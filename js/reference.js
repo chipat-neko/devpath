@@ -65,7 +65,7 @@
 
   function renderTabs() {
     tabsEl.innerHTML = TABS.map(function (t) {
-      return '<button type="button" role="tab" aria-selected="' + (t.id === current ? "true" : "false") +
+      return '<button type="button" aria-pressed="' + (t.id === current ? "true" : "false") +
         '" class="ref-tab' + (t.id === current ? " is-active" : "") +
         '" data-id="' + t.id + '">' + esc(t.label) + "</button>";
     }).join("");

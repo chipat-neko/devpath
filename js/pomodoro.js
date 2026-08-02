@@ -101,7 +101,7 @@
     for (var i = 0; i < btns.length; i++) {
       var sel = btns[i].getAttribute("data-mode") === m;
       btns[i].classList.toggle("is-active", sel);
-      btns[i].setAttribute("aria-selected", sel ? "true" : "false");
+      btns[i].setAttribute("aria-pressed", sel ? "true" : "false");
     }
     paint();
     if (autostart) start();

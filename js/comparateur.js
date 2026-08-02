@@ -23,7 +23,7 @@
     tasksEl.innerHTML = S.tasks
       .map(function (t) {
         return (
-          '<button type="button" role="tab" aria-selected="' + (t.id === current ? "true" : "false") +
+          '<button type="button" aria-pressed="' + (t.id === current ? "true" : "false") +
           '" class="cmp-task' + (t.id === current ? " is-active" : "") +
           '" data-id="' + esc(t.id) + '">' + esc(t.label) + "</button>"
         );

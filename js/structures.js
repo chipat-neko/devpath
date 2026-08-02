@@ -52,7 +52,7 @@
   function renderTabs() {
     tabsEl.innerHTML = STRUCTS.map(function (s) {
       return (
-        '<button type="button" role="tab" aria-selected="' + (s.id === current ? "true" : "false") +
+        '<button type="button" aria-pressed="' + (s.id === current ? "true" : "false") +
         '" class="ds-tab' + (s.id === current ? " is-active" : "") +
         '" data-id="' + s.id + '">' + esc(s.label) + "</button>"
       );
