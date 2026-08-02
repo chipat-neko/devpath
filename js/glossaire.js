@@ -66,27 +66,66 @@
     });
   })();
 
+  function entryHTML(it) {
+    return (
+      '<div class="gl-entry">' +
+      '<dt class="gl-term">' + esc(it.t) + "</dt>" +
+      '<dd class="gl-def">' + it.d +
+      ' <a class="gl-src" href="' + esc(it.c) + '/cours.html">' + esc(it.ct) + "</a></dd>" +
+      "</div>"
+    );
+  }
+
+  /* Rendu PROGRESSIF : rendre les 9 700+ entrées d'un bloc coûtait ~50 000 nœuds
+     et ~800 ms. On n'affiche qu'un lot, puis on complète au défilement via une
+     sentinelle observée. La recherche et le filtre recalculent la liste et
+     repartent du premier lot — la recherche interne reste entière. (cf. C10) */
+  var PAGE = 200;
+  var filtered = [];
+  var shown = 0;
+  var sentinel = document.createElement("div");
+  sentinel.className = "gl-sentinel";
+  sentinel.setAttribute("aria-hidden", "true");
+
+  function appendRows() {
+    if (shown >= filtered.length) return;
+    var frag = filtered.slice(shown, shown + PAGE).map(entryHTML).join("");
+    sentinel.insertAdjacentHTML("beforebegin", frag);
+    shown = Math.min(shown + PAGE, filtered.length);
+    sentinel.hidden = shown >= filtered.length;
+  }
+
+  var io = window.IntersectionObserver
+    ? new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) appendRows();
+      }, { rootMargin: "600px" })
+    : null;
+
   function render() {
     var q = norm(searchEl.value.trim());
     var cf = courseEl.value;
-    var rows = [];
+    filtered = [];
     for (var i = 0; i < ITEMS.length; i++) {
       var it = ITEMS[i];
       if (cf !== "all" && it.c !== cf) continue;
       if (q && it.key.indexOf(q) === -1) continue;
-      rows.push(
-        '<div class="gl-entry">' +
-        '<dt class="gl-term">' + esc(it.t) + "</dt>" +
-        '<dd class="gl-def">' + it.d +
-        ' <a class="gl-src" href="' + esc(it.c) + '/cours.html">' + esc(it.ct) + "</a></dd>" +
-        "</div>"
-      );
+      filtered.push(it);
     }
-    listEl.innerHTML = rows.length
-      ? rows.join("")
-      : '<p class="gl-empty">Aucun terme ne correspond.</p>';
+    if (io) io.unobserve(sentinel);
+    listEl.textContent = "";
+    shown = 0;
+    if (!filtered.length) {
+      listEl.innerHTML = '<p class="gl-empty">Aucun terme ne correspond.</p>';
+    } else if (io) {
+      listEl.appendChild(sentinel);
+      appendRows();          // premier lot immédiat
+      io.observe(sentinel);  // les suivants au défilement
+    } else {
+      listEl.innerHTML = filtered.map(entryHTML).join(""); // repli sans IntersectionObserver
+      shown = filtered.length;
+    }
     countEl.textContent =
-      rows.length + " terme" + (rows.length > 1 ? "s" : "") + " sur " + ITEMS.length;
+      filtered.length + " terme" + (filtered.length > 1 ? "s" : "") + " sur " + ITEMS.length;
   }
 
   searchEl.addEventListener("input", render);
