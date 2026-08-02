@@ -109,7 +109,16 @@
     return html;
   }
 
+  /* Le bouton d'impression doit dire la vérité : en mode cours il sort la fiche
+     du cours (la barre d'outils est masquée par @media print) ; en mode recherche
+     il sort les fiches AFFICHÉES (jusqu'à CAP), pas « cette fiche ». */
+  function printMode(isSearch) {
+    if (!printBtn) return;
+    printBtn.textContent = isSearch ? "Imprimer les résultats affichés" : "Imprimer cette fiche";
+  }
+
   function render(dir) {
+    printMode(false);
     var course = byCourse[dir];
     if (!course) {
       out.innerHTML = '<p class="cheat-empty">Aucune antisèche pour ce cours.</p>';
@@ -149,6 +158,7 @@
      « une fiche » imprimable. Plafonné pour rester fluide sur un terme fréquent. */
   var CAP = 50;
   function renderSearch(q) {
+    printMode(true);
     ensureIndex();
     var terms = norm(q).split(/\s+/).filter(Boolean);
     var hits = SHEETS.filter(function (s) {
@@ -193,7 +203,12 @@
     });
     out.innerHTML = html;
 
-    var nbCourses = Object.keys(groups).length;
+    /* Le nombre de cours doit porter sur TOUS les résultats, pas sur les seules
+       fiches affichées (sinon « 630 résultats dans 3 cours » quand les 630 se
+       répartissent sur bien plus de cours). On compte donc sur hits, pas shown. */
+    var allCourses = {};
+    hits.forEach(function (s) { allCourses[s.c] = 1; });
+    var nbCourses = Object.keys(allCourses).length;
     if (countEl) {
       var txt =
         hits.length + " résultat" + (hits.length > 1 ? "s" : "") +
@@ -246,6 +261,24 @@
     if (sel) sel.value = d;
     remember(d);
     render(d);
+  });
+
+  /* Clic sur un titre de groupe (mode recherche) : ouvrir le cours entier.
+     On ne peut PAS se reposer sur hashchange seul — si on est déjà sur
+     antiseches.html#<cours> (cas d'arrivée depuis une page de cours), cliquer
+     l'ancre identique ne déclenche aucun hashchange. On rend donc nous-mêmes. */
+  out.addEventListener("click", function (e) {
+    var a = e.target.closest(".cheat-group__title a");
+    if (!a) return;
+    var d = decodeURIComponent((a.getAttribute("href") || "").replace(/^#/, ""));
+    if (!byCourse[d]) return;
+    e.preventDefault();
+    if (searchEl) searchEl.value = "";
+    if (sel) sel.value = d;
+    remember(d);
+    render(d);
+    /* Refléter le cours dans l'URL sans re-déclencher render via hashchange. */
+    try { history.replaceState(null, "", "#" + encodeURIComponent(d)); } catch (e2) {}
   });
 
   /* Recherche : petit debounce pour ne pas reconstruire les tableaux à chaque
