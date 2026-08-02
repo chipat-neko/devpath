@@ -80,7 +80,9 @@ ce qu'elle devait.
 
 ## PHASE C — Défauts d'usage préexistants
 
-- [ ] **C1 · Le meilleur score de QCM ignore le nombre de questions.** `js/lecon.js` compare `good > prev.best` sans regarder `total` : un **8/8 parfait n'écrase pas un ancien 9/10**, et le certificat s'appuie sur cette valeur. Comparer des ratios.
+- [x] **C1 · Le meilleur score de QCM ignore le nombre de questions.** `js/lecon.js` compare `good > prev.best` sans regarder `total` : un **8/8 parfait n'écrase pas un ancien 9/10**, et le certificat s'appuie sur cette valeur. Comparer des ratios.
+  - **FAIT le 2026-08-02.** Bug reproduit dans `saveQuizBest` (`js/lecon.js`) : `good > prev.best` compare des comptes bruts. Corrigé en comparant les **ratios** `good/total` vs `prev.best/prev.total`, avec garde sur `prev.total` absent/0 (ancienne donnée → écrasée) et `total` = 0. Le comportement est **inchangé pour un même QCM** (même `total` ⇒ revient à `good > prev.best`), et corrige les cas où le nombre de questions diffère.
+  - **Vérifs** : `node --check js/lecon.js` OK ; **8/8 assertions** d'un test de la logique (8/8 bat 9/10 ; 8/10 ne bat pas 9/10 ; 10/10 bat 9/10 ; égalité ne remplace pas ; 9/10 bat 8/10 à total égal ; prev sans `total` écrasé ; 90/100 == 9/10 ne remplace pas). diff = 1 fichier (`js/lecon.js`).
 
 - [ ] **C2 · Le surlignage des résultats casse les entités HTML.** `highlight()` s'applique **après** `esc()` dans `js/recherche.js` et dans la palette (`js/main.js`) : chercher « amp » abîme 108 champs. Surligner avant d'échapper, ou travailler sur le texte brut.
 

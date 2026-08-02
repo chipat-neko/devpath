@@ -133,7 +133,12 @@
     if (!q[courseId]) q[courseId] = {};
     if (!q[courseId][lessonFile]) q[courseId][lessonFile] = {};
     var prev = q[courseId][lessonFile][scoreKey];
-    if (!prev || good > prev.best) {
+    /* On compare des RATIOS, pas des comptes bruts : un 8/8 (parfait) doit battre
+       un ancien 9/10, et le nombre de questions d'un QCM peut changer entre deux
+       tentatives. prev.total absent/0 (ancienne donnée) → on écrase sans hésiter. */
+    var prevRatio = prev && prev.total ? prev.best / prev.total : -1;
+    var newRatio = total > 0 ? good / total : 0;
+    if (!prev || newRatio > prevRatio) {
       q[courseId][lessonFile][scoreKey] = { best: good, total: total };
       try {
         localStorage.setItem(QKEY, JSON.stringify(q));
