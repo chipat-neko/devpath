@@ -275,7 +275,11 @@
       renderGrouped(filtered);
     } else {
       grid.className = "grid grid--cards";
-      grid.innerHTML = sortList(filtered).map(cardHTML).join("");
+      /* h2 masqué (sr-only) pour éviter le saut de titre h1 → h3 des cartes en
+         vue « à plat » ; la vue groupée a déjà ses h2 de section. (cf. D2) */
+      grid.innerHTML =
+        '<h2 class="sr-only">Tous les cours</h2>' +
+        sortList(filtered).map(cardHTML).join("");
     }
   }
 

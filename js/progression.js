@@ -360,6 +360,9 @@
 
     host.innerHTML =
       '<section class="xp-panel">' +
+      /* h2 masqué (sr-only) : le panneau enchaînait h1 → h3 (Succès/Badges) sans
+         niveau intermédiaire. (cf. D2) */
+      '<h2 class="sr-only">Ta progression</h2>' +
       '<div class="xp-panel__head">' +
       '<span class="xp-panel__level">Niveau ' + lv.level + "</span>" +
       '<span class="xp-panel__title">' + esc(lv.title) + "</span>" +

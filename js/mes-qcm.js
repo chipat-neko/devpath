@@ -57,7 +57,10 @@
     if (!b) return;
     var tab = b.getAttribute("data-tab");
     var btns = tabsEl.querySelectorAll(".mq-tab");
-    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("is-active", btns[i] === b);
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("is-active", btns[i] === b);
+      btns[i].setAttribute("aria-pressed", btns[i] === b ? "true" : "false");
+    }
     if (tab === "quiz") {
       editEl.hidden = true;
       quizEl.hidden = false;
