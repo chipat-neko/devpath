@@ -744,7 +744,7 @@
         '<div class="cmdk__dialog" role="dialog" aria-modal="true" aria-label="Recherche rapide dans les leçons">' +
           '<div class="cmdk__bar">' +
             '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-            '<input type="text" class="cmdk__input" role="combobox" aria-expanded="true" aria-controls="cmdk-list" aria-activedescendant="" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Chercher une leçon, une notion…" />' +
+            '<input type="text" class="cmdk__input" role="combobox" aria-expanded="false" aria-controls="cmdk-list" aria-activedescendant="" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Chercher une leçon, une notion…" />' +
             '<kbd class="cmdk__kbd">Échap</kbd>' +
           '</div>' +
           '<ul class="cmdk__list" id="cmdk-list" role="listbox" aria-label="Résultats de recherche"></ul>' +
@@ -758,13 +758,21 @@
       list = overlay.querySelector(".cmdk__list");
       footLink = overlay.querySelector(".cmdk__full");
 
-      overlay.addEventListener("mousedown", function (e) { if (e.target === overlay) close(); });
+      // Clic sur le fond : fermer. Clic dans une zone morte du dialogue
+      // (icône, barre, fond de liste) : empêcher le défocus, sinon le focus
+      // fuit sur BODY et « Échap » (écouté sur l'input) cesse de fermer.
+      overlay.addEventListener("mousedown", function (e) {
+        if (e.target === overlay) { close(); return; }
+        if (!e.target.closest("a, button, input, textarea, select")) e.preventDefault();
+      });
+      // Échap et le piège de tabulation, écoutés au niveau du dialogue :
+      // actifs quel que soit l'élément focalisé à l'intérieur (input, lien…).
+      overlay.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { e.preventDefault(); close(); }
+        else if (e.key === "Tab") { e.preventDefault(); trapTab(e.shiftKey); }
+      });
       input.addEventListener("input", function () { render(input.value); });
       input.addEventListener("keydown", onKey);
-      footLink.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") { e.preventDefault(); close(); }
-        else if (e.key === "Tab") { e.preventDefault(); input.focus(); }
-      });
       list.addEventListener("click", function (e) {
         var li = e.target.closest(".cmdk__item");
         if (li && li.dataset.href) go(li.dataset.href);
@@ -820,13 +828,15 @@
       footLink.setAttribute("href", root + "pages/recherche.html" + (q.trim() ? "?q=" + encodeURIComponent(q.trim()) : ""));
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
-        list.innerHTML = '<li class="cmdk__empty">Tape au moins deux lettres pour chercher parmi 1362 leçons.</li>';
+        input.setAttribute("aria-expanded", "false");
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1362 leçons.</li>';
         return;
       }
       items = doSearch(tk);
       if (!items.length) {
         active = -1; input.setAttribute("aria-activedescendant", "");
-        list.innerHTML = '<li class="cmdk__empty">Aucune leçon trouvée. Essaie la <a href="' + esc(footLink.getAttribute("href")) + '">recherche plein-texte</a>.</li>';
+        input.setAttribute("aria-expanded", "false");
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Aucune leçon trouvée. Essaie la <a href="' + esc(footLink.getAttribute("href")) + '">recherche plein-texte</a>.</li>';
         return;
       }
       list.innerHTML = items.map(function (it, idx) {
@@ -836,6 +846,7 @@
           '<span class="cmdk__item-snippet">' + highlight(esc(it.s), tk) + '</span>' +
           '</li>';
       }).join("");
+      input.setAttribute("aria-expanded", "true");
       setActive(0);
     }
 
@@ -853,6 +864,24 @@
       else if (bot > list.scrollTop + list.clientHeight) list.scrollTop = bot - list.clientHeight;
     }
 
+    // Éléments réellement focalisables et visibles du dialogue, dans l'ordre du
+    // DOM : l'input, le lien de l'état vide s'il est présent, puis le lien de
+    // pied. Le piège de tabulation cycle sur cette liste, donc le lien de
+    // l'état « aucun résultat » devient atteignable au clavier.
+    function focusables() {
+      return Array.prototype.filter.call(
+        overlay.querySelectorAll("a[href], button:not([disabled]), input:not([disabled])"),
+        function (el) { return el.offsetParent !== null; }
+      );
+    }
+    function trapTab(back) {
+      var f = focusables();
+      if (!f.length) return;
+      var i = f.indexOf(document.activeElement);
+      var n = back ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1 >= f.length ? 0 : i + 1);
+      f[n].focus();
+    }
+
     function onKey(e) {
       if (e.key === "ArrowDown") { e.preventDefault(); setActive(active + 1); }
       else if (e.key === "ArrowUp") { e.preventDefault(); setActive(active - 1); }
@@ -863,8 +892,6 @@
         if (active >= 0 && items[active]) go(root + "pages/" + items[active].d + "/" + items[active].f);
         else { var h = footLink.getAttribute("href"); if (h && h !== "#") go(h); }
       }
-      else if (e.key === "Escape") { e.preventDefault(); close(); }
-      else if (e.key === "Tab") { e.preventDefault(); footLink.focus(); }
     }
 
     function go(href) { close(); location.href = href; }
@@ -879,7 +906,10 @@
         input.value = "";
         render("");
         input.focus();
-        if (!ok) list.innerHTML = '<li class="cmdk__empty">Index de recherche momentanément indisponible.</li>';
+        if (!ok) {
+          list.innerHTML = '<li class="cmdk__empty" role="presentation">Index de recherche momentanément indisponible.</li>';
+          input.setAttribute("aria-expanded", "false");
+        }
       });
     }
     function close() {

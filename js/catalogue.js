@@ -379,17 +379,26 @@
     }
   }
 
-  /* ---- Raccourci clavier : « / » cible la recherche, Échap l'efface ---- */
+  /* ---- « / » cible la recherche du catalogue -------------------------
+     La palette globale (js/main.js) réclame aussi « / ». Sur le catalogue,
+     c'est le champ visible de la page qui doit gagner : on écoute en phase
+     CAPTURE (donc avant le gestionnaire « bubble » de la palette) et on
+     arrête la propagation, sinon les deux se déclenchent. La palette reste
+     ouvrable via Ctrl+K et le bouton loupe de l'en-tête. */
   document.addEventListener("keydown", function (e) {
     if (!searchInput) return;
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
     var t = e.target || {};
-    var typing =
-      t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable;
-    if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      searchInput.focus();
-      searchInput.select();
-    } else if (e.key === "Escape" && t === searchInput) {
+    if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    searchInput.focus();
+    searchInput.select();
+  }, true);
+
+  /* ---- Échap efface la recherche (phase bubble) ---- */
+  document.addEventListener("keydown", function (e) {
+    if (searchInput && e.key === "Escape" && (e.target || {}) === searchInput) {
       searchInput.value = "";
       state.qRaw = "";
       state.q = "";
