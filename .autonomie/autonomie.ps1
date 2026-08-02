@@ -49,9 +49,9 @@ $rapport = Join-Path $proj 'VERIF-FINALE.md'
 
 function Test-ChantierFini {
   try {
-    # Chantier V6 (depuis le 2026-08-01) : le plan CHANTIER-V6.md fait foi.
+    # Chantier V7 (depuis le 2026-08-02) : le plan CHANTIER-V7.md fait foi.
     # Tant qu'il reste une case a cocher, il reste du travail.
-    $plan = Join-Path $proj 'CHANTIER-V6.md'
+    $plan = Join-Path $proj 'CHANTIER-V7.md'
     if (-not (Test-Path $plan)) { return $false }
     if (Select-String -Path $plan -Pattern '^- \[ \]' -Quiet) { return $false }
     return $true
@@ -87,9 +87,9 @@ if ($modeVerif) {
 $promptTravail = @'
 Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) pour faire avancer le projet Syntaxe EN AUTONOMIE, dossier d:\test-claude. Tu es NON-INTERACTIF : ne pose AUCUNE question, ne propose AUCUN questionnaire, decide et agis seul. Tout le contenu visible et les commentaires en francais, avec accents CORRECTS (jamais d'ASCII a la place d'un accent dans le contenu).
 
-LE SITE : 76 cours, 1362 lecons, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. Le chantier V6 est EDITORIAL : les cours ayant ete ecrits par vagues successives, la meme question de QCM est parfois posee dans deux lecons differentes. Ton travail est de lire, juger et reecrire — pas de corriger un bug.
+LE SITE : 76 cours, 1362 lecons, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. Le chantier V7 traite les defauts MINEURS d'un audit de controle : finitions de la palette et des antiseches, coherence des donnees, defauts d'usage et accessibilite. LE PROJET EST DESORMAIS SOUS GIT : verifie que git status est propre avant chaque point, et fais un commit apres chaque point avec sa mesure. Tu peux enfin prouver au diff qu'une correction n'a touche que ce qu'elle devait.
 
-1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V6.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A, puis B, puis C, puis D). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
+1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V7.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A, puis B, puis C, puis D). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
 2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
 3) OUTILS DU PROJET, a utiliser systematiquement : node tools/verif-html.js (detecte en moins d'une seconde, sur les 1425 lecons, toute balise creee par erreur dans un bloc de code — il DOIT rester a zero probleme apres ton passage) et node tools/build-index.js (generateur rejouable des index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,antiseches). Pour mesurer un rendu, chrome est disponible en mode headless, avec --dump-dom, --allow-file-access-from-files, et --host-resolver-rules pour couper le reseau.
 4) INTERDIT ABSOLU : reintroduire une URL vers cdnjs.cloudflare.com, fonts.googleapis.com ou fonts.gstatic.com. Le site en compte zero. Apres toute modification de tools/, de starter/ ou d'un gabarit de page, REVERIFIE ce point : le piege s'est deja represente trois fois. Ne touche jamais au mojibake VOLONTAIRE des lecons qui enseignent l'encodage (pages/formats/lecon-06.html, pages/html/lecon-15.html, pages/r/lecon-06.html, pages/perl/lecon-13.html).
@@ -159,12 +159,12 @@ try {
   $statut = if ($code -eq 0) { 'OK' } else { 'ECHEC' }
   $faits = '?'; $total = '?'
   try {
-    $plan = Join-Path $proj 'CHANTIER-V6.md'
+    $plan = Join-Path $proj 'CHANTIER-V7.md'
     $coches = (Select-String -Path $plan -Pattern '^- \[x\]').Count
     $restants = (Select-String -Path $plan -Pattern '^- \[ \]').Count
     $faits = $coches; $total = $coches + $restants
   } catch {}
-  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points du chantier V6" -Encoding utf8
+  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points du chantier V7" -Encoding utf8
 
   # --- Verdict de la passe de securite ---------------------------------------
   # Le modele ecrit VERDICT: VERT ou VERDICT: ROUGE en 1re ligne de VERIF-FINALE.md.
