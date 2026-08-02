@@ -129,6 +129,15 @@
     }
   }
 
+  /* Deux onglets ouverts : quand un autre modifie la banque, on recharge pour ne
+     pas réécrire par-dessus son travail à la prochaine action (cf. C4). Le quiz
+     éventuellement en cours garde sa propre copie et n'est pas perturbé. */
+  window.addEventListener("storage", function (e) {
+    if (e.key !== KEY) return;
+    questions = load();
+    renderList();
+  });
+
   /* ------------------------------------------------------------- Quiz */
   var prepared = [];
   function startQuiz() {

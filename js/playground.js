@@ -64,6 +64,20 @@
     } catch (e) {}
   }
 
+  /* Deux onglets ouverts : se resynchroniser avec le dernier brouillon écrit
+     par un autre onglet, mais JAMAIS écraser ce que l'utilisateur est en train
+     de taper ici (on ignore l'événement si un éditeur a le focus) (cf. C4). */
+  window.addEventListener("storage", function (e) {
+    if (e.key !== KEY || e.newValue == null) return;
+    var a = document.activeElement;
+    if (a === html || a === css || a === js) return;
+    var s = load();
+    html.value = s.html;
+    css.value = s.css;
+    js.value = s.js;
+    render();
+  });
+
   function srcDoc() {
     return (
       '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">' +

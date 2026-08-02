@@ -35,6 +35,13 @@
   }
   function save() {
     try {
+      /* Relire-avant-écrire : un autre onglet a pu enregistrer sa progression
+         entre-temps ; on fusionne par carte pour ne pas l'écraser (cf. C4). */
+      var fresh = load();
+      for (var k in state) {
+        if (Object.prototype.hasOwnProperty.call(state, k)) fresh[k] = state[k];
+      }
+      state = fresh;
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) {}
   }
