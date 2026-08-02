@@ -136,6 +136,8 @@ volumes:
   pgdata:</code></pre></figure>
 <p>Comme en leçon&nbsp;5, Compose crée un <strong>réseau commun</strong> et chaque service joint les autres <strong>par leur nom</strong>&nbsp;: l'api atteint la base à l'adresse <code>db</code> et le cache à <code>cache</code> (visible dans <code>DATABASE_URL</code> et <code>REDIS_URL</code>). Un seul port est publié — celui du proxy&nbsp;; le reste dialogue en interne.</p>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Comment «&nbsp;par leur nom&nbsp;» fonctionne vraiment</p><p>Ce n'est pas de la magie&nbsp;: Compose lance un <strong>serveur DNS interne</strong> (à l'adresse <code>127.0.0.11</code> dans chaque conteneur) qui résout le nom d'un service vers son IP sur le réseau partagé. D'où une conséquence pratique&nbsp;: on écrit <code>db</code>, jamais une IP en dur — l'adresse change à chaque redémarrage, mais le <strong>nom</strong>, lui, est stable. Un service ne résout que les noms des services avec lesquels il <strong>partage un réseau</strong>&nbsp;; le nom d'un service d'un autre réseau ne se résout tout simplement pas.</p></div></div>
+
 <h2>Isoler avec plusieurs réseaux</h2>
 <p>Par défaut, <strong>tous</strong> les services partagent un réseau&nbsp;: le proxy pourrait parler directement à la base. Ce n'est pas souhaitable — le proxy n'a aucune raison de toucher aux données. On <strong>cloisonne</strong> en déclarant plusieurs réseaux et en rattachant chaque service à ceux dont il a besoin.</p>
 <figure class="code-block" data-file="compose.yaml (extrait)"><pre><code class="language-yaml">services:
@@ -212,6 +214,8 @@ docker compose --profile dev up -d # + adminer, pour inspecter en dev</code></pr
   <figcaption>Les services sans profil démarrent toujours&nbsp;; ceux marqués <code>profiles: [dev]</code> n'apparaissent qu'avec <code>--profile dev</code>. La production reste épurée.</figcaption>
 </figure>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Les profils se cumulent — et fixent une bonne habitude</p><p>Un service peut lister <strong>plusieurs</strong> profils (<code>profiles: [dev, debug]</code>)&nbsp;: il démarre si l'un d'eux est demandé. On active plusieurs profils en répétant l'option (<code>--profile dev --profile debug</code>) ou via la variable <code>COMPOSE_PROFILES=dev,debug</code>, pratique dans un <code>.env</code>. Subtilité utile&nbsp;: si un service <em>sans</em> profil déclare un <code>depends_on</code> vers un service <em>à</em> profil, ce dernier est démarré <strong>malgré tout</strong> (une dépendance requise ne peut pas rester absente). Le réflexe à prendre&nbsp;: mettre <strong>tout</strong> ce qui n'est pas indispensable en production (interface de base, seed de données, mailer de test) derrière un profil, pour qu'un simple <code>docker compose up</code> ne lance jamais que le strict nécessaire.</p></div></div>
+
 <h2>Monter en charge et adapter dev/prod</h2>
 <p>Compose peut lancer <strong>plusieurs instances</strong> d'un même service. Si l'api est sans état (elle ne stocke rien localement), <code>--scale</code> en démarre plusieurs répliques, que le proxy répartit.</p>
 <figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Trois instances de l'api derrière le proxy
@@ -220,12 +224,36 @@ docker compose up -d --scale api=3
 docker compose ps          # on voit api-1, api-2, api-3
 docker compose logs -f api # les logs des trois, mêlés</code></pre></figure>
 <p>Un détail compte&nbsp;: un service qu'on met à l'échelle ne doit pas publier un <strong>port fixe</strong> vers l'hôte (deux instances ne peuvent pas prendre le même port). C'est le proxy qui expose un port unique et distribue vers les répliques par leur nom de service.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Résolution d'un nom de service vers plusieurs répliques. Le proxy contacte le service par son nom, api. Le serveur DNS interne de Compose, à l'adresse 127.0.0.11, résout ce nom unique vers les adresses des trois répliques lancées par scale : api-1, api-2 et api-3. À chaque nouvelle résolution, le DNS renvoie les adresses dans un ordre qui tourne, ce qui répartit approximativement les connexions entre les trois instances : c'est un round-robin DNS. Un seul nom, api, désigne donc trois conteneurs.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un nom, trois répliques : le DNS tourne</text>
+    <rect class="d-box" x="40" y="86" width="110" height="40" rx="5" /><text class="d-text" x="95" y="103" text-anchor="middle" font-size="9">proxy</text><text class="d-mut" x="95" y="116" text-anchor="middle" font-size="7.5">appelle « api »</text>
+    <rect class="d-accent" x="215" y="82" width="140" height="48" rx="5" /><text class="d-text" x="285" y="101" text-anchor="middle" font-size="8.5">DNS interne</text><text class="d-mut" x="285" y="114" text-anchor="middle" font-size="7.5">127.0.0.11</text><text class="d-mut" x="285" y="124" text-anchor="middle" font-size="7">« api » → 3 IP</text>
+    <rect class="d-box" x="470" y="52" width="130" height="26" rx="4" /><text class="d-text" x="535" y="69" text-anchor="middle" font-size="8">api-1</text>
+    <rect class="d-box" x="470" y="94" width="130" height="26" rx="4" /><text class="d-text" x="535" y="111" text-anchor="middle" font-size="8">api-2</text>
+    <rect class="d-box" x="470" y="136" width="130" height="26" rx="4" /><text class="d-text" x="535" y="153" text-anchor="middle" font-size="8">api-3</text>
+    <path class="d-line" d="M150 106 L215 106" fill="none" /><circle class="d-dot" cx="215" cy="106" r="2.5" />
+    <path class="d-line" d="M355 100 L470 65" fill="none" /><circle class="d-dot" cx="470" cy="65" r="2.5" />
+    <path class="d-line" d="M355 106 L470 107" fill="none" /><circle class="d-dot" cx="470" cy="107" r="2.5" />
+    <path class="d-line" d="M355 112 L470 149" fill="none" /><circle class="d-dot" cx="470" cy="149" r="2.5" />
+    <text class="d-mut" x="320" y="188" text-anchor="middle" font-size="9">l'ordre des IP tourne à chaque résolution → répartition (round-robin DNS)</text>
+    <text class="d-mut" x="320" y="202" text-anchor="middle" font-size="7.5">un seul nom « api » désigne les trois conteneurs</text>
+  </svg>
+  <figcaption>Avec <code>--scale</code>, le nom <code>api</code> ne pointe plus un conteneur mais <strong>trois</strong>&nbsp;: le DNS interne renvoie leurs adresses dans un ordre qui tourne (<strong>round-robin</strong>), ce qui répartit les connexions sans configuration supplémentaire.</figcaption>
+</figure>
+
 <p>Enfin, le même projet a des besoins différents en dev et en prod. Plutôt que deux fichiers rivaux, Compose <strong>fusionne</strong> plusieurs fichiers. Un <code>compose.override.yaml</code> présent à côté du fichier principal est appliqué <strong>automatiquement</strong> — idéal pour les réglages de dev (monter le code en <a href="lecon-08.html">bind mount</a>, exposer des ports de debug)&nbsp;; en production, on choisit explicitement les fichiers.</p>
 <figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Dev : compose.yaml + compose.override.yaml (fusion automatique)
 docker compose up -d
 
 # Prod : on remplace l'override par un fichier de production
 docker compose -f compose.yaml -f compose.prod.yaml up -d</code></pre></figure>
+
+<h2>Arrêter la pile sans perdre les données</h2>
+<p>Une pile a un cycle de vie&nbsp;: <code>docker compose stop</code> suspend les conteneurs, <code>docker compose down</code> les supprime. L'arrêt se fait dans l'<strong>ordre inverse</strong> des <code>depends_on</code>&nbsp;: ce qui dépend de la base s'arrête avant elle. Le point sensible est ailleurs&nbsp;: que deviennent les <strong>données</strong> de la base entre deux <code>down</code>&nbsp;?</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège du <code>down -v</code> qui efface la base</p><p><code>docker compose down</code> supprime conteneurs et réseaux mais <strong>conserve les volumes nommés</strong> (ici <code>pgdata</code>)&nbsp;: relancer un <code>up</code> retrouve les données. En revanche, <code>docker compose down <strong>-v</strong></code> supprime <em>aussi</em> les volumes — la base repart <strong>vide</strong>, sans confirmation. Le <code>-v</code> est parfait pour repartir propre en développement, mais sur des données qui comptent c'est irréversible. Autre confusion fréquente&nbsp;: <code>down</code> arrête la pile <em>et</em> la démonte&nbsp;; pour juste la mettre en pause, c'est <code>stop</code> (les conteneurs et leurs données restent, un <code>start</code> les relance).</p></div></div>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Compose n'est pas un orchestrateur de production à grande échelle</p><p><code>--scale</code> répartit des répliques <strong>sur une seule machine</strong>, sans redémarrage automatique en cas de panne matérielle ni déploiement progressif. Pour de la haute disponibilité sur <em>plusieurs</em> serveurs — mise à l'échelle automatique, auto-réparation, montées de version sans coupure — on passe à un orchestrateur comme <strong>Kubernetes</strong> (<a href="../kubernetes/cours.html">cours dédié</a>). Compose reste roi en développement et pour les déploiements simples&nbsp;; il ne remplace pas Kubernetes en production exigeante.</p></div></div>
 

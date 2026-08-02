@@ -99,6 +99,8 @@
             <article class="prose">
 <p>Tu sais déjà rendre une image légère avec le multi-stage (<a href="lecon-06.html">leçon&nbsp;6</a>) et rapide grâce au cache des couches (<a href="lecon-03.html">leçon&nbsp;3</a>). Ces techniques reposent toutes sur le <strong>moteur de build</strong> de Docker. Depuis quelques années, ce moteur a changé — il s'appelle <strong>BuildKit</strong> — et il débloque des capacités que l'ancien ne permettait pas&nbsp;: un cache qui survit aux invalidations, des secrets propres, et des images qui tournent sur plusieurs processeurs.</p>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi le multi-stage allège <em>autant</em> l'image</p><p>La raison profonde&nbsp;: seule la <strong>dernière</strong> étape devient l'image finale&nbsp;; tout ce qui vit dans les étapes précédentes est <strong>jeté</strong>. On compile donc dans une étape riche (compilateur, <code>node_modules</code> de dev, en-têtes C, ~1&nbsp;Go d'outillage), puis on <code>COPY --from=build</code> uniquement l'<strong>artefact</strong> — le binaire ou le <code>dist/</code> — dans une base minuscule (<code>alpine</code>, <code>distroless</code>). L'image passe couramment de plusieurs centaines de Mo à quelques dizaines. Bonus non négligeable&nbsp;: moins de logiciels embarqués, c'est aussi une <strong>surface d'attaque</strong> réduite en production.</p></div></div>
+
 <h2>BuildKit : le moteur de build moderne</h2>
 <p>Historiquement, <code>docker build</code> construisait les couches <strong>strictement de haut en bas</strong>, une par une. <strong>BuildKit</strong>, le moteur par défaut des versions récentes de Docker, est plus malin&nbsp;: il lit tout le Dockerfile, construit un <em>graphe</em> des dépendances, et exécute <strong>en parallèle</strong> les étapes indépendantes. Dans un build multi-stage, deux étapes qui ne s'attendent pas se construisent en même temps.</p>
 <p>Concrètement, tu n'as rien à installer&nbsp;: un <code>docker build</code> récent utilise déjà BuildKit. La commande <code>docker buildx</code> en est l'interface étendue, qui donne accès aux options avancées de cette leçon.</p>
@@ -142,6 +144,32 @@ CMD ["node", "server.js"]</code></pre></figure>
   </svg>
   <figcaption>Le cache des couches, invalidé, perd tout&nbsp;; le <strong>cache monté</strong> de BuildKit, lui, persiste d'un build à l'autre. <code>npm ci</code> se rejoue mais ne retélécharge que le strict nécessaire.</figcaption>
 </figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">L'ordre des instructions qui ruine le cache</p><p>Le cache monté accélère un <code>RUN</code> qui se rejoue&nbsp;; mais le vrai levier reste de <strong>ne pas le rejouer du tout</strong>. Pour cela, l'ordre du Dockerfile est décisif&nbsp;: une couche n'est réutilisée que si <strong>toutes</strong> celles d'avant sont intactes. Un <code>COPY . .</code> placé <em>avant</em> le <code>RUN npm ci</code> invalide l'installation à <strong>chaque</strong> modification de code — même une virgule dans un commentaire relance tout. La règle&nbsp;: copie d'abord le seul <code>package*.json</code>, installe, <strong>puis</strong> copie le reste. Ce qui change souvent (le code) doit venir <strong>après</strong> ce qui change rarement (les dépendances).</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Effet de l'ordre des instructions du Dockerfile sur le cache des couches, quand seul le code source a changé. À gauche, le mauvais ordre : COPY point point copie tout le projet avant l'installation, donc dès que le code change cette couche est invalidée, et la couche npm ci qui la suit est forcément relancée elle aussi ; l'installation repart de zéro. À droite, le bon ordre : on copie d'abord uniquement package.json, on lance npm ci, puis on copie le reste du code ; comme package.json n'a pas changé, la couche npm ci reste en cache et n'est pas rejouée, seule la copie du code est refaite. Placer ce qui change souvent après ce qui change rarement préserve le cache.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Seul le code a changé : quelles couches se rejouent&nbsp;?</text>
+    <rect class="d-frame" x="20" y="38" width="290" height="162" rx="6" />
+    <text class="d-tag" x="165" y="58" text-anchor="middle" font-size="10">Mauvais ordre</text>
+    <rect class="d-box" x="50" y="70" width="230" height="22" rx="3" /><text class="d-mut" x="60" y="85" font-size="8">COPY . .</text>
+    <rect class="d-accent" x="50" y="98" width="230" height="22" rx="3" /><text class="d-text" x="60" y="113" font-size="8">RUN npm ci  ← rejoué</text>
+    <path class="d-line" d="M165 92 L165 98" fill="none" /><circle class="d-dot" cx="165" cy="98" r="2.5" />
+    <text class="d-mut" x="165" y="150" text-anchor="middle" font-size="9">le COPY change → tout ce qui suit</text>
+    <text class="d-mut" x="165" y="166" text-anchor="middle" font-size="9">est invalidé</text>
+    <text class="d-text" x="165" y="188" text-anchor="middle" font-size="9">install relancée à chaque édition</text>
+    <rect class="d-frame" x="330" y="38" width="290" height="162" rx="6" />
+    <text class="d-tag" x="475" y="58" text-anchor="middle" font-size="10">Bon ordre</text>
+    <rect class="d-box" x="360" y="70" width="230" height="22" rx="3" /><text class="d-mut" x="370" y="85" font-size="8">COPY package*.json ./</text>
+    <rect class="d-box" x="360" y="98" width="230" height="22" rx="3" /><text class="d-mut" x="370" y="113" font-size="8">RUN npm ci  ← en cache</text>
+    <rect class="d-accent" x="360" y="126" width="230" height="22" rx="3" /><text class="d-text" x="370" y="141" font-size="8">COPY . .  ← seul rejoué</text>
+    <text class="d-mut" x="475" y="170" text-anchor="middle" font-size="9">package.json intact → npm ci gardé</text>
+    <text class="d-text" x="475" y="190" text-anchor="middle" font-size="9">seule la copie du code est refaite</text>
+  </svg>
+  <figcaption>Une couche n'est réutilisée que si toutes celles d'avant le sont. En copiant <code>package*.json</code> <strong>avant</strong> le code, on garde <code>npm ci</code> en cache tant que les dépendances n'ont pas bougé.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title"><code>.dockerignore</code>&nbsp;: le complément indispensable de <code>COPY . .</code></p><p>Avant tout build, Docker envoie le <strong>contexte</strong> (le dossier courant) au moteur. Sans filtre, un <code>COPY . .</code> embarque aussi <code>node_modules</code>, <code>.git</code>, les logs et les fichiers locaux&nbsp;: contexte plus lourd, build plus lent, et surtout cache brisé — le moindre fichier local qui change invalide la couche. Un <code>.dockerignore</code>, calqué sur le <code>.gitignore</code>, les exclut&nbsp;: <code>node_modules</code>, <code>.git</code>, <code>*.log</code>, <code>.env</code>. Bonus sécurité&nbsp;: c'est aussi ce qui évite de copier par mégarde un <code>.env</code> plein de secrets dans l'image.</p></div></div>
 
 <h2>Des secrets qui ne laissent pas de trace</h2>
 <p>À la <a href="lecon-06.html">leçon&nbsp;6</a>, on a vu qu'un secret copié dans une couche y <strong>reste à jamais</strong>, récupérable avec <code>docker history</code>. Mais certains builds ont <em>besoin</em> d'un secret&nbsp;: un jeton pour télécharger un paquet privé, par exemple. BuildKit résout ça avec <code>--mount=type=secret</code>&nbsp;: le secret est monté <strong>le temps d'un <code>RUN</code></strong>, puis disparaît sans jamais entrer dans une couche.</p>
