@@ -135,11 +135,14 @@
 
   function run() {
     var qRaw = input.value.trim();
-    var q = norm(qRaw);
+    /* Recolle les décimaux (« 3.14 » → « 314 », « 1,5 » → « 15 ») avant le
+       découpage, EXACTEMENT comme l'indexation (tools/build-index.js) : sinon un
+       terme d'un seul chiffre est jeté (< 2 car) et « 3.14 » se réduit à « 14 ».
+       Le séparateur n'est retiré qu'entre deux chiffres — « array.map »,
+       « os.path », « put_line » restent découpés (chacun un sur-ensemble sûr). */
+    var q = norm(qRaw).replace(/(?<=\d)[.,](?=\d)/g, "");
     /* Découpe sur TOUT séparateur non alphanumérique, mais « + » et « # » restent
-       dans les mots (c++, c#, f#, #include). « array.map », « put_line » ou
-       « 3.14 » deviennent plusieurs termes tous exigés — un sur-ensemble sûr de
-       l'ancienne sous-chaîne littérale. */
+       dans les mots (c++, c#, f#, #include). */
     var tokens = q.split(/[^a-z0-9+#]+/).filter(function (t) { return t.length >= 2; });
 
     writeURL(qRaw);

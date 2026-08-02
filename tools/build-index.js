@@ -592,8 +592,13 @@ function buildInverted(texts) {
   var invTf = Object.create(null);
   texts.forEach(function (x, i) {
     var tf = Object.create(null);
-    /* On garde « + » et « # » dans les mots pour indexer c++, c#, f#, #include… */
-    searchNorm(x).split(/[^a-z0-9+#]+/).forEach(function (w) {
+    /* On garde « + » et « # » dans les mots pour indexer c++, c#, f#, #include…
+       Les décimaux et versions (« 3.14 », « 1,5 ») sont RECOLLÉS avant le
+       découpage : sinon « 3.14 » donnerait « 3 » (jeté car < 2 car) + « 14 », et
+       la recherche de « 3.14 » se réduirait à « 14 » (334 leçons pour ~100 vraies).
+       On ne retire le séparateur qu'ENTRE DEUX CHIFFRES — « array.map », « os.path »
+       restent découpés. La requête applique la même règle (js/recherche.js). */
+    searchNorm(x).replace(/(?<=\d)[.,](?=\d)/g, "").split(/[^a-z0-9+#]+/).forEach(function (w) {
       if (w.length >= 2) tf[w] = (tf[w] || 0) + 1;
     });
     for (var w in tf) { (invTf[w] = invTf[w] || []).push([i, tf[w]]); }
