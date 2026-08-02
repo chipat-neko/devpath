@@ -235,8 +235,12 @@
 
     hits.sort(function (x, y) { return y.score - x.score; });
 
+    var LIMITE_AFFICHAGE = 60;
     if (countEl) {
-      countEl.textContent = hits.length + (hits.length > 1 ? " résultats" : " résultat");
+      var n = hits.length;
+      var base = n + (n > 1 ? " résultats" : " résultat");
+      /* On n'affiche que les LIMITE_AFFICHAGE premiers : le dire, comme la page antisèches. */
+      countEl.textContent = n > LIMITE_AFFICHAGE ? base + " · " + LIMITE_AFFICHAGE + " affichés" : base;
     }
 
     if (!hits.length) {
@@ -247,7 +251,7 @@
       return;
     }
 
-    var top = hits.slice(0, 60);
+    var top = hits.slice(0, LIMITE_AFFICHAGE);
     results.innerHTML = top
       .map(function (h) {
         var e = DOCS[h.i]; // [d, f, t, s]
