@@ -92,15 +92,27 @@
     return COURSE_TITLE[dir] || dir;
   }
 
-  function highlight(escaped, tokens) {
-    var out = escaped;
-    tokens.forEach(function (tk) {
-      if (tk.length < 2) return;
-      try {
-        out = out.replace(new RegExp("(" + escapeRegExp(tk) + ")", "gi"), "<mark>$1</mark>");
-      } catch (e) {}
-    });
-    return out;
+  /* Surligne les tokens dans le texte BRUT, puis échappe segment par segment.
+     Il ne faut jamais surligner du texte déjà échappé : chercher « amp »
+     tomberait au milieu de « &amp; » et casserait l'entité. On cherche donc
+     dans le brut et on n'insère les <mark> qu'autour de segments déjà échappés. */
+  function highlight(raw, tokens) {
+    raw = raw || "";
+    var toks = tokens.filter(function (t) { return t && t.length >= 2; });
+    if (!toks.length) return esc(raw);
+    var re;
+    try {
+      re = new RegExp("(" + toks.map(escapeRegExp).join("|") + ")", "gi");
+    } catch (e) {
+      return esc(raw);
+    }
+    var out = "", last = 0, m;
+    while ((m = re.exec(raw)) !== null) {
+      out += esc(raw.slice(last, m.index)) + "<mark>" + esc(m[0]) + "</mark>";
+      last = m.index + m[0].length;
+      if (m.index === re.lastIndex) re.lastIndex++; // garde-fou : match vide
+    }
+    return out + esc(raw.slice(last));
   }
 
   /* Décodage paresseux des postings d'un mot : "D0[.tf],D1[.tf],..." → [[id,tf],…].
@@ -243,8 +255,8 @@
           '<li class="fts-result">' +
           '<a class="fts-result__link" href="' + esc(e[0]) + "/" + esc(e[1]) + '">' +
           '<span class="fts-result__course">' + esc(courseTitle(e[0])) + "</span>" +
-          '<span class="fts-result__title">' + highlight(esc(e[2]), tokens) + "</span>" +
-          '<span class="fts-result__snippet">' + highlight(esc(e[3]), tokens) + "</span>" +
+          '<span class="fts-result__title">' + highlight(e[2], tokens) + "</span>" +
+          '<span class="fts-result__snippet">' + highlight(e[3], tokens) + "</span>" +
           "</a></li>"
         );
       })

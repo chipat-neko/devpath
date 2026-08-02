@@ -717,13 +717,22 @@
       });
     }
     function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-    function highlight(escaped, toks) {
-      var out = escaped;
-      toks.forEach(function (t) {
-        if (t.length < 2) return;
-        try { out = out.replace(new RegExp("(" + escRe(t) + ")", "gi"), "<mark>$1</mark>"); } catch (e) {}
-      });
-      return out;
+    /* Surligne dans le texte BRUT puis échappe segment par segment : surligner
+       du texte déjà échappé ferait matcher « amp » au milieu de « &amp; ». */
+    function highlight(raw, toks) {
+      raw = raw || "";
+      var ts = toks.filter(function (t) { return t && t.length >= 2; });
+      if (!ts.length) return esc(raw);
+      var re;
+      try { re = new RegExp("(" + ts.map(escRe).join("|") + ")", "gi"); }
+      catch (e) { return esc(raw); }
+      var out = "", last = 0, m;
+      while ((m = re.exec(raw)) !== null) {
+        out += esc(raw.slice(last, m.index)) + "<mark>" + esc(m[0]) + "</mark>";
+        last = m.index + m[0].length;
+        if (m.index === re.lastIndex) re.lastIndex++;
+      }
+      return out + esc(raw.slice(last));
     }
     function isTyping(el) {
       if (!el) return false;
@@ -841,9 +850,9 @@
       }
       list.innerHTML = items.map(function (it, idx) {
         return '<li class="cmdk__item" role="option" id="cmdk-opt-' + idx + '" data-i="' + idx + '" data-href="' + esc(root + "pages/" + it.d + "/" + it.f) + '">' +
-          '<span class="cmdk__item-title">' + highlight(esc(it.t), tk) + '</span>' +
+          '<span class="cmdk__item-title">' + highlight(it.t, tk) + '</span>' +
           '<span class="cmdk__item-course">' + esc(it.ct) + '</span>' +
-          '<span class="cmdk__item-snippet">' + highlight(esc(it.s), tk) + '</span>' +
+          '<span class="cmdk__item-snippet">' + highlight(it.s, tk) + '</span>' +
           '</li>';
       }).join("");
       input.setAttribute("aria-expanded", "true");
