@@ -7,6 +7,15 @@
   "use strict";
 
   var DATA = [
+    /* ----- Ce site -----
+       Placés en tête : c'est la seule catégorie que le lecteur peut essayer
+       immédiatement, sans quitter la page. */
+    { cat: "Ce site", keys: "/", desc: "Ouvrir la recherche rapide depuis n'importe quelle page" },
+    { cat: "Ce site", keys: "Ctrl+K", desc: "Ouvrir la recherche rapide, même en train d'écrire dans un champ" },
+    { cat: "Ce site", keys: "Haut / Bas", desc: "Parcourir les résultats de la recherche rapide" },
+    { cat: "Ce site", keys: "Entrée", desc: "Ouvrir la leçon sélectionnée" },
+    { cat: "Ce site", keys: "Échap", desc: "Fermer la recherche rapide et revenir où on en était" },
+
     /* ----- VS Code ----- */
     { cat: "VS Code", keys: "Ctrl+P", desc: "Ouvrir un fichier par son nom" },
     { cat: "VS Code", keys: "Ctrl+Shift+P", desc: "Palette de commandes" },

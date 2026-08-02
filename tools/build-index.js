@@ -568,12 +568,21 @@ function buildCheats(problems) {
 function searchNorm(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
+/* Longueur de l'extrait embarque dans search-lite. Elle decide de DEUX choses a
+   la fois : ce qu'on AFFICHE sous chaque resultat de la palette, et ce dans quoi
+   la palette CHERCHE (elle n'a pas l'index inverse complet, trop lourd a charger).
+   A 160 caracteres, la recherche etait quasi limitee aux titres : << garbage
+   collector >> ne renvoyait rien alors que la recherche plein-texte trouve
+   12 lecons. A 420, le rappel remonte nettement pour un cout maitrise, l'index
+   restant charge EN DIFFERE a la premiere ouverture (donc zero cout au
+   chargement des pages). L'affichage, lui, tronque a 160 en CSS. */
+var SNIPPET_MAX = 420;
 function searchSnippet(x) {
   x = String(x || "");
-  if (x.length <= 160) return x;
-  var cut = x.slice(0, 160);
+  if (x.length <= SNIPPET_MAX) return x;
+  var cut = x.slice(0, SNIPPET_MAX);
   var sp = cut.lastIndexOf(" ");
-  if (sp > 120) cut = cut.slice(0, sp);
+  if (sp > SNIPPET_MAX * 0.75) cut = cut.slice(0, sp);
   return cut + "…";
 }
 function buildInverted(texts) {

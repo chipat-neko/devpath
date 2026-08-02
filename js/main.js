@@ -902,6 +902,28 @@
         open();
       }
     });
+
+    /* Un raccourci que personne ne peut deviner n'existe pas. On pose donc un
+       bouton dans l'en-tête : il rend la palette atteignable à la souris ET
+       annonce la touche « / » à ceux qui préfèrent le clavier. Même patron que
+       initAccent() : insertion en tête de .header-actions. */
+    var actions = document.querySelector(".header-actions");
+    if (actions) {
+      var dec = document.createElement("button");
+      dec.type = "button";
+      dec.className = "cmdk-trigger";
+      dec.setAttribute("aria-label", "Rechercher une leçon (raccourci : barre oblique)");
+      dec.title = "Rechercher une leçon  —  /  ou  Ctrl+K";
+      dec.innerHTML =
+        '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
+        '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
+        '<kbd class="cmdk-trigger__kbd" aria-hidden="true">/</kbd>';
+      dec.addEventListener("click", function () {
+        if (overlay && !overlay.hidden) close();
+        else open();
+      });
+      actions.insertBefore(dec, actions.firstChild);
+    }
   }
 
   /* --------------------------------------------------------------- Init */
