@@ -801,10 +801,16 @@
       wrap.className = "exo-try";
 
       var inputId = "exo-" + courseId + "-" + i;
+      /* La vraie micro-question était dans le placeholder, qui disparaît à la
+         première frappe : on la met dans le LIBELLÉ (persistant, lu par les
+         lecteurs d'écran). Le placeholder ne garde qu'une invite générique. (cf. C9) */
+      var question = entry.placeholder ? String(entry.placeholder).trim() : "";
       var label = document.createElement("label");
       label.className = "exo-try__label";
       label.setAttribute("for", inputId);
-      label.textContent = isCode ? "Écris ta réponse (code) :" : "Ta réponse :";
+      label.textContent = question
+        ? (isCode ? "Écris le code — " : "Ta réponse — ") + question
+        : (isCode ? "Écris ta réponse (code) :" : "Ta réponse :");
 
       var input = document.createElement(isCode ? "textarea" : "input");
       input.className = "exo-try__input";
@@ -812,7 +818,7 @@
       input.spellcheck = false;
       if (isCode) input.rows = 3;
       else input.type = "text";
-      if (entry.placeholder) input.setAttribute("placeholder", entry.placeholder);
+      input.setAttribute("placeholder", isCode ? "ton code ici…" : "ta réponse ici…");
 
       var bar = document.createElement("div");
       bar.className = "exo-try__bar";
