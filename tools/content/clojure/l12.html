@@ -1,0 +1,85 @@
+<p>Clojure mise sur des données souples&nbsp;: des maps qu'on passe partout, sans déclaration de type. C'est puissant, mais une question se pose&nbsp;: comment garantir qu'une map a bien la forme attendue&nbsp;? La réponse moderne de Clojure est <strong>clojure.spec</strong> — un système pour <em>décrire</em> la forme des données et des fonctions, puis les <strong>valider</strong>, les <em>expliquer</em>, et même <em>générer</em> des exemples pour les tests. C'est l'une des idées les plus marquantes du Clojure récent. Cette dernière leçon t'y initie.</p>
+
+<h2>L'idée&nbsp;: décrire la forme des données</h2>
+<p>Plutôt qu'un système de types statique, spec te laisse écrire des <strong>spécifications</strong> — des prédicats nommés — que tu appliques <em>quand tu veux</em> (à l'entrée d'une fonction, aux frontières du système, dans les tests). On charge spec ainsi&nbsp;:</p>
+<figure class="code-block" data-file="require.clj"><pre><code class="language-clojure">(require '[clojure.spec.alpha :as s])</code></pre></figure>
+
+<h2>Définir et utiliser une spec</h2>
+<p>Une spec est, à la base, un <strong>prédicat</strong> (une fonction renvoyant vrai/faux). On la nomme avec <code>s/def</code> (sous un keyword qualifié), puis on valide avec <code>s/valid?</code>.</p>
+<figure class="code-block" data-file="spec.clj"><pre><code class="language-clojure">;; Une spec : "un âge est un entier positif"
+(s/def :perso/age (s/and int? pos?))
+
+(s/valid? :perso/age 30)    ; → true
+(s/valid? :perso/age -5)    ; → false
+(s/valid? :perso/age "x")   ; → false</code></pre></figure>
+<p><code>s/and</code> combine plusieurs prédicats&nbsp;; <code>s/or</code> propose des alternatives. On réutilise n'importe quel prédicat Clojure (<code>int?</code>, <code>string?</code>, <code>pos?</code>…) et même des ensembles (<code>#{:rouge :vert :bleu}</code> est une spec valide&nbsp;!).</p>
+
+<h2>Expliquer pourquoi c'est invalide</h2>
+<p>L'atout majeur de spec&nbsp;: quand une donnée ne correspond pas, <code>s/explain</code> dit <strong>précisément pourquoi</strong>. Plus besoin de deviner.</p>
+<figure class="code-block" data-file="explain.clj"><pre><code class="language-clojure">(s/explain :perso/age -5)
+;; -5 - failed: pos? spec: :perso/age
+
+(s/explain-str :perso/age "abc")
+;; → une chaîne décrivant l'échec
+</code></pre></figure>
+<p>Ces messages sont précieux&nbsp;: validés à la frontière (une requête API, un fichier de config), ils transforment un bug silencieux en une erreur claire et localisée.</p>
+
+<h2>Spécifier une map</h2>
+<p>Le cas le plus utile en Clojure&nbsp;: décrire la forme d'une <strong>map</strong>. <code>s/keys</code> liste les clés <strong>requises</strong> et <strong>optionnelles</strong>, et chaque clé est validée par <em>sa propre</em> spec (du même nom).</p>
+<figure class="code-block" data-file="map-spec.clj"><pre><code class="language-clojure">(s/def :perso/nom string?)
+(s/def :perso/age (s/and int? pos?))
+
+;; Une personne = une map avec :nom et :age requis
+(s/def :perso/personne
+  (s/keys :req-un [:perso/nom :perso/age]))
+
+(s/valid? :perso/personne {:nom "Ada" :age 36})   ; → true
+(s/valid? :perso/personne {:nom "Bob"})           ; → false (:age manque)</code></pre></figure>
+<p><code>:req-un</code> («&nbsp;required unqualified&nbsp;») exige les clés <code>:nom</code> et <code>:age</code>. Chaque clé reprend la spec définie sous le même nom&nbsp;: l'organisation est élégante et composable.</p>
+
+<h2>Spécifier une fonction</h2>
+<p>On peut décrire le <strong>contrat d'une fonction</strong> avec <code>s/fdef</code>&nbsp;: ses arguments, sa valeur de retour. Couplé à l'instrumentation, Clojure vérifie alors les appels pendant les tests.</p>
+<figure class="code-block" data-file="fdef.clj"><pre><code class="language-clojure">(defn doubler [x] (* 2 x))
+
+(s/fdef doubler
+  :args (s/cat :x int?)
+  :ret int?)
+;; En test, un appel (doubler "non") sera signalé.</code></pre></figure>
+
+<h2>Générer des données de test</h2>
+<p>Conséquence remarquable&nbsp;: à partir d'une spec, Clojure peut <strong>générer automatiquement</strong> des exemples valides. Couplé aux tests de propriétés, cela teste ton code sur des centaines d'entrées variées sans que tu les écrives.</p>
+<figure class="code-block" data-file="gen.clj"><pre><code class="language-clojure">(require '[clojure.spec.gen.alpha :as gen])
+
+(gen/sample (s/gen :perso/age) 5)
+;; → par ex. (1 3 12 7 28) : des âges valides aléatoires</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir valider <em>partout</em>, comme un système de types statique permanent. Ce n'est pas l'esprit de spec&nbsp;: on valide aux <strong>frontières</strong> (entrées externes, données utilisateur, limites de modules) et dans les <strong>tests</strong>, pas à chaque appel interne — ce qui coûterait cher en performance. spec est un outil <em>ciblé et optionnel</em>, à dégainer là où la confiance dans les données est faible.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>spec incarne la philosophie de Rich Hickey sur les données&nbsp;: décrire ce qui est <em>vrai</em> d'une donnée, indépendamment de tout type nominal, et le vérifier quand c'est utile. C'est aussi un puissant outil de <strong>documentation vivante</strong>&nbsp;: une spec dit, sans ambiguïté, la forme attendue. Tu as maintenant fait le tour de Clojure — des bases jusqu'au polymorphisme, à la concurrence par canaux et à la spécification des données&nbsp;: un langage petit en surface, mais d'une profondeur remarquable.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une <strong>spec</strong> est un prédicat nommé (<code>s/def</code>)&nbsp;; on valide avec <code>s/valid?</code>, on combine avec <code>s/and</code>/<code>s/or</code>.</li>
+  <li><code>s/explain</code> dit <strong>pourquoi</strong> une donnée est invalide&nbsp;; <code>s/keys</code> spécifie la forme d'une <strong>map</strong>.</li>
+  <li><code>s/fdef</code> décrit le contrat d'une fonction&nbsp;; spec peut <strong>générer</strong> des données de test.</li>
+  <li>Valider aux <strong>frontières</strong> et dans les tests, pas partout&nbsp;: spec est un outil ciblé et optionnel.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'une spec, fondamentalement&nbsp;?</li><li>Que t'apporte <code>s/explain</code>&nbsp;?</li><li>Où faut-il valider, et où ne faut-il pas&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'une spec dans clojure.spec ?","a":["Un prédicat nommé qui décrit la forme attendue d'une donnée","Une déclaration de type statique obligatoire","Une classe","Un canal de communication"],"correct":0,"explain":"Une spec est à la base un prédicat (renvoyant vrai/faux) nommé avec s/def, qu'on applique quand on le veut."},
+  {"q":"Qu'apporte s/explain par rapport à s/valid? ?","a":["Il dit précisément pourquoi une donnée est invalide","Il valide plus vite","Il génère du code","Il supprime les données invalides"],"correct":0,"explain":"s/valid? renvoie juste true/false ; s/explain détaille la cause de l'échec — précieux aux frontières du système."},
+  {"q":"Où faut-il valider avec spec ?","a":["Aux frontières (entrées externes) et dans les tests, pas à chaque appel interne","Absolument partout, à chaque fonction","Jamais","Uniquement au démarrage du programme"],"correct":0,"explain":"spec est un outil ciblé : on valide là où la confiance dans les données est faible (entrées, limites de modules) et dans les tests, pas en continu (coût)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis une spec <code>:item/prix</code> qui exige un nombre positif.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(s/def :item/prix (s/and number? pos?))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Valide que <code>{:nom "Ada" :age 36}</code> respecte une spec de personne avec <code>:nom</code> et <code>:age</code> requis.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(s/def :p/nom string?)
+(s/def :p/age (s/and int? pos?))
+(s/def :p/personne (s/keys :req-un [:p/nom :p/age]))
+
+(s/valid? :p/personne {:nom "Ada" :age 36})   ; → true</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En une phrase, explique l'intérêt de pouvoir <em>générer</em> des données à partir d'une spec.</p><details><summary>Voir une solution</summary><p>À partir d'une spec, Clojure produit automatiquement des exemples valides et variés&nbsp;: couplé aux <strong>tests de propriétés</strong>, cela vérifie le code sur des centaines d'entrées qu'on n'aurait jamais écrites à la main, débusquant des cas limites inattendus — pour un coût d'écriture quasi nul (la spec sert à la fois de validation, de documentation et de générateur).</p></details></div>

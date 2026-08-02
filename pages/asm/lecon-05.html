@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Conventions d'appel et ABI — Leçon 05 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="Découvre l'ABI System V x86-64 : registres d'arguments, retour, caller/callee-saved, red zone, et comment relier asm et C avec un vrai exemple." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Structurer le code — Leçon 05</p>
+              <h1 class="lesson-header__title">Conventions d'appel et ABI</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 4</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>passer les arguments et récupérer le retour selon l'<strong>ABI System V</strong> (registres <code>rdi</code>…<code>r9</code>, <code>rax</code>)&nbsp;;</li>
+                  <li>distinguer les registres <strong>caller-saved</strong> des registres <strong>callee-saved</strong> et préserver les bons&nbsp;;</li>
+                  <li>écrire une fonction asm appelée depuis le C et appeler une fonction C depuis l'asm&nbsp;;</li>
+                  <li>comprendre le rôle de la <strong>red zone</strong> et pourquoi l'ABI est un contrat à respecter.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, tu as appris à manipuler des registres et la pile dans <em>tes</em> fonctions. Mais dès qu'un bout de code en appelle un autre — ton asm appelle <code>printf</code>, ou ton <code>main</code> en C appelle ta routine asm — il faut que les deux soient d'accord sur une question simple : « où je mets les arguments, et où je trouve le résultat ? ». Sans accord, c'est le chaos. Cet accord porte un nom : l'<strong>ABI</strong> (<em>Application Binary Interface</em>).</p>
+
+<p>Sur Linux x86-64, cet accord s'appelle l'<strong>ABI System V</strong>. C'est un document, suivi par <code>gcc</code>, <code>clang</code>, la <code>libc</code> et tout le système. Le comprendre, c'est pouvoir faire dialoguer ton assembleur avec n'importe quel code C — et inversement. C'est aussi comprendre, enfin, à quoi ressemble vraiment un appel de fonction sous le capot de tes langages préférés.</p>
+
+<h2>Un appel de fonction, c'est un contrat</h2>
+<p>En C, tu écris <code>int r = carre(5);</code> sans te demander où va le <code>5</code> ni d'où vient le résultat. Le compilateur, lui, le sait : il suit un protocole strict. Ce protocole répond à trois questions :</p>
+<ul>
+<li>où sont placés les <strong>arguments</strong> avant l'appel&nbsp;;</li>
+<li>où est placée la <strong>valeur de retour</strong> après l'appel&nbsp;;</li>
+<li>quels <strong>registres</strong> l'appelée a le droit d'écraser, et lesquels elle doit rendre intacts.</li>
+</ul>
+<p>Si l'appelant et l'appelée ne suivent pas le même protocole, l'argument arrive au mauvais endroit, ou un registre précieux est écrasé en douce. C'est pour ça qu'on parle de <strong>contrat</strong> : chacun fait des promesses, et compte sur celles de l'autre.</p>
+
+<h2>Passer les arguments : six registres, puis la pile</h2>
+<p>L'ABI System V fait passer les <strong>six premiers arguments entiers</strong> (ou pointeurs) dans des registres, dans cet ordre précis :</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; Ordre des arguments entiers / pointeurs :
+;   arg1 -&gt; rdi
+;   arg2 -&gt; rsi
+;   arg3 -&gt; rdx
+;   arg4 -&gt; rcx
+;   arg5 -&gt; r8
+;   arg6 -&gt; r9
+; arg7, arg8, ... -&gt; sur la pile (poussés dans l'ordre inverse)
+
+; Équivalent C : f(a, b, c) avec a, b, c entiers (long)
+;   mov rdi, a   ; 1er argument
+;   mov rsi, b   ; 2e  argument
+;   mov rdx, c   ; 3e  argument
+;   call f</code></pre></figure>
+<p>Un moyen mnémotechnique répandu : « <strong>Di</strong>ane <strong>Si</strong>lence <strong>D</strong>ort <strong>C</strong>hez <strong>8</strong> <strong>9</strong> » pour <code>rdi, rsi, rdx, rcx, r8, r9</code>. Au-delà de six arguments, les suivants partent sur la pile.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Passage des arguments selon l'ABI System V x86-64. Les six premiers arguments entiers ou pointeurs vont, dans l'ordre, dans les registres rdi pour le premier, puis rsi, rdx, rcx, r8 et r9 pour le sixième. À partir du septième, les arguments passent sur la pile. La valeur de retour entière est placée dans rax. Les flottants suivent une filière séparée, les registres xmm0 à xmm7.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Passage des arguments — ABI System V (entiers / pointeurs)</text>
+    <text class="d-mut" x="320" y="40" text-anchor="middle" font-size="9">les six premiers arguments dans des registres, dans cet ordre</text>
+    <text class="d-mut" x="70" y="66" text-anchor="middle" font-size="9">arg1</text>
+    <rect class="d-box" x="26" y="72" width="88" height="30" rx="4" /><text class="d-tag" x="70" y="92" text-anchor="middle" font-size="11">rdi</text>
+    <text class="d-mut" x="170" y="66" text-anchor="middle" font-size="9">arg2</text>
+    <rect class="d-box" x="126" y="72" width="88" height="30" rx="4" /><text class="d-tag" x="170" y="92" text-anchor="middle" font-size="11">rsi</text>
+    <text class="d-mut" x="270" y="66" text-anchor="middle" font-size="9">arg3</text>
+    <rect class="d-box" x="226" y="72" width="88" height="30" rx="4" /><text class="d-tag" x="270" y="92" text-anchor="middle" font-size="11">rdx</text>
+    <text class="d-mut" x="370" y="66" text-anchor="middle" font-size="9">arg4</text>
+    <rect class="d-box" x="326" y="72" width="88" height="30" rx="4" /><text class="d-tag" x="370" y="92" text-anchor="middle" font-size="11">rcx</text>
+    <text class="d-mut" x="470" y="66" text-anchor="middle" font-size="9">arg5</text>
+    <rect class="d-box" x="426" y="72" width="88" height="30" rx="4" /><text class="d-tag" x="470" y="92" text-anchor="middle" font-size="11">r8</text>
+    <text class="d-mut" x="570" y="66" text-anchor="middle" font-size="9">arg6</text>
+    <rect class="d-box" x="526" y="72" width="88" height="30" rx="4" /><text class="d-tag" x="570" y="92" text-anchor="middle" font-size="11">r9</text>
+    <rect class="d-box" x="26" y="128" width="290" height="30" rx="4" /><text class="d-text" x="171" y="147" text-anchor="middle" font-size="9">arg7, arg8, … → sur la pile</text>
+    <rect class="d-accent" x="324" y="128" width="290" height="30" rx="4" /><text class="d-text" x="469" y="147" text-anchor="middle" font-size="9">valeur de retour → rax</text>
+    <text class="d-mut" x="320" y="182" text-anchor="middle" font-size="8">flottants (float / double) : filière séparée xmm0–xmm7</text>
+  </svg>
+  <figcaption>Six registres pour les six premiers arguments entiers, dans l'ordre&nbsp;; au-delà, la pile. Le retour entier sort par <code>rax</code>.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les arguments en virgule flottante (<code>float</code>, <code>double</code>) suivent une autre filière : ils passent dans les registres <code>xmm0</code> à <code>xmm7</code>. On garde ça pour plus tard&nbsp;; ici, on reste sur les entiers et les pointeurs.</p></div></div>
+
+<h2>Récupérer le retour : tout passe par rax</h2>
+<p>La valeur de retour entière (ou un pointeur) est placée dans <code>rax</code>. C'est tout. Si la fonction renvoie un <code>int</code> (32 bits), le résultat est dans <code>eax</code> (la moitié basse de <code>rax</code>).</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; int carre(int n) { return n * n; }
+carre:
+    mov eax, edi      ; eax = n (1er arg int, dans edi = bas de rdi)
+    imul eax, eax     ; eax = n * n
+    ret               ; le retour est dans eax/rax
+
+; Après "call carre" avec edi = 5 :
+;   eax = 25          ; l'appelant lit le résultat dans eax</code></pre></figure>
+<p>Remarque qu'on lit l'argument dans <code>edi</code> (32 bits) et qu'on rend le résultat dans <code>eax</code> (32 bits), parce qu'on travaille avec des <code>int</code>. Écrire dans <code>eax</code> met d'ailleurs automatiquement à zéro la moitié haute de <code>rax</code>. Pour des <code>long</code> (64 bits), on utiliserait <code>rdi</code> et <code>rax</code>.</p>
+
+<h2>Caller-saved vs callee-saved : qui sauvegarde quoi ?</h2>
+<p>Voici le point qui piège tout le monde au début. Quand tu fais <code>call</code>, la fonction appelée a le droit d'écraser certains registres sans te prévenir. L'ABI classe les registres en deux camps.</p>
+<ul>
+<li><strong>Caller-saved</strong> (volatils) : <code>rax</code>, <code>rcx</code>, <code>rdx</code>, <code>rsi</code>, <code>rdi</code>, <code>r8</code>–<code>r11</code>. L'appelée peut les écraser librement. Si l'<em>appelant</em> en a besoin après l'appel, c'est à lui de les sauvegarder avant.</li>
+<li><strong>Callee-saved</strong> (préservés) : <code>rbx</code>, <code>rbp</code>, <code>r12</code>, <code>r13</code>, <code>r14</code>, <code>r15</code> (et <code>rsp</code>, bien sûr). L'appelée doit les rendre <strong>intacts</strong>. Si elle veut les utiliser, elle doit les sauvegarder au début et les restaurer avant <code>ret</code>.</li>
+</ul>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; Une fonction qui a besoin de rbx (callee-saved) :
+ma_fonction:
+    push rbx          ; je sauvegarde rbx car je vais l'écraser
+    ; ... je me sers de rbx librement ici ...
+    mov rbx, rdi
+    add rbx, 10
+    mov rax, rbx      ; retour dans rax
+    pop rbx           ; je restaure rbx AVANT de rendre la main
+    ret               ; l'appelant retrouve son rbx intact</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Les deux camps de registres face à un call. À gauche, les registres caller-saved ou volatils : rax, rcx, rdx, rsi, rdi, r8 à r11. La fonction appelée peut les écraser ; l'appelant les sauvegarde lui-même s'il y tient. À droite, les registres callee-saved ou préservés : rbx, rbp, r12 à r15. La fonction appelée doit les rendre intacts, en les empilant au début et en les dépilant avant ret.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux camps de registres autour d'un call</text>
+    <rect class="d-frame" x="24" y="36" width="288" height="150" rx="6" />
+    <text class="d-tag" x="168" y="60" text-anchor="middle" font-size="11">Caller-saved (volatils)</text>
+    <text class="d-text" x="168" y="86" text-anchor="middle" font-size="11">rax rcx rdx rsi rdi</text>
+    <text class="d-text" x="168" y="106" text-anchor="middle" font-size="11">r8 r9 r10 r11</text>
+    <line class="d-line" x1="44" y1="122" x2="292" y2="122" />
+    <text class="d-mut" x="168" y="142" text-anchor="middle" font-size="9">l'appelée peut les écraser</text>
+    <text class="d-mut" x="168" y="162" text-anchor="middle" font-size="9">→ l'appelant les sauve s'il y tient</text>
+    <rect class="d-frame" x="328" y="36" width="288" height="150" rx="6" />
+    <text class="d-tag" x="472" y="60" text-anchor="middle" font-size="11">Callee-saved (préservés)</text>
+    <text class="d-text" x="472" y="86" text-anchor="middle" font-size="11">rbx rbp</text>
+    <text class="d-text" x="472" y="106" text-anchor="middle" font-size="11">r12 r13 r14 r15</text>
+    <line class="d-line" x1="348" y1="122" x2="596" y2="122" />
+    <text class="d-mut" x="472" y="142" text-anchor="middle" font-size="9">l'appelée doit les rendre intacts</text>
+    <text class="d-mut" x="472" y="162" text-anchor="middle" font-size="9">→ push au début, pop avant ret</text>
+  </svg>
+  <figcaption>Face à un <code>call</code>&nbsp;: les volatils peuvent être écrasés par l'appelée&nbsp;; les préservés doivent lui survivre.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Règle simple : si une valeur doit <strong>survivre à un <code>call</code></strong> et que tu veux la garder dans un registre, mets-la dans un registre <strong>callee-saved</strong> (<code>rbx</code>, <code>r12</code>…). Tu paies un <code>push</code>/<code>pop</code> en entrée et sortie, mais elle ne sera pas écrasée par les fonctions que tu appelles.</p></div></div>
+
+<h2>La red zone : 128 octets gratuits sous la pile</h2>
+<p>L'ABI System V offre un petit luxe aux fonctions <em>feuilles</em> (celles qui n'appellent personne) : les <strong>128 octets situés juste sous <code>rsp</code></strong> (à des adresses inférieures) sont réservés à la fonction courante. C'est la <strong>red zone</strong>. Tu peux y stocker des variables temporaires <em>sans</em> décrémenter <code>rsp</code>.</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; Fonction feuille : on utilise la red zone sans toucher rsp
+feuille:
+    mov [rsp-8],  rdi    ; je range une valeur sous rsp (red zone)
+    mov [rsp-16], rsi    ; une autre, sans "sub rsp, ..."
+    ; ... calculs ...
+    ret                  ; pas de "add rsp" à faire : rsp n'a pas bougé</code></pre></figure>
+<p>Pourquoi la traiter à part ? Parce que c'est une zone protégée par convention : tant que tu n'appelles aucune fonction, rien ne l'écrase. En revanche, dès que tu fais un <code>call</code>, l'appel <code>push</code> l'adresse de retour à l'adresse pointée par <code>rsp</code> (en décrémentant <code>rsp</code>) et déborde sur cette zone. La red zone est donc réservée aux fonctions feuilles.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 195" role="img" aria-label="La red zone de l'ABI System V. À gauche, une fonction feuille qui n'appelle personne : les 128 octets situés juste sous le pointeur de pile rsp forment la red zone, utilisable pour des variables temporaires sans déplacer rsp. À droite, dès qu'on exécute un call, l'adresse de retour est empilée sous rsp et vient écraser cette zone, qui n'est donc plus disponible.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">La red zone : 128 octets sous rsp, réservés aux fonctions feuilles</text>
+    <text class="d-mut" x="200" y="40" text-anchor="middle" font-size="10">fonction feuille (aucun call)</text>
+    <rect class="d-box" x="112" y="48" width="176" height="26" rx="2" /><text class="d-mut" x="200" y="65" text-anchor="middle" font-size="9">… pile utilisée …</text>
+    <text class="d-tag" x="294" y="65" text-anchor="start" font-size="9">← rsp</text>
+    <rect class="d-accent" x="112" y="80" width="176" height="70" rx="2" /><text class="d-text" x="200" y="104" text-anchor="middle" font-size="10">red zone</text><text class="d-text" x="200" y="122" text-anchor="middle" font-size="9">128 octets libres</text><text class="d-text" x="200" y="138" text-anchor="middle" font-size="9">sans toucher rsp</text>
+    <text class="d-mut" x="470" y="40" text-anchor="middle" font-size="10">dès qu'on fait un call</text>
+    <rect class="d-box" x="382" y="48" width="176" height="26" rx="2" /><text class="d-mut" x="470" y="65" text-anchor="middle" font-size="9">… pile utilisée …</text>
+    <rect class="d-box" x="382" y="80" width="176" height="26" rx="2" /><text class="d-text" x="470" y="97" text-anchor="middle" font-size="9">adresse de retour</text>
+    <text class="d-tag" x="564" y="97" text-anchor="start" font-size="9">← rsp</text>
+    <rect class="d-frame" x="382" y="112" width="176" height="38" rx="2" /><text class="d-mut" x="470" y="135" text-anchor="middle" font-size="9">zone écrasée ✗</text>
+    <text class="d-mut" x="320" y="170" text-anchor="middle" font-size="8">adresses basses vers le bas ↓ — un call empile sous rsp et détruit la red zone</text>
+  </svg>
+  <figcaption>Une fonction feuille range ses temporaires dans la red zone sans bouger <code>rsp</code>&nbsp;; un <code>call</code> l'écrase, d'où sa réservation aux feuilles.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La red zone n'existe <strong>pas</strong> dans le code noyau ni dans certains environnements (drapeau <code>-mno-red-zone</code>). Et elle ne survit pas à un <code>call</code>. Ne t'y appuie que dans une fonction feuille, en espace utilisateur.</p></div></div>
+
+<h2>Exemple complet : une fonction asm appelée depuis le C</h2>
+<p>Mettons tout ensemble. On écrit <code>carre</code> en assembleur, et un <code>main</code> en C qui l'appelle. On compile les deux ensemble avec <code>gcc</code>.</p>
+<figure class="code-block" data-file="carre.asm"><pre><code class="language-nasm">; carre.asm  —  int carre(int n) { return n * n; }
+section .text
+    global carre        ; rend le symbole visible pour l'éditeur de liens
+
+carre:
+    mov eax, edi        ; eax = n   (1er argument int -&gt; edi)
+    imul eax, eax       ; eax = n * n
+    ret                 ; retour dans eax</code></pre></figure>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">/* main.c */
+#include &lt;stdio.h&gt;
+
+int carre(int n);       /* déclaration : définie en asm */
+
+int main(void) {
+    int r = carre(7);
+    printf("carre(7) = %d\n", r);
+    return 0;
+}</code></pre></figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">nasm -f elf64 carre.asm -o carre.o    # assemble l'asm
+gcc main.c carre.o -o prog            # gcc compile le C et lie le tout
+./prog
+# carre(7) = 49</code></pre></figure>
+<p class="code-caption">Le C met <code>7</code> dans <code>edi</code>, fait <code>call carre</code>, puis lit le résultat dans <code>eax</code>. Tout marche parce que les deux côtés respectent l'ABI.</p>
+
+<h2>L'inverse : appeler une fonction C depuis l'asm</h2>
+<p>Le contrat marche dans les deux sens. Ici, notre asm appelle <code>printf</code> de la <code>libc</code>. On doit donc charger les arguments dans les bons registres avant le <code>call</code>.</p>
+<figure class="code-block" data-file="appel.asm"><pre><code class="language-nasm">section .data
+    fmt: db "valeur = %d", 10, 0   ; chaîne de format "...\n\0"
+
+section .text
+    global main
+    extern printf                  ; printf vient de la libc
+
+main:
+    push rbp                       ; aligne la pile sur 16 octets
+                                   ; (rsp doit être multiple de 16 au call)
+    mov  rdi, fmt                  ; 1er arg de printf : le format
+    mov  esi, 42                   ; 2e  arg : la valeur (int) -&gt; esi
+    xor  eax, eax                  ; 0 registre flottant utilisé (varargs)
+    call printf
+    pop  rbp                       ; on restaure la pile
+    xor  eax, eax                  ; main renvoie 0
+    ret
+
+; Compilation : nasm -f elf64 appel.asm -o appel.o ; gcc appel.o -o prog
+; Sortie : valeur = 42</code></pre></figure>
+<p class="code-caption">Deux détails ABI cruciaux : au moment d'un <code>call</code>, <code>rsp</code> doit être aligné sur 16 octets (le <code>push rbp</code> rétablit ici l'alignement cassé par l'adresse de retour), et pour une fonction à arguments variables comme <code>printf</code>, <code>al</code> doit contenir le nombre d'arguments flottants — d'où <code>xor eax, eax</code>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le segfault qui ne frappait qu'<em>ailleurs</em>. Une équipe optimise une routine de traitement d'image en assembleur&nbsp;; celle-ci appelle une fonction de la <code>libc</code>. Sur la machine du développeur, tout marche. En production, plantage immédiat&nbsp;: <em>Segmentation fault</em> dans une instruction <code>movaps</code> au cœur de la <code>libc</code> — du code que personne dans l'équipe n'avait écrit. La cause&nbsp;: la routine appelait la <code>libc</code> avec <code>rsp</code> mal aligné (un <code>push</code> manquait). <code>movaps</code> exige une adresse multiple de 16&nbsp;; selon l'état exact de la pile à l'appel, l'alignement tombait <em>parfois</em> juste par chance sur une machine et pas sur l'autre — d'où un bug «&nbsp;fantôme&nbsp;» reproductible seulement en prod. Le correctif tenait en une instruction. Depuis, la règle «&nbsp;<code>rsp</code> multiple de 16 à chaque <code>call</code>&nbsp;» est vérifiée en revue&nbsp;: un manquement à l'ABI ne se lit pas dans le code, il ne se voit qu'à l'exécution, souvent loin du vrai coupable.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier l'alignement de pile.</strong> À l'entrée d'une fonction, <code>rsp</code> est décalé de 8 (à cause de l'adresse de retour empilée par <code>call</code>). Avant de faire toi-même un <code>call</code>, <code>rsp</code> doit être un multiple de 16. Un <code>push</code> (ou <code>sub rsp, 8</code>) suffit souvent à rétablir l'alignement. Sinon, certaines instructions SSE de la <code>libc</code> plantent par <em>segfault</em>.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Garder une valeur dans un registre caller-saved à travers un <code>call</code>.</strong> Tu ranges un résultat dans <code>rsi</code>, tu appelles <code>printf</code>, et après le <code>call</code> ton <code>rsi</code> est écrasé : <code>printf</code> avait le droit. Pour survivre à un appel, utilise un registre callee-saved (<code>rbx</code>, <code>r12</code>…) ou la pile.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Modifier un registre callee-saved sans le restaurer.</strong> Si ta fonction écrit dans <code>rbx</code> sans faire <code>push rbx</code> / <code>pop rbx</code>, l'appelant retrouve un <code>rbx</code> corrompu et plante plus loin — souvent loin du vrai coupable, ce qui rend le bug pénible à traquer.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'ABI System V décrit aussi le retour des <strong>structures</strong> (petites en <code>rax:rdx</code>, grosses via un pointeur caché passé dans <code>rdi</code>), les <strong>varargs</strong> en détail, et le rôle de <code>al</code> pour les fonctions variadiques. Windows utilise une convention <em>différente</em> (<code>rcx, rdx, r8, r9</code> + <em>shadow space</em>, pas de red zone) : ton asm Linux n'est pas portable tel quel. Compile un <code>.c</code> avec <code>gcc -S</code> et lis le <code>.s</code> produit : tu y verras l'ABI appliquée par le compilateur lui-même.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — ABI System V x86-64</caption>
+    <thead><tr><th scope="col">Rôle</th><th scope="col">Registre(s)</th><th scope="col">Remarque</th></tr></thead>
+    <tbody>
+      <tr><td>Arguments entiers 1→6</td><td><code>rdi rsi rdx rcx r8 r9</code></td><td>au-delà : sur la pile</td></tr>
+      <tr><td>Valeur de retour</td><td><code>rax</code> (<code>eax</code> pour un <code>int</code>)</td><td>écrire <code>eax</code> zéro-étend <code>rax</code></td></tr>
+      <tr><td>Caller-saved (volatils)</td><td><code>rax rcx rdx rsi rdi r8-r11</code></td><td>l'appelée peut les écraser</td></tr>
+      <tr><td>Callee-saved (préservés)</td><td><code>rbx rbp r12-r15</code></td><td><code>push</code>/<code>pop</code> autour de leur usage</td></tr>
+      <tr><td>Alignement au <code>call</code></td><td><code>rsp</code> multiple de 16</td><td>sinon les SSE de la libc plantent</td></tr>
+      <tr><td>Red zone</td><td>128 octets sous <code>rsp</code></td><td>fonctions feuilles uniquement</td></tr>
+      <tr><td>Flottants (arg / retour)</td><td><code>xmm0-xmm7</code> / <code>xmm0</code></td><td>filière séparée</td></tr>
+      <tr><td>Varargs (<code>printf</code>…)</td><td><code>al</code> = nb d'args flottants</td><td><code>xor eax, eax</code> si aucun</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>ABI</dt><dd><em>Application Binary Interface</em>&nbsp;: contrat binaire (passage d'arguments, retour, registres préservés) qui permet à du code compilé séparément de coopérer.</dd>
+  <dt>ABI System V</dt><dd>La convention d'appel de Linux et macOS sur x86-64, suivie par <code>gcc</code>, <code>clang</code> et la <code>libc</code>&nbsp;; Windows en utilise une différente.</dd>
+  <dt>Convention d'appel</dt><dd>Ensemble de règles fixant où vont les arguments et la valeur de retour, et qui sauvegarde quels registres.</dd>
+  <dt>Caller-saved (volatil)</dt><dd>Registre que la fonction appelée peut écraser&nbsp;; l'appelant le sauvegarde lui-même s'il en a besoin après l'appel.</dd>
+  <dt>Callee-saved (préservé)</dt><dd>Registre que la fonction appelée doit rendre intact&nbsp;: elle l'empile (<code>push</code>) au début et le restaure (<code>pop</code>) avant <code>ret</code>.</dd>
+  <dt>Red zone</dt><dd>128 octets sous <code>rsp</code> utilisables sans déplacer <code>rsp</code>, réservés aux fonctions feuilles.</dd>
+  <dt>Alignement de pile</dt><dd>Exigence que <code>rsp</code> soit un multiple de 16 au moment d'un <code>call</code>, sous peine de crash des instructions SSE de la <code>libc</code>.</dd>
+  <dt>Fonction feuille</dt><dd>Fonction qui n'appelle aucune autre fonction&nbsp;; elle seule peut compter sur la red zone.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Les 6 premiers arguments entiers passent dans <code>rdi, rsi, rdx, rcx, r8, r9</code>&nbsp;; au-delà, sur la pile.</li>
+<li>La valeur de retour entière est dans <code>rax</code> (ou <code>eax</code> pour un <code>int</code>).</li>
+<li><strong>Caller-saved</strong> (<code>rax, rcx, rdx, rsi, rdi, r8–r11</code>) : peuvent être écrasés par l'appelée.</li>
+<li><strong>Callee-saved</strong> (<code>rbx, rbp, r12–r15</code>) : l'appelée doit les restaurer.</li>
+<li>La <strong>red zone</strong> (128 octets sous <code>rsp</code>) sert aux fonctions feuilles, sans toucher <code>rsp</code>.</li>
+<li><code>rsp</code> doit être aligné sur 16 octets au moment d'un <code>call</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une fonction C reçoit <code>f(a, b, c, d)</code> avec quatre entiers. Dans quels registres arrivent <code>a</code> et <code>d</code> ?</li>
+<li>Tu écris une fonction asm qui appelle <code>printf</code> deux fois et veut garder un compteur entre les deux appels. Quel type de registre choisis-tu, et pourquoi ?</li>
+<li>Pourquoi ne peux-tu pas utiliser la red zone dans une fonction qui fait elle-même un <code>call</code> ?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Une fonction C reçoit f(a, b, c, d) avec quatre entiers. Dans quels registres arrivent a et d ?","a":["a arrive dans rdi (premier) et d dans rcx (quatrième), selon l'ordre rdi, rsi, rdx, rcx, r8, r9","a dans rax, d dans rdx","a dans rsi, d dans r8","Tous sur la pile"],"correct":0,"explain":"L'ABI System V passe les six premiers arguments entiers dans rdi, rsi, rdx, rcx, r8, r9. Le premier (a) va donc dans rdi et le quatrième (d) dans rcx ; au-delà de six, les arguments passent par la pile."},
+  {"q":"Tu écris une fonction asm qui appelle printf deux fois et veut garder un compteur entre les deux appels. Quel type de registre choisis-tu, et pourquoi ?","a":["Un registre callee-saved (ex. rbx, r12 à r15), car sa valeur est préservée à travers l'appel : printf doit le restaurer s'il l'utilise. Un registre volatile serait écrasé","Un registre volatile, plus rapide","Le registre rax","N'importe lequel, c'est égal"],"correct":0,"explain":"Les registres caller-saved (volatils) peuvent être détruits par une fonction appelée. Pour conserver une valeur à travers un appel à printf, on la met dans un registre callee-saved (rbx, r12-r15), que l'appelé s'engage à préserver."},
+  {"q":"Pourquoi ne peux-tu pas utiliser la red zone dans une fonction qui fait elle-même un call ?","a":["Parce que la red zone (128 octets sous rsp) n'est garantie que si la fonction n'appelle personne ; un call y écrit (adresse de retour) et l'appelé peut s'en servir, écrasant tes données","Parce que la red zone est en lecture seule","Parce qu'elle n'existe pas sous Linux","Parce qu'elle est trop petite"],"correct":0,"explain":"La red zone est une zone de 128 octets sous rsp utilisable sans ajuster la pile, mais uniquement dans une fonction feuille. Dès qu'on fait un call, l'adresse de retour empilée et le code appelé peuvent écrire dans cette zone, corrompant ce qu'on y avait rangé."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+{"type":"text","accept":["edi","rdi"],"placeholder":"Le registre du 1er argument entier (System V ABI) : e…/r…","hints":["Le même qui sert de 1er argument aux syscalls.","32 bits : edi ; 64 bits : rdi.","Le 2e argument, lui, est dans esi/rsi."],"link":{"href":"lecon-05.html","label":"Revoir l'ABI"}},
+{"type":"text","accept":["rbx","r12","r13","r14","r15"],"placeholder":"Un registre « callee-saved » pour survivre à printf (rbx ou r12-r15)","hints":["Ces registres sont préservés par la fonction appelée.","rbx, rbp, r12 à r15.","Commence par r."],"link":{"href":"lecon-05.html","label":"Revoir callee-saved"}},
+{"type":"text","accept":["[rsp+8]","[rsp + 8]","rsp+8"],"placeholder":"L'emplacement du 7e argument à l'entrée : [rsp + …]","hints":["[rsp] contient l'adresse de retour (8 octets).","a7 est juste au-dessus, donc décalé de 8.","[rsp + 8]."],"link":{"href":"lecon-05.html","label":"Revoir les arguments sur la pile"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction asm <code>somme(int a, int b)</code> qui renvoie <code>a + b</code>, appelable depuis le C. Donne aussi la ligne <code>gcc</code> qui la lie à un <code>main.c</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">; somme.asm  —  int somme(int a, int b) { return a + b; }
+section .text
+    global somme
+somme:
+    mov eax, edi      ; eax = a   (1er arg)
+    add eax, esi      ; eax = a + b   (2e arg)
+    ret               ; retour dans eax
+
+; nasm -f elf64 somme.asm -o somme.o
+; gcc main.c somme.o -o prog</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction asm <code>triple_et_affiche(int n)</code> qui calcule <code>n * 3</code>, le garde à travers un appel à <code>printf</code>, et l'affiche. Utilise un registre callee-saved pour préserver la valeur, et pense à le sauvegarder. Attention aussi à l'alignement de pile avant le <code>call</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">section .data
+    fmt: db "triple = %d", 10, 0
+
+section .text
+    global triple_et_affiche
+    extern printf
+triple_et_affiche:
+    push rbx              ; callee-saved : je le sauvegarde
+                          ; (ce push réaligne aussi rsp sur 16)
+    mov  eax, edi         ; eax = n
+    imul eax, eax, 3      ; eax = n * 3
+    mov  ebx, eax         ; je le range dans ebx (survit au call)
+    mov  rdi, fmt         ; 1er arg printf
+    mov  esi, ebx         ; 2e  arg : la valeur
+    xor  eax, eax         ; 0 arg flottant
+    call printf           ; printf peut écraser rsi/rdi, pas rbx
+    mov  eax, ebx         ; on renvoie n * 3
+    pop  rbx              ; je restaure rbx
+    ret
+
+; Avec n = 4 : affiche "triple = 12" et renvoie 12 dans eax</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction asm <code>septieme(long a1, long a2, long a3, long a4, long a5, long a6, long a7)</code> qui renvoie le <strong>septième</strong> argument. Comme il dépasse les six registres, il arrive sur la pile : à toi de le retrouver. Indice : à l'entrée, <code>[rsp]</code> contient l'adresse de retour, et <code>a7</code> est juste au-dessus.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">; long septieme(a1..a6 dans registres, a7 sur la pile)
+section .text
+    global septieme
+septieme:
+    ; À l'entrée :
+    ;   [rsp]      = adresse de retour (empilée par call)
+    ;   [rsp + 8]  = a7  (7e argument, poussé par l'appelant)
+    mov rax, [rsp + 8]   ; rax = a7
+    ret                  ; on le renvoie tel quel
+
+; a1..a6 sont dans rdi, rsi, rdx, rcx, r8, r9 (ignorés ici)
+; Si l'appelant fait septieme(1,2,3,4,5,6,7) -&gt; rax = 7</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-nasm.min.js" defer></script>
+  </body>
+</html>

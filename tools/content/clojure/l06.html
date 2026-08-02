@@ -1,0 +1,73 @@
+<p>On a répété le mot <strong>immuabilité</strong> depuis la première leçon&nbsp;; il est temps de comprendre précisément ce qu'il signifie et — question naturelle — comment Clojure peut être <em>efficace</em> si rien ne se modifie jamais. La réponse tient dans une idée élégante&nbsp;: les <strong>structures de données persistantes</strong> et le <strong>partage de structure</strong>. Cette leçon est plus conceptuelle&nbsp;; elle éclaire le pilier de tout le langage.</p>
+
+<h2>Qu'est-ce que l'immuabilité&nbsp;?</h2>
+<p>Une valeur <strong>immuable</strong> ne change jamais après sa création. En Clojure, c'est le cas par défaut de toutes les collections. Quand on «&nbsp;modifie&nbsp;» une map avec <code>assoc</code>, on obtient une <strong>nouvelle</strong> map&nbsp;; l'ancienne reste exactement telle quelle, accessible par quiconque la détenait.</p>
+<figure class="code-block" data-file="immuable.clj"><pre><code class="language-clojure">(def v1 [1 2 3])
+(def v2 (conj v1 4))
+
+v1    ; → [1 2 3]    (intacte)
+v2    ; → [1 2 3 4]  (nouvelle valeur)</code></pre></figure>
+<p><code>v1</code> et <code>v2</code> coexistent. Aucune action sur <code>v2</code> ne pourra jamais affecter <code>v1</code>. C'est une garantie absolue, pas une convention.</p>
+
+<h2>Pourquoi est-ce un avantage&nbsp;?</h2>
+<p>L'état mutable partagé est la source de bugs les plus retors&nbsp;: une fonction modifie une donnée que détenait aussi une autre partie du programme, et tout déraille. Avec l'immuabilité&nbsp;:</p>
+<ul>
+  <li>on <strong>raisonne localement</strong>&nbsp;: une valeur reçue ne changera jamais sous nos pieds&nbsp;;</li>
+  <li>on partage sans crainte entre threads (clé de la concurrence, leçon 7)&nbsp;;</li>
+  <li>on peut garder l'<strong>historique</strong> «&nbsp;gratuitement&nbsp;» (chaque version reste disponible)&nbsp;;</li>
+  <li>l'égalité est simple&nbsp;: deux valeurs égales le restent.</li>
+</ul>
+
+<h2>Le problème apparent&nbsp;: la performance</h2>
+<p>Objection naturelle&nbsp;: si «&nbsp;ajouter à un vecteur de un million d'éléments&nbsp;» recopiait tout, ce serait catastrophique. Clojure ne recopie <strong>pas</strong>. Il utilise des <strong>structures persistantes</strong> qui <strong>partagent</strong> la majeure partie de leurs données entre versions.</p>
+
+<h2>Le partage de structure</h2>
+<p>Imagine une liste chaînée <code>(2 3)</code>. Pour obtenir <code>(1 2 3)</code>, Clojure crée un seul nouveau maillon <code>1</code> qui <strong>pointe vers</strong> l'ancienne liste <code>(2 3)</code> — laquelle est réutilisée telle quelle. Deux listes, un seul exemplaire partagé de la queue.</p>
+<figure class="code-block" data-file="partage.clj"><pre><code class="language-clojure">(def a '(2 3))
+(def b (cons 1 a))   ; b = (1 2 3)
+
+;; 'a' n'est PAS copié : b réutilise a comme sa "queue".
+;; Coût de l'opération : un seul nouveau maillon, pas trois.</code></pre></figure>
+<p>Pour les vecteurs et maps, le principe est le même mais via des <strong>arbres</strong> (tries) à large branchement&nbsp;: une «&nbsp;modification&nbsp;» ne recrée que le chemin de la racine à la feuille concernée — typiquement quelques nœuds, même sur des millions d'éléments. Les autres branches sont partagées. Coût&nbsp;: logarithmique, en pratique quasi constant.</p>
+
+<h2>Une analogie&nbsp;: les versions d'un document</h2>
+<p>Pense à un système de gestion de versions. Chaque «&nbsp;commit&nbsp;» ne stocke pas une copie complète du projet&nbsp;; il enregistre les différences et réutilise tout ce qui n'a pas changé. Les structures persistantes font exactement cela en mémoire, automatiquement, à chaque <code>assoc</code> ou <code>conj</code>. Tu obtiens l'historique complet pour un coût marginal.</p>
+
+<h2>Écrire sans état partagé</h2>
+<p>En pratique, le style immuable consiste à <strong>faire passer les données</strong> de fonction en fonction, chacune renvoyant une version transformée, plutôt qu'à muter un état central.</p>
+<figure class="code-block" data-file="style.clj"><pre><code class="language-clojure">;; Style immuable : on transforme et on renvoie
+(defn ajouter-point [joueur n]
+  (update joueur :score + n))
+
+(def j {:nom "Ada" :score 10})
+(def j2 (ajouter-point j 5))   ; {:nom "Ada" :score 15}
+j                              ; {:nom "Ada" :score 10}  (intact)</code></pre></figure>
+<p>Aucune surprise possible&nbsp;: <code>ajouter-point</code> ne peut pas «&nbsp;abîmer&nbsp;» le joueur qu'on lui passe. Elle renvoie un nouveau joueur, point final.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Venant d'un langage impératif, on cherche par réflexe à «&nbsp;modifier une variable dans une boucle&nbsp;». En Clojure, ce réflexe mène à des contorsions. La bonne question n'est pas «&nbsp;comment muter&nbsp;?&nbsp;» mais «&nbsp;quelle transformation produit la valeur voulue&nbsp;?&nbsp;» — souvent un <code>map</code>/<code>filter</code>/<code>reduce</code>. L'état mutable existe (leçon 7), mais il est l'exception, contrôlée, pas la norme.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Quand un algorithme construit une grande structure par étapes et que la performance brute compte, Clojure offre les <strong>transients</strong>&nbsp;: une version temporairement mutable d'une collection persistante, qu'on «&nbsp;fige&nbsp;» à la fin avec <code>persistent!</code>. C'est un échappatoire local et sûr, invisible de l'extérieur&nbsp;: le résultat reste immuable. À réserver aux points chauds mesurés.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Immuable</strong>&nbsp;: une valeur ne change jamais&nbsp;; «&nbsp;modifier&nbsp;» crée une nouvelle valeur.</li>
+  <li>Avantages&nbsp;: raisonnement local, concurrence sûre, historique gratuit.</li>
+  <li><strong>Structures persistantes</strong> + <strong>partage de structure</strong>&nbsp;: pas de copie complète, coût quasi constant.</li>
+  <li>Style&nbsp;: faire circuler les données transformées, pas muter un état.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Après <code>(conj v 4)</code>, le vecteur <code>v</code> a-t-il changé&nbsp;?</li><li>Pourquoi l'immuabilité ne recopie-t-elle pas tout à chaque «&nbsp;modification&nbsp;»&nbsp;?</li><li>En quoi l'immuabilité aide-t-elle la concurrence&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée <code>v1 [1 2 3]</code>, puis <code>v2</code> en y ajoutant 4. Affiche les deux et constate que <code>v1</code> est intact.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(def v1 [1 2 3])
+(def v2 (conj v1 4))
+v1   ; → [1 2 3]
+v2   ; → [1 2 3 4]</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>renommer</code> qui renvoie une copie d'une map avec une nouvelle valeur pour <code>:nom</code>, sans muter l'originale.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(defn renommer [m nouveau]
+  (assoc m :nom nouveau))
+
+(def p {:nom "Ada" :age 36})
+(renommer p "Bob")   ; → {:nom "Bob" :age 36}
+p                    ; → {:nom "Ada" :age 36}  (intact)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique en une phrase pourquoi ajouter un élément à un vecteur d'un million d'entrées ne coûte pas un million d'opérations.</p><details><summary>Voir une solution</summary><p>Parce que le vecteur est une structure <strong>persistante</strong> fondée sur un arbre&nbsp;: «&nbsp;ajouter&nbsp;» ne recrée que le court chemin de la racine jusqu'à la feuille modifiée (quelques nœuds), et <strong>partage</strong> tout le reste de l'arbre avec la version précédente — d'où un coût logarithmique, et non proportionnel au nombre d'éléments.</p></details></div>

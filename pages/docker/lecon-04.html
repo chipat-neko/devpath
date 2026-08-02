@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Volumes, réseaux et ports — Leçon 04 · Docker · Syntaxe</title>
+    <meta name="description" content="Persister les données avec les volumes, comprendre le bind mount, et relier les conteneurs entre eux et au monde extérieur avec les réseaux et la publication de ports." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="docker" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Docker</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Applications réelles — Leçon 04</p>
+              <h1 class="lesson-header__title">Volumes, réseaux et ports</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 03 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li><strong>persister</strong> des données avec un <strong>volume</strong>&nbsp;;</li>
+                  <li>utiliser un <strong>bind mount</strong> pour le développement&nbsp;;</li>
+                  <li><strong>publier</strong> un port (<code>-p</code>) vers l'extérieur&nbsp;;</li>
+                  <li>relier des conteneurs par un <strong>réseau</strong> Docker.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un conteneur isolé qui ne garde rien et ne parle à personne a peu d'intérêt. Une vraie application doit <strong>conserver des données</strong> (une base ne peut pas tout perdre à chaque redémarrage) et <strong>communiquer</strong> (le serveur web parle à la base, et le navigateur parle au serveur web). Cette leçon couvre les deux&nbsp;: les <strong>volumes</strong> pour la persistance, et les <strong>ports et réseaux</strong> pour la communication.</p>
+
+<h2>Le problème : des conteneurs jetables</h2>
+<p>Rappelle-toi&nbsp;: le système de fichiers d'un conteneur est <strong>éphémère</strong>. Supprime le conteneur, et tout ce qu'il a écrit disparaît. Pour une base de données conteneurisée, ce serait catastrophique. La solution&nbsp;: stocker les données <em>en dehors</em> du conteneur, dans un <strong>volume</strong> géré par Docker, qui survit aux suppressions et redémarrages.</p>
+
+<h2>Les volumes nommés</h2>
+<p>Un <strong>volume nommé</strong> est un espace de stockage géré par Docker, indépendant du cycle de vie des conteneurs. On le branche sur un dossier du conteneur avec <code>-v</code>.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Créer un volume et lancer Postgres en l'utilisant pour ses données
+docker volume create pgdata
+
+docker run -d --name bdd \
+  -e POSTGRES_PASSWORD=secret \
+  -v pgdata:/var/lib/postgresql/data \
+  postgres:16
+# -v pgdata:/var/lib/postgresql/data
+#    relie le volume « pgdata » au dossier où Postgres écrit ses données
+
+# Même si on supprime le conteneur « bdd », le volume « pgdata » subsiste :
+docker rm -f bdd
+docker run -d --name bdd -v pgdata:/var/lib/postgresql/data postgres:16
+# -> les données sont toujours là.</code></pre></figure>
+<p>La syntaxe <code>-v nom:chemin</code> relie un volume à un dossier <em>dans</em> le conteneur. Tout ce que l'application écrit à ce chemin va en réalité dans le volume&nbsp;: il persiste tant que tu ne le supprimes pas explicitement (<code>docker volume rm</code>). C'est <strong>la</strong> façon de conserver des données en production.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 194" role="img" aria-label="Un volume survit à ses conteneurs. À gauche, un premier conteneur bdd écrit ses données dans un volume nommé pgdata, situé hors du conteneur et géré par Docker. Quand on supprime ce conteneur, le volume reste intact. Un second conteneur bdd recréé se rebranche sur le même volume pgdata et retrouve toutes les données.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le conteneur est jetable, le volume survit</text>
+    <rect class="d-box" x="28" y="44" width="224" height="48" rx="6" /><text class="d-text" x="140" y="64" text-anchor="middle" font-size="9.5">Conteneur bdd (1)</text><text class="d-mut" x="140" y="80" text-anchor="middle" font-size="8">docker rm -f → disparaît</text>
+    <rect class="d-box" x="28" y="122" width="224" height="48" rx="6" /><text class="d-text" x="140" y="142" text-anchor="middle" font-size="9.5">Conteneur bdd (2)</text><text class="d-mut" x="140" y="158" text-anchor="middle" font-size="8">recréé plus tard</text>
+    <rect class="d-accent" x="408" y="60" width="204" height="74" rx="6" /><text class="d-tag" x="510" y="88" text-anchor="middle" font-size="10.5">Volume pgdata</text><text class="d-mut" x="510" y="106" text-anchor="middle" font-size="8">géré par Docker</text><text class="d-mut" x="510" y="120" text-anchor="middle" font-size="8">persiste · survit aux rm</text>
+    <path class="d-line" d="M252 68 L408 88" fill="none" /><circle class="d-dot" cx="408" cy="88" r="3" />
+    <path class="d-line" d="M252 146 L408 108" fill="none" /><circle class="d-dot" cx="408" cy="108" r="3" />
+    <text class="d-mut" x="320" y="52" text-anchor="middle" font-size="8">-v pgdata:/var/lib/postgresql/data</text>
+  </svg>
+  <figcaption>Les données vivent dans le <strong>volume</strong>, pas dans le conteneur. On peut détruire et recréer le conteneur autant qu'on veut&nbsp;: tant que le volume existe, les données sont là.</figcaption>
+</figure>
+
+<h2>Le bind mount : pour développer</h2>
+<p>Une variante, le <strong>bind mount</strong>, relie un <em>dossier de ta machine</em> à un dossier du conteneur. Très pratique en développement&nbsp;: tu édites ton code sur ta machine, et le conteneur voit les changements <strong>en direct</strong>.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Monter le dossier courant de l'hôte dans /app du conteneur
+docker run -d -p 3000:3000 \
+  -v "$(pwd)":/app \
+  mon-app
+# Modifier un fichier sur l'hôte se reflète instantanément dans le conteneur
+# (idéal avec un rechargement à chaud pendant le développement).</code></pre></figure>
+<p>Différence avec un volume nommé&nbsp;: le bind mount pointe vers un <strong>chemin précis de l'hôte</strong> (<code>$(pwd)</code> = dossier courant), tandis qu'un volume nommé est géré par Docker dans un espace dédié. Règle générale&nbsp;: <strong>bind mount pour développer</strong> (voir son code en direct), <strong>volume nommé pour les données de production</strong> (bases, fichiers persistants).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Deux façons de monter du stockage dans un conteneur. À gauche, le volume nommé : Docker gère lui-même un espace de stockage dédié, idéal pour les données de production. À droite, le bind mount : un dossier précis de la machine hôte, par exemple le dossier courant, est relié au conteneur ; idéal pour développer et voir son code en direct.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Volume nommé vs bind mount</text>
+    <rect class="d-frame" x="20" y="38" width="290" height="118" rx="6" />
+    <text class="d-tag" x="165" y="58" text-anchor="middle" font-size="10">Volume nommé</text>
+    <rect class="d-accent" x="48" y="70" width="110" height="34" rx="4" /><text class="d-text" x="103" y="91" text-anchor="middle" font-size="8.5">Conteneur</text>
+    <rect class="d-box" x="188" y="70" width="98" height="34" rx="4" /><text class="d-mut" x="237" y="88" text-anchor="middle" font-size="8">espace Docker</text>
+    <path class="d-line" d="M158 87 L188 87" fill="none" /><circle class="d-dot" cx="188" cy="87" r="2.5" />
+    <text class="d-mut" x="165" y="130" text-anchor="middle" font-size="8">données de production · géré par Docker</text>
+    <rect class="d-frame" x="330" y="38" width="290" height="118" rx="6" />
+    <text class="d-tag" x="475" y="58" text-anchor="middle" font-size="10">Bind mount</text>
+    <rect class="d-accent" x="358" y="70" width="110" height="34" rx="4" /><text class="d-text" x="413" y="91" text-anchor="middle" font-size="8.5">Conteneur</text>
+    <rect class="d-box" x="498" y="70" width="98" height="34" rx="4" /><text class="d-mut" x="547" y="83" text-anchor="middle" font-size="8">dossier hôte</text><text class="d-mut" x="547" y="96" text-anchor="middle" font-size="8">$(pwd)</text>
+    <path class="d-line" d="M468 87 L498 87" fill="none" /><circle class="d-dot" cx="498" cy="87" r="2.5" />
+    <text class="d-mut" x="475" y="130" text-anchor="middle" font-size="8">développement · code de l'hôte en direct</text>
+  </svg>
+  <figcaption>Même option <code>-v</code>, deux usages&nbsp;: à gauche un espace que Docker gère (production)&nbsp;; à droite un dossier de ta machine relié au conteneur (développement).</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: la base de données effacée par mégarde</p><p>Une équipe lance sa base Postgres en conteneur pour la préproduction, <strong>sans volume</strong>. Tout fonctionne des semaines&nbsp;: le conteneur tourne, les données s'accumulent. Puis une mise à jour de routine fait <code>docker rm -f bdd</code> pour recréer le conteneur avec une nouvelle image… et toutes les données <strong>disparaissent</strong>, car elles vivaient dans le système de fichiers éphémère du conteneur. La règle qui aurait tout sauvé&nbsp;: <em>toute</em> base conteneurisée monte ses données sur un <strong>volume nommé</strong> dès le premier jour.</p></div></div>
+
+<h2>Publier un port</h2>
+<p>Un conteneur est isolé du réseau&nbsp;: par défaut, on ne peut pas l'atteindre depuis l'hôte. La <strong>publication de port</strong> (<code>-p</code>, déjà croisée) ouvre une porte de la machine vers le conteneur.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker run -d -p 8080:80 nginx
+#            -p   HÔTE:CONTENEUR
+# Le port 80 du conteneur devient accessible sur le port 8080 de l'hôte.
+# http://localhost:8080  ->  nginx</code></pre></figure>
+<p>Lis toujours <code>-p</code> dans l'ordre <strong>hôte:conteneur</strong>. Le port de gauche est celui que tu tapes dans le navigateur (sur ta machine)&nbsp;; celui de droite est le port sur lequel l'application écoute <em>dans</em> le conteneur. Les deux n'ont pas besoin d'être identiques.</p>
+
+<h2>Les réseaux : conteneurs qui se parlent</h2>
+<p>Quand plusieurs conteneurs doivent communiquer (un serveur web et sa base), on les place sur un <strong>réseau</strong> Docker commun. Sur un réseau, chaque conteneur peut joindre les autres <strong>par leur nom</strong>, sans connaître d'adresse IP.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Créer un réseau
+docker network create monreseau
+
+# Lancer la base et l'app sur ce réseau
+docker run -d --name bdd --network monreseau postgres:16
+docker run -d --name api --network monreseau mon-app
+
+# Depuis « api », on joint la base par son NOM d'hôte « bdd » :
+#   postgres://bdd:5432/...
+# Pas besoin d'IP : Docker résout « bdd » automatiquement.</code></pre></figure>
+<p>C'est le point clé&nbsp;: sur un même réseau Docker, le nom du conteneur (<code>bdd</code>) sert de <strong>nom d'hôte</strong>. L'application se connecte à <code>bdd:5432</code> comme à un serveur normal. On n'a plus à gérer d'adresses IP fragiles&nbsp;: Docker fait la résolution. (La prochaine leçon, Docker Compose, automatisera tout ce câblage.)</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Un réseau Docker relie les conteneurs entre eux. Le navigateur, à l'extérieur, atteint seulement le conteneur api par un port publié. À l'intérieur d'un réseau nommé monreseau, le conteneur api joint le conteneur bdd directement par son nom d'hôte bdd sur le port 5432. La base bdd n'est pas exposée à l'extérieur : elle n'est joignable que depuis le réseau interne.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Publié vers l'extérieur · privé sur le réseau interne</text>
+    <rect class="d-box" x="24" y="72" width="120" height="48" rx="6" /><text class="d-tag" x="84" y="94" text-anchor="middle" font-size="9.5">Navigateur</text><text class="d-mut" x="84" y="110" text-anchor="middle" font-size="8">extérieur</text>
+    <rect class="d-frame" x="210" y="44" width="404" height="128" rx="8" /><text class="d-tag" x="412" y="64" text-anchor="middle" font-size="10">Réseau « monreseau »</text>
+    <rect class="d-accent" x="248" y="86" width="140" height="50" rx="6" /><text class="d-tag" x="318" y="108" text-anchor="middle" font-size="10">api</text><text class="d-mut" x="318" y="124" text-anchor="middle" font-size="8">-p 8080:3000</text>
+    <rect class="d-accent" x="452" y="86" width="140" height="50" rx="6" /><text class="d-tag" x="522" y="108" text-anchor="middle" font-size="10">bdd</text><text class="d-mut" x="522" y="124" text-anchor="middle" font-size="8">non publiée</text>
+    <path class="d-line" d="M144 96 L248 104" fill="none" /><circle class="d-dot" cx="248" cy="104" r="3" /><text class="d-text" x="192" y="86" text-anchor="middle" font-size="8">port publié</text>
+    <path class="d-line" d="M388 111 L452 111" fill="none" /><circle class="d-dot" cx="452" cy="111" r="3" /><text class="d-text" x="420" y="103" text-anchor="middle" font-size="8">bdd:5432</text>
+    <text class="d-mut" x="412" y="160" text-anchor="middle" font-size="8">api joint bdd par son NOM — aucune adresse IP à gérer</text>
+  </svg>
+  <figcaption>Seule l'API a un port publié&nbsp;; la base reste sur le réseau interne, jointe par son nom. Exposer le strict minimum est la bonne posture de sécurité.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Monter un dossier en lecture seule</p><p>Un bind mount peut être <strong>en lecture seule</strong> en ajoutant <code>:ro</code>&nbsp;: <code>-v "$(pwd)/config":/etc/app:ro</code>. Le conteneur lit la configuration mais ne peut pas la modifier — utile pour injecter des fichiers de config ou des certificats sans risquer qu'un conteneur les altère.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Publier vs réseau interne</p><p>Ne confonds pas les deux modes de communication. <code>-p</code> ouvre un conteneur vers l'<strong>extérieur</strong> (ton navigateur, Internet). Un <strong>réseau</strong> Docker fait communiquer les conteneurs <strong>entre eux</strong>, en interne. Une base de données ne devrait <em>pas</em> être publiée avec <code>-p</code> vers l'extérieur&nbsp;: seuls les autres conteneurs (via le réseau) ont besoin de l'atteindre. Moins on expose, plus c'est sûr.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — persister et connecter</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Outil</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>Persister des données</td><td>volume nommé</td><td><code>-v pgdata:/var/lib/postgresql/data</code></td></tr>
+      <tr><td>Voir son code en direct</td><td>bind mount</td><td><code>-v "$(pwd)":/app</code></td></tr>
+      <tr><td>Monter en lecture seule</td><td>suffixe <code>:ro</code></td><td><code>-v "$(pwd)/conf":/etc/app:ro</code></td></tr>
+      <tr><td>Ouvrir vers l'extérieur</td><td>publication de port</td><td><code>-p 8080:80</code> (hôte:conteneur)</td></tr>
+      <tr><td>Relier des conteneurs</td><td>réseau Docker</td><td><code>--network monreseau</code> → joindre par nom</td></tr>
+      <tr><td>Lister / nettoyer</td><td>sous-commandes</td><td><code>docker volume ls</code> · <code>network ls</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Volume nommé</dt><dd>Espace de stockage <strong>géré par Docker</strong>, indépendant des conteneurs&nbsp;; la façon de persister des données de production.</dd>
+  <dt>Bind mount</dt><dd>Montage d'un <em>dossier précis de l'hôte</em> dans le conteneur&nbsp;; idéal en développement pour voir son code en direct.</dd>
+  <dt>Persistance</dt><dd>Conservation des données au-delà de la vie d'un conteneur, grâce à un volume.</dd>
+  <dt>Éphémère</dt><dd>Se dit du système de fichiers propre au conteneur&nbsp;: tout ce qui n'est pas dans un volume disparaît à sa suppression.</dd>
+  <dt>Publication de port (<code>-p</code>)</dt><dd>Ouverture d'un port du conteneur vers l'hôte, au format <strong>hôte:conteneur</strong>&nbsp;: la porte vers l'extérieur.</dd>
+  <dt>Réseau Docker</dt><dd>Réseau virtuel commun sur lequel les conteneurs communiquent <strong>entre eux</strong>, en interne.</dd>
+  <dt>Résolution par nom</dt><dd>Sur un réseau Docker, le nom d'un conteneur sert de nom d'hôte&nbsp;; plus besoin de gérer d'adresses IP.</dd>
+  <dt><code>:ro</code></dt><dd>Suffixe rendant un montage <em>en lecture seule</em>&nbsp;: le conteneur lit mais ne peut pas modifier.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le système de fichiers d'un conteneur est <strong>éphémère</strong>&nbsp;: pour persister, on utilise un <strong>volume</strong> (<code>-v nom:chemin</code>).</li>
+  <li><strong>Bind mount</strong> (<code>-v /chemin/hôte:/chemin</code>) pour développer (code en direct)&nbsp;; <strong>volume nommé</strong> pour les données de production.</li>
+  <li><code>-p hôte:conteneur</code> <strong>publie</strong> un port vers l'extérieur.</li>
+  <li>Un <strong>réseau</strong> Docker fait communiquer les conteneurs entre eux <strong>par leur nom</strong>, sans IP.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi a-t-on besoin d'un volume pour une base de données conteneurisée&nbsp;?</li>
+  <li>Quelle différence entre un bind mount et un volume nommé&nbsp;?</li>
+  <li>Comment l'app « api » joint-elle la base « bdd » sur un même réseau&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi a-t-on besoin d'un volume pour une base de données conteneurisée ?","a":["Parce que le système de fichiers d'un conteneur est éphémère : sans volume, les données seraient perdues à la suppression du conteneur","Parce qu'un conteneur ne peut pas écrire de fichiers","Pour accélérer la base de données","Parce que c'est obligatoire pour tout conteneur"],"correct":0,"explain":"Ce qu'un conteneur écrit dans son propre système de fichiers disparaît quand on le supprime. Un volume stocke les données en dehors du conteneur, où elles survivent aux suppressions et redémarrages."},
+  {"q":"Quelle est la différence entre un bind mount et un volume nommé ?","a":["Le bind mount relie un dossier précis de l'hôte au conteneur (idéal pour développer) ; le volume nommé est un espace géré par Docker (idéal pour les données de production)","Aucune, ce sont des synonymes","Le bind mount persiste, pas le volume nommé","Le volume nommé relie un dossier de l'hôte, le bind mount non"],"correct":0,"explain":"Le bind mount pointe vers un chemin de ta machine (ex. $(pwd)), pratique pour voir son code en direct. Le volume nommé est géré par Docker dans un espace dédié, recommandé pour persister des données de production."},
+  {"q":"Sur un même réseau Docker, comment le conteneur « api » joint-il le conteneur « bdd » ?","a":["Par son nom : Docker résout « bdd » comme nom d'hôte, donc api se connecte à bdd:5432 sans connaître d'IP","En publiant le port de bdd avec -p","Par l'adresse IP fixe de l'hôte","Ce n'est pas possible sans Internet"],"correct":0,"explain":"Sur un réseau Docker commun, le nom du conteneur sert de nom d'hôte. api se connecte à « bdd » directement ; Docker assure la résolution, sans gestion manuelle d'adresses IP."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["-v","--volume","-v dbdata:/var/lib/postgresql/data"],"placeholder":"l'option de docker run pour monter le volume nommé dbdata (persistance des données)","hints":["Sans elle, les données disparaissent à la suppression du conteneur.","Elle relie un volume à un chemin interne.","docker run ??? dbdata:/var/lib/postgresql/data …"],"link":{"href":"lecon-04.html","label":"Revoir « Les volumes »"}},
+  {"type":"text","accept":["$(pwd)","\"$(pwd)\":/app","$(pwd):/app","\"$(pwd)\""],"placeholder":"ce qu'on met côté hôte pour monter le DOSSIER COURANT dans /app (montage bind en dev)","hints":["On veut le chemin absolu du répertoire courant.","En shell, une substitution de commande le donne.","-v \"???\":/app"],"link":{"href":"lecon-04.html","label":"Revoir « Le bind mount »"}},
+  {"type":"text","accept":["docker network create","docker network create app-net","network create"],"placeholder":"la commande pour créer un réseau Docker reliant l'API et la base sans exposer le port de la base","hints":["Deux conteneurs sur un même réseau se parlent par leur nom.","Pas besoin de publier (-p) le port de la base.","docker network ??? app-net"],"link":{"href":"lecon-04.html","label":"Revoir « Les réseaux »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la commande qui lance <code>postgres:16</code> en stockant ses données dans un volume nommé <code>dbdata</code> (le dossier de données est <code>/var/lib/postgresql/data</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">docker run -d --name bdd \
+  -e POSTGRES_PASSWORD=secret \
+  -v dbdata:/var/lib/postgresql/data \
+  postgres:16</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>En développement, tu veux que ton image <code>mon-app</code> voie ton code en direct (dossier courant monté dans <code>/app</code>) et publie le port 3000. Écris la commande.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">docker run -d -p 3000:3000 -v "$(pwd)":/app mon-app</code></pre></figure><p>Le bind mount <code>"$(pwd)":/app</code> reflète tes modifications dans le conteneur&nbsp;; <code>-p 3000:3000</code> publie le port.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une base de données ne doit être jointe que par l'API, pas exposée à Internet. Comment relies-tu les deux conteneurs sans publier le port de la base&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">docker network create app-net
+docker run -d --name bdd --network app-net postgres:16
+docker run -d --name api --network app-net -p 8080:3000 mon-app
+# L'API joint la base par « bdd » (réseau interne) ;
+# seul le port de l'API est publié (-p), pas celui de la base.</code></pre></figure><p>On place les deux conteneurs sur le même réseau&nbsp;: l'API atteint la base par son nom <code>bdd</code>. On ne met <code>-p</code> que sur l'API&nbsp;: la base reste invisible de l'extérieur, ce qui est plus sûr.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

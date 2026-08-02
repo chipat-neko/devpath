@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Traits avancés et programmation générique — Leçon 15 · Rust · Syntaxe</title>
+    <meta name="description" content="Maîtrise les traits avancés de Rust : types associés, trait objects, bornes complexes, blanket impls, marker traits, surcharge d'opérateurs et macros." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="rust" data-lesson="lecon-15.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Rust</a></li>
+            <li aria-current="page">Leçon 15</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Rust en profondeur — Leçon 15</p>
+              <h1 class="lesson-header__title">Traits avancés et programmation générique</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 14 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir choisir entre <strong>type associé</strong> et paramètre générique, et entre <code>dyn Trait</code> et générique selon le dispatch&nbsp;;</li>
+                  <li>savoir écrire des <strong>bornes complexes</strong> (<code>where</code>, supertraits, bornes sur types associés) et des <strong>blanket implementations</strong> en respectant l'orphan rule&nbsp;;</li>
+                  <li>savoir exploiter les <strong>marker traits</strong> (<code>Send</code>, <code>Sync</code>, <code>?Sized</code>) et surcharger des opérateurs via <code>std::ops</code>, <code>From</code>/<code>Into</code>, <code>Deref</code>&nbsp;;</li>
+                  <li>savoir réduire la répétition avec une macro déclarative <code>macro_rules!</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu connais déjà les traits comme contrats partagés et les génériques bornés. Cette leçon pousse le système de traits dans ses retranchements&nbsp;: c'est là que Rust devient à la fois très expressif et un peu intimidant. On va clarifier des choix de conception qui reviennent sans cesse&nbsp;: faut-il un type associé ou un paramètre&nbsp;? Un <code>dyn Trait</code> ou un générique&nbsp;? Comment réutiliser une implémentation pour tout un ensemble de types sans tout recopier&nbsp;?</p>
+<p>Chaque section répond à une de ces questions avec un exemple compilable par <code>cargo build</code>. À la fin, tu sauras lire la signature d'une API standard comme <code>Iterator</code> ou <code>From</code> et comprendre <em>pourquoi</em> elle est écrite ainsi.</p>
+
+<h2>Types associés ou paramètres génériques&nbsp;?</h2>
+<p>Un <strong>type associé</strong> est un type fourni par l'implémentation, pas par l'appelant. <code>Iterator</code> en est l'exemple canonique&nbsp;: chaque itérateur produit <em>un seul</em> type d'élément, donc <code>Item</code> est un type associé, pas un paramètre.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">struct Compteur {
+    valeur: u32,
+}
+
+impl Iterator for Compteur {
+    type Item = u32; // type associé : fixé par CETTE implémentation
+
+    fn next(&amp;mut self) -&gt; Option&lt;Self::Item&gt; {
+        if self.valeur &lt; 3 {
+            self.valeur += 1;
+            Some(self.valeur)
+        } else {
+            None
+        }
+    }
+}
+
+fn main() {
+    // sum() exige Self::Item: Sum ; u32 l'implémente, d'où l'annotation u32.
+    let total: u32 = Compteur { valeur: 0 }.sum();
+    println!("{total}"); // 6
+}</code></pre></figure>
+<p>Si <code>Item</code> avait été un paramètre générique (<code>Iterator&lt;Item&gt;</code>), un type aurait pu l'implémenter plusieurs fois (<code>Iterator&lt;u32&gt;</code> et <code>Iterator&lt;String&gt;</code>), forçant l'appelant à toujours annoter le type. Le type associé dit&nbsp;: «&nbsp;il n'y a qu'<em>une</em> bonne réponse par type&nbsp;».</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Règle pratique&nbsp;: si l'appelant doit pouvoir <strong>choisir</strong> le type, utilise un paramètre générique (<code>From&lt;T&gt;</code>, qu'un type peut implémenter pour plusieurs sources). Si le type est déterminé par l'implémentation, utilise un type associé (<code>Iterator::Item</code>).</p></div></div>
+
+<h2>Trait objects (<code>dyn</code>) ou génériques&nbsp;?</h2>
+<p>Un générique <code>fn f&lt;T: Trait&gt;(x: T)</code> est résolu à la compilation&nbsp;: c'est le <strong>dispatch statique</strong> (monomorphisation, zéro coût à l'exécution). Un <code>Box&lt;dyn Trait&gt;</code> est résolu à l'exécution via une table de méthodes (vtable)&nbsp;: c'est le <strong>dispatch dynamique</strong>, légèrement plus lent mais qui permet de mélanger des types derrière un même type statique.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Deux façons de résoudre un appel de méthode. À gauche, le dispatch statique : une fonction générique fn f de T où T implémente Forme est monomorphisée, le compilateur produit une copie spécialisée par type concret (une pour Carre, une pour Cercle), et l'appel est direct, sans coût. À droite, le dispatch dynamique : un Box dyn Forme est une paire de pointeurs, l'un vers les données, l'autre vers une vtable qui localise la méthode aire à l'exécution ; l'appel est indirect mais permet une collection hétérogène.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">deux façons de résoudre un appel de méthode</text>
+    <rect class="d-frame" x="24" y="36" width="286" height="160" rx="10" />
+    <text class="d-tag" x="167" y="57" text-anchor="middle" font-size="11">générique — statique</text>
+    <text class="d-mut" x="167" y="74" text-anchor="middle" font-size="8">fn f&lt;T: Forme&gt;(x: &amp;T)</text>
+    <rect class="d-box" x="52" y="86" width="100" height="34" rx="6" />
+    <text class="d-text" x="102" y="107" text-anchor="middle" font-size="8">f::&lt;Carre&gt;</text>
+    <rect class="d-box" x="182" y="86" width="100" height="34" rx="6" />
+    <text class="d-text" x="232" y="107" text-anchor="middle" font-size="8">f::&lt;Cercle&gt;</text>
+    <text class="d-mut" x="167" y="140" text-anchor="middle" font-size="8">monomorphisation : 1 copie / type</text>
+    <rect class="d-accent" x="80" y="152" width="174" height="30" rx="7" />
+    <text class="d-text" x="167" y="171" text-anchor="middle" font-size="9">appel direct · 0 coût</text>
+    <rect class="d-frame" x="330" y="36" width="286" height="160" rx="10" />
+    <text class="d-tag" x="473" y="57" text-anchor="middle" font-size="11">dyn — dynamique</text>
+    <text class="d-mut" x="473" y="74" text-anchor="middle" font-size="8">Box&lt;dyn Forme&gt;</text>
+    <rect class="d-box" x="358" y="86" width="100" height="34" rx="6" />
+    <text class="d-text" x="408" y="107" text-anchor="middle" font-size="8">ptr données</text>
+    <rect class="d-box" x="488" y="86" width="100" height="34" rx="6" />
+    <text class="d-text" x="538" y="107" text-anchor="middle" font-size="8">ptr vtable</text>
+    <line class="d-line" x1="538" y1="120" x2="538" y2="138" />
+    <text class="d-mut" x="473" y="150" text-anchor="middle" font-size="8">vtable → aire() résolu à l'exécution</text>
+    <rect class="d-accent" x="386" y="160" width="174" height="30" rx="7" />
+    <text class="d-text" x="473" y="179" text-anchor="middle" font-size="9">appel indirect · hétérogène</text>
+  </svg>
+  <figcaption>Le générique est spécialisé et appelé directement (rapide, mais code dupliqué)&nbsp;; le <code>dyn</code> passe par une vtable (un appel indirect, mais une collection de types mélangés).</figcaption>
+</figure>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">trait Forme {
+    fn aire(&amp;self) -&gt; f64;
+}
+
+struct Carre(f64);
+struct Cercle(f64);
+
+impl Forme for Carre {
+    fn aire(&amp;self) -&gt; f64 { self.0 * self.0 }
+}
+impl Forme for Cercle {
+    fn aire(&amp;self) -&gt; f64 { std::f64::consts::PI * self.0 * self.0 }
+}
+
+// Dispatch statique : monomorphisé pour chaque F concret.
+fn afficher&lt;F: Forme&gt;(f: &amp;F) { println!("{:.2}", f.aire()); }
+
+// Dispatch dynamique : une collection HÉTÉROGÈNE.
+fn aire_totale(formes: &amp;[Box&lt;dyn Forme&gt;]) -&gt; f64 {
+    formes.iter().map(|f| f.aire()).sum()
+}
+
+fn main() {
+    let formes: Vec&lt;Box&lt;dyn Forme&gt;&gt; =
+        vec![Box::new(Carre(2.0)), Box::new(Cercle(1.0))];
+    println!("{:.2}", aire_totale(&amp;formes)); // 7.14
+}</code></pre></figure>
+<p>Un point clé&nbsp;: un trait n'est utilisable en <code>dyn</code> que s'il est <strong>object-safe</strong> (on dit aussi «&nbsp;dyn-compatible&nbsp;» dans les versions récentes de Rust). En gros, ses méthodes ne doivent pas renvoyer <code>Self</code> par valeur ni être génériques, car la vtable ne peut pas représenter ces cas.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">trait Cloneur {
+    fn dupliquer(&amp;self) -&gt; Self; // renvoie Self : NON object-safe
+}
+
+fn essai(_x: Box&lt;dyn Cloneur&gt;) {}
+// error[E0038]: the trait `Cloneur` cannot be made into an object
+//   note: method `dupliquer` references the `Self` type in its return type</code></pre></figure>
+
+<h2>Bornes complexes&nbsp;: <code>where</code>, supertraits, types associés</h2>
+<p>Quand les bornes s'accumulent, la clause <code>where</code> rend la signature lisible. On peut aussi borner un type associé directement.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::fmt::Debug;
+
+// Borne sur le type associé Item de l'itérateur passé.
+fn afficher_tout&lt;I&gt;(it: I)
+where
+    I: Iterator,
+    I::Item: Debug, // l'élément produit doit être affichable en debug
+{
+    for x in it {
+        println!("{x:?}");
+    }
+}
+
+fn main() {
+    // Affiche 1, puis 2, puis 3, chacun sur sa ligne.
+    afficher_tout(vec![1, 2, 3].into_iter());
+}</code></pre></figure>
+<p>Un <strong>supertrait</strong> exige qu'un autre trait soit déjà implémenté. Ici, tout <code>Animal</code> doit aussi être <code>Debug</code>&nbsp;:</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::fmt::Debug;
+
+trait Animal: Debug {        // Debug est un supertrait
+    fn cri(&amp;self) -&gt; String;
+    fn presenter(&amp;self) {
+        // On peut utiliser {:?} car Debug est garanti.
+        println!("{:?} fait {}", self, self.cri());
+    }
+}
+
+#[derive(Debug)]
+struct Chien;
+impl Animal for Chien {
+    fn cri(&amp;self) -&gt; String { "ouaf".to_string() }
+}
+
+fn main() {
+    Chien.presenter(); // Chien fait ouaf
+}</code></pre></figure>
+
+<h2>Blanket implementations et orphan rule</h2>
+<p>Une <strong>blanket impl</strong> implémente un trait pour <em>tous</em> les types qui satisfont une borne. La bibliothèque standard le fait massivement&nbsp;: par exemple <code>impl&lt;T: Display&gt; ToString for T</code>, c'est pourquoi <code>.to_string()</code> existe partout.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::fmt::Display;
+
+trait Resumable {
+    fn resume(&amp;self) -&gt; String;
+}
+
+// Implémente Resumable pour TOUT type qui est Display.
+impl&lt;T: Display&gt; Resumable for T {
+    fn resume(&amp;self) -&gt; String {
+        format!("[{self}]")
+    }
+}
+
+fn main() {
+    println!("{}", 42.resume());      // [42]
+    println!("{}", "salut".resume()); // [salut]
+}</code></pre></figure>
+<p>La contrepartie, c'est l'<strong>orphan rule</strong> (règle de cohérence)&nbsp;: tu ne peux implémenter un trait pour un type que si <em>le trait</em> ou <em>le type</em> t'appartient. Implémenter un trait externe pour un type externe est interdit, sinon deux crates pourraient fournir des impls contradictoires.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="La règle d'orphelin sous forme de matrice deux par deux. En colonnes, le trait est local ou externe ; en lignes, le type est local ou externe. Trois cases sur quatre sont autorisées : trait local avec type local, trait externe avec type local, trait local avec type externe. La seule case interdite est trait externe avec type externe, par exemple implémenter Display de la bibliothèque standard pour Vec de la bibliothèque standard. Le contournement est le newtype : envelopper le type externe dans une struct locale.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">orphan rule : le trait OU le type doit t'appartenir</text>
+    <text class="d-text" x="360" y="52" text-anchor="middle" font-size="9">trait local</text>
+    <text class="d-text" x="510" y="52" text-anchor="middle" font-size="9">trait externe</text>
+    <text class="d-text" x="150" y="92" text-anchor="end" font-size="9">type local</text>
+    <text class="d-text" x="150" y="152" text-anchor="end" font-size="9">type externe</text>
+    <rect class="d-accent" x="300" y="68" width="120" height="40" rx="7" />
+    <text class="d-text" x="360" y="93" text-anchor="middle" font-size="12">✓</text>
+    <rect class="d-accent" x="450" y="68" width="120" height="40" rx="7" />
+    <text class="d-text" x="510" y="93" text-anchor="middle" font-size="12">✓</text>
+    <rect class="d-accent" x="300" y="128" width="120" height="40" rx="7" />
+    <text class="d-text" x="360" y="153" text-anchor="middle" font-size="12">✓</text>
+    <rect class="d-box" x="450" y="128" width="120" height="40" rx="7" />
+    <text class="d-mut" x="510" y="146" text-anchor="middle" font-size="12">✗ interdit</text>
+    <text class="d-mut" x="510" y="161" text-anchor="middle" font-size="7">ex. Display pour Vec</text>
+  </svg>
+  <figcaption>Une seule case est refusée&nbsp;: trait <em>et</em> type tous deux externes. Le <em>newtype</em> (envelopper le type dans une struct à toi) reprend la main sur la case interdite.</figcaption>
+</figure>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">// Display ET Vec viennent tous deux de la std : interdit.
+impl std::fmt::Display for Vec&lt;i32&gt; {
+    fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter) -&gt; std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+// error[E0117]: only traits defined in the current crate can be
+//   implemented for types defined outside of the crate
+//   note: define and implement a trait or new type instead</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour contourner l'orphan rule, emballe le type externe dans un <em>newtype</em> à toi&nbsp;: <code>struct MonVec(Vec&lt;i32&gt;)</code>, puis implémente le trait sur <code>MonVec</code>. Le type t'appartient maintenant.</p></div></div>
+
+<h2>Marker traits&nbsp;: <code>Send</code>, <code>Sync</code>, <code>Sized</code>, <code>?Sized</code></h2>
+<p>Un <strong>marker trait</strong> n'a pas de méthode&nbsp;: il marque une propriété. <code>Send</code> (transférable entre threads) et <code>Sync</code> (partageable par référence entre threads) sont auto-implémentés par le compilateur&nbsp;; tu les as croisés en concurrence. <code>Sized</code> signifie «&nbsp;taille connue à la compilation&nbsp;» et est ajouté implicitement à tout paramètre générique.</p>
+<p>La relaxation <code>?Sized</code> permet d'accepter des types de taille inconnue (comme <code>str</code> ou <code>[T]</code>), à condition de les manipuler derrière une référence&nbsp;:</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::fmt::Display;
+
+// Sans ?Sized, T: Sized est implicite et str serait refusé.
+fn afficher&lt;T: Display + ?Sized&gt;(valeur: &amp;T) {
+    println!("{valeur}");
+}
+
+fn main() {
+    afficher("un str non sizé"); // T = str, OK grâce à ?Sized
+    afficher(&amp;42);               // T = i32, OK aussi
+}</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p><code>?Sized</code> est la <em>seule</em> borne «&nbsp;en moins&nbsp;» de Rust&nbsp;: elle retire la contrainte <code>Sized</code> implicite au lieu d'en ajouter une.</p></div></div>
+
+<h2>Surcharge d'opérateurs et conversions</h2>
+<p>Les opérateurs sont des traits de <code>std::ops</code>. Implémenter <code>Add</code> donne le sens de <code>+</code>&nbsp;; <code>Default</code> fournit une valeur par défaut&nbsp;; <code>From</code> définit une conversion (et <code>Into</code> en découle gratuitement)&nbsp;; <code>Deref</code> permet à un type de se comporter comme une référence vers un autre.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::ops::Add;
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Vec2 { x: f64, y: f64 }
+
+impl Add for Vec2 {
+    type Output = Vec2; // type associé : le résultat de l'addition
+    fn add(self, autre: Vec2) -&gt; Vec2 {
+        Vec2 { x: self.x + autre.x, y: self.y + autre.y }
+    }
+}
+
+// Conversion : From donne Into automatiquement.
+impl From&lt;(f64, f64)&gt; for Vec2 {
+    fn from(t: (f64, f64)) -&gt; Self {
+        Vec2 { x: t.0, y: t.1 }
+    }
+}
+
+fn main() {
+    let a = Vec2 { x: 1.0, y: 2.0 };
+    let b: Vec2 = (3.0, 4.0).into(); // Into dérivé de From
+    println!("{:?}", a + b);           // Vec2 { x: 4.0, y: 6.0 }
+    println!("{:?}", Vec2::default()); // Vec2 { x: 0.0, y: 0.0 }
+}</code></pre></figure>
+<p><code>Deref</code> est puissant mais à manier avec prudence&nbsp;: il sert aux types «&nbsp;pointeur intelligent&nbsp;» (<code>Box</code>, <code>Rc</code>), pas à simuler de l'héritage entre structs métier.</p>
+
+<h2>Macros déclaratives en aperçu</h2>
+<p>Quand plusieurs <code>impl</code> ne diffèrent que par un type, <code>macro_rules!</code> supprime la répétition en générant le code à la compilation. Aperçu sur une implémentation répétée pour plusieurs types entiers&nbsp;:</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">trait Doublable {
+    fn doubler(&amp;self) -&gt; Self;
+}
+
+// Génère une impl identique pour chaque type listé.
+macro_rules! impl_doublable {
+    ($($t:ty),*) =&gt; {
+        $(
+            impl Doublable for $t {
+                // self est &amp;$t ; &amp;i32 * i32 compile via Mul sur les références.
+                fn doubler(&amp;self) -&gt; Self { self * 2 }
+            }
+        )*
+    };
+}
+
+impl_doublable!(i32, i64, u8);
+
+fn main() {
+    println!("{}", 21_i32.doubler()); // 42
+    println!("{}", 5_u8.doubler());   // 10
+}</code></pre></figure>
+<p>Ici <code>$t:ty</code> capture un type, <code>$(...),*</code> répète sur une liste séparée par des virgules, et le bloc <code>$(...)*</code> de sortie réémet une impl par type. Trois lignes de macro remplacent trois <code>impl</code> quasi identiques.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Une macro qui en fait trop devient illisible et difficile à déboguer (les erreurs pointent souvent sur le site d'expansion, pas sur ta logique). Réserve <code>macro_rules!</code> aux répétitions vraiment mécaniques&nbsp;; pour de la logique, une fonction générique reste préférable.</p></div></div>
+
+<h2>Un cas réel&nbsp;: l'abstraction à coût nul des itérateurs</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le dispatch statique n'est pas un détail théorique&nbsp;: c'est la promesse «&nbsp;<em>zero-cost abstraction</em>&nbsp;» de Rust. Quand tu écris <code>v.iter().map(|x| x * 2).filter(|x| x &gt; &amp;4).sum()</code>, chaque adaptateur (<code>map</code>, <code>filter</code>) est un type générique distinct, monomorphisé puis <em>inliné</em> par le compilateur. Le code machine produit est <strong>identique</strong> à celui d'une boucle <code>for</code> écrite à la main&nbsp;: mêmes instructions, aucune allocation, aucun appel virtuel. La documentation officielle le démontre en comparant une chaîne d'itérateurs à une boucle manuelle — performances égales au cycle près. C'est pourquoi des outils comme <strong>ripgrep</strong> se permettent un style très haut niveau tout en rivalisant avec du C&nbsp;: l'expressivité des traits et des génériques ne coûte rien à l'exécution. Le revers de la médaille&nbsp;: la monomorphisation duplique le code pour chaque type concret, ce qui allonge la compilation et grossit le binaire — exactement le compromis inverse du <code>dyn</code>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser <code>Box&lt;dyn Trait&gt;</code> avec un trait non object-safe (méthode renvoyant <code>Self</code> ou générique) déclenche <code>E0038</code>. Si tu as besoin de <code>dyn</code>, retire ces méthodes du trait ou mets-les derrière une borne <code>where Self: Sized</code>&nbsp;: elles deviennent alors inaccessibles via <code>dyn</code>, mais le trait redevient object-safe.</p></div></div>
+<ul>
+<li><strong>Confondre type associé et générique</strong>&nbsp;: si tu écris <code>trait T&lt;X&gt;</code> alors qu'un seul <code>X</code> a du sens par type, tu forces des annotations inutiles. Préfère <code>type X;</code>.</li>
+<li><strong>Oublier une borne</strong>&nbsp;: appeler <code>x.clone()</code> dans un générique sans <code>T: Clone</code> donne <code>E0599</code> (méthode introuvable). Le compilateur ne déduit pas les bornes, il faut les déclarer.</li>
+<li><strong>Choisir le mauvais dispatch</strong>&nbsp;: du <code>dyn</code> dans une boucle chaude alors qu'un générique suffirait coûte des appels virtuels inutiles&nbsp;; à l'inverse, un générique sur un type figé à l'exécution ne compile pas. Le <code>dyn</code> sert quand la liste de types est ouverte ou hétérogène.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les <strong>macros procédurales</strong> (dont les <code>derive</code> personnalisés) génèrent du code à partir de l'AST&nbsp;; <code>serde</code> en est l'exemple phare. Explore aussi les <strong>GAT</strong> (generic associated types, stabilisés depuis Rust 1.65), les <strong>const generics</strong> (<code>[T; N]</code> paramétré par <code>N</code>), et le pattern <strong>typestate</strong> qui encode des états valides dans le système de types pour rendre les erreurs d'usage impossibles à la compilation.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — traits avancés et génériques</caption>
+    <thead><tr><th scope="col">Outil</th><th scope="col">Quand l'utiliser</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>Type associé</td><td>un seul type par implémentation</td><td><code>type Item;</code> (Iterator)</td></tr>
+      <tr><td>Paramètre générique</td><td>l'appelant choisit le type</td><td><code>From&lt;T&gt;</code></td></tr>
+      <tr><td>Générique <code>&lt;T: Trait&gt;</code></td><td>dispatch statique, 0 coût</td><td>monomorphisé par type</td></tr>
+      <tr><td><code>Box&lt;dyn Trait&gt;</code></td><td>collection hétérogène</td><td>dispatch dynamique (vtable)</td></tr>
+      <tr><td>Clause <code>where</code></td><td>bornes nombreuses / sur types assoc.</td><td><code>where I::Item: Debug</code></td></tr>
+      <tr><td>Supertrait</td><td>exiger un trait préalable</td><td><code>trait Animal: Debug</code></td></tr>
+      <tr><td>Blanket impl</td><td>couvrir tous les types d'une borne</td><td><code>impl&lt;T: Display&gt; … for T</code></td></tr>
+      <tr><td>Orphan rule</td><td>trait OU type local requis</td><td>contournement : newtype</td></tr>
+      <tr><td>Surcharge d'opérateur</td><td>donner un sens à <code>+</code>, etc.</td><td><code>impl Add for …</code></td></tr>
+      <tr><td><code>macro_rules!</code></td><td>répétition mécanique</td><td>une impl par type listé</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Type associé</dt><dd>Type fourni par l'<em>implémentation</em> d'un trait, pas par l'appelant (ex. <code>Iterator::Item</code>)&nbsp;: une seule «&nbsp;bonne réponse&nbsp;» par type.</dd>
+  <dt>Dispatch statique</dt><dd>Résolution des appels à la <strong>compilation</strong> via monomorphisation (une copie par type concret)&nbsp;: aucun coût à l'exécution.</dd>
+  <dt>Dispatch dynamique (<code>dyn</code>)</dt><dd>Résolution à l'<strong>exécution</strong> via une <em>vtable</em> (table de méthodes)&nbsp;: permet des collections hétérogènes, au prix d'un appel indirect.</dd>
+  <dt>Object safety</dt><dd>Propriété d'un trait utilisable derrière <code>dyn</code>&nbsp;: ses méthodes ne renvoient pas <code>Self</code> par valeur et ne sont pas génériques (sinon la vtable ne peut les représenter).</dd>
+  <dt>Blanket impl</dt><dd>Implémentation d'un trait pour <em>tous</em> les types satisfaisant une borne (<code>impl&lt;T: Display&gt; ToString for T</code>).</dd>
+  <dt>Orphan rule</dt><dd>Règle de cohérence&nbsp;: on n'implémente un trait pour un type que si le <strong>trait</strong> ou le <strong>type</strong> appartient à la crate. Contournement&nbsp;: le <em>newtype</em>.</dd>
+  <dt>Marker trait</dt><dd>Trait sans méthode qui marque une propriété (<code>Send</code>, <code>Sync</code>, <code>Sized</code>), souvent auto-implémenté par le compilateur.</dd>
+  <dt><code>macro_rules!</code></dt><dd>Macro <strong>déclarative</strong>&nbsp;: génère du code par motif à la compilation pour supprimer une répétition mécanique.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un <strong>type associé</strong> fixe un type par implémentation&nbsp;; un <strong>paramètre générique</strong> laisse l'appelant choisir.</li>
+<li><code>dyn Trait</code> = dispatch dynamique pour des collections hétérogènes, sous réserve d'<strong>object safety</strong>&nbsp;; les génériques = dispatch statique sans coût.</li>
+<li><code>where</code>, supertraits et bornes sur types associés expriment des contraintes riches&nbsp;; les <strong>blanket impls</strong> couvrent tous les types satisfaisant une borne.</li>
+<li>L'<strong>orphan rule</strong> exige que le trait ou le type t'appartienne&nbsp;; les <strong>marker traits</strong> (<code>Send</code>, <code>Sync</code>, <code>Sized</code>) décrivent des propriétés sans méthode.</li>
+<li><code>std::ops</code>, <code>From</code>/<code>Into</code>, <code>Default</code>, <code>Deref</code> intègrent tes types au langage&nbsp;; <code>macro_rules!</code> supprime la répétition mécanique.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>Iterator::Item</code> est-il un type associé plutôt qu'un paramètre générique <code>Iterator&lt;Item&gt;</code>&nbsp;?</li><li>Quelle propriété rend un trait inutilisable derrière <code>Box&lt;dyn Trait&gt;</code>, et donne un exemple de méthode qui la viole.</li><li>Tu veux implémenter <code>Display</code> pour <code>Vec&lt;i32&gt;</code>. Pourquoi est-ce interdit, et quel est le contournement&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi Iterator::Item est-il un type associé plutôt qu'un paramètre générique Iterator<Item> ?","a":["Parce qu'un type n'implémente Iterator que d'une seule façon (un seul type d'élément) : un type associé l'exprime, là où un paramètre générique permettrait à tort plusieurs implémentations","Pour aller plus vite","Item est un mot réservé","Les types associés sont obsolètes"],"correct":0,"explain":"Un itérateur produit un type d'élément bien déterminé. Le type associé Item attache ce type unique à l'implémentation. Un paramètre générique autoriserait plusieurs Iterator<A>, Iterator<B> pour le même type, ce qui n'a pas de sens ici."},
+  {"q":"Quelle propriété rend un trait inutilisable derrière Box<dyn Trait>, et donne un exemple de méthode qui la viole.","a":["La non object-safety ; par exemple une méthode générique (fn f<T>(...)) ou qui renvoie Self ne peut pas figurer dans une vtable","Le fait d'avoir trop de méthodes","L'absence de Display","Aucune propriété"],"correct":0,"explain":"Pour un dispatch dynamique (Box<dyn Trait>), le trait doit être object-safe : pas de méthode générique ni de retour de Self, car la vtable ne peut pas représenter ces cas. De telles méthodes empêchent l'usage en dyn."},
+  {"q":"Tu veux implémenter Display pour Vec<i32>. Pourquoi est-ce interdit, et quel est le contournement ?","a":["À cause de la règle d'orphelin : on ne peut pas implémenter un trait externe (Display) pour un type externe (Vec). Le contournement est un newtype : envelopper dans struct MaVec(Vec<i32>) et implémenter Display dessus","C'est autorisé","Il faut deux impl","Vec ne supporte pas les traits"],"correct":0,"explain":"La règle d'orphelin interdit d'implémenter un trait que vous ne possédez pas pour un type que vous ne possédez pas. On crée un type local enveloppant (newtype) pour reprendre la main et implémenter Display dessus."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["type associé","type associe","associated type","type associé Sortie"],"placeholder":"le nom d'un type défini DANS un trait (Self::Sortie de Source) : un …","hints":["type Sortie; dans la définition du trait.","Chaque implémentation choisit le type concret.","« type … »."],"link":{"href":"lecon-15.html","label":"Revoir « Les types associés »"}},
+  {"type":"text","accept":["objet de trait","trait object","dyn","objet trait"],"placeholder":"le nom d'un Box<dyn Dessinable> qui efface le type concret pour mélanger plusieurs structs : un … de trait","hints":["Permet le polymorphisme dynamique.","Box<dyn Dessinable>.","« … de trait » (trait object)."],"link":{"href":"lecon-15.html","label":"Revoir « Les objets de trait »"}},
+  {"type":"text","accept":["From","trait From","impl From"],"placeholder":"le trait à implémenter pour convertir Celsius → Fahrenheit (et obtenir .into() gratuitement) : …","hints":["impl From<Celsius> for Fahrenheit.","Implémenter From donne Into automatiquement.","Quatre lettres."],"link":{"href":"lecon-15.html","label":"Revoir « From et Into »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un trait <code>Source</code> avec un <strong>type associé</strong> <code>Sortie</code> et une méthode <code>produire(&amp;self) -&gt; Self::Sortie</code>. Implémente-le pour deux types&nbsp;: l'un produisant un <code>i32</code>, l'autre une <code>String</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">trait Source {
+    type Sortie;
+    fn produire(&amp;self) -&gt; Self::Sortie;
+}
+
+struct Constante(i32);
+struct Salutation;
+
+impl Source for Constante {
+    type Sortie = i32;
+    fn produire(&amp;self) -&gt; i32 { self.0 }
+}
+
+impl Source for Salutation {
+    type Sortie = String;
+    fn produire(&amp;self) -&gt; String { "bonjour".to_string() }
+}
+
+fn main() {
+    println!("{}", Constante(7).produire());  // 7
+    println!("{}", Salutation.produire());    // bonjour
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un trait <code>Dessinable</code> avec une méthode <code>dessiner(&amp;self) -&gt; String</code>. Implémente-le pour deux structs différents, puis range-les dans un <code>Vec&lt;Box&lt;dyn Dessinable&gt;&gt;</code> et affiche le dessin de chacun dans une boucle.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">trait Dessinable {
+    fn dessiner(&amp;self) -&gt; String;
+}
+
+struct Bouton(String);
+struct Case(bool);
+
+impl Dessinable for Bouton {
+    fn dessiner(&amp;self) -&gt; String { format!("[ {} ]", self.0) }
+}
+impl Dessinable for Case {
+    fn dessiner(&amp;self) -&gt; String {
+        if self.0 { "[x]".to_string() } else { "[ ]".to_string() }
+    }
+}
+
+fn main() {
+    let elements: Vec&lt;Box&lt;dyn Dessinable&gt;&gt; = vec![
+        Box::new(Bouton("OK".to_string())),
+        Box::new(Case(true)),
+    ];
+    for e in &amp;elements {
+        println!("{}", e.dessiner());
+    }
+    // [ OK ]
+    // [x]
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Définis un type <code>Celsius(f64)</code> et un type <code>Fahrenheit(f64)</code>. Implémente <code>From&lt;Celsius&gt;</code> pour <code>Fahrenheit</code> (formule&nbsp;: <code>f = c * 9.0 / 5.0 + 32.0</code>), puis utilise <code>.into()</code> pour convertir. Vérifie que <code>100.0</code>&nbsp;°C donne <code>212.0</code>&nbsp;°F.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">#[derive(Debug, Clone, Copy)]
+struct Celsius(f64);
+
+#[derive(Debug, Clone, Copy)]
+struct Fahrenheit(f64);
+
+impl From&lt;Celsius&gt; for Fahrenheit {
+    fn from(c: Celsius) -&gt; Self {
+        Fahrenheit(c.0 * 9.0 / 5.0 + 32.0)
+    }
+}
+
+fn main() {
+    let c = Celsius(100.0);
+    // Into est dérivé automatiquement de From.
+    let f: Fahrenheit = c.into();
+    println!("{:?}", f); // Fahrenheit(212.0)
+}</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-rust.min.js" defer></script>
+  </body>
+</html>

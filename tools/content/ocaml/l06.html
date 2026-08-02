@@ -1,0 +1,82 @@
+<p>Pour des données aux champs nommés, OCaml a les <strong>records</strong>. Et pour la sûreté, deux types fondamentaux remplacent les sources d'erreurs classiques&nbsp;: <code>option</code> bannit le <code>null</code>, <code>result</code> gère les erreurs sans exception cachée. Ensemble, ils éliminent une grande part des plantages habituels.</p>
+
+<h2>Les records</h2>
+<p>Un <strong>record</strong> regroupe des champs nommés et typés. On le définit avec des accolades, et on accède aux champs avec un point.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">type personne = {
+  nom : string;
+  age : int;
+}
+
+let ada = { nom = "Ada"; age = 36 }
+let n = ada.nom              (* "Ada" *)</code></pre></figure>
+
+<h2>Mise à jour fonctionnelle</h2>
+<p>Un record est immuable. Pour en obtenir une version modifiée, on utilise la syntaxe <code>with</code>&nbsp;: elle crée un <strong>nouveau</strong> record en copiant l'ancien et en changeant certains champs.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let ada_plus_vieille = { ada with age = 37 }
+(* ada reste { nom = "Ada"; age = 36 } *)</code></pre></figure>
+
+<h2>Le type option&nbsp;: en finir avec null</h2>
+<p>Comment représenter «&nbsp;une valeur peut être absente&nbsp;»&nbsp;? Pas avec <code>null</code> (source de plantages partout), mais avec le type <code>option</code>&nbsp;: soit <code>Some valeur</code>, soit <code>None</code>. Le type <em>oblige</em> à traiter le cas «&nbsp;absent&nbsp;».</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let rec trouver nom liste =
+  match liste with
+  | [] -&gt; None
+  | (n, age) :: reste -&gt;
+      if n = nom then Some age
+      else trouver nom reste
+
+let r = trouver "Ada" [("Ada", 36); ("Lin", 29)]   (* Some 36 *)</code></pre></figure>
+
+<h2>Manipuler une option</h2>
+<p>On déballe une option par filtrage, ou avec les fonctions du module <code>Option</code>.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let afficher_age opt =
+  match opt with
+  | Some age -&gt; "Âge : " ^ string_of_int age
+  | None -&gt; "Inconnu"
+
+(* Valeur par défaut : *)
+let age = Option.value (trouver "Sam" liste) ~default:0</code></pre></figure>
+
+<h2>Le type result&nbsp;: gérer les erreurs</h2>
+<p>Pour une opération qui peut <strong>échouer avec une raison</strong>, le type <code>result</code>&nbsp;: <code>Ok valeur</code> en cas de succès, <code>Error raison</code> en cas d'échec. L'erreur fait partie du type de retour&nbsp;: impossible de l'ignorer.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let diviser a b =
+  if b = 0 then Error "division par zéro"
+  else Ok (a / b)
+
+let resultat =
+  match diviser 10 2 with
+  | Ok q -&gt; "Résultat : " ^ string_of_int q
+  | Error msg -&gt; "Échec : " ^ msg</code></pre></figure>
+
+<h2>Les exceptions, avec parcimonie</h2>
+<p>OCaml a aussi des <strong>exceptions</strong> (<code>raise</code>, <code>try ... with</code>), mais l'usage idiomatique les réserve aux cas <em>vraiment</em> exceptionnels (erreurs de programmation). Pour les erreurs <em>attendues</em>, on préfère <code>option</code> ou <code>result</code>, visibles dans les types.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let lire_positif n =
+  try
+    if n &lt; 0 then raise (Invalid_argument "négatif");
+    n
+  with Invalid_argument _ -&gt; 0</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir «&nbsp;sortir&nbsp;» la valeur d'une <code>option</code> sans traiter le <code>None</code>&nbsp;: c'est précisément ce qu'OCaml empêche. Tu <em>dois</em> gérer les deux cas (par <code>match</code> ou <code>Option.value</code>). Cette contrainte est une force&nbsp;: pas de plantage «&nbsp;valeur nulle&nbsp;» possible.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour enchaîner plusieurs opérations faillibles sans pyramide de <code>match</code>, on utilise les opérateurs de liaison (<code>let*</code>) ou <code>Option.bind</code>/<code>Result.bind</code>. C'est l'équivalent OCaml du <code>?</code> de Rust&nbsp;: court-circuiter proprement à la première absence ou erreur.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>records</strong> ont des champs nommés&nbsp;; <code>{ r with champ = ... }</code> crée une copie modifiée.</li>
+  <li><code>option</code> (<code>Some</code>/<code>None</code>) remplace <code>null</code>&nbsp;: l'absence est dans le type.</li>
+  <li><code>result</code> (<code>Ok</code>/<code>Error</code>) gère les erreurs attendues, visibles dans le type de retour.</li>
+  <li>Les <strong>exceptions</strong> existent mais sont réservées aux cas vraiment exceptionnels.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment «&nbsp;modifier&nbsp;» un champ d'un record immuable&nbsp;?</li><li>Quels sont les deux cas du type <code>option</code>&nbsp;?</li><li>Quand préférer <code>result</code> à une exception&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un record <code>livre</code> (titre, annee) et crée une instance.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">type livre = { titre : string; annee : int }
+let l = { titre = "Sisyphe"; annee = 1942 }</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>tete</code> qui renvoie <code>Some</code> de la tête d'une liste, ou <code>None</code> si vide.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let tete l =
+  match l with
+  | [] -&gt; None
+  | x :: _ -&gt; Some x</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>racine</code> qui renvoie <code>Error</code> si l'argument est négatif, <code>Ok</code> de la racine sinon.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let racine x =
+  if x &lt; 0.0 then Error "négatif"
+  else Ok (sqrt x)</code></pre></figure></details></div>

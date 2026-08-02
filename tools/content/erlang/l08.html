@@ -1,0 +1,59 @@
+<p>Erlang a une dernière carte maîtresse&nbsp;: la <strong>distribution</strong>. Le même modèle de processus et de messages qui fonctionne sur une machine s'étend, presque sans changement, à <strong>plusieurs machines</strong>. Cela permet de bâtir des systèmes répartis sur de nombreux serveurs, et d'atteindre une disponibilité extrême — les fameux «&nbsp;neuf neuf&nbsp;». Cette leçon explore comment Erlang relie des nœuds et résiste aux pannes à grande échelle.</p>
+
+<h2>Les nœuds Erlang</h2>
+<p>Une instance d'Erlang qui tourne s'appelle un <strong>nœud</strong> (<em>node</em>). On peut démarrer plusieurs nœuds — sur une même machine ou sur des serveurs différents — et les <strong>connecter</strong> pour qu'ils forment un cluster. Chaque nœud porte un nom.</p>
+<figure class="code-block" data-file="noeuds"><pre><code class="language-erlang">% Démarrer un nœud nommé, sur deux terminaux :
+$ erl -name alice@192.168.1.10
+$ erl -name bob@192.168.1.11
+
+% Depuis alice, se connecter à bob :
+(alice@...)1&gt; net_adm:ping('bob@192.168.1.11').
+pong       % "pong" = connexion réussie ("pang" = échec)</code></pre></figure>
+<p>Une fois connectés, les nœuds se «&nbsp;voient&nbsp;» et peuvent s'échanger des processus et des messages comme s'ils étaient locaux.</p>
+
+<h2>Envoyer un message à distance</h2>
+<p>Voici la beauté du modèle&nbsp;: envoyer un message à un processus sur un <em>autre</em> nœud s'écrit <strong>exactement</strong> comme en local. La même syntaxe <code>!</code> fonctionne, que le destinataire soit dans la même machine ou à l'autre bout du réseau. C'est la <strong>transparence de localisation</strong>.</p>
+<figure class="code-block" data-file="distant.erl"><pre><code class="language-erlang">% Spawner un processus sur un nœud distant :
+Pid = spawn('bob@192.168.1.11', module, fonction, []).
+
+% Lui envoyer un message : IDENTIQUE au local
+Pid ! {bonjour, "depuis alice"}.
+
+% Atteindre un processus enregistré sur un autre nœud :
+{mon_service, 'bob@192.168.1.11'} ! requete.</code></pre></figure>
+<p>Le code concurrent que tu as écrit pour une machine fonctionne donc, presque tel quel, en distribué. Erlang a été pensé pour ça dès l'origine&nbsp;: les centraux téléphoniques sont par nature répartis sur de nombreux équipements.</p>
+
+<h2>Les «&nbsp;neuf neuf&nbsp;» de disponibilité</h2>
+<p>La combinaison «&nbsp;processus isolés + supervision + distribution&nbsp;» permet une <strong>disponibilité</strong> exceptionnelle. Le central téléphonique AXD301 d'Ericsson, écrit en Erlang, a atteint une fiabilité mesurée à <strong>neuf «&nbsp;9&nbsp;»</strong> (99,9999999&nbsp;%), soit l'équivalent de <em>32 millisecondes</em> d'indisponibilité par an. Comment&nbsp;? Si un nœud tombe, les autres continuent&nbsp;; si un processus plante, un superviseur le relance&nbsp;; et l'on peut réparer ou remplacer une partie pendant que le reste tourne.</p>
+
+<h2>La mise à jour à chaud</h2>
+<p>Conséquence remarquable&nbsp;: Erlang peut <strong>remplacer du code en cours d'exécution</strong>, sans arrêter le système (<em>hot code swapping</em>). Un central téléphonique ne peut pas s'éteindre pour une mise à jour&nbsp;; Erlang permet de charger une nouvelle version d'un module pendant que les appels continuent.</p>
+<figure class="code-block" data-file="hot.erl"><pre><code class="language-erlang">% Recharger un module à chaud (sans arrêter le système) :
+code:load_file(mon_module).
+% Les processus passent à la nouvelle version
+% à leur prochain appel qualifié du module.</code></pre></figure>
+<p>C'est une capacité rare et précieuse, directement issue du besoin télécom d'origine&nbsp;: «&nbsp;ça ne s'arrête jamais&nbsp;».</p>
+
+<h2>Les limites&nbsp;: cohérence et réseau</h2>
+<p>La distribution n'est pas magique. Sur un réseau, des messages peuvent se perdre, un nœud peut devenir injoignable (une <em>partition</em> réseau). Erlang fournit les <em>outils</em> (détection de nœuds morts, supervision distribuée), mais c'est au concepteur de décider comment gérer la cohérence des données réparties — un problème difficile, commun à tous les systèmes distribués.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que «&nbsp;transparence de localisation&nbsp;» signifie «&nbsp;le réseau est gratuit et fiable&nbsp;». Envoyer un message distant a le <em>même code</em> qu'en local, mais pas le même <em>coût</em>&nbsp;: latence réseau, possibilité de perte, nœud injoignable. Un message local est quasi instantané et sûr&nbsp;; un message distant traverse le réseau. Conçois en gardant à l'esprit que «&nbsp;distant&nbsp;» implique de la latence et des pannes possibles, même si la syntaxe le cache.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'histoire la plus célèbre est celle de <strong>WhatsApp</strong>&nbsp;: en 2015, l'application gérait des centaines de millions d'utilisateurs et des dizaines de milliards de messages par jour avec une équipe d'ingénieurs minuscule, grâce à Erlang. La concurrence massive, la supervision et la distribution leur ont permis de tenir une charge colossale avec une fiabilité remarquable — une démonstration éclatante que les choix d'Erlang, nés du téléphone, valent pour l'Internet moderne.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>nœud</strong> est une instance Erlang&nbsp;; on connecte des nœuds pour former un cluster (<code>net_adm:ping</code>).</li>
+  <li><strong>Transparence de localisation</strong>&nbsp;: envoyer un message distant s'écrit comme en local (<code>!</code>).</li>
+  <li>Processus isolés + supervision + distribution → disponibilité extrême («&nbsp;neuf neuf&nbsp;»).</li>
+  <li><strong>Mise à jour à chaud</strong> possible&nbsp;; mais le réseau implique latence et pannes à gérer.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'un nœud Erlang&nbsp;?</li><li>En quoi consiste la transparence de localisation&nbsp;?</li><li>Que permet la mise à jour à chaud&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle fonction teste la connexion vers un autre nœud&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">net_adm:ping('bob@hote').
+% renvoie pong (succès) ou pang (échec)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris l'envoi d'un message <code>ping</code> au processus enregistré <code>serveur</code> sur le nœud <code>'bob@hote'</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">{serveur, 'bob@hote'} ! ping.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique comment Erlang atteint une disponibilité de «&nbsp;neuf neuf&nbsp;».</p><details><summary>Voir une solution</summary><p>Par la combinaison de trois mécanismes&nbsp;: (1) des <strong>processus isolés</strong> qui ne s'entraînent pas mutuellement dans leur chute&nbsp;; (2) la <strong>supervision</strong>, qui redémarre automatiquement tout processus défaillant dans un état sain («&nbsp;let it crash&nbsp;»)&nbsp;; (3) la <strong>distribution</strong> sur plusieurs nœuds, de sorte que la panne d'une machine n'arrête pas le système, et la possibilité de réparer ou mettre à jour une partie (à chaud) pendant que le reste continue de fonctionner. Aucun point de défaillance unique ne peut tout arrêter.</p></details></div>

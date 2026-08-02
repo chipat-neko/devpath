@@ -1,0 +1,79 @@
+<p>La leçon 7 t'a montré la réentrance et le motif checks-effects-interactions. Mais l'univers des attaques sur les contrats intelligents est bien plus vaste — et c'est là que se jouent les emplois d'ingénieur Solidity. Cette leçon élargit ta vision de la sécurité&nbsp;: <strong>contrôle d'accès</strong>, manipulation d'<strong>oracles</strong> et <strong>flash-loans</strong>, <strong>front-running</strong>/MEV, et la démarche d'<strong>audit</strong>. Dans un monde où le code détient l'argent, penser en attaquant n'est pas optionnel.</p>
+
+<h2>Le contrôle d'accès, structuré</h2>
+<p>La première ligne de défense&nbsp;: décider <em>qui</em> peut appeler <em>quoi</em>. Plutôt que de réécrire des vérifications à la main, on réutilise les composants audités d'OpenZeppelin.</p>
+<figure class="code-block" data-file="acces.sol"><pre><code class="language-solidity">import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Tresor is Ownable {
+    constructor() Ownable(msg.sender) {}
+
+    // onlyOwner : seul le propriétaire passe
+    function retirerFonds() external onlyOwner {
+        // ...
+    }
+}</code></pre></figure>
+<p>Pour des besoins plus fins, <code>AccessControl</code> définit des <strong>rôles</strong> (<code>MINTER_ROLE</code>, <code>PAUSER_ROLE</code>…) attribuables à plusieurs adresses. Le principe directeur&nbsp;: le <strong>moindre privilège</strong> — chaque fonction n'est ouverte qu'à ceux qui en ont strictement besoin, et toute fonction sensible non protégée est un trou béant.</p>
+
+<h2>Les attaques par oracle et flash-loan</h2>
+<p>Beaucoup de contrats DeFi ont besoin d'un <strong>prix</strong> (combien vaut tel jeton&nbsp;?). S'ils le lisent depuis une source manipulable — typiquement le prix instantané d'un pool d'échange — un attaquant peut le <strong>fausser</strong> le temps d'une transaction.</p>
+<p>L'arme&nbsp;: le <strong>flash-loan</strong>, un emprunt de millions sans garantie, à condition de tout rembourser dans la <em>même transaction</em>. Le scénario classique&nbsp;: emprunter énormément → s'en servir pour déséquilibrer un pool et faire bouger le prix → exploiter un contrat qui fait confiance à ce prix faussé → rembourser. Tout cela atomiquement, en un bloc.</p>
+<figure class="code-block" data-file="oracle.sol"><pre><code class="language-solidity">// VULNÉRABLE : lit le prix instantané d'un pool (manipulable)
+uint256 prix = pool.getReservesRatio();   // danger !
+
+// PLUS SÛR : utiliser un oracle robuste (ex. Chainlink) et/ou
+// un prix MOYEN dans le temps (TWAP), coûteux à manipuler.</code></pre></figure>
+<p>La parade&nbsp;: ne jamais faire confiance à un prix <em>instantané</em> manipulable. On utilise des <strong>oracles décentralisés</strong> (Chainlink) ou des moyennes temporelles (TWAP), bien plus coûteuses à fausser.</p>
+
+<h2>Le front-running et le MEV</h2>
+<p>Sur Ethereum, les transactions en attente sont <strong>publiques</strong> (dans le <em>mempool</em>) avant d'être incluses dans un bloc. Un observateur peut voir ta transaction profitable et soumettre la sienne <strong>avant</strong>, en payant plus de gas, pour te «&nbsp;doubler&nbsp;». C'est le <strong>front-running</strong>, une forme de <strong>MEV</strong> (Maximal Extractable Value).</p>
+<figure class="code-block" data-file="frontrun.sol"><pre><code class="language-solidity">// Exemple : un achat sans protection de prix peut être "sandwiché"
+// L'attaquant achète avant toi (fait monter le prix), tu achètes cher,
+// il revend après toi. Parade : un paramètre 'montant minimum reçu'.
+function acheter(uint256 montantMinRecu) external { /* ... */ }</code></pre></figure>
+<p>Les parades&nbsp;: imposer une <strong>tolérance</strong> («&nbsp;je refuse si je reçois moins que X&nbsp;»), des <strong>échéances</strong>, ou des schémas commit-reveal pour cacher l'intention. On ne peut pas toujours éliminer le MEV, mais on peut <em>limiter</em> ce qu'un attaquant peut en extraire.</p>
+
+<h2>Quelques autres vecteurs</h2>
+<ul>
+  <li><strong>Débordements</strong>&nbsp;: gérés depuis Solidity 0.8 (revert auto), mais attention aux blocs <code>unchecked</code> et aux conversions de types.</li>
+  <li><strong><code>tx.origin</code></strong> pour l'authentification&nbsp;: à proscrire (utiliser <code>msg.sender</code>) — un contrat intermédiaire peut le détourner.</li>
+  <li><strong>Dépendance au hasard</strong> (<code>block.timestamp</code>, hash de bloc)&nbsp;: prévisible/manipulable&nbsp;; pour de l'aléa sûr, utiliser un oracle de hasard (VRF).</li>
+  <li><strong>Appels externes non vérifiés</strong>&nbsp;: toujours contrôler le succès, et appliquer checks-effects-interactions.</li>
+</ul>
+
+<h2>La démarche d'audit</h2>
+<p>Avant tout déploiement gérant de la valeur, on <strong>audite</strong>. Une démarche raisonnable&nbsp;:</p>
+<ol>
+  <li><strong>Tests exhaustifs</strong> (Foundry, fuzzing, invariants) — la base.</li>
+  <li><strong>Analyse statique</strong> (outils comme Slither) qui repère automatiquement des motifs dangereux.</li>
+  <li><strong>Revue manuelle</strong> par des pairs, avec une <em>checklist</em> (contrôle d'accès, réentrance, oracles, débordements, initialisation des proxies…).</li>
+  <li><strong>Audit professionnel</strong> externe pour les contrats à fort enjeu, et souvent un <strong>bug bounty</strong> public.</li>
+</ol>
+<p>Aucune étape ne garantit l'absence totale de faille&nbsp;; leur cumul réduit drastiquement le risque. La sécurité est un processus, pas une case à cocher.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'on a «&nbsp;fini&nbsp;» la sécurité parce qu'on a évité la réentrance. Les plus gros vols récents passent par des <strong>oracles manipulés via flash-loans</strong>, des <strong>fonctions d'administration mal protégées</strong>, ou des <strong>proxies mal initialisés</strong> — pas par la réentrance classique. Garde une vision <em>systémique</em>&nbsp;: chaque source de prix, chaque privilège, chaque appel externe est une surface d'attaque potentielle.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Étudie les <strong>hacks réels</strong>&nbsp;: la communauté documente précisément chaque exploit majeur (rekt.news, les post-mortems des protocoles). Lire comment un contrat a été vidé — souvent à cause d'une seule ligne — est la meilleure école de sécurité qui soit. Les bases de données comme «&nbsp;SWC Registry&nbsp;» et les checklists (Solcurity) recensent les vulnérabilités connues&nbsp;: en faire l'inventaire avant chaque déploiement est une discipline de professionnel.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Contrôle d'accès</strong> structuré (Ownable/AccessControl, rôles)&nbsp;: principe du moindre privilège.</li>
+  <li><strong>Oracles</strong>&nbsp;: ne jamais faire confiance à un prix instantané manipulable (flash-loans)&nbsp;; préférer oracles décentralisés / TWAP.</li>
+  <li><strong>Front-running / MEV</strong>&nbsp;: le mempool est public&nbsp;; se protéger par tolérances et échéances.</li>
+  <li><strong>Audit</strong>&nbsp;: tests + analyse statique + revue + audit externe + bug bounty — la sécurité est un processus.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment un flash-loan sert-il une attaque par oracle&nbsp;?</li><li>Pourquoi ne pas utiliser <code>tx.origin</code> pour l'authentification&nbsp;?</li><li>Cite trois étapes d'une démarche d'audit.</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Comment un attaquant manipule-t-il un oracle avec un flash-loan ?","a":["Il emprunte énormément pour déséquilibrer un pool et fausser le prix instantané, exploite un contrat qui s'y fie, puis rembourse — le tout en une transaction","Il vole directement la clé privée de l'oracle","Il modifie le code de l'oracle","Il attend plusieurs jours que le prix change"],"correct":0,"explain":"Le flash-loan fournit des fonds massifs sans garantie le temps d'une transaction ; on s'en sert pour fausser un prix manipulable, d'où l'importance d'oracles robustes (Chainlink/TWAP)."},
+  {"q":"Pourquoi éviter tx.origin pour l'authentification ?","a":["Un contrat intermédiaire peut le détourner ; il faut utiliser msg.sender","Il consomme trop de gas","Il n'existe qu'à partir de Solidity 0.9","Il renvoie toujours l'adresse zéro"],"correct":0,"explain":"tx.origin est l'initiateur de la chaîne d'appels : un contrat piège appelé par la victime verrait tx.origin = la victime. msg.sender (l'appelant direct) est le bon choix."},
+  {"q":"Que désigne le « front-running » ?","a":["Observer une transaction en attente dans le mempool et en soumettre une avant, en payant plus de gas","Déployer un contrat avant les autres","Compiler le contrat en avance","Tester le contrat avant de l'écrire"],"correct":0,"explain":"Les transactions en attente sont publiques ; un attaquant peut se placer avant la tienne (une forme de MEV). On se protège avec des tolérances de prix et des échéances."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quel modificateur OpenZeppelin réserve une fonction au propriétaire&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">function fonctionSensible() external onlyOwner { /* ... */ }
+// (en héritant de Ownable)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Comment se protéger d'un «&nbsp;sandwich&nbsp;» (front-running) lors d'un achat&nbsp;?</p><details><summary>Voir une solution</summary><p>En imposant un paramètre de <strong>tolérance</strong>&nbsp;: un «&nbsp;montant minimum reçu&nbsp;» (et/ou une échéance). Si l'attaquant fait monter le prix avant ta transaction, ton achat reçoit moins que le minimum exigé et la transaction <strong>échoue</strong> au lieu de s'exécuter à un prix défavorable.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Résume en trois points une démarche de sécurité avant de déployer un contrat qui gère des fonds.</p><details><summary>Voir une solution</summary><p>Réponses possibles&nbsp;: (1) <strong>tester exhaustivement</strong> (Foundry, fuzzing, invariants) et passer un <strong>analyseur statique</strong> (Slither)&nbsp;; (2) faire une <strong>revue manuelle</strong> avec une checklist (contrôle d'accès, réentrance, oracles, débordements, initialisation des proxies)&nbsp;; (3) pour tout enjeu sérieux, commander un <strong>audit professionnel externe</strong> et ouvrir un <strong>bug bounty</strong>. Aucune étape seule ne suffit&nbsp;: c'est leur cumul qui réduit le risque.</p></details></div>

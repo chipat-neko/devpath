@@ -1,0 +1,74 @@
+<p>OCaml est fonctionnel, mais <strong>pragmatique</strong>&nbsp;: quand l'état mutable ou les boucles simplifient vraiment, il les permet. Cette leçon montre les <strong>références</strong>, les <strong>tableaux</strong> mutables et les boucles — et surtout <em>comment</em> mêler proprement les styles fonctionnel et impératif.</p>
+
+<h2>Les références</h2>
+<p>Par défaut, une liaison <code>let</code> est immuable. Pour une vraie variable modifiable, on utilise une <strong>référence</strong>&nbsp;: <code>ref</code> la crée, <code>!</code> lit son contenu, <code>:=</code> le modifie.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let compteur = ref 0       (* une référence vers 0 *)
+compteur := !compteur + 1  (* modifie : 1 *)
+let v = !compteur          (* lit : 1 *)
+
+incr compteur              (* raccourci : +1 *)
+decr compteur              (* raccourci : -1 *)</code></pre></figure>
+<p class="code-caption"><code>!r</code> n'est pas une négation ici&nbsp;: c'est «&nbsp;le contenu de la référence <code>r</code>&nbsp;».</p>
+
+<h2>Les tableaux mutables</h2>
+<p>Contrairement aux listes (immuables), les <strong>tableaux</strong> (<code>array</code>) ont une taille fixe et des éléments <strong>modifiables</strong>, avec un accès indexé rapide.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let t = [| 10; 20; 30 |]   (* syntaxe [| ... |] *)
+t.(0)                      (* accès : 10 *)
+t.(1) &lt;- 99                (* modification : t = [|10; 99; 30|] *)
+Array.length t             (* 3 *)
+let z = Array.make 5 0     (* [|0; 0; 0; 0; 0|] *)</code></pre></figure>
+<p>Choisis le tableau pour l'accès indexé et la mutation&nbsp;; la liste pour la construction fonctionnelle.</p>
+
+<h2>Les boucles</h2>
+<p>OCaml a des boucles <code>for</code> et <code>while</code>. Elles renvoient <code>unit</code> (rien d'utile)&nbsp;: on ne les utilise que pour des <strong>effets de bord</strong> (modifier un tableau, afficher).</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">for i = 0 to 4 do
+  Printf.printf "%d " i      (* 0 1 2 3 4 *)
+done;
+
+let total = ref 0 in
+for i = 1 to 100 do
+  total := !total + i
+done;
+Printf.printf "%d\n" !total  (* 5050 *)</code></pre></figure>
+
+<h2>Le type unit et le point-virgule</h2>
+<p>Une expression qui ne produit «&nbsp;rien&nbsp;» a le type <code>unit</code> (sa seule valeur est <code>()</code>). On enchaîne des effets de bord avec le point-virgule <code>;</code>&nbsp;: «&nbsp;fais ceci, puis cela&nbsp;».</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let afficher_deux () =
+  print_endline "un";
+  print_endline "deux"       (* la dernière expression donne le résultat *)</code></pre></figure>
+
+<h2>Mêler les deux styles proprement</h2>
+<p>La bonne pratique OCaml&nbsp;: garder le <strong>cœur fonctionnel</strong> (logique pure, sans état) et isoler l'impératif là où il est vraiment utile (performance d'un algorithme, entrées/sorties). On obtient le meilleur des deux mondes&nbsp;: clarté et efficacité.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">(* Impératif local, interface pure : *)
+let somme_tableau t =
+  let total = ref 0 in
+  Array.iter (fun x -&gt; total := !total + x) t;
+  !total                     (* renvoie une valeur, pas d'état exposé *)</code></pre></figure>
+<p class="code-caption">À l'extérieur, <code>somme_tableau</code> est une fonction pure&nbsp;; la mutation reste cachée à l'intérieur.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier le <code>!</code> pour lire une référence&nbsp;: écrire <code>compteur + 1</code> au lieu de <code>!compteur + 1</code> est une erreur de type, car <code>compteur</code> est une <em>référence</em> (un <code>int ref</code>), pas un <code>int</code>. Pour obtenir la valeur, c'est toujours <code>!compteur</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Un champ de record peut être déclaré <code>mutable</code> pour autoriser sa modification (<code>champ &lt;- valeur</code>)&nbsp;: une autre façon, parfois plus claire qu'une <code>ref</code>, d'avoir un état modifiable encapsulé dans une structure.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une <strong>référence</strong> (<code>ref</code>) est mutable&nbsp;: <code>!r</code> lit, <code>r := v</code> écrit&nbsp;; <code>incr</code>/<code>decr</code>.</li>
+  <li>Les <strong>tableaux</strong> (<code>[| ... |]</code>) sont à taille fixe et modifiables (<code>t.(i) &lt;- v</code>).</li>
+  <li>Les boucles <code>for</code>/<code>while</code> renvoient <code>unit</code>&nbsp;: pour les effets de bord&nbsp;; on les enchaîne avec <code>;</code>.</li>
+  <li>Bonne pratique&nbsp;: <strong>cœur fonctionnel</strong>, impératif isolé et caché.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment lit-on et modifie-t-on une référence&nbsp;?</li><li>Quelle différence entre une liste et un tableau en OCaml&nbsp;?</li><li>Que renvoie une boucle <code>for</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée une référence à 0, incrémente-la deux fois, et affiche sa valeur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let c = ref 0 in
+incr c; incr c;
+Printf.printf "%d\n" !c   (* 2 *)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un tableau de 3 entiers et remplace le deuxième par 99.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let t = [| 1; 2; 3 |] in
+t.(1) &lt;- 99   (* [|1; 99; 3|] *)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Calcule la somme de 1 à n avec une boucle <code>for</code> et une référence, dans une fonction à interface pure.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let somme_n n =
+  let total = ref 0 in
+  for i = 1 to n do total := !total + i done;
+  !total
+(* somme_n 100 = 5050 *)</code></pre></figure></details></div>

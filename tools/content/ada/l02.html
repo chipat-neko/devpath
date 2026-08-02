@@ -1,0 +1,71 @@
+<p>Si un seul trait devait résumer Ada, ce serait son <strong>typage extrêmement fort</strong>. Là où d'autres langages laissent passer des mélanges douteux, Ada exige que chaque valeur ait un type précis, avec des <strong>contraintes</strong> que le programme s'engage à respecter. Cette rigueur, qui peut sembler tatillonne, est précisément ce qui attrape des bugs avant qu'ils ne deviennent des catastrophes. Cette leçon explore les types Ada et l'art de les contraindre.</p>
+
+<h2>Déclarer variables et constantes</h2>
+<p>En Ada, on déclare le <strong>nom</strong>, puis le <strong>type</strong> après deux-points, et éventuellement une valeur initiale avec <code>:=</code>. Une constante porte le mot <code>constant</code>.</p>
+<figure class="code-block" data-file="declarations.adb"><pre><code class="language-ada">Compteur : Integer := 0;            --  variable entière
+Pi       : constant Float := 3.14159;  --  constante
+Actif    : Boolean := True;          --  booléen
+Initiale : Character := 'A';         --  un caractère</code></pre></figure>
+<p>Le type vient toujours <em>après</em> le nom, ce qui se lit naturellement&nbsp;: «&nbsp;Compteur, de type Integer&nbsp;». Une constante ne peut plus changer&nbsp;: toute tentative de la modifier est rejetée à la compilation.</p>
+
+<h2>Les types scalaires de base</h2>
+<p>Ada fournit les types attendus&nbsp;: <code>Integer</code> (entiers), <code>Float</code> (réels), <code>Boolean</code> (vrai/faux), <code>Character</code> (caractère). Mais leur force vient de ce qu'on peut en <strong>dériver</strong> des versions sur mesure.</p>
+
+<h2>Les plages&nbsp;: contraindre les valeurs possibles</h2>
+<p>Voici une idée centrale d'Ada&nbsp;: un type peut imposer une <strong>plage</strong> de valeurs valides via <code>range</code>. Toute valeur hors de cette plage déclenche une erreur — à la compilation si elle est détectable, sinon à l'exécution.</p>
+<figure class="code-block" data-file="plages.adb"><pre><code class="language-ada">type Jour_Mois is range 1 .. 31;
+type Pourcentage is range 0 .. 100;
+
+J : Jour_Mois := 15;       --  OK
+P : Pourcentage := 50;     --  OK
+--  P := 150;  -- ERREUR : 150 hors de 0..100</code></pre></figure>
+<p>En définissant <code>Pourcentage</code> comme «&nbsp;un entier de 0 à 100&nbsp;», on rend <em>impossible</em> de lui assigner 150. Le type lui-même porte la règle métier&nbsp;: pas besoin de vérifications éparpillées dans le code, la contrainte est garantie partout.</p>
+
+<h2>Les sous-types</h2>
+<p>Un <strong>sous-type</strong> restreint un type existant sans en créer un nouveau, incompatible. Les valeurs d'un sous-type restent compatibles avec le type parent&nbsp;: pratique pour ajouter une contrainte tout en gardant l'interopérabilité.</p>
+<figure class="code-block" data-file="sous-types.adb"><pre><code class="language-ada">subtype Age is Integer range 0 .. 150;
+subtype Lettre_Maj is Character range 'A' .. 'Z';
+
+Mon_Age : Age := 30;
+--  Mon_Age reste un Integer : on peut le mélanger
+--  aux Integer, mais il refuse les valeurs hors 0..150.</code></pre></figure>
+<p>Distinction subtile mais utile&nbsp;: un <code>type</code> distinct (<code>type Compteur is range …</code>) crée une famille <em>séparée</em>, qu'on ne peut pas mélanger par accident avec un autre&nbsp;; un <code>subtype</code> ajoute juste une contrainte à un type existant.</p>
+
+<h2>Le typage fort en action</h2>
+<p>La grande force&nbsp;: Ada refuse de <strong>mélanger des types incompatibles</strong> sans conversion explicite. On ne peut pas additionner par mégarde des mètres et des secondes, ni un compteur de pommes et un compteur de poires.</p>
+<figure class="code-block" data-file="fort.adb"><pre><code class="language-ada">type Metres  is range 0 .. 100_000;
+type Secondes is range 0 .. 100_000;
+
+D : Metres := 100;
+T : Secondes := 10;
+--  X : Metres := D + T;  -- ERREUR : types différents !
+--  Il faut une conversion explicite si c'est voulu :
+--  X : Metres := D + Metres (Integer (T));</code></pre></figure>
+<p>Cette intransigeance a une histoire célèbre&nbsp;: nombre de bugs coûteux (y compris dans l'aérospatiale) venaient de la confusion entre unités. Le typage fort d'Ada rend ces erreurs <em>structurellement impossibles</em>. On notera aussi le <code>_</code> dans <code>100_000</code>&nbsp;: un séparateur de milliers, purement visuel, pour la lisibilité.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>S'attendre à des conversions automatiques entre <code>Integer</code> et <code>Float</code>, ou entre deux types distincts. Ada exige une <strong>conversion explicite</strong>&nbsp;: <code>Float (Mon_Entier)</code> ou <code>Integer (Mon_Reel)</code>. C'est délibéré&nbsp;: chaque conversion devient un choix visible dans le code, jamais un effet de bord silencieux qui fausserait un calcul.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Ada permet de définir des types numériques avec une <strong>précision garantie</strong>&nbsp;: <code>type Tension is delta 0.01 range 0.0 .. 240.0;</code> déclare un réel à pas fixe de 0,01 — crucial en embarqué où l'on maîtrise exactement la représentation. Cette finesse, rare dans les langages courants, explique l'adoption d'Ada là où chaque bit compte.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Déclaration&nbsp;: <code>Nom : Type := Valeur;</code>&nbsp;; <code>constant</code> pour l'immuable.</li>
+  <li>Les <strong>plages</strong> (<code>range</code>) contraignent les valeurs valides&nbsp;: la règle est dans le type.</li>
+  <li><strong>Sous-type</strong> = contrainte compatible&nbsp;; <strong>type</strong> distinct = famille séparée.</li>
+  <li>Typage <strong>fort</strong>&nbsp;: pas de mélange ni de conversion implicite&nbsp;; conversions explicites obligatoires.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment limiter un type entier aux valeurs 0 à 100&nbsp;?</li><li>Quelle différence entre un <code>type</code> distinct et un <code>subtype</code>&nbsp;?</li><li>Que faut-il pour additionner un <code>Integer</code> et un <code>Float</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une constante <code>Max</code> de type <code>Integer</code> valant 100.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">Max : constant Integer := 100;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Définis un sous-type <code>Note</code> des entiers de 0 à 20.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">subtype Note is Integer range 0 .. 20;
+
+Ma_Note : Note := 18;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Définis un type <code>Heure</code> (0 à 23) et explique ce qui se passe si on tente d'y mettre 25.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">type Heure is range 0 .. 23;
+
+H : Heure := 25;
+--  Rejeté : 25 est hors de la plage 0..23.
+--  Si la valeur venait d'un calcul à l'exécution,
+--  Ada lèverait l'exception Constraint_Error.</code></pre></figure></details></div>

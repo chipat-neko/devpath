@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La sécurité du système d'exploitation — Leçon 12 · Syntaxe</title>
+    <meta name="description" content="L'OS est le gardien de la machine : identités et permissions, principe du moindre privilège, isolation fine (capabilities, seccomp, SELinux), défenses de la mémoire (ASLR, DEP/NX, canaris), surface d'attaque et escalade de privilèges, illustrés par la faille Dirty COW." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="os" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes d'exploitation</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Exigences critiques — Leçon 12</p>
+              <h1 class="lesson-header__title">La sécurité du système d'exploitation</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçons 04 &amp; 09 conseillées</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer comment l'OS protège les programmes les uns des autres&nbsp;;</li>
+                  <li>appliquer le <strong>principe du moindre privilège</strong>&nbsp;;</li>
+                  <li>citer les outils d'isolation&nbsp;: <strong>capabilities</strong>, <strong>seccomp</strong>, <strong>SELinux</strong>&nbsp;;</li>
+                  <li>comprendre les défenses de la mémoire&nbsp;: <strong>ASLR</strong>, <strong>DEP/NX</strong>, <strong>canaris</strong>&nbsp;;</li>
+                  <li>définir la <strong>surface d'attaque</strong> et l'<strong>escalade de privilèges</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un système d'exploitation n'est pas qu'un <strong>partageur de ressources</strong>&nbsp;: c'est aussi le <strong>gardien</strong> de la machine. Sur un ordinateur partagé — ou simplement connecté à Internet — il doit empêcher qu'un programme lise les données d'un autre, qu'un utilisateur touche aux fichiers d'un autre, et qu'un simple <strong>bug</strong> se transforme en <strong>prise de contrôle</strong>. La <a href="lecon-09.html">leçon&nbsp;9</a> a montré le <em>mécanisme</em> (les modes noyau et utilisateur)&nbsp;; ici, on regarde l'<em>objectif</em>&nbsp;: la <strong>sécurité</strong>.</p>
+
+<h2>Identité et permissions : qui a le droit de quoi</h2>
+<p>Tout part de l'<strong>identité</strong>. Chaque processus s'exécute <strong>au nom d'un utilisateur</strong> (identifié par un <strong>UID</strong>). Chaque fichier a un <strong>propriétaire</strong> et des <strong>droits</strong> — lecture, écriture, exécution. À <strong>chaque</strong> accès, le noyau <strong>vérifie</strong>&nbsp;: ce processus, avec cette identité, a-t-il le droit de faire cela&nbsp;? Sans identité ni permissions, il n'y a tout simplement pas de sécurité.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Les droits d'un fichier : propriétaire, groupe, autres
+ls -l secret.txt
+#   -rw------- 1 alice alice 128 secret.txt   -> lecture/écriture pour alice SEULE
+
+# Restreindre : seul le propriétaire lit et écrit, personne d'autre
+chmod 600 secret.txt</code></pre></figure>
+
+<h2>Le principe du moindre privilège</h2>
+<p>La règle d'or de la sécurité tient en une phrase&nbsp;: un programme (ou un utilisateur) ne doit disposer que des <strong>droits strictement nécessaires</strong> à sa tâche — <strong>rien de plus</strong>. Pourquoi&nbsp;? Parce que le jour où ce programme est <strong>compromis</strong> (bug exploité, entrée malveillante), l'attaquant hérite <strong>exactement</strong> de ses privilèges. Moins il en a, moins la casse est grande.</p>
+<p>Le compte <strong>root</strong> (administrateur, tout-puissant) est donc à manier avec une extrême prudence. Un serveur web bien conçu ne tourne <strong>pas</strong> en root&nbsp;: il s'exécute sous un <strong>utilisateur dédié sans privilèges</strong>. S'il a besoin d'un port réservé au démarrage, il l'ouvre, puis <strong>abandonne ses privilèges</strong> (<em>drop privileges</em>) pour la suite. Réduire les droits, c'est <strong>réduire la surface des dégâts</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 206" role="img" aria-label="Comparaison de deux façons de lancer un service. À gauche, le service tourne en root : une grande zone représente tout ce qu'un attaquant pourrait atteindre s'il le compromet, c'est-à-dire toute la machine. À droite, le même service tourne avec le moindre privilège, sous un utilisateur dédié aux droits réduits : la zone atteignable en cas de compromission est beaucoup plus petite, limitée aux seuls fichiers du service.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">Le moindre privilège réduit les dégâts</text>
+    <text class="d-text" x="165" y="48" text-anchor="middle" font-size="11">Service en root</text>
+    <rect class="d-box" x="40" y="58" width="250" height="120" rx="8" fill-opacity="0.12" /><text class="d-mut" x="165" y="78" text-anchor="middle" font-size="9">si compromis, l'attaquant atteint…</text>
+    <rect class="d-frame" x="60" y="88" width="210" height="76" rx="6" /><text class="d-text" x="165" y="122" text-anchor="middle" font-size="11">TOUTE la machine</text><text class="d-mut" x="165" y="140" text-anchor="middle" font-size="9">fichiers, autres services, noyau</text>
+    <text class="d-text" x="475" y="48" text-anchor="middle" font-size="11">Service à privilèges réduits</text>
+    <rect class="d-box" x="350" y="58" width="250" height="120" rx="8" fill-opacity="0.12" /><text class="d-mut" x="475" y="78" text-anchor="middle" font-size="9">si compromis, l'attaquant atteint…</text>
+    <rect class="d-accent" x="430" y="112" width="90" height="46" rx="6" /><text class="d-text" x="475" y="132" text-anchor="middle" font-size="10">ses fichiers</text><text class="d-mut" x="475" y="148" text-anchor="middle" font-size="8">et rien d'autre</text>
+  </svg>
+  <figcaption>Même faille, deux mondes&nbsp;: en <strong>root</strong>, une compromission ouvre <strong>toute</strong> la machine&nbsp;; avec le <strong>moindre privilège</strong>, elle reste <strong>confinée</strong> à un petit périmètre.</figcaption>
+</figure>
+
+<h2>Isoler plus finement : capabilities, seccomp, bacs à sable</h2>
+<p>Le partage «&nbsp;root ou pas root&nbsp;» est trop <strong>grossier</strong>&nbsp;: beaucoup de programmes n'ont besoin que d'<em>un</em> pouvoir de root, pas de tous. Les OS modernes découpent donc la sécurité plus finement&nbsp;:</p>
+<ul>
+<li><strong>Capabilities</strong> (Linux) — on <strong>casse le pouvoir de root en morceaux</strong>. Par exemple <code>cap_net_bind_service</code> donne juste le droit d'ouvrir un port réservé, sans le reste des super-pouvoirs.</li>
+<li><strong>seccomp</strong> — on <strong>restreint les appels système</strong> (<a href="lecon-09.html">leçon&nbsp;9</a>) qu'un processus a le droit de faire. C'est un <strong>bac à sable</strong> (<em>sandbox</em>)&nbsp;: s'il tente un appel interdit, le noyau le tue.</li>
+<li><strong>namespaces</strong> (<a href="lecon-10.html">leçon&nbsp;10</a>) — on <strong>isole la vue</strong> du processus&nbsp;: ses propres PID, réseau, fichiers.</li>
+<li><strong>MAC</strong> (SELinux, AppArmor) — une <strong>politique obligatoire</strong> imposée par l'administrateur, que <strong>même root</strong> ne peut pas contourner à la légère.</li>
+</ul>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Donner UNE capacité précise, au lieu de tout root :
+# ouvrir le port 80 sans être root pour le reste
+sudo setcap 'cap_net_bind_service=+ep' /usr/local/bin/mon-serveur
+getcap /usr/local/bin/mon-serveur
+#   /usr/local/bin/mon-serveur cap_net_bind_service=ep</code></pre></figure>
+
+<h2>Défendre la mémoire : ASLR, DEP/NX, canaris</h2>
+<p>Une immense famille d'attaques exploite des <strong>bugs mémoire</strong>, à commencer par le <strong>dépassement de tampon</strong> (<em>buffer overflow</em>)&nbsp;: en écrivant <strong>au-delà</strong> d'une zone prévue, on écrase ce qui suit — dont l'<strong>adresse de retour</strong> d'une fonction. En la remplaçant, l'attaquant peut détourner l'exécution vers <em>son</em> code. L'OS et le matériel montent trois défenses&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 212" role="img" aria-label="Schéma d'un dépassement de tampon sur la pile. Trois cases sont alignées de gauche à droite : d'abord un tampon prévu pour des données, ensuite une valeur sentinelle appelée canari, enfin l'adresse de retour de la fonction. Une flèche représente une écriture qui déborde du tampon et vient écraser le canari puis l'adresse de retour. Comme le débordement modifie le canari, le programme s'en aperçoit avant d'utiliser l'adresse de retour et s'arrête, empêchant le détournement.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">Dépassement de tampon et canari</text>
+    <rect class="d-box" x="40" y="96" width="200" height="46" rx="4" /><text class="d-text" x="140" y="116" text-anchor="middle" font-size="10">tampon (données)</text><text class="d-mut" x="140" y="132" text-anchor="middle" font-size="8">taille prévue</text>
+    <rect class="d-tag" x="248" y="96" width="120" height="46" rx="4" /><text class="d-text" x="308" y="116" text-anchor="middle" font-size="10">canari</text><text class="d-mut" x="308" y="132" text-anchor="middle" font-size="8">valeur sentinelle</text>
+    <rect class="d-accent" x="376" y="96" width="220" height="46" rx="4" /><text class="d-text" x="486" y="116" text-anchor="middle" font-size="10">adresse de retour</text><text class="d-mut" x="486" y="132" text-anchor="middle" font-size="8">où reprendre après la fonction</text>
+    <path class="d-line" d="M60 84 L520 84" fill="none" stroke-dasharray="5 3" /><polygon class="d-dot" points="520,84 510,79 510,89" /><text class="d-mut" x="250" y="76" text-anchor="middle" font-size="9">écriture qui déborde →</text>
+    <text class="d-text" x="308" y="170" text-anchor="middle" font-size="10">le canari change → détecté → le programme s'arrête</text>
+    <text class="d-mut" x="320" y="192" text-anchor="middle" font-size="9">l'adresse de retour n'est jamais utilisée corrompue</text>
+  </svg>
+  <figcaption>Le <strong>canari</strong> est une sentinelle placée juste avant l'adresse de retour&nbsp;: un débordement l'écrase <em>d'abord</em>, ce qui trahit l'attaque avant qu'elle n'aboutisse.</figcaption>
+</figure>
+<ul>
+<li><strong>DEP / NX</strong> (<em>No-eXecute</em>) — marquer la pile et le tas <strong>non exécutables</strong>&nbsp;: on ne peut plus exécuter des <strong>données</strong> injectées comme si c'était du code.</li>
+<li><strong>ASLR</strong> (<em>Address Space Layout Randomization</em>) — <strong>randomiser les adresses</strong> (pile, tas, bibliothèques) à chaque exécution&nbsp;: l'attaquant ne sait plus <strong>où</strong> se trouve sa cible, donc où «&nbsp;sauter&nbsp;».</li>
+<li><strong>Canaris de pile</strong> — une valeur sentinelle placée avant l'adresse de retour&nbsp;; si un débordement l'écrase, le programme <strong>le détecte et s'arrête</strong> avant les dégâts.</li>
+</ul>
+
+<h2>Surface d'attaque et escalade de privilèges</h2>
+<p>La <strong>surface d'attaque</strong>, c'est <strong>tout ce qu'un attaquant peut atteindre</strong>&nbsp;: les appels système, les services réseau ouverts, les pilotes, les programmes installés avec des privilèges. Plus elle est <strong>petite</strong>, mieux on dort&nbsp;: désactiver un service inutile, fermer un port, retirer un droit, c'est <strong>réduire la surface</strong>.</p>
+<p>Le graal de l'attaquant, c'est l'<strong>escalade de privilèges</strong>&nbsp;: partir d'un accès <strong>limité</strong> (un utilisateur normal, un processus confiné) et <strong>devenir root</strong> en exploitant une faille — très souvent dans le <strong>noyau</strong>, car il est le seul code qui a tous les pouvoirs. C'est précisément pourquoi le <strong>noyau partagé</strong> des conteneurs (<a href="lecon-10.html">leçon&nbsp;10</a>) est un point sensible&nbsp;: une faille noyau exploitée <em>depuis</em> un conteneur peut compromettre <strong>l'hôte tout entier</strong>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: la faille «&nbsp;Dirty COW&nbsp;» (2016)</p><p>Pendant près de <strong>neuf ans</strong>, le noyau Linux a porté une faille discrète&nbsp;: <strong>Dirty COW</strong>. Elle exploitait une <strong>condition de course</strong> (<a href="lecon-07.html">leçon&nbsp;7</a>) dans le mécanisme de <strong>copie sur écriture</strong> (COW, <a href="lecon-04.html">leçon&nbsp;4</a>) de la mémoire. En s'y prenant au bon moment, un <strong>utilisateur normal</strong> pouvait écrire dans un fichier théoriquement <strong>en lecture seule</strong> appartenant à root — puis, de là, prendre le contrôle total de la machine. Un cas d'école d'<strong>escalade de privilèges</strong>&nbsp;: pas besoin d'entrer par la grande porte, il suffit d'un défaut minuscule dans le <strong>noyau</strong> pour passer de simple utilisateur à root. Correctif d'urgence sur des milliards d'appareils.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">La sécurité n'est pas un mur, mais des couches</p><p>Aucune défense n'est parfaite&nbsp;: l'ASLR se contourne, un canari se devine parfois, une capability mal réglée fuit. L'idée n'est pas de trouver <em>la</em> barrière imprenable, mais d'<strong>empiler les couches</strong> (<em>defense in depth</em>)&nbsp;: permissions <em>et</em> moindre privilège <em>et</em> bac à sable <em>et</em> défenses mémoire. Pour réussir, l'attaquant doit <strong>toutes</strong> les percer&nbsp;; pour se défendre, il suffit qu'<strong>une</strong> tienne.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La chaîne de confiance commence <strong>avant</strong> l'OS&nbsp;: le <strong>démarrage sécurisé</strong> (<em>secure boot</em>) vérifie la signature du noyau au boot, épaulé par une puce <strong>TPM</strong> qui garde les clés. Plus loin encore, l'<strong>informatique confidentielle</strong> (enclaves matérielles, chiffrement de la mémoire) vise à protéger des données <strong>même d'un administrateur</strong> ou d'un hébergeur curieux. Et pour approfondir l'attaque et la défense côté applicatif, le cours <a href="../securite/cours.html">Sécurité</a> prend le relais.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>La sécurité vue par l'OS</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">En bref</th></tr></thead>
+    <tbody>
+      <tr><td>Identité / permissions</td><td>Chaque processus a un utilisateur&nbsp;; le noyau vérifie chaque accès</td></tr>
+      <tr><td>Moindre privilège</td><td>N'accorder que les droits strictement nécessaires</td></tr>
+      <tr><td>root</td><td>Compte tout-puissant&nbsp;: à éviter pour les services</td></tr>
+      <tr><td>Capabilities</td><td>Découper le pouvoir de root en petits droits ciblés</td></tr>
+      <tr><td>seccomp / sandbox</td><td>Restreindre les appels système autorisés (bac à sable)</td></tr>
+      <tr><td>MAC (SELinux/AppArmor)</td><td>Politique obligatoire que même root ne contourne pas</td></tr>
+      <tr><td>DEP / NX</td><td>Pile et tas non exécutables&nbsp;: pas de code injecté exécuté</td></tr>
+      <tr><td>ASLR</td><td>Randomiser les adresses&nbsp;: l'attaquant ne sait où sauter</td></tr>
+      <tr><td>Canari de pile</td><td>Sentinelle qui détecte un dépassement de tampon</td></tr>
+      <tr><td>Escalade de privilèges</td><td>Passer d'un accès limité à root via une faille</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Permissions</dt><dd>Droits (lecture, écriture, exécution) attachés à un fichier pour son propriétaire, son groupe et les autres&nbsp;; le noyau les vérifie à chaque accès.</dd>
+  <dt>Moindre privilège</dt><dd>Principe consistant à n'accorder à un programme ou un utilisateur que les droits <strong>strictement nécessaires</strong>, pour limiter les dégâts en cas de compromission.</dd>
+  <dt>root</dt><dd>Le compte administrateur <strong>tout-puissant</strong>&nbsp;; en faire tourner un service augmente fortement les dégâts possibles s'il est piraté.</dd>
+  <dt>Capabilities</dt><dd>Découpage du pouvoir de root en <strong>droits fins</strong> et ciblés (ouvrir un port réservé, changer l'heure…), accordés un par un.</dd>
+  <dt>seccomp (bac à sable)</dt><dd>Mécanisme qui <strong>restreint les appels système</strong> qu'un processus peut faire&nbsp;; toute tentative interdite le fait tuer.</dd>
+  <dt>ASLR</dt><dd><em>Address Space Layout Randomization</em>&nbsp;: randomisation des adresses mémoire à chaque exécution, pour empêcher l'attaquant de savoir où se trouve sa cible.</dd>
+  <dt>DEP / NX</dt><dd>Marquage de la pile et du tas comme <strong>non exécutables</strong>, pour empêcher l'exécution de données injectées.</dd>
+  <dt>Canari de pile</dt><dd>Valeur sentinelle placée avant l'adresse de retour&nbsp;; un dépassement de tampon l'écrase et <strong>trahit</strong> l'attaque.</dd>
+  <dt>Escalade de privilèges</dt><dd>Passage d'un accès <strong>limité</strong> à des droits <strong>root</strong> en exploitant une faille, souvent dans le noyau.</dd>
+  <dt>Surface d'attaque</dt><dd>L'ensemble des points par lesquels un système peut être attaqué&nbsp;; la <strong>réduire</strong> (fermer, désactiver, retirer des droits) renforce la sécurité.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>L'OS est le <strong>gardien</strong>&nbsp;: <strong>identité</strong> + <strong>permissions</strong> vérifiées à chaque accès.</li>
+<li><strong>Moindre privilège</strong>&nbsp;: n'accorder que le strict nécessaire&nbsp;; éviter root pour les services.</li>
+<li>Isoler finement&nbsp;: <strong>capabilities</strong>, <strong>seccomp</strong>, <strong>namespaces</strong>, <strong>MAC</strong>.</li>
+<li>Défendre la mémoire&nbsp;: <strong>DEP/NX</strong>, <strong>ASLR</strong>, <strong>canaris</strong> contre les dépassements de tampon.</li>
+<li>Réduire la <strong>surface d'attaque</strong>&nbsp;; se méfier de l'<strong>escalade de privilèges</strong> (souvent via le noyau).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi ne faut-il pas lancer un service en root&nbsp;?</li><li>À quoi servent l'ASLR, le DEP/NX et les canaris&nbsp;?</li><li>Qu'est-ce qu'une escalade de privilèges, et pourquoi le noyau est-il visé&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"En quoi consiste le principe du moindre privilège ?","a":["N'accorder à chaque programme que les droits strictement nécessaires, pour limiter les dégâts s'il est compromis","Donner tous les droits à tout le monde pour éviter les blocages","Chiffrer tous les fichiers du disque","Interdire l'accès à Internet"],"correct":0,"explain":"Si un programme est piraté, l'attaquant hérite de ses privilèges. Moins il en a, plus la casse est contenue. D'où : pas de root inutile, abandon des privilèges après le démarrage, cloisonnement."},
+  {"q":"Que fait l'ASLR (Address Space Layout Randomization) ?","a":["Il randomise les adresses mémoire à chaque exécution, pour que l'attaquant ne sache pas où « sauter »","Il chiffre la mémoire vive","Il accélère l'allocation mémoire","Il empêche le swap"],"correct":0,"explain":"Beaucoup d'attaques mémoire supposent connaître l'adresse de leur cible. En randomisant pile, tas et bibliothèques, l'ASLR rend ces adresses imprévisibles. DEP/NX et canaris complètent la défense."},
+  {"q":"Qu'est-ce qu'une escalade de privilèges ?","a":["Passer d'un accès limité (utilisateur normal) à des droits root en exploitant une faille, souvent dans le noyau","Augmenter la priorité d'ordonnancement d'un processus","Ajouter de la mémoire à un programme","Ouvrir plusieurs fenêtres à la fois"],"correct":0,"explain":"L'attaquant part d'un accès modeste et exploite un défaut (souvent noyau, comme Dirty COW) pour devenir root. C'est aussi pourquoi le noyau partagé des conteneurs est un point sensible."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["moindre privilege","moindre privilège","principe du moindre privilège","le moindre privilège","least privilege"],"placeholder":"le principe : n'accorder que les droits strictement nécessaires","hints":["On évite root pour les services.","« moindre… »."],"link":{"href":"lecon-12.html","label":"Revoir « Le principe du moindre privilège »"}},
+  {"type":"text","accept":["escalade de privileges","escalade de privilèges","escalade de privilège","privilege escalation","l'escalade de privilèges","escalade"],"placeholder":"passer d'un accès limité à root en exploitant une faille","hints":["Souvent via une faille du noyau (ex. Dirty COW).","« escalade… »."],"link":{"href":"lecon-12.html","label":"Revoir « Surface d'attaque et escalade »"}},
+  {"type":"text","accept":["aslr","address space layout randomization","randomisation des adresses"],"placeholder":"randomiser les adresses mémoire pour que l'attaquant ne sache où sauter","hints":["Un sigle de quatre lettres.","Va avec DEP/NX et les canaris."],"link":{"href":"lecon-12.html","label":"Revoir « Défendre la mémoire »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un développeur pressé lance son serveur web <strong>en root</strong>&nbsp;: «&nbsp;comme ça, aucun problème de permissions&nbsp;». Explique pourquoi c'est une mauvaise idée, et ce qu'il faudrait faire à la place.</p><details><summary>Voir une solution</summary><p>Lancer un service en <strong>root</strong>, c'est confondre «&nbsp;ne jamais être bloqué&nbsp;» et «&nbsp;être en sécurité&nbsp;». Le problème&nbsp;: un serveur web est <strong>exposé</strong> (il reçoit des requêtes du monde entier), donc c'est une <strong>cible</strong> de choix. Le jour où une faille est exploitée (une entrée malveillante, un bug), l'attaquant hérite <strong>exactement</strong> des privilèges du processus. Si celui-ci est root, il obtient <strong>tout</strong>&nbsp;: lire et modifier n'importe quel fichier, installer une porte dérobée, effacer les journaux, attaquer les autres services. C'est le contraire du <strong>moindre privilège</strong>. <strong>Ce qu'il faut faire&nbsp;:</strong> exécuter le serveur sous un <strong>utilisateur dédié sans privilèges</strong>, qui n'a accès qu'à ses propres fichiers. Si le service a besoin d'un <strong>port réservé</strong> (comme le 80) au démarrage, deux options propres&nbsp;: lui donner une <strong>capability</strong> précise (<code>cap_net_bind_service</code>) au lieu de tout root, ou l'ouvrir en root <strong>puis abandonner les privilèges</strong> (<em>drop privileges</em>) juste après. Ainsi, même compromis, le service ne donne accès qu'à un <strong>petit périmètre</strong> — pas à toute la machine.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un programme copie une entrée de l'utilisateur dans un tampon de taille fixe <strong>sans vérifier la longueur</strong>. Explique le risque (le dépassement de tampon), puis dis comment <strong>DEP/NX</strong>, <strong>ASLR</strong> et le <strong>canari</strong> compliquent chacun l'attaque.</p><details><summary>Voir une solution</summary><p><strong>Le risque.</strong> Si l'entrée est plus longue que le tampon, l'écriture <strong>déborde</strong> et écrase ce qui suit en mémoire — en particulier, sur la pile, l'<strong>adresse de retour</strong> de la fonction. En choisissant soigneusement ce qu'il écrit, un attaquant remplace cette adresse par celle de <em>son</em> code (ou d'une portion utile déjà présente), et <strong>détourne l'exécution</strong> quand la fonction se termine. C'est le classique <strong>dépassement de tampon</strong>. <strong>Comment les trois défenses gênent l'attaque&nbsp;:</strong> <strong>(1) DEP/NX.</strong> La pile et le tas sont marqués <strong>non exécutables</strong>. L'attaquant a beau injecter son code dans le tampon, le processeur <strong>refuse de l'exécuter</strong>&nbsp;: des données restent des données. Il doit alors se rabattre sur des techniques plus complexes (réutiliser du code existant). <strong>(2) ASLR.</strong> Les adresses (pile, bibliothèques) sont <strong>randomisées</strong> à chaque lancement. Or l'attaquant doit indiquer <em>où</em> sauter&nbsp;: sans connaître les adresses, il vise à l'aveugle et échoue le plus souvent (le programme plante au lieu d'être détourné). <strong>(3) Le canari.</strong> Une <strong>valeur sentinelle</strong> est placée juste avant l'adresse de retour. Comme le débordement écrase la mémoire <strong>de proche en proche</strong>, il abîme le canari <em>avant</em> d'atteindre l'adresse de retour. À la sortie de la fonction, le programme <strong>vérifie</strong> le canari&nbsp;: s'il a changé, il <strong>s'arrête immédiatement</strong>, avant tout détournement. <strong>La morale&nbsp;:</strong> aucune de ces défenses n'est parfaite seule, mais <strong>ensemble</strong> elles transforment un bug «&nbsp;facile à exploiter&nbsp;» en casse-tête — et la <strong>vraie</strong> correction reste de <strong>vérifier la longueur</strong> avant de copier.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On te demande d'exécuter du <strong>code envoyé par des utilisateurs inconnus</strong> sur ton serveur. En t'appuyant sur cette leçon (et sur la <a href="lecon-10.html">leçon&nbsp;10</a>), propose une défense <strong>en profondeur</strong>&nbsp;: quelles couches empiles-tu, et pourquoi le noyau partagé reste-t-il le point délicat&nbsp;?</p><details><summary>Voir une solution</summary><p>Exécuter du <strong>code hostile par nature</strong>, c'est le pire cas&nbsp;: il faut supposer qu'il <strong>essaiera</strong> de s'échapper. On empile donc les couches (<em>defense in depth</em>), de la plus fine à la plus forte. <strong>(1) Moindre privilège.</strong> Le code tourne sous un <strong>utilisateur dédié sans aucun droit</strong>, jamais root, sans accès aux fichiers des autres. <strong>(2) Bac à sable seccomp.</strong> On <strong>restreint les appels système</strong> autorisés au strict minimum&nbsp;: pas d'accès réseau, pas d'ouverture de fichiers arbitraires. Tout appel interdit tue le processus. <strong>(3) Capabilities vidées.</strong> On retire <strong>toutes</strong> les capacités inutiles&nbsp;: le code ne peut ni changer l'heure, ni monter un disque, ni ouvrir un port. <strong>(4) Isolation par namespaces</strong> (leçon&nbsp;10)&nbsp;: vue isolée des PID, du réseau, des fichiers&nbsp;; idéalement des <strong>user namespaces</strong> pour que «&nbsp;root dans le conteneur&nbsp;» ne soit <em>pas</em> root sur l'hôte. <strong>(5) Défenses mémoire</strong> (ASLR, DEP/NX, canaris) actives, plus des <strong>quotas</strong> (cgroups) pour éviter qu'il n'épuise CPU et mémoire. <strong>(6) MAC</strong> (SELinux/AppArmor) pour une politique que même une erreur de config ne desserre pas. <strong>Pourquoi le noyau partagé reste délicat&nbsp;:</strong> toutes ces barrières reposent sur <strong>un même noyau</strong>, partagé avec l'hôte (leçon&nbsp;10). Si le code trouve une <strong>faille dans le noyau</strong> (comme Dirty COW), il peut <strong>escalader ses privilèges</strong> et franchir <em>toutes</em> les couches d'un coup, car le noyau est au-dessus d'elles. C'est la limite de fond du conteneur&nbsp;: son isolation est <strong>logicielle</strong> et adossée au noyau. Pour du code vraiment hostile, on ajoute donc une <strong>frontière plus forte</strong> — une <strong>machine virtuelle</strong> ou une <strong>microVM</strong> (leçon&nbsp;10), qui donne au code son <em>propre</em> noyau et une barrière matérielle bien plus dure à percer. La règle&nbsp;: plus le code est douteux, plus la frontière doit être <strong>épaisse</strong>.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

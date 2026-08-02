@@ -1,0 +1,84 @@
+<p>L'héritage de classe ne suffit pas toujours à structurer un programme. Objective-C offre deux mécanismes complémentaires, très utilisés dans les frameworks Apple&nbsp;: les <strong>protocoles</strong> (des contrats de méthodes, comme les interfaces d'autres langages) et les <strong>catégories</strong> (un moyen d'ajouter des méthodes à une classe <em>existante</em>, même qu'on n'a pas écrite). Ces deux outils reflètent l'esprit dynamique et flexible du langage.</p>
+
+<h2>Les protocoles&nbsp;: des contrats</h2>
+<p>Un <strong>protocole</strong> déclare une liste de méthodes qu'une classe s'engage à fournir, sans dire comment. C'est l'équivalent des <em>interfaces</em> en Java ou des <em>protocols</em> en Swift. Une classe qui <strong>adopte</strong> un protocole promet d'implémenter ses méthodes.</p>
+<figure class="code-block" data-file="protocole.h"><pre><code class="language-objectivec">// Déclaration d'un protocole
+@protocol Dessinable
+
+- (void)dessiner;
+- (double)surface;
+
+@end
+
+// Une classe qui ADOPTE le protocole (entre chevrons)
+@interface Cercle : NSObject &lt;Dessinable&gt;
+@property (nonatomic, assign) double rayon;
+@end</code></pre></figure>
+<p>Les chevrons <code>&lt;Dessinable&gt;</code> après la classe parente indiquent l'adoption. <code>Cercle</code> doit alors implémenter <code>dessiner</code> et <code>surface</code>, sinon le compilateur avertit. Un avantage&nbsp;: on peut traiter de façon uniforme tout objet conforme à <code>Dessinable</code>, quelle que soit sa classe.</p>
+
+<h2>Méthodes optionnelles</h2>
+<p>Un protocole peut distinguer des méthodes <strong>obligatoires</strong> (<code>@required</code>, le défaut) et <strong>optionnelles</strong> (<code>@optional</code>). Avant d'appeler une méthode optionnelle, on vérifie qu'elle est implémentée.</p>
+<figure class="code-block" data-file="optionnel.h"><pre><code class="language-objectivec">@protocol Animal
+
+@required
+- (void)manger;
+@optional
+- (void)voler;        // tous les animaux ne volent pas
+
+@end</code></pre></figure>
+<figure class="code-block" data-file="respond.m"><pre><code class="language-objectivec">if ([monAnimal respondsToSelector:@selector(voler)]) {
+    [monAnimal voler];     // seulement si la méthode existe
+}</code></pre></figure>
+<p><code>respondsToSelector:</code> demande à un objet «&nbsp;sais-tu répondre à ce message&nbsp;?&nbsp;» — une introspection rendue possible par le runtime dynamique.</p>
+
+<h2>La délégation&nbsp;: le patron roi d'Apple</h2>
+<p>Les protocoles sous-tendent un patron omniprésent dans les frameworks Apple&nbsp;: la <strong>délégation</strong>. Un objet (par exemple une liste à l'écran) confie certaines décisions à un autre objet, son <strong>delegate</strong>, qui adopte un protocole défini. C'est ainsi que ton code «&nbsp;réagit&nbsp;» aux composants du système.</p>
+<figure class="code-block" data-file="delegate.m"><pre><code class="language-objectivec">// Patron typique : un objet a une propriété 'delegate'
+@property (nonatomic, weak) id&lt;Dessinable&gt; delegate;
+
+// 'id&lt;Dessinable&gt;' = "un objet quelconque conforme à Dessinable"
+// 'weak' pour éviter un cycle de rétention (leçon 7)</code></pre></figure>
+<p>Le type <code>id&lt;Dessinable&gt;</code> signifie «&nbsp;n'importe quel objet conforme au protocole Dessinable&nbsp;». <code>id</code> est le type «&nbsp;objet quelconque&nbsp;» d'Objective-C.</p>
+
+<h2>Les catégories&nbsp;: étendre une classe existante</h2>
+<p>Une <strong>catégorie</strong> permet d'<strong>ajouter des méthodes</strong> à une classe déjà écrite — y compris une classe d'Apple comme <code>NSString</code> — sans en hériter ni toucher son code source. C'est une capacité étonnante, propre aux langages dynamiques.</p>
+<figure class="code-block" data-file="categorie.h"><pre><code class="language-objectivec">// Ajouter une méthode à NSString
+@interface NSString (Inversion)
+- (NSString *)chaineInversee;
+@end
+
+@implementation NSString (Inversion)
+- (NSString *)chaineInversee {
+    // ... code qui inverse la chaîne ...
+    return resultat;
+}
+@end
+
+// Désormais, TOUTE NSString a cette méthode :
+NSString *r = [@"Bonjour" chaineInversee];</code></pre></figure>
+<p>Le nom entre parenthèses (<code>Inversion</code>) est celui de la catégorie. Après ça, <em>toutes</em> les <code>NSString</code> du programme disposent de <code>chaineInversee</code>. On enrichit ainsi des classes sans héritage&nbsp;: pratique pour regrouper des méthodes utilitaires.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser une catégorie pour <strong>remplacer</strong> une méthode existante d'une classe&nbsp;: c'est possible mais dangereux&nbsp;: le comportement devient imprévisible (laquelle des deux s'exécute&nbsp;?) et peut casser le framework. Les catégories servent à <em>ajouter</em> de nouvelles méthodes, pas à écraser celles qui existent. Pour modifier un comportement, préfère l'héritage ou la composition.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La délégation explique pourquoi le développement iOS classique tourne autour de protocoles comme <code>UITableViewDelegate</code> et <code>UITableViewDataSource</code>&nbsp;: un tableau à l'écran demande à ton objet «&nbsp;combien de lignes&nbsp;? que mettre dans chacune&nbsp;? que faire au clic&nbsp;?&nbsp;» via les méthodes du protocole. Maîtriser les protocoles, c'est comprendre l'architecture même des applications Apple — un savoir qui se transpose directement à Swift, où le patron est identique.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>protocole</strong> est un contrat de méthodes&nbsp;; une classe l'<strong>adopte</strong> avec <code>&lt;Protocole&gt;</code>.</li>
+  <li>Méthodes <code>@required</code> / <code>@optional</code>&nbsp;; <code>respondsToSelector:</code> teste leur présence.</li>
+  <li>La <strong>délégation</strong> (<code>delegate</code>, <code>id&lt;Protocole&gt;</code>) est le patron clé des frameworks Apple.</li>
+  <li>Une <strong>catégorie</strong> ajoute des méthodes à une classe existante (sans héritage).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert un protocole&nbsp;?</li><li>Comment une classe indique-t-elle qu'elle adopte un protocole&nbsp;?</li><li>Que permet une catégorie&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare un protocole <code>Affichable</code> avec une méthode obligatoire <code>afficher</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.h"><pre><code class="language-objectivec">@protocol Affichable
+- (void)afficher;
+@end</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Déclare une classe <code>Carre</code> qui hérite de <code>NSObject</code> et adopte <code>Affichable</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.h"><pre><code class="language-objectivec">@interface Carre : NSObject &lt;Affichable&gt;
+@end</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris l'en-tête d'une catégorie sur <code>NSString</code> nommée <code>Utils</code> ajoutant une méthode <code>estVide</code> qui renvoie un <code>BOOL</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.h"><pre><code class="language-objectivec">@interface NSString (Utils)
+- (BOOL)estVide;
+@end</code></pre></figure></details></div>

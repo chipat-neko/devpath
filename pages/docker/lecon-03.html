@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Écrire un Dockerfile — Leçon 03 · Docker · Syntaxe</title>
+    <meta name="description" content="Construire sa propre image avec un Dockerfile : FROM, WORKDIR, COPY, RUN, EXPOSE, CMD, le cache des couches et docker build." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="docker" data-lesson="lecon-03.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Docker</a></li>
+            <li aria-current="page">Leçon 03</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 1 · Les conteneurs — Leçon 03</p>
+              <h1 class="lesson-header__title">Écrire un Dockerfile</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 02 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire un <strong>Dockerfile</strong> pour conteneuriser une app&nbsp;;</li>
+                  <li>employer <code>FROM</code>, <code>WORKDIR</code>, <code>COPY</code>, <code>RUN</code>, <code>CMD</code>&nbsp;;</li>
+                  <li>construire l'image avec <code>docker build</code>&nbsp;;</li>
+                  <li>comprendre le <strong>cache des couches</strong> et l'ordre des instructions.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, tu as utilisé des images <em>existantes</em> (nginx, ubuntu). Pour conteneuriser <em>ton</em> application, tu vas construire ta propre image. La recette s'écrit dans un fichier nommé <strong>Dockerfile</strong>&nbsp;: une suite d'instructions, lues de haut en bas, qui décrivent comment assembler l'image. C'est le cœur de Docker&nbsp;: une fois ce Dockerfile écrit, n'importe qui reconstruit la même image, à l'identique.</p>
+
+<h2>Un premier Dockerfile</h2>
+<p>Prenons une petite application Node.js à conteneuriser. Le Dockerfile décrit, étape par étape, l'environnement nécessaire&nbsp;:</p>
+<figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker"># Partir d'une image de base officielle (Node 20, version légère)
+FROM node:20-alpine
+
+# Définir le dossier de travail dans le conteneur
+WORKDIR /app
+
+# Copier les fichiers de dépendances et les installer
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Copier le reste du code source
+COPY . .
+
+# Documenter le port utilisé par l'application
+EXPOSE 3000
+
+# Commande lancée au démarrage du conteneur
+CMD ["node", "server.js"]</code></pre></figure>
+<p>Chaque ligne majuscule est une <strong>instruction</strong>. Lis le fichier comme une recette&nbsp;: «&nbsp;pars de Node 20, place-toi dans /app, copie et installe les dépendances, copie le code, et au démarrage lance <code>node server.js</code>&nbsp;».</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 244" role="img" aria-label="Une image Docker est une pile de couches, une par instruction du Dockerfile. De bas en haut : la couche de base FROM node 20 alpine, puis WORKDIR slash app, puis COPY des fichiers de dépendances, puis RUN npm install, puis COPY du code, et au sommet CMD. Le Dockerfile se lit de haut en bas, mais les couches s'empilent de bas en haut, la base d'abord.">
+    <text class="d-label" x="340" y="22" text-anchor="middle" font-size="12">Une instruction = une couche empilée</text>
+    <rect class="d-box" x="180" y="46" width="320" height="28" rx="3" /><text class="d-text" x="340" y="64" text-anchor="middle" font-size="9">CMD ["node", "server.js"]</text>
+    <rect class="d-box" x="180" y="78" width="320" height="28" rx="3" /><text class="d-text" x="340" y="96" text-anchor="middle" font-size="9">COPY . .</text>
+    <rect class="d-box" x="180" y="110" width="320" height="28" rx="3" /><text class="d-text" x="340" y="128" text-anchor="middle" font-size="9">RUN npm install</text>
+    <rect class="d-box" x="180" y="142" width="320" height="28" rx="3" /><text class="d-text" x="340" y="160" text-anchor="middle" font-size="9">COPY package.json package-lock.json ./</text>
+    <rect class="d-box" x="180" y="174" width="320" height="28" rx="3" /><text class="d-text" x="340" y="192" text-anchor="middle" font-size="9">WORKDIR /app</text>
+    <rect class="d-accent" x="180" y="206" width="320" height="30" rx="3" /><text class="d-tag" x="340" y="225" text-anchor="middle" font-size="9.5">FROM node:20-alpine — base (lecture seule)</text>
+    <path class="d-line" d="M150 234 L150 54" fill="none" /><circle class="d-dot" cx="150" cy="54" r="3" />
+    <text class="d-mut" x="130" y="146" font-size="8.5" transform="rotate(-90 130 146)" text-anchor="middle">empilement ↑</text>
+  </svg>
+  <figcaption>La base est posée en premier, tout en bas&nbsp;; chaque instruction ajoute une couche par-dessus. On lit le Dockerfile de haut en bas, l'image se construit de bas en haut.</figcaption>
+</figure>
+
+<h2>Les instructions essentielles</h2>
+<ul>
+  <li><code>FROM</code>&nbsp;: l'<strong>image de base</strong> dont on hérite. Toujours la première instruction. On part presque toujours d'une image officielle (un langage, un OS minimal).</li>
+  <li><code>WORKDIR</code>&nbsp;: le <strong>répertoire de travail</strong> pour les instructions suivantes (et au lancement). Évite les <code>cd</code> répétés.</li>
+  <li><code>COPY source dest</code>&nbsp;: copie des fichiers de ta machine <em>vers</em> l'image.</li>
+  <li><code>RUN</code>&nbsp;: exécute une commande <em>pendant la construction</em> (installer des paquets, compiler). Son résultat est figé dans l'image.</li>
+  <li><code>EXPOSE</code>&nbsp;: <em>documente</em> le port utilisé (informatif&nbsp;; la publication réelle se fait avec <code>-p</code> au <code>run</code>).</li>
+  <li><code>CMD</code>&nbsp;: la commande <em>par défaut</em> exécutée quand le conteneur démarre. Une seule par image.</li>
+</ul>
+<p>Distinction cruciale&nbsp;: <code>RUN</code> agit <strong>à la construction</strong> (une fois, pour bâtir l'image)&nbsp;; <code>CMD</code> agit <strong>à l'exécution</strong> (à chaque démarrage de conteneur). Confondre les deux est l'erreur classique du débutant.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 158" role="img" aria-label="RUN et CMD n'agissent pas au même moment. À gauche, docker build a lieu une seule fois : les instructions RUN, par exemple npm install, s'exécutent et leur résultat est figé dans l'image. À droite, docker run a lieu à chaque démarrage de conteneur : c'est là que la commande CMD est lancée.">
+    <text class="d-label" x="340" y="22" text-anchor="middle" font-size="12">Deux moments distincts</text>
+    <rect class="d-frame" x="20" y="38" width="290" height="106" rx="6" />
+    <text class="d-tag" x="165" y="58" text-anchor="middle" font-size="10">docker build — UNE fois</text>
+    <rect class="d-accent" x="44" y="72" width="242" height="30" rx="4" /><text class="d-text" x="165" y="91" text-anchor="middle" font-size="9">RUN npm install</text>
+    <text class="d-mut" x="165" y="124" text-anchor="middle" font-size="8.5">résultat figé dans une couche de l'image</text>
+    <rect class="d-frame" x="330" y="38" width="290" height="106" rx="6" />
+    <text class="d-tag" x="475" y="58" text-anchor="middle" font-size="10">docker run — à CHAQUE conteneur</text>
+    <rect class="d-accent" x="354" y="72" width="242" height="30" rx="4" /><text class="d-text" x="475" y="91" text-anchor="middle" font-size="9">CMD ["node", "server.js"]</text>
+    <text class="d-mut" x="475" y="124" text-anchor="middle" font-size="8.5">relancé au démarrage de chaque conteneur</text>
+  </svg>
+  <figcaption><code>RUN</code> prépare l'image (installe, compile)&nbsp;; <code>CMD</code> décrit ce qui tourne quand le conteneur démarre. Mettre <code>npm install</code> dans <code>CMD</code> le rejouerait à chaque lancement&nbsp;: une erreur fréquente.</figcaption>
+</figure>
+
+<h2>Construire l'image</h2>
+<p>Une fois le Dockerfile écrit, <code>docker build</code> le transforme en image&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Construire une image et la nommer (« tag ») mon-app
+docker build -t mon-app .
+# -t mon-app : nom (tag) de l'image
+# .          : le « contexte » = dossier courant (où est le Dockerfile)
+
+# Puis lancer un conteneur depuis cette image
+docker run -d -p 3000:3000 mon-app</code></pre></figure>
+<p>Le <code>.</code> final désigne le <strong>contexte de construction</strong>&nbsp;: le dossier dont Docker peut copier des fichiers. Le <code>-t</code> donne un nom à l'image pour la réutiliser ensuite. Après le build, ton image apparaît dans <code>docker images</code>, prête à lancer partout.</p>
+
+<h2>Le cache des couches</h2>
+<p>Chaque instruction du Dockerfile crée une <strong>couche</strong> (<em>layer</em>) empilée sur la précédente. Docker <strong>met en cache</strong> chaque couche&nbsp;: si rien n'a changé pour une instruction, il réutilise la couche au lieu de la rejouer. C'est ce qui rend les reconstructions ultra-rapides — à condition d'ordonner intelligemment.</p>
+<figure class="code-block" data-file="ordre malin"><pre><code class="language-docker"># BON : les dépendances changent rarement -> copiées AVANT le code
+COPY package.json package-lock.json ./
+RUN npm install          # cette couche est réutilisée tant que package.json ne change pas
+COPY . .                 # seul le code change souvent -> seule cette couche se rejoue</code></pre></figure>
+<p>L'ordre compte&nbsp;: dès qu'une couche change, <strong>toutes celles qui suivent</strong> sont recalculées. En copiant <code>package.json</code> et en installant les dépendances <em>avant</em> de copier le code, on garde l'étape coûteuse (<code>npm install</code>) en cache tant que les dépendances ne bougent pas. Modifier une ligne de code ne relance alors pas toute l'installation.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 236" role="img" aria-label="L'effet d'un changement sur le cache des couches, comparé dans deux cas. À gauche, on modifie seulement le code : les quatre couches du bas (base, WORKDIR, copie des dépendances, npm install) sont réutilisées depuis le cache ; seules les deux couches du haut, la copie du code et CMD, sont recalculées. À droite, on modifie les dépendances : la couche de copie des dépendances change tout en bas, donc elle et toutes les couches au-dessus, dont le coûteux npm install, sont recalculées.">
+    <text class="d-label" x="340" y="20" text-anchor="middle" font-size="12">Une couche qui change invalide toutes celles au-dessus</text>
+    <text class="d-tag" x="170" y="42" text-anchor="middle" font-size="10">Seul le CODE change</text>
+    <text class="d-tag" x="510" y="42" text-anchor="middle" font-size="10">Les DÉPENDANCES changent</text>
+    <rect class="d-accent" x="40" y="54" width="260" height="24" rx="3" /><text class="d-text" x="170" y="70" text-anchor="middle" font-size="8">CMD — rejouée</text>
+    <rect class="d-accent" x="40" y="81" width="260" height="24" rx="3" /><text class="d-text" x="170" y="97" text-anchor="middle" font-size="8">COPY . . (code) — rejouée</text>
+    <rect class="d-box" x="40" y="108" width="260" height="24" rx="3" /><text class="d-mut" x="170" y="124" text-anchor="middle" font-size="8">RUN npm install — cache ✓</text>
+    <rect class="d-box" x="40" y="135" width="260" height="24" rx="3" /><text class="d-mut" x="170" y="151" text-anchor="middle" font-size="8">COPY package.json — cache ✓</text>
+    <rect class="d-box" x="40" y="162" width="260" height="24" rx="3" /><text class="d-mut" x="170" y="178" text-anchor="middle" font-size="8">WORKDIR — cache ✓</text>
+    <rect class="d-box" x="40" y="189" width="260" height="24" rx="3" /><text class="d-mut" x="170" y="205" text-anchor="middle" font-size="8">FROM — cache ✓</text>
+    <rect class="d-accent" x="380" y="54" width="260" height="24" rx="3" /><text class="d-text" x="510" y="70" text-anchor="middle" font-size="8">CMD — rejouée</text>
+    <rect class="d-accent" x="380" y="81" width="260" height="24" rx="3" /><text class="d-text" x="510" y="97" text-anchor="middle" font-size="8">COPY . . (code) — rejouée</text>
+    <rect class="d-accent" x="380" y="108" width="260" height="24" rx="3" /><text class="d-text" x="510" y="124" text-anchor="middle" font-size="8">RUN npm install — rejouée !</text>
+    <rect class="d-accent" x="380" y="135" width="260" height="24" rx="3" /><text class="d-text" x="510" y="151" text-anchor="middle" font-size="8">COPY package.json — change</text>
+    <rect class="d-box" x="380" y="162" width="260" height="24" rx="3" /><text class="d-mut" x="510" y="178" text-anchor="middle" font-size="8">WORKDIR — cache ✓</text>
+    <rect class="d-box" x="380" y="189" width="260" height="24" rx="3" /><text class="d-mut" x="510" y="205" text-anchor="middle" font-size="8">FROM — cache ✓</text>
+    <text class="d-mut" x="340" y="228" text-anchor="middle" font-size="8.5">couches pleines = recalculées · couches sobres = réutilisées du cache</text>
+  </svg>
+  <figcaption>À gauche, l'ordre malin paie&nbsp;: changer le code ne rejoue pas <code>npm install</code>. À droite, toucher aux dépendances invalide tout ce qui est au-dessus — inévitable, mais rare.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: un build de CI qui passe de 8&nbsp;min à 40&nbsp;s</p><p>Une équipe reconstruit son image à chaque commit dans son pipeline. Le Dockerfile faisait <code>COPY . .</code> <em>avant</em> <code>RUN npm install</code>&nbsp;: la moindre modification de code invalidait la couche des dépendances, et l'installation complète se rejouait — 8&nbsp;minutes à chaque fois. En remontant <code>COPY package.json</code> + <code>RUN npm install</code> <strong>avant</strong> le <code>COPY . .</code>, l'installation reste en cache tant que les dépendances ne changent pas&nbsp;: les builds tombent à moins d'une minute. Un simple réordonnancement, un pipeline dix fois plus rapide.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le fichier .dockerignore</p><p>Comme <code>.gitignore</code>, un fichier <strong>.dockerignore</strong> exclut des fichiers du contexte de construction&nbsp;: <code>node_modules</code>, <code>.git</code>, fichiers temporaires. Cela accélère le build et allège l'image. Mets-y systématiquement <code>node_modules</code> et <code>.git</code> — inutile (et nuisible) de les copier dans l'image.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M3 12h18" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: <code>ENV</code>, <code>ARG</code> et le multi-stage</p><p>Un Dockerfile réel utilise vite d'autres instructions&nbsp;: <code>ENV</code> (variables d'environnement dans l'image), <code>ARG</code> (variables disponibles seulement à la construction), <code>ENTRYPOINT</code> (programme fixe complété par <code>CMD</code>). Et pour des images de production légères, le <strong>build multi-étapes</strong> (plusieurs <code>FROM</code>) compile dans une image jetable puis ne copie que le résultat&nbsp;: c'est l'objet de la dernière leçon du cours.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — les instructions d'un Dockerfile</caption>
+    <thead><tr><th scope="col">Instruction</th><th scope="col">Rôle</th><th scope="col">Quand</th></tr></thead>
+    <tbody>
+      <tr><td><code>FROM</code></td><td>image de base dont on hérite (1ʳᵉ ligne)</td><td>construction</td></tr>
+      <tr><td><code>WORKDIR</code></td><td>dossier de travail des instructions suivantes</td><td>construction</td></tr>
+      <tr><td><code>COPY src dst</code></td><td>copie des fichiers de l'hôte vers l'image</td><td>construction</td></tr>
+      <tr><td><code>RUN</code></td><td>exécute une commande, figée dans une couche</td><td>construction</td></tr>
+      <tr><td><code>EXPOSE</code></td><td>documente le port (informatif)</td><td>—</td></tr>
+      <tr><td><code>CMD</code></td><td>commande par défaut au démarrage (une seule)</td><td>exécution</td></tr>
+      <tr><td><code>docker build -t nom .</code></td><td>construit l'image depuis le contexte «&nbsp;.&nbsp;»</td><td>—</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Dockerfile</dt><dd>Fichier texte décrivant, instruction par instruction, comment construire une image reproductible.</dd>
+  <dt>Image de base (<code>FROM</code>)</dt><dd>Image existante dont on hérite&nbsp;; point de départ obligatoire de tout Dockerfile.</dd>
+  <dt>Couche (<em>layer</em>)</dt><dd>Résultat figé d'une instruction, empilé sur les précédentes&nbsp;; l'image est la pile de ses couches.</dd>
+  <dt>Cache des couches</dt><dd>Réutilisation d'une couche inchangée pour éviter de la reconstruire&nbsp;; une couche modifiée invalide toutes celles au-dessus.</dd>
+  <dt>Contexte de construction</dt><dd>Dossier (le «&nbsp;.&nbsp;» de <code>build</code>) d'où Docker peut lire le Dockerfile et copier des fichiers.</dd>
+  <dt>Tag (<code>-t</code>)</dt><dd>Nom (et version) donné à une image pour la retrouver et la lancer, ex. <code>mon-app:1.0</code>.</dd>
+  <dt><code>RUN</code> vs <code>CMD</code></dt><dd><code>RUN</code> s'exécute à la <strong>construction</strong>&nbsp;; <code>CMD</code> au <strong>démarrage</strong> du conteneur.</dd>
+  <dt><code>.dockerignore</code></dt><dd>Liste de fichiers à exclure du contexte (ex. <code>node_modules</code>, <code>.git</code>)&nbsp;: build plus rapide, image plus légère.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>Dockerfile</strong> décrit, instruction par instruction, comment bâtir une image.</li>
+  <li><code>FROM</code> (base), <code>WORKDIR</code>, <code>COPY</code>, <code>RUN</code> (à la construction), <code>EXPOSE</code> (doc), <code>CMD</code> (au démarrage).</li>
+  <li><code>docker build -t nom .</code> construit l'image depuis le contexte courant.</li>
+  <li>Chaque instruction = une <strong>couche</strong> mise en cache&nbsp;: copier les dépendances <em>avant</em> le code accélère les rebuilds.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quelle différence entre <code>RUN</code> et <code>CMD</code>&nbsp;?</li>
+  <li>Pourquoi copier <code>package.json</code> et installer les dépendances avant de copier le code&nbsp;?</li>
+  <li>Que désigne le <code>.</code> dans <code>docker build -t app .</code>&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre les instructions RUN et CMD d'un Dockerfile ?","a":["RUN s'exécute pendant la CONSTRUCTION de l'image ; CMD définit la commande lancée au DÉMARRAGE du conteneur","Elles sont identiques","RUN démarre le conteneur, CMD construit l'image","CMD peut apparaître plusieurs fois, RUN une seule"],"correct":0,"explain":"RUN exécute une commande lors du build (ex. installer des paquets), figée dans une couche. CMD définit le programme par défaut lancé à chaque démarrage du conteneur. Confondre les deux est l'erreur classique."},
+  {"q":"Pourquoi copie-t-on package.json et installe-t-on les dépendances AVANT de copier le reste du code ?","a":["Pour profiter du cache des couches : tant que les dépendances ne changent pas, npm install n'est pas rejoué quand seul le code change","Parce que l'ordre des instructions n'a aucune importance","Pour réduire le nombre de lignes du Dockerfile","Parce que COPY doit toujours venir en dernier"],"correct":0,"explain":"Chaque instruction crée une couche mise en cache ; dès qu'une couche change, les suivantes se recalculent. En isolant l'installation des dépendances avant le code, on garde cette étape coûteuse en cache tant que package.json ne bouge pas."},
+  {"q":"Que désigne le point « . » dans la commande docker build -t app . ?","a":["Le contexte de construction : le dossier courant, où Docker trouve le Dockerfile et les fichiers à copier","Le nom de l'image","Une option de cache","Le port à exposer"],"correct":0,"explain":"Le dernier argument de docker build est le contexte : le répertoire (ici « . ») contenant le Dockerfile et les fichiers que les instructions COPY peuvent prendre. -t app donne, lui, le nom de l'image."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["FROM"],"placeholder":"l'instruction Dockerfile toujours placée en première ligne (choisit l'image de base)","hints":["Tout Dockerfile part d'une image existante.","Cette instruction la désigne.","??? python:3.12-slim"],"link":{"href":"lecon-03.html","label":"Revoir « L'instruction FROM »"}},
+  {"type":"text","accept":["WORKDIR"],"placeholder":"l'instruction Dockerfile qui définit le dossier de travail (ici /app)","hints":["Elle évite de répéter le chemin dans chaque commande.","Les COPY et RUN suivants s'y placent.","??? /app"],"link":{"href":"lecon-03.html","label":"Revoir « WORKDIR »"}},
+  {"type":"text","accept":["docker build -t monapi .","docker build -t monapi","docker build"],"placeholder":"la commande pour construire l'image nommée monapi depuis le Dockerfile du dossier courant","hints":["build lit le Dockerfile et fabrique l'image.","-t donne un nom (tag) à l'image.","Le « . » est le contexte (dossier courant). docker build -t monapi ?"],"link":{"href":"lecon-03.html","label":"Revoir « Construire une image »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle instruction place-t-on toujours en <strong>première</strong> ligne d'un Dockerfile, et à quoi sert-elle&nbsp;?</p><details><summary>Voir une solution</summary><p><code>FROM</code>&nbsp;: elle déclare l'<strong>image de base</strong> dont on hérite (par ex. <code>FROM node:20-alpine</code>). Toute image part d'une autre&nbsp;; <code>FROM</code> est donc obligatoirement la première instruction.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un mini-Dockerfile pour une app Python&nbsp;: base <code>python:3.12-slim</code>, dossier <code>/app</code>, installe les dépendances depuis <code>requirements.txt</code>, copie le code, lance <code>python app.py</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker">FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "app.py"]</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Construis l'image précédente sous le nom <code>monapi</code>, puis lance un conteneur en arrière-plan publiant le port 8000.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker build -t monapi .
+docker run -d -p 8000:8000 monapi</code></pre></figure><p><code>build -t monapi .</code> crée l'image depuis le Dockerfile du dossier courant&nbsp;; <code>run -d -p 8000:8000</code> la lance en arrière-plan en publiant le port (en supposant que l'app écoute sur 8000).</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-docker.min.js" defer></script>
+  </body>
+</html>

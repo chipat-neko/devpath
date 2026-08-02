@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Déployer en continu — Leçon 05 · CI/CD · Syntaxe</title>
+    <meta name="description" content="Le déploiement continu : les environnements (staging/production), la gestion des secrets, et les stratégies de déploiement (rolling, blue-green, canary)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="cicd" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">CI/CD</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Livrer en production — Leçon 05</p>
+              <h1 class="lesson-header__title">Déployer en continu</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 04 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>organiser des <strong>environnements</strong> (staging/production)&nbsp;;</li>
+                  <li>gérer des <strong>secrets</strong> dans un pipeline&nbsp;;</li>
+                  <li>comparer les <strong>stratégies</strong> (rolling, blue-green, canary)&nbsp;;</li>
+                  <li>comprendre le <strong>retour arrière</strong> (rollback).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Vérifier le code, c'est la CI&nbsp;; le mettre en production, c'est le <strong>déploiement</strong>. C'est l'étape la plus délicate&nbsp;: elle touche des utilisateurs réels. Bien la mener demande des <strong>environnements</strong> séparés, une gestion sûre des <strong>secrets</strong>, et des <strong>stratégies</strong> qui limitent le risque. Cette leçon couvre ces trois piliers du «&nbsp;CD&nbsp;».</p>
+
+<h2>Les environnements</h2>
+<p>On ne déploie pas directement en production&nbsp;: on passe par une <strong>chaîne d'environnements</strong>, chacun de plus en plus proche du réel. Le code progresse de l'un à l'autre, gagnant en confiance à chaque étape.</p>
+<figure class="code-block" data-file="la progression entre environnements"><pre><code class="language-bash">dev  ->  staging  ->  production
+        (pré-prod)     (les vrais utilisateurs)
+
+dev        : la machine du développeur / les branches de travail
+staging    : copie fidèle de la prod, pour valider en conditions réelles
+production : l'environnement live, celui des utilisateurs</code></pre></figure>
+<p><strong>Staging</strong> (pré-production) est essentiel&nbsp;: c'est une réplique aussi fidèle que possible de la production, où l'on déploie <em>d'abord</em> pour vérifier que tout fonctionne avec des données et une configuration réalistes. Ce n'est qu'après validation en staging qu'on promeut la même version en production — l'artefact unique de la leçon précédente («&nbsp;build once, deploy many&nbsp;»).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Une chaîne d'environnements. Le code progresse de gauche à droite : dev (la machine du développeur et les branches de travail), puis staging (une réplique fidèle de la production où l'on valide en conditions réelles), puis production (les vrais utilisateurs). À chaque étape, le code gagne en confiance et se rapproche du réel.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le code progresse d'un environnement à l'autre, gagnant en confiance</text>
+    <rect class="d-box" x="24" y="52" width="172" height="58" rx="6" />
+    <text class="d-tag" x="110" y="77" text-anchor="middle" font-size="11">dev</text>
+    <text class="d-mut" x="110" y="95" text-anchor="middle" font-size="8.5">machine du dev, branches</text>
+    <line class="d-line" x1="196" y1="81" x2="230" y2="81" /><path class="d-line" d="M223 77 L231 81 L223 85" fill="none" />
+    <rect class="d-accent" x="234" y="52" width="172" height="58" rx="6" />
+    <text class="d-tag" x="320" y="77" text-anchor="middle" font-size="11">staging (pré-prod)</text>
+    <text class="d-text" x="320" y="95" text-anchor="middle" font-size="8.5">réplique fidèle&nbsp;: on valide ici</text>
+    <line class="d-line" x1="406" y1="81" x2="440" y2="81" /><path class="d-line" d="M433 77 L441 81 L433 85" fill="none" />
+    <rect class="d-box" x="444" y="52" width="172" height="58" rx="6" />
+    <text class="d-tag" x="530" y="77" text-anchor="middle" font-size="11">production</text>
+    <text class="d-mut" x="530" y="95" text-anchor="middle" font-size="8.5">les vrais utilisateurs</text>
+    <text class="d-mut" x="24" y="142" font-size="9">confiance et proximité du réel</text>
+    <line class="d-line" x1="234" y1="138" x2="616" y2="138" /><path class="d-line" d="M609 134 L617 138 L609 142" fill="none" />
+  </svg>
+  <figcaption>On ne déploie jamais directement en production&nbsp;: <strong>staging</strong> valide d'abord la même version en conditions réelles.</figcaption>
+</figure>
+
+<h2>Les secrets</h2>
+<p>Un déploiement a besoin d'informations sensibles&nbsp;: clés d'API, identifiants de serveur, mots de passe de base. Ces <strong>secrets</strong> ne doivent <em>jamais</em> être écrits dans le fichier de workflow (versionné, donc public dans l'historique). On les stocke dans le <strong>coffre à secrets</strong> de la plateforme, et on les <em>injecte</em> au moment de l'exécution.</p>
+<figure class="code-block" data-file="injecter un secret, sans l'exposer"><pre><code class="language-yaml">jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+        env:
+          # le secret vient du coffre de la plateforme, PAS du fichier
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+# Le fichier ne contient que la RÉFÉRENCE au secret, jamais sa valeur.
+# La plateforme masque aussi le secret dans les logs.</code></pre></figure>
+<p>Ce mécanisme reprend exactement les bonnes pratiques du cours <a href="../securite/cours.html">Sécurité</a>&nbsp;: les secrets restent <strong>hors du code</strong>, injectés par variable d'environnement à l'exécution. La plateforme les <em>masque</em> dans les journaux, pour qu'ils n'apparaissent pas par accident. Ne contourne jamais ce système&nbsp;: un secret écrit en clair dans un workflow est compromis dès le premier commit.</p>
+
+<h2>Les stratégies de déploiement</h2>
+<p>Remplacer brutalement l'ancienne version par la nouvelle (<em>recreate</em>) provoque une coupure et un risque maximal. Des <strong>stratégies</strong> plus fines limitent l'impact&nbsp;:</p>
+<ul>
+  <li><strong>Rolling</strong> (par vagues)&nbsp;: on remplace les instances <em>progressivement</em>, quelques-unes à la fois. Pas de coupure, mais deux versions coexistent un moment.</li>
+  <li><strong>Blue-green</strong>&nbsp;: deux environnements identiques. La nouvelle version est déployée sur le «&nbsp;vert&nbsp;» (inactif), testée, puis on <em>bascule</em> tout le trafic d'un coup. Retour arrière instantané (re-basculer sur le «&nbsp;bleu&nbsp;»).</li>
+  <li><strong>Canary</strong> (canari)&nbsp;: on envoie d'abord la nouvelle version à une <em>petite fraction</em> des utilisateurs (1&nbsp;%, 5&nbsp;%). Si tout va bien, on augmente progressivement&nbsp;; sinon, on arrête avant que ça touche tout le monde.</li>
+</ul>
+<figure class="code-block" data-file="comparaison"><pre><code class="language-bash">Recreate   : arrêt total puis nouvelle version   -> coupure, risqué
+Rolling    : remplacement par vagues             -> pas de coupure
+Blue-green : bascule instantanée d'un env à l'autre -> rollback immédiat
+Canary     : 1% -> 5% -> 100% des utilisateurs   -> détecter tôt, exposer peu</code></pre></figure>
+<p>Toutes visent le même but&nbsp;: <strong>réduire le risque d'un déploiement</strong>. Le <em>canary</em> est particulièrement élégant&nbsp;: si la nouvelle version a un défaut, seuls quelques utilisateurs sont touchés, et on détecte le problème avant un déploiement complet. Le choix dépend de l'infrastructure et de la tolérance au risque.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Déploiement canary. Le trafic est figuré par trois barres. Au palier 1, une fine bande (1 pour cent) va à la nouvelle version, le reste à l'ancienne. Au palier 2, la bande atteint 5 pour cent. Si les indicateurs restent bons, le palier 3 bascule 100 pour cent du trafic. À chaque palier on surveille erreurs et latence avant d'élargir.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Canary&nbsp;: augmenter la part de la nouvelle version par paliers</text>
+    <text class="d-text" x="20" y="52" font-size="10">palier 1</text>
+    <rect class="d-box" x="92" y="40" width="476" height="20" rx="4" />
+    <rect class="d-accent" x="92" y="40" width="6" height="20" rx="2" />
+    <text class="d-mut" x="576" y="55" font-size="9">1&nbsp;%</text>
+    <text class="d-text" x="20" y="94" font-size="10">palier 2</text>
+    <rect class="d-box" x="92" y="82" width="476" height="20" rx="4" />
+    <rect class="d-accent" x="92" y="82" width="24" height="20" rx="2" />
+    <text class="d-mut" x="576" y="97" font-size="9">5&nbsp;%</text>
+    <text class="d-text" x="20" y="136" font-size="10">palier 3</text>
+    <rect class="d-accent" x="92" y="124" width="476" height="20" rx="4" />
+    <text class="d-mut" x="576" y="139" font-size="9">100&nbsp;%</text>
+    <rect class="d-accent" x="92" y="156" width="12" height="12" rx="2" /><text class="d-mut" x="110" y="166" font-size="9">nouvelle version</text>
+    <rect class="d-box" x="250" y="156" width="12" height="12" rx="2" /><text class="d-mut" x="268" y="166" font-size="9">ancienne version</text>
+    <text class="d-mut" x="568" y="166" text-anchor="end" font-size="8.5">on surveille avant chaque palier</text>
+  </svg>
+  <figcaption>Un défaut ne touche d'abord qu'une poignée d'utilisateurs&nbsp;; on n'élargit que si erreurs et latence restent saines.</figcaption>
+</figure>
+
+<h2>Le retour arrière</h2>
+<p>Même avec toutes les précautions, un déploiement peut mal tourner. La capacité de <strong>revenir en arrière</strong> (<em>rollback</em>) rapidement est aussi importante que le déploiement lui-même. C'est là que les <strong>versions</strong> (cours Docker, tags) prennent tout leur sens.</p>
+<figure class="code-block" data-file="revenir à la version précédente"><pre><code class="language-bash"># Comme chaque version est un artefact identifié (ex. image v1.4.0),
+# revenir en arrière = redéployer la version PRÉCÉDENTE connue comme stable :
+deployer  app:v1.3.0     # rollback vers la dernière version saine
+# Avec blue-green : il suffit de re-basculer le trafic. Quasi instantané.</code></pre></figure>
+<p>La règle&nbsp;: <strong>toujours pouvoir revenir en arrière</strong>. Garder les versions précédentes (artefacts/images tagués), et préférer des changements <em>réversibles</em>. Un déploiement qu'on ne peut pas annuler est un pari&nbsp;; un déploiement réversible est une décision sereine. C'est la dernière pièce qui rend la livraison fréquente <em>sans</em> être angoissante.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Blue-green. Un routeur reçoit le trafic entrant et l'aiguille vers l'un de deux environnements identiques. Le vert (version 1.4, nouvelle) reçoit actuellement le trafic, flèche pleine. Le bleu (version 1.3, stable) est en attente, prêt pour le rollback, flèche en pointillé. Revenir en arrière consiste simplement à ré-aiguiller le trafic vers le bleu, sans rien reconstruire.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Blue-green&nbsp;: un aiguillage du trafic, rollback instantané</text>
+    <rect class="d-box" x="34" y="74" width="120" height="46" rx="6" />
+    <text class="d-tag" x="94" y="93" text-anchor="middle" font-size="10">routeur</text>
+    <text class="d-text" x="94" y="109" text-anchor="middle" font-size="8.5">trafic entrant</text>
+    <line class="d-line" x1="154" y1="88" x2="406" y2="62" /><path class="d-line" d="M399 58 L407 61 L400 68" fill="none" />
+    <line class="d-line" x1="154" y1="106" x2="406" y2="132" stroke-dasharray="4 4" />
+    <rect class="d-accent" x="410" y="42" width="206" height="42" rx="6" />
+    <text class="d-tag" x="513" y="61" text-anchor="middle" font-size="10">vert — v1.4 (nouvelle)</text>
+    <text class="d-text" x="513" y="75" text-anchor="middle" font-size="8.5">reçoit le trafic ✓</text>
+    <rect class="d-box" x="410" y="112" width="206" height="42" rx="6" />
+    <text class="d-tag" x="513" y="131" text-anchor="middle" font-size="10">bleu — v1.3 (stable)</text>
+    <text class="d-mut" x="513" y="145" text-anchor="middle" font-size="8.5">en attente, prêt au rollback</text>
+    <text class="d-mut" x="320" y="174" text-anchor="middle" font-size="9">rollback = ré-aiguiller vers le bleu — aucun rebuild, quasi instantané</text>
+  </svg>
+  <figcaption>Les deux versions coexistent&nbsp;; le retour arrière est un simple changement d'aiguillage, pas un redéploiement.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Les migrations de base, le point délicat</p><p>Le code se <em>rollback</em> facilement&nbsp;; les <strong>changements de base de données</strong>, beaucoup moins (supprimer une colonne est difficile à annuler). Bonne pratique&nbsp;: rendre les migrations <strong>compatibles en avant et en arrière</strong> — par exemple, ajouter une colonne avant de l'utiliser, et ne supprimer l'ancienne qu'une fois la nouvelle version stable. Découpler le déploiement du code et celui du schéma est l'un des sujets les plus subtils du CD.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le 1<sup>er</sup> août 2012, le courtier <strong>Knight Capital</strong> déploie une nouvelle version sur ses serveurs de trading — mais <em>un</em> des huit serveurs est oublié et garde l'ancien code, qui réactive par erreur une fonctionnalité obsolète. Faute de déploiement <strong>reproductible</strong> et de <strong>rollback</strong> immédiat, l'entreprise passe des ordres erronés pendant <strong>45 minutes</strong> et perd environ <strong>440 millions de dollars</strong>, ce qui la mène quasiment à la faillite. La leçon&nbsp;: un déploiement doit être <em>identique sur toutes les instances</em> (artefact unique, automatisé) et <em>réversible en un geste</em>. Une stratégie blue-green ou canary, doublée d'une observation des premières minutes, aurait stoppé l'hémorragie en quelques secondes.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Un rollback jamais testé n'existe pas</p><p>Le retour arrière n'est un filet de sécurité que si tu l'as <strong>déjà répété</strong>. Un bouton de rollback découvert dans l'urgence, un soir d'incident, échoue souvent (droits manquants, ancienne image effacée, migration de base non réversible). Bonne pratique&nbsp;: déclenche un rollback <em>volontairement</em> de temps en temps, en dehors de toute panne, pour vérifier qu'il fonctionne — comme un exercice d'évacuation.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — environnements, secrets et stratégies de déploiement</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Approche</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Valider avant le réel</td><td>staging (pré-prod)</td><td>réplique fidèle de la production</td></tr>
+      <tr><td>Injecter un secret</td><td><code>${{ secrets.X }}</code></td><td>coffre de la plateforme, jamais en clair</td></tr>
+      <tr><td>Déployer sans coupure</td><td>rolling</td><td>remplacement par vagues</td></tr>
+      <tr><td>Rollback instantané</td><td>blue-green</td><td>ré-aiguiller le trafic</td></tr>
+      <tr><td>Exposer peu, détecter tôt</td><td>canary</td><td>1&nbsp;% → 5&nbsp;% → 100&nbsp;%</td></tr>
+      <tr><td>Revenir en arrière</td><td>redéployer le tag stable</td><td>garder les artefacts précédents</td></tr>
+      <tr><td>Migration réversible</td><td>compatible avant/arrière</td><td>ajouter avant de supprimer</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Environnement</dt><dd>Une installation distincte de l'application (dev, staging, production), avec sa propre configuration et ses propres données.</dd>
+  <dt>Staging (pré-production)</dt><dd>Réplique aussi fidèle que possible de la production, où l'on déploie <em>d'abord</em> pour valider en conditions réelles.</dd>
+  <dt>Secret</dt><dd>Information sensible (clé d'API, mot de passe) stockée dans le coffre de la plateforme et injectée à l'exécution, jamais écrite dans le workflow.</dd>
+  <dt>Rolling</dt><dd>Déploiement par vagues&nbsp;: on remplace les instances quelques-unes à la fois, sans coupure&nbsp;; deux versions coexistent un moment.</dd>
+  <dt>Blue-green</dt><dd>Deux environnements identiques&nbsp;; on bascule le trafic de l'un («&nbsp;bleu&nbsp;») à l'autre («&nbsp;vert&nbsp;») d'un coup, avec rollback par simple re-bascule.</dd>
+  <dt>Canary (canari)</dt><dd>Exposition progressive de la nouvelle version à une fraction croissante d'utilisateurs (1&nbsp;%, 5&nbsp;%, 100&nbsp;%) en surveillant à chaque palier.</dd>
+  <dt>Rollback (retour arrière)</dt><dd>Revenir rapidement à la version précédente connue comme stable après un déploiement défaillant.</dd>
+  <dt>Migration réversible</dt><dd>Changement de schéma de base conçu pour être annulable&nbsp;: on ajoute avant d'utiliser, on ne supprime qu'une fois la nouvelle version stable.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le code progresse via des <strong>environnements</strong> (dev → staging → production)&nbsp;; <strong>staging</strong> valide en conditions réelles avant la prod.</li>
+  <li>Les <strong>secrets</strong> restent hors du workflow&nbsp;: stockés dans le coffre de la plateforme, injectés à l'exécution, masqués dans les logs.</li>
+  <li><strong>Stratégies</strong>&nbsp;: rolling (par vagues), blue-green (bascule + rollback instantané), canary (exposition progressive).</li>
+  <li>Toujours pouvoir faire un <strong>rollback</strong> (versions taguées)&nbsp;; attention aux migrations de base, difficiles à annuler.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>À quoi sert un environnement de staging&nbsp;?</li>
+  <li>Où stocke-t-on les secrets d'un déploiement, et pourquoi pas dans le workflow&nbsp;?</li>
+  <li>En quoi la stratégie canary réduit-elle le risque&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"À quoi sert un environnement de staging (pré-production) ?","a":["C'est une réplique fidèle de la production où l'on déploie d'abord, pour valider en conditions réelles avant de promouvoir la même version en prod","C'est l'environnement des utilisateurs finaux","C'est la machine du développeur","C'est une sauvegarde de la base de données"],"correct":0,"explain":"Staging imite la production (données, config réalistes). On y déploie l'artefact d'abord pour vérifier que tout fonctionne, puis on promeut la MÊME version en production (build once, deploy many). C'est un filet avant le réel."},
+  {"q":"Où stocke-t-on les secrets (clés d'API, mots de passe) d'un déploiement, et pourquoi pas dans le fichier de workflow ?","a":["Dans le coffre à secrets de la plateforme, injectés à l'exécution ; jamais dans le workflow, car il est versionné (le secret resterait dans l'historique Git)","Directement en clair dans le YAML, c'est plus simple","Dans un commentaire du code","Dans le nom du job"],"correct":0,"explain":"Un secret écrit dans le workflow est compromis dès le premier commit (et reste dans l'historique). On le met dans le coffre de la plateforme et on l'injecte par variable d'environnement (secrets.X) ; la plateforme le masque aussi dans les logs."},
+  {"q":"En quoi la stratégie de déploiement « canary » réduit-elle le risque ?","a":["On envoie d'abord la nouvelle version à une petite fraction des utilisateurs (1-5%) ; si un défaut apparaît, peu de monde est touché et on arrête avant un déploiement complet","Elle déploie sur tous les utilisateurs d'un coup, plus vite","Elle supprime le besoin de tests","Elle empêche tout déploiement"],"correct":0,"explain":"Le canary expose progressivement la nouvelle version (1% → 5% → 100%). Un problème ne touche d'abord qu'une poignée d'utilisateurs et se détecte tôt, avant l'exposition générale. C'est un déploiement à risque maîtrisé."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["production","prod","la production"],"placeholder":"le dernier environnement dans l'ordre dev → staging → …","hints":["Celui que voient les vrais utilisateurs.","On y déploie en dernier, une fois tout validé.","La … ."],"link":{"href":"lecon-05.html","label":"Revoir « Les environnements »"}},
+  {"type":"text","accept":["secrets.DEPLOY_KEY","secrets","${{ secrets.DEPLOY_KEY }}","${{secrets.DEPLOY_KEY}}","secrets.deploy_key"],"placeholder":"la syntaxe pour injecter le secret DEPLOY_KEY sans l'écrire en clair","hints":["Les secrets sont stockés côté plateforme, jamais dans le YAML.","On y accède par un contexte dédié.","${{ ???.DEPLOY_KEY }}"],"link":{"href":"lecon-05.html","label":"Revoir « Gérer les secrets »"}},
+  {"type":"text","accept":["rollback","retour arrière","retour arriere","bascule","revenir en arrière"],"placeholder":"le terme pour revenir instantanément à l'ancienne version après un déploiement boguée (… arrière)","hints":["Le blue-green garde l'ancienne version prête.","On rebascule le trafic dessus en un instant.","« … » (retour arrière)."],"link":{"href":"lecon-05.html","label":"Revoir « Blue-green et rollback »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Place ces environnements dans l'ordre de progression&nbsp;: production, dev, staging.</p><details><summary>Voir une solution</summary><p>Ordre&nbsp;: <strong>dev</strong> → <strong>staging</strong> (pré-production) → <strong>production</strong>. Le code gagne en confiance à chaque étape&nbsp;; staging valide en conditions réelles avant le déploiement final en production.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans un step de déploiement, montre comment injecter un secret <code>DEPLOY_KEY</code> sans l'écrire en clair.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.yml"><pre><code class="language-yaml">- run: ./deploy.sh
+  env:
+    DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}</code></pre></figure><p>Le fichier ne contient que la <em>référence</em> <code>secrets.DEPLOY_KEY</code>&nbsp;; la valeur réelle vit dans le coffre de la plateforme et n'apparaît jamais dans le YAML ni dans les logs.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un déploiement vient de mettre en prod une version boguée. Décris comment un déploiement blue-green permet un retour arrière quasi instantané.</p><details><summary>Voir une solution</summary><p>En <strong>blue-green</strong>, deux environnements identiques coexistent&nbsp;: «&nbsp;bleu&nbsp;» (l'ancienne version, qui tournait jusque-là) et «&nbsp;vert&nbsp;» (la nouvelle, fraîchement déployée). Au moment du déploiement, on a <em>basculé</em> le trafic du bleu vers le vert. Si le vert se révèle bogué, l'ancienne version (bleu) est <strong>toujours en place et fonctionnelle</strong>&nbsp;: il suffit de <strong>re-basculer le trafic</strong> du vert vers le bleu. Le rollback est <strong>quasi instantané</strong> (un simple changement d'aiguillage du trafic), sans rien reconstruire ni redéployer&nbsp;; les utilisateurs retrouvent immédiatement la version stable. C'est l'un des grands avantages du blue-green&nbsp;: le filet de sécurité est déjà chaud.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

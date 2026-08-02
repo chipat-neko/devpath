@@ -1,0 +1,77 @@
+<p>Pourquoi, en 2026, choisit-on encore Fortran pour une simulation de climat ou un calcul de structure&nbsp;? Pour une raison&nbsp;: la <strong>performance</strong>. Fortran a été conçu pour le calcul numérique intensif, et son compilateur produit du code parmi les plus rapides au monde. Cette leçon explore ce qui fait sa vitesse — et les pièges numériques à connaître.</p>
+
+<h2>Le calcul matriciel intégré</h2>
+<p>Les opérations d'algèbre linéaire sont natives. <code>matmul</code> multiplie des matrices, <code>transpose</code> transpose, <code>dot_product</code> calcule un produit scalaire — le tout optimisé par le compilateur.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">    real :: a(2,2) = reshape([1.,2.,3.,4.], [2,2])
+    real :: b(2,2) = reshape([5.,6.,7.,8.], [2,2])
+    real :: c(2,2)
+    c = matmul(a, b)        ! produit matriciel
+    print *, transpose(a)   ! transposée</code></pre></figure>
+<p class="code-caption"><code>reshape</code> transforme un tableau plat en matrice (ici remplie par colonnes).</p>
+
+<h2>Écrire des boucles que le compilateur aime</h2>
+<p>Pour les calculs sur tableaux, l'<strong>ordre des indices</strong> compte. Fortran range les matrices <em>par colonnes</em> (column-major)&nbsp;: la boucle interne doit parcourir le <strong>premier</strong> indice pour respecter la mémoire et profiter du cache.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">    ! Efficace : indice de ligne (1er) en boucle interne
+    do j = 1, n
+        do i = 1, n
+            a(i, j) = a(i, j) * 2.0
+        end do
+    end do</code></pre></figure>
+<p>Inverser les boucles donne le même résultat mais peut être bien plus lent sur de grandes matrices.</p>
+
+<h2>Précision et pièges des flottants</h2>
+<p>Le calcul scientifique vit et meurt par la précision. Trois réflexes&nbsp;: utiliser la <strong>double précision</strong>, ne jamais comparer deux réels avec <code>==</code>, et se méfier de la <strong>perte de précision</strong> quand on soustrait deux nombres proches.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">    use, intrinsic :: iso_fortran_env, only: dp =&gt; real64
+    real(dp) :: a, b
+    a = 1.0_dp + 1.0e-16_dp
+    b = 1.0_dp
+    print *, a - b          ! très petit, sensible aux arrondis</code></pre></figure>
+
+<h2>Laisser le compilateur optimiser</h2>
+<p>La règle d'or&nbsp;: écris du code clair, et confie l'optimisation au compilateur avec un drapeau comme <code>-O2</code> ou <code>-O3</code>. Il déroule les boucles, vectorise (SIMD) et réordonne les calculs bien mieux qu'à la main.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gfortran -O3 -march=native simulation.f90 -o sim
+# -O3 : optimisation agressive ; -march=native : instructions du CPU local</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>N'optimise pas à la main avant d'avoir <strong>mesuré</strong>&nbsp;: compile avec <code>-O2</code>, chronomètre, et n'interviens que sur les points chauds réels. Le compilateur fait déjà l'essentiel.</p></div></div>
+
+<h2>Le parallélisme (survol)</h2>
+<p>Pour exploiter plusieurs cœurs ou plusieurs machines, deux voies principales. <strong>OpenMP</strong> parallélise des boucles par des directives&nbsp;; les <strong>coarrays</strong> (natifs depuis Fortran 2008) répartissent les données sur plusieurs «&nbsp;images&nbsp;» qui s'exécutent en parallèle.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">    ! OpenMP : une directive avant la boucle
+    !$omp parallel do
+    do i = 1, n
+        resultat(i) = lourd_calcul(i)
+    end do
+    !$omp end parallel do</code></pre></figure>
+<p class="code-caption">Compilé avec <code>-fopenmp</code>, ce code répartit les itérations sur tous les cœurs.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Accumuler des erreurs d'arrondi dans une longue somme&nbsp;: additionner un million de petits nombres en simple précision dérive. Préfère la double précision pour les accumulateurs, ou des algorithmes de sommation compensée.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour l'algèbre linéaire sérieuse, on n'écrit pas ses propres routines&nbsp;: on appelle <strong>BLAS</strong> et <strong>LAPACK</strong>, des bibliothèques ultra-optimisées (souvent en assembleur sous le capot) que tout le HPC utilise. On les voit à la leçon suivante.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le calcul matriciel (<code>matmul</code>, <code>transpose</code>) est natif et optimisé.</li>
+  <li>Fortran est <strong>column-major</strong>&nbsp;: la boucle interne parcourt le premier indice.</li>
+  <li>Précision&nbsp;: double précision, pas de <code>==</code> sur les réels, méfiance avec les soustractions.</li>
+  <li>Confie l'optimisation au compilateur (<code>-O2</code>/<code>-O3</code>)&nbsp;; parallélise avec OpenMP ou coarrays.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi l'ordre des boucles imbriquées affecte-t-il la vitesse&nbsp;?</li><li>Quel drapeau de compilation active l'optimisation&nbsp;?</li><li>Cite deux façons de paralléliser un calcul en Fortran.</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Multiplie deux matrices 2×2 avec <code>matmul</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">    real :: a(2,2) = reshape([1.,0.,0.,1.], [2,2])
+    real :: b(2,2) = reshape([2.,3.,4.,5.], [2,2])
+    print *, matmul(a, b)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la boucle imbriquée «&nbsp;efficace&nbsp;» qui met à zéro une matrice n×n.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">    do j = 1, n
+        do i = 1, n
+            a(i, j) = 0.0
+        end do
+    end do
+    ! ou plus simplement : a = 0.0</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Calcule la somme d'un million de <code>0.1</code> en double précision et compare à 100000.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">    use, intrinsic :: iso_fortran_env, only: dp =&gt; real64
+    real(dp) :: s = 0.0_dp
+    integer :: i
+    do i = 1, 1000000
+        s = s + 0.1_dp
+    end do
+    print *, s   ! proche de 100000, avec une légère dérive</code></pre></figure></details></div>

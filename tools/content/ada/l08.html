@@ -1,0 +1,97 @@
+<p>Beaucoup de systèmes critiques font <strong>plusieurs choses à la fois</strong>&nbsp;: lire des capteurs, piloter des actionneurs, communiquer, le tout en respectant des délais stricts. Là où d'autres langages bricolent la concurrence avec des bibliothèques externes, Ada l'a <strong>intégrée au langage</strong> dès l'origine, avec un modèle élégant et sûr&nbsp;: les <strong>tâches</strong>. Cette leçon présente la concurrence native d'Ada, un de ses atouts les plus distinctifs.</p>
+
+<h2>Les tâches&nbsp;: des fils d'exécution du langage</h2>
+<p>Une <strong>tâche</strong> (<code>task</code>) est une unité qui s'exécute <strong>en parallèle</strong> du reste du programme. On la déclare, et elle démarre automatiquement. Plusieurs tâches progressent simultanément, gérées par le support d'exécution d'Ada.</p>
+<figure class="code-block" data-file="taches.adb"><pre><code class="language-ada">procedure Demo is
+   task Afficheur;          --  déclaration d'une tâche
+
+   task body Afficheur is   --  son corps
+   begin
+      for I in 1 .. 3 loop
+         Put_Line ("Tâche : " &amp; Integer'Image (I));
+      end loop;
+   end Afficheur;
+begin
+   Put_Line ("Programme principal");
+   --  Afficheur tourne EN MÊME TEMPS que ce bloc.
+end Demo;</code></pre></figure>
+<p>La tâche <code>Afficheur</code> démarre dès l'entrée dans <code>Demo</code> et s'exécute concurremment au corps principal. Le programme ne se termine que lorsque <em>toutes</em> ses tâches sont finies — Ada gère proprement la fin de vie.</p>
+
+<h2>Le rendez-vous&nbsp;: la communication synchrone</h2>
+<p>Comment deux tâches échangent-elles&nbsp;? Par le <strong>rendez-vous</strong>&nbsp;: une tâche offre des points d'<strong>entrée</strong> (<code>entry</code>), et attend qu'une autre les <strong>appelle</strong>. Les deux se synchronisent le temps de l'échange, puis repartent chacune de leur côté.</p>
+<figure class="code-block" data-file="rendezvous.adb"><pre><code class="language-ada">task Serveur is
+   entry Demander (Valeur : in Integer);   --  point d'entrée
+end Serveur;
+
+task body Serveur is
+   Recu : Integer;
+begin
+   accept Demander (Valeur : in Integer) do
+      Recu := Valeur;          --  reçoit pendant le rendez-vous
+   end Demander;
+   Put_Line ("Reçu : " &amp; Integer'Image (Recu));
+end Serveur;
+
+--  Ailleurs : Serveur.Demander (42);  -- appelle l'entrée</code></pre></figure>
+<p>Le mot <code>accept</code> marque l'endroit où la tâche accepte un appel. L'appelant (<code>Serveur.Demander (42)</code>) et l'accepteur se rencontrent à ce point&nbsp;: c'est le «&nbsp;rendez-vous&nbsp;». Le modèle est élégant car la synchronisation et l'échange de données se font d'un seul geste.</p>
+
+<h2>Les objets protégés&nbsp;: partager sans danger</h2>
+<p>Quand plusieurs tâches doivent accéder à une même donnée, l'accès concurrent non contrôlé est catastrophique. Ada offre l'<strong>objet protégé</strong> (<code>protected</code>)&nbsp;: il encapsule une donnée et garantit que ses opérations s'exécutent en <strong>exclusion mutuelle</strong>, sans verrou manuel.</p>
+<figure class="code-block" data-file="protege.adb"><pre><code class="language-ada">protected Compteur is
+   procedure Incrementer;
+   function Valeur return Integer;
+private
+   N : Integer := 0;
+end Compteur;
+
+protected body Compteur is
+   procedure Incrementer is
+   begin
+      N := N + 1;     --  jamais deux tâches ici en même temps
+   end Incrementer;
+
+   function Valeur return Integer is
+   begin
+      return N;
+   end Valeur;
+end Compteur;</code></pre></figure>
+<p>Le support d'exécution garantit qu'une seule tâche modifie <code>N</code> à la fois&nbsp;: pas de condition de course, pas de <code>mutex</code> à poser et lever soi-même (avec le risque d'oublier). La sûreté est dans la structure, pas dans la discipline du programmeur.</p>
+
+<h2>Pourquoi le temps réel adore Ada</h2>
+<p>Ces mécanismes, intégrés au langage et normalisés, permettent un comportement <strong>prévisible</strong> — essentiel quand un calcul doit finir avant une échéance. Ada fournit aussi des priorités de tâches, des délais (<code>delay until</code>), et un profil temps réel strict (<strong>Ravenscar</strong>) certifiable. C'est pourquoi on le retrouve aux commandes de systèmes où «&nbsp;trop tard&nbsp;» équivaut à «&nbsp;faux&nbsp;».</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Partager une variable ordinaire entre tâches «&nbsp;parce que ça a l'air de marcher&nbsp;». Sans objet protégé, deux tâches qui modifient la même donnée créent une <strong>condition de course</strong>&nbsp;: un bug intermittent, terriblement difficile à reproduire. La règle Ada&nbsp;: toute donnée partagée entre tâches passe par un <code>protected</code> ou un rendez-vous. Jamais d'accès concurrent «&nbsp;nu&nbsp;».</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le profil <strong>Ravenscar</strong> (et son successeur Jorvik) définit un sous-ensemble du modèle de tâches assez restreint pour être <em>analysable</em> et <em>certifiable</em> en temps réel dur&nbsp;: on peut prouver les bornes de temps de réponse. C'est ce niveau de garantie qui permet à Ada de voler dans des avions certifiés DO-178C, le plus haut standard de sûreté logicielle aéronautique.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une <strong>tâche</strong> (<code>task</code>) s'exécute en parallèle&nbsp;; la concurrence est <strong>native</strong> en Ada.</li>
+  <li>Le <strong>rendez-vous</strong> (<code>entry</code>/<code>accept</code>) synchronise deux tâches et échange des données.</li>
+  <li>L'<strong>objet protégé</strong> (<code>protected</code>) garantit l'exclusion mutuelle sans verrou manuel.</li>
+  <li>Priorités, délais et profil <strong>Ravenscar</strong> rendent Ada apte au temps réel certifié.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quand une tâche démarre-t-elle&nbsp;?</li><li>À quoi sert un objet <code>protected</code>&nbsp;?</li><li>Que se passe-t-il lors d'un rendez-vous&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une tâche nommée <code>Surveillant</code> (juste la déclaration).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">task Surveillant;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Quel type d'objet faut-il pour qu'un compteur partagé par plusieurs tâches soit sûr&nbsp;?</p><details><summary>Voir une solution</summary><p>Un <strong>objet protégé</strong> (<code>protected</code>)&nbsp;: il garantit que ses opérations (incrémenter, lire) s'exécutent en exclusion mutuelle, ce qui empêche toute condition de course sur le compteur, sans avoir à gérer de verrou manuellement.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Esquisse un objet protégé <code>Drapeau</code> avec une procédure <code>Lever</code> et une fonction <code>Est_Leve</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">protected Drapeau is
+   procedure Lever;
+   function Est_Leve return Boolean;
+private
+   Etat : Boolean := False;
+end Drapeau;
+
+protected body Drapeau is
+   procedure Lever is
+   begin
+      Etat := True;
+   end Lever;
+   function Est_Leve return Boolean is
+   begin
+      return Etat;
+   end Est_Leve;
+end Drapeau;</code></pre></figure></details></div>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les monades, démystifiées — Leçon 08 · Cours Haskell — Syntaxe</title>
+    <meta name="description" content="Comprends enfin les monades en Haskell : un simple pattern pour enchaîner des calculs dans un contexte, avec Maybe, Either, la notation do et un validateur fil rouge." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="haskell" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Haskell</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Le système de types — Leçon 08</p>
+              <h1 class="lesson-header__title">Les monades, démystifiées</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~60 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 7</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer ce qu'est une monade comme un <strong>pattern d'enchaînement</strong>, sans jargon&nbsp;;</li>
+                  <li>utiliser <code>&gt;&gt;=</code> et la notation <code>do</code> avec <code>Maybe</code> et <code>Either</code> pour court-circuiter au premier échec&nbsp;;</li>
+                  <li>comprendre la liste comme monade (non-déterminisme) et l'intuition des lois&nbsp;;</li>
+                  <li>écrire un validateur de formulaire qui enchaîne des vérifications proprement.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le mot « monade » fait fuir. On t'a sûrement dit que c'était de la haute mathématique, un truc de théoricien. C'est faux. Une monade, c'est <strong>un pattern d'enchaînement</strong> : un moyen de coller plusieurs calculs bout à bout quand chacun vit dans un <em>contexte</em> — un calcul qui peut échouer, qui peut renvoyer plusieurs résultats, qui lit une config, qui écrit dans un log. Tu connais déjà ce besoin : en Python ou JS, tu écris des cascades de <code>if x is None</code> ou des <code>try/catch</code> imbriqués. La monade, c'est exactement ça, mais factorisé une bonne fois pour toutes.</p>
+<p>Dans cette leçon, on part du problème concret — enchaîner des opérations qui peuvent rater sans empiler dix <code>if</code> — et on remonte tranquillement jusqu'à l'abstraction. Fil rouge : un petit validateur de formulaire qui s'arrête au premier champ invalide. Tu vas voir, à la fin, le mot ne fera plus peur.</p>
+
+<h2>Le problème : enchaîner des calculs qui peuvent échouer</h2>
+<p>Imagine deux fonctions qui peuvent chacune renvoyer <code>Nothing</code> (rappel du cours sur <code>Maybe</code> : <code>Just x</code> = succès, <code>Nothing</code> = échec). On cherche le service d'un utilisateur dans une table, puis le budget de ce service.</p>
+<figure class="code-block" data-file="Main.hs"><pre><code class="language-haskell">import qualified Data.Map as Map
+import Data.Map (Map)
+
+users :: Map String String      -- nom -&gt; service
+users = Map.fromList [("alice", "ventes"), ("bob", "rh")]
+
+budgets :: Map String Int       -- service -&gt; budget
+budgets = Map.fromList [("ventes", 5000), ("rh", 3000)]
+
+-- La version « impérative », à la main : on déballe à chaque étape
+budgetDe :: String -&gt; Maybe Int
+budgetDe nom =
+  case Map.lookup nom users of
+    Nothing      -&gt; Nothing
+    Just service -&gt; case Map.lookup service budgets of
+                      Nothing -&gt; Nothing
+                      Just b  -&gt; Just b
+</code></pre></figure>
+<p>Ça marche, mais regarde la structure : à chaque étape, on teste <code>Nothing</code>, on renvoie <code>Nothing</code>, et on continue seulement si c'est un <code>Just</code>. Avec cinq étapes, tu aurais une pyramide de <code>case</code>. Ce schéma <em>« si échec, abandonne ; sinon, prends la valeur et continue »</em> est toujours le même. C'est lui qu'on va capturer.</p>
+
+<h2>(&gt;&gt;=) : l'opérateur qui enchaîne</h2>
+<p>La fonction-clé s'appelle <strong>bind</strong>, et son symbole est <code>&gt;&gt;=</code>. Regarde son type, puis sa spécialisation à <code>Maybe</code> :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">ghci&gt; :t (&gt;&gt;=)
+(&gt;&gt;=) :: Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+-- Spécialisé à Maybe :
+-- (&gt;&gt;=) :: Maybe a -&gt; (a -&gt; Maybe b) -&gt; Maybe b</code></pre></figure>
+<p class="code-caption">Lis-le ainsi : « prends une valeur dans un contexte (<code>Maybe a</code>), et une fonction qui, à partir d'un <code>a</code> nu, produit un nouveau contexte (<code>a -&gt; Maybe b</code>). Bind les recolle. »</p>
+<p>Pour <code>Maybe</code>, <code>&gt;&gt;=</code> fait précisément le test qu'on écrivait à la main : si la gauche est <code>Nothing</code>, il court-circuite et renvoie <code>Nothing</code> sans même appeler la fonction ; si c'est <code>Just x</code>, il applique la fonction à <code>x</code>.</p>
+<figure class="code-block" data-file="Main.hs"><pre><code class="language-haskell">-- La même logique que budgetDe, mais enchaînée avec (&gt;&gt;=)
+budgetDe' :: String -&gt; Maybe Int
+budgetDe' nom =
+  Map.lookup nom users &gt;&gt;= \service -&gt;
+  Map.lookup service budgets
+
+-- ghci&gt; budgetDe' "alice"
+-- Just 5000
+-- ghci&gt; budgetDe' "carol"      -- absent : court-circuit immédiat
+-- Nothing</code></pre></figure>
+<p>Plus aucun <code>case</code>, plus aucun test de <code>Nothing</code> écrit à la main. Le court-circuit est <strong>automatique</strong> : c'est l'implémentation de <code>&gt;&gt;=</code> pour <code>Maybe</code> qui s'en charge. Ajoute une étape, tu ajoutes une ligne <code>&gt;&gt;= \x -&gt; ...</code>, et la logique d'échec reste gratuite.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Sur Maybe, le bind enchaîne si Just et court-circuite si Nothing. En haut, Just ventes passe par lookup budgets et donne Just 5000. En bas, Nothing court-circuite : la fonction n'est pas appelée et le résultat reste Nothing.">
+    <text class="d-label" x="24" y="22" font-size="12">(&gt;&gt;=) sur Maybe : enchaîner si Just, court-circuiter si Nothing</text>
+    <text class="d-tag" x="24" y="65" font-size="10" font-family="monospace">succès</text>
+    <rect class="d-accent" x="70" y="44" width="120" height="34" rx="8" /><text class="d-text" x="130" y="65" text-anchor="middle" font-size="11" font-family="monospace">Just "ventes"</text>
+    <line class="d-line" x1="190" y1="61" x2="248" y2="61" /><polygon class="d-dot" points="254,61 244,56 244,66" /><text class="d-mut" x="219" y="54" text-anchor="middle" font-size="8" font-family="monospace">&gt;&gt;=</text>
+    <rect class="d-box" x="254" y="44" width="158" height="34" rx="8" /><text class="d-text" x="333" y="65" text-anchor="middle" font-size="9.5" font-family="monospace">lookup service budgets</text>
+    <line class="d-line" x1="412" y1="61" x2="470" y2="61" /><polygon class="d-dot" points="476,61 466,56 466,66" />
+    <rect class="d-accent" x="476" y="44" width="140" height="34" rx="8" /><text class="d-text" x="546" y="65" text-anchor="middle" font-size="11" font-family="monospace">Just 5000</text>
+    <text class="d-tag" x="24" y="135" font-size="10" font-family="monospace">échec</text>
+    <rect class="d-frame" x="70" y="114" width="120" height="34" rx="8" /><text class="d-mut" x="130" y="135" text-anchor="middle" font-size="11" font-family="monospace">Nothing</text>
+    <line class="d-line" x1="190" y1="131" x2="248" y2="131" /><polygon class="d-dot" points="254,131 244,126 244,136" /><text class="d-mut" x="219" y="124" text-anchor="middle" font-size="8">court-circuit</text>
+    <rect class="d-frame" x="254" y="114" width="158" height="34" rx="8" /><text class="d-mut" x="333" y="135" text-anchor="middle" font-size="9.5" font-family="monospace">fonction non appelée</text>
+    <line class="d-line" x1="412" y1="131" x2="470" y2="131" /><polygon class="d-dot" points="476,131 466,126 466,136" />
+    <rect class="d-frame" x="476" y="114" width="140" height="34" rx="8" /><text class="d-mut" x="546" y="135" text-anchor="middle" font-size="11" font-family="monospace">Nothing</text>
+    <text class="d-mut" x="24" y="174" font-size="9">Un seul Nothing dans la chaîne et tout le résultat vaut Nothing — le test d'échec n'est écrit nulle part.</text>
+  </svg>
+  <figcaption>Le bind <code>&gt;&gt;=</code> de <code>Maybe</code> fait le travail du <code>case … of Nothing/Just</code> à ta place&nbsp;: sur <code>Just</code>, il déballe et continue&nbsp;; sur <code>Nothing</code>, il s'arrête net sans appeler l'étape suivante.</figcaption>
+</figure>
+
+<h2>return : remettre une valeur dans le contexte</h2>
+<p>L'autre brique d'une monade s'appelle <code>return</code> (rien à voir avec le <code>return</code> de Python/JS : ici il ne quitte aucune fonction). Son rôle est d'<strong>emballer</strong> une valeur ordinaire dans le contexte minimal.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">ghci&gt; :t return
+return :: Monad m =&gt; a -&gt; m a
+-- Pour Maybe, return x = Just x
+ghci&gt; return 42 :: Maybe Int
+Just 42</code></pre></figure>
+<p>On l'utilise pour finir une chaîne : quand tu as calculé une valeur nue et que tu dois la renvoyer dans le bon contexte. En Haskell moderne, <code>pure</code> fait la même chose que <code>return</code> (il vient de <code>Applicative</code>, la sur-classe de <code>Monad</code>) ; les deux sont interchangeables, et <code>pure</code> est souvent préféré.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Une monade, c'est donc un type qui sait faire deux choses : <code>return</code>/<code>pure</code> (entrer une valeur dans le contexte) et <code>&gt;&gt;=</code> (enchaîner un calcul à l'intérieur). C'est tout. La classe <code>Monad</code> ne contient rien d'autre d'essentiel.</p></div></div>
+
+<h2>La notation do : le sucre qui ressemble à de l'impératif</h2>
+<p>Empiler des <code>&gt;&gt;= \x -&gt;</code> devient vite illisible. Haskell offre un sucre syntaxique, la <strong>notation <code>do</code></strong>, qui transforme ces chaînes en quelque chose qui se lit comme une séquence d'instructions.</p>
+<figure class="code-block" data-file="Main.hs"><pre><code class="language-haskell">budgetDo :: String -&gt; Maybe Int
+budgetDo nom = do
+  service &lt;- Map.lookup nom users      -- &lt;- déballe le Just, ou court-circuite
+  budget  &lt;- Map.lookup service budgets
+  pure budget                          -- pourrait aussi s'écrire : return budget
+
+-- ghci&gt; budgetDo "bob"
+-- Just 3000
+-- budgetDo est, ligne à ligne, la ré-écriture de budgetDe' par le compilateur.</code></pre></figure>
+<p>La flèche <code>&lt;-</code> n'est <em>pas</em> une affectation : c'est du <code>&gt;&gt;=</code> déguisé. <code>service &lt;- Map.lookup nom users</code> veut dire « extrais la valeur du contexte ; si c'est <code>Nothing</code>, abandonne tout le bloc ; sinon, appelle <code>service</code> ce qu'il y a dedans et continue ». Le compilateur ré-écrit ce bloc <code>do</code> exactement en la version <code>&gt;&gt;=</code> précédente. C'est de l'impératif <em>en apparence</em>, mais 100 % pur en dessous.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="La notation do est réécrite par le compilateur en une chaîne de bind. À gauche, un bloc do avec des flèches gauche. À droite, la même logique avec des opérateurs bind et des lambdas. Les deux sont strictement équivalents.">
+    <text class="d-label" x="24" y="22" font-size="12">La notation do = du sucre pour une chaîne de (&gt;&gt;=)</text>
+    <rect class="d-frame" x="20" y="40" width="252" height="158" rx="10" />
+    <text class="d-tag" x="36" y="62" font-size="10" font-family="monospace">ce que TU écris</text>
+    <text class="d-text" x="36" y="90" font-size="11" font-family="monospace">do</text>
+    <text class="d-text" x="36" y="112" font-size="10.5" font-family="monospace">  service &lt;- lookup nom users</text>
+    <text class="d-text" x="36" y="134" font-size="10.5" font-family="monospace">  budget  &lt;- lookup service …</text>
+    <text class="d-tag" x="36" y="156" font-size="10.5" font-family="monospace">  pure budget</text>
+    <line class="d-line" x1="280" y1="118" x2="360" y2="118" /><polygon class="d-dot" points="366,118 356,113 356,123" /><text class="d-mut" x="320" y="110" text-anchor="middle" font-size="9">réécrit en</text>
+    <rect class="d-frame" x="372" y="40" width="248" height="158" rx="10" />
+    <text class="d-tag" x="388" y="62" font-size="10" font-family="monospace">ce que voit le compilateur</text>
+    <text class="d-text" x="388" y="90" font-size="10.5" font-family="monospace">lookup nom users</text>
+    <text class="d-text" x="388" y="112" font-size="10.5" font-family="monospace">  &gt;&gt;= \service -&gt;</text>
+    <text class="d-text" x="388" y="134" font-size="10.5" font-family="monospace">lookup service …</text>
+    <text class="d-text" x="388" y="156" font-size="10.5" font-family="monospace">  &gt;&gt;= \budget -&gt;</text>
+    <text class="d-tag" x="388" y="178" font-size="10.5" font-family="monospace">pure budget</text>
+  </svg>
+  <figcaption>La flèche <code>&lt;-</code> n'affecte rien&nbsp;: c'est un <code>&gt;&gt;=</code> suivi d'une lambda. Le compilateur traduit mécaniquement le bloc <code>do</code> de gauche en la cascade de <code>&gt;&gt;=</code> de droite — même code, deux présentations.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Mémo : <code>&lt;-</code> « sort » une valeur du contexte le temps du bloc ; <code>let x = ...</code> (sans <code>in</code>, dans un <code>do</code>) lie une valeur ordinaire ; la dernière ligne d'un <code>do</code> donne le résultat du bloc, et doit être du bon type monadique.</p></div></div>
+
+<h2>Either : enchaîner avec un message d'erreur</h2>
+<p><code>Maybe</code> dit « ça a raté » mais pas <em>pourquoi</em>. <code>Either e a</code> répond à ça : <code>Left e</code> porte une erreur (souvent un message), <code>Right a</code> porte le succès. C'est aussi une monade, et son <code>&gt;&gt;=</code> court-circuite sur le premier <code>Left</code> en conservant l'erreur. Voici le fil rouge : un validateur de formulaire.</p>
+<figure class="code-block" data-file="Main.hs"><pre><code class="language-haskell">data Inscription = Inscription { nom :: String, age :: Int, email :: String }
+  deriving Show
+
+verifNom :: String -&gt; Either String String
+verifNom n
+  | null n            = Left "Le nom est vide."
+  | length n &gt; 50     = Left "Le nom est trop long."
+  | otherwise         = Right n
+
+verifAge :: Int -&gt; Either String Int
+verifAge a
+  | a &lt; 0             = Left "L'âge est négatif."
+  | a &gt; 130           = Left "L'âge est irréaliste."
+  | otherwise         = Right a
+
+verifEmail :: String -&gt; Either String String
+verifEmail e
+  | '@' `elem` e      = Right e
+  | otherwise         = Left "L'email n'a pas de @."
+
+-- On enchaîne : le premier Left arrête tout et remonte son message
+valider :: String -&gt; Int -&gt; String -&gt; Either String Inscription
+valider n a e = do
+  n' &lt;- verifNom n
+  a' &lt;- verifAge a
+  e' &lt;- verifEmail e
+  pure (Inscription n' a' e')
+
+-- ghci&gt; valider "Alice" 30 "alice@ex.fr"
+-- Right (Inscription {nom = "Alice", age = 30, email = "alice@ex.fr"})
+-- ghci&gt; valider "Alice" (-5) "alice@ex.fr"   -- s'arrête à l'âge
+-- Left "L'âge est négatif."
+-- ghci&gt; valider "" 30 "pasdemail"            -- s'arrête au nom, jamais l'email
+-- Left "Le nom est vide."</code></pre></figure>
+<p>Note le comportement <strong>court-circuit au premier échec</strong> : quand le nom est vide, <code>verifAge</code> et <code>verifEmail</code> ne sont même pas évalués. C'est exactement la sémantique « valide tout dans l'ordre, arrête-toi à la première erreur » — sans un seul <code>if</code> imbriqué, et le message d'erreur remonte tout seul.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 246" role="img" aria-label="Un validateur enchaîne verifNom, verifAge et verifEmail. verifNom réussit et renvoie Right. verifAge sur moins cinq échoue et renvoie Left : la chaîne s'arrête, son message part vers le résultat, et verifEmail comme pure Inscription ne sont jamais évalués.">
+    <text class="d-label" x="24" y="22" font-size="12">Either : le premier Left arrête la chaîne et devient le résultat</text>
+    <rect class="d-accent" x="40" y="38" width="300" height="32" rx="8" /><text class="d-text" x="56" y="58" font-size="11" font-family="monospace">verifNom "Alice" → Right (OK)</text>
+    <line class="d-line" x1="190" y1="70" x2="190" y2="86" /><polygon class="d-dot" points="190,92 185,82 195,82" />
+    <rect class="d-box" x="40" y="94" width="300" height="32" rx="8" /><text class="d-text" x="56" y="114" font-size="11" font-family="monospace">verifAge (-5) → Left (STOP)</text>
+    <line class="d-line" x1="340" y1="110" x2="428" y2="110" /><polygon class="d-dot" points="434,110 424,105 424,115" />
+    <rect class="d-accent" x="434" y="94" width="182" height="32" rx="8" /><text class="d-text" x="525" y="114" text-anchor="middle" font-size="10" font-family="monospace">Left "âge négatif"</text>
+    <line class="d-line" x1="190" y1="126" x2="190" y2="144" /><polygon class="d-dot" points="190,150 185,140 195,140" /><text class="d-mut" x="205" y="140" font-size="8.5">court-circuit</text>
+    <rect class="d-frame" x="40" y="152" width="300" height="30" rx="8" /><text class="d-mut" x="56" y="171" font-size="10.5" font-family="monospace">verifEmail … — jamais évalué</text>
+    <line class="d-line" x1="190" y1="182" x2="190" y2="198" /><polygon class="d-dot" points="190,204 185,194 195,194" />
+    <rect class="d-frame" x="40" y="206" width="300" height="30" rx="8" /><text class="d-mut" x="56" y="225" font-size="10.5" font-family="monospace">pure Inscription — jamais atteint</text>
+  </svg>
+  <figcaption>Dès que <code>verifAge (-5)</code> renvoie <code>Left</code>, le bloc <code>do</code> s'interrompt&nbsp;: le message d'erreur devient la valeur de <code>valider</code>, et les vérifications suivantes ne tournent même pas. C'est le court-circuit «&nbsp;arrête-toi à la première erreur&nbsp;», offert par la monade.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Si tu veux au contraire <em>accumuler toutes</em> les erreurs (afficher tous les champs invalides d'un coup), la monade ne convient pas — justement parce qu'elle court-circuite. On utilise alors <code>Validation</code> (du paquet <code>validation</code>), qui est <code>Applicative</code> mais pas <code>Monad</code>. Le choix monade vs applicative, c'est exactement « arrêt au premier échec » contre « collecte tout ».</p></div></div>
+
+<h2>La liste comme monade : le non-déterminisme</h2>
+<p>Surprise : la liste <code>[a]</code> est aussi une monade. Son contexte n'est pas l'échec mais le <em>choix multiple</em> : « cette valeur peut être l'une de plusieurs ». <code>&gt;&gt;=</code> applique alors la fonction à chaque élément et concatène tous les résultats.</p>
+<figure class="code-block" data-file="Main.hs"><pre><code class="language-haskell">-- Toutes les paires (lettre, chiffre) possibles
+paires :: [(Char, Int)]
+paires = do
+  lettre  &lt;- ['a', 'b']
+  chiffre &lt;- [1, 2, 3]
+  pure (lettre, chiffre)
+
+-- ghci&gt; paires
+-- [('a',1),('a',2),('a',3),('b',1),('b',2),('b',3)]
+
+-- Pour Maybe, pure x = Just x ; pour la liste, pure x = [x]
+-- ghci&gt; pure 7 :: [Int]
+-- [7]</code></pre></figure>
+<p>Tu reconnais une double boucle imbriquée — et c'est exactement ce qu'est une <em>compréhension de liste</em>. Le <code>do</code> sur les listes <strong>est</strong> la compréhension de liste, écrite autrement. Même opérateur <code>&gt;&gt;=</code>, même notation <code>do</code>, sémantique radicalement différente : voilà la force du pattern. Tu apprends <code>do</code> une fois, il marche pour l'échec (<code>Maybe</code>), l'erreur (<code>Either</code>), le choix multiple (liste), les effets (<code>IO</code>)...</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — décoder du JSON avec aeson</p><p>Chaque fois qu'une API web écrite en Haskell reçoit du JSON, elle le décode avec <strong>aeson</strong>, la bibliothèque standard de fait. Une instance <code>FromJSON</code> enchaîne l'extraction des champs — <code>v .: "nom"</code>, <code>v .: "age"</code> — avec exactement la notation <code>do</code> (ou <code>&lt;$&gt;</code>/<code>&lt;*&gt;</code>) de cette leçon. Chacun de ces <code>.:</code> vit dans une monade <code>Parser</code> qui <strong>court-circuite au premier champ manquant ou mal typé</strong>, avec un message précis (« la clé age est absente »). Tu décris la forme attendue, et toute la gestion d'erreur — s'arrêter, remonter le bon message — est le pattern monadique, gratuit. Serveurs Servant, clients d'API, fichiers de config&nbsp;: tous reposent là-dessus.</p></div></div>
+
+<h2>Les lois des monades, l'intuition</h2>
+<p>Pour qu'une monade se comporte « normalement », son <code>&gt;&gt;=</code> doit respecter trois lois. Pas besoin de les démontrer : il suffit d'en saisir l'idée, car elles disent toutes « l'enchaînement ne réserve pas de mauvaise surprise ».</p>
+<figure class="code-block" data-file="Main.hs"><pre><code class="language-haskell">-- 1. Identité à gauche : emballer puis enchaîner = appeler directement
+--    return a &gt;&gt;= f   ==  f a
+
+-- 2. Identité à droite : enchaîner avec return ne change rien
+--    m &gt;&gt;= return    ==  m
+
+-- 3. Associativité : la façon de regrouper les étapes n'importe pas
+--    (m &gt;&gt;= f) &gt;&gt;= g  ==  m &gt;&gt;= (\x -&gt; f x &gt;&gt;= g)</code></pre></figure>
+<p>En clair : <code>return</code> est un élément neutre (il n'ajoute aucun effet), et coller A-puis-B-puis-C donne le même résultat qu'on groupe (A-puis-B)-puis-C ou A-puis-(B-puis-C). C'est ce qui rend la notation <code>do</code> fiable : tu peux factoriser, découper, réordonner les blocs sans changer le sens. Les monades de la bibliothèque standard respectent déjà ces lois ; tu ne t'en soucies que si tu écris ta propre instance.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre <code>&lt;-</code> avec une affectation. <code>x &lt;- m</code> n'assigne rien : c'est un <code>&gt;&gt;=</code>. La dernière ligne d'un <code>do</code> ne peut donc pas être un <code>x &lt;- ...</code> : elle doit être une expression monadique qui donne le résultat du bloc (souvent <code>pure ...</code>).</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mélanger deux monades dans un même <code>do</code>. Un bloc <code>do</code> vit dans <em>une seule</em> monade : tu ne peux pas écrire <code>x &lt;- Just 1</code> puis <code>y &lt;- [1,2]</code>. Le compilateur refusera avec une erreur de type du genre « Couldn't match type <code>[]</code> with <code>Maybe</code> ». Reste cohérent, ou convertis explicitement (par ex. <code>maybeToList</code>).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La monade <code>IO</code> applique exactement ce pattern aux effets (lire un fichier, afficher à l'écran) : c'est la prochaine leçon. Explore aussi <code>State</code> (faire passer un état), <code>Reader</code> (lire une config) et <code>mapM</code>/<code>traverse</code>, qui enchaînent une action monadique sur toute une liste. Et regarde l'opérateur <code>&gt;&gt;</code> (séquencer en ignorant la valeur) : <code>m &gt;&gt; n</code> = <code>m &gt;&gt;= \_ -&gt; n</code>.</p></div></div>
+
+<h2>Antisèche — enchaîner dans une monade</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le vocabulaire monadique et ce que chaque outil fait</caption>
+    <thead><tr><th>Outil</th><th>Rôle</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>&gt;&gt;=</code> (bind)</td><td>Enchaîner un calcul à l'intérieur d'un contexte</td><td><code>Just 3 &gt;&gt;= \x -&gt; Just (x+1)</code> → <code>Just 4</code></td></tr>
+      <tr><td><code>return</code> / <code>pure</code></td><td>Emballer une valeur dans le contexte minimal</td><td><code>pure 5 :: Maybe Int</code> → <code>Just 5</code></td></tr>
+      <tr><td>notation <code>do</code></td><td>Sucre pour une chaîne de <code>&gt;&gt;=</code></td><td><code>do x &lt;- m; f x</code></td></tr>
+      <tr><td><code>&lt;-</code></td><td>Déballe une valeur le temps du bloc <code>do</code></td><td><code>service &lt;- lookup nom users</code></td></tr>
+      <tr><td><code>Maybe</code></td><td>Court-circuite sur <code>Nothing</code> (échec anonyme)</td><td><code>Nothing &gt;&gt;= f</code> → <code>Nothing</code></td></tr>
+      <tr><td><code>Either e</code></td><td>Court-circuite sur <code>Left</code>, garde le message</td><td><code>Left "err" &gt;&gt;= f</code> → <code>Left "err"</code></td></tr>
+      <tr><td>liste</td><td>Non-déterminisme : explore tous les choix</td><td><code>[1,2] &gt;&gt;= \x -&gt; [x,x]</code> → <code>[1,1,2,2]</code></td></tr>
+      <tr><td><code>&gt;&gt;</code></td><td>Séquencer en ignorant la valeur</td><td><code>m &gt;&gt; n</code> = <code>m &gt;&gt;= \_ -&gt; n</code></td></tr>
+      <tr><td><code>guard</code></td><td>Élaguer une branche (liste / <code>Alternative</code>)</td><td><code>guard (x &gt; 0)</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Monade</dt><dd>Type qui sait <code>return</code>/<code>pure</code> (entrer une valeur dans un contexte) et <code>&gt;&gt;=</code> (enchaîner un calcul dedans)&nbsp;: un <em>pattern d'enchaînement</em>.</dd>
+  <dt>bind (<code>&gt;&gt;=</code>)</dt><dd><code>m a -&gt; (a -&gt; m b) -&gt; m b</code>&nbsp;: prend une valeur dans un contexte et une fonction qui produit un nouveau contexte, et les recolle.</dd>
+  <dt>return / pure</dt><dd><code>a -&gt; m a</code>&nbsp;: emballe une valeur ordinaire dans le contexte minimal (<code>Just x</code>, <code>[x]</code>…), sans ajouter d'effet.</dd>
+  <dt>Notation <code>do</code></dt><dd>Sucre syntaxique traduit par le compilateur en une suite de <code>&gt;&gt;=</code>&nbsp;; se lit comme une séquence d'instructions tout en restant pur.</dd>
+  <dt><code>&lt;-</code></dt><dd>Dans un <code>do</code>, «&nbsp;sort&nbsp;» la valeur d'un contexte le temps du bloc. Ce n'est pas une affectation, c'est un <code>&gt;&gt;=</code> déguisé.</dd>
+  <dt>Court-circuit</dt><dd>Arrêt automatique de la chaîne au premier échec (<code>Nothing</code>, <code>Left</code>)&nbsp;: les étapes suivantes ne sont pas évaluées.</dd>
+  <dt><code>Either e a</code></dt><dd>Contexte «&nbsp;succès ou erreur&nbsp;»&nbsp;: <code>Right a</code> = succès, <code>Left e</code> = erreur porteuse d'un message. Sa monade court-circuite sur <code>Left</code>.</dd>
+  <dt>Lois des monades</dt><dd>Identité à gauche/droite et associativité&nbsp;: elles garantissent que l'enchaînement est neutre et réordonnable, sans surprise.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une monade = un <strong>pattern d'enchaînement</strong> : <code>&gt;&gt;=</code> (bind) pour coller des calculs, <code>return</code>/<code>pure</code> pour emballer une valeur.</li>
+<li><code>Maybe</code> court-circuite sur <code>Nothing</code> ; <code>Either e</code> court-circuite sur <code>Left e</code> en gardant le message ; la liste explore tous les choix.</li>
+<li>La notation <code>do</code> est du sucre pour des chaînes de <code>&gt;&gt;=</code> : <code>&lt;-</code> déballe, la dernière ligne donne le résultat.</li>
+<li>Le fil rouge (validateur) montre le vrai gain : enchaîner des vérifications avec arrêt automatique au premier échec, sans <code>if</code> imbriqués.</li>
+<li>Les trois lois garantissent juste que l'enchaînement est sans surprise et réordonnable.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Quel est le type de <code>&gt;&gt;=</code> spécialisé à <code>Maybe</code>, et que fait-il quand sa gauche vaut <code>Nothing</code> ?</li>
+<li>Réécris <code>valider</code> sans la notation <code>do</code>, uniquement avec <code>&gt;&gt;=</code>. Le comportement change-t-il ?</li>
+<li>Pourquoi un <code>do</code> sur des listes produit-il le même résultat qu'une compréhension de liste ?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quel est le type de >>= spécialisé à Maybe, et que fait-il quand sa gauche vaut Nothing ?","a":["(>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b ; si la gauche est Nothing, il renvoie Nothing sans appeler la fonction (court-circuit)","Il applique quand même la fonction à Nothing","Il lève une exception","Il renvoie Just Nothing"],"correct":0,"explain":"Le bind monadique enchaîne un calcul Maybe avec une fonction qui en produit un autre. Sur Nothing, il s'arrête immédiatement et propage Nothing, sans exécuter l'étape suivante : c'est la gestion automatique de l'échec."},
+  {"q":"Réécris valider sans la notation do, uniquement avec >>=. Le comportement change-t-il ?","a":["On enchaîne avec >>= (ex. etape1 x >>= etape2 >>= etape3) ; le comportement ne change pas, car do n'est que du sucre syntaxique pour des >>= enchaînés","Le comportement devient impératif","do est plus puissant que >>=","On ne peut pas se passer de do"],"correct":0,"explain":"La notation do est traduite par le compilateur en une suite de >>= (et >>). Réécrire à la main donne exactement la même sémantique : c'est purement une question de lisibilité, pas de comportement."},
+  {"q":"Pourquoi un do sur des listes produit-il le même résultat qu'une compréhension de liste ?","a":["Parce que la monade Liste modélise le non-déterminisme (toutes les combinaisons) : un do sur des listes engendre le produit cartésien filtré, exactement ce que fait une compréhension de liste","Par coïncidence","Parce que les listes ne sont pas des monades","Parce que do ignore les listes"],"correct":0,"explain":"Le bind des listes explore toutes les valeurs possibles, enchaînant les choix comme des boucles imbriquées. Un bloc do sur des listes décrit donc les mêmes combinaisons, avec gardes, qu'une compréhension [ ... | ... ]."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["do","notation do"],"placeholder":"la notation pour ENCHAÎNER des calculs monadiques lisiblement (deuxDivisions en Maybe) : …","hints":["?? { q1 <- diviser a b; diviser q1 c }.","Sucre syntaxique pour >>=.","Deux lettres."],"link":{"href":"lecon-08.html","label":"Revoir « La notation do »"}},
+  {"type":"text","accept":["Either"],"placeholder":"le type pour une validation « erreur (Left) OU succès (Right) » (verifMotDePasse) : …","hints":["?????? String String.","Left porte le message d'erreur.","Six lettres."],"link":{"href":"lecon-08.html","label":"Revoir « Either »"}},
+  {"type":"text","accept":["guard"],"placeholder":"la fonction de Control.Monad pour FILTRER dans un do de liste (triplets pythagoriciens) : …","hints":["????? (a*a + b*b == c*c).","Coupe la branche si la condition est fausse.","Cinq lettres."],"link":{"href":"lecon-08.html","label":"Revoir « guard »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>diviser :: Int -&gt; Int -&gt; Maybe Int</code> qui renvoie <code>Nothing</code> si le diviseur est 0, sinon <code>Just</code> du quotient. Puis, avec la notation <code>do</code>, écris <code>deuxDivisions :: Int -&gt; Int -&gt; Int -&gt; Maybe Int</code> qui divise le premier par le deuxième, puis le résultat par le troisième.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-haskell">diviser :: Int -&gt; Int -&gt; Maybe Int
+diviser _ 0 = Nothing
+diviser a b = Just (a `div` b)
+
+deuxDivisions :: Int -&gt; Int -&gt; Int -&gt; Maybe Int
+deuxDivisions a b c = do
+  q1 &lt;- diviser a b
+  q2 &lt;- diviser q1 c
+  pure q2
+
+-- ghci&gt; deuxDivisions 100 5 2
+-- Just 10
+-- ghci&gt; deuxDivisions 100 0 2   -- court-circuit
+-- Nothing</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute au validateur fil rouge une règle <code>verifMotDePasse :: String -&gt; Either String String</code> : au moins 8 caractères et au moins un chiffre, sinon un message clair. Intègre-la dans une fonction <code>validerCompte</code> qui enchaîne nom, mot de passe et email.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Data.Char (isDigit)
+
+verifMotDePasse :: String -&gt; Either String String
+verifMotDePasse p
+  | length p &lt; 8        = Left "Le mot de passe fait moins de 8 caractères."
+  | not (any isDigit p) = Left "Le mot de passe doit contenir un chiffre."
+  | otherwise           = Right p
+
+validerCompte :: String -&gt; String -&gt; String -&gt; Either String (String, String, String)
+validerCompte n p e = do
+  n' &lt;- verifNom n
+  p' &lt;- verifMotDePasse p
+  e' &lt;- verifEmail e
+  pure (n', p', e')
+
+-- ghci&gt; validerCompte "Bob" "secret" "bob@ex.fr"
+-- Left "Le mot de passe fait moins de 8 caractères."
+-- ghci&gt; validerCompte "Bob" "secret12" "bob@ex.fr"
+-- Right ("Bob","secret12","bob@ex.fr")</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En utilisant la liste comme monade, écris <code>triplets :: Int -&gt; [(Int, Int, Int)]</code> qui renvoie tous les triplets pythagoriciens <code>(a, b, c)</code> avec <code>1 &lt;= a &lt;= b &lt;= c &lt;= n</code> et <code>a*a + b*b == c*c</code>. Astuce : un <code>do</code> avec trois <code>&lt;-</code> et un filtre via <code>guard</code> (de <code>Control.Monad</code>).</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Monad (guard)
+
+triplets :: Int -&gt; [(Int, Int, Int)]
+triplets n = do
+  c &lt;- [1 .. n]
+  b &lt;- [1 .. c]
+  a &lt;- [1 .. b]
+  guard (a*a + b*b == c*c)   -- guard False = [] : élague cette branche
+  pure (a, b, c)
+
+-- ghci&gt; triplets 20
+-- [(3,4,5),(6,8,10),(5,12,13),(9,12,15),(8,15,17),(12,16,20)]
+--
+-- guard :: Alternative f =&gt; Bool -&gt; f ()
+-- Dans la monade liste : guard True = [()], guard False = []
+-- Une branche qui produit [] disparaît du résultat final.</code></pre></figure>
+</details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-haskell.min.js" defer></script>
+  </body>
+</html>

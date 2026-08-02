@@ -1,0 +1,82 @@
+<p>Nous arrivons au cœur d'Erlang, ce qui le rend unique&nbsp;: la <strong>concurrence par processus</strong>. Là où d'autres langages s'appuient sur des threads lourds et de la mémoire partagée (avec verrous et bugs à la clé), Erlang propose un modèle radicalement plus simple et plus sûr&nbsp;: une multitude de <strong>processus isolés</strong>, ultra-légers, qui ne partagent <em>rien</em> et communiquent uniquement par <strong>messages</strong>. Cette leçon te fait créer tes premiers processus.</p>
+
+<h2>Les processus Erlang&nbsp;: légers à l'extrême</h2>
+<p>Un <strong>processus</strong> Erlang n'est pas un processus du système d'exploitation, ni même un thread&nbsp;: c'est une unité d'exécution gérée par la BEAM, si légère qu'on peut en lancer des <strong>centaines de milliers</strong> sans peine (quelques centaines d'octets chacun). Chaque processus a sa propre mémoire, totalement <strong>isolée</strong>&nbsp;: aucun ne peut toucher les données d'un autre.</p>
+
+<h2>Créer un processus avec <code>spawn</code></h2>
+<p>On lance un processus avec <code>spawn</code>, en lui indiquant la fonction qu'il doit exécuter. <code>spawn</code> renvoie un <strong>identifiant de processus</strong> (un <em>PID</em>), qui sert à lui envoyer des messages.</p>
+<figure class="code-block" data-file="spawn.erl"><pre><code class="language-erlang">% Lancer un processus qui exécute bonjour:dire()
+Pid = spawn(bonjour, dire, []).
+% Pid ressemble à &lt;0.85.0&gt;
+
+% spawn(Module, Fonction, ListeArguments)</code></pre></figure>
+<p>Le processus s'exécute <strong>en parallèle</strong> du reste du programme. Le PID (affiché sous une forme comme <code>&lt;0.85.0&gt;</code>) est l'adresse à laquelle on lui parlera.</p>
+
+<h2>Envoyer un message avec <code>!</code></h2>
+<p>On envoie un message à un processus avec l'opérateur <strong><code>!</code></strong> (le «&nbsp;bang&nbsp;»), suivi du message. L'envoi est <strong>asynchrone</strong>&nbsp;: on n'attend pas, le message est déposé dans la <em>boîte aux lettres</em> du destinataire.</p>
+<figure class="code-block" data-file="send.erl"><pre><code class="language-erlang">Pid ! {bonjour, "Ada"}.
+Pid ! {nombre, 42}.
+
+% Pid ! Message  : dépose Message dans la boîte de Pid
+% On peut envoyer n'importe quelle valeur comme message.</code></pre></figure>
+<p>Le message peut être n'importe quelle donnée&nbsp;: un atome, un tuple, une liste. La convention habituelle est un tuple étiqueté (<code>{type, données}</code>), pour que le destinataire sache de quoi il s'agit.</p>
+
+<h2>Recevoir avec <code>receive</code></h2>
+<p>Un processus lit sa boîte aux lettres avec <code>receive</code>, qui fait du <strong>pattern matching</strong> sur les messages&nbsp;: chaque motif correspond à un type de message à traiter.</p>
+<figure class="code-block" data-file="receive.erl"><pre><code class="language-erlang">boucle() -&gt;
+    receive
+        {bonjour, Nom} -&gt;
+            io:format("Salut, ~s !~n", [Nom]),
+            boucle();
+        {nombre, N} -&gt;
+            io:format("Recu : ~p~n", [N]),
+            boucle();
+        stop -&gt;
+            io:format("Arret.~n")
+    end.</code></pre></figure>
+<p>Le processus attend un message, le fait correspondre à l'un des motifs, exécute le code associé, puis se rappelle lui-même (<code>boucle()</code>) pour traiter le suivant — sauf sur <code>stop</code>, où il s'arrête. Si aucun message ne correspond, le processus <strong>attend</strong> patiemment qu'il en arrive un.</p>
+
+<h2>Un exemple complet</h2>
+<p>Assemblons&nbsp;: un processus «&nbsp;écho&nbsp;» qui réaffiche ce qu'on lui envoie.</p>
+<figure class="code-block" data-file="echo.erl"><pre><code class="language-erlang">-module(echo).
+-export([demarrer/0, boucle/0]).
+
+demarrer() -&gt;
+    spawn(echo, boucle, []).
+
+boucle() -&gt;
+    receive
+        {message, Texte} -&gt;
+            io:format("Echo : ~s~n", [Texte]),
+            boucle();
+        stop -&gt;
+            ok
+    end.
+
+% Usage :
+% P = echo:demarrer().
+% P ! {message, "coucou"}.   -&gt; affiche "Echo : coucou"
+% P ! stop.</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier de <strong>rappeler la boucle</strong> après avoir traité un message. Si une clause de <code>receive</code> ne se termine pas par un appel récursif (<code>boucle()</code>), le processus traite <em>un seul</em> message puis <strong>meurt</strong>. Pour un processus qui doit vivre et répondre en continu, chaque branche (sauf l'arrêt volontaire) doit relancer la boucle. C'est le ressort qui maintient un processus serveur en vie.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Comme les processus ne partagent <strong>aucune mémoire</strong> et ne communiquent que par copie de messages, ce modèle s'étend naturellement à <strong>plusieurs machines</strong> (leçon 8)&nbsp;: envoyer un message à un processus sur un autre serveur s'écrit exactement comme un envoi local. L'isolation par messages, conçue pour la fiabilité sur une machine, devient gratuitement le socle du calcul distribué. C'est l'une des plus belles idées d'Erlang.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>processus</strong> Erlang sont ultra-légers, isolés (mémoire séparée), gérés par la BEAM.</li>
+  <li><code>spawn</code> crée un processus et renvoie son <strong>PID</strong>&nbsp;; on lui parle via ce PID.</li>
+  <li><code>Pid ! Message</code> envoie (asynchrone)&nbsp;; <code>receive</code> lit la boîte par pattern matching.</li>
+  <li>Un processus serveur <strong>se rappelle</strong> (boucle récursive) pour traiter les messages en continu.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que renvoie <code>spawn</code>&nbsp;?</li><li>Quel opérateur envoie un message&nbsp;?</li><li>Pourquoi un processus serveur doit-il se rappeler lui-même&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris l'instruction qui envoie le message <code>{salut, "Bob"}</code> au processus <code>Pid</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">Pid ! {salut, "Bob"}.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une clause <code>receive</code> qui, sur un message <code>{addition, A, B}</code>, affiche la somme.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">receive
+    {addition, A, B} -&gt;
+        io:format("Somme : ~p~n", [A + B])
+end.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi peut-on créer des centaines de milliers de processus Erlang, mais pas autant de threads système&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que les processus Erlang ne sont <strong>pas</strong> des threads du système d'exploitation&nbsp;: ce sont des unités légères gérées <em>par la BEAM</em> elle-même, occupant quelques centaines d'octets et ordonnancées par la machine virtuelle. Un thread système, lui, réserve une pile de plusieurs kilo-octets (voire méga-octets) et dépend de l'ordonnanceur de l'OS&nbsp;: en lancer des centaines de milliers épuiserait la mémoire et écroulerait les performances. La légèreté des processus Erlang est précisément ce qui rend possible sa concurrence massive.</p></details></div>

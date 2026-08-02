@@ -1,0 +1,101 @@
+<p>Quand un script grandit, on en extrait des <strong>fonctions</strong>&nbsp;: des morceaux nommés et réutilisables. PowerShell pousse l'idée très loin avec les <strong>fonctions avancées</strong>, qui se comportent exactement comme des cmdlets natives — paramètres validés, prise en charge du pipeline, messages d'aide. C'est le cœur de l'écriture d'outils en PowerShell.</p>
+
+<h2>Définir une fonction</h2>
+<p>Le mot-clé <code>function</code>, un nom (idéalement <code>Verbe-Nom</code> avec un verbe approuvé), un bloc. Les paramètres se déclarent comme dans un script, avec <code>param()</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">function Get-Carre {
+    param([int]$Nombre)
+    $Nombre * $Nombre
+}
+
+Get-Carre -Nombre 9    # 81</code></pre></figure>
+<p>La dernière valeur produite est renvoyée automatiquement&nbsp;; <code>return</code> existe mais n'est pas obligatoire.</p>
+
+<h2>Paramètres typés, par défaut, obligatoires</h2>
+<p>On type chaque paramètre, on lui donne éventuellement une valeur par défaut, et on le rend <strong>obligatoire</strong> avec l'attribut <code>[Parameter(Mandatory)]</code> — PowerShell le réclamera s'il manque.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">function New-Salutation {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Nom,
+        [string]$Politesse = "Bonjour"
+    )
+    "$Politesse, $Nom !"
+}
+
+New-Salutation -Nom "Ada"                 # Bonjour, Ada !
+New-Salutation -Nom "Lin" -Politesse "Salut"</code></pre></figure>
+
+<h2>Valider les entrées</h2>
+<p>Des attributs de validation rejettent les valeurs incorrectes avant même d'entrer dans la fonction. <code>[ValidateSet]</code> impose une liste de choix&nbsp;; <code>[ValidateRange]</code> une plage&nbsp;; <code>[ValidateNotNullOrEmpty]</code> interdit le vide.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">function Set-Niveau {
+    param(
+        [ValidateSet("debutant", "intermediaire", "avance")]
+        [string]$Niveau,
+        [ValidateRange(1, 100)]
+        [int]$Score
+    )
+    "Niveau $Niveau, score $Score"
+}
+
+Set-Niveau -Niveau "expert" -Score 50
+# Erreur : "expert" n'est pas dans l'ensemble autorisé</code></pre></figure>
+<p class="code-caption">La validation documente l'intention ET protège la fonction.</p>
+
+<h2>Les fonctions avancées&nbsp;: CmdletBinding</h2>
+<p>Ajoute <code>[CmdletBinding()]</code> avant le <code>param()</code> et ta fonction gagne les comportements d'une vraie cmdlet&nbsp;: les paramètres communs (<code>-Verbose</code>, <code>-ErrorAction</code>…), et l'accès à <code>Write-Verbose</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">function Get-Cube {
+    [CmdletBinding()]
+    param([int]$Nombre)
+    Write-Verbose "Calcul du cube de $Nombre"
+    $Nombre * $Nombre * $Nombre
+}
+
+Get-Cube -Nombre 3 -Verbose
+# VERBOSE: Calcul du cube de 3
+# 27</code></pre></figure>
+
+<h2>Traiter le pipeline&nbsp;: begin / process / end</h2>
+<p>Pour qu'une fonction accepte des objets <strong>du pipeline</strong>, on marque un paramètre <code>ValueFromPipeline</code> et on découpe le corps en trois blocs&nbsp;: <code>begin</code> (une fois au départ), <code>process</code> (pour chaque objet reçu), <code>end</code> (une fois à la fin).</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">function Add-Tva {
+    param(
+        [Parameter(ValueFromPipeline)]
+        [double]$Prix,
+        [double]$Taux = 0.20
+    )
+    process {
+        [math]::Round($Prix * (1 + $Taux), 2)
+    }
+}
+
+10, 20, 30 | Add-Tva    # 12  24  36</code></pre></figure>
+<p>Sans le bloc <code>process</code>, seule la dernière valeur du pipeline serait traitée&nbsp;: un piège classique.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Tout ce qui «&nbsp;tombe&nbsp;» dans le flux de sortie est renvoyé. Si une ligne comme <code>$liste.Add($x)</code> renvoie une valeur, elle pollue ta sortie&nbsp;! Redirige-la vers <code>$null</code> (<code>[void]$liste.Add($x)</code>) ou capture-la.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Avec <code>[CmdletBinding(SupportsShouldProcess)]</code>, ta fonction obtient gratuitement <code>-WhatIf</code> et <code>-Confirm</code>&nbsp;: l'utilisateur peut simuler l'action avant de la lancer pour de bon. Indispensable pour les opérations destructrices.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>function Verbe-Nom { param(…) … }</code> définit une fonction réutilisable.</li>
+  <li>Les attributs <code>[Parameter(Mandatory)]</code>, <code>[ValidateSet]</code>, <code>[ValidateRange]</code> contrôlent les entrées.</li>
+  <li><code>[CmdletBinding()]</code> transforme une fonction en quasi-cmdlet (<code>-Verbose</code>, etc.).</li>
+  <li><code>process</code> est indispensable pour traiter chaque objet du pipeline.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment rendre un paramètre obligatoire&nbsp;?</li><li>À quoi sert le bloc <code>process</code> dans une fonction&nbsp;?</li><li>Qu'apporte <code>[CmdletBinding()]</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>Get-Double</code> qui renvoie le double de son paramètre <code>-Nombre</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">function Get-Double {
+    param([int]$Nombre)
+    $Nombre * 2
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée <code>ConvertTo-Celsius</code> qui convertit une température en Fahrenheit (paramètre obligatoire) en Celsius.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">function ConvertTo-Celsius {
+    param([Parameter(Mandatory)][double]$Fahrenheit)
+    [math]::Round(($Fahrenheit - 32) * 5 / 9, 1)
+}
+ConvertTo-Celsius -Fahrenheit 100   # 37,8</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction qui accepte des nombres <strong>depuis le pipeline</strong> et renvoie leur racine carrée.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">function Get-Racine {
+    param([Parameter(ValueFromPipeline)][double]$N)
+    process { [math]::Sqrt($N) }
+}
+4, 9, 16 | Get-Racine    # 2  3  4</code></pre></figure></details></div>

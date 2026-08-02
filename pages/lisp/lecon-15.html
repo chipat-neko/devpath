@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet : un mini-évaluateur Lisp — Leçon 15 · Cours Lisp &amp; Scheme — Syntaxe</title>
+    <meta name="description" content="Le projet capstone du cours Lisp : écrire un petit évaluateur (Lisp en Lisp). L'architecture eval/apply, l'environnement, l'aiguillage des formes, l'application des fonctions, et le bilan de tout le cours." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="lisp" data-lesson="lecon-15.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Lisp</a></li>
+            <li aria-current="page">Leçon 15</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Projet — Leçon 15</p>
+              <h1 class="lesson-header__title">Projet&nbsp;: un mini-évaluateur Lisp</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~60 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 14</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire un <strong>évaluateur métacirculaire</strong> (Lisp en Lisp)&nbsp;;</li>
+                  <li>représenter un <strong>environnement</strong> et y chercher une valeur&nbsp;;</li>
+                  <li>aiguiller <code>eval</code> selon la <strong>forme</strong> de l'expression&nbsp;;</li>
+                  <li>rassembler tout le cours dans un seul programme.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Voici le sommet du cours. Tu vas écrire un <strong>interpréteur Lisp… en Lisp</strong>. On l'appelle un <em>évaluateur métacirculaire</em>&nbsp;: un programme qui lit une expression Lisp et l'évalue lui-même, sans appeler l'<code>eval</code> intégré. C'est le projet fondateur de l'informatique (McCarthy, 1960&nbsp;; SICP, chapitre 4), et il tient en une trentaine de lignes. Chaque brique que tu as apprise — listes, récursion, <code>cond</code>, fonctions d'ordre supérieur, <code>eval</code>/<code>apply</code> — trouve ici sa place.</p>
+
+<h2>L'architecture&nbsp;: eval et apply, main dans la main</h2>
+<p>Le cœur d'un interpréteur, ce sont deux fonctions qui s'appellent <strong>mutuellement</strong>. <code>mon-eval</code> regarde une expression et décide quoi en faire&nbsp;; pour un appel de fonction, il évalue les arguments puis passe la main à <code>mon-apply</code>, qui exécute la fonction. Un troisième élément relie le tout&nbsp;: l'<strong>environnement</strong>, la table qui donne la valeur de chaque symbole.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Architecture d'un interpréteur. Au centre, deux boîtes reliées par des flèches dans les deux sens : mon-eval et mon-apply. mon-eval passe à mon-apply une fonction et ses arguments évalués ; mon-apply rappelle mon-eval pour évaluer le corps. Sur le côté, une boîte environnement, une table de symboles vers valeurs, que mon-eval consulte pour trouver la valeur d'une variable. Message : eval et apply se rappellent mutuellement, l'environnement fournit la valeur des symboles.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Deux fonctions qui se rappellent, une table qui les nourrit</text>
+    <rect class="d-accent" x="80" y="70" width="170" height="56" rx="10" /><text class="d-text" x="165" y="94" text-anchor="middle" font-size="12" font-family="monospace">mon-eval</text><text class="d-mut" x="165" y="112" text-anchor="middle" font-size="8">que veut dire ce code&nbsp;?</text>
+    <rect class="d-box" x="390" y="70" width="170" height="56" rx="10" /><text class="d-tag" x="475" y="94" text-anchor="middle" font-size="12" font-family="monospace">mon-apply</text><text class="d-mut" x="475" y="112" text-anchor="middle" font-size="8">exécute la fonction</text>
+    <path class="d-line" d="M250 88 L388 88" fill="none" /><path class="d-line" d="M384 84 L390 88 L384 92" fill="none" /><text class="d-mut" x="319" y="80" text-anchor="middle" font-size="8">fonction + args évalués</text>
+    <path class="d-line" d="M388 108 L250 108" fill="none" /><path class="d-line" d="M254 104 L248 108 L254 112" fill="none" /><text class="d-mut" x="319" y="122" text-anchor="middle" font-size="8">évalue le corps</text>
+    <rect class="d-frame" x="80" y="158" width="170" height="40" rx="8" /><text class="d-mut" x="165" y="176" text-anchor="middle" font-size="9">environnement</text><text class="d-mut" x="165" y="190" text-anchor="middle" font-size="8" font-family="monospace">((+ . #proc) (x . 3) …)</text>
+    <path class="d-line" d="M165 158 L165 128" fill="none" /><path class="d-line" d="M161 132 L165 126 L169 132" fill="none" /><text class="d-mut" x="220" y="147" text-anchor="start" font-size="8">valeur d'un symbole</text>
+  </svg>
+  <figcaption>L'interpréteur tient dans ce triangle&nbsp;: <code>mon-eval</code> interprète, <code>mon-apply</code> exécute, l'environnement mémorise.</figcaption>
+</figure>
+
+<h2>L'aiguillage de <code>mon-eval</code></h2>
+<p>Tout <code>mon-eval</code> se résume à un grand <code>cond</code> qui range l'expression dans une <strong>catégorie</strong> et la traite. Cinq cas suffisent pour un langage déjà utile&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 230" role="img" aria-label="L'aiguillage de mon-eval en cinq cas. Une expression entre en haut et descend le long d'une colonne de questions. Premier cas : est-ce un nombre ? Alors on le renvoie tel quel, il est auto-évaluant. Deuxième cas : est-ce un symbole ? Alors on cherche sa valeur dans l'environnement. Troisième cas : commence-t-il par quote ? Alors on renvoie l'argument sans l'évaluer. Quatrième cas : commence-t-il par if ? Alors on évalue le test puis une branche. Sinon, cinquième cas : c'est une application, on évalue la fonction et les arguments puis on appelle apply. Message : eval range chaque expression dans une catégorie puis la traite.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">mon-eval&nbsp;: ranger l'expression, puis la traiter</text>
+    <rect class="d-box" x="250" y="36" width="140" height="26" rx="6" /><text class="d-tag" x="320" y="53" text-anchor="middle" font-size="10">une expression</text>
+    <line class="d-line" x1="320" y1="62" x2="320" y2="76" /><path class="d-line" d="M316 72 L320 78 L324 72" fill="none" />
+    <rect class="d-frame" x="40" y="80" width="230" height="24" rx="5" /><text class="d-mut" x="52" y="96" text-anchor="start" font-size="9">nombre&nbsp;?</text><text class="d-tag" x="262" y="96" text-anchor="end" font-size="9" font-family="monospace">→ tel quel</text>
+    <rect class="d-frame" x="40" y="110" width="230" height="24" rx="5" /><text class="d-mut" x="52" y="126" text-anchor="start" font-size="9">symbole&nbsp;?</text><text class="d-tag" x="262" y="126" text-anchor="end" font-size="9" font-family="monospace">→ chercher (env)</text>
+    <rect class="d-frame" x="40" y="140" width="230" height="24" rx="5" /><text class="d-mut" x="52" y="156" text-anchor="start" font-size="9">(quote x)&nbsp;?</text><text class="d-tag" x="262" y="156" text-anchor="end" font-size="9" font-family="monospace">→ x</text>
+    <rect class="d-frame" x="40" y="170" width="230" height="24" rx="5" /><text class="d-mut" x="52" y="186" text-anchor="start" font-size="9">(if t c a)&nbsp;?</text><text class="d-tag" x="262" y="186" text-anchor="end" font-size="9" font-family="monospace">→ test, puis branche</text>
+    <rect class="d-accent" x="330" y="140" width="270" height="54" rx="8" /><text class="d-text" x="465" y="162" text-anchor="middle" font-size="10">sinon&nbsp;: application</text><text class="d-mut" x="465" y="180" text-anchor="middle" font-size="8">évaluer fn + args, puis mon-apply</text>
+    <path class="d-line" d="M270 182 L328 172" fill="none" /><path class="d-line" d="M324 168 L330 171 L325 176" fill="none" />
+    <text class="d-mut" x="465" y="118" text-anchor="middle" font-size="8.5">les 4 premiers cas sont des « formes spéciales »</text>
+  </svg>
+  <figcaption>Un <code>cond</code> à cinq branches&nbsp;: les quatre premières sont des cas particuliers, la dernière traite tout appel de fonction.</figcaption>
+</figure>
+
+<h2>Brique 1&nbsp;: l'environnement</h2>
+<p>L'environnement est une simple <strong>liste d'association</strong>&nbsp;: des paires <code>(symbole valeur)</code>. On y range les primitives du langage, et <code>chercher</code> y retrouve une valeur avec <code>assoc</code> (leçon 9).</p>
+<figure class="code-block" data-file="env.lisp"><pre><code class="language-lisp">; les fonctions de base que notre langage connaîtra
+(define env-base
+  (list (list '+ +) (list '- -) (list '* *)
+        (list '&gt; &gt;) (list '= =)))
+
+(define (chercher sym env)
+  (let ((paire (assoc sym env)))
+    (if paire
+        (cadr paire)                 ; la valeur associée
+        (error "Symbole inconnu :" sym))))</code></pre></figure>
+
+<h2>Brique 2&nbsp;: <code>mon-eval</code>, le grand aiguillage</h2>
+<p>On traduit l'aiguillage en <code>cond</code>. Remarque la <strong>récursion</strong>&nbsp;: pour un <code>if</code> ou une application, <code>mon-eval</code> s'appelle sur les sous-expressions.</p>
+<figure class="code-block" data-file="eval.lisp"><pre><code class="language-lisp">(define (mon-eval expr env)
+  (cond
+    ((number? expr) expr)                    ; nombre : auto-évaluant
+    ((symbol? expr) (chercher expr env))     ; variable : on cherche
+    ((eq? (car expr) 'quote) (cadr expr))    ; (quote x) → x
+    ((eq? (car expr) 'if)                     ; (if test oui non)
+     (if (mon-eval (cadr expr) env)
+         (mon-eval (caddr expr) env)
+         (mon-eval (cadddr expr) env)))
+    (else                                     ; application de fonction
+     (mon-apply (mon-eval (car expr) env)
+                (map (lambda (e) (mon-eval e env))
+                     (cdr expr))))))</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi <code>if</code> et <code>quote</code> sont-ils à part&nbsp;?</p><p>Ce sont des <strong>formes spéciales</strong>&nbsp;: elles n'évaluent pas tous leurs arguments. <code>quote</code> n'évalue rien&nbsp;; <code>if</code> n'évalue qu'<em>une</em> des deux branches. Une application ordinaire, elle, évalue <em>tous</em> ses arguments d'abord (le <code>map</code> de la dernière branche). C'est exactement la distinction fonction / macro de la leçon 8.</p></div></div>
+
+<h2>Brique 3&nbsp;: <code>mon-apply</code></h2>
+<p>Pour les primitives (<code>+</code>, <code>*</code>…), on délègue au vrai <code>apply</code> de l'hôte (leçon 14)&nbsp;: il déballe la liste d'arguments sur la fonction.</p>
+<figure class="code-block" data-file="apply.lisp"><pre><code class="language-lisp">(define (mon-apply fn args)
+  (apply fn args))     ; déballe args sur fn : (fn a b c…)</code></pre></figure>
+
+<h2>La trace d'une évaluation</h2>
+<p>Suivons <code>(mon-eval '(if (&gt; 3 2) 'oui 'non) env-base)</code> pas à pas. La récursion mutuelle se déroule comme une petite cascade&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Trace de l'évaluation de if supérieur 3 2 quote oui quote non. Étape 1 : l'expression commence par if, on évalue d'abord le test supérieur 3 2. Étape 2 : le test est une application, mon-apply applique la fonction supérieur aux arguments 3 et 2, ce qui donne vrai. Étape 3 : le test est vrai, on évalue donc la branche quote oui, ce qui donne le symbole oui. Résultat final : oui. Message : eval descend dans les sous-expressions puis remonte le résultat.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">(mon-eval '(if (&gt; 3 2) 'oui 'non) env-base)</text>
+    <rect class="d-frame" x="30" y="40" width="580" height="30" rx="6" /><text class="d-mut" x="44" y="59" text-anchor="start" font-size="9">1.</text><text class="d-tag" x="66" y="59" text-anchor="start" font-size="9.5">c'est un <tspan font-family="monospace">if</tspan> → on évalue d'abord le test <tspan font-family="monospace">(&gt; 3 2)</tspan></text>
+    <line class="d-line" x1="320" y1="70" x2="320" y2="82" /><path class="d-line" d="M316 78 L320 84 L324 78" fill="none" />
+    <rect class="d-frame" x="30" y="86" width="580" height="30" rx="6" /><text class="d-mut" x="44" y="105" text-anchor="start" font-size="9">2.</text><text class="d-tag" x="66" y="105" text-anchor="start" font-size="9.5">application → <tspan font-family="monospace">(mon-apply &gt; '(3 2))</tspan> → <tspan font-family="monospace">#t</tspan> (vrai)</text>
+    <line class="d-line" x1="320" y1="116" x2="320" y2="128" /><path class="d-line" d="M316 124 L320 130 L324 124" fill="none" />
+    <rect class="d-frame" x="30" y="132" width="580" height="30" rx="6" /><text class="d-mut" x="44" y="151" text-anchor="start" font-size="9">3.</text><text class="d-tag" x="66" y="151" text-anchor="start" font-size="9.5">test vrai → on évalue la branche <tspan font-family="monospace">'oui</tspan> → <tspan font-family="monospace">oui</tspan></text>
+    <line class="d-line" x1="320" y1="162" x2="320" y2="174" /><path class="d-line" d="M316 170 L320 176 L324 170" fill="none" />
+    <rect class="d-accent" x="250" y="176" width="140" height="22" rx="6" /><text class="d-text" x="320" y="191" text-anchor="middle" font-size="10" font-family="monospace">résultat : oui</text>
+  </svg>
+  <figcaption><code>mon-eval</code> descend dans les sous-expressions (le test, puis la branche), et fait remonter le résultat. C'est la récursion à l'œuvre.</figcaption>
+</figure>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Notre langage sait déjà beaucoup. Pour le rapprocher d'un vrai Lisp, ajoute&nbsp;: <code>define</code> (étendre l'environnement), <code>lambda</code> (fabriquer des fermetures qui capturent <code>env</code> — leçon 12&nbsp;!), <code>let</code>, <code>cond</code>, la récursion utilisateur. C'est le chemin du chapitre 4 de <strong>SICP</strong>. Plus loin encore&nbsp;: transformer l'arbre en <em>bytecode</em>, ou compiler vers une autre cible — le début du cours «&nbsp;Construis ton propre langage&nbsp;».</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les briques du mini-évaluateur</caption>
+    <thead><tr><th scope="col">Cas dans <code>mon-eval</code></th><th scope="col">Test</th><th scope="col">Action</th></tr></thead>
+    <tbody>
+      <tr><td>Nombre</td><td><code>(number? expr)</code></td><td>renvoyer <code>expr</code></td></tr>
+      <tr><td>Variable</td><td><code>(symbol? expr)</code></td><td><code>(chercher expr env)</code></td></tr>
+      <tr><td>Citation</td><td><code>(eq? (car expr) 'quote)</code></td><td><code>(cadr expr)</code></td></tr>
+      <tr><td>Condition</td><td><code>(eq? (car expr) 'if)</code></td><td>évaluer test, puis une branche</td></tr>
+      <tr><td>Application</td><td><code>else</code></td><td>évaluer fn + args, puis <code>mon-apply</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Évaluateur métacirculaire</dt><dd>Un interpréteur d'un langage écrit <strong>dans ce même langage</strong>&nbsp;; ici, Lisp en Lisp.</dd>
+  <dt>Environnement</dt><dd>La table (liste d'association) qui associe chaque <strong>symbole</strong> à sa valeur pendant l'évaluation.</dd>
+  <dt>Liste d'association</dt><dd>Une liste de paires <code>(clé valeur)</code>, interrogeable avec <code>assoc</code>.</dd>
+  <dt>Forme spéciale</dt><dd>Une expression qui <strong>n'évalue pas</strong> tous ses arguments&nbsp;: <code>quote</code>, <code>if</code>…</dd>
+  <dt>Auto-évaluant</dt><dd>Une valeur qui est sa propre évaluation&nbsp;: un nombre, une chaîne.</dd>
+  <dt>Récursion mutuelle</dt><dd>Deux fonctions (<code>eval</code> et <code>apply</code>) qui s'appellent l'une l'autre.</dd>
+  <dt>Primitive</dt><dd>Une opération fournie d'emblée par le langage (<code>+</code>, <code>*</code>…), non définie par l'utilisateur.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un interpréteur tient dans un triangle&nbsp;: <code>eval</code> interprète, <code>apply</code> exécute, l'<strong>environnement</strong> mémorise.</li>
+  <li><code>mon-eval</code> est un <code>cond</code> qui <strong>aiguille</strong> l'expression&nbsp;: nombre, symbole, <code>quote</code>, <code>if</code>, sinon application.</li>
+  <li>Les <strong>formes spéciales</strong> n'évaluent pas tous leurs arguments&nbsp;; une application, si (via <code>map</code>).</li>
+  <li>Le tout est <strong>récursif</strong>&nbsp;: écrire Lisp en Lisp, c'est la clef de voûte du cours.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que fait <code>mon-eval</code> face à un nombre&nbsp;? face à un symbole&nbsp;?</li><li>Pourquoi <code>if</code> ne peut-il pas être traité comme une application ordinaire&nbsp;?</li><li>À quoi sert l'environnement&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans mon-eval, comment traite-t-on un nombre puis un symbole ?","a":["Le nombre est renvoyé tel quel (auto-évaluant) ; le symbole est cherché dans l'environnement","Les deux sont cherchés dans l'environnement","Les deux sont renvoyés tels quels","Les deux déclenchent une application"],"correct":0,"explain":"Un nombre est sa propre valeur : on le renvoie. Un symbole désigne une variable : on va chercher sa valeur dans l'environnement avec chercher/assoc."},
+  {"q":"Pourquoi if ne peut-il pas être traité comme une application ordinaire ?","a":["Une application évalue TOUS ses arguments ; if ne doit évaluer que le test puis UNE seule branche","Parce que if est une fonction interne","Parce que if renvoie toujours vrai","Parce que if n'a pas d'arguments"],"correct":0,"explain":"if est une forme spéciale : évaluer les deux branches serait faux (et coûteux). On évalue le test, puis seulement la branche retenue. D'où une branche dédiée dans le cond, avant le cas application."},
+  {"q":"À quoi sert l'environnement dans l'évaluateur ?","a":["À associer chaque symbole à sa valeur (les primitives +, *, … et, plus tard, les variables)","À stocker le résultat final","À accélérer l'affichage","À compter les parenthèses"],"correct":0,"explain":"L'environnement est la table (liste d'association) que mon-eval consulte pour donner une valeur à un symbole. On y met d'abord les primitives, puis on l'étend pour define/lambda."}
+]
+</script>
+
+<h2>Mini-projet fil rouge — un mini-évaluateur Lisp</h2>
+<p>Assemble les trois briques en un interpréteur complet. Il réunit tout le cours&nbsp;: <strong>listes</strong> (leçon 3), <strong>récursion</strong> (5), <strong>fonctions d'ordre supérieur</strong> (6, le <code>map</code>), <code>cond</code> (7), <code>assoc</code> (9), et <code>eval</code>/<code>apply</code> (14).</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Un langage jouet qui évalue <code>42</code>, <code>(+ 1 (* 2 3))</code>, <code>'salut</code> et <code>(if (&gt; 3 2) 'oui 'non)</code> — sans jamais appeler l'<code>eval</code> intégré.</p></div></div>
+<p class="kicker kicker--gold">Étapes</p>
+<div class="steps">
+<div class="step"><h3>L'environnement</h3><p>Crée <code>env-base</code> avec les primitives (<code>+ - * &gt; =</code>) et la fonction <code>chercher</code> qui interroge cette table avec <code>assoc</code>.</p></div>
+<div class="step"><h3>Les cas simples</h3><p>Dans <code>mon-eval</code>, traite d'abord le nombre (renvoyé tel quel) et le symbole (via <code>chercher</code>).</p></div>
+<div class="step"><h3>Les formes spéciales</h3><p>Ajoute <code>quote</code> (renvoie son argument) et <code>if</code> (évalue le test, puis une seule branche).</p></div>
+<div class="step"><h3>L'application</h3><p>Dans le <code>else</code>, évalue la fonction et chaque argument (<code>map</code>), puis appelle <code>mon-apply</code>.</p></div>
+<div class="step"><h3>Essaie</h3><p>Évalue <code>42</code>, <code>(+ 1 (* 2 3))</code> et <code>(if (&gt; 3 2) 'oui 'non)</code>. Compare avec ce que tu attends.</p></div>
+</div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble les cinq étapes en un programme complet. Essaie d'abord par toi-même, puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary><figure class="code-block" data-file="mini-eval.lisp"><pre><code class="language-lisp">; --- 1. L'environnement -------------------------------
+(define env-base
+  (list (list '+ +) (list '- -) (list '* *)
+        (list '&gt; &gt;) (list '= =)))
+
+(define (chercher sym env)
+  (let ((paire (assoc sym env)))
+    (if paire (cadr paire)
+        (error "Symbole inconnu :" sym))))
+
+; --- 2 & 3. eval : le grand aiguillage ----------------
+(define (mon-eval expr env)
+  (cond
+    ((number? expr) expr)
+    ((symbol? expr) (chercher expr env))
+    ((eq? (car expr) 'quote) (cadr expr))
+    ((eq? (car expr) 'if)
+     (if (mon-eval (cadr expr) env)
+         (mon-eval (caddr expr) env)
+         (mon-eval (cadddr expr) env)))
+    (else
+     (mon-apply (mon-eval (car expr) env)
+                (map (lambda (e) (mon-eval e env))
+                     (cdr expr))))))
+
+; --- 4. apply -----------------------------------------
+(define (mon-apply fn args) (apply fn args))
+
+; --- 5. On essaie -------------------------------------
+(mon-eval '42 env-base)                       ; 42
+(mon-eval '(+ 1 (* 2 3)) env-base)            ; 7
+(mon-eval ''salut env-base)                   ; salut
+(mon-eval '(if (&gt; 3 2) 'oui 'non) env-base)   ; oui</code></pre></figure></details></div>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  null,
+  {"type":"text","accept":["number?","(number?","number"],"placeholder":"le prédicat qui teste si expr est un nombre (cas auto-évaluant) : (… expr)","hints":["Il finit par un point d'interrogation.","(??????? 42) → #t.","number?"],"link":{"href":"lecon-15.html","label":"Revoir « l'aiguillage »"}},
+  {"type":"text","accept":["assoc","(assoc","chercher"],"placeholder":"la fonction qui retrouve une paire par sa clé dans l'environnement : (… sym env)","hints":["Elle interroge une liste d'association.","Vue à la leçon 9.","assoc"],"link":{"href":"lecon-15.html","label":"Revoir « l'environnement »"}},
+  {"type":"text","accept":["map","(map","(map "],"placeholder":"la fonction d'ordre supérieur qui évalue CHAQUE argument avant l'application : (… (lambda (e) …) (cdr expr))","hints":["Trois lettres.","Applique une fonction à chaque élément.","map"],"link":{"href":"lecon-15.html","label":"Revoir « l'application »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Ajoute la primitive <code>/</code> (division) à <code>env-base</code>, puis évalue <code>(/ 10 2)</code> avec ton interpréteur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define env-base
+  (list (list '+ +) (list '- -) (list '* *) (list '/ /)
+        (list '&gt; &gt;) (list '= =)))
+(mon-eval '(/ 10 2) env-base)   ; 5</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Que renvoie <code>(mon-eval '(if (= 1 2) 'a 'b) env-base)</code>&nbsp;? Explique le chemin suivi dans le <code>cond</code>.</p><details><summary>Voir une solution</summary><p>Résultat&nbsp;: <code>b</code>. L'expression commence par <code>if</code>&nbsp;: on évalue le test <code>(= 1 2)</code> → application → <code>#f</code>. Le test étant faux, on évalue la branche <em>sinon</em>, soit <code>'b</code> → <code>b</code>.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Ajoute la forme spéciale <code>(begin e1 e2 …)</code>&nbsp;: elle évalue chaque expression et renvoie la <strong>dernière</strong> valeur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">; nouvelle branche, avant le else :
+((eq? (car expr) 'begin)
+ (let boucle ((es (cdr expr)) (dernier #f))
+   (if (null? es)
+       dernier
+       (boucle (cdr es) (mon-eval (car es) env)))))</code></pre></figure><p>On enchaîne les évaluations avec une récursion terminale (leçon 11) et on garde la dernière valeur.</p></details></div>
+
+<script type="application/json" data-quiz-bilan>
+[
+  {"q":"Quelle est la syntaxe d'un calcul/appel en Lisp ?","a":["(+ 1 2) — préfixe, entre parenthèses","1 + 2","add(1, 2)","1.add(2)"],"correct":0,"explain":"L'opérateur vient en tête (notation préfixe), le tout entre parenthèses : une s-expression."},
+  {"q":"Quelle propriété rend Lisp si malléable ?","a":["Le code est de la donnée (homoiconicité)","Il compile en C","Il est binaire","Aucune particularité"],"correct":0,"explain":"Le code est une liste, manipulable et évaluable comme n'importe quelle donnée."},
+  {"q":"Comment empêche-t-on l'évaluation d'une expression ?","a":["Avec quote : '(a b c) ou (quote (a b c))","Avec des guillemets","Avec un point-virgule","On ne peut pas"],"correct":0,"explain":"quote (l'apostrophe ') fige une expression : elle reste une donnée au lieu d'être évaluée."},
+  {"q":"À quoi sert la récursion terminale ?","a":["À itérer sans faire grossir la pile : l'appel récursif est la toute dernière opération, souvent avec un accumulateur","À rendre le code plus court","À éviter d'écrire des boucles for","À accélérer l'affichage"],"correct":0,"explain":"Quand l'appel récursif est en position terminale, l'interpréteur réutilise le cadre de pile : la récursion devient une itération, sans débordement (leçon 11)."},
+  {"q":"Qu'est-ce qu'une fermeture (closure) ?","a":["Une fonction qui capture les variables de son environnement de définition","Une fonction sans argument","Une parenthèse fermante","Une macro"],"correct":0,"explain":"Une fermeture retient l'environnement où elle a été créée : elle peut ainsi encapsuler un état privé (leçon 12)."},
+  {"q":"Dans une quasiquote, quelle différence entre , et ,@ ?","a":[", insère une valeur ; ,@ éclate les éléments d'une liste","Aucune différence",", éclate, ,@ insère","Les deux commentent"],"correct":0,"explain":"`(a ,x) insère la valeur de x ; `(a ,@xs) éclate les éléments de la liste xs au même niveau (leçon 13)."},
+  {"q":"À quoi sert gensym dans une macro ?","a":["À fabriquer un nom unique pour éviter la capture de variable","À accélérer la macro","À afficher un symbole","À supprimer une variable"],"correct":0,"explain":"gensym garantit un symbole unique, ce qui empêche les temporaires de la macro d'entrer en collision avec les noms de l'appelant (leçon 13)."},
+  {"q":"Que fait (eval '(+ 1 2)) ?","a":["Il évalue la liste comme du code et renvoie 3","Il renvoie la liste (+ 1 2)","Il renvoie une erreur","Il renvoie 12"],"correct":0,"explain":"eval prend la donnée '(+ 1 2) et l'interprète comme du code : l'addition est effectuée, le résultat est 3 (leçon 14)."},
+  {"q":"Que fait (apply + '(1 2 3)) ?","a":["Il déballe la liste en arguments : cela revient à (+ 1 2 3), soit 6","Il renvoie (1 2 3)","Il additionne 1 à la liste","Il applique + à chaque élément séparément"],"correct":0,"explain":"apply appelle la fonction avec les éléments de la liste comme arguments distincts (leçon 14)."},
+  {"q":"Dans un mini-évaluateur, pourquoi if est-il une « forme spéciale » ?","a":["Parce qu'il n'évalue qu'UNE des deux branches, pas les deux : il ne suit pas la règle des applications ordinaires","Parce qu'il est plus rapide","Parce qu'il renvoie toujours vrai","Parce qu'il ne prend pas d'arguments"],"correct":0,"explain":"Une application évalue tous ses arguments. if doit choisir : évaluer le test, puis une seule branche. Il faut donc le traiter à part, comme quote (leçon 15)."}
+]
+</script>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-lisp.min.js" defer></script>
+  </body>
+</html>

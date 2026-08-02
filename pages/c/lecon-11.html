@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Débogage et sûreté mémoire — Leçon 11 · C · Syntaxe</title>
+    <meta name="description" content="Apprends à traquer les bugs en C : comportement indéfini, warnings, sanitizers, Valgrind, GDB, pointeurs de fonction et bonnes pratiques de sûreté mémoire." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="c" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">C</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 03 · Aller plus loin — Leçon 11</p>
+              <h1 class="lesson-header__title">Débogage et sûreté mémoire</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 10 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Comprendre le <strong>comportement indéfini</strong> et reconnaître ses formes courantes (débordement signé, hors borne, <em>use-after-free</em>, déréférencement <code>NULL</code>)&nbsp;;</li>
+                  <li>Outiller sa compilation et son exécution avec <code>-Wall -Wextra -Werror</code>, les <strong>sanitizers</strong>, <strong>Valgrind</strong> et <strong>GDB</strong>&nbsp;;</li>
+                  <li>Déclarer et utiliser des <strong>pointeurs de fonction</strong> pour des <em>callbacks</em> et tables de dispatch&nbsp;;</li>
+                  <li>Appliquer des règles de sûreté mémoire systématiques (initialiser, vérifier les retours, borner les copies, <code>free</code> puis <code>NULL</code>).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais désormais manipuler la mémoire en C : allouer, libérer, jongler avec les pointeurs. Mais cette puissance a un prix : le C ne te protège de presque rien. Un indice hors borne, un pointeur libéré deux fois, un entier qui déborde, et ton programme ne plante pas forcément — pire, il peut continuer à tourner en produisant des résultats faux, jusqu'au jour où il s'effondre chez l'utilisateur.</p>
+<p>Cette leçon t'apprend à <strong>traquer</strong> ces bugs et à écrire du C plus <strong>sûr</strong>. On part de la notion centrale — le comportement indéfini — puis on enchaîne sur l'outillage : warnings, sanitizers, Valgrind, GDB. On en profite pour découvrir les pointeurs de fonction (très utiles quand on outille), avant de conclure sur des règles de sûreté à appliquer mécaniquement.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Les trois lignes de défense contre les bugs en C, du plus tôt au plus tard. D'abord à la compilation, les warnings -Wall -Wextra -Werror arrêtent le build sur du code douteux. Ensuite à l'exécution, les sanitizers ASan et UBSan et l'outil Valgrind détectent les fautes mémoire au moment où elles se produisent. Enfin, le débogueur GDB permet d'inspecter l'état pas à pas quand le bug est logique.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Trois lignes de défense, du plus tôt au plus tard</text>
+    <rect class="d-accent" x="24" y="50" width="176" height="90" rx="8" /><text class="d-text" x="112" y="74" text-anchor="middle" font-size="10">1. Compilation</text><text class="d-mut" x="112" y="96" text-anchor="middle" font-size="9">-Wall -Wextra</text><text class="d-mut" x="112" y="110" text-anchor="middle" font-size="9">-Werror</text><text class="d-mut" x="112" y="128" text-anchor="middle" font-size="8">bugs probables → erreurs</text>
+    <line class="d-line" x1="200" y1="95" x2="232" y2="95" />
+    <rect class="d-box" x="232" y="50" width="176" height="90" rx="8" /><text class="d-text" x="320" y="74" text-anchor="middle" font-size="10">2. Exécution</text><text class="d-mut" x="320" y="96" text-anchor="middle" font-size="9">ASan · UBSan</text><text class="d-mut" x="320" y="110" text-anchor="middle" font-size="9">Valgrind</text><text class="d-mut" x="320" y="128" text-anchor="middle" font-size="8">fautes mémoire réelles</text>
+    <line class="d-line" x1="408" y1="95" x2="440" y2="95" />
+    <rect class="d-box" x="440" y="50" width="176" height="90" rx="8" /><text class="d-text" x="528" y="74" text-anchor="middle" font-size="10">3. Inspection</text><text class="d-mut" x="528" y="96" text-anchor="middle" font-size="9">GDB (-g)</text><text class="d-mut" x="528" y="110" text-anchor="middle" font-size="9">break · print · bt</text><text class="d-mut" x="528" y="128" text-anchor="middle" font-size="8">bug logique pas à pas</text>
+    <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="9">plus on attrape tôt (à gauche), moins le bug coûte cher</text>
+  </svg>
+  <figcaption>On empile les trois défenses plutôt que d'en choisir une&nbsp;: warnings à la compilation, sanitizers et Valgrind à l'exécution, GDB pour inspecter.</figcaption>
+</figure>
+
+<h2>Le comportement indéfini (undefined behavior)</h2>
+<p>Le standard C définit un ensemble d'opérations « légales ». Tout le reste est du <strong>comportement indéfini</strong> (UB, <em>undefined behavior</em>) : la norme ne dit <em>rien</em> sur ce qui doit se passer. Le compilateur a alors le droit de <strong>tout</strong> faire — produire le résultat « attendu », planter, corrompre une autre variable, ou supprimer purement et simplement ton code en supposant que l'UB ne peut pas arriver.</p>
+<p>Quelques formes classiques :</p>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;limits.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(void) {
+    /* 1) Débordement d'entier SIGNÉ : UB (pas un simple wrap-around) */
+    int x = INT_MAX;
+    int y = x + 1;          /* UB : le compilateur peut supposer x + 1 &gt; x */
+
+    /* 2) Accès hors borne */
+    int t[3] = {0, 1, 2};
+    int z = t[3];           /* UB : indices valides = 0..2 */
+
+    /* 3) Use-after-free */
+    int *p = malloc(sizeof *p);
+    if (p == NULL) return 1;
+    free(p);
+    *p = 42;                /* UB : p ne pointe plus sur rien de valide */
+
+    /* 4) Déréférencement de NULL */
+    int *q = NULL;
+    *q = 7;                 /* UB : déréférencer NULL */
+
+    printf("%d %d\n", y, z);
+    return 0;
+}</code></pre></figure>
+<p>Le piège, c'est que chacun de ces cas « marche » parfois. Le débordement signé peut donner <code>INT_MIN</code> sur ta machine ; <code>t[3]</code> peut tomber sur un octet anodin de la pile. Mais « ça marche aujourd'hui » n'est pas « c'est correct ». Avec une optimisation activée (<code>-O2</code>), le compilateur exploite l'absence d'UB comme une garantie et peut réécrire ton programme de façon surprenante.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>« Ça compile et ça affiche le bon résultat, donc c'est bon. » Faux. Un UB peut rester silencieux pendant des mois, puis se déclencher après un simple changement de compilateur, de niveau d'optimisation ou de plateforme. Un UB n'est jamais « inoffensif » : c'est une bombe à retardement.</p></div></div>
+
+<h2>Les warnings : ta première ligne de défense</h2>
+<p>Par défaut, gcc et clang sont silencieux sur beaucoup d'erreurs probables. Active toujours les avertissements. Le trio de base :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -std=c17 -Wall -Wextra -Werror -g main.c -o prog</code></pre></figure>
+<p class="code-caption"><code>-Wall</code> et <code>-Wextra</code> activent un large jeu d'avertissements ; <code>-Werror</code> les transforme en erreurs (compilation refusée) ; <code>-g</code> ajoute les infos de débogage.</p>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+
+int main(void) {
+    int n;                       /* non initialisée */
+    if (n &gt; 0)                   /* lecture d'une valeur indéterminée */
+        printf("positif\n");
+    return 0;
+}
+
+/* gcc -Wall -Wextra :
+   warning: 'n' is used uninitialized in this function [-Wuninitialized] */</code></pre></figure>
+<p>Un warning n'est pas un détail cosmétique : c'est souvent le compilateur qui repère un bug à ta place, gratuitement. Traite chaque avertissement comme une erreur à corriger.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Ajoute aussi <code>-Wshadow</code> (variable qui en masque une autre) et <code>-Wconversion</code> (conversions implicites qui perdent des bits). Sur un nouveau projet, commence strict : il est plus facile de garder un code propre que de nettoyer des centaines de warnings plus tard.</p></div></div>
+
+<h2>Les sanitizers : attraper l'UB à l'exécution</h2>
+<p>Les warnings sont statiques (à la compilation) et ne voient pas tout. Les <strong>sanitizers</strong> instrumentent ton programme pour détecter les fautes <em>au moment où elles se produisent</em>. Les deux essentiels :</p>
+<ul>
+<li><strong>ASan</strong> (<code>-fsanitize=address</code>) : débordements de tampon, <em>use-after-free</em>, <em>double free</em>, fuites mémoire.</li>
+<li><strong>UBSan</strong> (<code>-fsanitize=undefined</code>) : débordement signé, décalages invalides, déréférencement <code>NULL</code>, etc.</li>
+</ul>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -std=c17 -g -fsanitize=address,undefined main.c -o prog
+./prog</code></pre></figure>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdlib.h&gt;
+
+int main(void) {
+    int *t = malloc(3 * sizeof *t);
+    if (t == NULL) return 1;
+    t[3] = 99;        /* écriture hors borne : 1 case de trop */
+    free(t);
+    return 0;
+}
+
+/* Sortie ASan (extrait) :
+   ==12345==ERROR: AddressSanitizer: heap-buffer-overflow on address ...
+     WRITE of size 4 at 0x... thread T0
+       #0 0x... in main main.c:6
+     0x... is located 0 bytes to the right of 12-byte region
+*/</code></pre></figure>
+<p>ASan te donne le fichier, la ligne, le type d'accès (lecture/écriture) et la taille de la région : un diagnostic d'une précision redoutable. Compile <strong>toujours</strong> tes tests avec les sanitizers pendant le développement.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les sanitizers ralentissent l'exécution (×2 environ pour ASan) et augmentent la mémoire utilisée. C'est un outil de <em>développement et de test</em>, pas pour la version livrée en production. Sous Linux avec gcc/clang, la détection des fuites est active par défaut ; sinon, force-la avec la variable d'environnement <code>ASAN_OPTIONS=detect_leaks=1</code>.</p></div></div>
+
+<h2>Valgrind : fuites et accès invalides</h2>
+<p><strong>Valgrind</strong> (outil <em>Memcheck</em>) exécute ton binaire dans une machine virtuelle et surveille chaque accès mémoire, sans recompilation spéciale (compile juste avec <code>-g</code>). Il excelle pour les <strong>fuites mémoire</strong> et les lectures de mémoire non initialisée.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -std=c17 -g main.c -o prog
+valgrind --leak-check=full ./prog</code></pre></figure>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdlib.h&gt;
+
+int main(void) {
+    int *p = malloc(100 * sizeof *p);
+    if (p == NULL) return 1;
+    /* on oublie free(p) : fuite de 400 octets */
+    return 0;
+}
+
+/* Sortie Valgrind (extrait) :
+   ==999== HEAP SUMMARY:
+   ==999==   in use at exit: 400 bytes in 1 blocks
+   ==999== 400 bytes in 1 blocks are definitely lost in loss record 1 of 1
+   ==999==    at 0x...: malloc
+   ==999==    by 0x...: main (main.c:4)
+   ==999== LEAK SUMMARY:
+   ==999==    definitely lost: 400 bytes in 1 blocks
+*/</code></pre></figure>
+<p><code>definitely lost</code> signale un bloc dont plus aucun pointeur ne garde l'adresse : impossible à libérer, c'est une vraie fuite. La ligne <code>main.c:4</code> te renvoie directement au <code>malloc</code> coupable. ASan et Valgrind se recoupent en partie ; en pratique, on utilise souvent ASan en continu et Valgrind ponctuellement pour son rapport de fuites très lisible.</p>
+
+<h2>GDB : déboguer pas à pas</h2>
+<p>Quand le bug est logique (mauvais résultat, boucle infinie) et non une corruption mémoire, le débogueur <strong>GDB</strong> te laisse arrêter le programme et inspecter son état. Compile avec <code>-g</code> (sans quoi tu n'as ni noms de variables ni numéros de ligne).</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -std=c17 -g main.c -o prog
+gdb ./prog</code></pre></figure>
+<p>Les commandes de base, une fois dans GDB :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">(gdb) break main        # point d'arrêt sur la fonction main
+(gdb) run               # lance le programme
+(gdb) next              # exécute la ligne suivante (sans entrer dans les appels)
+(gdb) step              # comme next, mais entre dans les fonctions appelées
+(gdb) print somme       # affiche la valeur de la variable somme
+(gdb) backtrace         # pile des appels (utile après un crash)
+(gdb) continue          # reprend jusqu'au prochain point d'arrêt</code></pre></figure>
+<p>Le schéma typique : tu poses un <code>break</code> près du bug, tu <code>run</code>, tu avances avec <code>next</code>/<code>step</code> en surveillant tes variables avec <code>print</code>. Après un crash, <code>backtrace</code> (abrégé <code>bt</code>) montre l'enchaînement d'appels qui a mené au plantage — point de départ idéal de l'enquête.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Combine les outils : lance ton binaire compilé avec ASan <em>sous</em> GDB. Quand le sanitizer détecte la faute, GDB s'arrête pile au bon endroit et tu inspectes l'état avec <code>backtrace</code> et <code>print</code>. Le diagnostic d'ASan + le contexte de GDB, c'est imbattable.</p></div></div>
+
+<h2>Les pointeurs de fonction</h2>
+<p>Puisqu'on parle d'outillage, voici une brique qui sert partout dès qu'on veut du code générique ou des <em>callbacks</em> : le <strong>pointeur de fonction</strong>. En C, une fonction a une adresse, et tu peux la stocker dans une variable typée par sa <strong>signature</strong>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Un pointeur de fonction. La variable op, de type pointeur vers une fonction prenant deux int et renvoyant un int, contient l'adresse d'une fonction. Quand op reçoit l'adresse de ajoute, l'appel op de 3 et 4 exécute ajoute et donne 7. Quand op reçoit l'adresse de multiplie, le même appel op de 3 et 4 exécute multiplie et donne 12. Une seule ligne d'appel, deux comportements selon l'adresse stockée.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">op(3, 4) : même appel, résultat selon l'adresse stockée</text>
+    <rect class="d-accent" x="250" y="44" width="140" height="48" rx="8" /><text class="d-text" x="320" y="65" text-anchor="middle" font-size="10">op</text><text class="d-mut" x="320" y="81" text-anchor="middle" font-size="8">int (*op)(int, int)</text>
+    <line class="d-line" x1="288" y1="92" x2="150" y2="128" /><text class="d-tag" x="200" y="106" text-anchor="middle" font-size="8">= ajoute</text>
+    <line class="d-line" x1="352" y1="92" x2="490" y2="128" /><text class="d-tag" x="440" y="106" text-anchor="middle" font-size="8">= multiplie</text>
+    <rect class="d-box" x="70" y="130" width="150" height="42" rx="6" /><text class="d-text" x="145" y="151" text-anchor="middle" font-size="9">ajoute(3, 4)</text><text class="d-mut" x="145" y="165" text-anchor="middle" font-size="9">→ 7</text>
+    <rect class="d-box" x="420" y="130" width="150" height="42" rx="6" /><text class="d-text" x="495" y="151" text-anchor="middle" font-size="9">multiplie(3, 4)</text><text class="d-mut" x="495" y="165" text-anchor="middle" font-size="9">→ 12</text>
+  </svg>
+  <figcaption>Un pointeur de fonction stocke l'adresse d'une fonction&nbsp;: en changeant l'adresse, la même ligne <code>op(3, 4)</code> exécute un code différent.</figcaption>
+</figure>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+
+int ajoute(int a, int b)    { return a + b; }
+int multiplie(int a, int b) { return a * b; }
+
+int main(void) {
+    /* déclaration : pointeur vers fonction (int, int) -&gt; int */
+    int (*op)(int, int);
+
+    op = ajoute;                /* le nom de la fonction donne son adresse */
+    printf("%d\n", op(3, 4));   /* appel via le pointeur : 7 */
+
+    op = multiplie;
+    printf("%d\n", op(3, 4));   /* 12 */
+    return 0;
+}</code></pre></figure>
+<p>L'usage le plus courant : passer une fonction en argument. C'est exactement ce que fait <code>qsort</code> de la bibliothèque standard, qui réclame un <strong>comparateur</strong> sous forme de pointeur de fonction. On peut aussi bâtir une <strong>table de dispatch</strong> (un tableau de pointeurs de fonction) pour remplacer une cascade de <code>if</code> :</p>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+
+int ajoute(int a, int b)    { return a + b; }
+int soustrait(int a, int b) { return a - b; }
+
+int main(void) {
+    /* table de dispatch indexée par un code d'opération */
+    int (*table[2])(int, int) = { ajoute, soustrait };
+
+    for (int i = 0; i &lt; 2; i++)
+        printf("%d\n", table[i](10, 3));  /* 13 puis 7 */
+    return 0;
+}</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La signature du pointeur doit correspondre <strong>exactement</strong> à celle de la fonction. Appeler une fonction via un pointeur de type incompatible (par exemple stocker une fonction <code>(double, double)</code> dans un pointeur <code>(int, int)</code>) est un <strong>comportement indéfini</strong>. Le comparateur de <code>qsort</code> doit impérativement avoir le prototype <code>int cmp(const void *, const void *)</code>.</p></div></div>
+
+<h2>Bonnes pratiques de sûreté</h2>
+<p>Beaucoup de bugs mémoire disparaissent si tu appliques systématiquement quelques règles, sans même réfléchir au cas particulier :</p>
+<ul>
+<li><strong>Initialise</strong> chaque variable à sa déclaration (pas de lecture de valeur indéterminée).</li>
+<li><strong>Vérifie les retours</strong> des fonctions qui peuvent échouer : <code>malloc</code>, <code>fopen</code>, <code>scanf</code>…</li>
+<li><strong>Borne les copies</strong> : préfère les fonctions qui prennent une taille (<code>snprintf</code>, <code>memcpy</code> avec longueur calculée) et ne dépasse jamais la taille du tampon de destination.</li>
+<li><strong>Après <code>free</code>, remets le pointeur à <code>NULL</code></strong> : un éventuel <em>double free</em> ou <em>use-after-free</em> devient un crash net plutôt qu'un UB silencieux (<code>free(NULL)</code> est sans effet, c'est garanti).</li>
+</ul>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+int main(void) {
+    char dest[8] = {0};                 /* initialisé */
+
+    FILE *f = fopen("data.txt", "r");
+    if (f == NULL) {                    /* retour vérifié */
+        perror("fopen");
+        return 1;
+    }
+
+    const char *src = "bonjour-le-monde";
+    /* copie bornée : au plus sizeof(dest)-1 octets + le '\0' */
+    snprintf(dest, sizeof dest, "%s", src);
+    printf("%s\n", dest);               /* affiche "bonjour" (tronqué) */
+
+    int *p = malloc(sizeof *p);
+    if (p == NULL) { fclose(f); return 1; }
+    *p = 42;
+    free(p);
+    p = NULL;                           /* plus de use-after-free possible */
+
+    fclose(f);
+    return 0;
+}</code></pre></figure>
+<p>Ces réflexes ne coûtent presque rien à l'écriture et t'épargnent les catégories de bugs les plus pénibles à diagnostiquer.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2014, la faille <strong>Heartbleed</strong> a frappé <strong>OpenSSL</strong>, la bibliothèque qui chiffre une grande partie du web. La cause&nbsp;: une longueur fournie par le client était recopiée <em>sans être vérifiée</em> contre la taille réelle du tampon (un <em>buffer over-read</em>). Le serveur renvoyait alors jusqu'à 64&nbsp;Ko de mémoire voisine — mots de passe, clés privées. C'est exactement le genre de dépassement qu'AddressSanitizer signale à la ligne près, et qu'un <em>fuzzer</em> déclenche en quelques secondes. Depuis, OpenSSL est testé en continu avec sanitizers et fuzzing&nbsp;: les outils de cette leçon ne sont pas un luxe d'école.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Ignorer un UB « qui marche quand même ».</strong> Le code correct par hasard cesse de l'être au prochain <code>-O2</code> ou changement de compilateur.</li>
+<li><strong>Déboguer sans <code>-g</code>.</strong> Sans symboles, GDB et Valgrind n'affichent ni noms de variables ni lignes : tu navigues à l'aveugle.</li>
+<li><strong>Ne jamais lancer Valgrind ni les sanitizers.</strong> Une fuite ou un dépassement invisible à l'œil saute aux yeux de ces outils. Intègre-les dans ta routine.</li>
+<li><strong>Un pointeur de fonction de mauvaise signature.</strong> L'appel via un type incompatible est un UB, même si « ça a l'air de marcher ».</li>
+<li><strong>Supposer un ordre d'évaluation non garanti.</strong> Dans <code>f(i++, i++)</code> ou <code>t[i] = i++;</code>, l'ordre d'évaluation des sous-expressions n'est pas spécifié, et modifier <code>i</code> deux fois sans point de séquence est même un UB. N'écris jamais de code qui dépend d'un tel ordre.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Automatise la qualité : fais tourner les <strong>sanitizers en CI</strong> (intégration continue) sur chaque commit. Ajoute de l'<strong>analyse statique</strong> avec <code>clang-tidy</code> ou <code>cppcheck</code> pour repérer des défauts sans exécuter le code. Explore le <strong>fuzzing</strong> (libFuzzer, AFL++) qui bombarde ton programme d'entrées aléatoires pour découvrir des plantages. Et pour le logiciel critique (automobile, aérospatial), renseigne-toi sur les <strong>normes de codage sûres</strong> comme <strong>MISRA C</strong>, qui interdisent les constructions à risque.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — déboguer et sécuriser du C</caption>
+    <thead><tr><th scope="col">Outil / réflexe</th><th scope="col">Rôle</th><th scope="col">Commande / geste</th></tr></thead>
+    <tbody>
+      <tr><td><code>-Wall -Wextra -Werror</code></td><td>bugs probables → erreurs de compilation</td><td><code>gcc -Wall -Wextra -Werror …</code></td></tr>
+      <tr><td>ASan</td><td>débordement, use-after-free, double free, fuites</td><td><code>-fsanitize=address</code></td></tr>
+      <tr><td>UBSan</td><td>débordement signé, décalage, NULL…</td><td><code>-fsanitize=undefined</code></td></tr>
+      <tr><td>Valgrind</td><td>fuites et accès invalides (rapport lisible)</td><td><code>valgrind --leak-check=full ./prog</code></td></tr>
+      <tr><td>GDB</td><td>inspecter l'état pas à pas (avec <code>-g</code>)</td><td><code>break · run · next · print · bt</code></td></tr>
+      <tr><td>Pointeur de fonction</td><td>callback / table de dispatch</td><td><code>int (*op)(int, int);</code></td></tr>
+      <tr><td>Après <code>free</code></td><td>couper le use-after-free</td><td><code>free(p); p = NULL;</code></td></tr>
+      <tr><td>Copie bornée</td><td>ne jamais dépasser le tampon</td><td><code>snprintf(dst, sizeof dst, …)</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Comportement indéfini (UB)</dt><dd>Opération sur laquelle la norme ne garantit rien&nbsp;: le compilateur peut tout faire, y compris «&nbsp;marcher par hasard&nbsp;».</dd>
+  <dt><em>Sanitizer</em></dt><dd>Instrumentation ajoutée à la compilation (<code>-fsanitize=…</code>) qui détecte une faute au moment où elle se produit.</dd>
+  <dt>ASan / UBSan</dt><dd>AddressSanitizer (mémoire&nbsp;: débordements, use-after-free, fuites) et UndefinedBehaviorSanitizer (UB arithmétique et pointeurs).</dd>
+  <dt>Valgrind</dt><dd>Outil qui exécute le binaire sous surveillance pour repérer fuites et accès invalides, sans recompilation spéciale.</dd>
+  <dt>GDB</dt><dd>Débogueur permettant d'arrêter le programme (<code>break</code>), de l'avancer (<code>next</code>/<code>step</code>) et d'inspecter (<code>print</code>, <code>backtrace</code>).</dd>
+  <dt><em>Use-after-free</em></dt><dd>Accès à une zone déjà libérée par <code>free</code>&nbsp;: UB classique, évité en remettant le pointeur à <code>NULL</code>.</dd>
+  <dt>Pointeur de fonction</dt><dd>Variable qui stocke l'adresse d'une fonction, typée par sa signature&nbsp;; sert aux callbacks et tables de dispatch.</dd>
+  <dt>Fuite mémoire</dt><dd>Bloc alloué jamais libéré, dont plus aucun pointeur ne garde l'adresse (<code>definitely lost</code> chez Valgrind).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>comportement indéfini</strong> autorise le compilateur à tout faire : il n'est jamais « inoffensif », même quand le programme semble fonctionner.</li>
+<li><code>-Wall -Wextra -Werror</code> transforme des bugs probables en erreurs de compilation : c'est ta première défense.</li>
+<li>Les <strong>sanitizers</strong> (<code>-fsanitize=address,undefined</code>) et <strong>Valgrind</strong> attrapent les fautes mémoire à l'exécution avec fichier et ligne.</li>
+<li><strong>GDB</strong> (avec <code>-g</code>) sert à inspecter l'état : <code>break</code>, <code>run</code>, <code>next</code>/<code>step</code>, <code>print</code>, <code>backtrace</code>.</li>
+<li>Un <strong>pointeur de fonction</strong> stocke l'adresse d'une fonction (typée par sa signature) pour les <em>callbacks</em> et tables de dispatch.</li>
+<li>Règles d'or : initialiser, vérifier les retours, borner les copies, et <code>free</code> puis <code>= NULL</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi « le programme affiche le bon résultat » ne prouve-t-il pas l'absence de comportement indéfini ?</li><li>Quelle option de compilation est indispensable pour que GDB et Valgrind affichent les numéros de ligne, et pourquoi ?</li><li>Quelle différence d'usage fais-tu entre <code>next</code> et <code>step</code> dans GDB ?</li><li>Pourquoi remettre un pointeur à <code>NULL</code> juste après <code>free</code> rend-il un bug plus facile à détecter ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi « le programme affiche le bon résultat » ne prouve-t-il pas l'absence de comportement indéfini ?","a":["Parce qu'un comportement indéfini peut « marcher par chance » selon le compilateur, les options ou l'OS ; un résultat correct ne garantit rien, et le bug peut se manifester ailleurs ou plus tard","Un bon résultat prouve l'absence de bug","Le comportement indéfini plante toujours","Le compilateur signale tout UB"],"correct":0,"explain":"Le comportement indéfini n'oblige pas à planter : il peut produire le bon résultat aujourd'hui, puis casser après une mise à jour du compilateur ou un changement d'optimisation. On le traque avec des outils (sanitizers), pas en se fiant à la sortie."},
+  {"q":"Quelle option de compilation est indispensable pour que GDB et Valgrind affichent les numéros de ligne, et pourquoi ?","a":["-g, qui inclut les informations de débogage (correspondance entre le binaire et le code source)","-O2","-Wall","-lm"],"correct":0,"explain":"L'option -g embarque les tables de débogage reliant les instructions machine aux lignes source. Sans elle, GDB et Valgrind ne peuvent afficher que des adresses, pas les numéros de ligne ni les noms de variables."},
+  {"q":"Quelle différence d'usage fais-tu entre next et step dans GDB ?","a":["next exécute la ligne courante sans entrer dans les fonctions appelées ; step entre à l'intérieur de la fonction appelée","C'est l'inverse","Les deux entrent dans les fonctions","Les deux sautent les fonctions"],"correct":0,"explain":"next passe par-dessus un appel (l'exécute d'un bloc et s'arrête à la ligne suivante). step descend dans la fonction appelée pour la suivre instruction par instruction."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["hors limites","débordement","off-by-one","depassement","débordement de tampon","out of bounds","dépassement","acces hors limites"],"placeholder":"le type de bug quand la boucle va jusqu'à i <= 5 sur un tableau de 5 cases (accès …)","hints":["Les indices valides vont de 0 à 4.","t[5] est en dehors du tableau.","Un accès … (hors limites / off-by-one)."],"link":{"href":"lecon-11.html","label":"Revoir « Les comportements indéfinis »"}},
+  {"type":"text","accept":["qsort","qsort()"],"placeholder":"la fonction de tri de <stdlib.h> à laquelle on passe un comparateur (callback) : …","hints":["« quick sort ».","Le comparateur reçoit des const void *.","q????"],"link":{"href":"lecon-11.html","label":"Revoir « qsort »"}},
+  {"type":"text","accept":["valgrind","Valgrind"],"placeholder":"l'outil qui détecte les fuites mémoire et accès invalides (--leak-check=full) : …","hints":["On compile avec -g pour des messages lisibles.","Signale « definitely lost » pour une fuite.","val?????"],"link":{"href":"lecon-11.html","label":"Revoir « Valgrind »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>L'extrait ci-dessous contient au moins un comportement indéfini. Identifie-le et corrige le code pour qu'il soit correct et sûr.</p>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(void) {
+    int *t = malloc(5 * sizeof *t);
+    for (int i = 0; i &lt;= 5; i++)   /* remplit le tableau */
+        t[i] = i * i;
+    for (int i = 0; i &lt;= 5; i++)
+        printf("%d ", t[i]);
+    free(t);
+    return 0;
+}</code></pre></figure>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(void) {
+    int *t = malloc(5 * sizeof *t);
+    if (t == NULL) return 1;          /* retour de malloc vérifié */
+
+    /* BUG : i &lt;= 5 accède à t[5], hors borne (indices valides 0..4).
+       Correction : i &lt; 5 dans les deux boucles. */
+    for (int i = 0; i &lt; 5; i++)
+        t[i] = i * i;
+    for (int i = 0; i &lt; 5; i++)
+        printf("%d ", t[i]);
+    printf("\n");
+
+    free(t);
+    return 0;
+}
+
+/* Vérifié sans erreur avec :
+   gcc -std=c17 -Wall -Wextra -g -fsanitize=address,undefined main.c -o prog */</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Utilise un pointeur de fonction comme <em>callback</em> de tri. Trie un tableau d'entiers avec <code>qsort</code> (de <code>&lt;stdlib.h&gt;</code>) en fournissant un comparateur, puis affiche le résultat en ordre croissant.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+/* Comparateur : prototype imposé par qsort.
+   Retourne &lt;0, 0 ou &gt;0 selon l'ordre voulu. */
+int cmp_croissant(const void *a, const void *b) {
+    int x = *(const int *)a;
+    int y = *(const int *)b;
+    /* éviter (x - y) qui peut déborder : comparaisons explicites */
+    if (x &lt; y) return -1;
+    if (x &gt; y) return 1;
+    return 0;
+}
+
+int main(void) {
+    int t[] = {5, 2, 9, 1, 7};
+    size_t n = sizeof t / sizeof t[0];
+
+    qsort(t, n, sizeof t[0], cmp_croissant);
+
+    for (size_t i = 0; i &lt; n; i++)
+        printf("%d ", t[i]);
+    printf("\n");                 /* affiche : 1 2 5 7 9 */
+    return 0;
+}</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Analyse</span></div><p>On compile le code suivant avec <code>-g</code> puis on lance <code>valgrind --leak-check=full ./prog</code>. Sur le papier : combien d'octets fuient, et comment corriger le programme ? Explique ce que signalerait Valgrind.</p>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdlib.h&gt;
+
+char *copie(size_t n) {
+    char *buf = malloc(n);
+    return buf;                 /* le buffer est rendu à l'appelant */
+}
+
+int main(void) {
+    char *a = copie(64);
+    char *b = copie(64);
+    free(a);
+    /* et b ? */
+    return 0;
+}</code></pre></figure>
+<details><summary>Voir une solution</summary>
+<p>Le programme alloue deux blocs de 64 octets (<code>a</code> et <code>b</code>) mais ne libère que <code>a</code>. À la sortie, <code>b</code> n'est jamais libéré : <strong>64 octets fuient</strong>. Comme aucun pointeur n'a perdu l'adresse pendant l'exécution mais que le bloc n'est pas libéré à la fin, Valgrind le classe en <code>definitely lost</code> et pointe vers la ligne du <code>malloc</code> dans <code>copie</code> (appelé depuis <code>main</code>).</p>
+<figure class="code-block" data-file="solution"><pre><code class="language-c">#include &lt;stdlib.h&gt;
+
+char *copie(size_t n) {
+    char *buf = malloc(n);
+    return buf;                 /* l'appelant devient responsable du free */
+}
+
+int main(void) {
+    char *a = copie(64);
+    char *b = copie(64);
+    if (a == NULL || b == NULL) { free(a); free(b); return 1; }
+
+    free(a);
+    a = NULL;
+    free(b);                    /* correction : on libère aussi b */
+    b = NULL;
+    return 0;
+}
+
+/* Après correction, Valgrind affiche :
+   All heap blocks were freed -- no leaks are possible */</code></pre></figure>
+<p>Règle de conception : quand une fonction renvoie un bloc alloué, documente clairement que <strong>l'appelant</strong> est responsable de le libérer.</p>
+</details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+  </body>
+</html>

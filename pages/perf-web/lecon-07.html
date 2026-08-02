@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le chemin critique du rendu — Leçon 07 · Syntaxe</title>
+    <meta name="description" content="Comprendre comment le navigateur transforme HTML et CSS en pixels : DOM, CSSOM, arbre de rendu, mise en page et peinture — et comment raccourcir ce chemin critique pour afficher plus vite." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="perf-web" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Performance &amp; SEO web</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 07</p>
+              <h1 class="lesson-header__title">Le chemin critique du rendu</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 06 requise</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>décrire comment le navigateur passe du <strong>code aux pixels</strong>&nbsp;;</li>
+                  <li>repérer les ressources <strong>bloquantes</strong> (CSS, JS)&nbsp;;</li>
+                  <li>appliquer le <strong>CSS critique</strong> et différer le reste&nbsp;;</li>
+                  <li>raccourcir le <strong>chemin critique de rendu</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais mesurer la vitesse (Web Vitals) et alléger les ressources. Reste à comprendre ce qui se passe <em>entre</em> le moment où le HTML arrive et celui où l'utilisateur voit quelque chose. Ce trajet a un nom&nbsp;: le <strong>chemin critique de rendu</strong> (<em>Critical Rendering Path</em>). Le connaître, c'est savoir exactement <em>quoi</em> optimiser pour afficher plus tôt.</p>
+
+<h2>Du code aux pixels</h2>
+<p>Pour peindre une page, le navigateur enchaîne plusieurs étapes. Il lit le HTML pour bâtir le <strong>DOM</strong> (l'arbre des éléments), lit le CSS pour bâtir le <strong>CSSOM</strong> (l'arbre des styles), les combine en un <strong>arbre de rendu</strong> (les éléments visibles avec leur style), calcule la position et la taille de chacun (<strong>mise en page</strong>, ou <em>layout</em>), puis <strong>peint</strong> les pixels et les <strong>compose</strong> en couches à l'écran.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Le pipeline du rendu en cinq étapes. Le HTML devient le DOM et le CSS devient le CSSOM ; les deux se combinent en un arbre de rendu ; vient ensuite la mise en page qui calcule positions et tailles, puis la peinture des pixels, et enfin la composition des couches à l'écran.">
+    <rect class="d-box" x="12" y="40" width="110" height="34" rx="6" /><text class="d-text" x="67" y="61" text-anchor="middle" font-size="10">HTML → DOM</text>
+    <rect class="d-box" x="12" y="92" width="110" height="34" rx="6" /><text class="d-text" x="67" y="113" text-anchor="middle" font-size="10">CSS → CSSOM</text>
+    <rect class="d-accent" x="160" y="66" width="120" height="34" rx="6" /><text class="d-text" x="220" y="87" text-anchor="middle" font-size="10">Arbre de rendu</text>
+    <rect class="d-box" x="316" y="66" width="96" height="34" rx="6" /><text class="d-text" x="364" y="87" text-anchor="middle" font-size="10">Mise en page</text>
+    <rect class="d-box" x="440" y="66" width="80" height="34" rx="6" /><text class="d-text" x="480" y="87" text-anchor="middle" font-size="10">Peinture</text>
+    <rect class="d-box" x="548" y="66" width="84" height="34" rx="6" /><text class="d-text" x="590" y="87" text-anchor="middle" font-size="10">Composite</text>
+    <path class="d-line" d="M122 57 L158 76" fill="none" stroke-width="1.3" /><polygon class="d-dot" points="160,77 151,76 155,70" />
+    <path class="d-line" d="M122 109 L158 90" fill="none" stroke-width="1.3" /><polygon class="d-dot" points="160,89 155,96 151,90" />
+    <path class="d-line" d="M280 83 L314 83" fill="none" stroke-width="1.3" /><polygon class="d-dot" points="316,83 308,79 308,87" />
+    <path class="d-line" d="M412 83 L438 83" fill="none" stroke-width="1.3" /><polygon class="d-dot" points="440,83 432,79 432,87" />
+    <path class="d-line" d="M520 83 L546 83" fill="none" stroke-width="1.3" /><polygon class="d-dot" points="548,83 540,79 540,87" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">Rien ne s'affiche tant que le DOM ET le CSSOM ne sont pas prêts.</text>
+  </svg>
+  <figcaption>Le premier affichage attend que le <strong>DOM</strong> et le <strong>CSSOM</strong> soient tous deux construits&nbsp;: ce sont les deux ingrédients du chemin critique.</figcaption>
+</figure>
+
+<h2>Le CSS bloque le rendu</h2>
+<p>Le navigateur refuse de peindre une page à moitié stylée&nbsp;: il attend d'avoir <strong>tout</strong> le CSSOM avant le premier affichage. Le CSS est donc <strong>bloquant pour le rendu</strong>. Une grosse feuille de style, ou plusieurs feuilles chaînées, retardent d'autant le premier pixel — même si le HTML, lui, est prêt depuis longtemps.</p>
+<figure class="code-block" data-file="index.html"><pre><code class="language-html">&lt;head&gt;
+  &lt;!-- Chaque feuille bloque le rendu jusqu'à son téléchargement --&gt;
+  &lt;link rel="stylesheet" href="reset.css" /&gt;
+  &lt;link rel="stylesheet" href="grille.css" /&gt;
+  &lt;link rel="stylesheet" href="theme.css" /&gt;
+  &lt;link rel="stylesheet" href="composants.css" /&gt;
+&lt;/head&gt;</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Attention au FOUC… et à son contraire</p><p>Si l'on charge le CSS trop tard (ou en <code>async</code> mal maîtrisé), la page apparaît un instant <strong>sans style</strong> (le <em>FOUC</em>, <em>flash of unstyled content</em>). L'inverse — bloquer le rendu sur du CSS non essentiel — donne une page blanche trop longtemps. L'équilibre&nbsp;: charger tout de suite le <strong>strict nécessaire au premier écran</strong>, différer le reste.</p></div></div>
+
+<h2>Le JavaScript bloque l'analyse</h2>
+<p>Un <code>&lt;script&gt;</code> sans attribut interrompt la construction du DOM&nbsp;: le navigateur s'arrête, télécharge, exécute, puis reprend. Pire, comme un script peut lire les styles, il doit parfois <em>attendre le CSSOM</em> avant de s'exécuter. Résultat&nbsp;: un script mal placé retarde à la fois le DOM et le premier affichage. D'où le réflexe vu en leçon 03&nbsp;: <code>defer</code> par défaut, <code>async</code> pour l'indépendant.</p>
+
+<h2>Raccourcir le chemin critique</h2>
+<p>Trois leviers, dans l'ordre&nbsp;:</p>
+<ul>
+<li><strong>Inliner le CSS critique</strong>&nbsp;: mettre directement dans le <code>&lt;head&gt;</code> le minimum de styles nécessaires au premier écran (<em>above the fold</em>), pour peindre sans attendre un fichier externe.</li>
+<li><strong>Différer le reste du CSS</strong>&nbsp;: charger les styles non critiques de façon non bloquante.</li>
+<li><strong>Réduire le nombre de ressources bloquantes</strong>&nbsp;: moins de feuilles, moins de scripts synchrones, moins d'allers-retours réseau.</li>
+</ul>
+<figure class="code-block" data-file="css-non-critique.html"><pre><code class="language-html">&lt;!-- CSS critique : inline, appliqué immédiatement --&gt;
+&lt;style&gt;/* styles du premier écran : en-tête, héros… */&lt;/style&gt;
+
+&lt;!-- Le reste, sans bloquer le rendu : chargé puis appliqué --&gt;
+&lt;link rel="stylesheet" href="reste.css" media="print" onload="this.media='all'" /&gt;</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Comparaison de deux stratégies sur la ligne de temps. En haut, quatre feuilles CSS bloquantes se chaînent avant le premier affichage, qui arrive tard. En bas, un CSS critique inline permet un premier affichage précoce, tandis que le reste du CSS se charge ensuite sans bloquer.">
+    <text class="d-mut" x="86" y="40" text-anchor="middle" font-size="10">4 feuilles bloquantes</text>
+    <rect class="d-box" x="20" y="48" width="70" height="22" rx="4" /><text class="d-mut" x="55" y="63" text-anchor="middle" font-size="8">css 1</text>
+    <rect class="d-box" x="94" y="48" width="70" height="22" rx="4" /><text class="d-mut" x="129" y="63" text-anchor="middle" font-size="8">css 2</text>
+    <rect class="d-box" x="168" y="48" width="70" height="22" rx="4" /><text class="d-mut" x="203" y="63" text-anchor="middle" font-size="8">css 3</text>
+    <rect class="d-box" x="242" y="48" width="70" height="22" rx="4" /><text class="d-mut" x="277" y="63" text-anchor="middle" font-size="8">css 4</text>
+    <line class="d-line" x1="316" y1="42" x2="316" y2="76" stroke-width="1.4" /><text class="d-tag" x="356" y="63" text-anchor="middle" font-size="9">1er affichage</text>
+    <text class="d-mut" x="120" y="112" text-anchor="middle" font-size="10">CSS critique inline</text>
+    <rect class="d-accent" x="20" y="120" width="90" height="22" rx="4" /><text class="d-text" x="65" y="135" text-anchor="middle" font-size="8">CSS critique</text>
+    <line class="d-line" x1="114" y1="114" x2="114" y2="148" stroke-width="1.4" /><text class="d-tag" x="152" y="135" text-anchor="middle" font-size="9">1er affichage</text>
+    <rect class="d-box" x="180" y="120" width="150" height="22" rx="4" stroke-dasharray="4 3" /><text class="d-mut" x="255" y="135" text-anchor="middle" font-size="8">reste du CSS · différé</text>
+  </svg>
+  <figcaption>En inlinant le CSS du premier écran, on peint <strong>avant</strong> d'avoir tout téléchargé&nbsp;; le reste suit sans bloquer. Le premier affichage arrive bien plus tôt.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">L'astuce media="print"</p><p>Le motif <code>media="print" onload="this.media='all'"</code> est une ruse classique&nbsp;: le navigateur considère la feuille comme <em>non bloquante</em> (elle ne concerne que l'impression), la télécharge en arrière-plan, puis <code>onload</code> la rebascule sur <code>all</code>. Résultat&nbsp;: du CSS chargé sans retarder le premier affichage. Les outils comme <em>Critical</em> extraient automatiquement le CSS du premier écran.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: une page vitrine bloquée par ses styles</p><p>Un site marchand chargeait <strong>cinq feuilles CSS externes</strong> dans le <code>&lt;head&gt;</code>, dont un gros framework de composants. Sur une connexion mobile, le premier pixel n'apparaissait qu'après <strong>1,8&nbsp;s</strong> — tout ce temps en page blanche, le HTML pourtant déjà reçu. En <strong>inlinant</strong> les ~8&nbsp;Ko de CSS du premier écran et en différant le reste avec l'astuce <code>media="print"</code>, le <strong>FCP</strong> est tombé sous <strong>0,7&nbsp;s</strong>. Aucun octet de CSS en moins&nbsp;: juste envoyé dans le bon ordre.</p></div></div>
+
+<h2>Mise en page et peinture : le coût d'après</h2>
+<p>Le chemin critique ne s'arrête pas au premier affichage. Chaque changement de style peut déclencher un nouveau <strong>reflow</strong> (recalcul de la mise en page) puis un <strong>repaint</strong> (nouvelle peinture). Modifier <code>width</code>, <code>top</code> ou <code>font-size</code> relance la mise en page&nbsp;; animer <code>transform</code> ou <code>opacity</code>, en revanche, ne touche que la <strong>composition</strong> (sur le GPU) et reste fluide. C'est pourquoi on anime avec <code>transform</code>/<code>opacity</code>, jamais avec <code>width</code>/<code>margin</code>.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Deux techniques serveur raccourcissent encore le chemin&nbsp;: <code>rel="preload"</code> demande au navigateur d'aller chercher <em>tôt</em> une ressource clé (police, image LCP), et les <strong>103 Early Hints</strong> laissent le serveur souffler les ressources critiques avant même la réponse HTML. Côté rendu, <code>content-visibility: auto</code> évite de mettre en page ce qui est hors écran.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Chemin critique de rendu — mémo</caption>
+    <thead><tr><th scope="col">Étape / notion</th><th scope="col">Ce que c'est</th><th scope="col">Levier</th></tr></thead>
+    <tbody>
+      <tr><td><strong>DOM</strong></td><td>arbre des éléments (depuis le HTML)</td><td>HTML léger, pas de script bloquant</td></tr>
+      <tr><td><strong>CSSOM</strong></td><td>arbre des styles (depuis le CSS)</td><td>CSS critique inline, reste différé</td></tr>
+      <tr><td><strong>CSS bloquant</strong></td><td>retarde le 1er affichage</td><td>moins de feuilles ; <code>media="print"</code></td></tr>
+      <tr><td><strong>JS bloquant</strong></td><td>retarde le DOM</td><td><code>defer</code> / <code>async</code></td></tr>
+      <tr><td><strong>reflow</strong></td><td>recalcul de la mise en page</td><td>éviter les changements de géométrie</td></tr>
+      <tr><td><strong>composite</strong></td><td>couches assemblées sur le GPU</td><td>animer <code>transform</code>/<code>opacity</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Chemin critique de rendu</dt><dd>La suite d'étapes et de ressources (HTML + CSS, parfois JS) indispensables au <strong>premier affichage</strong>&nbsp;; le raccourcir accélère le rendu perçu.</dd>
+  <dt>DOM</dt><dd><em>Document Object Model</em>&nbsp;: l'arbre des éléments de la page, construit à partir du HTML.</dd>
+  <dt>CSSOM</dt><dd><em>CSS Object Model</em>&nbsp;: l'arbre des styles, construit à partir du CSS&nbsp;; le rendu attend qu'il soit complet.</dd>
+  <dt>Arbre de rendu</dt><dd>La combinaison du DOM et du CSSOM&nbsp;: les éléments <em>visibles</em> avec leur style, prêts pour la mise en page.</dd>
+  <dt>CSS critique</dt><dd>Le minimum de styles nécessaires au premier écran&nbsp;; inliné dans le <code>&lt;head&gt;</code> pour peindre sans attendre un fichier externe.</dd>
+  <dt>Reflow (mise en page)</dt><dd>Recalcul de la position et de la taille des éléments&nbsp;; coûteux, déclenché par les changements de géométrie (<code>width</code>, <code>top</code>…).</dd>
+  <dt>Repaint / composite</dt><dd>Nouvelle peinture des pixels (repaint), puis assemblage des couches (composite, sur le GPU)&nbsp;; animer <code>transform</code>/<code>opacity</code> ne touche que la composition.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le navigateur bâtit le <strong>DOM</strong> (HTML) et le <strong>CSSOM</strong> (CSS), les combine, met en page, peint et compose.</li>
+  <li>Le <strong>CSS bloque le rendu</strong>&nbsp;: on inline le critique et on diffère le reste.</li>
+  <li>Le <strong>JS bloque l'analyse</strong>&nbsp;: <code>defer</code>/<code>async</code> l'écartent du chemin.</li>
+  <li>Après coup, éviter les <strong>reflows</strong>&nbsp;: animer avec <code>transform</code>/<code>opacity</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quelles deux structures le navigateur doit-il construire avant le premier affichage&nbsp;?</li>
+  <li>Pourquoi le CSS est-il dit «&nbsp;bloquant pour le rendu&nbsp;»&nbsp;?</li>
+  <li>Que fait l'astuce <code>media="print" onload="this.media='all'"</code>&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelles structures le navigateur combine-t-il pour obtenir l'arbre de rendu ?","a":["Le DOM (issu du HTML) et le CSSOM (issu du CSS)","Le DOM et le JavaScript","Le CSSOM et les images","Le HTML brut et le cache"],"correct":0,"explain":"Le DOM (arbre des éléments) et le CSSOM (arbre des styles) se combinent en un arbre de rendu : les éléments visibles avec leur style. Le premier affichage attend que les deux soient prêts."},
+  {"q":"Pourquoi le CSS est-il « bloquant pour le rendu » ?","a":["Le navigateur attend d'avoir tout le CSSOM avant de peindre, pour ne pas afficher une page à moitié stylée","Parce que le CSS est toujours volumineux","Parce qu'il s'exécute comme du JavaScript","Il ne l'est pas : le CSS ne bloque jamais"],"correct":0,"explain":"Tant que le CSSOM n'est pas complet, le navigateur ne peint pas (sinon la page apparaîtrait sans style). D'où l'intérêt d'inliner le CSS critique et de différer le reste."},
+  {"q":"Que permet le motif media=\"print\" onload=\"this.media='all'\" sur une feuille de style ?","a":["Charger le CSS sans bloquer le premier affichage, puis l'appliquer une fois téléchargé","Imprimer la page automatiquement","Supprimer le CSS sur mobile","Bloquer le rendu jusqu'à la fin du chargement"],"correct":0,"explain":"Déclarée pour l'impression, la feuille n'est pas bloquante au rendu ; le navigateur la télécharge en arrière-plan, puis onload la rebascule sur « all ». Le premier affichage n'est pas retardé."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["CSSOM","cssom","le cssom"],"placeholder":"l'arbre des styles que le navigateur construit à partir du CSS…","hints":["Pendant construit à partir du CSS.","Le rendu attend qu'il soit complet.","« CSS… » + « OM »."],"link":{"href":"lecon-07.html","label":"Revoir « Du code aux pixels »"}},
+  {"type":"text","accept":["CSS critique","css critique","critical css","le css critique"],"placeholder":"le minimum de styles du premier écran, qu'on inline dans le head…","hints":["On l'inline pour peindre sans attendre un fichier externe.","« above the fold ».","« CSS c… »."],"link":{"href":"lecon-07.html","label":"Revoir « Raccourcir le chemin critique »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une page a un HTML léger reçu en 100&nbsp;ms, mais quatre feuilles CSS externes qui mettent chacune 300&nbsp;ms à arriver, chaînées. Pourquoi le premier affichage tarde-t-il, alors que le HTML est prêt&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que le CSS est <strong>bloquant pour le rendu</strong>&nbsp;: le navigateur ne peint rien tant que le <strong>CSSOM</strong> n'est pas complet, donc tant que les quatre feuilles ne sont pas toutes téléchargées et analysées. Le HTML a beau être prêt, l'affichage attend le CSS. Ici, quatre feuilles chaînées = quatre allers-retours&nbsp;: le premier pixel n'arrive qu'après la dernière. La solution&nbsp;: inliner le CSS critique du premier écran et différer (ou fusionner) le reste.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris, dans un <code>&lt;head&gt;</code>, un bloc de CSS critique inline pour l'en-tête, puis charge <code>reste.css</code> de façon non bloquante.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-html">&lt;head&gt;
+  &lt;style&gt;
+    header { background: #111; color: #fff; padding: 1rem; }
+    .hero  { min-height: 60vh; }
+  &lt;/style&gt;
+  &lt;link rel="stylesheet" href="reste.css"
+        media="print" onload="this.media='all'" /&gt;
+&lt;/head&gt;</code></pre></figure><p>Les styles du premier écran s'appliquent tout de suite (inline), et <code>reste.css</code> se charge sans bloquer le rendu, puis s'applique via <code>onload</code>. On peut ajouter un <code>&lt;noscript&gt;&lt;link rel="stylesheet" href="reste.css"&gt;&lt;/noscript&gt;</code> pour les rares clients sans JS.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une animation de menu qui fait varier <code>width</code> et <code>left</code> saccade sur mobile. Explique pourquoi, et propose une correction fondée sur le pipeline de rendu.</p><details><summary>Voir une solution</summary><p>Animer <code>width</code> et <code>left</code> force le navigateur à refaire, à chaque image, la <strong>mise en page</strong> (reflow) puis la <strong>peinture</strong> (repaint) de la zone concernée — un travail lourd sur le thread principal, d'où les saccades sur un mobile modeste. La correction&nbsp;: animer avec <code>transform</code> (par exemple <code>translateX()</code> pour le déplacement, <code>scaleX()</code> pour la largeur) et éventuellement <code>opacity</code>. Ces propriétés ne déclenchent <strong>ni reflow ni repaint</strong>&nbsp;: elles sont traitées à l'étape de <strong>composition</strong>, sur le GPU, ce qui donne une animation fluide à 60&nbsp;images/seconde. On peut aussi indiquer <code>will-change: transform</code> pour préparer la couche.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-markup.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,76 @@
+<p>Comme OCaml, F# bannit le <code>null</code> dangereux au profit de types explicites&nbsp;: <strong><code>option</code></strong> pour l'absence, <strong><code>Result</code></strong> pour l'échec. Et pour enchaîner proprement plusieurs opérations faillibles, F# offre les <strong>computation expressions</strong>, une syntaxe élégante. Le résultat&nbsp;: des erreurs visibles dans les types, impossibles à ignorer.</p>
+
+<h2>Le type option</h2>
+<p>Une valeur qui peut être absente a le type <code>'T option</code>&nbsp;: soit <code>Some valeur</code>, soit <code>None</code>. Le type force à traiter le cas «&nbsp;absent&nbsp;».</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let trouver cle liste =
+    liste |&gt; List.tryFind (fun (k, _) -&gt; k = cle)
+
+let chercherAge nom liste =
+    match List.tryFind (fun (n, _) -&gt; n = nom) liste with
+    | Some (_, age) -&gt; Some age
+    | None -&gt; None</code></pre></figure>
+<p class="code-caption">Beaucoup de fonctions de la stdlib renvoient une <code>option</code>&nbsp;: <code>List.tryFind</code>, <code>Map.tryFind</code>, <code>Int32.TryParse</code>…</p>
+
+<h2>Manipuler une option</h2>
+<p>On déballe par <code>match</code>, ou avec le module <code>Option</code>&nbsp;: <code>Option.map</code> (transformer si présent), <code>Option.defaultValue</code> (valeur de repli).</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let opt = Some 36
+
+opt |&gt; Option.map (fun x -&gt; x + 1)        // Some 37
+None |&gt; Option.defaultValue 0             // 0
+opt |&gt; Option.defaultValue 0              // 36</code></pre></figure>
+
+<h2>Le type Result</h2>
+<p>Pour une opération qui peut <strong>échouer avec une raison</strong>, le type <code>Result&lt;'Succes, 'Erreur&gt;</code>&nbsp;: <code>Ok valeur</code> ou <code>Error raison</code>. L'erreur fait partie du type de retour.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let diviser a b =
+    if b = 0 then Error "division par zéro"
+    else Ok (a / b)
+
+let afficher r =
+    match diviser 10 2 with
+    | Ok q -&gt; sprintf "Résultat : %d" q
+    | Error msg -&gt; sprintf "Échec : %s" msg</code></pre></figure>
+
+<h2>Enchaîner avec bind</h2>
+<p>Le problème classique&nbsp;: enchaîner plusieurs opérations qui renvoient chacune une <code>option</code> ou un <code>Result</code>, en court-circuitant à la première absence/erreur. <code>Option.bind</code> et <code>Result.bind</code> le font élégamment.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let resultat =
+    Some 10
+    |&gt; Option.bind (fun x -&gt; if x &gt; 0 then Some (x * 2) else None)
+    |&gt; Option.bind (fun x -&gt; Some (x + 1))
+    // Some 21 ; si une étape donne None, tout devient None</code></pre></figure>
+
+<h2>Les computation expressions</h2>
+<p>F# pousse plus loin avec les <strong>computation expressions</strong>&nbsp;: une syntaxe en bloc (<code>let!</code>) qui enchaîne des calculs «&nbsp;dans un contexte&nbsp;» (option, result, async…) sans imbrication. Avec une bibliothèque comme FsToolkit&nbsp;:</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">// Enchaînement lisible, court-circuit automatique sur Error :
+let calcul =
+    result {
+        let! a = diviser 100 5      // déballe le Ok, ou court-circuite
+        let! b = diviser a 2
+        return b + 1
+    }</code></pre></figure>
+<p class="code-caption">C'est l'équivalent F# du <code>?</code> de Rust ou du <code>do</code> de Haskell&nbsp;: enchaîner sans pyramide de <code>match</code>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser <code>Option.get</code> pour «&nbsp;sortir&nbsp;» la valeur sans gérer <code>None</code>&nbsp;: si l'option est <code>None</code>, <code>Option.get</code> lève une exception&nbsp;— tu réintroduis le plantage que <code>option</code> évitait&nbsp;! Préfère <code>match</code>, <code>Option.map</code> ou <code>Option.defaultValue</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Attention en interop&nbsp;: les bibliothèques .NET écrites en C# peuvent renvoyer <code>null</code>. F# 9 ajoute des <strong>types de référence nullables</strong> pour gérer ce cas à la frontière&nbsp;; côté F# pur, on convertit en <code>option</code> dès que possible (<code>Option.ofObj</code>).</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>option</code> (<code>Some</code>/<code>None</code>) remplace <code>null</code>&nbsp;; <code>Result</code> (<code>Ok</code>/<code>Error</code>) gère les erreurs.</li>
+  <li><code>Option.map</code>, <code>Option.defaultValue</code>, <code>Option.bind</code> manipulent ces types proprement.</li>
+  <li>Les <strong>computation expressions</strong> (<code>result { let! ... }</code>) enchaînent sans pyramide.</li>
+  <li>Évite <code>Option.get</code>&nbsp;; traite toujours le cas <code>None</code>/<code>Error</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quels sont les deux cas du type <code>option</code>&nbsp;?</li><li>Quand utiliser <code>Result</code> plutôt qu'<code>option</code>&nbsp;?</li><li>Pourquoi éviter <code>Option.get</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>tete</code> qui renvoie <code>Some</code> de la tête d'une liste, ou <code>None</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let tete = function
+    | [] -&gt; None
+    | x :: _ -&gt; Some x</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>À partir de <code>Some 10</code>, ajoute 5 avec <code>Option.map</code> puis fournis 0 par défaut.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">Some 10
+|&gt; Option.map (fun x -&gt; x + 5)
+|&gt; Option.defaultValue 0   // 15</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>racine</code> renvoyant <code>Error</code> si négatif, <code>Ok</code> de la racine sinon.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let racine x =
+    if x &lt; 0.0 then Error "négatif"
+    else Ok (sqrt x)</code></pre></figure></details></div>

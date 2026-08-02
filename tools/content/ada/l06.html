@@ -1,0 +1,91 @@
+<p>Un logiciel critique compte souvent des centaines de milliers de lignes. Pour rester maîtrisable, il faut le <strong>découper en modules</strong> indépendants, aux frontières nettes. En Ada, ce module s'appelle le <strong>paquet</strong> (<em>package</em>), et c'est l'unité d'organisation reine du langage. Sa grande idée&nbsp;: séparer ce qu'un module <em>offre</em> (sa spécification) de la <em>façon</em> dont il le réalise (son corps). Cette leçon t'apprend à structurer un vrai projet.</p>
+
+<h2>Spécification et corps&nbsp;: deux faces, un module</h2>
+<p>Un paquet Ada se compose de deux parties, souvent dans deux fichiers&nbsp;:</p>
+<ul>
+  <li>la <strong>spécification</strong> (fichier <code>.ads</code>)&nbsp;: l'interface publique — ce que les autres peuvent utiliser&nbsp;;</li>
+  <li>le <strong>corps</strong> (fichier <code>.adb</code>)&nbsp;: l'implémentation — le code interne, caché.</li>
+</ul>
+<figure class="code-block" data-file="maths.ads"><pre><code class="language-ada">--  Spécification : l'interface (ce qu'on promet)
+package Maths is
+   function Carre (X : in Integer) return Integer;
+   function Cube  (X : in Integer) return Integer;
+end Maths;</code></pre></figure>
+<figure class="code-block" data-file="maths.adb"><pre><code class="language-ada">--  Corps : la réalisation (cachée aux utilisateurs)
+package body Maths is
+   function Carre (X : in Integer) return Integer is
+   begin
+      return X * X;
+   end Carre;
+
+   function Cube (X : in Integer) return Integer is
+   begin
+      return X * X * X;
+   end Cube;
+end Maths;</code></pre></figure>
+<p>Qui utilise <code>Maths</code> ne voit que la spécification&nbsp;: les <em>signatures</em>, pas le code. On peut réécrire entièrement le corps sans gêner personne, tant que l'interface tient. C'est l'<strong>encapsulation</strong> au niveau du module.</p>
+
+<h2>Utiliser un paquet&nbsp;: <code>with</code> et <code>use</code></h2>
+<p>Pour employer un paquet, on le rend visible avec <code>with</code>. On peut ajouter <code>use</code> pour éviter de préfixer chaque nom.</p>
+<figure class="code-block" data-file="programme.adb"><pre><code class="language-ada">with Maths;            --  rend Maths accessible
+with Ada.Text_IO; use Ada.Text_IO;
+
+procedure Test is
+begin
+   --  Sans use : on préfixe par le nom du paquet
+   Put_Line (Integer'Image (Maths.Carre (5)));
+end Test;</code></pre></figure>
+<p>Bonne pratique courante en logiciel critique&nbsp;: utiliser <code>with</code> seul et garder le préfixe (<code>Maths.Carre</code>), car cela montre d'où vient chaque nom. Le <code>use</code> allège, mais peut masquer l'origine&nbsp;; on le réserve aux paquets très courants.</p>
+
+<h2>Encapsuler avec les types privés</h2>
+<p>La spécification peut déclarer un type <strong>privé</strong>&nbsp;: les utilisateurs savent qu'il existe et peuvent s'en servir via les opérations offertes, mais ne voient <em>pas</em> sa structure interne. C'est le secret d'une véritable abstraction.</p>
+<figure class="code-block" data-file="compte.ads"><pre><code class="language-ada">package Compte_Bancaire is
+   type Compte is private;        --  type opaque
+
+   procedure Ouvrir (C : out Compte);
+   procedure Deposer (C : in out Compte; Montant : in Integer);
+   function Solde (C : in Compte) return Integer;
+private
+   --  La structure réelle, invisible de l'extérieur :
+   type Compte is record
+      Solde_Interne : Integer := 0;
+   end record;
+end Compte_Bancaire;</code></pre></figure>
+<p>Hors du paquet, on ne peut pas écrire <code>C.Solde_Interne</code>&nbsp;: on est <em>obligé</em> de passer par <code>Deposer</code> et <code>Solde</code>. Impossible donc de corrompre l'état en touchant directement aux entrailles. Le type est une boîte noire dont seules les opérations autorisées ouvrent l'accès.</p>
+
+<h2>Pourquoi cette séparation est précieuse</h2>
+<p>Cette discipline apporte trois bénéfices décisifs pour les grands systèmes&nbsp;:</p>
+<ul>
+  <li><strong>compilation séparée</strong>&nbsp;: modifier un corps ne force pas à recompiler tout ce qui en dépend&nbsp;;</li>
+  <li><strong>contrats clairs</strong>&nbsp;: la spécification <em>est</em> le contrat entre l'auteur et les utilisateurs&nbsp;;</li>
+  <li><strong>sûreté</strong>&nbsp;: ce qui est privé ne peut pas être mal employé de l'extérieur.</li>
+</ul>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier qu'une signature déclarée dans la spécification doit correspondre <strong>exactement</strong> à celle du corps&nbsp;: même nom, mêmes types, mêmes modes de paramètres. La moindre divergence est rejetée à la compilation. C'est contraignant, mais c'est ce qui garantit que l'interface promise est bien celle qui est livrée — aucune dérive silencieuse possible entre ce qu'on annonce et ce qu'on fait.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les paquets peuvent être <strong>génériques</strong>&nbsp;: paramétrés par un type, ils se réutilisent pour n'importe quel élément, comme un paquet «&nbsp;pile&nbsp;» qui marche aussi bien pour des entiers que pour des records. C'est l'équivalent Ada des <em>templates</em> ou <em>generics</em>, et le fondement des bibliothèques de conteneurs standard (<code>Ada.Containers</code>). On retrouve la généricité, mais avec la sûreté de type d'Ada.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le <strong>paquet</strong> sépare <strong>spécification</strong> (<code>.ads</code>, l'interface) et <strong>corps</strong> (<code>.adb</code>, l'implémentation).</li>
+  <li><code>with</code> rend un paquet visible&nbsp;; <code>use</code> évite le préfixe (à employer avec parcimonie).</li>
+  <li>Un <strong>type privé</strong> cache sa structure&nbsp;: accès uniquement via les opérations offertes.</li>
+  <li>Bénéfices&nbsp;: compilation séparée, contrats clairs, sûreté par encapsulation.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que contient la spécification d'un paquet, par opposition au corps&nbsp;?</li><li>Qu'apporte un type <code>private</code>&nbsp;?</li><li>À quoi sert le mot-clé <code>with</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la spécification d'un paquet <code>Salutations</code> exposant une procédure <code>Saluer</code> sans paramètre.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ads"><pre><code class="language-ada">package Salutations is
+   procedure Saluer;
+end Salutations;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris le corps du paquet <code>Salutations</code> où <code>Saluer</code> affiche «&nbsp;Bonjour&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">with Ada.Text_IO; use Ada.Text_IO;
+
+package body Salutations is
+   procedure Saluer is
+   begin
+      Put_Line ("Bonjour");
+   end Saluer;
+end Salutations;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique pourquoi, avec un type <code>Compte</code> privé, du code externe ne peut pas écrire <code>C.Solde_Interne := -1000;</code>.</p><details><summary>Voir une solution</summary><p>Parce que la structure du type <code>Compte</code> est déclarée dans la partie <code>private</code> du paquet&nbsp;: elle est <strong>invisible</strong> hors de ce paquet. Le code externe ne connaît que le nom du type et les opérations publiques (<code>Ouvrir</code>, <code>Deposer</code>, <code>Solde</code>). Tenter d'accéder à <code>Solde_Interne</code> de l'extérieur est rejeté à la compilation, ce qui empêche de placer le compte dans un état incohérent (comme un solde négatif imposé directement).</p></details></div>

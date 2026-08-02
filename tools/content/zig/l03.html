@@ -1,0 +1,104 @@
+<p>Le contrôle du flux en Zig est familier — <code>if</code>, <code>while</code>, <code>for</code> — mais avec deux raffinements&nbsp;: ce sont souvent des <strong>expressions</strong> (qui renvoient une valeur), et Zig remplace le dangereux <code>null</code> du C par les <strong>optionnels</strong>, un type qui rend l'absence de valeur explicite et sûre.</p>
+
+<h2>if / else</h2>
+<p>Pas de parenthèses obligatoires autour de la condition&nbsp;? Si, en Zig elles le sont. Mais le <code>if</code> peut renvoyer une valeur, comme un ternaire.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const note: i32 = 14;
+if (note &gt;= 16) {
+    std.debug.print("Très bien\n", .{});
+} else if (note &gt;= 10) {
+    std.debug.print("Admis\n", .{});
+} else {
+    std.debug.print("À revoir\n", .{});
+}
+
+// if comme expression :
+const statut = if (note &gt;= 10) "admis" else "recalé";</code></pre></figure>
+
+<h2>while</h2>
+<p>La boucle <code>while</code> répète tant que la condition tient. Une clause <code>: (expr)</code> permet d'exécuter une mise à jour à chaque tour (pratique comme un <code>for</code> du C).</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">var i: usize = 0;
+while (i &lt; 5) {
+    std.debug.print("{} ", .{i});
+    i += 1;
+}
+
+// avec clause de continuation
+var j: usize = 0;
+while (j &lt; 5) : (j += 1) {
+    std.debug.print("{} ", .{j});
+}</code></pre></figure>
+
+<h2>for</h2>
+<p><code>for</code> parcourt un tableau ou un slice, en liant chaque élément à une variable entre barres verticales <code>|x|</code>.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const nombres = [_]i32{ 10, 20, 30 };
+for (nombres) |n| {
+    std.debug.print("{}\n", .{n});
+}
+
+// avec l'indice :
+for (nombres, 0..) |n, idx| {
+    std.debug.print("{}: {}\n", .{ idx, n });
+}</code></pre></figure>
+<p class="code-caption">La syntaxe <code>|valeur|</code> (capture) revient partout en Zig&nbsp;: dans les boucles, les optionnels, les erreurs.</p>
+
+<h2>Les optionnels&nbsp;: en finir avec null</h2>
+<p>Voici un apport clé. Une valeur qui peut être absente a un type <strong>optionnel</strong>, noté <code>?T</code>. Impossible de l'utiliser sans avoir vérifié sa présence&nbsp;: le compilateur t'y oblige. Fini les déréférencements de pointeur nul du C.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">var maybe: ?i32 = null;   // optionnel, actuellement absent
+maybe = 42;               // maintenant présent
+
+// Déballer avec une capture :
+if (maybe) |valeur| {
+    std.debug.print("Présent : {}\n", .{valeur});
+} else {
+    std.debug.print("Absent\n", .{});
+}</code></pre></figure>
+
+<h2>orelse&nbsp;: une valeur de repli</h2>
+<p>Pour fournir une valeur par défaut quand l'optionnel est absent&nbsp;: <code>orelse</code>.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const x: ?i32 = null;
+const y = x orelse 0;     // y vaut 0 si x est absent
+std.debug.print("{}\n", .{y});</code></pre></figure>
+
+<h2>switch&nbsp;: exhaustif</h2>
+<p><code>switch</code> est une expression puissante&nbsp;: il doit couvrir <strong>tous</strong> les cas (exhaustivité vérifiée par le compilateur), avec <code>else</code> pour le reste.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const jour: u8 = 3;
+const nom = switch (jour) {
+    1 =&gt; "lundi",
+    2 =&gt; "mardi",
+    3...5 =&gt; "milieu de semaine",
+    else =&gt; "week-end",
+};</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir utiliser un optionnel comme une valeur normale&nbsp;: <code>maybe + 1</code> échoue tant que tu n'as pas déballé l'optionnel. C'est <em>voulu</em>&nbsp;: ça t'oblige à traiter le cas «&nbsp;absent&nbsp;», éliminant les plantages liés au null.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Un <code>switch</code> sur un <strong>enum</strong> sans <code>else</code> force à traiter chaque variante&nbsp;: si tu ajoutes une variante plus tard, le compilateur signale tous les <code>switch</code> à mettre à jour. Une sécurité que les langages à <code>null</code> n'offrent pas.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>if</code>, <code>while</code> (avec clause <code>: (…)</code>), <code>for</code> (capture <code>|x|</code>)&nbsp;; <code>if</code> et <code>switch</code> sont des expressions.</li>
+  <li>Les <strong>optionnels</strong> <code>?T</code> remplacent <code>null</code> et obligent à vérifier la présence.</li>
+  <li>On déballe avec <code>if (opt) |v|</code> et on fournit un repli avec <code>orelse</code>.</li>
+  <li><code>switch</code> est <strong>exhaustif</strong>&nbsp;: tous les cas doivent être couverts.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que signifie le type <code>?i32</code>&nbsp;?</li><li>Comment fournir une valeur par défaut à un optionnel absent&nbsp;?</li><li>Pourquoi le <code>switch</code> exhaustif est-il une sécurité&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Affiche les nombres de 0 à 4 avec une boucle <code>while</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">var i: usize = 0;
+while (i &lt; 5) : (i += 1) {
+    std.debug.print("{}\n", .{i});
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>À partir d'un optionnel <code>?i32</code>, affiche sa valeur ou «&nbsp;rien&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const x: ?i32 = 7;
+if (x) |v| {
+    std.debug.print("{}\n", .{v});
+} else {
+    std.debug.print("rien\n", .{});
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec un <code>switch</code>, transforme une note (0-20) en mention.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const note: u8 = 17;
+const mention = switch (note) {
+    16...20 =&gt; "Très bien",
+    10...15 =&gt; "Admis",
+    else =&gt; "À revoir",
+};
+std.debug.print("{s}\n", .{mention});</code></pre></figure></details></div>

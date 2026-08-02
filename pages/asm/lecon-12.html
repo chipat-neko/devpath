@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>De la source à l'exécutable — Leçon 12 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="La chaîne de compilation étape par étape : préprocesseur, compilateur, assembleur, éditeur de liens. Sections .text/.data/.bss/.rodata, symboles, relocations, et lien statique contre dynamique." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Assembleur en pratique — Leçon 12</p>
+              <h1 class="lesson-header__title">De la source à l'exécutable</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Prérequis : leçon 8</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>décomposer la <strong>chaîne de compilation</strong> en quatre étapes&nbsp;;</li>
+                  <li>reconnaître les <strong>sections</strong> <code>.text</code>, <code>.rodata</code>, <code>.data</code>, <code>.bss</code>&nbsp;;</li>
+                  <li>comprendre ce que fait l'<strong>éditeur de liens</strong> (symboles, relocations)&nbsp;;</li>
+                  <li>choisir entre lien <strong>statique</strong> et <strong>dynamique</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu tapes <code>gcc prog.c -o prog</code> et, comme par magie, un fichier exécutable apparaît. Mais entre ton fichier texte et le binaire que le noyau charge en mémoire, il se passe <strong>quatre transformations</strong> distinctes, chacune avec son propre outil et son propre format de sortie. Comprendre cette chaîne, c'est savoir <em>où</em> une erreur se produit — «&nbsp;syntaxe invalide&nbsp;» n'a rien à voir avec «&nbsp;<code>undefined reference</code>&nbsp;» — et pourquoi un binaire «&nbsp;hello world&nbsp;» peut peser 20&nbsp;Ko ou 900&nbsp;Ko selon comment on le lie.</p>
+
+<h2>La chaîne en quatre étapes</h2>
+<p>Ce qu'on appelle «&nbsp;compiler&nbsp;» est en réalité une <strong>tuyauterie</strong>&nbsp;: le <strong>préprocesseur</strong> traite les <code>#include</code> et <code>#define</code>, le <strong>compilateur</strong> traduit le C en assembleur, l'<strong>assembleur</strong> transforme cet asm en code machine (un fichier objet), et l'<strong>éditeur de liens</strong> assemble les objets et les bibliothèques en un exécutable.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La chaîne de compilation en quatre étapes. Le fichier prog.c passe par le préprocesseur cpp qui produit prog.i, puis par le compilateur cc1 qui produit prog.s en assembleur, puis par l'assembleur as qui produit prog.o le fichier objet, puis par l'éditeur de liens ld qui produit l'exécutable prog.">
+    <rect class="d-box" x="8" y="66" width="96" height="42" rx="8" /><text class="d-text" x="56" y="86" text-anchor="middle" font-size="10">prog.c</text><text class="d-mut" x="56" y="100" text-anchor="middle" font-size="7.5">source</text>
+    <rect class="d-frame" x="137" y="66" width="96" height="42" rx="8" /><text class="d-text" x="185" y="86" text-anchor="middle" font-size="10">prog.i</text><text class="d-mut" x="185" y="100" text-anchor="middle" font-size="7.5">préproc.</text>
+    <rect class="d-frame" x="266" y="66" width="96" height="42" rx="8" /><text class="d-text" x="314" y="86" text-anchor="middle" font-size="10">prog.s</text><text class="d-mut" x="314" y="100" text-anchor="middle" font-size="7.5">assembleur</text>
+    <rect class="d-accent" x="395" y="66" width="96" height="42" rx="8" /><text class="d-tag" x="443" y="86" text-anchor="middle" font-size="10">prog.o</text><text class="d-mut" x="443" y="100" text-anchor="middle" font-size="7.5">objet</text>
+    <rect class="d-accent" x="524" y="66" width="96" height="42" rx="8" /><text class="d-tag" x="572" y="86" text-anchor="middle" font-size="10">prog</text><text class="d-mut" x="572" y="100" text-anchor="middle" font-size="7.5">exécutable</text>
+    <line class="d-line" x1="104" y1="87" x2="133" y2="87" /><polygon class="d-dot" points="137,87 127,82 127,92" />
+    <line class="d-line" x1="233" y1="87" x2="262" y2="87" /><polygon class="d-dot" points="266,87 256,82 256,92" />
+    <line class="d-line" x1="362" y1="87" x2="391" y2="87" /><polygon class="d-dot" points="395,87 385,82 385,92" />
+    <line class="d-line" x1="491" y1="87" x2="520" y2="87" /><polygon class="d-dot" points="524,87 514,82 514,92" />
+    <text class="d-label" x="118" y="52" text-anchor="middle" font-size="8">cpp</text>
+    <text class="d-label" x="249" y="52" text-anchor="middle" font-size="8">cc1</text>
+    <text class="d-label" x="378" y="52" text-anchor="middle" font-size="8">as</text>
+    <text class="d-label" x="507" y="52" text-anchor="middle" font-size="8">ld</text>
+    <text class="d-mut" x="118" y="128" text-anchor="middle" font-size="7">-E</text>
+    <text class="d-mut" x="249" y="128" text-anchor="middle" font-size="7">-S</text>
+    <text class="d-mut" x="378" y="128" text-anchor="middle" font-size="7">-c</text>
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="8.5">chaque flèche = un outil, chaque boîte = un format de fichier</text>
+  </svg>
+  <figcaption>La chaîne&nbsp;: <code>gcc</code> orchestre en réalité <code>cpp</code> → <code>cc1</code> → <code>as</code> → <code>ld</code>. Chaque option (<code>-E</code>, <code>-S</code>, <code>-c</code>) arrête le pipeline à une étape pour en inspecter la sortie.</figcaption>
+</figure>
+<p>On peut suivre le pipeline à la main, en s'arrêtant après chaque étape&nbsp;:</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -E prog.c -o prog.i      # 1. préprocesseur : #include, #define, commentaires
+gcc -S prog.i -o prog.s      # 2. compilateur : C → assembleur (.s lisible)
+gcc -c prog.s -o prog.o      # 3. assembleur : asm → code machine (objet ELF)
+gcc    prog.o -o prog        # 4. éditeur de liens : objets + libs → exécutable
+</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce : voir la chaîne sans rien exécuter</p><p><code>gcc -v prog.c -o prog</code> affiche chaque sous-programme réellement lancé avec ses arguments. Et <code>gcc -save-temps prog.c</code> garde les <code>prog.i</code>, <code>prog.s</code> et <code>prog.o</code> intermédiaires sans les effacer — parfait pour inspecter l'asm généré à une étape précise.</p></div></div>
+
+<h2>Les sections d'un fichier objet</h2>
+<p>Un fichier objet (et un exécutable) est découpé en <strong>sections</strong>&nbsp;: le code d'un côté, les données de l'autre, séparés selon leurs droits (exécutable, inscriptible, lecture seule). Les quatre que tu croiseras tout le temps&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 216" role="img" aria-label="Les sections d'un fichier objet ELF. Un cadre représente prog.o. À l'intérieur, de haut en bas : la section .text contient le code machine, la section .rodata contient les constantes en lecture seule, la section .data contient les variables globales initialisées à une valeur non nulle, et la section .bss ne contient qu'une taille réservée pour les variables globales à zéro. Un accolement indique que .text, .rodata et .data occupent le fichier tandis que .bss n'occupe aucun octet sur disque.">
+    <text class="d-label" x="200" y="26" text-anchor="middle" font-size="10">prog.o (objet ELF)</text>
+    <rect class="d-frame" x="40" y="38" width="320" height="164" rx="8" />
+    <rect class="d-accent" x="56" y="52" width="288" height="34" rx="6" /><text class="d-tag" x="72" y="73" font-size="10">.text</text><text class="d-mut" x="330" y="73" text-anchor="end" font-size="8">code machine</text>
+    <rect class="d-box" x="56" y="92" width="288" height="34" rx="6" /><text class="d-text" x="72" y="113" font-size="10">.rodata</text><text class="d-mut" x="330" y="113" text-anchor="end" font-size="8">constantes (lecture seule)</text>
+    <rect class="d-box" x="56" y="132" width="288" height="34" rx="6" /><text class="d-text" x="72" y="153" font-size="10">.data</text><text class="d-mut" x="330" y="153" text-anchor="end" font-size="8">globales ≠ 0</text>
+    <rect class="d-frame" x="56" y="172" width="288" height="24" rx="6" stroke-dasharray="4 3" /><text class="d-text" x="72" y="188" font-size="10">.bss</text><text class="d-mut" x="330" y="188" text-anchor="end" font-size="8">globales = 0 (taille seule)</text>
+    <line class="d-line" x1="392" y1="52" x2="392" y2="166" /><text class="d-mut" x="404" y="106" font-size="8">occupe</text><text class="d-mut" x="404" y="118" font-size="8">le fichier</text>
+    <line class="d-line" x1="392" y1="172" x2="392" y2="196" /><text class="d-accent" x="404" y="184" font-size="8">0 octet</text>
+    <text class="d-mut" x="520" y="150" text-anchor="middle" font-size="8.5">« int t[10000]; »</text>
+    <text class="d-mut" x="520" y="164" text-anchor="middle" font-size="8.5">vit dans .bss :</text>
+    <text class="d-mut" x="520" y="178" text-anchor="middle" font-size="8.5">40 Ko en mémoire,</text>
+    <text class="d-mut" x="520" y="192" text-anchor="middle" font-size="8.5">0 octet sur disque.</text>
+  </svg>
+  <figcaption><code>.text</code> = instructions, <code>.rodata</code> = constantes (chaînes littérales, <code>const</code>), <code>.data</code> = globales initialisées à une valeur non nulle, <code>.bss</code> = globales nulles ou non initialisées — le fichier n'en stocke que la <em>taille</em>, le noyau les met à zéro au chargement.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi <code>.bss</code> ne pèse rien sur disque</p><p>Une variable globale <code>static int compteurs[100000];</code> occupe 400&nbsp;Ko <em>en mémoire</em>, mais 0&nbsp;octet dans le fichier&nbsp;: comme sa valeur initiale est nulle partout, inutile de stocker 400&nbsp;Ko de zéros. Le fichier n'enregistre que «&nbsp;réserve 400&nbsp;Ko de zéros&nbsp;». C'est pourquoi <code>size</code> distingue la colonne <code>bss</code> des colonnes <code>text</code>/<code>data</code> qui, elles, occupent le disque.</p></div></div>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">$ size prog
+   text    data     bss     dec     hex filename
+   1837     616      16    2469     9a5 prog
+$ readelf -S prog        # liste détaillée de toutes les sections
+$ objdump -d prog        # désassemble la section .text
+</code></pre></figure>
+
+<h2>Symboles et relocations : le travail de l'éditeur de liens</h2>
+<p>Un fichier objet n'est pas encore exécutable&nbsp;: il contient des <strong>symboles</strong> (les noms de fonctions et de variables globales) dont certains sont <em>définis</em> ici et d'autres seulement <em>référencés</em> — <code>printf</code>, par exemple, est défini dans la bibliothèque C, pas dans ton objet. L'éditeur de liens <strong>résout</strong> ces références&nbsp;: il relie chaque appel à la bonne adresse, puis applique les <strong>relocations</strong> (corrige les adresses une fois la disposition finale connue).</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">$ nm prog.o
+0000000000000000 T main      # T = défini dans .text (majuscule = global)
+                 U printf     # U = Undefined : à résoudre au link
+0000000000000000 D total     # D = défini dans .data
+</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'erreur reine : <code>undefined reference</code></p><p><code>undefined reference to 'foo'</code> ne vient <strong>jamais</strong> du compilateur&nbsp;: c'est l'éditeur de liens qui n'a trouvé <em>aucune</em> définition du symbole <code>foo</code> parmi les objets et bibliothèques fournis. Causes classiques&nbsp;: un <code>.o</code> oublié sur la ligne de commande, une bibliothèque non liée (<code>-lm</code> pour <code>&lt;math.h&gt;</code>), ou une fonction déclarée mais jamais définie. À l'inverse, <code>multiple definition</code> = le même symbole défini deux fois.</p></div></div>
+
+<h2>Lien statique ou dynamique&nbsp;?</h2>
+<p>Reste une grande décision&nbsp;: où mettre le code des bibliothèques&nbsp;? Le lien <strong>statique</strong> copie le code utilisé de la bibliothèque <em>dans</em> ton binaire (fichiers <code>.a</code>). Le lien <strong>dynamique</strong> ne garde qu'une <em>référence</em>&nbsp;: la bibliothèque partagée (<code>.so</code>) est chargée en mémoire au lancement, et partagée entre tous les programmes qui l'utilisent.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison entre lien statique et lien dynamique. À gauche, le lien statique : un gros exécutable contient à la fois ton code et une copie de la libc, il est autonome. À droite, le lien dynamique : un petit exécutable contient seulement ton code et référence la bibliothèque partagée libc point so point six, qui est chargée depuis le système au lancement et partagée entre plusieurs programmes.">
+    <text class="d-label" x="160" y="26" text-anchor="middle" font-size="10">Lien statique</text>
+    <rect class="d-frame" x="70" y="40" width="180" height="120" rx="8" />
+    <rect class="d-accent" x="86" y="56" width="148" height="40" rx="6" /><text class="d-tag" x="160" y="80" text-anchor="middle" font-size="9.5">ton code</text>
+    <rect class="d-box" x="86" y="104" width="148" height="48" rx="6" /><text class="d-text" x="160" y="126" text-anchor="middle" font-size="9">copie de la libc</text><text class="d-mut" x="160" y="142" text-anchor="middle" font-size="7.5">incluse dans le binaire</text>
+    <text class="d-mut" x="160" y="178" text-anchor="middle" font-size="8">autonome, mais lourd</text>
+    <text class="d-mut" x="160" y="192" text-anchor="middle" font-size="8">(≈ 800 Ko « hello »)</text>
+
+    <text class="d-label" x="470" y="26" text-anchor="middle" font-size="10">Lien dynamique</text>
+    <rect class="d-frame" x="380" y="40" width="150" height="80" rx="8" />
+    <rect class="d-accent" x="396" y="56" width="118" height="40" rx="6" /><text class="d-tag" x="455" y="80" text-anchor="middle" font-size="9.5">ton code</text>
+    <text class="d-mut" x="455" y="112" text-anchor="middle" font-size="7.5">petit binaire</text>
+    <rect class="d-box" x="380" y="150" width="220" height="40" rx="6" /><text class="d-text" x="490" y="170" text-anchor="middle" font-size="9">libc.so.6 (partagée)</text><text class="d-mut" x="490" y="184" text-anchor="middle" font-size="7.5">chargée au lancement</text>
+    <line class="d-line" x1="455" y1="120" x2="455" y2="146" /><polygon class="d-dot" points="455,150 450,140 460,140" />
+    <text class="d-mut" x="565" y="138" text-anchor="middle" font-size="7.5">↕ partagée par</text>
+    <text class="d-mut" x="565" y="149" text-anchor="middle" font-size="7.5">tous les procs</text>
+  </svg>
+  <figcaption>Statique&nbsp;: un seul fichier autonome (déploiement simple, binaire lourd, pas de mise à jour de sécurité automatique de la lib). Dynamique&nbsp;: binaire léger, la <code>.so</code> est mutualisée en RAM et mise à jour indépendamment — le défaut sur Linux.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc prog.c -o prog              # dynamique (défaut) : dépend de libc.so
+gcc -static prog.c -o prog-st   # statique : tout embarqué, autonome
+ldd prog                        # liste les .so dont dépend un binaire
+ldd prog-st                     # → « not a dynamic executable »
+</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe distribue un petit utilitaire en ligne de commande à des serveurs clients aux distributions Linux variées (vieilles et récentes). En dynamique, le binaire refuse de démarrer sur les machines à <code>glibc</code> trop ancienne&nbsp;: <code>version 'GLIBC_2.34' not found</code>. La solution retenue&nbsp;: compiler en <strong>statique</strong> contre <strong>musl</strong> (une libc légère), via <code>musl-gcc -static</code>. Résultat&nbsp;: un unique fichier de 900&nbsp;Ko qui tourne partout, sans dépendance ni surprise de version — le prix à payer étant qu'un correctif de sécurité de la libc oblige à <em>recompiler et redéployer</em>, là où le lien dynamique l'aurait appliqué au prochain lancement. C'est le compromis classique&nbsp;: <strong>portabilité et simplicité de déploiement</strong> contre <strong>taille et mises à jour centralisées</strong>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le lien dynamique moderne passe par la <strong>PLT</strong> (table de liaison des procédures) et la <strong>GOT</strong> (table des adresses globales)&nbsp;: la première fois qu'on appelle <code>printf</code>, un résolveur paresseux (<em>lazy binding</em>) trouve son adresse et la mémorise dans la GOT. Les exécutables actuels sont aussi des <strong>PIE</strong> (<em>Position-Independent Executables</em>), chargés à une adresse aléatoire (<strong>ASLR</strong>) pour la sécurité. Et un <em>linker script</em> décrit précisément la disposition des sections — indispensable en embarqué pour placer le code en flash et les données en RAM.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — la chaîne de compilation et ses outils</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Outil / option</th><th scope="col">Produit</th></tr></thead>
+    <tbody>
+      <tr><td>Préprocesseur seul</td><td><code>gcc -E</code></td><td><code>.i</code></td></tr>
+      <tr><td>Compiler en asm</td><td><code>gcc -S</code></td><td><code>.s</code></td></tr>
+      <tr><td>Assembler en objet</td><td><code>gcc -c</code> · <code>as</code></td><td><code>.o</code></td></tr>
+      <tr><td>Lier</td><td><code>gcc</code> · <code>ld</code></td><td>exécutable</td></tr>
+      <tr><td>Taille des sections</td><td><code>size prog</code></td><td>text/data/bss</td></tr>
+      <tr><td>Lister les symboles</td><td><code>nm prog.o</code></td><td>T/D/U…</td></tr>
+      <tr><td>Lister les sections</td><td><code>readelf -S</code></td><td>.text, .bss…</td></tr>
+      <tr><td>Dépendances dynamiques</td><td><code>ldd prog</code></td><td>les <code>.so</code></td></tr>
+      <tr><td>Lien statique</td><td><code>gcc -static</code></td><td>binaire autonome</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Préprocesseur</dt><dd>Première étape&nbsp;: traite <code>#include</code>, <code>#define</code> et les commentaires <em>avant</em> la compilation proprement dite. Sortie&nbsp;: un <code>.i</code>.</dd>
+  <dt>Fichier objet (<code>.o</code>)</dt><dd>Code machine <strong>pas encore lié</strong>, au format ELF&nbsp;: contient des sections et une table de symboles, mais des adresses encore provisoires.</dd>
+  <dt>Section</dt><dd>Zone d'un objet regroupant des données de même nature&nbsp;: <code>.text</code> (code), <code>.rodata</code> (constantes), <code>.data</code> (globales ≠ 0), <code>.bss</code> (globales = 0).</dd>
+  <dt>Symbole</dt><dd>Nom (de fonction ou de variable globale) exposé par un objet&nbsp;; il est soit <strong>défini</strong> ici, soit <strong>indéfini</strong> (<code>U</code>) et à résoudre au link.</dd>
+  <dt>Relocation</dt><dd>Correction d'adresse appliquée par l'éditeur de liens une fois la disposition finale connue, pour que chaque référence pointe au bon endroit.</dd>
+  <dt>Édition de liens</dt><dd>Étape qui fusionne les objets et bibliothèques, résout les symboles et produit l'exécutable (ou la bibliothèque) final.</dd>
+  <dt>Bibliothèque statique (<code>.a</code>)</dt><dd>Archive d'objets&nbsp;; le code utilisé est <strong>copié</strong> dans le binaire au link. Autonome mais volumineux.</dd>
+  <dt>Bibliothèque dynamique (<code>.so</code>)</dt><dd>Bibliothèque partagée chargée à l'exécution&nbsp;; mutualisée en mémoire et mise à jour indépendamment du binaire.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Quatre étapes&nbsp;: <strong>préprocesseur</strong> (<code>-E</code>) → <strong>compilateur</strong> (<code>-S</code>) → <strong>assembleur</strong> (<code>-c</code>) → <strong>éditeur de liens</strong>.</li>
+<li>Sections&nbsp;: <code>.text</code> (code), <code>.rodata</code> (constantes), <code>.data</code> (globales ≠ 0), <code>.bss</code> (globales = 0, taille seule sur disque).</li>
+<li>L'éditeur de liens résout les <strong>symboles</strong> et applique les <strong>relocations</strong>&nbsp;; <code>undefined reference</code> = symbole introuvable au link.</li>
+<li>Statique (<code>-static</code>&nbsp;: autonome, lourd) vs dynamique (défaut&nbsp;: léger, <code>.so</code> partagée, <code>ldd</code> pour voir les dépendances).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quel outil produit «&nbsp;<code>undefined reference</code>&nbsp;», et pourquoi jamais le compilateur&nbsp;?</li><li>Pourquoi <code>.bss</code> n'occupe-t-il aucun octet sur disque&nbsp;?</li><li>Quel avantage et quel inconvénient a le lien statique&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans quel ordre se déroule la chaîne de compilation ?","a":["Préprocesseur → compilateur → assembleur → éditeur de liens","Compilateur → préprocesseur → éditeur de liens → assembleur","Assembleur → compilateur → préprocesseur → éditeur de liens","Éditeur de liens → assembleur → compilateur → préprocesseur"],"correct":0,"explain":"cpp traite les directives (#include/#define), cc1 traduit le C en asm (.s), as produit l'objet (.o), et ld lie les objets et bibliothèques en exécutable. Les options -E, -S, -c arrêtent le pipeline à chaque étape."},
+  {"q":"Où vit une variable globale « int compteurs[100000]; » non initialisée, et combien pèse-t-elle sur disque ?","a":["Dans .bss : 0 octet sur disque (seule sa taille est enregistrée)","Dans .data : 400 Ko sur disque","Dans .text : 400 Ko sur disque","Dans .rodata : 0 octet, car elle est constante"],"correct":0,"explain":"Une globale nulle ou non initialisée va dans .bss. Comme elle vaut zéro partout, le fichier n'en stocke que la taille ; le noyau la met à zéro au chargement. D'où la colonne bss distincte dans « size »."},
+  {"q":"« undefined reference to 'sqrt' » à la compilation signifie le plus souvent :","a":["L'éditeur de liens n'a trouvé aucune définition : il manque -lm (bibliothèque math)","Une erreur de syntaxe dans le code C","Un débordement de pile à l'exécution","Que le fichier .c est introuvable"],"correct":0,"explain":"Cette erreur vient de l'éditeur de liens, pas du compilateur : le symbole est déclaré (via l'en-tête) mais aucune définition n'est fournie. Pour <math.h>, il faut lier avec -lm."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":[".bss","bss"],"placeholder":"La section où vit une globale non initialisée (0 octet sur disque)","hints":["Trois lettres après un point.","Ni .data ni .text ni .rodata.",". _ _ _"],"link":{"href":"lecon-12.html","label":"Revoir « Les sections d'un fichier objet »"}},
+  {"type":"text","accept":["ld","éditeur de liens","editeur de liens","linker"],"placeholder":"L'outil qui produit « undefined reference »","hints":["La 4e et dernière étape.","Deux lettres pour l'outil GNU.","Il résout les symboles."],"link":{"href":"lecon-12.html","label":"Revoir « Symboles et relocations »"}},
+  {"type":"text","accept":["-static","static"],"placeholder":"L'option gcc pour un binaire autonome (sans .so)","hints":["Un tiret puis un mot.","Le contraire de dynamique.","« -s_____ »"],"link":{"href":"lecon-12.html","label":"Revoir « Lien statique ou dynamique »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Tu veux voir <em>uniquement</em> l'assembleur produit par le compilateur pour <code>calc.c</code>, sans assembler ni lier. Quelle commande&nbsp;? Et pour t'arrêter au fichier objet&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -S calc.c -o calc.s     # arrêt après le compilateur : asm lisible
+gcc -c calc.c -o calc.o     # arrêt après l'assembleur : objet ELF</code></pre></figure><p><code>-S</code> stoppe le pipeline juste après la traduction en assembleur&nbsp;; <code>-c</code> va une étape plus loin (assemblage) mais <strong>ne lie pas</strong>. <code>-save-temps</code> garderait tous les intermédiaires d'un coup.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p><code>nm util.o</code> affiche <code>U puts</code> et <code>T traiter</code>. Que signifient <code>U</code> et <code>T</code>, et lequel risque de provoquer une erreur de link&nbsp;?</p><details><summary>Voir une solution</summary><p><code>T</code> (majuscule) = symbole <strong>défini</strong> dans la section <code>.text</code> et <strong>global</strong>&nbsp;: <code>traiter</code> est implémenté ici. <code>U</code> = <strong>Undefined</strong>&nbsp;: <code>puts</code> est seulement <em>référencé</em>, sa définition est ailleurs (la libc). C'est <code>U</code> qui provoque un <code>undefined reference</code> <strong>si</strong> aucun objet ni bibliothèque lié ne fournit ce symbole. Ici <code>puts</code> vient de la libc, liée automatiquement&nbsp;: pas de problème. Un <code>U</code> vers ta propre fonction oubliée, en revanche, casserait le link.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un «&nbsp;hello world&nbsp;» compilé normalement pèse 16&nbsp;Ko&nbsp;; avec <code>-static</code>, 900&nbsp;Ko. Explique l'écart, puis nomme un contexte où le binaire statique de 900&nbsp;Ko est le <em>meilleur</em> choix.</p><details><summary>Voir une solution</summary><p>En dynamique, le binaire ne contient <strong>que ton code</strong> et une référence à <code>libc.so.6</code>, chargée au lancement (16&nbsp;Ko). En statique, l'éditeur de liens <strong>copie dans le binaire</strong> tout le code de la libc réellement utilisé (démarrage, <code>printf</code> et ses dépendances) → 900&nbsp;Ko, mais le fichier est <strong>autonome</strong>.</p><p>Contexte idéal du statique&nbsp;: <strong>déployer un seul fichier</strong> sur des machines hétérogènes ou minimalistes (conteneur <em>scratch</em>, image Docker sans libc, serveurs à <code>glibc</code> de versions variées, binaire de secours sur une clé USB). On échange la taille contre l'absence totale de dépendances externes — plus de <code>version 'GLIBC_x' not found</code>.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

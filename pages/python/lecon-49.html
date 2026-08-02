@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le système d'import et les plugins — Leçon 49 · Python · Syntaxe</title>
+    <meta name="description" content="Comprendre la machinerie d'import de Python : le cache sys.modules, le chemin de recherche, finders et loaders, imports absolus/relatifs, imports circulaires, import dynamique et la construction d'un système de plugins extensible." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="python" data-lesson="lecon-49.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Python</a></li>
+            <li aria-current="page">Leçon 49</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 17 · Étendre &amp; assembler — Leçon 49</p>
+              <h1 class="lesson-header__title">Le système d'import et les plugins</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 12 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>décrire les <strong>étapes</strong> qu'un <code>import</code> déclenche réellement&nbsp;;</li>
+                  <li>expliquer le rôle du cache <code>sys.modules</code> et du chemin <code>sys.path</code>&nbsp;;</li>
+                  <li>distinguer <strong>imports absolus et relatifs</strong> et dénouer un <strong>import circulaire</strong>&nbsp;;</li>
+                  <li>importer dynamiquement un module avec <code>importlib.import_module</code>&nbsp;;</li>
+                  <li>construire un <strong>système de plugins</strong> par registre ou par <em>entry points</em>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une ligne aussi banale que <code>import json</code> déclenche une machinerie que la plupart des développeurs n'ouvrent jamais. La comprendre change tout&nbsp;: on cesse de subir les <strong>imports circulaires</strong>, on sait pourquoi un module coûteux ralentit le démarrage, et surtout on peut bâtir des applications <strong>extensibles</strong> où des greffons se branchent sans toucher au cœur. C'est le mécanisme qui fait de pytest, Flask ou Django des plateformes et pas seulement des bibliothèques.</p>
+
+<h2>Ce que fait vraiment <code>import</code></h2>
+<p>Importer n'est pas «&nbsp;coller un fichier&nbsp;»&nbsp;: c'est <strong>exécuter</strong> un module une fois, puis lier son objet à un nom local. La séquence tient en quatre temps&nbsp;: Python regarde d'abord si le module est déjà dans le <strong>cache</strong> <code>sys.modules</code>&nbsp;; sinon, un <em>finder</em> le localise le long de <code>sys.path</code>&nbsp;; un <em>loader</em> exécute son code de haut en bas&nbsp;; le module obtenu est <strong>mis en cache</strong> et le nom est lié dans ton espace de noms.</p>
+
+<figure class="code-block" data-file="import_cache.py"><pre><code class="language-python">import sys
+
+print("json" in sys.modules)   # False : pas encore chargé
+import json
+print("json" in sys.modules)   # True  : mis en cache
+
+import json                    # 2e import : AUCUNE réexécution,
+                               # Python renvoie l'objet déjà en cache
+print(sys.modules["json"] is json)   # True : le même objet module
+</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Les quatre étapes d'un import. Le mot-clé import interroge d'abord le cache sys.modules : si le module y est, il est renvoyé immédiatement. Sinon, un finder cherche le fichier le long de sys.path, un loader exécute son code une seule fois, le module résultant est stocké dans sys.modules, puis son nom est lié dans l'espace de noms local.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="11">import monmodule</text>
+    <rect class="d-accent" x="18" y="40" width="130" height="58" rx="8" />
+    <text class="d-tag" x="83" y="64" text-anchor="middle" font-size="10">sys.modules ?</text>
+    <text class="d-mut" x="83" y="82" text-anchor="middle" font-size="8">le cache</text>
+    <rect class="d-box" x="170" y="40" width="130" height="58" rx="8" />
+    <text class="d-tag" x="235" y="64" text-anchor="middle" font-size="10">finder</text>
+    <text class="d-mut" x="235" y="82" text-anchor="middle" font-size="8">cherche sur sys.path</text>
+    <rect class="d-box" x="322" y="40" width="130" height="58" rx="8" />
+    <text class="d-tag" x="387" y="64" text-anchor="middle" font-size="10">loader</text>
+    <text class="d-mut" x="387" y="82" text-anchor="middle" font-size="8">exécute le code 1×</text>
+    <rect class="d-accent" x="474" y="40" width="148" height="58" rx="8" />
+    <text class="d-tag" x="548" y="64" text-anchor="middle" font-size="10">nom lié</text>
+    <text class="d-mut" x="548" y="82" text-anchor="middle" font-size="8">+ mis en cache</text>
+    <line class="d-line" x1="148" y1="69" x2="170" y2="69" />
+    <line class="d-line" x1="300" y1="69" x2="322" y2="69" />
+    <line class="d-line" x1="452" y1="69" x2="474" y2="69" />
+    <path class="d-line" d="M83 98 L83 128 L548 128 L548 98" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="315" y="146" text-anchor="middle" font-size="8.5">déjà en cache → renvoyé directement, sans repasser par finder/loader</text>
+    <text class="d-mut" x="315" y="164" text-anchor="middle" font-size="8">un module n'est exécuté qu'une seule fois par processus</text>
+  </svg>
+  <figcaption>Le cache <code>sys.modules</code> est consulté en premier&nbsp;: c'est lui qui rend un module «&nbsp;singleton&nbsp;» à l'échelle du processus.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Parce qu'un module n'est exécuté qu'une fois puis mis en cache, une variable définie à son niveau supérieur se comporte comme un <strong>singleton partagé</strong> par tout le programme. C'est le mécanisme derrière les «&nbsp;modules de configuration&nbsp;» ou les connexions uniques&nbsp;: tout le monde qui fait <code>from config import settings</code> voit le même objet.</p></div></div>
+
+<h2>Packages, imports absolus et relatifs</h2>
+<p>Un <strong>package</strong> est un dossier de modules. Historiquement il contient un <code>__init__.py</code> (exécuté quand on importe le package)&nbsp;; depuis Python&nbsp;3.3, un dossier sans <code>__init__.py</code> forme un <em>namespace package</em>. Pour désigner un module voisin, deux styles&nbsp;: l'<strong>import absolu</strong> part de la racine du projet (<code>from monapp.core import moteur</code>)&nbsp;; l'<strong>import relatif</strong> part du module courant (<code>from .core import moteur</code>, le point = «&nbsp;ici&nbsp;»).</p>
+
+<figure class="code-block" data-file="arborescence.txt"><pre><code>monapp/
+├── __init__.py
+├── core/
+│   ├── __init__.py
+│   └── moteur.py        # from monapp.core.moteur import Moteur   (absolu)
+│                        # from .moteur import Moteur              (relatif, depuis core/)
+└── plugins/
+    ├── __init__.py
+    └── export_csv.py    # from ..core.moteur import Moteur        (relatif, remonte d'un cran)</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Un package et deux façons de référencer un module. À gauche l'arborescence : le package monapp contient les sous-packages core et plugins. Depuis le module export_csv, un import absolu écrit le chemin complet depuis monapp, tandis qu'un import relatif utilise deux points pour remonter au package parent puis descendre vers core.moteur.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="11">Désigner monapp/core/moteur.py depuis plugins/export_csv.py</text>
+    <rect class="d-frame" x="18" y="34" width="200" height="140" rx="8" />
+    <text class="d-tag" x="34" y="56" font-size="10">monapp/</text>
+    <text class="d-text" x="52" y="80" font-size="9.5">core/</text>
+    <text class="d-mut" x="70" y="100" font-size="9">moteur.py</text>
+    <text class="d-text" x="52" y="126" font-size="9.5">plugins/</text>
+    <text class="d-mut" x="70" y="146" font-size="9">export_csv.py</text>
+    <rect class="d-box" x="248" y="52" width="374" height="52" rx="8" />
+    <text class="d-tag" x="264" y="74" font-size="9.5">Absolu</text>
+    <text class="d-mut" x="264" y="92" font-size="9">from monapp.core.moteur import Moteur</text>
+    <rect class="d-accent" x="248" y="116" width="374" height="52" rx="8" />
+    <text class="d-tag" x="264" y="138" font-size="9.5">Relatif</text>
+    <text class="d-mut" x="264" y="156" font-size="9">from ..core.moteur import Moteur  (.. = monapp)</text>
+    <line class="d-line" x1="150" y1="146" x2="248" y2="142" />
+  </svg>
+  <figcaption>L'absolu est explicite et robuste au déplacement&nbsp;; le relatif est concis à l'intérieur d'un package. On préfère l'absolu par défaut.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Erreur fréquente&nbsp;: l'import circulaire</p><p>Si <code>a.py</code> fait <code>import b</code> en tête, et <code>b.py</code> fait <code>import a</code> en tête, le premier des deux à se charger tombe sur un module <em>à moitié exécuté</em>&nbsp;: <code>ImportError: cannot import name…</code> ou <code>AttributeError</code>. Trois issues&nbsp;: (1)&nbsp;déplacer l'import <strong>dans la fonction</strong> qui en a besoin (import différé)&nbsp;; (2)&nbsp;<strong>extraire</strong> la partie commune dans un troisième module que les deux importent&nbsp;; (3)&nbsp;importer le <em>module</em> (<code>import b</code>) plutôt que le <em>nom</em> (<code>from b import X</code>), et n'accéder à <code>b.X</code> qu'à l'exécution.</p></div></div>
+
+<h2>Import dynamique et paresseux</h2>
+<p>Le nom d'un module n'a pas besoin d'être écrit en dur. <code>importlib.import_module("paquet.module")</code> importe à partir d'une <strong>chaîne</strong> calculée à l'exécution — la base de tout chargement piloté par la configuration. Et un <code>import</code> placé <strong>dans une fonction</strong> n'est exécuté qu'au premier appel&nbsp;: on <em>diffère</em> ainsi le coût d'une dépendance lourde (et on brise au passage les cycles).</p>
+
+<figure class="code-block" data-file="dynamique.py"><pre><code class="language-python">import importlib
+
+def charger_moteur(nom: str):
+    # nom vient d'un fichier de config, d'une variable d'environnement…
+    module = importlib.import_module(f"monapp.moteurs.{nom}")
+    return module.Moteur()          # ex. "sqlite" → monapp.moteurs.sqlite
+
+def export_lourd(donnees):
+    import pandas as pd             # importé seulement si on appelle export_lourd
+    return pd.DataFrame(donnees).to_parquet("sortie.parquet")
+</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: le coût d'un import est du code exécuté</p><p>Tout ce qui est écrit <em>au niveau supérieur</em> d'un module tourne à l'import&nbsp;: ouvrir un fichier, compiler une regex géante ou charger un modèle de 200&nbsp;Mo ralentit le <strong>démarrage</strong> de quiconque importe le module. Garde le niveau module léger (définitions), et fais le travail coûteux dans des fonctions appelées à la demande.</p></div></div>
+
+<h2>Construire un système de plugins</h2>
+<p>Un système de plugins, c'est un cœur qui expose un <strong>point d'extension</strong> et découvre des greffons sans les connaître à l'avance. Deux techniques dominent. La plus simple&nbsp;: un <strong>registre</strong> rempli par un décorateur, idéal à l'intérieur d'une même application. La plus puissante&nbsp;: les <strong>entry points</strong>, déclarés dans le <code>pyproject.toml</code> de chaque paquet et lus via <code>importlib.metadata</code> — c'est ainsi qu'un paquet <em>tiers</em>, installé séparément, s'ajoute tout seul.</p>
+
+<figure class="code-block" data-file="registre.py"><pre><code class="language-python"># --- cœur : un registre alimenté par décorateur ---
+_EXPORTEURS = {}
+
+def exporteur(nom):
+    def deco(fn):
+        _EXPORTEURS[nom] = fn       # on enregistre à l'import du module
+        return fn
+    return deco
+
+def exporter(nom, donnees):
+    if nom not in _EXPORTEURS:
+        raise ValueError(f"format inconnu : {nom}")
+    return _EXPORTEURS[nom](donnees)
+
+# --- un plugin (peut vivre dans un autre fichier) ---
+@exporteur("csv")
+def _csv(donnees):
+    return "\n".join(";".join(map(str, ligne)) for ligne in donnees)
+</code></pre></figure>
+
+<figure class="code-block" data-file="entry_points.py"><pre><code class="language-python"># Découverte de plugins TIERS déclarés dans leur pyproject.toml :
+#   [project.entry-points."monapp.exporteurs"]
+#   json = "monplugin.export:exporter_json"
+from importlib.metadata import entry_points
+
+for ep in entry_points(group="monapp.exporteurs"):
+    fonction = ep.load()            # importe le module et récupère l'objet
+    _EXPORTEURS[ep.name] = fonction # le plugin s'ajoute sans modifier le cœur
+</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Architecture d'un système de plugins. Au centre, le cœur de l'application expose un registre, c'est-à-dire un point d'extension. Trois plugins — CSV, JSON, XML — se déclarent chacun de leur côté et viennent s'inscrire dans ce registre, soit par un décorateur, soit par un entry point découvert à l'installation. Le cœur les appelle sans connaître leur code.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="11">Le cœur ignore les plugins&nbsp;; ils s'inscrivent d'eux-mêmes</text>
+    <rect class="d-accent" x="240" y="72" width="160" height="60" rx="10" />
+    <text class="d-tag" x="320" y="98" text-anchor="middle" font-size="10.5">cœur + registre</text>
+    <text class="d-mut" x="320" y="116" text-anchor="middle" font-size="8.5">point d'extension</text>
+    <rect class="d-box" x="30" y="44" width="130" height="40" rx="8" />
+    <text class="d-tag" x="95" y="68" text-anchor="middle" font-size="9.5">plugin CSV</text>
+    <rect class="d-box" x="30" y="122" width="130" height="40" rx="8" />
+    <text class="d-tag" x="95" y="146" text-anchor="middle" font-size="9.5">plugin JSON</text>
+    <rect class="d-box" x="480" y="83" width="130" height="40" rx="8" />
+    <text class="d-tag" x="545" y="107" text-anchor="middle" font-size="9.5">plugin XML</text>
+    <line class="d-line" x1="160" y1="64" x2="240" y2="92" />
+    <line class="d-line" x1="160" y1="142" x2="240" y2="112" />
+    <line class="d-line" x1="480" y1="103" x2="400" y2="102" />
+    <text class="d-mut" x="196" y="70" text-anchor="middle" font-size="7.5">@exporteur</text>
+    <text class="d-mut" x="196" y="136" text-anchor="middle" font-size="7.5">@exporteur</text>
+    <text class="d-mut" x="440" y="96" text-anchor="middle" font-size="7.5">entry point</text>
+    <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="8.5">ajouter un format = ajouter un plugin, jamais toucher au cœur</text>
+  </svg>
+  <figcaption>Inversion de dépendance&nbsp;: le cœur définit le contrat, les plugins s'y branchent. On étend l'application sans la rouvrir.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>Comment pytest découvre ses greffons.</strong> Installe <code>pytest-cov</code> ou <code>pytest-django</code> et, sans une ligne de configuration, la commande <code>pytest</code> gagne de nouvelles options. Le secret&nbsp;: chaque paquet publie un <em>entry point</em> dans le groupe <code>pytest11</code>&nbsp;; au démarrage, pytest lit <code>importlib.metadata.entry_points(group="pytest11")</code> et charge tout ce qu'il trouve. Flask (extensions), Django (applications), Sphinx (extensions) reposent sur le même principe&nbsp;: <em>un cœur stable, une périphérie ouverte</em>. Comprendre ce mécanisme, c'est pouvoir transformer ta propre bibliothèque en plateforme.</p></div></div>
+
+<h2>Antisèche&nbsp;: la machinerie d'import</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Outil, rôle et repère mémoire</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td><code>sys.modules</code></td><td>Cache des modules chargés</td><td>consulté en premier · exécution unique</td></tr>
+      <tr><td><code>sys.path</code></td><td>Liste des dossiers de recherche</td><td>ordre = priorité</td></tr>
+      <tr><td><code>__init__.py</code></td><td>Marque et initialise un package</td><td>exécuté à l'import du package</td></tr>
+      <tr><td>Import absolu</td><td><code>from pkg.mod import X</code></td><td>par défaut, robuste</td></tr>
+      <tr><td>Import relatif</td><td><code>from .mod import X</code></td><td><code>.</code> = ici, <code>..</code> = parent</td></tr>
+      <tr><td><code>importlib.import_module</code></td><td>Importer par chaîne</td><td>chargement dynamique</td></tr>
+      <tr><td><code>importlib.metadata.entry_points</code></td><td>Découvrir des plugins</td><td>cœur ouvert à l'extension</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le protocole complet vit dans <code>importlib.abc</code> (<code>MetaPathFinder</code>, <code>Loader</code>) et <code>importlib.machinery</code>&nbsp;: on peut écrire un finder maison pour charger des modules depuis une archive, une base ou le réseau (c'est ainsi que fonctionnent les imports depuis un <code>.zip</code>). Voir aussi <code>__all__</code> (ce que <code>from pkg import *</code> exporte), <code>importlib.reload</code> (recharger sans redémarrer, utile en dev), les <em>lazy imports</em> (<code>importlib.util.LazyLoader</code>) et l'outil <code>python -X importtime</code> pour mesurer le coût d'import de chaque module au démarrage.</p></div></div>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Module et package</dt><dd>Un <strong>module</strong> est un fichier <code>.py</code>&nbsp;; un <strong>package</strong> est un dossier contenant un <code>__init__.py</code> qui regroupe plusieurs modules.</dd>
+  <dt><code>sys.modules</code></dt><dd>Cache des modules déjà importés&nbsp;: un second <code>import</code> y puise directement, sans réexécuter le code du module.</dd>
+  <dt><code>sys.path</code></dt><dd>Liste ordonnée des dossiers où Python cherche un module à importer&nbsp;; l'<strong>ordre</strong> détermine la priorité en cas d'homonymes.</dd>
+  <dt>Finder et loader</dt><dd>Le <em>finder</em> localise le module sur <code>sys.path</code>, le <em>loader</em> exécute son code <strong>une seule fois</strong> pour construire l'objet module.</dd>
+  <dt>Import absolu / relatif</dt><dd>L'absolu part de la racine du package (<code>from pkg.mod import X</code>)&nbsp;; le relatif part du module courant (<code>.</code> = ici, <code>..</code> = parent).</dd>
+  <dt>Import circulaire</dt><dd>Deux modules qui s'importent mutuellement&nbsp;; se résout en différant l'import dans une fonction ou en extrayant un module commun.</dd>
+  <dt><code>importlib.import_module</code></dt><dd>Importe un module dont le nom n'est connu qu'à l'exécution (une chaîne)&nbsp;: base du chargement <strong>dynamique</strong>.</dd>
+  <dt>Entry point</dt><dd>Déclaration publiée par un paquet et lue via <code>importlib.metadata</code>&nbsp;; elle permet à un programme hôte de <strong>découvrir des plugins</strong> sans les connaître à l'avance.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><strong>Un import en 4 temps</strong> : cache <code>sys.modules</code> → <em>finder</em> sur <code>sys.path</code> → <em>loader</em> qui exécute le code une fois → nom lié et mis en cache.</li>
+<li><strong>Exécution unique</strong> : réimporter renvoie l'objet en cache ; les variables de niveau module sont des singletons partagés.</li>
+<li><strong>Absolu vs relatif</strong> : <code>from pkg.mod import X</code> (par défaut) ou <code>from .mod import X</code> (<code>.</code> ici, <code>..</code> parent).</li>
+<li><strong>Import circulaire</strong> : différer l'import dans la fonction, extraire un module commun, ou importer le module et non le nom.</li>
+<li><strong>Dynamique &amp; plugins</strong> : <code>importlib.import_module</code> pour charger par chaîne ; registre par décorateur ou <em>entry points</em> pour un cœur extensible.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi un <code>import</code> répété n'exécute-t-il pas deux fois le code du module&nbsp;?</li>
+<li>Quelles sont trois façons de résoudre un import circulaire&nbsp;?</li>
+<li>Quelle différence entre un registre par décorateur et une découverte par <em>entry points</em> pour des plugins&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un import répété (ex. import json plusieurs fois) n'exécute-t-il pas le code du module à chaque fois ?","a":["Parce que le module est mis en cache dans sys.modules au premier import : les imports suivants y trouvent l'objet déjà construit et le renvoient sans réexécuter le code","Parce que Python compile le module en binaire une fois pour toutes","Parce que le second import est ignoré silencieusement","Parce que import json ne fait rien après le premier appel de la fonction"],"correct":0,"explain":"Le premier import exécute le module et stocke le résultat dans sys.modules. Tout import ultérieur consulte ce cache en premier et renvoie le même objet module, sans repasser par le finder ni le loader."},
+  {"q":"a.py fait « import b » en tête et b.py fait « import a » en tête, ce qui casse. Quelle solution NE résout PAS le cycle ?","a":["Renommer les deux fichiers","Déplacer l'import dans la fonction qui en a besoin (import différé)","Extraire la partie commune dans un troisième module importé par les deux","Importer le module (import b) puis accéder à b.X à l'exécution, au lieu de from b import X"],"correct":0,"explain":"Renommer les fichiers ne change rien à la dépendance mutuelle. Les vraies parades cassent le cycle au moment du chargement : import différé, extraction d'un module commun, ou import du module plutôt que du nom."},
+  {"q":"Quel intérêt des entry points (importlib.metadata) par rapport à un simple registre par décorateur ?","a":["Ils permettent à un paquet TIERS installé séparément de s'enregistrer tout seul, sans que le cœur ne l'importe ni ne le connaisse","Ils sont plus rapides à l'exécution","Ils évitent d'écrire un pyproject.toml","Ils rendent les imports circulaires impossibles"],"correct":0,"explain":"Un registre par décorateur suppose que le cœur importe le module du plugin. Les entry points sont déclarés dans le pyproject.toml de chaque paquet et découverts à l'installation : un plugin externe s'ajoute sans modifier ni importer le cœur."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["sys.modules","sys .modules","modules"],"placeholder":"le dictionnaire qui sert de cache des modules déjà chargés : sys.…","hints":["C'est ce que Python consulte en tout premier.","Il rend l'exécution d'un module unique.","sys._____"],"link":{"href":"lecon-21.html","label":"Revoir « Ce que fait vraiment import »"}},
+  {"type":"text","accept":["importlib.import_module","import_module","importlib .import_module"],"placeholder":"la fonction pour importer un module à partir d'une chaîne de caractères : importlib.…","hints":["Utile pour charger un plugin dont le nom vient de la config.","Elle prend le chemin pointé du module en argument.","importlib._________"],"link":{"href":"lecon-21.html","label":"Revoir « Import dynamique et paresseux »"}},
+  {"type":"text","accept":["entry points","entry point","entry-points","entry_points","points d'entrée","points d'entree"],"placeholder":"le mécanisme déclaré dans pyproject.toml qui permet à un paquet tiers de s'enregistrer comme plugin : les … (2 mots)","hints":["On les lit avec importlib.metadata.","pytest les utilise via le groupe pytest11.","entry ____"],"link":{"href":"lecon-21.html","label":"Revoir « Construire un système de plugins »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Affiche la preuve que le second import ne recharge rien&nbsp;: importe un module de la bibliothèque standard, note son objet, réimporte-le et vérifie avec <code>is</code> que c'est bien le même objet que celui référencé dans <code>sys.modules</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="preuve_cache.py"><pre><code class="language-python">import sys
+import math
+avant = math
+
+import math                      # 2e import : renvoie l'objet en cache
+print(math is avant)             # True
+print(math is sys.modules["math"])   # True
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un mini-registre&nbsp;: un décorateur <code>@commande(nom)</code> qui range des fonctions dans un dictionnaire <code>COMMANDES</code>, et une fonction <code>lancer(nom)</code> qui exécute la bonne. Enregistre deux commandes «&nbsp;bonjour&nbsp;» et «&nbsp;heure&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="registre.py"><pre><code class="language-python">COMMANDES = {}
+
+def commande(nom):
+    def deco(fn):
+        COMMANDES[nom] = fn
+        return fn
+    return deco
+
+def lancer(nom, *args):
+    if nom not in COMMANDES:
+        raise ValueError(f"commande inconnue : {nom}")
+    return COMMANDES[nom](*args)
+
+@commande("bonjour")
+def _b(qui):
+    return f"Bonjour {qui} !"
+
+@commande("heure")
+def _h():
+    return "Il est l'heure d'apprendre."
+
+print(lancer("bonjour", "Ana"))   # Bonjour Ana !
+print(lancer("heure"))            # Il est l'heure d'apprendre.
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Simule un chargement dynamique&nbsp;: écris <code>charger(nom)</code> qui, à partir de la chaîne <code>"json"</code> ou <code>"csv"</code>, importe le module standard correspondant avec <code>importlib.import_module</code> et renvoie son nom via l'attribut <code>__name__</code>. Gère le cas d'un nom inconnu avec un message clair.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="charger.py"><pre><code class="language-python">import importlib
+
+AUTORISES = {"json", "csv"}
+
+def charger(nom):
+    if nom not in AUTORISES:
+        raise ValueError(f"module non autorisé : {nom}")
+    module = importlib.import_module(nom)
+    return module.__name__
+
+print(charger("json"))   # json
+print(charger("csv"))    # csv
+</code></pre></figure><p class="hint-inline">On filtre les noms autorisés avant l'import&nbsp;: importer une chaîne venue de l'extérieur sans contrôle est une porte ouverte.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

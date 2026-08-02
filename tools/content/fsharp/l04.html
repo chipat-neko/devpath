@@ -1,0 +1,89 @@
+<p>F# excelle dans la <strong>modélisation du domaine</strong>&nbsp;: décrire précisément, par les types, ce qui est valide dans ton application. Deux outils s'en chargent&nbsp;: les <strong>records</strong> (regrouper des données nommées) et les <strong>unions discriminées</strong> (représenter un choix entre plusieurs formes). Ensemble, ils permettent de rendre les états invalides… impossibles à écrire.</p>
+
+<h2>Les records</h2>
+<p>Un <strong>record</strong> regroupe des champs nommés et typés. On le définit avec des accolades, et on le crée en nommant les champs.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">type Personne = {
+    Nom: string
+    Age: int
+}
+
+let ada = { Nom = "Ada"; Age = 36 }
+let n = ada.Nom                  // "Ada"</code></pre></figure>
+
+<h2>Mise à jour fonctionnelle</h2>
+<p>Un record est immuable. La syntaxe <code>with</code> crée une <strong>copie</strong> avec certains champs modifiés.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let plusVieille = { ada with Age = 37 }
+// ada reste { Nom = "Ada"; Age = 36 }</code></pre></figure>
+
+<h2>Les unions discriminées</h2>
+<p>Une <strong>union discriminée</strong> (DU) représente une valeur qui peut être de l'une de plusieurs <strong>formes</strong>, chacune introduite par <code>|</code>. C'est l'équivalent F# des types somme (variants OCaml, <code>enum</code> Rust).</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">type Forme =
+    | Cercle of float                 // un rayon
+    | Rectangle of float * float      // largeur, hauteur
+    | Point
+
+let aire forme =
+    match forme with
+    | Cercle r -&gt; System.Math.PI * r * r
+    | Rectangle (l, h) -&gt; l * h
+    | Point -&gt; 0.0
+
+let a = aire (Cercle 2.0)            // ~12.57</code></pre></figure>
+<p class="code-caption">Chaque cas peut transporter des données. Le <code>match</code> est exhaustif&nbsp;: le compilateur exige tous les cas.</p>
+
+<h2>Rendre l'invalide impossible</h2>
+<p>La force de la modélisation par les types&nbsp;: on conçoit des types qui ne <em>peuvent</em> représenter que des valeurs valides. Exemple&nbsp;: un mode de contact.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">type Contact =
+    | Email of string
+    | Telephone of string
+    | Aucun
+
+// Impossible d'avoir "Email" sans adresse, ou un état incohérent :
+// le type interdit les combinaisons invalides.</code></pre></figure>
+<p>Là où d'autres langages utiliseraient plusieurs champs potentiellement contradictoires (un booléen «&nbsp;a un email&nbsp;» + une chaîne email parfois vide), la DU encode directement les seuls cas valides.</p>
+
+<h2>Les unions récursives</h2>
+<p>Une DU peut se référer à elle-même&nbsp;: on modélise naturellement des structures récursives comme les arbres.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">type Arbre =
+    | Feuille
+    | Noeud of Arbre * int * Arbre
+
+let rec somme arbre =
+    match arbre with
+    | Feuille -&gt; 0
+    | Noeud (g, v, d) -&gt; somme g + v + somme d</code></pre></figure>
+
+<h2>La généricité</h2>
+<p>Records et unions peuvent être <strong>génériques</strong> avec un paramètre de type <code>&lt;'T&gt;</code>.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">type Boite&lt;'T&gt; = { Contenu: 'T }
+let bi = { Contenu = 42 }            // Boite&lt;int&gt;
+let bs = { Contenu = "salut" }       // Boite&lt;string&gt;
+
+// option est lui-même une DU générique :
+// type Option&lt;'T&gt; = Some of 'T | None</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Modéliser un état avec plusieurs champs booléens et chaînes au lieu d'une union&nbsp;: on crée alors des combinaisons invalides (deux booléens vrais en même temps…). La bonne approche F#&nbsp;: une <strong>union discriminée</strong> qui n'autorise que les états réellement possibles.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les records F# ont l'<strong>égalité structurelle</strong> automatique&nbsp;: deux records aux mêmes valeurs sont égaux (<code>=</code>), sans rien coder. Idem pour les unions. C'est précieux pour comparer et tester des données — là où C# demanderait du code supplémentaire.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>records</strong> regroupent des champs nommés&nbsp;; <code>{ r with champ = ... }</code> copie en modifiant.</li>
+  <li>Les <strong>unions discriminées</strong> (<code>type T = A | B of ...</code>) représentent un choix entre formes.</li>
+  <li>On <strong>rend l'invalide impossible</strong> en modélisant précisément&nbsp;; DU récursives pour les arbres.</li>
+  <li>Records et unions sont <strong>génériques</strong> (<code>&lt;'T&gt;</code>) et ont l'<strong>égalité structurelle</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre un record et une union discriminée&nbsp;?</li><li>Comment «&nbsp;modifier&nbsp;» un champ d'un record immuable&nbsp;?</li><li>Pourquoi préférer une union à plusieurs champs booléens&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un record <code>Livre</code> (Titre, Annee) et crée une instance.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">type Livre = { Titre: string; Annee: int }
+let l = { Titre = "Sisyphe"; Annee = 1942 }</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Définis une union <code>Resultat</code> avec <code>Succes of int</code> et <code>Erreur of string</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">type Resultat =
+    | Succes of int
+    | Erreur of string</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec le type <code>Arbre</code>, écris une fonction qui compte les nœuds.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let rec compte arbre =
+    match arbre with
+    | Feuille -&gt; 0
+    | Noeud (g, _, d) -&gt; 1 + compte g + compte d</code></pre></figure></details></div>

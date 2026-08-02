@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observer et déboguer HTTP — Leçon 11 · HTTP · Syntaxe</title>
+    <meta name="description" content="Observer et déboguer le trafic HTTP : l'onglet Réseau des DevTools (F12), lire les en-têtes et le corps d'une requête, la cascade (waterfall) et le TTFB, rejouer une requête avec curl, et une démarche de diagnostic par le code de statut." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="http" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">HTTP</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · HTTP en pratique — Leçon 11</p>
+              <h1 class="lesson-header__title">Observer et déboguer HTTP</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçons 03 à 10 conseillées</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>explorer l'onglet <strong>Réseau</strong> des DevTools&nbsp;;</li>
+                  <li>lire <strong>en-têtes</strong>, <strong>corps</strong> et <strong>timing</strong> d'une requête&nbsp;;</li>
+                  <li>rejouer une requête avec <strong>curl</strong>&nbsp;;</li>
+                  <li>diagnostiquer un problème <strong>par le code de statut</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tout ce que ce cours a décrit — requêtes, méthodes, statuts, en-têtes, cookies, cache, négociation, authentification — est <strong>observable</strong>. Savoir <em>regarder</em> le trafic HTTP réel transforme un bug mystérieux en fait précis&nbsp;: «&nbsp;la requête part-elle vraiment&nbsp;? avec quels en-têtes&nbsp;? que répond le serveur&nbsp;?&nbsp;». C'est la compétence de débogage la plus rentable du développeur web, et elle tient dans deux outils&nbsp;: l'<strong>onglet Réseau</strong> du navigateur et <strong>curl</strong>.</p>
+
+<h2>L'onglet Réseau des DevTools</h2>
+<p>Ouvre les outils de développement (<code>F12</code> ou <code>Ctrl+Maj+I</code>) et va dans l'onglet <strong>Réseau</strong>. Recharge la page&nbsp;: chaque ligne est une <strong>requête</strong>. Les colonnes résument l'essentiel — <strong>nom</strong>, <strong>statut</strong>, <strong>type</strong>, <strong>taille</strong>, <strong>temps</strong> — et un clic ouvre le détail complet.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 220" role="img" aria-label="L'onglet Réseau des DevTools. Une barre d'outils propose des filtres par type et une case Désactiver le cache. Un tableau liste les requêtes avec les colonnes Nom, Statut, Type et Taille : document point html en 200, style point css en 200, app point js en 304 servi depuis le cache, api slash data en 401, et photo point avif en 200. À droite, un panneau de détail présente les onglets En-têtes, Payload, Réponse et Timing.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">L'onglet Réseau (F12) : lire chaque requête</text>
+    <rect class="d-frame" x="20" y="28" width="600" height="20" rx="5" /><text class="d-mut" x="30" y="42" font-size="8">Filtres : Tout · Fetch/XHR · JS · CSS · Img</text><text class="d-mut" x="470" y="42" font-size="8">☑ Désactiver le cache</text>
+    <rect class="d-box" x="20" y="54" width="380" height="20" rx="4" /><text class="d-tag" x="30" y="68" font-size="8">Nom</text><text class="d-tag" x="185" y="68" font-size="8">Statut</text><text class="d-tag" x="255" y="68" font-size="8">Type</text><text class="d-tag" x="335" y="68" font-size="8">Taille</text>
+    <text class="d-text" x="30" y="92" font-size="8">document.html</text><text class="d-text" x="185" y="92" font-size="8">200</text><text class="d-mut" x="255" y="92" font-size="8">document</text><text class="d-mut" x="335" y="92" font-size="8">12 Ko</text>
+    <text class="d-text" x="30" y="112" font-size="8">style.css</text><text class="d-text" x="185" y="112" font-size="8">200</text><text class="d-mut" x="255" y="112" font-size="8">css</text><text class="d-mut" x="335" y="112" font-size="8">8 Ko</text>
+    <text class="d-text" x="30" y="132" font-size="8">app.js</text><text class="d-text" x="185" y="132" font-size="8">304</text><text class="d-mut" x="255" y="132" font-size="8">script</text><text class="d-mut" x="335" y="132" font-size="8">(cache)</text>
+    <text class="d-text" x="30" y="152" font-size="8">api/data</text><text class="d-tag" x="185" y="152" font-size="8">401</text><text class="d-mut" x="255" y="152" font-size="8">fetch</text><text class="d-mut" x="335" y="152" font-size="8">0,3 Ko</text>
+    <text class="d-text" x="30" y="172" font-size="8">photo.avif</text><text class="d-text" x="185" y="172" font-size="8">200</text><text class="d-mut" x="255" y="172" font-size="8">img</text><text class="d-mut" x="335" y="172" font-size="8">40 Ko</text>
+    <path class="d-line" d="M20 178 L400 178" fill="none" stroke-dasharray="2 3" />
+    <rect class="d-accent" x="410" y="54" width="210" height="152" rx="7" /><text class="d-tag" x="515" y="72" text-anchor="middle" font-size="9">Détail de la requête</text>
+    <text class="d-text" x="515" y="100" text-anchor="middle" font-size="9">En-têtes</text>
+    <text class="d-text" x="515" y="124" text-anchor="middle" font-size="9">Payload (corps envoyé)</text>
+    <text class="d-text" x="515" y="148" text-anchor="middle" font-size="9">Réponse (corps reçu)</text>
+    <text class="d-text" x="515" y="172" text-anchor="middle" font-size="9">Timing (cascade)</text>
+    <text class="d-mut" x="515" y="196" text-anchor="middle" font-size="8">un clic sur une ligne →</text>
+  </svg>
+  <figcaption>Le tableau te donne la vue d'ensemble&nbsp;; le panneau de détail t'ouvre le message brut. Ici, <code>api/data</code> ressort en <strong>401</strong>&nbsp;: c'est la ligne à inspecter en priorité (leçon 10).</figcaption>
+</figure>
+
+<h2>Lire le détail d'une requête</h2>
+<p>En cliquant une requête, tu accèdes à ses en-têtes de requête <em>et</em> de réponse, au corps envoyé (<strong>Payload</strong>), au corps reçu (<strong>Réponse</strong>) et au <strong>timing</strong>. C'est là qu'on vérifie concrètement ce que le cours a décrit&nbsp;:</p>
+<figure class="code-block" data-file="détail d'une requête (extrait des DevTools)"><pre><code>Requête : GET https://api.exemple.fr/data
+  Accept: application/json
+  Authorization: Bearer eyJhbGciOi...
+
+Réponse : 401 Unauthorized
+  WWW-Authenticate: Bearer
+  Content-Type: application/json
+  { "error": "token expiré" }
+</code></pre></figure>
+<p>En quelques lignes, le diagnostic est fait&nbsp;: la requête part bien, avec un jeton&nbsp;; le serveur répond <strong>401</strong> et précise dans le corps que le jeton est <strong>expiré</strong>. Il ne reste qu'à en obtenir un nouveau. Sans cet outil, on aurait tâtonné.</p>
+
+<h2>La cascade (waterfall) et le TTFB</h2>
+<p>L'onglet <strong>Timing</strong> décompose la durée d'une requête en phases&nbsp;: résolution <strong>DNS</strong> (leçon 02), établissement de la connexion <strong>TCP</strong>, poignée de main <strong>TLS</strong> (leçon 06), <strong>attente</strong> de la réponse — le fameux <strong>TTFB</strong> (<em>Time To First Byte</em>) — puis <strong>téléchargement</strong> du corps.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="La cascade du temps d'une requête. Pour un GET slash api slash data, le temps se décompose en cinq phases successives : la résolution DNS, l'établissement de la connexion TCP, la poignée de main TLS, l'attente de la réponse appelée TTFB ou Time To First Byte qui est souvent la plus longue, puis le téléchargement du corps.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le temps d'une requête, phase par phase</text>
+    <text class="d-text" x="30" y="76" font-size="9">GET</text><text class="d-mut" x="30" y="88" font-size="8">/api/data</text>
+    <rect class="d-box" x="140" y="64" width="42" height="26" rx="4" /><text class="d-mut" x="161" y="80" text-anchor="middle" font-size="7">DNS</text>
+    <rect class="d-box" x="184" y="64" width="52" height="26" rx="4" /><text class="d-mut" x="210" y="80" text-anchor="middle" font-size="7">TCP</text>
+    <rect class="d-accent" x="238" y="64" width="60" height="26" rx="4" /><text class="d-mut" x="268" y="80" text-anchor="middle" font-size="7">TLS</text>
+    <rect class="d-box" x="300" y="64" width="158" height="26" rx="4" /><text class="d-mut" x="379" y="80" text-anchor="middle" font-size="7">Attente (TTFB)</text>
+    <rect class="d-accent" x="460" y="64" width="116" height="26" rx="4" /><text class="d-mut" x="518" y="80" text-anchor="middle" font-size="7">Téléchargement</text>
+    <text class="d-mut" x="30" y="130" font-size="8">DNS : résoudre le nom · TCP : établir la connexion · TLS : sécuriser</text>
+    <text class="d-mut" x="30" y="148" font-size="8">Attente (TTFB) : le serveur prépare la réponse · Téléchargement : recevoir le corps</text>
+    <rect class="d-frame" x="20" y="160" width="600" height="22" rx="6" /><text class="d-mut" x="320" y="175" text-anchor="middle" font-size="8">Un TTFB élevé pointe vers le serveur ; un téléchargement long, vers le poids ou le réseau</text>
+  </svg>
+  <figcaption>La cascade dit <em>où</em> part le temps. Un <strong>TTFB</strong> élevé accuse le serveur (traitement lent, base de données)&nbsp;; un <strong>téléchargement</strong> long pointe une ressource trop lourde ou mal compressée (leçon 09) — deux pistes de correction très différentes.</figcaption>
+</figure>
+
+<h2>Rejouer une requête avec curl</h2>
+<p><strong>curl</strong> envoie une requête HTTP depuis le terminal et affiche la réponse&nbsp;: idéal pour reproduire un problème hors du navigateur, dans un script ou en production.</p>
+<figure class="code-block" data-file="terminal · curl"><pre><code># -i affiche les en-têtes de réponse ; -H ajoute un en-tête
+curl -i -H "Authorization: Bearer eyJ..." https://api.exemple.fr/data
+
+# -X choisit la méthode, -d envoie un corps (POST)
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"titre":"Bonjour"}' https://api.exemple.fr/articles
+</code></pre></figure>
+<p>Mieux&nbsp;: dans l'onglet Réseau, un clic droit sur une requête propose <strong>«&nbsp;Copier comme cURL&nbsp;»</strong>. Tu obtiens la commande <em>exacte</em> — URL, méthode, tous les en-têtes, le corps — prête à coller dans un terminal pour rejouer et modifier la requête à volonté.</p>
+
+<h2>Une démarche&nbsp;: diagnostiquer par le statut</h2>
+<p>Face à un bug réseau, commence <strong>toujours</strong> par le <strong>code de statut</strong> (leçon 04)&nbsp;: il oriente tout le reste.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Déboguer par le code de statut. À partir de la question quel est le statut, quatre pistes. 2xx succès : lis le corps reçu, le problème est ailleurs. 3xx redirection : suis l'en-tête Location. 4xx, le problème vient de ta requête : 401 identifie-toi, 403 droits insuffisants, 404 URL fausse, 400 corps invalide. 5xx, le problème vient du serveur : regarde ses journaux.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Déboguer par le code de statut</text>
+    <rect class="d-accent" x="250" y="34" width="140" height="26" rx="7" /><text class="d-tag" x="320" y="51" text-anchor="middle" font-size="10">Quel est le statut ?</text>
+    <path class="d-line" d="M320 60 L86 84" fill="none" /><path class="d-line" d="M320 60 L245 84" fill="none" /><path class="d-line" d="M320 60 L395 84" fill="none" /><path class="d-line" d="M320 60 L555 84" fill="none" />
+    <rect class="d-box" x="16" y="84" width="140" height="24" rx="6" /><text class="d-text" x="86" y="100" text-anchor="middle" font-size="9">2xx — succès</text>
+    <rect class="d-box" x="170" y="84" width="150" height="24" rx="6" /><text class="d-text" x="245" y="100" text-anchor="middle" font-size="9">3xx — redirection</text>
+    <rect class="d-box" x="324" y="84" width="142" height="24" rx="6" /><text class="d-text" x="395" y="100" text-anchor="middle" font-size="9">4xx — ta requête</text>
+    <rect class="d-box" x="480" y="84" width="146" height="24" rx="6" /><text class="d-text" x="553" y="100" text-anchor="middle" font-size="9">5xx — le serveur</text>
+    <text class="d-mut" x="86" y="130" text-anchor="middle" font-size="8">lis le corps reçu ;</text><text class="d-mut" x="86" y="142" text-anchor="middle" font-size="8">le bug est ailleurs</text>
+    <text class="d-mut" x="245" y="130" text-anchor="middle" font-size="8">suis l'en-tête</text><text class="d-mut" x="245" y="142" text-anchor="middle" font-size="8">Location</text>
+    <text class="d-mut" x="395" y="128" text-anchor="middle" font-size="7">401 identifie-toi · 403 droits</text><text class="d-mut" x="395" y="140" text-anchor="middle" font-size="7">404 URL fausse · 400 corps</text>
+    <text class="d-mut" x="553" y="130" text-anchor="middle" font-size="8">erreur serveur →</text><text class="d-mut" x="553" y="142" text-anchor="middle" font-size="8">regarde ses journaux</text>
+    <rect class="d-frame" x="20" y="164" width="600" height="30" rx="8" /><text class="d-mut" x="320" y="183" text-anchor="middle" font-size="9">Statut → en-têtes → corps → timing : la même méthode résout la plupart des bugs réseau</text>
+  </svg>
+  <figcaption>Le statut te dit <em>de quel côté</em> chercher&nbsp;: <strong>4xx</strong>, corrige ta requête&nbsp;; <strong>5xx</strong>, le serveur a un souci (regarde ses journaux). Ensuite seulement, on descend dans les en-têtes, le corps, puis le timing.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le fichier HAR&nbsp;: partager une capture</p><p>L'onglet Réseau permet d'<strong>exporter</strong> tout l'échange dans un fichier <strong>HAR</strong> (<em>HTTP Archive</em>, du JSON). Pratique pour joindre à un rapport de bug&nbsp;: la personne qui reçoit le HAR rejoue exactement ta session (requêtes, en-têtes, timing) sans avoir à reproduire le contexte. La plupart des outils savent le réimporter.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Trois réglages qui font gagner du temps</p><p><strong>Conserver le journal</strong> (<em>Preserve log</em>)&nbsp;: garde les requêtes même après un changement de page ou une redirection — indispensable pour déboguer une connexion. <strong>Filtrer par type</strong> (Fetch/XHR) pour ne voir que les appels d'API, noyés sinon parmi les images et scripts. Et <strong>«&nbsp;Copier comme cURL&nbsp;»</strong> pour rejouer une requête en un instant hors du navigateur.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un HAR contient des secrets</p><p>Une capture réseau enregistre <strong>tout</strong>&nbsp;: cookies de session, en-têtes <code>Authorization</code>, jetons, parfois des mots de passe envoyés en <code>POST</code>. Avant de partager un <strong>HAR</strong> (ou une capture d'écran de l'onglet Réseau), <strong>retire ou masque</strong> ces données sensibles&nbsp;: quiconque possède un cookie de session valide peut se faire passer pour toi. De même, ne colle jamais une commande <em>cURL</em> contenant un vrai jeton dans un ticket public.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>«&nbsp;Ça marche en local, mais pas en ligne.&nbsp;»</strong> Un développeur voit ses appels d'API échouer une fois le site déployé&nbsp;: la page reste vide, sans message clair. Plutôt que de deviner, il ouvre l'onglet <strong>Réseau</strong>. La requête <code>fetch</code> vers l'API apparaît en <strong>rouge</strong>, sans code de statut&nbsp;; la console affiche une erreur <strong>CORS</strong> (leçon 07). Le détail confirme&nbsp;: la réponse ne porte pas l'en-tête <code>Access-Control-Allow-Origin</code> attendu, parce que le front est servi depuis un domaine différent de l'API. Diagnostic posé <strong>en trente secondes</strong> grâce à l'onglet Réseau, là où la seule page blanche n'apprenait rien. La correction (configurer CORS côté serveur) découle directement de ce que l'outil a montré. Morale&nbsp;: devant un bug web, on <strong>ouvre le Réseau avant de spéculer</strong>.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Des clients graphiques comme <strong>Postman</strong> ou <strong>Insomnia</strong> (et l'extension REST Client) organisent des collections de requêtes réutilisables&nbsp;: parfait pour tester une API méthodiquement. Pour inspecter le trafic d'une application <em>hors navigateur</em> (mobile, service), un <strong>proxy</strong> comme mitmproxy ou Charles s'intercale et affiche tout. Enfin, l'onglet <strong>Application</strong> (ou Stockage) des DevTools montre l'état des <strong>cookies</strong>, du cache et du stockage local&nbsp;: le complément naturel de l'onglet Réseau.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — observer et déboguer HTTP</caption>
+    <thead><tr><th scope="col">Outil / notion</th><th scope="col">À quoi ça sert</th></tr></thead>
+    <tbody>
+      <tr><td>Onglet Réseau (F12)</td><td>voir toutes les requêtes&nbsp;: statut, type, taille, temps</td></tr>
+      <tr><td>Détail : En-têtes / Payload / Réponse</td><td>inspecter le message brut envoyé et reçu</td></tr>
+      <tr><td>Timing (waterfall)</td><td>DNS, TCP, TLS, attente (TTFB), téléchargement</td></tr>
+      <tr><td>TTFB</td><td>temps d'attente&nbsp;: surtout la préparation côté serveur</td></tr>
+      <tr><td><code>curl -i -H … -X … -d …</code></td><td>envoyer/rejouer une requête au terminal</td></tr>
+      <tr><td>Copier comme cURL</td><td>reproduire la requête exacte hors du navigateur</td></tr>
+      <tr><td>Fichier HAR</td><td>exporter/partager une capture (contient des secrets&nbsp;!)</td></tr>
+      <tr><td>Méthode</td><td>statut → en-têtes → corps → timing</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Onglet Réseau</dt><dd>Panneau des DevTools (F12) listant toutes les requêtes de la page avec statut, type, taille et durée.</dd>
+  <dt>DevTools</dt><dd>Outils de développement intégrés au navigateur (Réseau, Console, Éléments, Application…).</dd>
+  <dt>Cascade (waterfall)</dt><dd>Vue décomposant la durée d'une requête en phases&nbsp;: DNS, connexion, TLS, attente, téléchargement.</dd>
+  <dt>TTFB</dt><dd><em>Time To First Byte</em>&nbsp;: délai avant le premier octet de réponse&nbsp;; reflète surtout le temps de traitement serveur.</dd>
+  <dt>curl</dt><dd>Outil en ligne de commande pour envoyer une requête HTTP et afficher la réponse&nbsp;; utile pour rejouer une requête.</dd>
+  <dt>Copier comme cURL</dt><dd>Fonction de l'onglet Réseau générant la commande curl reproduisant exactement une requête.</dd>
+  <dt>HAR</dt><dd><em>HTTP Archive</em>&nbsp;: fichier JSON exportant une session réseau complète&nbsp;; contient des données sensibles.</dd>
+  <dt>Payload</dt><dd>Corps de données envoyé par le client dans une requête (par exemple le JSON d'un POST).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>L'onglet <strong>Réseau</strong> (F12) liste chaque requête&nbsp;: statut, type, taille, temps&nbsp;; le détail ouvre en-têtes et corps.</li>
+  <li>La <strong>cascade</strong> décompose le temps&nbsp;: un <strong>TTFB</strong> élevé accuse le serveur, un téléchargement long, le poids.</li>
+  <li><strong>curl</strong> (et «&nbsp;Copier comme cURL&nbsp;») rejoue une requête hors du navigateur, en la modifiant à volonté.</li>
+  <li>La démarche&nbsp;: partir du <strong>code de statut</strong>, puis en-têtes, corps, timing.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Que lis-tu en <strong>premier</strong> pour diagnostiquer une requête&nbsp;?</li>
+  <li>Que représente le <strong>TTFB</strong> dans la cascade&nbsp;?</li>
+  <li>À quoi sert «&nbsp;Copier comme cURL&nbsp;»&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans l'onglet Réseau, quelle information lis-tu en premier pour diagnostiquer une requête ?","a":["Le code de statut : il oriente tout le reste (2xx succès, 3xx redirection, 4xx requête, 5xx serveur)","La couleur de la ligne, uniquement","Le nom du fichier","La police d'écriture de la réponse"],"correct":0,"explain":"Le statut dit de quel côté chercher : un 4xx accuse ta requête (401, 403, 404, 400), un 5xx accuse le serveur. On descend ensuite dans les en-têtes, le corps, puis le timing. C'est la première marche de toute démarche de débogage HTTP."},
+  {"q":"Que représente le TTFB (Time To First Byte) dans la cascade ?","a":["Le temps d'attente avant le premier octet de réponse : surtout le temps que met le serveur à préparer la réponse","La taille totale du fichier téléchargé","La durée de la résolution DNS uniquement","Le nombre de requêtes de la page"],"correct":0,"explain":"Après DNS, TCP et TLS, le TTFB mesure l'attente jusqu'au premier octet renvoyé. Un TTFB élevé pointe un serveur lent (traitement, base de données) ; un téléchargement long pointe plutôt une ressource trop lourde ou mal compressée."},
+  {"q":"À quoi sert « Copier comme cURL » (Copy as cURL) dans l'onglet Réseau ?","a":["Reproduire exactement la requête (URL, méthode, en-têtes, corps) en ligne de commande, pour la rejouer et la déboguer","Copier le contenu de la page en HTML","Traduire la requête en une autre langue","Supprimer la requête du journal"],"correct":0,"explain":"La fonction génère la commande curl équivalente à une requête observée, avec tous ses en-têtes et son corps. On la colle dans un terminal pour rejouer la requête à l'identique, la modifier, ou la reproduire hors du navigateur (script, production)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["réseau","reseau","network","onglet réseau","onglet reseau"],"placeholder":"l'onglet des DevTools (F12) où l'on observe les requêtes HTTP","hints":["On l'ouvre avec F12.","Il liste chaque requête de la page.","« … » en français, « Network » en anglais."],"link":{"href":"lecon-11.html","label":"Revoir « L'onglet Réseau »"}},
+  {"type":"text","accept":["curl"],"placeholder":"l'outil en ligne de commande pour envoyer une requête et voir la réponse","hints":["Cinq lettres.","On l'utilise avec -i, -H, -X, -d.","« Copier comme … »."],"link":{"href":"lecon-11.html","label":"Revoir « Rejouer avec curl »"}},
+  {"type":"text","accept":["statut","code de statut","code","status","code statut"],"placeholder":"la première chose à lire pour diagnostiquer (2xx / 3xx / 4xx / 5xx)","hints":["Il oriente de quel côté chercher.","2xx, 3xx, 4xx, 5xx.","Le code de …"],"link":{"href":"lecon-11.html","label":"Revoir « Diagnostiquer par le statut »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans l'onglet Réseau, une requête <code>app.js</code> affiche <code>304</code> et une taille <em>(cache)</em>, tandis que <code>api/data</code> affiche <code>401</code>. Laquelle pose problème, et où regarder ensuite&nbsp;?</p><details><summary>Voir une solution</summary><p><code>app.js</code> en <strong>304</strong> n'est <strong>pas</strong> un problème&nbsp;: c'est une revalidation réussie (leçon 08), le fichier n'a pas changé et le navigateur réutilise sa copie&nbsp;; tout va bien. C'est <code>api/data</code> en <strong>401</strong> qu'il faut inspecter&nbsp;: le serveur refuse la requête parce qu'elle n'est <strong>pas authentifiée</strong> (leçon 10). On clique dessus, on regarde les <strong>en-têtes de requête</strong>&nbsp;: l'en-tête <code>Authorization</code> est-il présent&nbsp;? est-il bien formé&nbsp;? Puis le <strong>corps de la réponse</strong>, qui précise souvent la cause («&nbsp;token manquant&nbsp;», «&nbsp;token expiré&nbsp;»). Le bon réflexe est de laisser les <code>2xx</code>/<code>3xx</code> tranquilles et de se concentrer sur les <strong>4xx</strong>/<strong>5xx</strong>.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Une page met 4&nbsp;secondes à répondre. Dans l'onglet Timing, tout le temps est passé en <strong>«&nbsp;Attente&nbsp;»</strong> (TTFB), les autres phases sont négligeables. Où est probablement le problème, et où <em>ne pas</em> chercher&nbsp;?</p><details><summary>Voir une solution</summary><p>Un temps concentré dans l'<strong>attente (TTFB)</strong> signifie que le navigateur a déjà résolu le DNS, ouvert la connexion et fait le handshake TLS <strong>rapidement</strong> — puis a <strong>attendu le serveur</strong> pendant l'essentiel des 4&nbsp;secondes avant de recevoir le premier octet. Le problème est donc <strong>côté serveur</strong>&nbsp;: traitement lent, requête de base de données coûteuse, appel à un service tiers qui traîne… Ce n'est <strong>pas</strong> un problème de réseau, de poids de la page ni de compression (le téléchargement est négligeable ici). Inutile d'optimiser les images ou d'activer Brotli&nbsp;: il faut regarder <strong>ce que fait le serveur</strong> pour produire cette réponse (ses journaux, ses requêtes SQL). La cascade a évité une mauvaise piste&nbsp;: elle a montré <em>où</em> partait le temps.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un <code>POST</code> de formulaire échoue&nbsp;: la page affiche «&nbsp;Erreur, réessayez&nbsp;», sans détail. Décris, étape par étape, comment utiliser l'onglet Réseau et <code>curl</code> pour localiser la cause.</p><details><summary>Voir une solution</summary><p><strong>1. Reproduire en observant.</strong> Ouvrir <code>F12 → Réseau</code>, cocher <strong>«&nbsp;Conserver le journal&nbsp;»</strong> (le formulaire peut provoquer une navigation), puis soumettre. <strong>2. Repérer la requête.</strong> Filtrer sur <em>Fetch/XHR</em> (ou chercher la requête <code>POST</code>) et lire son <strong>code de statut</strong>. C'est le point de départ&nbsp;: un <strong>400</strong> pointe un <em>corps invalide</em>, un <strong>401/403</strong> un problème d'authentification/droits, un <strong>422</strong> une validation métier, un <strong>500</strong> une erreur serveur. <strong>3. Lire le détail.</strong> Onglet <em>Payload</em>&nbsp;: le corps envoyé est-il correct (bons champs, bon <code>Content-Type</code>&nbsp;: <code>application/json</code> vs formulaire)&nbsp;? Onglet <em>Réponse</em>&nbsp;: le serveur donne souvent un message d'erreur précis dans le corps. <strong>4. Isoler avec curl.</strong> Clic droit sur la requête → <strong>«&nbsp;Copier comme cURL&nbsp;»</strong>, coller dans un terminal, et la <strong>rejouer</strong>. On peut alors modifier un champ à la fois pour trouver ce qui déclenche l'erreur, sans repasser par l'interface. <strong>5. Conclure selon le côté&nbsp;:</strong> si un <code>4xx</code> persiste avec une requête pourtant correcte, le problème est dans la <em>construction</em> de la requête côté client&nbsp;; si c'est un <code>5xx</code>, la balle est côté serveur (ses journaux prennent le relais). En quelques minutes, «&nbsp;Erreur, réessayez&nbsp;» est devenu un diagnostic précis et actionnable.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

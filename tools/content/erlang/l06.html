@@ -1,0 +1,62 @@
+<p>Voici la philosophie qui a rendu Erlang célèbre, et qui prend le contre-pied de tout ce qu'on enseigne d'habitude&nbsp;: «&nbsp;<strong>let it crash</strong>&nbsp;» — laisse planter. Au lieu de blinder chaque ligne de code contre toutes les erreurs imaginables, Erlang laisse un processus défaillant <em>mourir</em> proprement, et un autre processus, le <strong>superviseur</strong>, le redémarre dans un état sain. Cette approche, contre-intuitive, est la clé de la fiabilité légendaire d'Erlang. Cette leçon l'explique.</p>
+
+<h2>Pourquoi «&nbsp;laisser planter&nbsp;»&nbsp;?</h2>
+<p>Le raisonnement est le suivant&nbsp;: tenter de gérer <em>chaque</em> erreur possible à l'intérieur d'un processus rend le code énorme, illisible, et truffé de cas que personne n'a jamais testés. Pire, après une erreur inattendue, l'état du processus est peut-être corrompu. Erlang préfère&nbsp;: si quelque chose tourne mal, le processus <strong>meurt immédiatement</strong>, et on le <strong>recrée à neuf</strong>, dans un état propre connu. Un redémarrage vaut mieux qu'un état douteux.</p>
+<figure class="code-block" data-file="philosophie.erl"><pre><code class="language-erlang">% On écrit le "chemin heureux", sans défense excessive :
+traiter({division, A, B}) -&gt;
+    A / B.        % si B = 0, le processus plante... et c'est OK !
+                  % Un superviseur le redémarrera proprement.</code></pre></figure>
+<p>On code le <strong>cas normal</strong> clairement, sans noyer la logique sous des vérifications. Les erreurs rares sont gérées <em>structurellement</em> par la supervision, pas <em>localement</em> par des <code>if</code> partout.</p>
+
+<h2>Lier des processus avec <code>link</code></h2>
+<p>Pour qu'un processus soit informé de la mort d'un autre, on les <strong>lie</strong> avec <code>link</code>. Quand un processus lié meurt anormalement, il propage un signal de sortie aux processus liés.</p>
+<figure class="code-block" data-file="link.erl"><pre><code class="language-erlang">Pid = spawn_link(module, fonction, []).
+% Si Pid plante, le processus courant est averti
+% (et plante aussi, par défaut, sauf s'il "piège" les sorties).</code></pre></figure>
+<p><code>spawn_link</code> crée et lie en une fois. Par défaut, la mort se propage&nbsp;: tout un groupe de processus liés peut s'éteindre ensemble — ce qui est voulu, pour éviter de continuer dans un état partiellement cassé.</p>
+
+<h2>Surveiller avec <code>monitor</code></h2>
+<p>Parfois, on veut être <em>averti</em> de la mort d'un processus sans mourir avec lui. C'est le rôle de <code>monitor</code>&nbsp;: il envoie un message au surveillant quand le processus surveillé disparaît.</p>
+<figure class="code-block" data-file="monitor.erl"><pre><code class="language-erlang">Ref = monitor(process, Pid).
+% Si Pid meurt, on reçoit :
+receive
+    {'DOWN', Ref, process, Pid, Raison} -&gt;
+        io:format("Le processus est mort : ~p~n", [Raison])
+end.</code></pre></figure>
+<p><code>link</code> est <em>symétrique</em> (les deux sont liés), <code>monitor</code> est <em>unidirectionnel</em> (un surveille l'autre). Les superviseurs s'appuient sur ces mécanismes pour savoir quand redémarrer un enfant.</p>
+
+<h2>Le superviseur</h2>
+<p>Un <strong>superviseur</strong> est un processus dont l'unique rôle est de surveiller d'autres processus (ses «&nbsp;enfants&nbsp;») et de les <strong>redémarrer</strong> selon une stratégie quand ils meurent. Il ne fait pas de travail métier&nbsp;: il assure la <em>résilience</em>.</p>
+<figure class="code-block" data-file="superviseur.erl"><pre><code class="language-erlang">% Idée d'un superviseur (version conceptuelle) :
+superviser(Module, Fonction, Args) -&gt;
+    process_flag(trap_exit, true),     % piéger les sorties
+    Pid = spawn_link(Module, Fonction, Args),
+    receive
+        {'EXIT', Pid, Raison} -&gt;
+            io:format("Enfant mort (~p), redemarrage.~n", [Raison]),
+            superviser(Module, Fonction, Args)   % on relance !
+    end.</code></pre></figure>
+<p>Quand l'enfant meurt, le superviseur en relance un neuf. C'est le principe d'auto-réparation&nbsp;: le système se rétablit tout seul, sans intervention humaine. En pratique, on n'écrit pas ce code à la main — OTP fournit des superviseurs robustes et configurables (leçon 7).</p>
+
+<h2>Les arbres de supervision</h2>
+<p>En assemblant des superviseurs qui surveillent d'autres superviseurs, on bâtit un <strong>arbre de supervision</strong>&nbsp;: une hiérarchie où chaque niveau peut redémarrer le niveau inférieur. Si une panne se propage, elle est «&nbsp;rattrapée&nbsp;» au bon étage. C'est l'architecture standard d'une application Erlang robuste.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Comprendre «&nbsp;let it crash&nbsp;» comme «&nbsp;ne jamais gérer les erreurs&nbsp;». C'est l'inverse&nbsp;: on gère les erreurs <strong>structurellement</strong>, via la supervision, au lieu de les disperser en mille vérifications locales. On laisse planter les erreurs <em>imprévisibles</em> (un bug, une donnée corrompue), mais on traite normalement les cas <em>attendus</em> (un fichier absent, une saisie invalide). La supervision n'excuse pas le code bâclé&nbsp;: elle isole les défaillances rares pour qu'elles ne propagent pas leur dégât.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Cette idée de «&nbsp;l'isolation des défaillances&nbsp;» a influencé bien au-delà d'Erlang&nbsp;: les architectures modernes en <strong>micro-services</strong>, les conteneurs qu'un orchestrateur redémarre automatiquement, les <em>circuit breakers</em>… reprennent le même principe à plus grande échelle. Erlang l'avait compris dès les années 1980 au niveau du processus&nbsp;: il vaut mieux concevoir un système qui se <em>répare</em> qu'un système qui prétend ne jamais échouer.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>«&nbsp;<strong>Let it crash</strong>&nbsp;»&nbsp;: laisser mourir un processus défaillant et le redémarrer à neuf, plutôt que blinder chaque ligne.</li>
+  <li><code>link</code> lie deux processus (symétrique)&nbsp;; <code>monitor</code> surveille (unidirectionnel).</li>
+  <li>Un <strong>superviseur</strong> surveille des enfants et les redémarre&nbsp;: auto-réparation.</li>
+  <li>Les <strong>arbres de supervision</strong> structurent la résilience d'une application.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que signifie «&nbsp;let it crash&nbsp;»&nbsp;?</li><li>Quelle différence entre <code>link</code> et <code>monitor</code>&nbsp;?</li><li>Quel est le rôle d'un superviseur&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle fonction crée un processus <em>et</em> le lie au processus courant en une fois&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">spawn_link(Module, Fonction, Args).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>En une phrase, explique pourquoi on préfère parfois <code>monitor</code> à <code>link</code>.</p><details><summary>Voir une solution</summary><p>Parce que <code>monitor</code> est <strong>unidirectionnel</strong>&nbsp;: il permet d'être <em>averti</em> de la mort d'un processus (par un message <code>'DOWN'</code>) sans mourir avec lui, là où <code>link</code> est symétrique et propage la sortie. C'est exactement ce que veut un superviseur&nbsp;: survivre à la mort de ses enfants pour pouvoir les redémarrer.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi redémarrer un processus planté est-il souvent plus sûr que tenter de «&nbsp;réparer&nbsp;» son état&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'après une erreur inattendue, l'état du processus peut être <strong>corrompu ou incohérent</strong> de façon imprévisible&nbsp;: tenter de le réparer suppose qu'on connaisse exactement ce qui a mal tourné, ce qui est rarement le cas. Redémarrer le processus le ramène à un <strong>état initial sain et connu</strong>, sans hypothèse hasardeuse. C'est plus simple, plus fiable, et cela évite de propager un état douteux dans le reste du système.</p></details></div>

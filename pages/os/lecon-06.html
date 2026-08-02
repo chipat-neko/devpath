@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Analyser le comportement d'un programme — Leçon 06 · Syntaxe</title>
+    <meta name="description" content="Observer un programme au niveau système — processus et threads, CPU-bound ou I/O-bound, mémoire, appels système — et relier chaque observation aux concepts de l'OS." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="os" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes d'exploitation</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 03 · Pratique — Leçon 06</p>
+              <h1 class="lesson-header__title">Analyser le comportement d'un programme</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçons 01 à 05</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>observer un programme au <strong>niveau système</strong>&nbsp;;</li>
+                  <li>diagnostiquer <strong>CPU-bound</strong> ou <strong>I/O-bound</strong>&nbsp;;</li>
+                  <li>relier les observations aux <strong>concepts</strong> du cours&nbsp;;</li>
+                  <li>expliquer un comportement <strong>surprenant</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu as vu le rôle de l'OS, les processus et threads, l'ordonnancement, la mémoire et les E/S. Cette leçon les relie&nbsp;: prendre un <strong>vrai programme</strong> et l'observer « de l'extérieur » pour comprendre ce qu'il fait au niveau du système — et expliquer ses performances. C'est la compétence que le <strong>projet final</strong> (leçon&nbsp;11) te fera mettre en œuvre de bout en bout.</p>
+
+<h2>Une démarche d'analyse</h2>
+<figure class="code-block" data-file="demarche.txt"><pre><code>  1) Identifier   le processus (PID), ses threads               (L2)
+  2) CPU ou E/S   à 100 % de CPU (calcul) ou souvent en attente ? (L3)
+  3) Mémoire      combien consomme-t-il ? swappe-t-il ?           (L4)
+  4) Appels syst. que demande-t-il au noyau (fichiers, réseau) ?  (L1/L5)
+  5) Conclure     expliquer son comportement par les concepts vus
+
+  Outils : top/htop (CPU, mémoire), ps, free, strace (appels système).
+</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le fil rouge du cours</p><p>Chaque étape mobilise une leçon. Analyser un programme, c'est <strong>traduire</strong> ce qu'on observe (« 100&nbsp;% de CPU », « beaucoup d'attente », « la RAM grimpe ») en concepts (ordonnancement, E/S, mémoire) — et donc en explications.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Traduire une observation en concept du cours. À gauche, ce que l'on observe avec les outils ; à droite, ce que cela signifie. Un cœur à cent pour cent avec peu d'attente correspond à un programme limité par le processeur, dit CPU-bound. Un processeur bas mais un programme souvent bloqué correspond à un programme limité par les entrées-sorties, dit I/O-bound. Une mémoire qui grimpe et qui déclenche le swap correspond à une pression mémoire, voire au thrashing. Beaucoup de lectures et d'écritures correspondent au coût des appels système et des E/S.">
+    <text class="d-label" x="150" y="28" text-anchor="middle" font-size="12">Ce qu'on observe</text>
+    <text class="d-label" x="486" y="28" text-anchor="middle" font-size="12">Ce que ça signifie</text>
+    <rect class="d-box" x="24" y="42" width="252" height="34" rx="4" /><text class="d-text" x="150" y="63" text-anchor="middle" font-size="10">cœur à 100 %, peu d'attente</text>
+    <rect class="d-accent" x="356" y="42" width="260" height="34" rx="4" /><text class="d-text" x="486" y="63" text-anchor="middle" font-size="10">CPU-bound (calcul)</text>
+    <rect class="d-box" x="24" y="84" width="252" height="34" rx="4" /><text class="d-text" x="150" y="105" text-anchor="middle" font-size="10">CPU bas, souvent bloqué</text>
+    <rect class="d-accent" x="356" y="84" width="260" height="34" rx="4" /><text class="d-text" x="486" y="105" text-anchor="middle" font-size="10">I/O-bound (attente E/S)</text>
+    <rect class="d-box" x="24" y="126" width="252" height="34" rx="4" /><text class="d-text" x="150" y="147" text-anchor="middle" font-size="10">la RAM grimpe, ça swappe</text>
+    <rect class="d-accent" x="356" y="126" width="260" height="34" rx="4" /><text class="d-text" x="486" y="147" text-anchor="middle" font-size="10">pression mémoire / thrashing</text>
+    <rect class="d-box" x="24" y="168" width="252" height="34" rx="4" /><text class="d-text" x="150" y="189" text-anchor="middle" font-size="10">beaucoup de read / write</text>
+    <rect class="d-accent" x="356" y="168" width="260" height="34" rx="4" /><text class="d-text" x="486" y="189" text-anchor="middle" font-size="10">coût des appels système / E/S</text>
+    <path class="d-line" d="M276 59 L354 59" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="354,59 346,55 346,63" />
+    <path class="d-line" d="M276 101 L354 101" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="354,101 346,97 346,105" />
+    <path class="d-line" d="M276 143 L354 143" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="354,143 346,139 346,147" />
+    <path class="d-line" d="M276 185 L354 185" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="354,185 346,181 346,189" />
+  </svg>
+  <figcaption>Analyser, c'est <strong>traduire</strong>&nbsp;: chaque symptôme observé renvoie à un concept du cours, et donc à un <strong>levier d'optimisation</strong> précis.</figcaption>
+</figure>
+
+<h2>La question clé : CPU ou E/S ?</h2>
+<p>Le diagnostic le plus utile&nbsp;: le programme est-il <strong>limité par le CPU</strong> (il calcule, cœur à 100&nbsp;%) ou <strong>par les E/S</strong> (il attend disque/réseau, CPU bas)&nbsp;? Cette seule réponse oriente <em>toute</em> l'optimisation&nbsp;: pour du CPU-bound, on parallélise sur les cœurs&nbsp;; pour de l'I/O-bound, on recouvre l'attente ou on réduit les E/S.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Deux profils d'occupation vus dans un moniteur système. À gauche, un programme CPU-bound : le premier cœur est saturé à cent pour cent, les trois autres cœurs restent quasi inactifs — c'est un calcul mono-thread. À droite, un programme I/O-bound : les quatre cœurs sont tous à un faible pourcentage, tandis qu'une barre disque et réseau est occupée — le programme attend les entrées-sorties.">
+    <text class="d-label" x="165" y="30" text-anchor="middle" font-size="12">CPU-bound (calcul)</text>
+    <text class="d-label" x="475" y="30" text-anchor="middle" font-size="12">I/O-bound (attente)</text>
+    <rect class="d-frame" x="20" y="42" width="290" height="152" rx="6" />
+    <text class="d-mut" x="34" y="68" font-size="9">cœur 1</text><rect class="d-frame" x="92" y="58" width="194" height="14" rx="2" /><rect class="d-accent" x="92" y="58" width="194" height="14" rx="2" />
+    <text class="d-mut" x="34" y="100" font-size="9">cœur 2</text><rect class="d-frame" x="92" y="90" width="194" height="14" rx="2" /><rect class="d-box" x="92" y="90" width="12" height="14" rx="2" />
+    <text class="d-mut" x="34" y="132" font-size="9">cœur 3</text><rect class="d-frame" x="92" y="122" width="194" height="14" rx="2" /><rect class="d-box" x="92" y="122" width="10" height="14" rx="2" />
+    <text class="d-mut" x="34" y="164" font-size="9">cœur 4</text><rect class="d-frame" x="92" y="154" width="194" height="14" rx="2" /><rect class="d-box" x="92" y="154" width="16" height="14" rx="2" />
+    <text class="d-mut" x="165" y="186" text-anchor="middle" font-size="9">1 cœur saturé, 3 oisifs → mono-thread</text>
+    <rect class="d-frame" x="330" y="42" width="290" height="152" rx="6" />
+    <text class="d-mut" x="344" y="62" font-size="9">cœur 1</text><rect class="d-frame" x="402" y="53" width="194" height="12" rx="2" /><rect class="d-box" x="402" y="53" width="18" height="12" rx="2" />
+    <text class="d-mut" x="344" y="86" font-size="9">cœur 2</text><rect class="d-frame" x="402" y="77" width="194" height="12" rx="2" /><rect class="d-box" x="402" y="77" width="14" height="12" rx="2" />
+    <text class="d-mut" x="344" y="110" font-size="9">cœur 3</text><rect class="d-frame" x="402" y="101" width="194" height="12" rx="2" /><rect class="d-box" x="402" y="101" width="20" height="12" rx="2" />
+    <text class="d-mut" x="344" y="134" font-size="9">cœur 4</text><rect class="d-frame" x="402" y="125" width="194" height="12" rx="2" /><rect class="d-box" x="402" y="125" width="12" height="12" rx="2" />
+    <text class="d-mut" x="336" y="160" font-size="9">disque / réseau</text><rect class="d-frame" x="402" y="150" width="194" height="14" rx="2" /><rect class="d-accent" x="402" y="150" width="180" height="14" rx="2" />
+    <text class="d-mut" x="475" y="186" text-anchor="middle" font-size="9">CPU bas, on attend les E/S</text>
+  </svg>
+  <figcaption>Un même moniteur (top/htop) donne le diagnostic d'un coup d'œil&nbsp;: <strong>où passe le temps</strong> — dans le <strong>calcul</strong> ou dans l'<strong>attente</strong>&nbsp;?</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: « ma compilation ne va pas plus vite »</p><p>Une équipe se plaint qu'un <em>build</em> reste lent sur une machine à 8&nbsp;cœurs. <code>htop</code> montre <strong>un seul cœur à 100&nbsp;%</strong>, les 7&nbsp;autres oisifs&nbsp;: le programme de build est <strong>mono-thread</strong>, donc CPU-bound mais non parallélisé. Le levier n'est pas d'acheter un CPU plus rapide, mais d'activer la <strong>compilation en parallèle</strong> (l'option «&nbsp;jobs&nbsp;» des outils de build), qui répartit les fichiers sur les cœurs. Diagnostic posé en 10&nbsp;secondes grâce à un simple moniteur.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>La boîte à outils de l'analyse système</caption>
+    <thead><tr><th scope="col">Outil</th><th scope="col">Ce qu'il montre</th></tr></thead>
+    <tbody>
+      <tr><td>top / htop</td><td>CPU et mémoire en temps réel, par processus (vue d'ensemble)</td></tr>
+      <tr><td>ps</td><td>liste des processus&nbsp;: PID, état, parent, commande</td></tr>
+      <tr><td>free</td><td>mémoire totale / utilisée / libre et usage du swap</td></tr>
+      <tr><td>strace</td><td>les appels système qu'un processus adresse au noyau</td></tr>
+      <tr><td>vmstat / iostat</td><td>activité mémoire, swap, et débit des disques</td></tr>
+      <tr><td>time</td><td>temps passé en calcul (user) vs dans le noyau (sys) vs total</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>CPU-bound</dt><dd>Programme limité par le processeur&nbsp;: il calcule et sature un ou plusieurs cœurs. On l'accélère en <strong>parallélisant</strong> sur les cœurs (ou en améliorant l'algorithme).</dd>
+  <dt>I/O-bound</dt><dd>Programme limité par les entrées/sorties&nbsp;: il passe son temps bloqué à attendre le disque ou le réseau, CPU bas. On l'accélère en <strong>recouvrant</strong> ou en <strong>réduisant</strong> les E/S.</dd>
+  <dt>PID</dt><dd>Identifiant numérique unique d'un processus, par lequel les outils le désignent (observer, suspendre, arrêter).</dd>
+  <dt>strace</dt><dd>Outil qui trace en direct les <strong>appels système</strong> d'un processus&nbsp;: idéal pour voir ce qu'il demande vraiment au noyau (fichiers, réseau, mémoire).</dd>
+  <dt>Thrashing</dt><dd>Effondrement des performances quand la RAM manque&nbsp;: l'OS passe son temps à échanger des pages entre RAM et disque (swap) au lieu de faire progresser les programmes.</dd>
+  <dt>Profilage</dt><dd>Mesure du comportement réel d'un programme (temps, CPU, mémoire, appels) pour fonder l'optimisation sur des <strong>faits</strong> plutôt que sur des intuitions.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Analyser un programme&nbsp;: identifier → CPU/E/S → mémoire → appels système → conclure.</li>
+<li>La question clé&nbsp;: <strong>CPU-bound</strong> (calcul) ou <strong>I/O-bound</strong> (attente)&nbsp;? Elle oriente l'optimisation.</li>
+<li>On <strong>relie</strong> chaque observation à un concept (ordonnancement, mémoire, E/S).</li>
+<li>But final&nbsp;: un <strong>modèle mental</strong> pour expliquer ce que fait vraiment le code.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelles étapes suit l'analyse d'un programme ?</li><li>Pourquoi la question CPU/E/S est-elle centrale ?</li><li>Que t'apporte, durablement, un modèle mental de l'OS ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle démarche suivre pour analyser le comportement d'un programme ?","a":["Identifier le processus → déterminer CPU-bound ou I/O-bound → regarder la mémoire → observer les appels système → conclure en reliant aux concepts","Le réécrire entièrement","Ajouter des threads au hasard","Acheter un nouvel ordinateur"],"correct":0,"explain":"On observe (top/htop, strace), on classe (calcul ou attente), et on explique par les concepts du cours plutôt que de deviner."},
+  {"q":"Pourquoi la question « CPU-bound ou I/O-bound ? » est-elle centrale ?","a":["Parce qu'elle oriente toute l'optimisation : pour le calcul, paralléliser sur les cœurs ; pour l'attente, recouvrir ou réduire les E/S","Parce qu'elle détermine la couleur de l'interface","Parce que c'est une question piège sans réponse","Parce qu'elle n'a aucune importance"],"correct":0,"explain":"Un programme limité par le CPU et un programme limité par les E/S s'optimisent de façons radicalement différentes. Se tromper de diagnostic mène à optimiser au mauvais endroit."},
+  {"q":"Pendant un téléchargement, on observe un CPU bas et un processus souvent bloqué. Qu'en conclure ?","a":["Le programme est I/O-bound : il attend le réseau (état bloqué, CPU libre) ; ajouter des cœurs n'aiderait pas, recouvrir l'attente oui","Il est CPU-bound","Il manque de mémoire","Il faut le redémarrer"],"correct":0,"explain":"CPU bas + souvent bloqué = limité par les E/S. On accélère en parallélisant les transferts (recouvrir l'attente), pas en ajoutant de la puissance de calcul."},
+  {"q":"Que t'apporte durablement la compréhension de l'OS ?","a":["Un modèle mental pour expliquer ce que fait vraiment le code sous la surface, et transformer les « mystères » de performance en questions résolubles","Rien d'utile en pratique","Uniquement du vocabulaire","La capacité d'écrire un OS complet"],"correct":0,"explain":"Les notions d'OS éclairent le débogage et la conception dans tous les langages : pourquoi ça rame, pourquoi la RAM grimpe, pourquoi des threads n'accélèrent pas."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["cpu-bound","cpu bound","limite par le cpu","limité par le cpu"],"placeholder":"le type de programme qui occupe un cœur à 100 % (calcul)","hints":["S'optimise en parallélisant sur les cœurs.","« CPU-… »."],"link":{"href":"lecon-06.html","label":"Revoir « La question clé »"}},
+  {"type":"text","accept":["i/o-bound","io-bound","i/o bound","limite par les e/s","limité par les e/s","io bound"],"placeholder":"le type de programme qui passe son temps à attendre (E/S)","hints":["CPU bas, souvent bloqué.","« I/O-… »."],"link":{"href":"lecon-06.html","label":"Revoir « La question clé »"}},
+  {"type":"text","accept":["appels systeme","appels système","strace","appel systeme","appel système"],"placeholder":"ce que strace permet d'observer (les demandes au noyau)","hints":["Ouvrir un fichier, lire le réseau…","« appels … »."],"link":{"href":"lecon-06.html","label":"Revoir « Une démarche d'analyse »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Remets dans l'ordre les étapes d'analyse&nbsp;: (a) regarder les appels système ; (b) identifier le processus ; (c) conclure CPU-bound ou I/O-bound ; (d) observer l'usage CPU et mémoire.</p><details><summary>Voir une solution</summary><p>Ordre logique&nbsp;: <strong>(b)</strong> identifier le processus (savoir <em>quoi</em> observer, son PID, ses threads), <strong>(d)</strong> observer l'usage CPU et mémoire (la vue d'ensemble&nbsp;: calcule-t-il&nbsp;? attend-il&nbsp;? combien de RAM&nbsp;?), <strong>(a)</strong> regarder les appels système (creuser&nbsp;: <em>que</em> demande-t-il au noyau&nbsp;?), puis <strong>(c)</strong> conclure CPU-bound ou I/O-bound et expliquer. On va du <strong>général</strong> (identifier, observer) au <strong>précis</strong> (appels système), avant de <strong>synthétiser</strong>. Conclure avant d'avoir observé serait deviner.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu observes un programme à 100 % d'un seul cœur, alors que ta machine en a huit, et il ne swappe pas. Que conclus-tu, et que proposes-tu ?</p><details><summary>Voir une solution</summary><p><strong>Conclusion&nbsp;:</strong> le programme est <strong>CPU-bound</strong> (il sature le processeur en calcul, pas d'attente d'E/S puisqu'il reste à 100&nbsp;% de CPU) <strong>mais mono-thread</strong> (il n'utilise qu'<strong>un seul</strong> cœur sur huit). La mémoire n'est pas le problème (pas de swap). On a donc un calcul intensif qui <strong>n'exploite pas le parallélisme matériel</strong> disponible&nbsp;: sept cœurs restent oisifs pendant que le travail s'effectue sur un seul. <strong>Propositions&nbsp;:</strong> <strong>1)</strong> <strong>Paralléliser le calcul</strong> sur plusieurs cœurs — si le travail peut être découpé en parties indépendantes (traiter plusieurs morceaux d'une image, plusieurs fichiers, plusieurs plages de données), on lance plusieurs <strong>threads</strong> (ou processus) qui s'exécutent <strong>vraiment en parallèle</strong> sur des cœurs distincts. Idéalement, on vise un nombre de threads de calcul proche du nombre de <strong>cœurs</strong> (≈8), pas plus (au-delà, ils se partageraient les mêmes cœurs sans gain, leçon&nbsp;3). On peut espérer une accélération allant jusqu'à ~8× si le travail se découpe bien. <strong>2)</strong> Vérifier d'abord que le travail est <strong>parallélisable</strong>&nbsp;: certains calculs sont intrinsèquement séquentiels (chaque étape dépend de la précédente)&nbsp;; dans ce cas, ajouter des threads n'aide pas, et il faut plutôt optimiser l'<strong>algorithme</strong> lui-même (meilleure complexité — cf. le cours algo) ou le code (vectorisation, structures de données). <strong>3)</strong> Mesurer après chaque changement pour confirmer le gain réel (et l'absence de conditions de course si on introduit des threads sur des données partagées, leçon&nbsp;2). <strong>L'erreur à éviter&nbsp;:</strong> conclure « ma machine est trop lente » et acheter un CPU plus rapide&nbsp;: ici, on n'utilise déjà que 1/8 de la machine&nbsp;! Le levier n'est pas plus de puissance, mais <strong>mieux exploiter</strong> celle qu'on a. C'est typiquement le diagnostic que la compréhension de l'ordonnancement et des threads permet de poser.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Synthèse du cours&nbsp;: cite trois « mystères » de performance ou de comportement qu'un développeur rencontre, et explique chacun avec un concept d'OS vu dans ce cours.</p><details><summary>Voir une solution</summary><p>Voici trois mystères courants et leur explication par les concepts du cours&nbsp;: <strong>Mystère 1 — « J'ai ajouté plein de threads à mon calcul, mais ça ne va pas plus vite (voire plus lentement). »</strong> → Explication par l'<strong>ordonnancement</strong> et le <strong>parallélisme</strong> (L2/L3)&nbsp;: pour un travail <strong>CPU-bound</strong>, le nombre utile de threads est limité par le nombre de <strong>cœurs</strong>. Au-delà, les threads se <strong>partagent</strong> les mêmes cœurs (alternance), sans ajouter de puissance, et chaque <strong>changement de contexte</strong> coûte du temps&nbsp;: trop de threads = contention, pas accélération. <strong>Mystère 2 — « Mon ordinateur est devenu extrêmement lent, le disque tourne sans arrêt, mais le CPU n'est pas saturé. »</strong> → Explication par la <strong>mémoire virtuelle</strong> et le <strong>swap</strong> (L4)&nbsp;: la RAM est pleine, l'OS déplace sans cesse des pages entre RAM et disque (<em>thrashing</em>). Comme le disque est des milliers de fois plus lent que la RAM, tout rame&nbsp;; et le CPU n'est pas saturé parce que les programmes sont <strong>bloqués</strong> en attente du disque (L3), pas en train de calculer. Solution&nbsp;: libérer/ajouter de la RAM, pas un CPU plus rapide. <strong>Mystère 3 — « Mon programme affiche “écriture réussie”, mais après une coupure de courant, les données ont disparu. »</strong> → Explication par le <strong>tampon d'écriture</strong> (L5)&nbsp;: l'OS a accepté l'écriture mais la garde en <strong>tampon (RAM)</strong> pour l'écrire plus tard, groupée&nbsp;; la coupure a effacé ce tampon avant qu'il n'atteigne le disque. Solution&nbsp;: forcer l'écriture physique (<em>flush/fsync</em>) pour les données critiques (comme le fait une base de données pour la durabilité). <strong>(Bonus, mystère 4) — « Une page web ne se charge pas, mais le ping vers le serveur passe »</strong> → relève plutôt du réseau/DNS, mais illustre le même réflexe&nbsp;: <strong>raisonner par couches/concepts</strong> pour localiser la cause. <strong>Le fil commun</strong>&nbsp;: chacun de ces comportements, mystérieux « de l'extérieur », s'explique <strong>simplement</strong> dès qu'on a le <strong>modèle mental</strong> de l'OS — ordonnancement, mémoire virtuelle, E/S et tampons. C'est précisément ce que ce cours apporte&nbsp;: non pas des recettes, mais une <strong>compréhension</strong> qui transforme les mystères en diagnostics.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

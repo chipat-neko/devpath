@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les métriques en profondeur : types &amp; PromQL — Leçon 08 · Syntaxe</title>
+    <meta name="description" content="Les quatre types de métriques (counter, gauge, histogram, summary), les bases de PromQL (rate, histogram_quantile, agrégation sum by), et les méthodes RED et USE pour choisir quoi mesurer." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="observabilite" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Observabilité &amp; SRE</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 08</p>
+              <h1 class="lesson-header__title">Les métriques en profondeur : types &amp; PromQL</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 03 conseillée</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer <strong>counter</strong>, <strong>gauge</strong>, <strong>histogram</strong> et <strong>summary</strong>&nbsp;;</li>
+                  <li>lire une requête <strong>PromQL</strong> avec <code>rate()</code>&nbsp;;</li>
+                  <li>calculer un <strong>percentile</strong> avec un histogramme&nbsp;;</li>
+                  <li>appliquer les méthodes <strong>RED</strong> et <strong>USE</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-03.html">leçon 03</a> a présenté les métriques et les tableaux de bord. Ici, on descend d'un cran&nbsp;: <strong>tous les chiffres ne se mesurent pas de la même façon</strong>. Choisir le bon <strong>type</strong> de métrique et savoir l'interroger avec <strong>PromQL</strong> (le langage de Prometheus) change tout — surtout pour les percentiles, qui sont la clé d'un bon diagnostic de latence.</p>
+
+<h2>Les quatre types de métriques</h2>
+<p>Prometheus, devenu le standard de fait, définit quatre types. Utiliser le mauvais donne des graphiques faux ou trompeurs.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Les types de métriques. À gauche, un counter : une courbe qui ne fait que monter en escalier, car un compteur ne redescend jamais (par exemple le nombre total de requêtes). Au centre, un gauge : une courbe qui monte et descend librement, car une jauge mesure une valeur instantanée (par exemple la mémoire utilisée). À droite, un histogram : des barres de hauteurs différentes réparties par tranches de durée, qui comptent combien de requêtes tombent dans chaque tranche.">
+    <text class="d-label" x="108" y="34" text-anchor="middle" font-size="12">counter</text>
+    <text class="d-mut" x="108" y="50" text-anchor="middle" font-size="9">ne fait que monter</text>
+    <path class="d-line" d="M28 170 L28 66 M28 170 L188 170" fill="none" />
+    <path class="d-accent" d="M28 160 L60 160 L60 140 L96 140 L96 118 L132 118 L132 92 L172 92" fill="none" stroke-width="2" />
+    <text class="d-label" x="320" y="34" text-anchor="middle" font-size="12">gauge</text>
+    <text class="d-mut" x="320" y="50" text-anchor="middle" font-size="9">monte et descend</text>
+    <path class="d-line" d="M240 170 L240 66 M240 170 L400 170" fill="none" />
+    <path class="d-accent" d="M240 140 L272 108 L304 128 L336 84 L368 120 L392 96" fill="none" stroke-width="2" />
+    <text class="d-label" x="532" y="34" text-anchor="middle" font-size="12">histogram</text>
+    <text class="d-mut" x="532" y="50" text-anchor="middle" font-size="9">réparti en tranches</text>
+    <path class="d-line" d="M452 170 L452 66 M452 170 L612 170" fill="none" />
+    <rect class="d-accent" x="462" y="132" width="24" height="38" />
+    <rect class="d-accent" x="494" y="96" width="24" height="74" />
+    <rect class="d-accent" x="526" y="112" width="24" height="58" />
+    <rect class="d-accent" x="558" y="146" width="24" height="24" />
+    <rect class="d-accent" x="590" y="158" width="18" height="12" />
+  </svg>
+  <figcaption>Un <strong>counter</strong> ne fait que croître (total de requêtes)&nbsp;; un <strong>gauge</strong> oscille (mémoire, files d'attente)&nbsp;; un <strong>histogram</strong> range les mesures en <strong>tranches</strong> pour reconstituer une répartition (durées de réponse).</figcaption>
+</figure>
+
+<ul>
+<li><strong>Counter</strong> (compteur)&nbsp;: une valeur qui <strong>ne fait que monter</strong> (elle se remet à zéro seulement au redémarrage). Ex.&nbsp;: nombre total de requêtes, d'erreurs. On ne lit <em>jamais</em> sa valeur brute&nbsp;: on regarde sa <strong>vitesse de croissance</strong>.</li>
+<li><strong>Gauge</strong> (jauge)&nbsp;: une valeur <strong>instantanée</strong> qui monte et descend. Ex.&nbsp;: mémoire utilisée, requêtes en cours, température, taille d'une file.</li>
+<li><strong>Histogram</strong> (histogramme)&nbsp;: compte les observations dans des <strong>tranches</strong> prédéfinies (buckets). Permet de calculer des <strong>percentiles</strong> côté serveur. Idéal pour les durées.</li>
+<li><strong>Summary</strong>&nbsp;: calcule des quantiles <strong>côté application</strong>. Plus précis localement mais <strong>non agrégeable</strong> entre instances&nbsp;: on ne peut pas fusionner les p99 de 10 serveurs. En pratique, on préfère souvent l'histogram.</li>
+</ul>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention — ne jamais afficher la valeur brute d'un counter</p><p>Tracer directement un counter donne une courbe qui <strong>monte à l'infini</strong>, illisible. Ce qui a un sens, c'est sa <strong>dérivée</strong>&nbsp;: combien il augmente <em>par seconde</em>. C'est exactement le rôle de <code>rate()</code>.</p></div></div>
+
+<h2>PromQL : rate() sur un counter</h2>
+<p>PromQL est le langage de requête de Prometheus. La fonction la plus utilisée est <code>rate()</code>&nbsp;: elle transforme un counter cumulé en un <strong>débit par seconde</strong>, moyenné sur une fenêtre de temps.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="La fonction rate transforme un counter en débit. À gauche, un counter qui monte en escalier de manière irrégulière au fil du temps. Une flèche étiquetée rate sur cinq minutes pointe vers la droite. À droite, une courbe lisse qui représente le nombre de requêtes par seconde, obtenue en mesurant la pente du counter sur la fenêtre de temps. On passe d'un total cumulé à une vitesse.">
+    <text class="d-label" x="120" y="30" text-anchor="middle" font-size="11">counter (cumulé)</text>
+    <path class="d-line" d="M32 140 L32 50 M32 140 L212 140" fill="none" />
+    <path class="d-accent" d="M32 132 L72 132 L72 112 L108 112 L108 104 L150 104 L150 78 L200 78" fill="none" stroke-width="2" />
+    <path class="d-line" d="M244 95 L316 95" fill="none" />
+    <path class="d-line" d="M316 95 L307 90 M316 95 L307 100" fill="none" />
+    <text class="d-tag" x="280" y="84" text-anchor="middle" font-size="10">rate()[5m]</text>
+    <text class="d-mut" x="280" y="112" text-anchor="middle" font-size="9">la pente</text>
+    <text class="d-label" x="470" y="30" text-anchor="middle" font-size="11">débit (req/s)</text>
+    <path class="d-line" d="M360 140 L360 50 M360 140 L612 140" fill="none" />
+    <path class="d-accent" d="M360 120 L400 116 L440 122 L480 96 L520 100 L560 90 L600 94" fill="none" stroke-width="2" />
+  </svg>
+  <figcaption><code>rate(http_requests_total[5m])</code> mesure la <strong>pente</strong> du counter sur les 5 dernières minutes&nbsp;: on obtient un débit en requêtes/seconde, lisible et comparable.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="promql.txt"><pre><code># Débit de requêtes par seconde (les 5 dernières minutes)
+rate(http_requests_total[5m])
+
+# Taux d'erreur : erreurs / total, agrégé par endpoint
+sum by (endpoint) (rate(http_requests_total{status=~"5.."}[5m]))
+  / sum by (endpoint) (rate(http_requests_total[5m]))
+
+# Latence p99 à partir d'un histogramme
+histogram_quantile(0.99, sum by (le) (rate(http_duration_seconds_bucket[5m])))
+</code></pre></figure>
+
+<h2>Agréger : sum by et sum without</h2>
+<p>Une métrique porte des <strong>étiquettes</strong> (labels)&nbsp;: <code>endpoint</code>, <code>status</code>, <code>instance</code>… Pour passer d'un détail fin à une vue d'ensemble, on <strong>agrège</strong>. <code>sum by (endpoint)</code> additionne en <strong>gardant</strong> l'étiquette <code>endpoint</code> (une courbe par endpoint)&nbsp;; <code>sum without (instance)</code> additionne en <strong>oubliant</strong> <code>instance</code> (on fusionne les serveurs).</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — pourquoi l'histogram plutôt que le summary</p><p>Une entreprise qui exploite <strong>plusieurs répliques</strong> d'un même service (courant en Kubernetes) veut le p99 <em>global</em>. Avec des <strong>summary</strong>, chaque instance calcule son propre p99&nbsp;: on ne peut pas les <strong>fusionner</strong> mathématiquement (la moyenne de percentiles ne veut rien dire). Avec des <strong>histogram</strong>, chaque instance expose ses <strong>tranches</strong>&nbsp;; Prometheus les additionne (<code>sum by (le)</code>) puis <code>histogram_quantile</code> recalcule un p99 <strong>correct sur l'ensemble</strong>. C'est la raison pour laquelle la communauté recommande l'histogram dès qu'on a plusieurs instances.</p></div></div>
+
+<h2>Quoi mesurer : RED et USE</h2>
+<p>Face à un service, on ne sait pas toujours <em>quelles</em> métriques créer. Deux recettes éprouvées répondent à la question&nbsp;: <strong>RED</strong> pour les services (côté requête), <strong>USE</strong> pour les ressources (côté machine).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Deux méthodes pour choisir les métriques. À gauche, la méthode RED, pour un service : Rate le débit de requêtes, Errors le taux d'erreur, Duration la latence. À droite, la méthode USE, pour une ressource comme le CPU ou le disque : Utilization le taux d'occupation, Saturation le débordement ou la file d'attente, Errors les erreurs matérielles. RED regarde le service du point de vue de l'utilisateur, USE regarde la ressource du point de vue du système.">
+    <rect class="d-accent" x="24" y="44" width="270" height="128" rx="10" />
+    <text class="d-label" x="159" y="70" text-anchor="middle" font-size="13">RED — un service</text>
+    <text class="d-text" x="60" y="100" font-size="11">Rate</text>
+    <text class="d-mut" x="150" y="100" font-size="9">débit de requêtes</text>
+    <text class="d-text" x="60" y="126" font-size="11">Errors</text>
+    <text class="d-mut" x="150" y="126" font-size="9">taux d'erreur</text>
+    <text class="d-text" x="60" y="152" font-size="11">Duration</text>
+    <text class="d-mut" x="150" y="152" font-size="9">latence</text>
+    <rect class="d-frame" x="346" y="44" width="270" height="128" rx="10" />
+    <text class="d-label" x="481" y="70" text-anchor="middle" font-size="13">USE — une ressource</text>
+    <text class="d-text" x="382" y="100" font-size="11">Utilization</text>
+    <text class="d-mut" x="486" y="100" font-size="9">taux d'occupation</text>
+    <text class="d-text" x="382" y="126" font-size="11">Saturation</text>
+    <text class="d-mut" x="486" y="126" font-size="9">file d'attente</text>
+    <text class="d-text" x="382" y="152" font-size="11">Errors</text>
+    <text class="d-mut" x="486" y="152" font-size="9">erreurs matérielles</text>
+  </svg>
+  <figcaption><strong>RED</strong> (Rate, Errors, Duration) décrit un service du point de vue de l'<strong>utilisateur</strong>&nbsp;; <strong>USE</strong> (Utilization, Saturation, Errors) décrit une ressource du point de vue du <strong>système</strong>. Les deux se complètent.</figcaption>
+</figure>
+
+<p>On retrouve ici les <strong>signaux dorés</strong> de la leçon 03&nbsp;: RED en est une formulation orientée service, tandis que USE éclaire la <strong>saturation</strong> des ressources sous-jacentes.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — la cardinalité, encore et toujours</p><p>Chaque combinaison d'étiquettes crée une <strong>série temporelle</strong> stockée. Une étiquette <code>user_id</code> (des millions de valeurs) fait exploser la <strong>cardinalité</strong> et le coût. Règle d'or&nbsp;: des étiquettes à <strong>faible cardinalité</strong> et bornée (endpoint, code de statut, région), jamais d'identifiants uniques.</p></div></div>
+
+<h2>Antisèche — types &amp; PromQL</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Choisir le type et l'interroger.</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Usage</th></tr></thead>
+    <tbody>
+      <tr><td>counter</td><td>Ne fait que monter&nbsp;; total de requêtes/erreurs → <code>rate()</code></td></tr>
+      <tr><td>gauge</td><td>Valeur instantanée&nbsp;; mémoire, file, connexions</td></tr>
+      <tr><td>histogram</td><td>Durées&nbsp;; percentiles agrégeables (<code>histogram_quantile</code>)</td></tr>
+      <tr><td>summary</td><td>Quantiles côté app&nbsp;; non fusionnable entre instances</td></tr>
+      <tr><td><code>rate(x[5m])</code></td><td>Débit par seconde d'un counter sur 5 min</td></tr>
+      <tr><td><code>sum by (l)</code></td><td>Agrège en gardant l'étiquette <code>l</code></td></tr>
+      <tr><td>RED / USE</td><td>Quoi mesurer&nbsp;: service (Rate/Errors/Duration) / ressource</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Counter</dt><dd>Métrique cumulative qui ne décroît pas&nbsp;; on l'exploite via son débit (<code>rate</code>), pas sa valeur brute.</dd>
+  <dt>Gauge</dt><dd>Métrique instantanée qui monte et descend (mémoire, taille de file, connexions actives).</dd>
+  <dt>Histogram</dt><dd>Métrique qui répartit les observations en tranches (buckets), permettant de calculer des percentiles agrégeables.</dd>
+  <dt>Summary</dt><dd>Métrique qui calcule des quantiles côté application&nbsp;; précise localement mais non agrégeable entre instances.</dd>
+  <dt>PromQL</dt><dd>Le langage de requête de Prometheus pour interroger et transformer les séries temporelles.</dd>
+  <dt>rate()</dt><dd>Fonction PromQL qui calcule le débit par seconde d'un counter sur une fenêtre de temps.</dd>
+  <dt>Agrégation (sum by / without)</dt><dd>Combiner des séries en gardant (<code>by</code>) ou en oubliant (<code>without</code>) certaines étiquettes.</dd>
+  <dt>RED / USE</dt><dd>Deux recettes pour choisir les métriques&nbsp;: RED (Rate, Errors, Duration) côté service, USE (Utilization, Saturation, Errors) côté ressource.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Quatre types&nbsp;: <strong>counter</strong> (monte), <strong>gauge</strong> (oscille), <strong>histogram</strong> (tranches), <strong>summary</strong> (quantiles locaux).</li>
+<li>Un counter s'exploite avec <code>rate()</code>, jamais en valeur brute.</li>
+<li>Les <strong>histogrammes</strong> donnent des percentiles <strong>agrégeables</strong> entre instances&nbsp;; c'est pourquoi on les préfère aux summary.</li>
+<li><strong>RED</strong> (service) et <strong>USE</strong> (ressource) répondent à «&nbsp;quoi mesurer&nbsp;?&nbsp;».</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quand choisir un gauge plutôt qu'un counter&nbsp;?</li><li>Pourquoi applique-t-on <code>rate()</code> à un counter&nbsp;?</li><li>Que décrivent les méthodes RED et USE&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quel type de métrique pour « la mémoire utilisée en ce moment » ?","a":["Un gauge (une valeur instantanée qui monte et descend)","Un counter (qui ne fait que monter)","Un histogram","Un summary"],"correct":0,"explain":"La mémoire varie dans les deux sens : c'est une jauge (gauge). Un counter conviendrait à un total cumulé comme « octets écrits depuis le démarrage »."},
+  {"q":"Pourquoi applique-t-on rate() à un counter au lieu d'afficher sa valeur ?","a":["Parce qu'un counter ne fait que croître ; ce qui a du sens, c'est sa vitesse de croissance (débit par seconde)","Parce que rate() chiffre les données","Parce que la valeur brute est secrète","Parce que rate() supprime les erreurs"],"correct":0,"explain":"La valeur brute d'un counter monte à l'infini et n'est pas lisible. rate() en donne la pente : le débit sur une fenêtre de temps."},
+  {"q":"Pourquoi préférer un histogram à un summary quand on a plusieurs instances ?","a":["Les tranches d'un histogram s'additionnent, donc on peut recalculer un percentile global correct ; les quantiles d'un summary ne se fusionnent pas","L'histogram est plus joli","Le summary est interdit","L'histogram consomme zéro ressource"],"correct":0,"explain":"On ne peut pas moyenner des percentiles. L'histogram expose des buckets agrégeables ; histogram_quantile recalcule un p99 juste sur l'ensemble."},
+  {"q":"Que décrit la méthode RED pour un service ?","a":["Rate (débit), Errors (taux d'erreur), Duration (latence)","Read, Edit, Delete","Rouge, Estimé, Détecté","Réseau, Espace, Disque"],"correct":0,"explain":"RED oriente les métriques d'un service côté utilisateur : combien de requêtes, combien échouent, et combien de temps elles prennent. USE fait pareil côté ressource."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["counter","compteur"],"placeholder":"le type de métrique qui ne fait que monter (total de requêtes)","hints":["Se remet à zéro seulement au redémarrage.","On l'exploite avec rate()."],"link":{"href":"lecon-08.html","label":"Revoir « Les quatre types »"}},
+  {"type":"text","accept":["rate","rate()"],"placeholder":"la fonction PromQL qui donne le débit par seconde d'un counter","hints":["Mesure la pente.","rate(x[5m])."],"link":{"href":"lecon-08.html","label":"Revoir « rate() sur un counter »"}},
+  {"type":"text","accept":["histogram","histogramme"],"placeholder":"le type de métrique qui range les durées en tranches (percentiles agrégeables)","hints":["Buckets.","histogram_quantile()."],"link":{"href":"lecon-08.html","label":"Revoir « Les quatre types »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune de ces mesures, dis quel <strong>type</strong> convient&nbsp;: (a) nombre total de commandes créées&nbsp;; (b) nombre de connexions ouvertes en ce moment&nbsp;; (c) durée de traitement des requêtes.</p><details><summary>Voir une solution</summary><p><strong>(a) Nombre total de commandes créées → un counter.</strong> C'est une valeur <strong>cumulative</strong> qui ne fait qu'augmenter au fil du temps (une commande créée ne se «&nbsp;dé-crée&nbsp;» pas). On ne lira pas sa valeur brute mais son débit&nbsp;: <code>rate(commandes_total[5m])</code> pour connaître le nombre de commandes par seconde. <strong>(b) Nombre de connexions ouvertes en ce moment → un gauge.</strong> Cette valeur <strong>monte et descend</strong> selon que des connexions s'ouvrent ou se ferment&nbsp;: c'est un instantané, typique d'une jauge (comme la mémoire ou la taille d'une file). <strong>(c) Durée de traitement des requêtes → un histogram.</strong> On veut la <strong>répartition</strong> des durées (combien de requêtes rapides, combien de lentes) pour en tirer des percentiles p95/p99. L'histogram range chaque durée dans une tranche&nbsp;; c'est le seul type qui permet de calculer proprement des percentiles <strong>agrégeables</strong> entre plusieurs instances.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Lis cette requête à voix haute et explique ce qu'elle calcule&nbsp;: <code>sum by (endpoint) (rate(http_requests_total{status=~"5.."}[5m]))</code>.</p><details><summary>Voir une solution</summary><p>On décortique de l'intérieur vers l'extérieur. <strong>1)</strong> <code>http_requests_total{status=~"5.."}</code> sélectionne la métrique <code>http_requests_total</code> (un <strong>counter</strong> du nombre total de requêtes) en ne gardant que les séries dont l'étiquette <code>status</code> correspond à l'expression régulière <code>5..</code> — c'est-à-dire les codes HTTP <strong>5xx</strong> (500, 502, 503…), donc les <strong>erreurs serveur</strong>. <strong>2)</strong> <code>rate(...[5m])</code> transforme ce counter en un <strong>débit par seconde</strong>, moyenné sur les 5 dernières minutes&nbsp;: on obtient le nombre d'erreurs serveur par seconde, pour chaque combinaison d'étiquettes restante. <strong>3)</strong> <code>sum by (endpoint) (...)</code> <strong>additionne</strong> ces débits en ne gardant que l'étiquette <code>endpoint</code>&nbsp;: toutes les autres étiquettes (instance, méthode…) sont fusionnées. <strong>Résultat</strong>&nbsp;: on obtient <strong>une courbe par endpoint</strong> donnant le nombre d'erreurs 5xx par seconde sur cet endpoint. C'est exactement ce qu'il faut pour repérer <em>quel</em> endpoint concentre les erreurs. Pour en faire un <strong>taux</strong> (proportion), on diviserait par le même calcul sans le filtre <code>status</code> — soit le total de requêtes par endpoint.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un dashboard affiche «&nbsp;latence moyenne&nbsp;: 180&nbsp;ms&nbsp;», ce qui semble bon. Pourtant les utilisateurs se plaignent de lenteurs. Explique le piège et propose une meilleure mesure, en précisant le type de métrique nécessaire.</p><details><summary>Voir une solution</summary><p>Le piège classique est celui de la <strong>moyenne</strong>, qui <strong>masque la longue traîne</strong>. Une moyenne de 180&nbsp;ms peut très bien cacher que <strong>5&nbsp;% des requêtes prennent 3&nbsp;secondes</strong>&nbsp;: comme l'immense majorité est rapide (disons 100&nbsp;ms), elle «&nbsp;dilue&nbsp;» les lenteurs dans le calcul, et la moyenne reste basse. Or ces 5&nbsp;% d'utilisateurs très mal servis sont précisément ceux qui se plaignent — et une moyenne ne les <em>voit</em> pas. <strong>Meilleure mesure&nbsp;: les percentiles.</strong> Le <strong>p95</strong> (la durée sous laquelle tombent 95&nbsp;% des requêtes) et le <strong>p99</strong> révèlent la <strong>queue de distribution</strong>&nbsp;: si le p99 est à 3&nbsp;s, on voit immédiatement que 1&nbsp;% des requêtes sont catastrophiques. <strong>Type de métrique nécessaire&nbsp;:</strong> il faut un <strong>histogram</strong> — c'est le seul type qui range les durées en <strong>tranches</strong> et permet de calculer des percentiles côté serveur, avec <code>histogram_quantile(0.99, sum by (le) (rate(http_duration_seconds_bucket[5m])))</code>. En prime, contrairement à un summary, l'histogram est <strong>agrégeable</strong>&nbsp;: on peut obtenir un p99 global correct même avec plusieurs répliques du service. <strong>Leçon</strong>&nbsp;: sur les latences, on ne pilote jamais à la moyenne&nbsp;; on regarde les percentiles, car ce sont eux qui reflètent l'expérience des utilisateurs les moins bien servis — ceux qui, justement, se plaignent.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

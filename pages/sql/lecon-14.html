@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Performance, sécurité & bonnes pratiques — Leçon 14 · SQL · Syntaxe</title>
+    <meta name="description" content="Rends tes requêtes SQL rapides et sûres : index et arbre B, EXPLAIN, pièges de performance, injection SQL, requêtes paramétrées et lisibilité." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="sql" data-lesson="lecon-14.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">SQL</a></li>
+            <li aria-current="page">Leçon 14</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Aller plus loin — Leçon 14</p>
+              <h1 class="lesson-header__title">Performance, sécurité & bonnes pratiques</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 13 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir créer un <strong>INDEX</strong> utile sur les colonnes de <code>WHERE</code>, <code>JOIN</code> et <code>ORDER BY</code>&nbsp;;</li>
+                  <li>savoir lire un plan d'exécution avec <code>EXPLAIN</code> pour repérer un balayage complet de table&nbsp;;</li>
+                  <li>savoir éviter l'<strong>injection SQL</strong> grâce aux requêtes <strong>paramétrées</strong> et au moindre privilège&nbsp;;</li>
+                  <li>savoir écrire des requêtes lisibles et appliquer une checklist de bonnes pratiques.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais maintenant lire, filtrer, trier, regrouper et joindre des tables. Cette dernière leçon ne t'apprend pas une nouvelle commande&nbsp;: elle te montre comment écrire des requêtes qui restent <strong>rapides</strong> quand la table grossit, et <strong>sûres</strong> quand des humains tapent leurs données. C'est ce qui sépare une requête qui «&nbsp;marche&nbsp;» d'une requête qu'on peut mettre en production.</p>
+<p>On reprend notre petit schéma habituel&nbsp;: une table <code>clients</code> (id, nom, ville, email) et une table <code>commandes</code> (id, client_id, date, montant). Imagine qu'elles contiennent non pas 5 lignes, mais 5 millions. C'est là que les bonnes pratiques deviennent visibles.</p>
+
+<h2>Les INDEX : retrouver vite une ligne</h2>
+<p>Sans index, pour répondre à <code>WHERE ville = 'Lyon'</code>, la base lit <strong>toutes</strong> les lignes une par une&nbsp;: c'est un <em>balayage complet de table</em> (full table scan). Un <strong>INDEX</strong> est une structure annexe, triée, qui pointe vers les lignes&nbsp;: un peu comme l'index alphabétique au dos d'un livre. La plupart des bases utilisent un <strong>arbre B</strong> (B-tree), qui permet de trouver une valeur en quelques sauts au lieu de tout parcourir.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 230" role="img" aria-label="Deux façons de retrouver la ville Lyon dans une grande table. À gauche, sans index, le moteur lit toutes les lignes une par une du haut vers le bas, c'est le balayage complet ou SCAN, coûteux sur des millions de lignes. À droite, avec un index en arbre B, on part de la racine, on descend vers le bon nœud intermédiaire I à P, puis vers la feuille qui contient Lyon, en seulement quelques sauts, c'est un SEEK.">
+    <text class="d-label" x="145" y="22" text-anchor="middle" font-size="11">sans index — SCAN</text>
+    <rect class="d-frame" x="55" y="30" width="150" height="170" fill="none" />
+    <rect class="d-box" x="65" y="38" width="130" height="16" /><text class="d-mut" x="72" y="50" font-size="9" font-family="monospace">Paris</text>
+    <rect class="d-box" x="65" y="56" width="130" height="16" /><text class="d-mut" x="72" y="68" font-size="9" font-family="monospace">Nantes</text>
+    <rect class="d-box" x="65" y="74" width="130" height="16" /><text class="d-mut" x="72" y="86" font-size="9" font-family="monospace">Lille</text>
+    <rect class="d-box" x="65" y="92" width="130" height="16" /><text class="d-mut" x="72" y="104" font-size="9" font-family="monospace">Nice</text>
+    <rect class="d-accent" x="65" y="110" width="130" height="16" /><text class="d-text" x="72" y="122" font-size="9" font-family="monospace">Lyon ✓</text>
+    <rect class="d-box" x="65" y="128" width="130" height="16" /><text class="d-mut" x="72" y="140" font-size="9" font-family="monospace">Metz</text>
+    <rect class="d-box" x="65" y="146" width="130" height="16" /><text class="d-mut" x="72" y="158" font-size="9" font-family="monospace">Tours</text>
+    <rect class="d-box" x="65" y="164" width="130" height="16" /><text class="d-mut" x="72" y="176" font-size="9" font-family="monospace">…</text>
+    <text class="d-tag" x="40" y="66" font-size="14" font-family="monospace">↓</text>
+    <text class="d-tag" x="40" y="122" font-size="14" font-family="monospace">↓</text>
+    <text class="d-tag" x="40" y="176" font-size="14" font-family="monospace">↓</text>
+    <text class="d-mut" x="145" y="194" text-anchor="middle" font-size="9">lit toutes les lignes</text>
+
+    <text class="d-label" x="470" y="22" text-anchor="middle" font-size="11">avec index — arbre B (SEEK)</text>
+    <rect class="d-accent" x="420" y="34" width="100" height="24" /><text class="d-text" x="470" y="50" text-anchor="middle" font-size="10" font-family="monospace">racine</text>
+    <line class="d-line" x1="450" y1="58" x2="390" y2="92" /><line class="d-line" x1="470" y1="58" x2="470" y2="92" /><line class="d-line" x1="490" y1="58" x2="550" y2="92" />
+    <rect class="d-box" x="350" y="92" width="80" height="22" /><text class="d-mut" x="390" y="107" text-anchor="middle" font-size="9" font-family="monospace">A–H</text>
+    <rect class="d-accent" x="430" y="92" width="80" height="22" /><text class="d-text" x="470" y="107" text-anchor="middle" font-size="9" font-family="monospace">I–P</text>
+    <rect class="d-box" x="510" y="92" width="80" height="22" /><text class="d-mut" x="550" y="107" text-anchor="middle" font-size="9" font-family="monospace">Q–Z</text>
+    <line class="d-line" x1="470" y1="114" x2="470" y2="150" />
+    <rect class="d-accent" x="420" y="150" width="100" height="24" /><text class="d-text" x="470" y="166" text-anchor="middle" font-size="10" font-family="monospace">Lyon ✓</text>
+    <text class="d-mut" x="470" y="194" text-anchor="middle" font-size="9">3 sauts, pas un balayage</text>
+  </svg>
+  <figcaption>Sans index, la base parcourt toute la table (<strong>SCAN</strong>). Avec un index en <strong>arbre B</strong>, elle descend racine → nœud → feuille en quelques sauts (<strong>SEEK</strong>)&nbsp;: sur des millions de lignes, la différence est spectaculaire.</figcaption>
+</figure>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Créer un index sur la colonne souvent filtrée
+CREATE INDEX idx_clients_ville
+    ON clients (ville);</code></pre></figure>
+<p class="code-caption">Après cet index, <code>WHERE ville = 'Lyon'</code> n'a plus besoin de lire toute la table.</p>
+<p>Indexe en priorité les colonnes qui apparaissent dans <code>WHERE</code>, dans les conditions de <code>JOIN</code> (typiquement les clés étrangères comme <code>commandes.client_id</code>) et dans <code>ORDER BY</code>. Un <strong>index composite</strong> couvre plusieurs colonnes à la fois&nbsp;; l'ordre des colonnes compte.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Index composite : utile pour filtrer par client PUIS trier par date
+CREATE INDEX idx_commandes_client_date
+    ON commandes (client_id, date);</code></pre></figure>
+<p class="code-caption">Cet index sert une requête du type «&nbsp;les commandes du client 42, triées par date&nbsp;». L'inverse (d'abord <code>date</code>, puis <code>client_id</code>) ne servirait pas la même requête&nbsp;: l'ordre n'est pas neutre.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un index n'est pas gratuit&nbsp;: chaque <code>INSERT</code>, <code>UPDATE</code> ou <code>DELETE</code> doit aussi mettre l'index à jour. Les lectures gagnent, les écritures perdent un peu. C'est presque toujours un bon échange quand on lit plus qu'on n'écrit — ce qui est le cas le plus courant.</p></div></div>
+
+<h2>EXPLAIN : lire le plan d'exécution</h2>
+<p>Avant d'ajouter un index «&nbsp;à l'instinct&nbsp;», demande à la base <strong>comment</strong> elle compte exécuter ta requête. Le mot-clé <code>EXPLAIN</code> affiche le <em>plan d'exécution</em>&nbsp;: c'est la feuille de route choisie par le moteur.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">EXPLAIN
+SELECT nom, ville
+FROM clients
+WHERE ville = 'Lyon';</code></pre></figure>
+<p>Le détail varie selon le SGBD, mais on lit toujours la même information clé&nbsp;: la base fait-elle un balayage complet, ou utilise-t-elle un index&nbsp;? Voici une lecture simplifiée d'un plan, avant et après l'index&nbsp;:</p>
+<table><thead><tr><th>Requête</th><th>Méthode d'accès</th><th>Lignes parcourues</th></tr></thead><tbody><tr><td>ville = 'Lyon' (sans index)</td><td>Balayage complet (SCAN)</td><td>5 000 000</td></tr><tr><td>ville = 'Lyon' (avec index)</td><td>Recherche par index (SEEK)</td><td>1 280</td></tr></tbody></table>
+<p class="code-caption">Passer d'un «&nbsp;SCAN&nbsp;» de toute la table à un «&nbsp;SEEK&nbsp;» ciblé, c'est l'effet visible d'un bon index.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Sous PostgreSQL et MySQL, <code>EXPLAIN ANALYZE</code> exécute réellement la requête et te donne le <strong>temps</strong> mesuré, pas seulement l'estimation. SQLite, lui, utilise <code>EXPLAIN QUERY PLAN</code>, plus lisible pour débuter.</p></div></div>
+
+<h2>Les pièges de performance</h2>
+<p>Quatre erreurs reviennent sans cesse. Elles n'empêchent pas la requête de fonctionner&nbsp;; elles la rendent lente.</p>
+<p><strong>1. <code>SELECT *</code>.</strong> Tu ramènes toutes les colonnes, même celles dont tu n'as pas besoin&nbsp;: plus de données à lire et à transférer, et parfois un index parfaitement utile devient inutilisable. Demande les colonnes utiles.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- À éviter
+SELECT * FROM clients WHERE ville = 'Lyon';
+
+-- Préférer : seulement ce dont tu te sers
+SELECT nom, email FROM clients WHERE ville = 'Lyon';</code></pre></figure>
+<p><strong>2. Une fonction sur une colonne indexée.</strong> Si tu transformes la colonne dans le <code>WHERE</code>, la base ne peut plus utiliser l'index&nbsp;: elle doit calculer la fonction sur chaque ligne.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Casse l'index : UPPER() est appliqué à chaque ligne
+SELECT nom FROM clients
+WHERE UPPER(ville) = 'LYON';
+
+-- Garde l'index utilisable : on compare la colonne brute
+SELECT nom FROM clients
+WHERE ville = 'Lyon';</code></pre></figure>
+<p><strong>3. Le problème N+1.</strong> C'est le piège classique côté application&nbsp;: tu fais 1 requête pour lister les clients, puis 1 requête par client pour ses commandes. Avec 1 000 clients, cela fait 1 001 allers-retours. La bonne réponse&nbsp;: une seule requête avec une <code>JOIN</code>.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Une seule requête remplace 1 + N requêtes
+SELECT c.nom, o.date, o.montant
+FROM clients AS c
+JOIN commandes AS o ON o.client_id = c.id;</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le problème N plus 1 comparé à une jointure. À gauche, l'approche N plus 1 : une première requête récupère la liste des clients, puis une requête supplémentaire par client pour ses commandes, soit 1 plus N allers-retours vers la base, par exemple 1 plus 1000. À droite, une seule requête avec JOIN récupère clients et commandes ensemble, en un seul aller-retour.">
+    <text class="d-label" x="160" y="22" text-anchor="middle" font-size="11">N+1 requêtes</text>
+    <rect class="d-frame" x="40" y="30" width="240" height="145" fill="none" />
+    <rect class="d-accent" x="55" y="40" width="210" height="20" /><text class="d-text" x="62" y="54" font-size="9" font-family="monospace">1 · SELECT … FROM clients</text>
+    <rect class="d-box" x="55" y="66" width="210" height="16" /><text class="d-mut" x="62" y="78" font-size="9" font-family="monospace">2 · …WHERE client_id = 1</text>
+    <rect class="d-box" x="55" y="86" width="210" height="16" /><text class="d-mut" x="62" y="98" font-size="9" font-family="monospace">3 · …WHERE client_id = 2</text>
+    <rect class="d-box" x="55" y="106" width="210" height="16" /><text class="d-mut" x="62" y="118" font-size="9" font-family="monospace">4 · …WHERE client_id = 3</text>
+    <text class="d-mut" x="160" y="138" text-anchor="middle" font-size="12" font-family="monospace">⋮</text>
+    <text class="d-tag" x="160" y="164" text-anchor="middle" font-size="10">1 + 1000 allers-retours</text>
+
+    <text class="d-label" x="480" y="22" text-anchor="middle" font-size="11">1 seule requête</text>
+    <rect class="d-frame" x="360" y="30" width="240" height="145" fill="none" />
+    <rect class="d-accent" x="375" y="66" width="210" height="24" /><text class="d-text" x="382" y="82" font-size="9" font-family="monospace">SELECT … JOIN commandes</text>
+    <text class="d-text" x="480" y="124" text-anchor="middle" font-size="10">1 aller-retour</text>
+    <text class="d-mut" x="480" y="144" text-anchor="middle" font-size="9">clients + commandes ensemble</text>
+  </svg>
+  <figcaption>Le piège <strong>N+1</strong> multiplie les allers-retours vers la base (1 requête de liste, puis 1 par ligne). Une seule <code>JOIN</code> ramène tout en un aller-retour.</figcaption>
+</figure>
+<p><strong>4. Les sous-requêtes corrélées coûteuses.</strong> Une sous-requête qui se ré-exécute pour <em>chaque</em> ligne de la requête principale peut vite devenir très lente. Souvent, on peut la remplacer par une <code>JOIN</code> ou une agrégation groupée, bien plus efficace.</p>
+
+<h2>La sécurité : l'injection SQL</h2>
+<p>C'est le risque le plus connu et le plus grave. Il survient quand une application <strong>colle directement</strong> la saisie d'un utilisateur dans une requête. Imagine un formulaire de connexion qui construit la requête ainsi (pseudo-code)&nbsp;:</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- DANGEREUX : la saisie est concaténée dans la requête
+-- requete = "SELECT * FROM clients WHERE email = '" + saisie + "'"</code></pre></figure>
+<p>Si l'utilisateur tape <code>' OR '1'='1</code>, la condition du <code>WHERE</code> devient toujours vraie&nbsp;: il peut contourner le filtre, lire des données qui ne lui appartiennent pas, voire supprimer une table. <strong>Ne concatène jamais</strong> une saisie utilisateur dans une requête.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Le danger ne se limite pas au contournement d'un login. Via une injection, un attaquant peut lire d'autres tables (avec <code>UNION SELECT</code>), modifier ou supprimer des données, parfois enchaîner plusieurs instructions. Une <strong>seule</strong> requête concaténée peut suffire à compromettre toute la base.</p></div></div>
+<p>La parade s'appelle la <strong>requête paramétrée</strong> (ou requête préparée). Tu écris la requête avec des <em>marqueurs</em>, et tu fournis les valeurs à part&nbsp;: la base traite alors la saisie comme une simple donnée, jamais comme du code SQL.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- SÛR : un marqueur, la valeur est passée séparément
+SELECT id, nom
+FROM clients
+WHERE email = ?;</code></pre></figure>
+<p class="code-caption">Le <code>?</code> est un paramètre. Selon le SGBD, on écrit aussi <code>$1</code> (PostgreSQL) ou <code>:email</code> (paramètre nommé).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Deux façons de gérer une saisie utilisateur. En haut, la concaténation : la saisie apostrophe OR 1 égale 1 est collée dans le texte de la requête, qui devient WHERE email égale vide OR 1 égale 1, une condition toujours vraie ; l'attaquant contourne le filtre, c'est dangereux. En bas, la requête paramétrée : la requête garde un marqueur point d'interrogation figé, et la saisie est rangée à part dans une case donnée, traitée comme du texte, jamais comme du SQL, c'est sûr.">
+    <text class="d-label" x="95" y="22" text-anchor="middle" font-size="11">saisie utilisateur</text>
+    <rect class="d-frame" x="20" y="30" width="150" height="26" /><text class="d-text" x="30" y="47" font-size="10" font-family="monospace">' OR '1'='1</text>
+
+    <text class="d-label" x="420" y="22" text-anchor="middle" font-size="11">concaténation → SQL construit</text>
+    <rect class="d-frame" x="220" y="30" width="400" height="54" fill="none" />
+    <text class="d-mut" x="232" y="52" font-size="10" font-family="monospace">WHERE email = '</text><text class="d-tag" x="332" y="52" font-size="10" font-family="monospace">' OR '1'='1</text><text class="d-mut" x="418" y="52" font-size="10" font-family="monospace">'</text>
+    <text class="d-text" x="232" y="74" font-size="10" font-family="monospace">→ condition TOUJOURS vraie</text>
+    <line class="d-line" x1="170" y1="43" x2="220" y2="50" />
+    <text class="d-tag" x="530" y="74" font-size="11">✗ danger</text>
+
+    <text class="d-label" x="95" y="128" text-anchor="middle" font-size="11">saisie (rangée à part)</text>
+    <rect class="d-box" x="20" y="136" width="150" height="26" /><text class="d-text" x="30" y="153" font-size="10" font-family="monospace">' OR '1'='1</text>
+    <text class="d-mut" x="95" y="182" text-anchor="middle" font-size="9">= simple donnée, pas du code</text>
+
+    <text class="d-label" x="420" y="128" text-anchor="middle" font-size="11">requête paramétrée</text>
+    <rect class="d-frame" x="220" y="136" width="400" height="54" fill="none" />
+    <text class="d-mut" x="232" y="158" font-size="10" font-family="monospace">WHERE email = ?</text>
+    <text class="d-text" x="232" y="180" font-size="10" font-family="monospace">le ? reste figé, la valeur passe à côté</text>
+    <line class="d-line" x1="170" y1="149" x2="220" y2="160" />
+    <text class="d-tag" x="530" y="180" font-size="11">✓ sûr</text>
+  </svg>
+  <figcaption>La <strong>concaténation</strong> laisse la saisie modifier la structure de la requête (condition toujours vraie). La <strong>requête paramétrée</strong> fige le SQL et range la saisie dans une case «&nbsp;donnée&nbsp;»&nbsp;: elle ne peut plus devenir du code.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>L'injection SQL figure depuis des années parmi les toutes premières failles du classement <strong>OWASP</strong>. Des fuites massives de données (e-mails, identifiants, empreintes de mots de passe) ont eu pour origine une simple requête concaténée dans un formulaire de recherche ou de connexion. La parade est connue et gratuite&nbsp;: la requête paramétrée. Aucun site sérieux ne colle de saisie utilisateur dans son SQL.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Applique le <strong>principe du moindre privilège</strong>&nbsp;: le compte que ton application utilise ne devrait avoir que les droits dont elle a besoin. Un compte qui ne fait que lire des produits n'a aucune raison de pouvoir faire <code>DROP TABLE</code>.</p></div></div>
+
+<h2>La lisibilité : une requête se relit</h2>
+<p>Une requête est lue bien plus souvent qu'elle n'est écrite. Quelques habitudes simples rendent ton SQL clair pour les autres (et pour toi dans six mois)&nbsp;: mots-clés en <strong>MAJUSCULES</strong>, une clause par ligne avec <strong>indentation</strong>, des <strong>alias</strong> courts et parlants, et un <strong>commentaire</strong> quand l'intention n'est pas évidente.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Chiffre d'affaires par ville (clients ayant au moins une commande)
+SELECT
+    c.ville,
+    COUNT(o.id)      AS nb_commandes,
+    SUM(o.montant)   AS total
+FROM clients AS c
+JOIN commandes AS o ON o.client_id = c.id
+GROUP BY c.ville
+HAVING SUM(o.montant) &gt; 1000
+ORDER BY total DESC;</code></pre></figure>
+<table><thead><tr><th>ville</th><th>nb_commandes</th><th>total</th></tr></thead><tbody><tr><td>Paris</td><td>312</td><td>48 900</td></tr><tr><td>Lyon</td><td>187</td><td>27 450</td></tr><tr><td>Marseille</td><td>96</td><td>14 120</td></tr></tbody></table>
+<p class="code-caption">Même requête, mais lisible d'un coup d'œil&nbsp;: alignement, alias et un commentaire d'intention.</p>
+
+<h2>Checklist : performance et sécurité</h2>
+<p>Avant de considérer une requête comme «&nbsp;finie&nbsp;», passe-la au crible de cette liste.</p>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Les colonnes de <code>WHERE</code>, <code>JOIN</code> et <code>ORDER BY</code> sont-elles indexées&nbsp;?</li>
+<li>Ai-je vérifié le plan avec <code>EXPLAIN</code> sur les requêtes lentes&nbsp;?</li>
+<li>Je sélectionne les colonnes utiles, pas <code>SELECT *</code>.</li>
+<li>Je n'applique pas de fonction sur une colonne indexée dans le <code>WHERE</code>.</li>
+<li>J'évite le problème N+1 en utilisant une <code>JOIN</code> plutôt que des requêtes en boucle.</li>
+<li>Je n'ai pas créé d'index inutiles (pas de sur-indexation).</li>
+</ul>
+<p><strong>Sécurité</strong></p>
+<ul>
+<li>Je ne concatène <strong>jamais</strong> une saisie utilisateur dans une requête.</li>
+<li>J'utilise des requêtes <strong>paramétrées</strong> / préparées.</li>
+<li>Le compte applicatif suit le <strong>moindre privilège</strong>.</li>
+<li>Je n'expose pas de messages d'erreur SQL bruts à l'utilisateur final.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les bases offrent d'autres leviers&nbsp;: index partiels ou couvrants, statistiques que le moteur utilise pour choisir son plan, et mise en cache des plans préparés. Côté sécurité, regarde le chiffrement des données sensibles et la gestion fine des rôles. Tu n'as pas besoin de tout maîtriser maintenant&nbsp;: retiens d'abord index + <code>EXPLAIN</code> + requêtes paramétrées, qui couvrent l'immense majorité des cas.</p></div></div>
+
+<h2>Et après</h2>
+<p>Tu maîtrises désormais le cœur de SQL&nbsp;: lire, filtrer, trier, agréger, joindre plusieurs tables, et écrire des requêtes rapides et sûres. C'est une compétence qui se transfère partout, car SQL est le langage commun de presque toutes les bases relationnelles.</p>
+<p>Quelques pistes pour continuer&nbsp;:</p>
+<ul>
+<li><strong>Approfondir un SGBD</strong>&nbsp;: PostgreSQL est un excellent choix, riche et rigoureux, très demandé.</li>
+<li><strong>L'optimisation avancée</strong>&nbsp;: lire des plans complexes, comprendre les types de jointures internes, ajuster les index.</li>
+<li><strong>L'analytique</strong>&nbsp;: les fonctions de fenêtrage (<code>OVER</code>, <code>PARTITION BY</code>) et la BI pour analyser de gros volumes.</li>
+<li><strong>Le NoSQL</strong>&nbsp;: découvrir quand une base documentaire ou clé-valeur convient mieux qu'une base relationnelle.</li>
+<li><strong>Relier SQL à un langage</strong>&nbsp;: piloter une base depuis Python, JavaScript ou autre, en gardant le réflexe des requêtes paramétrées.</li>
+</ul>
+<p>Tu as toutes les bases pour pratiquer sur de vraies données. Le meilleur entraînement&nbsp;: prends un jeu de données qui t'intéresse, pose-toi des questions concrètes, et écris les requêtes pour y répondre. Bravo d'être allé jusqu'au bout&nbsp;!</p>
+
+<h2>Antisèche&nbsp;: réflexes performance et sécurité</h2>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Le bon réflexe face à chaque situation courante.</caption>
+    <thead><tr><th>Situation</th><th>Réflexe</th></tr></thead>
+    <tbody>
+      <tr><td>Filtre lent sur une colonne (<code>WHERE</code>)</td><td>Créer un <code>INDEX</code> sur cette colonne</td></tr>
+      <tr><td>Requête lente, cause inconnue</td><td><code>EXPLAIN</code> pour voir SCAN vs SEEK</td></tr>
+      <tr><td>On ramène trop de données</td><td>Lister les colonnes utiles, éviter <code>SELECT *</code></td></tr>
+      <tr><td><code>WHERE fonction(colonne) = …</code></td><td>Comparer la colonne brute (l'index reste utilisable)</td></tr>
+      <tr><td>1 requête par élément d'une liste</td><td>Une seule <code>JOIN</code> (éviter le N+1)</td></tr>
+      <tr><td>Saisie utilisateur dans une requête</td><td>Requête <strong>paramétrée</strong> (<code>?</code>, <code>$1</code>, <code>:nom</code>)</td></tr>
+      <tr><td>Compte applicatif trop puissant</td><td>Moindre privilège (pas de <code>DROP</code> inutile)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+
+<dl class="glossary">
+  <dt>Index</dt><dd>Structure annexe triée qui pointe vers les lignes d'une table pour accélérer les recherches, au prix d'un léger surcoût en écriture.</dd>
+  <dt>Arbre B (B-tree)</dt><dd>Structure de données équilibrée utilisée par la plupart des index&nbsp;: elle permet de trouver une valeur en quelques sauts (racine → nœud → feuille).</dd>
+  <dt>Balayage complet (full scan)</dt><dd>Lecture de toutes les lignes d'une table faute d'index utilisable&nbsp;; lent dès que la table est grande.</dd>
+  <dt>Plan d'exécution</dt><dd>La feuille de route choisie par le moteur pour exécuter une requête, révélée par <code>EXPLAIN</code> (SCAN, SEEK, jointures…).</dd>
+  <dt>Injection SQL</dt><dd>Faille où une saisie utilisateur concaténée dans une requête est interprétée comme du code SQL, permettant de la détourner.</dd>
+  <dt>Requête paramétrée</dt><dd>Requête où les valeurs sont fournies via des marqueurs (<code>?</code>, <code>$1</code>, <code>:nom</code>) et traitées comme des données&nbsp;: la parade à l'injection.</dd>
+  <dt>Problème N+1</dt><dd>Anti-motif où l'on lance 1 requête de liste puis 1 requête par ligne&nbsp;; on le remplace par une seule <code>JOIN</code>.</dd>
+  <dt>Moindre privilège</dt><dd>Principe de sécurité&nbsp;: n'accorder au compte applicatif que les droits strictement nécessaires à sa tâche.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un <strong>INDEX</strong> (arbre B) accélère les lectures sur <code>WHERE</code>, <code>JOIN</code> et <code>ORDER BY</code>, au prix d'écritures un peu plus lentes&nbsp;; on n'en abuse pas.</li>
+<li><code>EXPLAIN</code> (et <code>EXPLAIN ANALYZE</code>) montre le plan d'exécution et révèle les balayages complets de table.</li>
+<li>Pièges de perf&nbsp;: <code>SELECT *</code>, fonction sur colonne indexée, problème N+1, sous-requêtes corrélées coûteuses.</li>
+<li>Sécurité&nbsp;: jamais de concaténation de saisie&nbsp;; toujours des requêtes <strong>paramétrées</strong> et le moindre privilège.</li>
+<li>Lisibilité&nbsp;: majuscules, indentation, alias clairs, commentaires.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un index accélère-t-il une lecture mais ralentit-il légèrement une écriture&nbsp;?</li><li>Pourquoi <code>WHERE UPPER(ville) = 'LYON'</code> empêche-t-il d'utiliser l'index sur <code>ville</code>&nbsp;?</li><li>En quoi une requête paramétrée protège-t-elle de l'injection SQL, là où la concaténation ne le fait pas&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un index accélère-t-il une lecture mais ralentit-il légèrement une écriture ?","a":["L'index est une structure triée qui accélère les recherches, mais doit être mis à jour à chaque INSERT/UPDATE/DELETE, d'où un surcoût en écriture","Il ralentit aussi les lectures","Il ne sert qu'à l'écriture","Il n'a aucun effet sur l'écriture"],"correct":0,"explain":"Un index évite de parcourir toute la table pour retrouver des lignes (lecture rapide). En contrepartie, chaque modification de données doit aussi mettre à jour l'index : on n'indexe donc que ce qui est utile."},
+  {"q":"Pourquoi WHERE UPPER(ville) = 'LYON' empêche-t-il d'utiliser l'index sur ville ?","a":["Parce qu'appliquer une fonction à la colonne masque la valeur brute indexée : l'index porte sur ville, pas sur UPPER(ville). On crée un index sur l'expression, ou on évite la fonction","Parce que UPPER est interdit","Parce que 'LYON' est en majuscules","L'index fonctionne quand même"],"correct":0,"explain":"Un index ordinaire indexe les valeurs telles quelles. Envelopper la colonne dans une fonction force un calcul ligne par ligne, que l'index ne couvre pas. Solution : un index fonctionnel sur UPPER(ville), ou normaliser les données."},
+  {"q":"En quoi une requête paramétrée protège-t-elle de l'injection SQL, là où la concaténation ne le fait pas ?","a":["La requête paramétrée envoie les valeurs séparément : le moteur les traite comme des données, jamais comme du SQL. La concaténation insère l'entrée dans le texte de la requête, permettant l'injection","Elle chiffre la requête","Elle est juste plus lisible","Elle bloque tous les caractères spéciaux du clavier"],"correct":0,"explain":"Avec des paramètres (placeholders), la valeur saisie ne peut pas modifier la structure de la requête : elle reste une simple donnée. La concaténation mélange code et entrée utilisateur, ce qui laisse injecter du SQL malveillant."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["INDEX","CREATE INDEX"],"placeholder":"ce qu'on crée pour accélérer un filtre sur une colonne","hints":["Le filtre sur ville est lent sur une grosse table.","On veut éviter le balayage complet (full scan).","On crée une structure de recherche."],"link":{"href":"lecon-14.html","label":"Revoir « Les index »"}},
+  {"type":"text","accept":["injection SQL","injection","SQL injection"],"placeholder":"la faille évitée par une requête paramétrée","hints":["Concaténer une saisie dans le SQL est dangereux.","Un attaquant peut détourner la requête.","On parle d'« injection »."],"link":{"href":"lecon-14.html","label":"Revoir « Requêtes paramétrées »"}},
+  {"type":"text","accept":["EXPLAIN"],"placeholder":"la commande qui montre le plan d'exécution","hints":["Avant d'optimiser, on observe ce que fait la base.","Elle révèle si un index est utilisé.","La commande « explique » la requête."],"link":{"href":"lecon-14.html","label":"Revoir « EXPLAIN »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>La requête <code>SELECT nom FROM clients WHERE ville = 'Lyon'</code> est lente sur une grosse table. Ajoute un index utile et explique en une phrase l'effet attendu.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">CREATE INDEX idx_clients_ville
+    ON clients (ville);
+
+-- Effet : la base passe d'un balayage complet (full scan) à une
+-- recherche ciblée par index, donc beaucoup moins de lignes lues.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Voici une requête construite par concaténation (dangereuse). Réécris-la en version <strong>paramétrée</strong> (pseudo-code de l'appel + requête SQL avec marqueur).</p><figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- requete = "SELECT id, nom FROM clients WHERE email = '" + saisie + "'"</code></pre></figure><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Requête avec un marqueur, sans saisie collée dedans
+SELECT id, nom
+FROM clients
+WHERE email = ?;
+
+-- Pseudo-code de l'appel : la valeur est passée à PART
+-- preparer("SELECT id, nom FROM clients WHERE email = ?")
+-- executer(saisie)   -- la base traite 'saisie' comme une donnée,
+--                    -- jamais comme du SQL</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Synthèse</span></div><p>Sans regarder la leçon, liste <strong>5 bonnes pratiques SQL</strong> mêlant performance et sécurité, et explique chacune en quelques mots.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Exemple de réponse (5 bonnes pratiques)
+-- 1. Indexer les colonnes de WHERE / JOIN / ORDER BY (lectures rapides).
+-- 2. Vérifier le plan avec EXPLAIN avant d'optimiser à l'aveugle.
+-- 3. Sélectionner les colonnes utiles, pas SELECT * (moins de données).
+-- 4. Utiliser des requêtes PARAMÉTRÉES (anti-injection SQL).
+-- 5. Appliquer le moindre privilège au compte applicatif (sécurité).</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

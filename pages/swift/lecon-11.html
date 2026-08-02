@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concurrence : async/await et actors — Leçon 11 · Cours Swift — Syntaxe</title>
+    <meta name="description" content="Maîtrise la concurrence moderne de Swift : async/await pour lire l'asynchrone séquentiellement, Task, async let, actors et @MainActor contre les data races." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="swift" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Swift</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Swift en pratique — Leçon 11</p>
+              <h1 class="lesson-header__title">Concurrence : async/await et actors</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 10</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir écrire et appeler des fonctions <code>async</code> avec <code>await</code>, et lancer du travail concurrent via <code>Task</code> et <code>async&nbsp;let</code>&nbsp;;</li>
+                  <li>savoir protéger un état mutable partagé avec un <code>actor</code> et revenir sur le thread UI avec <code>@MainActor</code>&nbsp;;</li>
+                  <li>savoir parcourir un flux asynchrone avec <code>for await</code> et annuler proprement une <code>Task</code>&nbsp;;</li>
+                  <li>savoir <strong>expliquer</strong> pourquoi le compilateur Swift 6 attrape les data races et ce qu'apporte <code>async/await</code> face aux completion handlers.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Quand ton app télécharge une image, interroge une API ou lit un gros fichier, ce travail prend du temps. Si tu le fais sur le <strong>thread principal</strong> — celui qui dessine l'interface — l'écran gèle : plus de scroll, plus d'animation, l'utilisateur croit que l'app a planté. La concurrence, c'est l'art de faire ce travail <em>ailleurs</em> sans bloquer l'UI, puis de revenir poser le résultat à l'écran.</p>
+<p>Depuis Swift 5.5, le langage offre un modèle de concurrence intégré : <code>async/await</code>, <code>Task</code>, les <code>actor</code>. Sa promesse colle au fil conducteur du cours — <strong>sûreté et expressivité</strong> : tu écris du code asynchrone qui se lit comme du code séquentiel, et le compilateur attrape une grande classe de bugs (les <em>data races</em>) avant même que le programme tourne.</p>
+
+<h2>Le problème : bloquer le thread principal</h2>
+<p>Avant de voir la solution, regardons la douleur. Une fonction synchrone qui « dort » trois secondes bloque tout ce qui l'attend.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">import Foundation
+
+// Version synchrone : BLOQUE le thread appelant pendant 3 s.
+func chargerProfilBloquant() -&gt; String {
+    Thread.sleep(forTimeInterval: 3) // gèle tout pendant 3 secondes
+    return "Profil de Noah"
+}
+
+// Sur le thread principal d'une app, l'UI serait figée 3 s.
+let profil = chargerProfilBloquant()
+print(profil) // Profil de Noah  (mais après un gel de 3 s)</code></pre></figure>
+<p>Le souci n'est pas la durée, c'est que <em>rien d'autre</em> ne peut s'exécuter pendant ce temps. Il faut une façon de dire « mets ce travail en pause, libère le thread, reviens-moi quand c'est prêt ». C'est exactement ce que fait <code>await</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Deux frises temporelles. En haut, version synchrone : le thread principal est occupé pendant les trois secondes du travail, l'interface est gelée. En bas, version async await : au point await le thread principal est libéré, l'interface reste fluide, et la fonction reprend quand le résultat arrive.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Le même travail de 3 s, deux comportements</text>
+    <text class="d-text" x="20" y="55" text-anchor="start" font-size="11">synchrone</text>
+    <rect class="d-frame" x="150" y="38" width="360" height="28" rx="5" /><text class="d-mut" x="330" y="56" text-anchor="middle" font-size="10">thread principal OCCUPÉ — UI gelée</text>
+    <text class="d-mut" x="524" y="56" text-anchor="start" font-size="12">✗</text>
+    <text class="d-text" x="20" y="120" text-anchor="start" font-size="11">async / await</text>
+    <rect class="d-box" x="150" y="104" width="70" height="28" rx="5" /><text class="d-mut" x="185" y="122" text-anchor="middle" font-size="9">début</text>
+    <rect class="d-accent" x="224" y="104" width="212" height="28" rx="5" /><text class="d-tag" x="330" y="122" text-anchor="middle" font-size="10">await — thread LIBÉRÉ</text>
+    <rect class="d-box" x="440" y="104" width="70" height="28" rx="5" /><text class="d-mut" x="475" y="122" text-anchor="middle" font-size="9">reprise</text>
+    <text class="d-mut" x="524" y="122" text-anchor="start" font-size="12">✓</text>
+    <text class="d-mut" x="320" y="164" text-anchor="middle" font-size="10">pendant l'await, l'app continue de défiler, d'animer, de répondre</text>
+  </svg>
+  <figcaption>Bloquant, le thread reste pris tout du long. Avec <code>await</code>, le point de suspension <strong>rend le thread</strong>&nbsp;: l'interface vit sa vie, puis la fonction reprend là où elle s'était arrêtée.</figcaption>
+</figure>
+
+<h2><code>async</code> et <code>await</code> : lire l'asynchrone de haut en bas</h2>
+<p>On marque une fonction <code>async</code> quand elle peut se suspendre. À l'appel, on écrit <code>await</code> devant : c'est un <strong>point de suspension</strong>. Le thread n'est pas bloqué — il part faire autre chose — et la fonction reprend ici dès que le résultat arrive.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">func chargerProfil() async -&gt; String {
+    // Pause asynchrone : le thread est LIBÉRÉ, pas bloqué.
+    try? await Task.sleep(for: .seconds(3))
+    return "Profil de Noah"
+}
+
+func afficherProfil() async {
+    print("Début…")
+    let profil = await chargerProfil() // await = je peux me suspendre ici
+    print(profil)                      // reprend après la pause
+}
+
+await afficherProfil()
+// Début…
+// Profil de Noah</code></pre></figure>
+<p>Le gain de lisibilité est énorme : trois lignes qui se lisent de haut en bas, comme du code classique, alors qu'il se passe une suspension au milieu. Chaque <code>await</code> signale « ici, l'exécution peut faire une pause » — utile pour raisonner sur l'ordre des choses.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Une fonction <code>async</code> ne peut être appelée que depuis un contexte asynchrone : une autre fonction <code>async</code>, ou une <code>Task</code>. C'est cette règle qui empêche d'appeler du code asynchrone « par accident » au mauvais endroit.</p></div></div>
+
+<h2><code>Task</code> : lancer du travail asynchrone</h2>
+<p>Comment franchir la frontière entre le monde synchrone (un bouton tapé, le démarrage d'une vue) et le monde <code>async</code> ? Avec une <code>Task</code> : elle crée un contexte asynchrone et démarre le travail immédiatement, sans bloquer l'appelant.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">func boutonTapé() {
+    // Contexte synchrone. On ouvre une porte vers l'async :
+    Task {
+        let profil = await chargerProfil()
+        print("Chargé : \(profil)")
+    }
+    print("Le bouton rend la main tout de suite") // s'affiche AVANT le profil
+}
+
+boutonTapé()
+// Le bouton rend la main tout de suite
+// Chargé : Profil de Noah</code></pre></figure>
+<p>La <code>Task</code> expose aussi sa valeur si tu en as besoin : <code>let t = Task { … }</code> puis <code>await t.value</code>. Elle peut aussi propager une erreur lancée par son contenu — tu la récupères avec <code>try await t.value</code>.</p>
+
+<h2><code>async let</code> : faire deux choses en parallèle</h2>
+<p>Avec un seul <code>await</code> à la suite, les travaux s'enchaînent. Mais si deux téléchargements sont indépendants, autant les lancer <strong>en même temps</strong>. C'est le rôle d'<code>async let</code> : la valeur démarre tout de suite, et tu n'attends qu'au moment où tu en as besoin.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">func téléchargerAvatar() async -&gt; String {
+    try? await Task.sleep(for: .seconds(2))
+    return "avatar.png"
+}
+
+func téléchargerBannière() async -&gt; String {
+    try? await Task.sleep(for: .seconds(2))
+    return "banniere.png"
+}
+
+func chargerMédias() async {
+    // Les DEUX démarrent immédiatement, en parallèle.
+    async let avatar = téléchargerAvatar()
+    async let banniere = téléchargerBannière()
+
+    // On attend les deux ici : total ≈ 2 s, pas 4 s.
+    let (a, b) = await (avatar, banniere)
+    print("Reçu \(a) et \(b)")
+}
+
+await chargerMédias()
+// Reçu avatar.png et banniere.png   (après ~2 s, pas ~4 s)</code></pre></figure>
+<p>Séquentiel, ce serait <code>2&nbsp;s&nbsp;+&nbsp;2&nbsp;s&nbsp;=&nbsp;4&nbsp;s</code>. En parallèle avec <code>async let</code>, c'est ~2&nbsp;s. Retiens la règle : enchaîner avec <code>await</code> quand une étape dépend de la précédente, <code>async let</code> quand elles sont indépendantes.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 195" role="img" aria-label="En haut, deux await enchaînés : l'avatar prend deux secondes, puis la bannière deux secondes, total quatre secondes. En bas, async let : l'avatar et la bannière démarrent en même temps et se terminent au bout de deux secondes.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Indépendants : ne les attends pas l'un après l'autre</text>
+    <text class="d-text" x="18" y="54" text-anchor="start" font-size="11">await</text>
+    <text class="d-text" x="18" y="69" text-anchor="start" font-size="11">en série</text>
+    <rect class="d-box" x="90" y="44" width="205" height="28" rx="5" /><text class="d-mut" x="192" y="63" text-anchor="middle" font-size="10">avatar — 2 s</text>
+    <rect class="d-box" x="300" y="44" width="205" height="28" rx="5" /><text class="d-mut" x="402" y="63" text-anchor="middle" font-size="10">bannière — 2 s</text>
+    <text class="d-tag" x="514" y="63" text-anchor="start" font-size="12">= 4 s</text>
+    <text class="d-text" x="18" y="121" text-anchor="start" font-size="11">async let</text>
+    <text class="d-text" x="18" y="136" text-anchor="start" font-size="11">parallèle</text>
+    <rect class="d-accent" x="90" y="106" width="205" height="28" rx="5" /><text class="d-mut" x="192" y="125" text-anchor="middle" font-size="10">avatar — 2 s</text>
+    <rect class="d-accent" x="90" y="140" width="205" height="28" rx="5" /><text class="d-mut" x="192" y="159" text-anchor="middle" font-size="10">bannière — 2 s</text>
+    <text class="d-tag" x="320" y="141" text-anchor="start" font-size="12">= 2 s</text>
+    <line class="d-line" stroke-dasharray="3 3" x1="295" y1="40" x2="295" y2="176" />
+  </svg>
+  <figcaption>Deux tâches indépendantes lancées avec <code>async let</code> démarrent ensemble&nbsp;: le temps total tend vers celui de la <em>plus longue</em>, pas vers leur somme.</figcaption>
+</figure>
+
+<h2>Le data race, et comment Swift l'attrape</h2>
+<p>Le danger du parallélisme : deux tâches qui écrivent <em>au même moment</em> dans la même variable. Le résultat devient imprévisible — c'est un <strong>data race</strong>. Historiquement, ces bugs étaient invisibles à la compilation et surgissaient au pire moment en production.</p>
+<p>Swift 6 active la <em>strict concurrency</em> : le compilateur refuse le code qui pourrait provoquer un data race. Ce n'est plus un avertissement à l'exécution, c'est une <strong>erreur de compilation</strong>.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">func incrémenterEnDésordre() async {
+    var compteur = 0 // var locale, capturée par les deux closures ci-dessous
+
+    // Deux closures qui mutent 'compteur' en même temps :
+    async let a: Void = { compteur += 1 }()
+    async let b: Void = { compteur += 1 }()
+    _ = await (a, b)
+    print(compteur)
+}
+// En mode Swift 6 strict, le compilateur REFUSE ce code :
+// error: mutation of captured var 'compteur' in concurrently-executing code
+// Tant que l'accès n'est pas protégé, la compilation échoue.</code></pre></figure>
+<p>Au lieu de te laisser livrer un bug intermittent, le langage te force à dire <em>comment</em> cet état est protégé. La réponse idiomatique s'appelle l'<code>actor</code>.</p>
+
+<h2><code>actor</code> : protéger un état mutable partagé</h2>
+<p>Un <code>actor</code> ressemble à une classe, mais avec une garantie forte : un seul accès à la fois à son état interne. Le runtime <strong>sérialise</strong> les appels, donc deux tâches ne peuvent jamais écrire en même temps. De l'extérieur, lire ou modifier son état demande un <code>await</code> (l'appel peut attendre son tour).</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">actor CompteurSûr {
+    private(set) var valeur = 0
+
+    func incrémenter() {
+        valeur += 1 // ici, accès garanti exclusif : pas de data race
+    }
+}
+
+let compteur = CompteurSûr()
+
+func tester() async {
+    async let a: Void = compteur.incrémenter()
+    async let b: Void = compteur.incrémenter()
+    _ = await (a, b)
+    print(await compteur.valeur) // depuis l'extérieur : await obligatoire
+}
+
+await tester()
+// 2   (toujours, jamais 1 : l'actor sérialise les deux écritures)</code></pre></figure>
+<p>Compare avec une <code>class</code> classique : rien ne t'empêcherait d'écrire <code>compteur.valeur += 1</code> depuis deux threads et de finir parfois à <code>1</code>. L'<code>actor</code> rend ce bug <em>impossible à écrire</em>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Deux tâches appellent en même temps le même actor. L'actor met les appels en file et n'en traite qu'un à la fois, si bien que son état interne, un compteur, n'est jamais corrompu et vaut exactement deux.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Un actor sérialise les accès : jamais de data race</text>
+    <rect class="d-box" x="24" y="48" width="120" height="36" rx="8" /><text class="d-text" x="84" y="71" text-anchor="middle" font-size="11">Task A</text>
+    <rect class="d-box" x="24" y="104" width="120" height="36" rx="8" /><text class="d-text" x="84" y="127" text-anchor="middle" font-size="11">Task B</text>
+    <line class="d-line" x1="144" y1="66" x2="248" y2="86" /><line class="d-line" x1="144" y1="122" x2="248" y2="102" />
+    <rect class="d-accent" x="248" y="60" width="150" height="68" rx="10" /><text class="d-tag" x="323" y="90" text-anchor="middle" font-size="12">actor</text><text class="d-mut" x="323" y="110" text-anchor="middle" font-size="10">un accès à la fois</text>
+    <line class="d-line" x1="398" y1="94" x2="468" y2="94" />
+    <rect class="d-box" x="468" y="66" width="150" height="56" rx="10" /><text class="d-text" x="543" y="90" text-anchor="middle" font-size="11">état protégé</text><text class="d-tag" x="543" y="110" text-anchor="middle" font-size="11">valeur = 2</text>
+    <text class="d-mut" x="320" y="162" text-anchor="middle" font-size="10">de l'extérieur, chaque appel passe par await — il attend son tour</text>
+  </svg>
+  <figcaption>Là où deux threads sur une <code>class</code> pourraient s'écraser mutuellement (et finir à 1), l'<code>actor</code> met les appels en file&nbsp;: les écritures ne se chevauchent jamais.</figcaption>
+</figure>
+
+<h2><code>@MainActor</code> : revenir sur le thread de l'UI</h2>
+<p>Toute mise à jour d'interface doit se faire sur le thread principal. Swift modélise ce thread par un actor global : <code>@MainActor</code>. Tu annotes une fonction, une propriété ou une classe entière, et le compilateur garantit que son code tourne sur le thread principal.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">@MainActor
+final class VueModèle {
+    var titre = "Chargement…" // toujours lu/écrit sur le thread principal
+
+    func rafraîchir() async {
+        // On part travailler ailleurs (réseau), thread principal libre :
+        let profil = await chargerProfil()
+        // De retour, on est garanti sur le thread principal : safe pour l'UI.
+        titre = profil
+        print(titre) // Profil de Noah
+    }
+}</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Dans une app SwiftUI, marque tes classes de vue-modèle en <code>@MainActor</code>. Tu n'as plus à te demander « suis-je sur le bon thread ? » : le compilateur t'oblige à <code>await</code> dès que tu sors du thread principal.</p></div></div>
+
+<h2><code>AsyncSequence</code> et <code>for await</code></h2>
+<p>Parfois la valeur n'arrive pas en une fois mais en <em>flux</em> : lignes d'un fichier, événements, messages d'un WebSocket. Une <code>AsyncSequence</code> se parcourt avec <code>for await</code> — chaque tour de boucle peut se suspendre en attendant l'élément suivant.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">func compteÀRebours(de n: Int) -&gt; AsyncStream&lt;Int&gt; {
+    AsyncStream { suite in
+        Task {
+            for i in stride(from: n, through: 1, by: -1) {
+                try? await Task.sleep(for: .seconds(1))
+                suite.yield(i) // émet une valeur
+            }
+            suite.finish() // ferme le flux
+        }
+    }
+}
+
+for await tic in compteÀRebours(de: 3) {
+    print(tic) // 3 … 2 … 1  (une valeur par seconde)
+}
+print("Décollage !")
+// 3
+// 2
+// 1
+// Décollage !</code></pre></figure>
+
+<h2>Annulation et <code>Sendable</code></h2>
+<p>Une <code>Task</code> peut être <strong>annulée</strong> (l'utilisateur quitte l'écran, une nouvelle recherche remplace l'ancienne). L'annulation est <em>coopérative</em> : le code doit la vérifier et s'arrêter proprement.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">let recherche = Task {
+    for page in 1...100 {
+        try Task.checkCancellation() // lance CancellationError si annulée
+        print("Page \(page)")
+        try await Task.sleep(for: .milliseconds(200))
+    }
+}
+
+// Plus tard, l'utilisateur change d'avis :
+recherche.cancel()
+// La boucle s'arrête au prochain checkCancellation() — pas brutalement.</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le protocole <code>Sendable</code> marque les types qu'on peut transférer sans danger entre tâches concurrentes. Les value types (struct/enum) composés de membres sûrs le sont automatiquement — encore une raison de <strong>privilégier les value types</strong>. Le compilateur t'avertit quand un type non-<code>Sendable</code> franchit une frontière de concurrence.</p></div></div>
+
+<h2>L'ancien monde : completion handlers</h2>
+<p>Avant <code>async/await</code>, l'asynchrone passait par des <em>completion handlers</em> : tu passais une closure rappelée à la fin. Honnêtement, ça marchait — mais ça imbriquait le code, dispersait la gestion d'erreurs et invitait à oublier d'appeler le callback.</p>
+<figure class="code-block" data-file="main.swift"><pre><code class="language-swift">// ANCIEN MONDE : callbacks imbriqués ("pyramid of doom")
+func chargerProfil(completion: @escaping (Result&lt;String, Error&gt;) -&gt; Void) {
+    téléchargerAvatar { avatar in
+        téléchargerBannière { banniere in
+            completion(.success("\(avatar) + \(banniere)"))
+            // erreurs à gérer à chaque niveau, ordre difficile à suivre
+        }
+    }
+}
+
+// NOUVEAU MONDE : plat, séquentiel, erreurs avec try.
+// Ici les téléchargements PEUVENT échouer : ils sont 'async throws'.
+func avatarRéseau() async throws -&gt; String { "avatar.png" }
+func bannièreRéseau() async throws -&gt; String { "banniere.png" }
+
+func chargerProfil() async throws -&gt; String {
+    async let avatar = avatarRéseau()     // démarre tout de suite
+    async let banniere = bannièreRéseau() // en parallèle
+    return try await "\(avatar) + \(banniere)" // try : une lecture peut throw
+}</code></pre></figure>
+<p>Même comportement, mais la version <code>async</code> se lit de haut en bas, gère les erreurs avec <code>try</code> et le parallélisme avec <code>async let</code>. C'est l'expressivité de Swift appliquée à la concurrence.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Ouvre n'importe quel écran de profil d'une app moderne (un réseau social, un client bancaire, une boutique)&nbsp;: il affiche d'un coup un avatar, une bannière et une liste de publications, chacun venant d'une requête réseau distincte. En completion handlers, ce chargement s'imbriquait en «&nbsp;pyramide&nbsp;» difficile à relire&nbsp;; avec <code>async let</code>, les trois requêtes partent ensemble et l'écran s'affiche en ~1 fois le temps de la plus lente, pas la somme des trois. Mieux&nbsp;: en SwiftUI, le modificateur <code>.task { … }</code> lance ce travail à l'apparition de la vue et l'<strong>annule automatiquement</strong> quand l'utilisateur quitte l'écran — exactement le comportement d'une barre de recherche qui abandonne l'ancienne requête à chaque nouvelle frappe.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Enchaîner deux <code>await</code> indépendants au lieu d'<code>async let</code> : <code>let a = await f(); let b = await g()</code> exécute <strong>en série</strong> (temps additionné). Si <code>a</code> et <code>b</code> ne dépendent pas l'un de l'autre, utilise <code>async let</code> pour les paralléliser.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mettre à jour l'UI hors du thread principal. Sans <code>@MainActor</code>, modifier l'interface depuis une <code>Task</code> quelconque est un bug. Annote ta couche de présentation en <code>@MainActor</code> et laisse le compilateur t'imposer un <code>await</code> au bon endroit.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore les <code>TaskGroup</code> (paralléliser un nombre <em>dynamique</em> de tâches, pas seulement deux), la <em>structured concurrency</em> et la propagation d'annulation dans un arbre de tâches, et <code>URLSession.shared.data(from:)</code> — l'API réseau de Foundation entièrement <code>async/await</code>. Côté flux, regarde comment transformer une <code>AsyncSequence</code> avec <code>map</code> et <code>filter</code>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Concurrence Swift moderne</caption>
+    <thead><tr><th scope="col">Écriture</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>func f() async</code></td><td>Fonction qui peut se suspendre</td></tr>
+      <tr><td><code>await f()</code></td><td>Point de suspension&nbsp;: libère le thread, attend le résultat</td></tr>
+      <tr><td><code>Task { … }</code></td><td>Ouvrir un contexte async depuis du code synchrone</td></tr>
+      <tr><td><code>async let x = …</code></td><td>Lancer un travail en parallèle, l'attendre plus tard</td></tr>
+      <tr><td><code>actor A { … }</code></td><td>État mutable protégé, un accès à la fois</td></tr>
+      <tr><td><code>@MainActor</code></td><td>Forcer l'exécution sur le thread de l'UI</td></tr>
+      <tr><td><code>for await x in …</code></td><td>Parcourir une <code>AsyncSequence</code> (flux)</td></tr>
+      <tr><td><code>Task.checkCancellation()</code></td><td>Vérifier l'annulation coopérative d'une tâche</td></tr>
+      <tr><td><code>Sendable</code></td><td>Type sûr à transférer entre tâches concurrentes</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>async</code> / <code>await</code></dt><dd>Écrire l'asynchrone linéairement&nbsp;; <code>await</code> marque un endroit où l'exécution peut se suspendre.</dd>
+  <dt>Point de suspension</dt><dd>Endroit (<code>await</code>) où la fonction rend le thread et pourra reprendre plus tard.</dd>
+  <dt><code>Task</code></dt><dd>Unité de travail asynchrone&nbsp;; pont entre le monde synchrone et le monde <code>async</code>.</dd>
+  <dt><code>async let</code></dt><dd>Démarre une valeur asynchrone immédiatement pour la paralléliser&nbsp;; on l'attend au moment de l'utiliser.</dd>
+  <dt><code>actor</code></dt><dd>Type de référence dont l'état n'est accessible qu'un accès à la fois (isolation), éliminant les data races.</dd>
+  <dt><code>@MainActor</code></dt><dd>Actor global représentant le thread principal&nbsp;; garantit que le code annoté y tourne (UI).</dd>
+  <dt>Data race</dt><dd>Accès concurrent non synchronisé au même état mutable, dont au moins une écriture&nbsp;: résultat imprévisible.</dd>
+  <dt><code>Sendable</code></dt><dd>Protocole marquant les types transférables sans danger entre contextes concurrents.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><strong><code>async</code>/<code>await</code></strong> : écrire de l'asynchrone qui se lit de haut en bas ; chaque <code>await</code> est un point de suspension qui libère le thread.</li>
+<li><strong><code>Task</code></strong> : pont du synchrone vers l'asynchrone ; <strong><code>async let</code></strong> : lancer des travaux indépendants en parallèle.</li>
+<li><strong><code>actor</code></strong> : un seul accès à la fois à son état → pas de data race ; <strong><code>@MainActor</code></strong> : garantir l'exécution sur le thread de l'UI.</li>
+<li><strong>Swift 6 strict concurrency</strong> transforme les data races en erreurs de compilation ; <strong><code>Sendable</code></strong> marque les types sûrs à transférer.</li>
+<li><strong><code>for await</code></strong> parcourt une <code>AsyncSequence</code> ; les <code>Task</code> s'annulent de façon coopérative via <code>Task.checkCancellation()</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi <code>let a = await f(); let b = await g()</code> est-il plus lent que la version avec <code>async let</code> quand <code>f</code> et <code>g</code> sont indépendantes ?</li>
+<li>Qu'est-ce qu'un data race, et par quel mécanisme un <code>actor</code> le rend impossible ?</li>
+<li>À quoi sert <code>@MainActor</code>, et quel risque court-on si on l'oublie en mettant à jour l'interface ?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi let a = await f(); let b = await g() est-il plus lent que la version avec async let quand f et g sont indépendantes ?","a":["Parce que les deux await séquentiels attendent f puis g (somme des durées) ; async let lance les deux en parallèle et on n'attend qu'au moment d'utiliser les résultats (durée du plus long)","async let est en réalité plus lent","Les deux versions sont identiques","f bloque g de toute façon"],"correct":0,"explain":"Enchaîner deux await exécute les tâches l'une après l'autre. async let démarre les deux opérations concurremment ; l'attente n'a lieu qu'à la lecture des valeurs, faisant tendre le temps total vers le plus long des deux."},
+  {"q":"Qu'est-ce qu'un data race, et par quel mécanisme un actor le rend impossible ?","a":["Un data race survient quand plusieurs tâches accèdent au même état mutable en même temps, dont au moins une en écriture ; un actor sérialise les accès à son état (un seul à la fois, isolation), ce qui l'empêche","C'est une erreur réseau ; l'actor la corrige","Un data race est un type d'exception","L'actor accélère les accès concurrents"],"correct":0,"explain":"Un data race produit un résultat indéterminé par accès concurrent non synchronisé. Un actor protège son état : les accès externes passent par await et sont traités séquentiellement, supprimant la concurrence non sûre."},
+  {"q":"À quoi sert @MainActor, et quel risque court-on si on l'oublie en mettant à jour l'interface ?","a":["@MainActor garantit l'exécution sur le thread principal, requis pour l'UI ; l'oublier revient à modifier l'interface depuis un autre thread, ce qui provoque comportements indéfinis, glitches et plantages","@MainActor accélère l'UI","Cela n'a aucune importance","@MainActor désactive la concurrence"],"correct":0,"explain":"Les frameworks d'UI exigent le thread principal. @MainActor isole le code concerné sur ce thread. Mettre à jour la vue depuis un thread d'arrière-plan sans cette garantie mène à des bugs visuels et des crashs imprévisibles."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["async"],"placeholder":"le mot-clé pour une fonction ASYNCHRONE (direBonjour) : … func direBonjour(à nom: String)","hints":["On l'appelle avec await.","func direBonjour(...) ????? -> String.","Cinq lettres."],"link":{"href":"lecon-11.html","label":"Revoir « async / await »"}},
+  {"type":"text","accept":["async let"],"placeholder":"la syntaxe pour lancer prixHT() et tauxTVA() EN PARALLÈLE (~1 s au lieu de 2) : … let","hints":["????? let ht = prixHT(); ????? let tva = tauxTVA().","On attend ensuite les deux avec await.","« … let »."],"link":{"href":"lecon-11.html","label":"Revoir « async let »"}},
+  {"type":"text","accept":["actor"],"placeholder":"le type Swift qui PROTÈGE son état des accès concurrents (BanqueCompte, solde exact) : …","hints":["Sérialise automatiquement l'accès à ses propriétés.","Une class classique pourrait perdre des dépôts (data race).","Cinq lettres."],"link":{"href":"lecon-11.html","label":"Revoir « Les actors »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>async</code> nommée <code>direBonjour(à:)</code> qui attend 1 seconde puis retourne <code>"Bonjour, &lt;nom&gt; !"</code>. Appelle-la depuis une <code>Task</code> et affiche le résultat.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-swift">func direBonjour(à nom: String) async -&gt; String {
+    try? await Task.sleep(for: .seconds(1))
+    return "Bonjour, \(nom) !"
+}
+
+Task {
+    let message = await direBonjour(à: "Noah")
+    print(message) // Bonjour, Noah !
+}</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu dois récupérer deux nombres indépendants : <code>prixHT()</code> (attend 1&nbsp;s, retourne <code>100</code>) et <code>tauxTVA()</code> (attend 1&nbsp;s, retourne <code>0.2</code>). Lance-les <strong>en parallèle</strong> avec <code>async let</code> et affiche le prix TTC. Le tout doit prendre ~1&nbsp;s, pas ~2&nbsp;s.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-swift">func prixHT() async -&gt; Double {
+    try? await Task.sleep(for: .seconds(1))
+    return 100
+}
+
+func tauxTVA() async -&gt; Double {
+    try? await Task.sleep(for: .seconds(1))
+    return 0.2
+}
+
+func afficherTTC() async {
+    async let ht = prixHT()
+    async let tva = tauxTVA()
+    let (p, t) = await (ht, tva) // ~1 s, les deux en parallèle
+    print("Prix TTC : \(p * (1 + t))") // Prix TTC : 120.0
+}
+
+await afficherTTC()</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Crée un <code>actor BanqueCompte</code> avec un solde privé et deux méthodes <code>déposer(_:)</code> et <code>lireSolde()</code>. Lance 1000 dépôts de <code>1</code> en parallèle (via un <code>TaskGroup</code> que tu attends), puis affiche le solde final : il doit valoir exactement <code>1000</code>. Explique en commentaire pourquoi une <code>class</code> classique pourrait, elle, finir en dessous.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-swift">actor BanqueCompte {
+    private var solde = 0
+    func déposer(_ montant: Int) { solde += montant }
+    func lireSolde() -&gt; Int { solde }
+}
+
+func test() async {
+    let compte = BanqueCompte()
+
+    // 1000 dépôts concurrents, regroupés dans un TaskGroup.
+    await withTaskGroup(of: Void.self) { groupe in
+        for _ in 1...1000 {
+            groupe.addTask { await compte.déposer(1) }
+        }
+    }
+
+    print(await compte.lireSolde()) // 1000  (toujours)
+    // Avec une class : 'solde += 1' = lire, additionner, réécrire.
+    // Deux threads peuvent lire la même valeur avant de réécrire →
+    // des incréments se perdent et le total finit &lt; 1000 (data race).
+    // L'actor sérialise les accès : aucun incrément n'est perdu.
+}
+
+await test()</code></pre></figure>
+</details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-swift.min.js" defer></script>
+  </body>
+</html>

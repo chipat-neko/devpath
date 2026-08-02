@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Secrets et sécurité de la chaîne — Leçon 07 · CI/CD · Syntaxe</title>
+    <meta name="description" content="Protège ton pipeline : stockage chiffré des secrets, principe du moindre privilège, identité fédérée OIDC au lieu de clés permanentes, et sécurisation de la chaîne d'approvisionnement en épinglant les actions par SHA." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="cicd" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">CI/CD</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · CI/CD en pratique — Leçon 07</p>
+              <h1 class="lesson-header__title">Secrets et sécurité de la chaîne</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 06 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>stocker et injecter un <strong>secret</strong> sans jamais l'écrire en clair&nbsp;;</li>
+                  <li>appliquer le <strong>moindre privilège</strong> aux jetons et aux jobs&nbsp;;</li>
+                  <li>remplacer une clé permanente par une <strong>identité fédérée OIDC</strong> éphémère&nbsp;;</li>
+                  <li>sécuriser la <strong>chaîne d'approvisionnement</strong> en épinglant les actions par leur SHA.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Ton pipeline est le point le plus privilégié de tout ton projet&nbsp;: il lit le code source, possède les clés de déploiement, pousse des images vers un registre et publie en production. Autrement dit, c'est une <strong>cible de choix</strong>. Une clé qui fuit dans un log, une action tierce compromise, un jeton trop permissif&nbsp;: chacun de ces détails peut ouvrir la porte à toute ton infrastructure. Cette leçon te donne les quatre réflexes qui transforment un pipeline naïf en une chaîne défendable.</p>
+
+<h2>Les secrets ne s'écrivent jamais en clair</h2>
+
+<p>Un <strong>secret</strong> (mot de passe, clé d'API, jeton de déploiement) ne doit <em>jamais</em> apparaître dans le dépôt ni dans un fichier de pipeline. On le stocke dans le <strong>coffre de secrets</strong> de la plateforme (GitHub Secrets, GitLab CI/CD Variables), chiffré au repos, puis on l'injecte au moment de l'exécution comme variable d'environnement. La plateforme <strong>masque</strong> alors sa valeur dans les logs.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le cycle de vie d'un secret. En haut, le bon chemin : le secret est rangé dans un coffre chiffré, injecté au job comme variable d'environnement au moment de l'exécution, et sa valeur est remplacée par des astérisques dans les logs. En bas, le mauvais chemin : un secret écrit en dur dans le fichier de pipeline se retrouve enregistré dans l'historique Git, visible par quiconque a accès au dépôt, à jamais.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un secret bien géré ne se voit jamais</text>
+    <rect class="d-accent" x="24" y="40" width="176" height="52" rx="6" />
+    <text class="d-tag" x="112" y="61" text-anchor="middle" font-size="9">coffre chiffré</text>
+    <text class="d-text" x="112" y="79" text-anchor="middle" font-size="9">secrets.API_KEY</text>
+    <rect class="d-box" x="232" y="40" width="176" height="52" rx="6" />
+    <text class="d-tag" x="320" y="61" text-anchor="middle" font-size="9">injecté au job</text>
+    <text class="d-text" x="320" y="79" text-anchor="middle" font-size="9" font-family="monospace">env: KEY: ***</text>
+    <rect class="d-box" x="440" y="40" width="176" height="52" rx="6" />
+    <text class="d-tag" x="528" y="61" text-anchor="middle" font-size="9">logs</text>
+    <text class="d-text" x="528" y="79" text-anchor="middle" font-size="10" font-family="monospace">KEY=***masqué***</text>
+    <line class="d-line" x1="200" y1="66" x2="230" y2="66" /><path class="d-line" d="M223 61 L233 66 L223 71" fill="none" />
+    <line class="d-line" x1="408" y1="66" x2="438" y2="66" /><path class="d-line" d="M431 61 L441 66 L431 71" fill="none" />
+    <rect class="d-frame" x="120" y="120" width="400" height="60" rx="6" />
+    <text class="d-tag" x="320" y="142" text-anchor="middle" font-size="9">à ne JAMAIS faire</text>
+    <text class="d-text" x="320" y="160" text-anchor="middle" font-size="10" font-family="monospace">api_key: "sk-42a9f..."  (en dur)</text>
+    <text class="d-mut" x="320" y="174" text-anchor="middle" font-size="8.5">→ figé dans l'historique Git, visible à jamais</text>
+  </svg>
+  <figcaption>Coffre chiffré → variable d'environnement → valeur masquée. Un secret écrit en dur reste dans l'historique pour toujours.</figcaption>
+</figure>
+
+<figure class="code-block" data-file=".github/workflows/deploy.yml"><pre><code class="language-yaml">jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Déployer
+        env:
+          # Injecté depuis le coffre, jamais écrit ici
+          API_KEY: ${{ secrets.API_KEY }}
+        run: ./deploy.sh   # lit $API_KEY dans l'environnement</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le masquage ne protège que la valeur <em>exacte</em>. Si ton script transforme le secret (encodage base64, découpage) puis l'affiche, la version transformée <strong>n'est pas masquée</strong> et fuite dans les logs. Ne fais jamais <code>echo "$API_KEY"</code> «&nbsp;pour déboguer&nbsp;»&nbsp;: c'est le moyen le plus courant de trahir un secret.</p></div></div>
+
+<h2>Le moindre privilège</h2>
+
+<p>Par défaut, le jeton automatique du pipeline (le <code>GITHUB_TOKEN</code>) peut être très puissant. Le principe du <strong>moindre privilège</strong> consiste à ne lui accorder que ce dont le job a besoin — souvent la simple lecture. On déclare cela avec <code>permissions:</code>, au niveau du workflow ou d'un job précis.</p>
+
+<figure class="code-block" data-file=".github/workflows/ci.yml"><pre><code class="language-yaml"># Par défaut pour tout le workflow : lecture seule
+permissions:
+  contents: read
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    # Ce job SEUL obtient le droit d'écrire des packages
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - run: ./publier.sh</code></pre></figure>
+
+<p>La règle&nbsp;: partir de <code>contents: read</code> pour tout, puis n'élargir qu'au job qui en a réellement besoin. Un secret peut aussi être <strong>rattaché à un environnement</strong> (<code>production</code>) protégé par une règle d'approbation&nbsp;: seul un déploiement validé y accède.</p>
+
+<h2>OIDC : en finir avec les clés permanentes</h2>
+
+<p>Longtemps, déployer vers le cloud signifiait copier une <strong>clé d'accès à longue durée</strong> dans les secrets du CI. Problème&nbsp;: cette clé reste valable des mois, et si le CI fuit, elle fuit avec. L'<strong>identité fédérée OIDC</strong> renverse le modèle&nbsp;: à chaque exécution, le runner prouve son identité au fournisseur cloud, qui lui remet un <strong>jeton éphémère</strong> (quelques minutes). Plus aucun secret cloud permanent à stocker.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Clé permanente contre jeton OIDC éphémère. En haut, l'ancienne façon : une clé cloud à longue durée de vie est copiée dans les secrets du CI ; elle reste valable des mois, donc si le CI est compromis la clé l'est aussi. En bas, avec OIDC : à chaque exécution, le runner présente son identité au fournisseur cloud, qui vérifie et renvoie un jeton temporaire valable quelques minutes ; rien de permanent n'est stocké.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Clé permanente vs jeton OIDC</text>
+    <text class="d-tag" x="30" y="46" font-size="9">avant</text>
+    <rect class="d-frame" x="30" y="52" width="240" height="44" rx="6" />
+    <text class="d-text" x="150" y="72" text-anchor="middle" font-size="10">clé longue durée dans secrets</text>
+    <text class="d-mut" x="150" y="88" text-anchor="middle" font-size="8.5">valable des mois</text>
+    <rect class="d-box" x="330" y="52" width="280" height="44" rx="6" />
+    <text class="d-text" x="470" y="72" text-anchor="middle" font-size="10">CI compromis → clé volée</text>
+    <text class="d-mut" x="470" y="88" text-anchor="middle" font-size="8.5">accès cloud durable pour l'attaquant</text>
+    <line class="d-line" x1="270" y1="74" x2="328" y2="74" /><path class="d-line" d="M321 69 L331 74 L321 79" fill="none" />
+    <text class="d-tag" x="30" y="128" font-size="9">avec OIDC</text>
+    <rect class="d-accent" x="30" y="134" width="176" height="56" rx="6" />
+    <text class="d-text" x="118" y="156" text-anchor="middle" font-size="10">runner présente</text>
+    <text class="d-text" x="118" y="172" text-anchor="middle" font-size="10">son identité</text>
+    <rect class="d-box" x="238" y="134" width="176" height="56" rx="6" />
+    <text class="d-text" x="326" y="156" text-anchor="middle" font-size="10">fournisseur cloud</text>
+    <text class="d-mut" x="326" y="172" text-anchor="middle" font-size="8.5">vérifie la confiance</text>
+    <rect class="d-accent" x="446" y="134" width="170" height="56" rx="6" />
+    <text class="d-text" x="531" y="156" text-anchor="middle" font-size="10">jeton éphémère</text>
+    <text class="d-mut" x="531" y="172" text-anchor="middle" font-size="8.5">~15 min, puis expiré</text>
+    <line class="d-line" x1="206" y1="162" x2="236" y2="162" /><path class="d-line" d="M229 157 L239 162 L229 167" fill="none" />
+    <line class="d-line" x1="414" y1="162" x2="444" y2="162" /><path class="d-line" d="M437 157 L447 162 L437 167" fill="none" />
+  </svg>
+  <figcaption>Avec OIDC, rien de permanent n'est stocké&nbsp;: le jeton naît à l'exécution et meurt quelques minutes plus tard.</figcaption>
+</figure>
+
+<figure class="code-block" data-file=".github/workflows/deploy.yml"><pre><code class="language-yaml">permissions:
+  id-token: write     # autorise la demande d'un jeton OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Aucune clé stockée : on assume un rôle par confiance OIDC
+          role-to-assume: arn:aws:iam::123456789:role/ci-deploy
+          aws-region: eu-west-3
+      - run: aws s3 sync ./site s3://mon-bucket</code></pre></figure>
+
+<h2>Sécuriser la chaîne d'approvisionnement</h2>
+
+<p>Ton pipeline exécute du code que tu n'as pas écrit&nbsp;: des <strong>actions</strong> tierces, des <strong>dépendances</strong>. Chacune est une porte d'entrée. Le réflexe clé&nbsp;: <strong>épingler</strong> une action par son empreinte <strong>SHA</strong> complète, et non par un tag mutable comme <code>@v4</code>. Un tag peut être déplacé vers un nouveau commit — potentiellement malveillant — sans que tu changes une ligne. Un SHA, lui, désigne un code figé.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Épingler une action par tag mutable ou par SHA. En haut, l'action référencée par le tag v4 : le mainteneur, ou un attaquant qui l'a compromis, peut déplacer v4 vers un nouveau commit, et ton pipeline exécutera ce nouveau code à sa prochaine exécution, sans que tu aies rien changé. En bas, l'action épinglée par son empreinte SHA de quarante caractères : elle pointe toujours vers exactement le même code, immuable.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">uses: action@…</text>
+    <rect class="d-frame" x="30" y="40" width="180" height="48" rx="6" />
+    <text class="d-text" x="120" y="60" text-anchor="middle" font-size="11" font-family="monospace">action@v4</text>
+    <text class="d-mut" x="120" y="78" text-anchor="middle" font-size="8.5">tag MUTABLE</text>
+    <rect class="d-box" x="250" y="40" width="150" height="22" rx="4" /><text class="d-text" x="325" y="55" text-anchor="middle" font-size="9" font-family="monospace">commit sûr</text>
+    <rect class="d-frame" x="250" y="66" width="150" height="22" rx="4" /><text class="d-text" x="325" y="81" text-anchor="middle" font-size="9" font-family="monospace">commit malveillant</text>
+    <line class="d-line" x1="210" y1="58" x2="248" y2="52" /><path class="d-line" d="M241 49 L250 51 L243 58" fill="none" />
+    <line class="d-line" x1="210" y1="66" x2="248" y2="76" /><path class="d-line" d="M243 70 L250 77 L241 79" fill="none" />
+    <text class="d-mut" x="480" y="60" text-anchor="middle" font-size="9">v4 peut glisser</text>
+    <text class="d-mut" x="480" y="76" text-anchor="middle" font-size="9">de l'un à l'autre</text>
+    <rect class="d-accent" x="30" y="112" width="230" height="48" rx="6" />
+    <text class="d-text" x="145" y="132" text-anchor="middle" font-size="9.5" font-family="monospace">action@a1b2c3…9f (SHA)</text>
+    <text class="d-mut" x="145" y="150" text-anchor="middle" font-size="8.5">empreinte IMMUABLE</text>
+    <rect class="d-box" x="300" y="112" width="180" height="48" rx="6" />
+    <text class="d-text" x="390" y="132" text-anchor="middle" font-size="10">toujours le même code</text>
+    <text class="d-mut" x="390" y="150" text-anchor="middle" font-size="8.5">rien ne bouge sous tes pieds</text>
+    <line class="d-line" x1="260" y1="136" x2="298" y2="136" /><path class="d-line" d="M291 131 L301 136 L291 141" fill="none" />
+  </svg>
+  <figcaption>Un tag se déplace&nbsp;; un SHA est gravé. Épingler par empreinte, c'est refuser toute mise à jour surprise.</figcaption>
+</figure>
+
+<figure class="code-block" data-file=".github/workflows/ci.yml"><pre><code class="language-yaml">steps:
+  # Fragile : @v4 peut être déplacé vers un autre commit
+  - uses: actions/checkout@v4
+
+  # Sûr : épinglé par SHA complet (le commentaire garde la version lisible)
+  - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En mars 2025, l'action très populaire <strong>tj-actions/changed-files</strong> a été compromise&nbsp;: du code malveillant y a été injecté et déversait les <em>secrets</em> des runners dans les logs de build. Comme des milliers de dépôts la référençaient par un tag mutable (<code>@v35</code>…), ils ont tous tiré la version piégée dès l'exécution suivante. Les projets qui l'avaient <strong>épinglée par SHA</strong> n'ont rien exécuté de nouveau et sont restés indemnes. C'est l'illustration parfaite d'une attaque de la chaîne d'approvisionnement — et de sa parade.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Épingler par SHA fige aussi les mises à jour <em>utiles</em>. Confie l'entretien à un robot comme <strong>Dependabot</strong> ou <strong>Renovate</strong>&nbsp;: ils proposent des pull requests qui montent le SHA vers la nouvelle version, que tu relis et fusionnes. Tu gardes l'immuabilité <em>et</em> les correctifs de sécurité.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Exposer les secrets aux workflows déclenchés par une <em>pull request d'un dépôt forké</em>. Un contributeur externe pourrait alors soumettre un code qui exfiltre tes secrets. Les plateformes protègent ce cas par défaut, mais méfie-toi des déclencheurs comme <code>pull_request_target</code> qui, eux, donnent accès aux secrets&nbsp;: ne les combine jamais avec l'exécution de code non relu.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore la <strong>rotation</strong> régulière des secrets, les scanners de secrets (<em>gitleaks</em>, <em>trufflehog</em>) en pré-commit, la génération d'un <strong>SBOM</strong> (inventaire des dépendances) et la signature d'artefacts avec <strong>Sigstore/cosign</strong>, ainsi que le cadre <strong>SLSA</strong> qui gradue la robustesse d'une chaîne de production.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — sécuriser un pipeline</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Réflexe</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Stocker un secret</td><td>coffre chiffré</td><td>jamais en dur, jamais commité</td></tr>
+      <tr><td>Utiliser un secret</td><td><code>${{ secrets.NOM }}</code></td><td>injecté en <code>env:</code>, masqué</td></tr>
+      <tr><td>Limiter le jeton</td><td><code>permissions: contents: read</code></td><td>élargir au cas par cas</td></tr>
+      <tr><td>Déployer au cloud</td><td>OIDC <code>id-token: write</code></td><td>jeton éphémère, zéro clé stockée</td></tr>
+      <tr><td>Utiliser une action</td><td><code>uses: a/b@&lt;sha&gt;</code></td><td>SHA complet, pas <code>@v4</code></td></tr>
+      <tr><td>Garder à jour</td><td>Dependabot / Renovate</td><td>PR qui montent le SHA</td></tr>
+      <tr><td>Ne jamais faire</td><td><code>echo "$SECRET"</code></td><td>trahit la valeur dans les logs</td></tr>
+      <tr><td>PR de fork</td><td>éviter <code>pull_request_target</code> + code non relu</td><td>fuite de secrets</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Secret</dt><dd>Donnée sensible (clé d'API, mot de passe, jeton) stockée chiffrée et injectée à l'exécution, jamais écrite dans le dépôt.</dd>
+  <dt>Coffre de secrets</dt><dd>Espace chiffré de la plateforme (GitHub Secrets, GitLab Variables) où l'on range les secrets, hors du code.</dd>
+  <dt>Masquage</dt><dd>Remplacement automatique de la valeur exacte d'un secret par des astérisques dans les logs.</dd>
+  <dt>Moindre privilège</dt><dd>N'accorder à un jeton ou à un job que les droits strictement nécessaires&nbsp;; on part de la lecture seule.</dd>
+  <dt>OIDC (identité fédérée)</dt><dd>Le runner prouve son identité à un fournisseur cloud qui émet un jeton court, supprimant les clés permanentes.</dd>
+  <dt>Jeton éphémère</dt><dd>Identifiant valable quelques minutes seulement, expiré à la fin du job.</dd>
+  <dt>Chaîne d'approvisionnement</dt><dd>L'ensemble des actions et dépendances tierces exécutées par ton pipeline&nbsp;: autant de points d'entrée à protéger.</dd>
+  <dt>Épinglage par SHA</dt><dd>Référencer une action par son empreinte immuable de 40 caractères plutôt que par un tag déplaçable.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>Un secret vit dans le <strong>coffre chiffré</strong>, s'injecte en <code>env:</code> via <code>${{ secrets.NOM }}</code>, et n'est jamais affiché.</li>
+<li><strong>Moindre privilège</strong>&nbsp;: <code>permissions: contents: read</code> par défaut, élargi au seul job qui en a besoin.</li>
+<li><strong>OIDC</strong> remplace les clés permanentes par un jeton éphémère demandé à l'exécution.</li>
+<li>Épingle les actions par <strong>SHA</strong>, pas par tag&nbsp;; laisse un robot (Dependabot) proposer les montées de version.</li>
+<li>La chaîne d'approvisionnement est une vraie surface d'attaque&nbsp;: l'incident <em>tj-actions</em> l'a prouvé.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>echo "$SECRET"</code> peut-il trahir un secret malgré le masquage&nbsp;?</li><li>Quel avantage l'OIDC offre-t-il face à une clé cloud stockée dans les secrets&nbsp;?</li><li>Pourquoi épingler une action par SHA plutôt que par <code>@v4</code>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi ne jamais stocker un secret en dur dans le fichier de pipeline ?","a":["Parce qu'il serait figé dans l'historique Git, visible par quiconque accède au dépôt, et impossible à vraiment effacer","Parce que le YAML n'accepte pas les chaînes longues","Parce que ça ralentit le pipeline","Parce que les secrets doivent être en majuscules"],"correct":0,"explain":"Un secret écrit dans le code entre dans l'historique Git de façon permanente. Même supprimé plus tard, il reste dans les anciens commits. On le range dans le coffre chiffré et on l'injecte via ${{ secrets.NOM }}."},
+  {"q":"Quel est l'intérêt de l'identité fédérée OIDC pour déployer vers le cloud ?","a":["Le runner obtient un jeton éphémère à chaque exécution, ce qui évite de stocker une clé permanente qui fuirait avec le CI","Elle chiffre le code source","Elle accélère le déploiement","Elle supprime le besoin de tests"],"correct":0,"explain":"Sans OIDC, on copie une clé cloud à longue durée dans les secrets ; si le CI est compromis, la clé l'est pour des mois. Avec OIDC, le runner prouve son identité et reçoit un jeton court : rien de permanent n'est stocké."},
+  {"q":"Pourquoi épingler une action par son SHA complet plutôt que par un tag comme @v4 ?","a":["Un tag peut être déplacé vers un nouveau commit (éventuellement malveillant) sans que tu changes rien ; un SHA désigne un code immuable","Le SHA est plus court à écrire","@v4 ne fonctionne pas sur GitHub","Le SHA rend le pipeline plus rapide"],"correct":0,"explain":"Un tag est une étiquette déplaçable : le mainteneur (ou un attaquant l'ayant compromis) peut le repointer, et ton pipeline exécutera le nouveau code. Le SHA fige exactement le code exécuté — c'est ce qui a protégé les dépôts lors de l'incident tj-actions."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["secrets","${{ secrets","secrets."],"placeholder":"le contexte à utiliser pour lire une valeur du coffre : ${{ ___.API_KEY }}","hints":["Pluriel du mot « secret ».","${{ ??????.API_KEY }}","On n'écrit jamais la valeur en clair."],"link":{"href":"lecon-07.html","label":"Revoir « Les secrets »"}},
+  {"type":"text","accept":["permissions","permissions:"],"placeholder":"la clé YAML qui restreint les droits du jeton (moindre privilège) : …","hints":["Pluriel de « permission ».","contents: read se met dessous.","???????????: contents: read"],"link":{"href":"lecon-07.html","label":"Revoir « Le moindre privilège »"}},
+  {"type":"text","accept":["oidc","OIDC","id-token"],"placeholder":"le mécanisme d'identité fédérée qui remplace une clé permanente par un jeton éphémère : …","hints":["Quatre lettres.","Repose sur id-token: write.","OpenID Connect."],"link":{"href":"lecon-07.html","label":"Revoir « OIDC »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris le step d'un job qui exécute <code>./publier.sh</code> en lui fournissant le secret <code>NPM_TOKEN</code> dans une variable d'environnement <code>NODE_AUTH_TOKEN</code>, sans jamais écrire la valeur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.yml"><pre><code class="language-yaml">- name: Publier le paquet
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  run: ./publier.sh
+# La valeur vient du coffre ; elle est masquée dans les logs.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Déclare des <code>permissions</code> par défaut en lecture seule pour tout le workflow, puis donne au seul job <code>release</code> le droit d'écrire des <em>contents</em> (pour créer une release).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.yml"><pre><code class="language-yaml">permissions:
+  contents: read          # défaut pour tous les jobs
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # élargi UNIQUEMENT ici
+    steps:
+      - run: ./creer-release.sh</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Transforme un step fragile <code>uses: actions/setup-node@v4</code> en une référence <strong>épinglée par SHA</strong>, avec un commentaire rappelant la version lisible.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.yml"><pre><code class="language-yaml"># Avant (tag mutable) :
+# - uses: actions/setup-node@v4
+
+# Apres (SHA immuable, version en commentaire) :
+- uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v4.0.2
+# Un robot (Dependabot) proposera plus tard une PR qui monte ce SHA.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

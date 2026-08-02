@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mettre en service un petit serveur — Leçon 06 · Syntaxe</title>
+    <meta name="description" content="Projet fil rouge : partir d'un système Linux vierge et mettre en service une application — utilisateur dédié, paquets, service systemd, accès SSH sécurisé et pare-feu — en appliquant le moindre privilège." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="linux" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Linux &amp; administration système</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 03 · Pratique — Leçon 06</p>
+              <h1 class="lesson-header__title">Mettre en service un petit serveur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~33 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçons 01 à 05</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>enchaîner les gestes d'administration en une <strong>mise en service complète</strong>&nbsp;;</li>
+                  <li>installer une app et la lancer comme un <strong>service</strong>&nbsp;;</li>
+                  <li>sécuriser l'<strong>accès distant</strong> et le <strong>réseau</strong>&nbsp;;</li>
+                  <li>vérifier le tout via les <strong>journaux</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu as vu le système (fichiers, utilisateurs, processus) et l'administration (paquets, services, réseau, SSH). Cette dernière leçon relie tout&nbsp;: prendre une machine <strong>vierge</strong> et la transformer en <strong>petit serveur</strong> qui héberge une application, proprement et en sécurité.</p>
+
+<h2>La mise en service, étape par étape</h2>
+<p>Mettre en service un serveur suit presque toujours la même séquence&nbsp;:</p>
+<figure class="code-block" data-file="sequence.txt"><pre><code>  1) Mettre à jour      le système (correctifs de sécurité)
+  2) Créer un utilisateur dédié (non-root, avec sudo)
+  3) Installer          l'application et ses dépendances (apt)
+  4) Configurer         un service systemd (+ enable au boot)
+  5) Sécuriser l'accès  clés SSH, pare-feu (ouvrir le minimum)
+  6) Vérifier           status + journaux ; tester depuis l'extérieur</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="La séquence de mise en service d'un serveur, en six étapes enchaînées par des flèches. Étape 1, mettre à jour le système pour les correctifs. Étape 2, créer un utilisateur dédié non-root. Étape 3, installer l'application avec apt. Étape 4, configurer un service systemd activé au boot avec enable tiret tiret now. Étape 5, sécuriser l'accès avec les clés SSH et le pare-feu. Étape 6, vérifier l'état, les journaux et le port. Message clé : on prépare, on installe, on sécurise, et on vérifie à chaque étape.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Mettre en service&nbsp;: six étapes, dans l'ordre</text>
+    <rect class="d-box" x="16" y="54" width="90" height="64" rx="5" /><text class="d-tag" x="61" y="74" text-anchor="middle" font-size="12" font-family="monospace">1</text><text class="d-text" x="61" y="92" text-anchor="middle" font-size="8.5">Mettre à jour</text><text class="d-mut" x="61" y="106" text-anchor="middle" font-size="7.5">correctifs</text>
+    <rect class="d-box" x="118" y="54" width="90" height="64" rx="5" /><text class="d-tag" x="163" y="74" text-anchor="middle" font-size="12" font-family="monospace">2</text><text class="d-text" x="163" y="92" text-anchor="middle" font-size="8.5">Utilisateur</text><text class="d-mut" x="163" y="106" text-anchor="middle" font-size="7.5">dédié, non-root</text>
+    <rect class="d-box" x="220" y="54" width="90" height="64" rx="5" /><text class="d-tag" x="265" y="74" text-anchor="middle" font-size="12" font-family="monospace">3</text><text class="d-text" x="265" y="92" text-anchor="middle" font-size="8.5">Installer</text><text class="d-mut" x="265" y="106" text-anchor="middle" font-size="7.5">apt install</text>
+    <rect class="d-box" x="322" y="54" width="90" height="64" rx="5" /><text class="d-tag" x="367" y="74" text-anchor="middle" font-size="12" font-family="monospace">4</text><text class="d-text" x="367" y="92" text-anchor="middle" font-size="8.5">Service</text><text class="d-mut" x="367" y="106" text-anchor="middle" font-size="7.5">enable --now</text>
+    <rect class="d-box" x="424" y="54" width="90" height="64" rx="5" /><text class="d-tag" x="469" y="74" text-anchor="middle" font-size="12" font-family="monospace">5</text><text class="d-text" x="469" y="92" text-anchor="middle" font-size="8.5">Sécuriser</text><text class="d-mut" x="469" y="106" text-anchor="middle" font-size="7.5">clés + pare-feu</text>
+    <rect class="d-accent" x="526" y="54" width="90" height="64" rx="5" /><text class="d-tag" x="571" y="74" text-anchor="middle" font-size="12" font-family="monospace">6</text><text class="d-text" x="571" y="92" text-anchor="middle" font-size="8.5">Vérifier</text><text class="d-mut" x="571" y="106" text-anchor="middle" font-size="7.5">status + logs</text>
+    <path class="d-line" d="M107 86 L117 86" fill="none" /><path class="d-line" d="M112 82 L118 86 L112 90" fill="none" />
+    <path class="d-line" d="M209 86 L219 86" fill="none" /><path class="d-line" d="M214 82 L220 86 L214 90" fill="none" />
+    <path class="d-line" d="M311 86 L321 86" fill="none" /><path class="d-line" d="M316 82 L322 86 L316 90" fill="none" />
+    <path class="d-line" d="M413 86 L423 86" fill="none" /><path class="d-line" d="M418 82 L424 86 L418 90" fill="none" />
+    <path class="d-line" d="M515 86 L525 86" fill="none" /><path class="d-line" d="M520 82 L526 86 L520 90" fill="none" />
+  </svg>
+  <figcaption>La même séquence à chaque fois&nbsp;: <strong>préparer</strong> (1-2), <strong>installer</strong> (3-4), <strong>sécuriser</strong> (5), puis <strong>vérifier</strong> (6) — en contrôlant après chaque étape.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le fil rouge du cours</p><p>Chaque étape mobilise une leçon&nbsp;: les paquets et services (L4), le réseau et SSH (L5), les utilisateurs et permissions (L3), l'arborescence (L2). La mise en service, c'est l'<strong>orchestration</strong> de tout ce que tu as appris.</p></div></div>
+
+<h2>Vérifier, toujours</h2>
+<p>Après chaque étape importante, on <strong>vérifie</strong> avant d'avancer — c'est ce qui distingue une mise en service fiable d'un bricolage&nbsp;:</p>
+<figure class="code-block" data-file="verifier.sh"><pre><code class="language-bash">systemctl status mon-app      # le service tourne-t-il vraiment ?
+journalctl -u mon-app -e      # le journal confirme-t-il (ou pointe l'erreur) ?
+ss -tlnp                      # le bon port est-il à l'écoute ?
+sudo ufw status               # le pare-feu autorise-t-il ce port ?</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Vérifier avant d'avancer</p><p>La règle d'or d'une mise en service fiable&nbsp;: après <strong>chaque</strong> étape, une vérification. Service installé&nbsp;→ <code>systemctl status</code>. Port attendu&nbsp;→ <code>ss -tlnp</code>. Pare-feu réglé&nbsp;→ <code>sudo ufw status</code>. Corriger une erreur tout de suite coûte une minute&nbsp;; la découvrir trois étapes plus tard peut coûter une heure.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Le chemin d'une requête depuis l'extérieur jusqu'au service, avec les points à vérifier quand le service est actif mais injoignable. De gauche à droite : le navigateur du visiteur ; le pare-feu du cloud, appelé groupe de sécurité, qui doit autoriser le port ; le pare-feu local ufw, qui doit aussi l'autoriser ; l'interface d'écoute du service, qui doit être 0.0.0.0 pour tout le monde et non 127.0.0.1 qui limite à la machine locale ; enfin le service, actif et running. Chaque maillon peut bloquer la requête. Message : quand systemctl status dit actif mais que le site est injoignable, on remonte ce chemin maillon par maillon.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Service « actif » mais injoignable&nbsp;? Remonte le chemin</text>
+    <rect class="d-box" x="12" y="70" width="104" height="56" rx="5" /><text class="d-text" x="64" y="94" text-anchor="middle" font-size="9.5">Navigateur</text><text class="d-mut" x="64" y="110" text-anchor="middle" font-size="8">du visiteur</text>
+    <rect class="d-frame" x="140" y="70" width="104" height="56" rx="5" /><text class="d-text" x="192" y="90" text-anchor="middle" font-size="9">Pare-feu cloud</text><text class="d-mut" x="192" y="104" text-anchor="middle" font-size="7.5">groupe de sécurité</text><text class="d-mut" x="192" y="116" text-anchor="middle" font-size="7.5">port autorisé&nbsp;?</text>
+    <rect class="d-frame" x="268" y="70" width="104" height="56" rx="5" /><text class="d-text" x="320" y="90" text-anchor="middle" font-size="9">Pare-feu local</text><text class="d-mut" x="320" y="104" text-anchor="middle" font-size="7.5">ufw status</text><text class="d-mut" x="320" y="116" text-anchor="middle" font-size="7.5">allow 80&nbsp;?</text>
+    <rect class="d-frame" x="396" y="70" width="112" height="56" rx="5" /><text class="d-text" x="452" y="90" text-anchor="middle" font-size="9">Écoute</text><text class="d-mut" x="452" y="104" text-anchor="middle" font-size="7.5">0.0.0.0 (pas</text><text class="d-mut" x="452" y="116" text-anchor="middle" font-size="7.5">127.0.0.1)&nbsp;?</text>
+    <rect class="d-accent" x="532" y="70" width="96" height="56" rx="5" /><text class="d-text" x="580" y="94" text-anchor="middle" font-size="9.5">Service</text><text class="d-mut" x="580" y="110" text-anchor="middle" font-size="8">active (running)</text>
+    <path class="d-line" d="M116 98 L140 98" fill="none" /><path class="d-line" d="M134 94 L140 98 L134 102" fill="none" />
+    <path class="d-line" d="M244 98 L268 98" fill="none" /><path class="d-line" d="M262 94 L268 98 L262 102" fill="none" />
+    <path class="d-line" d="M372 98 L396 98" fill="none" /><path class="d-line" d="M390 94 L396 98 L390 102" fill="none" />
+    <path class="d-line" d="M508 98 L532 98" fill="none" /><path class="d-line" d="M526 94 L532 98 L526 102" fill="none" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8.5">chaque maillon peut bloquer&nbsp;: on vérifie de l'extérieur vers le service</text>
+  </svg>
+  <figcaption>Le service tourne, mais la requête traverse plusieurs <strong>filtres</strong>&nbsp;: pare-feu cloud, <code>ufw</code>, interface d'écoute. On <strong>remonte le chemin</strong> jusqu'au maillon qui bloque.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Erreur fréquente — le service qui n'écoute qu'en local</p><p>Beaucoup d'applications écoutent par défaut sur <code>127.0.0.1</code> (la machine elle-même) et non sur <code>0.0.0.0</code> (toutes les interfaces). Résultat&nbsp;: <code>systemctl status</code> affiche « active (running) », mais le service est <strong>injoignable de l'extérieur</strong> — non à cause du pare-feu, mais parce qu'il n'écoute pas sur la bonne interface. <code>ss -tlnp</code> te le montre&nbsp;: regarde l'adresse écrite devant le port.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — « ça marche en SSH mais le site ne s'affiche pas »</p><p>Premier déploiement chez un hébergeur cloud&nbsp;: nginx installé, <code>enable --now</code>, <code>ufw allow 80</code>, et <code>ss -tlnp</code> confirme l'écoute sur le 80… mais le navigateur tourne dans le vide. La cause&nbsp;: la plupart des clouds (AWS, GCP, Azure, OVH…) ajoutent un <strong>pare-feu externe</strong> — le <em>groupe de sécurité</em> — <strong>en amont</strong> de la machine. Tant que le port 80 n'y est pas ouvert <em>lui aussi</em>, le trafic n'atteint jamais <code>ufw</code>. Le réflexe&nbsp;: quand tout semble correct côté serveur, penser à la <strong>couche réseau de l'hébergeur</strong>.</p></div></div>
+
+<h2>Et après&nbsp;?</h2>
+<p>Tu sais administrer un serveur Linux de bout en bout. Les suites naturelles&nbsp;: <a href="../docker/cours.html">Docker</a> (empaqueter l'app dans un conteneur Linux), le <a href="../cloud/cours.html">cloud</a> (héberger à l'échelle), l'<a href="../iac/cours.html">Infrastructure as Code</a> (décrire le serveur en code) et la <a href="../securite/cours.html">sécurité</a> (durcir plus loin). Mais surtout&nbsp;: pratique sur de vraies machines, car l'aisance vient de la répétition.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le réflexe le plus utile&nbsp;: rendre tes mises en service <strong>reproductibles</strong>. Note chaque commande, transforme tes notes en script, puis en configuration déclarative. Un serveur qu'on sait <strong>recréer à l'identique</strong> vaut bien mieux qu'un serveur « monté à la main » qu'on n'ose plus toucher.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mettre en service et vérifier&nbsp;: les commandes clés</caption>
+    <thead><tr><th scope="col">Étape</th><th scope="col">Commande</th><th scope="col">Ce qu'elle fait</th></tr></thead>
+    <tbody>
+      <tr><td>Mettre à jour</td><td><code>sudo apt update &amp;&amp; sudo apt upgrade</code></td><td>applique les correctifs de sécurité</td></tr>
+      <tr><td>Utilisateur dédié</td><td><code>sudo adduser deploy</code></td><td>un compte non-root pour administrer</td></tr>
+      <tr><td>Installer</td><td><code>sudo apt install nginx</code></td><td>le logiciel + ses dépendances</td></tr>
+      <tr><td>Service au boot</td><td><code>sudo systemctl enable --now nginx</code></td><td>démarre maintenant ET à chaque boot</td></tr>
+      <tr><td>Vérifier l'état</td><td><code>systemctl status nginx</code></td><td>actif&nbsp;? en échec&nbsp;?</td></tr>
+      <tr><td>Vérifier le port</td><td><code>ss -tlnp</code></td><td>le service écoute-t-il, et sur quelle interface&nbsp;?</td></tr>
+      <tr><td>Lire les journaux</td><td><code>journalctl -u nginx -e</code></td><td>le message d'erreur exact</td></tr>
+      <tr><td>Déposer sa clé SSH</td><td><code>ssh-copy-id deploy@serveur</code></td><td>connexion par clé, sans mot de passe</td></tr>
+      <tr><td>Ouvrir un port</td><td><code>sudo ufw allow 80</code></td><td>n'ouvrir que le nécessaire</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Mise en service (déploiement)</dt><dd>L'ensemble des étapes qui transforment une machine vierge en serveur opérationnel&nbsp;: mettre à jour, installer, configurer le service, sécuriser, vérifier.</dd>
+  <dt>Service systemd</dt><dd>Un programme supervisé par systemd, qui le démarre, le surveille et le relance. On le pilote avec <code>systemctl</code>.</dd>
+  <dt><code>enable --now</code></dt><dd>Une commande <code>systemctl</code> qui, en une fois, <strong>démarre</strong> le service et l'<strong>active au boot</strong> (pour qu'il revienne après un redémarrage).</dd>
+  <dt>Utilisateur dédié</dt><dd>Un compte non-root créé pour administrer ou faire tourner un service. Applique le moindre privilège&nbsp;: on n'opère pas tout-puissant en permanence.</dd>
+  <dt>Interface d'écoute (0.0.0.0 / 127.0.0.1)</dt><dd>L'adresse sur laquelle un service accepte les connexions. <code>127.0.0.1</code> = la machine seule&nbsp;; <code>0.0.0.0</code> = toutes les interfaces (joignable de l'extérieur).</dd>
+  <dt>Groupe de sécurité</dt><dd>Le pare-feu <strong>externe</strong> d'un hébergeur cloud, en amont de la machine. À ouvrir en plus de <code>ufw</code> pour qu'un port soit réellement joignable.</dd>
+  <dt>Reproductibilité</dt><dd>La capacité à recréer un serveur à l'identique. On y tend en notant chaque commande, puis en la transformant en script, puis en configuration déclarative.</dd>
+  <dt>Défense en profondeur</dt><dd>Empiler plusieurs protections (mises à jour, clés, pare-feu, comptes dédiés) pour qu'aucune faille unique ne suffise à compromettre le serveur.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La mise en service suit une <strong>séquence</strong>&nbsp;: mettre à jour → utilisateur → installer → service → sécuriser → vérifier.</li>
+<li>L'application tourne comme un <strong>service systemd</strong>, activé au <strong>boot</strong>.</li>
+<li>L'accès est sécurisé&nbsp;: <strong>SSH par clé</strong>, <strong>pare-feu</strong> minimal, <strong>moindre privilège</strong>.</li>
+<li>On <strong>vérifie</strong> chaque étape (status, journaux, port) avant d'avancer.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle séquence suis-tu pour mettre en service un serveur ?</li><li>Comment vérifies-tu qu'un service tourne et écoute sur le bon port ?</li><li>Quelles mesures rendent l'accès au serveur plus sûr ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est une bonne séquence pour mettre en service un serveur ?","a":["Mettre à jour → créer un utilisateur dédié → installer l'application → configurer un service (enable au boot) → sécuriser l'accès → vérifier","Installer l'application directement en root, sans rien d'autre","Ouvrir tous les ports puis installer au hasard","Désactiver les journaux pour gagner du temps"],"correct":0,"explain":"On prépare le système, on installe, on fait tourner l'app comme un service activé au boot, on sécurise l'accès, et on vérifie à chaque étape."},
+  {"q":"Comment vérifier qu'un service tourne et écoute sur le bon port ?","a":["systemctl status <service> (état) et ss -tlnp (ports en écoute), en complément des journaux journalctl","En redémarrant la machine plusieurs fois","En supprimant le service","Il n'y a aucun moyen de vérifier"],"correct":0,"explain":"systemctl status confirme que le service est actif, ss -tlnp montre les ports à l'écoute, et journalctl donne le détail en cas de problème."},
+  {"q":"Quelles mesures rendent l'accès à un serveur plus sûr ?","a":["SSH par clé (mot de passe et root SSH désactivés), pare-feu n'ouvrant que le nécessaire, utilisateur dédié et mises à jour","Se connecter en root par mot de passe","Ouvrir tous les ports pour éviter les soucis","Ne jamais mettre à jour"],"correct":0,"explain":"La sécurité se construit par couches : clés SSH, pare-feu minimal, comptes dédiés (moindre privilège) et mises à jour régulières."},
+  {"q":"Quel principe doit guider toute la mise en service ?","a":["Le moindre privilège : utilisateur dédié, permissions justes, pare-feu minimal — n'accorder que le strict nécessaire","Tout faire en root pour aller plus vite","Donner tous les droits à tout le monde","Désactiver le pare-feu"],"correct":0,"explain":"Le moindre privilège limite la surface d'attaque à chaque niveau (compte, fichiers, réseau). C'est le fil conducteur d'une administration saine."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["systemd","service systemd","systemctl"],"placeholder":"le système qui fait tourner l'application comme un service supervisé","hints":["Piloté par systemctl.","« system… »."],"link":{"href":"lecon-06.html","label":"Revoir « La mise en service »"}},
+  {"type":"text","accept":["enable","systemctl enable","enable --now"],"placeholder":"l'action pour que le service démarre automatiquement au boot","hints":["systemctl ___ mon-app","enable --now en une fois"],"link":{"href":"lecon-06.html","label":"Revoir « La séquence »"}},
+  {"type":"text","accept":["moindre privilege","moindre privilège","least privilege"],"placeholder":"le principe directeur de toute la mise en service","hints":["Deux mots.","N'accorder que le nécessaire."],"link":{"href":"lecon-06.html","label":"Revoir « Et après ? »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Remets dans l'ordre&nbsp;: (a) configurer le pare-feu ; (b) mettre à jour le système ; (c) installer l'application ; (d) créer un utilisateur dédié.</p><details><summary>Voir une solution</summary><p>Ordre logique&nbsp;: <strong>(b)</strong> mettre à jour le système (partir d'une base saine), <strong>(d)</strong> créer un utilisateur dédié (pour ne pas travailler en root), <strong>(c)</strong> installer l'application, puis <strong>(a)</strong> configurer le pare-feu (sécuriser l'accès une fois le service en place). On prépare, on installe, on sécurise — en vérifiant au fur et à mesure.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu as installé et démarré ton application, mais elle est injoignable depuis l'extérieur alors que <code>systemctl status</code> la dit « active (running) ». Quelles pistes vérifies-tu&nbsp;?</p><details><summary>Voir une solution</summary><p>Le service tourne, donc le problème est entre l'application et l'extérieur. Pistes, dans l'ordre&nbsp;: <strong>1) Le port à l'écoute</strong>&nbsp;: <code>ss -tlnp</code> — l'app écoute-t-elle bien sur le port attendu&nbsp;? Et écoute-t-elle sur <strong>toutes les interfaces</strong> (0.0.0.0) ou seulement en local (127.0.0.1)&nbsp;? Un service qui n'écoute qu'en local est injoignable de l'extérieur. <strong>2) Le pare-feu</strong>&nbsp;: <code>sudo ufw status</code> — le port est-il <strong>autorisé</strong>&nbsp;? C'est la cause la plus fréquente&nbsp;: le service marche mais le pare-feu bloque. <strong>3) Le réseau en amont</strong>&nbsp;: chez un hébergeur cloud, il y a souvent un <strong>groupe de sécurité</strong> (pare-feu externe) à ouvrir en plus de <code>ufw</code>. <strong>4) L'adresse testée</strong>&nbsp;: utilises-tu la bonne IP&nbsp;? <strong>5) Les journaux</strong>&nbsp;: <code>journalctl -u &lt;service&gt;</code> pour un éventuel message. La démarche&nbsp;: remonter le chemin de la requête, du service vers l'extérieur, en vérifiant chaque maillon (écoute → pare-feu local → pare-feu réseau).</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi vaut-il mieux <strong>noter chaque commande</strong> de ta mise en service et viser la <strong>reproductibilité</strong>, plutôt que de « monter le serveur à la main » ?</p><details><summary>Voir une solution</summary><p>Un serveur monté « à la main » sans trace pose plusieurs problèmes. <strong>1) Irreproductibilité</strong>&nbsp;: si la machine tombe ou doit être recréée, personne ne sait exactement quelles commandes ont été passées&nbsp;; on perd du temps et on oublie des détails. <strong>2) Dérive de configuration</strong>&nbsp;: au fil des bricolages successifs, l'état réel du serveur diverge de ce qu'on croit, et plus personne n'ose y toucher de peur de tout casser. <strong>3) Pas de partage</strong>&nbsp;: un collègue ne peut pas reproduire l'environnement à l'identique. <strong>Noter chaque commande</strong> (puis en faire un <strong>script</strong>) répond à tout cela&nbsp;: la mise en service devient <strong>documentée</strong>, <strong>rejouable</strong> et <strong>partageable</strong>. C'est la première marche vers l'automatisation&nbsp;: un script shell aujourd'hui, une <strong>configuration déclarative</strong> demain (gestion de configuration, Infrastructure as Code). Un serveur qu'on sait <strong>recréer à l'identique en quelques minutes</strong> est infiniment plus robuste qu'un serveur unique et fragile. C'est aussi ce qui rend les déploiements fiables à grande échelle.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

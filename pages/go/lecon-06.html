@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La gestion d'erreurs — Leçon 06 · Go · Syntaxe</title>
+    <meta name="description" content="Maîtrise la gestion d'erreurs idiomatique de Go : valeurs error, if err != nil, %w, errors.Is/As, erreurs sentinelles, defer et panic/recover." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="go" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Go</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Go idiomatique — Leçon 06</p>
+              <h1 class="lesson-header__title">La gestion d'erreurs</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~28 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 5 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir renvoyer et vérifier une <code>error</code> avec le pattern <code>if err != nil</code>&nbsp;;</li>
+                  <li>savoir créer, envelopper avec <code>%w</code> et inspecter une erreur via <code>errors.Is</code> et <code>errors.As</code>&nbsp;;</li>
+                  <li>savoir libérer une ressource proprement avec <code>defer</code> (ordre LIFO)&nbsp;;</li>
+                  <li>savoir quand réserver <code>panic</code>/<code>recover</code> aux cas vraiment exceptionnels.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En Go, il n'y a pas d'exceptions ni de <code>try/catch</code>. Une fonction qui peut échouer te le dit franchement : elle renvoie une <strong>valeur d'erreur</strong> en plus de son résultat. À toi de la vérifier. Ça paraît verbeux au début, mais c'est ce qui rend le flot du programme explicite : tu vois, ligne par ligne, ce qui peut mal tourner et ce que tu en fais.</p>
+
+<p>Dans cette leçon, on couvre le pattern <code>if err != nil</code>, le type <code>error</code>, l'enveloppement (<code>%w</code>) avec <code>errors.Is</code>/<code>errors.As</code>, les erreurs sentinelles, le mot-clé <code>defer</code> pour le nettoyage, et enfin <code>panic</code>/<code>recover</code> — à réserver aux vrais cas exceptionnels.</p>
+
+<h2>Pas d'exceptions : l'erreur est une valeur de retour</h2>
+<p>La convention en Go : si une fonction peut échouer, elle renvoie l'erreur en <strong>dernier</strong> retour, avec le type <code>error</code>. Quand tout va bien, cette valeur vaut <code>nil</code>.</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+// Diviser renvoie un résultat ET une erreur.
+func Diviser(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("division par zéro")
+	}
+	return a / b, nil
+}
+
+func main() {
+	r, err := Diviser(10, 2)
+	fmt.Println(r, err) // 5 &lt;nil&gt;
+}</code></pre></figure>
+
+<p>Note la signature : <code>func Diviser(a, b float64) (float64, error)</code>. Le résultat « utile » d'abord, l'erreur ensuite. C'est l'ordre que toute la bibliothèque standard respecte. En cas d'échec, on renvoie une valeur « neutre » pour le résultat (ici <code>0</code>) et l'erreur ; en cas de succès, le vrai résultat et <code>nil</code>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Quand une fonction échoue, le résultat renvoyé à côté de l'erreur n'a en général aucune valeur exploitable. Ne l'utilise qu'<strong>après</strong> avoir vérifié que l'erreur est <code>nil</code>.</p></div></div>
+
+<h2>Le pattern omniprésent : <code>if err != nil</code></h2>
+<p>Juste après un appel qui peut échouer, tu vérifies l'erreur. Si elle n'est pas <code>nil</code>, tu réagis : souvent tu la <strong>renvoies</strong> à l'appelant.</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func PrixUnitaire(total, quantite float64) (float64, error) {
+	prix, err := Diviser(total, quantite)
+	if err != nil {
+		return 0, err // on remonte l'erreur telle quelle
+	}
+	return prix, nil
+}
+
+func main() {
+	_, err := PrixUnitaire(50, 0)
+	if err != nil {
+		fmt.Println("échec :", err) // échec : division par zéro
+		return
+	}
+}</code></pre></figure>
+
+<p>Ce bloc <code>if err != nil { return err }</code>, tu vas l'écrire des milliers de fois. C'est le rythme de Go : appel, vérification, suite. Le « chemin heureux » reste aligné à gauche, sans indentation profonde, ce qui rend le code facile à suivre de haut en bas.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Vérifie l'erreur <strong>immédiatement</strong> après l'appel, avant toute autre instruction. Gérer l'échec tôt évite d'utiliser par mégarde un résultat invalide.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le pattern if err différent de nil. Un appel qui peut échouer renvoie un résultat et une erreur. Si l'erreur n'est pas nil, on renvoie tôt l'erreur à l'appelant, branche qui part sur le côté. Si elle est nil, le chemin heureux continue tout droit vers le bas, aligné à gauche, sans imbrication.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le rythme de Go : appel → vérification → suite</text>
+    <rect class="d-box" x="200" y="40" width="240" height="34" rx="8" />
+    <text class="d-text" x="320" y="62" text-anchor="middle" font-size="10">r, err := Diviser(a, b)</text>
+    <line class="d-line" x1="320" y1="74" x2="320" y2="92" />
+    <rect class="d-accent" x="240" y="92" width="160" height="34" rx="8" />
+    <text class="d-tag" x="320" y="114" text-anchor="middle" font-size="11">err != nil ?</text>
+    <line class="d-line" x1="400" y1="109" x2="470" y2="109" />
+    <text class="d-mut" x="435" y="103" text-anchor="middle" font-size="9">oui</text>
+    <rect class="d-box" x="470" y="92" width="150" height="34" rx="8" />
+    <text class="d-text" x="545" y="114" text-anchor="middle" font-size="10">return err</text>
+    <line class="d-line" x1="320" y1="126" x2="320" y2="152" />
+    <text class="d-mut" x="360" y="144" text-anchor="middle" font-size="9">non (nil)</text>
+    <rect class="d-box" x="200" y="154" width="240" height="34" rx="8" />
+    <text class="d-text" x="320" y="176" text-anchor="middle" font-size="10">utiliser r — chemin heureux</text>
+  </svg>
+  <figcaption>Vérifier l'erreur juste après l'appel&nbsp;: en cas d'échec on <strong>sort tôt</strong> (<code>return err</code>), et le «&nbsp;chemin heureux&nbsp;» reste aligné à gauche, sans imbrication profonde.</figcaption>
+</figure>
+
+<h2>Le type <code>error</code> et comment en créer une</h2>
+<p><code>error</code> est une interface toute simple de la bibliothèque standard :</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">type error interface {
+	Error() string
+}</code></pre></figure>
+
+<p>N'importe quel type qui possède une méthode <code>Error() string</code> est une <code>error</code>. Pour en fabriquer une rapidement, deux outils :</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">// Texte fixe :
+err1 := errors.New("fichier introuvable")
+
+// Texte formaté (avec des valeurs) :
+nom := "config.json"
+err2 := fmt.Errorf("fichier introuvable : %s", nom)
+
+fmt.Println(err1) // fichier introuvable
+fmt.Println(err2) // fichier introuvable : config.json</code></pre></figure>
+
+<p>Utilise <code>errors.New</code> pour un message constant, et <code>fmt.Errorf</code> dès que tu veux y glisser des valeurs. Convention de message : minuscule en début, pas de point final, pas de « erreur : » redondant — car ton message sera souvent préfixé par un autre.</p>
+
+<h2>Envelopper une erreur avec <code>%w</code></h2>
+<p>Quand tu remontes une erreur, ajoute du <strong>contexte</strong> sans perdre l'erreur d'origine. C'est l'enveloppement (<em>wrapping</em>) : <code>fmt.Errorf</code> avec le verbe <code>%w</code>.</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func ChargerConfig(nom string) error {
+	_, err := Diviser(1, 0) // simule un échec interne
+	if err != nil {
+		// on enrobe : on garde l'erreur d'origine via %w
+		return fmt.Errorf("chargement de %s : %w", nom, err)
+	}
+	return nil
+}
+
+func main() {
+	err := ChargerConfig("app.conf")
+	fmt.Println(err)
+	// chargement de app.conf : division par zéro
+}</code></pre></figure>
+
+<p>Pour inspecter une erreur enveloppée, n'utilise pas <code>==</code> (qui ne regarde que la couche extérieure). Utilise <code>errors.Is</code> (compare à une erreur cible à travers les couches) et <code>errors.As</code> (récupère une erreur d'un type donné dans la chaîne).</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">var ErrPermission = errors.New("permission refusée")
+
+func main() {
+	// On enveloppe ErrPermission dans deux couches de contexte.
+	err := fmt.Errorf("ouverture : %w",
+		fmt.Errorf("accès disque : %w", ErrPermission))
+
+	fmt.Println(errors.Is(err, ErrPermission)) // true
+	fmt.Println(err == ErrPermission)          // false
+}</code></pre></figure>
+
+<p><code>errors.Is</code> répond <code>true</code> parce qu'il déballe les couches une à une jusqu'à retrouver <code>ErrPermission</code>. La comparaison <code>==</code>, elle, ne voit que l'enveloppe extérieure et répond <code>false</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="L'enveloppement d'erreur avec le verbe %w empile des couches de contexte autour de l'erreur d'origine. Trois couches emboîtées : ouverture contient accès disque qui contient l'erreur sentinelle ErrPermission au cœur. errors.Is déballe les couches une à une pour retrouver la cible et renvoie true, tandis que la comparaison double égal ne voit que la couche extérieure et renvoie false.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">%w empile le contexte ; errors.Is déballe jusqu'à la cible</text>
+    <rect class="d-box" x="90" y="42" width="460" height="112" rx="10" />
+    <text class="d-mut" x="104" y="60" font-size="9">fmt.Errorf("ouverture : %w", …)</text>
+    <rect class="d-box" x="150" y="70" width="340" height="72" rx="9" />
+    <text class="d-mut" x="164" y="88" font-size="9">fmt.Errorf("accès disque : %w", …)</text>
+    <rect class="d-accent" x="220" y="98" width="200" height="36" rx="8" />
+    <text class="d-tag" x="320" y="121" text-anchor="middle" font-size="11">ErrPermission</text>
+    <text class="d-text" x="320" y="178" text-anchor="middle" font-size="10">errors.Is(err, ErrPermission) → true   ·   err == ErrPermission → false</text>
+  </svg>
+  <figcaption>L'erreur d'origine (<code>ErrPermission</code>) reste au cœur&nbsp;; chaque <code>%w</code> ajoute une couche de contexte. <code>errors.Is</code> traverse les couches, là où <code>==</code> ne compare que l'enveloppe extérieure.</figcaption>
+</figure>
+
+<h2>Les erreurs sentinelles</h2>
+<p>Une erreur <strong>sentinelle</strong> est une variable d'erreur exportée et stable, que l'appelant peut tester précisément. La bibliothèque standard en regorge (<code>io.EOF</code>, <code>sql.ErrNoRows</code>…). Convention de nom : préfixe <code>Err</code>.</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">// Sentinelle exportée : l'appelant pourra la reconnaître.
+var ErrIntrouvable = errors.New("élément introuvable")
+
+var base = map[string]int{"go": 2009}
+
+func Annee(langage string) (int, error) {
+	annee, ok := base[langage]
+	if !ok {
+		return 0, fmt.Errorf("langage %q : %w", langage, ErrIntrouvable)
+	}
+	return annee, nil
+}
+
+func main() {
+	_, err := Annee("brainfuck")
+	if errors.Is(err, ErrIntrouvable) {
+		fmt.Println("pas dans la base") // pas dans la base
+	}
+}</code></pre></figure>
+
+<p>L'appelant teste <code>errors.Is(err, ErrIntrouvable)</code> pour réagir au cas précis, même si l'erreur a été enveloppée en chemin. C'est plus robuste que de comparer des chaînes de texte.</p>
+
+<h2><code>defer</code> : différer le nettoyage</h2>
+<p><code>defer</code> reporte l'exécution d'un appel <strong>jusqu'à la sortie de la fonction</strong> englobante — que la sortie soit normale ou via une erreur. Idéal pour libérer une ressource juste après l'avoir obtenue, sans risquer de l'oublier.</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func LireFichier(chemin string) error {
+	f, err := os.Open(chemin)
+	if err != nil {
+		return fmt.Errorf("ouverture : %w", err)
+	}
+	defer f.Close() // garanti, quel que soit le chemin de sortie
+
+	// ... lire le fichier ...
+	return nil
+}</code></pre></figure>
+
+<p>Les appels <code>defer</code> s'exécutent dans l'ordre <strong>LIFO</strong> (dernier arrivé, premier sorti). Si tu en empiles plusieurs, le dernier déclaré s'exécute en premier :</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func main() {
+	defer fmt.Println("1")
+	defer fmt.Println("2")
+	defer fmt.Println("3")
+	fmt.Println("corps")
+	// corps
+	// 3
+	// 2
+	// 1
+}</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Place ton <code>defer f.Close()</code> <strong>juste après</strong> avoir vérifié que l'ouverture a réussi. Ainsi la ressource est libérée par tous les chemins de retour, présents et futurs.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Les appels defer s'empilent et s'exécutent en ordre LIFO, dernier arrivé premier sorti. On empile defer f1 puis defer f2 puis defer f3 au sommet. À la sortie de la fonction, ils s'exécutent dans l'ordre inverse : f3 d'abord, puis f2, puis f1 en dernier.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">defer : pile LIFO (dernier arrivé, premier exécuté)</text>
+    <text class="d-mut" x="150" y="48" text-anchor="middle" font-size="9">on empile ↓</text>
+    <rect class="d-box" x="60" y="56" width="180" height="26" rx="6" />
+    <text class="d-text" x="150" y="74" text-anchor="middle" font-size="9">defer f1()   — 1er</text>
+    <rect class="d-box" x="60" y="86" width="180" height="26" rx="6" />
+    <text class="d-text" x="150" y="104" text-anchor="middle" font-size="9">defer f2()   — 2e</text>
+    <rect class="d-accent" x="60" y="116" width="180" height="26" rx="6" />
+    <text class="d-tag" x="150" y="134" text-anchor="middle" font-size="9">defer f3()   — sommet</text>
+    <line class="d-line" x1="250" y1="100" x2="380" y2="100" />
+    <text class="d-mut" x="315" y="92" text-anchor="middle" font-size="9">sortie de fonction</text>
+    <text class="d-text" x="470" y="64" text-anchor="middle" font-size="10">f3()  →  d'abord</text>
+    <text class="d-text" x="470" y="104" text-anchor="middle" font-size="10">f2()</text>
+    <text class="d-text" x="470" y="144" text-anchor="middle" font-size="10">f1()  →  en dernier</text>
+  </svg>
+  <figcaption>Empiler plusieurs <code>defer</code> les fait s'exécuter en ordre <strong>inverse</strong> à la sortie de la fonction&nbsp;: pratique pour défaire les ressources dans le bon sens (ouvrir A puis B → fermer B puis A).</figcaption>
+</figure>
+
+<h2><code>panic</code> et <code>recover</code> : pour l'exceptionnel</h2>
+<p>Une <code>panic</code> interrompt le flot normal et remonte la pile en exécutant les <code>defer</code>, jusqu'à faire planter le programme — sauf si un <code>recover</code> (placé dans un <code>defer</code>) la rattrape. Réserve ça aux situations <strong>vraiment</strong> anormales : un bug irrécupérable, un invariant violé. Pour une erreur attendue (fichier absent, saisie invalide), utilise une <code>error</code>, pas <code>panic</code>.</p>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func protege() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("récupéré : %v", r)
+		}
+	}()
+	panic("quelque chose a très mal tourné")
+}
+
+func main() {
+	err := protege()
+	fmt.Println(err) // récupéré : quelque chose a très mal tourné
+	fmt.Println("le programme continue")
+}</code></pre></figure>
+
+<p><code>recover</code> ne fonctionne <strong>que</strong> dans une fonction différée. Ici il transforme la panique en <code>error</code> renvoyée proprement, et le programme poursuit. C'est un pattern utile aux frontières (un serveur web qui ne doit pas tomber à cause d'une requête), mais pas un remplaçant du retour d'erreur classique.</p>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Ignorer une erreur.</strong> Écrire <code>r, _ := Diviser(a, b)</code> jette l'erreur à la poubelle et te laisse avec un résultat possiblement faux. Sauf cas vraiment anodin et conscient, vérifie toujours <code>err</code>. <code>go vet</code> et les linters signalent ces oublis.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Comparer avec <code>==</code> au lieu d'<code>errors.Is</code>.</strong> Dès qu'une erreur a pu être enveloppée (<code>%w</code>), <code>err == ErrX</code> renvoie <code>false</code>. Utilise <code>errors.Is(err, ErrX)</code> qui traverse les couches.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong><code>defer</code> dans une boucle.</strong> Un <code>defer</code> ne s'exécute qu'à la sortie de la <strong>fonction</strong>, pas de l'itération. Dans une boucle qui ouvre mille fichiers, les mille <code>Close</code> s'accumulent jusqu'à la fin — fuite garantie. Extrais le corps dans une fonction, ou ferme explicitement à chaque tour.</p></div></div>
+
+<p>Autres pièges : oublier complètement le <code>defer Close</code> (fuite de descripteurs) ; remonter une erreur <strong>sans contexte</strong> (<code>return err</code> nu partout rend le diagnostic pénible — enveloppe avec <code>%w</code>) ; et utiliser <code>panic</code> pour une erreur attendue, ce qui casse le contrat normal des appelants.</p>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p><strong><code>errors.Join</code></strong> (Go 1.20) combine plusieurs erreurs en une seule, et <code>errors.Is</code> sait inspecter chacune. Tu peux aussi définir tes <strong>erreurs personnalisées</strong> : un <code>struct</code> qui implémente <code>Error() string</code>, récupérable ensuite via <code>errors.As</code> pour lire ses champs. Enfin, pour les messages et le diagnostic, regarde le <strong>logging structuré</strong> avec le paquet <code>log/slog</code> (Go 1.21).</p></div></div>
+
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">// errors.Join : agréger plusieurs erreurs en une seule.
+groupe := errors.Join(
+	errors.New("champ nom manquant"),
+	errors.New("âge invalide"),
+)
+fmt.Println(groupe)
+// champ nom manquant
+// âge invalide
+
+// Erreur personnalisée (struct) inspectée avec errors.As.
+type ErrValidation struct{ Champ string }
+
+func (e *ErrValidation) Error() string {
+	return fmt.Sprintf("champ invalide : %s", e.Champ)
+}
+
+// On enveloppe une *ErrValidation, puis on la retrouve par son type.
+err := fmt.Errorf("formulaire : %w", &amp;ErrValidation{Champ: "email"})
+
+var cible *ErrValidation
+if errors.As(err, &amp;cible) {
+	fmt.Println("champ fautif :", cible.Champ) // champ fautif : email
+}</code></pre></figure>
+
+<h2>Un cas réel : l'erreur nue qui coûtait des heures de diagnostic</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe exploitait une API de paiement écrite en Go. Chaque couche remontait l'erreur avec un <code>return err</code> <strong>nu</strong>. En production, quand un virement échouait, les journaux n'affichaient qu'une ligne cryptique — <code>EOF</code> ou <code>context deadline exceeded</code> — sans dire <em>quelle</em> étape (validation&nbsp;? banque&nbsp;? base de données&nbsp;?) avait lâché. Diagnostiquer un incident prenait des heures de fouille. Le correctif a tenu en une règle&nbsp;: envelopper à chaque étage avec <code>fmt.Errorf("étape X : %w", err)</code> et journaliser avec <code>log/slog</code>. Désormais un message ressemble à «&nbsp;<code>règlement : appel banque : délai dépassé</code>&nbsp;»&nbsp;: la chaîne raconte tout le trajet, et <code>errors.Is(err, ErrReseauTemporaire)</code> permet de brancher une reprise automatique sur les pannes réseau passagères. Le temps moyen de diagnostic est tombé de quelques heures à quelques minutes.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — gérer les erreurs en Go</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Outil</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Signaler un échec</td><td><code>return T{}, err</code></td><td>erreur en dernier retour</td></tr>
+      <tr><td>Vérifier</td><td><code>if err != nil { … }</code></td><td>juste après l'appel</td></tr>
+      <tr><td>Créer (texte fixe)</td><td><code>errors.New("…")</code></td><td>minuscule, sans point final</td></tr>
+      <tr><td>Créer (formaté)</td><td><code>fmt.Errorf("… %s", v)</code></td><td>avec des valeurs</td></tr>
+      <tr><td>Envelopper</td><td><code>fmt.Errorf("… : %w", err)</code></td><td>garde l'erreur d'origine</td></tr>
+      <tr><td>Comparer à une cible</td><td><code>errors.Is(err, ErrX)</code></td><td>traverse les couches</td></tr>
+      <tr><td>Extraire un type</td><td><code>errors.As(err, &amp;cible)</code></td><td>récupère les champs</td></tr>
+      <tr><td>Libérer une ressource</td><td><code>defer f.Close()</code></td><td>LIFO, à la sortie</td></tr>
+      <tr><td>Cas exceptionnel</td><td><code>panic</code> / <code>recover</code></td><td>jamais pour une erreur attendue</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>error</code></dt><dd>Interface standard <code>{ Error() string }</code>&nbsp;: tout type qui possède cette méthode est une erreur. Renvoyée en dernière position d'une fonction faillible.</dd>
+  <dt><code>nil</code></dt><dd>Valeur «&nbsp;absence d'erreur&nbsp;»&nbsp;: une opération réussie renvoie <code>nil</code>. On teste <code>if err != nil</code> avant d'exploiter le résultat.</dd>
+  <dt>Enveloppement (<em>wrapping</em>)</dt><dd>Ajout de contexte autour d'une erreur avec le verbe <code>%w</code> de <code>fmt.Errorf</code>, sans perdre l'erreur d'origine.</dd>
+  <dt><code>errors.Is</code></dt><dd>Teste si une erreur (même enveloppée) correspond à une cible donnée, en déballant les couches&nbsp;; remplace <code>==</code> pour les sentinelles.</dd>
+  <dt><code>errors.As</code></dt><dd>Cherche dans la chaîne une erreur d'un <strong>type</strong> donné et l'extrait dans une variable, pour lire ses champs.</dd>
+  <dt>Erreur sentinelle</dt><dd>Variable d'erreur exportée et stable (<code>var ErrX = errors.New(…)</code>) que l'appelant reconnaît via <code>errors.Is</code>. Convention&nbsp;: préfixe <code>Err</code>.</dd>
+  <dt><code>defer</code></dt><dd>Diffère un appel jusqu'à la sortie de la fonction englobante (ordre LIFO)&nbsp;; idéal pour libérer une ressource à coup sûr.</dd>
+  <dt><code>panic</code> / <code>recover</code></dt><dd><code>panic</code> interrompt le flot et remonte la pile&nbsp;; <code>recover</code>, dans un <code>defer</code>, la rattrape. Réservés à l'exceptionnel, pas aux erreurs attendues.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une fonction faillible renvoie l'erreur en dernier : <code>func f() (T, error)</code> ; <code>nil</code> signifie « tout va bien ».</li>
+<li>Le pattern <code>if err != nil { return err }</code> se place juste après l'appel ; garde le chemin heureux aligné à gauche.</li>
+<li><code>error</code> est l'interface <code>{ Error() string }</code> ; on crée une erreur avec <code>errors.New</code> ou <code>fmt.Errorf</code>.</li>
+<li>Enveloppe avec <code>%w</code> pour ajouter du contexte, puis inspecte avec <code>errors.Is</code> (cible) et <code>errors.As</code> (type).</li>
+<li>Les sentinelles (<code>var ErrX = errors.New(...)</code>) se testent avec <code>errors.Is</code>, jamais avec <code>==</code> si l'erreur a pu être enveloppée.</li>
+<li><code>defer</code> libère les ressources à la sortie de la fonction, en ordre LIFO ; <code>panic</code>/<code>recover</code> restent pour l'exceptionnel.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Dans quel ordre place-t-on le résultat et l'erreur dans la signature d'une fonction Go, et que vaut l'erreur en cas de succès ?</li>
+<li>Pourquoi préférer <code>errors.Is(err, ErrX)</code> à <code>err == ErrX</code> ?</li>
+<li>Si tu ouvres un fichier dans une boucle <code>for</code> et écris <code>defer f.Close()</code>, quand les fermetures ont-elles lieu, et quel est le risque ?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans quel ordre place-t-on le résultat et l'erreur dans la signature d'une fonction Go, et que vaut l'erreur en cas de succès ?","a":["L'erreur est la dernière valeur de retour ; en cas de succès, elle vaut nil","L'erreur est en premier ; elle vaut 0 au succès","L'erreur est au milieu","Il n'y a pas d'erreur en retour"],"correct":0,"explain":"La convention Go place error en dernière position (ex. (Resultat, error)). Une opération réussie renvoie nil comme erreur ; l'appelant teste if err != nil avant d'utiliser le résultat."},
+  {"q":"Pourquoi préférer errors.Is(err, ErrX) à err == ErrX ?","a":["Parce qu'errors.Is parcourt la chaîne d'erreurs enveloppées (wrappées avec %w) et trouve l'erreur cible même si elle est imbriquée ; == ne compare que l'erreur de surface","== est plus précis","errors.Is ne fonctionne pas","Ils sont identiques"],"correct":0,"explain":"Les erreurs s'enveloppent souvent (fmt.Errorf(\"...: %w\", err)). errors.Is remonte cette chaîne pour reconnaître une erreur sentinelle même profondément emballée, là où == échouerait sur l'erreur externe."},
+  {"q":"Si tu ouvres un fichier dans une boucle for et écris defer f.Close(), quand les fermetures ont-elles lieu, et quel est le risque ?","a":["Les defer s'exécutent à la fin de la FONCTION (pas de l'itération) : tous les fichiers restent ouverts jusque-là, au risque d'épuiser les descripteurs. On ferme dans une fonction interne ou explicitement par tour","À chaque itération","Jamais","Au début de la boucle"],"correct":0,"explain":"defer est lié à la fonction englobante, pas à l'itération de boucle. Empiler des Close différés ouvre tous les fichiers simultanément jusqu'au retour. On encapsule le traitement dans une fonction (où le defer se déclenche par tour) ou on ferme à la main."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["error"],"placeholder":"le 2e type de retour conventionnel d'une fonction Go pouvant échouer (float64, …) : …","hints":["nil signifie « pas d'erreur ».","On le teste juste après l'appel : if err != nil.","Cinq lettres."],"link":{"href":"lecon-06.html","label":"Revoir « Le type error »"}},
+  {"type":"text","accept":["%w"],"placeholder":"le verbe de fmt.Errorf pour ENVELOPPER une erreur (reconnaissable par errors.Is) : …","hints":["%v afficherait, mais ne permettrait pas le déballage.","fmt.Errorf(\"contexte : %?\", ErrSolde...).","% + une lettre."],"link":{"href":"lecon-06.html","label":"Revoir « Envelopper une erreur »"}},
+  {"type":"text","accept":["defer"],"placeholder":"le mot-clé qui DIFFÈRE la fermeture du fichier jusqu'à la fin de la fonction (os.Create) : …","hints":["defer f.Close() juste après l'ouverture.","Exécuté quoi qu'il arrive (même en cas d'erreur).","Cinq lettres."],"link":{"href":"lecon-06.html","label":"Revoir « defer »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>RacineCarree(x float64) (float64, error)</code> qui renvoie une erreur si <code>x</code> est négatif, et son résultat sinon. Appelle-la deux fois (une valeur valide, une invalide) en vérifiant l'erreur à chaque fois.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-go">package main
+
+import (
+	"errors"
+	"fmt"
+	"math"
+)
+
+func RacineCarree(x float64) (float64, error) {
+	if x &lt; 0 {
+		return 0, errors.New("nombre négatif")
+	}
+	return math.Sqrt(x), nil
+}
+
+func main() {
+	for _, v := range []float64{16, -4} {
+		r, err := RacineCarree(v)
+		if err != nil {
+			fmt.Printf("%.0f : %v\n", v, err)
+			continue
+		}
+		fmt.Printf("%.0f -&gt; %.0f\n", v, r)
+	}
+	// 16 -&gt; 4
+	// -4 : nombre négatif
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Intermédiaire</span></div><p>Définis une sentinelle <code>ErrSoldeInsuffisant</code>. Écris <code>Retirer(solde, montant float64) (float64, error)</code> qui l'enveloppe avec <code>%w</code> et un peu de contexte quand le montant dépasse le solde. Dans <code>main</code>, déclenche le cas d'échec et reconnais-le avec <code>errors.Is</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-go">package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrSoldeInsuffisant = errors.New("solde insuffisant")
+
+func Retirer(solde, montant float64) (float64, error) {
+	if montant &gt; solde {
+		return solde, fmt.Errorf(
+			"retrait de %.2f sur %.2f : %w",
+			montant, solde, ErrSoldeInsuffisant)
+	}
+	return solde - montant, nil
+}
+
+func main() {
+	_, err := Retirer(50, 80)
+	fmt.Println(err)
+	// retrait de 80.00 sur 50.00 : solde insuffisant
+
+	if errors.Is(err, ErrSoldeInsuffisant) {
+		fmt.Println("opération refusée") // opération refusée
+	}
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Mise en pratique</span></div><p>Écris <code>CopierVers(chemin, contenu string) error</code> qui crée un fichier avec <code>os.Create</code>, l'écrit, et garantit sa fermeture avec <code>defer</code>. Enveloppe chaque erreur (création, écriture) avec du contexte via <code>%w</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-go">package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func CopierVers(chemin, contenu string) error {
+	f, err := os.Create(chemin)
+	if err != nil {
+		return fmt.Errorf("création de %s : %w", chemin, err)
+	}
+	defer f.Close() // fermeture garantie à la sortie
+
+	if _, err := f.WriteString(contenu); err != nil {
+		return fmt.Errorf("écriture dans %s : %w", chemin, err)
+	}
+	return nil
+}
+
+func main() {
+	if err := CopierVers("note.txt", "bonjour Go"); err != nil {
+		fmt.Println("échec :", err)
+		return
+	}
+	fmt.Println("fichier écrit") // fichier écrit
+}</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-go.min.js" defer></script>
+  </body>
+</html>

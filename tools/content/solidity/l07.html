@@ -1,0 +1,74 @@
+<p>Voici sans doute la leçon la plus importante du cours. En Solidity, <strong>le code, c'est l'argent</strong>&nbsp;: une faille n'est pas un simple bug, c'est une porte ouverte sur des fonds réels, exploitable par n'importe qui, de façon irréversible. L'histoire de la blockchain est jalonnée de piratages à des centaines de millions de dollars, presque toujours dus à des erreurs évitables. Cette leçon présente la faille la plus célèbre — la <strong>réentrance</strong> — et les réflexes de sécurité indispensables.</p>
+
+<h2>Pourquoi la sécurité est vitale</h2>
+<p>Un contrat déployé est <strong>public</strong> (tout le monde voit son code), <strong>immuable</strong> (on ne peut pas le corriger), et <strong>détient de l'argent</strong>. Un attaquant a tout le temps d'étudier ton contrat à la recherche d'une faille, et s'il en trouve une, il peut vider les fonds en une transaction, sans recours possible. La sécurité n'est pas une option en Solidity&nbsp;: c'est l'essentiel du métier.</p>
+
+<h2>L'attaque de réentrance</h2>
+<p>La faille la plus fameuse (à l'origine du piratage «&nbsp;The DAO&nbsp;» en 2016, ~60 millions de dollars). Le scénario&nbsp;: un contrat envoie de l'ether à une adresse <em>avant</em> de mettre son état à jour. Si cette adresse est un contrat malveillant, son code peut <strong>rappeler</strong> la fonction de retrait pendant l'envoi — encore et encore — avant que le solde ne soit décrémenté.</p>
+<figure class="code-block" data-file="vulnerable.sol"><pre><code class="language-solidity">// VULNÉRABLE - NE PAS UTILISER
+function retirer() public {
+    uint256 montant = soldes[msg.sender];
+    // 1. on envoie AVANT de mettre à jour : danger !
+    (bool ok, ) = msg.sender.call{value: montant}("");
+    require(ok);
+    // 2. mise à jour trop tard
+    soldes[msg.sender] = 0;
+}</code></pre></figure>
+<p>Le contrat attaquant, en recevant l'ether, déclenche du code qui rappelle <code>retirer()</code>. Comme <code>soldes[msg.sender]</code> n'est pas encore remis à zéro, il retire de nouveau. La boucle se répète jusqu'à vider le contrat. Une seule transaction, des fonds envolés.</p>
+
+<h2>La parade&nbsp;: checks-effects-interactions</h2>
+<p>Le motif <strong>checks-effects-interactions</strong> ordonne toute fonction en trois temps, dans cet ordre strict&nbsp;:</p>
+<ol>
+  <li><strong>Checks</strong> (vérifications)&nbsp;: valider les conditions avec <code>require</code>&nbsp;;</li>
+  <li><strong>Effects</strong> (effets)&nbsp;: mettre à jour l'état du contrat&nbsp;;</li>
+  <li><strong>Interactions</strong>&nbsp;: <em>seulement maintenant</em>, interagir avec l'extérieur (envoyer de l'ether, appeler un autre contrat).</li>
+</ol>
+<figure class="code-block" data-file="sur.sol"><pre><code class="language-solidity">// SÛR - checks-effects-interactions
+function retirer() public {
+    uint256 montant = soldes[msg.sender];
+    require(montant &gt; 0, "Rien a retirer");   // CHECK
+    soldes[msg.sender] = 0;                    // EFFECT (avant !)
+    (bool ok, ) = msg.sender.call{value: montant}("");  // INTERACTION
+    require(ok, "Echec");
+}</code></pre></figure>
+<p>Le solde est remis à zéro <strong>avant</strong> l'envoi&nbsp;: si l'attaquant rappelle <code>retirer()</code>, il trouve un solde nul et n'obtient rien. Ce simple réordonnancement neutralise la réentrance. C'est la règle d'or à appliquer systématiquement.</p>
+
+<h2>Autres protections</h2>
+<p>On renforce avec d'autres techniques&nbsp;:</p>
+<ul>
+  <li>un <strong>verrou de réentrance</strong> (<em>reentrancy guard</em>)&nbsp;: un modificateur qui empêche d'entrer deux fois dans une fonction&nbsp;;</li>
+  <li>le <strong>contrôle d'accès</strong> (modificateurs, leçon 5) sur toute fonction sensible&nbsp;;</li>
+  <li>la <strong>validation des entrées</strong>&nbsp;: vérifier les adresses (pas <code>address(0)</code>), les montants, les bornes.</li>
+</ul>
+
+<h2>D'autres pièges classiques</h2>
+<p>La réentrance n'est pas seule. Quelques autres&nbsp;:</p>
+<ul>
+  <li><strong>Débordements</strong> (overflow)&nbsp;: gérés automatiquement depuis 0.8, mais à connaître&nbsp;;</li>
+  <li><strong><code>tx.origin</code></strong>&nbsp;: ne jamais l'utiliser pour l'authentification (utilise <code>msg.sender</code>)&nbsp;; <code>tx.origin</code> peut être détourné par un contrat intermédiaire&nbsp;;</li>
+  <li>dépendre du <strong>hasard</strong> (block.timestamp…)&nbsp;: prévisible et manipulable par les mineurs&nbsp;;</li>
+  <li><strong>fonctions non protégées</strong>&nbsp;: une fonction d'administration <code>public</code> sans contrôle d'accès.</li>
+</ul>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'un contrat «&nbsp;qui marche&nbsp;» dans les tests est sûr. Un contrat peut fonctionner parfaitement dans tous tes scénarios normaux et rester <strong>exploitable</strong> par un attaquant qui pense différemment («&nbsp;que se passe-t-il si je rappelle cette fonction&nbsp;? si je passe l'adresse zéro&nbsp;? si j'envoie zéro ether&nbsp;?&nbsp;»). La sécurité demande de raisonner en <em>adversaire</em>, pas en utilisateur. Pour tout contrat gérant des fonds importants, un <strong>audit professionnel</strong> est indispensable.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La bibliothèque <strong>OpenZeppelin</strong> (leçon 9) fournit des composants <em>audités et éprouvés</em> pour les besoins courants&nbsp;: <code>ReentrancyGuard</code> (verrou anti-réentrance), <code>Ownable</code> (contrôle d'accès), <code>SafeERC20</code>, etc. La règle des développeurs expérimentés&nbsp;: <strong>ne réinvente pas la sécurité</strong>. Réutilise du code audité par des milliers de personnes plutôt que d'écrire le tien, où une subtilité t'échappera probablement. La meilleure faille est celle qu'on n'a pas eu à écrire.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>En Solidity, <strong>le code = l'argent</strong>&nbsp;: une faille est exploitable, irréversible, publique.</li>
+  <li>La <strong>réentrance</strong>&nbsp;: envoyer de l'ether avant de mettre l'état à jour permet des retraits répétés.</li>
+  <li>Parade&nbsp;: <strong>checks-effects-interactions</strong> (vérifier, mettre à jour l'état, <em>puis</em> interagir).</li>
+  <li>Autres réflexes&nbsp;: contrôle d'accès, validation des entrées, éviter <code>tx.origin</code>, réutiliser du code audité (OpenZeppelin), auditer.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>En quoi consiste l'attaque de réentrance&nbsp;?</li><li>Quel est l'ordre du motif checks-effects-interactions&nbsp;?</li><li>Pourquoi ne pas utiliser <code>tx.origin</code> pour l'authentification&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans une fonction de retrait, quelle opération doit venir <em>avant</em> l'envoi d'ether&nbsp;?</p><details><summary>Voir une solution</summary><p>La <strong>mise à jour de l'état</strong> — par exemple remettre le solde de l'utilisateur à zéro (l'«&nbsp;effect&nbsp;») — doit se faire <strong>avant</strong> l'envoi d'ether (l'«&nbsp;interaction&nbsp;»). C'est ce qui neutralise la réentrance.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Réécris en sûr&nbsp;: <code>call{value: m}("")</code> puis <code>solde = 0</code>. Donne le bon ordre.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">require(solde &gt; 0, "Rien");      // check
+solde = 0;                       // effect (AVANT)
+(bool ok, ) = msg.sender.call{value: m}("");  // interaction
+require(ok, "Echec");</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi vaut-il mieux réutiliser un <code>ReentrancyGuard</code> d'OpenZeppelin que d'écrire le sien&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que le code d'OpenZeppelin est <strong>audité, testé et éprouvé</strong> par des milliers de développeurs et de projets en production. La sécurité en Solidity est pleine de subtilités&nbsp;: une protection «&nbsp;maison&nbsp;» a de fortes chances de contenir un défaut qu'on ne verra pas soi-même, et l'erreur se paie en fonds volés. Réutiliser un composant largement vérifié réduit drastiquement le risque&nbsp;: c'est le principe «&nbsp;ne réinvente pas la sécurité&nbsp;».</p></details></div>

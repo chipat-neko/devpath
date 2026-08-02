@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Volumes & stockage — Leçon 06 · Syntaxe</title>
+    <meta name="description" content="Persister des données dans Kubernetes : le stockage éphémère des conteneurs, les volumes, les PersistentVolumes et PersistentVolumeClaims, et le provisionnement dynamique via StorageClass." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="kubernetes" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Kubernetes</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Réseau & configuration — Leçon 06</p>
+              <h1 class="lesson-header__title">Volumes & stockage</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 05</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer pourquoi le stockage d'un conteneur est <strong>éphémère</strong>&nbsp;;</li>
+                  <li>attacher un <strong>volume</strong> à un pod&nbsp;;</li>
+                  <li>réclamer du stockage durable avec un <strong>PersistentVolumeClaim</strong>&nbsp;;</li>
+                  <li>comprendre le rôle d'une <strong>StorageClass</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Quand un conteneur redémarre, son système de fichiers repart <strong>à zéro</strong>. Pour une base de données ou des fichiers téléversés, c'est inacceptable. Kubernetes répond avec les <strong>volumes</strong> et le stockage <strong>persistant</strong>.</p>
+
+<h2>Le stockage d'un conteneur est éphémère</h2>
+<p>Par défaut, ce qu'un conteneur écrit sur son disque vit et meurt avec lui : redémarrage, recréation par le déploiement, déplacement sur un autre nœud… et les données sont perdues. C'est voulu (les conteneurs sont jetables), mais il faut une solution pour les données qui doivent <strong>survivre</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le disque d'un conteneur est éphémère. En haut, un conteneur écrit des données sur son propre disque interne ; à sa recréation (redémarrage ou déplacement sur un nouveau nœud), un nouveau conteneur démarre avec un disque vide et les données sont perdues, il repart à zéro. En bas, le même conteneur écrit sur un volume persistant externe ; à sa recréation, le nouveau conteneur retrouve le volume intact et ses données ont survécu.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Disque interne : perdu à la recréation — volume persistant : conservé</text>
+    <text class="d-mut" x="24" y="52" text-anchor="start" font-size="9">disque du conteneur (interne)</text>
+    <rect class="d-box" x="24" y="58" width="150" height="46" rx="6" />
+    <text class="d-tag" x="99" y="79" text-anchor="middle" font-size="10">conteneur</text>
+    <text class="d-mut" x="99" y="95" text-anchor="middle" font-size="8">écrit des données</text>
+    <line class="d-line" x1="174" y1="81" x2="236" y2="81" /><path class="d-line" d="M229 77 L237 81 L229 85" fill="none" />
+    <text class="d-mut" x="205" y="72" text-anchor="middle" font-size="8">recréé</text>
+    <rect class="d-box" x="240" y="58" width="150" height="46" rx="6" />
+    <text class="d-tag" x="315" y="79" text-anchor="middle" font-size="10">nouveau conteneur</text>
+    <text class="d-mut" x="315" y="95" text-anchor="middle" font-size="8">disque vide</text>
+    <line class="d-line" x1="390" y1="81" x2="452" y2="81" /><path class="d-line" d="M445 77 L453 81 L445 85" fill="none" />
+    <rect class="d-box" x="456" y="58" width="160" height="46" rx="6" />
+    <text class="d-tag" x="536" y="79" text-anchor="middle" font-size="10">données PERDUES</text>
+    <text class="d-mut" x="536" y="95" text-anchor="middle" font-size="8">repart à zéro</text>
+    <text class="d-mut" x="24" y="142" text-anchor="start" font-size="9">volume persistant (externe)</text>
+    <rect class="d-box" x="24" y="148" width="150" height="46" rx="6" />
+    <text class="d-tag" x="99" y="169" text-anchor="middle" font-size="10">conteneur</text>
+    <text class="d-mut" x="99" y="185" text-anchor="middle" font-size="8">écrit sur le volume</text>
+    <line class="d-line" x1="174" y1="171" x2="236" y2="171" /><path class="d-line" d="M229 167 L237 171 L229 175" fill="none" />
+    <text class="d-mut" x="205" y="162" text-anchor="middle" font-size="8">recréé</text>
+    <rect class="d-box" x="240" y="148" width="150" height="46" rx="6" />
+    <text class="d-tag" x="315" y="169" text-anchor="middle" font-size="10">nouveau conteneur</text>
+    <text class="d-mut" x="315" y="185" text-anchor="middle" font-size="8">remonte le volume</text>
+    <line class="d-line" x1="390" y1="171" x2="452" y2="171" /><path class="d-line" d="M445 167 L453 171 L445 175" fill="none" />
+    <rect class="d-accent" x="456" y="148" width="160" height="46" rx="6" />
+    <text class="d-tag" x="536" y="169" text-anchor="middle" font-size="10">données CONSERVÉES</text>
+    <text class="d-mut" x="536" y="185" text-anchor="middle" font-size="8">le volume a survécu</text>
+  </svg>
+  <figcaption>Sur son disque interne, un conteneur recréé repart à zéro&nbsp;; sur un volume persistant, les données <strong>survivent</strong> à la recréation du pod.</figcaption>
+</figure>
+
+<h2>Les volumes</h2>
+<p>Un <strong>volume</strong> est un espace de stockage attaché au pod et monté dans un ou plusieurs conteneurs. Le volume le plus simple, <code>emptyDir</code>, vit le temps du pod : utile pour un cache ou pour partager des fichiers entre conteneurs d'un même pod — mais il disparaît avec le pod.</p>
+<figure class="code-block" data-file="emptydir.yaml"><pre><code class="language-yaml">    spec:
+      volumes:
+        - name: cache
+          emptyDir: {}
+      containers:
+        - name: app
+          image: mon-app:1.0
+          volumeMounts:
+            - name: cache
+              mountPath: /tmp/cache</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Volume ≠ persistance</p><p>Un <code>emptyDir</code> n'est pas durable : il disparaît avec le pod. Pour des données qui doivent survivre à la recréation d'un pod, il faut du stockage <strong>persistant</strong> (la suite).</p></div></div>
+
+<h2>Stockage persistant : PV et PVC</h2>
+<p>Pour des données durables, Kubernetes sépare deux notions&nbsp;: le <strong>PersistentVolume</strong> (PV) est un morceau de stockage réel (un disque), et le <strong>PersistentVolumeClaim</strong> (PVC) est une <em>demande</em> de stockage faite par l'application (« j'ai besoin de 5&nbsp;Gio »). Le pod référence le PVC ; Kubernetes le relie à un PV qui satisfait la demande.</p>
+<figure class="code-block" data-file="pvc.yaml"><pre><code class="language-yaml">apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: donnees
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi</code></pre></figure>
+<figure class="code-block" data-file="montage.yaml"><pre><code class="language-yaml">    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: donnees      # on réclame le stockage durable
+      containers:
+        - name: db
+          image: postgres:16
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">La bonne image mentale</p><p>Le <strong>PVC</strong> est un « bon de commande » de stockage ; le <strong>PV</strong> est le disque livré. L'application décrit son besoin (taille, mode d'accès) sans savoir <em>quel</em> disque la satisfera : c'est Kubernetes qui apparie.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Relation entre un PVC et un PV. À gauche, le pod monte un volume qui référence un PersistentVolumeClaim par son claimName. Au centre, le PVC exprime une demande : besoin de 5 gigaoctets en mode ReadWriteOnce. Kubernetes apparie cette demande à un PersistentVolume réel, à droite, un disque de 5 gigaoctets qui satisfait la demande. Une flèche relie le PVC au PV, étiquetée « apparie ».">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Demande (PVC) → appariement → disque réel (PV)</text>
+    <rect class="d-box" x="20" y="66" width="150" height="70" rx="8" />
+    <text class="d-tag" x="95" y="92" text-anchor="middle" font-size="11">pod</text>
+    <text class="d-mut" x="95" y="110" text-anchor="middle" font-size="8.5">volumeMounts</text>
+    <text class="d-mut" x="95" y="124" text-anchor="middle" font-size="8.5">claimName: donnees</text>
+    <line class="d-line" x1="170" y1="101" x2="222" y2="101" /><path class="d-line" d="M215 97 L223 101 L215 105" fill="none" />
+    <text class="d-mut" x="196" y="92" text-anchor="middle" font-size="8">référence</text>
+    <rect class="d-accent" x="226" y="60" width="180" height="82" rx="8" />
+    <text class="d-tag" x="316" y="86" text-anchor="middle" font-size="11">PVC « donnees »</text>
+    <text class="d-mut" x="316" y="104" text-anchor="middle" font-size="9">demande : 5 Gio</text>
+    <text class="d-mut" x="316" y="120" text-anchor="middle" font-size="9">ReadWriteOnce</text>
+    <text class="d-mut" x="316" y="134" text-anchor="middle" font-size="8.5">Bound → PV</text>
+    <line class="d-line" x1="406" y1="101" x2="462" y2="101" /><path class="d-line" d="M455 97 L463 101 L455 105" fill="none" />
+    <text class="d-mut" x="434" y="92" text-anchor="middle" font-size="8">apparie</text>
+    <rect class="d-box" x="466" y="60" width="154" height="82" rx="8" />
+    <text class="d-tag" x="543" y="86" text-anchor="middle" font-size="11">PV (disque réel)</text>
+    <text class="d-mut" x="543" y="104" text-anchor="middle" font-size="9">capacité : 5 Gio</text>
+    <text class="d-mut" x="543" y="120" text-anchor="middle" font-size="9">stockage physique</text>
+    <text class="d-mut" x="543" y="134" text-anchor="middle" font-size="8.5">satisfait la demande</text>
+    <text class="d-mut" x="320" y="170" text-anchor="middle" font-size="9">le pod ne connaît que le PVC&nbsp;; Kubernetes choisit le PV</text>
+  </svg>
+  <figcaption>Le pod réclame via le <code>claimName</code>&nbsp;; Kubernetes apparie le <strong>PVC</strong> (la demande) à un <strong>PV</strong> (le disque) qui la satisfait.</figcaption>
+</figure>
+
+<h2>La StorageClass : du stockage à la demande</h2>
+<p>Créer les PV à la main serait fastidieux. Une <strong>StorageClass</strong> permet le <strong>provisionnement dynamique</strong> : quand un PVC arrive, le cluster crée automatiquement le disque correspondant (chez l'hébergeur cloud, par exemple). On indique simplement la classe voulue dans le PVC (ou on laisse la classe par défaut).</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl get pvc          # voir les demandes et leur état (Bound = relié)
+kubectl get pv           # voir les volumes réels
+kubectl get storageclass # les classes de stockage disponibles</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Provisionnement dynamique par la StorageClass. Étape 1, un PVC arrive avec l'état Pending. Étape 2, la StorageClass demande au provisionneur du cloud de créer un disque. Étape 3, le provisionneur crée automatiquement un PersistentVolume réel, sans intervention manuelle. Étape 4, le PVC est relié au nouveau PV et passe à l'état Bound. Des flèches relient les quatre étapes dans l'ordre.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un PVC arrive → le disque est créé tout seul</text>
+    <rect class="d-box" x="16" y="54" width="140" height="60" rx="8" />
+    <text class="d-tag" x="86" y="80" text-anchor="middle" font-size="10">PVC arrive</text>
+    <text class="d-mut" x="86" y="98" text-anchor="middle" font-size="9">état : Pending</text>
+    <line class="d-line" x1="156" y1="84" x2="196" y2="84" /><path class="d-line" d="M189 80 L197 84 L189 88" fill="none" />
+    <rect class="d-accent" x="200" y="54" width="150" height="60" rx="8" />
+    <text class="d-tag" x="275" y="80" text-anchor="middle" font-size="10">StorageClass</text>
+    <text class="d-mut" x="275" y="98" text-anchor="middle" font-size="9">appelle le provisionneur</text>
+    <line class="d-line" x1="350" y1="84" x2="390" y2="84" /><path class="d-line" d="M383 80 L391 84 L383 88" fill="none" />
+    <rect class="d-box" x="394" y="54" width="150" height="60" rx="8" />
+    <text class="d-tag" x="469" y="80" text-anchor="middle" font-size="10">provisionneur cloud</text>
+    <text class="d-mut" x="469" y="98" text-anchor="middle" font-size="9">crée un PV réel</text>
+    <line class="d-line" x1="544" y1="84" x2="584" y2="84" /><path class="d-line" d="M577 80 L585 84 L577 88" fill="none" />
+    <rect class="d-box" x="470" y="126" width="150" height="40" rx="6" />
+    <text class="d-tag" x="545" y="151" text-anchor="middle" font-size="10">PVC → Bound</text>
+    <line class="d-line" x1="590" y1="84" x2="590" y2="126" /><path class="d-line" d="M586 119 L590 127 L594 119" fill="none" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">aucune création manuelle de disque</text>
+  </svg>
+  <figcaption>La <strong>StorageClass</strong> déclenche la création automatique du disque (PV)&nbsp;; le PVC passe alors à l'état <code>Bound</code>.</figcaption>
+</figure>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Croire qu'<code>emptyDir</code> persiste.</strong> Il disparaît avec le pod : pour durer, il faut un PVC.</li>
+<li><strong>Stocker une base sur un déploiement banal.</strong> Les applications « avec état » se gèrent souvent avec un StatefulSet + PVC.</li>
+<li><strong>Mode d'accès inadapté.</strong> <code>ReadWriteOnce</code> = un seul nœud à la fois ; vérifie ce que ton stockage supporte.</li>
+<li><strong>PVC qui reste « Pending ».</strong> Aucune StorageClass ne le satisfait : vérifie la classe et le provisionneur disponibles.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>Les bases de données en cluster (répliquées, avec une identité stable par instance) se déploient avec un <strong>StatefulSet</strong>, qui crée un PVC dédié par réplique. C'est le cousin du déploiement, conçu pour les charges « avec état ».</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Question de fond : faut-il héberger sa base de données <em>dans</em> Kubernetes&nbsp;? Beaucoup d'équipes préfèrent une base gérée par l'hébergeur (hors cluster) et réservent Kubernetes aux applications « sans état ». Les deux approches se défendent.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — une base PostgreSQL sans stockage durable perd tout</p><p>Une équipe déploie <strong>PostgreSQL</strong> dans un pod nu (ou avec un simple <code>emptyDir</code>), sans volume persistant. Tout fonctionne… jusqu'à la première <strong>recréation du pod</strong> : mise à jour de l'image, incident sur le nœud, rééquilibrage du planificateur. Le nouveau pod démarre avec un disque vierge et <strong>toutes les données sont perdues</strong> — tables, comptes, historique. La bonne pratique&nbsp;: un <strong>StatefulSet</strong> qui attribue à chaque réplique un <strong>PVC durable</strong> (relié à un PV), de sorte que la base retrouve ses données à chaque redémarrage, même déplacée sur un autre nœud.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — volumes &amp; stockage</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>emptyDir</code></td><td>volume temporaire lié au pod (cache, partage entre conteneurs)&nbsp;; <strong>perdu</strong> avec le pod</td></tr>
+      <tr><td><code>PersistentVolumeClaim</code> (PVC)</td><td>la <em>demande</em> de stockage durable (taille, mode d'accès)</td></tr>
+      <tr><td><code>PersistentVolume</code> (PV)</td><td>le disque réel qui satisfait un PVC</td></tr>
+      <tr><td><code>StorageClass</code></td><td>provisionne un PV automatiquement à l'arrivée d'un PVC</td></tr>
+      <tr><td><code>accessModes: ["ReadWriteOnce"]</code></td><td>lecture-écriture depuis un seul nœud à la fois</td></tr>
+      <tr><td><code>claimName</code> + <code>volumeMounts</code></td><td>le pod réclame le PVC, puis le monte dans le conteneur</td></tr>
+      <tr><td><code>kubectl get pvc</code></td><td>lister les demandes et leur état (<code>Bound</code> / <code>Pending</code>)</td></tr>
+      <tr><td><code>kubectl get pv</code></td><td>lister les volumes réels (disques)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Volume</dt><dd>Espace de stockage attaché à un pod et monté dans un ou plusieurs conteneurs via <code>volumeMounts</code>.</dd>
+  <dt>emptyDir</dt><dd>Volume le plus simple, créé vide au démarrage du pod et <strong>supprimé</strong> avec lui&nbsp;; utile pour un cache ou pour partager des fichiers entre conteneurs d'un même pod.</dd>
+  <dt>PersistentVolume (PV)</dt><dd>Morceau de stockage réel (un disque) dans le cluster, indépendant du cycle de vie des pods.</dd>
+  <dt>PersistentVolumeClaim (PVC)</dt><dd>Demande de stockage émise par l'application (taille, mode d'accès)&nbsp;; Kubernetes l'apparie à un PV. Le pod la référence via <code>claimName</code>.</dd>
+  <dt>StorageClass</dt><dd>Décrit un type de stockage et son provisionneur&nbsp;; permet la création automatique du PV à l'arrivée d'un PVC.</dd>
+  <dt>Provisionnement dynamique</dt><dd>Création automatique du disque (PV) au moment où un PVC est créé, sans préparer les volumes à la main.</dd>
+  <dt>accessModes / ReadWriteOnce</dt><dd>Mode d'accès d'un volume&nbsp;; <code>ReadWriteOnce</code> autorise la lecture-écriture depuis un seul nœud à la fois.</dd>
+  <dt>StatefulSet</dt><dd>Contrôleur pour les charges « avec état » (bases répliquées)&nbsp;: identité stable par instance et un PVC dédié par réplique.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le disque d'un conteneur est <strong>éphémère</strong> ; pour durer, il faut un volume <strong>persistant</strong>.</li>
+<li><code>emptyDir</code> = stockage temporaire lié au pod.</li>
+<li><strong>PVC</strong> (demande) + <strong>PV</strong> (disque réel) = stockage durable ; le pod référence le PVC.</li>
+<li>Une <strong>StorageClass</strong> provisionne le stockage <strong>automatiquement</strong> à la demande.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que devient ce qu'un conteneur écrit sur son disque quand il est recréé ?</li><li>Quelle est la différence entre un PV et un PVC ?</li><li>À quoi sert une StorageClass ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que devient le système de fichiers d'un conteneur quand il redémarre ou est recréé ?","a":["Il repart à zéro : les données écrites sur le disque du conteneur sont perdues (stockage éphémère)","Il est sauvegardé automatiquement pour toujours","Il est copié sur tous les nœuds","Rien ne change, tout persiste"],"correct":0,"explain":"Le stockage d'un conteneur est éphémère par défaut. Pour conserver des données, il faut un volume persistant (PVC)."},
+  {"q":"Quelle est la différence entre un PersistentVolume (PV) et un PersistentVolumeClaim (PVC) ?","a":["Le PV est le stockage réel (le disque) ; le PVC est la demande de stockage faite par l'application, que Kubernetes relie à un PV","Ce sont deux noms pour la même chose","Le PVC est le disque, le PV la demande","Le PV ne sert qu'aux ConfigMaps"],"correct":0,"explain":"Le PVC exprime un besoin (taille, mode d'accès) ; Kubernetes l'apparie à un PV qui le satisfait. Le pod référence le PVC."},
+  {"q":"À quoi sert une StorageClass ?","a":["Au provisionnement dynamique : créer automatiquement le disque (PV) qui satisfait un PVC, sans le préparer à la main","À chiffrer les Secrets","À exposer un service à l'extérieur","À limiter le nombre de pods"],"correct":0,"explain":"La StorageClass décrit un type de stockage et son provisionneur ; à l'arrivée d'un PVC, le cluster crée le PV correspondant automatiquement."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["ephemere","éphémère","temporaire"],"placeholder":"comment qualifier le stockage d'un conteneur par défaut","hints":["Il disparaît au redémarrage.","Contraire de durable/persistant.","« éph… »."],"link":{"href":"lecon-06.html","label":"Revoir « Le stockage est éphémère »"}},
+  {"type":"text","accept":["pvc","persistentvolumeclaim","persistent volume claim"],"placeholder":"l'objet par lequel une application RÉCLAME du stockage durable","hints":["Sigle de 3 lettres.","Persistent Volume Claim.","Le pod le référence via claimName."],"link":{"href":"lecon-06.html","label":"Revoir « PV et PVC »"}},
+  {"type":"text","accept":["storageclass","storage class","classe de stockage"],"placeholder":"l'objet qui provisionne le stockage automatiquement","hints":["Storage + Class.","Provisionnement dynamique.","kubectl get ____."],"link":{"href":"lecon-06.html","label":"Revoir « La StorageClass »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la commande qui liste les demandes de stockage (PVC) et leur état.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl get pvc</code></pre></figure><p>La colonne <code>STATUS</code> indique <code>Bound</code> quand le PVC est relié à un PV, ou <code>Pending</code> sinon.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pourquoi un <code>emptyDir</code> ne convient-il pas pour stocker les données d'une base de données&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'un <code>emptyDir</code> est lié au cycle de vie du <strong>pod</strong> : dès que le pod est supprimé ou recréé (mise à jour, incident, déplacement), son contenu est perdu. Une base de données a besoin de données <strong>durables</strong>, donc d'un volume persistant (PVC relié à un PV).</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Tu crées un PVC mais il reste indéfiniment à l'état <code>Pending</code>. Quelles pistes vérifies-tu&nbsp;?</p><details><summary>Voir une solution</summary><p>Un PVC <code>Pending</code> n'a pas trouvé de PV qui le satisfait. Pistes : (1) y a-t-il une <strong>StorageClass</strong> (par défaut ou nommée) capable de provisionner dynamiquement&nbsp;? (2) le <strong>provisionneur</strong> est-il installé et fonctionnel sur le cluster&nbsp;? (3) la <strong>taille</strong> ou le <strong>mode d'accès</strong> demandés sont-ils disponibles&nbsp;? On inspecte avec <code>kubectl describe pvc &lt;nom&gt;</code> (ses événements expliquent souvent le blocage) et on vérifie <code>kubectl get storageclass</code>.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

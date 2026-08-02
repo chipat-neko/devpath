@@ -1,0 +1,82 @@
+<p>Les <strong>fonctions</strong> sont l'unité de construction d'Erlang. Mais leur écriture y est particulière&nbsp;: au lieu d'un gros <code>if</code> à l'intérieur, on définit plusieurs <strong>clauses</strong>, et le pattern matching choisit laquelle s'applique. Couplé aux <strong>gardes</strong> et à la <strong>récursion</strong> (il n'y a pas de boucle&nbsp;!), ce style produit un code remarquablement déclaratif. Cette leçon t'apprend à penser «&nbsp;à l'erlang&nbsp;».</p>
+
+<h2>Une fonction, plusieurs clauses</h2>
+<p>Une fonction Erlang peut avoir <strong>plusieurs définitions</strong> (clauses), distinguées par leurs motifs d'arguments. Erlang essaie les clauses de haut en bas et exécute la première qui correspond. Les clauses sont séparées par un point-virgule&nbsp;; un point termine la fonction.</p>
+<figure class="code-block" data-file="clauses.erl"><pre><code class="language-erlang">% Selon la valeur de l'argument, une clause différente :
+jour(1) -&gt; "lundi";
+jour(2) -&gt; "mardi";
+jour(_) -&gt; "autre jour".</code></pre></figure>
+<p>C'est plus lisible qu'un <code>if</code> imbriqué&nbsp;: chaque cas a sa ligne. La dernière clause, avec <code>_</code>, capture tout le reste.</p>
+
+<h2>Le pattern matching dans les arguments</h2>
+<p>Les clauses peuvent filtrer la <strong>structure</strong> des arguments, pas seulement leur valeur&nbsp;: on déstructure directement dans l'en-tête.</p>
+<figure class="code-block" data-file="match-args.erl"><pre><code class="language-erlang">% Décrire une forme et calculer son aire :
+aire({cercle, R}) -&gt; 3.14159 * R * R;
+aire({rectangle, L, H}) -&gt; L * H;
+aire({carre, C}) -&gt; C * C.
+
+% Appel : aire({rectangle, 4, 5})  -&gt;  20</code></pre></figure>
+<p>Selon la forme du tuple reçu, la bonne clause s'active et extrait les bons champs. Ce style — «&nbsp;filtrer et déstructurer dans l'en-tête&nbsp;» — est la signature d'Erlang.</p>
+
+<h2>Les gardes&nbsp;: affiner avec <code>when</code></h2>
+<p>Quand le motif ne suffit pas, une <strong>garde</strong> (<code>when</code>) ajoute une condition. La clause ne s'applique que si le motif <em>et</em> la garde sont satisfaits.</p>
+<figure class="code-block" data-file="gardes.erl"><pre><code class="language-erlang">categorie(Age) when Age &lt; 13 -&gt; enfant;
+categorie(Age) when Age &lt; 18 -&gt; adolescent;
+categorie(_) -&gt; adulte.
+
+% Comparaisons : ==, /=, &lt;, &gt;, =&lt;, &gt;=
+% (attention : "inférieur ou égal" s'écrit =&lt; en Erlang)</code></pre></figure>
+<p>Note la curiosité&nbsp;: «&nbsp;inférieur ou égal&nbsp;» s'écrit <code>=&lt;</code> (et non <code>&lt;=</code>) en Erlang. Les gardes ne peuvent contenir que des tests simples (comparaisons, types), pas d'appels de fonctions arbitraires&nbsp;: c'est une restriction voulue pour garder leur évaluation sûre et rapide.</p>
+
+<h2>La récursion remplace les boucles</h2>
+<p>Erlang n'a <strong>pas de boucle</strong> <code>for</code> ou <code>while</code>. Pour répéter, on utilise la <strong>récursion</strong>&nbsp;: une clause de base (l'arrêt) et une clause qui se ramène à un cas plus petit.</p>
+<figure class="code-block" data-file="recursion.erl"><pre><code class="language-erlang">% Somme des éléments d'une liste
+somme([]) -&gt; 0;                      % liste vide : 0
+somme([Tete | Queue]) -&gt;             % tête + somme du reste
+    Tete + somme(Queue).
+
+% somme([1, 2, 3])  -&gt;  6</code></pre></figure>
+<p>On retrouve le patron <code>[Tete | Queue]</code> de la leçon 2&nbsp;: on traite la tête, on recommence sur la queue, jusqu'à la liste vide. C'est <em>le</em> schéma fondamental du traitement de listes en Erlang.</p>
+
+<h2>La récursion terminale</h2>
+<p>Pour éviter d'empiler les appels sur de longues listes, on utilise un <strong>accumulateur</strong>&nbsp;: un argument qui transporte le résultat partiel. La récursion devient «&nbsp;terminale&nbsp;», donc économe et adaptée à des processus tournant indéfiniment (leçon 5).</p>
+<figure class="code-block" data-file="terminale.erl"><pre><code class="language-erlang">somme(Liste) -&gt; somme(Liste, 0).
+
+somme([], Acc) -&gt; Acc;
+somme([T | Q], Acc) -&gt; somme(Q, Acc + T).</code></pre></figure>
+
+<h2>Les listes en compréhension</h2>
+<p>Pour transformer ou filtrer une liste de façon concise, Erlang offre les <strong>compréhensions de listes</strong>&nbsp;: une notation déclarative inspirée des mathématiques.</p>
+<figure class="code-block" data-file="comprehension.erl"><pre><code class="language-erlang">% Doubler chaque élément :
+[X * 2 || X &lt;- [1, 2, 3, 4]].
+% -&gt; [2, 4, 6, 8]
+
+% Garder seulement les pairs :
+[X || X &lt;- [1, 2, 3, 4, 5, 6], X rem 2 =:= 0].
+% -&gt; [2, 4, 6]</code></pre></figure>
+<p>On lit <code>[Expression || X &lt;- Liste, Condition]</code> comme «&nbsp;l'expression, pour chaque X tiré de la liste, tel que la condition&nbsp;». Concis et lisible pour map et filter.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La <strong>ponctuation entre clauses</strong>&nbsp;: chaque clause d'une fonction se termine par un <strong>point-virgule</strong> <code>;</code>, sauf la dernière qui prend un <strong>point</strong> <code>.</code>. Mettre un point au milieu coupe la fonction en deux (erreur), et un point-virgule à la fin laisse la fonction «&nbsp;ouverte&nbsp;». Vérifie toujours&nbsp;: <code>;</code> entre les clauses, <code>.</code> à la toute fin.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La récursion terminale n'est pas qu'une optimisation&nbsp;: c'est <em>indispensable</em> en Erlang, car les processus serveurs (leçon 5) tournent dans une boucle récursive <strong>infinie</strong> pour rester en vie. Sans récursion terminale, chaque tour empilerait un appel et finirait par épuiser la mémoire. Le réflexe de l'accumulateur est donc au cœur de la programmation concurrente en Erlang.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une fonction a plusieurs <strong>clauses</strong> (séparées par <code>;</code>, terminées par <code>.</code>)&nbsp;; la première qui correspond gagne.</li>
+  <li>Le <strong>pattern matching</strong> dans les arguments filtre et déstructure&nbsp;; <strong>gardes</strong> <code>when</code> pour affiner (<code>=&lt;</code> pour ≤).</li>
+  <li>Pas de boucle&nbsp;: on utilise la <strong>récursion</strong> (avec <strong>accumulateur</strong> pour la version terminale).</li>
+  <li>Les <strong>compréhensions</strong> <code>[E || X &lt;- L, C]</code> font map et filter de façon concise.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment Erlang choisit-il quelle clause d'une fonction exécuter&nbsp;?</li><li>Comment écrit-on «&nbsp;inférieur ou égal&nbsp;»&nbsp;?</li><li>Pourquoi utiliser un accumulateur&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>double/1</code> qui renvoie le double de son argument.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">double(X) -&gt; X * 2.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>signe/1</code> avec des gardes&nbsp;: «&nbsp;positif&nbsp;», «&nbsp;negatif&nbsp;» ou «&nbsp;nul&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">signe(N) when N &gt; 0 -&gt; positif;
+signe(N) when N &lt; 0 -&gt; negatif;
+signe(_) -&gt; nul.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction récursive <code>longueur/1</code> qui compte les éléments d'une liste (sans utiliser <code>length</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">longueur([]) -&gt; 0;
+longueur([_ | Q]) -&gt; 1 + longueur(Q).
+
+% longueur([a, b, c])  -&gt;  3</code></pre></figure></details></div>

@@ -1,0 +1,93 @@
+<p>Le système de types d'OCaml ne sert pas qu'à vérifier&nbsp;: il sert à <strong>modéliser</strong>. Avec les <strong>types variants</strong> (types somme), tu définis tes propres types qui représentent exactement les valeurs valides de ton domaine — ni plus, ni moins. Combinés au pattern matching, ils rendent les états impossibles… vraiment impossibles à représenter.</p>
+
+<h2>Définir un variant</h2>
+<p>Un <strong>type variant</strong> énumère des cas (des constructeurs), séparés par <code>|</code>. C'est l'équivalent d'une énumération, en plus puissant.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">type couleur = Rouge | Vert | Bleu
+
+let code c =
+  match c with
+  | Rouge -&gt; "#FF0000"
+  | Vert -&gt; "#00FF00"
+  | Bleu -&gt; "#0000FF"</code></pre></figure>
+<p class="code-caption">Les constructeurs commencent par une <strong>majuscule</strong>. Le <code>match</code> est exhaustif&nbsp;: oublier <code>Bleu</code> déclenche un avertissement.</p>
+
+<h2>Des constructeurs qui portent des données</h2>
+<p>Chaque cas peut transporter une valeur (ou plusieurs). C'est ce qui distingue les variants d'OCaml des simples enums&nbsp;: on modélise des formes <em>différentes</em> de données.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">type forme =
+  | Cercle of float                  (* un rayon *)
+  | Rectangle of float * float       (* largeur, hauteur *)
+  | Point
+
+let aire f =
+  match f with
+  | Cercle r -&gt; 3.14159 *. r *. r
+  | Rectangle (l, h) -&gt; l *. h
+  | Point -&gt; 0.0
+
+let a = aire (Cercle 2.0)            (* 12.566 *)</code></pre></figure>
+
+<h2>Rendre l'invalide impossible</h2>
+<p>Idée forte d'OCaml&nbsp;: «&nbsp;<em>make illegal states unrepresentable</em>&nbsp;». En modélisant précisément avec des variants, on garantit qu'aucune valeur invalide ne peut exister. Exemple&nbsp;: un statut de paiement.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">type paiement =
+  | EnAttente
+  | Reussi of int          (* le montant *)
+  | Echoue of string       (* la raison *)
+
+(* Impossible d'avoir un "Reussi" sans montant,
+   ou un "Echoue" sans raison : le type l'interdit. *)</code></pre></figure>
+
+<h2>Les types récursifs&nbsp;: les arbres</h2>
+<p>Un variant peut se référer à lui-même&nbsp;: on modélise ainsi des structures récursives comme les arbres, naturellement.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">type arbre =
+  | Feuille
+  | Noeud of arbre * int * arbre
+
+let rec somme a =
+  match a with
+  | Feuille -&gt; 0
+  | Noeud (g, v, d) -&gt; somme g + v + somme d
+
+let t = Noeud (Noeud (Feuille, 1, Feuille), 2, Feuille)
+let s = somme t                      (* 3 *)</code></pre></figure>
+
+<h2>Le polymorphisme paramétrique</h2>
+<p>Un type peut être <strong>générique</strong> sur un autre, grâce aux variables de type (<code>'a</code>, lire «&nbsp;alpha&nbsp;»). On définit ainsi une structure valable pour tout type d'élément.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">type 'a arbre_bin =
+  | Vide
+  | Branche of 'a arbre_bin * 'a * 'a arbre_bin
+
+(* 'a peut être int, string, float… le même type pour tous *)
+let feuille_int : int arbre_bin = Branche (Vide, 42, Vide)</code></pre></figure>
+<p>Le type <code>option</code> de la stdlib (leçon 6) est précisément un variant polymorphe&nbsp;: <code>type 'a option = None | Some of 'a</code>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier la majuscule des constructeurs&nbsp;: <code>rouge</code> serait interprété comme une variable, pas un constructeur du type. Les constructeurs de variants commencent <strong>toujours</strong> par une majuscule (<code>Rouge</code>), les variables et fonctions par une minuscule.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Cette combinaison «&nbsp;types variants + pattern matching exhaustif&nbsp;» est exactement ce qu'on appelle les <strong>types algébriques de données</strong> (ADT). Rust (<code>enum</code>), Swift (<code>enum</code>), Haskell (<code>data</code>) et Scala (<code>sealed</code>) l'ont tous adoptée. OCaml en est l'un des pionniers grand public.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>variant</strong> (<code>type t = A | B | C</code>) énumère des cas&nbsp;; les constructeurs commencent par une majuscule.</li>
+  <li>Un constructeur peut <strong>porter des données</strong> (<code>Cercle of float</code>) — au-delà d'un simple enum.</li>
+  <li>Les variants <strong>récursifs</strong> modélisent les arbres&nbsp;; les variables <code>'a</code> donnent le polymorphisme.</li>
+  <li>On rend ainsi les <strong>états invalides impossibles</strong> à représenter.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre un variant OCaml et une simple énumération&nbsp;?</li><li>Par quoi commencent les constructeurs de variant&nbsp;?</li><li>Que signifie <code>'a</code> dans un type&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un type <code>direction</code> (Nord, Sud, Est, Ouest) et une fonction <code>oppose</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">type direction = Nord | Sud | Est | Ouest
+let oppose d =
+  match d with
+  | Nord -&gt; Sud | Sud -&gt; Nord
+  | Est -&gt; Ouest | Ouest -&gt; Est</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Définis un type <code>resultat</code> avec <code>Succes of int</code> et <code>Erreur of string</code>, et une fonction qui l'affiche.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">type resultat = Succes of int | Erreur of string
+let afficher r =
+  match r with
+  | Succes n -&gt; "OK : " ^ string_of_int n
+  | Erreur m -&gt; "Erreur : " ^ m</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec le type <code>arbre</code> récursif, écris une fonction qui compte ses nœuds.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">type arbre = Feuille | Noeud of arbre * int * arbre
+let rec compte a =
+  match a with
+  | Feuille -&gt; 0
+  | Noeud (g, _, d) -&gt; 1 + compte g + compte d</code></pre></figure></details></div>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La concurrence : threads, processus et asyncio — Leçon 26 · Python · Syntaxe</title>
+    <meta name="description" content="Faire plusieurs choses à la fois en Python : comprendre le GIL, distinguer les tâches d'attente (I/O) des tâches de calcul (CPU), et choisir entre threading, multiprocessing et asyncio." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="python" data-lesson="lecon-26.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Python</a></li>
+            <li aria-current="page">Leçon 26</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 09 · Pour aller plus loin — Leçon 26</p>
+              <h1 class="lesson-header__title">La concurrence&nbsp;: threads, processus et asyncio</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 24 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer ce qu'est le <strong>GIL</strong> et pourquoi il compte&nbsp;;</li>
+                  <li>distinguer une tâche <strong>d'attente (I/O)</strong> d'une tâche <strong>de calcul (CPU)</strong>&nbsp;;</li>
+                  <li>accélérer des téléchargements avec des <strong>threads</strong> (<code>concurrent.futures</code>)&nbsp;;</li>
+                  <li>répartir du calcul lourd sur plusieurs cœurs avec les <strong>processus</strong>&nbsp;;</li>
+                  <li>découvrir <strong>asyncio</strong> (<code>async</code>/<code>await</code>) et savoir <em>quel outil</em> choisir.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>«&nbsp;Mon script télécharge 100 pages, ça prend deux minutes&nbsp;: peut-on aller plus vite&nbsp;?&nbsp;» Presque toujours, oui — en faisant plusieurs choses <strong>en même temps</strong>. Mais Python propose <em>trois</em> outils pour ça (<code>threading</code>, <code>multiprocessing</code>, <code>asyncio</code>) et choisir le mauvais ne change rien, voire ralentit. La clé pour trancher tient en une question&nbsp;: ta tâche <strong>attend</strong>-elle, ou <strong>calcule</strong>-t-elle&nbsp;? Et pour comprendre pourquoi, il faut d'abord rencontrer le GIL.</p>
+
+<h2>Le GIL&nbsp;: un seul cœur pour le code Python</h2>
+<p>Le <strong>GIL</strong> (<em>Global Interpreter Lock</em>) est un verrou interne de CPython&nbsp;: à tout instant, <strong>un seul thread</strong> exécute du <em>bytecode</em> Python. Même sur un processeur à 8 cœurs, deux threads ne calculent jamais réellement <em>en parallèle</em>. Ce verrou simplifie l'interpréteur, mais il a une conséquence énorme sur le choix de l'outil.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Trois threads veulent s'exécuter mais un seul détient le verrou GIL à la fois ; les deux autres attendent leur tour.">
+    <rect class="d-accent" x="262" y="66" width="116" height="40" rx="8" />
+    <text class="d-label" x="320" y="84" text-anchor="middle" font-size="12">🔒 GIL</text>
+    <text class="d-mut" x="320" y="99" text-anchor="middle" font-size="9">un seul à la fois</text>
+    <rect class="d-box" x="40" y="28" width="150" height="34" rx="7" />
+    <text class="d-text" x="115" y="49" text-anchor="middle" font-size="11">Thread 1 — exécute ✓</text>
+    <path class="d-line" d="M190 52 C230 60 240 70 262 80" marker-end="url(#g26)" />
+    <rect class="d-frame" x="40" y="110" width="150" height="30" rx="7" stroke-dasharray="5 3" />
+    <text class="d-mut" x="115" y="129" text-anchor="middle" font-size="10.5">Thread 2 — attend</text>
+    <path class="d-line" d="M190 122 C230 112 240 104 262 96" marker-end="url(#g26)" />
+    <rect class="d-frame" x="450" y="110" width="150" height="30" rx="7" stroke-dasharray="5 3" />
+    <text class="d-mut" x="525" y="129" text-anchor="middle" font-size="10.5">Thread 3 — attend</text>
+    <path class="d-line" d="M450 122 C410 112 400 104 378 96" marker-end="url(#g26)" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="10">Le verrou circule très vite, mais un seul thread calcule à un instant donné.</text>
+    <defs><marker id="g26" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" class="d-dot" /></marker></defs>
+  </svg>
+  <figcaption>Le GIL sérialise l'exécution du bytecode&nbsp;: les threads Python ne parallélisent pas le <em>calcul</em>.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">À retenir</p><p>Le GIL n'empêche pas la concurrence de <strong>l'attente</strong>&nbsp;: quand un thread attend une réponse réseau, il <em>lâche</em> le verrou, et un autre thread avance. C'est pourquoi les threads restent très utiles… tant qu'on <em>attend</em>. Python 3.13 introduit un mode expérimental «&nbsp;sans GIL&nbsp;», mais la règle ci-dessous reste la référence.</p></div></div>
+
+<h2>Deux natures de tâches</h2>
+<p>Tout se joue ici. Une tâche <strong>I/O-bound</strong> passe l'essentiel de son temps à <em>attendre</em> quelque chose d'extérieur (réseau, disque, base de données). Une tâche <strong>CPU-bound</strong> passe son temps à <em>calculer</em> (traiter une image, compresser, faire des maths).</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Une tâche I/O-bound est surtout de l'attente ; une tâche CPU-bound est surtout du calcul.">
+    <text class="d-label" x="20" y="42" font-size="11">I/O-bound</text>
+    <rect class="d-frame" x="150" y="26" width="470" height="34" rx="7" />
+    <rect class="d-mut" x="154" y="30" width="360" height="26" rx="5" />
+    <text class="d-text" x="334" y="47" text-anchor="middle" font-size="10">attente réseau / disque</text>
+    <rect class="d-accent" x="518" y="30" width="98" height="26" rx="5" />
+    <text class="d-text" x="567" y="47" text-anchor="middle" font-size="10">calcul</text>
+    <text class="d-mut" x="20" y="76" font-size="9">→ threads ou asyncio</text>
+    <text class="d-label" x="20" y="122" font-size="11">CPU-bound</text>
+    <rect class="d-frame" x="150" y="106" width="470" height="34" rx="7" />
+    <rect class="d-accent" x="154" y="110" width="430" height="26" rx="5" />
+    <text class="d-text" x="369" y="127" text-anchor="middle" font-size="10">calcul intensif</text>
+    <rect class="d-mut" x="588" y="110" width="28" height="26" rx="5" />
+    <text class="d-mut" x="20" y="156" font-size="9">→ multiprocessing (plusieurs cœurs)</text>
+  </svg>
+  <figcaption>Repère la barre dominante&nbsp;: attente → concurrence légère&nbsp;; calcul → vrais processus parallèles.</figcaption>
+</figure>
+
+<h2>Threads&nbsp;: pour tout ce qui attend</h2>
+<p>Pour télécharger 100 pages, le goulot n'est pas le processeur mais le <strong>réseau</strong>&nbsp;: pendant qu'une requête attend, une autre peut partir. Le module de haut niveau <code>concurrent.futures</code> rend ça limpide avec un <code>ThreadPoolExecutor</code>.</p>
+<figure class="code-block" data-file="threads.py"><pre><code class="language-python">from concurrent.futures import ThreadPoolExecutor
+import requests
+
+urls = ["https://example.com", "https://python.org", "..."]
+
+def taille(url):
+    return len(requests.get(url, timeout=10).content)
+
+with ThreadPoolExecutor(max_workers=8) as executor:
+    tailles = list(executor.map(taille, urls))
+
+print(tailles)   # les 100 pages, en une fraction du temps</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="En séquentiel, trois requêtes s'enchaînent et le temps total est leur somme ; en concurrent, elles se superposent et le temps total est proche d'une seule.">
+    <text class="d-label" x="20" y="40" font-size="11">Séquentiel</text>
+    <rect class="d-box" x="120" y="26" width="150" height="24" rx="5" /><text class="d-text" x="195" y="43" text-anchor="middle" font-size="9.5">requête 1</text>
+    <rect class="d-box" x="272" y="26" width="150" height="24" rx="5" /><text class="d-text" x="347" y="43" text-anchor="middle" font-size="9.5">requête 2</text>
+    <rect class="d-box" x="424" y="26" width="150" height="24" rx="5" /><text class="d-text" x="499" y="43" text-anchor="middle" font-size="9.5">requête 3</text>
+    <text class="d-mut" x="347" y="68" text-anchor="middle" font-size="9.5">temps total = 1 + 2 + 3</text>
+    <text class="d-label" x="20" y="118" font-size="11">Concurrent</text>
+    <rect class="d-accent" x="120" y="98" width="150" height="22" rx="5" /><text class="d-text" x="195" y="114" text-anchor="middle" font-size="9.5">requête 1</text>
+    <rect class="d-accent" x="120" y="124" width="150" height="22" rx="5" /><text class="d-text" x="195" y="140" text-anchor="middle" font-size="9.5">requête 2</text>
+    <rect class="d-accent" x="120" y="150" width="150" height="22" rx="5" /><text class="d-text" x="195" y="166" text-anchor="middle" font-size="9.5">requête 3</text>
+    <path class="d-line" d="M120 90 L120 176" /><path class="d-line" d="M270 90 L270 176" />
+    <text class="d-mut" x="410" y="140" font-size="9.5">temps total ≈ la plus longue</text>
+  </svg>
+  <figcaption>Les attentes se superposent&nbsp;: on paie une seule fois le temps réseau, pas la somme.</figcaption>
+</figure>
+
+<h2>Processus&nbsp;: pour le calcul lourd</h2>
+<p>Pour du <strong>calcul</strong> pur, les threads ne servent à rien (le GIL les sérialise). Il faut de <em>vrais</em> processus, chacun avec son propre interpréteur et son propre GIL. Même API, un seul mot change&nbsp;: <code>ProcessPoolExecutor</code>.</p>
+<figure class="code-block" data-file="processus.py"><pre><code class="language-python">from concurrent.futures import ProcessPoolExecutor
+
+def est_premier(n):
+    if n &lt; 2:
+        return False
+    return all(n % d for d in range(2, int(n ** 0.5) + 1))
+
+nombres = [112272535095293, 112582705942171, 115280095190773]
+
+with ProcessPoolExecutor() as executor:      # un processus par cœur
+    resultats = list(executor.map(est_premier, nombres))
+
+print(resultats)</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Les processus ne <strong>partagent pas la mémoire</strong>&nbsp;: échanger des données a un coût (elles sont copiées entre processus). Pour de petites tâches, ce coût dépasse le gain. Les processus valent le coup quand chaque tâche <em>calcule</em> longtemps. Sur Windows, protège toujours le lancement par <code>if __name__ == "__main__":</code>.</p></div></div>
+
+<h2>asyncio&nbsp;: l'attente, sans threads</h2>
+<p><strong>asyncio</strong> obtient le même résultat que les threads pour l'I/O, mais avec <em>un seul</em> thread et une «&nbsp;boucle d'événements&nbsp;». Tu marques les fonctions <code>async def</code> et tu attends avec <code>await</code>&nbsp;: à chaque <code>await</code>, Python part faire autre chose au lieu de bloquer. C'est le choix des serveurs qui gèrent des <strong>milliers</strong> de connexions simultanées.</p>
+<figure class="code-block" data-file="asyncio_exemple.py"><pre><code class="language-python">import asyncio
+
+async def cuire(nom, secondes):
+    print("Je lance", nom)
+    await asyncio.sleep(secondes)   # attente non bloquante
+    return f"{nom} prêt"
+
+async def main():
+    resultats = await asyncio.gather(
+        cuire("pain", 2),
+        cuire("café", 1),
+        cuire("œufs", 3),
+    )
+    print(resultats)
+
+asyncio.run(main())   # les trois avancent ensemble : ~3 s, pas 6</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.3 1 2h6c0-.7.5-1.5 1-2A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Bonne pratique</p><p>Threads ou asyncio&nbsp;? Les <strong>threads</strong> conviennent au code existant (bibliothèques classiques comme <code>requests</code>), sans réécriture. <strong>asyncio</strong> brille à très grande échelle mais impose des bibliothèques compatibles (<code>httpx</code>, <code>aiohttp</code>) et de «&nbsp;colorer&nbsp;» tout le code en <code>async</code>. Pour commencer, un <code>ThreadPoolExecutor</code> suffit presque toujours.</p></div></div>
+
+<h2>Cas réel&nbsp;: un agrégateur de prix</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un comparateur qui interroge <strong>20 boutiques</strong> pour un même produit est un cas d'école <em>I/O-bound</em>&nbsp;: chaque requête passe son temps à attendre le réseau. En séquentiel, 20 × 300&nbsp;ms = 6&nbsp;secondes&nbsp;; avec un <code>ThreadPoolExecutor</code>, les 20 attentes se superposent et le tout prend ~300&nbsp;ms. À l'inverse, un script qui <strong>redimensionne 500 photos</strong> est <em>CPU-bound</em>&nbsp;: seul <code>multiprocessing</code> exploitera les 8 cœurs de la machine. Diagnostiquer la nature de la tâche <em>avant</em> de coder évite d'optimiser dans le vide.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Quand plusieurs threads modifient une même donnée, on risque une <strong>situation de compétition</strong> (<em>race condition</em>)&nbsp;: on protège alors la section critique avec un <code>threading.Lock</code>. Pour du calcul distribué au-delà d'une machine, on regarde <code>Dask</code>, <code>Ray</code> ou <code>multiprocessing.Pool</code> à grande échelle. Et l'écriture asynchrone irrigue tout l'écosystème web moderne (FastAPI, ASGI).</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: quel outil de concurrence&nbsp;?</caption>
+    <thead><tr><th>Situation</th><th>Outil</th></tr></thead>
+    <tbody>
+      <tr><td>Attendre le réseau, le disque (I/O)</td><td><code>ThreadPoolExecutor</code> ou <code>asyncio</code></td></tr>
+      <tr><td>Calcul lourd (CPU)</td><td><code>ProcessPoolExecutor</code></td></tr>
+      <tr><td>Des milliers de connexions</td><td><code>asyncio</code> (<code>async</code>/<code>await</code>)</td></tr>
+      <tr><td>Lancer plusieurs tâches</td><td><code>executor.map(fn, iterable)</code></td></tr>
+      <tr><td>Attendre plusieurs coroutines</td><td><code>await asyncio.gather(...)</code></td></tr>
+      <tr><td>Attente asynchrone</td><td><code>await asyncio.sleep(s)</code></td></tr>
+      <tr><td>Protéger une donnée partagée</td><td><code>threading.Lock()</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Concurrence</dt>
+  <dd>Faire progresser plusieurs tâches sur une même période&nbsp;; distincte du <em>parallélisme</em>, qui les exécute réellement au même instant.</dd>
+  <dt>GIL (Global Interpreter Lock)</dt>
+  <dd>Verrou de CPython garantissant qu'un seul thread exécute du bytecode Python à la fois&nbsp;; il limite le parallélisme du calcul.</dd>
+  <dt>I/O-bound</dt>
+  <dd>Tâche dont le temps est dominé par l'attente d'une ressource externe (réseau, disque)&nbsp;; accélérée par les threads ou asyncio.</dd>
+  <dt>CPU-bound</dt>
+  <dd>Tâche dont le temps est dominé par le calcul&nbsp;; accélérée par plusieurs processus.</dd>
+  <dt>Thread</dt>
+  <dd>Fil d'exécution partageant la mémoire du programme&nbsp;; léger, idéal pour l'attente, soumis au GIL pour le calcul.</dd>
+  <dt>Processus</dt>
+  <dd>Programme indépendant avec sa propre mémoire et son propre GIL&nbsp;; permet un vrai calcul parallèle.</dd>
+  <dt>Coroutine</dt>
+  <dd>Fonction <code>async def</code> pouvant se suspendre à un <code>await</code> pour laisser tourner d'autres coroutines.</dd>
+  <dt>Boucle d'événements</dt>
+  <dd>Cœur d'asyncio qui orchestre les coroutines sur un seul thread&nbsp;; lancée par <code>asyncio.run</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>GIL</strong> n'autorise qu'un thread à exécuter du bytecode Python à la fois&nbsp;: pas de calcul vraiment parallèle avec les threads.</li>
+<li>Une tâche <strong>I/O-bound</strong> (attente) profite des <strong>threads</strong> ou d'<strong>asyncio</strong>&nbsp;; une tâche <strong>CPU-bound</strong> (calcul) réclame des <strong>processus</strong>.</li>
+<li><code>concurrent.futures</code> unifie l'API&nbsp;: <code>ThreadPoolExecutor</code> et <code>ProcessPoolExecutor</code>, avec <code>executor.map</code>.</li>
+<li><strong>asyncio</strong> (<code>async</code>/<code>await</code>, <code>gather</code>) gère l'attente à très grande échelle sur un seul thread.</li>
+<li>Diagnostique la <em>nature</em> de la tâche avant de choisir l'outil.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>En une phrase, que garantit le GIL&nbsp;?</li><li>Pour télécharger 50 fichiers, threads ou processus&nbsp;? Pourquoi&nbsp;?</li><li>Pour redimensionner 1000 images, quel outil&nbsp;?</li><li>Que fait <code>await</code> dans une coroutine&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que garantit le GIL dans CPython ?","a":["Qu'un seul thread exécute du bytecode Python à un instant donné","Que le code Python tourne sur tous les cœurs en parallèle","Que les variables sont automatiquement protégées contre toute erreur","Que les processus partagent leur mémoire"],"correct":0,"explain":"Le Global Interpreter Lock sérialise l'exécution du bytecode : les threads Python ne parallélisent donc pas le calcul, seulement l'attente."},
+  {"q":"Ton script télécharge 50 pages web. Quel outil est le plus adapté ?","a":["Des threads (ThreadPoolExecutor) ou asyncio, car la tâche est I/O-bound","Des processus (ProcessPoolExecutor), car c'est plus rapide","Aucun : le GIL empêche toute accélération","Une boucle for classique, la concurrence n'aide jamais"],"correct":0,"explain":"Télécharger, c'est surtout attendre le réseau (I/O-bound). Pendant qu'un thread attend, il lâche le GIL et un autre avance : les threads (ou asyncio) accélèrent nettement."},
+  {"q":"Ton script redimensionne 1000 images (calcul lourd). Quel outil choisir ?","a":["multiprocessing (ProcessPoolExecutor), pour exploiter plusieurs cœurs","Des threads, car ils sont plus légers","asyncio, car c'est le plus moderne","Rien, le calcul ne se parallélise pas en Python"],"correct":0,"explain":"C'est une tâche CPU-bound : le GIL rend les threads inutiles. De vrais processus, chacun avec son propre interpréteur, répartissent le calcul sur les cœurs."},
+  {"q":"Que provoque un await asyncio.sleep(2) dans une coroutine ?","a":["Il suspend la coroutine sans bloquer, laissant d'autres coroutines avancer pendant l'attente","Il met en pause tout le programme pendant 2 secondes","Il lance un nouveau thread","Il crée un nouveau processus"],"correct":0,"explain":"await rend la main à la boucle d'événements pendant l'attente : les autres coroutines progressent, ce qui superpose les attentes sur un seul thread."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["GIL","le GIL","Global Interpreter Lock"],"placeholder":"le verrou qui limite l'exécution à un thread Python à la fois","hints":["Trois lettres.","Global Interpreter Lock.","Il explique pourquoi les threads n'accélèrent pas le calcul."],"link":{"href":"lecon-26.html","label":"Revoir « Le GIL »"}},
+  {"type":"text","accept":["ProcessPoolExecutor","multiprocessing"],"placeholder":"l'outil pour paralléliser une tâche CPU-bound sur plusieurs cœurs","hints":["Il crée de vrais processus, pas des threads.","Même API que ThreadPoolExecutor.","___PoolExecutor"],"link":{"href":"lecon-26.html","label":"Revoir « Processus »"}},
+  {"type":"text","accept":["gather","asyncio.gather"],"placeholder":"la fonction asyncio qui lance et attend plusieurs coroutines ensemble","hints":["On l'utilise avec await.","asyncio.______(...)"],"link":{"href":"lecon-26.html","label":"Revoir « asyncio »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Classe ces tâches en I/O-bound ou CPU-bound&nbsp;: (a) calculer un million de décimales de π, (b) lire 200 fichiers sur le disque, (c) appeler 30 API, (d) compresser une vidéo.</p><details><summary>Voir une solution</summary><p><strong>CPU-bound</strong>&nbsp;: (a) décimales de π, (d) compression vidéo → <code>multiprocessing</code>. <strong>I/O-bound</strong>&nbsp;: (b) lecture disque, (c) appels API → <code>threads</code> ou <code>asyncio</code>. Le critère&nbsp;: la tâche <em>calcule</em>-t-elle ou <em>attend</em>-elle&nbsp;?</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec un <code>ThreadPoolExecutor</code>, applique une fonction <code>longueur(url)</code> à une liste d'URL et récupère toutes les longueurs dans une liste.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.py"><pre><code class="language-python">from concurrent.futures import ThreadPoolExecutor
+import requests
+
+def longueur(url):
+    return len(requests.get(url, timeout=10).text)
+
+urls = ["https://python.org", "https://example.com"]
+with ThreadPoolExecutor(max_workers=8) as ex:
+    print(list(ex.map(longueur, urls)))</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris deux coroutines qui «&nbsp;attendent&nbsp;» respectivement 1&nbsp;s et 2&nbsp;s, lance-les ensemble avec <code>gather</code>, et vérifie que le total tourne autour de 2&nbsp;s, pas 3.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.py"><pre><code class="language-python">import asyncio, time
+
+async def tache(nom, s):
+    await asyncio.sleep(s)
+    return nom
+
+async def main():
+    t0 = time.perf_counter()
+    print(await asyncio.gather(tache("A", 1), tache("B", 2)))
+    print(round(time.perf_counter() - t0, 1), "s")   # ≈ 2.0
+
+asyncio.run(main())</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

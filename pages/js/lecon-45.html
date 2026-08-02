@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proxy et Reflect (métaprogrammation) — Leçon 45 · Syntaxe</title>
+    <meta name="description" content="Maîtrise Proxy et Reflect en JavaScript : intercepte get, set, has, apply et construct, préserve this avec Reflect, et construis des objets réactifs." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="javascript" data-lesson="lecon-45.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">JavaScript</a></li>
+            <li aria-current="page">Leçon 45</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 14 · Le langage en profondeur — Leçon 45</p>
+              <h1 class="lesson-header__title">Proxy et Reflect (métaprogrammation)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 02 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir intercepter les opérations fondamentales d'un objet via <code>new Proxy</code> et ses trappes (<code>get</code>, <code>set</code>, <code>has</code>, <code>apply</code>, <code>construct</code>)</li>
+                  <li>savoir déléguer le comportement standard à <code>Reflect</code> en préservant <code>this</code> grâce au <code>recepteur</code></li>
+                  <li>savoir bâtir des cas réels : valeurs par défaut, validation, objets réactifs et tableaux à index négatif</li>
+                  <li>savoir éviter les pièges : invariants des proxys, perte de <code>this</code>, coût en performance et non-égalité proxy&nbsp;/ cible.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais déjà manipuler des objets&nbsp;: lire et écrire des propriétés, déléguer via la chaîne de prototypes, geler avec <code>Object.freeze</code>. Jusqu'ici, tu agissais <em>sur</em> les objets. Cette leçon t'apprend à agir <em>sur le comportement même</em> de ces opérations&nbsp;: que se passe-t-il, précisément, quand le moteur évalue <code>obj.x</code>, <code>obj.y = 3</code> ou <code>"z" in obj</code>&nbsp;? Avec <code>Proxy</code>, tu interposes ton propre code entre l'opération et son effet.</p>
+
+<p>Tu débloques ainsi des patrons impossibles autrement&nbsp;: objets réactifs qui notifient leurs changements (le cœur de Vue&nbsp;3), validation déclarative à l'écriture, propriétés calculées à la volée, API tolérantes aux clés absentes. Le tout en restant transparent pour le code appelant, qui croit manipuler un objet ordinaire.</p>
+
+<h2>Métaprogrammation&nbsp;: agir sur le langage</h2>
+<p>La <strong>métaprogrammation</strong>, c'est écrire du code qui observe ou modifie le comportement d'autre code à l'exécution. Tu en as déjà fait sans le nommer&nbsp;: les <em>getters</em>/<em>setters</em>, <code>Object.defineProperty</code>, ou <code>Symbol.iterator</code> sont des hooks dans la mécanique du langage. <code>Proxy</code> généralise ce principe&nbsp;: au lieu de personnaliser une seule propriété, tu interceptes <strong>n'importe quelle opération fondamentale</strong> (lecture, écriture, suppression, appel, <code>new</code>…) de façon uniforme.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Chaque opération du langage correspond à une «&nbsp;méthode interne&nbsp;» de la spec (<code>[[Get]]</code>, <code>[[Set]]</code>, <code>[[HasProperty]]</code>…). Une trappe de Proxy n'est rien d'autre qu'un moyen de redéfinir l'une de ces méthodes internes.</p></div></div>
+
+<h2>new Proxy(cible, handler)</h2>
+<p>Un proxy enveloppe une <strong>cible</strong> (<em>target</em>). Le <strong>handler</strong> est un objet dont chaque méthode est une <strong>trappe</strong> (<em>trap</em>) interceptant une opération précise. Toute opération sans trappe correspondante est transmise telle quelle à la cible.</p>
+<figure class="code-block" data-file="base.js"><pre><code class="language-javascript">const cible = { titre: "Proxy" };
+
+// handler vide : le proxy est transparent, tout passe à la cible
+const p = new Proxy(cible, {});
+console.log(p.titre); // "Proxy" — délégué à cible
+p.vues = 1;           // écrit sur cible
+console.log(cible.vues); // 1 — proxy et cible partagent l'état</code></pre></figure>
+<p class="code-caption">Sans trappe, un proxy se comporte exactement comme sa cible — mais reste un objet distinct.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Une lecture ou une écriture sur le proxy passe d'abord par la trappe du handler, qui exécute une logique optionnelle puis délègue à la cible via Reflect.">
+    <text class="d-label" x="24" y="24" font-size="13">Le proxy interpose une trappe entre l'opération et la cible</text>
+    <rect class="d-box" x="24" y="56" width="150" height="80" rx="10" />
+    <text class="d-label" x="99" y="80" text-anchor="middle" font-size="12">code appelant</text>
+    <text class="d-tag" x="99" y="104" text-anchor="middle" font-size="12.5">p.titre</text>
+    <text class="d-tag" x="99" y="124" text-anchor="middle" font-size="12.5">p.vues = 1</text>
+    <rect class="d-accent" x="246" y="56" width="150" height="80" rx="10" />
+    <text class="d-label" x="321" y="80" text-anchor="middle" font-size="12">handler</text>
+    <text class="d-text" x="321" y="104" text-anchor="middle" font-size="11.5">get(cible, clef, …)</text>
+    <text class="d-text" x="321" y="124" text-anchor="middle" font-size="11.5">set(cible, clef, v, …)</text>
+    <rect class="d-box" x="468" y="56" width="148" height="80" rx="10" />
+    <text class="d-label" x="542" y="80" text-anchor="middle" font-size="12">cible</text>
+    <text class="d-tag" x="542" y="106" text-anchor="middle" font-size="12.5">{ titre, vues }</text>
+    <line class="d-line" x1="174" y1="96" x2="246" y2="96" />
+    <circle class="d-dot" cx="246" cy="96" r="3.5" />
+    <line class="d-line" x1="396" y1="96" x2="468" y2="96" />
+    <circle class="d-dot" cx="468" cy="96" r="3.5" />
+    <text class="d-mut" x="210" y="88" text-anchor="middle" font-size="10.5">intercepte</text>
+    <text class="d-mut" x="432" y="88" text-anchor="middle" font-size="10.5">Reflect</text>
+    <text class="d-mut" x="321" y="164" text-anchor="middle" font-size="11.5">ta logique : défaut, validation, journal, réactivité…</text>
+    <text class="d-mut" x="321" y="184" text-anchor="middle" font-size="11">sans trappe → tout passe directement à la cible</text>
+  </svg>
+  <figcaption>Chaque opération (<code>p.titre</code>, <code>p.vues = 1</code>) passe par la trappe correspondante du <em>handler</em>, qui peut ajouter sa logique puis déléguer à la cible via <code>Reflect</code>.</figcaption>
+</figure>
+
+<h2>La trappe get</h2>
+<p>La trappe <code>get(cible, clef, recepteur)</code> intercepte toute lecture. Le <code>recepteur</code> est l'objet sur lequel la lecture a démarré (le proxy lui-même, ou un objet qui en hérite). Premier cas d'usage&nbsp;: fournir une valeur par défaut pour une clé absente.</p>
+<figure class="code-block" data-file="get-defaut.js"><pre><code class="language-javascript">const avecDefaut = (obj, defaut) =>
+  new Proxy(obj, {
+    get(cible, clef, recepteur) {
+      // Reflect.has couvre la cible ET sa chaîne de prototypes
+      if (Reflect.has(cible, clef)) {
+        return Reflect.get(cible, clef, recepteur);
+      }
+      return defaut; // clé absente → valeur de repli
+    },
+  });
+
+const config = avecDefaut({ theme: "sombre" }, null);
+console.log(config.theme);  // "sombre"
+console.log(config.langue); // null — au lieu de undefined</code></pre></figure>
+<p class="code-caption">On délègue la lecture réelle à <code>Reflect.get</code> et on ne remplace que le cas «&nbsp;clé absente&nbsp;».</p>
+<p>Deuxième usage&nbsp;: la journalisation transparente des accès, utile en débogage ou pour tracer quelles propriétés un module consomme réellement.</p>
+
+<h2>La trappe set</h2>
+<p><code>set(cible, clef, valeur, recepteur)</code> intercepte les affectations. Sa <strong>valeur de retour est sémantique</strong>&nbsp;: renvoyer une valeur fausse signale un échec, ce qui lève un <code>TypeError</code> en mode strict (le cas des modules ES, toujours stricts). On valide donc en refusant explicitement.</p>
+<figure class="code-block" data-file="set-validation.js"><pre><code class="language-javascript">const utilisateur = new Proxy(
+  { nom: "", age: 0 },
+  {
+    set(cible, clef, valeur, recepteur) {
+      if (clef === "age" &amp;&amp; (!Number.isInteger(valeur) || valeur &lt; 0)) {
+        throw new TypeError(`age invalide : ${valeur}`);
+      }
+      // affectation standard, recepteur préserve le bon "this"
+      return Reflect.set(cible, clef, valeur, recepteur);
+    },
+  },
+);
+
+utilisateur.age = 30;  // OK
+utilisateur.age = -5;  // TypeError: age invalide : -5</code></pre></figure>
+<p class="code-caption"><code>Reflect.set</code> renvoie <code>true</code>/<code>false</code> selon le succès&nbsp;: on retourne directement son résultat.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Retourne toujours <code>Reflect.set(...)</code> plutôt que <code>true</code>&nbsp;: si la cible est elle-même gelée ou possède un setter qui refuse, <code>Reflect.set</code> renvoie <code>false</code> et tu propages fidèlement l'échec au lieu de mentir.</p></div></div>
+
+<h2>Autres trappes utiles</h2>
+<p>Au-delà de <code>get</code>/<code>set</code>, le handler couvre toutes les opérations primitives. Les plus courantes&nbsp;:</p>
+<figure class="code-block" data-file="autres-trappes.js"><pre><code class="language-javascript">const espace = new Proxy(
+  { _secret: 1, public: 2 },
+  {
+    // opérateur "in" : masque les clés privées
+    has(cible, clef) {
+      if (typeof clef === "string" &amp;&amp; clef.startsWith("_")) return false;
+      return Reflect.has(cible, clef);
+    },
+    // suppression : interdit d'effacer les clés privées
+    deleteProperty(cible, clef) {
+      if (typeof clef === "string" &amp;&amp; clef.startsWith("_")) {
+        throw new TypeError(`suppression interdite : ${clef}`);
+      }
+      return Reflect.deleteProperty(cible, clef);
+    },
+  },
+);
+
+console.log("_secret" in espace); // false — masqué par has
+console.log("public" in espace);  // true</code></pre></figure>
+<p class="code-caption"><code>has</code> pilote <code>in</code>&nbsp;; <code>deleteProperty</code> pilote <code>delete</code>.</p>
+<p>Deux trappes ne s'appliquent qu'aux cibles <strong>appelables</strong> (fonctions)&nbsp;: <code>apply(cible, ceci, args)</code> intercepte l'appel <code>f(...)</code>, et <code>construct(cible, args, nouvelleCible)</code> intercepte <code>new F(...)</code>. Idéal pour mémoïser, tracer les appels ou injecter des contrôles avant instanciation.</p>
+<figure class="code-block" data-file="apply-construct.js"><pre><code class="language-javascript">function somme(a, b) { return a + b; }
+
+const tracee = new Proxy(somme, {
+  apply(cible, ceci, args) {
+    console.log(`appel(${args.join(", ")})`);
+    return Reflect.apply(cible, ceci, args); // exécute la vraie fonction
+  },
+});
+
+tracee(2, 3); // log: "appel(2, 3)" puis renvoie 5</code></pre></figure>
+<p class="code-caption"><code>Reflect.apply</code> relaie l'appel avec son <code>this</code> et ses arguments d'origine.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 258" role="img" aria-label="Tableau des opérations du langage et de la trappe de Proxy correspondante : obj.x get, obj.x égale v set, x in obj has, delete obj.x deleteProperty, f() apply, new F() construct.">
+    <text class="d-label" x="24" y="24" font-size="13">À chaque opération du langage, sa trappe</text>
+    <rect class="d-frame" x="24" y="40" width="592" height="204" rx="10" />
+    <text class="d-mut" x="150" y="60" text-anchor="middle" font-size="11">ton code</text>
+    <text class="d-mut" x="470" y="60" text-anchor="middle" font-size="11">trappe du handler</text>
+    <line class="d-line" x1="320" y1="72" x2="320" y2="236" />
+    <text class="d-tag" x="150" y="94" text-anchor="middle" font-size="12.5">obj.x</text>
+    <text class="d-text" x="470" y="94" text-anchor="middle" font-size="12">get(cible, clef, recepteur)</text>
+    <text class="d-tag" x="150" y="122" text-anchor="middle" font-size="12.5">obj.x = v</text>
+    <text class="d-text" x="470" y="122" text-anchor="middle" font-size="12">set(cible, clef, v, recepteur)</text>
+    <text class="d-tag" x="150" y="150" text-anchor="middle" font-size="12.5">"x" in obj</text>
+    <text class="d-text" x="470" y="150" text-anchor="middle" font-size="12">has(cible, clef)</text>
+    <text class="d-tag" x="150" y="178" text-anchor="middle" font-size="12.5">delete obj.x</text>
+    <text class="d-text" x="470" y="178" text-anchor="middle" font-size="12">deleteProperty(cible, clef)</text>
+    <text class="d-tag" x="150" y="206" text-anchor="middle" font-size="12.5">f(...args)</text>
+    <text class="d-text" x="470" y="206" text-anchor="middle" font-size="12">apply(cible, ceci, args)</text>
+    <text class="d-tag" x="150" y="234" text-anchor="middle" font-size="12.5">new F(...args)</text>
+    <text class="d-text" x="470" y="234" text-anchor="middle" font-size="12">construct(cible, args, cible2)</text>
+  </svg>
+  <figcaption>Les trappes couvrent les opérations primitives&nbsp;; <code>apply</code> et <code>construct</code> ne concernent que les cibles appelables (fonctions, classes).</figcaption>
+</figure>
+
+<h2>Reflect&nbsp;: le comportement par défaut</h2>
+<p><code>Reflect</code> est un objet (non constructible, sans <code>new</code>) qui expose <strong>une méthode par trappe</strong>&nbsp;: <code>Reflect.get</code>, <code>set</code>, <code>has</code>, <code>deleteProperty</code>, <code>ownKeys</code>, <code>apply</code>, <code>construct</code>… Chacune reproduit exactement l'opération standard correspondante. C'est le <em>miroir</em> du handler. À l'intérieur d'une trappe, tu l'utilises pour exécuter le comportement normal après ou avant ta logique.</p>
+<p>Le bénéfice décisif tient au troisième argument de <code>Reflect.get</code>/<code>set</code>&nbsp;: le <strong>récepteur</strong>. Si la cible a un <em>getter</em> qui lit <code>this</code>, passer le récepteur garantit que <code>this</code> pointe vers le proxy (ou l'héritier appelant), pas vers la cible — la chaîne de délégation reste cohérente.</p>
+<figure class="code-block" data-file="recepteur.js"><pre><code class="language-javascript">const base = {
+  prenom: "Ada",
+  get salutation() { return `Bonjour ${this.prenom}`; },
+};
+
+const p = new Proxy(base, {
+  get(cible, clef, recepteur) {
+    // SANS recepteur : this serait "cible", pas l'objet appelant
+    return Reflect.get(cible, clef, recepteur);
+  },
+});
+
+// On crée un objet qui hérite du proxy et redéfinit prenom
+const heritier = Object.create(p);
+heritier.prenom = "Grace";
+console.log(heritier.salutation); // "Bonjour Grace" — this = heritier</code></pre></figure>
+<p class="code-caption">Sans transmettre <code>recepteur</code>, <code>this.prenom</code> vaudrait «&nbsp;Ada&nbsp;»&nbsp;: le getter perdrait l'objet appelant.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>La signature de chaque méthode <code>Reflect</code> est calquée sur sa trappe&nbsp;: les arguments arrivent dans le même ordre. Tu peux donc, dans la plupart des cas, écrire <code>return Reflect.maTrappe(...arguments)</code> pour un relais parfait.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Le handler et Reflect sont symétriques : à chaque trappe get, set, has, apply correspond une méthode Reflect.get, Reflect.set, Reflect.has, Reflect.apply de même signature.">
+    <text class="d-label" x="24" y="24" font-size="13">Reflect, le miroir du handler</text>
+    <rect class="d-accent" x="40" y="46" width="200" height="140" rx="10" />
+    <text class="d-label" x="140" y="70" text-anchor="middle" font-size="12">handler — tes trappes</text>
+    <text class="d-text" x="140" y="98" text-anchor="middle" font-size="12">get</text>
+    <text class="d-text" x="140" y="120" text-anchor="middle" font-size="12">set</text>
+    <text class="d-text" x="140" y="142" text-anchor="middle" font-size="12">has</text>
+    <text class="d-text" x="140" y="164" text-anchor="middle" font-size="12">apply</text>
+    <rect class="d-box" x="400" y="46" width="200" height="140" rx="10" />
+    <text class="d-label" x="500" y="70" text-anchor="middle" font-size="12">Reflect — comportement défaut</text>
+    <text class="d-tag" x="500" y="98" text-anchor="middle" font-size="12">Reflect.get</text>
+    <text class="d-tag" x="500" y="120" text-anchor="middle" font-size="12">Reflect.set</text>
+    <text class="d-tag" x="500" y="142" text-anchor="middle" font-size="12">Reflect.has</text>
+    <text class="d-tag" x="500" y="164" text-anchor="middle" font-size="12">Reflect.apply</text>
+    <line class="d-line" x1="240" y1="98" x2="400" y2="98" />
+    <line class="d-line" x1="240" y1="120" x2="400" y2="120" />
+    <line class="d-line" x1="240" y1="142" x2="400" y2="142" />
+    <line class="d-line" x1="240" y1="164" x2="400" y2="164" />
+    <text class="d-mut" x="320" y="92" text-anchor="middle" font-size="10.5">même signature</text>
+  </svg>
+  <figcaption>Chaque trappe a sa méthode <code>Reflect</code> jumelle, aux arguments identiques&nbsp;: appeler <code>Reflect.get(cible, clef, recepteur)</code> dans la trappe <code>get</code> exécute la lecture standard tout en préservant <code>this</code> via le <em>récepteur</em>.</figcaption>
+</figure>
+
+<h2>Cas d'usage réels</h2>
+<p>Un <strong>objet réactif</strong> minimal&nbsp;: notifier un abonné à chaque écriture. C'est le principe exact de la réactivité moderne.</p>
+<figure class="code-block" data-file="reactif.js"><pre><code class="language-javascript">function reactif(cible, surChangement) {
+  return new Proxy(cible, {
+    set(c, clef, valeur, recepteur) {
+      const ancien = c[clef];
+      const ok = Reflect.set(c, clef, valeur, recepteur);
+      if (ok &amp;&amp; ancien !== valeur) surChangement(clef, valeur, ancien);
+      return ok;
+    },
+  });
+}
+
+const etat = reactif({ compteur: 0 }, (clef, neuf) =>
+  console.log(`${clef} → ${neuf}`),
+);
+etat.compteur = 1; // log: "compteur → 1"</code></pre></figure>
+<p class="code-caption">On ne notifie que si l'écriture a réussi <em>et</em> que la valeur change réellement.</p>
+<p>Autre exemple parlant&nbsp;: des <strong>tableaux à index négatif</strong>, façon Python, où <code>arr[-1]</code> désigne le dernier élément.</p>
+<figure class="code-block" data-file="index-negatif.js"><pre><code class="language-javascript">const negatif = (arr) =>
+  new Proxy(arr, {
+    get(cible, clef, recepteur) {
+      // clef est une chaîne (ou un Symbol) ; on teste le type AVANT Number()
+      if (typeof clef === "string") {
+        const i = Number(clef);
+        if (Number.isInteger(i) &amp;&amp; i &lt; 0) {
+          return Reflect.get(cible, String(cible.length + i), recepteur);
+        }
+      }
+      return Reflect.get(cible, clef, recepteur);
+    },
+  });
+
+const t = negatif(["a", "b", "c"]);
+console.log(t[-1]); // "c"
+console.log(t[-2]); // "b"</code></pre></figure>
+<p class="code-caption">Les méthodes natives (<code>map</code>, <code>length</code>…) continuent de fonctionner&nbsp;: elles passent par la branche <code>Reflect.get</code> standard.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>La réactivité de <strong>Vue&nbsp;3</strong> est bâtie exactement sur ce patron. <code>reactive(obj)</code> renvoie un <code>Proxy</code>&nbsp;: la trappe <code>get</code> <em>enregistre</em> quel effet (rendu, <code>computed</code>) lit quelle propriété, et la trappe <code>set</code> <em>redéclenche</em> ces effets quand la valeur change. Écrire <code>state.compteur++</code> dans un composant met à jour l'écran sans une seule ligne d'abonnement manuel — tout transite par les trappes. <strong>MobX</strong> (côté React) applique la même idée. C'est le cas d'usage industriel n°&nbsp;1 de <code>Proxy</code>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Les invariants des proxys.</strong> Tu ne peux pas «&nbsp;mentir&nbsp;» sur une propriété <em>non&nbsp;configurable et non&nbsp;writable</em> de la cible&nbsp;: si <code>get</code> renvoie une valeur différente de celle réellement définie, le moteur lève un <code>TypeError</code>. De même, <code>ownKeys</code> doit lister toutes les clés non configurables. Les invariants garantissent qu'un proxy ne casse pas les hypothèses fondamentales du langage.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Perte de <code>this</code> et coût caché.</strong> Sans passer <code>recepteur</code> à <code>Reflect</code>, les getters et méthodes qui dépendent de <code>this</code> se brisent silencieusement. Attention aussi aux clés <code>Symbol</code> dans une trappe <code>get</code>&nbsp;: <code>Number(clef)</code> ou <code>clef.startsWith(...)</code> lèveront sur un Symbol — teste <code>typeof clef === "string"</code> avant. Par ailleurs, chaque opération traversant un proxy paie un surcoût&nbsp;: n'en mets pas sur du code chaud (boucles serrées, structures de données critiques). Enfin, <code>p === cible</code> vaut <strong>toujours <code>false</code></strong>&nbsp;: un proxy n'est jamais identique à sa cible, ce qui peut piéger les comparaisons d'identité et les <code>Map</code>/<code>WeakMap</code> mixant les deux.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La réactivité de <strong>Vue&nbsp;3</strong> repose entièrement sur <code>Proxy</code> (paquet <code>@vue/reactivity</code>)&nbsp;: <code>reactive()</code> trace les lectures pour construire un graphe de dépendances, puis déclenche les effets aux écritures. Explore aussi <code>Reflect.ownKeys</code> (qui inclut les clés <code>Symbol</code> et non énumérables, contrairement à <code>Object.keys</code>) et les <strong>proxys révocables</strong>&nbsp;: <code>Proxy.revocable(cible, handler)</code> renvoie <code>{ proxy, revoke }</code>&nbsp;; après <code>revoke()</code>, toute opération sur le proxy lève un <code>TypeError</code> — pratique pour invalider un accès accordé temporairement (capacités, sécurité).</p></div></div>
+
+<h2>Antisèche&nbsp;: trappes et Reflect</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo : trappe, opération interceptée, relais par défaut</caption>
+    <thead><tr><th>Trappe du handler</th><th>Opération interceptée</th><th>Relais standard</th></tr></thead>
+    <tbody>
+      <tr><td><code>get(c, clef, rec)</code></td><td>lecture <code>obj.x</code></td><td><code>Reflect.get(c, clef, rec)</code></td></tr>
+      <tr><td><code>set(c, clef, v, rec)</code></td><td>écriture <code>obj.x = v</code></td><td><code>Reflect.set(…)</code> → booléen</td></tr>
+      <tr><td><code>has(c, clef)</code></td><td>opérateur <code>clef in obj</code></td><td><code>Reflect.has(c, clef)</code></td></tr>
+      <tr><td><code>deleteProperty(c, clef)</code></td><td><code>delete obj.x</code></td><td><code>Reflect.deleteProperty(…)</code></td></tr>
+      <tr><td><code>ownKeys(c)</code></td><td><code>Object.keys</code>, <code>for…in</code></td><td><code>Reflect.ownKeys(c)</code></td></tr>
+      <tr><td><code>apply(c, ceci, args)</code></td><td>appel <code>f(…)</code></td><td><code>Reflect.apply(…)</code></td></tr>
+      <tr><td><code>construct(c, args, nc)</code></td><td><code>new F(…)</code></td><td><code>Reflect.construct(…)</code></td></tr>
+      <tr><td><code>Proxy.revocable(c, h)</code></td><td>proxy révocable</td><td><code>{ proxy, revoke }</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Métaprogrammation</dt>
+  <dd>Écrire du code qui observe ou modifie le comportement d'autre code à l'exécution&nbsp;; ici, intercepter les opérations fondamentales d'un objet.</dd>
+  <dt>Proxy</dt>
+  <dd>Objet qui enveloppe une cible et redirige les opérations vers les trappes d'un handler&nbsp;; transparent pour le code appelant.</dd>
+  <dt>Cible (<em>target</em>)</dt>
+  <dd>Objet réel enveloppé par le proxy&nbsp;: il reçoit les opérations non interceptées et détient l'état.</dd>
+  <dt>Handler</dt>
+  <dd>Objet dont les méthodes sont les trappes&nbsp;; toute trappe absente laisse l'opération passer telle quelle à la cible.</dd>
+  <dt>Trappe (<em>trap</em>)</dt>
+  <dd>Méthode du handler interceptant une opération précise (<code>get</code>, <code>set</code>, <code>has</code>, <code>apply</code>…).</dd>
+  <dt>Reflect</dt>
+  <dd>Objet exposant une méthode par trappe qui reproduit le comportement standard&nbsp;: le miroir du handler.</dd>
+  <dt>Récepteur (<em>receiver</em>)</dt>
+  <dd>Troisième argument de <code>Reflect.get</code>/<code>set</code> fixant le <code>this</code> des accesseurs&nbsp;; préserve la chaîne d'héritage.</dd>
+  <dt>Invariant</dt>
+  <dd>Garantie du langage qu'un proxy ne peut pas violer (ex. renvoyer la vraie valeur d'une propriété non-configurable et non-inscriptible)&nbsp;; sa violation lève un <code>TypeError</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>new Proxy(cible, handler)</code> interpose des <strong>trappes</strong> entre une opération et son effet&nbsp;; sans trappe, tout est délégué à la cible.</li>
+  <li><code>get</code>, <code>set</code>, <code>has</code>, <code>deleteProperty</code>, <code>apply</code>, <code>construct</code> couvrent les opérations primitives&nbsp;; <code>set</code> renvoie un booléen de succès.</li>
+  <li><code>Reflect</code> est le miroir des trappes&nbsp;: appelle-le dans une trappe pour le comportement standard, en transmettant <code>recepteur</code> pour préserver <code>this</code>.</li>
+  <li>Attention aux <strong>invariants</strong>, à la perte de <code>this</code>, aux clés <code>Symbol</code>, au coût en perf, et au fait qu'un proxy n'est jamais <code>===</code> à sa cible.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi faut-il retourner <code>Reflect.set(...)</code> dans une trappe <code>set</code> plutôt que <code>true</code> en dur&nbsp;?</li><li>Quel rôle joue le troisième argument <code>recepteur</code> de <code>Reflect.get</code>, et que casse-t-on en l'omettant&nbsp;?</li><li>Cite un invariant qu'un Proxy ne peut pas violer, et explique pourquoi le langage l'impose.</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi faut-il retourner Reflect.set(...) dans une trappe set d'un Proxy plutôt que true en dur ?","a":["Reflect.set renvoie un booléen reflétant le succès RÉEL de l'affectation (respect des invariants, propriétés non inscriptibles...) ; renvoyer true en dur peut mentir au moteur et violer un invariant (TypeError en mode strict)","true est toujours correct","Reflect.set est plus lent","La trappe set ne doit rien renvoyer"],"correct":0,"explain":"La valeur de retour d'une trappe set indique si l'écriture a réussi. Reflect.set effectue l'opération par défaut et rapporte fidèlement le résultat. Forcer true alors que l'écriture échoue rompt les garanties du langage."},
+  {"q":"Quel rôle joue le troisième argument (receiver) de Reflect.get, et que casse-t-on en l'omettant ?","a":["Il fixe la valeur de this dans un getter ; l'omettre casse les accesseurs hérités qui dépendent de this (mauvais this, résultats erronés)","Il sert seulement au débogage","Il choisit la cible","Il est obligatoire sinon erreur de syntaxe"],"correct":0,"explain":"Quand une propriété est un getter, receiver détermine le this avec lequel il s'exécute. En contexte de proxy/héritage, transmettre le bon receiver garantit que le getter voit la bonne instance."},
+  {"q":"Cite un invariant qu'un Proxy ne peut pas violer, et pourquoi le langage l'impose.","a":["Si une propriété de la cible est non-configurable et non-inscriptible, la trappe get DOIT renvoyer sa valeur réelle ; le langage l'impose pour préserver les garanties sur lesquelles d'autres codes s'appuient","Un Proxy peut tout redéfinir sans limite","Il ne peut pas définir de trappe get","Il ne peut pas avoir de cible"],"correct":0,"explain":"Les invariants des objets (immuabilité d'une propriété non-configurable/non-writable, cohérence de getOwnPropertyDescriptor, etc.) sont protégés : un proxy qui les contredirait lève une TypeError, afin que le code reposant sur ces garanties reste fiable."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"0"},"placeholder":"écris zeroParDefaut(obj) (proxy : propriété absente → 0), puis affiche zeroParDefaut({a:1}).b","hints":["new Proxy(obj, { get(c, k) { … } }).","Reflect.has(c, k) ? Reflect.get(c, k) : 0.","b est absente, donc 0."],"link":{"href":"lecon-03.html","label":"Revoir « Le piège get »"}},
+  {"type":"text","accept":["set","la trap set","set()","le piège set"],"placeholder":"le nom du piège (trap) de Proxy déclenché à l'ÉCRITURE d'une propriété : …","hints":["Le pendant de get.","On y valide age avant d'écrire.","new Proxy(o, { ???(cible, clef, valeur) { … } })"],"link":{"href":"lecon-03.html","label":"Revoir « Le piège set »"}},
+  {"type":"text","accept":["Reflect","l'objet Reflect"],"placeholder":"l'objet utilisé pour déléguer le comportement réel dans un piège de Proxy (….get, ….set) : …","hints":["Ses méthodes reflètent les opérations internes du langage.","Reflect.get(cible, clef, recepteur) respecte le bon this.","Un mot qui commence par R."],"link":{"href":"lecon-03.html","label":"Revoir « Reflect »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>zeroParDefaut(obj)</code> qui renvoie un proxy&nbsp;: toute lecture d'une propriété <strong>numérique absente</strong> renvoie <code>0</code> au lieu de <code>undefined</code>&nbsp;; les propriétés présentes se comportent normalement. Attention&nbsp;: une clé peut être un <code>Symbol</code>, ne le convertis pas en nombre.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.js"><pre><code class="language-javascript">function zeroParDefaut(obj) {
+  return new Proxy(obj, {
+    get(cible, clef, recepteur) {
+      if (Reflect.has(cible, clef)) {
+        return Reflect.get(cible, clef, recepteur);
+      }
+      // teste le type AVANT Number() : Number(symbol) lèverait un TypeError
+      if (typeof clef === "string") {
+        const i = Number(clef);
+        if (Number.isInteger(i)) return 0; // clé absente, nom entier → 0
+      }
+      return undefined;
+    },
+  });
+}
+
+const scores = zeroParDefaut({ 0: 12 });
+console.log(scores[0]); // 12
+console.log(scores[5]); // 0 (absente, numérique)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>personneValidee(donnees)</code> renvoyant un proxy qui <strong>lève une erreur</strong> dès qu'on tente d'affecter à <code>age</code> une valeur qui n'est pas un entier positif ou nul. Les autres propriétés s'écrivent librement, et l'échec d'une écriture doit se propager correctement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">function personneValidee(donnees) {
+  return new Proxy(donnees, {
+    set(cible, clef, valeur, recepteur) {
+      if (clef === "age" &amp;&amp; (!Number.isInteger(valeur) || valeur &lt; 0)) {
+        throw new RangeError(`age invalide : ${valeur}`);
+      }
+      return Reflect.set(cible, clef, valeur, recepteur);
+    },
+  });
+}
+
+const p = personneValidee({ nom: "Lin", age: 20 });
+p.age = 21;       // OK
+p.ville = "Lyon"; // OK
+p.age = -1;       // RangeError: age invalide : -1</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>journalise(obj)</code> qui retourne un proxy traçant <strong>chaque lecture et chaque écriture</strong> sur la console (<code>GET clef</code>, <code>SET clef = valeur</code>), tout en <strong>déléguant le comportement réel à <code>Reflect</code></strong> (récepteur compris). Vérifie qu'un getter dépendant de <code>this</code> continue de fonctionner.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">function journalise(obj) {
+  return new Proxy(obj, {
+    get(cible, clef, recepteur) {
+      console.log(`GET ${String(clef)}`);
+      return Reflect.get(cible, clef, recepteur);
+    },
+    set(cible, clef, valeur, recepteur) {
+      console.log(`SET ${String(clef)} = ${valeur}`);
+      return Reflect.set(cible, clef, valeur, recepteur);
+    },
+  });
+}
+
+const compte = journalise({
+  solde: 100,
+  get apercu() { return `Solde : ${this.solde}`; },
+});
+
+compte.solde = 150;         // SET solde = 150
+console.log(compte.apercu); // GET apercu, GET solde, puis "Solde : 150"</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

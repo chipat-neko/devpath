@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Programmer en parallèle : les threads POSIX — Leçon 20 · C · Syntaxe</title>
+    <meta name="description" content="Le parallélisme en C avec les threads POSIX : pthread_create et pthread_join, la mémoire partagée, la course aux données (data race), la protection par mutex et le passage d'arguments à un thread." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="c" data-lesson="lecon-20.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">C</a></li>
+            <li aria-current="page">Leçon 20</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 06 · C en pratique — Leçon 20</p>
+              <h1 class="lesson-header__title">Programmer en parallèle : les threads POSIX</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçons sur les pointeurs et la mémoire recommandées</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>créer un fil d'exécution avec <code>pthread_create</code> et l'attendre avec <code>pthread_join</code>&nbsp;;</li>
+                  <li>comprendre que les threads <strong>partagent la même mémoire</strong>, contrairement aux processus&nbsp;;</li>
+                  <li>reconnaître une <strong>course aux données</strong> (<em>data race</em>) et pourquoi elle produit des résultats faux&nbsp;;</li>
+                  <li>protéger une section critique avec un <strong>mutex</strong> et passer proprement des données à un thread.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un programme classique exécute ses instructions les unes après les autres, sur un seul fil. Mais une machine moderne possède plusieurs cœurs&nbsp;: laisser sept d'entre eux inactifs pendant qu'un seul travaille, c'est gâcher la moitié de la puissance. Les <strong>threads</strong> permettent de faire progresser plusieurs tâches <em>en même temps</em> à l'intérieur d'un même programme. La norme la plus répandue en C est celle des <strong>threads POSIX</strong> (les <em>pthreads</em>), disponible sous Linux, macOS et les systèmes Unix. Puissant&nbsp;: mais dès qu'on partage de la mémoire, un nouveau danger apparaît — la course aux données.</p>
+
+<h2>Un thread partage la mémoire du programme</h2>
+<p>Un <strong>processus</strong> a sa propre mémoire, isolée des autres. Un <strong>thread</strong>, lui, vit <em>à l'intérieur</em> d'un processus et partage sa mémoire avec les autres threads&nbsp;: mêmes variables globales, même tas. C'est ce qui les rend rapides (rien à copier) et dangereux (tout le monde écrit au même endroit).</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="À gauche, un programme séquentiel : un unique fil exécute la tâche A, puis la tâche B, puis la tâche C, de haut en bas, ce qui prend un temps total long. À droite, un programme parallèle : le thread principal se divise en trois threads qui exécutent A, B et C côte à côte, en même temps, puis se rejoignent par un join ; le temps total est celui de la tâche la plus longue seulement.">
+    <text class="d-label" x="160" y="22" text-anchor="middle" font-size="12">Séquentiel — 1 fil</text>
+    <rect class="d-box" x="110" y="38" width="100" height="30" rx="4" /><text class="d-text" x="160" y="58" text-anchor="middle" font-size="10">tâche A</text>
+    <rect class="d-box" x="110" y="74" width="100" height="30" rx="4" /><text class="d-text" x="160" y="94" text-anchor="middle" font-size="10">tâche B</text>
+    <rect class="d-box" x="110" y="110" width="100" height="30" rx="4" /><text class="d-text" x="160" y="130" text-anchor="middle" font-size="10">tâche C</text>
+    <line class="d-line" x1="160" y1="68" x2="160" y2="74" /><line class="d-line" x1="160" y1="104" x2="160" y2="110" />
+    <text class="d-mut" x="160" y="164" text-anchor="middle" font-size="9">temps = A + B + C</text>
+    <line class="d-line" x1="300" y1="30" x2="300" y2="180" />
+    <text class="d-label" x="480" y="22" text-anchor="middle" font-size="12">Parallèle — N threads</text>
+    <rect class="d-accent" x="430" y="38" width="100" height="26" rx="4" /><text class="d-text" x="480" y="55" text-anchor="middle" font-size="9">thread principal</text>
+    <line class="d-line" x1="480" y1="64" x2="400" y2="86" /><line class="d-line" x1="480" y1="64" x2="480" y2="86" /><line class="d-line" x1="480" y1="64" x2="560" y2="86" />
+    <rect class="d-box" x="360" y="86" width="80" height="30" rx="4" /><text class="d-text" x="400" y="106" text-anchor="middle" font-size="10">A</text>
+    <rect class="d-box" x="440" y="86" width="80" height="30" rx="4" /><text class="d-text" x="480" y="106" text-anchor="middle" font-size="10">B</text>
+    <rect class="d-box" x="520" y="86" width="80" height="30" rx="4" /><text class="d-text" x="560" y="106" text-anchor="middle" font-size="10">C</text>
+    <line class="d-line" x1="400" y1="116" x2="480" y2="140" /><line class="d-line" x1="480" y1="116" x2="480" y2="140" /><line class="d-line" x1="560" y1="116" x2="480" y2="140" />
+    <rect class="d-accent" x="430" y="140" width="100" height="26" rx="4" /><text class="d-text" x="480" y="157" text-anchor="middle" font-size="9">join (on rejoint)</text>
+    <text class="d-mut" x="480" y="190" text-anchor="middle" font-size="9">temps = max(A, B, C)</text>
+  </svg>
+  <figcaption>Le thread principal <strong>crée</strong> des threads qui travaillent en parallèle, puis les <strong>rejoint</strong>. Le gain n'existe que si les tâches sont indépendantes.</figcaption>
+</figure>
+
+<h2>Créer et attendre un thread</h2>
+<p>Tout tient en deux fonctions de <code>&lt;pthread.h&gt;</code>. <code>pthread_create</code> lance une fonction dans un nouveau thread&nbsp;; <code>pthread_join</code> attend qu'il se termine et récupère sa valeur de retour. La fonction exécutée a une signature imposée&nbsp;: elle reçoit un <code>void *</code> et renvoie un <code>void *</code>.</p>
+<figure class="code-block" data-file="hello_thread.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+
+// La fonction exécutée par le thread : void *(void *)
+void *travail(void *arg) {
+    int numero = *(int *)arg;          // on relit l'argument via un pointeur
+    printf("Bonjour depuis le thread %d\n", numero);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t fil;
+    int id = 1;
+    pthread_create(&amp;fil, NULL, travail, &amp;id);  // lance travail(&id)
+    pthread_join(fil, NULL);                    // attend la fin du thread
+    printf("Le thread est termine.\n");
+    return 0;
+}
+// Compilation : gcc -pthread hello_thread.c -o hello</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">N'oublie jamais l'option de compilation</p><p>Il faut lier la bibliothèque de threads&nbsp;: <code>gcc <strong>-pthread</strong> prog.c</code>. Sans elle, l'édition de liens échoue (<code>undefined reference to pthread_create</code>). <code>-pthread</code> (et non <code>-lpthread</code> seul) active aussi les bons réglages du préprocesseur.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Chaque appel réussi à <code>pthread_create</code> doit être suivi, tôt ou tard, d'un <code>pthread_join</code> (ou d'un <code>pthread_detach</code>). Sans cela, le thread terminé garde des ressources&nbsp;: c'est l'équivalent d'une fuite mémoire, version thread.</p></div></div>
+
+<h2>Le piège : la course aux données</h2>
+<p>Puisque les threads partagent la mémoire, deux threads qui modifient <strong>la même variable en même temps</strong> se marchent dessus. Incrémenter <code>compteur++</code> n'est pas une opération unique&nbsp;: c'est <em>lire</em>, <em>ajouter&nbsp;1</em>, <em>réécrire</em>. Si deux threads lisent la même valeur avant que l'un ait réécrit, une mise à jour est <strong>perdue</strong>. On appelle ça une <strong>course aux données</strong> (<em>data race</em>), et le résultat n'est ni fiable ni reproductible.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="Une course aux données sur un compteur partagé qui vaut cinq. Le thread 1 lit cinq. Presque en même temps, le thread 2 lit cinq aussi, avant que le thread 1 ait réécrit. Le thread 1 calcule six et l'écrit. Le thread 2, qui avait lu cinq, calcule six lui aussi et l'écrit par-dessus. Résultat : le compteur vaut six alors que deux incréments auraient dû donner sept. Une mise à jour a été perdue.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux incréments simultanés → une mise à jour perdue</text>
+    <rect class="d-frame" x="250" y="36" width="140" height="30" rx="6" /><text class="d-text" x="320" y="56" text-anchor="middle" font-size="10">compteur = 5</text>
+    <text class="d-tag" x="120" y="92" text-anchor="middle" font-size="10">Thread 1</text>
+    <text class="d-tag" x="520" y="92" text-anchor="middle" font-size="10">Thread 2</text>
+    <rect class="d-box" x="40" y="102" width="160" height="26" rx="4" /><text class="d-text" x="120" y="119" text-anchor="middle" font-size="9">lit 5</text>
+    <rect class="d-box" x="440" y="102" width="160" height="26" rx="4" /><text class="d-text" x="520" y="119" text-anchor="middle" font-size="9">lit 5 (avant réécriture)</text>
+    <rect class="d-box" x="40" y="134" width="160" height="26" rx="4" /><text class="d-text" x="120" y="151" text-anchor="middle" font-size="9">calcule 6, écrit 6</text>
+    <rect class="d-box" x="440" y="134" width="160" height="26" rx="4" /><text class="d-text" x="520" y="151" text-anchor="middle" font-size="9">calcule 6, écrit 6</text>
+    <line class="d-line" x1="200" y1="115" x2="250" y2="55" /><line class="d-line" x1="440" y1="115" x2="390" y2="55" />
+    <rect class="d-accent" x="230" y="170" width="180" height="28" rx="6" /><text class="d-text" x="320" y="188" text-anchor="middle" font-size="10">compteur = 6 (attendu : 7)</text>
+  </svg>
+  <figcaption><code>compteur++</code> = lire, ajouter, réécrire. Entrelacées, ces trois étapes perdent des incréments&nbsp;: le total final est trop bas, et varie à chaque exécution.</figcaption>
+</figure>
+<figure class="code-block" data-file="course.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+
+long compteur = 0;               // partagé par tous les threads
+
+void *incrementer(void *arg) {
+    (void)arg;
+    for (int i = 0; i &lt; 1000000; i++)
+        compteur++;              // COURSE AUX DONNEES : non protégé !
+    return NULL;
+}
+
+int main(void) {
+    pthread_t a, b;
+    pthread_create(&amp;a, NULL, incrementer, NULL);
+    pthread_create(&amp;b, NULL, incrementer, NULL);
+    pthread_join(a, NULL);
+    pthread_join(b, NULL);
+    printf("compteur = %ld\n", compteur);   // devrait afficher 2000000...
+    return 0;                                // ...mais donne un nombre plus petit, variable
+}</code></pre></figure>
+
+<h2>Protéger avec un mutex</h2>
+<p>Un <strong>mutex</strong> (de l'anglais <em>mutual exclusion</em>) est un verrou qui garantit qu'<strong>un seul thread à la fois</strong> exécute une portion de code — la <strong>section critique</strong>. Un thread <code>lock</code> (verrouille) avant d'entrer, <code>unlock</code> (déverrouille) en sortant&nbsp;; les autres attendent leur tour.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Un mutex protège la section critique. Le thread 1 verrouille le mutex et entre dans la section critique où il modifie le compteur. Pendant ce temps, le thread 2 arrive, tente de verrouiller, mais le mutex est déjà pris : il est mis en attente, bloqué. Quand le thread 1 déverrouille en sortant, le thread 2 est réveillé, verrouille à son tour et entre. Un seul thread se trouve dans la section critique à un instant donné.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le mutex : un seul thread à la fois dans la section critique</text>
+    <rect class="d-accent" x="240" y="70" width="160" height="54" rx="8" /><text class="d-text" x="320" y="93" text-anchor="middle" font-size="10">section critique</text><text class="d-mut" x="320" y="110" text-anchor="middle" font-size="8">compteur++</text>
+    <rect class="d-box" x="40" y="78" width="150" height="38" rx="6" /><text class="d-text" x="115" y="95" text-anchor="middle" font-size="9">Thread 1 : lock ✓</text><text class="d-mut" x="115" y="109" text-anchor="middle" font-size="8">entre</text>
+    <line class="d-line" x1="190" y1="97" x2="240" y2="97" />
+    <rect class="d-box" x="450" y="42" width="160" height="38" rx="6" /><text class="d-text" x="530" y="59" text-anchor="middle" font-size="9">Thread 2 : lock…</text><text class="d-mut" x="530" y="73" text-anchor="middle" font-size="8">bloqué, il attend</text>
+    <rect class="d-box" x="450" y="120" width="160" height="38" rx="6" /><text class="d-text" x="530" y="137" text-anchor="middle" font-size="9">…réveillé après unlock</text><text class="d-mut" x="530" y="151" text-anchor="middle" font-size="8">entre à son tour</text>
+    <line class="d-line" x1="450" y1="61" x2="400" y2="80" /><line class="d-line" x1="400" y1="114" x2="450" y2="133" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">lock → … → unlock&nbsp;: l'accès est sérialisé, plus de perte de mise à jour</text>
+  </svg>
+  <figcaption>Le mutex transforme «&nbsp;lire-ajouter-réécrire&nbsp;» en une opération <strong>indivisible</strong> vue de l'extérieur&nbsp;: pendant qu'un thread la fait, les autres patientent.</figcaption>
+</figure>
+<figure class="code-block" data-file="mutex.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+
+long compteur = 0;
+pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER;   // mutex prêt à l'emploi
+
+void *incrementer(void *arg) {
+    (void)arg;
+    for (int i = 0; i &lt; 1000000; i++) {
+        pthread_mutex_lock(&amp;verrou);     // entrée en section critique
+        compteur++;                       // protégé : un seul thread ici
+        pthread_mutex_unlock(&amp;verrou);   // sortie
+    }
+    return NULL;
+}
+
+int main(void) {
+    pthread_t a, b;
+    pthread_create(&amp;a, NULL, incrementer, NULL);
+    pthread_create(&amp;b, NULL, incrementer, NULL);
+    pthread_join(a, NULL);
+    pthread_join(b, NULL);
+    printf("compteur = %ld\n", compteur);   // 2000000, à chaque exécution
+    return 0;
+}</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Verrouiller a un coût — et un risque</p><p>Un mutex <strong>sérialise</strong> la section critique&nbsp;: si tu verrouilles trop large, tu annules le bénéfice du parallélisme. Garde la section critique <em>la plus courte possible</em>. Et attention à l'<strong>interblocage</strong> (<em>deadlock</em>)&nbsp;: si un thread A attend un verrou tenu par B pendant que B attend un verrou tenu par A, plus rien n'avance. Règle d'or&nbsp;: verrouille toujours plusieurs mutex dans le <strong>même ordre</strong>.</p></div></div>
+
+<h2>Passer des données à un thread</h2>
+<p>La fonction du thread ne reçoit qu'un seul <code>void *</code>. Pour lui transmettre plusieurs valeurs, on empaquette dans une <code>struct</code> et on passe son adresse. Piège classique&nbsp;: dans une boucle, ne passe pas l'adresse de la variable de boucle — elle change sous les pieds du thread. Donne à chaque thread <strong>sa propre</strong> donnée.</p>
+<figure class="code-block" data-file="args.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+#define N 4
+
+typedef struct { int id; double *tableau; int debut, fin; } Tache;
+
+void *sommer(void *arg) {
+    Tache *t = arg;                      // on retrouve nos données typées
+    double s = 0;
+    for (int i = t-&gt;debut; i &lt; t-&gt;fin; i++) s += t-&gt;tableau[i];
+    printf("thread %d : somme partielle = %.1f\n", t-&gt;id, s);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t fils[N];
+    Tache taches[N];                     // un paquet PAR thread (pas de partage)
+    double data[400] = { /* ... */ };
+    for (int i = 0; i &lt; N; i++) {
+        taches[i] = (Tache){ i, data, i * 100, (i + 1) * 100 };
+        pthread_create(&amp;fils[i], NULL, sommer, &amp;taches[i]);
+    }
+    for (int i = 0; i &lt; N; i++) pthread_join(fils[i], NULL);
+    return 0;
+}</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Diviser pour paralléliser sans verrou</p><p>Ici, chaque thread écrit dans <strong>sa</strong> case (<code>taches[i]</code>) et lit une <em>tranche disjointe</em> du tableau&nbsp;: aucune donnée n'est partagée en écriture, donc <strong>aucun mutex n'est nécessaire</strong>. C'est la meilleure stratégie&nbsp;: le parallélisme sans verrou est plus rapide et plus sûr. On n'ajoute un mutex que là où un partage en écriture est vraiment inévitable.</p></div></div>
+
+<h2>Cas réel : le compteur de statistiques qui mentait</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un serveur multithread comptait ses requêtes avec un simple <code>requetes_total++</code> partagé, sans verrou. En développement, avec un seul client, le compte était juste. En production, sous des dizaines de clients simultanés, le tableau de bord affichait <strong>systématiquement moins de requêtes qu'en réalité</strong> — parfois 5&nbsp;% de moins, sans régularité. Le code «&nbsp;marchait&nbsp;», ne plantait jamais&nbsp;: juste un chiffre faux. Le diagnostic est venu de l'outil <strong>ThreadSanitizer</strong> (<code>gcc -fsanitize=thread</code>), qui a pointé la course aux données à la ligne du <code>++</code>. Correctif&nbsp;: un <code>pthread_mutex_t</code> autour de l'incrément — ou, mieux ici, un compteur <code>_Atomic long</code> (C11) qui rend l'incrément indivisible sans verrou explicite. Morale&nbsp;: une course aux données ne fait pas planter, elle <em>corrompt silencieusement</em>&nbsp;; seuls les outils dédiés la révèlent.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Au-delà du mutex&nbsp;: les <strong>variables de condition</strong> (<code>pthread_cond_t</code>) pour attendre qu'un événement se produise (schéma producteur/consommateur), les <strong>atomiques</strong> C11 (<code>&lt;stdatomic.h&gt;</code>, <code>atomic_fetch_add</code>) pour les compteurs sans verrou, et les <strong>threads C11</strong> portables de <code>&lt;threads.h&gt;</code> (<code>thrd_create</code>) — plus rares en pratique que les pthreads. Pour la mémoire, lance toujours ton programme sous <code>-fsanitize=thread</code>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — threads POSIX</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Fonction / notion</th><th scope="col">Point de vigilance</th></tr></thead>
+    <tbody>
+      <tr><td>Lancer un thread</td><td><code>pthread_create(&amp;t, NULL, f, arg)</code></td><td><code>f</code> a la signature <code>void *(void *)</code></td></tr>
+      <tr><td>Attendre sa fin</td><td><code>pthread_join(t, &amp;retour)</code></td><td>obligatoire (sinon ressources fuitées)</td></tr>
+      <tr><td>Compiler</td><td><code>gcc -pthread prog.c</code></td><td>l'option est indispensable</td></tr>
+      <tr><td>Protéger un accès partagé</td><td><code>pthread_mutex_lock</code> / <code>unlock</code></td><td>section critique la plus courte possible</td></tr>
+      <tr><td>Initialiser un mutex</td><td><code>PTHREAD_MUTEX_INITIALIZER</code></td><td>ou <code>pthread_mutex_init</code></td></tr>
+      <tr><td>Passer des données</td><td>une <code>struct</code> par thread</td><td>jamais l'adresse de la variable de boucle</td></tr>
+      <tr><td>Éviter les verrous</td><td>tranches disjointes</td><td>pas de partage en écriture = pas de mutex</td></tr>
+      <tr><td>Détecter les courses</td><td><code>-fsanitize=thread</code></td><td>une course ne plante pas, elle corrompt</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Thread (fil d'exécution)</dt><dd>Suite d'instructions s'exécutant en parallèle des autres au sein d'un même processus, avec lequel il <strong>partage la mémoire</strong>.</dd>
+  <dt>Processus</dt><dd>Programme en cours d'exécution disposant de sa <em>propre</em> mémoire isolée&nbsp;; il peut contenir plusieurs threads.</dd>
+  <dt><code>pthread_create</code></dt><dd>Lance une fonction dans un nouveau thread POSIX&nbsp;; la fonction a la signature <code>void *(void *)</code>.</dd>
+  <dt><code>pthread_join</code></dt><dd>Attend la fin d'un thread et récupère éventuellement sa valeur de retour&nbsp;; libère ses ressources.</dd>
+  <dt>Course aux données (<em>data race</em>)</dt><dd>Deux threads accèdent à la même mémoire «&nbsp;en même temps&nbsp;» dont au moins un en écriture, sans synchronisation&nbsp;; résultat indéfini et non reproductible.</dd>
+  <dt>Section critique</dt><dd>Portion de code qui accède à une ressource partagée et ne doit être exécutée que par un thread à la fois.</dd>
+  <dt>Mutex</dt><dd>Verrou d'exclusion mutuelle&nbsp;: <code>lock</code> avant la section critique, <code>unlock</code> après&nbsp;; garantit un seul thread à la fois.</dd>
+  <dt>Interblocage (<em>deadlock</em>)</dt><dd>Situation où des threads s'attendent mutuellement pour toujours&nbsp;; évité en verrouillant les mutex dans un ordre constant.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>thread</strong> partage la mémoire du processus&nbsp;; c'est sa force (rapidité) et son danger (accès concurrents).</li>
+  <li><code>pthread_create</code> lance, <code>pthread_join</code> attend&nbsp;; compile avec <code>-pthread</code>.</li>
+  <li>Une <strong>course aux données</strong> sur une variable partagée donne un résultat faux et variable — sans forcément planter.</li>
+  <li>Un <strong>mutex</strong> (<code>lock</code>/<code>unlock</code>) sérialise la <strong>section critique</strong>&nbsp;; garde-la courte, verrouille dans un ordre constant.</li>
+  <li>Mieux qu'un verrou&nbsp;: <strong>diviser</strong> les données en tranches disjointes pour éviter tout partage en écriture.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quelle différence fondamentale de mémoire distingue un thread d'un processus&nbsp;?</li>
+  <li>Pourquoi <code>compteur++</code> partagé entre deux threads peut-il perdre des incréments&nbsp;?</li>
+  <li>À quoi sert un mutex, et quel est le risque si l'on verrouille trop large&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle différence fondamentale distingue un thread d'un processus ?","a":["Les threads d'un même processus partagent la même mémoire, alors que chaque processus a sa mémoire isolée","Un thread est toujours plus lent","Un processus ne peut pas contenir de thread","Il n'y a aucune différence"],"correct":0,"explain":"Un processus possède sa propre mémoire isolée ; les threads vivent à l'intérieur d'un processus et partagent sa mémoire (variables globales, tas). Ce partage les rend rapides mais expose aux accès concurrents."},
+  {"q":"Pourquoi compteur++ partagé entre deux threads peut-il perdre des incréments ?","a":["Parce que compteur++ est en réalité trois étapes (lire, ajouter, réécrire) : si deux threads lisent la même valeur avant de réécrire, une mise à jour est écrasée","Parce que ++ ne marche pas sur les long","Parce que les threads sont trop lents","Parce que la mémoire est en lecture seule"],"correct":0,"explain":"L'incrément n'est pas atomique : lire, +1, réécrire. Entrelacées entre deux threads, ces étapes font que deux incréments successifs n'en comptent qu'un : c'est la course aux données, d'où un total trop bas et variable."},
+  {"q":"À quoi sert un mutex, et quel est le risque à verrouiller trop large ?","a":["Il garantit qu'un seul thread à la fois exécute la section critique ; verrouiller trop large sérialise tout et annule le gain du parallélisme","Il accélère toujours le programme sans contrepartie","Il remplace pthread_join","Il alloue de la mémoire"],"correct":0,"explain":"Le mutex assure l'exclusion mutuelle sur la section critique. Mais il sérialise cette portion : si elle est trop large, les threads s'attendent en file et le parallélisme ne sert plus à rien. On garde donc la section critique la plus courte possible."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["pthread_join","pthread_join()","join"],"placeholder":"la fonction qui attend la fin d'un thread et libère ses ressources : …","hints":["Le pendant de pthread_create.","Sans elle, le thread fuit ses ressources.","pthread_????"],"link":{"href":"lecon-20.html","label":"Revoir « Créer et attendre un thread »"}},
+  {"type":"text","accept":["mutex","un mutex","verrou","le mutex"],"placeholder":"le verrou d'exclusion mutuelle qui protège une section critique : un …","hints":["De l'anglais mutual exclusion.","On fait lock puis unlock autour.","m????"],"link":{"href":"lecon-20.html","label":"Revoir « Protéger avec un mutex »"}},
+  {"type":"text","accept":["-pthread","pthread","-lpthread"],"placeholder":"l'option de gcc à ajouter pour compiler un programme qui utilise les threads POSIX : -…","hints":["Sans elle : undefined reference to pthread_create.","Un seul mot après le tiret.","-p??????"],"link":{"href":"lecon-20.html","label":"Revoir « N'oublie jamais l'option de compilation »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un programme qui lance <strong>trois</strong> threads. Chacun reçoit son numéro (0, 1, 2) via un pointeur vers sa propre variable, et affiche <code>« Thread N au rapport »</code>. Attends les trois avant de quitter.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+
+void *rapport(void *arg) {
+    int n = *(int *)arg;
+    printf("Thread %d au rapport\n", n);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t fils[3];
+    int nums[3] = {0, 1, 2};          // une variable PAR thread
+    for (int i = 0; i &lt; 3; i++)
+        pthread_create(&amp;fils[i], NULL, rapport, &amp;nums[i]);
+    for (int i = 0; i &lt; 3; i++)
+        pthread_join(fils[i], NULL);
+    return 0;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Reprends le compteur partagé incrémenté par deux threads. Ajoute un <code>pthread_mutex_t</code> pour que le total final soit <strong>toujours</strong> exact. Où places-tu le <code>lock</code> et le <code>unlock</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-c">long compteur = 0;
+pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER;
+
+void *incrementer(void *arg) {
+    (void)arg;
+    for (int i = 0; i &lt; 1000000; i++) {
+        pthread_mutex_lock(&amp;verrou);
+        compteur++;                    // section critique : la plus courte possible
+        pthread_mutex_unlock(&amp;verrou);
+    }
+    return NULL;
+}
+// lock juste avant l'accès partagé, unlock juste après : on ne verrouille QUE le ++.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On veut sommer un tableau de 1000 <code>double</code> avec 4 threads, <strong>sans mutex</strong>. Explique la stratégie, puis écris la fonction de thread et le partage des tranches.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-c">#include &lt;pthread.h&gt;
+#define N 4
+typedef struct { double *t; int debut, fin; double resultat; } Tranche;
+
+void *sommer(void *arg) {
+    Tranche *tr = arg;
+    double s = 0;
+    for (int i = tr-&gt;debut; i &lt; tr-&gt;fin; i++) s += tr-&gt;t[i];
+    tr-&gt;resultat = s;                 // chaque thread écrit dans SA case : aucun partage
+    return NULL;
+}
+// main : découper [0..1000) en 4 tranches de 250, un Tranche par thread,
+// puis additionner les 4 resultat après les join. Pas de mutex nécessaire.</code></pre></figure><p>La clé&nbsp;: chaque thread lit une <strong>tranche disjointe</strong> et écrit dans <strong>sa propre</strong> structure. Sans partage en écriture, il n'y a pas de course aux données — donc pas besoin de verrou. On combine les résultats partiels une fois tous les threads rejoints.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+  </body>
+</html>

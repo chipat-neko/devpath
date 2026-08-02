@@ -1,0 +1,94 @@
+<p>Les <strong>listes</strong> sont la structure de données reine de Prolog&nbsp;: on y représente des séquences, des ensembles, des phrases, des chemins. Leur manipulation repose sur deux idées déjà acquises — l'unification et la récursion — combinées à une notation élégante&nbsp;: <code>[Tete|Queue]</code>. Cette leçon t'apprend à décomposer, parcourir et construire des listes, et à écrire tes propres prédicats sur elles.</p>
+
+<h2>La notation des listes</h2>
+<p>Une liste s'écrit entre crochets&nbsp;: <code>[a, b, c]</code>. La liste vide est <code>[]</code>. Le secret réside dans la notation <strong>tête/queue</strong>&nbsp;: <code>[T|Q]</code> désigne une liste dont <code>T</code> est le <strong>premier élément</strong> et <code>Q</code> la <strong>liste du reste</strong>.</p>
+<figure class="code-block" data-file="listes.pl"><pre><code class="language-prolog">?- [T|Q] = [a, b, c].
+T = a,
+Q = [b, c].          % la tête, puis la queue
+
+?- [X, Y | R] = [1, 2, 3, 4].
+X = 1, Y = 2,
+R = [3, 4].          % on peut détacher plusieurs têtes
+
+?- [T|Q] = [seul].
+T = seul, Q = [].     % queue vide pour un seul élément</code></pre></figure>
+<p>Cette décomposition <strong>par unification</strong> est le point de départ de presque tout traitement de liste&nbsp;: «&nbsp;regarde la tête, traite-la, recommence sur la queue&nbsp;».</p>
+
+<h2>Parcourir par récursion</h2>
+<p>Comme Prolog n'a pas de boucle, on parcourt une liste par <strong>récursion</strong>, avec deux clauses&nbsp;: le <em>cas de base</em> (la liste vide) et le <em>cas récursif</em> (une tête + une queue à traiter).</p>
+<figure class="code-block" data-file="afficher.pl"><pre><code class="language-prolog">% Afficher chaque élément d'une liste
+afficher([]).                 % cas de base : rien à faire
+afficher([T|Q]) :-            % cas récursif :
+    write(T), nl,            % traiter la tête
+    afficher(Q).             % puis la queue
+
+?- afficher([a, b, c]).
+a
+b
+c
+true.</code></pre></figure>
+<p>Ce <strong>patron à deux clauses</strong> — vide / tête+queue — revient dans presque tous les prédicats de liste. Mémorise-le&nbsp;: c'est le squelette de la récursion sur listes.</p>
+
+<h2><code>member</code>&nbsp;: l'appartenance</h2>
+<p><code>member(X, L)</code> est vrai si <code>X</code> figure dans la liste <code>L</code>. Sa définition illustre parfaitement le patron tête/queue.</p>
+<figure class="code-block" data-file="member.pl"><pre><code class="language-prolog">% X est membre si c'est la tête...
+member(X, [X|_]).
+% ...ou s'il est membre de la queue.
+member(X, [_|Q]) :- member(X, Q).
+
+?- member(b, [a, b, c]).
+true.
+?- member(X, [a, b, c]).
+X = a ; X = b ; X = c.     % backtracking : énumère tout !</code></pre></figure>
+<p>Remarque la <strong>réversibilité</strong>&nbsp;: avec une variable, <code>member</code> ne teste plus l'appartenance, il <em>énumère</em> les éléments. Une même définition, deux usages.</p>
+
+<h2><code>append</code>&nbsp;: concaténer</h2>
+<p><code>append(L1, L2, L3)</code> est vrai si <code>L3</code> est la concaténation de <code>L1</code> et <code>L2</code>. C'est l'un des prédicats les plus polyvalents de Prolog.</p>
+<figure class="code-block" data-file="append.pl"><pre><code class="language-prolog">?- append([1, 2], [3, 4], R).
+R = [1, 2, 3, 4].
+
+% Réversible : trouver toutes les découpes d'une liste !
+?- append(A, B, [1, 2, 3]).
+A = [],        B = [1, 2, 3] ;
+A = [1],       B = [2, 3] ;
+A = [1, 2],    B = [3] ;
+A = [1, 2, 3], B = [].</code></pre></figure>
+<p>Utilisé «&nbsp;à l'envers&nbsp;», <code>append</code> génère toutes les façons de <strong>couper</strong> une liste en deux&nbsp;: très pratique pour rechercher des motifs.</p>
+
+<h2>Quelques prédicats utiles</h2>
+<p>La plupart des Prolog fournissent déjà ces prédicats&nbsp;; les connaître évite de réinventer la roue.</p>
+<figure class="code-block" data-file="utiles.pl"><pre><code class="language-prolog">?- length([a, b, c], N).      N = 3.
+?- reverse([1, 2, 3], R).     R = [3, 2, 1].
+?- last([1, 2, 3], X).        X = 3.
+?- nth0(0, [a, b, c], X).     X = a.   % indice 0
+?- msort([3, 1, 2], L).       L = [1, 2, 3].</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre la <strong>virgule</strong> et la <strong>barre</strong> dans les crochets. <code>[a, b]</code> est une liste de <em>deux</em> éléments&nbsp;; <code>[a|b]</code> est une liste dont la tête est <code>a</code> et la «&nbsp;queue&nbsp;» est <code>b</code> (ce qui est mal formé si <code>b</code> n'est pas une liste). On écrit <code>[T|Q]</code> avec une <em>barre</em> pour séparer tête et reste, et des <em>virgules</em> entre éléments. <code>[a|[b, c]]</code> vaut <code>[a, b, c]</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>En interne, une liste Prolog n'est qu'un empilement de termes composés <code>'.'(Tete, Queue)</code> terminé par <code>[]</code> — exactement la structure des «&nbsp;cons&nbsp;» du <a href="../lisp/cours.html">Lisp</a>. La notation <code>[T|Q]</code> n'est qu'un sucre syntaxique au-dessus. Comprendre cela démystifie pourquoi l'unification décompose si naturellement les listes&nbsp;: ce sont juste des termes imbriqués.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Notation <code>[Tete|Queue]</code>&nbsp;; liste vide <code>[]</code>&nbsp;; on décompose par unification.</li>
+  <li>Patron récursif à deux clauses&nbsp;: cas de base <code>[]</code>, cas <code>[T|Q]</code>.</li>
+  <li><code>member</code>, <code>append</code>, <code>length</code>, <code>reverse</code>… souvent fournis et <strong>réversibles</strong>.</li>
+  <li>Virgule = séparateur d'éléments&nbsp;; barre = séparateur tête/reste.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que valent <code>T</code> et <code>Q</code> dans <code>[T|Q] = [1, 2, 3]</code>&nbsp;?</li><li>Quelles sont les deux clauses typiques d'un parcours de liste&nbsp;?</li><li>Comment <code>member</code> peut-il <em>énumérer</em> une liste&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Que donne <code>?- [X|R] = [10, 20, 30].</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">X = 10,
+R = [20, 30].</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un prédicat <code>premier(L, X)</code> qui unifie <code>X</code> avec le premier élément de <code>L</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">premier([X|_], X).
+
+?- premier([a, b, c], P).
+P = a.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>compte(L, N)</code> qui calcule la longueur de <code>L</code> par récursion (sans utiliser <code>length</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">compte([], 0).
+compte([_|Q], N) :-
+    compte(Q, N1),
+    N is N1 + 1.
+
+?- compte([a, b, c], N).
+N = 3.</code></pre></figure></details></div>

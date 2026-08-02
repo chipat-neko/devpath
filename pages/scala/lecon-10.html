@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concurrence avec les Futures — Leçon 10 · Cours Scala — Syntaxe</title>
+    <meta name="description" content="Maîtrise l'asynchrone en Scala 3 : Future, ExecutionContext, map/flatMap, for-comprehension, recover, Await, et un aperçu de Cats Effect, ZIO et Akka." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="scala" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Scala</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Scala en pratique — Leçon 10</p>
+              <h1 class="lesson-header__title">Concurrence avec les Futures</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~45 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 9</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>créer un calcul asynchrone avec <code>Future { ... }</code> et comprendre le rôle de l'<code>ExecutionContext</code>&nbsp;;</li>
+                  <li>transformer et enchaîner des résultats futurs avec <code>map</code>, <code>flatMap</code> et la <strong>for-comprehension</strong>&nbsp;;</li>
+                  <li>paralléliser deux <code>Future</code> puis combiner leurs résultats, et gérer les échecs avec <code>recover</code> et <code>recoverWith</code>&nbsp;;</li>
+                  <li>situer <code>Await</code> (tests/scripts) et l'écosystème des effets purs (<strong>Cats Effect</strong>, <strong>ZIO</strong>, <strong>Akka/Pekko</strong>).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, ton code s'exécutait de haut en bas, une instruction après l'autre&nbsp;: c'est l'exécution <em>synchrone</em>. Mais beaucoup de calculs prennent du temps sans occuper le processeur&nbsp;: interroger une base de données, appeler une API distante, lire un fichier. Bloquer le programme en attendant chaque réponse, c'est gaspiller. La concurrence permet de lancer plusieurs de ces opérations <strong>en même temps</strong> et de réagir quand chacune est prête.</p>
+<p>Scala propose pour cela le type <code>Future[T]</code>&nbsp;: la promesse d'une valeur de type <code>T</code> qui arrivera plus tard. Toute la beauté du modèle est qu'on compose ces calculs asynchrones comme des expressions ordinaires, sans tomber dans l'enfer des <em>callbacks</em> imbriqués. C'est exactement là que les deux paradigmes de Scala se réconcilient&nbsp;: un <code>Future</code> est une valeur fonctionnelle qu'on transforme avec <code>map</code> et <code>flatMap</code>.</p>
+
+<h2>Un Future, c'est une valeur qui arrivera</h2>
+<p>Un <code>Future[T]</code> représente un calcul lancé en arrière-plan. Au moment où tu l'écris, la valeur n'existe pas encore&nbsp;: le <code>Future</code> est «&nbsp;en cours&nbsp;», puis devient «&nbsp;réussi&nbsp;» (il contient un <code>T</code>) ou «&nbsp;échoué&nbsp;» (il contient une exception). Pour démarrer un calcul asynchrone, on utilise le constructeur <code>Future { ... }</code>.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// Le bloc s'exécute sur un autre thread ; la ligne suivante ne l'attend pas.
+val prix: Future[Int] = Future {
+  Thread.sleep(500) // simule un appel réseau lent
+  42
+}
+
+println("Le calcul est lancé, je continue...")
+// Affichage immédiat : "Le calcul est lancé, je continue..."
+// La valeur 42 n'est PAS encore disponible ici.</code></pre></figure>
+<p>Le bloc entre accolades est évalué sur un autre fil d'exécution. Le programme principal n'attend pas&nbsp;: il passe tout de suite à la ligne suivante. C'est le cœur de l'asynchrone.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Deux frises temporelles. En mode synchrone, le programme lance un appel lent et reste bloqué à attendre pendant toute sa durée avant de continuer. En mode asynchrone avec Future, l'appel lent part sur un autre thread pendant que le programme principal continue immédiatement, puis récupère le résultat quand il est prêt.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Synchrone : on attend — Asynchrone : on continue</text>
+    <text class="d-mut" x="18" y="58" font-size="10">sync</text>
+    <rect class="d-box" x="58" y="44" width="86" height="26" rx="5" /><text class="d-text" x="101" y="61" text-anchor="middle" font-size="9">travail</text>
+    <rect class="d-frame" x="146" y="44" width="300" height="26" rx="5" /><text class="d-mut" x="296" y="61" text-anchor="middle" font-size="9">BLOQUÉ : attend l'appel lent…</text>
+    <rect class="d-box" x="448" y="44" width="90" height="26" rx="5" /><text class="d-text" x="493" y="61" text-anchor="middle" font-size="9">suite</text>
+    <text class="d-mut" x="16" y="122" font-size="10">async</text>
+    <rect class="d-box" x="58" y="108" width="86" height="26" rx="5" /><text class="d-text" x="101" y="125" text-anchor="middle" font-size="9">travail</text>
+    <rect class="d-box" x="146" y="108" width="140" height="26" rx="5" /><text class="d-text" x="216" y="125" text-anchor="middle" font-size="8.5">suite (tout de suite)</text>
+    <rect class="d-accent" x="146" y="140" width="300" height="24" rx="5" /><text class="d-text" x="296" y="156" text-anchor="middle" font-size="8.5" font-family="monospace">Future { appel lent }  (autre thread)</text>
+    <text class="d-mut" x="540" y="156" text-anchor="middle" font-size="8.5">résultat plus tard</text>
+  </svg>
+  <figcaption>En synchrone, le thread principal reste bloqué le temps de l'appel lent. Avec un <code>Future</code>, l'appel part sur un autre thread et le programme principal poursuit sans attendre.</figcaption>
+</figure>
+
+<h2>L'ExecutionContext : qui fait tourner le calcul ?</h2>
+<p>Un <code>Future</code> a besoin d'un <strong>pool de threads</strong> pour exécuter son code. Ce pool est fourni par un <code>ExecutionContext</code>. Comme presque toutes les opérations sur les <code>Future</code> en réclament un, on le passe en paramètre <em>implicite</em>&nbsp;: tu l'importes une fois et le compilateur le branche partout où il faut.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">// L'ExecutionContext global : un pool dimensionné sur le nombre de cœurs.
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// Équivaut, sous le capot, à fournir cet implicite à chaque opération :
+def calcul()(using ec: scala.concurrent.ExecutionContext): Future[Int] =
+  Future { 21 * 2 }</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le <code>global</code> convient pour apprendre et pour les calculs courts. En production, on évite d'y lancer des opérations <em>bloquantes</em> (comme un <code>Thread.sleep</code> ou un appel JDBC synchrone)&nbsp;: elles monopolisent les threads du pool et asphyxient les autres tâches. On entoure alors l'appel bloquant d'un <code>blocking { ... }</code> (pour signaler le risque au pool) ou, mieux, on lui dédie un <code>ExecutionContext</code> séparé.</p></div></div>
+
+<h2>Transformer le résultat : map et flatMap</h2>
+<p>On ne lit jamais «&nbsp;de force&nbsp;» la valeur d'un <code>Future</code>. À la place, on décrit ce qu'on fera <em>quand</em> elle sera prête. <code>map</code> applique une fonction au résultat futur et renvoie un nouveau <code>Future</code>.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">val prixHT: Future[Int] = Future { 100 }
+
+// map : transforme la valeur future quand elle arrive.
+val prixTTC: Future[Double] = prixHT.map(ht =&gt; ht * 1.20)
+
+// On réagit au résultat sans bloquer, avec foreach :
+prixTTC.foreach(ttc =&gt; println(s"Prix TTC : $ttc"))
+// Plus tard : "Prix TTC : 120.0"</code></pre></figure>
+<p>Quand la transformation produit elle-même un <code>Future</code> (par exemple un second appel réseau qui dépend du premier), <code>map</code> donnerait un <code>Future[Future[T]]</code> imbriqué. <code>flatMap</code> «&nbsp;aplatit&nbsp;» ce résultat&nbsp;: il enchaîne deux étapes asynchrones dépendantes.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">def chercheUtilisateur(id: Int): Future[String] = Future { s"user-$id" }
+def chercheSolde(user: String): Future[Int]     = Future { user.length * 10 }
+
+// flatMap : l'étape 2 dépend du résultat de l'étape 1.
+val solde: Future[Int] =
+  chercheUtilisateur(7).flatMap(user =&gt; chercheSolde(user))
+
+solde.foreach(s =&gt; println(s"Solde : $s")) // "Solde : 60"</code></pre></figure>
+
+<h2>Enchaîner lisiblement avec la for-comprehension</h2>
+<p>Empiler des <code>flatMap</code> devient vite illisible. Comme <code>Future</code> expose <code>map</code> et <code>flatMap</code>, on peut utiliser la <strong>for-comprehension</strong>, qui se relit comme une séquence d'étapes&nbsp;: chaque <code>&lt;-</code> attend le résultat du <code>Future</code> précédent avant de continuer.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">val resultat: Future[String] =
+  for
+    user  &lt;- chercheUtilisateur(7) // étape 1
+    solde &lt;- chercheSolde(user)    // étape 2 (dépend de user)
+  yield s"$user a un solde de $solde"
+
+resultat.foreach(println)
+// "user-7 a un solde de 60"</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Dans une for-comprehension, les <code>Future</code> déclarés sur des lignes <code>&lt;-</code> successives s'exécutent <strong>en série</strong>, pas en parallèle&nbsp;: chacun attend le précédent. Pour paralléliser, il faut <em>démarrer</em> les <code>Future</code> AVANT le <code>for</code> (section suivante).</p></div></div>
+
+<h2>Paralléliser deux Futures, puis combiner</h2>
+<p>Pour agréger deux sources de données indépendantes — disons un compte bancaire et un cours de change — on lance les deux <code>Future</code> d'abord, sur des <code>val</code> séparées. Comme ils démarrent dès leur construction, ils tournent côte à côte. Le <code>for</code> ne sert plus qu'à <em>combiner</em> leurs résultats une fois prêts.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">def soldeEnEuros(): Future[Int]      = Future { Thread.sleep(300); 1000 }
+def tauxEuroDollar(): Future[Double] = Future { Thread.sleep(300); 1.08 }
+
+// 1) On DÉMARRE les deux calculs : ils tournent en parallèle.
+val fSolde = soldeEnEuros()
+val fTaux  = tauxEuroDollar()
+
+// 2) On combine quand les deux sont prêts (~300 ms, pas 600).
+val soldeDollars: Future[Double] =
+  for
+    euros &lt;- fSolde
+    taux  &lt;- fTaux
+  yield euros * taux
+
+soldeDollars.foreach(d =&gt; println(s"Solde en dollars : $d"))
+// "Solde en dollars : 1080.0"</code></pre></figure>
+<p>Place les deux <code>val</code> avant le <code>for</code> et le temps total est celui du plus lent (~300&nbsp;ms), pas la somme des deux (~600&nbsp;ms). Mets les appels <em>dans</em> le <code>for</code> et tu reviens à une exécution en série. La différence tient à un seul détail&nbsp;: où le calcul démarre.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 192" role="img" aria-label="Comparaison de deux dispositions. Quand les Future sont créés dans la for-comprehension, les appels A et B s'enchaînent l'un après l'autre, soit environ 600 millisecondes au total. Quand les Future sont créés avant la for-comprehension, les appels A et B se déroulent en même temps, empilés, soit environ 300 millisecondes au total.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Où démarrent les Future décide de tout</text>
+    <text class="d-mut" x="150" y="46" text-anchor="middle" font-size="10">Future créés DANS le for</text>
+    <rect class="d-box" x="60" y="54" width="160" height="28" rx="6" /><text class="d-text" x="140" y="72" text-anchor="middle" font-size="9">appel A (300 ms)</text>
+    <rect class="d-box" x="230" y="54" width="160" height="28" rx="6" /><text class="d-text" x="310" y="72" text-anchor="middle" font-size="9">appel B (300 ms)</text>
+    <text class="d-tag" x="500" y="72" text-anchor="middle" font-size="11">série ≈ 600 ms</text>
+    <line class="d-line" x1="20" y1="98" x2="620" y2="98" />
+    <text class="d-mut" x="150" y="122" text-anchor="middle" font-size="10">Future créés AVANT le for</text>
+    <rect class="d-accent" x="60" y="130" width="160" height="26" rx="6" /><text class="d-text" x="140" y="147" text-anchor="middle" font-size="9">appel A (300 ms)</text>
+    <rect class="d-accent" x="60" y="160" width="160" height="26" rx="6" /><text class="d-text" x="140" y="177" text-anchor="middle" font-size="9">appel B (300 ms)</text>
+    <text class="d-tag" x="500" y="157" text-anchor="middle" font-size="11">parallèle ≈ 300 ms</text>
+  </svg>
+  <figcaption>Empilés = en même temps. Démarrer les <code>Future</code> avant le <code>for</code> les fait tourner en parallèle&nbsp;: le temps total tombe à celui du plus lent.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une page produit d'un site marchand doit afficher le prix, les avis clients et la disponibilité en stock — trois services distincts. En série, l'utilisateur attendrait la somme des trois latences&nbsp;; lancés en parallèle (trois <code>Future</code> démarrés avant de combiner), la page se charge en à peu près le temps du service le plus lent. C'est la technique du <em>fan-out / fan-in</em> qu'appliquent les <em>API Gateway</em> et les pages de rendu côté serveur pour agréger plusieurs micro-services sans empiler les temps d'attente.</p></div></div>
+
+<h2>Gérer les échecs : recover et recoverWith</h2>
+<p>Un <code>Future</code> peut échouer&nbsp;: si le bloc lève une exception, le <code>Future</code> devient «&nbsp;échoué&nbsp;» et porte cette exception. On ne laisse pas le programme planter&nbsp;: on traite le cas. <code>recover</code> fournit une valeur de repli (selon le type d'exception), et <code>recoverWith</code> fait de même mais en renvoyant un <em>autre</em> <code>Future</code> (utile pour réessayer ou basculer sur une source de secours).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Les états d'un Future. Un Future part de l'état en cours, puis bascule soit en réussi contenant une valeur Success, soit en échoué contenant une exception Failure. Sur la branche échouée, recover intercepte l'erreur et fournit une valeur de repli, évitant le plantage.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Les trois états d'un Future — et le rôle de recover</text>
+    <rect class="d-box" x="34" y="62" width="140" height="42" rx="8" /><text class="d-tag" x="104" y="88" text-anchor="middle" font-size="12">en cours</text>
+    <line class="d-line" x1="174" y1="74" x2="262" y2="52" />
+    <line class="d-line" x1="174" y1="92" x2="262" y2="120" />
+    <rect class="d-accent" x="264" y="34" width="200" height="36" rx="8" /><text class="d-text" x="364" y="56" text-anchor="middle" font-size="10" font-family="monospace">réussi : Success(valeur)</text>
+    <rect class="d-frame" x="264" y="102" width="200" height="36" rx="8" /><text class="d-text" x="364" y="124" text-anchor="middle" font-size="10" font-family="monospace">échoué : Failure(e)</text>
+    <line class="d-line" x1="464" y1="120" x2="506" y2="120" />
+    <rect class="d-box" x="508" y="100" width="118" height="40" rx="8" /><text class="d-tag" x="567" y="118" text-anchor="middle" font-size="10">recover</text><text class="d-mut" x="567" y="132" text-anchor="middle" font-size="8">valeur de repli</text>
+  </svg>
+  <figcaption>Un <code>Future</code> réussit (<code>Success</code>) ou échoue (<code>Failure</code>). Sur la branche d'échec, <code>recover</code> rattrape l'exception et fournit une valeur de secours au lieu de laisser l'erreur se propager.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">val risque: Future[Int] = Future {
+  throw new RuntimeException("API indisponible")
+}
+
+// recover : valeur de repli en cas d'échec.
+val sur: Future[Int] = risque.recover {
+  case _: RuntimeException =&gt; -1 // valeur sentinelle
+}
+sur.foreach(v =&gt; println(s"Valeur : $v")) // "Valeur : -1"
+
+// recoverWith : bascule sur une source de secours (un autre Future).
+def sourceSecours(): Future[Int] = Future { 0 }
+val resilient: Future[Int] = risque.recoverWith {
+  case _: RuntimeException =&gt; sourceSecours()
+}</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Dans une for-comprehension, dès qu'un <code>Future</code> échoue, les étapes suivantes sont court-circuitées et le résultat global est l'échec&nbsp;: même logique que <code>Try</code> ou <code>Either</code>, version asynchrone. On place donc le <code>recover</code> sur le <code>Future</code> final pour traiter l'erreur d'un seul endroit.</p></div></div>
+
+<h2>Await : seulement pour les tests et les scripts</h2>
+<p>Parfois, dans un test ou un petit script, on <em>doit</em> attendre le résultat pour ne pas terminer le programme trop tôt. <code>Await.result</code> bloque le thread courant jusqu'à ce que le <code>Future</code> soit prêt (ou jusqu'au délai maximal). C'est pratique, mais à bannir du code de production&nbsp;: bloquer annule tout le bénéfice de l'asynchrone.</p>
+<figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">import scala.concurrent.Await
+import scala.concurrent.duration.*
+
+val f: Future[Int] = Future { Thread.sleep(200); 42 }
+
+// Bloque jusqu'à 2 secondes en attendant le résultat.
+val valeur: Int = Await.result(f, 2.seconds)
+println(valeur) // 42
+
+// Si le délai expire : lève une TimeoutException.</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>En vrai service (serveur web, traitement de flux), ne bloque jamais&nbsp;: renvoie le <code>Future</code> jusqu'au framework, qui sait l'attendre sans geler de thread. <code>Await</code> reste cantonné aux tests, scripts et au <code>main</code> d'un petit programme pour ne pas qu'il se termine avant la fin des calculs.</p></div></div>
+
+<h2>Au-delà : l'écosystème des effets</h2>
+<p>Le <code>Future</code> a une limite&nbsp;: il démarre dès sa création (il est «&nbsp;impatient&nbsp;»), ce qui le rend difficile à composer de façon purement fonctionnelle et à réessayer. La communauté Scala a donc bâti des <strong>bibliothèques d'effets purs</strong>, où un calcul asynchrone est une <em>description</em> paresseuse qu'on n'exécute qu'à la fin.</p>
+<ul>
+<li><strong>Cats Effect</strong> (le type <code>IO</code>)&nbsp;: un effet paresseux, annulable, hautement composable, fondé sur l'algèbre de la bibliothèque Cats.</li>
+<li><strong>ZIO</strong>&nbsp;: un type d'effet riche, <code>ZIO[R, E, A]</code>, qui encode dans sa signature les dépendances <code>R</code>, les erreurs <code>E</code> attendues et le résultat <code>A</code>.</li>
+<li><strong>Akka / Pekko</strong>&nbsp;: le <em>modèle acteur</em> sur la JVM, où des entités isolées s'échangent des messages — une autre approche de la concurrence, taillée pour les systèmes distribués (Pekko est le fork open-source d'Akka).</li>
+</ul>
+<p>Tu n'as pas besoin d'eux pour débuter&nbsp;: <code>Future</code> suffit largement pour comprendre la composition asynchrone et écrire du vrai code. Mais sache que cet écosystème existe, et que les concepts (<code>map</code>, <code>flatMap</code>, for-comprehension, gestion d'erreur) que tu viens d'apprendre s'y transposent presque tels quels.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'une for-comprehension parallélise. Elle <strong>séquence</strong>&nbsp;: chaque <code>&lt;-</code> attend le précédent. Le parallélisme vient du fait de démarrer les <code>Future</code> (sur des <code>val</code>) <em>avant</em> le <code>for</code>. Et n'oublie jamais d'importer un <code>ExecutionContext</code>, sinon le code ne compile pas.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore <code>Future.sequence</code> (transformer une <code>List[Future[T]]</code> en <code>Future[List[T]]</code> pour attendre un lot de calculs), <code>Future.traverse</code>, et <code>Promise</code> (qui permet de compléter un <code>Future</code> «&nbsp;à la main&nbsp;»). Puis compare avec <code>cats.effect.IO</code> pour sentir l'apport d'un effet paresseux. Dans le monde big data, Spark s'appuie aussi sur l'exécution distribuée&nbsp;: les mêmes intuitions de composition reviennent.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les Future — l'essentiel</caption>
+    <thead><tr><th scope="col">Expression</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>Future { bloc }</code></td><td>lance <code>bloc</code> en asynchrone&nbsp;; rend la main aussitôt</td></tr>
+      <tr><td><code>import …global</code></td><td>fournit l'<code>ExecutionContext</code> (pool de threads) implicite</td></tr>
+      <tr><td><code>f.map(v =&gt; …)</code></td><td>transforme le résultat futur quand il arrive</td></tr>
+      <tr><td><code>f.flatMap(v =&gt; autreFuture)</code></td><td>enchaîne une étape asynchrone qui dépend de la précédente</td></tr>
+      <tr><td><code>for a &lt;- fa; b &lt;- fb yield …</code></td><td>compose des <code>Future</code> lisiblement (série si créés dedans)</td></tr>
+      <tr><td><code>f.recover { case e =&gt; repli }</code></td><td>valeur de secours en cas d'échec</td></tr>
+      <tr><td><code>f.recoverWith { case e =&gt; f2 }</code></td><td>bascule sur un autre <code>Future</code> en cas d'échec</td></tr>
+      <tr><td><code>Await.result(f, 2.seconds)</code></td><td>bloque et attend — tests et scripts uniquement</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>Future[T]</code></dt><dd>Conteneur d'une valeur de type <code>T</code> qui sera disponible plus tard&nbsp;: la promesse d'un calcul lancé en arrière-plan.</dd>
+  <dt>Asynchrone</dt><dd>Mode d'exécution où l'on lance un calcul sans attendre son résultat&nbsp;; le programme continue et réagit quand la valeur est prête.</dd>
+  <dt><code>ExecutionContext</code></dt><dd>Pool de threads qui exécute le code des <code>Future</code>&nbsp;; fourni en paramètre implicite (le <code>global</code> pour apprendre).</dd>
+  <dt>For-comprehension</dt><dd>Écriture <code>for … yield …</code> qui enchaîne des <code>Future</code>&nbsp;; séquentielle si les <code>Future</code> y sont créés, parallèle s'ils sont démarrés avant.</dd>
+  <dt><code>recover</code> / <code>recoverWith</code></dt><dd>Gestion d'échec d'un <code>Future</code>&nbsp;: <code>recover</code> fournit une valeur de repli, <code>recoverWith</code> un autre <code>Future</code>.</dd>
+  <dt><code>Await</code></dt><dd>Attente bloquante du résultat d'un <code>Future</code>&nbsp;; réservée aux tests et scripts, à bannir en production.</dd>
+  <dt>Effet paresseux (<code>IO</code>, <code>ZIO</code>)</dt><dd>Description d'un calcul asynchrone qui ne s'exécute qu'au moment voulu, contrairement au <code>Future</code> «&nbsp;impatient&nbsp;»&nbsp;; base de Cats Effect et ZIO.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><code>Future[T]</code> est la promesse d'une valeur future&nbsp;; <code>Future { ... }</code> lance le calcul sur un thread du pool.</li>
+<li>Tout repose sur un <code>ExecutionContext</code> implicite (le <code>global</code> pour apprendre).</li>
+<li><code>map</code> transforme le résultat&nbsp;; <code>flatMap</code> enchaîne deux étapes asynchrones dépendantes&nbsp;; la for-comprehension les écrit lisiblement.</li>
+<li>Pour paralléliser, démarre les <code>Future</code> avant le <code>for</code>, puis combine&nbsp;; le temps total est celui du plus lent.</li>
+<li><code>recover</code> et <code>recoverWith</code> gèrent les échecs&nbsp;; <code>Await</code> bloque et reste réservé aux tests/scripts.</li>
+<li>Au-delà&nbsp;: Cats Effect (<code>IO</code>), ZIO, et le modèle acteur d'Akka/Pekko.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi la ligne qui suit un <code>Future { ... }</code> s'exécute-t-elle <em>avant</em> que la valeur du <code>Future</code> soit disponible&nbsp;?</li><li>Quand utilises-tu <code>flatMap</code> plutôt que <code>map</code> sur un <code>Future</code>&nbsp;?</li><li>Tu as deux appels réseau indépendants. Où places-tu leurs <code>Future</code> pour qu'ils s'exécutent en parallèle, et pourquoi&nbsp;?</li><li>Quelle est la différence entre <code>recover</code> et <code>recoverWith</code>, et pourquoi éviter <code>Await</code> en production&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi la ligne qui suit un Future { ... } s'exécute-t-elle avant que la valeur du Future soit disponible ?","a":["Parce qu'un Future démarre le calcul de façon asynchrone (sur un autre thread) : le code suivant continue immédiatement, sans attendre le résultat","Parce que le Future est synchrone","Parce que la ligne est ignorée","Parce que le Future bloque"],"correct":0,"explain":"Créer un Future planifie son corps sur un pool de threads et rend la main aussitôt. L'instruction d'après s'exécute donc sans attendre, le résultat n'étant accessible que plus tard via des combinateurs ou des callbacks."},
+  {"q":"Quand utilises-tu flatMap plutôt que map sur un Future ?","a":["Quand la fonction renvoie elle-même un Future : map donnerait Future[Future[T]], tandis que flatMap aplatit en Future[T] (enchaîne deux opérations asynchrones)","Quand le Future a échoué","Jamais","Quand on veut bloquer"],"correct":0,"explain":"map transforme la valeur portée par le Future ; si la transformation produit un autre Future, on obtient un Future imbriqué. flatMap compose deux étapes asynchrones en un seul Future[T], indispensable pour chaîner des appels dépendants."},
+  {"q":"Tu as deux appels réseau indépendants. Où places-tu leurs Future pour qu'ils s'exécutent en parallèle, et pourquoi ?","a":["On démarre les deux Future avant la for-comprehension (on les crée d'abord, puis on les compose) ; les créer dans le for les rendrait séquentiels, le second attendant le premier","Dans le for, l'un après l'autre","Dans un seul Future imbriqué","Peu importe, c'est toujours parallèle"],"correct":0,"explain":"Un Future commence dès sa création. En instanciant les deux avant la for-comprehension, ils tournent en concurrence et le for ne fait que combiner leurs résultats. Les démarrer à l'intérieur du for enchaînerait les étapes, sérialisant les appels."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["Await","Await.result"],"placeholder":"ce qu'on utilise à la fin du main pour ATTENDRE le Future (éviter une sortie trop tôt) : …","hints":["Await.result(f, 2.seconds).","Bloque le thread principal le temps voulu.","A????"],"link":{"href":"lecon-10.html","label":"Revoir « Les Futures »"}},
+  {"type":"text","accept":["for","for-comprehension","for comprehension"],"placeholder":"la construction pour COMBINER deux Future (température + humidité) de façon lisible : … -comprehension","hints":["for { t <- temperature(); h <- humidite() } yield ...","Les Future sont lancés AVANT le for (parallélisme).","« … -comprehension »."],"link":{"href":"lecon-10.html","label":"Revoir « Combiner des Futures »"}},
+  {"type":"text","accept":["recover","recoverWith"],"placeholder":"la méthode du Future pour fournir une valeur par défaut (0.0) EN CAS D'ÉCHEC : …","hints":["recoverWith bascule sur un autre Future ; recover sur une valeur.","f.???????{ case _ => 0.0 }.","re?????"],"link":{"href":"lecon-10.html","label":"Revoir « recover »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un <code>Future[Int]</code> qui calcule le carré de 9 (avec un petit <code>Thread.sleep</code> pour simuler la latence), puis affiche le résultat avec <code>foreach</code>. Utilise <code>Await</code> à la fin pour que le programme n'expire pas trop tôt.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-scala">import scala.concurrent.{Future, Await}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.*
+
+@main def ex1(): Unit =
+  val carre: Future[Int] = Future {
+    Thread.sleep(100)
+    9 * 9
+  }
+  carre.foreach(r =&gt; println(s"Carré : $r")) // "Carré : 81"
+  Await.result(carre, 2.seconds) // évite la fin prématurée</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu disposes de <code>def temperature(): Future[Double]</code> et <code>def humidite(): Future[Double]</code>, deux capteurs indépendants. Lance-les <strong>en parallèle</strong> et combine-les en un <code>Future[String]</code> du genre «&nbsp;22.5°C, 60.0% d'humidité&nbsp;» via une for-comprehension.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-scala">import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+def temperature(): Future[Double] = Future { Thread.sleep(200); 22.5 }
+def humidite(): Future[Double]     = Future { Thread.sleep(200); 60.0 }
+
+// On démarre les deux AVANT le for : exécution parallèle.
+val fTemp = temperature()
+val fHum  = humidite()
+
+val bulletin: Future[String] =
+  for
+    t &lt;- fTemp
+    h &lt;- fHum
+  yield s"$t°C, $h% d'humidité"
+
+bulletin.foreach(println)
+// "22.5°C, 60.0% d'humidité"  (~200 ms, pas 400)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>def prixDepuisApi(): Future[Double]</code> qui échoue (lève une exception). Enrobe l'appel pour&nbsp;: 1) essayer une API de secours <code>prixDepuisCache(): Future[Double]</code> avec <code>recoverWith</code>&nbsp;; 2) si elle échoue <em>aussi</em>, retomber sur une valeur par défaut <code>0.0</code> avec <code>recover</code>. Affiche le prix final.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-scala">import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+def prixDepuisApi(): Future[Double] = Future {
+  throw new RuntimeException("API HS")
+}
+def prixDepuisCache(): Future[Double] = Future {
+  throw new RuntimeException("cache vide") // échoue aussi, pour tester
+}
+
+val prixFinal: Future[Double] =
+  prixDepuisApi()
+    .recoverWith { case _: RuntimeException =&gt; prixDepuisCache() }
+    .recover     { case _: RuntimeException =&gt; 0.0 }
+
+prixFinal.foreach(p =&gt; println(s"Prix final : $p"))
+// "Prix final : 0.0"  (les deux sources ont échoué)</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-java.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-scala.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<p>Avant d'écrire des programmes, il faut connaître la <strong>matière première</strong> de Clojure&nbsp;: ses données. Là où d'autres langages séparent nettement la syntaxe (mots-clés, opérateurs) des valeurs, Clojure efface presque cette frontière. Le code que tu écris <em>est</em> une structure de données. Cette leçon explore les littéraux de base et la règle d'évaluation qui les anime.</p>
+
+<p>Tout ce que tu tapes dans le REPL est une <strong>expression</strong>&nbsp;: Clojure la lit, l'évalue, et te rend une valeur. Comprendre cette règle, c'est comprendre 80&nbsp;% du langage.</p>
+
+<h2>Les nombres, chaînes et booléens</h2>
+<p>Clojure dispose des types scalaires usuels, avec quelques particularités héritées de la JVM&nbsp;: les entiers sont des <code>long</code> (64 bits), et il existe des entiers <strong>arbitrairement grands</strong> (<code>BigInt</code>, suffixe <code>N</code>) et des rationnels exacts.</p>
+<figure class="code-block" data-file="scalaires.clj"><pre><code class="language-clojure">42            ; un entier (long)
+3.14          ; un flottant (double)
+1/3           ; un rationnel EXACT (un tiers, pas 0.333…)
+42N           ; un BigInt
+"Bonjour"     ; une chaîne (toujours entre guillemets doubles)
+\a            ; le caractère 'a'
+true false    ; les booléens
+nil           ; l'absence de valeur (comme null)</code></pre></figure>
+<p>Le rationnel <code>1/3</code> est une vraie nouveauté&nbsp;: <code>(+ 1/3 1/3 1/3)</code> donne exactement <code>1</code>, sans erreur d'arrondi. Précieux pour les calculs exacts.</p>
+
+<h2>Les keywords&nbsp;: l'étiquette de Clojure</h2>
+<p>Un <strong>keyword</strong> (mot-clé) commence par deux-points&nbsp;: <code>:nom</code>, <code>:age</code>, <code>:ville</code>. C'est une valeur constante, qui se représente elle-même, idéale comme <strong>clé</strong> dans une map ou comme étiquette symbolique. On les croise partout en Clojure.</p>
+<figure class="code-block" data-file="keywords.clj"><pre><code class="language-clojure">:rouge          ; un keyword
+:rouge          ; le MÊME keyword (toujours égal à lui-même)
+(= :rouge :rouge)   ; true
+
+;; Typiquement utilisé comme clé :
+{:nom "Ada" :age 36}</code></pre></figure>
+<p>Pense aux keywords comme à des «&nbsp;noms qui ne valent qu'eux-mêmes&nbsp;»&nbsp;: pas besoin de les déclarer, ils existent dès qu'on les écrit, et deux keywords identiques sont la même valeur (économie de mémoire, comparaison instantanée).</p>
+
+<h2>Les symboles</h2>
+<p>Un <strong>symbole</strong> est un nom <em>sans</em> deux-points&nbsp;: <code>x</code>, <code>+</code>, <code>println</code>. Normalement, évaluer un symbole renvoie ce à quoi il <strong>réfère</strong> (la valeur liée à ce nom).</p>
+<figure class="code-block" data-file="symboles.clj"><pre><code class="language-clojure">(def x 10)
+x           ; → 10  (le symbole x réfère à la valeur 10)
++           ; → #function[…]  (le symbole + réfère à la fonction addition)</code></pre></figure>
+<p>Distinction clé&nbsp;: <code>:age</code> (keyword) vaut toujours <code>:age</code>&nbsp;; <code>age</code> (symbole) vaut ce qu'on lui a lié. L'un est une donnée constante, l'autre est une référence.</p>
+
+<h2>La règle d'évaluation</h2>
+<p>Voici le cœur de Clojure. Quand le langage évalue une expression&nbsp;:</p>
+<ul>
+  <li>un <strong>nombre, une chaîne, un keyword, un booléen, <code>nil</code></strong> s'évaluent en eux-mêmes&nbsp;;</li>
+  <li>un <strong>symbole</strong> s'évalue en la valeur à laquelle il est lié&nbsp;;</li>
+  <li>une <strong>liste</strong> <code>(f a b)</code> est un <strong>appel</strong>&nbsp;: on évalue <code>f</code> (qui doit être une fonction), puis les arguments, puis on applique.</li>
+</ul>
+<figure class="code-block" data-file="eval.clj"><pre><code class="language-clojure">(+ 1 2)         ; liste → appel : + appliqué à 1 et 2 → 3
+(+ (* 2 3) 4)   ; imbrication : (* 2 3)=6, puis (+ 6 4)=10</code></pre></figure>
+
+<h2>Empêcher l'évaluation&nbsp;: le quote</h2>
+<p>Parfois, on veut une liste <strong>comme donnée</strong>, sans l'appeler. On la <strong>quote</strong> avec une apostrophe <code>'</code>&nbsp;: Clojure renvoie alors la liste littérale au lieu de l'évaluer.</p>
+<figure class="code-block" data-file="quote.clj"><pre><code class="language-clojure">(+ 1 2)     ; → 3   (évalué : appel)
+'(+ 1 2)    ; → (+ 1 2)   (donnée : une liste de trois éléments)
+'rouge      ; → rouge  (le symbole lui-même, non évalué)</code></pre></figure>
+<p>Cette dualité — une liste est tantôt du code, tantôt une donnée — est l'<strong>homoiconicité</strong>. C'est elle qui rendra les macros possibles (leçon 8).</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre <code>:nom</code> (keyword, donnée constante) et <code>nom</code> (symbole, référence). Si tu écris <code>(println age)</code> sans avoir lié <code>age</code>, Clojure proteste&nbsp;: «&nbsp;Unable to resolve symbol&nbsp;». Avec un keyword <code>:age</code>, aucun souci&nbsp;: il vaut toujours lui-même.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le format <strong>EDN</strong> (Extensible Data Notation) est le «&nbsp;JSON de Clojure&nbsp;»&nbsp;: il utilise exactement cette même syntaxe de données (nombres, chaînes, keywords, vecteurs, maps) pour échanger ou stocker des données. Comme le code et les données partagent la même notation, lire un fichier de configuration Clojure, c'est lire de la donnée Clojure native.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Scalaires&nbsp;: entiers (<code>long</code>, <code>BigInt</code> en <code>N</code>), <strong>rationnels exacts</strong> (<code>1/3</code>), chaînes, <code>nil</code>.</li>
+  <li><strong>Keywords</strong> (<code>:cle</code>)&nbsp;: constantes qui valent elles-mêmes, parfaites comme clés.</li>
+  <li><strong>Symboles</strong> (<code>x</code>)&nbsp;: noms qui réfèrent à une valeur liée.</li>
+  <li>Règle&nbsp;: une <strong>liste</strong> est un appel&nbsp;; le <strong>quote</strong> <code>'</code> la rend comme donnée.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre <code>:age</code> et <code>age</code>&nbsp;?</li><li>Que vaut <code>'(+ 1 2)</code> et pourquoi&nbsp;?</li><li>Pourquoi <code>(+ 1/3 1/3 1/3)</code> donne-t-il exactement <code>1</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une map associant le keyword <code>:langue</code> à la chaîne <code>"Clojure"</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">{:langue "Clojure"}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Prédis le résultat de <code>(= :a :a)</code> puis de <code>'(a b c)</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(= :a :a)   ; → true (même keyword)
+'(a b c)    ; → (a b c) : une liste de trois symboles, non évaluée</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sans l'exécuter, explique pourquoi <code>(1 2 3)</code> provoque une erreur mais <code>'(1 2 3)</code> non.</p><details><summary>Voir une solution</summary><p><code>(1 2 3)</code> est une liste, donc Clojure tente de l'<strong>appeler</strong>&nbsp;: il prend <code>1</code> pour une fonction et applique <code>2</code> et <code>3</code> — or <code>1</code> n'est pas une fonction, d'où l'erreur. <code>'(1 2 3)</code> est <strong>quotée</strong>&nbsp;: Clojure la traite comme une simple donnée (une liste de trois nombres), sans tenter d'appeler quoi que ce soit.</p></details></div>

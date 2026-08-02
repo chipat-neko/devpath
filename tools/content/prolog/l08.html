@@ -1,0 +1,85 @@
+<p>Voici la leçon où tout converge. Faits, règles, unification, backtracking, listes, contrôle&nbsp;: ces briques se combinent en un style d'une élégance saisissante, le <strong>générer-et-tester</strong>. C'est là que Prolog tient sa promesse&nbsp;: décrire un problème en quelques lignes et laisser la machine trouver la solution. On va résoudre de vrais petits casse-têtes, et apprendre à <strong>collecter</strong> toutes les réponses.</p>
+
+<h2>Le schéma générer-et-tester</h2>
+<p>L'idée tient en deux temps&nbsp;: une partie <strong>génère</strong> des candidats (via le backtracking), une partie <strong>teste</strong> des contraintes (via des conditions). Prolog enchaîne les deux automatiquement&nbsp;: il propose un candidat, vérifie les contraintes&nbsp;; si elles échouent, il revient en générer un autre. Tu décris <em>quoi</em> chercher, il s'occupe du <em>comment</em>.</p>
+<figure class="code-block" data-file="generer-tester.pl"><pre><code class="language-prolog">% Trouver deux chiffres dont la somme fait 10
+chiffre(0). chiffre(1). chiffre(2). chiffre(3). chiffre(4).
+chiffre(5). chiffre(6). chiffre(7). chiffre(8). chiffre(9).
+
+paire_dix(X, Y) :-
+    chiffre(X),         % génère X
+    chiffre(Y),         % génère Y
+    X + Y =:= 10.       % teste la contrainte
+
+?- paire_dix(X, Y).
+X = 1, Y = 9 ;
+X = 2, Y = 8 ;
+X = 3, Y = 7 ...</code></pre></figure>
+<p>On n'a écrit <em>aucun</em> algorithme de recherche&nbsp;: juste les chiffres possibles et la contrainte. Le backtracking fait le reste. C'est la signature de la programmation logique.</p>
+
+<h2>Un puzzle&nbsp;: qui habite où&nbsp;?</h2>
+<p>Les énigmes du type «&nbsp;maisons et indices&nbsp;» (façon casse-tête d'Einstein) sont le terrain de jeu favori de Prolog. On <strong>génère</strong> les arrangements possibles et on <strong>teste</strong> les indices.</p>
+<figure class="code-block" data-file="voisins.pl"><pre><code class="language-prolog">% Trois personnes dans trois maisons alignées (1, 2, 3).
+% Indices : ana est en 1 ; bob est voisin de ana.
+voisin(X, Y) :- Diff is X - Y, abs(Diff) =:= 1.
+
+solution(Ana, Bob, Cara) :-
+    permutation([1, 2, 3], [Ana, Bob, Cara]),
+    Ana =:= 1,
+    voisin(Bob, Ana).
+
+?- solution(A, B, C).
+A = 1, B = 2, C = 3.</code></pre></figure>
+<p><code>permutation</code> <strong>génère</strong> tous les ordres possibles des positions&nbsp;; les lignes suivantes <strong>filtrent</strong> selon les indices. En quelques lignes déclaratives, on a résolu ce qui demanderait des boucles imbriquées ailleurs.</p>
+
+<h2>Collecter toutes les solutions&nbsp;: <code>findall</code></h2>
+<p>Le backtracking énumère les solutions une à une, mais dans un programme on veut souvent les <strong>rassembler dans une liste</strong>. C'est le rôle de <code>findall(Modele, But, Liste)</code>&nbsp;: il exécute <code>But</code> de toutes les façons possibles et collecte chaque <code>Modele</code> dans <code>Liste</code>.</p>
+<figure class="code-block" data-file="findall.pl"><pre><code class="language-prolog">age(ana, 30).  age(bob, 25).  age(cara, 30).
+
+?- findall(P, age(P, 30), Liste).
+Liste = [ana, cara].      % tous ceux qui ont 30 ans
+
+?- findall(P-A, age(P, A), Tout).
+Tout = [ana-30, bob-25, cara-30].</code></pre></figure>
+<p>Si aucune solution n'existe, <code>findall</code> renvoie simplement <code>[]</code> (liste vide) — il ne échoue pas. C'est l'outil de référence pour passer du «&nbsp;flux&nbsp;» de solutions à une vraie donnée manipulable.</p>
+
+<h2><code>bagof</code> et <code>setof</code></h2>
+<p>Deux cousins de <code>findall</code> offrent plus de finesse&nbsp;: <code>bagof</code> regroupe les solutions (et échoue s'il n'y en a aucune), <code>setof</code> fait de même mais <strong>trie et dédoublonne</strong> le résultat.</p>
+<figure class="code-block" data-file="setof.pl"><pre><code class="language-prolog">?- setof(A, P^age(P, A), Ages).
+Ages = [25, 30].     % âges distincts, triés
+
+% Le P^ signifie "peu importe quel P" : on agrège sur A seul.</code></pre></figure>
+<p>L'opérateur <code>^</code> dit «&nbsp;quantifier existentiellement&nbsp;» une variable&nbsp;: ici, on veut l'ensemble des âges <em>quels que soient</em> leurs porteurs.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Placer le <strong>test avant le générateur</strong>&nbsp;: <code>X + Y =:= 10, chiffre(X), chiffre(Y)</code> échoue, car <code>X</code> et <code>Y</code> ne sont pas encore liés au moment du calcul. En générer-et-tester, l'ordre compte&nbsp;: <strong>génère d'abord</strong> (pour instancier les variables), <strong>teste ensuite</strong>. C'est l'inverse exact de l'erreur, mais facile à commettre par réflexe mathématique.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le générer-et-tester «&nbsp;naïf&nbsp;» peut être lent sur de gros espaces de recherche, car il génère beaucoup de candidats voués au rejet. La <strong>programmation logique par contraintes</strong> (CLP, bibliothèque <code>clpfd</code>) inverse l'approche&nbsp;: elle <em>propage</em> les contraintes pour réduire l'espace <em>avant</em> de chercher. Le Sudoku, par exemple, se résout en quelques millisecondes avec <code>clpfd</code> là où le test naïf ramerait. C'est la suite naturelle de cette leçon.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Générer-et-tester</strong>&nbsp;: une partie produit des candidats, une partie filtre&nbsp;; le backtracking relie le tout.</li>
+  <li>Ordre crucial&nbsp;: <strong>générer avant de tester</strong>, pour instancier les variables.</li>
+  <li><code>findall(M, But, L)</code> collecte toutes les solutions dans une liste (<code>[]</code> si aucune).</li>
+  <li><code>setof</code> trie et dédoublonne&nbsp;; <code>^</code> quantifie une variable «&nbsp;peu importe&nbsp;».</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>En quoi consiste le schéma générer-et-tester&nbsp;?</li><li>Pourquoi faut-il générer avant de tester&nbsp;?</li><li>Que renvoie <code>findall</code> si le but n'a aucune solution&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Avec <code>chiffre/1</code>, écris une requête trouvant les paires dont la somme vaut 5.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">?- chiffre(X), chiffre(Y), X + Y =:= 5.
+X = 0, Y = 5 ;
+X = 1, Y = 4 ; ...</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec des faits <code>animal/1</code>, collecte tous les animaux dans une liste avec <code>findall</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">animal(chat). animal(chien). animal(oiseau).
+
+?- findall(A, animal(A), L).
+L = [chat, chien, oiseau].</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Trouve trois entiers de 1 à 5 formant un triangle rectangle (<code>A*A + B*B =:= C*C</code>), avec <code>A &lt; B</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">entier(1). entier(2). entier(3). entier(4). entier(5).
+
+pythagore(A, B, C) :-
+    entier(A), entier(B), entier(C),
+    A &lt; B,
+    A*A + B*B =:= C*C.
+
+?- pythagore(A, B, C).
+A = 3, B = 4, C = 5.</code></pre></figure></details></div>

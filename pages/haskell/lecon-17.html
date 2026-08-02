@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La concurrence : threads légers, MVar et STM — Leçon 17 · Cours Haskell — Syntaxe</title>
+    <meta name="description" content="La concurrence en Haskell : des fils légers par milliers avec forkIO, le partage d'état avec MVar, les transactions atomiques et composables de STM (TVar, atomically, retry), et l'orchestration avec la bibliothèque async." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="haskell" data-lesson="lecon-17.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Haskell</a></li>
+            <li aria-current="page">Leçon 17</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Haskell avancé — Leçon 17</p>
+              <h1 class="lesson-header__title">La concurrence : threads légers, MVar et STM</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~58 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 16</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lancer des milliers de <strong>fils légers</strong> avec <code>forkIO</code>, gérés par le runtime GHC&nbsp;;</li>
+                  <li>partager un résultat entre fils avec un <code>MVar</code> — et voir ses limites&nbsp;;</li>
+                  <li>composer des <strong>transactions atomiques</strong> sans verrou avec <strong>STM</strong> (<code>TVar</code>, <code>atomically</code>, <code>retry</code>)&nbsp;;</li>
+                  <li>orchestrer des tâches concurrentes avec la bibliothèque <code>async</code> (<code>concurrently</code>, <code>race</code>).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Haskell a une réputation d'austérité, mais c'est aussi l'un des langages où la <strong>concurrence</strong> est la plus agréable. Deux raisons&nbsp;: son runtime sait jongler avec des <em>millions</em> de fils légers, et — surtout — la pureté qui t'a accompagné jusqu'ici prend ici tout son sens. Quand la logique de calcul n'a <strong>aucun effet de bord</strong>, la partager entre plusieurs fils ne peut pas provoquer de <em>data race</em>&nbsp;: il n'y a rien à corrompre. Il ne reste à gérer que l'état <em>volontairement</em> partagé, et Haskell offre pour ça un outil rare et élégant&nbsp;: la mémoire transactionnelle.</p>
+
+<p>On va monter en trois marches&nbsp;: lancer des fils (<code>forkIO</code>), les faire communiquer par une boîte partagée (<code>MVar</code>), puis découvrir pourquoi <strong>STM</strong> rend les verrous presque obsolètes. On finit par la bibliothèque <code>async</code>, celle qu'on utilise vraiment au quotidien.</p>
+
+<h2>Des fils par milliers : forkIO</h2>
+
+<p><code>forkIO</code> lance une action <code>IO</code> dans un <strong>nouveau fil</strong> et rend la main immédiatement. Sa signature dit tout&nbsp;: <code>forkIO :: IO () -&gt; IO ThreadId</code>. Ces fils ne sont <em>pas</em> des threads du système d'exploitation&nbsp;: ce sont des <strong>fils légers</strong> (<em>green threads</em>), multiplexés par le runtime GHC sur un petit nombre de fils OS. En créer un coûte quelques octets&nbsp;; on peut en lancer un million sans faire suer la machine.</p>
+
+<figure class="code-block" data-file="Fils.hs"><pre><code class="language-haskell">import Control.Concurrent (forkIO, threadDelay)
+import Control.Monad (forM_)
+
+main :: IO ()
+main = do
+  forM_ [1..5] $ \n -&gt;
+    forkIO $ do
+      threadDelay (n * 100000)          -- pause en microsecondes
+      putStrLn ("Fil " ++ show n ++ " termine")
+  threadDelay 1000000                   -- laisse les fils finir avant de quitter
+</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Le runtime GHC répartit de nombreux fils légers créés par forkIO sur un petit nombre de fils du système d'exploitation, eux-mêmes exécutés par les cœurs du processeur. Un million de fils légers peut tenir sur quatre fils OS.">
+    <text class="d-label" x="24" y="22" font-size="12">forkIO : beaucoup de fils légers, peu de fils OS (ordonnancement M:N)</text>
+    <text class="d-mut" x="24" y="46" font-size="9">créés par ton code — coût : quelques octets chacun</text>
+    <rect class="d-accent" x="24" y="56" width="70" height="30" rx="8" /><text class="d-text" x="59" y="76" text-anchor="middle" font-size="10" font-family="monospace">fil 1</text>
+    <rect class="d-accent" x="104" y="56" width="70" height="30" rx="8" /><text class="d-text" x="139" y="76" text-anchor="middle" font-size="10" font-family="monospace">fil 2</text>
+    <rect class="d-accent" x="184" y="56" width="70" height="30" rx="8" /><text class="d-text" x="219" y="76" text-anchor="middle" font-size="10" font-family="monospace">fil 3</text>
+    <text class="d-text" x="284" y="76" font-size="14">…</text>
+    <rect class="d-accent" x="320" y="56" width="150" height="30" rx="8" /><text class="d-text" x="395" y="76" text-anchor="middle" font-size="10" font-family="monospace">1 000 000 de fils</text>
+    <text class="d-tag" x="512" y="76" font-size="9">green threads</text>
+    <line class="d-line" x1="200" y1="90" x2="240" y2="112" /><line class="d-line" x1="360" y1="90" x2="320" y2="112" /><polygon class="d-dot" points="286,118 296,113 296,123" />
+    <rect class="d-frame" x="180" y="118" width="280" height="30" rx="8" /><text class="d-text" x="320" y="138" text-anchor="middle" font-size="10">runtime GHC — l'ordonnanceur</text>
+    <line class="d-line" x1="260" y1="148" x2="200" y2="166" /><line class="d-line" x1="380" y1="148" x2="440" y2="166" />
+    <rect class="d-box" x="150" y="166" width="80" height="26" rx="7" /><text class="d-text" x="190" y="184" text-anchor="middle" font-size="9" font-family="monospace">OS 1</text>
+    <rect class="d-box" x="242" y="166" width="80" height="26" rx="7" /><text class="d-text" x="282" y="184" text-anchor="middle" font-size="9" font-family="monospace">OS 2</text>
+    <rect class="d-box" x="334" y="166" width="80" height="26" rx="7" /><text class="d-text" x="374" y="184" text-anchor="middle" font-size="9" font-family="monospace">OS 3</text>
+    <rect class="d-box" x="426" y="166" width="80" height="26" rx="7" /><text class="d-text" x="466" y="184" text-anchor="middle" font-size="9" font-family="monospace">OS 4</text>
+    <text class="d-mut" x="520" y="184" font-size="9">= cœurs CPU</text>
+  </svg>
+  <figcaption>Le runtime GHC fait de l'ordonnancement <strong>M:N</strong>&nbsp;: M fils légers projetés sur N fils système. C'est ce qui rend <code>forkIO</code> quasi gratuit et permet le style «&nbsp;un fil par requête&nbsp;» même à très grande échelle.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention — le programme n'attend pas ses fils</p><p>Quand <code>main</code> se termine, <strong>tout le programme s'arrête</strong>, même si des fils tournent encore. Le <code>threadDelay</code> final n'est qu'une béquille pédagogique&nbsp;; en vrai, on synchronise proprement avec un <code>MVar</code> ou la bibliothèque <code>async</code> (voir plus bas). Autre point&nbsp;: pour exploiter <em>plusieurs cœurs</em>, il faut compiler avec <code>-threaded</code> et lancer avec <code>+RTS -N</code>.</p></div></div>
+
+<h2>Partager un résultat : MVar</h2>
+
+<p>Un <code>MVar a</code> est une <strong>boîte mutable</strong> qui contient soit une valeur, soit rien. Deux opérations suffisent&nbsp;: <code>putMVar</code> la remplit (et <strong>bloque</strong> si elle est déjà pleine), <code>takeMVar</code> la vide (et <strong>bloque</strong> si elle est vide). Ce blocage n'est pas un défaut&nbsp;: c'est exactement le mécanisme de <em>synchronisation</em> entre fils. Un fil peut ainsi attendre patiemment le résultat d'un autre.</p>
+
+<figure class="code-block" data-file="Boite.hs"><pre><code class="language-haskell">import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent.MVar
+
+main :: IO ()
+main = do
+  boite &lt;- newEmptyMVar                 -- une boite vide, partagee
+  _ &lt;- forkIO $ do
+    threadDelay 500000
+    putMVar boite "resultat pret"       -- remplit (bloquerait si pleine)
+  msg &lt;- takeMVar boite                  -- ATTEND puis vide (bloque si vide)
+  putStrLn msg                          -- "resultat pret"
+</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Un MVar est une boîte partagée entre un fil producteur et un fil consommateur. Le producteur appelle putMVar pour la remplir ; le consommateur appelle takeMVar pour la vider. Si la boîte est vide, takeMVar attend ; si elle est pleine, putMVar attend.">
+    <text class="d-label" x="24" y="22" font-size="12">MVar : une boîte à une place qui synchronise deux fils</text>
+    <rect class="d-box" x="24" y="52" width="150" height="44" rx="10" /><text class="d-text" x="99" y="72" text-anchor="middle" font-size="11">Fil producteur</text><text class="d-mut" x="99" y="88" text-anchor="middle" font-size="8" font-family="monospace">putMVar boite x</text>
+    <line class="d-line" x1="174" y1="74" x2="244" y2="74" /><polygon class="d-dot" points="250,74 240,69 240,79" /><text class="d-tag" x="212" y="66" text-anchor="middle" font-size="8">remplit</text>
+    <rect class="d-accent" x="258" y="48" width="124" height="52" rx="12" /><text class="d-text" x="320" y="70" text-anchor="middle" font-size="11" font-family="monospace">MVar</text><text class="d-mut" x="320" y="88" text-anchor="middle" font-size="8">vide ⟷ pleine</text>
+    <line class="d-line" x1="382" y1="74" x2="452" y2="74" /><polygon class="d-dot" points="458,74 448,69 448,79" /><text class="d-tag" x="420" y="66" text-anchor="middle" font-size="8">vide</text>
+    <rect class="d-box" x="466" y="52" width="150" height="44" rx="10" /><text class="d-text" x="541" y="72" text-anchor="middle" font-size="11">Fil consommateur</text><text class="d-mut" x="541" y="88" text-anchor="middle" font-size="8" font-family="monospace">takeMVar boite</text>
+    <text class="d-mut" x="24" y="132" font-size="9">Boîte vide ⟶ takeMVar attend (bloque) que quelqu'un remplisse.</text>
+    <text class="d-mut" x="24" y="150" font-size="9">Boîte pleine ⟶ putMVar attend (bloque) que quelqu'un vide. Ce blocage EST la synchronisation.</text>
+  </svg>
+  <figcaption>Le <code>MVar</code> combine deux rôles&nbsp;: transporter une valeur <em>et</em> synchroniser. C'est parfait pour un passage de relais ponctuel (un fil calcule, l'autre récupère), ou comme verrou binaire.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un <code>MVar</code> sert aussi de <strong>verrou</strong>&nbsp;: une boîte pleine = «&nbsp;libre&nbsp;», qu'on prend (<code>takeMVar</code>) pour entrer en section critique et qu'on repose (<code>putMVar</code>) en sortant. Mais dès qu'on manipule <em>plusieurs</em> verrous, on retombe sur les vieux démons du parallélisme&nbsp;: interblocages et conditions de course. C'est précisément le problème que STM va dissoudre.</p></div></div>
+
+<h2>STM : des transactions sans verrou</h2>
+
+<p>La <strong>mémoire transactionnelle logicielle</strong> (<em>Software Transactional Memory</em>) est l'idée-phare de la concurrence en Haskell. On écrit un bloc d'opérations sur des variables partagées (<code>TVar</code>), on l'enveloppe dans <code>atomically</code>, et le runtime garantit qu'il s'exécute <strong>tout entier ou pas du tout</strong>, comme une transaction de base de données. Pas de verrou à poser, pas d'ordre à respecter&nbsp;: en cas de conflit avec un autre fil, la transaction est <em>rejouée</em> automatiquement.</p>
+
+<figure class="code-block" data-file="Compteur.hs"><pre><code class="language-haskell">import Control.Concurrent.STM
+import Control.Concurrent (forkIO)
+import Control.Monad (replicateM_)
+
+main :: IO ()
+main = do
+  compteur &lt;- newTVarIO (0 :: Int)              -- une variable transactionnelle
+  replicateM_ 100 $ forkIO $
+    atomically (modifyTVar' compteur (+1))      -- +1 atomique, sans verrou
+  threadDelay 200000
+  n &lt;- readTVarIO compteur
+  print n                                        -- 100, sans condition de course
+</code></pre></figure>
+
+<p>La vraie magie, c'est <code>retry</code>&nbsp;: à l'intérieur d'une transaction, il dit «&nbsp;les conditions ne sont pas réunies, mets-moi en pause et réveille-moi quand une des variables lues aura changé&nbsp;». Aucune attente active, aucun sondage. Parfait pour un producteur/consommateur ou un compte bancaire qui doit attendre des fonds.</p>
+
+<figure class="code-block" data-file="Banque.hs"><pre><code class="language-haskell">-- Vire un montant d'un compte a l'autre, de facon atomique.
+virer :: TVar Int -&gt; TVar Int -&gt; Int -&gt; STM ()
+virer source dest montant = do
+  soldeS &lt;- readTVar source
+  if soldeS &lt; montant
+    then retry                          -- fonds insuffisants : attend un depot
+    else do
+      writeTVar source (soldeS - montant)
+      modifyTVar' dest (+ montant)
+
+-- Cote IO : deux virements combines en UNE seule transaction atomique.
+main :: IO ()
+main = do
+  a &lt;- newTVarIO 100
+  b &lt;- newTVarIO 0
+  atomically $ do
+    virer a b 30
+    virer a b 20                        -- les deux passent, ou aucun
+  soldes &lt;- atomically ((,) &lt;$&gt; readTVar a &lt;*&gt; readTVar b)
+  print soldes                          -- (50, 50)
+</code></pre></figure>
+
+<p>Le point décisif&nbsp;: <code>virer</code> a le type <code>STM ()</code>, pas <code>IO ()</code>. On peut donc <strong>composer</strong> deux virements par un simple bloc <code>do</code>, et le tout devient une seule transaction indivisible. Avec des verrous, combiner deux opérations atomiques ne donne <em>pas</em> une opération atomique&nbsp;; avec STM, si.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="Comparaison entre verrous et STM. À gauche, deux fils prennent deux verrous dans l'ordre inverse et se bloquent mutuellement : c'est un interblocage. À droite, deux fils exécutent chacun une transaction atomically ; en cas de conflit, l'une est simplement rejouée, sans interblocage possible.">
+    <text class="d-label" x="24" y="22" font-size="12">Verrous vs STM : le même partage, deux mondes</text>
+    <text class="d-tag" x="24" y="46" font-size="10">avec des verrous — ordre fragile</text>
+    <rect class="d-box" x="24" y="56" width="120" height="30" rx="8" /><text class="d-text" x="84" y="76" text-anchor="middle" font-size="9" font-family="monospace">fil A : lock 1</text>
+    <rect class="d-box" x="24" y="94" width="120" height="30" rx="8" /><text class="d-text" x="84" y="114" text-anchor="middle" font-size="9" font-family="monospace">fil B : lock 2</text>
+    <line class="d-line" x1="144" y1="71" x2="200" y2="109" /><line class="d-line" x1="144" y1="109" x2="200" y2="71" />
+    <rect class="d-box" x="200" y="56" width="120" height="30" rx="8" /><text class="d-text" x="260" y="76" text-anchor="middle" font-size="9" font-family="monospace">attend lock 2</text>
+    <rect class="d-box" x="200" y="94" width="120" height="30" rx="8" /><text class="d-text" x="260" y="114" text-anchor="middle" font-size="9" font-family="monospace">attend lock 1</text>
+    <text class="d-text" x="150" y="150" font-size="11" fill="#b4302e">✗ interblocage</text>
+    <line class="d-line" x1="336" y1="40" x2="336" y2="200" />
+    <text class="d-tag" x="356" y="46" font-size="10">avec STM — rejeu automatique</text>
+    <rect class="d-accent" x="356" y="56" width="260" height="30" rx="8" /><text class="d-text" x="486" y="76" text-anchor="middle" font-size="9" font-family="monospace">atomically { lire; ecrire TVars }</text>
+    <line class="d-line" x1="486" y1="86" x2="486" y2="104" /><polygon class="d-dot" points="486,110 481,100 491,100" />
+    <rect class="d-box" x="356" y="110" width="125" height="30" rx="8" /><text class="d-text" x="418" y="130" text-anchor="middle" font-size="9">conflit détecté</text>
+    <rect class="d-accent" x="491" y="110" width="125" height="30" rx="8" /><text class="d-text" x="553" y="130" text-anchor="middle" font-size="9">valide (commit)</text>
+    <path class="d-line" d="M418 140 q -30 30 30 40 q 40 8 68 -30" fill="none" /><polygon class="d-dot" points="486,152 476,150 481,159" />
+    <text class="d-text" x="470" y="196" font-size="11" fill="#1f7a4d">✓ rejeu, jamais bloqué</text>
+  </svg>
+  <figcaption>Les verrous demandent de respecter un ordre global — sinon, interblocage. STM supprime la question&nbsp;: une transaction ne pose aucun verrou, elle <em>tente</em>, détecte les conflits et <strong>rejoue</strong>. Un interblocage devient structurellement impossible.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le mur anti-spam de Facebook (Sigma &amp; Haxl)</p><p>Facebook a réécrit <strong>Sigma</strong>, son système de détection de spam et d'abus, en Haskell. Cette brique examine <em>chaque</em> action publiée sur le réseau — jusqu'à plus d'un <strong>million de requêtes par seconde</strong> — pour décider en quelques millisecondes si elle est légitime. Le cœur repose sur la bibliothèque maison <strong>Haxl</strong>, qui exploite deux forces vues dans ce cours&nbsp;: la <em>pureté</em> (les règles anti-abus sont des fonctions sans effet, donc parallélisables sans risque) et la concurrence légère de GHC pour lancer des milliers de récupérations de données <em>en même temps</em>, automatiquement groupées et dédupliquées. Là où d'autres écosystèmes auraient orchestré ce ballet à la main avec des verrous et des rappels, Haskell laisse le runtime et STM gérer le partage d'état. Résultat&nbsp;: un système qui tient une charge colossale avec un code que les ingénieurs décrivent comme… étonnamment lisible.</p></div></div>
+
+<h2>Orchestrer avec async</h2>
+
+<p>Au quotidien, on manipule rarement <code>forkIO</code> à nu&nbsp;: on prend la bibliothèque <strong><code>async</code></strong> (de Simon Marlow), qui traite une tâche concurrente comme une valeur qu'on peut attendre. <code>async</code> lance, <code>wait</code> récupère le résultat, et surtout les exceptions du fil enfant <em>remontent</em> au lieu d'être perdues.</p>
+
+<figure class="code-block" data-file="Async.hs"><pre><code class="language-haskell">import Control.Concurrent.Async
+
+-- concurrently : lance deux actions en parallele, attend les DEUX.
+telecharger :: String -&gt; IO String
+telecharger url = pure ("contenu de " ++ url)   -- simule un acces reseau
+
+main :: IO ()
+main = do
+  (a, b) &lt;- concurrently (telecharger "miroir/1") (telecharger "miroir/2")
+  putStrLn (a ++ " | " ++ b)
+
+  -- race : lance deux actions, garde la PREMIERE finie, annule l'autre.
+  gagnant &lt;- race (telecharger "rapide") (telecharger "lent")
+  print (gagnant :: Either String String)
+
+  -- mapConcurrently : un map... mais toutes les taches en parallele.
+  pages &lt;- mapConcurrently telecharger ["/a", "/b", "/c"]
+  mapM_ putStrLn pages
+</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Préfère <code>async</code> à <code>forkIO</code> dès qu'un fil doit <strong>rendre un résultat</strong> ou peut <strong>échouer</strong>. <code>withAsync</code> garantit en plus que le fil est annulé si le bloc qui l'entoure se termine (par une exception, par exemple)&nbsp;: plus de fils «&nbsp;zombies&nbsp;» oubliés. C'est la version sûre, exception-safe, de la concurrence.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Faire de l'<code>IO</code> dans une transaction STM.</strong> Le type l'interdit&nbsp;: dans un bloc <code>atomically</code>, on ne peut appeler que des actions <code>STM</code>, jamais <code>putStrLn</code> ni <code>readFile</code>. C'est <em>voulu</em>&nbsp;: une transaction peut être rejouée plusieurs fois, et rejouer un effet de bord (envoyer deux e-mails&nbsp;!) serait catastrophique. Fais tes lectures/écritures <em>après</em> le <code>atomically</code>.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Un <code>modifyTVar</code> paresseux qui fuit.</strong> Avec beaucoup de fils, <code>modifyTVar compteur (+1)</code> peut empiler des additions non évaluées (<em>thunks</em>) et faire enfler la mémoire. Utilise la version stricte <code>modifyTVar'</code> (avec l'apostrophe) pour forcer le calcul à chaque pas — le réflexe vu à la leçon sur l'évaluation paresseuse.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore <code>TChan</code> et <code>TQueue</code> (des files d'attente transactionnelles pour les schémas producteur/consommateur), et l'opérateur <code>orElse</code> qui compose deux transactions «&nbsp;essaie ceci, sinon cela&nbsp;». Pour la théorie, l'article fondateur <em>«&nbsp;Composable Memory Transactions&nbsp;»</em> (Harris, Marlow, Peyton Jones, Herlihy) et le chapitre <em>Parallel and Concurrent Programming in Haskell</em> de Simon Marlow sont les références. Enfin, ne confonds pas <strong>concurrence</strong> (structurer des tâches qui progressent ensemble) et <strong>parallélisme</strong> (<code>par</code>/<code>Strategies</code>, accélérer un calcul pur sur plusieurs cœurs)&nbsp;: Haskell distingue soigneusement les deux.</p></div></div>
+
+<h2>Antisèche — la concurrence en Haskell</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les outils pour lancer, partager et orchestrer des fils</caption>
+    <thead><tr><th>Outil</th><th>Rôle</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>forkIO</code></td><td>Lancer un fil léger</td><td><code>forkIO (putStrLn "hello")</code></td></tr>
+      <tr><td><code>threadDelay</code></td><td>Suspendre un fil (microsecondes)</td><td><code>threadDelay 1000000</code></td></tr>
+      <tr><td><code>MVar</code></td><td>Boîte à une place&nbsp;: transporte + synchronise</td><td><code>takeMVar</code> / <code>putMVar</code></td></tr>
+      <tr><td><code>TVar</code></td><td>Variable transactionnelle (partagée)</td><td><code>newTVarIO 0</code></td></tr>
+      <tr><td><code>atomically</code></td><td>Exécuter une transaction STM (tout ou rien)</td><td><code>atomically (modifyTVar' v (+1))</code></td></tr>
+      <tr><td><code>retry</code></td><td>Mettre la transaction en attente d'un changement</td><td><code>if solde &lt; m then retry else …</code></td></tr>
+      <tr><td><code>concurrently</code></td><td>Deux actions en parallèle, attend les deux</td><td><code>concurrently f g</code></td></tr>
+      <tr><td><code>race</code></td><td>La première finie gagne, l'autre est annulée</td><td><code>race f g :: IO (Either a b)</code></td></tr>
+      <tr><td><code>mapConcurrently</code></td><td><code>map</code> dont toutes les tâches sont parallèles</td><td><code>mapConcurrently dl urls</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Fil léger (<em>green thread</em>)</dt><dd>Fil géré par le runtime GHC, pas par le système d'exploitation. Très bon marché (quelques octets), on peut en lancer des millions&nbsp;; créé avec <code>forkIO</code>.</dd>
+  <dt>Ordonnancement M:N</dt><dd>Stratégie du runtime qui projette M fils légers sur N fils système (les cœurs). C'est ce qui rend la concurrence Haskell si peu coûteuse.</dd>
+  <dt><code>MVar</code></dt><dd>Boîte mutable à une place, vide ou pleine. <code>putMVar</code> remplit (bloque si pleine), <code>takeMVar</code> vide (bloque si vide)&nbsp;: le blocage assure la synchronisation.</dd>
+  <dt>STM</dt><dd><em>Software Transactional Memory</em>&nbsp;: on groupe des opérations sur des <code>TVar</code> dans un bloc <code>atomically</code> exécuté «&nbsp;tout ou rien&nbsp;», rejoué en cas de conflit, sans verrou.</dd>
+  <dt><code>TVar</code></dt><dd>Variable transactionnelle&nbsp;: la mémoire partagée manipulée par STM, lue avec <code>readTVar</code> et modifiée avec <code>writeTVar</code>/<code>modifyTVar'</code>.</dd>
+  <dt><code>retry</code></dt><dd>Dans une transaction, met le fil en attente jusqu'à ce qu'une des <code>TVar</code> lues change&nbsp;: une attente passive, sans sondage.</dd>
+  <dt>Interblocage (<em>deadlock</em>)</dt><dd>Situation où des fils s'attendent mutuellement et se figent. Fréquent avec les verrous pris dans le mauvais ordre&nbsp;; structurellement impossible avec STM.</dd>
+  <dt><code>async</code></dt><dd>Bibliothèque qui traite une tâche concurrente comme une valeur&nbsp;: <code>async</code>/<code>wait</code>, <code>concurrently</code>, <code>race</code>, <code>mapConcurrently</code>, avec remontée des exceptions.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>forkIO</code> lance un <strong>fil léger</strong>&nbsp;; le runtime GHC en ordonnance des millions sur quelques fils OS (M:N).</li>
+  <li>Un <code>MVar</code> est une boîte à une place qui <strong>transporte et synchronise</strong>&nbsp;; utile pour un relais ou un verrou binaire, mais fragile à plusieurs.</li>
+  <li><strong>STM</strong> remplace les verrous par des <strong>transactions atomiques et composables</strong> (<code>TVar</code>, <code>atomically</code>, <code>retry</code>)&nbsp;: pas d'interblocage possible.</li>
+  <li>On ne fait <strong>jamais d'<code>IO</code></strong> dans un bloc <code>atomically</code> (il peut être rejoué)&nbsp;; on privilégie <code>modifyTVar'</code> (strict).</li>
+  <li>La bibliothèque <code>async</code> (<code>concurrently</code>, <code>race</code>, <code>mapConcurrently</code>) est l'outil de tous les jours.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>En quoi un fil créé par <code>forkIO</code> diffère-t-il d'un thread du système d'exploitation&nbsp;?</li>
+<li>Pourquoi ne peut-on pas appeler <code>putStrLn</code> à l'intérieur d'un bloc <code>atomically</code>&nbsp;?</li>
+<li>Qu'est-ce qui rend STM «&nbsp;composable&nbsp;» là où deux verrous ne le sont pas&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un fil créé par forkIO ?","a":["Un fil léger (green thread) géré par le runtime GHC, très bon marché : on peut en lancer des millions, multiplexés sur quelques fils OS","Un processus séparé du système","Un thread OS classique, coûteux à créer","Une simple fonction pure"],"correct":0,"explain":"forkIO crée un fil léger ordonnancé par le runtime GHC (M:N). Il coûte quelques octets, ce qui autorise le style « un fil par requête » même à très grande échelle, contrairement aux threads OS lourds."},
+  {"q":"Quel est l'avantage décisif de STM (atomically) sur les verrous ?","a":["Les transactions sont atomiques ET composables, et ne peuvent pas provoquer d'interblocage : on combine plusieurs opérations en une seule action indivisible, rejouée en cas de conflit","Elles sont toujours plus rapides","Elles évitent d'écrire du code","Elles suppriment le besoin de types"],"correct":0,"explain":"Deux opérations protégées par des verrous ne forment pas une opération atomique ; deux actions STM, combinées dans un bloc do sous atomically, si. Et comme aucune transaction ne pose de verrou, l'interblocage devient impossible."},
+  {"q":"Que fait race a b de la bibliothèque async ?","a":["Elle lance a et b en concurrence et rend le résultat de la PREMIÈRE terminée (un Either), en annulant l'autre","Elle attend que les deux finissent","Elle exécute a puis b séquentiellement","Elle échoue si a et b diffèrent"],"correct":0,"explain":"race met deux actions en compétition : la première qui se termine gagne, son résultat est renvoyé dans un Either (Left = a, Right = b), et l'autre tâche est automatiquement annulée."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["forkIO"],"placeholder":"la fonction qui lance une action IO dans un nouveau fil léger : … action","hints":["Sa signature : IO () -> IO ThreadId.","Fork + IO.","Six lettres, deux majuscules à la fin."],"link":{"href":"lecon-17.html","label":"Revoir « forkIO »"}},
+  {"type":"text","accept":["atomically"],"placeholder":"la fonction qui exécute une transaction STM (tout ou rien) : … (modifyTVar' v (+1))","hints":["Elle transforme une action STM en action IO.","« de façon … ».","Dix lettres."],"link":{"href":"lecon-17.html","label":"Revoir « STM »"}},
+  {"type":"text","accept":["retry"],"placeholder":"dans une transaction STM, l'action qui met le fil en attente jusqu'à ce qu'une TVar change : …","hints":["« ré-essaie ».","Cinq lettres.","if solde < m then … else ..."],"link":{"href":"lecon-17.html","label":"Revoir « retry »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Lance trois fils qui affichent chacun leur numéro, puis laisse le programme leur donner le temps de finir. Utilise <code>forkIO</code>, <code>forM_</code> et <code>threadDelay</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Concurrent (forkIO, threadDelay)
+import Control.Monad (forM_)
+
+main :: IO ()
+main = do
+  forM_ [1..3] $ \n -&gt;
+    forkIO (putStrLn ("Bonjour du fil " ++ show n))
+  threadDelay 100000        -- 0,1 s pour laisser les fils s'exprimer</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un compteur partagé avec un <code>TVar</code>, lance 50 fils qui l'incrémentent chacun une fois de façon atomique, puis affiche le total. Pourquoi n'y a-t-il pas de condition de course&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Concurrent.STM
+import Control.Concurrent (forkIO, threadDelay)
+import Control.Monad (replicateM_)
+
+main :: IO ()
+main = do
+  compteur &lt;- newTVarIO (0 :: Int)
+  replicateM_ 50 $ forkIO $
+    atomically (modifyTVar' compteur (+1))
+  threadDelay 200000
+  total &lt;- readTVarIO compteur
+  print total               -- 50
+
+-- Pas de course : chaque +1 est une transaction atomique. En cas de
+-- conflit, le runtime rejoue la transaction, jamais d'ecrasement perdu.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>retirer :: TVar Int -&gt; Int -&gt; STM ()</code> qui retire un montant d'un compte, mais <strong>attend</strong> (au lieu d'échouer) si le solde est insuffisant. Explique en une phrase ce que <code>retry</code> apporte ici par rapport à un simple message d'erreur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Concurrent.STM
+
+retirer :: TVar Int -&gt; Int -&gt; STM ()
+retirer compte montant = do
+  solde &lt;- readTVar compte
+  if solde &lt; montant
+    then retry                       -- attend passivement un depot suffisant
+    else writeTVar compte (solde - montant)
+
+-- retry met le fil en pause SANS sondage : le runtime le reveille tout
+-- seul des qu'un depot modifie le TVar. Un message d'erreur, lui, forcerait
+-- l'appelant a re-tenter en boucle (attente active, gaspilleuse).</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-haskell.min.js" defer></script>
+  </body>
+</html>

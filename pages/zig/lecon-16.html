@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les threads et la synchronisation — Leçon 16 · Cours Zig — Syntaxe</title>
+    <meta name="description" content="Lancer plusieurs fils d'exécution avec std.Thread, comprendre la course critique, protéger les données partagées avec un Mutex et les atomiques, et paralléliser un travail." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="zig" data-lesson="lecon-16.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Zig</a></li>
+            <li aria-current="page">Leçon 16</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Zig avancé — Leçon 16</p>
+              <h1 class="lesson-header__title">Les threads et la synchronisation</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~52 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 06 &amp; 15</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lancer un fil d'exécution avec <code>std.Thread.spawn</code> et l'attendre&nbsp;;</li>
+                  <li>reconnaître une <strong>course critique</strong> sur une donnée partagée&nbsp;;</li>
+                  <li>protéger un accès avec un <code>Mutex</code> ou une valeur <strong>atomique</strong>&nbsp;;</li>
+                  <li>répartir un travail sur plusieurs cœurs.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un ordinateur moderne a plusieurs cœurs&nbsp;: pour aller vite, on veut faire <strong>plusieurs choses à la fois</strong>. Zig n'a pas de mot-clé magique&nbsp;; il expose des <strong>fils d'exécution</strong> (threads) via la bibliothèque standard, et te laisse les outils pour partager la mémoire <em>sans te tirer une balle dans le pied</em>. C'est puissant — et cela demande de la rigueur.</p>
+
+<h2>Lancer et attendre un fil</h2>
+<p>Un thread exécute une fonction «&nbsp;à côté&nbsp;» du fil principal. On le <strong>lance</strong> (<code>spawn</code>) et, plus tard, on l'<strong>attend</strong> (<code>join</code>) pour être sûr qu'il a fini.</p>
+<figure class="code-block" data-file="threads.zig"><pre><code class="language-clike">const std = @import("std");
+
+fn saluer(nom: []const u8) void {
+    std.debug.print("bonjour depuis {s}\n", .{nom});
+}
+
+pub fn main() !void {
+    // lance DEUX fils en parallèle du fil principal
+    const t1 = try std.Thread.spawn(.{}, saluer, .{"fil A"});
+    const t2 = try std.Thread.spawn(.{}, saluer, .{"fil B"});
+    // attend qu'ils aient terminé avant de continuer
+    t1.join();
+    t2.join();
+    std.debug.print("les deux fils sont finis\n", .{});
+}</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Chronologie de deux threads. Le fil principal lance le fil A puis le fil B avec spawn. Les deux fils s'exécutent en parallèle pendant un moment. Le fil principal appelle join pour chacun : il attend que les deux fils aient terminé, puis reprend seul jusqu'à la fin.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">spawn lance à côté ; join attend la fin</text>
+    <text class="d-mut" x="20" y="52" font-size="10">principal</text>
+    <line class="d-line" x1="80" y1="48" x2="600" y2="48" marker-end="url(#z16a)" />
+    <circle class="d-dot" cx="150" cy="48" r="4" /><text class="d-mut" x="150" y="38" text-anchor="middle" font-size="8">spawn A</text>
+    <circle class="d-dot" cx="210" cy="48" r="4" /><text class="d-mut" x="210" y="38" text-anchor="middle" font-size="8">spawn B</text>
+    <circle class="d-dot" cx="500" cy="48" r="4" /><text class="d-mut" x="500" y="38" text-anchor="middle" font-size="8">join</text>
+    <text class="d-mut" x="20" y="100" font-size="10">fil A</text>
+    <rect class="d-accent" x="150" y="88" width="330" height="22" rx="5" /><text class="d-text" x="315" y="103" text-anchor="middle" font-size="10">saluer("fil A")</text>
+    <text class="d-mut" x="20" y="138" font-size="10">fil B</text>
+    <rect class="d-accent" x="210" y="126" width="290" height="22" rx="5" /><text class="d-text" x="355" y="141" text-anchor="middle" font-size="10">saluer("fil B")</text>
+    <line class="d-line" x1="480" y1="99" x2="498" y2="55" marker-end="url(#z16a)" />
+    <line class="d-line" x1="500" y1="137" x2="502" y2="55" marker-end="url(#z16a)" />
+    <defs><marker id="z16a" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Sans <code>join</code>, le fil principal pourrait se terminer <strong>avant</strong> les autres&nbsp;: on attend toujours ses threads.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'ordre d'affichage n'est pas garanti</p><p>Lance ce programme plusieurs fois&nbsp;: parfois «&nbsp;fil A&nbsp;» s'affiche avant «&nbsp;fil B&nbsp;», parfois l'inverse. Les fils avancent <strong>indépendamment</strong>&nbsp;; le système décide qui tourne quand. Ne <em>jamais</em> supposer un ordre entre threads sans synchronisation explicite.</p></div></div>
+
+<h2>Le piège&nbsp;: la course critique</h2>
+<p>Le danger apparaît dès que deux fils <strong>modifient la même donnée</strong>. Incrémenter un compteur semble atomique&nbsp;; en réalité c'est <em>lire → +1 → écrire</em>. Si deux fils s'entrelacent, une incrémentation est <strong>perdue</strong>.</p>
+<figure class="code-block" data-file="course.zig"><pre><code class="language-clike">var compteur: usize = 0; // partagé — DANGER
+
+fn ajouter_mille() void {
+    var i: usize = 0;
+    while (i &lt; 1000) : (i += 1) compteur += 1; // lecture-modif-écriture non protégée
+}
+// 8 fils qui font chacun +1000 → on ESPÈRE 8000…
+// … mais on obtient souvent MOINS : des incréments s'écrasent.</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Une course critique. Deux fils lisent le compteur à 41 en même temps. Chacun calcule 41 plus 1 égale 42, puis écrit 42. Résultat final 42 au lieu de 43 : une incrémentation est perdue car les deux fils sont partis de la même valeur.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Deux « +1 » entrelacés = un seul compté</text>
+    <text class="d-mut" x="40" y="58" font-size="10">fil A</text>
+    <rect class="d-box" x="80" y="42" width="120" height="30" rx="5" /><text class="d-text" x="140" y="61" text-anchor="middle" font-size="9.5">lit 41</text>
+    <rect class="d-box" x="212" y="42" width="120" height="30" rx="5" /><text class="d-text" x="272" y="61" text-anchor="middle" font-size="9.5">41+1 = 42</text>
+    <rect class="d-frame" x="344" y="42" width="120" height="30" rx="5" /><text class="d-text" x="404" y="61" text-anchor="middle" font-size="9.5">écrit 42</text>
+    <text class="d-mut" x="40" y="112" font-size="10">fil B</text>
+    <rect class="d-box" x="80" y="96" width="120" height="30" rx="5" /><text class="d-text" x="140" y="115" text-anchor="middle" font-size="9.5">lit 41</text>
+    <rect class="d-box" x="212" y="96" width="120" height="30" rx="5" /><text class="d-text" x="272" y="115" text-anchor="middle" font-size="9.5">41+1 = 42</text>
+    <rect class="d-frame" x="344" y="96" width="120" height="30" rx="5" /><text class="d-text" x="404" y="115" text-anchor="middle" font-size="9.5">écrit 42</text>
+    <rect class="d-accent" x="486" y="68" width="130" height="34" rx="6" /><text class="d-text" x="551" y="89" text-anchor="middle" font-size="10">42, pas 43 ✗</text>
+    <text class="d-mut" x="551" y="120" text-anchor="middle" font-size="9">un +1 perdu</text>
+    <defs><marker id="z16b" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Les deux fils partent de <strong>41</strong> et écrivent <strong>42</strong>&nbsp;: une des deux incrémentations est perdue. C'est une <strong>course critique</strong>.</figcaption>
+</figure>
+
+<h2>Protéger avec un <code>Mutex</code></h2>
+<p>Un <strong>mutex</strong> (exclusion mutuelle) garantit qu'<strong>un seul fil à la fois</strong> entre dans la section sensible. On <code>lock</code> avant, on <code>unlock</code> après — et <code>defer</code> rend l'<code>unlock</code> infaillible.</p>
+<figure class="code-block" data-file="mutex.zig"><pre><code class="language-clike">var compteur: usize = 0;
+var verrou: std.Thread.Mutex = .{};
+
+fn ajouter_mille() void {
+    var i: usize = 0;
+    while (i &lt; 1000) : (i += 1) {
+        verrou.lock();
+        defer verrou.unlock(); // libéré à coup sûr en sortie de bloc
+        compteur += 1;         // section critique : un seul fil ici à la fois
+    }
+}
+// 8 fils → 8000, à tous les coups.</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title"><code>defer unlock</code> = jamais de verrou oublié</p><p>Poser <code>defer verrou.unlock()</code> juste après le <code>lock()</code> garantit que le verrou est relâché <strong>quelle que soit</strong> la sortie du bloc (retour, erreur, fin normale). Un verrou oublié fige tous les autres fils&nbsp;: c'est un <strong>interblocage</strong>. Le <code>defer</code> de la leçon&nbsp;12 l'empêche par construction.</p></div></div>
+
+<h2>Plus léger&nbsp;: les opérations atomiques</h2>
+<p>Pour un simple compteur, prendre un verrou est un peu lourd. Une valeur <strong>atomique</strong> effectue le «&nbsp;lire-modifier-écrire&nbsp;» en <em>une</em> opération indivisible, sans verrou&nbsp;:</p>
+<figure class="code-block" data-file="atomic.zig"><pre><code class="language-clike">var compteur = std.atomic.Value(usize).init(0);
+
+fn ajouter_mille() void {
+    var i: usize = 0;
+    while (i &lt; 1000) : (i += 1) {
+        _ = compteur.fetchAdd(1, .monotonic); // +1 atomique, indivisible
+    }
+}
+// lecture finale : compteur.load(.monotonic) → 8000</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Atomique ≠ solution universelle</p><p>Les atomiques sont parfaits pour un <strong>compteur</strong> ou un drapeau. Mais dès qu'une opération touche <strong>plusieurs</strong> variables qui doivent rester cohérentes entre elles (par ex. déplacer un élément d'une liste à une autre), l'atomique ne suffit plus&nbsp;: il faut un <strong>mutex</strong> autour de toute la section. Choisis l'outil selon la taille de la section critique.</p></div></div>
+
+<h2>Répartir un travail sur plusieurs cœurs</h2>
+<p>Le vrai gain arrive quand on découpe un gros calcul en morceaux traités <strong>en parallèle</strong>. On peut lancer un fil par morceau, ou utiliser un <code>std.Thread.Pool</code> qui recycle un nombre fixe de fils.</p>
+<figure class="code-block" data-file="pool.zig"><pre><code class="language-clike">var pool: std.Thread.Pool = undefined;
+try pool.init(.{ .allocator = alloc });
+defer pool.deinit();
+
+var attente: std.Thread.WaitGroup = .{};
+for (morceaux) |*m| {
+    pool.spawnWg(&amp;attente, traiter, .{m}); // distribue chaque morceau
+}
+attente.wait(); // attend que TOUT soit traité</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — un serveur qui tient la charge</p><p>Un serveur web reçoit des dizaines de connexions <em>simultanées</em>. Le patron classique&nbsp;: un <strong>pool de threads</strong> traite les requêtes en parallèle&nbsp;; les données partagées (cache, compteurs de statistiques) sont protégées par des <strong>mutex</strong> ou des <strong>atomiques</strong>. C'est exactement ce que tu viens de voir&nbsp;: <code>spawn</code> pour la parallélisation, <code>Mutex</code>/atomiques pour la cohérence. Sans cette discipline, un compteur de visites se met à «&nbsp;perdre&nbsp;» des visites sous charge — le bug le plus frustrant qui soit, car il ne se reproduit pas à la demande.</p></div></div>
+
+<h2>Et après&nbsp;?</h2>
+<p>Tu sais lancer des fils, repérer une course critique et la corriger. Le réflexe clé&nbsp;: <strong>toute donnée partagée <em>et</em> modifiée doit être protégée</strong>. La <a href="lecon-17.html">leçon suivante</a> aborde la généricité et les interfaces&nbsp;; le <a href="lecon-18.html">projet final</a> assemblera tout.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore <code>std.Thread.Condition</code> (attendre qu'une condition devienne vraie), <code>std.Thread.RwLock</code> (plusieurs lecteurs OU un écrivain), et les ordres mémoire (<code>.monotonic</code>, <code>.acquire</code>, <code>.release</code>). Compare avec l'<a href="../rust/cours.html">approche de Rust</a> (le compilateur <em>interdit</em> le partage non protégé) et le modèle acteur d'<a href="../erlang/cours.html">Erlang</a>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Threads et synchronisation en Zig — référence rapide</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Code Zig</th></tr></thead>
+    <tbody>
+      <tr><td>Lancer un fil</td><td><code>std.Thread.spawn(.{}, f, args)</code></td></tr>
+      <tr><td>Attendre la fin d'un fil</td><td><code>t.join()</code></td></tr>
+      <tr><td>Déclarer un verrou</td><td><code>var verrou: std.Thread.Mutex = .{}</code></td></tr>
+      <tr><td>Verrouiller / déverrouiller</td><td><code>verrou.lock(); defer verrou.unlock()</code></td></tr>
+      <tr><td>Déclarer un compteur atomique</td><td><code>std.atomic.Value(usize).init(0)</code></td></tr>
+      <tr><td>Incrémenter atomiquement</td><td><code>compteur.fetchAdd(1, .monotonic)</code></td></tr>
+      <tr><td>Lire une valeur atomique</td><td><code>compteur.load(.monotonic)</code></td></tr>
+      <tr><td>Créer un pool de fils</td><td><code>pool.init(.{ .allocator = alloc })</code></td></tr>
+      <tr><td>Distribuer une tâche au pool</td><td><code>pool.spawnWg(&amp;attente, f, .{arg})</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>thread (fil d'exécution)</dt><dd>Une suite d'instructions qui s'exécute «&nbsp;à côté&nbsp;» des autres, potentiellement sur un autre cœur.</dd>
+  <dt><code>spawn</code></dt><dd>Lance une fonction dans un nouveau fil&nbsp;: <code>std.Thread.spawn(.{}, f, args)</code>.</dd>
+  <dt><code>join</code></dt><dd>Attend qu'un fil ait terminé avant de continuer&nbsp;; on attend toujours ses threads.</dd>
+  <dt>course critique (data race)</dt><dd>Deux fils accèdent à la même donnée «&nbsp;en même temps&nbsp;», dont au moins un en écriture, sans synchronisation&nbsp;: résultat imprévisible.</dd>
+  <dt>section critique</dt><dd>Le morceau de code qui touche une donnée partagée et qu'un seul fil doit exécuter à la fois.</dd>
+  <dt>mutex</dt><dd>Un verrou d'<strong>exclusion mutuelle</strong>&nbsp;: <code>lock</code> avant la section critique, <code>unlock</code> après.</dd>
+  <dt>opération atomique</dt><dd>Un lire-modifier-écrire <strong>indivisible</strong>, sans verrou&nbsp;; idéal pour un compteur ou un drapeau.</dd>
+  <dt>interblocage (deadlock)</dt><dd>Des fils se bloquent mutuellement en attente d'un verrou jamais relâché&nbsp;; évité par <code>defer unlock</code> et un ordre de verrouillage cohérent.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><code>std.Thread.spawn</code> lance un fil&nbsp;; <code>join</code> attend sa fin (toujours attendre ses threads).</li>
+<li>Une donnée partagée <em>et</em> modifiée sans protection = <strong>course critique</strong> (incréments perdus).</li>
+<li>Un <code>Mutex</code> (avec <code>defer unlock</code>) sérialise la section critique&nbsp;; une valeur <strong>atomique</strong> suffit pour un compteur.</li>
+<li>Un <code>Thread.Pool</code> répartit un travail découpé sur plusieurs cœurs.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert <code>join</code> après un <code>spawn</code> ?</li><li>Pourquoi <code>compteur += 1</code> est-il dangereux entre threads ?</li><li>Quand préférer un atomique à un mutex ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"À quoi sert join() après avoir lancé un thread avec spawn() ?","a":["À attendre que le fil ait terminé son travail avant de continuer","À démarrer le fil (spawn ne fait que le préparer)","À fusionner deux fils en un seul","À libérer la mémoire du programme"],"correct":0,"explain":"spawn lance le fil ; join bloque jusqu'à sa fin. Sans join, le fil principal pourrait finir avant les autres."},
+  {"q":"Pourquoi compteur += 1 partagé entre plusieurs threads est-il dangereux ?","a":["Parce que c'est un lire-modifier-écrire : deux fils partis de la même valeur écrasent l'incrément de l'autre (course critique)","Parce que Zig interdit les variables globales","Parce que += n'existe pas en Zig","Parce que le compteur déborde toujours"],"correct":0,"explain":"L'opération n'est pas indivisible ; l'entrelacement fait perdre des incréments. C'est la course critique."},
+  {"q":"Que garantit un Mutex ?","a":["Qu'un seul fil à la fois exécute la section critique protégée par lock/unlock","Que les fils s'exécutent plus vite","Que la mémoire est chiffrée","Qu'aucun fil ne peut être lancé"],"correct":0,"explain":"Le mutex sérialise l'accès : entre lock() et unlock(), un seul fil entre. defer unlock évite d'oublier de relâcher."},
+  {"q":"Quand une valeur atomique suffit-elle, plutôt qu'un mutex ?","a":["Pour une opération simple et indivisible sur UNE variable (compteur, drapeau)","Pour toute opération, un atomique remplace toujours un mutex","Jamais : il faut toujours un mutex","Uniquement pour lire, jamais pour écrire"],"correct":0,"explain":"L'atomique gère un compteur/drapeau sans verrou ; dès que plusieurs variables doivent rester cohérentes ensemble, il faut un mutex."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["join","join()",".join()"],"placeholder":"la méthode qui attend la fin d'un thread","hints":["Contraire de « lancer ».","« t.___() »."],"link":{"href":"lecon-16.html","label":"Revoir « Lancer et attendre »"}},
+  {"type":"text","accept":["course critique","data race","race condition","course"],"placeholder":"le nom du bug quand deux fils modifient la même donnée sans protection","hints":["Deux mots.","« course ___ »."],"link":{"href":"lecon-16.html","label":"Revoir « Le piège »"}},
+  {"type":"text","accept":["mutex","un mutex","std.Thread.Mutex"],"placeholder":"le verrou qui n'autorise qu'un fil à la fois dans la section critique","hints":["Exclusion mutuelle.","5 lettres."],"link":{"href":"lecon-16.html","label":"Revoir « Protéger avec un Mutex »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans quel ordre s'affichent «&nbsp;A&nbsp;» et «&nbsp;B&nbsp;» si deux fils les impriment, l'un après <code>spawn</code>, sans autre synchronisation&nbsp;? Justifie.</p><details><summary>Voir une solution</summary><p><strong>Indéterminé</strong>&nbsp;: cela peut être «&nbsp;A B&nbsp;», «&nbsp;B A&nbsp;», voire un mélange des caractères si les deux impriment vraiment en même temps. Les fils avancent <strong>indépendamment</strong> et c'est l'<strong>ordonnanceur du système</strong> qui décide qui tourne quand. Il ne faut <em>jamais</em> présumer d'un ordre entre threads sans mécanisme explicite (join en cascade, mutex, condition…). Pour garantir «&nbsp;A avant B&nbsp;», il faudrait par exemple <code>join</code> le premier fil <em>avant</em> de lancer le second — ce qui, au passage, supprime le parallélisme.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ce code fait tourner 4 fils qui incrémentent <code>total</code>. Le résultat final est parfois faux. Corrige-le avec un mutex.</p><figure class="code-block" data-file="a-corriger.zig"><pre><code class="language-clike">var total: u64 = 0;
+fn bosser() void {
+    var i: usize = 0;
+    while (i &lt; 100000) : (i += 1) total += 1;
+}</code></pre></figure><details><summary>Voir une solution</summary><figure class="code-block" data-file="corrige.zig"><pre><code class="language-clike">var total: u64 = 0;
+var verrou: std.Thread.Mutex = .{};
+
+fn bosser() void {
+    var i: usize = 0;
+    while (i &lt; 100000) : (i += 1) {
+        verrou.lock();
+        defer verrou.unlock();
+        total += 1; // un seul fil ici à la fois
+    }
+}</code></pre></figure><p>On protège la <strong>section critique</strong> (<code>total += 1</code>) par un <code>Mutex</code>. Le <code>defer verrou.unlock()</code> garantit la libération. <strong>Variante plus rapide</strong> ici&nbsp;: comme on ne touche qu'une variable, une valeur atomique (<code>std.atomic.Value(u64)</code> + <code>fetchAdd</code>) éviterait le coût du verrou. Le mutex reste le bon choix dès que la section touche plusieurs variables liées.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Tu veux additionner un grand tableau en le découpant en 4 tranches traitées par 4 fils. Comment récupérer la somme totale <strong>sans</strong> course critique&nbsp;?</p><details><summary>Voir une solution</summary><p>La bonne approche évite <em>carrément</em> le partage pendant le calcul&nbsp;: chaque fil calcule la somme de <strong>sa</strong> tranche dans une variable <strong>qui lui est propre</strong> (aucun accès concurrent), puis on combine les 4 résultats <strong>après</strong> les <code>join</code>, sur le fil principal (là, plus aucun autre fil ne tourne).</p><figure class="code-block" data-file="somme.zig"><pre><code class="language-clike">var partiels = [_]u64{0} ** 4;      // une case par fil
+fn sommer(tranche: []const u64, out: *u64) void {
+    var s: u64 = 0;
+    for (tranche) |v| s += v;        // local au fil : aucune course
+    out.* = s;                       // écrit dans SA case à lui
+}
+// … spawn des 4 fils sur 4 tranches + 4 cases distinctes, puis join …
+const total = partiels[0] + partiels[1] + partiels[2] + partiels[3];</code></pre></figure><p>Principe clé&nbsp;: <strong>ne pas partager ce qu'on peut ne pas partager</strong>. Chaque fil écrit dans une case distincte (pas de course), et la combinaison finale a lieu quand les fils sont finis. On n'a même pas besoin de mutex&nbsp;: le meilleur verrou est celui qu'on n'a pas à poser.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+  </body>
+</html>

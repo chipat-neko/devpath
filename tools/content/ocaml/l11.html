@@ -1,0 +1,80 @@
+<p>Le système de types d'OCaml est l'un des plus puissants qui soient&nbsp;: il <em>infère</em> les types tout seul, et il sait exprimer des garanties que peu de langages atteignent. Au-delà des variants et du pattern matching que tu connais, deux mécanismes avancés repoussent encore les limites&nbsp;: les <strong>variants polymorphes</strong> (souples et réutilisables) et les <strong>GADT</strong> (types algébriques généralisés), qui permettent d'encoder des invariants <em>dans le type lui-même</em>. Cette leçon t'ouvre ces portes — un aperçu de ce qui fait la réputation d'OCaml.</p>
+
+<h2>Rappel&nbsp;: les variants ordinaires</h2>
+<p>Un variant ordinaire définit un type fermé par une liste de constructeurs. C'est la base de la modélisation en OCaml.</p>
+<figure class="code-block" data-file="variant.ml"><pre><code class="language-ocaml">type couleur = Rouge | Vert | Bleu
+
+type forme =
+  | Cercle of float
+  | Rectangle of float * float</code></pre></figure>
+<p>Pratique, mais chaque constructeur appartient à <em>un seul</em> type. Si deux types ont un cas <code>Rouge</code>, ce sont deux constructeurs distincts. Les variants polymorphes lèvent cette contrainte.</p>
+
+<h2>Les variants polymorphes</h2>
+<p>Un <strong>variant polymorphe</strong> utilise un tag précédé d'un <strong>accent grave</strong> (<code>`</code>). Il n'a pas besoin d'être déclaré dans un type fermé&nbsp;: on peut l'utiliser à la volée, et le <em>partager</em> entre plusieurs types.</p>
+<figure class="code-block" data-file="poly-variant.ml"><pre><code class="language-ocaml">(* Pas de déclaration préalable : on utilise les tags directement *)
+let rouge = `Rouge
+let nombre = `Int 42
+
+(* Une fonction qui accepte plusieurs tags *)
+let decrire c =
+  match c with
+  | `Rouge -&gt; "rouge"
+  | `Vert -&gt; "vert"
+  | `Bleu -&gt; "bleu"
+
+(* Le type inféré est [&gt; `Bleu | `Rouge | `Vert ] : ouvert *)</code></pre></figure>
+<p>Les variants polymorphes brillent quand plusieurs modules partagent des étiquettes communes, ou pour des types «&nbsp;ouverts&nbsp;» qu'on étend. Leur souplesse a un coût&nbsp;: des messages d'erreur plus complexes&nbsp;; on les réserve donc aux cas où leur réutilisabilité est vraiment utile.</p>
+
+<h2>Le problème que résolvent les GADT</h2>
+<p>Imagine un petit langage d'expressions&nbsp;: des entiers, des booléens, des additions. Avec un variant ordinaire, rien n'empêche d'écrire une expression <em>mal typée</em>, comme «&nbsp;additionner un booléen&nbsp;». L'évaluateur doit alors gérer des cas absurdes à l'exécution.</p>
+<figure class="code-block" data-file="probleme.ml"><pre><code class="language-ocaml">(* Variant ordinaire : on PEUT construire des expressions absurdes *)
+type expr =
+  | Int of int
+  | Bool of bool
+  | Add of expr * expr   (* rien n'interdit Add(Bool true, Int 1) ! *)</code></pre></figure>
+
+<h2>Les GADT&nbsp;: des invariants dans le type</h2>
+<p>Un <strong>GADT</strong> (Generalized Algebraic Data Type) permet à chaque constructeur de préciser le type de son résultat. On peut ainsi <strong>paramétrer</strong> l'expression par le type qu'elle produit — et rendre les expressions mal typées <em>impossibles à construire</em>.</p>
+<figure class="code-block" data-file="gadt.ml"><pre><code class="language-ocaml">type _ expr =
+  | Int  : int -&gt; int expr
+  | Bool : bool -&gt; bool expr
+  | Add  : int expr * int expr -&gt; int expr
+  | If   : bool expr * 'a expr * 'a expr -&gt; 'a expr
+
+(* L'évaluateur renvoie le BON type, garanti par le compilateur *)
+let rec eval : type a. a expr -&gt; a = function
+  | Int n -&gt; n
+  | Bool b -&gt; b
+  | Add (x, y) -&gt; eval x + eval y
+  | If (c, t, e) -&gt; if eval c then eval t else eval e</code></pre></figure>
+<p>La magie&nbsp;: <code>Add</code> n'accepte que des <code>int expr</code>. Écrire <code>Add (Bool true, Int 1)</code> est désormais <strong>rejeté à la compilation</strong>. Et <code>eval</code> renvoie un <code>int</code> pour une <code>int expr</code>, un <code>bool</code> pour une <code>bool expr</code> — la justesse de typage est garantie par le compilateur, pas par des vérifications à l'exécution.</p>
+
+<h2>Pourquoi c'est puissant</h2>
+<p>Les GADT permettent d'<strong>encoder des règles dans les types</strong>&nbsp;: un état impossible devient inexprimable. C'est l'idéal du «&nbsp;<em>make illegal states unrepresentable</em>&nbsp;» poussé à son extrême. On les emploie pour des interpréteurs typés, des encodeurs/décodeurs sûrs, des machines à états où chaque transition est vérifiée à la compilation. C'est l'une des raisons pour lesquelles OCaml est prisé là où la <em>correction</em> compte (compilateurs, finance, vérification).</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Atteindre les GADT trop tôt. Ce sont des outils <strong>avancés</strong>&nbsp;: pour la plupart des programmes, un variant ordinaire et du pattern matching suffisent amplement et restent plus lisibles. Les GADT (et leur annotation <code>type a. …</code> obligatoire sur les fonctions récursives polymorphes) ne se justifient que lorsqu'on a réellement besoin de garantir des invariants au niveau du type. N'alourdis pas un code simple avec de la machinerie de types dont il n'a pas besoin.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>OCaml possède un système de types parmi les plus expressifs du monde fonctionnel&nbsp;: au-delà des GADT, il offre les <strong>modules de première classe</strong>, les <strong>foncteurs</strong> (vus en leçon 8) et l'inférence de type complète. C'est cette richesse qui en fait le langage des <em>compilateurs</em> (le compilateur Rust a longtemps été écrit en OCaml, ainsi que de nombreux outils de preuve et de finance). Comprendre les GADT, c'est entrevoir pourquoi des équipes choisissent OCaml quand une erreur de logique coûte cher.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>variants polymorphes</strong> (<code>`Tag</code>) sont ouverts et partageables, sans déclaration préalable (souples, mais plus délicats).</li>
+  <li>Un variant ordinaire laisse construire des valeurs «&nbsp;absurdes&nbsp;»&nbsp;; les <strong>GADT</strong> l'empêchent.</li>
+  <li>Un <strong>GADT</strong> précise le type de résultat de chaque constructeur&nbsp;: il encode des invariants dans le type.</li>
+  <li>On rend les <strong>états illégaux inexprimables</strong>&nbsp;; outil avancé, à réserver aux cas qui le justifient.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment reconnaît-on un variant polymorphe&nbsp;?</li><li>Que permet un GADT qu'un variant ordinaire ne permet pas&nbsp;?</li><li>Quand éviter les GADT&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Comment reconnaît-on un variant polymorphe en OCaml ?","a":["À l'accent grave devant le tag (par ex. `Rouge)","À sa déclaration obligatoire dans un type fermé","À la majuscule du constructeur uniquement","Il n'existe pas en OCaml"],"correct":0,"explain":"Le backtick (`Tag) marque un variant polymorphe : ouvert, réutilisable entre types, sans déclaration préalable."},
+  {"q":"Qu'apporte un GADT par rapport à un variant ordinaire ?","a":["Chaque constructeur précise son type de résultat, ce qui rend certains états impossibles à construire","Il est plus rapide à l'exécution","Il supprime le pattern matching","Il permet la mutation"],"correct":0,"explain":"En paramétrant l'expression par le type produit, on interdit à la compilation des valeurs absurdes (ex. additionner un booléen)."},
+  {"q":"Quand vaut-il mieux NE PAS utiliser de GADT ?","a":["Pour la plupart des programmes : un variant ordinaire suffit et reste plus lisible","Quand on veut garantir des invariants forts","Jamais : il faut toujours des GADT","Quand on écrit un compilateur"],"correct":0,"explain":"Les GADT sont avancés ; ils ne se justifient que lorsqu'on a réellement besoin d'invariants au niveau du type, sinon ils alourdissent inutilement."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une valeur de variant polymorphe représentant l'étiquette <code>Ok</code> portant l'entier 1.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let v = `Ok 1</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans le GADT <code>expr</code>, pourquoi <code>Add (Bool true, Int 1)</code> est-il rejeté&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que le constructeur <code>Add</code> a le type <code>int expr * int expr -&gt; int expr</code>&nbsp;: il n'accepte que des <code>int expr</code>. Or <code>Bool true</code> a le type <code>bool expr</code>. Le compilateur détecte l'incompatibilité et <strong>refuse de compiler</strong> — l'expression mal typée est tout simplement impossible à construire.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En une phrase, quel principe de conception les GADT poussent-ils à l'extrême&nbsp;?</p><details><summary>Voir une solution</summary><p>«&nbsp;Rendre les états illégaux inexprimables&nbsp;» (<em>make illegal states unrepresentable</em>)&nbsp;: en encodant des invariants directement dans le type, on fait en sorte que le compilateur rejette toute valeur qui violerait les règles, plutôt que de devoir les vérifier à l'exécution.</p></details></div>

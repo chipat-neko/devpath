@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Interagir entre contrats : interfaces, call et delegatecall — Leçon 16 · Syntaxe</title>
+    <meta name="description" content="Comment un contrat en appelle un autre, via une interface typée ou l'appel bas niveau .call ; la différence entre call, staticcall et delegatecall ; et les risques du delegatecall." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="solidity" data-lesson="lecon-16.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Solidity</a></li>
+            <li aria-current="page">Leçon 16</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Solidity avancé — Leçon 16</p>
+              <h1 class="lesson-header__title">Interagir entre contrats : interfaces, call et delegatecall</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Avoir suivi « Contrats évolutifs : proxy et UUPS »</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>appeler un autre contrat <strong>proprement</strong> via une interface&nbsp;;</li>
+                  <li>comprendre la différence <strong>call / staticcall / delegatecall</strong>&nbsp;;</li>
+                  <li>pourquoi <code>delegatecall</code> exécute du code étranger dans <strong>ton stockage</strong>&nbsp;;</li>
+                  <li>gérer l'<strong>échec</strong> d'un appel externe.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un contrat vit rarement seul. Il lit un oracle de prix, dépose dans un protocole, appelle un jeton… Savoir appeler un <strong>autre contrat</strong> — proprement et sans se faire piéger — est une compétence centrale du développement Solidity. Il existe plusieurs façons de le faire, de la plus sûre (l'<strong>interface typée</strong>) à la plus brute et dangereuse (l'appel bas niveau <code>.call</code>).</p>
+
+<h2>La voie propre : les interfaces</h2>
+<p>La méthode <strong>par défaut</strong> pour appeler un autre contrat est de décrire ses fonctions dans une <strong>interface</strong>, puis d'appeler comme s'il s'agissait d'un objet typé. Une interface ne contient <em>que des signatures</em> (pas de corps)&nbsp;: elle dit «&nbsp;ce contrat expose telle fonction&nbsp;».</p>
+<figure class="code-block" data-file="Interactions.sol"><pre><code class="language-solidity">// On décrit les fonctions du contrat cible
+interface IJeton {
+    function transfer(address dest, uint256 montant) external returns (bool);
+    function balanceOf(address compte) external view returns (uint256);
+}
+
+contract Boutique {
+    IJeton public jeton;
+
+    constructor(address adresseJeton) {
+        jeton = IJeton(adresseJeton); // on « caste » l'adresse en interface
+    }
+
+    function encaisser(address dest, uint256 montant) external {
+        // Appel typé, lisible, vérifié à la compilation
+        bool ok = jeton.transfer(dest, montant);
+        require(ok, "transfert refuse");
+    }
+}</code></pre></figure>
+<p>Les avantages sont décisifs&nbsp;: l'appel est <strong>typé</strong> (le compilateur vérifie le nom, les arguments et le type de retour), <strong>lisible</strong> (<code>jeton.transfer(...)</code> se lit comme un appel normal) et robuste. C'est la méthode que tu dois employer <strong>dans la quasi-totalité des cas</strong>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Un appel via une interface typée. À gauche, une boîte Contrat A. Une flèche vers la droite, étiquetée « appel jeton.transfer(dest, montant) », part de A et arrive dans une boîte Contrat Jeton, à droite, en passant par une petite étiquette centrale « interface IJeton ». Une seconde flèche, en dessous, revient du Contrat Jeton vers A, étiquetée « valeur de retour : bool ok ».">
+    <rect class="d-frame" x="8" y="8" width="624" height="184" rx="10" />
+    <text class="d-label" x="320" y="30" text-anchor="middle" font-size="13">Appel typé via une interface</text>
+    <rect class="d-box" x="36" y="70" width="150" height="60" rx="8" /><text class="d-text" x="111" y="105" text-anchor="middle" font-size="12">Contrat A</text>
+    <rect class="d-accent" x="454" y="70" width="150" height="60" rx="8" /><text class="d-text" x="529" y="98" text-anchor="middle" font-size="12">Contrat Jeton</text><text class="d-mut" x="529" y="116" text-anchor="middle" font-size="9">code + stockage</text>
+    <rect class="d-tag" x="272" y="58" width="96" height="22" rx="6" /><text class="d-mut" x="320" y="73" text-anchor="middle" font-size="9">interface IJeton</text>
+    <line class="d-line" x1="186" y1="90" x2="452" y2="90" /><polygon class="d-dot" points="452,90 442,85 442,95" /><text class="d-mut" x="320" y="102" text-anchor="middle" font-size="9">jeton.transfer(dest, montant)</text>
+    <line class="d-line" x1="454" y1="118" x2="188" y2="118" /><polygon class="d-dot" points="188,118 198,113 198,123" /><text class="d-mut" x="320" y="134" text-anchor="middle" font-size="9">valeur de retour : bool ok</text>
+    <text class="d-mut" x="320" y="170" text-anchor="middle" font-size="9">le code de Jeton s'exécute dans le stockage de Jeton</text>
+  </svg>
+  <figcaption>L'appel part de <strong>A</strong>, la fonction s'exécute chez <strong>Jeton</strong> (avec le stockage de Jeton), et la valeur de retour revient à A. Tout est vérifié à la compilation grâce à l'interface.</figcaption>
+</figure>
+
+<h2>La voie bas niveau : .call</h2>
+<p>Solidity expose aussi un appel <strong>bas niveau</strong> sur n'importe quelle <code>address</code>&nbsp;: <code>.call</code>. Il est <strong>flexible</strong> — on peut appeler une fonction inconnue à la compilation, ou joindre de l'ether — mais <strong>dangereux</strong>, car il ne vérifie rien pour toi.</p>
+<figure class="code-block" data-file="Interactions.sol"><pre><code class="language-solidity">// Appel bas niveau : on encode nous-mêmes l'appel
+(bool ok, bytes memory data) = adresse.call{value: montant}(
+    abi.encodeWithSignature("f(uint256)", 42)
+);
+require(ok, "appel echoue"); // OBLIGATOIRE : .call ne « revert » pas tout seul</code></pre></figure>
+<p><code>abi.encodeWithSignature("f(uint256)", 42)</code> construit la <strong>donnée d'appel</strong> (le <em>calldata</em>)&nbsp;: elle prend la <strong>signature</strong> textuelle de la fonction, en calcule le sélecteur (4 octets), puis y accole les arguments encodés. <code>.call</code> renvoie deux valeurs&nbsp;: un booléen <code>ok</code> (l'appel a-t-il réussi&nbsp;?) et les <code>data</code> renvoyées.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Interface d'abord, .call en dernier recours</p><p>Par défaut, privilégie l'appel via <strong>interface typée</strong>&nbsp;: c'est vérifié à la compilation et lisible. Ne descends au <code>.call</code> que quand tu en as vraiment besoin&nbsp;: pour <strong>envoyer de l'ether</strong> à un contrat, ou appeler une <strong>signature dynamique</strong> inconnue à la compilation.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un .call vers une adresse sans code renvoie ok = true</p><p>Piège classique&nbsp;: si <code>adresse</code> ne contient <strong>aucun code</strong> (un compte ordinaire, ou une adresse erronée), le <code>.call</code> réussit quand même et renvoie <code>ok = true</code> sans rien exécuter. Ne jamais supposer qu'un <code>.call</code> réussi a vraiment fait quelque chose&nbsp;: vérifie <code>ok</code>, et au besoin que l'adresse a bien du code.</p></div></div>
+
+<h2>call, staticcall, delegatecall</h2>
+<p>L'appel bas niveau existe en <strong>trois variantes</strong>, qui diffèrent par le <strong>contexte</strong> dans lequel le code cible s'exécute&nbsp;:</p>
+<ul>
+<li><strong><code>call</code></strong>&nbsp;: appel normal. Le code s'exécute dans le contexte de la <strong>cible</strong>, avec <strong>son</strong> stockage. C'est ce qu'on veut presque toujours.</li>
+<li><strong><code>staticcall</code></strong>&nbsp;: comme <code>call</code>, mais toute <strong>modification d'état est interdite</strong>. Sert à <strong>lire</strong> une valeur chez un autre contrat sans risque d'effet de bord (les fonctions <code>view</code> sont appelées ainsi).</li>
+<li><strong><code>delegatecall</code></strong>&nbsp;: le code de la cible s'exécute dans le contexte de <strong>l'appelant</strong>. C'est <strong>ton</strong> stockage, <strong>ton</strong> <code>msg.sender</code> et <strong>ton</strong> solde qui sont utilisés — on emprunte seulement le <em>code</em> de la cible.</li>
+</ul>
+<p>Ce <code>delegatecall</code> est exactement le mécanisme des <strong>proxies</strong> vus à la leçon 11&nbsp;: un proxy sans logique délègue l'exécution au contrat d'implémentation, tout en gardant les données chez lui.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 236" role="img" aria-label="Comparaison de call et delegatecall en deux colonnes. À gauche, call : le Contrat A appelle B ; une flèche va de A vers B ; le code de B s'exécute avec le STOCKAGE de B, indiqué par une boîte accentuée sous B. À droite, delegatecall : le Contrat A appelle B ; une flèche va de A vers B pour emprunter son code, mais une accolade ramène l'exécution vers le STOCKAGE de A, indiqué par une boîte accentuée sous A. Conclusion : call écrit chez la cible, delegatecall écrit chez l'appelant.">
+    <rect class="d-frame" x="8" y="8" width="624" height="220" rx="10" />
+    <line class="d-line" x1="320" y1="20" x2="320" y2="216" />
+    <text class="d-label" x="164" y="34" text-anchor="middle" font-size="13">call</text>
+    <text class="d-label" x="476" y="34" text-anchor="middle" font-size="13">delegatecall</text>
+
+    <rect class="d-box" x="40" y="56" width="110" height="46" rx="8" /><text class="d-text" x="95" y="84" text-anchor="middle" font-size="12">Contrat A</text>
+    <rect class="d-box" x="180" y="56" width="110" height="46" rx="8" /><text class="d-text" x="235" y="84" text-anchor="middle" font-size="12">Contrat B</text>
+    <line class="d-line" x1="150" y1="79" x2="178" y2="79" /><polygon class="d-dot" points="178,79 168,74 168,84" />
+    <rect class="d-accent" x="180" y="132" width="110" height="44" rx="8" /><text class="d-text" x="235" y="152" text-anchor="middle" font-size="10">STOCKAGE de B</text><text class="d-mut" x="235" y="167" text-anchor="middle" font-size="9">le code écrit ici</text>
+    <line class="d-line" x1="235" y1="102" x2="235" y2="130" /><polygon class="d-dot" points="235,130 230,120 240,120" />
+    <text class="d-mut" x="164" y="200" text-anchor="middle" font-size="9">le code de B s'exécute avec le stockage de B</text>
+
+    <rect class="d-box" x="352" y="56" width="110" height="46" rx="8" /><text class="d-text" x="407" y="84" text-anchor="middle" font-size="12">Contrat A</text>
+    <rect class="d-box" x="492" y="56" width="110" height="46" rx="8" /><text class="d-text" x="547" y="80" text-anchor="middle" font-size="12">Contrat B</text><text class="d-mut" x="547" y="94" text-anchor="middle" font-size="9">code emprunté</text>
+    <line class="d-line" x1="462" y1="72" x2="490" y2="72" /><polygon class="d-dot" points="490,72 480,67 480,77" />
+    <rect class="d-accent" x="352" y="132" width="110" height="44" rx="8" /><text class="d-text" x="407" y="152" text-anchor="middle" font-size="10">STOCKAGE de A</text><text class="d-mut" x="407" y="167" text-anchor="middle" font-size="9">le code écrit ICI</text>
+    <line class="d-line" x1="547" y1="102" x2="547" y2="118" /><line class="d-line" x1="547" y1="118" x2="407" y2="118" /><line class="d-line" x1="407" y1="118" x2="407" y2="130" /><polygon class="d-dot" points="407,130 402,120 412,120" />
+    <text class="d-mut" x="476" y="200" text-anchor="middle" font-size="9">le code de B s'exécute avec le stockage de A</text>
+  </svg>
+  <figcaption>Même code cible, contexte opposé&nbsp;: <code>call</code> écrit dans le stockage de la <strong>cible</strong>&nbsp;; <code>delegatecall</code> écrit dans le stockage de l'<strong>appelant</strong>. Cette différence est la source de sa puissance… et de ses pièges.</figcaption>
+</figure>
+
+<h2>Le piège du delegatecall : la disposition du stockage</h2>
+<p>Puisque <code>delegatecall</code> écrit dans le stockage de <strong>l'appelant</strong> en suivant la <strong>disposition des slots</strong> (le <em>storage layout</em>) telle que la voit le <strong>code appelé</strong>, une <strong>divergence</strong> de disposition entre le proxy et l'implémentation est catastrophique&nbsp;: le code croit écrire dans la variable X à un certain slot, mais chez l'appelant ce slot contient la variable Y. Les données se retrouvent <strong>corrompues silencieusement</strong>.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">delegatecall : code de confiance et dispositions alignées, sans exception</p><p>N'utilise <code>delegatecall</code> que vers du <strong>code de confiance</strong> et avec des <strong>dispositions de stockage rigoureusement alignées</strong> entre l'appelant et la cible. Un slot qui ne correspond pas, une variable ajoutée au mauvais endroit, et tu écrases l'adresse du propriétaire ou le solde d'un utilisateur. C'est l'erreur la plus grave — et la plus courante — autour des proxies.</p></div></div>
+
+<h2>Gérer l'échec proprement</h2>
+<p>Un appel externe peut <strong>échouer</strong>&nbsp;: la cible révoque, manque de gas, ou n'existe pas. Il faut le prévoir.</p>
+<p>Pour un appel <strong>typé</strong>, le bloc <code>try/catch</code> permet de réagir à l'échec <strong>sans annuler toute ta transaction</strong>&nbsp;:</p>
+<figure class="code-block" data-file="Interactions.sol"><pre><code class="language-solidity">function lirePrix(address oracle) external returns (uint prix, bool dispo) {
+    try IOracle(oracle).prix() returns (uint v) {
+        prix = v;
+        dispo = true;              // l'appel a réussi
+    } catch {
+        dispo = false;             // on encaisse l'échec sans tout annuler
+    }
+}</code></pre></figure>
+<p>Pour un <code>.call</code> bas niveau, il n'y a pas de <code>try/catch</code>&nbsp;: on teste <strong>toujours</strong> <code>ok</code> soi-même et on remonte l'erreur avec <code>require(ok, "...")</code>. Enfin, rappelle-toi le motif <strong>Checks-Effects-Interactions</strong> vu à la leçon 7&nbsp;: place l'appel externe <strong>en dernier</strong>, après avoir mis à jour ton état, pour éviter la <strong>réentrance</strong>.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">L'appel externe, toujours en dernier</p><p>Un appel externe peut <strong>rappeler ton contrat</strong> avant qu'il ait fini (réentrance). En appliquant Checks-Effects-Interactions — vérifier, <strong>modifier ton état</strong>, puis seulement appeler l'extérieur — un rappel arrive sur un état déjà à jour et la faille se referme.</p></div></div>
+
+<h2>Cas réel — le gel du multisig Parity (2017)</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Quand un code externe disparaît, tout s'effondre</p><p>Les portefeuilles multisig <strong>Parity</strong> déléguaient (<code>delegatecall</code>) leur logique à une <strong>bibliothèque partagée</strong> unique. En 2017, un utilisateur a réussi à en devenir «&nbsp;propriétaire&nbsp;», puis a appelé <code>selfdestruct</code> sur cette bibliothèque. D'un coup, <strong>tous</strong> les portefeuilles qui en dépendaient sont devenus inutilisables&nbsp;: leur code délégué avait disparu, gelant plus de <strong>500 000 ETH</strong> (des centaines de millions de dollars) définitivement inaccessibles. La leçon&nbsp;: <code>delegatecall</code> lie ton contrat au <strong>sort d'un code externe</strong>&nbsp;; si le contrat dont tu dépends disparaît, il peut tout emporter avec lui. Confiance, contrôle des permissions et immuabilité du code délégué ne sont pas optionnels.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Appeler un autre contrat</caption>
+    <thead><tr><th scope="col">Mécanisme</th><th scope="col">Contexte &amp; usage</th></tr></thead>
+    <tbody>
+      <tr><td>Interface typée</td><td>Méthode par défaut&nbsp;: <code>IContrat(a).f()</code>, vérifiée à la compilation, lisible</td></tr>
+      <tr><td><code>.call</code></td><td>Bas niveau&nbsp;: envoyer de l'ether ou signature dynamique&nbsp;; contexte de la cible&nbsp;; vérifier <code>ok</code></td></tr>
+      <tr><td><code>staticcall</code></td><td>Comme <code>call</code> mais interdit toute écriture&nbsp;: pour <strong>lire</strong> sans effet de bord</td></tr>
+      <tr><td><code>delegatecall</code></td><td>Le code cible s'exécute dans <strong>ton</strong> stockage&nbsp;: mécanisme des proxies, à réserver au code de confiance</td></tr>
+      <tr><td><code>try/catch</code></td><td>Encaisser l'échec d'un appel <strong>typé</strong> sans annuler toute la transaction</td></tr>
+      <tr><td>Vérifier <code>ok</code></td><td>Après tout <code>.call</code>&nbsp;: <code>require(ok, "...")</code> — sinon un échec passe inaperçu</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Interface</dt><dd>Description des seules signatures des fonctions d'un contrat, sans corps&nbsp;; permet de l'appeler de façon typée via <code>IContrat(adresse).f()</code>.</dd>
+  <dt>ABI</dt><dd><em>Application Binary Interface</em>&nbsp;: la convention qui encode l'appel d'une fonction et ses arguments en octets (le calldata) ainsi que les valeurs de retour.</dd>
+  <dt>call</dt><dd>Appel bas niveau où le code de la cible s'exécute dans le contexte de la <strong>cible</strong> (son stockage)&nbsp;; renvoie un booléen de succès à vérifier soi-même.</dd>
+  <dt>staticcall</dt><dd>Variante de <code>call</code> qui interdit toute modification d'état&nbsp;; utilisée pour lire une valeur chez un autre contrat sans effet de bord.</dd>
+  <dt>delegatecall</dt><dd>Appel où le code de la cible s'exécute dans le contexte de l'<strong>appelant</strong> (son stockage, son <code>msg.sender</code>, son solde)&nbsp;; base des proxies.</dd>
+  <dt>Contexte d'exécution</dt><dd>L'ensemble stockage + <code>msg.sender</code> + solde dans lequel un code s'exécute&nbsp;; <code>call</code> utilise celui de la cible, <code>delegatecall</code> celui de l'appelant.</dd>
+  <dt>Collision de stockage (storage layout)</dt><dd>Divergence entre la disposition des slots du proxy et de l'implémentation&nbsp;; avec <code>delegatecall</code>, elle fait écrire une variable par-dessus une autre et corrompt l'état.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Appelle un autre contrat via une <strong>interface typée</strong> par défaut&nbsp;: c'est vérifié à la compilation et lisible.</li>
+<li><code>call</code> s'exécute dans le stockage de la <strong>cible</strong>, <code>staticcall</code> lit sans modifier, <code>delegatecall</code> s'exécute dans le stockage de <strong>l'appelant</strong>.</li>
+<li><code>delegatecall</code> exige un <strong>code de confiance</strong> et des <strong>dispositions de stockage alignées</strong>, sous peine de corruption (cf. le gel Parity).</li>
+<li>Gère l'échec&nbsp;: <code>try/catch</code> pour un appel typé, <code>require(ok, "...")</code> après un <code>.call</code>, et l'appel externe <strong>en dernier</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi préférer un appel via interface typée à un <code>.call</code> bas niveau ?</li><li>Quel stockage et quel <code>msg.sender</code> utilise un <code>delegatecall</code> ?</li><li>Pourquoi doit-on toujours tester la valeur <code>ok</code> renvoyée par un <code>.call</code> ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi privilégier un appel via interface typée plutôt qu'un .call bas niveau ?","a":["Parce qu'il est vérifié à la compilation (nom, arguments, type de retour) et plus lisible","Parce qu'il consomme toujours zéro gas","Parce que le .call est interdit depuis Solidity 0.8","Parce qu'une interface s'exécute plus vite à l'exécution"],"correct":0,"explain":"L'interface fait vérifier par le compilateur le nom de la fonction, ses arguments et son type de retour ; l'appel se lit comme un appel normal. On ne descend au .call que pour envoyer de l'ether ou une signature dynamique."},
+  {"q":"Un delegatecall exécute le code de la cible avec…","a":["le stockage, le msg.sender et le solde de l'APPELANT (on n'emprunte que le code)","le stockage et le msg.sender de la cible","un stockage neuf, vidé à chaque appel","le stockage de l'appelant mais le msg.sender de la cible"],"correct":0,"explain":"C'est toute la particularité du delegatecall : seul le code de la cible est emprunté ; le contexte (stockage, msg.sender, solde) reste celui de l'appelant. C'est le mécanisme des proxies."},
+  {"q":"Quel est le piège classique d'un .call bas niveau ?","a":["Un .call vers une adresse sans code renvoie ok = true sans rien exécuter","Un .call annule toujours la transaction en cas de doute","Un .call ne peut jamais envoyer d'ether","Un .call chiffre automatiquement les arguments"],"correct":0,"explain":"Si l'adresse ne contient aucun code, le .call réussit quand même (ok = true) sans effet. Il ne faut jamais supposer qu'un .call réussi a vraiment agi."},
+  {"q":"Pourquoi faut-il toujours vérifier la valeur ok d'un .call ?","a":["Parce que .call ne « revert » pas de lui-même : un échec passe inaperçu si on ne teste pas ok","Parce que ok contient la valeur de retour de la fonction appelée","Parce que sans le lire, le compilateur refuse de compiler","Parce que ok rembourse le gas de l'appel"],"correct":0,"explain":"Contrairement à un appel typé, .call ne propage pas l'échec automatiquement : il renvoie ok = false. Sans require(ok, \"...\"), le code continue comme si tout allait bien."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["delegatecall"],"placeholder":"l'appel où le code cible s'exécute dans le stockage de l'appelant (base des proxies)","hints":["C'est le mécanisme des proxies (leçon 11).","Il utilise TON stockage et TON msg.sender."],"link":{"href":"lecon-16.html","label":"Revoir « call, staticcall, delegatecall »"}},
+  {"type":"text","accept":["interface","une interface"],"placeholder":"ce qu'on déclare pour appeler un autre contrat de façon typée et vérifiée","hints":["Elle ne contient que des signatures, pas de corps.","On écrit IJeton(adresse).transfer(...)."],"link":{"href":"lecon-16.html","label":"Revoir « La voie propre : les interfaces »"}},
+  {"type":"text","accept":["staticcall"],"placeholder":"la variante d'appel qui interdit toute modification d'état, pour lire sans effet de bord","hints":["Comme call, mais en lecture seule.","Les fonctions view sont appelées ainsi."],"link":{"href":"lecon-16.html","label":"Revoir « call, staticcall, delegatecall »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Tu veux appeler <code>transfer(address,uint256)</code> d'un jeton dont tu connais l'adresse, de façon <strong>typée</strong>. Écris la déclaration d'interface minimale et la ligne d'appel.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="appel.sol"><pre><code class="language-solidity">interface IJeton {
+    function transfer(address dest, uint256 montant) external returns (bool);
+}
+
+// puis, l'adresse du jeton étant connue :
+bool ok = IJeton(adresseJeton).transfer(dest, montant);
+require(ok, "transfert refuse");</code></pre></figure><p>On décrit la <strong>signature</strong> dans l'interface (aucun corps), on «&nbsp;caste&nbsp;» l'adresse en <code>IJeton(...)</code>, puis on appelle comme une méthode normale. Le compilateur vérifie le type de retour <code>bool</code> pour nous.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un collègue écrit <code>adresse.call(abi.encodeWithSignature("f(uint256)", 3));</code> sans regarder la valeur de retour. Que corriges-tu&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="verif.sol"><pre><code class="language-solidity">(bool ok, ) = adresse.call(
+    abi.encodeWithSignature("f(uint256)", 3)
+);
+require(ok, "appel echoue");</code></pre></figure><p>Un <code>.call</code> ne révoque <strong>pas</strong> tout seul en cas d'échec&nbsp;: il renvoie <code>ok = false</code>. Sans <code>require(ok, ...)</code>, le code continue comme si l'appel avait réussi. Pire&nbsp;: si <code>adresse</code> n'a aucun code, <code>ok</code> vaut <code>true</code> sans que rien ne se passe. On récupère et on teste toujours <code>ok</code>.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique en une ou deux phrases <strong>pourquoi</strong> la catastrophe Parity de 2017 a pu geler plus de 500 000 ETH, en te servant du mot <code>delegatecall</code>.</p><details><summary>Voir une solution</summary><p>Les portefeuilles Parity ne contenaient pas leur logique&nbsp;: ils la <strong>déléguaient</strong> par <code>delegatecall</code> à une unique bibliothèque partagée. Quand un utilisateur a pris le contrôle de cette bibliothèque et l'a détruite (<code>selfdestruct</code>), le code délégué a <strong>disparu</strong>&nbsp;; tous les portefeuilles qui en dépendaient se sont retrouvés sans logique, donc incapables de bouger leurs fonds. La leçon&nbsp;: <code>delegatecall</code> lie le sort de ton contrat à celui d'un code externe — n'y délègue que du code de confiance et, idéalement, non destructible.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-solidity.min.js" defer></script>
+  </body>
+</html>

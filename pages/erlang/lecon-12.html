@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Binaires et bit syntax — Leçon 12 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="Manipuler des données binaires en Erlang : la notation <<...>>, les segments de bits typés et dimensionnés, la construction et le pattern matching sur les bits, et le décodage de protocoles réseau — le domaine où Erlang brille." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Erlang : aller plus loin — Leçon 12</p>
+              <h1 class="lesson-header__title">Binaires et bit syntax</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 11</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire un <strong>binaire</strong> avec la notation <code>&lt;&lt;...&gt;&gt;</code>&nbsp;;</li>
+                  <li>composer des <strong>segments de bits</strong> typés et dimensionnés&nbsp;;</li>
+                  <li><strong>filtrer</strong> un binaire par pattern matching pour en extraire des champs&nbsp;;</li>
+                  <li>décoder un petit <strong>en-tête de protocole</strong> réseau.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Les télécoms, les protocoles réseau, les formats de fichiers&nbsp;: tout cela parle en <strong>octets et en bits</strong>, pas en jolies structures. C'est justement le terrain de naissance d'Erlang, et son arme secrète s'appelle la <strong>bit syntax</strong>&nbsp;: une notation qui rend la construction et le découpage de données binaires aussi naturels que le pattern matching sur des tuples. Là où d'autres langages jonglent avec des masques et des décalages, Erlang écrit la structure du paquet <em>telle qu'elle est</em>.</p>
+
+<h2>Un binaire, c'est quoi&nbsp;?</h2>
+<p>Un <strong>binaire</strong> est une séquence compacte d'octets, notée entre <code>&lt;&lt;</code> et <code>&gt;&gt;</code>. On peut l'écrire comme du texte ou comme une liste d'octets&nbsp;:</p>
+<figure class="code-block" data-file="shell"><pre><code class="language-erlang">B1 = &lt;&lt;"hello"&gt;&gt;.
+%% =&gt; &lt;&lt;"hello"&gt;&gt;   (soit les octets &lt;&lt;104,101,108,108,111&gt;&gt;)
+
+B2 = &lt;&lt;104, 101, 108, 108, 111&gt;&gt;.
+%% =&gt; &lt;&lt;"hello"&gt;&gt;   (identique à B1)
+
+byte_size(B1).      %% =&gt; 5</code></pre></figure>
+<p>Par défaut, chaque nombre occupe <strong>un octet</strong> (8 bits). Un binaire est immuable comme le reste, mais bien plus compact qu'une liste d'entiers&nbsp;: c'est la représentation de choix pour les gros volumes de données brutes.</p>
+
+<h2>Les segments : taille et type</h2>
+<p>La puissance vient des <strong>segments</strong>&nbsp;: <code>Valeur:Taille</code> précise combien de <em>bits</em> occupe une valeur. On assemble ainsi un format à la bonne dimension, y compris sur des largeurs qui ne sont pas des octets entiers&nbsp;:</p>
+<figure class="code-block" data-file="shell"><pre><code class="language-erlang">%% version sur 4 bits, type sur 4 bits, longueur sur 16 bits
+Paquet = &lt;&lt;1:4, 2:4, 42:16&gt;&gt;.
+%% =&gt; &lt;&lt;18, 0, 42&gt;&gt;   (4+4 = 8 bits = l'octet 18, puis 42 sur 16 bits)
+
+bit_size(Paquet).    %% =&gt; 24  (4 + 4 + 16)</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Un paquet binaire représenté comme une barre horizontale découpée en champs de largeurs différentes. De gauche à droite : un champ version de 4 bits, un champ type de 4 bits, un champ longueur de 16 bits, puis un champ charge utile de taille variable marqué binary. Sous chaque champ figure sa largeur en bits. Une accolade regroupe les deux premiers champs de 4 bits pour montrer qu'ensemble ils forment un octet complet de 8 bits.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un paquet, champ par champ (bit syntax)</text>
+    <rect class="d-accent" x="40" y="54" width="70" height="40" rx="4" /><text class="d-text" x="75" y="78" text-anchor="middle" font-size="8">version</text>
+    <rect class="d-accent" x="112" y="54" width="70" height="40" rx="4" /><text class="d-text" x="147" y="78" text-anchor="middle" font-size="8">type</text>
+    <rect class="d-box" x="184" y="54" width="220" height="40" rx="4" /><text class="d-text" x="294" y="78" text-anchor="middle" font-size="8">longueur</text>
+    <rect class="d-box" x="406" y="54" width="194" height="40" rx="4" /><text class="d-text" x="503" y="74" text-anchor="middle" font-size="8">charge utile</text><text class="d-mut" x="503" y="86" text-anchor="middle" font-size="7">/binary</text>
+    <text class="d-mut" x="75" y="108" text-anchor="middle" font-size="7.5">4 bits</text>
+    <text class="d-mut" x="147" y="108" text-anchor="middle" font-size="7.5">4 bits</text>
+    <text class="d-mut" x="294" y="108" text-anchor="middle" font-size="7.5">16 bits</text>
+    <text class="d-mut" x="503" y="108" text-anchor="middle" font-size="7.5">reste (variable)</text>
+    <path class="d-line" d="M40 120 q0 8 8 8 h58 q8 0 8 -8 M114 128 q8 0 8 8 M182 120 q0 8 -8 8 h-58 q-8 0 -8 -8" fill="none" transform="translate(0,-4)" />
+    <text class="d-mut" x="111" y="146" text-anchor="middle" font-size="7.5">ensemble = 1 octet (8 bits)</text>
+  </svg>
+  <figcaption>La notation <code>&lt;&lt;Version:4, Type:4, Longueur:16, Charge/binary&gt;&gt;</code> décrit le paquet exactement comme une spécification de protocole&nbsp;: chaque champ, sa largeur, son ordre.</figcaption>
+</figure>
+
+<h2>Les deux sens : construire et filtrer</h2>
+<p>La <em>même</em> notation sert à <strong>construire</strong> un binaire (à droite du <code>=</code>) et à le <strong>décomposer</strong> par pattern matching (à gauche du <code>=</code>). C'est la symétrie qui rend la bit syntax si agréable&nbsp;:</p>
+<figure class="code-block" data-file="shell"><pre><code class="language-erlang">%% CONSTRUIRE
+Paquet = &lt;&lt;1:4, 2:4, 42:16&gt;&gt;.
+
+%% FILTRER (pattern matching) : lier chaque champ à une variable
+&lt;&lt;Version:4, Type:4, Longueur:16&gt;&gt; = Paquet.
+Version.     %% =&gt; 1
+Type.        %% =&gt; 2
+Longueur.    %% =&gt; 42
+
+%% Extraire un préfixe et garder le RESTE en binaire
+&lt;&lt;Premier:8, Reste/binary&gt;&gt; = &lt;&lt;255, 10, 20, 30&gt;&gt;.
+Premier.     %% =&gt; 255
+Reste.       %% =&gt; &lt;&lt;10,20,30&gt;&gt;</code></pre></figure>
+<p>Le spécificateur <code>/binary</code> signifie «&nbsp;tout le reste, sous forme de binaire&nbsp;»&nbsp;: idéal pour séparer un en-tête de sa charge utile.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La bit syntax fonctionne dans les deux sens, illustrés en miroir. À gauche, la construction : trois valeurs, 1, 2 et 42, entrent dans la notation double chevron avec leurs tailles, et il en sort un binaire compact. À droite, le filtrage : le même binaire compact entre dans un motif double chevron avec des variables Version, Type et Longueur, et il en ressort les trois valeurs liées. Une flèche part des valeurs vers le binaire à gauche, une autre part du binaire vers les valeurs à droite, montrant les directions opposées d'une même notation.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Une notation, deux directions</text>
+    <text class="d-mut" x="160" y="42" text-anchor="middle" font-size="8.5">construire</text>
+    <rect class="d-box" x="40" y="54" width="98" height="34" rx="5" /><text class="d-text" x="89" y="72" text-anchor="middle" font-size="8">1, 2, 42</text><text class="d-mut" x="89" y="83" text-anchor="middle" font-size="7">valeurs</text>
+    <rect class="d-accent" x="196" y="54" width="98" height="34" rx="5" /><text class="d-text" x="245" y="72" text-anchor="middle" font-size="7.5">&lt;&lt;18,0,42&gt;&gt;</text><text class="d-mut" x="245" y="83" text-anchor="middle" font-size="7">binaire</text>
+    <path class="d-line" d="M138 71 L196 71" fill="none" /><circle class="d-dot" cx="196" cy="71" r="2.5" /><text class="d-mut" x="167" y="65" text-anchor="middle" font-size="6.5">&lt;&lt;_:4,_:4,_:16&gt;&gt;</text>
+    <line class="d-line" x1="320" y1="46" x2="320" y2="150" stroke-dasharray="3 3" />
+    <text class="d-mut" x="470" y="42" text-anchor="middle" font-size="8.5">filtrer (match)</text>
+    <rect class="d-accent" x="346" y="54" width="98" height="34" rx="5" /><text class="d-text" x="395" y="72" text-anchor="middle" font-size="7.5">&lt;&lt;18,0,42&gt;&gt;</text><text class="d-mut" x="395" y="83" text-anchor="middle" font-size="7">binaire</text>
+    <rect class="d-box" x="502" y="54" width="106" height="34" rx="5" /><text class="d-text" x="555" y="70" text-anchor="middle" font-size="7.5">Version=1…</text><text class="d-mut" x="555" y="82" text-anchor="middle" font-size="7">variables liées</text>
+    <path class="d-line" d="M444 71 L502 71" fill="none" /><circle class="d-dot" cx="502" cy="71" r="2.5" /><text class="d-mut" x="473" y="65" text-anchor="middle" font-size="6.5">&lt;&lt;V:4,T:4,L:16&gt;&gt;</text>
+    <text class="d-mut" x="320" y="168" text-anchor="middle" font-size="8">Écrire le format une fois sert à l'encoder ET à le décoder.</text>
+  </svg>
+  <figcaption>Construire à droite du <code>=</code>, décomposer à gauche&nbsp;: la structure du paquet est écrite une seule fois et fonctionne dans les deux sens. C'est le pattern matching de la leçon&nbsp;2, appliqué aux bits.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: décoder un en-tête, comme les commutateurs télécoms</p><p>Erlang est né chez Ericsson pour piloter des commutateurs téléphoniques&nbsp;: du traitement de protocoles à très haut débit. La bit syntax y décode des trames (ATM, RADIUS, DNS…) en quelques lignes. Le même mécanisme fait tourner aujourd'hui le cœur de <strong>RabbitMQ</strong> (protocole AMQP) et de bien des serveurs MQTT&nbsp;: parser un en-tête binaire, router selon un champ, réémettre. Une trame IPv4 commence par exemple par <code>&lt;&lt;Version:4, IHL:4, ...&gt;&gt;</code> — exactement la forme que tu viens d'écrire.</p></div></div>
+
+<h2>Décoder une trame : un exemple complet</h2>
+<figure class="code-block" data-file="trame.erl"><pre><code class="language-erlang">%% Une trame minuscule : type (8 bits) + id (16 bits) + message (reste)
+decoder(&lt;&lt;Type:8, Id:16, Message/binary&gt;&gt;) -&gt;
+    {Type, Id, Message}.
+
+%% Usage
+decoder(&lt;&lt;1, 0, 7, "salut"&gt;&gt;).
+%% =&gt; {1, 7, &lt;&lt;"salut"&gt;&gt;}</code></pre></figure>
+<p>Une seule clause de fonction, un seul motif&nbsp;: le message est découpé, validé (la trame doit avoir au moins 3 octets, sinon aucune clause ne matche) et déstructuré d'un coup. Pas de curseur, pas de décalage manuel.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Parcourir un flux récursivement</p><p>Pour traiter une suite de messages collés bout à bout, on associe la bit syntax et la récursion (leçon&nbsp;3)&nbsp;: on filtre <code>&lt;&lt;Taille:16, Bloc:Taille/binary, Reste/binary&gt;&gt;</code>, on traite <code>Bloc</code>, puis on se rappelle sur <code>Reste</code> jusqu'à <code>&lt;&lt;&gt;&gt;</code> (binaire vide). Remarque le champ dont la taille dépend d'une <em>variable</em> déjà liée&nbsp;: un patron impossible dans la plupart des langages.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Binaire vs liste de caractères</p><p>Attention à ne pas confondre <code>&lt;&lt;"abc"&gt;&gt;</code> (un binaire de 3 octets) avec <code>"abc"</code> (une <em>liste</em> de trois entiers, leçon&nbsp;2). Les deux représentent du texte, mais n'ont ni la même performance ni les mêmes fonctions&nbsp;: pour de gros textes, préfère les binaires (d'où les <em>binary strings</em> d'Elixir). Convertir&nbsp;: <code>binary_to_list/1</code> et <code>list_to_binary/1</code>.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les segments acceptent d'autres spécificateurs&nbsp;: <code>/float</code>, <code>/utf8</code>, l'endianness (<code>big</code>/<code>little</code>), la signature (<code>signed</code>/<code>unsigned</code>). Les <strong>binary comprehensions</strong> (<code>&lt;&lt; ... || ... &gt;&gt;</code>) transforment un binaire en un autre. Enfin, la VM optimise les gros binaires par <strong>partage</strong> (comptage de références&nbsp;: un sous-binaire ne recopie pas les octets), ce qui rend le découpage bon marché.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — binaires &amp; bit syntax</caption>
+    <thead><tr><th scope="col">But</th><th scope="col">Écriture</th></tr></thead>
+    <tbody>
+      <tr><td>Binaire texte</td><td><code>&lt;&lt;"hello"&gt;&gt;</code></td></tr>
+      <tr><td>Binaire d'octets</td><td><code>&lt;&lt;104, 101, 108&gt;&gt;</code></td></tr>
+      <tr><td>Segment dimensionné</td><td><code>&lt;&lt;42:16&gt;&gt;</code> (16 bits)</td></tr>
+      <tr><td>Filtrer des champs</td><td><code>&lt;&lt;V:4, T:4, L:16&gt;&gt; = Bin</code></td></tr>
+      <tr><td>Préfixe + reste</td><td><code>&lt;&lt;X:8, Reste/binary&gt;&gt; = Bin</code></td></tr>
+      <tr><td>Taille en octets</td><td><code>byte_size(Bin)</code></td></tr>
+      <tr><td>Taille en bits</td><td><code>bit_size(Bin)</code></td></tr>
+      <tr><td>Convertir liste ⇄ binaire</td><td><code>list_to_binary/1</code>, <code>binary_to_list/1</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Binaire</dt><dd>Séquence compacte et immuable d'octets, notée <code>&lt;&lt;...&gt;&gt;</code>.</dd>
+  <dt>Bit syntax</dt><dd>Notation pour construire et filtrer des binaires par segments, y compris sur des largeurs de bits arbitraires.</dd>
+  <dt>Segment</dt><dd>Élément d'un binaire, de la forme <code>Valeur:Taille</code> (en bits) avec des spécificateurs de type optionnels.</dd>
+  <dt>Spécificateur</dt><dd>Suffixe précisant le type/format d'un segment&nbsp;: <code>/binary</code>, <code>/float</code>, <code>/utf8</code>, <code>big</code>/<code>little</code>…</dd>
+  <dt><code>/binary</code></dt><dd>Capture «&nbsp;tout le reste&nbsp;» d'un binaire sous forme de binaire&nbsp;; sépare en-tête et charge utile.</dd>
+  <dt><code>byte_size</code> / <code>bit_size</code></dt><dd>Taille d'un binaire, respectivement en octets et en bits.</dd>
+  <dt>Charge utile (payload)</dt><dd>La partie «&nbsp;données&nbsp;» d'une trame, après l'en-tête.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>binaire</strong> <code>&lt;&lt;...&gt;&gt;</code> est une suite d'octets compacte et immuable.</li>
+  <li>Les <strong>segments</strong> <code>Valeur:Taille</code> décrivent des champs à la largeur de bits voulue.</li>
+  <li>La même notation <strong>construit</strong> (à droite du <code>=</code>) et <strong>filtre</strong> (à gauche) un binaire.</li>
+  <li><code>/binary</code> capture le reste&nbsp;: parfait pour séparer en-tête et charge utile d'une trame.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Combien de bits fait <code>&lt;&lt;1:4, 2:4, 42:16&gt;&gt;</code>&nbsp;?</li>
+  <li>Que vaut <code>Reste</code> après <code>&lt;&lt;X:8, Reste/binary&gt;&gt; = &lt;&lt;255,1,2&gt;&gt;</code>&nbsp;?</li>
+  <li>Quelle différence entre <code>&lt;&lt;"ok"&gt;&gt;</code> et <code>"ok"</code>&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la taille, en bits, du binaire <<1:4, 2:4, 42:16>> ?","a":["24 bits (4 + 4 + 16)","8 bits","3 bits","16 bits"],"correct":0,"explain":"Chaque segment déclare sa largeur : 4 + 4 + 16 = 24 bits, soit 3 octets. bit_size renverrait 24 et byte_size 3."},
+  {"q":"Après <<X:8, Reste/binary>> = <<255, 10, 20, 30>>, que valent X et Reste ?","a":["X = 255 et Reste = <<10,20,30>>","X = <<255>> et Reste = [10,20,30]","X = 255 et Reste = 60","X = 0 et Reste = <<255,10,20,30>>"],"correct":0,"explain":"Le 1er segment de 8 bits lie X à 255 ; /binary capture tout le reste sous forme de binaire, soit <<10,20,30>>."},
+  {"q":"Quelle est la différence entre <<\"ok\">> et \"ok\" en Erlang ?","a":["<<\"ok\">> est un binaire (2 octets) ; \"ok\" est une liste d'entiers [111, 107]","Aucune, ce sont des synonymes","<<\"ok\">> est une liste, \"ok\" un binaire","<<\"ok\">> est un atome"],"correct":0,"explain":"Les guillemets doubles seuls donnent une liste de codes de caractères ; entourés de <<>>, on obtient un binaire compact. Choix important pour la performance sur de gros textes."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["byte_size","byte_size/1"],"placeholder":"la fonction qui donne la taille d'un binaire en OCTETS","hints":["Son cousin donne la taille en bits.","byte_????(Bin)","Pour <<\"hello\">> elle renvoie 5."],"link":{"href":"lecon-12.html","label":"Revoir « Un binaire, c'est quoi ? »"}},
+  {"type":"text","accept":["/binary","binary"],"placeholder":"le spécificateur de segment qui capture « tout le reste » en binaire","hints":["Se met après une variable : Reste/????? .","Sépare en-tête et charge utile.","Commence par une barre oblique."],"link":{"href":"lecon-12.html","label":"Revoir « Les deux sens »"}},
+  {"type":"text","accept":["bit_size","bit_size/1"],"placeholder":"la fonction qui donne la taille d'un binaire en BITS","hints":["Pour <<1:4,2:4,42:16>> elle renvoie 24.","bit_????(Bin)","≠ byte_size."],"link":{"href":"lecon-12.html","label":"Revoir « Les segments »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Construis un binaire représentant une couleur RVB avec trois octets&nbsp;: rouge <code>255</code>, vert <code>128</code>, bleu <code>0</code>. Quelle est sa taille en octets&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">Couleur = &lt;&lt;255, 128, 0&gt;&gt;.
+byte_size(Couleur).   %% =&gt; 3</code></pre></figure><p>Trois nombres, un octet chacun par défaut&nbsp;: 3 octets (24 bits).</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un motif qui extrait les composantes <code>R</code>, <code>V</code>, <code>B</code> (8 bits chacune) du binaire couleur de l'exercice&nbsp;1.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">&lt;&lt;R:8, V:8, B:8&gt;&gt; = &lt;&lt;255, 128, 0&gt;&gt;.
+R.   %% =&gt; 255
+V.   %% =&gt; 128
+B.   %% =&gt; 0</code></pre></figure><p>Trois segments de 8 bits lient chacun leur variable. La même écriture aurait servi à <em>construire</em> le binaire.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction <code>entete/1</code> qui, d'une trame <code>&lt;&lt;Version:4, Type:4, Reste/binary&gt;&gt;</code>, renvoie <code>{Version, Type}</code>. Que se passe-t-il si on l'appelle avec <code>&lt;&lt;&gt;&gt;</code> (binaire vide)&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="proto.erl"><pre><code class="language-erlang">entete(&lt;&lt;Version:4, Type:4, _Reste/binary&gt;&gt;) -&gt;
+    {Version, Type}.
+
+entete(&lt;&lt;1:4, 2:4, "data"&gt;&gt;).   %% =&gt; {1, 2}
+%% entete(&lt;&lt;&gt;&gt;) ⇒ erreur : function_clause</code></pre></figure><p>Avec un binaire vide, aucun motif ne peut lier 8 bits d'en-tête&nbsp;: la clause échoue et Erlang lève <code>function_clause</code>. C'est le «&nbsp;let it crash&nbsp;» (leçon&nbsp;6)&nbsp;: une trame malformée fait planter le processus de traitement, qu'un superviseur relancera proprement.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

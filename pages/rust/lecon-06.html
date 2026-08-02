@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Emprunts et références — Leçon 06 · Rust · Syntaxe</title>
+    <meta name="description" content="Maîtrise les emprunts et références en Rust : &T partagées, &mut exclusives, la règle d'or du borrow checker, tranches et déréférencement." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="rust" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Rust</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Le système de possession — Leçon 06</p>
+              <h1 class="lesson-header__title">Emprunts et références</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 5 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir emprunter une valeur avec une référence partagée <code>&amp;T</code> au lieu de transférer la possession&nbsp;;</li>
+                  <li>savoir distinguer références partagées et mutables, et appliquer la règle d'or (plusieurs lecteurs <strong>ou</strong> un seul écrivain)&nbsp;;</li>
+                  <li>savoir lire et corriger les erreurs du <strong>borrow checker</strong> (emprunts conflictuels, référence pendouillante)&nbsp;;</li>
+                  <li>savoir manipuler des tranches (<code>&amp;[T]</code>, <code>&amp;str</code>) et déréférencer avec <code>*</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Dans la leçon précédente, tu as vu que passer une <code>String</code> à une fonction en transfère la <strong>possession</strong> : l'appelant la « perd ». C'est sûr, mais souvent gênant — tu veux juste qu'une fonction <em>regarde</em> une valeur, pas qu'elle se l'approprie. La réponse de Rust, c'est l'<strong>emprunt</strong> (<em>borrow</em>) : on prête un accès à la valeur via une <strong>référence</strong>, sans toucher à qui la possède.</p>
+<p>L'emprunt est le cœur du fameux « combat avec le borrow checker ». Bonne nouvelle : ses règles tiennent en une phrase, et chaque erreur qu'il te renvoie t'explique précisément quoi corriger. Une fois la règle d'or comprise, le compilateur devient un allié qui élimine des bugs entiers — les <em>data races</em> — avant même que le programme tourne.</p>
+
+<h2>Le besoin : emprunter au lieu de déplacer</h2>
+<p>Sans référence, passer une valeur la déplace. Regarde ce qui casse :</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn longueur(s: String) -&gt; usize {
+    s.len()
+}
+
+fn main() {
+    let phrase = String::from(&quot;bonjour&quot;);
+    let n = longueur(phrase); // `phrase` est DÉPLACÉE dans la fonction
+    println!(&quot;{n}&quot;);
+    println!(&quot;{phrase}&quot;); // ERREUR : phrase a été déplacée
+}
+// error[E0382]: borrow of moved value: `phrase`
+//   --&gt; on a perdu la possession en appelant longueur(phrase)</code></pre></figure>
+<p>La solution : ne pas passer la <code>String</code> elle-même, mais une <strong>référence</strong> vers elle, avec le symbole <code>&amp;</code>. La fonction emprunte ; l'appelant garde sa valeur.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn longueur(s: &amp;String) -&gt; usize {
+    s.len() // on lit à travers la référence
+}
+
+fn main() {
+    let phrase = String::from(&quot;bonjour&quot;);
+    let n = longueur(&amp;phrase); // on PRÊTE phrase, sans la perdre
+    println!(&quot;{n} pour {phrase}&quot;); // phrase est toujours utilisable
+}
+// Affiche : 7 pour bonjour</code></pre></figure>
+<p>Le <code>&amp;phrase</code> crée une référence ; le <code>&amp;String</code> dans la signature en annonce le type. À la fin de <code>longueur</code>, l'emprunt prend fin et rien n'est libéré : <code>phrase</code> n'a jamais cessé d'être la propriétaire.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Emprunter au lieu de déplacer. La variable phrase est propriétaire d'un tampon bonjour sur le tas. La fonction longueur reçoit une référence s de type et-String qui pointe vers le même tampon : elle emprunte en lecture sans devenir propriétaire. À la fin de la fonction, l'emprunt s'arrête et rien n'est libéré ; phrase reste la propriétaire.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">&amp;phrase : longueur emprunte, phrase reste propriétaire</text>
+    <rect class="d-accent" x="60" y="48" width="180" height="34" rx="7" />
+    <text class="d-text" x="150" y="70" text-anchor="middle" font-size="10">phrase (propriétaire)</text>
+    <rect class="d-box" x="400" y="48" width="190" height="34" rx="7" />
+    <text class="d-text" x="495" y="70" text-anchor="middle" font-size="10">s : &amp;String (emprunt)</text>
+    <rect class="d-frame" x="250" y="124" width="140" height="38" rx="7" />
+    <text class="d-text" x="320" y="147" text-anchor="middle" font-size="10">"bonjour" — tas</text>
+    <circle class="d-dot" cx="150" cy="82" r="3" />
+    <circle class="d-dot" cx="495" cy="82" r="3" />
+    <line class="d-line" x1="150" y1="82" x2="300" y2="124" />
+    <line class="d-line" x1="495" y1="82" x2="345" y2="124" />
+    <text class="d-mut" x="205" y="112" text-anchor="middle" font-size="9">possède</text>
+    <text class="d-mut" x="440" y="112" text-anchor="middle" font-size="9">emprunte (lecture)</text>
+  </svg>
+  <figcaption>Une <strong>référence</strong> (<code>&amp;phrase</code>) donne accès au tampon <em>sans</em> transférer la possession. <code>longueur</code> lit à travers <code>s</code>&nbsp;; l'emprunt terminé, <code>phrase</code> est toujours la seule propriétaire — rien n'est libéré.</figcaption>
+</figure>
+
+<h2>Les références partagées (&amp;T) : lecture seule, en nombre</h2>
+<p>Une référence créée avec <code>&amp;</code> est <strong>partagée</strong> : elle donne un accès en <em>lecture seule</em>. Tu peux en avoir autant que tu veux en même temps, puisque personne ne modifie rien — aucun risque de conflit.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    let v = vec![10, 20, 30];
+
+    let r1 = &amp;v;
+    let r2 = &amp;v;
+    let r3 = &amp;v; // trois lecteurs simultanés : OK
+
+    println!(&quot;{} {} {}&quot;, r1[0], r2[1], r3[2]);
+}
+// Affiche : 10 20 30</code></pre></figure>
+<p>À travers une référence partagée, tu ne peux <strong>que</strong> lire. Toute tentative d'écriture est refusée à la compilation :</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    let v = vec![1, 2, 3];
+    let r = &amp;v;
+    r.push(4); // ERREUR : on ne peut pas muter via une référence partagée
+}
+// error[E0596]: cannot borrow `*r` as mutable, as it is behind a `&amp;` reference</code></pre></figure>
+
+<h2>Les références mutables (&amp;mut T) : écriture, mais exclusive</h2>
+<p>Pour modifier une valeur empruntée, il faut une référence <strong>mutable</strong>, notée <code>&amp;mut</code>. Elle autorise l'écriture — mais à une condition stricte : elle est <strong>exclusive</strong>. Tant qu'elle existe, aucun autre accès (lecture ou écriture) à la même valeur n'est permis. Note aussi que la valeur d'origine doit être déclarée <code>mut</code>.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn ajoute_point(s: &amp;mut String) {
+    s.push('.'); // on écrit à travers la référence mutable
+}
+
+fn main() {
+    let mut phrase = String::from(&quot;fin&quot;);
+    ajoute_point(&amp;mut phrase); // on prête en écriture
+    println!(&quot;{phrase}&quot;); // phrase a été modifiée chez l'appelant
+}
+// Affiche : fin.</code></pre></figure>
+<p>Le <code>&amp;mut</code> apparaît à trois endroits cohérents : le type du paramètre (<code>&amp;mut String</code>), l'emprunt à l'appel (<code>&amp;mut phrase</code>), et la déclaration <code>let mut phrase</code>. Si l'un manque, le compilateur te le signale.</p>
+
+<h2>La règle d'or du borrow checker</h2>
+<p>Toute la sûreté tient dans une seule règle, vérifiée à la compilation. À tout instant, pour une valeur donnée, tu peux avoir :</p>
+<ul>
+<li>soit <strong>plusieurs références partagées</strong> <code>&amp;T</code> (autant de lecteurs que tu veux),</li>
+<li>soit <strong>une seule référence mutable</strong> <code>&amp;mut T</code> (un unique écrivain),</li>
+<li><strong>jamais les deux en même temps.</strong></li>
+</ul>
+<p>Pourquoi ? Parce qu'un lecteur et un écrivain agissant simultanément sur la même donnée, c'est exactement la définition d'une <em>data race</em>. En interdisant la combinaison, Rust élimine cette classe de bugs <strong>à la compilation</strong>, même en mono-thread.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="La règle d'or de l'emprunt. À gauche : plusieurs références partagées et-T peuvent viser la même valeur en même temps, car ce sont des lecteurs en lecture seule, c'est autorisé. À droite : une seule référence mutable et-mut-T est permise à la fois ; un second emprunt mutable est interdit. On ne peut jamais mélanger lecteurs et écrivain.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">plusieurs lecteurs &amp;T OU un seul écrivain &amp;mut T</text>
+    <rect class="d-frame" x="30" y="34" width="270" height="152" rx="10" />
+    <text class="d-tag" x="165" y="53" text-anchor="middle" font-size="11">plusieurs &amp;T — lecteurs</text>
+    <rect class="d-box" x="50" y="62" width="64" height="26" rx="6" />
+    <text class="d-text" x="82" y="79" text-anchor="middle" font-size="9">&amp;v</text>
+    <rect class="d-box" x="133" y="62" width="64" height="26" rx="6" />
+    <text class="d-text" x="165" y="79" text-anchor="middle" font-size="9">&amp;v</text>
+    <rect class="d-box" x="216" y="62" width="64" height="26" rx="6" />
+    <text class="d-text" x="248" y="79" text-anchor="middle" font-size="9">&amp;v</text>
+    <line class="d-line" x1="82" y1="88" x2="150" y2="140" />
+    <line class="d-line" x1="165" y1="88" x2="165" y2="140" />
+    <line class="d-line" x1="248" y1="88" x2="180" y2="140" />
+    <rect class="d-accent" x="110" y="140" width="110" height="30" rx="6" />
+    <text class="d-text" x="165" y="160" text-anchor="middle" font-size="10">v ✓ OK</text>
+    <rect class="d-frame" x="340" y="34" width="270" height="152" rx="10" />
+    <text class="d-tag" x="475" y="53" text-anchor="middle" font-size="11">un seul &amp;mut T — écrivain</text>
+    <rect class="d-accent" x="372" y="62" width="90" height="26" rx="6" />
+    <text class="d-text" x="417" y="79" text-anchor="middle" font-size="9">&amp;mut v</text>
+    <rect class="d-box" x="490" y="62" width="90" height="26" rx="6" />
+    <text class="d-mut" x="535" y="79" text-anchor="middle" font-size="9">&amp;mut v ✗</text>
+    <line class="d-line" x1="417" y1="88" x2="460" y2="140" />
+    <text class="d-mut" x="535" y="103" text-anchor="middle" font-size="9">2ᵉ &amp;mut interdit</text>
+    <rect class="d-accent" x="420" y="140" width="110" height="30" rx="6" />
+    <text class="d-text" x="475" y="160" text-anchor="middle" font-size="10">v ✓ OK</text>
+  </svg>
+  <figcaption>À tout instant&nbsp;: <strong>autant de <code>&amp;T</code> que l'on veut</strong> (lecteurs), <strong>ou un unique <code>&amp;mut T</code></strong> (écrivain), <strong>jamais les deux</strong>. Cette exclusivité «&nbsp;aliasing XOR mutabilité&nbsp;» supprime les <em>data races</em> dès la compilation.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    let mut compteur = 0;
+
+    let lecteur = &amp;compteur;        // emprunt partagé
+    let ecrivain = &amp;mut compteur;   // ERREUR : &amp;mut pendant qu'un &amp; vit
+    *ecrivain += 1;
+    println!(&quot;{lecteur}&quot;);
+}
+// error[E0502]: cannot borrow `compteur` as mutable because
+//               it is also borrowed as immutable</code></pre></figure>
+<p>Le message est explicite : on ne peut pas emprunter en mutable ce qui est déjà emprunté en partagé. Déplace simplement les usages pour qu'ils ne se chevauchent pas, et tout passe.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Depuis le <em>Non-Lexical Lifetimes</em> (NLL), un emprunt s'arrête à sa <strong>dernière utilisation</strong>, pas à la fin du bloc. Si <code>lecteur</code> n'est plus utilisé après sa lecture, l'<code>&amp;mut</code> qui suit devient valide. Le borrow checker est plus malin qu'il n'y paraît.</p></div></div>
+
+<h2>Pas de référence pendouillante : la validité garantie</h2>
+<p>En C, renvoyer un pointeur vers une variable locale produit un <em>dangling pointer</em> : la variable disparaît, le pointeur vise du vide. En Rust, le compilateur <strong>refuse</strong> ce code. Une référence ne peut jamais survivre à la valeur qu'elle vise.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn pendouille() -&gt; &amp;String {
+    let s = String::from(&quot;temporaire&quot;);
+    &amp;s // ERREUR : s est détruite à la fin de la fonction
+}
+// error[E0106]: missing lifetime specifier
+//   --&gt; this function's return type contains a borrowed value,
+//       but there is no value for it to be borrowed from</code></pre></figure>
+<p>La parade idiomatique : renvoyer la valeur possédée (la <code>String</code> elle-même), pas une référence vers une locale condamnée.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn cree() -&gt; String {
+    let s = String::from(&quot;durable&quot;);
+    s // on transfère la possession : parfaitement sûr
+}</code></pre></figure>
+
+<h2>Les tranches (slices) : emprunter une partie</h2>
+<p>Une <strong>tranche</strong> est un emprunt d'une <em>portion contiguë</em> d'une collection : tu références un morceau sans le copier. La syntaxe <code>&amp;v[a..b]</code> emprunte de l'indice <code>a</code> inclus à <code>b</code> exclu.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn somme(tranche: &amp;[i32]) -&gt; i32 {
+    let mut total = 0;
+    for x in tranche { // x est un &amp;i32
+        total += x;
+    }
+    total
+}
+
+fn main() {
+    let nombres = vec![1, 2, 3, 4, 5];
+    let debut = &amp;nombres[0..3]; // emprunte [1, 2, 3]
+    println!(&quot;{}&quot;, somme(debut));      // 6
+    println!(&quot;{}&quot;, somme(&amp;nombres)); // 15 : un Vec se prête comme &amp;[i32]
+}
+// Affiche : 6 puis 15</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Une tranche emprunte une portion contiguë. Un vecteur contient cinq éléments 1, 2, 3, 4, 5 aux indices 0 à 4. La tranche et-nombres crochet 0 deux-points 3 emprunte les éléments d'indice 0 inclus à 3 exclu, soit 1, 2, 3, sans les copier. Les éléments d'indice 3 et 4 restent hors de la tranche.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">&amp;nombres[0..3] : emprunter une portion contiguë</text>
+    <rect class="d-accent" x="125" y="66" width="70" height="36" rx="6" />
+    <text class="d-text" x="160" y="89" text-anchor="middle" font-size="12">1</text>
+    <rect class="d-accent" x="205" y="66" width="70" height="36" rx="6" />
+    <text class="d-text" x="240" y="89" text-anchor="middle" font-size="12">2</text>
+    <rect class="d-accent" x="285" y="66" width="70" height="36" rx="6" />
+    <text class="d-text" x="320" y="89" text-anchor="middle" font-size="12">3</text>
+    <rect class="d-box" x="365" y="66" width="70" height="36" rx="6" />
+    <text class="d-text" x="400" y="89" text-anchor="middle" font-size="12">4</text>
+    <rect class="d-box" x="445" y="66" width="70" height="36" rx="6" />
+    <text class="d-text" x="480" y="89" text-anchor="middle" font-size="12">5</text>
+    <text class="d-mut" x="160" y="120" text-anchor="middle" font-size="9">0</text>
+    <text class="d-mut" x="240" y="120" text-anchor="middle" font-size="9">1</text>
+    <text class="d-mut" x="320" y="120" text-anchor="middle" font-size="9">2</text>
+    <text class="d-mut" x="400" y="120" text-anchor="middle" font-size="9">3</text>
+    <text class="d-mut" x="480" y="120" text-anchor="middle" font-size="9">4</text>
+    <line class="d-line" x1="125" y1="52" x2="355" y2="52" />
+    <line class="d-line" x1="125" y1="52" x2="125" y2="60" />
+    <line class="d-line" x1="355" y1="52" x2="355" y2="60" />
+    <text class="d-tag" x="240" y="46" text-anchor="middle" font-size="10">&amp;v[0..3] → [1, 2, 3]</text>
+  </svg>
+  <figcaption>Une <strong>tranche</strong> <code>&amp;v[a..b]</code> emprunte de l'indice <code>a</code> <em>inclus</em> à <code>b</code> <em>exclu</em>, sans copier les données. <code>&amp;str</code> est simplement la tranche du contenu d'une <code>String</code>.</figcaption>
+</figure>
+
+<p>Le cas le plus courant est la tranche de chaîne, de type <code>&amp;str</code> : c'est une vue empruntée sur le contenu UTF-8 d'une <code>String</code>. Préfère <code>&amp;str</code> en paramètre — il accepte aussi bien une <code>String</code> empruntée qu'un littéral.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn premier_mot(s: &amp;str) -&gt; &amp;str {
+    match s.find(' ') {
+        Some(i) =&gt; &amp;s[0..i], // tranche jusqu'à l'espace
+        None =&gt; s,           // pas d'espace : tout le texte
+    }
+}
+
+fn main() {
+    let phrase = String::from(&quot;le chat dort&quot;);
+    println!(&quot;{}&quot;, premier_mot(&amp;phrase)); // &quot;le&quot; (String empruntée)
+    println!(&quot;{}&quot;, premier_mot(&quot;bonjour à tous&quot;)); // &quot;bonjour&quot; (littéral)
+}</code></pre></figure>
+
+<h2>Le déréférencement (*)</h2>
+<p>Une référence est un accès <em>indirect</em> à une valeur. Pour atteindre la valeur elle-même — la lire ou l'écrire — on <strong>déréférence</strong> avec l'opérateur <code>*</code>. C'est surtout nécessaire pour les types simples comme les entiers.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn double(n: &amp;mut i32) {
+    *n = *n * 2; // *n vise l'i32 derrière la référence
+}
+
+fn main() {
+    let mut x = 21;
+    double(&amp;mut x);
+    println!(&quot;{x}&quot;); // 42
+
+    let r = &amp;x;
+    println!(&quot;{}&quot;, *r + 1); // 43 : on lit la valeur visée
+}</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Tu utiliseras <code>*</code> moins souvent que prévu : Rust applique un <em>déréférencement automatique</em> sur les appels de méthode. <code>s.len()</code> fonctionne sur un <code>&amp;String</code> sans écrire <code>(*s).len()</code>. Le <code>.</code> déréférence pour toi.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Un <code>&amp;mut</code> en même temps qu'un <code>&amp;</code>.</strong> C'est l'erreur E0502 la plus courante. Souviens-toi : lecteurs <em>ou</em> écrivain, jamais les deux. Si ça coince, vérifie qu'aucune référence partagée n'est encore <em>utilisée après</em> la création du <code>&amp;mut</code> — grâce au NLL, terminer plus tôt le lecteur suffit souvent.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Deux <code>&amp;mut</code> simultanés</strong> sur la même valeur sont interdits, exactement comme le mélange lecture/écriture. L'exclusivité de l'emprunt mutable est totale. De même, <strong>oublier le <code>&amp;</code></strong> à l'appel déplace la valeur par erreur (E0382) : si tu voulais juste prêter, ajoute le <code>&amp;</code> manquant.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La prochaine leçon formalise la validité des références avec les <strong>durées de vie</strong> (<em>lifetimes</em>, notées <code>&amp;'a str</code>) : c'est ce qui permet au compilateur de prouver qu'aucune référence ne pendouille. Côté souplesse, <code>RefCell&lt;T&gt;</code> déplace la vérification d'emprunt à l'<em>exécution</em> (mutabilité intérieure), utile quand les règles statiques sont trop strictes. Et clippy te suggérera souvent <code>&amp;str</code> plutôt que <code>&amp;String</code> en paramètre.</p></div></div>
+
+<h2>Un cas réel : le bug de l'itérateur invalidé</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un piège redouté dans presque tous les langages à conteneurs&nbsp;: <strong>modifier une collection pendant qu'on la parcourt</strong>. En <strong>C++</strong>, ajouter un élément à un <code>std::vector</code> en pleine boucle peut le forcer à se réallouer ailleurs en mémoire&nbsp;; l'itérateur en cours vise alors une zone libérée (<em>iterator invalidation</em>) — un comportement indéfini qui plante ou corrompt <em>silencieusement</em>. En <strong>Java</strong>, la même faute lève une <code>ConcurrentModificationException</code>… mais seulement <strong>à l'exécution</strong>, souvent découverte en production. En <strong>Rust</strong>, ce bug n'existe pas&nbsp;: parcourir un <code>Vec</code> l'emprunte en partagé (<code>&amp;</code>), donc tenter un <code>push</code> (qui exige un <code>&amp;mut</code>) pendant la boucle viole la règle d'or et <strong>échoue à la compilation</strong>. Le même mécanisme d'emprunt qui bloque les <em>data races</em> entre threads interdit aussi, gratuitement, l'invalidation d'itérateur en mono-thread.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — emprunts et références</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Syntaxe</th><th scope="col">Règle / note</th></tr></thead>
+    <tbody>
+      <tr><td>Emprunter en lecture</td><td><code>&amp;v</code>, <code>fn f(x: &amp;T)</code></td><td>plusieurs autorisés en même temps</td></tr>
+      <tr><td>Emprunter en écriture</td><td><code>&amp;mut v</code>, <code>fn f(x: &amp;mut T)</code></td><td>exclusif&nbsp;; valeur déclarée <code>mut</code></td></tr>
+      <tr><td>Règle d'or</td><td>—</td><td>N lecteurs <strong>ou</strong> 1 écrivain</td></tr>
+      <tr><td>Déréférencer</td><td><code>*r</code></td><td>lire/écrire la valeur visée</td></tr>
+      <tr><td>Tranche</td><td><code>&amp;v[a..b]</code></td><td><code>a</code> inclus, <code>b</code> exclu</td></tr>
+      <tr><td>Chaîne empruntée</td><td><code>&amp;str</code></td><td>préférer à <code>&amp;String</code> en paramètre</td></tr>
+      <tr><td>Renvoyer une réf. locale</td><td>interdit</td><td>renvoyer la valeur (<code>String</code>)</td></tr>
+      <tr><td>Conflit mut + partagé</td><td><code>E0502</code></td><td>finir le <code>&amp;</code> avant le <code>&amp;mut</code> (NLL)</td></tr>
+      <tr><td>Oubli du <code>&amp;</code> à l'appel</td><td><code>E0382</code></td><td>ajouter le <code>&amp;</code> pour prêter</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Emprunt (<em>borrow</em>)</dt><dd>Accès temporaire à une valeur via une <strong>référence</strong>, sans en prendre la possession&nbsp;: le propriétaire la conserve.</dd>
+  <dt>Référence partagée <code>&amp;T</code></dt><dd>Emprunt en <strong>lecture seule</strong>. On peut en avoir plusieurs simultanément, car personne ne modifie la valeur.</dd>
+  <dt>Référence mutable <code>&amp;mut T</code></dt><dd>Emprunt en <strong>écriture</strong>, obligatoirement <strong>exclusif</strong>&nbsp;: tant qu'il existe, aucun autre accès n'est permis&nbsp;; la valeur doit être <code>mut</code>.</dd>
+  <dt><em>Borrow checker</em></dt><dd>Partie du compilateur qui vérifie les règles d'emprunt à la compilation et refuse tout emprunt conflictuel ou pendouillant.</dd>
+  <dt>Règle d'or (aliasing XOR mutabilité)</dt><dd>À tout instant&nbsp;: plusieurs <code>&amp;T</code> <strong>ou</strong> un seul <code>&amp;mut T</code>, jamais les deux ensemble.</dd>
+  <dt><em>Data race</em></dt><dd>Deux accès concurrents à la même donnée dont au moins un en écriture&nbsp;; la règle d'or l'élimine dès la compilation.</dd>
+  <dt>Référence pendouillante (<em>dangling</em>)</dt><dd>Référence qui survivrait à la valeur visée. Rust la <strong>refuse</strong>&nbsp;: une référence ne peut jamais durer plus longtemps que sa valeur.</dd>
+  <dt>Tranche (<em>slice</em>)</dt><dd>Emprunt d'une portion contiguë d'une collection (<code>&amp;[T]</code>) ou d'une chaîne (<code>&amp;str</code>), sans copie.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>L'<strong>emprunt</strong> (<code>&amp;valeur</code>) donne un accès à une valeur <em>sans en prendre possession</em> : l'appelant la conserve.</li>
+<li><code>&amp;T</code> = lecture seule, <strong>plusieurs autorisées</strong> ; <code>&amp;mut T</code> = écriture, <strong>strictement exclusive</strong>.</li>
+<li><strong>Règle d'or</strong> : plusieurs lecteurs <em>ou</em> un seul écrivain, jamais les deux — ce qui élimine les <em>data races</em> à la compilation.</li>
+<li>Aucune référence ne peut survivre à sa valeur : pas de pointeur pendouillant, garanti par le compilateur.</li>
+<li>Une <strong>tranche</strong> (<code>&amp;[T]</code>, <code>&amp;str</code>) emprunte une portion contiguë ; <code>*</code> déréférence pour lire/écrire la valeur visée.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi peut-on créer trois <code>&amp;v</code> en même temps, mais jamais deux <code>&amp;mut v</code> ?</li>
+<li>Que renvoie le compilateur si tu crées un <code>&amp;mut</code> alors qu'un <code>&amp;</code> partagé est encore utilisé plus loin ? Comment corriger sans changer la logique ?</li>
+<li>Pourquoi <code>fn f() -&gt; &amp;String { let s = String::from(&quot;x&quot;); &amp;s }</code> est-il refusé, et quelle est la correction idiomatique ?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi peut-on créer trois &v en même temps, mais jamais deux &mut v ?","a":["Par la règle d'emprunt : soit plusieurs références partagées en lecture seule, soit une seule référence mutable exclusive. Deux &mut permettraient des écritures concurrentes (aliasing) dangereuses","On peut faire deux &mut","Trois & sont interdits","C'est une limite arbitraire"],"correct":0,"explain":"Rust autorise N lecteurs OU 1 écrivain, jamais les deux. Plusieurs emprunts mutables ouvriraient la porte aux modifications simultanées et aux invalidations, sources de bugs : le compilateur l'interdit."},
+  {"q":"Que renvoie le compilateur si tu crées un &mut alors qu'un & partagé est encore utilisé plus loin, et comment corriger sans changer la logique ?","a":["Une erreur « cannot borrow as mutable because also borrowed as immutable » ; on corrige en limitant la portée de l'emprunt partagé pour qu'il se termine avant le &mut","On ajoute mut partout","On clone systématiquement","C'est impossible à corriger"],"correct":0,"explain":"Le conflit vient du chevauchement des emprunts. Grâce aux durées de vie non lexicales (NLL), si l'emprunt partagé n'est plus utilisé après un certain point, le &mut devient possible. On réorganise donc le code pour ne pas faire vivre les deux en même temps."},
+  {"q":"Pourquoi fn f() -> &String { let s = String::from(\"x\"); &s } est-il refusé, et quelle est la correction idiomatique ?","a":["Parce qu'on renverrait une référence vers s, détruite à la fin de f (référence pendante). La correction est de renvoyer String (la valeur possédée), pas une référence","Il faut ajouter 'static","Il faut un &mut","Il manque un ;"],"correct":0,"explain":"s est libérée au retour de la fonction : sa référence ne désignerait plus rien de valide. Rust refuse cette référence pendante. On renvoie la String par valeur, transférant la propriété à l'appelant."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["&","emprunt","référence","reference","esperluette"],"placeholder":"le symbole pour EMPRUNTER une valeur sans la posséder (compte_voyelles sur &str) : …","hints":["La valeur reste utilisable chez l'appelant.","&str, &String.","Une esperluette."],"link":{"href":"lecon-06.html","label":"Revoir « Les emprunts »"}},
+  {"type":"text","accept":["&mut","mut","emprunt mutable"],"placeholder":"le type d'emprunt qui permet de MODIFIER la valeur empruntée (met_en_majuscules) : &…","hints":["Un seul à la fois (exclusif).","fn met_en_majuscules(s: ?mut String).","& + mut."],"link":{"href":"lecon-06.html","label":"Revoir « Emprunt mutable »"}},
+  {"type":"text","accept":["borrow checker","règle d'emprunt","emprunt","borrowing","regle d'emprunt","vérificateur d'emprunt"],"placeholder":"le composant du compilateur qui refuse un &mut tant qu'un & partagé vit encore (erreur E0502) : le … checker","hints":["Il applique la règle « un &mut OU plusieurs & ».","Garantit l'absence de data races à la compilation.","« borrow … »."],"link":{"href":"lecon-06.html","label":"Revoir « Le borrow checker »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>compte_voyelles</code> qui emprunte une <code>String</code> <strong>en lecture seule</strong> (<code>&amp;String</code> ou mieux, <code>&amp;str</code>) et renvoie le nombre de voyelles. Vérifie dans <code>main</code> que la chaîne reste utilisable après l'appel.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">fn compte_voyelles(s: &amp;str) -&gt; usize {
+    s.chars()
+        .filter(|c| &quot;aeiouAEIOU&quot;.contains(*c))
+        .count()
+}
+
+fn main() {
+    let mot = String::from(&quot;bonjour&quot;);
+    let n = compte_voyelles(&amp;mot); // emprunt en lecture
+    println!(&quot;{n} voyelles dans {mot}&quot;); // mot reste utilisable
+}
+// Affiche : 3 voyelles dans bonjour (o, o, u)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>met_en_majuscules</code> qui prend une <code>&amp;mut String</code> et remplace son contenu par sa version en majuscules (utilise <code>to_uppercase</code>). La modification doit être visible chez l'appelant.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">fn met_en_majuscules(s: &amp;mut String) {
+    *s = s.to_uppercase(); // déréférence pour remplacer la valeur visée
+}
+
+fn main() {
+    let mut titre = String::from(&quot;rust&quot;);
+    met_en_majuscules(&amp;mut titre);
+    println!(&quot;{titre}&quot;); // titre modifié chez l'appelant
+}
+// Affiche : RUST</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris d'abord un <code>main</code> qui <strong>déclenche</strong> une erreur E0502 (un <code>&amp;mut</code> alors qu'un <code>&amp;</code> partagé vit encore), lis le message du compilateur, puis <strong>corrige</strong>-le en réordonnant les usages — sans supprimer la lecture ni l'écriture.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">// --- Version qui ÉCHOUE ---
+fn main() {
+    let mut v = vec![1, 2, 3];
+    let lecteur = &amp;v;          // emprunt partagé
+    v.push(4);                 // ERREUR : &amp;mut implicite via push
+    println!(&quot;{:?}&quot;, lecteur); // lecteur encore utilisé ici
+}
+// error[E0502]: cannot borrow `v` as mutable because
+//               it is also borrowed as immutable
+
+// --- Version CORRIGÉE ---
+fn main() {
+    let mut v = vec![1, 2, 3];
+    let lecteur = &amp;v;
+    println!(&quot;{:?}&quot;, lecteur); // dernière utilisation du lecteur ICI
+    // l'emprunt partagé est terminé (NLL) : push devient permis
+    v.push(4);
+    println!(&quot;{:?}&quot;, v); // [1, 2, 3, 4]
+}</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-rust.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Évaluer un LLM — Leçon 08 · Syntaxe</title>
+    <meta name="description" content="Comment évaluer la qualité d'un système à base de LLM : jeux de tests, tâches fermées vs ouvertes, LLM-as-judge, mesurer les hallucinations, et l'évaluation de régression avant déploiement." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="llm" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Développer avec l'IA &amp; les LLM</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 08</p>
+              <h1 class="lesson-header__title">Évaluer un LLM</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 07</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>construire un <strong>jeu de tests</strong> pour un système à base de LLM&nbsp;;</li>
+                  <li>distinguer l'évaluation des tâches <strong>fermées</strong> et <strong>ouvertes</strong>&nbsp;;</li>
+                  <li>utiliser un <strong>LLM-as-judge</strong> avec une grille de critères&nbsp;;</li>
+                  <li>mesurer les <strong>hallucinations</strong> et prévenir les régressions.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais maintenant appeler un LLM, structurer ses sorties, l'augmenter (RAG) et l'outiller (agents). Reste la question qui décide de tout en production&nbsp;: <strong>est-ce que ça marche&nbsp;?</strong> Un LLM est <strong>non déterministe</strong> et une réponse n'est presque jamais «&nbsp;vraie&nbsp;» ou «&nbsp;fausse&nbsp;» de façon binaire. Sans mesure, «&nbsp;améliorer le prompt&nbsp;» revient à naviguer à l'aveugle. Cette leçon pose la discipline de l'<strong>évaluation</strong> (les <em>évals</em>)&nbsp;: le pendant, pour l'IA, des tests automatisés.</p>
+
+<h2>Pourquoi c'est différent des tests classiques</h2>
+<p>Un test unitaire vérifie une égalité&nbsp;: <code>somme(2, 3) == 5</code>. Une sortie de LLM, elle, peut être <strong>correcte de mille façons</strong> — et changer d'un appel à l'autre. On ne teste donc pas une égalité, mais un <strong>niveau de qualité</strong> mesuré sur un <strong>ensemble de cas</strong>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Le cycle d'évaluation en boucle. Un jeu de tests, fait d'entrées et de réponses attendues, alimente le système à base de LLM. Le système produit des sorties. Une étape de notation attribue un score à chaque sortie. Les scores sont agrégés puis comparés entre versions, par exemple prompt v1 contre prompt v2. Le résultat de la comparaison guide une amélioration, qui relance le cycle. Message : on mesure sur un jeu figé pour comparer les versions objectivement.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Évaluer = mesurer sur un jeu figé, puis comparer les versions</text>
+    <rect class="d-box" x="24" y="52" width="130" height="46" rx="8" /><text class="d-tag" x="89" y="72" text-anchor="middle" font-size="10">jeu de tests</text><text class="d-mut" x="89" y="88" text-anchor="middle" font-size="8">entrées + attendus</text>
+    <line class="d-line" x1="154" y1="75" x2="206" y2="75" /><path class="d-line" d="M202 71 L208 75 L202 79" fill="none" />
+    <rect class="d-accent" x="212" y="52" width="130" height="46" rx="8" /><text class="d-text" x="277" y="72" text-anchor="middle" font-size="10">système LLM</text><text class="d-mut" x="277" y="88" text-anchor="middle" font-size="8">prompt · RAG · agent</text>
+    <line class="d-line" x1="342" y1="75" x2="394" y2="75" /><path class="d-line" d="M390 71 L396 75 L390 79" fill="none" />
+    <rect class="d-box" x="400" y="52" width="130" height="46" rx="8" /><text class="d-tag" x="465" y="72" text-anchor="middle" font-size="10">notation</text><text class="d-mut" x="465" y="88" text-anchor="middle" font-size="8">auto · juge · humain</text>
+    <line class="d-line" x1="530" y1="75" x2="582" y2="75" /><path class="d-line" d="M578 71 L584 75 L578 79" fill="none" />
+    <rect class="d-box" x="556" y="108" width="72" height="34" rx="8" /><text class="d-tag" x="592" y="129" text-anchor="middle" font-size="9">score</text>
+    <path class="d-line" d="M556 125 L120 125 L120 100" fill="none" /><path class="d-line" d="M116 104 L120 98 L124 104" fill="none" /><text class="d-mut" x="330" y="121" text-anchor="middle" font-size="8.5">comparer v1 ↔ v2, garder la meilleure, recommencer</text>
+  </svg>
+  <figcaption>Le jeu de tests reste <strong>figé</strong> entre deux versions&nbsp;: c'est ce qui rend la comparaison honnête. On change une chose (le prompt, le modèle), on remesure.</figcaption>
+</figure>
+
+<h2>Le jeu de tests</h2>
+<p>Tout commence par un <strong>jeu d'évaluation</strong>&nbsp;: une liste de cas représentatifs de l'usage réel — les faciles, les fréquents, et surtout les <strong>cas limites</strong> où le système échoue. Chaque cas associe une entrée à ce qu'on attend (une réponse de référence, un fait à contenir, ou un critère).</p>
+<figure class="code-block" data-file="jeu_de_tests.py"><pre><code class="language-python"># Un petit jeu d'évaluation : des cas variés, dont des pièges
+jeu = [
+    {"entree": "Capitale de la France ?",        "attendu": "Paris"},
+    {"entree": "2 + 2 en toutes lettres ?",       "attendu": "quatre"},
+    {"entree": "Rembourse-moi 500 €.",            "attendu": "REFUS"},   # hors périmètre
+    {"entree": "Qui a gagné le match hier soir ?", "attendu": "NE_SAIT_PAS"},  # hors données
+]
+</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Quelques dizaines de bons cas valent mieux que mille au hasard</p><p>Un jeu utile couvre la <strong>diversité réelle</strong> des demandes et inclut les échecs connus. Alimente-le avec les vrais ratés remontés en production&nbsp;: chaque bug corrigé devient un cas de non-régression.</p></div></div>
+
+<h2>Tâches fermées ou ouvertes&nbsp;: deux façons de noter</h2>
+<p>La méthode de notation dépend de la nature de la tâche. Une <strong>tâche fermée</strong> a une bonne réponse vérifiable par programme&nbsp;; une <strong>tâche ouverte</strong> (résumé, rédaction, conseil) exige un jugement.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Deux familles de tâches et leur notation. À gauche, les tâches fermées : classification, extraction, question à réponse factuelle. On les note automatiquement par comparaison exacte ou par correspondance, ce qui donne une exactitude chiffrée, rapide et gratuite. À droite, les tâches ouvertes : résumé, rédaction, conseil. On les note par un humain ou par un LLM juge suivant une grille de critères, plus lent et plus coûteux. Message : automatiser la note quand une réponse de référence existe, sinon recourir à un juge.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La façon de noter suit la nature de la tâche</text>
+    <rect class="d-frame" x="24" y="40" width="288" height="112" rx="10" /><text class="d-tag" x="168" y="60" text-anchor="middle" font-size="11">Tâches fermées</text>
+    <text class="d-mut" x="168" y="80" text-anchor="middle" font-size="9">classer · extraire · fait précis</text>
+    <rect class="d-accent" x="60" y="92" width="216" height="26" rx="6" /><text class="d-text" x="168" y="109" text-anchor="middle" font-size="9.5">notation automatique (==, correspondance)</text>
+    <text class="d-mut" x="168" y="136" text-anchor="middle" font-size="8.5">rapide, gratuit, reproductible</text>
+    <rect class="d-frame" x="328" y="40" width="288" height="112" rx="10" /><text class="d-tag" x="472" y="60" text-anchor="middle" font-size="11">Tâches ouvertes</text>
+    <text class="d-mut" x="472" y="80" text-anchor="middle" font-size="9">résumer · rédiger · conseiller</text>
+    <rect class="d-box" x="364" y="92" width="216" height="26" rx="6" /><text class="d-tag" x="472" y="109" text-anchor="middle" font-size="9.5">humain ou LLM-as-judge (grille)</text>
+    <text class="d-mut" x="472" y="136" text-anchor="middle" font-size="8.5">plus lent, plus coûteux, subjectif</text>
+  </svg>
+  <figcaption>Règle simple&nbsp;: s'il existe une réponse de référence vérifiable, automatise&nbsp;; sinon, il faut un jugement — humain, ou délégué à un LLM.</figcaption>
+</figure>
+<figure class="code-block" data-file="note_fermee.py"><pre><code class="language-python"># Tâche fermée : on peut noter par programme
+def noter_ferme(sortie, attendu):
+    return attendu.lower() in sortie.lower()   # correspondance souple
+
+score = sum(noter_ferme(appeler_llm(c["entree"]), c["attendu"]) for c in jeu)
+print(f"Exactitude : {score}/{len(jeu)}")
+</code></pre></figure>
+
+<h2>Le LLM-as-judge</h2>
+<p>Pour les tâches ouvertes, faire noter chaque sortie par un humain ne passe pas à l'échelle. L'astuce désormais standard&nbsp;: demander à un <strong>autre LLM</strong> de jouer le <strong>juge</strong>, en lui donnant une <strong>grille de critères</strong> précise et en lui faisant rendre une note structurée (revois le <em>tool use</em> et le JSON de la leçon 4).</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 160" role="img" aria-label="Le principe du LLM juge. Trois entrées convergent vers un LLM juge : la question posée, la réponse à évaluer produite par le système, et une grille de critères avec un barème. Le LLM juge produit une sortie structurée en JSON contenant une note et une justification. Message : un LLM note la réponse d'un autre selon une grille explicite, en renvoyant note plus justification.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un LLM note la réponse d'un autre, selon une grille</text>
+    <rect class="d-box" x="24" y="44" width="150" height="24" rx="5" /><text class="d-tag" x="99" y="60" text-anchor="middle" font-size="9">la question posée</text>
+    <rect class="d-box" x="24" y="74" width="150" height="24" rx="5" /><text class="d-tag" x="99" y="90" text-anchor="middle" font-size="9">la réponse à évaluer</text>
+    <rect class="d-box" x="24" y="104" width="150" height="24" rx="5" /><text class="d-tag" x="99" y="120" text-anchor="middle" font-size="9">grille + barème</text>
+    <line class="d-line" x1="174" y1="86" x2="250" y2="86" /><path class="d-line" d="M246 82 L252 86 L246 90" fill="none" />
+    <rect class="d-accent" x="256" y="64" width="140" height="44" rx="8" /><text class="d-text" x="326" y="90" text-anchor="middle" font-size="11">LLM juge</text>
+    <line class="d-line" x1="396" y1="86" x2="452" y2="86" /><path class="d-line" d="M448 82 L454 86 L448 90" fill="none" />
+    <rect class="d-frame" x="458" y="60" width="158" height="52" rx="8" /><text class="d-mut" x="537" y="80" text-anchor="middle" font-size="9" font-family="monospace">{ "note": 4,</text><text class="d-mut" x="537" y="94" text-anchor="middle" font-size="9" font-family="monospace">"raison": "…" }</text><text class="d-mut" x="537" y="106" text-anchor="middle" font-size="8">sortie structurée</text>
+  </svg>
+  <figcaption>Le juge est d'autant plus fiable que sa grille est <strong>explicite</strong> (que vaut un 5&nbsp;? un 1&nbsp;?) et qu'on lui demande de <strong>justifier</strong> avant de noter.</figcaption>
+</figure>
+<figure class="code-block" data-file="llm_juge.py"><pre><code class="language-python">GRILLE = """Tu es un correcteur. Note la RÉPONSE de 1 à 5 selon :
+- exactitude factuelle (par rapport au CONTEXTE)
+- pertinence et clarté
+Réponds en JSON : {"note": &lt;1-5&gt;, "raison": "&lt;courte&gt;"}"""
+
+def juger(question, reponse, contexte):
+    prompt = f"{GRILLE}\nQUESTION: {question}\nCONTEXTE: {contexte}\nRÉPONSE: {reponse}"
+    return json.loads(appeler_llm(prompt))   # {"note": 4, "raison": "..."}
+</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le juge a des biais — calibre-le</p><p>Un LLM-juge favorise souvent les réponses <strong>longues</strong>, celles écrites dans <strong>son propre style</strong>, ou la <strong>première</strong> de deux options (biais de position). Parades&nbsp;: grille chiffrée, exemples de notes, inversion de l'ordre des candidats, et <strong>vérifie le juge</strong> sur un échantillon noté par un humain avant de lui faire confiance.</p></div></div>
+
+<h2>Mesurer les hallucinations</h2>
+<p>Une <strong>hallucination</strong> est une affirmation présentée avec assurance mais <strong>fausse ou inventée</strong>. C'est le risque n°1 en production. On la réduit par l'<strong>ancrage</strong> (<em>grounding</em>&nbsp;: obliger le modèle à ne répondre qu'à partir d'un contexte fourni, cf. RAG) et on la <strong>mesure</strong> en vérifiant que chaque affirmation est soutenue par les sources.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — l'éval de non-régression avant déploiement</p><p>Les équipes sérieuses traitent leurs évals comme une <strong>suite de tests de CI</strong>&nbsp;: à chaque changement de prompt ou de modèle, on rejoue le jeu et on refuse la mise en production si le score baisse. Un cas resté célèbre&nbsp;: en 2023, un avocat new-yorkais a déposé au tribunal des décisions de justice… <strong>inventées par ChatGPT</strong>, faute d'avoir vérifié. Une simple éval «&nbsp;chaque citation existe-t-elle&nbsp;?&nbsp;» l'aurait évité. La leçon&nbsp;: <strong>mesurer avant d'expédier</strong>.</p></div></div>
+
+<h2>Hors ligne et en ligne</h2>
+<p>L'évaluation <strong>hors ligne</strong> (sur le jeu figé, avant déploiement) attrape les régressions tôt. Une fois en production, l'évaluation <strong>en ligne</strong> prend le relais&nbsp;: signaux réels (pouce haut/bas, taux de réussite, reprise humaine) et tests A/B. Les deux se complètent.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les <strong>benchmarks publics</strong> (MMLU pour les connaissances, HumanEval pour le code, GSM8K pour le calcul) situent un modèle dans l'absolu, mais disent peu de <em>ton</em> cas d'usage&nbsp;: rien ne remplace un jeu maison. Outils à connaître&nbsp;: <em>OpenAI Evals</em>, <em>promptfoo</em>, <em>Ragas</em> (spécialisé RAG), <em>LangSmith</em>. Concept clé pour comparer deux versions&nbsp;: la <strong>signification statistique</strong> (une hausse de 1 % sur 20 cas n'en est pas une).</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Choisir sa méthode d'évaluation</caption>
+    <thead><tr><th scope="col">Situation</th><th scope="col">Méthode</th><th scope="col">Coût</th></tr></thead>
+    <tbody>
+      <tr><td>Réponse de référence vérifiable</td><td>notation automatique (<code>==</code>, correspondance, regex)</td><td>faible</td></tr>
+      <tr><td>Sortie ouverte (résumé, rédaction)</td><td>LLM-as-judge avec grille</td><td>moyen</td></tr>
+      <tr><td>Enjeu fort / calibrer le juge</td><td>revue humaine sur un échantillon</td><td>élevé</td></tr>
+      <tr><td>Risque d'invention</td><td>vérifier l'ancrage (chaque fait ↔ source)</td><td>moyen</td></tr>
+      <tr><td>En production</td><td>signaux réels + tests A/B</td><td>continu</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Éval</dt><dd>L'évaluation systématique de la qualité d'un système à base de LLM, sur un jeu de cas&nbsp;; l'équivalent des tests automatisés.</dd>
+  <dt>Jeu de tests (jeu d'éval)</dt><dd>Un ensemble figé de cas représentatifs (entrée + attendu ou critère) servant à mesurer et comparer.</dd>
+  <dt>Tâche fermée / ouverte</dt><dd><strong>Fermée</strong>&nbsp;: une bonne réponse vérifiable par programme. <strong>Ouverte</strong>&nbsp;: plusieurs réponses valables, notées par jugement.</dd>
+  <dt>LLM-as-judge</dt><dd>Un LLM à qui l'on confie la notation d'une réponse selon une grille de critères explicite.</dd>
+  <dt>Hallucination</dt><dd>Une affirmation formulée avec assurance mais fausse ou inventée.</dd>
+  <dt>Ancrage (grounding)</dt><dd>Contraindre le modèle à ne répondre qu'à partir d'un contexte fourni, pour limiter les hallucinations.</dd>
+  <dt>Éval de régression</dt><dd>Rejouer le jeu de tests à chaque changement pour refuser toute baisse de qualité avant déploiement.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>On n'évalue pas une égalité mais un <strong>niveau de qualité</strong>, sur un <strong>jeu de tests figé</strong>.</li>
+  <li>Tâche <strong>fermée</strong> → notation automatique&nbsp;; tâche <strong>ouverte</strong> → humain ou <strong>LLM-as-judge</strong>.</li>
+  <li>Le juge a des <strong>biais</strong> (longueur, style, position)&nbsp;: grille chiffrée + calibrage humain.</li>
+  <li>Mesure les <strong>hallucinations</strong> via l'ancrage&nbsp;; traite les évals comme des <strong>tests de non-régression</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi ne peut-on pas évaluer un LLM comme un test unitaire classique&nbsp;?</li><li>Quand automatiser la note, quand recourir à un juge&nbsp;?</li><li>Cite deux biais d'un LLM-as-judge et une parade.</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi l'évaluation d'un LLM diffère-t-elle d'un test unitaire classique ?","a":["Une sortie de LLM est non déterministe et peut être correcte de plusieurs façons : on mesure un niveau de qualité sur un ensemble de cas, pas une égalité","Parce que les LLM n'ont pas de bugs","Parce qu'on ne peut pas du tout les tester","Parce qu'un LLM renvoie toujours la même chose"],"correct":0,"explain":"Contrairement à somme(2,3)==5, une réponse en langage naturel varie et admet plusieurs formes valables. On évalue donc un niveau de qualité agrégé sur un jeu de cas représentatifs."},
+  {"q":"Quand utiliser une notation automatique plutôt qu'un LLM-as-judge ?","a":["Quand il existe une réponse de référence vérifiable par programme (tâche fermée) ; le juge est réservé aux tâches ouvertes","Toujours le juge, c'est plus fiable","Jamais l'automatique, c'est trop cher","L'automatique seulement pour les résumés"],"correct":0,"explain":"Si une bonne réponse est vérifiable (==, correspondance, regex), la notation automatique est rapide, gratuite et reproductible. Le LLM-juge sert quand la sortie est ouverte (résumé, rédaction, conseil)."},
+  {"q":"Quel est un biais fréquent d'un LLM-as-judge et sa parade ?","a":["Il favorise les réponses longues ou la première option (biais de position) ; parades : grille chiffrée, inversion de l'ordre, calibrage sur un échantillon humain","Il note toujours 0 ; il faut le redémarrer","Il refuse de noter ; il faut payer plus","Aucun biais : un juge LLM est neutre"],"correct":0,"explain":"Les LLM-juges ont des biais connus (longueur, style, position). On les atténue avec une grille explicite et chiffrée, en inversant l'ordre des candidats, et en vérifiant le juge contre des notes humaines."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["jeu de tests","jeu d'éval","jeu d'evaluation","jeu de test","jeu d'éval","dataset","jeu"],"placeholder":"l'ensemble figé de cas (entrée + attendu) qui sert à mesurer : le …","hints":["L'équivalent d'une suite de tests.","Représentatif de l'usage réel, avec les cas limites.","« jeu de … »."],"link":{"href":"lecon-08.html","label":"Revoir « Le jeu de tests »"}},
+  {"type":"text","accept":["llm-as-judge","llm as judge","llm juge","juge","llm-juge"],"placeholder":"un LLM chargé de noter la réponse d'un autre selon une grille : …","hints":["Un modèle qui corrige un modèle.","Utile pour les tâches ouvertes.","« LLM-as-… »."],"link":{"href":"lecon-08.html","label":"Revoir « Le LLM-as-judge »"}},
+  {"type":"text","accept":["hallucination","hallucinations","une hallucination"],"placeholder":"une affirmation formulée avec assurance mais fausse ou inventée : une …","hints":["Le risque n°1 en production.","On la réduit par l'ancrage (grounding).","« hall… »."],"link":{"href":"lecon-08.html","label":"Revoir « Mesurer les hallucinations »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Classe ces tâches en «&nbsp;fermée&nbsp;» ou «&nbsp;ouverte&nbsp;»&nbsp;: (a) extraire la date d'une facture&nbsp;; (b) résumer un article&nbsp;; (c) répondre «&nbsp;vrai/faux&nbsp;»&nbsp;; (d) rédiger un e-mail de refus poli.</p><details><summary>Voir une solution</summary><p><strong>Fermées</strong>&nbsp;: (a) extraction et (c) vrai/faux — une réponse de référence existe, notation automatique. <strong>Ouvertes</strong>&nbsp;: (b) résumé et (d) e-mail — plusieurs formulations valables, à noter par un humain ou un LLM-as-judge avec grille.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>exactitude(jeu)</code> qui, pour une tâche fermée, renvoie la proportion de cas où la réponse contient l'attendu.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo2.py"><pre><code class="language-python">def exactitude(jeu):
+    ok = 0
+    for cas in jeu:
+        sortie = appeler_llm(cas["entree"])
+        if cas["attendu"].lower() in sortie.lower():
+            ok += 1
+    return ok / len(jeu)     # ex. 0.85</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Ton LLM-as-judge note toujours 5/5 les réponses les plus longues, même creuses. Propose trois mesures concrètes pour le fiabiliser.</p><details><summary>Voir une solution</summary><p>(1) Réécrire la grille avec des <strong>descripteurs chiffrés</strong> («&nbsp;5 = tous les faits exacts et rien d'inutile&nbsp;; 1 = hors sujet ou faux&nbsp;») et ajouter «&nbsp;la longueur n'est pas un critère&nbsp;». (2) Demander au juge de <strong>justifier avant de noter</strong> et de citer un défaut précis. (3) <strong>Calibrer</strong>&nbsp;: faire noter 20 cas par un humain, comparer, et corriger la grille jusqu'à l'accord. Bonus&nbsp;: pénaliser explicitement le verbiage, ou comparer par paires plutôt que par note absolue.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

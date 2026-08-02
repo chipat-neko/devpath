@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lire le code du compilateur — Leçon 08 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="Apprends à lire l'assembleur produit par gcc : -O0 vs -O2, désassemblage avec objdump, et reconnaître if, boucles, appels et switch (table de saut)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Données et lecture — Leçon 08</p>
+              <h1 class="lesson-header__title">Lire le code du compilateur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 7</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lire l'assembleur généré par <code>gcc</code> avec <code>-S</code> et le désassembler avec <code>objdump -d</code>&nbsp;;</li>
+                  <li>comparer <code>-O0</code> et <code>-O2</code> pour <strong>voir l'optimisation à l'œuvre</strong> (registres, code mort, boucle éliminée)&nbsp;;</li>
+                  <li>reconnaître les patterns classiques : <strong>if</strong>, boucle, appel de fonction et <strong>switch</strong> (table de saut)&nbsp;;</li>
+                  <li>utiliser cette lecture pour déboguer un crash et comprendre la performance d'un programme.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais maintenant écrire de l'assembleur à la main. Mais la compétence la plus rentable au quotidien, ce n'est pas d'en <em>écrire</em>&nbsp;: c'est d'en <strong>lire</strong>. Chaque fois que tu compiles un programme C, Rust, Go ou C++, le compilateur produit de l'assembleur x86-64 — exactement le langage que tu connais désormais. Apprendre à le relire, c'est ouvrir le capot de toutes ces machines de haut niveau d'un seul coup.</p>
+
+<p>Dans cette leçon, on prend de petites fonctions C, on demande au compilateur son assembleur, et on apprend à le déchiffrer. On verra surtout pourquoi le code change radicalement entre <code>-O0</code> et <code>-O2</code>, et comment repérer du premier coup d'œil un <code>if</code>, une boucle, un appel ou un <code>switch</code>.</p>
+
+<h2>Demander son assembleur au compilateur</h2>
+<p>Deux façons d'obtenir l'assembleur d'un programme C. La première, avant assemblage, avec l'option <code>-S</code> de gcc&nbsp;: tu récupères un fichier <code>.s</code> en syntaxe AT&amp;T (l'inverse de NASM&nbsp;: la destination est à droite, les registres sont préfixés par <code>%</code>). La seconde, après compilation, en <strong>désassemblant</strong> le binaire avec <code>objdump</code>.</p>
+<figure class="code-block" data-file="carre.c"><pre><code class="language-c">int carre(int x) {
+    return x * x;
+}</code></pre></figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gcc -O0 -S carre.c -o carre.s    # produit l'assembleur (.s, syntaxe AT&amp;T)
+gcc -O0 -c carre.c -o carre.o    # compile sans lier
+objdump -d carre.o               # desassemble l'objet</code></pre></figure>
+<p class="code-caption">Avec <code>objdump -M intel -d</code> tu obtiens la syntaxe Intel, beaucoup plus proche de NASM que tu connais.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Le site <strong>Compiler Explorer</strong> (godbolt.org) fait tout ça dans le navigateur&nbsp;: tu écris du C à gauche, l'assembleur s'affiche à droite, et un code couleur relie chaque ligne C à ses instructions. C'est l'outil idéal pour expérimenter sans rien installer.</p></div></div>
+
+<h2>Lire une fonction simple en Intel</h2>
+<p>Reprenons <code>carre</code> en désassemblage Intel, non optimisé. Voici ce que produit le compilateur (commenté à droite).</p>
+<figure class="code-block" data-file="carre.asm"><pre><code class="language-nasm">carre:
+    push rbp                 ; sauve l'ancien base pointer (prologue)
+    mov  rbp, rsp            ; installe le cadre de pile
+    mov  DWORD [rbp-4], edi  ; range l'argument x (edi) sur la pile
+    mov  eax, DWORD [rbp-4]  ; recharge x dans eax
+    imul eax, DWORD [rbp-4]  ; eax = x * x
+    pop  rbp                 ; restaure le base pointer (epilogue)
+    ret                      ; renvoie ; le resultat est dans eax</code></pre></figure>
+<p>Tu reconnais tout&nbsp;: l'argument <code>x</code> arrive dans <code>edi</code> (convention System V, premier argument entier), le résultat repart dans <code>eax</code>, et <code>push rbp</code> / <code>mov rbp, rsp</code> / <code>pop rbp</code> forment le prologue et l'épilogue classiques. Le compilateur range bêtement <code>x</code> sur la pile puis le relit&nbsp;: c'est ce que donne <code>-O0</code>, fidèle au code source ligne par ligne, sans aucune ruse.</p>
+
+<h2>-O0 contre -O2 : voir l'optimisation</h2>
+<p>Recompile la même fonction avec <code>-O2</code>. Le compilateur sait que la pile est inutile ici&nbsp;: <code>x</code> est déjà dans un registre, autant l'utiliser directement.</p>
+<figure class="code-block" data-file="carre_O2.asm"><pre><code class="language-nasm">carre:                       ; compile avec gcc -O2
+    mov  eax, edi            ; eax = x
+    imul eax, edi            ; eax = x * x
+    ret                      ; pas de prologue : la pile n'a pas servi</code></pre></figure>
+<p>Trois instructions au lieu de sept. Plus aucun accès mémoire, plus de cadre de pile. C'est la première leçon de l'optimisation&nbsp;: <strong>garder les valeurs dans les registres</strong> et ne toucher la pile que si c'est indispensable.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 232" role="img" aria-label="Comparaison du même code carre(x) compilé en -O0 et en -O2. En -O0, fidèle au source, le compilateur produit sept instructions qui passent par la pile. En -O2, optimisé, il n'en produit que trois qui restent dans les registres : le cadre de pile devenu inutile a disparu.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Même fonction carre(x), deux niveaux d'optimisation</text>
+    <text class="d-mut" x="165" y="44" text-anchor="middle" font-size="10">-O0 · fidèle au source</text>
+    <text class="d-mut" x="475" y="44" text-anchor="middle" font-size="10">-O2 · optimisé</text>
+    <rect class="d-frame" x="30" y="54" width="270" height="148" rx="5" />
+    <rect class="d-accent" x="340" y="54" width="270" height="148" rx="5" />
+    <text class="d-text" x="46" y="78" font-size="10.5">push rbp</text>
+    <text class="d-text" x="46" y="97" font-size="10.5">mov rbp, rsp</text>
+    <text class="d-text" x="46" y="116" font-size="10.5">mov [rbp-4], edi</text>
+    <text class="d-text" x="46" y="135" font-size="10.5">mov eax, [rbp-4]</text>
+    <text class="d-text" x="46" y="154" font-size="10.5">imul eax, [rbp-4]</text>
+    <text class="d-text" x="46" y="173" font-size="10.5">pop rbp</text>
+    <text class="d-text" x="46" y="192" font-size="10.5">ret</text>
+    <text class="d-text" x="356" y="97" font-size="10.5">mov eax, edi</text>
+    <text class="d-text" x="356" y="116" font-size="10.5">imul eax, edi</text>
+    <text class="d-text" x="356" y="135" font-size="10.5">ret</text>
+    <text class="d-mut" x="475" y="180" text-anchor="middle" font-size="9">(plus de cadre de pile)</text>
+    <text class="d-mut" x="165" y="222" text-anchor="middle" font-size="9">7 instructions · passe par la pile</text>
+    <text class="d-mut" x="475" y="222" text-anchor="middle" font-size="9">3 instructions · tout en registres</text>
+  </svg>
+  <figcaption>À <code>-O2</code>, l'optimiseur garde <code>x</code> dans un registre et supprime le cadre de pile&nbsp;: sept instructions deviennent trois.</figcaption>
+</figure>
+<p>Regardons un cas plus parlant avec une boucle.</p>
+<figure class="code-block" data-file="somme.c"><pre><code class="language-c">int somme(int n) {
+    int total = 0;
+    for (int i = 0; i &lt; n; i++)
+        total += i;
+    return total;
+}</code></pre></figure>
+<p>En <code>-O0</code>, gcc traduit fidèlement&nbsp;: un compteur <code>i</code> sur la pile, un test, un saut, un incrément — la boucle telle que tu l'as écrite. En <code>-O2</code>, surprise&nbsp;: la boucle <em>disparaît</em>. Le compilateur reconnaît que tu additionnes <code>0 + 1 + … + (n-1)</code> et remplace toute la boucle par la formule fermée <code>n*(n-1)/2</code>.</p>
+<figure class="code-block" data-file="somme_O2.asm"><pre><code class="language-nasm">somme:                       ; gcc -O2 : plus aucune boucle, juste de l'arithmetique
+    lea  ecx, [rdi-1]        ; ecx = n - 1
+    imul ecx, edi            ; ecx = n * (n - 1)
+    shr  ecx, 1             ; ecx = n * (n - 1) / 2  (division par 2 = decalage)
+    mov  eax, ecx           ; resultat dans eax
+    ret                     ; (gcc ajoute en plus un garde pour n &lt;= 0)</code></pre></figure>
+<p>C'est l'<strong>élimination de boucle</strong> par reconnaissance d'une réduction&nbsp;: une boucle entière devient quatre instructions sans le moindre saut. Tu ne pourrais pas deviner ce code en lisant seulement le C — c'est précisément pour ça qu'on lit l'assembleur.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les autres optimisations courantes&nbsp;: le <strong>déroulage de boucle</strong> (traiter plusieurs itérations par tour pour réduire les sauts), l'<strong>inlining</strong> (recopier le corps d'une petite fonction au lieu de l'appeler), et l'<strong>élimination de code mort</strong> (supprimer tout calcul dont le résultat n'est jamais lu).</p></div></div>
+
+<h2>Reconnaître un if</h2>
+<p>Un <code>if</code> se lit toujours de la même façon&nbsp;: une comparaison (<code>cmp</code>) ou un test (<code>test</code>) suivi d'un saut conditionnel (<code>je</code>, <code>jle</code>, <code>jns</code>…) qui enjambe le bloc à ne pas exécuter. Le saut utilise la condition <em>inverse</em> de celle du C.</p>
+<figure class="code-block" data-file="absolue.asm"><pre><code class="language-nasm">; int valabs(int x) { if (x &lt; 0) return -x; return x; }
+valabs:
+    mov  eax, edi
+    test eax, eax        ; positionne les drapeaux selon le signe de x
+    jns  .fin            ; si x n'est PAS negatif (x &gt;= 0), saute
+    neg  eax             ; sinon eax = -x
+.fin:
+    ret</code></pre></figure>
+<p>Le C dit «&nbsp;si <code>x &lt; 0</code> alors nie&nbsp;»&nbsp;; l'assembleur dit «&nbsp;si <code>x &gt;= 0</code>, saute par-dessus la négation&nbsp;». C'est la même logique vue à l'envers. Dès que tu vois <code>cmp</code> ou <code>test</code> suivi d'un <code>j</code>quelque-chose, tu tiens un branchement.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Un if compilé inverse la condition. Le code C dit : si x est inférieur à 0, renvoyer moins x, sinon renvoyer x. L'assembleur pose les drapeaux avec test eax eax, puis jns saute à l'étiquette fin quand x n'est pas négatif, c'est-à-dire supérieur ou égal à 0, ce qui enjambe l'instruction neg eax. La condition du saut est donc l'inverse de celle écrite en C.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le saut conditionnel prend la condition inverse du if</text>
+    <text class="d-mut" x="150" y="44" text-anchor="middle" font-size="10">source C</text>
+    <text class="d-mut" x="470" y="44" text-anchor="middle" font-size="10">assembleur généré</text>
+    <rect class="d-frame" x="30" y="54" width="240" height="100" rx="5" />
+    <text class="d-text" x="46" y="80" font-size="10.5">if (x &lt; 0)</text>
+    <text class="d-text" x="46" y="100" font-size="10.5">    return -x;</text>
+    <text class="d-text" x="46" y="120" font-size="10.5">return x;</text>
+    <rect class="d-accent" x="370" y="54" width="240" height="100" rx="5" />
+    <text class="d-text" x="386" y="76" font-size="10.5">test eax, eax</text>
+    <text class="d-tag" x="386" y="96" font-size="10.5">jns .fin</text><text class="d-mut" x="452" y="96" font-size="9">; si x &gt;= 0</text>
+    <text class="d-text" x="386" y="116" font-size="10.5">neg eax</text>
+    <text class="d-text" x="386" y="136" font-size="10.5">.fin: ret</text>
+    <line class="d-line" x1="270" y1="104" x2="370" y2="104" />
+    <text class="d-mut" x="320" y="98" text-anchor="middle" font-size="10">&lt; devient &gt;=</text>
+  </svg>
+  <figcaption>Le C teste <code>x &lt; 0</code>&nbsp;; l'assembleur saute si <code>x &gt;= 0</code> pour enjamber la négation. Un <code>cmp</code>/<code>test</code> suivi d'un <code>j…</code> trahit toujours un branchement.</figcaption>
+</figure>
+
+<h2>Reconnaître un switch : la table de saut</h2>
+<p>Un <code>switch</code> sur des valeurs contiguës ne se compile pas en cascade de <code>if</code>&nbsp;: le compilateur construit une <strong>table de saut</strong>. Il range en mémoire les adresses des différents cas, puis saute directement à la bonne grâce à un indexage — un seul saut indirect au lieu de <em>n</em> comparaisons.</p>
+<figure class="code-block" data-file="switch.asm"><pre><code class="language-nasm">; switch (n) { case 0:..; case 1:..; case 2:..; default:.. }
+    cmp  edi, 2             ; n hors de [0, 2] ?
+    ja   .defaut           ; si oui (compare non signe), va au defaut
+    mov  eax, edi          ; eax = n (index)
+    jmp  [.table + rax*8]  ; saut indirect : table[n], 8 octets par adresse
+.table:
+    dq .cas0, .cas1, .cas2 ; les adresses des trois cas</code></pre></figure>
+<p>La signature d'un switch optimisé, c'est ce <code>jmp</code> vers <code>[base + registre*8]</code>&nbsp;: un saut calculé à partir d'une table d'adresses. En coût, c'est <strong>O(1)</strong> quel que soit le nombre de cas, alors qu'une chaîne de <code>if</code> serait en O(n).</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 204" role="img" aria-label="Une table de saut compile un switch dense en un seul saut indirect. La valeur testée n, ici 1, sert d'index dans une table d'adresses : l'entrée 0 pointe vers cas0, l'entrée 1 vers cas1, l'entrée 2 vers cas2. L'instruction jmp lit l'adresse à l'index n et saute directement au bon cas, en coût constant, sans parcourir une cascade de comparaisons.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">switch dense → table de saut (un seul saut indirect)</text>
+    <rect class="d-accent" x="26" y="92" width="94" height="34" rx="4" /><text class="d-text" x="73" y="114" text-anchor="middle" font-size="11">n = 1</text>
+    <text class="d-mut" x="73" y="142" text-anchor="middle" font-size="9">valeur = index</text>
+    <text class="d-mut" x="288" y="58" text-anchor="middle" font-size="10">table d'adresses</text>
+    <rect class="d-box" x="216" y="66" width="144" height="28" rx="3" /><text class="d-text" x="288" y="85" text-anchor="middle" font-size="10">[0] → .cas0</text>
+    <rect class="d-accent" x="216" y="96" width="144" height="28" rx="3" /><text class="d-text" x="288" y="115" text-anchor="middle" font-size="10">[1] → .cas1</text>
+    <rect class="d-box" x="216" y="126" width="144" height="28" rx="3" /><text class="d-text" x="288" y="145" text-anchor="middle" font-size="10">[2] → .cas2</text>
+    <rect class="d-frame" x="470" y="66" width="140" height="28" rx="3" /><text class="d-text" x="540" y="85" text-anchor="middle" font-size="10">.cas0: …</text>
+    <rect class="d-accent" x="470" y="96" width="140" height="28" rx="3" /><text class="d-text" x="540" y="115" text-anchor="middle" font-size="10">.cas1: …</text>
+    <rect class="d-frame" x="470" y="126" width="140" height="28" rx="3" /><text class="d-text" x="540" y="145" text-anchor="middle" font-size="10">.cas2: …</text>
+    <line class="d-line" x1="120" y1="109" x2="216" y2="110" />
+    <line class="d-line" x1="360" y1="110" x2="470" y2="110" />
+    <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="9.5">jmp [table + n*8] — coût O(1) quel que soit le nombre de cas</text>
+  </svg>
+  <figcaption>La valeur du switch indexe une table d'adresses&nbsp;: <code>jmp [table + n*8]</code> saute droit au bon cas, en temps constant.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Dans un vrai binaire indépendant de la position (PIE, le défaut aujourd'hui), la table contient souvent des <em>décalages</em> relatifs plutôt que des adresses absolues, et gcc les additionne à une base avant de sauter. Le principe reste identique&nbsp;: un saut indexé par la valeur du switch.</p></div></div>
+
+<h2>Pourquoi le compilateur gagne (presque toujours)</h2>
+<p>En lisant ce code, une évidence s'impose&nbsp;: à <code>-O2</code>, le compilateur produit souvent mieux que ce que tu écrirais à la main. Il connaît par cœur les coûts de chaque instruction, alloue les registres de façon optimale sur des fonctions entières, déroule et vectorise sans se fatiguer, et n'oublie jamais un cas. Tu peux le battre sur un noyau critique très précis, mais sur du code ordinaire, lui faire confiance est le bon réflexe. <strong>Écris du C clair, laisse-le optimiser.</strong></p>
+<p>Là où ta lecture devient précieuse, c'est pour le <strong>débogage</strong> et la <strong>performance</strong>. Un crash dans du code optimisé donne une pile parfois incohérente et des variables «&nbsp;optimisées away&nbsp;» dans le débogueur&nbsp;: savoir lire l'asm permet de retrouver ce qui s'est réellement passé. Et quand un profil pointe une fonction chaude, regarder son assembleur révèle si le compilateur a bien vectorisé, ou s'il rate une optimisation parce que ton code l'en empêche (un pointeur potentiellement aliasé, par exemple).</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2009, une faille du noyau Linux (CVE-2009-1897) est née d'une optimisation invisible. Le pilote <code>tun</code> déréférençait un pointeur, <em>puis</em> vérifiait <code>if (!tun)</code> juste après. Comme déréférencer un pointeur nul est un «&nbsp;comportement indéfini&nbsp;», <code>gcc -O2</code> en a déduit que <code>tun</code> ne <em>pouvait</em> pas être nul et a purement <strong>supprimé le test de sécurité</strong>. Le trou était invisible dans le C&nbsp;: il n'apparaissait que dans l'assembleur produit, où le branchement avait disparu. C'est en relisant cet asm qu'on a compris le problème (corrigé en réordonnant le code et en compilant avec <code>-fno-delete-null-pointer-checks</code>). La morale de cette leçon en un cas&nbsp;: ce que le compilateur exécute n'est pas toujours ce que le source laisse croire.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Lire l'assembleur de <code>-O0</code> en pensant qu'il représente «&nbsp;le vrai code&nbsp;». Le <code>-O0</code> est volontairement naïf et lent (tout passe par la pile)&nbsp;: il sert à déboguer, pas à juger la performance. Pour comprendre ce qui tournera réellement en production, lis toujours <strong>la version optimisée</strong> (<code>-O2</code> ou <code>-O3</code>).</p></div></div>
+<p>Autre confusion classique&nbsp;: oublier que <code>objdump -d</code> sort de l'AT&amp;T par défaut. Si l'ordre des opérandes te semble inversé et que les registres ont des <code>%</code>, ajoute <code>-M intel</code>. Enfin, attention aux suffixes de saut <strong>non signés</strong>&nbsp;: <code>ja</code>/<code>jb</code> (above/below) servent aux comparaisons non signées, <code>jg</code>/<code>jl</code> (greater/less) aux signées. Le compilateur choisit selon le type C, et confondre les deux change le sens du test.</p>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Ouvre Compiler Explorer et compare un même code C entre gcc et clang, ou entre <code>-O2</code> et <code>-O3</code>. Active l'option qui relie les lignes C à l'asm par couleur, et observe comment une simple boucle de copie devient une instruction <strong>SIMD</strong> (registres <code>xmm</code>/<code>ymm</code>) quand tu montes en niveau d'optimisation.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — reconnaître un motif de haut niveau dans le désassemblage</caption>
+    <thead><tr><th scope="col">Motif source</th><th scope="col">Signature en asm</th><th scope="col">Indice</th></tr></thead>
+    <tbody>
+      <tr><td>if / else</td><td><code>cmp</code>/<code>test</code> + saut conditionnel</td><td>condition <em>inverse</em>, enjambe un bloc</td></tr>
+      <tr><td>boucle</td><td>saut conditionnel <strong>en arrière</strong></td><td><code>jl</code>/<code>jne</code> vers une étiquette au-dessus</td></tr>
+      <tr><td>appel de fonction</td><td><code>call</code> … <code>ret</code></td><td>arguments dans <code>rdi, rsi, rdx…</code></td></tr>
+      <tr><td>switch dense</td><td><code>jmp</code> indirect via table</td><td><code>jmp [base + i*8]</code></td></tr>
+      <tr><td>min / max sans branche</td><td><code>cmov…</code></td><td>déplacement conditionnel, pas de saut</td></tr>
+      <tr><td>×2, +&nbsp;constante</td><td><code>lea</code></td><td><code>lea eax, [rdi+rdi]</code></td></tr>
+      <tr><td>code <code>-O0</code></td><td>tout via <code>[rbp-x]</code></td><td>valeurs sur la pile, verbeux</td></tr>
+      <tr><td>code <code>-O2</code></td><td>valeurs en registres</td><td>peu d'accès mémoire, boucles fondues</td></tr>
+      <tr><td>obtenir l'asm</td><td><code>gcc -S</code> · <code>objdump -d</code></td><td><code>-M intel</code> pour la syntaxe Intel</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>-O0</code> / <code>-O2</code></dt><dd>Niveaux d'optimisation de gcc/clang&nbsp;: <code>-O0</code> traduit le source fidèlement (lent, lisible, pour déboguer)&nbsp;; <code>-O2</code> optimise agressivement (registres, code mort supprimé, boucles fondues).</dd>
+  <dt><code>objdump</code></dt><dd>Désassembleur&nbsp;: reconstitue les instructions à partir des octets d'un binaire. <code>objdump -d -M intel</code> donne la syntaxe Intel.</dd>
+  <dt>Syntaxe AT&amp;T vs Intel</dt><dd>Deux notations pour le même code&nbsp;: AT&amp;T (défaut de gcc/objdump, destination à droite, registres en <code>%</code>) et Intel (destination à gauche, proche de NASM).</dd>
+  <dt>Table de saut (<em>jump table</em>)</dt><dd>Tableau d'adresses indexé par la valeur d'un <code>switch</code>&nbsp;; un seul saut indirect <code>jmp [base + i*8]</code> remplace une cascade de comparaisons — coût O(1).</dd>
+  <dt><code>cmov</code></dt><dd>Déplacement conditionnel (<em>conditional move</em>)&nbsp;: choisit une valeur selon les drapeaux <strong>sans saut</strong>, évitant une rupture de flux (utile pour min/max).</dd>
+  <dt>Inlining</dt><dd>Optimisation qui recopie le corps d'une petite fonction à l'endroit de l'appel, supprimant le coût du <code>call</code>/<code>ret</code>.</dd>
+  <dt>Élimination de code mort</dt><dd>Suppression de tout calcul dont le résultat n'est jamais lu&nbsp;; peut faire disparaître une boucle entière.</dd>
+  <dt>Auto-vectorisation</dt><dd>Transformation automatique d'une boucle en instructions <strong>SIMD</strong> (<code>xmm</code>/<code>ymm</code>) qui traitent plusieurs données à la fois.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><code>gcc -S</code> donne l'asm (AT&amp;T), <code>objdump -d</code> désassemble un binaire&nbsp;; ajoute <code>-M intel</code> pour la syntaxe que tu connais.</li>
+<li><code>-O0</code> suit le source ligne par ligne (tout sur la pile)&nbsp;; <code>-O2</code> garde les valeurs en registres, élimine le code mort et peut faire disparaître des boucles entières.</li>
+<li>Un <code>if</code> = <code>cmp</code>/<code>test</code> + saut conditionnel avec la condition inverse&nbsp;; une boucle = un saut arrière&nbsp;; un appel = <code>call</code>&nbsp;; un <code>switch</code> dense = un <code>jmp</code> indirect via une table de saut.</li>
+<li>Le compilateur optimise presque toujours mieux que toi&nbsp;; lire son asm sert surtout à déboguer le code optimisé et à comprendre la performance.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle option ajoutes-tu à <code>objdump -d</code> pour obtenir la syntaxe Intel plutôt qu'AT&amp;T&nbsp;?</li><li>Pourquoi une boucle de somme peut-elle disparaître complètement en <code>-O2</code>&nbsp;?</li><li>À quoi reconnais-tu un <code>switch</code> compilé en table de saut dans le désassemblage&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle option ajoutes-tu à objdump -d pour obtenir la syntaxe Intel plutôt qu'AT&T ?","a":["-M intel (objdump -d -M intel)","-S intel","--att","-x intel"],"correct":0,"explain":"Par défaut, objdump affiche le désassemblage en syntaxe AT&T. L'option -M intel bascule vers la syntaxe Intel (destination à gauche), souvent plus lisible pour qui apprend sur des documents Intel."},
+  {"q":"Pourquoi une boucle de somme peut-elle disparaître complètement en -O2 ?","a":["Parce que le compilateur optimise : il peut calculer le résultat à la compilation (formule fermée) ou éliminer le code mort si le résultat n'est pas utilisé, supprimant la boucle","Parce que -O2 interdit les boucles","Parce que la boucle est trop longue","Parce que le CPU saute les boucles"],"correct":0,"explain":"Un optimiseur agressif reconnaît qu'une somme d'entiers a une forme close ou que son résultat n'est jamais lu. Il remplace alors la boucle par une constante, ou l'élimine entièrement (dead code elimination) : le désassemblage ne montre plus de boucle."},
+  {"q":"À quoi reconnais-tu un switch compilé en table de saut dans le désassemblage ?","a":["À un saut indirect vers une adresse lue dans une table indexée (par exemple jmp vers [table + index*8]), au lieu d'une cascade de comparaisons","À une longue suite de cmp/je","À l'absence de tout saut","À un appel de fonction par cas"],"correct":0,"explain":"Pour un switch dense, le compilateur génère une table d'adresses (jump table) et un saut indirect indexé par la valeur testée. Repérer un jmp vers une adresse calculée à partir d'une table trahit cette optimisation, bien plus rapide qu'une série de tests."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+{"type":"text","accept":["x+x","x + x","2*x","x*2"],"placeholder":"La fonction C correspondante : return …; (lea eax, [rdi+rdi])","hints":["[rdi + rdi] additionne l'argument avec lui-même.","x + x revient à doubler x.","x + x ou 2*x."],"link":{"href":"lecon-08.html","label":"Revoir lea"}},
+null,
+{"type":"text","accept":["boucle","une boucle"],"placeholder":"Le pattern de haut niveau (un mot) : if, appel, ou … ?","hints":["L'étiquette .boucle et le saut jl en arrière le trahissent.","La fonction additionne les éléments d'un tableau.","Structure répétitive."],"link":{"href":"lecon-08.html","label":"Revoir la reconnaissance de boucle"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Voici l'asm d'une fonction C à un argument <code>int</code>, compilée en <code>-O2</code>. Retrouve la fonction C correspondante.</p>
+<figure class="code-block" data-file="mystere.asm"><pre><code class="language-nasm">mystere:
+    lea eax, [rdi + rdi]    ; eax = x + x
+    ret</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.c"><pre><code class="language-c">int mystere(int x) {
+    return x + x;   /* ou x * 2 ; le compilateur prefere lea, plus rapide qu'imul */
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Compile cette fonction en <code>-O0</code> puis en <code>-O2</code> (Compiler Explorer ou <code>gcc -S</code>). Explique en une phrase la différence principale entre les deux sorties.</p>
+<figure class="code-block" data-file="maxi.c"><pre><code class="language-c">int maxi(int a, int b) {
+    if (a &gt; b) return a;
+    return b;
+}</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.asm"><pre><code class="language-nasm">; -O0 : cmp + saut conditionnel (jle) qui enjambe un bloc, valeurs sur la pile.
+; -O2 : sans branchement, avec cmov (deplacement conditionnel) :
+maxi:
+    cmp    edi, esi      ; compare a et b
+    mov    eax, esi      ; eax = b
+    cmovge eax, edi      ; si a &gt;= b, eax = a  (pas de saut !)
+    ret
+; Difference cle : -O2 supprime le saut au profit de cmov, sans rupture de flux.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En lisant cet extrait <code>-O2</code>, identifie le pattern de haut niveau (boucle&nbsp;? if&nbsp;? appel&nbsp;?) et dis ce que fait la fonction. <code>rdi</code> est un pointeur, <code>esi</code> une longueur.</p>
+<figure class="code-block" data-file="defi.asm"><pre><code class="language-nasm">f:
+    xor  eax, eax                 ; somme = 0
+    test esi, esi
+    jle  .fin                     ; si longueur &lt;= 0, termine
+    xor  ecx, ecx                 ; i = 0
+.boucle:
+    add  eax, DWORD [rdi + rcx*4] ; somme += tab[i]
+    add  rcx, 1                   ; i++
+    cmp  ecx, esi
+    jl   .boucle                  ; tant que i &lt; longueur
+.fin:
+    ret</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.c"><pre><code class="language-c">/* Pattern : une BOUCLE (saut arriere .boucle) qui accumule.
+   La fonction additionne les elements d'un tableau d'int : */
+int f(int *tab, int longueur) {
+    int somme = 0;
+    for (int i = 0; i &lt; longueur; i++)
+        somme += tab[i];     /* add eax, [rdi + rcx*4] : indexage *4 = sizeof(int) */
+    return somme;
+}</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-nasm.min.js" defer></script>
+  </body>
+</html>

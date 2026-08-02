@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comment marche un LLM — Leçon 01 · Syntaxe</title>
+    <meta name="description" content="Comprendre un grand modèle de langage : la prédiction du token suivant, la tokenisation, la fenêtre de contexte, la température et ce qu'un LLM n'est pas (hallucinations)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="llm" data-lesson="lecon-01.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Développer avec l'IA &amp; les LLM</a></li>
+            <li aria-current="page">Leçon 01</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 01 · Comprendre — Leçon 01</p>
+              <h1 class="lesson-header__title">Comment marche un LLM</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~31 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Aucun prérequis fort</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer le principe : <strong>prédire le token suivant</strong>&nbsp;;</li>
+                  <li>ce qu'est un <strong>token</strong> et la <strong>fenêtre de contexte</strong>&nbsp;;</li>
+                  <li>le rôle de la <strong>température</strong> dans la génération&nbsp;;</li>
+                  <li>ce qu'un LLM <strong>n'est pas</strong> (hallucinations, limites).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Avant de coder avec un LLM, il faut une bonne intuition de ce qu'il fait. La promesse est démystifiante : un <strong>grand modèle de langage</strong> est, au fond, une machine à <strong>prédire le mot suivant</strong>. Tout le reste en découle.</p>
+
+<h2>Prédire le token suivant</h2>
+<p>Un LLM a été entraîné sur d'énormes quantités de texte pour une tâche unique : étant donné un début de texte, <strong>deviner la suite la plus probable</strong>, un petit morceau à la fois. Il répète l'opération en boucle — prédire, ajouter, re-prédire — ce qui produit des phrases entières. Cette simplicité apparente, à très grande échelle, suffit à résumer, traduire, coder ou répondre.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'idée clé</p><p>Le modèle ne « comprend » pas comme un humain et ne consulte pas une base de faits : il calcule, pour chaque suite possible, une <strong>probabilité</strong>, et en choisit une. Génial pour la forme du langage — d'où aussi ses erreurs sur le fond.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 178" role="img" aria-label="La boucle de génération d'un LLM. Étape 1, le contexte : les tokens déjà présents, par exemple « Le chat noir dort sur le ». Étape 2, le modèle Transformer calcule pour chaque token possible une probabilité d'être le suivant. Étape 3, la distribution obtenue : « canapé » 0,42 ; « lit » 0,30 ; « sol » 0,12. Le modèle en choisit un, ici « canapé », l'ajoute au contexte, puis recommence tout le processus, token après token.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La boucle de génération, token après token</text>
+    <text class="d-mut" x="112" y="48" text-anchor="middle" font-size="9">1 · Contexte</text>
+    <rect class="d-frame" x="28" y="56" width="168" height="52" rx="6" />
+    <text class="d-text" x="112" y="80" text-anchor="middle" font-size="10" font-family="monospace">Le chat noir dort</text>
+    <text class="d-text" x="112" y="97" text-anchor="middle" font-size="10" font-family="monospace">sur le&nbsp;__</text>
+    <line class="d-line" x1="196" y1="82" x2="228" y2="82" /><line class="d-line" x1="222" y1="78" x2="228" y2="82" /><line class="d-line" x1="222" y1="86" x2="228" y2="82" />
+    <text class="d-mut" x="320" y="48" text-anchor="middle" font-size="9">2 · Modèle</text>
+    <rect class="d-accent" x="236" y="56" width="168" height="52" rx="6" />
+    <text class="d-text" x="320" y="80" text-anchor="middle" font-size="10">Transformer</text>
+    <text class="d-mut" x="320" y="97" text-anchor="middle" font-size="8">calcule les probabilités</text>
+    <line class="d-line" x1="404" y1="82" x2="436" y2="82" /><line class="d-line" x1="430" y1="78" x2="436" y2="82" /><line class="d-line" x1="430" y1="86" x2="436" y2="82" />
+    <text class="d-mut" x="528" y="48" text-anchor="middle" font-size="9">3 · Probabilités</text>
+    <rect class="d-frame" x="444" y="56" width="168" height="52" rx="6" />
+    <rect class="d-accent" x="452" y="64" width="84" height="9" rx="2" /><text class="d-text" x="604" y="72" text-anchor="end" font-size="8">canapé 0,42</text>
+    <rect class="d-box" x="452" y="78" width="60" height="9" rx="2" /><text class="d-mut" x="604" y="86" text-anchor="end" font-size="8">lit 0,30</text>
+    <rect class="d-box" x="452" y="92" width="26" height="9" rx="2" /><text class="d-mut" x="604" y="100" text-anchor="end" font-size="8">sol 0,12</text>
+    <line class="d-line" x1="528" y1="108" x2="528" y2="130" /><line class="d-line" x1="524" y1="124" x2="528" y2="130" /><line class="d-line" x1="532" y1="124" x2="528" y2="130" />
+    <rect class="d-accent" x="448" y="130" width="160" height="28" rx="6" /><text class="d-text" x="528" y="148" text-anchor="middle" font-size="9.5">token choisi&nbsp;: «&nbsp;canapé&nbsp;»</text>
+    <path class="d-line" d="M448 144 L112 144 L112 110" fill="none" /><line class="d-line" x1="108" y1="116" x2="112" y2="110" /><line class="d-line" x1="116" y1="116" x2="112" y2="110" />
+    <text class="d-mut" x="290" y="138" text-anchor="middle" font-size="8">on l'ajoute au contexte, puis on recommence</text>
+  </svg>
+  <figcaption>À chaque pas, le modèle transforme le contexte en <strong>probabilités</strong>, en choisit un token, l'ajoute, et <strong>répète</strong>. Des milliers de fois, cela produit des phrases entières.</figcaption>
+</figure>
+
+<h2>Les tokens</h2>
+<p>Le modèle ne voit pas des lettres ni des mots entiers, mais des <strong>tokens</strong> : des morceaux de texte (souvent des bouts de mots). « anticonstitutionnel » peut compter plusieurs tokens, « chat » un seul. C'est l'unité de mesure de l'IA générative : on compte les tokens en entrée et en sortie, et c'est souvent ce qui est <strong>facturé</strong>.</p>
+<figure class="code-block" data-file="tokens.txt"><pre><code>Texte   : "Bonjour le monde"
+Tokens  : ["Bon", "jour", " le", " monde"]   (≈ 4 tokens)
+Règle approximative : 1 token ≈ 4 caractères ≈ 0,75 mot (en anglais)</code></pre></figure>
+
+<h2>La fenêtre de contexte</h2>
+<p>Le modèle ne peut prendre en compte qu'une <strong>quantité limitée</strong> de tokens à la fois : c'est la <strong>fenêtre de contexte</strong>. Elle inclut <em>tout</em> : tes instructions, l'historique de la conversation et la réponse en cours. Au-delà, il faut résumer ou tronquer. Une grande fenêtre permet de fournir plus de documents… mais coûte plus cher et peut diluer l'attention.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un modèle « oublie » ce qui sort de sa fenêtre de contexte. Dans une longue conversation, les premiers messages peuvent être perdus : il faut gérer activement ce qu'on garde (résumés, sélection).</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 148" role="img" aria-label="La fenêtre de contexte est un budget de tokens limité et partagé. À gauche, hors de la fenêtre, les messages les plus anciens sont « oubliés » (encadré en pointillés). À l'intérieur de la fenêtre tiennent, dans l'ordre : le message système avec les consignes permanentes, l'historique récent de la conversation, la question de l'utilisateur, et la réponse en cours de génération. Tout partage le même budget : une réponse longue laisse moins de place au reste.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La fenêtre de contexte&nbsp;: un budget de tokens partagé</text>
+    <rect class="d-box" x="24" y="64" width="118" height="44" rx="5" stroke-dasharray="4 3" />
+    <text class="d-mut" x="83" y="82" text-anchor="middle" font-size="8">messages</text>
+    <text class="d-mut" x="83" y="94" text-anchor="middle" font-size="8">anciens</text>
+    <text class="d-mut" x="83" y="124" text-anchor="middle" font-size="8.5">«&nbsp;oubliés&nbsp;»</text>
+    <line class="d-line" x1="146" y1="58" x2="146" y2="116" stroke-dasharray="3 3" />
+    <text class="d-mut" x="383" y="52" text-anchor="middle" font-size="9">fenêtre de contexte (budget limité de tokens)</text>
+    <rect class="d-frame" x="150" y="60" width="466" height="52" rx="6" />
+    <rect class="d-accent" x="156" y="70" width="96" height="32" rx="4" /><text class="d-text" x="204" y="90" text-anchor="middle" font-size="8">système</text>
+    <rect class="d-box" x="256" y="70" width="150" height="32" rx="4" /><text class="d-text" x="331" y="90" text-anchor="middle" font-size="8">historique récent</text>
+    <rect class="d-box" x="410" y="70" width="80" height="32" rx="4" /><text class="d-text" x="450" y="90" text-anchor="middle" font-size="8">question</text>
+    <rect class="d-accent" x="494" y="70" width="116" height="32" rx="4" /><text class="d-text" x="552" y="90" text-anchor="middle" font-size="7.5">réponse en cours</text>
+    <text class="d-mut" x="370" y="132" text-anchor="middle" font-size="8.5">tout partage le même budget&nbsp;: une réponse longue laisse moins de place au reste</text>
+  </svg>
+  <figcaption>Instructions, historique et réponse se partagent un même quota. Ce qui déborde à gauche sort de la fenêtre&nbsp;: le modèle ne le «&nbsp;voit&nbsp;» plus.</figcaption>
+</figure>
+
+<h2>La température</h2>
+<p>À chaque étape, le modèle a une distribution de probabilités sur le prochain token. La <strong>température</strong> règle l'<strong>aléatoire</strong> du choix : <strong>basse</strong> (proche de 0), le modèle prend presque toujours le plus probable — réponses sûres et répétables ; <strong>haute</strong>, il ose des choix moins probables — réponses variées et créatives, mais plus risquées.</p>
+<figure class="code-block" data-file="parametres.json"><pre><code class="language-json">{
+  "model": "un-llm",
+  "temperature": 0.2,
+  "messages": [
+    { "role": "system", "content": "Tu es un assistant concis." },
+    { "role": "user", "content": "Donne 3 idées de noms pour un chat noir." }
+  ]
+}</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Quelle température ?</p><p>Pour de l'<strong>extraction</strong>, de la <strong>classification</strong> ou du code fiable : température <strong>basse</strong>. Pour du <strong>brainstorming</strong> ou de la rédaction créative : plus <strong>haute</strong>. En cas de doute, commence bas.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 182" role="img" aria-label="Effet de la température sur le choix du prochain token. À gauche, température basse, proche de zéro : la distribution de probabilités est très piquée, une seule option domine largement — le modèle choisit presque toujours la même suite, réponses sûres et répétables. À droite, température haute : la distribution est aplatie, plusieurs options ont des probabilités proches — le modèle ose des choix moins probables, réponses variées et créatives, mais plus risquées.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La température aplatit ou pique la distribution</text>
+    <text class="d-mut" x="165" y="44" text-anchor="middle" font-size="10">température basse (≈ 0)</text>
+    <rect class="d-frame" x="40" y="52" width="250" height="98" rx="6" />
+    <rect class="d-accent" x="70" y="64" width="34" height="78" rx="2" />
+    <rect class="d-box" x="120" y="122" width="34" height="20" rx="2" />
+    <rect class="d-box" x="170" y="128" width="34" height="14" rx="2" />
+    <rect class="d-box" x="220" y="132" width="34" height="10" rx="2" />
+    <line class="d-line" x1="52" y1="142" x2="278" y2="142" />
+    <text class="d-mut" x="475" y="44" text-anchor="middle" font-size="10">température haute</text>
+    <rect class="d-frame" x="350" y="52" width="250" height="98" rx="6" />
+    <rect class="d-accent" x="380" y="100" width="34" height="42" rx="2" />
+    <rect class="d-box" x="430" y="106" width="34" height="36" rx="2" />
+    <rect class="d-box" x="480" y="112" width="34" height="30" rx="2" />
+    <rect class="d-box" x="530" y="116" width="34" height="26" rx="2" />
+    <line class="d-line" x1="362" y1="142" x2="588" y2="142" />
+    <text class="d-mut" x="165" y="168" text-anchor="middle" font-size="9">→ sûr, répétable, déterministe</text>
+    <text class="d-mut" x="475" y="168" text-anchor="middle" font-size="9">→ varié, créatif, plus risqué</text>
+  </svg>
+  <figcaption>Même contexte, deux réglages. À gauche une option écrase les autres&nbsp;; à droite plusieurs deviennent plausibles. La température ne change pas ce que «&nbsp;sait&nbsp;» le modèle, seulement son <strong>audace</strong>.</figcaption>
+</figure>
+
+<h2>Ce qu'un LLM n'est pas</h2>
+<p>Garder l'idée « prédire le texte probable » évite les déconvenues. Un LLM peut produire une réponse <strong>fausse mais convaincante</strong> : c'est une <strong>hallucination</strong>. Il n'a pas de connaissances à jour au-delà de son entraînement, ne calcule pas de façon fiable, et n'a pas d'accès au monde réel sans qu'on le lui donne (via des outils ou des documents — l'objet des prochaines leçons).</p>
+<ul>
+<li><strong>Pas une base de faits</strong> : il restitue des régularités, pas une vérité vérifiée.</li>
+<li><strong>Connaissances figées</strong> : il ignore ce qui est postérieur à son entraînement.</li>
+<li><strong>Calcul non garanti</strong> : pour des calculs exacts, donne-lui un outil.</li>
+</ul>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2023, un avocat new-yorkais (affaire <em>Mata v. Avianca</em>) a remis au tribunal des décisions de justice… <strong>inventées</strong> par ChatGPT&nbsp;: des références d'apparence crédible, mais totalement fictives. Résultat&nbsp;: une sanction. La morale tient en une phrase — un LLM produit du <strong>plausible</strong>, pas du <strong>vérifié</strong>&nbsp;: citations, chiffres et références demandent toujours un contrôle.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Croire qu'il « sait ».</strong> Il prédit ; il faut vérifier les faits importants.</li>
+<li><strong>Ignorer la fenêtre de contexte.</strong> Ce qui en sort est oublié.</li>
+<li><strong>Laisser la température au hasard.</strong> Adapte-la à la tâche (basse pour le déterminisme).</li>
+<li><strong>Oublier le coût en tokens.</strong> Entrée + sortie comptent ; les longs prompts coûtent.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>Les LLM modernes reposent sur l'architecture <strong>Transformer</strong> (2017) et son mécanisme d'<em>attention</em>, qui pèse l'importance relative des tokens. Tu n'as pas besoin d'en maîtriser les maths pour développer avec : l'essentiel est le modèle mental « prédire le token suivant, dans une fenêtre limitée, avec une part d'aléatoire réglable ».</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>« Generative Pre-trained Transformer » (GPT) résume la recette : <em>pré-entraîné</em> sur du texte, <em>génératif</em> (il produit du texte), bâti sur un <em>Transformer</em>. Les variantes « instruct/chat » sont en plus affinées pour suivre des instructions.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le vocabulaire d'un LLM en un coup d'œil</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">En bref</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Token</td><td>morceau de texte (≈ ¾ de mot)</td><td>unité comptée et <strong>facturée</strong></td></tr>
+      <tr><td>Prédiction</td><td>deviner le token suivant</td><td>en boucle → des phrases</td></tr>
+      <tr><td>Fenêtre de contexte</td><td>tokens visibles d'un coup</td><td>ce qui déborde est oublié</td></tr>
+      <tr><td>Température</td><td>aléatoire du choix</td><td>basse = sûr · haute = créatif</td></tr>
+      <tr><td>Hallucination</td><td>réponse fausse mais plausible</td><td>toujours vérifier les faits</td></tr>
+      <tr><td>Message système</td><td>consignes permanentes</td><td>conservé dans le contexte</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>LLM (grand modèle de langage)</dt><dd>Modèle entraîné sur d'immenses corpus de texte pour <strong>prédire le token suivant</strong>. De cette tâche unique émergent résumé, traduction, code et dialogue.</dd>
+  <dt>Token</dt><dd>Unité de texte manipulée par le modèle — souvent un bout de mot (≈ 4 caractères, ≈ ¾ de mot). On en compte en entrée <em>et</em> en sortie&nbsp;: c'est la base de la <strong>facturation</strong>.</dd>
+  <dt>Fenêtre de contexte</dt><dd>Quantité <strong>limitée</strong> de tokens que le modèle prend en compte simultanément&nbsp;: instructions, historique et réponse en cours. Ce qui en sort est «&nbsp;oublié&nbsp;».</dd>
+  <dt>Température</dt><dd>Paramètre réglant l'<strong>aléatoire</strong> de la génération. Basse (≈ 0) → sorties sûres et répétables&nbsp;; haute → sorties variées et créatives.</dd>
+  <dt>Hallucination</dt><dd>Réponse <strong>fausse mais plausible</strong> énoncée avec assurance&nbsp;: conséquence directe du fait que le modèle prédit du probable, pas du vérifié.</dd>
+  <dt>Message système</dt><dd>Instruction permanente placée en tête de conversation (rôle, ton, règles). On le <strong>conserve</strong> dans le contexte pour qu'il reste actif.</dd>
+  <dt>Transformer</dt><dd>Architecture (2017) au cœur des LLM modernes&nbsp;; son mécanisme d'<em>attention</em> pèse l'importance relative des tokens. C'est le «&nbsp;T&nbsp;» de GPT.</dd>
+  <dt>Inférence</dt><dd>L'exécution du modèle pour produire une réponse (par opposition à l'<em>entraînement</em>). C'est ce qu'on paie à chaque appel, en tokens.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un LLM <strong>prédit le token suivant</strong>, en boucle ; il ne consulte pas une base de faits.</li>
+<li>Les <strong>tokens</strong> sont les morceaux de texte manipulés (et facturés).</li>
+<li>La <strong>fenêtre de contexte</strong> limite ce que le modèle prend en compte d'un coup.</li>
+<li>La <strong>température</strong> règle l'aléatoire ; attention aux <strong>hallucinations</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la tâche fondamentale d'un LLM ?</li><li>Que contient la fenêtre de contexte ?</li><li>Quand baisser la température ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la tâche fondamentale d'un grand modèle de langage ?","a":["Prédire le token (morceau de texte) suivant le plus probable, en répétant l'opération","Consulter une base de données de faits vérifiés","Exécuter du code pour calculer la réponse","Rechercher la réponse sur le web en temps réel"],"correct":0,"explain":"Un LLM génère du texte en prédisant le prochain token à partir du contexte. Il ne consulte pas de base de faits et n'a pas d'accès au monde sans outils."},
+  {"q":"Que contient la « fenêtre de contexte » d'un LLM ?","a":["L'ensemble des tokens pris en compte d'un coup : instructions, historique et réponse en cours — elle est limitée","Uniquement la dernière phrase de l'utilisateur","Toute la mémoire permanente du modèle","Les données d'entraînement"],"correct":0,"explain":"La fenêtre de contexte est la quantité limitée de tokens que le modèle considère à la fois. Ce qui en sort est « oublié »."},
+  {"q":"Pour une tâche d'extraction ou de classification fiable, quel réglage de température privilégier ?","a":["Une température basse (proche de 0), pour des réponses sûres et répétables","Une température élevée, pour plus de créativité","La température n'a aucun effet","Toujours exactement 1"],"correct":0,"explain":"Basse température = le modèle choisit presque toujours le token le plus probable : sorties déterministes, adaptées à l'extraction, la classification ou le code."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["token","tokens","un token","le token"],"placeholder":"l'unité de texte qu'un LLM manipule (et qu'on facture)","hints":["Souvent un bout de mot.","On en compte en entrée et en sortie.","« tok… »."],"link":{"href":"lecon-01.html","label":"Revoir « Les tokens »"}},
+  {"type":"text","accept":["temperature","température","la temperature","la température"],"placeholder":"le réglage qui contrôle l'aléatoire de la génération","hints":["Basse = déterministe, haute = créatif.","Comme en thermodynamique, au figuré.","« temp… »."],"link":{"href":"lecon-01.html","label":"Revoir « La température »"}},
+  {"type":"text","accept":["hallucination","hallucinations","une hallucination"],"placeholder":"une réponse fausse mais plausible inventée par le modèle","hints":["Le modèle « invente » avec assurance.","Terme courant en IA générative.","« hallu… »."],"link":{"href":"lecon-01.html","label":"Revoir « Ce qu'un LLM n'est pas »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>En une phrase, explique pourquoi un LLM peut affirmer une information fausse avec assurance.</p><details><summary>Voir une solution</summary><p>Parce qu'il <strong>prédit le texte le plus probable</strong> plutôt qu'il ne vérifie des faits : une formulation fluide et plausible peut être statistiquement « probable » tout en étant fausse — c'est une hallucination.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour chacune de ces tâches, indique une température plutôt basse ou plutôt haute : (a) extraire des dates d'un texte ; (b) inventer des slogans publicitaires ; (c) classer des avis en positif/négatif.</p><details><summary>Voir une solution</summary><p>(a) <strong>basse</strong> — on veut une extraction fiable et répétable. (b) <strong>haute</strong> — on cherche de la variété et de la créativité. (c) <strong>basse</strong> — la classification doit être stable et cohérente.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une conversation très longue commence à « oublier » des consignes données au début. Explique pourquoi, et propose deux solutions.</p><details><summary>Voir une solution</summary><p>Les premiers messages sont sortis de la <strong>fenêtre de contexte</strong> : le modèle ne les voit plus. Solutions : (1) <strong>résumer</strong> régulièrement la conversation et réinjecter le résumé ; (2) <strong>répéter</strong> les consignes essentielles (ou les placer dans le <strong>message système</strong>, qu'on conserve toujours) ; (3) ne garder que les messages les plus pertinents plutôt que tout l'historique. L'idée : gérer activement ce qui occupe le contexte.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-json.min.js" defer></script>
+  </body>
+</html>

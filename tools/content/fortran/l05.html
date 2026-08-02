@@ -1,0 +1,95 @@
+<p>Au-delà de quelques dizaines de lignes, on découpe le code en <strong>procédures</strong>&nbsp;: des unités nommées et réutilisables. Fortran en distingue deux sortes — les <strong>functions</strong> (qui renvoient une valeur) et les <strong>subroutines</strong> (qui agissent par leurs arguments). Bien les écrire, en déclarant l'<em>intention</em> des arguments, est la clé d'un code numérique fiable.</p>
+
+<h2>Les functions</h2>
+<p>Une <code>function</code> calcule et <strong>renvoie</strong> une valeur. On déclare son type de retour et on affecte le résultat au nom de la fonction.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">function carre(x) result(r)
+    implicit none
+    real, intent(in) :: x
+    real :: r
+    r = x * x
+end function carre
+
+! Appel : y = carre(3.0)   ! 9.0</code></pre></figure>
+<p class="code-caption">La clause <code>result(r)</code> nomme la valeur de retour&nbsp;: plus clair que d'utiliser le nom de la fonction.</p>
+
+<h2>Les subroutines</h2>
+<p>Une <code>subroutine</code> ne renvoie rien&nbsp;: elle agit en modifiant ses arguments. On l'invoque avec <code>call</code>. C'est le bon choix quand on produit plusieurs résultats.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">subroutine echanger(a, b)
+    implicit none
+    real, intent(inout) :: a, b
+    real :: temp
+    temp = a
+    a = b
+    b = temp
+end subroutine echanger
+
+! Appel : call echanger(x, y)</code></pre></figure>
+
+<h2>L'intention des arguments&nbsp;: intent</h2>
+<p>Élément capital&nbsp;: on déclare ce que la procédure <em>fait</em> de chaque argument. <code>intent(in)</code> = lecture seule, <code>intent(out)</code> = produit (écrasé), <code>intent(inout)</code> = modifié. Le compilateur vérifie et optimise grâce à cette information.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">subroutine stats(donnees, moyenne, maxi)
+    implicit none
+    real, intent(in)  :: donnees(:)   ! entrée
+    real, intent(out) :: moyenne, maxi! sorties
+    moyenne = sum(donnees) / size(donnees)
+    maxi = maxval(donnees)
+end subroutine stats</code></pre></figure>
+<p>Déclarer <code>intent(in)</code> protège&nbsp;: toute tentative de modifier l'argument provoque une erreur de compilation.</p>
+
+<h2>Le passage par référence</h2>
+<p>Fortran passe les arguments <strong>par référence</strong>&nbsp;: la procédure travaille sur la variable d'origine, pas une copie. C'est efficace (pas de recopie de gros tableaux) — d'où l'importance d'<code>intent</code> pour éviter les modifications accidentelles.</p>
+
+<h2>Arguments tableaux à taille implicite</h2>
+<p>Une procédure peut recevoir un tableau sans en connaître la taille à l'avance&nbsp;: on déclare <code>(:)</code> et on interroge <code>size()</code>. Cela rend les procédures génériques.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">function moyenne(v) result(m)
+    implicit none
+    real, intent(in) :: v(:)      ! taille quelconque
+    real :: m
+    m = sum(v) / size(v)
+end function moyenne</code></pre></figure>
+
+<h2>Procédures internes (contains)</h2>
+<p>On peut placer des procédures <em>à l'intérieur</em> d'un programme, après le mot-clé <code>contains</code>. Elles voient les variables du programme et bénéficient d'une vérification automatique des arguments.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">program demo
+    implicit none
+    print *, double(21)      ! 42
+contains
+    function double(n) result(r)
+        integer, intent(in) :: n
+        integer :: r
+        r = n * 2
+    end function double
+end program demo</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Une procédure «&nbsp;externe&nbsp;» (hors <code>contains</code> ou module) n'a pas d'<strong>interface explicite</strong>&nbsp;: le compilateur ne vérifie pas ses arguments, et une erreur de type passe inaperçue. Place tes procédures dans un <code>contains</code> ou un <strong>module</strong> (leçon 6) pour bénéficier des vérifications.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les arguments peuvent être <strong>optionnels</strong> (<code>optional</code>) et on teste leur présence avec <code>present()</code>. Combiné aux arguments nommés (<code>call f(tol=1.0e-6)</code>), cela donne des interfaces souples, à la façon des langages modernes.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>function</code> renvoie une valeur&nbsp;; <code>subroutine</code> agit via ses arguments (<code>call</code>).</li>
+  <li><code>intent(in/out/inout)</code> déclare l'usage de chaque argument — essentiel et protecteur.</li>
+  <li>Les arguments passent <strong>par référence</strong>&nbsp;; un tableau <code>(:)</code> rend la procédure générique.</li>
+  <li>Les procédures sous <code>contains</code> (ou en module) ont une <strong>interface explicite</strong> vérifiée.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre une <code>function</code> et une <code>subroutine</code>&nbsp;?</li><li>Que signifie <code>intent(in)</code> et que protège-t-il&nbsp;?</li><li>Pourquoi éviter les procédures externes sans interface&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>cube</code> qui renvoie le cube d'un réel.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">function cube(x) result(r)
+    real, intent(in) :: x
+    real :: r
+    r = x**3
+end function cube</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une subroutine qui renvoie à la fois le min et le max d'un tableau.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">subroutine bornes(v, mini, maxi)
+    real, intent(in)  :: v(:)
+    real, intent(out) :: mini, maxi
+    mini = minval(v)
+    maxi = maxval(v)
+end subroutine bornes</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction qui calcule la norme (longueur) d'un vecteur de taille quelconque.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">function norme(v) result(n)
+    real, intent(in) :: v(:)
+    real :: n
+    n = sqrt(sum(v**2))
+end function norme</code></pre></figure></details></div>

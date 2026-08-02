@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La concurrence sans peur — Leçon 12 · Rust · Syntaxe</title>
+    <meta name="description" content="Maîtrise la concurrence sûre en Rust : threads, channels mpsc, Arc&lt;Mutex&lt;T&gt;&gt;, traits Send/Sync, et async/await en survol, sans data race." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="rust" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Rust</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Rust en pratique — Leçon 12</p>
+              <h1 class="lesson-header__title">La concurrence sans peur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 11 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Savoir lancer des <code>thread::spawn</code>, récupérer leur résultat avec <code>join</code> et transférer la possession via <code>move</code>&nbsp;;</li>
+                  <li>Savoir communiquer entre threads avec un channel <code>mpsc</code> et partager un état avec <code>Arc&lt;Mutex&lt;T&gt;&gt;</code>&nbsp;;</li>
+                  <li>Savoir pourquoi les traits marqueurs <code>Send</code> et <code>Sync</code> garantissent l'absence de <strong>data race</strong> à la compilation&nbsp;;</li>
+                  <li>Savoir reconnaître les pièges (oubli de <code>move</code>, deadlock, <code>Rc</code> au lieu d'<code>Arc</code>) et situer <code>async</code>/<code>await</code> avec Tokio.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En C, écrire du code multithread, c'est marcher sur un champ de mines : un accès concurrent oublié, et tu obtiens une <strong>data race</strong> — un bug qui n'apparaît qu'une fois sur mille, en production, le vendredi soir. Rust appelle sa réponse la <em>fearless concurrency</em> : la concurrence sans peur. L'idée est aussi belle qu'efficace : les <strong>mêmes règles de possession</strong> qui te protègent en mono-thread protègent aussi tes threads. Si ton code compile, il est exempt de data race. Garanti par le compilateur.</p>
+
+<p>Ce n'est pas un slogan marketing : c'est une propriété du système de types. Dans cette leçon, on va lancer des threads, les faire dialoguer par messages, partager un état avec un verrou, et comprendre la mécanique des traits <code>Send</code> et <code>Sync</code> qui rend tout cela possible. Le borrow checker, ton vieil adversaire, devient ici ton meilleur allié.</p>
+
+<h2>Lancer un thread avec <code>thread::spawn</code> et <code>join</code></h2>
+<p>Un thread se crée avec <code>thread::spawn</code>, à qui tu passes une <strong>closure</strong>. La fonction renvoie un <code>JoinHandle</code> ; appeler <code>.join()</code> dessus attend la fin du thread et récupère sa valeur de retour, emballée dans un <code>Result</code>.</p>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::thread;
+
+fn main() {
+    let handle = thread::spawn(|| {
+        // Ce bloc s'exécute dans un autre thread.
+        let mut somme = 0;
+        for i in 1..=100 {
+            somme += i;
+        }
+        somme // valeur de retour du thread
+    });
+
+    // On attend la fin et on récupère le résultat.
+    let resultat = handle.join().unwrap();
+    println!("Somme = {resultat}");
+}
+// Sortie :
+// Somme = 5050</code></pre></figure>
+
+<p><code>join</code> renvoie un <code>Result</code> parce que le thread peut <em>paniquer</em> : dans ce cas tu obtiens un <code>Err</code> plutôt qu'un crash silencieux. Sans <code>join</code>, le thread principal pourrait se terminer avant le thread enfant, qui serait alors brutalement interrompu.</p>
+
+<h2>Transférer la possession : le mot-clé <code>move</code></h2>
+<p>Un thread peut vivre plus longtemps que la fonction qui l'a lancé. Si la closure emprunte une variable locale, Rust ne peut pas garantir que cette variable existera encore : il refuse de compiler. La solution est <code>move</code>, qui <strong>transfère la possession</strong> des variables capturées au thread.</p>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::thread;
+
+fn main() {
+    let donnees = vec![10, 20, 30];
+
+    // `move` : la possession de `donnees` passe au thread.
+    let handle = thread::spawn(move || {
+        println!("Dans le thread : {donnees:?}");
+    });
+
+    handle.join().unwrap();
+    // Ici, `donnees` n'existe plus pour le thread principal :
+    // elle appartient désormais au thread enfant.
+}
+// Sortie :
+// Dans le thread : [10, 20, 30]</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Sans <code>move</code>, le compilateur affiche : <code>closure may outlive the current function, but it borrows `donnees`</code> et suggère <code>help: to force the closure to take ownership ... use the `move` keyword</code>. Le message te donne la correction exacte. Lis-le, ne le combats pas.</p></div></div>
+
+<h2>Pourquoi le partage est dangereux — et comment Rust l'empêche</h2>
+<p>Une data race survient quand deux threads accèdent à la même donnée, qu'au moins un écrit, sans synchronisation. En C, le compilateur t'y autorise sans broncher. En Rust, c'est <strong>impossible en code sûr</strong>. Tente de partager une variable mutable par référence entre deux threads :</p>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::thread;
+
+fn main() {
+    let mut compteur = 0;
+    let h = thread::spawn(|| {
+        compteur += 1; // ERREUR : emprunt de `compteur`
+    });
+    compteur += 1;     // accès concurrent potentiel
+    h.join().unwrap();
+}
+// Erreur du compilateur :
+// error[E0373]: closure may outlive the current function...
+// closure borrows `compteur`, which is owned by the current function</code></pre></figure>
+
+<p>Le compilateur refuse <em>avant</em> même de te parler de data race : la closure emprunte <code>compteur</code> alors que le thread principal le modifie aussi. Les règles d'emprunt (un seul accès mutable, ou plusieurs accès partagés en lecture) s'appliquent <strong>à travers les threads</strong>. Pour partager légitimement, il faut des outils dédiés : les channels, ou <code>Arc</code> + <code>Mutex</code>.</p>
+
+<h2>Communiquer par messages : les channels <code>mpsc</code></h2>
+<p>Une philosophie répandue : « ne communiquez pas en partageant la mémoire ; partagez la mémoire en communiquant ». Rust fournit <code>std::sync::mpsc</code> — <em>multiple producer, single consumer</em>. Tu obtiens un émetteur <code>tx</code> (transmitter) et un récepteur <code>rx</code> (receiver) ; <code>tx.send</code> envoie, <code>rx.recv</code> reçoit (en bloquant jusqu'à l'arrivée d'un message).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Un channel mpsc, plusieurs producteurs et un seul consommateur. À gauche, plusieurs threads producteurs détiennent chacun un émetteur tx, obtenu en clonant le premier. Ils envoient des messages avec tx.send. Les messages transitent par une file au centre. À droite, un unique récepteur rx les reçoit un par un avec rx.recv, dans un seul thread consommateur. La possession de chaque valeur voyage avec le message : rien n'est partagé.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">mpsc : plusieurs émetteurs (tx), un seul récepteur (rx)</text>
+    <rect class="d-box" x="24" y="42" width="130" height="26" rx="6" />
+    <text class="d-text" x="89" y="59" text-anchor="middle" font-size="9">thread 1 · tx</text>
+    <rect class="d-box" x="24" y="80" width="130" height="26" rx="6" />
+    <text class="d-text" x="89" y="97" text-anchor="middle" font-size="9">thread 2 · tx.clone()</text>
+    <rect class="d-box" x="24" y="118" width="130" height="26" rx="6" />
+    <text class="d-text" x="89" y="135" text-anchor="middle" font-size="9">thread 3 · tx.clone()</text>
+    <line class="d-line" x1="154" y1="55" x2="250" y2="88" />
+    <line class="d-line" x1="154" y1="93" x2="250" y2="93" />
+    <line class="d-line" x1="154" y1="131" x2="250" y2="98" />
+    <rect class="d-accent" x="250" y="72" width="150" height="44" rx="8" />
+    <text class="d-text" x="325" y="91" text-anchor="middle" font-size="10">file de messages</text>
+    <text class="d-mut" x="325" y="106" text-anchor="middle" font-size="8">send → … → recv</text>
+    <line class="d-line" x1="400" y1="94" x2="470" y2="94" />
+    <rect class="d-box" x="470" y="72" width="146" height="44" rx="8" />
+    <text class="d-text" x="543" y="91" text-anchor="middle" font-size="10">thread consommateur</text>
+    <text class="d-mut" x="543" y="106" text-anchor="middle" font-size="8">rx.recv() — un seul rx</text>
+    <text class="d-mut" x="320" y="162" text-anchor="middle" font-size="9">la possession voyage avec le message → aucune donnée partagée, aucune course</text>
+  </svg>
+  <figcaption>Avec un channel, on <strong>déplace</strong> les valeurs d'un thread à l'autre au lieu de les partager. Plusieurs <code>tx</code> (clonés) alimentent une file&nbsp;; un unique <code>rx</code> consomme. Pas de mémoire commune, donc pas de data race.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::sync::mpsc;
+use std::thread;
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        for mot in ["salut", "depuis", "le", "thread"] {
+            tx.send(String::from(mot)).unwrap();
+        }
+        // `tx` est abandonné ici : le channel se ferme.
+    });
+
+    // `rx` est itérable : la boucle s'arrête quand le channel ferme.
+    for recu in rx {
+        println!("Reçu : {recu}");
+    }
+}
+// Sortie :
+// Reçu : salut
+// Reçu : depuis
+// Reçu : le
+// Reçu : thread</code></pre></figure>
+
+<p>La possession voyage avec le message : après <code>tx.send(valeur)</code>, tu ne peux plus utiliser <code>valeur</code> dans l'émetteur. Là encore, aucune donnée n'est partagée — elle est <em>déplacée</em>, donc aucune course possible. Pour plusieurs producteurs, clone <code>tx</code> avec <code>tx.clone()</code>.</p>
+
+<h2>État partagé : <code>Mutex&lt;T&gt;</code> et <code>Arc&lt;T&gt;</code></h2>
+<p>Parfois, plusieurs threads doivent vraiment partager <strong>la même</strong> donnée mutable. Il faut alors deux ingrédients :</p>
+<ul>
+<li><code>Mutex&lt;T&gt;</code> (verrou d'exclusion mutuelle) : un seul thread accède à la donnée à la fois. <code>lock()</code> renvoie un garde ; tant qu'il vit, tu as l'accès exclusif. À sa libération (fin de portée), le verrou se relâche automatiquement.</li>
+<li><code>Arc&lt;T&gt;</code> (<em>Atomically Reference Counted</em>) : un compteur de références <strong>atomique</strong> qui permet à plusieurs threads de posséder ensemble la même valeur. C'est la version thread-safe de <code>Rc&lt;T&gt;</code>.</li>
+</ul>
+<p>On les combine très souvent en <code>Arc&lt;Mutex&lt;T&gt;&gt;</code> : <code>Arc</code> pour partager la possession entre threads, <code>Mutex</code> pour synchroniser les accès.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 202" role="img" aria-label="Arc de Mutex de T, partager une donnée entre threads. Trois threads détiennent chacun un clone de l'Arc, le compteur de références atomique, qui pointent tous vers le même Mutex. Le Mutex protège la donnée : un seul thread à la fois obtient le verrou par lock et peut modifier la valeur ; les autres attendent leur tour. Arc gère le partage de la possession, Mutex sérialise les accès.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Arc = partage la possession · Mutex = un seul accès à la fois</text>
+    <rect class="d-box" x="30" y="46" width="120" height="28" rx="6" />
+    <text class="d-text" x="90" y="64" text-anchor="middle" font-size="9">thread A · Arc</text>
+    <rect class="d-box" x="30" y="92" width="120" height="28" rx="6" />
+    <text class="d-text" x="90" y="110" text-anchor="middle" font-size="9">thread B · Arc</text>
+    <rect class="d-box" x="30" y="138" width="120" height="28" rx="6" />
+    <text class="d-text" x="90" y="156" text-anchor="middle" font-size="9">thread C · Arc</text>
+    <line class="d-line" x1="150" y1="60" x2="270" y2="96" />
+    <line class="d-line" x1="150" y1="106" x2="270" y2="106" />
+    <line class="d-line" x1="150" y1="152" x2="270" y2="116" />
+    <rect class="d-accent" x="270" y="80" width="180" height="56" rx="9" />
+    <text class="d-tag" x="360" y="102" text-anchor="middle" font-size="10">Mutex&lt;T&gt;</text>
+    <text class="d-mut" x="360" y="120" text-anchor="middle" font-size="8">verrou : 1 seul thread entre</text>
+    <line class="d-line" x1="450" y1="108" x2="512" y2="108" />
+    <rect class="d-box" x="512" y="86" width="104" height="44" rx="8" />
+    <text class="d-text" x="564" y="105" text-anchor="middle" font-size="10">donnée</text>
+    <text class="d-mut" x="564" y="121" text-anchor="middle" font-size="8">protégée</text>
+    <text class="d-mut" x="320" y="178" text-anchor="middle" font-size="9">Arc::clone incrémente le compteur ; lock() donne l'accès exclusif, relâché en fin de portée</text>
+  </svg>
+  <figcaption><code>Arc</code> laisse plusieurs threads <strong>posséder</strong> la même valeur (compteur atomique)&nbsp;; <code>Mutex</code> garantit qu'un <strong>seul</strong> y accède à la fois. Le duo <code>Arc&lt;Mutex&lt;T&gt;&gt;</code> est l'outil standard de l'état mutable partagé.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::sync::{Arc, Mutex};
+use std::thread;
+
+fn main() {
+    let compteur = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let compteur = Arc::clone(&amp;compteur); // clone l'Arc, pas la donnée
+        let h = thread::spawn(move || {
+            let mut n = compteur.lock().unwrap(); // verrou pris
+            *n += 1;
+            // `n` (le garde) est libéré ici : le verrou se relâche.
+        });
+        handles.push(h);
+    }
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    println!("Total = {}", *compteur.lock().unwrap());
+}
+// Sortie :
+// Total = 10</code></pre></figure>
+
+<p><code>Arc::clone</code> ne copie pas les données : il incrémente seulement le compteur de références. <code>lock().unwrap()</code> peut renvoyer une erreur si un autre thread a paniqué en tenant le verrou (verrou « empoisonné ») — c'est une sécurité de plus.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Garde un verrou le moins longtemps possible. Pour relâcher tôt, ouvre un bloc <code>{ ... }</code> autour du <code>lock()</code>, ou appelle <code>drop(garde)</code> explicitement avant un calcul long. Un verrou tenu = les autres threads attendent.</p></div></div>
+
+<h2>La magie de la sûreté : les traits <code>Send</code> et <code>Sync</code></h2>
+<p>Comment le compilateur <em>sait-il</em> ce qui peut traverser un thread ? Grâce à deux <strong>traits marqueurs</strong> (sans méthode), appliqués automatiquement :</p>
+<ul>
+<li><code>Send</code> : un type est <code>Send</code> si sa possession peut être <strong>transférée</strong> vers un autre thread. Presque tout l'est ; <code>Rc&lt;T&gt;</code> ne l'est pas (son compteur n'est pas atomique).</li>
+<li><code>Sync</code> : un type est <code>Sync</code> si une <strong>référence partagée</strong> <code>&amp;T</code> peut être utilisée depuis plusieurs threads en sécurité. <code>Mutex&lt;T&gt;</code> est <code>Sync</code> ; <code>RefCell&lt;T&gt;</code> ne l'est pas.</li>
+</ul>
+<figure class="diagram">
+  <svg viewBox="0 0 640 178" role="img" aria-label="Les traits marqueurs Send et Sync. À gauche, Send : la possession d'une valeur T peut être transférée d'un thread à un autre ; Arc et la plupart des types le sont, Rc ne l'est pas car son compteur n'est pas atomique. À droite, Sync : une référence partagée et-T peut être utilisée depuis plusieurs threads en même temps ; Mutex l'est, RefCell ne l'est pas. thread spawn exige que la closure soit Send.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">deux traits marqueurs, déduits automatiquement</text>
+    <rect class="d-frame" x="24" y="36" width="286" height="130" rx="10" />
+    <text class="d-tag" x="167" y="57" text-anchor="middle" font-size="11">Send</text>
+    <text class="d-text" x="167" y="80" text-anchor="middle" font-size="9">la valeur T peut être TRANSFÉRÉE</text>
+    <text class="d-text" x="167" y="95" text-anchor="middle" font-size="9">vers un autre thread</text>
+    <rect class="d-accent" x="52" y="112" width="110" height="34" rx="6" />
+    <text class="d-text" x="107" y="133" text-anchor="middle" font-size="9">Arc ✓</text>
+    <rect class="d-box" x="172" y="112" width="110" height="34" rx="6" />
+    <text class="d-mut" x="227" y="133" text-anchor="middle" font-size="9">Rc ✗</text>
+    <rect class="d-frame" x="330" y="36" width="286" height="130" rx="10" />
+    <text class="d-tag" x="473" y="57" text-anchor="middle" font-size="11">Sync</text>
+    <text class="d-text" x="473" y="80" text-anchor="middle" font-size="9">une référence &amp;T peut être PARTAGÉE</text>
+    <text class="d-text" x="473" y="95" text-anchor="middle" font-size="9">entre plusieurs threads</text>
+    <rect class="d-accent" x="358" y="112" width="110" height="34" rx="6" />
+    <text class="d-text" x="413" y="133" text-anchor="middle" font-size="9">Mutex ✓</text>
+    <rect class="d-box" x="478" y="112" width="110" height="34" rx="6" />
+    <text class="d-mut" x="533" y="133" text-anchor="middle" font-size="9">RefCell ✗</text>
+  </svg>
+  <figcaption><code>Send</code> autorise le <strong>transfert</strong> de possession entre threads&nbsp;; <code>Sync</code> autorise le <strong>partage</strong> par référence. <code>thread::spawn</code> exige <code>Send</code>&nbsp;: c'est pourquoi un <code>Rc</code> capturé est refusé, alors qu'un <code>Arc</code> passe.</figcaption>
+</figure>
+
+<p>Ces traits se propagent : un type composé n'est <code>Send</code>/<code>Sync</code> que si tous ses champs le sont. <code>thread::spawn</code> exige que la closure soit <code>Send</code> — voilà pourquoi tenter de capturer un <code>Rc</code> échoue net :</p>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">use std::rc::Rc;
+use std::thread;
+
+fn main() {
+    let valeur = Rc::new(42);
+    let copie = Rc::clone(&amp;valeur);
+    thread::spawn(move || {
+        println!("{copie}");
+    });
+}
+// Erreur du compilateur :
+// error[E0277]: `Rc&lt;i32&gt;` cannot be sent between threads safely
+// the trait `Send` is not implemented for `Rc&lt;i32&gt;`
+// note: required because it appears within the type of the closure</code></pre></figure>
+
+<p>Le message est limpide : <code>Rc</code> n'est pas <code>Send</code>. Remplace-le par <code>Arc</code> et tout rentre dans l'ordre. Tu n'écriras presque jamais <code>Send</code>/<code>Sync</code> à la main — le compilateur les déduit pour toi et refuse ce qui est dangereux.</p>
+
+<h2>Le rapprochement avec la possession</h2>
+<p>Prends du recul. Tu n'as appris <strong>aucune règle nouvelle</strong> de sûreté dans cette leçon : ce sont les principes de possession et d'emprunt vus plus tôt, appliqués au-delà d'un seul thread. « Une seule référence mutable, ou plusieurs partagées » empêche aussi bien le double-free en mono-thread que la data race en multi-thread. <code>Send</code> et <code>Sync</code> sont simplement la formalisation de « cette donnée peut franchir une frontière de thread ». Le système qui t'agaçait au début est exactement celui qui te permet aujourd'hui d'écrire du parallélisme sans crainte.</p>
+
+<h2>async/await en survol</h2>
+<p>Les threads conviennent au calcul. Pour gérer des milliers de connexions réseau qui passent leur temps à <em>attendre</em>, on préfère l'<strong>asynchrone</strong> : une fonction <code>async</code> renvoie une <code>Future</code> (une tâche à terminer), et <code>.await</code> suspend l'exécution sans bloquer le thread. Rust fournit la syntaxe ; l'<em>exécuteur</em> qui fait tourner les futures vient d'une bibliothèque externe, le plus souvent <strong>Tokio</strong>.</p>
+
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">// Cargo.toml : tokio = { version = "1", features = ["full"] }
+use tokio::time::{sleep, Duration};
+
+async fn tache(nom: &amp;str) {
+    sleep(Duration::from_millis(100)).await; // ne bloque pas le thread
+    println!("Tâche {nom} terminée");
+}
+
+#[tokio::main]
+async fn main() {
+    // Les deux tâches progressent en concurrence.
+    tokio::join!(tache("A"), tache("B"));
+}
+// Sortie (après ~100 ms, pas 200) :
+// Tâche A terminée
+// Tâche B terminée</code></pre></figure>
+
+<p>La beauté : <code>Send</code>, <code>Sync</code> et la possession protègent aussi le code async. Les mêmes garanties, un modèle d'exécution différent. On approfondira async dans un cours dédié.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier <code>move</code></strong> dans la closure du thread : le compilateur le réclame et te donne la correction. <strong>Utiliser <code>Rc</code> au lieu d'<code>Arc</code></strong> : <code>Rc</code> n'est pas <code>Send</code>, il ne traverse pas les threads. <strong>Deadlock</strong> : deux threads prennent deux verrous dans l'ordre inverse et s'attendent mutuellement — verrouille toujours dans le même ordre. <strong>Tenir un verrou trop longtemps</strong> : tout le reste attend ; relâche-le au plus tôt. <strong>Oublier <code>join</code></strong> : le thread principal peut finir avant les enfants et les couper net.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore <strong>Tokio</strong> et l'écosystème async pour les serveurs ; <strong>rayon</strong> pour le parallélisme de données (un <code>iter()</code> devient <code>par_iter()</code> et c'est tout) ; les <strong>atomics</strong> (<code>AtomicUsize</code>) pour des compteurs sans verrou ; <strong>crossbeam</strong> pour des channels et structures concurrentes avancées ; et les détails de <code>Send</code>/<code>Sync</code> et du code <code>unsafe</code> sous-jacent.</p></div></div>
+
+<h2>Un cas réel : Firefox Quantum, la concurrence sans peur</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>L'expression «&nbsp;<em>fearless concurrency</em>&nbsp;» n'est pas qu'un slogan. Mozilla a passé près d'une décennie à tenter de <strong>paralléliser le moteur de style CSS</strong> de Firefox en C++&nbsp;: à chaque essai, les data races rendaient le code trop instable pour la production, et les tentatives étaient abandonnées. L'équipe a alors réécrit ce moteur en Rust, sous le nom de <strong>Stylo</strong>. Cette fois, le compilateur garantissait l'absence de course <em>à la compilation</em> — impossible de partager une donnée mutable sans <code>Arc&lt;Mutex&lt;…&gt;&gt;</code> ou passage de message. Résultat&nbsp;: Stylo a livré en 2017, dans <strong>Firefox 57 «&nbsp;Quantum&nbsp;»</strong>, un moteur CSS parallèle exploitant tous les cœurs de la machine — là où quinze ans de C++ avaient échoué. Le même système d'emprunt qui «&nbsp;agace au début&nbsp;» a rendu sûr un parallélisme que des experts n'avaient pas su sécuriser autrement.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — concurrence en Rust</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Lancer un thread</td><td><code>thread::spawn(move || { … })</code></td><td><code>move</code> transfère la possession</td></tr>
+      <tr><td>Attendre un thread</td><td><code>handle.join().unwrap()</code></td><td>récupère son résultat</td></tr>
+      <tr><td>Envoyer des messages</td><td><code>mpsc::channel()</code> → <code>tx</code> / <code>rx</code></td><td>multiple producer, single consumer</td></tr>
+      <tr><td>Plusieurs émetteurs</td><td><code>tx.clone()</code></td><td>un seul <code>rx</code></td></tr>
+      <tr><td>Partager la possession</td><td><code>Arc::new(x)</code> · <code>Arc::clone(&amp;a)</code></td><td>compteur atomique, thread-safe</td></tr>
+      <tr><td>Accès exclusif</td><td><code>Mutex::new(x)</code> → <code>.lock()</code></td><td>verrou relâché en fin de portée</td></tr>
+      <tr><td>État mutable partagé</td><td><code>Arc&lt;Mutex&lt;T&gt;&gt;</code></td><td>le duo standard</td></tr>
+      <tr><td>Transférable entre threads</td><td>trait <code>Send</code></td><td><code>Rc</code> ✗ · <code>Arc</code> ✓</td></tr>
+      <tr><td>Partageable par <code>&amp;T</code></td><td>trait <code>Sync</code></td><td><code>RefCell</code> ✗ · <code>Mutex</code> ✓</td></tr>
+      <tr><td>Attente d'E/S massive</td><td><code>async</code> / <code>.await</code> (Tokio)</td><td>des <code>Future</code>, pas des threads</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Thread (<code>spawn</code> / <code>join</code>)</dt><dd>Fil d'exécution parallèle&nbsp;: <code>thread::spawn</code> le lance, <code>join</code> attend sa fin et récupère son résultat.</dd>
+  <dt>Data race</dt><dd>Accès concurrent non synchronisé à une même donnée, dont au moins un en écriture&nbsp;; <strong>impossible en Rust sûr</strong>, refusé à la compilation.</dd>
+  <dt>Channel <code>mpsc</code></dt><dd>Canal <em>multiple producer, single consumer</em>&nbsp;: on envoie par <code>tx.send</code>, on reçoit par <code>rx.recv</code>&nbsp;; la valeur est <strong>déplacée</strong>, jamais partagée.</dd>
+  <dt><code>Mutex&lt;T&gt;</code></dt><dd>Verrou d'exclusion mutuelle&nbsp;: <code>lock()</code> donne un accès <strong>exclusif</strong> à la donnée, relâché automatiquement en fin de portée.</dd>
+  <dt><code>Arc&lt;T&gt;</code></dt><dd><em>Atomically Reference Counted</em>&nbsp;: compteur de références atomique qui laisse plusieurs threads posséder ensemble la même valeur (version thread-safe de <code>Rc</code>).</dd>
+  <dt><code>Send</code> / <code>Sync</code></dt><dd>Traits marqueurs auto-déduits&nbsp;: <code>Send</code> = la valeur peut être <strong>transférée</strong> entre threads&nbsp;; <code>Sync</code> = une référence <code>&amp;T</code> peut être <strong>partagée</strong> entre threads.</dd>
+  <dt>Deadlock</dt><dd>Interblocage&nbsp;: deux threads prennent deux verrous dans l'ordre inverse et s'attendent mutuellement pour toujours. Parade&nbsp;: verrouiller toujours dans le même ordre.</dd>
+  <dt><code>async</code> / <code>.await</code></dt><dd>Modèle asynchrone&nbsp;: une fonction <code>async</code> renvoie une <code>Future</code>, et <code>.await</code> suspend sans bloquer le thread. L'exécuteur (souvent <strong>Tokio</strong>) fait avancer les futures.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><code>thread::spawn</code> lance un thread ; <code>join()</code> attend sa fin et récupère son <code>Result</code>.</li>
+<li><code>move</code> transfère la possession des variables capturées au thread.</li>
+<li>Les data races sont <strong>impossibles en Rust sûr</strong> : le borrow checker s'applique à travers les threads.</li>
+<li>Les channels <code>mpsc</code> communiquent par messages (<code>tx.send</code> / <code>rx.recv</code>) ; la possession voyage avec le message.</li>
+<li><code>Arc&lt;Mutex&lt;T&gt;&gt;</code> partage un état mutable : <code>Arc</code> pour la possession partagée, <code>Mutex</code> pour la synchronisation.</li>
+<li><code>Send</code> (transférable entre threads) et <code>Sync</code> (référence partageable) permettent au compilateur de garantir la sûreté.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi la closure de <code>thread::spawn</code> a-t-elle souvent besoin du mot-clé <code>move</code> ?</li><li>Quelle est la différence entre <code>Rc&lt;T&gt;</code> et <code>Arc&lt;T&gt;</code>, et pourquoi seul l'un des deux peut traverser un thread ?</li><li>Que garantissent respectivement les traits <code>Send</code> et <code>Sync</code> ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi la closure de thread::spawn a-t-elle souvent besoin du mot-clé move ?","a":["Parce que le thread peut survivre à la fonction : la closure doit posséder (move) les variables capturées plutôt que les emprunter, sinon les références pourraient devenir pendantes","move accélère le thread","move est purement décoratif","Sans move, c'est plus sûr"],"correct":0,"explain":"Le nouveau thread s'exécute indépendamment et peut durer plus longtemps que la portée qui l'a lancé. En déplaçant les variables dans la closure (move), on garantit qu'elles restent valides pendant toute la vie du thread."},
+  {"q":"Quelle est la différence entre Rc<T> et Arc<T>, et pourquoi seul l'un des deux peut traverser un thread ?","a":["Rc utilise un comptage non atomique (mono-thread, plus rapide) ; Arc un comptage atomique (thread-safe). Seul Arc peut passer entre threads, car Rc n'est ni Send ni Sync","Les deux traversent les threads","Rc est thread-safe","Arc est plus lent et inutile"],"correct":0,"explain":"Rc compte les références sans synchronisation : rapide mais dangereux en multithread (courses sur le compteur). Arc utilise des opérations atomiques, donc sûr entre threads. Le système de types l'impose via Send/Sync."},
+  {"q":"Que garantissent respectivement les traits Send et Sync ?","a":["Send : le type peut être transféré (déplacé) vers un autre thread ; Sync : le type peut être partagé par référence (&T) entre threads en toute sécurité","C'est l'inverse","Les deux garantissent la vitesse","Ils n'ont aucun rapport avec les threads"],"correct":0,"explain":"Send autorise le déplacement d'une valeur d'un thread à un autre. Sync signifie que &T est sûr à partager entre threads (l'accès concurrent en lecture est correct). Le compilateur s'en sert pour interdire les usages non sûrs."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["thread::spawn","spawn","std::thread::spawn"],"placeholder":"la fonction pour LANCER un nouveau thread (calcul des carrés) : thread::…","hints":["Renvoie un JoinHandle.","On récupère le résultat avec .join().","thread::?????"],"link":{"href":"lecon-12.html","label":"Revoir « Les threads »"}},
+  {"type":"text","accept":["mpsc","std::sync::mpsc","channel"],"placeholder":"le module Rust pour un canal multi-producteurs / un-consommateur (producteur → main) : …","hints":["Multi Producer, Single Consumer.","let (tx, rx) = ????::channel();","Quatre lettres."],"link":{"href":"lecon-12.html","label":"Revoir « Les channels »"}},
+  {"type":"text","accept":["Arc","Arc<Mutex>","Arc<Mutex<T>>"],"placeholder":"le pointeur à comptage de références ATOMIQUE pour partager un Mutex entre 5 threads : …","hints":["Rc ne passe pas entre threads ; sa version atomique, si.","???<Mutex<i32>>.","Trois lettres."],"link":{"href":"lecon-12.html","label":"Revoir « Arc et Mutex »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Lance un thread qui calcule le carré de chaque nombre de 1 à 5 et renvoie un <code>Vec&lt;i32&gt;</code>. Récupère ce vecteur dans le thread principal avec <code>join</code> et affiche-le.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">use std::thread;
+
+fn main() {
+    let handle = thread::spawn(|| {
+        (1..=5).map(|n| n * n).collect::&lt;Vec&lt;i32&gt;&gt;()
+    });
+
+    let carres = handle.join().unwrap();
+    println!("{carres:?}");
+}
+// Sortie :
+// [1, 4, 9, 16, 25]</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un channel <code>mpsc</code>. Lance un thread producteur qui envoie les entiers de 1 à 5. Dans le thread principal, reçois-les et affiche leur somme.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">use std::sync::mpsc;
+use std::thread;
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        for i in 1..=5 {
+            tx.send(i).unwrap();
+        }
+        // `tx` abandonné ici : le channel se ferme.
+    });
+
+    let mut somme = 0;
+    for recu in rx {
+        somme += recu;
+    }
+    println!("Somme = {somme}");
+}
+// Sortie :
+// Somme = 15</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Partage un compteur entre 5 threads avec <code>Arc&lt;Mutex&lt;T&gt;&gt;</code>. Chaque thread incrémente le compteur 1000 fois. Après les <code>join</code>, affiche le total (qui doit valoir exactement 5000 — preuve de l'absence de data race).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">use std::sync::{Arc, Mutex};
+use std::thread;
+
+fn main() {
+    let compteur = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..5 {
+        let compteur = Arc::clone(&amp;compteur);
+        let h = thread::spawn(move || {
+            for _ in 0..1000 {
+                let mut n = compteur.lock().unwrap();
+                *n += 1;
+            } // le verrou est relâché à chaque tour
+        });
+        handles.push(h);
+    }
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    println!("Total = {}", *compteur.lock().unwrap());
+}
+// Sortie :
+// Total = 5000</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-rust.min.js" defer></script>
+  </body>
+</html>

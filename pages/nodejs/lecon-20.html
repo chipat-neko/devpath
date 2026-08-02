@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observabilité, conteneurisation et déploiement — Leçon 20 · Node.js · Syntaxe</title>
+    <meta name="description" content="Observabilité (logs, métriques, traces), health checks, arrêt propre, Dockerfile multi-stage non-root, CI/CD et fiabilité pour une app Node en production." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="nodejs" data-lesson="lecon-20.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Node.js</a></li>
+            <li aria-current="page">Leçon 20</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 07 · Node.js à l'échelle — Leçon 20</p>
+              <h1 class="lesson-header__title">Observabilité, conteneurisation et déploiement</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 19 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>instrumenter une app Node avec des <strong>logs structurés</strong>, des métriques Prometheus et des traces ;</li>
+                  <li>mettre en place des <code>health checks</code> et un <strong>arrêt propre</strong> sur <code>SIGTERM</code> ;</li>
+                  <li>écrire un <code>Dockerfile</code> multi-stage, non-root et minimal, et le déployer via une CI/CD ;</li>
+                  <li>fiabiliser les appels externes avec <strong>timeouts</strong>, <strong>retries</strong> et <strong>circuit breaker</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Ton API fonctionne en local et passe ses tests. En production, c'est une autre histoire : il faut <strong>voir</strong> ce qui se passe à l'intérieur (un client se plaint d'une lenteur &mdash; où ?), <strong>survivre</strong> aux déploiements sans couper de requêtes, et faire tourner le tout dans un environnement reproductible. Cette leçon couvre l'<strong>observabilité</strong>, l'<strong>arrêt propre</strong>, la <strong>conteneurisation</strong> Docker, le <strong>déploiement</strong> et la <strong>fiabilité</strong> des appels externes.</p>
+<p>On ne réexplique pas les bases du serveur HTTP ni l'intro sécurité : on se place au niveau de l'<strong>exploitation à l'échelle</strong>, là où « ça marche sur ma machine » ne suffit plus.</p>
+
+<h2>Les trois piliers de l'observabilité</h2>
+<p>Observer une application, ce n'est pas la même chose que la monitorer. Le monitoring répond à « est-ce que ça tombe ? » ; l'observabilité répond à « <em>pourquoi</em> ça tombe ? ». Elle repose sur trois piliers : les <strong>logs</strong> (événements ponctuels), les <strong>métriques</strong> (agrégats chiffrés dans le temps) et les <strong>traces</strong> (le parcours d'une requête à travers les services).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Les trois piliers de l'observabilité. Trois colonnes : les logs sont des événements ponctuels horodatés en JSON qui répondent à « que s'est-il passé ? » (outils pino, Loki, Elastic) ; les métriques sont des agrégats chiffrés dans le temps, le trio RED, qui répondent à « combien, à quelle vitesse ? » (Prometheus, Grafana) ; les traces suivent une requête de service en service et répondent à « où est passé le temps ? » (OpenTelemetry, Jaeger). Réunis, les trois piliers répondent à « pourquoi ça tombe ? », au-delà du simple monitoring qui dit seulement « est-ce que ça tombe ? ».">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Observer : trois angles complémentaires</text>
+    <rect class="d-box" x="24" y="38" width="184" height="120" rx="10" />
+    <text class="d-text" x="116" y="62" text-anchor="middle" font-size="11">Logs</text>
+    <text class="d-mut" x="116" y="82" text-anchor="middle" font-size="8.5">événements ponctuels</text>
+    <text class="d-mut" x="116" y="98" text-anchor="middle" font-size="8.5">horodatés, en JSON</text>
+    <line class="d-line" x1="44" y1="112" x2="188" y2="112" />
+    <text class="d-tag" x="116" y="132" text-anchor="middle" font-size="8.5">« que s'est-il passé ? »</text>
+    <text class="d-mut" x="116" y="148" text-anchor="middle" font-size="8">pino · Loki · Elastic</text>
+    <rect class="d-box" x="228" y="38" width="184" height="120" rx="10" />
+    <text class="d-text" x="320" y="62" text-anchor="middle" font-size="11">Métriques</text>
+    <text class="d-mut" x="320" y="82" text-anchor="middle" font-size="8.5">agrégats chiffrés</text>
+    <text class="d-mut" x="320" y="98" text-anchor="middle" font-size="8.5">dans le temps (RED)</text>
+    <line class="d-line" x1="248" y1="112" x2="392" y2="112" />
+    <text class="d-tag" x="320" y="132" text-anchor="middle" font-size="8.5">« combien, quelle vitesse ? »</text>
+    <text class="d-mut" x="320" y="148" text-anchor="middle" font-size="8">Prometheus · Grafana</text>
+    <rect class="d-box" x="432" y="38" width="184" height="120" rx="10" />
+    <text class="d-text" x="524" y="62" text-anchor="middle" font-size="11">Traces</text>
+    <text class="d-mut" x="524" y="82" text-anchor="middle" font-size="8.5">parcours d'une requête</text>
+    <text class="d-mut" x="524" y="98" text-anchor="middle" font-size="8.5">de service en service</text>
+    <line class="d-line" x1="452" y1="112" x2="596" y2="112" />
+    <text class="d-tag" x="524" y="132" text-anchor="middle" font-size="8.5">« où est passé le temps ? »</text>
+    <text class="d-mut" x="524" y="148" text-anchor="middle" font-size="8">OpenTelemetry · Jaeger</text>
+    <rect class="d-accent" x="150" y="172" width="340" height="26" rx="8" />
+    <text class="d-text" x="320" y="189" text-anchor="middle" font-size="9">réunis : « POURQUOI ça tombe ? » — au-delà du monitoring</text>
+  </svg>
+  <figcaption>Le monitoring dit <em>si</em> ça va mal&nbsp;; l'observabilité — les trois piliers réunis — dit <em>pourquoi</em>.</figcaption>
+</figure>
+
+<p>Premier réflexe : des logs <strong>structurés</strong> en JSON, pas du texte libre. Une ligne JSON est filtrable et indexable par un agrégateur (Loki, Elastic, Datadog). On utilise <code>pino</code>, rapide et orienté JSON.</p>
+<figure class="code-block" data-file="logger.js"><pre><code class="language-javascript">import pino from 'pino';
+
+export const logger = pino({
+  level: process.env.LOG_LEVEL ?? 'info',
+  // En prod : JSON brut. En dev, on branche pino-pretty côté terminal.
+  formatters: {
+    level: (label) =&gt; ({ level: label }), // niveau lisible plutôt qu'un nombre
+  },
+  base: { service: 'orders-api', env: process.env.NODE_ENV },
+});
+
+logger.info({ userId: 42 }, 'commande créée');
+// =&gt; {"level":"info","service":"orders-api","env":"production","userId":42,"msg":"commande créée","time":...}</code></pre></figure>
+<p class="code-caption">Une ligne = un objet JSON ; chaque champ devient interrogeable.</p>
+
+<h2>Corréler par requestId</h2>
+<p>À l'échelle, des milliers de lignes se mélangent. Pour reconstituer <em>une</em> requête, on attache un identifiant unique à chaque log la concernant. <code>AsyncLocalStorage</code> propage ce contexte sans le passer en argument partout.</p>
+<figure class="code-block" data-file="request-context.js"><pre><code class="language-javascript">import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomUUID } from 'node:crypto';
+import { logger } from './logger.js';
+
+const als = new AsyncLocalStorage();
+
+export function requestContext(req, res, next) {
+  const requestId = req.headers['x-request-id'] ?? randomUUID();
+  res.setHeader('x-request-id', requestId);
+  // Tout log émis pendant cette requête héritera du requestId.
+  als.run({ requestId }, () =&gt; next());
+}
+
+export function log() {
+  const store = als.getStore();
+  return store ? logger.child({ requestId: store.requestId }) : logger;
+}
+
+// Dans un handler : log().info('paiement validé');
+// =&gt; {... "requestId":"a1b2-...","msg":"paiement validé"}</code></pre></figure>
+<p class="code-caption">Le <code>requestId</code> circule via le contexte asynchrone, pas via des paramètres.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Propage le <code>x-request-id</code> aux appels sortants (vers d'autres services) : c'est le fil rouge qui relie les logs de toute la chaîne, et la base d'une trace distribuée.</p></div></div>
+
+<h2>Métriques Prometheus</h2>
+<p>Les métriques répondent à « combien, à quelle vitesse, quel taux d'erreur ». Le trio de base (les <strong>RED metrics</strong>) : <strong>R</strong>ate (débit), <strong>E</strong>rrors (erreurs), <strong>D</strong>uration (latence). On expose un endpoint <code>/metrics</code> que Prometheus vient scraper.</p>
+<figure class="code-block" data-file="metrics.js"><pre><code class="language-javascript">import client from 'prom-client';
+
+client.collectDefaultMetrics(); // CPU, mémoire, event loop lag...
+
+const httpDuration = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Latence des requêtes HTTP',
+  labelNames: ['method', 'route', 'status'],
+  buckets: [0.01, 0.05, 0.1, 0.3, 1, 3], // secondes
+});
+
+export function metricsMiddleware(req, res, next) {
+  const end = httpDuration.startTimer();
+  res.on('finish', () =&gt; {
+    end({ method: req.method, route: req.route?.path ?? 'unknown', status: res.statusCode });
+  });
+  next();
+}
+
+export async function metricsHandler(req, res) {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+}
+// GET /metrics =&gt; http_request_duration_seconds_bucket{route="/orders",status="200",le="0.1"} 873</code></pre></figure>
+<p class="code-caption">Un histogramme te donne latence moyenne <em>et</em> percentiles (p95, p99) après agrégation.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour les <strong>traces distribuées</strong>, branche <code>@opentelemetry/sdk-node</code> avec l'auto-instrumentation : un span par requête, propagé entre services, visualisable dans Jaeger ou Tempo. Pour le suivi des erreurs (stack trace, contexte, alertes), un APM comme <strong>Sentry</strong> via <code>Sentry.init()</code> complète bien les logs.</p></div></div>
+
+<h2>Health checks et arrêt propre</h2>
+<p>Les orchestrateurs (Kubernetes, un load balancer) ont besoin de savoir si ton process est <em>vivant</em> et <em>prêt</em>. On distingue deux sondes : <strong>liveness</strong> (le process tourne-t-il ? sinon on le redémarre) et <strong>readiness</strong> (peut-il recevoir du trafic ? dépendances DB OK ?).</p>
+<figure class="code-block" data-file="health.js"><pre><code class="language-javascript">import { pool } from './db.js';
+
+// Liveness : ultra simple, ne touche PAS aux dépendances.
+export function liveness(req, res) {
+  res.status(200).json({ status: 'ok' });
+}
+
+// Readiness : vérifie les dépendances critiques.
+export async function readiness(req, res) {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ready' });
+  } catch {
+    res.status(503).json({ status: 'not-ready' }); // 503 =&gt; pas de trafic
+  }
+}</code></pre></figure>
+<p class="code-caption">Ne fais pas appeler la DB par la liveness : une DB lente ferait redémarrer un process pourtant sain.</p>
+<p>Au déploiement, l'orchestrateur envoie <code>SIGTERM</code> à l'ancien conteneur. Sans gestion, Node tue les requêtes en cours. L'<strong>arrêt propre</strong> consiste à arrêter d'accepter du nouveau trafic, laisser finir les requêtes en vol (<em>drain</em>), puis fermer les ressources.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="La séquence d'un arrêt propre sur SIGTERM, de gauche à droite. Étape 1 : la sonde de readiness répond 503, le load balancer retire l'instance du trafic. Étape 2 : server.close cesse d'accepter de nouvelles connexions. Étape 3 : les requêtes déjà en vol se terminent, c'est le drain. Étape 4 : on ferme le pool de base de données et le process sort proprement avec le code 0. En dessous, un filet de sécurité : un minuteur de dix secondes force la sortie avec le code 1 si le drain n'aboutit pas, pour ne jamais rester bloqué.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">SIGTERM : on draine, puis on ferme — dans l'ordre</text>
+    <rect class="d-box" x="40" y="42" width="128" height="48" rx="8" /><text class="d-text" x="104" y="62" text-anchor="middle" font-size="8.5">1 · readiness 503</text><text class="d-mut" x="104" y="78" text-anchor="middle" font-size="7.5">le LB se retire</text>
+    <line class="d-line" x1="168" y1="66" x2="184" y2="66" />
+    <rect class="d-box" x="184" y="42" width="128" height="48" rx="8" /><text class="d-text" x="248" y="62" text-anchor="middle" font-size="8.5">2 · server.close()</text><text class="d-mut" x="248" y="78" text-anchor="middle" font-size="7.5">plus de nouvelles</text>
+    <line class="d-line" x1="312" y1="66" x2="328" y2="66" />
+    <rect class="d-box" x="328" y="42" width="128" height="48" rx="8" /><text class="d-text" x="392" y="62" text-anchor="middle" font-size="8.5">3 · drain</text><text class="d-mut" x="392" y="78" text-anchor="middle" font-size="7.5">les requêtes finissent</text>
+    <line class="d-line" x1="456" y1="66" x2="472" y2="66" />
+    <rect class="d-accent" x="472" y="42" width="128" height="48" rx="8" /><text class="d-text" x="536" y="62" text-anchor="middle" font-size="8.5">4 · pool.end()</text><text class="d-mut" x="536" y="78" text-anchor="middle" font-size="7.5">exit 0 propre</text>
+    <rect class="d-frame" x="120" y="108" width="400" height="42" rx="8" />
+    <text class="d-tag" x="320" y="127" text-anchor="middle" font-size="8.5">filet : setTimeout(10 s).unref() → exit 1 si le drain traîne</text>
+    <text class="d-mut" x="320" y="143" text-anchor="middle" font-size="7.5">on ne reste jamais bloqué indéfiniment</text>
+  </svg>
+  <figcaption>L'ordre compte&nbsp;: se retirer du trafic, finir l'existant, fermer les ressources — avec un minuteur qui garantit la sortie.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="server.js"><pre><code class="language-javascript">import { app } from './app.js';
+import { pool } from './db.js';
+import { logger } from './logger.js';
+
+const server = app.listen(3000, () =&gt; logger.info('listening on 3000'));
+
+let shuttingDown = false;
+
+async function shutdown(signal) {
+  if (shuttingDown) return; // ignore un second signal
+  shuttingDown = true;
+  logger.info({ signal }, 'arrêt en cours');
+  // 1. Stoppe l'acceptation de nouvelles connexions, draine les requêtes en vol.
+  server.close(async () =&gt; {
+    try {
+      await pool.end();      // 2. ferme le pool DB
+      logger.info('arrêt propre terminé');
+      process.exit(0);
+    } catch (err) {
+      logger.error({ err }, 'erreur durant l’arrêt');
+      process.exit(1);
+    }
+  });
+  // 3. Filet de sécurité : on ne traîne pas indéfiniment.
+  setTimeout(() =&gt; {
+    logger.error('arrêt forcé (timeout)');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () =&gt; shutdown('SIGTERM'));
+process.on('SIGINT', () =&gt; shutdown('SIGINT'));</code></pre></figure>
+<p class="code-caption">Pendant le drain, fais répondre la readiness en 503 pour que le load balancer cesse d'envoyer du trafic.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le déploiement qui renvoyait des 502</p><p>Une équipe déploie plusieurs fois par jour. À chaque déploiement, une poignée d'utilisateurs voit passer une erreur <strong>502 Bad Gateway</strong> pendant quelques secondes. La cause&nbsp;: Kubernetes envoie <code>SIGTERM</code> à l'ancien pod, qui coupe <em>immédiatement</em> ses connexions en cours alors que le load balancer lui route encore du trafic (la mise à jour des règles de routage n'est pas instantanée). Deux correctifs, exactement ceux de cette leçon&nbsp;: gérer <code>SIGTERM</code> pour <strong>drainer</strong> les requêtes en vol au lieu de les tuer, et faire répondre la <strong>readiness en 503</strong> dès le début de l'arrêt pour que le LB retire l'instance <em>avant</em> qu'elle ne ferme. Un court <code>sleep</code> avant <code>server.close</code> laisse même le temps au LB de propager le retrait. Résultat&nbsp;: zéro 502 au déploiement.</p></div></div>
+
+<h2>Conteneuriser avec un Dockerfile multi-stage</h2>
+<p>Une image Docker doit être <strong>petite</strong>, <strong>reproductible</strong> et tourner <strong>sans privilèges</strong>. Le multi-stage sépare l'étape de build (dépendances complètes, compilation) de l'image finale, qui ne garde que le strict nécessaire.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Un Dockerfile multi-stage. À gauche, l'étage de build, jetable, part de node:20-alpine, installe TOUTES les dépendances avec npm ci, copie les sources et lance npm run build qui produit le dossier /app/dist ; cet étage est lourd car il contient les outils, les sources et les devDependencies. À droite, l'étage runtime, publié, repart d'une image node:20-alpine propre, n'installe que les dépendances de production avec npm ci --omit=dev, puis copie UNIQUEMENT le dossier dist compilé depuis l'étage de build et tourne en utilisateur node non-root. Seule cette image finale légère est publiée.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Multi-stage : compiler à part, n'embarquer que le résultat</text>
+    <rect class="d-frame" x="24" y="36" width="270" height="140" rx="10" />
+    <text class="d-mut" x="40" y="54" font-size="9.5">Étage 1 · build (jetable)</text>
+    <rect class="d-box" x="40" y="62" width="238" height="24" rx="6" /><text class="d-text" x="159" y="78" text-anchor="middle" font-size="8">FROM node:20-alpine AS build</text>
+    <rect class="d-box" x="40" y="92" width="238" height="24" rx="6" /><text class="d-text" x="159" y="108" text-anchor="middle" font-size="8">npm ci — toutes les deps</text>
+    <rect class="d-box" x="40" y="122" width="238" height="24" rx="6" /><text class="d-text" x="159" y="138" text-anchor="middle" font-size="8">npm run build → /app/dist</text>
+    <text class="d-tag" x="159" y="166" text-anchor="middle" font-size="8">lourd : outils + sources + devDeps</text>
+    <line class="d-line" x1="294" y1="106" x2="346" y2="106" />
+    <text class="d-mut" x="320" y="98" text-anchor="middle" font-size="7">COPY --from</text>
+    <text class="d-mut" x="320" y="120" text-anchor="middle" font-size="7">=build /dist</text>
+    <rect class="d-accent" x="346" y="36" width="270" height="140" rx="10" />
+    <text class="d-mut" x="362" y="54" font-size="9.5">Étage 2 · runtime (publié)</text>
+    <rect class="d-box" x="362" y="62" width="238" height="24" rx="6" /><text class="d-text" x="481" y="78" text-anchor="middle" font-size="8">FROM node:20-alpine — propre</text>
+    <rect class="d-box" x="362" y="92" width="238" height="24" rx="6" /><text class="d-text" x="481" y="108" text-anchor="middle" font-size="8">npm ci --omit=dev</text>
+    <rect class="d-box" x="362" y="122" width="238" height="24" rx="6" /><text class="d-text" x="481" y="138" text-anchor="middle" font-size="8">COPY dist · USER node</text>
+    <text class="d-tag" x="481" y="166" text-anchor="middle" font-size="8">léger : le nécessaire, non-root</text>
+  </svg>
+  <figcaption>Les outils de build restent dans l'étage jetable&nbsp;; l'image finale ne contient que le <code>dist</code> et les dépendances de production.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="Dockerfile"><pre><code class="language-bash"># --- Stage 1 : build ---
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci                      # install reproductible (lockfile)
+COPY . .
+RUN npm run build               # ex. transpile / bundle
+
+# --- Stage 2 : runtime léger ---
+FROM node:20-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev &amp;&amp; npm cache clean --force
+COPY --from=build /app/dist ./dist
+USER node                       # ne PAS tourner en root
+EXPOSE 3000
+CMD ["node", "dist/server.js"]</code></pre></figure>
+<p class="code-caption">L'image finale n'embarque ni les devDependencies ni les sources brutes : surface d'attaque et poids réduits.</p>
+<figure class="code-block" data-file=".dockerignore"><pre><code class="language-bash">node_modules
+npm-debug.log
+.git
+.env
+coverage
+Dockerfile
+*.md</code></pre></figure>
+<p class="code-caption">Le <code>.dockerignore</code> évite d'envoyer <code>node_modules</code> et tes secrets dans le contexte de build.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Pour aller plus loin que <code>alpine</code>, les images <strong>distroless</strong> (sans shell ni gestionnaire de paquets) réduisent encore la surface d'attaque. Les secrets, eux, n'entrent <em>jamais</em> dans l'image : ils sont injectés à l'exécution via variables d'environnement ou un gestionnaire de secrets.</p></div></div>
+
+<h2>Déploiement et CI/CD</h2>
+<p>Le pipeline type, à chaque push : <strong>tests &rarr; build de l'image &rarr; push vers un registre &rarr; déploiement</strong>. L'image taguée (par exemple avec le SHA du commit) devient l'artefact immuable que tu promeus de la pré-prod à la prod.</p>
+<figure class="code-block" data-file=".github/workflows/deploy.yml"><pre><code class="language-bash">name: deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm test               # bloque le déploiement si rouge
+      - run: docker build -t registry.example.com/orders:${{ github.sha }} .
+      - run: docker push registry.example.com/orders:${{ github.sha }}
+      # puis : déclencher le rollout (kubectl set image, ou API du PaaS)</code></pre></figure>
+<p class="code-caption">Les tests sont une <strong>barrière</strong> : pas de build d'image si la suite échoue.</p>
+<p>Côté cible : un <strong>PaaS</strong> (Render, Fly.io, Railway) si tu veux la simplicité ; <strong>Kubernetes</strong> si tu as besoin d'orchestration fine (probes, autoscaling) ; ou <strong>PM2</strong> sur une VM classique (<code>pm2 start dist/server.js -i max</code> pour le mode cluster et le redémarrage auto). Dans tous les cas, la configuration passe par des <strong>variables d'environnement</strong> et les secrets par un coffre dédié (Vault, secrets du PaaS, GitHub Secrets), jamais en dur dans le code.</p>
+
+<h2>Fiabiliser les appels externes</h2>
+<p>Toute dépendance réseau peut être lente ou tomber. Sans garde-fous, un service externe gelé bloque tes workers et propage la panne en cascade. Trois mécanismes : <strong>timeout</strong> (ne jamais attendre l'infini), <strong>retry</strong> (réessayer une panne transitoire, avec backoff), <strong>circuit breaker</strong> (couper net après trop d'échecs pour laisser le service récupérer).</p>
+<figure class="code-block" data-file="external.js"><pre><code class="language-javascript">// Timeout natif via AbortSignal : indispensable sur tout fetch sortant.
+async function fetchJSON(url, { retries = 2 } = {}) {
+  for (let attempt = 0; attempt &lt;= retries; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      // Backoff exponentiel + jitter pour ne pas marteler le service.
+      const delay = 2 ** attempt * 100 + Math.random() * 100;
+      await new Promise((r) =&gt; setTimeout(r, delay));
+    }
+  }
+}
+// Un timeout de 2s coupe l'attente ; 3 tentatives espacées absorbent un hoquet réseau.</code></pre></figure>
+<p class="code-caption">Le retry ne s'applique qu'aux opérations <strong>idempotentes</strong> : ne réessaie pas un paiement à l'aveugle.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour le <strong>circuit breaker</strong>, une lib comme <code>opossum</code> ouvre le circuit après un seuil d'échecs et renvoie immédiatement une erreur (ou un fallback) le temps que le service distant se remette. Tu protèges ainsi tes propres ressources.</p></div></div>
+
+<h2>Le 12-factor app, en résumé</h2>
+<p>La méthodologie <strong>12-factor</strong> condense les bonnes pratiques d'une app prête pour le cloud. Les points qui te concernent directement ici : <strong>config dans l'environnement</strong> (pas de valeurs en dur), <strong>dépendances déclarées</strong> explicitement (lockfile), <strong>processus sans état</strong> (l'état va en DB ou cache, jamais en mémoire locale), <strong>logs comme flux</strong> (écris sur <code>stdout</code>, l'infra se charge de la collecte), <strong>parité dev/prod</strong> (même image partout), et <strong>jetabilité</strong> (démarrage rapide, arrêt propre &mdash; exactement ce qu'on a codé plus haut).</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Des <strong>logs non structurés</strong> (<code>console.log('user ' + id + ' ok')</code>) deviennent illisibles et impossibles à corréler à l'échelle. Pas d'<strong>arrêt propre</strong> = requêtes coupées à chaque déploiement. Image <strong>en root</strong> ou trop grosse = surface d'attaque et lenteur. <strong>Secrets dans l'image</strong> = fuite garantie au moindre <code>docker history</code>. Pas de <strong>health check</strong> = l'orchestrateur route vers un process mort. Pas de <strong>timeout</strong> sur un appel externe = un service gelé entraîne toute ta flotte dans une cascade de pannes.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p><strong>OpenTelemetry</strong> en profondeur (spans, baggage, exporters), <strong>Kubernetes</strong> (probes <code>liveness</code>/<code>readiness</code>, autoscaling horizontal HPA), le <strong>service mesh</strong> (Istio, Linkerd) pour la résilience réseau hors-code, les déploiements <strong>blue-green</strong> et <strong>canary</strong> pour limiter le rayon d'impact, les <strong>feature flags</strong> pour activer du code sans redéployer, et la culture <strong>SRE</strong> (SLI/SLO, budgets d'erreur).</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — mettre une app Node en production</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Réponse</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Logs</td><td>structurés JSON (<code>pino</code>)</td><td>+ <code>requestId</code> via <code>AsyncLocalStorage</code></td></tr>
+      <tr><td>Métriques</td><td>RED via <code>prom-client</code></td><td>endpoint <code>/metrics</code> scrapé par Prometheus</td></tr>
+      <tr><td>Traces</td><td>OpenTelemetry</td><td>un span par requête, propagé entre services</td></tr>
+      <tr><td>Santé</td><td><code>liveness</code> + <code>readiness</code></td><td>la liveness ne touche pas la DB</td></tr>
+      <tr><td>Arrêt</td><td><code>SIGTERM</code> → drain</td><td><code>server.close</code> puis <code>pool.end</code>, minuteur filet</td></tr>
+      <tr><td>Image</td><td>multi-stage, <code>USER node</code></td><td>petite, non-root, avec <code>.dockerignore</code></td></tr>
+      <tr><td>Config</td><td>variables d'env (12-factor)</td><td>secrets injectés à l'exécution, jamais dans l'image</td></tr>
+      <tr><td>Appels externes</td><td>timeout + retry + breaker</td><td>retry sur opérations idempotentes seulement</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Observabilité</dt><dd>Capacité à comprendre l'état interne d'un système à partir de ses sorties (logs, métriques, traces). Répond à «&nbsp;pourquoi ça tombe&nbsp;?&nbsp;», là où le monitoring dit seulement «&nbsp;est-ce que ça tombe&nbsp;?&nbsp;».</dd>
+  <dt>Log structuré</dt><dd>Ligne de journal émise comme objet (JSON) plutôt qu'en texte libre&nbsp;: chaque champ devient filtrable et indexable par un agrégateur (Loki, Elastic, Datadog).</dd>
+  <dt>RED metrics</dt><dd>Trio de métriques de base d'un service&nbsp;: <em>Rate</em> (débit), <em>Errors</em> (taux d'erreur), <em>Duration</em> (latence). Exposées à Prometheus, elles résument la santé côté trafic.</dd>
+  <dt>Liveness / Readiness</dt><dd>Deux sondes de santé. La <em>liveness</em> dit si le process est vivant (sinon on le redémarre)&nbsp;; la <em>readiness</em> dit s'il peut recevoir du trafic (dépendances OK). La liveness ne doit pas dépendre de la base.</dd>
+  <dt>Arrêt propre</dt><dd>Séquence déclenchée par <code>SIGTERM</code>&nbsp;: cesser d'accepter de nouvelles connexions, laisser finir les requêtes en vol (drain), fermer les ressources, puis sortir — sans couper de requête.</dd>
+  <dt>Multi-stage build</dt><dd>Dockerfile en plusieurs étages&nbsp;: un étage compile (dépendances complètes), l'image finale ne copie que l'artefact et les dépendances de production. Image plus petite et plus sûre.</dd>
+  <dt>Circuit breaker</dt><dd>Garde-fou qui «&nbsp;ouvre le circuit&nbsp;» après trop d'échecs vers une dépendance&nbsp;: les appels suivants échouent vite (ou renvoient un repli) le temps qu'elle récupère, évitant une panne en cascade.</dd>
+  <dt>12-factor app</dt><dd>Méthodologie de bonnes pratiques pour une app cloud&nbsp;: config dans l'environnement, processus sans état, logs comme flux sur <code>stdout</code>, parité dev/prod, jetabilité (démarrage et arrêt rapides).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>L'observabilité repose sur <strong>logs structurés</strong> (JSON + <code>requestId</code>), <strong>métriques</strong> (RED via Prometheus) et <strong>traces</strong> (OpenTelemetry) ; un APM comme Sentry suit les erreurs.</li>
+<li><strong>Liveness</strong> et <strong>readiness</strong> renseignent l'orchestrateur ; l'<strong>arrêt propre</strong> sur <code>SIGTERM</code> draine les requêtes avant de fermer le serveur et la DB.</li>
+<li>Un <code>Dockerfile</code> <strong>multi-stage</strong>, <strong>non-root</strong>, basé sur une image minimale, avec <code>.dockerignore</code> et secrets injectés à l'exécution.</li>
+<li>La <strong>CI/CD</strong> teste, build, push et déploie une image immuable ; la config vit dans l'environnement (<strong>12-factor</strong>).</li>
+<li>Les appels externes sont protégés par <strong>timeout</strong>, <strong>retry</strong> (backoff) et <strong>circuit breaker</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi la sonde de <strong>liveness</strong> ne doit-elle pas interroger la base de données, contrairement à la <strong>readiness</strong> ?</li><li>Que se passe-t-il pour les requêtes en cours si tu ne gères pas <code>SIGTERM</code> lors d'un déploiement ?</li><li>Cite deux raisons d'utiliser un <code>Dockerfile</code> multi-stage plutôt qu'une seule étape.</li><li>Sur quel type d'opération un <strong>retry</strong> automatique est-il dangereux, et pourquoi ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi la sonde de liveness ne doit-elle pas interroger la base de données, contrairement à la readiness ?","a":["La liveness teste si le processus est vivant (à redémarrer s'il est bloqué) : le lier à la BD le ferait redémarrer à tort lors d'un souci passager. La readiness, elle, teste si l'app est prête à recevoir du trafic (dépendances incluses)","C'est l'inverse","Les deux doivent tester la BD","Aucune ne doit tester quoi que ce soit"],"correct":0,"explain":"Liveness = « le process tourne-t-il ? » ; un échec entraîne un redémarrage. Y mêler la BD provoquerait des redémarrages inutiles quand la base hoquette. Readiness = « puis-je servir des requêtes ? » : là, vérifier la BD a du sens (on retire l'instance du trafic sans la tuer)."},
+  {"q":"Que se passe-t-il pour les requêtes en cours si tu ne gères pas SIGTERM lors d'un déploiement ?","a":["Elles sont coupées brutalement (connexions fermées), provoquant des erreurs côté clients. Un arrêt propre les laisse se terminer d'abord","Elles continuent toujours","Elles sont mises en file et rejouées","Rien, c'est sans effet"],"correct":0,"explain":"Sans gestion de SIGTERM, le process s'arrête immédiatement et les traitements en vol échouent. Un graceful shutdown attend la fin des requêtes en cours avant de quitter, évitant des réponses interrompues."},
+  {"q":"Cite deux raisons d'utiliser un Dockerfile multi-stage plutôt qu'une seule étape.","a":["Une image finale plus petite (on n'embarque pas les outils de build ni les devDependencies) et une séparation build/runtime (moins de surface d'attaque en production)","Cela accélère le réseau","Cela double la taille de l'image","C'est uniquement esthétique"],"correct":0,"explain":"Le multi-stage compile dans une étape (avec tous les outils) puis ne copie que le résultat nécessaire dans une image d'exécution légère. On obtient une image plus compacte et plus sûre, sans dépendances de développement."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["pino"],"placeholder":"le nom du logger JSON rapide configuré ici (avec un requestId par requête)","hints":["Très utilisé en production pour des logs structurés.","Quatre lettres, finit par « no ».","import ???? from 'pino'."],"link":{"href":"lecon-20.html","label":"Revoir « Journaliser »"}},
+  {"type":"text","accept":["server.close","close","close()","server.close()"],"placeholder":"la méthode du serveur HTTP pour cesser d'accepter de NOUVELLES connexions (arrêt propre)","hints":["Les requêtes déjà en cours peuvent se terminer.","On l'appelle à la réception de SIGTERM.","server.?????()"],"link":{"href":"lecon-20.html","label":"Revoir « L'arrêt propre »"}},
+  {"type":"text","accept":[".dockerignore","dockerignore"],"placeholder":"le fichier (équivalent .gitignore) qui exclut des fichiers du contexte de build Docker","hints":["Évite d'envoyer node_modules, .git… au démon Docker.","Accélère le build et allège l'image.",".docker?????"],"link":{"href":"lecon-20.html","label":"Revoir « Conteneuriser »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Configure un logger <code>pino</code> et un middleware Express qui génère un <code>requestId</code> (ou réutilise l'en-tête <code>x-request-id</code> entrant), le renvoie dans la réponse, et le rattache à chaque log de la requête.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">import pino from 'pino';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomUUID } from 'node:crypto';
+
+const logger = pino({ level: 'info', base: { service: 'demo' } });
+const als = new AsyncLocalStorage();
+
+export function requestId(req, res, next) {
+  const id = req.headers['x-request-id'] ?? randomUUID();
+  res.setHeader('x-request-id', id);
+  als.run({ id }, () =&gt; next());
+}
+
+export function log() {
+  const store = als.getStore();
+  return store ? logger.child({ requestId: store.id }) : logger;
+}
+
+// app.use(requestId);
+// app.get('/', (req, res) =&gt; { log().info('hit /'); res.send('ok'); });
+// =&gt; {"service":"demo","requestId":"...","msg":"hit /"}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Implémente un <strong>arrêt propre</strong> : sur <code>SIGTERM</code>, cesse d'accepter de nouvelles connexions, attends la fin des requêtes en vol, ferme une ressource (pool DB simulé), et force la sortie après 5 secondes si le drain n'aboutit pas.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">import http from 'node:http';
+
+const fakePool = { end: async () =&gt; console.log('pool fermé') };
+
+const server = http.createServer((req, res) =&gt; {
+  setTimeout(() =&gt; res.end('ok'), 500); // requête « longue »
+});
+server.listen(3000, () =&gt; console.log('up on 3000'));
+
+function shutdown(signal) {
+  console.log(`${signal} reçu, drain...`);
+  server.close(async () =&gt; {
+    await fakePool.end();
+    console.log('arrêt propre terminé');
+    process.exit(0);
+  });
+  setTimeout(() =&gt; {
+    console.error('arrêt forcé');
+    process.exit(1);
+  }, 5_000).unref();
+}
+
+process.on('SIGTERM', () =&gt; shutdown('SIGTERM'));
+process.on('SIGINT', () =&gt; shutdown('SIGINT'));
+// kill -TERM &lt;pid&gt; =&gt; les requêtes en cours se terminent avant l'exit</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un <code>Dockerfile</code> <strong>multi-stage</strong> pour une app Node : une étape de build avec <code>npm ci</code> complet, une étape runtime sur <code>alpine</code> qui n'installe que les dépendances de production, tourne en utilisateur <code>node</code> (non-root) et démarre <code>dist/server.js</code>. Ajoute le <code>.dockerignore</code> correspondant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash"># Dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev &amp;&amp; npm cache clean --force
+COPY --from=build /app/dist ./dist
+USER node
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+
+# .dockerignore
+# node_modules
+# .git
+# .env
+# coverage
+# Dockerfile</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

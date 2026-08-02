@@ -1,0 +1,91 @@
+<p>Un script qui automatise une tâche réelle doit savoir <strong>réagir aux problèmes</strong>&nbsp;: un fichier absent, un service injoignable, une saisie aberrante. PowerShell a un modèle d'erreurs particulier qu'il faut comprendre pour écrire du code robuste&nbsp;: la distinction entre erreurs <strong>terminantes</strong> et <strong>non terminantes</strong>.</p>
+
+<h2>Deux familles d'erreurs</h2>
+<p>Une erreur <strong>non terminante</strong> signale un souci mais laisse le script continuer (par exemple, un fichier introuvable parmi plusieurs). Une erreur <strong>terminante</strong> interrompt l'exécution. La plupart des cmdlets émettent des erreurs non terminantes par défaut&nbsp;: un <code>try/catch</code> ne les attrapera donc pas… sauf si on les transforme en terminantes.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell"># Non terminante : le script continue malgré l'erreur affichée
+Get-Item "C:\inexistant.txt"
+Write-Output "On continue quand même"</code></pre></figure>
+
+<h2>try / catch / finally</h2>
+<p>Le bloc <code>try</code> contient le code risqué&nbsp;; <code>catch</code> s'exécute si une erreur <strong>terminante</strong> survient&nbsp;; <code>finally</code> s'exécute toujours (nettoyage). Pour capturer une erreur de cmdlet, force-la en terminante avec <code>-ErrorAction Stop</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">try {
+    $contenu = Get-Content "C:\inexistant.txt" -ErrorAction Stop
+    Write-Output $contenu
+}
+catch {
+    Write-Warning "Lecture impossible : $($_.Exception.Message)"
+}
+finally {
+    Write-Output "Fin de la tentative."
+}</code></pre></figure>
+<p class="code-caption">Dans le <code>catch</code>, <code>$_</code> est l'enregistrement d'erreur&nbsp;; <code>$_.Exception.Message</code> en donne le texte.</p>
+
+<h2>-ErrorAction et $ErrorActionPreference</h2>
+<p>Le paramètre commun <code>-ErrorAction</code> règle le comportement d'<strong>une</strong> commande&nbsp;: <code>Stop</code> (lève une terminante), <code>SilentlyContinue</code> (ignore en silence), <code>Continue</code> (défaut). La variable <code>$ErrorActionPreference</code> fixe le comportement global du script.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-Item "x" -ErrorAction SilentlyContinue   # n'affiche rien
+$ErrorActionPreference = "Stop"               # tout devient terminant</code></pre></figure>
+
+<h2>Capturer une erreur ciblée</h2>
+<p>On peut prévoir plusieurs <code>catch</code>, par type d'exception, pour réagir différemment selon le problème.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">try {
+    [int]$age = "abc"   # conversion impossible
+}
+catch [System.Management.Automation.RuntimeException] {
+    Write-Warning "Valeur non numérique"
+}
+catch {
+    Write-Warning "Autre erreur : $($_.Exception.Message)"
+}</code></pre></figure>
+
+<h2>Lever ses propres erreurs</h2>
+<p><code>throw</code> déclenche une erreur terminante&nbsp;; <code>Write-Error</code> émet une erreur non terminante. Utilise <code>throw</code> quand la situation empêche de poursuivre.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">function Get-Inverse {
+    param([double]$N)
+    if ($N -eq 0) {
+        throw "Division par zéro impossible"
+    }
+    1 / $N
+}
+
+try { Get-Inverse -N 0 }
+catch { Write-Warning $_.Exception.Message }</code></pre></figure>
+
+<h2>Inspecter les erreurs passées</h2>
+<p>La variable automatique <code>$Error</code> est une liste des erreurs récentes, la plus récente en tête (<code>$Error[0]</code>). Pratique pour déboguer après coup.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">$Error[0]                       # dernière erreur
+$Error[0].ScriptStackTrace      # où elle s'est produite
+$Error.Clear()                  # vider l'historique</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Entourer une cmdlet d'un <code>try/catch</code> sans <code>-ErrorAction Stop</code>&nbsp;: comme l'erreur est non terminante, le <code>catch</code> ne se déclenche jamais et tu crois à tort que tout va bien. Pense toujours à <code>-ErrorAction Stop</code> dans un <code>try</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour les opérations en masse, <code>-ErrorVariable maVar</code> collecte les erreurs dans une variable sans interrompre le traitement. Tu traites le lot, puis tu examines <code>$maVar</code> pour les échecs.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les erreurs sont <strong>terminantes</strong> ou <strong>non terminantes</strong>&nbsp;; un <code>try/catch</code> n'attrape que les terminantes.</li>
+  <li><code>-ErrorAction Stop</code> force une cmdlet à lever une erreur terminante.</li>
+  <li><code>try/catch/finally</code> structure la gestion&nbsp;; <code>$_</code> y porte l'erreur.</li>
+  <li><code>throw</code> (terminante) et <code>Write-Error</code> (non terminante) signalent tes propres problèmes.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un <code>try/catch</code> n'attrape-t-il parfois pas l'erreur d'une cmdlet&nbsp;?</li><li>Quand utiliser <code>throw</code> plutôt que <code>Write-Error</code>&nbsp;?</li><li>À quoi sert le bloc <code>finally</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Tente de lire un fichier qui n'existe pas, et affiche un message d'avertissement propre au lieu de l'erreur brute.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">try {
+    Get-Content "absent.txt" -ErrorAction Stop
+}
+catch {
+    Write-Warning "Fichier introuvable"
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>Get-Quotient</code> qui lève une erreur claire si le diviseur est zéro.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">function Get-Quotient {
+    param([double]$A, [double]$B)
+    if ($B -eq 0) { throw "Le diviseur ne peut pas être zéro" }
+    $A / $B
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Parcours une liste de chemins de fichiers&nbsp;; lis chacun, et continue malgré les fichiers manquants en mémorisant les échecs.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">$echecs = @()
+foreach ($chemin in "a.txt", "b.txt") {
+    try { Get-Content $chemin -ErrorAction Stop }
+    catch { $echecs += $chemin }
+}
+"Échecs : $($echecs -join ', ')"</code></pre></figure></details></div>

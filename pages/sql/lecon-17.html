@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Optimiser les requêtes et les index — Leçon 17 · SQL · Syntaxe</title>
+    <meta name="description" content="Comprends le planificateur de requêtes, lis un plan EXPLAIN, choisis les bons index (B-tree, GIN, composites, partiels, couvrants) et évite le N+1." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="sql" data-lesson="lecon-17.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">SQL</a></li>
+            <li aria-current="page">Leçon 17</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 07 · SQL en production — Leçon 17</p>
+              <h1 class="lesson-header__title">Optimiser les requêtes et les index</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Cours SQL recommandé</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Savoir lire un plan d'exécution avec <code>EXPLAIN</code> et <code>EXPLAIN ANALYZE</code> et distinguer coût estimé et temps réel&nbsp;;</li>
+                  <li>Savoir choisir le bon type d'index (B-tree, GIN/GiST, composite, partiel, couvrant, sur expression) selon la requête&nbsp;;</li>
+                  <li>Savoir reconnaître quand un index <strong>n'aide pas</strong> et le coût d'une condition non <em>sargable</em>&nbsp;;</li>
+                  <li>Savoir appliquer une méthode d'optimisation fondée sur la mesure et éviter le piège N+1.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais déjà écrire des requêtes correctes. La question maintenant n'est plus «&nbsp;est-ce que ça renvoie le bon résultat&nbsp;?&nbsp;» mais «&nbsp;est-ce que ça le renvoie vite, sur une table de dix millions de lignes, sans saturer le serveur&nbsp;?&nbsp;». Une même requête peut s'exécuter en 2&nbsp;ms ou en 8&nbsp;s selon la façon dont la base décide de la lire. Cette décision, c'est le travail du <strong>planificateur</strong>, et ton levier principal pour l'orienter, c'est l'<strong>index</strong>.</p>
+
+<p>Dans cette leçon, tu vas apprendre à lire ce que la base fait réellement (et non ce que tu crois qu'elle fait), à choisir des index pertinents plutôt qu'à en empiler au hasard, et à reconnaître les situations où un index ne sert à rien. Règle d'or annoncée tout de suite&nbsp;: <strong>on ne devine pas, on mesure avec <code>EXPLAIN</code></strong>.</p>
+
+<h2>Le planificateur de requêtes</h2>
+<p>Le SQL est <em>déclaratif</em>&nbsp;: tu dis <em>quoi</em> tu veux, pas <em>comment</em> l'obtenir. Pour une même requête, il existe souvent plusieurs chemins d'exécution (parcourir toute la table, passer par un index, joindre dans un sens ou dans l'autre…). Le planificateur évalue ces chemins, estime le <strong>coût</strong> de chacun à partir des statistiques de la table, et choisit le moins cher. <code>EXPLAIN</code> te montre le plan choisi sans exécuter la requête&nbsp;; <code>EXPLAIN ANALYZE</code> l'exécute vraiment et ajoute les temps mesurés.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">EXPLAIN
+SELECT id, email
+FROM   clients
+WHERE  pays = 'FR';</code></pre></figure>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">Seq Scan on clients  (cost=0.00..2310.00 rows=12000 width=36)
+  Filter: (pays = 'FR'::text)</code></pre></figure>
+
+<p>Lecture du plan&nbsp;: <code>Seq Scan</code> = parcours séquentiel de toute la table. <code>cost=0.00..2310.00</code> donne le coût de démarrage (0) et le coût total estimé (2310, en unités arbitraires&nbsp;: ce n'est pas une durée). <code>rows=12000</code> est le nombre de lignes <em>estimé</em> en sortie, <code>width=36</code> la taille moyenne d'une ligne en octets. Ajoutons la mesure réelle&nbsp;:</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">EXPLAIN ANALYZE
+SELECT id, email
+FROM   clients
+WHERE  pays = 'FR';</code></pre></figure>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">Seq Scan on clients  (cost=0.00..2310.00 rows=12000 width=36)
+                      (actual time=0.018..14.802 rows=11873 loops=1)
+  Filter: (pays = 'FR'::text)
+  Rows Removed by Filter: 88127
+Planning Time: 0.121 ms
+Execution Time: 18.640 ms</code></pre></figure>
+
+<p>La ligne <code>actual time</code> donne le temps réel (premier chiffre = avant la première ligne, second = avant la dernière), <code>rows=11873</code> le nombre réel de lignes, et <code>Rows Removed by Filter: 88127</code> révèle l'essentiel&nbsp;: la base a lu 100&nbsp;000 lignes pour n'en garder que ~12&nbsp;%. <code>Execution Time</code> est la durée totale. Quand l'estimé (<code>rows=12000</code>) colle au réel (<code>rows=11873</code>), les statistiques sont saines.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les coûts (<code>cost</code>) sont sans unité et sans dimension réelle&nbsp;: ils servent à <em>comparer</em> des plans entre eux, pas à prédire une durée. Pour du temps, il faut <code>ANALYZE</code>. Et pour voir les lectures disque, ajoute <code>EXPLAIN (ANALYZE, BUFFERS)</code>.</p></div></div>
+
+<h2>Les scans et les jointures</h2>
+<p>Trois façons de lire une table reviennent sans cesse. Le <strong>Seq Scan</strong> lit toute la table de bout en bout&nbsp;: optimal quand tu veux une grosse fraction des lignes ou que la table est petite. L'<strong>Index Scan</strong> traverse un index pour trouver les lignes ciblées puis va chercher chaque ligne dans la table&nbsp;: gagnant quand le filtre est très sélectif. L'<strong>Index Only Scan</strong> répond <em>sans toucher la table</em>, parce que toutes les colonnes demandées sont déjà dans l'index&nbsp;: le plus rapide.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 220" role="img" aria-label="Les trois façons de lire une table filtrée. Le Seq Scan lit toutes les lignes de la table et n'en garde qu'une fraction, coûteux sur une grosse table. L'Index Scan traverse un index trié qui cible les lignes voulues, puis va lire uniquement ces lignes dans la table, gagnant quand le filtre est très sélectif. L'Index Only Scan trouve toutes les colonnes demandées dans l'index lui-même et répond sans toucher la table, la stratégie la plus rapide.">
+    <text class="d-label" x="110" y="20" text-anchor="middle" font-size="11">Seq Scan</text>
+    <rect class="d-frame" x="55" y="32" width="110" height="138" fill="none" />
+    <rect class="d-box" x="63" y="42" width="94" height="12" /><rect class="d-accent" x="63" y="58" width="94" height="12" /><rect class="d-box" x="63" y="74" width="94" height="12" /><rect class="d-box" x="63" y="90" width="94" height="12" /><rect class="d-accent" x="63" y="106" width="94" height="12" /><rect class="d-box" x="63" y="122" width="94" height="12" /><rect class="d-box" x="63" y="138" width="94" height="12" />
+    <text class="d-mut" x="110" y="190" text-anchor="middle" font-size="9">lit TOUT, garde peu</text>
+    <text class="d-mut" x="110" y="204" text-anchor="middle" font-size="9">(cher si table énorme)</text>
+
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="11">Index Scan</text>
+    <rect class="d-accent" x="232" y="64" width="64" height="62" /><text class="d-text" x="264" y="90" text-anchor="middle" font-size="9">index</text><text class="d-mut" x="264" y="105" text-anchor="middle" font-size="8">trié</text>
+    <line class="d-line" x1="298" y1="95" x2="338" y2="95" /><circle class="d-dot" cx="338" cy="95" r="3" />
+    <rect class="d-frame" x="344" y="50" width="62" height="102" fill="none" /><rect class="d-accent" x="350" y="70" width="50" height="12" /><rect class="d-accent" x="350" y="112" width="50" height="12" /><text class="d-mut" x="375" y="147" text-anchor="middle" font-size="8">table</text>
+    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="9">l'index cible les lignes,</text>
+    <text class="d-mut" x="320" y="204" text-anchor="middle" font-size="9">on ne lit que celles-là</text>
+
+    <text class="d-label" x="525" y="20" text-anchor="middle" font-size="11">Index Only Scan</text>
+    <rect class="d-accent" x="470" y="56" width="110" height="58" /><text class="d-text" x="525" y="80" text-anchor="middle" font-size="9">index</text><text class="d-mut" x="525" y="95" text-anchor="middle" font-size="8">contient déjà</text><text class="d-mut" x="525" y="107" text-anchor="middle" font-size="8">les colonnes</text>
+    <rect class="d-frame" x="470" y="126" width="110" height="34" fill="none" /><text class="d-mut" x="525" y="147" text-anchor="middle" font-size="8">table : non lue</text>
+    <text class="d-mut" x="525" y="190" text-anchor="middle" font-size="9">répond sans toucher</text>
+    <text class="d-mut" x="525" y="204" text-anchor="middle" font-size="9">la table : le + rapide</text>
+  </svg>
+  <figcaption>Trois stratégies de lecture&nbsp;: le <strong>Seq Scan</strong> parcourt toute la table, l'<strong>Index Scan</strong> passe par l'index puis lit les lignes ciblées, l'<strong>Index Only Scan</strong> répond depuis le seul index. Le planificateur tranche selon la <em>sélectivité</em> du filtre.</figcaption>
+</figure>
+
+<p>Crée un index sur la colonne filtrée et le plan bascule&nbsp;:</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">CREATE INDEX idx_commandes_statut ON commandes (statut);
+
+EXPLAIN ANALYZE
+SELECT id, montant
+FROM   commandes
+WHERE  statut = 'annulee';   -- statut rare : 0,5 % des lignes</code></pre></figure>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">Index Scan using idx_commandes_statut on commandes
+   (cost=0.42..38.10 rows=520 width=12)
+   (actual time=0.041..0.612 rows=503 loops=1)
+   Index Cond: (statut = 'annulee'::text)
+Execution Time: 0.740 ms</code></pre></figure>
+
+<p>Pour les <strong>jointures</strong>, le planificateur choisit aussi un algorithme&nbsp;: <strong>Nested Loop</strong> (pour chaque ligne de la table externe, on cherche les correspondances&nbsp;: excellent si la table interne a un index et que le côté externe est petit), <strong>Hash Join</strong> (on construit une table de hachage de la plus petite relation&nbsp;: efficace sur de gros volumes sans tri), <strong>Merge Join</strong> (les deux côtés sont triés sur la clé puis fusionnés&nbsp;: idéal quand les données sont déjà triées ou indexées). Tu n'imposes pas l'algorithme&nbsp;: tu donnes des index et de bonnes statistiques, le planificateur tranche.</p>
+
+<h2>Les index en profondeur</h2>
+<p>Le <strong>B-tree</strong> est l'index par défaut et couvre la grande majorité des besoins&nbsp;: égalité (<code>=</code>), plages (<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>BETWEEN</code>), tri (<code>ORDER BY</code>) et préfixe de chaîne (<code>LIKE 'abc%'</code>). Pour les cas spéciaux&nbsp;: <strong>hash</strong> (égalité stricte uniquement), <strong>GIN</strong> et <strong>GiST</strong> pour les types composites&nbsp;— JSONB, plein-texte (<code>tsvector</code>), tableaux, données géographiques. Au-delà du type, plusieurs formes d'index changent tout&nbsp;:</p>
+
+<p><strong>Index composite</strong> (plusieurs colonnes). L'ordre des colonnes est décisif&nbsp;: l'index est utilisable pour un filtre sur la première colonne, ou sur la première <em>et</em> la deuxième, mais pas sur la deuxième seule. Pense à un annuaire trié par nom puis prénom&nbsp;: chercher par prénom seul n'aide pas.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Requête fréquente : filtrer par client, trier par date
+CREATE INDEX idx_cmd_client_date
+  ON commandes (client_id, creee_le DESC);
+
+EXPLAIN ANALYZE
+SELECT id, montant
+FROM   commandes
+WHERE  client_id = 4071
+ORDER  BY creee_le DESC
+LIMIT  10;</code></pre></figure>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">Index Scan using idx_cmd_client_date on commandes
+   (cost=0.42..8.71 rows=14 width=12) (actual time=0.029..0.034 rows=10 loops=1)
+   Index Cond: (client_id = 4071)
+Execution Time: 0.061 ms   -- pas de tri separe : l'index est deja ordonne</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un index composite sur (client_id, creee_le DESC) est trié d'abord par client_id, puis par date décroissante. Les lignes d'un même client sont donc contiguës et déjà triées par date. Un filtre WHERE client_id = 4071 ORDER BY creee_le DESC saute directement sur ce bloc contigu et lit les premières entrées sans tri : c'est un Index Scan efficace. En revanche, un filtre sur creee_le seul, sans client_id, ne peut pas utiliser l'index : les dates sont éparpillées entre tous les groupes de clients.">
+    <text class="d-label" x="160" y="20" text-anchor="middle" font-size="11">index (client_id, creee_le DESC)</text>
+    <rect class="d-frame" x="28" y="30" width="264" height="150" fill="none" />
+    <rect class="d-box" x="42" y="40" width="236" height="22" /><text class="d-text" x="52" y="55" font-size="9" font-family="monospace">4070 · 12 mars</text>
+    <rect class="d-accent" x="42" y="66" width="236" height="22" /><text class="d-text" x="52" y="81" font-size="9" font-family="monospace">4071 · 09 mai</text>
+    <rect class="d-accent" x="42" y="92" width="236" height="22" /><text class="d-text" x="52" y="107" font-size="9" font-family="monospace">4071 · 03 mai</text>
+    <rect class="d-accent" x="42" y="118" width="236" height="22" /><text class="d-text" x="52" y="133" font-size="9" font-family="monospace">4071 · 27 avr</text>
+    <rect class="d-box" x="42" y="144" width="236" height="22" /><text class="d-text" x="52" y="159" font-size="9" font-family="monospace">4072 · 11 mai</text>
+    <text class="d-mut" x="160" y="192" text-anchor="middle" font-size="9">trié par client, puis par date ↓ (4071 = bloc contigu)</text>
+
+    <rect class="d-frame" x="318" y="40" width="302" height="58" fill="none" />
+    <text class="d-tag" x="330" y="60" font-size="9" font-family="monospace">✓ WHERE client_id = 4071</text>
+    <text class="d-mut" x="330" y="75" font-size="8.5" font-family="monospace">ORDER BY creee_le DESC</text>
+    <text class="d-mut" x="330" y="90" font-size="9">→ bloc déjà trié : Index Scan</text>
+
+    <rect class="d-frame" x="318" y="116" width="302" height="58" fill="none" />
+    <text class="d-tag" x="330" y="136" font-size="9" font-family="monospace">✗ WHERE creee_le = '03 mai'</text>
+    <text class="d-mut" x="330" y="151" font-size="8.5">client_id absent → dates éparpillées</text>
+    <text class="d-mut" x="330" y="166" font-size="9">→ l'index ne sert pas</text>
+  </svg>
+  <figcaption>L'ordre des colonnes décide de tout&nbsp;: l'index est trié d'abord par <code>client_id</code>. Un filtre sur la <strong>première</strong> colonne exploite le bloc contigu déjà trié&nbsp;; un filtre sur la <strong>seconde seule</strong> (<code>creee_le</code>) ne peut pas l'utiliser.</figcaption>
+</figure>
+
+<p><strong>Index partiel</strong> (avec <code>WHERE</code>)&nbsp;: n'indexe qu'un sous-ensemble, donc plus petit et plus rapide à maintenir. Parfait pour une valeur rare souvent recherchée.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- On ne recherche que les commandes encore en attente
+CREATE INDEX idx_cmd_attente
+  ON commandes (creee_le)
+  WHERE statut = 'en_attente';</code></pre></figure>
+
+<p><strong>Index couvrant</strong> (<code>INCLUDE</code>)&nbsp;: ajoute des colonnes «&nbsp;en charge utile&nbsp;» pour permettre un <em>Index Only Scan</em> sans qu'elles servent au filtrage.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">CREATE INDEX idx_cmd_client_inc
+  ON commandes (client_id) INCLUDE (montant, creee_le);
+-- SELECT montant, creee_le FROM commandes WHERE client_id = ?
+-- peut repondre sans lire la table -&gt; Index Only Scan</code></pre></figure>
+
+<p><strong>Index sur expression</strong>&nbsp;: indexe le résultat d'une fonction, indispensable quand tu filtres sur une transformation (voir section suivante).</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">CREATE INDEX idx_clients_email_lower
+  ON clients (lower(email));</code></pre></figure>
+
+<h2>Quand un index n'aide pas</h2>
+<p>Un index n'est pas magique. Il est <em>ignoré</em> dans plusieurs cas. <strong>Faible sélectivité</strong>&nbsp;: si un filtre garde 60&nbsp;% des lignes, passer par l'index (lire l'index <em>puis</em> aller chercher chaque ligne) coûte plus cher qu'un Seq Scan&nbsp;; le planificateur a raison de ne pas l'utiliser. <strong>Petite table</strong>&nbsp;: sur 200 lignes, tout tient en mémoire, le Seq Scan gagne toujours. <strong>Condition non <em>sargable</em></strong>&nbsp;: si tu appliques une fonction à la colonne indexée, l'index B-tree sur la colonne brute devient inutilisable.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Index sur clients(email), mais ceci ne peut PAS l'utiliser :
+SELECT id FROM clients WHERE lower(email) = 'a@x.fr';   -- Seq Scan
+-- La fonction lower() s'applique ligne a ligne : l'index sur email brut ne colle plus.
+
+-- Idem avec un calcul a gauche ou une fonction sur la colonne :
+SELECT id FROM commandes WHERE montant + 5 &gt; 100;             -- non sargable
+SELECT id FROM ventes    WHERE EXTRACT(year FROM jour) = 2026; -- non sargable</code></pre></figure>
+
+<p>Le mot <em>sargable</em> (Search ARGument ABLE) désigne une condition que la base peut résoudre via un index. La règle&nbsp;: <strong>laisse la colonne nue d'un côté de la comparaison</strong>. Au lieu de transformer la colonne, transforme la valeur ou réécris la plage.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Sargable : la colonne reste nue, on borne par une plage
+SELECT id FROM ventes
+WHERE  jour &gt;= DATE '2026-01-01'
+  AND  jour &lt;  DATE '2027-01-01';</code></pre></figure>
+
+<p>Enfin, tout index a un <strong>coût en écriture</strong>&nbsp;: chaque <code>INSERT</code>, <code>UPDATE</code> ou <code>DELETE</code> doit aussi mettre à jour les index, et chaque index occupe de l'espace disque. Dix index sur une table très écrite peuvent diviser le débit d'insertion par deux. Un index se justifie par les lectures qu'il accélère, pas par principe.</p>
+
+<h2>Les statistiques (ANALYZE)</h2>
+<p>Le planificateur estime les coûts à partir de statistiques sur la distribution des données&nbsp;: nombre de lignes, valeurs distinctes, valeurs les plus fréquentes, histogrammes. Si ces statistiques sont périmées (après un gros chargement, par exemple), il estime mal et peut choisir un Seq Scan là où un index serait dix fois plus rapide. La commande <code>ANALYZE</code> recalcule ces statistiques.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">ANALYZE commandes;            -- met a jour les stats d'une table
+-- VACUUM ANALYZE commandes; -- nettoie ET met a jour</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>PostgreSQL lance un <code>autovacuum</code> qui réanalyse en arrière-plan. Mais après un import massif ou la création d'une table, force un <code>ANALYZE</code> manuel avant de juger un plan&nbsp;: un écart énorme entre <code>rows</code> estimé et réel dans <code>EXPLAIN ANALYZE</code> est le symptôme typique de stats périmées.</p></div></div>
+
+<h2>Une méthode, pas des recettes</h2>
+<p>Optimiser, ce n'est pas connaître par cœur quel index poser&nbsp;: c'est une boucle. <strong>1.</strong> Mesurer&nbsp;: identifie la requête lente (avec <code>EXPLAIN ANALYZE</code>, et en production avec <code>pg_stat_statements</code>). <strong>2.</strong> Comprendre&nbsp;: lis le plan, repère le Seq Scan coûteux, le <code>Rows Removed by Filter</code> élevé, le tri qui déborde sur disque. <strong>3.</strong> Indexer ce qui est <em>filtré</em> (<code>WHERE</code>), <em>joint</em> (<code>JOIN ... ON</code>) ou <em>trié</em> (<code>ORDER BY</code>), en pensant à la sélectivité. <strong>4.</strong> Vérifier&nbsp;: relance <code>EXPLAIN ANALYZE</code> et confirme que le plan a changé et que le temps a baissé. Sans l'étape 4, tu ne sais pas si ton index sert vraiment&nbsp;— il arrive qu'il ne soit même pas utilisé.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Ne sélectionne que les colonnes utiles. Un <code>SELECT *</code> empêche souvent l'Index Only Scan (il faut retourner des colonnes absentes de l'index) et transporte des octets pour rien. Liste explicitement tes colonnes&nbsp;: c'est gratuit et ça aide le planificateur.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le tableau de bord d'une boutique affiche «&nbsp;les 20 dernières commandes du client&nbsp;». Sur une table <code>commandes</code> de douze millions de lignes, la page rame&nbsp;: <code>EXPLAIN ANALYZE</code> montre un <code>Seq Scan</code> suivi d'un <code>Sort</code> qui déborde sur disque — près de <strong>6&nbsp;s</strong>. Le filtre porte sur <code>client_id</code> et le tri sur <code>creee_le DESC</code>&nbsp;: on pose l'index composite <code>(client_id, creee_le DESC)</code>, on relance <code>ANALYZE</code>, et le même plan devient un <code>Index Scan</code> qui lit 20 lignes déjà triées&nbsp;: <strong>3&nbsp;ms</strong>. Deux mille fois plus rapide, pour un seul index dans le bon ordre — trouvé en <em>lisant le plan</em>, pas en devinant.</p></div></div>
+
+<h2>Le piège N+1</h2>
+<p>Celui-ci ne vient pas du SQL mais du code applicatif, et c'est l'un des plus coûteux. Tu récupères une liste de N éléments, puis tu fais <em>une requête par élément</em> pour charger ses détails&nbsp;: 1 requête pour la liste + N requêtes pour les détails. Avec 200 commandes, c'est 201 allers-retours réseau là où une seule jointure suffirait.</p>
+
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">-- Anti-pattern N+1 (vu cote appli, en pseudo-code) :
+--   commandes = SELECT id, client_id FROM commandes LIMIT 200;
+--   pour chaque commande :
+--       SELECT nom FROM clients WHERE id = :client_id;  -- 200 requetes !
+
+-- Correctif : une seule requete avec jointure
+SELECT c.id, c.montant, cl.nom
+FROM   commandes c
+JOIN   clients   cl ON cl.id = c.client_id
+LIMIT  200;</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison du nombre d'allers-retours entre l'application et la base. À gauche, l'anti-pattern N plus 1 : une première requête récupère la liste de 200 commandes, puis l'application envoie une requête distincte par commande pour charger le nom du client, soit 1 plus 200 égale 201 allers-retours. À droite, la version avec jointure : une seule requête ramène commandes et clients ensemble, soit un unique aller-retour, quel que soit le nombre de lignes.">
+    <text class="d-label" x="160" y="20" text-anchor="middle" font-size="11">N+1 : une requête par élément</text>
+    <rect class="d-box" x="30" y="70" width="80" height="34" /><text class="d-text" x="70" y="91" text-anchor="middle" font-size="9">appli</text>
+    <rect class="d-frame" x="250" y="42" width="60" height="128" fill="none" /><text class="d-mut" x="280" y="112" text-anchor="middle" font-size="9">base</text>
+    <line class="d-line" x1="110" y1="54" x2="250" y2="54" /><text class="d-mut" x="180" y="49" text-anchor="middle" font-size="8">1 · la liste</text>
+    <line class="d-line" x1="110" y1="78" x2="250" y2="78" /><line class="d-line" x1="110" y1="92" x2="250" y2="92" /><line class="d-line" x1="110" y1="106" x2="250" y2="106" /><line class="d-line" x1="110" y1="120" x2="250" y2="120" /><line class="d-line" x1="110" y1="134" x2="250" y2="134" />
+    <text class="d-tag" x="180" y="152" text-anchor="middle" font-size="9" font-family="monospace">× 200 détails</text>
+    <text class="d-mut" x="160" y="188" text-anchor="middle" font-size="9">1 + 200 = 201 allers-retours</text>
+
+    <text class="d-label" x="480" y="20" text-anchor="middle" font-size="11">jointure : une seule requête</text>
+    <rect class="d-box" x="350" y="70" width="80" height="34" /><text class="d-text" x="390" y="91" text-anchor="middle" font-size="9">appli</text>
+    <rect class="d-frame" x="560" y="42" width="60" height="128" fill="none" /><text class="d-mut" x="590" y="112" text-anchor="middle" font-size="9">base</text>
+    <line class="d-line" x1="430" y1="82" x2="560" y2="82" /><circle class="d-dot" cx="560" cy="82" r="3" />
+    <text class="d-tag" x="495" y="77" text-anchor="middle" font-size="8.5" font-family="monospace">JOIN clients</text>
+    <line class="d-line" x1="560" y1="104" x2="430" y2="104" /><circle class="d-dot" cx="430" cy="104" r="3" />
+    <text class="d-mut" x="495" y="122" text-anchor="middle" font-size="8">tout en un seul lot</text>
+    <text class="d-mut" x="480" y="188" text-anchor="middle" font-size="9">1 requête = 1 aller-retour</text>
+  </svg>
+  <figcaption>Chaque aller-retour a un coût fixe (réseau, <em>parsing</em>, planification). Le <strong>N+1</strong> le paie 201&nbsp;fois&nbsp;; une <strong>jointure</strong> (ou un <code>WHERE id = ANY(:ids)</code>) le paie une seule fois.</figcaption>
+</figure>
+
+<p>Chaque requête a un coût fixe (réseau, parsing, planification) indépendant de sa taille. Regrouper N petites requêtes en une seule jointure (ou un <code>WHERE id = ANY(:ids)</code>) supprime ce coût fixe multiplié. La plupart des ORM proposent un chargement «&nbsp;eager&nbsp;» (par exemple un <em>join fetch</em>) pour éviter le N+1&nbsp;: encore faut-il l'activer.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Indexer à l'aveugle. Ajouter un index «&nbsp;au cas où&nbsp;» a un coût réel&nbsp;: ralentissement des écritures et espace disque. Mesure d'abord, indexe ensuite, et supprime les index jamais utilisés (PostgreSQL expose <code>pg_stat_user_indexes</code> pour les repérer).</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mauvais ordre dans un index composite. <code>(a, b)</code> n'accélère pas un filtre sur <code>b</code> seul. Place en premier la colonne utilisée pour l'égalité, ensuite celle de la plage ou du tri. Un index inutile parce que mal ordonné est aussi coûteux qu'un index utile.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Conclure sans <code>EXPLAIN</code>. «&nbsp;Ça a l'air plus rapide&nbsp;» n'est pas une mesure&nbsp;: variations de cache, données chaudes, charge du serveur faussent l'impression. Le plan et l'<code>Execution Time</code> sont les seuls juges, idéalement sur un volume représentatif.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Quand l'indexation ne suffit plus&nbsp;: le <strong>partitionnement</strong> découpe une énorme table par plage ou liste pour ne scanner qu'une partition&nbsp;; les <strong>vues matérialisées</strong> (leçon 19) figent un calcul lourd&nbsp;; <strong><code>pg_stat_statements</code></strong> classe tes requêtes par temps cumulé en production&nbsp;; les index <strong>BRIN</strong> sont minuscules et parfaits sur des données naturellement ordonnées (séries temporelles)&nbsp;; le <strong>tuning du planificateur</strong> (<code>work_mem</code>, <code>random_page_cost</code>) affine ses choix&nbsp;; et le <strong>pooling de connexions</strong> (PgBouncer) réduit le coût fixe d'ouverture, ce qui atténue même les effets d'un N+1 résiduel.</p></div></div>
+
+<h2>Antisèche&nbsp;: du symptôme à la piste</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Ce que tu lis dans <code>EXPLAIN (ANALYZE)</code> et la piste d'optimisation correspondante.</caption>
+    <thead><tr><th>Symptôme observé</th><th>Piste d'optimisation</th></tr></thead>
+    <tbody>
+      <tr><td><code>Seq Scan</code> + <code>Rows Removed by Filter</code> élevé sur grosse table</td><td>Indexer la colonne filtrée <em>si</em> elle est sélective</td></tr>
+      <tr><td><code>rows</code> estimé très loin du <code>rows</code> réel</td><td>Statistiques périmées&nbsp;: <code>ANALYZE</code> la table</td></tr>
+      <tr><td>Étape <code>Sort</code> coûteuse (tri qui déborde sur disque)</td><td>Index composite <code>(filtre, tri)</code> dans le bon ordre</td></tr>
+      <tr><td><code>SELECT *</code> empêche l'<em>Index Only Scan</em></td><td>Lister les colonnes utiles / index <code>INCLUDE</code></td></tr>
+      <tr><td>Fonction sur la colonne&nbsp;: <code>lower(col)</code>, <code>EXTRACT(…)</code></td><td>Non sargable&nbsp;: index sur expression ou plage de dates</td></tr>
+      <tr><td>Filtre peu sélectif (garde &gt;&nbsp;~20&nbsp;% des lignes)</td><td>Aucun index&nbsp;: le <code>Seq Scan</code> est le bon choix</td></tr>
+      <tr><td>1 requête liste + N requêtes de détail (côté appli)</td><td>Jointure unique ou <code>WHERE id = ANY(:ids)</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Planificateur (<em>query planner</em>)</dt><dd>Composant du SGBD qui, pour une requête, évalue plusieurs plans d'exécution, estime leur <strong>coût</strong> d'après les statistiques, et retient le moins cher.</dd>
+  <dt><code>EXPLAIN</code> / <code>EXPLAIN ANALYZE</code></dt><dd><code>EXPLAIN</code> affiche le plan et les coûts <em>estimés</em> sans exécuter&nbsp;; <code>EXPLAIN ANALYZE</code> exécute vraiment la requête et ajoute les temps et lignes <em>réels</em>.</dd>
+  <dt>Seq Scan / Index Scan</dt><dd><strong>Seq Scan</strong>&nbsp;: parcours de toute la table. <strong>Index Scan</strong>&nbsp;: on cible les lignes via un index puis on les lit dans la table&nbsp;; gagnant si le filtre est sélectif.</dd>
+  <dt>Index Only Scan</dt><dd>Réponse obtenue depuis le seul index, <em>sans</em> lire la table, parce qu'il contient déjà toutes les colonnes demandées&nbsp;: la lecture la plus rapide.</dd>
+  <dt>Sélectivité</dt><dd>Fraction des lignes qu'un filtre conserve. <strong>Haute</strong> (peu de lignes) = un index aide&nbsp;; <strong>faible</strong> (beaucoup de lignes) = le Seq Scan l'emporte.</dd>
+  <dt>Sargable</dt><dd><em>Search ARGument ABLE</em>&nbsp;: condition qu'un index peut résoudre. Elle exige la colonne <strong>nue</strong> d'un côté&nbsp;; une fonction sur la colonne (<code>lower</code>, <code>EXTRACT</code>) la rend non sargable.</dd>
+  <dt>Index composite</dt><dd>Index sur plusieurs colonnes, trié d'abord par la première&nbsp;: utilisable pour un filtre sur la première colonne (ou la première <em>et</em> la deuxième), mais pas sur la deuxième seule.</dd>
+  <dt>Piège N+1</dt><dd>Anti-pattern applicatif&nbsp;: 1 requête pour une liste de N éléments, puis N requêtes pour leurs détails. Se corrige par une jointure ou un chargement <em>eager</em>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><strong>Planificateur</strong>&nbsp;: choisit le plan le moins coûteux selon les statistiques&nbsp;; <code>EXPLAIN</code> montre le plan estimé, <code>EXPLAIN ANALYZE</code> ajoute les temps réels.</li>
+<li><strong>Scans</strong>&nbsp;: Seq Scan (toute la table), Index Scan (filtre sélectif), Index Only Scan (réponse depuis l'index seul).</li>
+<li><strong>Index</strong>&nbsp;: B-tree par défaut&nbsp;; composites (l'ordre compte), partiels (<code>WHERE</code>), couvrants (<code>INCLUDE</code>), sur expression&nbsp;; GIN/GiST pour JSON, plein-texte, géo.</li>
+<li><strong>Inutile quand</strong>&nbsp;: faible sélectivité, petite table, condition non sargable. Et tout index coûte en écriture.</li>
+<li><strong>Statistiques</strong>&nbsp;: <code>ANALYZE</code> les met à jour&nbsp;; périmées = mauvais plans.</li>
+<li><strong>Méthode</strong>&nbsp;: mesurer, indexer ce qui est filtré/joint/trié, vérifier avec <code>EXPLAIN</code>. Éviter le N+1 côté appli.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Quelle est la différence entre le coût (<code>cost</code>) et le temps (<code>actual time</code>) dans un plan, et lequel exige <code>ANALYZE</code>&nbsp;?</li>
+<li>Pourquoi <code>WHERE lower(email) = 'a@x.fr'</code> ignore-t-il un index B-tree posé sur <code>email</code>, et comment corriger&nbsp;?</li>
+<li>Tu as l'index <code>(client_id, creee_le)</code>. Accélère-t-il un filtre sur <code>creee_le</code> seul&nbsp;? Pourquoi&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans un plan d'exécution, quelle est la différence entre le coût (cost) et le temps réel (actual time), et lequel exige ANALYZE ?","a":["cost est une ESTIMATION du planificateur (EXPLAIN) ; actual time est le temps RÉEL mesuré, obtenu avec EXPLAIN ANALYZE (qui exécute vraiment la requête)","Les deux sont mesurés","cost exige ANALYZE","actual time est une estimation"],"correct":0,"explain":"EXPLAIN affiche des coûts estimés, sans lancer la requête. EXPLAIN ANALYZE l'exécute pour de bon et rapporte les durées réelles : on compare estimation et réalité pour repérer les mauvaises estimations."},
+  {"q":"Pourquoi WHERE lower(email) = 'a@x.fr' ignore-t-il un index B-tree posé sur email, et comment corriger ?","a":["La fonction lower() sur la colonne empêche l'usage de l'index brut ; on crée un index fonctionnel sur lower(email), ou on stocke l'email déjà en minuscules","Parce que l'email est invalide","Parce que B-tree ne gère pas le texte","On ne peut pas corriger"],"correct":0,"explain":"L'index couvre email tel quel, pas lower(email). En indexant directement l'expression (CREATE INDEX ... ON t (lower(email))), la recherche redevient indexée. Autre option : normaliser la casse à l'insertion."},
+  {"q":"Tu as l'index (client_id, creee_le). Accélère-t-il un filtre sur creee_le SEUL ? Pourquoi ?","a":["Non : un index composite ne s'exploite efficacement que si l'on filtre d'abord sur sa première colonne (client_id). Un filtre sur creee_le seul ne peut pas l'utiliser comme prévu","Oui, l'ordre des colonnes n'importe pas","Oui, toujours","Non, il ne sert jamais"],"correct":0,"explain":"Un index multi-colonnes est trié d'abord par la colonne de tête. Sans condition sur client_id, les valeurs de creee_le sont éparpillées dans l'index : il ne peut pas servir de raccourci. On créerait un index dédié sur creee_le."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["ANALYZE"],"placeholder":"la commande qui recalcule les statistiques","hints":["Le plan estime 2 lignes mais en lit 4980 : statistiques fausses.","On doit rafraîchir les statistiques de la table.","La commande « analyse » la table."],"link":{"href":"lecon-17.html","label":"Revoir « EXPLAIN ANALYZE et stats »"}},
+  {"type":"text","accept":["index composite","composite","index multi-colonnes"],"placeholder":"le type d'index servant le filtre ET le tri","hints":["On filtre sur compte_id et on trie sur effectue_le.","Un seul index peut couvrir les deux colonnes.","C'est un index sur plusieurs colonnes."],"link":{"href":"lecon-17.html","label":"Revoir « Index composite »"}},
+  {"type":"text","accept":["sargable"],"placeholder":"le terme pour une requête qu'un index peut accélérer","hints":["EXTRACT(...) et upper(...) sur la colonne empêchent l'index.","Il ne faut pas appliquer de fonction à la colonne filtrée.","Le terme anglais vient de « Search ARGument ABLE »."],"link":{"href":"lecon-17.html","label":"Revoir « Requêtes sargables »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Voici le plan d'une requête. Indique si un index est utilisé, de quel type de scan il s'agit, et si les statistiques semblent saines (compare estimé et réel).</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">Seq Scan on factures  (cost=0.00..4120.00 rows=2 width=20)
+                       (actual time=0.03..52.7 rows=4980 loops=1)
+  Filter: (devise = 'EUR')
+  Rows Removed by Filter: 95020
+Execution Time: 61.2 ms</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">-- Aucun index utilise : c'est un Seq Scan (parcours complet de 'factures').
+-- Statistiques PERIMEES : estime rows=2 mais reel rows=4980 -&gt; ecart enorme.
+-- Le planificateur a cru le filtre ultra-selectif et n'a meme pas envisage
+-- d'index. Correctif :
+ANALYZE factures;                 -- recalcule les stats
+CREATE INDEX idx_factures_devise  -- si 'EUR' reste minoritaire apres stats
+  ON factures (devise);
+-- Puis verifier que le plan passe en Index Scan avec EXPLAIN ANALYZE.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Cette requête est fréquente et lente. Crée l'index composite qui sert à la fois le filtre et le tri, dans le bon ordre, et explique pourquoi cet ordre.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">SELECT id, montant
+FROM   paiements
+WHERE  compte_id = 88
+ORDER  BY effectue_le DESC
+LIMIT  20;</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">CREATE INDEX idx_paiements_compte_date
+  ON paiements (compte_id, effectue_le DESC);
+
+-- Ordre : la colonne d'EGALITE (compte_id) en premier, la colonne de TRI
+-- (effectue_le) ensuite. L'index regroupe les lignes d'un compte et les
+-- garde deja triees par date decroissante : la base lit les 20 premieres
+-- entrees correspondantes, sans tri separe ni LIMIT couteux.
+-- L'inverse (effectue_le, compte_id) n'aurait pas regroupe par compte.
+
+-- Variante couvrante pour viser l'Index Only Scan :
+CREATE INDEX idx_paiements_compte_date_inc
+  ON paiements (compte_id, effectue_le DESC) INCLUDE (montant);</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Rends cette requête sargable pour qu'un index puisse l'accélérer. Deux conditions posent problème. Propose la réécriture, et l'index adéquat pour chacune.</p>
+<figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">SELECT id
+FROM   evenements
+WHERE  EXTRACT(year FROM survenu_le) = 2026
+  AND  upper(code) = 'ALERTE';</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">-- Probleme 1 : EXTRACT() enveloppe la colonne -&gt; non sargable.
+-- On remplace par une plage de dates, colonne nue a gauche :
+SELECT id
+FROM   evenements
+WHERE  survenu_le &gt;= DATE '2026-01-01'
+  AND  survenu_le &lt;  DATE '2027-01-01'
+  AND  upper(code) = 'ALERTE';
+
+CREATE INDEX idx_evenements_survenu ON evenements (survenu_le);
+
+-- Probleme 2 : upper(code) transforme la colonne. Deux options.
+-- (a) Index SUR EXPRESSION, qui correspond exactement au filtre :
+CREATE INDEX idx_evenements_code_upper ON evenements (upper(code));
+-- (b) ou normaliser les donnees a l'ecriture et filtrer sur code brut.
+
+-- Ideal : un index composite sur expression + plage couvrant les deux,
+-- la colonne d'egalite d'abord :
+CREATE INDEX idx_evenements_code_date
+  ON evenements (upper(code), survenu_le);</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

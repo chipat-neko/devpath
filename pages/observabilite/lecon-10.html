@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gérer l'incident : budget d'erreur, astreinte &amp; post-mortem — Leçon 10 · Syntaxe</title>
+    <meta name="description" content="La réponse à incident en SRE : politique de budget d'erreur, vitesse de consommation (burn rate) et alertes multi-fenêtres, astreinte (on-call) et runbooks, post-mortem sans blâme, et les indicateurs MTTD et MTTR." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="observabilite" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Observabilité &amp; SRE</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 10</p>
+              <h1 class="lesson-header__title">Gérer l'incident : budget d'erreur, astreinte &amp; post-mortem</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 05 conseillée</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>appliquer une <strong>politique de budget d'erreur</strong>&nbsp;;</li>
+                  <li>alerter sur la <strong>vitesse de consommation</strong> (burn rate)&nbsp;;</li>
+                  <li>organiser l'<strong>astreinte</strong> et écrire un <strong>runbook</strong>&nbsp;;</li>
+                  <li>mener un <strong>post-mortem sans blâme</strong> (MTTD/MTTR).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-05.html">leçon 05</a> a posé les SLI/SLO et le budget d'erreur. Mais que se passe-t-il <strong>le jour de la panne</strong>&nbsp;? Détecter est une chose&nbsp;; <strong>répondre</strong> vite et <strong>apprendre</strong> de l'incident en est une autre. Cette leçon couvre la <strong>gestion d'incident</strong> côté SRE&nbsp;: piloter le budget d'erreur, être alerté au bon moment, s'organiser en astreinte, et transformer chaque panne en progrès durable.</p>
+
+<h2>La politique de budget d'erreur</h2>
+<p>Le budget d'erreur (1&nbsp;−&nbsp;SLO) n'est utile que s'il <strong>déclenche des décisions</strong>. Une <strong>politique de budget d'erreur</strong> (error budget policy) écrit, <em>à l'avance</em>, ce qu'on fait selon l'état du budget. Décidée à froid, elle évite les débats à chaud.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="La politique de budget d'erreur en trois zones. Zone verte : le budget est sain, on a le droit de livrer de nouvelles fonctionnalités et d'expérimenter. Zone orange : le budget se réduit, on ralentit, on renforce les tests et la revue. Zone rouge : le budget est épuisé, on gèle les nouveautés et toute l'équipe se concentre sur la fiabilité jusqu'à revenir dans la cible.">
+    <rect class="d-accent" x="20" y="52" width="190" height="76" rx="10" />
+    <text class="d-label" x="115" y="80" text-anchor="middle" font-size="12">Budget sain</text>
+    <text class="d-mut" x="115" y="102" text-anchor="middle" font-size="9">on livre, on expérimente</text>
+    <rect class="d-frame" x="226" y="52" width="188" height="76" rx="10" />
+    <text class="d-label" x="320" y="80" text-anchor="middle" font-size="12">Budget qui fond</text>
+    <text class="d-mut" x="320" y="102" text-anchor="middle" font-size="9">on ralentit, on teste plus</text>
+    <rect class="d-frame" x="430" y="52" width="190" height="76" rx="10" />
+    <text class="d-label" x="525" y="80" text-anchor="middle" font-size="12">Budget épuisé</text>
+    <text class="d-mut" x="525" y="102" text-anchor="middle" font-size="9">gel · priorité fiabilité</text>
+    <path class="d-line" d="M210 90 L224 90" fill="none" />
+    <path class="d-line" d="M414 90 L428 90" fill="none" />
+  </svg>
+  <figcaption>La <strong>politique de budget d'erreur</strong> décide <em>d'avance</em>&nbsp;: budget sain → on livre&nbsp;; budget qui fond → on ralentit&nbsp;; budget épuisé → <strong>gel</strong> et priorité à la fiabilité. Une règle objective, pas une négociation.</figcaption>
+</figure>
+
+<h2>Alerter sur le burn rate</h2>
+<p>Alerter «&nbsp;dès qu'une erreur survient&nbsp;» est trop bruyant&nbsp;; alerter «&nbsp;quand le SLO est déjà raté&nbsp;» est trop tard. La bonne idée&nbsp;: alerter sur le <strong>burn rate</strong>, la <strong>vitesse</strong> à laquelle on consomme le budget d'erreur. On combine plusieurs <strong>fenêtres</strong>&nbsp;: une consommation <strong>rapide</strong> déclenche une alerte urgente&nbsp;; une consommation <strong>lente mais continue</strong>, une alerte moins pressante.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="La consommation du budget d'erreur dans le temps. Une réserve de budget diminue au fil du temps. Deux pentes sont comparées. Une pente raide, dite burn rate rapide, épuise le budget en quelques heures et déclenche une alerte urgente qui réveille l'astreinte. Une pente douce, dite burn rate lent, grignote le budget sur plusieurs jours et déclenche seulement un ticket à traiter en journée.">
+    <path class="d-line" d="M40 30 L40 150 L610 150" fill="none" />
+    <text class="d-mut" x="30" y="34" text-anchor="end" font-size="9">budget</text>
+    <text class="d-mut" x="600" y="166" text-anchor="middle" font-size="9">temps</text>
+    <path class="d-accent" d="M40 40 L150 150" fill="none" stroke-width="2.5" />
+    <text class="d-tag" x="170" y="70" font-size="10">burn rate rapide</text>
+    <text class="d-mut" x="170" y="86" font-size="9">→ alerte urgente (réveille)</text>
+    <path class="d-line" d="M40 40 L560 130" fill="none" stroke-width="2.5" />
+    <text class="d-tag" x="330" y="120" font-size="10">burn rate lent</text>
+    <text class="d-mut" x="330" y="136" font-size="9">→ ticket en journée</text>
+  </svg>
+  <figcaption>On alerte sur la <strong>vitesse</strong> de consommation, pas sur chaque erreur. Un burn rate <strong>rapide</strong> (le budget d'un mois brûlé en heures) réveille l'astreinte&nbsp;; un burn rate <strong>lent</strong> crée un ticket. Peu d'alertes, toutes justifiées.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — les alertes multi-fenêtres</p><p>Combiner une fenêtre <strong>courte</strong> (5&nbsp;min) et une fenêtre <strong>longue</strong> (1&nbsp;h) évite deux pièges&nbsp;: la fenêtre courte réagit <strong>vite</strong> aux gros incidents&nbsp;; exiger que la fenêtre longue confirme évite de <strong>réveiller quelqu'un</strong> pour un pic d'une minute sans conséquence. C'est la recette recommandée par le livre <em>SRE</em> de Google.</p></div></div>
+
+<h2>L'astreinte (on-call) et les runbooks</h2>
+<p>Quand une alerte urgente se déclenche à 3&nbsp;h du matin, quelqu'un doit répondre. L'<strong>astreinte</strong> (on-call) organise cela&nbsp;: une <strong>rotation</strong> équitable, une <strong>escalade</strong> si la première personne ne répond pas, et un objectif humain — <strong>peu d'alertes</strong>, toutes actionnables, pour éviter l'épuisement. Chaque alerte importante devrait pointer vers un <strong>runbook</strong>&nbsp;: une procédure écrite «&nbsp;si ceci, vérifie cela, fais ceci&nbsp;».</p>
+
+<figure class="code-block" data-file="runbook.txt"><pre><code>RUNBOOK — Alerte : taux d'erreur /commande > 2 %
+─────────────────────────────────────────────────
+1. Confirmer : dashboard « API commande » → panneau Erreurs.
+2. Localiser : ouvrir 2-3 traces en erreur → repérer le span fautif.
+3. Corréler : filtrer les logs par le trace_id → lire le message exact.
+4. Causes fréquentes :
+   - dépendance paiement en timeout → activer le mode dégradé
+   - déploiement récent → envisager un rollback
+5. Communiquer : ouvrir le canal incident, prévenir les parties prenantes.
+6. Escalader si non résolu en 15 min → responsable de garde.
+</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention — la fatigue d'alerte est un vrai risque</p><p>Une astreinte noyée sous les fausses alertes finit par <strong>ignorer</strong> les notifications — et rater la vraie. La fatigue d'alerte n'est pas qu'un inconfort&nbsp;: c'est un <strong>risque de fiabilité</strong> et un facteur d'épuisement professionnel. Réduire le bruit (alertes actionnables, burn rate, runbooks) fait partie du travail SRE, pas du confort.</p></div></div>
+
+<h2>Le post-mortem sans blâme</h2>
+<p>Après un incident sérieux, on rédige un <strong>post-mortem</strong>&nbsp;: chronologie des faits, <strong>cause racine</strong>, impact, et surtout <strong>actions correctives</strong> pour que ça ne se reproduise pas. Le principe cardinal&nbsp;: il est <strong>sans blâme</strong> (blameless). On cherche la faille du <strong>système</strong> (un garde-fou manquant, un test absent), pas un coupable.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 160" role="img" aria-label="La structure d'un post-mortem sans blâme, en quatre étapes reliées. Étape 1, la chronologie : ce qui s'est passé, minute par minute. Étape 2, la cause racine : la faille du système, pas la personne. Étape 3, l'impact : combien d'utilisateurs, combien de temps. Étape 4, les actions : les correctifs concrets et assignés pour éviter la récidive.">
+    <rect class="d-box" x="14" y="54" width="140" height="60" rx="9" />
+    <text class="d-label" x="84" y="80" text-anchor="middle" font-size="11">Chronologie</text>
+    <text class="d-mut" x="84" y="98" text-anchor="middle" font-size="9">ce qui s'est passé</text>
+    <rect class="d-box" x="176" y="54" width="140" height="60" rx="9" />
+    <text class="d-label" x="246" y="80" text-anchor="middle" font-size="11">Cause racine</text>
+    <text class="d-mut" x="246" y="98" text-anchor="middle" font-size="9">le système, pas qui</text>
+    <rect class="d-box" x="338" y="54" width="140" height="60" rx="9" />
+    <text class="d-label" x="408" y="80" text-anchor="middle" font-size="11">Impact</text>
+    <text class="d-mut" x="408" y="98" text-anchor="middle" font-size="9">qui, combien de temps</text>
+    <rect class="d-accent" x="500" y="54" width="126" height="60" rx="9" />
+    <text class="d-label" x="563" y="80" text-anchor="middle" font-size="11">Actions</text>
+    <text class="d-mut" x="563" y="98" text-anchor="middle" font-size="9">correctifs assignés</text>
+    <path class="d-line" d="M154 84 L174 84" fill="none" />
+    <path class="d-line" d="M316 84 L336 84" fill="none" />
+    <path class="d-line" d="M478 84 L498 84" fill="none" />
+  </svg>
+  <figcaption>Un post-mortem&nbsp;: <strong>chronologie</strong> → <strong>cause racine</strong> (systémique) → <strong>impact</strong> → <strong>actions</strong> correctives assignées. Sans blâme, pour que les gens racontent <em>honnêtement</em> ce qui s'est passé.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — pourquoi « sans blâme » fonctionne</p><p>Google, Etsy et bien d'autres ont popularisé la culture <strong>blameless</strong> pour une raison très concrète&nbsp;: si les gens <strong>craignent d'être punis</strong>, ils <strong>cachent</strong> les détails, minimisent, et l'organisation n'apprend rien — les mêmes pannes reviennent. En retirant le blâme, on obtient des récits <strong>honnêtes et complets</strong>, donc des causes racines <strong>réelles</strong> et des correctifs qui <em>tiennent</em>. L'erreur humaine y est vue comme le <strong>symptôme</strong> d'un système trop permissif (pas de garde-fou, pas de vérification), pas comme la cause à sanctionner.</p></div></div>
+
+<h2>Mesurer la réponse : MTTD et MTTR</h2>
+<p>Deux indicateurs résument la qualité de la réponse&nbsp;: le <strong>MTTD</strong> (Mean Time To Detect, temps moyen de <strong>détection</strong>) et le <strong>MTTR</strong> (Mean Time To Recovery, temps moyen de <strong>rétablissement</strong>). Une bonne observabilité fait <strong>chuter</strong> les deux&nbsp;: on repère plus vite (bonnes alertes) et on diagnostique plus vite (piliers reliés).</p>
+
+<h2>Antisèche — gérer l'incident</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Répondre à un incident, du signal à l'apprentissage.</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Politique de budget</td><td>Décide d'avance&nbsp;: sain → livrer&nbsp;; épuisé → geler</td></tr>
+      <tr><td>Burn rate</td><td>Vitesse de consommation du budget&nbsp;; on alerte dessus</td></tr>
+      <tr><td>Multi-fenêtres</td><td>Court (réagir vite) + long (confirmer, éviter le bruit)</td></tr>
+      <tr><td>Astreinte (on-call)</td><td>Rotation, escalade&nbsp;; peu d'alertes, actionnables</td></tr>
+      <tr><td>Runbook</td><td>Procédure écrite «&nbsp;si ceci, fais cela&nbsp;»</td></tr>
+      <tr><td>Post-mortem</td><td>Sans blâme&nbsp;: cause systémique + actions assignées</td></tr>
+      <tr><td>MTTD / MTTR</td><td>Temps de détection / de rétablissement&nbsp;: à faire chuter</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Politique de budget d'erreur</dt><dd>Règles décidées à l'avance sur ce qu'on fait selon l'état du budget (livrer, ralentir, geler).</dd>
+  <dt>Burn rate</dt><dd>Vitesse à laquelle on consomme le budget d'erreur&nbsp;; base des alertes de fiabilité.</dd>
+  <dt>Alerte multi-fenêtres</dt><dd>Combinaison d'une fenêtre courte (réactivité) et d'une longue (confirmation) pour alerter juste.</dd>
+  <dt>Astreinte (on-call)</dt><dd>Organisation qui garantit qu'une personne répond aux alertes urgentes&nbsp;: rotation, escalade.</dd>
+  <dt>Runbook</dt><dd>Procédure écrite de réponse à une alerte donnée&nbsp;: étapes de diagnostic et d'action.</dd>
+  <dt>Post-mortem sans blâme</dt><dd>Compte rendu d'incident qui cherche la cause systémique et des actions, pas un coupable.</dd>
+  <dt>Cause racine</dt><dd>La faille profonde (souvent un garde-fou manquant) à l'origine de l'incident, au-delà du symptôme.</dd>
+  <dt>MTTD / MTTR</dt><dd>Temps moyen de détection / de rétablissement d'un incident&nbsp;; indicateurs à réduire.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La <strong>politique de budget d'erreur</strong> décide d'avance&nbsp;: budget sain → livrer&nbsp;; épuisé → geler et fiabiliser.</li>
+<li>On alerte sur le <strong>burn rate</strong> (multi-fenêtres), pas sur chaque erreur.</li>
+<li>L'<strong>astreinte</strong> (rotation, escalade, runbooks) répond aux urgences sans épuiser les équipes.</li>
+<li>Le <strong>post-mortem sans blâme</strong> transforme la panne en correctifs&nbsp;; <strong>MTTD/MTTR</strong> mesurent le progrès.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que décide une politique de budget d'erreur&nbsp;?</li><li>Pourquoi alerter sur le burn rate plutôt que sur chaque erreur&nbsp;?</li><li>Pourquoi un post-mortem est-il «&nbsp;sans blâme&nbsp;»&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"À quoi sert une politique de budget d'erreur ?","a":["Décider à l'avance ce qu'on fait selon l'état du budget : livrer si sain, geler et fiabiliser si épuisé","À punir l'équipe qui a causé une panne","À supprimer les SLO","À chiffrer les logs"],"correct":0,"explain":"Écrite à froid, la politique transforme le budget d'erreur en décisions objectives, sans débat vitesse-vs-stabilité à chaud."},
+  {"q":"Pourquoi alerter sur le burn rate plutôt que sur chaque erreur ?","a":["Parce qu'on veut être prévenu selon la vitesse de consommation du budget : vite pour un gros incident, en ticket pour une dérive lente","Parce que les erreurs ne comptent pas","Pour générer le plus d'alertes possible","Parce que le burn rate chiffre les données"],"correct":0,"explain":"Alerter sur chaque erreur est bruyant ; attendre le SLO raté est trop tard. Le burn rate (multi-fenêtres) alerte au bon moment, avec la bonne urgence."},
+  {"q":"Que vise un post-mortem sans blâme ?","a":["Trouver la cause systémique (garde-fou manquant, test absent) et des actions correctives, pas un coupable","Désigner et sanctionner le responsable","Oublier l'incident au plus vite","Prouver que personne n'a fait d'erreur"],"correct":0,"explain":"Sans peur de sanction, les gens racontent honnêtement : on obtient de vraies causes racines et des correctifs durables. L'erreur humaine révèle un système trop permissif."},
+  {"q":"Que mesure le MTTR ?","a":["Le temps moyen de rétablissement d'un incident (Mean Time To Recovery)","La mémoire totale du serveur","Le nombre de tests réussis","Le taux de requêtes par seconde"],"correct":0,"explain":"Le MTTR mesure combien de temps il faut pour rétablir le service ; le MTTD mesure le temps de détection. Une bonne observabilité fait chuter les deux."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["burn rate","taux de consommation","burnrate"],"placeholder":"la vitesse de consommation du budget d'erreur, sur laquelle on alerte","hints":["Rapide → alerte urgente.","« burn … »."],"link":{"href":"lecon-10.html","label":"Revoir « Alerter sur le burn rate »"}},
+  {"type":"text","accept":["runbook","run book"],"placeholder":"la procédure écrite « si ceci, fais cela » vers laquelle pointe une alerte","hints":["Étapes de diagnostic et d'action.","Un mot anglais en deux parties."],"link":{"href":"lecon-10.html","label":"Revoir « L'astreinte et les runbooks »"}},
+  {"type":"text","accept":["sans blame","sans blâme","blameless"],"placeholder":"le principe d'un post-mortem : chercher la cause systémique, pas un coupable","hints":["On ne punit personne.","« sans … » / blameless."],"link":{"href":"lecon-10.html","label":"Revoir « Le post-mortem sans blâme »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Classe ces situations selon la politique de budget d'erreur (livrer normalement / ralentir / geler)&nbsp;: (a) le budget du mois est consommé à 20&nbsp;%&nbsp;; (b) il est consommé à 75&nbsp;% à mi-mois&nbsp;; (c) il est entièrement épuisé.</p><details><summary>Voir une solution</summary><p><strong>(a) Budget consommé à 20&nbsp;% → livrer normalement.</strong> Le budget est <strong>sain</strong>&nbsp;: on est très en dessous de la cible, l'équipe a toute latitude pour livrer de nouvelles fonctionnalités et expérimenter. Prendre des risques mesurés est légitime — c'est même l'intérêt d'avoir un budget&nbsp;: l'utiliser. <strong>(b) Budget consommé à 75&nbsp;% à mi-mois → ralentir.</strong> C'est un <strong>signal d'alerte</strong>&nbsp;: au rythme actuel, le budget sera épuisé avant la fin de la période. On ne gèle pas encore, mais on <strong>lève le pied</strong>&nbsp;: renforcer les tests et la revue de code, éviter les changements risqués, surveiller de plus près, prioriser la correction des sources d'erreurs connues. L'objectif est de <strong>ne pas basculer</strong> en zone rouge. <strong>(c) Budget entièrement épuisé → geler.</strong> Le SLO est menacé ou déjà raté&nbsp;: la politique impose de <strong>geler les nouvelles fonctionnalités</strong> et de concentrer toute l'équipe sur la <strong>fiabilité</strong> (corriger les causes, stabiliser) jusqu'à revenir dans la cible. Ce n'est pas une punition&nbsp;: c'est une règle <strong>décidée à l'avance</strong> et partagée, qui s'applique automatiquement — ce qui évite les négociations pénibles au moment le plus tendu.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Rédige (en quelques lignes) le squelette d'un <strong>runbook</strong> pour l'alerte «&nbsp;la latence p99 de l'API dépasse 2&nbsp;s depuis 10&nbsp;min&nbsp;». Appuie-toi sur les trois piliers.</p><details><summary>Voir une solution</summary><p>Un bon runbook est une <strong>liste d'actions concrètes et ordonnées</strong>, pas un cours. Exemple&nbsp;: <strong>Alerte&nbsp;: p99 API &gt; 2&nbsp;s depuis 10&nbsp;min.</strong> <strong>1) Confirmer (métrique).</strong> Ouvrir le dashboard «&nbsp;API&nbsp;»&nbsp;: la hausse touche-t-elle <em>tous</em> les endpoints ou un seul&nbsp;? Depuis quand exactement&nbsp;? Coïncide-t-elle avec un <strong>déploiement</strong> récent (à vérifier dans l'historique de livraison)&nbsp;? <strong>2) Localiser (trace).</strong> Ouvrir 2-3 <strong>traces</strong> de requêtes lentes sur la période&nbsp;; regarder la <strong>cascade</strong> pour identifier le <strong>span</strong> qui domine la durée (base de données&nbsp;? appel à un service tiers&nbsp;? file d'attente&nbsp;?). <strong>3) Corréler (logs).</strong> Récupérer le <code>trace_id</code> d'une requête lente et <strong>filtrer les logs</strong> dessus pour lire le détail (ex.&nbsp;: «&nbsp;requête SQL 3,2&nbsp;s&nbsp;», «&nbsp;pool de connexions saturé&nbsp;»). <strong>4) Causes fréquentes &amp; actions.</strong> Base lente&nbsp;→ vérifier une requête non indexée, la charge, un verrou&nbsp;; saturation&nbsp;→ vérifier l'autoscaling, augmenter les répliques&nbsp;; déploiement suspect&nbsp;→ envisager un <strong>rollback</strong>&nbsp;; dépendance tierce lente&nbsp;→ activer un <strong>mode dégradé</strong> ou un cache. <strong>5) Communiquer.</strong> Ouvrir le canal d'incident, indiquer l'impact et l'action en cours. <strong>6) Escalader.</strong> Si non résolu en 20&nbsp;min, appeler le responsable de garde. <strong>Pourquoi ce format&nbsp;?</strong> À 3&nbsp;h du matin, sous stress, on ne veut pas <em>réfléchir</em> de zéro&nbsp;: on veut <strong>dérouler</strong> une procédure fiable qui mène du symptôme à la cause en s'appuyant sur les piliers reliés. Le runbook capitalise l'expérience de l'équipe.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Après un incident majeur, un manager veut «&nbsp;identifier qui a poussé le mauvais code et le mentionner dans le rapport pour que ça serve de leçon&nbsp;». Explique pourquoi c'est une erreur, et ce qu'un vrai post-mortem sans blâme devrait produire à la place.</p><details><summary>Voir une solution</summary><p>Vouloir «&nbsp;nommer le coupable pour l'exemple&nbsp;» est une réaction humaine mais <strong>contre-productive</strong>, pour plusieurs raisons. <strong>1) Ça détruit l'honnêteté.</strong> Dès que les gens savent qu'un incident peut leur être personnellement reproché, ils <strong>cachent</strong> des informations, minimisent leur rôle, ou évitent de signaler les problèmes. On perd la matière première d'un bon post-mortem&nbsp;: le <strong>récit complet et honnête</strong> de ce qui s'est passé. L'organisation <strong>n'apprend plus</strong>, et les mêmes pannes reviennent. <strong>2) Ça vise le symptôme, pas la cause.</strong> Qu'une personne ait pu «&nbsp;pousser du mauvais code&nbsp;» en production et déclencher un incident majeur n'est pas la <strong>cause racine</strong>&nbsp;: c'est le <strong>symptôme</strong> d'un système trop permissif. Les vraies questions sont systémiques&nbsp;: pourquoi n'y avait-il pas de <strong>test</strong> qui attrape ce bug&nbsp;? pas de <strong>revue</strong> obligatoire&nbsp;? pas de <strong>déploiement progressif</strong> (canary) qui aurait limité l'impact&nbsp;? pas de <strong>rollback</strong> rapide&nbsp;? N'importe qui, à la place de cette personne, aurait pu déclencher le même incident&nbsp;: c'est <em>ça</em>, le problème à corriger. <strong>3) Ça démoralise et fait fuir.</strong> Punir l'erreur honnête pousse les meilleurs à ne plus prendre d'initiative, voire à partir. <strong>Ce qu'un vrai post-mortem sans blâme produit&nbsp;:</strong> une <strong>chronologie</strong> factuelle&nbsp;; une <strong>cause racine systémique</strong> (le garde-fou manquant)&nbsp;; l'<strong>impact</strong> chiffré (utilisateurs, durée)&nbsp;; et surtout une liste d'<strong>actions correctives concrètes et assignées</strong> — ajouter le test manquant, rendre la revue obligatoire, mettre en place un déploiement progressif et un rollback en un clic, améliorer une alerte. On mesure ensuite le progrès via le <strong>MTTD/MTTR</strong>. <strong>La bonne formulation&nbsp;:</strong> non pas «&nbsp;X a cassé la prod&nbsp;», mais «&nbsp;notre système a permis qu'un changement non testé atteigne tous les utilisateurs sans filet&nbsp;; voici les filets qu'on ajoute&nbsp;». C'est ainsi qu'une panne devient un <strong>progrès durable</strong> plutôt qu'une chasse aux sorcières stérile.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

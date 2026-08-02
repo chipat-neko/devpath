@@ -1,0 +1,71 @@
+<p>L'administration ne se limite pas à la machine devant toi. PowerShell excelle à piloter des <strong>ordinateurs distants</strong> et à lancer du travail <strong>en parallèle</strong> ou en arrière-plan. C'est ce qui en fait l'outil de référence pour gérer des parcs de serveurs et automatiser des tâches longues.</p>
+
+<h2>Le Remoting&nbsp;: exécuter à distance</h2>
+<p>Le <strong>PowerShell Remoting</strong> (basé sur WinRM) permet d'exécuter des commandes sur d'autres machines. <code>Invoke-Command</code> envoie un bloc de code, qui s'exécute là-bas et renvoie des objets.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Invoke-Command -ComputerName Serveur01 -ScriptBlock {
+    Get-Service -Name Spooler
+}
+# Le résultat revient enrichi d'une propriété PSComputerName</code></pre></figure>
+<p class="code-caption">On peut viser plusieurs machines d'un coup&nbsp;: <code>-ComputerName S1, S2, S3</code>.</p>
+
+<h2>Les sessions interactives et persistantes</h2>
+<p><code>Enter-PSSession</code> ouvre une console <em>sur</em> la machine distante (comme un SSH). Pour enchaîner plusieurs commandes en réutilisant la connexion, on crée une <strong>session persistante</strong> avec <code>New-PSSession</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Enter-PSSession -ComputerName Serveur01   # invite distante
+# Exit-PSSession pour revenir
+
+$s = New-PSSession -ComputerName Serveur01
+Invoke-Command -Session $s -ScriptBlock { $env:COMPUTERNAME }
+Invoke-Command -Session $s -ScriptBlock { Get-Date }
+Remove-PSSession $s</code></pre></figure>
+
+<h2>Les jobs&nbsp;: travailler en arrière-plan</h2>
+<p>Une tâche longue ne doit pas bloquer ta console. Un <strong>job</strong> s'exécute en arrière-plan&nbsp;; tu récupères son résultat plus tard avec <code>Receive-Job</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">$job = Start-Job -ScriptBlock {
+    Start-Sleep 5
+    Get-Process
+}
+Get-Job                  # état : Running / Completed
+$resultats = Receive-Job $job -Wait
+Remove-Job $job</code></pre></figure>
+
+<h2>Paralléliser avec ForEach-Object -Parallel</h2>
+<p>PowerShell 7 introduit <code>-Parallel</code> sur <code>ForEach-Object</code>&nbsp;: chaque élément est traité dans son propre fil. Idéal pour des opérations indépendantes et lentes (réseau, fichiers).</p>
+<figure class="code-block" data-file="Console (PowerShell 7+)"><pre><code class="language-powershell">$sites = "exemple.fr", "syntaxe.fr", "test.fr"
+$sites | ForEach-Object -Parallel {
+    "Test de $_ …"
+    # Test-Connection $_ -Count 1
+} -ThrottleLimit 3</code></pre></figure>
+<p>Le <code>-ThrottleLimit</code> limite le nombre de fils simultanés.</p>
+
+<h2>Planifier l'exécution d'un script</h2>
+<p>Pour qu'un script tourne automatiquement (chaque nuit, au démarrage…), on crée une <strong>tâche planifiée</strong> Windows depuis PowerShell.</p>
+<figure class="code-block" data-file="Console (admin)"><pre><code class="language-powershell">$action = New-ScheduledTaskAction -Execute "pwsh.exe" `
+  -Argument "-File C:\Scripts\sauvegarde.ps1"
+$trigger = New-ScheduledTaskTrigger -Daily -At 2am
+Register-ScheduledTask -TaskName "Sauvegarde" `
+  -Action $action -Trigger $trigger</code></pre></figure>
+<p class="code-caption">La tâche apparaît ensuite dans le Planificateur de tâches Windows.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Dans un bloc <code>-ScriptBlock</code> distant ou <code>-Parallel</code>, tes variables locales ne sont <strong>pas</strong> disponibles automatiquement. Passe-les explicitement&nbsp;: <code>$using:maVariable</code> à distance, ou via <code>-ArgumentList</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Hors du monde Windows, le Remoting peut passer par <strong>SSH</strong> (PowerShell 7)&nbsp;: <code>Invoke-Command -HostName serveur -UserName lin -SSHTransport</code>. Le même modèle fonctionne alors vers Linux et macOS.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>Invoke-Command -ComputerName</code> exécute du code à distance et renvoie des objets.</li>
+  <li><code>Enter-PSSession</code> ouvre une console distante&nbsp;; <code>New-PSSession</code> réutilise une connexion.</li>
+  <li>Les <strong>jobs</strong> (<code>Start-Job</code>/<code>Receive-Job</code>) et <code>ForEach-Object -Parallel</code> exécutent en arrière-plan / en parallèle.</li>
+  <li>Une <strong>tâche planifiée</strong> automatise le lancement d'un script.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle cmdlet exécute un bloc de code sur un serveur distant&nbsp;?</li><li>Comment passer une variable locale à un bloc distant&nbsp;?</li><li>Quand préférer un job à une exécution directe&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Lance un job qui attend 3 secondes puis renvoie la date, et récupère son résultat.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">$j = Start-Job { Start-Sleep 3; Get-Date }
+Receive-Job $j -Wait
+Remove-Job $j</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>En parallèle, calcule le carré des nombres de 1 à 5 (PowerShell 7).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">1..5 | ForEach-Object -Parallel { $_ * $_ }</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris la commande qui récupère, sur trois serveurs nommés, le service «&nbsp;Spooler&nbsp;» et son statut.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">Invoke-Command -ComputerName S1, S2, S3 -ScriptBlock {
+    Get-Service Spooler | Select-Object Status
+}</code></pre></figure></details></div>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concurrence asynchrone : core.async — Leçon 11 · Cours Clojure — Syntaxe</title>
+    <meta name="description" content="La concurrence par messages en Clojure : core.async, les canaux (channels), les go-blocks, et la différence avec les atoms." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="clojure" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Clojure</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Clojure en grand — Leçon 11</p>
+              <h1 class="lesson-header__title">Concurrence asynchrone : core.async</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~45 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 10</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>créer des <strong>canaux</strong> (<code>chan</code>) et y passer des messages&nbsp;;</li>
+                  <li>utiliser les <strong>go-blocks</strong> (<code>go</code>, <code>&lt;!</code>, <code>&gt;!</code>)&nbsp;;</li>
+                  <li>comprendre le modèle CSP&nbsp;;</li>
+                  <li>distinguer core.async des atoms/refs.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La leçon 7 t'a montré comment gérer l'état partagé avec les atoms et les refs. Mais il existe une autre façon de penser la concurrence&nbsp;: non plus par <em>état partagé</em>, mais par <strong>communication</strong>. Des tâches indépendantes s'échangent des messages via des <strong>canaux</strong>, sans rien partager. C'est le modèle <strong>CSP</strong> (Communicating Sequential Processes), et la bibliothèque <strong>core.async</strong> l'apporte à Clojure — le même modèle que les goroutines de Go. Cette leçon t'y initie.</p>
+
+<h2>L'idée&nbsp;: communiquer, pas partager</h2>
+<p>Plutôt que plusieurs tâches se disputant une variable, on a des tâches isolées qui se passent des valeurs par des <strong>canaux</strong> (channels). Un canal est une file&nbsp;: on y <em>met</em> des valeurs d'un côté, on les <em>prend</em> de l'autre. Le producteur et le consommateur n'ont pas besoin de se connaître&nbsp;; le canal les découple.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 206" role="img" aria-label="Deux façons de gérer la concurrence. À gauche, le partage d'état : trois tâches T1, T2 et T3 accèdent toutes à une même case d'état mutable au centre, ce qui impose des verrous et crée de la contention. À droite, la communication par canal : une tâche productrice dépose des valeurs dans un canal, une file, et une tâche consommatrice les y prend ; les deux ne se connaissent pas, le canal les découple.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux façons de penser la concurrence</text>
+    <rect class="d-frame" x="24" y="36" width="286" height="156" rx="9" />
+    <text class="d-tag" x="167" y="57" text-anchor="middle" font-size="11">Partager un état</text>
+    <rect class="d-box" x="44" y="70" width="60" height="30" rx="6" /><text class="d-mut" x="74" y="89" text-anchor="middle" font-size="9">T1</text>
+    <rect class="d-box" x="137" y="70" width="60" height="30" rx="6" /><text class="d-mut" x="167" y="89" text-anchor="middle" font-size="9">T2</text>
+    <rect class="d-box" x="230" y="70" width="60" height="30" rx="6" /><text class="d-mut" x="260" y="89" text-anchor="middle" font-size="9">T3</text>
+    <rect class="d-accent" x="107" y="140" width="120" height="38" rx="7" /><text class="d-text" x="167" y="156" text-anchor="middle" font-size="9">état mutable</text><text class="d-mut" x="167" y="170" text-anchor="middle" font-size="8">verrous · contention</text>
+    <path class="d-line" d="M74 100 L150 140" fill="none" /><path class="d-line" d="M167 100 L167 138" fill="none" /><path class="d-line" d="M260 100 L184 140" fill="none" />
+    <rect class="d-frame" x="330" y="36" width="286" height="156" rx="9" />
+    <text class="d-tag" x="473" y="57" text-anchor="middle" font-size="11">Communiquer par canal</text>
+    <rect class="d-box" x="346" y="96" width="72" height="40" rx="7" /><text class="d-text" x="382" y="112" text-anchor="middle" font-size="8.5">produc-</text><text class="d-text" x="382" y="124" text-anchor="middle" font-size="8.5">teur</text>
+    <rect class="d-accent" x="440" y="98" width="86" height="36" rx="6" /><text class="d-mut" x="483" y="110" text-anchor="middle" font-size="8">canal (file)</text>
+    <rect class="d-box" x="449" y="118" width="16" height="10" rx="2" /><rect class="d-box" x="470" y="118" width="16" height="10" rx="2" /><rect class="d-box" x="491" y="118" width="16" height="10" rx="2" />
+    <rect class="d-box" x="548" y="96" width="60" height="40" rx="7" /><text class="d-text" x="578" y="112" text-anchor="middle" font-size="8.5">consom-</text><text class="d-text" x="578" y="124" text-anchor="middle" font-size="8.5">mateur</text>
+    <path class="d-line" d="M418 116 L438 116" fill="none" /><path class="d-line" d="M431 112 L439 116 L431 120" fill="none" />
+    <path class="d-line" d="M526 116 L546 116" fill="none" /><path class="d-line" d="M539 112 L547 116 L539 120" fill="none" />
+    <text class="d-mut" x="473" y="182" text-anchor="middle" font-size="8">ils ne se connaissent pas</text>
+  </svg>
+  <figcaption>À gauche, tout le monde touche au même état (verrous). À droite, on <strong>communique</strong> par un canal qui découple producteur et consommateur.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="require.clj"><pre><code class="language-clojure">(require '[clojure.core.async :as a
+           :refer [chan go &lt;! &gt;! &lt;!! &gt;!!]])</code></pre></figure>
+
+<h2>Créer un canal et y passer des valeurs</h2>
+<p>On crée un canal avec <code>chan</code>. On y dépose une valeur et on en retire une. Les opérations «&nbsp;bloquantes&nbsp;» (hors go-block) s'écrivent avec un double point d'exclamation.</p>
+<figure class="code-block" data-file="canal.clj"><pre><code class="language-clojure">(def c (chan))          ; un canal
+
+;; Dans un thread, déposer une valeur (>!!) ...
+(future (&gt;!! c "bonjour"))
+
+;; ... et la récupérer ailleurs (&lt;!!)
+(&lt;!! c)                 ; → "bonjour" (attend qu'une valeur arrive)</code></pre></figure>
+<p>Convention de nommage&nbsp;: <code>&gt;!</code> «&nbsp;met dans&nbsp;» (la flèche pointe <em>vers</em> le canal), <code>&lt;!</code> «&nbsp;prend de&nbsp;». La version à un point (<code>&lt;!</code>, <code>&gt;!</code>) s'utilise dans un go-block&nbsp;; la version à deux points (<code>&lt;!!</code>, <code>&gt;!!</code>) bloque un vrai thread.</p>
+
+<h2>Les go-blocks</h2>
+<p>Le cœur de core.async&nbsp;: le <strong>go-block</strong>. Le code dans <code>(go …)</code> s'exécute de façon <strong>asynchrone</strong>&nbsp;; et quand il «&nbsp;attend&nbsp;» sur un canal (<code>&lt;!</code>), il ne bloque pas un thread — il se met en pause et libère le thread, qui reprendra plus tard. On peut donc lancer des <em>milliers</em> de go-blocks sur quelques threads.</p>
+<figure class="code-block" data-file="go.clj"><pre><code class="language-clojure">(def resultats (chan))
+
+(go
+  (let [x (&lt;! resultats)]      ; attend une valeur, sans bloquer de thread
+    (println "Reçu :" x)))
+
+(go (&gt;! resultats 42))          ; un autre go-block dépose 42
+;; affiche : Reçu : 42</code></pre></figure>
+<p>C'est ce qui rend core.async puissant pour l'asynchrone&nbsp;: un go-block en attente ne coûte presque rien. On structure un programme concurrent comme une suite de petites tâches qui se parlent par canaux.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="La différence entre bloquer et parker. En haut, l'opération bloquante à deux points : une tâche qui attend gèle tout un thread, qui reste inutilisable tant que la valeur n'arrive pas ; mille tâches en attente demandent mille threads. En bas, le go-block : quand il attend une valeur, il se met en pause et rend le thread à un petit pool, qui sert alors un autre go-block ; quelques threads suffisent pour des milliers de go-blocks.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Attendre une valeur sans geler de thread</text>
+    <text class="d-tag" x="24" y="54" font-size="10.5">Bloquant &lt;!!</text>
+    <rect class="d-box" x="24" y="62" width="132" height="34" rx="6" /><text class="d-mut" x="90" y="83" text-anchor="middle" font-size="8.5">thread 1 · figé ⏳</text>
+    <rect class="d-box" x="166" y="62" width="132" height="34" rx="6" /><text class="d-mut" x="232" y="83" text-anchor="middle" font-size="8.5">thread 2 · figé ⏳</text>
+    <text class="d-mut" x="316" y="83" font-size="9">1 tâche en attente = 1 thread gelé</text>
+    <text class="d-tag" x="24" y="132" font-size="10.5">Parking &lt;! (dans un go)</text>
+    <rect class="d-accent" x="24" y="140" width="146" height="52" rx="7" /><text class="d-text" x="97" y="160" text-anchor="middle" font-size="9">pool : 2 threads</text><text class="d-mut" x="97" y="176" text-anchor="middle" font-size="8">réutilisés en boucle</text>
+    <rect class="d-box" x="196" y="144" width="58" height="22" rx="5" /><text class="d-mut" x="225" y="159" text-anchor="middle" font-size="8">go #1</text>
+    <rect class="d-box" x="262" y="144" width="58" height="22" rx="5" /><text class="d-mut" x="291" y="159" text-anchor="middle" font-size="8">go #2</text>
+    <rect class="d-box" x="328" y="144" width="58" height="22" rx="5" /><text class="d-mut" x="357" y="159" text-anchor="middle" font-size="8">go #3</text>
+    <text class="d-mut" x="196" y="184" font-size="8">… jusqu'à des milliers de go-blocks …</text>
+    <text class="d-text" x="470" y="159" font-size="9">en attente → rend le thread</text>
+  </svg>
+  <figcaption>Un <code>&lt;!!</code> gèle un thread entier&nbsp;; un <code>&lt;!</code> dans un go-block <strong>parke</strong> et rend le thread — d'où des milliers de go-blocks sur quelques threads.</figcaption>
+</figure>
+
+<h2>Un pipeline producteur / consommateur</h2>
+<p>Le patron typique&nbsp;: un go-block produit des valeurs, un autre les consomme. Le canal régule le flux entre eux.</p>
+<figure class="code-block" data-file="pipeline.clj"><pre><code class="language-clojure">(def travaux (chan))
+
+;; Producteur : envoie 0, 1, 2 puis ferme le canal
+(go
+  (doseq [n (range 3)]
+    (&gt;! travaux n))
+  (a/close! travaux))
+
+;; Consommateur : lit jusqu'à la fermeture (nil)
+(go
+  (loop []
+    (when-let [n (&lt;! travaux)]    ; nil quand le canal est fermé
+      (println "Traite" n)
+      (recur))))</code></pre></figure>
+<p>Fermer un canal avec <code>close!</code> signale «&nbsp;plus rien à venir&nbsp;»&nbsp;: un <code>&lt;!</code> sur un canal fermé renvoie <code>nil</code>, ce qui termine proprement la boucle du consommateur.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Le patron producteur-consommateur et la fermeture d'un canal. En haut, le producteur envoie les valeurs 0, 1 puis 2 dans le canal, puis appelle close pour le fermer. Au milieu, le canal transporte ces trois valeurs puis, une fois fermé, ne rend plus que nil. En bas, le consommateur boucle : il prend 0, puis 1, puis 2 et les traite, et quand il reçoit nil il sort proprement de la boucle.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Fermer le canal termine proprement le consommateur</text>
+    <text class="d-tag" x="16" y="55" font-size="9.5">Producteur</text>
+    <text class="d-tag" x="16" y="107" font-size="9.5">Canal</text>
+    <text class="d-tag" x="16" y="159" font-size="9.5">Consommateur</text>
+    <rect class="d-box" x="150" y="38" width="52" height="26" rx="5" /><text class="d-mut" x="176" y="55" text-anchor="middle" font-size="9" font-family="monospace">&gt;! 0</text>
+    <rect class="d-box" x="150" y="90" width="52" height="26" rx="5" /><text class="d-mut" x="176" y="107" text-anchor="middle" font-size="9">0</text>
+    <rect class="d-box" x="150" y="142" width="52" height="26" rx="5" /><text class="d-mut" x="176" y="159" text-anchor="middle" font-size="9">✓ 0</text>
+    <rect class="d-box" x="224" y="38" width="52" height="26" rx="5" /><text class="d-mut" x="250" y="55" text-anchor="middle" font-size="9" font-family="monospace">&gt;! 1</text>
+    <rect class="d-box" x="224" y="90" width="52" height="26" rx="5" /><text class="d-mut" x="250" y="107" text-anchor="middle" font-size="9">1</text>
+    <rect class="d-box" x="224" y="142" width="52" height="26" rx="5" /><text class="d-mut" x="250" y="159" text-anchor="middle" font-size="9">✓ 1</text>
+    <rect class="d-box" x="298" y="38" width="52" height="26" rx="5" /><text class="d-mut" x="324" y="55" text-anchor="middle" font-size="9" font-family="monospace">&gt;! 2</text>
+    <rect class="d-box" x="298" y="90" width="52" height="26" rx="5" /><text class="d-mut" x="324" y="107" text-anchor="middle" font-size="9">2</text>
+    <rect class="d-box" x="298" y="142" width="52" height="26" rx="5" /><text class="d-mut" x="324" y="159" text-anchor="middle" font-size="9">✓ 2</text>
+    <rect class="d-accent" x="372" y="38" width="64" height="26" rx="5" /><text class="d-text" x="404" y="55" text-anchor="middle" font-size="9">close!</text>
+    <rect class="d-frame" x="372" y="90" width="64" height="26" rx="5" /><text class="d-mut" x="404" y="107" text-anchor="middle" font-size="9">nil</text>
+    <rect class="d-accent" x="372" y="142" width="96" height="26" rx="5" /><text class="d-text" x="420" y="159" text-anchor="middle" font-size="8.5">nil → stop</text>
+    <path class="d-line" d="M176 64 L176 90" fill="none" /><path class="d-line" d="M176 116 L176 142" fill="none" />
+    <path class="d-line" d="M404 64 L404 90" fill="none" /><path class="d-line" d="M404 116 L404 142" fill="none" />
+    <text class="d-mut" x="502" y="105" font-size="8.5">un &lt;! sur un</text><text class="d-mut" x="502" y="117" font-size="8.5">canal fermé = nil</text>
+  </svg>
+  <figcaption>Le producteur ferme le canal après ses envois&nbsp;; le consommateur reçoit alors <code>nil</code> et quitte sa boucle sans code spécial.</figcaption>
+</figure>
+
+<h2>core.async ou atoms&nbsp;?</h2>
+<p>Deux approches complémentaires de la concurrence&nbsp;:</p>
+<ul>
+  <li>les <strong>atoms/refs</strong> (leçon 7) gèrent un <em>état partagé</em> mutable de façon sûre — parfait pour «&nbsp;un compteur, un cache&nbsp;»&nbsp;;</li>
+  <li><strong>core.async</strong> gère la <em>communication</em> entre tâches et le flux de données — parfait pour «&nbsp;un pipeline, des événements, de l'asynchrone&nbsp;».</li>
+</ul>
+<p>On choisit selon le problème&nbsp;: as-tu un état à protéger, ou des tâches à coordonner&nbsp;? Souvent, on combine les deux.</p>
+
+<h2>Un cas concret</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Dans les interfaces web en ClojureScript — la bibliothèque <strong>Om</strong> de David Nolan a popularisé l'approche — core.async orchestre les événements de l'UI. Une <em>barre de recherche</em> met chaque frappe dans un canal&nbsp;; un go-block attend un court silence (un <code>timeout</code> couplé à <code>alts!</code>) avant de lancer la requête, et <strong>ignore les réponses obsolètes</strong> d'une frappe précédente. Résultat&nbsp;: une autocomplétion fluide qui ne martèle pas le serveur — et exactement le <em>même</em> modèle CSP côté navigateur (JS) que côté serveur (JVM).</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le bon tampon</p><p>Un canal nu (<code>(chan)</code>) est un <em>rendez-vous</em>&nbsp;: le dépôt attend qu'on prenne. Pour découpler vraiment producteur et consommateur, donne-lui un tampon&nbsp;: <code>(chan 100)</code>. Et si tu préfères <em>jeter</em> les valeurs en trop plutôt que bloquer, choisis <code>(chan (a/sliding-buffer 1))</code> — idéal quand seule la <strong>dernière</strong> valeur compte (position de souris, redimensionnement de fenêtre).</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser les versions bloquantes (<code>&lt;!!</code>, <code>&gt;!!</code>) <strong>à l'intérieur</strong> d'un go-block. C'est l'erreur classique&nbsp;: dans un <code>(go …)</code>, on utilise les versions à un point (<code>&lt;!</code>, <code>&gt;!</code>) qui «&nbsp;parkent&nbsp;» sans bloquer le thread. Mettre <code>&lt;!!</code> dans un go-block bloque un des rares threads du pool et peut figer tout le système. Règle&nbsp;: <strong>un point dans un go-block, deux points hors d'un go-block</strong>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>core.async offre bien plus&nbsp;: <code>alts!</code> (attendre sur <em>plusieurs</em> canaux à la fois, le premier prêt gagne), des canaux <strong>tamponnés</strong> (<code>(chan 10)</code>) qui acceptent N valeurs sans bloquer, et des <strong>transducers</strong> appliqués directement au canal pour transformer le flux. Et comme core.async existe aussi en ClojureScript, le <em>même</em> modèle de concurrence sert côté serveur (JVM) et côté navigateur (JS) — un atout rare.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — core.async</caption>
+    <thead><tr><th scope="col">Forme</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>(chan)</code> / <code>(chan n)</code></td><td>crée un canal (tamponné à <em>n</em> valeurs si précisé)</td></tr>
+      <tr><td><code>go</code></td><td>lance un bloc asynchrone léger (qui «&nbsp;parke&nbsp;»)</td></tr>
+      <tr><td><code>&gt;!</code> / <code>&lt;!</code></td><td>met / prend <strong>dans</strong> un go-block (parking)</td></tr>
+      <tr><td><code>&gt;!!</code> / <code>&lt;!!</code></td><td>met / prend <strong>hors</strong> d'un go-block (bloque un thread)</td></tr>
+      <tr><td><code>close!</code></td><td>ferme un canal&nbsp;; un <code>&lt;!</code> renvoie ensuite <code>nil</code></td></tr>
+      <tr><td><code>alts!</code></td><td>attend sur <em>plusieurs</em> canaux&nbsp;: le premier prêt gagne</td></tr>
+      <tr><td><code>timeout</code></td><td>canal qui se ferme tout seul après N&nbsp;ms</td></tr>
+      <tr><td><code>put!</code> / <code>take!</code></td><td>dépose / retire par <em>callback</em>, hors d'un go-block</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>core.async</dt><dd>Bibliothèque apportant la concurrence par messages (modèle CSP) à Clojure et ClojureScript.</dd>
+  <dt>CSP</dt><dd><em>Communicating Sequential Processes</em>&nbsp;: des tâches isolées coordonnées par des canaux plutôt que par un état partagé.</dd>
+  <dt>Canal (channel)</dt><dd>File de communication créée par <code>chan</code>&nbsp;: on y <strong>met</strong> des valeurs (<code>&gt;!</code>) et on en <strong>prend</strong> (<code>&lt;!</code>).</dd>
+  <dt>go-block</dt><dd>Bloc <code>(go …)</code> exécuté de façon asynchrone&nbsp;; très léger, on peut en lancer des milliers.</dd>
+  <dt>Parking</dt><dd>Mise en pause d'un go-block en attente qui <strong>rend son thread</strong> au pool, au lieu de le geler comme le ferait <code>&lt;!!</code>.</dd>
+  <dt><code>close!</code></dt><dd>Ferme un canal pour signaler la fin&nbsp;; toute prise ultérieure renvoie <code>nil</code>.</dd>
+  <dt>Canal tamponné</dt><dd>Canal <code>(chan n)</code> qui accepte jusqu'à <em>n</em> valeurs sans bloquer le producteur.</dd>
+  <dt><code>alts!</code></dt><dd>Attend sur plusieurs canaux à la fois&nbsp;; sert par exemple à composer une opération avec un <code>timeout</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>core.async&nbsp;: concurrence par <strong>communication</strong> (modèle CSP), via des <strong>canaux</strong> (<code>chan</code>).</li>
+  <li><code>&gt;!</code> met, <code>&lt;!</code> prend&nbsp;; un <strong>go-block</strong> (<code>go</code>) s'exécute en asynchrone et «&nbsp;parke&nbsp;» sans bloquer de thread.</li>
+  <li><code>close!</code> ferme un canal (<code>&lt;!</code> renvoie alors <code>nil</code>)&nbsp;; patron producteur/consommateur.</li>
+  <li><strong>Un point</strong> (<code>&lt;!</code>/<code>&gt;!</code>) dans un go-block, <strong>deux points</strong> (<code>&lt;!!</code>/<code>&gt;!!</code>) hors d'un go-block.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est l'idée du modèle CSP&nbsp;?</li><li>Que fait un go-block quand il attend sur un canal&nbsp;?</li><li>Quand utilise-t-on <code>&lt;!!</code> plutôt que <code>&lt;!</code>&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est l'idée centrale de core.async (modèle CSP) ?","a":["Des tâches isolées communiquent par des canaux, au lieu de partager un état","Toutes les tâches modifient une variable globale","On supprime toute concurrence","On bloque un thread par tâche"],"correct":0,"explain":"On découple producteur et consommateur par un canal : communiquer plutôt que partager. C'est le modèle des goroutines de Go."},
+  {"q":"Que fait un go-block lorsqu'il attend une valeur avec <! ?","a":["Il se met en pause et libère le thread, qui pourra servir d'autres tâches","Il bloque définitivement un thread","Il lève une exception","Il renvoie immédiatement nil"],"correct":0,"explain":"Le go-block « parke » sans bloquer de thread : on peut donc lancer des milliers de go-blocks sur quelques threads."},
+  {"q":"Où doit-on utiliser les versions à deux points <!! et >!! ?","a":["Hors d'un go-block (elles bloquent un vrai thread)","À l'intérieur d'un go-block","Uniquement en ClojureScript","Jamais"],"correct":0,"explain":"Dans un go-block on utilise <! et >! (un point) ; <!! et >!! (deux points) bloquent un thread et ne doivent pas être utilisés dans un go-block."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["chan","(chan)"],"placeholder":"la fonction de core.async pour créer un CANAL (messages) : …","hints":["(def messages (????)).","Une file de communication entre go-blocks.","Quatre lettres."],"link":{"href":"lecon-11.html","label":"Revoir « Les canaux »"}},
+  {"type":"text","accept":["go","(go ...)"],"placeholder":"la macro pour un BLOC asynchrone léger dans core.async : …","hints":["(?? (>! messages :salut)).","Transforme le code en machine à états.","Deux lettres."],"link":{"href":"lecon-11.html","label":"Revoir « Les go-blocks »"}},
+  {"type":"text","accept":["<!","<! c"],"placeholder":"l'opérateur NON bloquant à utiliser DANS un go (au lieu du bloquant <!!) : …","hints":["<!! bloque un vrai thread : dangereux dans un go.","Sa version « parking » a un seul !.","< suivi d'un !."],"link":{"href":"lecon-11.html","label":"Revoir « <! et <!! »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un canal nommé <code>messages</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(def messages (chan))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans un go-block, dépose la valeur <code>:salut</code> dans le canal <code>messages</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(go (&gt;! messages :salut))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Corrige ce code&nbsp;: un développeur a écrit <code>(go (&lt;!! c))</code>. Pourquoi est-ce dangereux et comment le corriger&nbsp;?</p><details><summary>Voir une solution</summary><p><code>&lt;!!</code> (deux points) <strong>bloque un thread</strong>, ce qu'on ne doit jamais faire dans un <code>go</code>-block (cela peut figer le pool de threads de core.async). Dans un go-block, on utilise la version à <strong>un point</strong>, qui «&nbsp;parke&nbsp;» sans bloquer&nbsp;:</p><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(go (&lt;! c))</code></pre></figure></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clojure.min.js" defer></script>
+  </body>
+</html>

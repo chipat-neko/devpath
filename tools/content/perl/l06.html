@@ -1,0 +1,90 @@
+<p>Le texte vit dans des <strong>fichiers</strong>&nbsp;: journaux, exports, configurations. Perl a été conçu pour les traiter à la chaîne, et ses outils d'entrée/sortie sont à la fois simples et puissants. Cette leçon te rend autonome pour lire, écrire et filtrer des fichiers.</p>
+
+<h2>Ouvrir un fichier proprement</h2>
+<p>La forme moderne de <code>open</code> utilise un <strong>handle lexical</strong> (une variable scalaire) et un mode explicite. Toujours vérifier l'échec avec <code>or die</code>&nbsp;: un fichier peut manquer.</p>
+<figure class="code-block" data-file="lire.pl"><pre><code class="language-perl">use strict;
+use warnings;
+
+open(my $fh, '&lt;', 'donnees.txt')
+    or die "Impossible d'ouvrir : $!";
+
+# … utiliser $fh …
+
+close($fh);</code></pre></figure>
+<p class="code-caption">Les modes&nbsp;: <code>'&lt;'</code> lecture, <code>'&gt;'</code> écriture (écrase), <code>'&gt;&gt;'</code> ajout. <code>$!</code> contient le message d'erreur système.</p>
+
+<h2>Lire ligne à ligne avec le losange</h2>
+<p>L'opérateur losange <code>&lt;$fh&gt;</code> lit une ligne (saut de ligne inclus). Dans une boucle <code>while</code>, il les parcourt toutes, une à une — sans charger le fichier entier en mémoire, ce qui permet de traiter des fichiers énormes.</p>
+<figure class="code-block" data-file="lire.pl"><pre><code class="language-perl">open(my $fh, '&lt;', 'journal.txt') or die "$!";
+while (my $ligne = &lt;$fh&gt;) {
+    chomp $ligne;            # retire le \n
+    say "Lu : $ligne";
+}
+close($fh);</code></pre></figure>
+
+<h2>Tout lire d'un coup</h2>
+<p>Si le fichier est petit, on peut le charger entièrement&nbsp;: en contexte liste, le losange renvoie <strong>toutes les lignes</strong> dans un tableau.</p>
+<figure class="code-block" data-file="lire.pl"><pre><code class="language-perl">open(my $fh, '&lt;', 'court.txt') or die "$!";
+my @lignes = &lt;$fh&gt;;          # toutes les lignes
+close($fh);
+say "Nombre de lignes : ", scalar @lignes;</code></pre></figure>
+
+<h2>Écrire et ajouter</h2>
+<p>Avec le mode <code>'&gt;'</code> on écrit (le fichier est vidé), avec <code>'&gt;&gt;'</code> on ajoute à la fin. On envoie du texte au handle avec <code>print</code> ou <code>say</code>.</p>
+<figure class="code-block" data-file="ecrire.pl"><pre><code class="language-perl">open(my $out, '&gt;', 'sortie.txt') or die "$!";
+say $out "Première ligne";
+say $out "Deuxième ligne";
+close($out);
+
+open(my $log, '&gt;&gt;', 'sortie.txt') or die "$!";
+say $log "Ajout en fin";
+close($log);</code></pre></figure>
+
+<h2>Filtrer un fichier&nbsp;: l'exemple classique</h2>
+<p>Combinons tout&nbsp;: lire un fichier, garder les lignes qui correspondent à un motif, et écrire le résultat. C'est le pain quotidien de Perl.</p>
+<figure class="code-block" data-file="filtre.pl"><pre><code class="language-perl">open(my $in,  '&lt;', 'journal.txt') or die "$!";
+open(my $out, '&gt;', 'erreurs.txt') or die "$!";
+
+while (my $ligne = &lt;$in&gt;) {
+    print $out $ligne if $ligne =~ /ERREUR/;
+}
+close($in);
+close($out);</code></pre></figure>
+
+<h2>L'entrée standard et les arguments</h2>
+<p>Le losange vide <code>&lt;&gt;</code> lit soit les fichiers passés en argument, soit l'entrée standard. Cela transforme ton script en <strong>filtre Unix</strong>, utilisable dans un pipe.</p>
+<figure class="code-block" data-file="majuscule.pl"><pre><code class="language-perl">while (my $ligne = &lt;&gt;) {
+    print uc $ligne;        # met chaque ligne en majuscules
+}
+# Usage : perl majuscule.pl fichier.txt
+#    ou : cat fichier.txt | perl majuscule.pl</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ouvrir en mode <code>'&gt;'</code> alors qu'on voulait ajouter&nbsp;: le mode écriture <strong>vide le fichier</strong> sans prévenir&nbsp;! Pour conserver le contenu et ajouter à la fin, c'est <code>'&gt;&gt;'</code>. Et n'oublie jamais le <code>or die "$!"</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour gérer l'encodage (UTF-8), précise-le à l'ouverture&nbsp;: <code>open(my $fh, '&lt;:encoding(UTF-8)', $fichier)</code>. C'est indispensable dès que tes fichiers contiennent des accents&nbsp;— ce qui est fréquent en français&nbsp;!</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>open(my $fh, '&lt;', $fichier) or die "$!"</code>&nbsp;: ouverture sûre avec handle lexical.</li>
+  <li><code>while (my $l = &lt;$fh&gt;)</code> lit ligne à ligne&nbsp;; pense à <code>chomp</code>.</li>
+  <li>Modes&nbsp;: <code>'&lt;'</code> lire, <code>'&gt;'</code> écrire (écrase), <code>'&gt;&gt;'</code> ajouter.</li>
+  <li>Le losange vide <code>&lt;&gt;</code> fait de ton script un filtre Unix.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre les modes <code>'&gt;'</code> et <code>'&gt;&gt;'</code>&nbsp;?</li><li>Pourquoi lire ligne à ligne plutôt que tout charger&nbsp;?</li><li>À quoi sert <code>or die "$!"</code> après un <code>open</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris trois lignes dans un fichier <code>notes.txt</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">open(my $fh, '&gt;', 'notes.txt') or die "$!";
+say $fh $_ for ("une", "deux", "trois");
+close($fh);</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Compte le nombre de lignes d'un fichier passé en argument.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">my $n = 0;
+$n++ while &lt;&gt;;
+say "$n lignes";
+# perl compte.pl fichier.txt</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Lis un fichier et écris dans un autre uniquement les lignes contenant un nombre.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">open(my $in,  '&lt;', 'entree.txt')  or die "$!";
+open(my $out, '&gt;', 'nombres.txt') or die "$!";
+while (my $l = &lt;$in&gt;) {
+    print $out $l if $l =~ /\d/;
+}
+close($in); close($out);</code></pre></figure></details></div>

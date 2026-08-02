@@ -1,0 +1,72 @@
+<p>Puisque les fonctions sont des valeurs (leçon 4), on peut les passer à d'autres fonctions. Une fonction qui prend ou renvoie une fonction s'appelle une <strong>fonction d'ordre supérieur</strong>. Lisp a popularisé cette idée — <code>map</code>, <code>filter</code>, <code>fold</code> — que tous les langages modernes ont depuis adoptée.</p>
+
+<h2>map&nbsp;: transformer chaque élément</h2>
+<p><code>map</code> applique une fonction à chaque élément d'une liste et renvoie la liste des résultats. Plus de boucle&nbsp;: on décrit la transformation.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(map (lambda (x) (* x x)) '(1 2 3 4))   ; (1 4 9 16)
+(map (lambda (x) (+ x 10)) '(1 2 3))    ; (11 12 13)
+
+; map peut combiner plusieurs listes en parallèle :
+(map + '(1 2 3) '(10 20 30))            ; (11 22 33)</code></pre></figure>
+
+<h2>filter&nbsp;: ne garder que certains éléments</h2>
+<p><code>filter</code> conserve les éléments qui satisfont un prédicat (une fonction qui renvoie vrai ou faux).</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(filter even? '(1 2 3 4 5 6))           ; (2 4 6)
+(filter (lambda (x) (&gt; x 3)) '(1 2 3 4 5))  ; (4 5)</code></pre></figure>
+
+<h2>fold&nbsp;: réduire à une valeur</h2>
+<p><code>fold</code> (ou <code>reduce</code>) combine tous les éléments en une seule valeur, en accumulant avec une fonction. C'est l'outil le plus général&nbsp;: somme, produit, concaténation, et bien plus se définissent ainsi.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">; fold-left : (op (op (op init e1) e2) e3) ...
+(fold-left + 0 '(1 2 3 4))              ; 10
+(fold-left * 1 '(1 2 3 4))              ; 24
+(fold-left (lambda (acc x) (cons x acc)) '() '(1 2 3))  ; (3 2 1)</code></pre></figure>
+<p class="code-caption">Avec <code>map</code>, <code>filter</code> et <code>fold</code>, on exprime presque tout traitement de liste sans récursion explicite.</p>
+
+<h2>Composer un pipeline</h2>
+<p>On enchaîne naturellement ces opérations. Exemple&nbsp;: la somme des carrés des nombres pairs.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(fold-left + 0
+  (map (lambda (x) (* x x))
+       (filter even? '(1 2 3 4 5 6))))   ; 4 + 16 + 36 = 56</code></pre></figure>
+
+<h2>Les fermetures (closures)</h2>
+<p>Une <strong>fermeture</strong> est une fonction qui «&nbsp;capture&nbsp;» des variables de son environnement de définition. C'est ce qui permet de fabriquer des fonctions sur mesure — y compris des compteurs à état privé.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define (additionneur n)
+  (lambda (x) (+ x n)))      ; capture n
+
+(define ajoute5 (additionneur 5))
+(ajoute5 10)            ; 15  (n vaut 5 dans cette fermeture)
+
+(define ajoute100 (additionneur 100))
+(ajoute100 10)         ; 110</code></pre></figure>
+<p>Chaque appel d'<code>additionneur</code> crée une fermeture distincte, avec son propre <code>n</code> capturé.</p>
+
+<h2>Renvoyer et composer des fonctions</h2>
+<p>Une fonction d'ordre supérieur peut <em>renvoyer</em> une fonction&nbsp;: on construit ainsi de nouvelles fonctions par composition.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define (composer f g)
+  (lambda (x) (f (g x))))
+
+(define carre-puis-incr (composer (lambda (x) (+ x 1))
+                                  (lambda (x) (* x x))))
+(carre-puis-incr 4)     ; 17  ((4*4)+1)</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre <code>map</code> et <code>for-each</code>&nbsp;: <code>map</code> renvoie une <em>nouvelle liste</em> de résultats&nbsp;; <code>for-each</code> applique une fonction pour ses <em>effets de bord</em> (afficher…) sans construire de liste. Pour transformer, c'est <code>map</code>&nbsp;; pour agir, <code>for-each</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les fonctions d'ordre supérieur de Lisp ont essaimé partout&nbsp;: le <code>map</code>/<code>filter</code>/<code>reduce</code> de Python, le <code>map</code>/<code>filter</code>/<code>reduce</code> de JavaScript, les Streams de Java… tous descendent en droite ligne de ce que Lisp faisait dès les années 1960.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>map</code> transforme chaque élément&nbsp;; <code>filter</code> sélectionne&nbsp;; <code>fold</code>/<code>reduce</code> combine en une valeur.</li>
+  <li>On <strong>compose</strong> ces opérations pour exprimer des traitements complexes sans récursion explicite.</li>
+  <li>Une <strong>fermeture</strong> capture les variables de son environnement&nbsp;; chaque fermeture a son propre état.</li>
+  <li>Une fonction peut renvoyer une fonction&nbsp;: composition et fabrication de fonctions.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre <code>map</code> et <code>filter</code>&nbsp;?</li><li>Qu'est-ce qu'une fermeture&nbsp;?</li><li>Que fait <code>fold-left + 0 '(1 2 3)</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Avec <code>map</code>, incrémente chaque élément de <code>'(10 20 30)</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(map (lambda (x) (+ x 1)) '(10 20 30))   ; (11 21 31)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec <code>filter</code> et <code>fold-left</code>, calcule la somme des nombres &gt; 2 dans <code>'(1 2 3 4 5)</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(fold-left + 0
+  (filter (lambda (x) (&gt; x 2)) '(1 2 3 4 5)))   ; 12</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>multiplicateur</code> qui renvoie une fonction multipliant par <code>n</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define (multiplicateur n)
+  (lambda (x) (* x n)))
+((multiplicateur 3) 7)   ; 21</code></pre></figure></details></div>

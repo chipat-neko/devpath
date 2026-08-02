@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Constructeurs, destructeurs et RAII — Leçon 05 · C++ · Syntaxe</title>
+    <meta name="description" content="RAII en C++ moderne : destructeur, constructeur de copie, opérateur d'affectation, règle de 0/3/5, =default/=delete et pourquoi déléguer à la STL." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="cpp" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">C++</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · POO et RAII — Leçon 05</p>
+              <h1 class="lesson-header__title">Constructeurs, destructeurs et RAII</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 4 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre le rôle du <strong>destructeur</strong> et le pattern <strong>RAII</strong> (acquérir dans le constructeur, libérer dans le destructeur)&nbsp;;</li>
+                  <li>écrire un <strong>constructeur de copie</strong> et un <strong>opérateur d'affectation</strong> corrects pour une classe qui possède une ressource&nbsp;;</li>
+                  <li>appliquer la <strong>règle de 0/3/5</strong> et utiliser <code>=default</code> / <code>=delete</code>&nbsp;;</li>
+                  <li>savoir pourquoi préférer les types RAII de la STL comme <code>std::string</code> et <code>std::vector</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En C++, il n'y a pas de ramasse-miettes&nbsp;: aucun processus invisible ne vient récupérer la mémoire ou fermer les fichiers à ta place. Et pourtant, du code C++ moderne bien écrit ne fuit pas. Le secret tient en quatre lettres&nbsp;: <strong>RAII</strong> (<em>Resource Acquisition Is Initialization</em>). L'idée est d'attacher chaque ressource à la durée de vie d'un objet&nbsp;: tu acquiers dans le constructeur, tu libères dans le destructeur, et le langage garantit que le destructeur sera appelé.</p>
+
+<p>Cette leçon décortique le destructeur, le constructeur de copie, l'opérateur d'affectation, puis la fameuse <strong>règle de 0/3/5</strong> qui dit lesquels écrire. Tu verras pourquoi, dans la grande majorité des cas, la bonne réponse est de n'en écrire aucun et de laisser la STL travailler.</p>
+
+<h2>Le destructeur&nbsp;: la fin de vie d'un objet</h2>
+<p>Le destructeur a le nom de la classe précédé d'un tilde&nbsp;: <code>~Classe()</code>. Il ne prend aucun paramètre, ne renvoie rien, et tu ne l'appelles jamais à la main&nbsp;: le compilateur l'invoque <strong>automatiquement</strong> quand l'objet atteint la fin de sa vie — typiquement à la sortie de sa portée (l'accolade fermante).</p>
+
+<figure class="code-block" data-file="main.cpp"><pre><code class="language-cpp">#include &lt;iostream&gt;
+
+struct Sentinelle {
+    Sentinelle()  { std::cout &lt;&lt; "construction\n"; }
+    ~Sentinelle() { std::cout &lt;&lt; "destruction\n"; }
+};
+
+int main() {
+    std::cout &lt;&lt; "avant le bloc\n";
+    {
+        Sentinelle s;                 // construction ici
+        std::cout &lt;&lt; "dans le bloc\n";
+    }                                 // destruction ici (sortie de portee)
+    std::cout &lt;&lt; "apres le bloc\n";
+}
+// Sortie :
+// avant le bloc
+// construction
+// dans le bloc
+// destruction
+// apres le bloc</code></pre></figure>
+<p class="code-caption">Le destructeur est déclenché par l'accolade fermante, pas par une instruction explicite.</p>
+
+<h2>RAII&nbsp;: acquérir, puis libérer automatiquement</h2>
+<p>RAII consiste à mettre l'acquisition d'une ressource dans le constructeur et sa libération dans le destructeur. Une fois ce contrat posé, la ressource est garantie fermée à la fin de la portée — <strong>même si une exception est levée</strong> entre-temps, car la pile se déroule en appelant les destructeurs au passage.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 175" role="img" aria-label="Le cycle de vie RAII sur la durée d'une portée. À l'entrée dans le bloc entre accolades, le constructeur acquiert la ressource : il ouvre le fichier, alloue la mémoire ou verrouille. Pendant la vie de l'objet, la ressource est utilisée. À la sortie du bloc, l'accolade fermante, le destructeur libère automatiquement la ressource. Cette libération a lieu même si une exception interrompt le bloc, car la pile se déroule en appelant les destructeurs au passage.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">RAII : la ressource suit la durée de vie de l'objet</text>
+    <text class="d-tag" x="66" y="106" text-anchor="middle" font-size="18">{</text>
+    <text class="d-tag" x="576" y="106" text-anchor="middle" font-size="18">}</text>
+    <line class="d-line" x1="80" y1="100" x2="560" y2="100" />
+    <rect class="d-accent" x="92" y="82" width="150" height="36" rx="6" /><text class="d-text" x="167" y="104" text-anchor="middle" font-size="9">constructeur : ACQUIERT</text>
+    <rect class="d-box" x="250" y="82" width="140" height="36" rx="6" /><text class="d-text" x="320" y="104" text-anchor="middle" font-size="9">objet vivant : utilise</text>
+    <rect class="d-accent" x="398" y="82" width="150" height="36" rx="6" /><text class="d-text" x="473" y="104" text-anchor="middle" font-size="9">destructeur : LIBÈRE</text>
+    <text class="d-mut" x="167" y="138" text-anchor="middle" font-size="8">new / open / lock</text>
+    <text class="d-mut" x="473" y="138" text-anchor="middle" font-size="8">delete / close / unlock</text>
+    <text class="d-mut" x="320" y="162" text-anchor="middle" font-size="8">libération garantie à la sortie de portée — même en cas d'exception</text>
+  </svg>
+  <figcaption>La ressource est <strong>acquise</strong> à la construction et <strong>libérée</strong> au destructeur&nbsp;: sa durée de vie est exactement celle de l'objet.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="main.cpp"><pre><code class="language-cpp">#include &lt;fstream&gt;
+#include &lt;iostream&gt;
+#include &lt;stdexcept&gt;
+#include &lt;string&gt;
+
+void ecrire(const std::string&amp; chemin) {
+    std::ofstream f(chemin);          // ACQUISITION : le fichier s'ouvre
+    if (!f) throw std::runtime_error("ouverture impossible");
+    f &lt;&lt; "ligne 1\n";
+    throw std::runtime_error("oups au milieu");
+    // Tout ce qui suit le throw est inatteignable (le compilateur
+    // peut d'ailleurs emettre un avertissement) :
+    // f &lt;&lt; "ligne 2\n";
+}                                     // LIBERATION : ~ofstream ferme le fichier,
+                                      // meme avec l'exception en vol
+
+int main() {
+    try {
+        ecrire("sortie.txt");
+    } catch (const std::exception&amp; e) {
+        std::cout &lt;&lt; "erreur : " &lt;&lt; e.what() &lt;&lt; '\n';
+    }
+    // Le fichier a bien ete ferme malgre l'exception.
+}
+// Sortie :
+// erreur : oups au milieu</code></pre></figure>
+<p class="code-caption"><code>std::ofstream</code> est déjà une classe RAII&nbsp;: son destructeur ferme le flux quoi qu'il arrive.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>C'est précisément ce que le C++ offre à la place du ramasse-miettes&nbsp;: une libération <em>déterministe</em>. Tu sais exactement <strong>quand</strong> la ressource est rendue (à la fin de la portée), et pas «&nbsp;un jour, peut-être&nbsp;».</p></div></div>
+
+<h2>Une classe qui possède une ressource</h2>
+<p>Illustrons avec une classe qui détient un buffer. Pour l'exemple pédagogique on alloue manuellement&nbsp;; en vrai, on utiliserait <code>std::vector</code> (voir plus bas). Acquisition dans le constructeur, libération dans le destructeur.</p>
+
+<figure class="code-block" data-file="main.cpp"><pre><code class="language-cpp">#include &lt;cstddef&gt;
+#include &lt;iostream&gt;
+
+class Buffer {
+public:
+    explicit Buffer(std::size_t n) : taille_(n), data_(new int[n]{}) {
+        std::cout &lt;&lt; "alloue " &lt;&lt; n &lt;&lt; " ints\n";
+    }
+    ~Buffer() {
+        delete[] data_;               // LIBERATION
+        std::cout &lt;&lt; "libere\n";
+    }
+    void set(std::size_t i, int v) { data_[i] = v; }
+    int  get(std::size_t i) const   { return data_[i]; }
+
+private:
+    std::size_t taille_;
+    int*        data_;
+};
+
+int main() {
+    Buffer b(3);
+    b.set(0, 42);
+    std::cout &lt;&lt; "b[0] = " &lt;&lt; b.get(0) &lt;&lt; '\n';
+}                                     // ~Buffer() appele ici
+// Sortie :
+// alloue 3 ints
+// b[0] = 42
+// libere</code></pre></figure>
+<p class="code-caption">Tant qu'on ne copie pas l'objet, ce code est correct. Mais la copie va poser problème — c'est l'objet de la section suivante.</p>
+
+<h2>Constructeur de copie et opérateur d'affectation</h2>
+<p>Que se passe-t-il si on écrit <code>Buffer c = b;</code>&nbsp;? Le compilateur génère par défaut une <strong>copie membre à membre</strong>. Pour le pointeur <code>data_</code>, cela copie l'adresse, pas le contenu&nbsp;: les deux objets pointent vers le <em>même</em> tableau. À la destruction, chacun appelle <code>delete[]</code> sur cette adresse&nbsp;: c'est un <strong>double free</strong>, comportement indéfini.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 215" role="img" aria-label="Copie superficielle contre copie profonde d'un objet qui possède un tableau. En haut, la copie superficielle générée par défaut : les deux objets a et b copient la même adresse et pointent vers un unique tableau ; à leur destruction, chacun libère ce tableau, d'où un double delete. En bas, la copie profonde : le constructeur de copie alloue un nouveau tableau et recopie le contenu ; a et b possèdent chacun leur propre tableau, et chacun libère le sien, sans conflit.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Copier un objet qui possède un pointeur</text>
+    <text class="d-mut" x="30" y="74" text-anchor="start" font-size="9">superficielle</text>
+    <rect class="d-box" x="120" y="52" width="76" height="26" rx="4" /><text class="d-text" x="158" y="69" text-anchor="middle" font-size="9">a.data_</text>
+    <rect class="d-box" x="120" y="86" width="76" height="26" rx="4" /><text class="d-text" x="158" y="103" text-anchor="middle" font-size="9">b.data_</text>
+    <rect class="d-accent" x="300" y="69" width="120" height="28" rx="4" /><text class="d-text" x="360" y="87" text-anchor="middle" font-size="9">[ 7, 3, 9 ]</text>
+    <line class="d-line" x1="196" y1="65" x2="300" y2="82" /><line class="d-line" x1="196" y1="99" x2="300" y2="86" />
+    <text class="d-mut" x="510" y="87" text-anchor="middle" font-size="9">2 × delete[] → double free ✗</text>
+    <line class="d-line" x1="30" y1="126" x2="610" y2="126" />
+    <text class="d-mut" x="30" y="152" text-anchor="start" font-size="9">profonde</text>
+    <rect class="d-box" x="120" y="140" width="76" height="26" rx="4" /><text class="d-text" x="158" y="157" text-anchor="middle" font-size="9">a.data_</text>
+    <rect class="d-accent" x="300" y="140" width="120" height="26" rx="4" /><text class="d-text" x="360" y="157" text-anchor="middle" font-size="9">[ 7, 3, 9 ]</text>
+    <line class="d-line" x1="196" y1="153" x2="300" y2="153" />
+    <rect class="d-box" x="120" y="176" width="76" height="26" rx="4" /><text class="d-text" x="158" y="193" text-anchor="middle" font-size="9">b.data_</text>
+    <rect class="d-accent" x="300" y="176" width="120" height="26" rx="4" /><text class="d-text" x="360" y="193" text-anchor="middle" font-size="9">[ 7, 3, 9 ]</text>
+    <line class="d-line" x1="196" y1="189" x2="300" y2="189" />
+    <text class="d-mut" x="510" y="171" text-anchor="middle" font-size="9">chacun son tableau → OK ✓</text>
+  </svg>
+  <figcaption>La copie par défaut duplique le <em>pointeur</em> (partage → double <code>delete</code>)&nbsp;; la copie <strong>profonde</strong> duplique le <em>tableau</em>.</figcaption>
+</figure>
+
+<p>La solution est une <strong>copie profonde</strong>&nbsp;: dupliquer le tableau possédé. On définit le constructeur de copie et l'opérateur d'affectation par copie.</p>
+
+<figure class="code-block" data-file="main.cpp"><pre><code class="language-cpp">#include &lt;algorithm&gt;   // std::copy
+#include &lt;cstddef&gt;
+#include &lt;iostream&gt;
+
+class Buffer {
+public:
+    explicit Buffer(std::size_t n) : taille_(n), data_(new int[n]{}) {}
+
+    ~Buffer() { delete[] data_; }
+
+    // Constructeur de COPIE : duplique le tableau (copie profonde)
+    Buffer(const Buffer&amp; autre)
+        : taille_(autre.taille_), data_(new int[autre.taille_]) {
+        std::copy(autre.data_, autre.data_ + taille_, data_);
+    }
+
+    // Operateur d'AFFECTATION par copie (allouer - copier - liberer - basculer)
+    Buffer&amp; operator=(const Buffer&amp; autre) {
+        if (this == &amp;autre) return *this;     // auto-affectation
+        int* neuf = new int[autre.taille_];   // 1) allouer d'abord (securite)
+        std::copy(autre.data_, autre.data_ + autre.taille_, neuf);
+        delete[] data_;                        // 2) liberer l'ancien
+        data_   = neuf;                        // 3) basculer
+        taille_ = autre.taille_;
+        return *this;
+    }
+
+    void set(std::size_t i, int v) { data_[i] = v; }
+    int  get(std::size_t i) const   { return data_[i]; }
+
+private:
+    std::size_t taille_;
+    int*        data_;
+};
+
+int main() {
+    Buffer a(2);
+    a.set(0, 7);
+    Buffer b = a;        // appelle le constructeur de copie
+    b.set(0, 99);        // modifie b, pas a (tableaux distincts)
+    std::cout &lt;&lt; "a[0]=" &lt;&lt; a.get(0) &lt;&lt; "  b[0]=" &lt;&lt; b.get(0) &lt;&lt; '\n';
+}
+// Sortie :
+// a[0]=7  b[0]=99</code></pre></figure>
+<p class="code-caption">Chaque <code>Buffer</code> possède désormais son propre tableau&nbsp;: plus de partage accidentel, plus de double <code>delete[]</code>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Dans l'opérateur d'affectation, on alloue le nouveau tableau <strong>avant</strong> de libérer l'ancien. Si <code>new</code> échoue (exception), l'objet reste intact&nbsp;: c'est la garantie «&nbsp;forte&nbsp;» face aux exceptions. Inverser l'ordre laisserait un pointeur pendouillant. Une alternative encore plus sûre, l'idiome <em>copy-and-swap</em>, est évoquée avec la sémantique de déplacement (leçon 8).</p></div></div>
+
+<h2>La règle de 0/3/5</h2>
+<p>Ces fonctions spéciales forment une famille cohérente. La <strong>règle de trois</strong> (C++98) dit&nbsp;: si tu définis <em>l'un</em> de ces trois — destructeur, constructeur de copie, opérateur d'affectation par copie — tu dois sans doute définir <em>les trois</em>, car ta classe gère une ressource manuellement. La <strong>règle de cinq</strong> (C++11) ajoute le constructeur de déplacement et l'affectation par déplacement (leçon 8).</p>
+
+<p>Mais la règle la plus importante est la <strong>règle de zéro</strong>&nbsp;: conçois tes classes pour n'avoir à définir <em>aucune</em> de ces fonctions, en confiant la possession des ressources à des types qui gèrent déjà RAII (conteneurs STL, smart pointers). Le compilateur génère alors des copies et destructions correctes gratuitement.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="La règle de zéro, trois et cinq. À gauche, la règle de zéro : la classe ne possède aucune ressource brute, tous ses membres sont des types RAII comme string et vector ; on n'écrit aucune fonction spéciale. Au milieu, la règle de trois du C++98 : si la classe gère une ressource manuelle, elle doit définir les trois fonctions, destructeur, constructeur de copie et opérateur d'affectation par copie. À droite, la règle de cinq du C++11 ajoute les deux fonctions de déplacement, constructeur de déplacement et affectation par déplacement.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Combien de fonctions spéciales écrire ?</text>
+    <rect class="d-accent" x="24" y="38" width="184" height="122" rx="8" /><text class="d-tag" x="116" y="60" text-anchor="middle" font-size="11">règle de 0</text>
+    <text class="d-text" x="116" y="86" text-anchor="middle" font-size="9">AUCUNE à écrire</text>
+    <text class="d-mut" x="116" y="110" text-anchor="middle" font-size="8">membres RAII :</text>
+    <text class="d-mut" x="116" y="126" text-anchor="middle" font-size="8">string, vector,</text>
+    <text class="d-mut" x="116" y="142" text-anchor="middle" font-size="8">unique_ptr…</text>
+    <rect class="d-frame" x="228" y="38" width="184" height="122" rx="8" /><text class="d-tag" x="320" y="60" text-anchor="middle" font-size="11">règle de 3 (C++98)</text>
+    <text class="d-text" x="320" y="84" text-anchor="middle" font-size="8">~Classe()</text>
+    <text class="d-text" x="320" y="102" text-anchor="middle" font-size="8">Classe(const Classe&amp;)</text>
+    <text class="d-text" x="320" y="120" text-anchor="middle" font-size="8">operator=(const Classe&amp;)</text>
+    <text class="d-mut" x="320" y="144" text-anchor="middle" font-size="8">si ressource manuelle</text>
+    <rect class="d-frame" x="432" y="38" width="184" height="122" rx="8" /><text class="d-tag" x="524" y="60" text-anchor="middle" font-size="11">règle de 5 (C++11)</text>
+    <text class="d-text" x="524" y="86" text-anchor="middle" font-size="8">+ Classe(Classe&amp;&amp;)</text>
+    <text class="d-text" x="524" y="104" text-anchor="middle" font-size="8">+ operator=(Classe&amp;&amp;)</text>
+    <text class="d-mut" x="524" y="128" text-anchor="middle" font-size="8">déplacement efficace</text>
+    <text class="d-mut" x="524" y="144" text-anchor="middle" font-size="8">(leçon 8)</text>
+  </svg>
+  <figcaption>Vise la <strong>règle de zéro</strong>&nbsp;; si tu gères une ressource à la main, applique la règle de <strong>trois</strong> (et de <strong>cinq</strong> avec le déplacement).</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Règle pratique&nbsp;: une classe gère <strong>soit</strong> de la logique métier, <strong>soit</strong> une ressource brute, jamais les deux. Pousse la gestion de ressource dans un type RAII dédié, et tes classes métier suivent la règle de zéro.</p></div></div>
+
+<h2>=default et =delete</h2>
+<p>Tu peux contrôler explicitement ces fonctions spéciales. <code>=default</code> demande au compilateur la version générée (utile pour documenter l'intention ou réactiver une fonction supprimée). <code>=delete</code> interdit une opération&nbsp;: toute tentative de l'utiliser devient une erreur de compilation.</p>
+
+<figure class="code-block" data-file="main.cpp"><pre><code class="language-cpp">#include &lt;iostream&gt;
+
+// Type "unique" : possedable mais NON copiable (ex. un verrou, un handle)
+class Unique {
+public:
+    Unique()  = default;              // constructeur par defaut genere
+    ~Unique() = default;              // destructeur genere
+
+    Unique(const Unique&amp;)            = delete;   // copie interdite
+    Unique&amp; operator=(const Unique&amp;) = delete;   // affectation interdite
+};
+
+int main() {
+    Unique a;
+    // Unique b = a;   // ERREUR de compilation : copie supprimee
+    std::cout &lt;&lt; "ok\n";
+}
+// Erreur si on decommente :
+// error: use of deleted function 'Unique::Unique(const Unique&amp;)'</code></pre></figure>
+<p class="code-caption"><code>=delete</code> transforme un mauvais usage en erreur <em>à la compilation</em>, bien avant l'exécution.</p>
+
+<h2>Préférer les types RAII de la STL</h2>
+<p>Reprends le <code>Buffer</code> avec ses trois fonctions spéciales… puis jette-le. <code>std::vector</code> fait tout cela, correctement, et applique déjà la règle de cinq en interne&nbsp;: copie profonde, déplacement efficace, libération automatique. Idem pour <code>std::string</code> qui possède un tampon de caractères.</p>
+
+<figure class="code-block" data-file="main.cpp"><pre><code class="language-cpp">#include &lt;iostream&gt;
+#include &lt;string&gt;
+#include &lt;utility&gt;   // std::move
+#include &lt;vector&gt;
+
+// Classe metier : AUCUNE fonction speciale a ecrire (regle de zero)
+class Etudiant {
+public:
+    Etudiant(std::string nom, std::vector&lt;int&gt; notes)
+        : nom_(std::move(nom)), notes_(std::move(notes)) {}
+
+    double moyenne() const {
+        double total = 0;
+        for (int n : notes_) total += n;   // range-for
+        return notes_.empty() ? 0.0 : total / notes_.size();
+    }
+    const std::string&amp; nom() const { return nom_; }
+
+private:
+    std::string      nom_;
+    std::vector&lt;int&gt; notes_;
+};
+
+int main() {
+    Etudiant e{"Noah", {12, 15, 18}};
+    Etudiant copie = e;                 // copie profonde GRATUITE et correcte
+    std::cout &lt;&lt; copie.nom() &lt;&lt; " : " &lt;&lt; copie.moyenne() &lt;&lt; '\n';
+}                                       // string et vector se liberent seuls
+// Sortie :
+// Noah : 15</code></pre></figure>
+<p class="code-caption">Ici <code>Etudiant</code> n'a ni destructeur, ni constructeur de copie, ni opérateur d'affectation explicites&nbsp;: <code>string</code> et <code>vector</code> assurent le RAII. C'est la règle de zéro en action.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service réseau en C++ ouvrait un fichier de journal par requête, puis fermait le descripteur «&nbsp;à la main&nbsp;» en fin de fonction. Dès qu'un <code>return</code> anticipé ou une exception sautait cette ligne, le descripteur fuyait&nbsp;; après quelques heures de charge, le processus atteignait la limite système (<code>too many open files</code>) et refusait toute nouvelle connexion. Le correctif tenait en une ligne&nbsp;: remplacer le descripteur nu par un <code>std::ofstream</code> (RAII), qui ferme <em>toujours</em> à la sortie de portée. C'est exactement le principe de <code>std::lock_guard</code>, qui verrouille un <code>std::mutex</code> à sa construction et le déverrouille à son destructeur&nbsp;: impossible d'oublier de rendre la ressource, car c'est le langage qui s'en charge.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Acquérir une ressource dans le constructeur sans destructeur pour la libérer&nbsp;: c'est une <strong>fuite</strong> garantie. Chaque <code>new</code>/<code>new[]</code> brut doit avoir son <code>delete</code>/<code>delete[]</code> exactement une fois — raison de plus pour éviter le pointeur nu et utiliser <code>std::vector</code> ou un smart pointer.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Copie superficielle d'un pointeur possédé</strong> = double <code>delete</code>. Si ta classe a un destructeur qui libère un pointeur membre mais pas de constructeur de copie correct, la première copie détruite invalide le tableau, la seconde le re-libère&nbsp;: comportement indéfini. C'est exactement ce que la règle de 3/5 prévient.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Sur une classe de <strong>base polymorphe</strong> (destinée à être dérivée et manipulée via un pointeur de base), un destructeur non <code>virtual</code> empêche l'appel du destructeur de la classe dérivée&nbsp;: ressources de la partie dérivée non libérées. On traite ce cas en détail avec l'héritage (leçon 6).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La règle de <em>cinq</em> ajoute la <strong>sémantique de déplacement</strong> (leçon 8)&nbsp;: transférer une ressource au lieu de la copier, bien plus efficace. Les <strong>smart pointers</strong> (<code>std::unique_ptr</code>, <code>std::shared_ptr</code>, leçon 12) encapsulent la possession et te ramènent à la règle de zéro. Pour les verrous, <code>std::lock_guard</code> applique RAII à un <code>std::mutex</code>&nbsp;: il le verrouille à la construction et le déverrouille au destructeur.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — fonctions spéciales et RAII</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>Destructeur</td><td>libère à la fin de vie</td><td><code>~Buffer() { delete[] data_; }</code></td></tr>
+      <tr><td>Constructeur de copie</td><td>copie profonde d'un autre objet</td><td><code>Buffer(const Buffer&amp;)</code></td></tr>
+      <tr><td>Affectation par copie</td><td>allouer, copier, libérer, basculer</td><td><code>Buffer&amp; operator=(const Buffer&amp;)</code></td></tr>
+      <tr><td>Règle de 0</td><td>aucune fonction spéciale à écrire</td><td>membres <code>string</code> / <code>vector</code></td></tr>
+      <tr><td>Règle de 3 / 5</td><td>un défini ⇒ définis-les tous</td><td>+ déplacement en C++11</td></tr>
+      <tr><td><code>=default</code></td><td>demande la version générée</td><td><code>~Unique() = default;</code></td></tr>
+      <tr><td><code>=delete</code></td><td>interdit l'opération (à la compilation)</td><td><code>Unique(const Unique&amp;) = delete;</code></td></tr>
+      <tr><td>Type RAII de la STL</td><td>gère la ressource à ta place</td><td><code>std::vector</code>, <code>std::string</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>RAII</dt><dd><em>Resource Acquisition Is Initialization</em>&nbsp;: lier une ressource à la durée de vie d'un objet — acquise au constructeur, libérée au destructeur.</dd>
+  <dt>Destructeur</dt><dd>Méthode <code>~Classe()</code> appelée automatiquement en fin de vie de l'objet&nbsp;; on y place la libération des ressources.</dd>
+  <dt>Copie superficielle</dt><dd>Copie membre à membre&nbsp;: pour un pointeur, elle duplique l'adresse, d'où deux objets partageant la même ressource (double <code>delete</code>).</dd>
+  <dt>Copie profonde</dt><dd>Copie qui duplique la ressource pointée (nouveau tableau puis recopie du contenu)&nbsp;: chaque objet possède la sienne.</dd>
+  <dt>Règle de 0/3/5</dt><dd>Si tu définis l'une des fonctions spéciales, définis-les toutes (trois, ou cinq avec le déplacement)&nbsp;; idéalement n'en définis <strong>aucune</strong> (règle de zéro).</dd>
+  <dt><code>=default</code> / <code>=delete</code></dt><dd><code>=default</code> demande la version générée&nbsp;; <code>=delete</code> interdit l'opération, transformant tout usage en erreur de compilation.</dd>
+  <dt>Double <code>delete</code></dt><dd>Libérer deux fois la même adresse&nbsp;; comportement indéfini, conséquence typique d'une copie superficielle d'un pointeur possédé.</dd>
+  <dt>Fonction spéciale</dt><dd>Fonction que le compilateur peut générer&nbsp;: destructeur, constructeurs et affectations par copie et par déplacement.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>destructeur</strong> <code>~Classe()</code> est appelé automatiquement en fin de vie de l'objet&nbsp;; il libère les ressources.</li>
+<li><strong>RAII</strong>&nbsp;: acquérir dans le constructeur, libérer dans le destructeur — fichiers, mémoire, verrous fermés même en cas d'exception.</li>
+<li>Une classe qui possède un pointeur brut a besoin d'une <strong>copie profonde</strong> (constructeur de copie + opérateur d'affectation), sinon double <code>delete</code>.</li>
+<li><strong>Règle de 0/3/5</strong>&nbsp;: si tu en définis un, définis-les tous&nbsp;; mieux, vise la règle de <strong>zéro</strong>.</li>
+<li><code>=default</code> demande la version générée&nbsp;; <code>=delete</code> interdit une opération à la compilation.</li>
+<li>Préfère <code>std::string</code> / <code>std::vector</code> qui appliquent déjà RAII pour toi.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>À quel moment précis le destructeur d'un objet local est-il appelé&nbsp;?</li>
+<li>Pourquoi une classe possédant un pointeur brut, dotée d'un destructeur mais sans constructeur de copie correct, provoque-t-elle un double <code>delete</code> à la copie&nbsp;?</li>
+<li>Énonce la règle de 3/5, puis explique pourquoi <code>Etudiant</code> (avec <code>string</code> et <code>vector</code>) n'a besoin d'aucune de ces fonctions.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"À quel moment précis le destructeur d'un objet local est-il appelé ?","a":["À la fin de sa portée (sortie du bloc), dans l'ordre inverse de leur construction","Au début du programme","Jamais, c'est automatique sans destructeur","Au prochain new"],"correct":0,"explain":"Quand un objet local sort de portée (fin d'accolade), son destructeur s'exécute. Les objets d'un même bloc sont détruits dans l'ordre inverse de leur création : c'est la base du RAII."},
+  {"q":"Pourquoi une classe avec un pointeur brut, dotée d'un destructeur mais sans constructeur de copie correct, provoque-t-elle un double delete à la copie ?","a":["Parce que la copie par défaut copie le pointeur (copie superficielle) : deux objets pointent la même mémoire, et chacun la delete à sa destruction","Parce que le destructeur est appelé deux fois sur le même objet","Parce que new échoue","Il n'y a pas de double delete"],"correct":0,"explain":"La copie générée duplique l'adresse, pas la ressource. Les deux objets « possèdent » alors le même bloc ; à leur destruction respective, ils le libèrent tous les deux, d'où un double delete (comportement indéfini)."},
+  {"q":"Énonce la règle de 3/5, puis explique pourquoi Etudiant (avec string et vector) n'a besoin d'aucune de ces fonctions.","a":["Si l'on définit l'un des (destructeur, copie, affectation) — et avec le déplacement, les 5 — il faut songer aux autres. Etudiant n'a que des membres qui gèrent déjà leur ressource (string, vector) : la règle de zéro s'applique, les versions générées suffisent","Il faut toujours écrire les 5","string et vector ne gèrent rien","Etudiant doit définir un destructeur"],"correct":0,"explain":"La règle de 3/5 dit que définir une de ces fonctions spéciales implique de gérer les autres. Mais si tous les membres sont eux-mêmes RAII (string, vector se copient/déplacent/détruisent correctement), aucune fonction spéciale n'est nécessaire : c'est la règle de zéro."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["RAII","raii"],"placeholder":"le sigle pour « la ressource est libérée à la destruction de l'objet » (ouverture/fermeture auto) : …","hints":["Resource Acquisition Is Initialization.","Le destructeur fait le ménage tout seul.","Quatre lettres."],"link":{"href":"lecon-05.html","label":"Revoir « RAII »"}},
+  {"type":"text","accept":["copie profonde","deep copy","profonde","copie-profonde"],"placeholder":"le type de copie qui DUPLIQUE le tableau pointé (et non juste le pointeur) : copie …","hints":["Sinon deux objets partageraient la même mémoire (double free).","On alloue un nouveau bloc et on recopie le contenu.","Copie … (deep copy)."],"link":{"href":"lecon-05.html","label":"Revoir « Le constructeur de copie »"}},
+  {"type":"text","accept":["règle de zéro","rule of zero","regle de zero","zéro","zero","règle du zéro"],"placeholder":"le nom de la règle : ne PAS écrire de fonctions spéciales si les membres se gèrent seuls (std::string) : règle de …","hints":["Les membres RAII (string, vector…) gèrent la copie pour toi.","Aucun destructeur/copie à écrire à la main.","Règle de … ."],"link":{"href":"lecon-05.html","label":"Revoir « La règle de zéro »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une classe <code>Connexion</code> qui simule l'ouverture d'une ressource&nbsp;: son constructeur affiche «&nbsp;ouverture&nbsp;» et son destructeur «&nbsp;fermeture&nbsp;». Crée une instance dans un bloc <code>{ ... }</code> dans <code>main</code> et vérifie, via la sortie, que la fermeture survient bien à la sortie du bloc (RAII).</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-cpp">#include &lt;iostream&gt;
+#include &lt;string&gt;
+#include &lt;utility&gt;
+
+class Connexion {
+public:
+    explicit Connexion(std::string hote) : hote_(std::move(hote)) {
+        std::cout &lt;&lt; "ouverture vers " &lt;&lt; hote_ &lt;&lt; '\n';
+    }
+    ~Connexion() {
+        std::cout &lt;&lt; "fermeture vers " &lt;&lt; hote_ &lt;&lt; '\n';
+    }
+private:
+    std::string hote_;
+};
+
+int main() {
+    std::cout &lt;&lt; "debut\n";
+    {
+        Connexion c("serveur");
+        std::cout &lt;&lt; "travail en cours\n";
+    }                                   // ~Connexion() ici
+    std::cout &lt;&lt; "fin\n";
+}
+// Sortie :
+// debut
+// ouverture vers serveur
+// travail en cours
+// fermeture vers serveur
+// fin</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>On te donne une classe <code>Tableau</code> qui possède un <code>int*</code> alloué dans le constructeur et libéré dans le destructeur. Ajoute un <strong>constructeur de copie correct</strong> (copie profonde) et l'opérateur d'affectation par copie. Démontre, dans <code>main</code>, que modifier la copie ne touche pas l'original.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-cpp">#include &lt;algorithm&gt;
+#include &lt;cstddef&gt;
+#include &lt;iostream&gt;
+
+class Tableau {
+public:
+    explicit Tableau(std::size_t n) : taille_(n), data_(new int[n]{}) {}
+
+    ~Tableau() { delete[] data_; }
+
+    Tableau(const Tableau&amp; autre)
+        : taille_(autre.taille_), data_(new int[autre.taille_]) {
+        std::copy(autre.data_, autre.data_ + taille_, data_);
+    }
+
+    Tableau&amp; operator=(const Tableau&amp; autre) {
+        if (this == &amp;autre) return *this;
+        int* neuf = new int[autre.taille_];
+        std::copy(autre.data_, autre.data_ + autre.taille_, neuf);
+        delete[] data_;
+        data_   = neuf;
+        taille_ = autre.taille_;
+        return *this;
+    }
+
+    void set(std::size_t i, int v) { data_[i] = v; }
+    int  get(std::size_t i) const   { return data_[i]; }
+
+private:
+    std::size_t taille_;
+    int*        data_;
+};
+
+int main() {
+    Tableau a(3);
+    a.set(0, 10);
+    Tableau b = a;        // constructeur de copie
+    b.set(0, 999);        // ne modifie que b
+    std::cout &lt;&lt; "a[0]=" &lt;&lt; a.get(0) &lt;&lt; "  b[0]=" &lt;&lt; b.get(0) &lt;&lt; '\n';
+}
+// Sortie :
+// a[0]=10  b[0]=999</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Crée une classe <code>Tracee</code> qui affiche un message à la construction, à la copie, à l'affectation et à la destruction (chaque message inclut un identifiant). Place plusieurs instances dans un <code>std::vector&lt;Tracee&gt;</code> et observe l'<strong>ordre des appels</strong> dans la sortie. Réécris ensuite <code>Tracee</code> pour qu'elle suive la <strong>règle de zéro</strong> (un seul membre <code>std::string</code>) et constate que la copie reste correcte sans aucune fonction spéciale écrite à la main.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-cpp">#include &lt;iostream&gt;
+#include &lt;string&gt;
+#include &lt;utility&gt;
+#include &lt;vector&gt;
+
+class Tracee {
+public:
+    explicit Tracee(std::string id) : id_(std::move(id)) {
+        std::cout &lt;&lt; "construit " &lt;&lt; id_ &lt;&lt; '\n';
+    }
+    Tracee(const Tracee&amp; o) : id_(o.id_) {
+        std::cout &lt;&lt; "copie de " &lt;&lt; id_ &lt;&lt; '\n';
+    }
+    Tracee&amp; operator=(const Tracee&amp; o) {
+        id_ = o.id_;
+        std::cout &lt;&lt; "affecte " &lt;&lt; id_ &lt;&lt; '\n';
+        return *this;
+    }
+    ~Tracee() {
+        std::cout &lt;&lt; "detruit " &lt;&lt; id_ &lt;&lt; '\n';
+    }
+private:
+    std::string id_;
+};
+
+int main() {
+    std::vector&lt;Tracee&gt; v;
+    v.reserve(2);                 // evite les copies dues a la reallocation
+    v.emplace_back("A");
+    v.emplace_back("B");
+    std::cout &lt;&lt; "--- fin du main ---\n";
+}                                 // destruction dans l'ordre inverse : B puis A
+// Sortie (avec reserve(2)) :
+// construit A
+// construit B
+// --- fin du main ---
+// detruit B
+// detruit A
+
+// Variante "regle de zero" : on supprime copie/affectation/destructeur
+// ecrits a la main ; un seul membre std::string suffit, le compilateur
+// genere des operations correctes automatiquement.
+class TraceeZero {
+public:
+    explicit TraceeZero(std::string id) : id_(std::move(id)) {}
+    const std::string&amp; id() const { return id_; }
+private:
+    std::string id_;              // gere son propre RAII
+};</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-cpp.min.js" defer></script>
+  </body>
+</html>

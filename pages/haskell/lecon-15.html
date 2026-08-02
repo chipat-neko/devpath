@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les transformers de monades — Leçon 15 · Cours Haskell — Syntaxe</title>
+    <meta name="description" content="Empiler plusieurs effets à la fois en Haskell : StateT, ReaderT et ExceptT au-dessus d'IO, lift et liftIO, et les classes mtl (MonadState, MonadReader, MonadError)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="haskell" data-lesson="lecon-15.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Haskell</a></li>
+            <li aria-current="page">Leçon 15</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Haskell avancé — Leçon 15</p>
+              <h1 class="lesson-header__title">Les transformers de monades</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~60 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 14</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre <strong>pourquoi</strong> on empile les monades quand une seule ne suffit plus&nbsp;;</li>
+                  <li>utiliser <code>StateT</code>, <code>ReaderT</code> et <code>ExceptT</code> au-dessus d'<code>IO</code>&nbsp;;</li>
+                  <li>remonter une action de la base avec <code>lift</code> et <code>liftIO</code>&nbsp;;</li>
+                  <li>lire une pile de type comme <code>ExceptT String (StateT Int IO)</code> et l'exécuter dans le bon ordre.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>À la leçon&nbsp;12, tu as rencontré <code>State</code> (un état pur) et, en passant, <code>StateT s IO</code>. C'était le premier <em>transformer</em>. Le problème qu'il résout est concret&nbsp;: une vraie application veut souvent <strong>plusieurs effets à la fois</strong> — un état <em>et</em> une configuration en lecture seule <em>et</em> la possibilité d'échouer avec un message <em>et</em> faire de l'<code>IO</code>. Une monade unique (<code>Maybe</code>, <code>State</code>, <code>IO</code>…) ne porte qu'un seul de ces pouvoirs.</p>
+
+<p>Un <strong>transformer de monade</strong> résout ça en <em>empilant</em> les capacités&nbsp;: on prend une monade de base et on lui ajoute une couche. <code>StateT</code> ajoute un état, <code>ReaderT</code> une config, <code>ExceptT</code> des erreurs. Empilées, elles forment une monade sur mesure pour ton application.</p>
+
+<h2>Le problème : une seule monade ne suffit plus</h2>
+
+<p>Imagine un petit interpréteur qui&nbsp;: (1) lit une <strong>config</strong> partagée, (2) maintient un <strong>compteur</strong> d'instructions, (3) peut <strong>échouer</strong> avec un message, et (4) doit parfois <strong>afficher</strong> quelque chose (<code>IO</code>). Aucune monade seule ne fait tout ça. La solution&nbsp;: composer.</p>
+
+<figure class="code-block" data-file="Rappel.hs"><pre><code class="language-haskell">-- Rappel (lecon 12) : State pur, une fonction s -&gt; (a, s) emballee.
+--   newtype State  s   a = State  { runState  :: s -&gt;    (a, s) }
+-- StateT ajoute l'etat par-dessus une monade de base m :
+--   newtype StateT s m a = StateT { runStateT :: s -&gt; m (a, s) }
+-- Le m au milieu, c'est la couche du dessous (souvent IO).</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Une pile de transformers : ExceptT String au sommet, StateT Int au milieu, IO à la base. On l'exécute de haut en bas : runExceptT retire la couche des erreurs, runStateT retire l'état, et il reste une action IO.">
+    <text class="d-label" x="24" y="24" font-size="12">Une pile de monades : chaque couche ajoute un pouvoir</text>
+    <rect class="d-accent" x="120" y="40" width="400" height="38" rx="9" /><text class="d-text" x="320" y="64" text-anchor="middle" font-size="11" font-family="monospace">ExceptT String  — peut échouer (throwError)</text>
+    <rect class="d-box" x="150" y="86" width="340" height="38" rx="9" /><text class="d-text" x="320" y="110" text-anchor="middle" font-size="11" font-family="monospace">StateT Int  — porte un état (get / put)</text>
+    <rect class="d-box" x="180" y="132" width="280" height="38" rx="9" /><text class="d-text" x="320" y="156" text-anchor="middle" font-size="11" font-family="monospace">IO  — la base (liftIO)</text>
+    <text class="d-mut" x="536" y="63" font-size="9">sommet</text>
+    <text class="d-mut" x="536" y="155" font-size="9">base</text>
+    <text class="d-mut" x="24" y="192" font-size="9">On déroule de haut en bas : runExceptT retire les erreurs, runStateT retire l'état, il reste une action IO.</text>
+  </svg>
+  <figcaption>Le type se lit du sommet vers la base. À l'exécution, on retire les couches une à une&nbsp;: <code>runExceptT</code> puis <code>runStateT</code>, jusqu'à retomber sur l'<code>IO</code> qu'on lance dans <code>main</code>.</figcaption>
+</figure>
+
+<h2>StateT : de l'état AU-DESSUS d'IO</h2>
+
+<p>Reprenons le compteur, mais cette fois il doit aussi <em>afficher</em> chaque étape. On empile <code>State</code> sur <code>IO</code>&nbsp;: c'est <code>StateT Int IO</code>. On lit et modifie l'état avec <code>get</code>/<code>put</code> comme avant&nbsp;; pour l'<code>IO</code>, on utilise <code>liftIO</code>.</p>
+
+<figure class="code-block" data-file="Compteur.hs"><pre><code class="language-haskell">import Control.Monad.State
+
+type App a = StateT Int IO a   -- un compteur Int + de l'IO
+
+pas :: App ()
+pas = do
+  n &lt;- get                              -- lit l'etat (couche StateT)
+  liftIO (putStrLn ("etape " ++ show n))  -- remonte une action IO
+  put (n + 1)                           -- ecrit l'etat
+
+demo :: App ()
+demo = pas &gt;&gt; pas &gt;&gt; pas
+
+-- On lance en fournissant l'etat initial, ce qui rend une action IO :
+main :: IO ()
+main = do
+  final &lt;- execStateT demo 0   -- garde l'etat final
+  putStrLn ("compteur final : " ++ show final)</code></pre></figure>
+
+<figure class="code-block" data-file="Sortie"><pre><code class="language-text">etape 0
+etape 1
+etape 2
+compteur final : 3</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p><code>execStateT demo 0</code> ne rend pas directement un <code>Int</code> comme <code>execState</code>&nbsp;: il rend <code>IO Int</code>, car la base est <code>IO</code>. C'est logique — pour connaître l'état final, il a fallu <em>exécuter</em> les affichages en chemin. On récupère donc la valeur avec <code>&lt;-</code>.</p></div></div>
+
+<h2>lift et liftIO : remonter dans la pile</h2>
+
+<p>Une action écrite pour la <em>base</em> (par exemple <code>putStrLn</code>, qui vit dans <code>IO</code>) doit être «&nbsp;remontée&nbsp;» à travers les couches pour s'utiliser dans la pile. <code>lift</code> remonte d'<strong>un</strong> cran&nbsp;; <code>liftIO</code> remonte depuis <code>IO</code> quel que soit le nombre de couches au-dessus.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="liftIO prend une action IO à la base et la fait remonter à travers les couches StateT et ExceptT pour l'utiliser au sommet de la pile.">
+    <text class="d-label" x="24" y="24" font-size="12">liftIO : faire remonter une action IO jusqu'au sommet</text>
+    <rect class="d-box" x="40" y="112" width="180" height="36" rx="9" /><text class="d-text" x="130" y="135" text-anchor="middle" font-size="10" font-family="monospace">putStrLn "…" :: IO ()</text>
+    <text class="d-mut" x="130" y="104" text-anchor="middle" font-size="9">base : IO</text>
+    <line class="d-line" x1="230" y1="130" x2="360" y2="130" /><polygon class="d-dot" points="366,130 356,125 356,135" /><text class="d-tag" x="298" y="122" text-anchor="middle" font-size="9">liftIO</text>
+    <rect class="d-accent" x="380" y="112" width="230" height="36" rx="9" /><text class="d-text" x="495" y="135" text-anchor="middle" font-size="10" font-family="monospace">… :: App ()  (dans la pile)</text>
+    <text class="d-mut" x="24" y="70" font-size="9">Sans liftIO, le compilateur refuse : il attend une action de la pile (App), pas de la base (IO).</text>
+    <text class="d-mut" x="24" y="86" font-size="9">liftIO franchit toutes les couches d'un coup ; lift n'en franchit qu'une seule.</text>
+  </svg>
+  <figcaption>La règle mentale&nbsp;: si le compilateur réclame <code>App a</code> mais que tu tiens une <code>IO a</code>, enveloppe-la dans <code>liftIO</code>. Idem pour une action d'une couche intermédiaire avec <code>lift</code>.</figcaption>
+</figure>
+
+<h2>ReaderT : une config partagée en lecture seule</h2>
+
+<p><code>ReaderT env</code> donne à toute la pile accès à une valeur <strong>immuable</strong> — typiquement une configuration — sans la passer en argument partout. On la lit avec <code>ask</code> (ou <code>asks</code> pour un champ). C'est la base du très répandu <em>«&nbsp;ReaderT design pattern&nbsp;»</em>.</p>
+
+<figure class="code-block" data-file="Config.hs"><pre><code class="language-haskell">import Control.Monad.Reader
+
+data Env = Env { verbeux :: Bool, prefixe :: String }
+
+type App a = ReaderT Env IO a
+
+logue :: String -&gt; App ()
+logue msg = do
+  v &lt;- asks verbeux            -- lit un champ de la config
+  p &lt;- asks prefixe
+  liftIO $ if v then putStrLn (p ++ msg) else pure ()
+
+main :: IO ()
+main = runReaderT (logue "demarrage" &gt;&gt; logue "fin") (Env True "[app] ")
+-- [app] demarrage
+-- [app] fin</code></pre></figure>
+
+<h2>ExceptT : des erreurs par-dessus le reste</h2>
+
+<p><code>ExceptT e</code> ajoute la possibilité d'<strong>échouer avec une valeur</strong> <code>e</code> (souvent un message), via <code>throwError</code>, et de rattraper avec <code>catchError</code>. Empilé sur <code>StateT Int IO</code>, il donne un interpréteur qui a un état, peut faire de l'<code>IO</code>… et s'arrêter net sur une erreur.</p>
+
+<figure class="code-block" data-file="Banque.hs"><pre><code class="language-haskell">import Control.Monad.State
+import Control.Monad.Except
+
+type App a = ExceptT String (StateT Int IO) a   -- erreurs + solde + IO
+
+retirer :: Int -&gt; App ()
+retirer montant = do
+  solde &lt;- get                                   -- couche StateT (traversee)
+  when (montant &gt; solde) $
+    throwError ("solde insuffisant : " ++ show solde)  -- couche ExceptT
+  liftIO (putStrLn ("retrait de " ++ show montant))    -- base IO
+  put (solde - montant)
+
+-- Deroulement : runExceptT retire les erreurs, execStateT retire l'etat.
+main :: IO ()
+main = do
+  (res, final) &lt;- runStateT (runExceptT (retirer 30 &gt;&gt; retirer 50)) 100
+  print res      -- Left "solde insuffisant : 70"
+  print final    -- 70  (l'etat au moment de l'echec)</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>L'<strong>ordre</strong> d'empilement change la sémantique. <code>ExceptT e (State s)</code> conserve l'état même quand une erreur survient (l'état est «&nbsp;en dessous&nbsp;»)&nbsp;; <code>StateT s (Except e)</code> perd l'état en cas d'erreur. En cas de doute, mets <code>ExceptT</code> vers le <em>sommet</em> pour garder l'état.</p></div></div>
+
+<h2>mtl : écrire get, ask et throwError sans lift</h2>
+
+<p>Empiler à la main obligerait à saupoudrer des <code>lift</code> partout. La bibliothèque <strong>mtl</strong> évite ça avec des <em>classes de contraintes</em>&nbsp;: <code>MonadState</code>, <code>MonadReader</code>, <code>MonadError</code>, <code>MonadIO</code>. Tu déclares les pouvoirs dont ta fonction a besoin, et <code>get</code>, <code>ask</code>, <code>throwError</code>, <code>liftIO</code> marchent directement, à n'importe quel étage.</p>
+
+<figure class="code-block" data-file="Mtl.hs"><pre><code class="language-haskell">import Control.Monad.State
+import Control.Monad.Except
+
+-- "Cette fonction a besoin d'un etat Int, du droit d'echouer, et d'IO."
+-- Aucun lift : les classes mtl s'en chargent.
+retirer :: (MonadState Int m, MonadError String m, MonadIO m)
+        =&gt; Int -&gt; m ()
+retirer montant = do
+  solde &lt;- get
+  when (montant &gt; solde) $ throwError "solde insuffisant"
+  liftIO (putStrLn ("retrait de " ++ show montant))
+  put (solde - montant)</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le «&nbsp;ReaderT design pattern&nbsp;» en production</p><p>Dans les applications Haskell de production (serveurs web, outils réseau), le patron le plus recommandé aujourd'hui n'est <em>pas</em> une grande tour de transformers, mais une pile volontairement plate&nbsp;: <code>ReaderT Env IO</code>. Cette approche, popularisée par <strong>Michael Snoyman</strong> (créateur du framework web <em>Yesod</em> et de la boîte à outils <em>Stack</em>) sous le nom de «&nbsp;ReaderT design pattern&nbsp;», tient en une idée&nbsp;: on met <strong>tout</strong> le contexte de l'application (configuration, pool de connexions à la base, gestionnaire de logs, compteurs) dans un unique <code>Env</code> passé par <code>ReaderT</code>, et l'état mutable réel vit dans des <code>IORef</code> ou des <code>TVar</code> à l'intérieur de cet <code>Env</code>. Pourquoi&nbsp;? Parce qu'empiler <code>StateT</code> sur <code>IO</code> se comporte mal avec la concurrence et les exceptions, alors qu'un <code>ReaderT</code> plat reste prévisible et simple à raisonner. Des frameworks comme Yesod et de nombreux services d'entreprise suivent ce modèle&nbsp;: les transformers restent un outil, mais on empile <em>le moins possible</em>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier <code>liftIO</code>.</strong> Écrire <code>putStrLn "x"</code> directement dans une pile provoque une erreur du type «&nbsp;expected <code>App ()</code>, got <code>IO ()</code>&nbsp;». Le correctif est mécanique&nbsp;: <code>liftIO (putStrLn "x")</code>. Avec mtl et une contrainte <code>MonadIO m</code>, tu peux souvent l'écrire une fois et l'oublier.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Dérouler les couches dans le mauvais ordre.</strong> On exécute du <em>sommet</em> vers la <em>base</em>&nbsp;: pour <code>ExceptT String (StateT Int IO)</code>, c'est <code>runStateT (runExceptT action) etatInitial</code>, pas l'inverse. Inverser les <code>run…</code> ne compile pas — laisse le compilateur te guider.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Au-delà de mtl, la communauté explore les <strong>effets algébriques</strong> avec des bibliothèques comme <code>effectful</code>, <code>polysemy</code> ou <code>fused-effects</code>&nbsp;: on déclare les effets voulus et l'interprétation se choisit à la fin, avec de meilleures performances que les vieilles piles profondes. À connaître aussi&nbsp;: <code>WriterT</code> (accumuler un journal), <code>MaybeT</code> (l'échec sans message) et <code>Control.Monad.State.Strict</code> pour les états volumineux.</p></div></div>
+
+<h2>Antisèche — empiler les effets</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Transformers courants, exécution et remontée</caption>
+    <thead><tr><th>Élément</th><th>Rôle</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>StateT s m</code></td><td>Ajoute un état sur la base <code>m</code></td><td><code>get</code> · <code>put (n+1)</code></td></tr>
+      <tr><td><code>ReaderT r m</code></td><td>Ajoute une config en lecture seule</td><td><code>ask</code> · <code>asks champ</code></td></tr>
+      <tr><td><code>ExceptT e m</code></td><td>Ajoute l'échec avec une valeur <code>e</code></td><td><code>throwError "…"</code></td></tr>
+      <tr><td><code>WriterT w m</code></td><td>Ajoute un journal accumulé</td><td><code>tell ["ligne"]</code></td></tr>
+      <tr><td><code>lift</code></td><td>Remonte d'une couche</td><td><code>lift (putStrLn …)</code></td></tr>
+      <tr><td><code>liftIO</code></td><td>Remonte une action IO (toutes couches)</td><td><code>liftIO (readFile f)</code></td></tr>
+      <tr><td><code>runStateT</code></td><td>Retire la couche d'état</td><td><code>runStateT app 0</code></td></tr>
+      <tr><td><code>runReaderT</code></td><td>Fournit la config, retire la couche</td><td><code>runReaderT app env</code></td></tr>
+      <tr><td><code>runExceptT</code></td><td>Retire les erreurs (rend un <code>Either</code>)</td><td><code>runExceptT app</code></td></tr>
+      <tr><td>classes mtl</td><td>Déclarer les pouvoirs, sans <code>lift</code></td><td><code>MonadState Int m =&gt; …</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Monad transformer</dt><dd>Brique qui <em>empile</em> une capacité (état, config, erreurs, journal) sur une monade de base, formant une nouvelle monade combinant les deux.</dd>
+  <dt>Monade de base</dt><dd>La couche du fond de la pile, souvent <code>IO</code> (ou <code>Identity</code> pour rester pur). C'est elle qu'on exécute réellement à la fin.</dd>
+  <dt><code>StateT</code> / <code>ReaderT</code> / <code>ExceptT</code></dt><dd>Les transformers les plus courants&nbsp;: ajouter respectivement un état mutable enfilé, une config en lecture seule, et l'échec avec valeur.</dd>
+  <dt><code>lift</code></dt><dd>Remonte une action d'une couche vers la couche immédiatement au-dessus. Une fois par niveau à franchir.</dd>
+  <dt><code>liftIO</code></dt><dd>Cas spécial&nbsp;: remonte une action <code>IO</code> jusqu'au sommet, quel que soit le nombre de couches. Fournie par la classe <code>MonadIO</code>.</dd>
+  <dt>mtl</dt><dd>Bibliothèque de classes (<code>MonadState</code>, <code>MonadReader</code>, <code>MonadError</code>, <code>MonadIO</code>) permettant d'utiliser <code>get</code>, <code>ask</code>, <code>throwError</code> sans <code>lift</code>, en déclarant les pouvoirs requis.</dd>
+  <dt>ReaderT design pattern</dt><dd>Convention de production&nbsp;: mettre tout le contexte dans un <code>Env</code> via <code>ReaderT Env IO</code>, l'état réel logeant dans des <code>IORef</code>/<code>TVar</code>. Plat, prévisible, sûr en concurrence.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une monade seule ne porte qu'un effet&nbsp;; les <strong>transformers</strong> empilent état, config, erreurs, journal et <code>IO</code>.</li>
+  <li><code>StateT</code>/<code>ReaderT</code>/<code>ExceptT</code> ajoutent une couche&nbsp;; on lit le type <strong>du sommet vers la base</strong>.</li>
+  <li><code>liftIO</code> fait remonter une action <code>IO</code>&nbsp;; <code>lift</code> remonte d'une seule couche.</li>
+  <li>On exécute en retirant les couches <strong>de haut en bas</strong> (<code>runExceptT</code> puis <code>runStateT</code>…).</li>
+  <li><strong>mtl</strong> évite les <code>lift</code> via des contraintes&nbsp;; en production, on empile <em>le moins possible</em> (<code>ReaderT Env IO</code>).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi a-t-on besoin d'un transformer plutôt que d'une monade unique&nbsp;?</li>
+<li>Dans <code>ExceptT String (StateT Int IO)</code>, dans quel ordre appelles-tu <code>runExceptT</code> et <code>runStateT</code>&nbsp;?</li>
+<li>À quoi sert <code>liftIO</code>, et comment repères-tu qu'il te manque&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi a-t-on besoin d'un transformer de monade plutôt que d'une monade unique ?","a":["Parce qu'une monade seule ne porte qu'un effet ; empiler des transformers combine plusieurs pouvoirs (état + erreurs + IO…) dans une même monade","Parce que les transformers sont plus rapides","Parce que IO est interdit","On n'en a jamais besoin"],"correct":0,"explain":"Maybe donne l'échec, State l'état, IO les entrées-sorties — mais aucune ne fait tout. Les transformers (StateT, ExceptT, ReaderT) empilent ces capacités pour obtenir une monade sur mesure."},
+  {"q":"Dans ExceptT String (StateT Int IO), dans quel ordre retire-t-on les couches ?","a":["Du sommet vers la base : runExceptT d'abord (retire les erreurs), puis runStateT (retire l'état), ce qui laisse une action IO","runStateT d'abord, puis runExceptT","Peu importe l'ordre","On n'exécute jamais les couches"],"correct":0,"explain":"Le type se lit du sommet (ExceptT) vers la base (IO). On déroule dans le même sens : runStateT (runExceptT action) etatInitial — runExceptT au plus près de l'action, runStateT autour, IO au bout."},
+  {"q":"À quoi sert liftIO, et comment repérer qu'il manque ?","a":["Il fait remonter une action IO jusqu'au sommet de la pile ; il manque quand le compilateur attend App a mais reçoit IO a","Il transforme une monade en liste","Il supprime les erreurs","Il n'a aucun effet"],"correct":0,"explain":"Une action IO (comme putStrLn) n'est pas directement du type de la pile. liftIO la remonte à travers les couches. Le symptôme d'un liftIO oublié : une erreur « expected App (), got IO () »."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["liftIO"],"placeholder":"la fonction pour utiliser putStrLn dans une pile StateT Int IO : … (putStrLn …) :","hints":["Remonte une action IO jusqu'au sommet.","Fournie par la classe MonadIO.","Six lettres, commence par lift."],"link":{"href":"lecon-15.html","label":"Revoir « lift et liftIO »"}},
+  {"type":"text","accept":["throwError"],"placeholder":"la fonction d'ExceptT pour échouer avec un message : … \"solde insuffisant\" :","hints":["Le pendant de throw, mais dans ExceptT.","Se rattrape avec catchError.","Dix lettres."],"link":{"href":"lecon-15.html","label":"Revoir « ExceptT »"}},
+  {"type":"text","accept":["ask","asks"],"placeholder":"la fonction de ReaderT pour lire la config partagée : env <- … :","hints":["asks champ lit un seul champ.","Lecture seule, jamais de put.","Trois lettres."],"link":{"href":"lecon-15.html","label":"Revoir « ReaderT »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>compter :: StateT Int IO ()</code> qui incrémente le compteur puis affiche sa nouvelle valeur. Montre l'appel qui l'exécute trois fois à partir de <code>0</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Monad.State
+
+compter :: StateT Int IO ()
+compter = do
+  modify (+ 1)
+  n &lt;- get
+  liftIO (print n)
+
+-- ghci&gt; evalStateT (compter &gt;&gt; compter &gt;&gt; compter) 0
+-- 1
+-- 2
+-- 3</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec <code>ExceptT String IO</code>, écris <code>diviser :: Int -&gt; Int -&gt; ExceptT String IO Int</code> qui échoue avec <code>"division par zero"</code> si le diviseur est nul, et sinon affiche le calcul avant de renvoyer le quotient.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Monad.Except
+
+diviser :: Int -&gt; Int -&gt; ExceptT String IO Int
+diviser _ 0 = throwError "division par zero"
+diviser a b = do
+  liftIO (putStrLn (show a ++ " / " ++ show b))
+  pure (a `div` b)
+
+-- ghci&gt; runExceptT (diviser 10 2)   =&gt; Right 5   (affiche "10 / 2")
+-- ghci&gt; runExceptT (diviser 10 0)   =&gt; Left "division par zero"</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Réécris <code>diviser</code> de l'exercice&nbsp;2 avec une <strong>signature mtl</strong> (contraintes <code>MonadError String m</code> et <code>MonadIO m</code>) au lieu d'un type concret. Quel avantage cela donne-t-il&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-haskell">import Control.Monad.Except
+
+diviser :: (MonadError String m, MonadIO m) =&gt; Int -&gt; Int -&gt; m Int
+diviser _ 0 = throwError "division par zero"
+diviser a b = do
+  liftIO (putStrLn (show a ++ " / " ++ show b))
+  pure (a `div` b)
+
+-- Avantage : la fonction n'est plus liee a UNE pile precise. Elle
+-- s'utilise telle quelle dans ExceptT String IO, dans une pile plus
+-- grande (StateT ... par-dessus), etc. On declare les pouvoirs requis,
+-- pas la structure exacte.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-haskell.min.js" defer></script>
+  </body>
+</html>

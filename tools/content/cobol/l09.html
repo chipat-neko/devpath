@@ -1,0 +1,67 @@
+<p>En COBOL, on écrit rarement un programme de zéro&nbsp;: on <strong>maintient l'existant</strong>. Des programmes de trente ou quarante ans, des milliers de lignes, à corriger ou faire évoluer sans rien casser. Cette dernière leçon te donne la méthode pour aborder ce code, repérer ses pièges, et situer l'écosystème mainframe où il vit.</p>
+
+<h2>Aborder un programme existant</h2>
+<p>Face à un gros programme, ne lis pas tout&nbsp;: pars de la <strong>structure</strong>. La division PROCEDURE commence souvent par un paragraphe principal qui <code>PERFORM</code> les grandes étapes&nbsp;— c'est ta table des matières. Suis ensuite les <code>PERFORM</code> de proche en proche.</p>
+<figure class="code-block" data-file="existant.cbl"><pre><code class="language-cobol">       PROGRAMME-PRINCIPAL.
+           PERFORM 1000-INITIALISER.
+           PERFORM 2000-TRAITER UNTIL FIN.
+           PERFORM 3000-EDITER-ETAT.
+           PERFORM 9000-TERMINER.
+           STOP RUN.</code></pre></figure>
+<p class="code-caption">Les paragraphes numérotés (1000, 2000…) sont une convention répandue pour ordonner la lecture.</p>
+
+<h2>Lire la DATA DIVISION en premier</h2>
+<p>Avant la logique, comprends les <strong>données</strong>&nbsp;: les structures d'enregistrement et les zones de travail racontent ce que le programme manipule. Une <code>FD</code> bien lue éclaire la moitié du code.</p>
+
+<h2>Les pièges du vieux code</h2>
+<p>Quelques classiques à connaître pour ne pas te faire surprendre&nbsp;:</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">      * 1. Le GO TO : saut sans retour, casse le fil de lecture
+           GO TO 8000-ERREUR.
+
+      * 2. MOVE entre formats différents : troncature/cadrage silencieux
+           MOVE NOM-LONG TO NOM-COURT.
+
+      * 3. Données partagées via REDEFINES : deux noms, même zone mémoire
+       01  ZONE         PIC X(8).
+       01  ZONE-DATE REDEFINES ZONE.
+           05  Z-ANNEE  PIC 9(4).
+           05  Z-MOIS   PIC 9(2).
+           05  Z-JOUR   PIC 9(2).</code></pre></figure>
+<p><code>REDEFINES</code> superpose deux descriptions sur la même mémoire&nbsp;: puissant mais déroutant, il faut savoir qu'une modification de l'un change l'autre.</p>
+
+<h2>Modifier sans casser</h2>
+<p>Règle d'or de la maintenance&nbsp;: change le <strong>minimum</strong>, et teste. Le code en production encode des règles métier subtiles&nbsp;; une «&nbsp;amélioration&nbsp;» hâtive peut fausser des millions de calculs. Documente chaque modification, conserve l'ancien comportement par défaut, et compare les sorties avant/après.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Garde toujours un jeu de données de test et compare la sortie de l'ancien et du nouveau programme&nbsp;: en COBOL de production, la <strong>non-régression</strong> prime sur l'élégance.</p></div></div>
+
+<h2>L'écosystème mainframe</h2>
+<p>Le COBOL «&nbsp;sérieux&nbsp;» tourne sur des mainframes IBM (z/OS), entouré d'un écosystème qu'il faut situer&nbsp;: le <strong>JCL</strong> (Job Control Language) orchestre l'exécution des batchs&nbsp;; <strong>CICS</strong> gère le transactionnel (les échanges interactifs)&nbsp;; <strong>DB2</strong> est la base de données, interrogée en SQL embarqué dans le COBOL.</p>
+<figure class="code-block" data-file="avec-db2.cbl"><pre><code class="language-cobol">           EXEC SQL
+               SELECT SOLDE INTO :CPT-SOLDE
+               FROM COMPTES
+               WHERE NUMERO = :CPT-NUMERO
+           END-EXEC.</code></pre></figure>
+<p class="code-caption">Le SQL s'insère directement dans le COBOL entre <code>EXEC SQL</code> et <code>END-EXEC</code>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'on peut tout réécrire en langage moderne d'un coup&nbsp;: les migrations COBOL ratées sont nombreuses et coûteuses. La maintenance prudente du code existant a plus de valeur — et c'est précisément la compétence rare et recherchée.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour continuer&nbsp;: pratique GnuCOBOL sur des exercices, lis du vrai code (des dépôts COBOL ouverts existent), et familiarise-toi avec le JCL et CICS si tu vises le mainframe. La demande dépasse l'offre&nbsp;: une niche stable et bien rémunérée.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Aborde l'existant par la <strong>structure</strong> (paragraphe principal, <code>PERFORM</code>) et la <strong>DATA DIVISION</strong>.</li>
+  <li>Méfie-toi du <code>GO TO</code>, des <code>MOVE</code> entre formats, et du <code>REDEFINES</code>.</li>
+  <li>Maintiens prudemment&nbsp;: change le minimum, teste la <strong>non-régression</strong>.</li>
+  <li>L'écosystème mainframe&nbsp;: <strong>JCL</strong> (batch), <strong>CICS</strong> (transactionnel), <strong>DB2</strong> (SQL embarqué).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Par quoi commencer la lecture d'un programme inconnu&nbsp;?</li><li>Que fait <code>REDEFINES</code>&nbsp;?</li><li>À quoi servent JCL et CICS&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans un programme inconnu, quels deux endroits lis-tu en premier&nbsp;?</p><details><summary>Voir une solution</summary><p>La <strong>DATA DIVISION</strong> (pour comprendre les données manipulées) et le <strong>paragraphe principal</strong> de la PROCEDURE (pour la structure d'ensemble via les <code>PERFORM</code>).</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Déclare une zone de 8 caractères et un <code>REDEFINES</code> qui l'interprète comme année/mois/jour.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">       01  ZONE       PIC X(8).
+       01  ZONE-DATE REDEFINES ZONE.
+           05  ANNEE  PIC 9(4).
+           05  MOIS   PIC 9(2).
+           05  JOUR   PIC 9(2).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique en deux phrases pourquoi remplacer un gros système COBOL est risqué.</p><details><summary>Voir une solution</summary><p>Le code encode des décennies de règles métier subtiles et de cas particuliers, souvent non documentés ailleurs que dans le programme lui-même. Une réécriture risque d'omettre ces règles et d'introduire des erreurs dans des systèmes critiques qui brassent d'énormes volumes financiers.</p></details></div>

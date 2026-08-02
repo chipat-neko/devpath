@@ -1,0 +1,85 @@
+<p>Voici le concept qui fait l'identité de Julia&nbsp;: le <strong>multiple dispatch</strong>. C'est l'idée que le comportement d'une fonction est choisi selon les types de <strong>tous</strong> ses arguments. Cela paraît subtil, mais c'est le secret de l'élégance et de l'extensibilité de Julia. Une fois compris, on ne voit plus la programmation pareil.</p>
+
+<h2>Une fonction, plusieurs méthodes</h2>
+<p>En Julia, une <code>function</code> peut avoir plusieurs <strong>méthodes</strong>&nbsp;: des définitions différentes selon les types des arguments. Julia choisit automatiquement la bonne à l'appel.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">aire(r) = error("type inconnu")
+aire(cote::Float64) = cote^2                      # un carré
+aire(base::Float64, hauteur::Float64) = base * hauteur / 2  # un triangle
+
+println(aire(3.0))         # 9.0   (méthode du carré)
+println(aire(4.0, 6.0))    # 12.0  (méthode du triangle)</code></pre></figure>
+<p class="code-caption">Ce ne sont pas des fonctions différentes&nbsp;: ce sont des <em>méthodes</em> de la même fonction <code>aire</code>.</p>
+
+<h2>Dispatcher sur le type</h2>
+<p>L'annotation <code>::Type</code> sur un argument indique pour quel type la méthode s'applique. Avec des types abstraits, on couvre des familles entières.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">decrire(x::Int)     = "un entier : $x"
+decrire(x::Float64) = "un flottant : $x"
+decrire(x::String)  = "un texte : $x"
+decrire(x::Number)  = "un nombre quelconque"   # plus général
+
+println(decrire(42))      # un entier : 42
+println(decrire(3.14))    # un flottant : 3.14
+println(decrire(1//2))    # un nombre quelconque (Rational)</code></pre></figure>
+<p>Julia choisit toujours la méthode la <strong>plus spécifique</strong> qui correspond&nbsp;: <code>Int</code> avant <code>Number</code>.</p>
+
+<h2>Dispatcher sur ses propres types</h2>
+<p>Le multiple dispatch brille avec des types abstraits et des structs. On définit une hiérarchie, puis des méthodes par type concret.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">abstract type Forme end
+
+struct Cercle &lt;: Forme
+    rayon::Float64
+end
+struct Carre &lt;: Forme
+    cote::Float64
+end
+
+aire(c::Cercle) = π * c.rayon^2
+aire(c::Carre)  = c.cote^2
+
+formes = [Cercle(1.0), Carre(2.0), Cercle(3.0)]
+for f in formes
+    println(aire(f))      # la bonne méthode selon le type réel
+end</code></pre></figure>
+
+<h2>Pourquoi c'est puissant</h2>
+<p>En POO classique, une méthode «&nbsp;appartient&nbsp;» à une classe (<code>cercle.aire()</code>). En Julia, les fonctions sont <strong>libres</strong> et dispatchent sur <em>tous</em> leurs arguments. Conséquence majeure&nbsp;: tu peux ajouter une méthode à une fonction existante (même de la stdlib&nbsp;!) pour <em>tes</em> types, sans modifier le code original. C'est l'<strong>extensibilité</strong> ultime.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">import Base: +
+# On apprend à '+' à additionner deux Cercle
++(a::Cercle, b::Cercle) = Cercle(a.rayon + b.rayon)
+Cercle(1.0) + Cercle(2.0)   # Cercle(3.0)</code></pre></figure>
+
+<h2>Dispatcher sur plusieurs arguments</h2>
+<p>Le «&nbsp;multiple&nbsp;» de multiple dispatch&nbsp;: la méthode est choisie selon la combinaison des types de plusieurs arguments — impossible en POO simple.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">collision(a::Cercle, b::Cercle) = "deux cercles"
+collision(a::Cercle, b::Carre)  = "cercle et carré"
+collision(a::Carre,  b::Carre)  = "deux carrés"</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Trop spécialiser les types des arguments&nbsp;: une méthode <code>f(x::Float64)</code> ne s'appliquera pas à un <code>Int</code>&nbsp;! Pour rester générique, annote avec un type abstrait (<code>::Real</code>, <code>::Number</code>) ou n'annote pas du tout — Julia spécialisera quand même à la compilation.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p><code>methods(aire)</code> liste toutes les méthodes d'une fonction&nbsp;; <code>@which aire(3.0)</code> dit laquelle sera appelée. Ces outils sont précieux pour comprendre un gros écosystème Julia, où des centaines de packages s'enrichissent mutuellement par dispatch.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une fonction peut avoir plusieurs <strong>méthodes</strong> selon les types de ses arguments.</li>
+  <li>Julia choisit la méthode la plus <strong>spécifique</strong> qui correspond.</li>
+  <li>On dispatche sur ses propres types (hiérarchie <code>abstract type</code> + structs).</li>
+  <li>On peut <strong>étendre</strong> des fonctions existantes pour ses types&nbsp;: extensibilité maximale.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'une «&nbsp;méthode&nbsp;» au sens de Julia&nbsp;?</li><li>En quoi le multiple dispatch diffère-t-il de la POO classique&nbsp;?</li><li>Si <code>f(x::Int)</code> et <code>f(x::Number)</code> existent, laquelle appelle <code>f(5)</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris deux méthodes de <code>saluer</code>&nbsp;: une pour un <code>String</code>, une pour un <code>Int</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.jl"><pre><code class="language-julia">saluer(x::String) = "Bonjour $x"
+saluer(x::Int)    = "Numéro $x"
+println(saluer("Ada"))   # Bonjour Ada
+println(saluer(7))       # Numéro 7</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un type abstrait <code>Animal</code>, deux structs <code>Chien</code> et <code>Chat</code>, et une fonction <code>crier</code> par type.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.jl"><pre><code class="language-julia">abstract type Animal end
+struct Chien &lt;: Animal end
+struct Chat  &lt;: Animal end
+crier(a::Chien) = "Wouf"
+crier(a::Chat)  = "Miaou"
+println(crier(Chien()))   # Wouf</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Apprends à <code>*</code> à répéter une chaîne un certain nombre de fois&nbsp;: <code>"ab" * 3</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.jl"><pre><code class="language-julia">import Base: *
+*(s::String, n::Int) = repeat(s, n)
+println("ab" * 3)   # ababab</code></pre></figure></details></div>

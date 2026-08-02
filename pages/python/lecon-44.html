@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concurrence à grande échelle et le no-GIL — Leçon 44 · Python · Syntaxe</title>
+    <meta name="description" content="Concurrence Python à l'échelle : concurrent.futures, multiprocessing avancé, asyncio TaskGroup, free-threading 3.13t et sous-interpréteurs (PEP 734)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="python" data-lesson="lecon-44.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Python</a></li>
+            <li aria-current="page">Leçon 44</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 15 · Python à l'échelle — Leçon 44</p>
+              <h1 class="lesson-header__title">Concurrence à grande échelle et le no-GIL</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 15 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir choisir entre <code>asyncio</code>, threads et <code>multiprocessing</code> selon le profil I/O-bound ou CPU-bound&nbsp;;</li>
+                  <li>savoir piloter un pool unifié avec <code>concurrent.futures</code> et maîtriser le partage inter-processus (<code>Queue</code>, <code>shared_memory</code>, pickle)&nbsp;;</li>
+                  <li>savoir structurer une charge <code>asyncio</code> avec <code>TaskGroup</code>, <code>Semaphore</code>, timeouts et <code>run_in_executor</code>&nbsp;;</li>
+                  <li>savoir situer l'état réel du <strong>free-threading</strong> (3.13t) et des sous-interpréteurs avant de viser la production.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu as déjà disséqué le GIL, <code>asyncio</code> et le couple threads/processus dans les leçons précédentes. Ici on change d'échelle : il ne s'agit plus de comprendre <em>comment</em> ces primitives fonctionnent, mais de <strong>les composer</strong> pour saturer une machine à 32 cœurs ou tenir 50 000 connexions sortantes, tout en gardant un code observable et déterministe. On va aussi regarder en face les deux changements structurels de CPython récents : le <strong>free-threading</strong> (3.13t) et les sous-interpréteurs (PEP 734), pour savoir ce qu'ils débloquent réellement aujourd'hui — et ce qu'ils ne débloquent pas encore.</p>
+
+<p>Le fil rouge : la concurrence n'est pas un détail d'implémentation qu'on saupoudre à la fin, c'est une <strong>décision d'architecture</strong> qui dépend d'un seul axe — où passe le temps de ton programme. Mesure d'abord, parallélise ensuite.</p>
+
+<h2>Le choix fondamental, en 30 secondes</h2>
+<p>Tout part du profil de charge. Du temps passé à <strong>attendre</strong> (réseau, disque, base) ? C'est de l'I/O-bound : un seul cœur suffit, tu veux de l'<strong>overlap</strong> via <code>asyncio</code> (ou des threads si la lib n'est pas <code>async</code>). Du temps passé à <strong>calculer</strong> ? C'est du CPU-bound : le GIL sérialise les threads Python, donc il te faut plusieurs processus (<code>multiprocessing</code>) — ou, demain, le free-threading.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Arbre de décision de la concurrence. On part de la question : où passe le temps du programme ? Si c'est de l'attente (réseau, disque, base), c'est de l'I/O-bound : asyncio et TaskGroup avec des bibliothèques asynchrones, ou un ThreadPoolExecutor avec des bibliothèques synchrones. Si c'est du calcul, c'est du CPU-bound : un ProcessPoolExecutor en production, ou le free-threading 3.13t en recherche.">
+    <rect class="d-accent" x="220" y="26" width="200" height="40" rx="8" />
+    <text class="d-tag" x="320" y="51" text-anchor="middle" font-size="11">Où passe le temps&nbsp;?</text>
+    <line class="d-line" x1="300" y1="66" x2="180" y2="98" />
+    <line class="d-line" x1="340" y1="66" x2="460" y2="98" />
+    <rect class="d-box" x="56" y="100" width="212" height="40" rx="8" />
+    <text class="d-tag" x="162" y="119" text-anchor="middle" font-size="10.5">I/O-bound — attente</text>
+    <text class="d-mut" x="162" y="132" text-anchor="middle" font-size="8.5">réseau · disque · base</text>
+    <rect class="d-box" x="372" y="100" width="212" height="40" rx="8" />
+    <text class="d-tag" x="478" y="119" text-anchor="middle" font-size="10.5">CPU-bound — calcul</text>
+    <text class="d-mut" x="478" y="132" text-anchor="middle" font-size="8.5">un cœur sature à 100 %</text>
+    <line class="d-line" x1="162" y1="140" x2="100" y2="158" />
+    <line class="d-line" x1="162" y1="140" x2="224" y2="158" />
+    <line class="d-line" x1="478" y1="140" x2="416" y2="158" />
+    <line class="d-line" x1="478" y1="140" x2="540" y2="158" />
+    <rect class="d-box" x="12" y="158" width="142" height="46" rx="8" />
+    <text class="d-mut" x="83" y="177" text-anchor="middle" font-size="8.5">libs async</text>
+    <text class="d-tag" x="83" y="192" text-anchor="middle" font-size="9.5">asyncio · TaskGroup</text>
+    <rect class="d-box" x="170" y="158" width="142" height="46" rx="8" />
+    <text class="d-mut" x="241" y="177" text-anchor="middle" font-size="8.5">libs synchrones</text>
+    <text class="d-tag" x="241" y="192" text-anchor="middle" font-size="9.5">ThreadPoolExecutor</text>
+    <rect class="d-box" x="328" y="158" width="142" height="46" rx="8" />
+    <text class="d-mut" x="399" y="177" text-anchor="middle" font-size="8.5">production</text>
+    <text class="d-tag" x="399" y="192" text-anchor="middle" font-size="9.5">ProcessPoolExecutor</text>
+    <rect class="d-box" x="486" y="158" width="142" height="46" rx="8" />
+    <text class="d-mut" x="557" y="177" text-anchor="middle" font-size="8.5">R&amp;D · interne</text>
+    <text class="d-tag" x="557" y="192" text-anchor="middle" font-size="9.5">free-threading 3.13t</text>
+  </svg>
+  <figcaption>Le seul axe qui compte&nbsp;: où passe le temps. L'attente veut de l'overlap (un cœur suffit)&nbsp;; le calcul veut plusieurs cœurs (donc plusieurs processus, ou le no-GIL).</figcaption>
+</figure>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python">import time, threading
+
+def cpu_bound(n: int) -&gt; int:
+    return sum(i * i for i in range(n))
+
+# Deux threads sur du CPU-bound : le GIL sérialise, aucun gain.
+N = 20_000_000
+t0 = time.perf_counter()
+ts = [threading.Thread(target=cpu_bound, args=(N,)) for _ in range(2)]
+for t in ts: t.start()
+for t in ts: t.join()
+print(f"2 threads CPU-bound : {time.perf_counter() - t0:.2f}s")
+# 2 threads CPU-bound : 2.05s   (~identique au sequentiel sur CPython 3.12)
+</code></pre></figure>
+<p class="code-caption">Sur un interpréteur standard (avec GIL), doubler les threads sur du CPU-bound ne double rien : on paie même le coût de synchronisation.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les libs natives qui relâchent le GIL (NumPy, <code>lxml</code>, compression, hachage…) <em>scalent</em> déjà en threads sur du calcul, parce que le gros du travail s'exécute hors interpréteur Python. Le GIL ne bloque que le bytecode Python pur.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Chronologie comparée. À gauche, deux threads sous GIL se relaient sur un seul cœur : les tranches T1 et T2 s'alternent, le temps total égale le séquentiel. À droite, deux processus tournent chacun sur son cœur en parallèle : P1 et P2 s'exécutent en même temps, le temps mur est environ divisé par deux.">
+    <text class="d-label" x="150" y="20" text-anchor="middle" font-size="12">2 threads · GIL (1 cœur)</text>
+    <text class="d-label" x="482" y="20" text-anchor="middle" font-size="12">2 processus (2 cœurs)</text>
+    <line class="d-line" x1="320" y1="30" x2="320" y2="170" />
+    <rect class="d-box" x="36" y="44" width="46" height="34" rx="4" />
+    <text class="d-tag" x="59" y="65" text-anchor="middle" font-size="10">T1</text>
+    <rect class="d-accent" x="84" y="44" width="46" height="34" rx="4" />
+    <text class="d-tag" x="107" y="65" text-anchor="middle" font-size="10">T2</text>
+    <rect class="d-box" x="132" y="44" width="46" height="34" rx="4" />
+    <text class="d-tag" x="155" y="65" text-anchor="middle" font-size="10">T1</text>
+    <rect class="d-accent" x="180" y="44" width="46" height="34" rx="4" />
+    <text class="d-tag" x="203" y="65" text-anchor="middle" font-size="10">T2</text>
+    <line class="d-line" x1="36" y1="92" x2="286" y2="92" />
+    <line class="d-line" x1="278" y1="88" x2="286" y2="92" />
+    <line class="d-line" x1="278" y1="96" x2="286" y2="92" />
+    <line class="d-line" x1="226" y1="40" x2="226" y2="98" stroke-dasharray="3 3" />
+    <text class="d-mut" x="150" y="116" text-anchor="middle" font-size="9.5">exécution sérialisée</text>
+    <text class="d-mut" x="150" y="132" text-anchor="middle" font-size="9.5">gain nul sur du calcul pur</text>
+    <rect class="d-accent" x="356" y="42" width="150" height="30" rx="4" />
+    <text class="d-tag" x="431" y="62" text-anchor="middle" font-size="10">P1</text>
+    <rect class="d-accent" x="356" y="78" width="150" height="30" rx="4" />
+    <text class="d-tag" x="431" y="98" text-anchor="middle" font-size="10">P2</text>
+    <line class="d-line" x1="356" y1="122" x2="606" y2="122" />
+    <line class="d-line" x1="598" y1="118" x2="606" y2="122" />
+    <line class="d-line" x1="598" y1="126" x2="606" y2="122" />
+    <line class="d-line" x1="506" y1="38" x2="506" y2="128" stroke-dasharray="3 3" />
+    <text class="d-mut" x="482" y="146" text-anchor="middle" font-size="9.5">exécution parallèle · ~2x plus vite</text>
+  </svg>
+  <figcaption>Sous GIL, les threads Python se relaient (un seul exécute du bytecode à la fois)&nbsp;; deux processus ont chacun leur GIL et exploitent réellement deux cœurs.</figcaption>
+</figure>
+
+<h2>concurrent.futures : le bon niveau d'abstraction</h2>
+<p><code>concurrent.futures</code> unifie threads et processus derrière une même API d'<code>Executor</code>. Tu écris ta logique une fois, et tu bascules <code>ThreadPoolExecutor</code> ⇄ <code>ProcessPoolExecutor</code> selon le profil. C'est presque toujours le bon point de départ : plus haut niveau que <code>multiprocessing.Process</code>, suffisant pour 90 % des besoins.</p>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python">from concurrent.futures import ProcessPoolExecutor, as_completed
+
+def work(n: int) -&gt; int:
+    if n &lt; 0:
+        raise ValueError(f"n negatif : {n}")
+    return sum(i * i for i in range(n))
+
+tasks = [5_000_000, 6_000_000, -1, 7_000_000]
+
+if __name__ == "__main__":             # indispensable sous spawn
+    with ProcessPoolExecutor(max_workers=4) as ex:
+        # submit -&gt; Future ; on recupere les resultats des qu'ils tombent.
+        futures = {ex.submit(work, n): n for n in tasks}
+        for fut in as_completed(futures):
+            n = futures[fut]
+            try:
+                print(f"work({n}) = {fut.result()}")
+            except ValueError as e:
+                # L'exception du worker est re-levee ICI, a l'appel de .result().
+                print(f"work({n}) a echoue : {e}")
+# work(5000000) = 41666654166667500000   (ordre non deterministe)
+# work(-1) a echoue : n negatif : -1
+</code></pre></figure>
+<p class="code-caption"><code>submit</code> + <code>as_completed</code> pour le streaming de résultats et la gestion fine des erreurs ; <code>map</code> pour le cas simple ordonné.</p>
+
+<p>Distinction à garder en tête : avec <code>executor.map(...)</code>, une exception dans un worker n'est levée qu'au moment où tu <strong>itères</strong> sur le résultat correspondant, et l'ordre des résultats suit l'ordre des entrées. Avec <code>submit</code>/<code>as_completed</code>, tu reçois les <code>Future</code> dans l'ordre de <strong>complétion</strong> et tu décides quoi faire de chaque échec sans tuer le pool entier.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Dimensionne <code>max_workers</code> par le profil : <code>os.cpu_count()</code> (voire <code>len(os.sched_getaffinity(0))</code> sous Linux) pour le CPU-bound, beaucoup plus pour l'I/O-bound en threads. Au-delà, tu ajoutes de la contention sans débit.</p></div></div>
+
+<h2>multiprocessing en profondeur : partage et sérialisation</h2>
+<p>Dès que tu sors plusieurs processus, deux coûts dominent : la <strong>sérialisation</strong> (tout argument et tout résultat transite par <code>pickle</code>) et le <strong>démarrage</strong>. Sous <code>spawn</code> (défaut sur Windows et macOS, et bientôt sur Linux), chaque worker relance un interpréteur et ré-importe ton module ; sous <code>fork</code> (Linux historique), il copie l'espace mémoire — rapide mais piégeux avec des threads ou des handles ouverts.</p>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python">from multiprocessing import shared_memory
+import numpy as np
+
+# Partager un gros tableau SANS le repickler dans chaque worker.
+arr = np.arange(10_000_000, dtype=np.float64)
+shm = shared_memory.SharedMemory(create=True, size=arr.nbytes)
+buf = np.ndarray(arr.shape, dtype=arr.dtype, buffer=shm.buf)
+buf[:] = arr[:]                       # copie unique en memoire partagee
+
+# Les workers recoivent shm.name (str picklable), pas les 80 Mo de donnees.
+def worker(name: str, shape, dtype):
+    existing = shared_memory.SharedMemory(name=name)
+    view = np.ndarray(shape, dtype=dtype, buffer=existing.buf)
+    total = float(view.sum())
+    existing.close()                  # on ferme la vue, on ne unlink PAS ici
+    return total
+
+# ... dispatch via ProcessPoolExecutor en passant (shm.name, arr.shape, arr.dtype)
+shm.close()
+shm.unlink()                          # un seul proprietaire libere le segment
+</code></pre></figure>
+<p class="code-caption"><code>shared_memory</code> évite de re-sérialiser des Mo à chaque appel : on passe un nom, pas le buffer. Règle d'or : un seul <code>unlink()</code>, par le propriétaire.</p>
+
+<p>Pour communiquer des messages plutôt que partager de la mémoire brute, <code>Queue</code> (multi-producteurs/multi-consommateurs, sérialisé) et <code>Pipe</code> (point à point, plus rapide, deux extrémités) restent les outils canoniques. Mais rappelle-toi que tout ce qui transite est picklé : un objet non picklable (lambda, connexion ouverte, closure capturant un socket) fera échouer le <code>submit</code> ou le <code>put</code>.</p>
+
+<h2>asyncio à grande échelle : structurer la concurrence</h2>
+<p>Depuis 3.11, <code>asyncio.TaskGroup</code> est la primitive de référence pour la <strong>concurrence structurée</strong> : toutes les tâches du groupe sont attendues à la sortie du <code>async with</code>, et si l'une lève, les autres sont annulées et les erreurs remontent agrégées dans un <code>ExceptionGroup</code>. Fini les <code>Task</code> orphelines qu'on oublie d'<code>await</code>.</p>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python">import asyncio
+import httpx
+
+async def fetch(client, url: str, sem: asyncio.Semaphore) -&gt; int:
+    async with sem:                                  # plafonne la concurrence
+        async with asyncio.timeout(5):               # 3.11+ : budget temps
+            resp = await client.get(url)
+            return len(resp.content)
+
+async def main(urls: list[str]) -&gt; None:
+    sem = asyncio.Semaphore(20)                      # 20 requetes en vol max
+    async with httpx.AsyncClient() as client:
+        async with asyncio.TaskGroup() as tg:        # 3.11+ : structure
+            tasks = [tg.create_task(fetch(client, u, sem)) for u in urls]
+    sizes = [t.result() for t in tasks]              # tout est fini ici
+    print(f"{len(sizes)} reponses, total {sum(sizes)} octets")
+
+# Si une URL timeout, TaskGroup annule les autres et leve un ExceptionGroup :
+# + Exception Group Traceback ...
+# | TimeoutError
+</code></pre></figure>
+<p class="code-caption"><code>TaskGroup</code> + <code>Semaphore</code> + <code>asyncio.timeout</code> : la triade pour une charge sortante massive, bornée et annulable proprement.</p>
+
+<p>Le piège mortel d'<code>asyncio</code> à l'échelle, c'est de <strong>bloquer la boucle</strong>. Un seul appel synchrone lourd (parsing CPU, <code>requests</code> bloquant, <code>time.sleep</code>) gèle <em>toutes</em> les tâches, car il n'y a qu'un thread. La parade : déporter sur un exécuteur.</p>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python">import asyncio, hashlib
+
+def blocking_hash(data: bytes) -&gt; str:
+    # CPU pur : si on l'appelle direct dans une coroutine, la boucle gele.
+    return hashlib.pbkdf2_hmac("sha256", data, b"salt", 600_000).hex()
+
+async def handle(data: bytes) -&gt; str:
+    loop = asyncio.get_running_loop()
+    # Deporte sur le ThreadPool par defaut : la boucle reste reactive.
+    return await loop.run_in_executor(None, blocking_hash, data)
+    # Pour du CPU-bound reel, passe un ProcessPoolExecutor a run_in_executor.
+</code></pre></figure>
+<p class="code-caption"><code>run_in_executor(None, ...)</code> renvoie un <code>Future</code> awaitable ; <code>None</code> = pool de threads par défaut. <code>asyncio.to_thread</code> (3.9+) est le raccourci pour le cas threads.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Ne jamais bloquer la boucle asyncio. À gauche, la boucle asyncio tourne sur un seul thread avec ses coroutines et doit rester réactive. Un appel bloquant lourd est déporté via run_in_executor vers un exécuteur (threads ou processus), à droite, qui exécute le calcul lourd ; le résultat revient par await. Appeler la fonction bloquante directement dans la boucle la gèlerait.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Ne bloque jamais la boucle&nbsp;: déporte le calcul lourd</text>
+    <rect class="d-accent" x="28" y="44" width="250" height="76" rx="8" />
+    <text class="d-tag" x="153" y="70" text-anchor="middle" font-size="11">Boucle asyncio</text>
+    <text class="d-mut" x="153" y="88" text-anchor="middle" font-size="9">1 thread · fetch() handle()</text>
+    <text class="d-mut" x="153" y="104" text-anchor="middle" font-size="9">reste réactive</text>
+    <rect class="d-box" x="362" y="44" width="250" height="76" rx="8" />
+    <text class="d-tag" x="487" y="70" text-anchor="middle" font-size="11">Executor</text>
+    <text class="d-mut" x="487" y="88" text-anchor="middle" font-size="9">threads · process</text>
+    <text class="d-mut" x="487" y="104" text-anchor="middle" font-size="9">calcul lourd / bloquant</text>
+    <line class="d-line" x1="278" y1="66" x2="356" y2="66" />
+    <line class="d-line" x1="348" y1="62" x2="356" y2="66" />
+    <line class="d-line" x1="348" y1="70" x2="356" y2="66" />
+    <text class="d-mut" x="320" y="60" text-anchor="middle" font-size="8.5">run_in_executor(pool, fn)</text>
+    <line class="d-line" x1="362" y1="100" x2="284" y2="100" />
+    <line class="d-line" x1="292" y1="96" x2="284" y2="100" />
+    <line class="d-line" x1="292" y1="104" x2="284" y2="100" />
+    <text class="d-mut" x="320" y="114" text-anchor="middle" font-size="8.5">await → résultat</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">Appeler la fonction bloquante DANS la boucle = tout gèle.</text>
+  </svg>
+  <figcaption>Le seul thread de la boucle ne doit jamais calculer longtemps&nbsp;: <code>run_in_executor</code> (ou <code>to_thread</code>) confie le travail lourd à un pool et rend la main par <code>await</code>.</figcaption>
+</figure>
+
+<h2>Le GIL revisité et le free-threading (3.13t)</h2>
+<p>Python 3.13 introduit un build <strong>expérimental sans GIL</strong> (PEP 703), distribué comme un interpréteur distinct — le suffixe <code>t</code> (« free-threaded »), p. ex. <code>python3.13t</code>. Dans ce build, plusieurs threads exécutent du bytecode Python <em>réellement en parallèle</em> : le <code>cpu_bound</code> de la première section scalerait enfin avec le nombre de cœurs, sans passer par des processus.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Verifier si le GIL est desactive a l'execution.
+python3.13t -c "import sys; print(sys._is_gil_enabled())"
+# False
+
+# Forcer/relacher via variable d'env ou flag (selon build) :
+PYTHON_GIL=0 python3.13t mon_script.py
+python3.13t -X gil=0 mon_script.py
+</code></pre></figure>
+<p class="code-caption"><code>sys._is_gil_enabled()</code> renseigne l'état effectif. Importer une extension C non compatible no-GIL peut <strong>réactiver</strong> le GIL automatiquement.</p>
+
+<p>Ce que ça change : le parallélisme CPU devient possible dans un seul processus, avec mémoire partagée native (pas de pickle, pas de <code>shared_memory</code>). Ce que ça coûte aujourd'hui : un build à part, des performances mono-thread en léger retrait, un écosystème C en cours d'adaptation, et surtout — c'est désormais à <strong>toi</strong> de protéger tout état mutable partagé, car le GIL ne t'offre plus d'atomicité implicite. Les <strong>races</strong> qui « marchaient par chance » sous GIL deviennent de vrais bugs.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le free-threading n'est <strong>pas prêt pour la prod</strong> en 2026 : c'est explicitement expérimental. Ne migre pas un service critique dessus ; expérimente, mesure, et garde un chemin de repli vers <code>multiprocessing</code>.</p></div></div>
+
+<h2>Les sous-interpréteurs (PEP 734), en aperçu</h2>
+<p>Voie alternative au free-threading : plusieurs interpréteurs <strong>isolés</strong> dans un même processus, chacun avec son propre GIL (« per-interpreter GIL », PEP 684), pilotés depuis 3.13 par un module <code>interpreters</code> exposé par la PEP 734. On obtient du parallélisme CPU sans le surcoût de démarrage d'un processus OS, mais avec une isolation forte : pas de partage d'objets Python arbitraires, on échange par canaux.</p>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python"># API 3.13+ (stdlib : module 'interpreters'). Esquisse conceptuelle.
+from concurrent import interpreters   # module expose via PEP 734
+
+interp = interpreters.create()        # interpreteur isole, son propre GIL
+interp.exec("import math; r = math.factorial(50000)")
+interp.close()
+# Echange de donnees : par 'queues' / canaux, pas par references partagees.
+# Avantage : demarrage plus leger qu'un process, isolation propre.
+# Limite : peu de libs tierces le supportent encore (2026).
+</code></pre></figure>
+<p class="code-caption">Per-interpreter GIL : un compromis entre l'isolation de <code>multiprocessing</code> et le partage du free-threading. Encore jeune côté écosystème.</p>
+
+<h2>Choisir et mesurer</h2>
+<p>La règle de décision tient en quatre branches. I/O-bound avec libs <code>async</code> → <code>asyncio</code> + <code>TaskGroup</code>. I/O-bound avec libs synchrones → <code>ThreadPoolExecutor</code>. CPU-bound aujourd'hui en prod → <code>ProcessPoolExecutor</code>. CPU-bound en R&amp;D / interne → évalue 3.13t. Et dans tous les cas : <strong>profile avant, benchmarke après</strong>, sinon tu parallélises au jugé.</p>
+<figure class="code-block" data-file="app.py"><pre><code class="language-python">import time
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+
+def work(n: int) -&gt; int:
+    return sum(i * i for i in range(n))
+
+def bench(executor_cls, fn, items, workers):
+    t0 = time.perf_counter()
+    with executor_cls(max_workers=workers) as ex:
+        list(ex.map(fn, items))
+    return time.perf_counter() - t0
+
+if __name__ == "__main__":
+    work_items = [6_000_000] * 8
+    print("threads :", round(bench(ThreadPoolExecutor, work, work_items, 8), 2), "s")
+    print("process :", round(bench(ProcessPoolExecutor, work, work_items, 8), 2), "s")
+# threads : 3.10 s   (GIL : pas de gain sur du CPU pur)
+# process : 0.62 s   (8 coeurs reellement exploites)
+</code></pre></figure>
+<p class="code-caption">Le même harnais départage threads et processus sur ta charge réelle. Le verdict change avec la part d'I/O, la taille des données picklées et le nombre de cœurs.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>Un comparateur de vols.</strong> Interroger 80 compagnies en séquentiel à ~300 ms chacune&nbsp;= 24 s d'attente pure. La même charge en <code>asyncio</code> avec un <code>Semaphore(20)</code> dans un <code>TaskGroup</code> tombe à ~1,5 s, bornée et annulable si une API dépasse son timeout&nbsp;: c'est de l'I/O-bound, un seul cœur suffit. En revanche, le service qui régénère ensuite les 5 000 vignettes des offres (redimensionnement d'images) est <strong>CPU-bound</strong>&nbsp;: là, <code>ProcessPoolExecutor</code> sur les 16 cœurs divise le temps, pas <code>asyncio</code>. Deux charges, deux outils — dictés par où passe le temps.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Objets non picklables</strong> en <code>multiprocessing</code> : lambdas, fonctions imbriquées, closures capturant un socket/lock, ou objets avec handles ouverts font échouer le <code>submit</code> (<code>PicklingError</code> / <code>AttributeError</code>). Passe des fonctions de module et des données sérialisables.</p></div></div>
+<ul>
+<li><strong>Bloquer la boucle <code>asyncio</code></strong> avec un appel synchrone CPU ou réseau : gèle toutes les coroutines. Déporte via <code>run_in_executor</code> / <code>to_thread</code>.</li>
+<li><strong>Trop de processus</strong> : chaque worker coûte de la mémoire et un démarrage (surtout sous <code>spawn</code>). Au-delà du nombre de cœurs pour du CPU-bound, tu perds en débit.</li>
+<li><strong>Partager un état mutable naïvement</strong> entre processus : chacun a sa copie après pickle/fork ; modifier <code>dict</code> ou <code>list</code> « globaux » dans un worker n'a aucun effet chez les autres. Utilise <code>Manager</code>, <code>shared_memory</code> ou des messages.</li>
+<li><strong>Oublier le garde <code>if __name__ == "__main__"</code></strong> : sous <code>spawn</code>, le module est ré-importé dans chaque worker ; sans garde, tu déclenches une récursion de pools (et un plantage immédiat).</li>
+<li><strong>Races en free-threading</strong> : sans GIL, <code>x += 1</code> sur un compteur partagé n'est plus atomique. Mets des <code>Lock</code> ou des structures conçues pour le parallélisme.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Suis l'évolution du <strong>free-threading</strong> (3.13t puis 3.14, où le build cesse d'être « expérimental ») et des <strong>sous-interpréteurs</strong> (PEP 734). Explore <strong>Trio</strong> et <strong>AnyIO</strong> pour une concurrence structurée plus stricte, <strong>Ray</strong> et <strong>Dask</strong> pour passer du multi-cœur au calcul distribué, et <strong>Celery</strong> pour les files de tâches asynchrones côté backend. Et instrumente : sans mesure (<code>perf</code>, <code>py-spy</code>, traces), tout choix de concurrence est une intuition.</p></div></div>
+
+<h2>Antisèche&nbsp;: quelle concurrence pour quelle charge&nbsp;?</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le profil de charge choisit l'outil&nbsp;; profile d'abord, parallélise ensuite</caption>
+    <thead><tr><th scope="col">Charge</th><th scope="col">Outil</th><th scope="col">Primitive clé</th><th scope="col">Repère</th></tr></thead>
+    <tbody>
+      <tr><td>I/O-bound, libs async</td><td><code>asyncio</code></td><td><code>TaskGroup</code> + <code>Semaphore</code></td><td><code>asyncio.run(main())</code></td></tr>
+      <tr><td>I/O-bound, libs sync</td><td><code>ThreadPoolExecutor</code></td><td><code>submit</code> / <code>map</code></td><td><code>asyncio.to_thread</code></td></tr>
+      <tr><td>CPU-bound (prod)</td><td><code>ProcessPoolExecutor</code></td><td><code>as_completed</code></td><td><code>if __name__ == "__main__"</code></td></tr>
+      <tr><td>CPU-bound (R&amp;D)</td><td>free-threading 3.13t</td><td>threads réels</td><td><code>sys._is_gil_enabled()</code></td></tr>
+      <tr><td>gros buffer partagé</td><td><code>shared_memory</code></td><td>on passe le nom du segment</td><td>un seul <code>unlink()</code></td></tr>
+      <tr><td>déporter un blocage</td><td><code>run_in_executor</code></td><td><code>loop.run_in_executor(None, fn)</code></td><td>la boucle reste réactive</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>GIL</dt><dd><em>Global Interpreter Lock</em>&nbsp;: verrou qui n'autorise qu'un thread à exécuter du bytecode Python à la fois&nbsp;; il sérialise le calcul pur mais est relâché pendant l'I/O et par les libs natives.</dd>
+  <dt>I/O-bound</dt><dd>Charge dont le temps est dominé par l'<strong>attente</strong> (réseau, disque, base)&nbsp;; profite de l'overlap sur un seul cœur (asyncio, threads).</dd>
+  <dt>CPU-bound</dt><dd>Charge dont le temps est dominé par le <strong>calcul</strong>&nbsp;; exige plusieurs cœurs, donc plusieurs processus (ou le free-threading).</dd>
+  <dt>Executor</dt><dd>Abstraction de <code>concurrent.futures</code> qui pilote un pool de threads ou de processus derrière une API unique (<code>submit</code>, <code>map</code>).</dd>
+  <dt>Future</dt><dd>Poignée vers un résultat pas encore calculé&nbsp;; <code>result()</code> attend puis re-lève l'exception éventuelle du worker.</dd>
+  <dt>Concurrence structurée</dt><dd>Modèle où les tâches vivent dans une portée (<code>TaskGroup</code>)&nbsp;: toutes attendues à la sortie, annulées et agrégées (<code>ExceptionGroup</code>) en cas d'échec.</dd>
+  <dt>Free-threading</dt><dd>Build expérimental de CPython (3.13t, PEP 703) sans GIL&nbsp;: les threads exécutent du bytecode en parallèle&nbsp;; la synchronisation redevient ta responsabilité.</dd>
+  <dt>Sous-interpréteur</dt><dd>Interpréteur isolé dans le même processus, avec son propre GIL (PEP 684/734)&nbsp;: parallélisme CPU sans processus OS, échanges par canaux.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le profil (I/O-bound vs CPU-bound) dicte l'outil : <code>asyncio</code>/threads pour l'attente, processus pour le calcul.</li>
+<li><code>concurrent.futures</code> unifie threads et processus ; <code>submit</code>/<code>as_completed</code> donnent le contrôle fin des erreurs, <code>map</code> le cas simple.</li>
+<li>En multi-processus, pickle et démarrage dominent : <code>shared_memory</code> pour les gros buffers, attention au <code>spawn</code> vs <code>fork</code> et au garde <code>__main__</code>.</li>
+<li><code>TaskGroup</code>, <code>Semaphore</code>, <code>asyncio.timeout</code> et <code>run_in_executor</code> structurent et bornent une charge <code>asyncio</code> sans figer la boucle.</li>
+<li>Le free-threading (3.13t) et les sous-interpréteurs ouvrent le parallélisme CPU intra-processus, mais restent expérimentaux et exposent les races.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi deux threads ne réduisent-ils pas le temps d'un calcul CPU-bound sur un interpréteur avec GIL, alors que deux processus oui&nbsp;?</li>
+<li>Quand préfères-tu <code>submit</code>/<code>as_completed</code> à <code>executor.map</code>, et qu'est-ce que ça change pour la gestion des exceptions&nbsp;?</li>
+<li>Que se passe-t-il si une tâche d'un <code>TaskGroup</code> lève une exception, et comment l'erreur remonte-t-elle&nbsp;?</li>
+<li>En quoi le free-threading déplace-t-il la responsabilité de la synchronisation vers le développeur&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi deux threads ne réduisent-ils pas le temps d'un calcul CPU-bound sur un interpréteur avec GIL, alors que deux processus oui ?","a":["Parce que le GIL sérialise l'exécution du bytecode : un seul thread calcule à la fois. Deux processus ont chacun leur interpréteur et leur GIL, d'où un vrai parallélisme sur plusieurs cœurs","Parce que les threads consomment trop de mémoire","Parce que les processus partagent le GIL","Parce que deux threads, c'est trop peu"],"correct":0,"explain":"Avec le GIL, les threads se relaient sans s'exécuter simultanément sur du calcul Python pur. Chaque processus disposant de son propre interpréteur et GIL, ils s'exécutent réellement en parallèle, exploitant plusieurs cœurs."},
+  {"q":"Quand préfères-tu submit/as_completed à executor.map, et qu'est-ce que ça change pour la gestion des exceptions ?","a":["map renvoie les résultats dans l'ordre des entrées (l'exception surgit en itérant) ; submit + as_completed traite chaque résultat dès qu'il est prêt et permet de gérer l'erreur par tâche via future.exception()","Ils sont identiques pour les exceptions","map gère mieux les erreurs par tâche","as_completed garde l'ordre des entrées"],"correct":0,"explain":"executor.map est pratique mais ordonné et propage l'exception au moment de lire le résultat correspondant. submit associé à as_completed livre les futures dans l'ordre d'achèvement et laisse inspecter individuellement chaque échec (future.exception())."},
+  {"q":"Que se passe-t-il si une tâche d'un TaskGroup lève une exception, et comment l'erreur remonte-t-elle ?","a":["Le TaskGroup annule les autres tâches et, à la sortie du bloc async with, lève un ExceptionGroup regroupant les erreurs (que l'on peut traiter avec except*)","La tâche échoue en silence","Seule cette tâche s'arrête, sans annulation","L'erreur est ignorée"],"correct":0,"explain":"La concurrence structurée d'un TaskGroup garantit qu'aucune tâche ne survit à une défaillance : il annule les sœurs et agrège les exceptions dans un ExceptionGroup levé en quittant le bloc, géré par la syntaxe except*."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["map","executor.map","map()","la méthode map"],"placeholder":"la méthode de l'executor qui applique une fonction et renvoie les résultats DANS L'ORDRE des entrées : …","hints":["Comme la fonction map intégrée, mais parallélisée.","executor.???(fonction, valeurs).","Trois lettres."],"link":{"href":"lecon-16.html","label":"Revoir « ProcessPoolExecutor.map »"}},
+  {"type":"text","accept":["TaskGroup","asyncio.TaskGroup","taskgroup"],"placeholder":"le gestionnaire asyncio (3.11+) qui regroupe des tâches concurrentes et propage les erreurs : asyncio.…","hints":["async with asyncio.TaskGroup() as tg: tg.create_task(...).","Annule les autres tâches si l'une échoue.","Task?????"],"link":{"href":"lecon-16.html","label":"Revoir « Les TaskGroup »"}},
+  {"type":"text","accept":["run_in_executor","loop.run_in_executor","run in executor"],"placeholder":"la méthode de la boucle asyncio pour DÉPORTER un calcul CPU bloquant hors de la boucle : loop.…","hints":["On lui passe un ProcessPoolExecutor.","La boucle reste réactive (le heartbeat tourne).","loop.run_in_????????"],"link":{"href":"lecon-16.html","label":"Revoir « run_in_executor »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Parallélise un calcul CPU-bound (somme de carrés sur plusieurs grandes valeurs) avec un <code>ProcessPoolExecutor</code> et récupère les résultats dans l'ordre des entrées via <code>map</code>. Compare le temps au séquentiel.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-python">import time, os
+from concurrent.futures import ProcessPoolExecutor
+
+def sum_squares(n: int) -&gt; int:
+    return sum(i * i for i in range(n))
+
+def main() -&gt; None:
+    items = [8_000_000] * 8
+
+    t0 = time.perf_counter()
+    seq = [sum_squares(n) for n in items]
+    print(f"sequentiel : {time.perf_counter() - t0:.2f}s")
+
+    t0 = time.perf_counter()
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as ex:
+        par = list(ex.map(sum_squares, items))   # ordre = ordre des entrees
+    print(f"parallele  : {time.perf_counter() - t0:.2f}s")
+
+    assert seq == par
+    # sequentiel : 3.9s
+    # parallele  : 0.7s
+
+if __name__ == "__main__":   # indispensable sous spawn (Windows/macOS)
+    main()
+</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une coroutine qui télécharge une liste d'URL en limitant à 10 requêtes simultanées via un <code>asyncio.Semaphore</code>, le tout dans un <code>TaskGroup</code> avec un timeout de 5 s par requête. Simule l'I/O avec <code>asyncio.sleep</code>.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-python">import asyncio, random
+
+async def fetch(url: str, sem: asyncio.Semaphore) -&gt; tuple[str, int]:
+    async with sem:                          # au plus 10 en vol
+        async with asyncio.timeout(5):
+            await asyncio.sleep(random.uniform(0.1, 0.5))   # I/O simulee
+            return url, random.randint(100, 9999)
+
+async def main(urls: list[str]) -&gt; None:
+    sem = asyncio.Semaphore(10)
+    async with asyncio.TaskGroup() as tg:
+        tasks = [tg.create_task(fetch(u, sem)) for u in urls]
+    results = [t.result() for t in tasks]    # toutes terminees ici
+    print(f"{len(results)} telechargements, "
+          f"total {sum(size for _, size in results)} octets")
+
+if __name__ == "__main__":
+    asyncio.run(main([f"https://ex/{i}" for i in range(50)]))
+    # 50 telechargements, total ... octets
+</code></pre></figure>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Tu as une fonction de hachage coûteuse (CPU pur) à appeler depuis une coroutine. Déporte-la hors de la boucle avec <code>run_in_executor</code> en utilisant un <code>ProcessPoolExecutor</code>, et lance-en plusieurs en parallèle. Vérifie que la boucle reste réactive en faisant tourner une tâche « heartbeat » concurrente.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-python">import asyncio, hashlib
+from concurrent.futures import ProcessPoolExecutor
+
+def heavy_hash(data: bytes) -&gt; str:
+    return hashlib.pbkdf2_hmac("sha256", data, b"salt", 500_000).hex()
+
+async def heartbeat() -&gt; None:
+    for _ in range(5):
+        print("tic")                 # prouve que la boucle n'est pas gelee
+        await asyncio.sleep(0.2)
+
+async def compute_all(pool, payloads) -&gt; list[str]:
+    loop = asyncio.get_running_loop()
+    # run_in_executor renvoie un Future awaitable ; on les agrege.
+    return await asyncio.gather(
+        *(loop.run_in_executor(pool, heavy_hash, p) for p in payloads)
+    )
+
+async def main() -&gt; None:
+    payloads = [f"msg-{i}".encode() for i in range(8)]
+    with ProcessPoolExecutor() as pool:
+        # Le calcul lourd et le heartbeat avancent en parallele.
+        results, _ = await asyncio.gather(
+            compute_all(pool, payloads),
+            heartbeat(),
+        )
+    print(f"{len(results)} hachages calcules, boucle restee reactive")
+    # tic / tic / ...  (intercales avec le calcul, pas apres)
+    # 8 hachages calcules, boucle restee reactive
+
+if __name__ == "__main__":
+    asyncio.run(main())
+</code></pre></figure>
+</details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

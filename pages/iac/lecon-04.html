@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Modules & réutilisation — Leçon 04 · Syntaxe</title>
+    <meta name="description" content="Factoriser son code Terraform avec des modules : éviter la duplication, créer un module paramétré par variables et outputs, l'appeler et le composer." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="iac" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Infrastructure as Code</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Structurer — Leçon 04</p>
+              <h1 class="lesson-header__title">Modules &amp; réutilisation</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~33 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 03</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>repérer la <strong>duplication</strong> à factoriser&nbsp;;</li>
+                  <li>créer un <strong>module</strong> paramétré&nbsp;;</li>
+                  <li>l'<strong>appeler</strong> et lire ses <strong>outputs</strong>&nbsp;;</li>
+                  <li><strong>composer</strong> plusieurs modules.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Quand on déploie plusieurs fois le même ensemble de ressources (un serveur + son réseau + ses règles), le copier-coller s'installe — et avec lui les divergences et les erreurs. Les <strong>modules</strong> apportent à l'IaC ce que les fonctions apportent au code : la <strong>réutilisation</strong>.</p>
+
+<h2>Le problème de la duplication</h2>
+<p>Imaginons trois environnements, chacun avec un serveur web, un réseau et une base. Sans factorisation, c'est trois fois le même bloc de code, à maintenir en parallèle : modifier la taille des serveurs partout, sans en oublier un, devient pénible et risqué. La règle <strong>DRY</strong> (« Don't Repeat Yourself ») s'applique aussi à l'infrastructure.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 182" role="img" aria-label="Duplication contre module. En haut, sans factorisation : trois environnements dev, staging et production contiennent chacun une copie du même bloc de code ; changer la taille des serveurs oblige à modifier les trois, au risque d'en oublier un. En bas, avec un module : un seul bloc module serveur est appelé trois fois avec des valeurs différentes ; une modification au même endroit se répercute partout.">
+    <text class="d-label" x="160" y="22" text-anchor="middle" font-size="12">Sans module&nbsp;: 3 copies</text>
+    <text class="d-label" x="480" y="22" text-anchor="middle" font-size="12">Avec module&nbsp;: 1 source</text>
+    <rect class="d-box" x="24" y="38" width="88" height="40" rx="5" /><text class="d-mut" x="68" y="62" text-anchor="middle" font-size="9">dev</text>
+    <rect class="d-box" x="120" y="38" width="88" height="40" rx="5" /><text class="d-mut" x="164" y="62" text-anchor="middle" font-size="9">staging</text>
+    <rect class="d-box" x="216" y="38" width="88" height="40" rx="5" /><text class="d-mut" x="260" y="62" text-anchor="middle" font-size="9">prod</text>
+    <text class="d-text" x="164" y="104" text-anchor="middle" font-size="9">3 blocs identiques à maintenir</text>
+    <rect class="d-accent" x="416" y="38" width="128" height="40" rx="5" /><text class="d-tag" x="480" y="62" text-anchor="middle" font-size="10.5">module serveur</text>
+    <line class="d-line" x1="452" y1="78" x2="416" y2="104" /><line class="d-line" x1="480" y1="78" x2="480" y2="104" /><line class="d-line" x1="508" y1="78" x2="544" y2="104" />
+    <rect class="d-box" x="384" y="106" width="60" height="28" rx="5" /><text class="d-mut" x="414" y="124" text-anchor="middle" font-size="8.5">dev</text>
+    <rect class="d-box" x="450" y="106" width="60" height="28" rx="5" /><text class="d-mut" x="480" y="124" text-anchor="middle" font-size="8.5">staging</text>
+    <rect class="d-box" x="516" y="106" width="60" height="28" rx="5" /><text class="d-mut" x="546" y="124" text-anchor="middle" font-size="8.5">prod</text>
+    <text class="d-text" x="480" y="158" text-anchor="middle" font-size="9">on modifie le module → partout à la fois</text>
+  </svg>
+  <figcaption>Trois copies divergent&nbsp;; un <strong>module</strong> appelé trois fois se corrige d'un seul endroit.</figcaption>
+</figure>
+
+<h2>Qu'est-ce qu'un module&nbsp;?</h2>
+<p>Un <strong>module</strong> est simplement un <strong>dossier</strong> de configuration Terraform, paramétré par des <strong>variables</strong> (ses entrées) et exposant des <strong>outputs</strong> (ses sorties). Tout dossier est déjà un module (le « module racine ») ; on en crée d'autres, réutilisables, qu'on appelle depuis le racine.</p>
+<figure class="code-block" data-file="modules/serveur/main.tf"><pre><code class="language-hcl">variable "nom"  { type = string }
+variable "taille" { type = string, default = "small" }
+
+resource "cloud_server" "this" {
+  name = var.nom
+  size = var.taille
+}
+
+output "ip" { value = cloud_server.this.ip }</code></pre></figure>
+
+<h2>Appeler un module</h2>
+<p>Depuis la configuration racine, on appelle le module avec un bloc <code>module</code>, en lui passant ses variables. On réutilise le même module autant de fois qu'on veut, avec des valeurs différentes&nbsp;:</p>
+<figure class="code-block" data-file="main.tf"><pre><code class="language-hcl">module "web" {
+  source = "./modules/serveur"
+  nom    = "serveur-web"
+  taille = "medium"
+}
+
+module "api" {
+  source = "./modules/serveur"
+  nom    = "serveur-api"
+}
+
+output "ip_web" { value = module.web.ip }   # lire un output du module</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Appeler un module. Au centre, une boîte module serveur avec ses entrées (variables nom et taille) et sa sortie (output ip). En haut à gauche, un premier appel module web passe la taille medium ; en bas à gauche, un second appel module api garde la taille par défaut. À droite, chaque appel produit un serveur différent, serveur-web et serveur-api. On lit une sortie avec module point web point ip.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">un même module, appelé avec des arguments différents</text>
+    <rect class="d-box" x="24" y="40" width="150" height="34" rx="5" /><text class="d-mut" x="99" y="61" text-anchor="middle" font-size="9">module "web" (medium)</text>
+    <rect class="d-box" x="24" y="118" width="150" height="34" rx="5" /><text class="d-mut" x="99" y="139" text-anchor="middle" font-size="9">module "api" (défaut)</text>
+    <line class="d-line" x1="174" y1="57" x2="238" y2="86" /><line class="d-line" x1="174" y1="135" x2="238" y2="100" />
+    <rect class="d-accent" x="240" y="66" width="200" height="54" rx="6" />
+    <text class="d-tag" x="340" y="90" text-anchor="middle" font-size="11">module « serveur »</text>
+    <text class="d-mut" x="340" y="108" text-anchor="middle" font-size="8.5">var nom, taille → output ip</text>
+    <line class="d-line" x1="440" y1="86" x2="504" y2="70" /><line class="d-line" x1="440" y1="100" x2="504" y2="134" />
+    <rect class="d-box" x="506" y="52" width="110" height="34" rx="5" /><text class="d-mut" x="561" y="73" text-anchor="middle" font-size="9">serveur-web</text>
+    <rect class="d-box" x="506" y="118" width="110" height="34" rx="5" /><text class="d-mut" x="561" y="139" text-anchor="middle" font-size="9">serveur-api</text>
+    <text class="d-mut" x="320" y="170" text-anchor="middle" font-size="9">on lit une sortie avec module.web.ip</text>
+  </svg>
+  <figcaption>Un module se réutilise autant de fois qu'on veut&nbsp;; ses <strong>outputs</strong> se lisent via <code>module.&lt;nom&gt;.&lt;sortie&gt;</code>.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Comme une fonction</p><p>Un module a des <strong>entrées</strong> (variables), un <strong>corps</strong> (les ressources) et des <strong>sorties</strong> (outputs). On l'appelle plusieurs fois avec des arguments différents — exactement comme une fonction. Modifier le module corrige tous ses usages d'un coup.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Une interface minimale</p><p>Un bon module expose <strong>peu de variables</strong>, bien nommées, et cache le reste. Plus l'interface est petite et stable, plus le module est facile à réutiliser sans tout casser à chaque évolution. Vise «&nbsp;une chose, bien faite&nbsp;».</p></div></div>
+
+<h2>D'où viennent les modules&nbsp;?</h2>
+<ul>
+<li><strong>Locaux</strong> : un dossier de ton dépôt (<code>./modules/...</code>), le plus simple pour commencer.</li>
+<li><strong>Partagés</strong> : un dépôt Git ou un <strong>registre</strong> de modules, pour réutiliser entre projets/équipes — en épinglant une <strong>version</strong>.</li>
+</ul>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Épingle la version d'un module partagé</p><p>Un module tiré d'un registre ou d'un dépôt Git <strong>évolue</strong>. Sans version épinglée (<code>version = "1.4.0"</code>), une mise à jour surprise peut changer ton <code>plan</code> — voire casser ton infra — sans que tu l'aies décidé. On met à jour <em>volontairement</em>.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — réutiliser un module éprouvé</p><p>Le <strong>Terraform Registry</strong> public héberge des modules maintenus, comme le module VPC AWS officiel utilisé par des milliers d'équipes. Plutôt que réécrire (et déboguer) un réseau complet — sous-réseaux, tables de routage, passerelles — on appelle un module éprouvé en épinglant sa version. Même réflexe que d'installer une bibliothèque au lieu de la recoder&nbsp;: on réutilise le travail testé de la communauté.</p></div></div>
+
+<h2>Composer</h2>
+<p>On <strong>compose</strong> les modules : un module « réseau », un module « serveur » qui prend l'id du réseau, un module « base »… La configuration racine devient un <strong>assemblage lisible</strong> de briques, chacune testable et réutilisable séparément.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Composer des modules. La configuration racine assemble trois briques : un module réseau qui expose un network_id, un module serveur qui reçoit ce network_id, et un module base qui le reçoit aussi. Les flèches montrent que le serveur et la base dépendent du réseau. La racine devient un assemblage lisible de modules réutilisables.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">la configuration racine assemble des briques</text>
+    <rect class="d-frame" x="24" y="34" width="592" height="118" rx="8" />
+    <text class="d-mut" x="40" y="52" font-size="9">module racine</text>
+    <rect class="d-accent" x="60" y="70" width="150" height="54" rx="6" /><text class="d-tag" x="135" y="94" text-anchor="middle" font-size="11">module réseau</text><text class="d-mut" x="135" y="112" text-anchor="middle" font-size="8.5">expose network_id</text>
+    <rect class="d-box" x="250" y="70" width="150" height="54" rx="6" /><text class="d-tag" x="325" y="94" text-anchor="middle" font-size="11">module serveur</text><text class="d-mut" x="325" y="112" text-anchor="middle" font-size="8.5">reçoit network_id</text>
+    <rect class="d-box" x="440" y="70" width="150" height="54" rx="6" /><text class="d-tag" x="515" y="94" text-anchor="middle" font-size="11">module base</text><text class="d-mut" x="515" y="112" text-anchor="middle" font-size="8.5">reçoit network_id</text>
+    <line class="d-line" x1="210" y1="90" x2="250" y2="90" /><path class="d-line" d="M243 86 L251 90 L243 94" fill="none" />
+    <line class="d-line" x1="210" y1="106" x2="440" y2="116" /><path class="d-line" d="M433 113 L441 116 L433 120" fill="none" />
+  </svg>
+  <figcaption>On <strong>compose</strong> des modules&nbsp;: la sortie de l'un (l'id du réseau) alimente les autres.</figcaption>
+</figure>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Copier-coller au lieu de factoriser.</strong> Trois fois le même bloc&nbsp;? C'est un module qui se cache.</li>
+<li><strong>Modules trop gros ou trop génériques.</strong> Un bon module fait une chose claire, avec peu d'entrées bien pensées.</li>
+<li><strong>Ne pas épingler la version d'un module partagé.</strong> Une mise à jour surprise peut casser ton infra.</li>
+<li><strong>Tout mettre dans le module racine.</strong> Sans découpage, le code devient un mur illisible.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>Les boucles (<code>count</code>, <code>for_each</code>) permettent de créer <strong>plusieurs instances</strong> d'une ressource ou d'un module à partir d'une liste (trois serveurs identiques, un par zone…). Couplées aux modules, elles rendent la configuration à la fois concise et expressive.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Un bon module se documente (un court README : ce qu'il fait, ses variables, ses outputs) et se <strong>versionne</strong>. Traité comme un petit produit réutilisable, il devient un atout pour toute l'équipe.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — modules et réutilisation</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Moyen</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Éviter la duplication</td><td>module</td><td>un dossier paramétré, comme une fonction</td></tr>
+      <tr><td>Paramétrer un module</td><td><code>variable</code></td><td>ses entrées</td></tr>
+      <tr><td>Récupérer un résultat</td><td><code>module.nom.sortie</code></td><td>ses outputs</td></tr>
+      <tr><td>Appeler un module</td><td>bloc <code>module</code> + <code>source</code></td><td>local (<code>./…</code>) ou registre</td></tr>
+      <tr><td>Réutiliser sûrement</td><td><code>version = "…"</code></td><td>module partagé épinglé</td></tr>
+      <tr><td>Créer N instances</td><td><code>for_each</code> / <code>count</code></td><td>à partir d'une liste</td></tr>
+      <tr><td>Assembler</td><td>composition</td><td>la sortie de l'un → l'entrée de l'autre</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Module</dt><dd>Dossier de configuration Terraform réutilisable, paramétré par des <em>variables</em> (entrées) et exposant des <em>outputs</em> (sorties)&nbsp;: l'équivalent d'une fonction.</dd>
+  <dt>Module racine</dt><dd>Le dossier depuis lequel on lance Terraform&nbsp;; c'est lui qui appelle les autres modules.</dd>
+  <dt><code>source</code></dt><dd>Attribut d'un bloc <code>module</code> qui indique où trouver le module&nbsp;: un chemin local (<code>./modules/…</code>), un dépôt Git ou un registre.</dd>
+  <dt>DRY</dt><dd>« Don't Repeat Yourself »&nbsp;: éviter de dupliquer&nbsp;; toute logique répétée devient une brique unique (ici, un module).</dd>
+  <dt>Composition</dt><dd>Assembler plusieurs modules en passant la sortie de l'un (ex. l'id du réseau) en entrée d'un autre.</dd>
+  <dt>Registre de modules</dt><dd>Catalogue de modules versionnés et partagés (public comme le Terraform Registry, ou privé) qu'on réutilise entre projets.</dd>
+  <dt><code>for_each</code></dt><dd>Mécanisme qui crée plusieurs instances d'une ressource ou d'un module à partir d'une liste ou d'une map.</dd>
+  <dt>Interface (d'un module)</dt><dd>L'ensemble de ses variables d'entrée et de ses outputs&nbsp;; on la garde <strong>petite et stable</strong> pour ne pas casser les usages.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Les <strong>modules</strong> factorisent l'infrastructure (DRY) : un dossier paramétré, comme une fonction.</li>
+<li>Entrées = <strong>variables</strong>, sorties = <strong>outputs</strong> ; on appelle avec un bloc <code>module</code>.</li>
+<li>Modules <strong>locaux</strong> (dossier) ou <strong>partagés</strong> (registre, version épinglée).</li>
+<li>On <strong>compose</strong> des briques claires plutôt qu'un gros bloc unique.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quel concept de programmation un module ressemble-t-il ?</li><li>Comment lit-on la sortie d'un module appelé ?</li><li>Pourquoi épingler la version d'un module partagé ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un module Terraform ?","a":["Un dossier de configuration réutilisable, paramétré par des variables (entrées) et exposant des outputs (sorties) — comme une fonction","Un fournisseur cloud","Le fichier d'état","Une variable globale"],"correct":0,"explain":"Un module a des entrées (variables), un corps (ressources) et des sorties (outputs). On l'appelle plusieurs fois avec des valeurs différentes pour éviter la duplication."},
+  {"q":"Comment lit-on la sortie (output) d'un module appelé « web » ?","a":["Avec module.web.<nom_output> (ex. module.web.ip)","Avec var.web.ip","En éditant le state","Avec output.web"],"correct":0,"explain":"On accède aux outputs d'un module via module.<nom>.<output>, qu'on peut réutiliser ailleurs ou ré-exposer en output racine."},
+  {"q":"Pourquoi épingler la version d'un module partagé (registre/Git) ?","a":["Pour éviter qu'une mise à jour inattendue du module ne modifie ou casse ton infrastructure sans que tu l'aies décidé","Pour le rendre plus rapide","Parce que c'est obligatoire","Pour réduire la taille du state"],"correct":0,"explain":"Sans version épinglée, le module pourrait évoluer et changer ton plan de façon imprévue. On fige la version pour des déploiements reproductibles."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["module","un module","les modules","modules"],"placeholder":"le dossier réutilisable et paramétré (équivalent d'une fonction)","hints":["Entrées = variables, sorties = outputs.","On l'appelle avec un bloc module.","Six lettres."],"link":{"href":"lecon-04.html","label":"Revoir « Qu'est-ce qu'un module ? »"}},
+  {"type":"text","accept":["dry","don't repeat yourself","dont repeat yourself","ne te repete pas","ne te répète pas"],"placeholder":"le principe « ne te répète pas » qui motive la factorisation","hints":["Trois lettres.","Don't Repeat Yourself.","« D__ »."],"link":{"href":"lecon-04.html","label":"Revoir « Le problème de la duplication »"}},
+  {"type":"text","accept":["outputs","output","les outputs","sorties","sortie"],"placeholder":"les valeurs qu'un module expose à l'extérieur","hints":["module.web.ip en lit une.","Opposé des variables d'entrée.","« out… »."],"link":{"href":"lecon-04.html","label":"Revoir « Appeler un module »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Appelle un module local <code>./modules/serveur</code> pour créer un serveur nommé « bdd » de taille « large ».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo1.tf"><pre><code class="language-hcl">module "bdd" {
+  source = "./modules/serveur"
+  nom    = "bdd"
+  taille = "large"
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu as trois serveurs identiques décrits par copier-coller, ne différant que par leur nom. Comment améliorer ?</p><details><summary>Voir une solution</summary><p>Extraire un <strong>module</strong> « serveur » (avec une variable <code>nom</code> et les attributs communs), puis l'<strong>appeler trois fois</strong> avec des noms différents. Mieux encore : utiliser <code>for_each</code> sur une liste de noms pour créer les trois instances en une seule déclaration. Ainsi, toute modification commune (taille, image, règles) se fait à <strong>un seul endroit</strong> — le module — et s'applique aux trois.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une équipe veut partager un module « réseau standard » entre cinq projets différents. Quelles bonnes pratiques mets-tu en place ?</p><details><summary>Voir une solution</summary><p>(1) Placer le module dans un <strong>dépôt dédié</strong> (ou un registre de modules), pas dupliqué dans chaque projet ; (2) le <strong>versionner</strong> (tags sémantiques) et, dans chaque projet, <strong>épingler une version</strong> précise pour des déploiements reproductibles — on met à jour volontairement ; (3) le <strong>documenter</strong> (README : rôle, variables d'entrée, outputs) ; (4) garder une <strong>interface claire et stable</strong> (peu de variables, bien nommées) pour ne pas casser les projets consommateurs à chaque évolution ; (5) idéalement, le <strong>tester</strong>. Le module devient un petit produit réutilisable, maintenu une fois pour tous.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-hcl.min.js" defer></script>
+  </body>
+</html>

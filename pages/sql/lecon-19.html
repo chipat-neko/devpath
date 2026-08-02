@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SQL analytique et données à l'échelle — Leçon 19 · SQL · Syntaxe</title>
+    <meta name="description" content="Agrégations ROLLUP/CUBE, pivots, fenêtrage analytique, vues matérialisées, partitionnement et OLTP vs OLAP pour exploiter SQL à l'échelle en production." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="sql" data-lesson="lecon-19.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">SQL</a></li>
+            <li aria-current="page">Leçon 19</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 07 · SQL en production — Leçon 19</p>
+              <h1 class="lesson-header__title">SQL analytique et données à l'échelle</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 18 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir produire des sous-totaux et totaux multi-niveaux avec <code>ROLLUP</code>, <code>CUBE</code>, <code>GROUPING SETS</code> et lire correctement les lignes de total via <code>GROUPING()</code>&nbsp;;</li>
+                  <li>savoir transposer des lignes en colonnes (pivot) avec <code>CASE</code>/<code>FILTER</code> et exploiter le fenêtrage pour les cumuls et comparaisons période à période&nbsp;;</li>
+                  <li>savoir pré-calculer un résultat coûteux avec une <strong>vue matérialisée</strong> et la rafraîchir au bon moment&nbsp;;</li>
+                  <li>savoir quand <strong>partitionner</strong> une grosse table et distinguer un usage <strong>OLTP</strong> d'un usage <strong>OLAP</strong> pour décider où exécuter l'analytique.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais déjà agréger, joindre et fenêtrer. Cette leçon assemble ces briques pour répondre à la vraie question de la production&nbsp;: <strong>comment analyser beaucoup de données sans écrouler la base</strong>. On y verra des agrégations multi-niveaux, le pivot, un rappel ciblé du fenêtrage au service de l'analyse, puis les outils de montée en charge&nbsp;: vues matérialisées, partitionnement, et la grande ligne de partage entre transactionnel (OLTP) et analytique (OLAP).</p>
+
+<p>Le fil rouge&nbsp;: une table <code>ventes(id, region, produit, vendu_le, montant)</code> qui grossit. Tant qu'elle tient en quelques milliers de lignes, tout va vite. Le jour où elle pèse des centaines de millions de lignes, les mêmes requêtes deviennent un problème d'architecture, pas de syntaxe.</p>
+
+<h2>Sous-totaux et totaux multi-niveaux&nbsp;: ROLLUP, CUBE, GROUPING SETS</h2>
+
+<p>Un <code>GROUP BY region, produit</code> classique te donne une ligne par couple. Mais un rapport veut souvent <em>aussi</em> les sous-totaux par région et le total général. Plutôt que d'empiler des <code>UNION ALL</code>, le standard SQL fournit trois extensions du <code>GROUP BY</code>.</p>
+
+<p><code>ROLLUP</code> calcule une hiérarchie&nbsp;: détail, puis sous-totaux en remontant les colonnes de gauche à droite, puis total général.</p>
+
+<figure class="code-block" data-file="rollup.sql"><pre><code class="language-sql">SELECT region, produit, SUM(montant) AS total
+FROM ventes
+GROUP BY ROLLUP (region, produit)
+ORDER BY region, produit;</code></pre></figure>
+
+<p>Les lignes de sous-total et de total portent un <code>NULL</code> sur la colonne agrégée. Ici, «&nbsp;Est / NULL&nbsp;» est le sous-total de la région Est, et «&nbsp;NULL / NULL&nbsp;» le total général.</p>
+
+<figure class="code-block" data-file="Résultat"><table><thead><tr><th>region</th><th>produit</th><th>total</th></tr></thead><tbody><tr><td>Est</td><td>Clavier</td><td>1200</td></tr><tr><td>Est</td><td>Souris</td><td>800</td></tr><tr><td>Est</td><td>NULL</td><td>2000</td></tr><tr><td>Ouest</td><td>Clavier</td><td>1500</td></tr><tr><td>Ouest</td><td>NULL</td><td>1500</td></tr><tr><td>NULL</td><td>NULL</td><td>3500</td></tr></tbody></table></figure>
+
+<p><code>CUBE</code> va plus loin&nbsp;: il génère <em>toutes</em> les combinaisons de sous-totaux (par région seule, par produit seul, et le total). <code>GROUPING SETS</code> te laisse choisir précisément quels regroupements tu veux, sans la hiérarchie imposée par <code>ROLLUP</code>.</p>
+
+<figure class="code-block" data-file="grouping-sets.sql"><pre><code class="language-sql">-- Total par region ET total par produit, mais pas le croisement detaille
+SELECT region, produit, SUM(montant) AS total
+FROM ventes
+GROUP BY GROUPING SETS ((region), (produit), ());
+
+-- Equivalences utiles :
+--   ROLLUP (a, b)  =  GROUPING SETS ((a, b), (a), ())
+--   CUBE   (a, b)  =  GROUPING SETS ((a, b), (a), (b), ())</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="ROLLUP comparé à CUBE. À gauche, ROLLUP (region, produit) génère une hiérarchie de trois regroupements : le détail (region, produit), le sous-total par région (region), et le total général représenté par des parenthèses vides. À droite, CUBE (region, produit) génère les quatre combinaisons possibles : (region, produit), (region), (produit) et le total général ; il ajoute le regroupement par produit seul, mis en évidence, que ROLLUP ne produit pas.">
+    <text class="d-label" x="165" y="20" text-anchor="middle" font-size="11">ROLLUP (region, produit)</text>
+    <text class="d-mut" x="165" y="34" text-anchor="middle" font-size="8">une hiérarchie : détail → sous-total → total</text>
+    <line class="d-line" x1="165" y1="48" x2="165" y2="166" />
+    <rect class="d-box" x="70" y="48" width="190" height="28" /><text class="d-text" x="165" y="66" text-anchor="middle" font-size="9" font-family="monospace">(region, produit)</text>
+    <rect class="d-box" x="70" y="94" width="190" height="28" /><text class="d-text" x="165" y="112" text-anchor="middle" font-size="9" font-family="monospace">(region)</text>
+    <rect class="d-box" x="70" y="140" width="190" height="28" /><text class="d-text" x="165" y="158" text-anchor="middle" font-size="9" font-family="monospace">( )</text>
+    <text class="d-mut" x="165" y="186" text-anchor="middle" font-size="8.5">3 regroupements</text>
+
+    <text class="d-label" x="475" y="20" text-anchor="middle" font-size="11">CUBE (region, produit)</text>
+    <text class="d-mut" x="475" y="34" text-anchor="middle" font-size="8">toutes les combinaisons</text>
+    <rect class="d-box" x="380" y="44" width="190" height="26" /><text class="d-text" x="475" y="61" text-anchor="middle" font-size="9" font-family="monospace">(region, produit)</text>
+    <rect class="d-box" x="380" y="76" width="190" height="26" /><text class="d-text" x="475" y="93" text-anchor="middle" font-size="9" font-family="monospace">(region)</text>
+    <rect class="d-accent" x="380" y="108" width="190" height="26" /><text class="d-text" x="475" y="125" text-anchor="middle" font-size="9" font-family="monospace">(produit)</text>
+    <rect class="d-box" x="380" y="140" width="190" height="26" /><text class="d-text" x="475" y="157" text-anchor="middle" font-size="9" font-family="monospace">( )</text>
+    <text class="d-mut" x="475" y="186" text-anchor="middle" font-size="8.5">4 regroupements — (produit) en plus</text>
+  </svg>
+  <figcaption><code>ROLLUP</code> remonte les colonnes <strong>de gauche à droite</strong> (pas de sous-total «&nbsp;par produit seul&nbsp;»)&nbsp;; <code>CUBE</code> ajoute toutes les combinaisons manquantes. <code>GROUPING SETS</code> te laisse écrire exactement l'ensemble voulu.</figcaption>
+</figure>
+
+<p>Comment distinguer un vrai <code>NULL</code> (donnée manquante) d'un <code>NULL</code> «&nbsp;ligne de total&nbsp;»&nbsp;? La fonction <code>GROUPING()</code> renvoie <code>1</code> quand la colonne est agrégée sur cette ligne, <code>0</code> sinon. On s'en sert pour étiqueter proprement.</p>
+
+<figure class="code-block" data-file="grouping-label.sql"><pre><code class="language-sql">SELECT
+  CASE WHEN GROUPING(region) = 1 THEN 'Toutes régions' ELSE region END AS region,
+  CASE WHEN GROUPING(produit) = 1 THEN 'Tous produits' ELSE produit END AS produit,
+  SUM(montant) AS total
+FROM ventes
+GROUP BY ROLLUP (region, produit);</code></pre></figure>
+
+<h2>Le pivot&nbsp;: transposer lignes et colonnes</h2>
+
+<p>Les données arrivent «&nbsp;en long&nbsp;» (une ligne par mois) mais un tableau de bord les veut souvent «&nbsp;en large&nbsp;» (un mois par colonne). C'est un <strong>pivot</strong>. SQL standard n'a pas de mot-clé <code>PIVOT</code> portable&nbsp;; on l'écrit avec une agrégation conditionnelle. La forme la plus lisible utilise <code>FILTER</code> (PostgreSQL, SQL standard).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 175" role="img" aria-label="Le pivot transpose des données. À gauche, une table « en long » avec les colonnes region, mois et montant, et une ligne par couple région-mois. Au centre, une flèche étiquetée « pivot, FILTER ou CASE ». À droite, la même information « en large » : une ligne par région et une colonne par mois (janvier, février, mars) contenant le montant. Les valeurs de la colonne mois deviennent des noms de colonnes.">
+    <text class="d-label" x="140" y="18" text-anchor="middle" font-size="10.5">en long — 1 ligne par mois</text>
+    <rect class="d-box" x="24" y="28" width="232" height="18" /><text class="d-mut" x="32" y="41" font-size="8" font-family="monospace">region · mois · montant</text>
+    <text class="d-text" x="32" y="62" font-size="8.5" font-family="monospace">Est · janvier · 2000</text>
+    <text class="d-text" x="32" y="80" font-size="8.5" font-family="monospace">Est · février · 2100</text>
+    <text class="d-text" x="32" y="98" font-size="8.5" font-family="monospace">Est · mars · 1800</text>
+    <text class="d-text" x="32" y="116" font-size="8.5" font-family="monospace">Ouest · janvier · 1500</text>
+    <text class="d-mut" x="32" y="134" font-size="8" font-family="monospace">… (6 lignes)</text>
+
+    <text class="d-label" x="320" y="78" text-anchor="middle" font-size="9.5">pivot</text>
+    <line class="d-line" x1="286" y1="90" x2="352" y2="90" /><line class="d-line" x1="352" y1="90" x2="344" y2="86" /><line class="d-line" x1="352" y1="90" x2="344" y2="94" />
+    <text class="d-mut" x="320" y="106" text-anchor="middle" font-size="7.5">FILTER / CASE</text>
+
+    <text class="d-label" x="500" y="18" text-anchor="middle" font-size="10.5">en large — 1 mois par colonne</text>
+    <rect class="d-box" x="384" y="28" width="232" height="18" /><text class="d-mut" x="392" y="41" font-size="7.5" font-family="monospace">region · janvier · février · mars</text>
+    <rect class="d-accent" x="384" y="52" width="232" height="20" /><text class="d-text" x="392" y="66" font-size="8.5" font-family="monospace">Est · 2000 · 2100 · 1800</text>
+    <rect class="d-accent" x="384" y="76" width="232" height="20" /><text class="d-text" x="392" y="90" font-size="8.5" font-family="monospace">Ouest · 1500 · 1700 · 1600</text>
+    <text class="d-mut" x="500" y="120" text-anchor="middle" font-size="8.5">les mois deviennent des colonnes</text>
+  </svg>
+  <figcaption>Le pivot fait passer une <strong>valeur</strong> (le mois) au rang de <strong>nom de colonne</strong>. D'où la contrainte&nbsp;: il faut connaître la liste des colonnes à l'écriture de la requête.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="pivot-filter.sql"><pre><code class="language-sql">SELECT
+  region,
+  SUM(montant) FILTER (WHERE EXTRACT(MONTH FROM vendu_le) = 1) AS janvier,
+  SUM(montant) FILTER (WHERE EXTRACT(MONTH FROM vendu_le) = 2) AS fevrier,
+  SUM(montant) FILTER (WHERE EXTRACT(MONTH FROM vendu_le) = 3) AS mars
+FROM ventes
+WHERE vendu_le &gt;= DATE '2026-01-01' AND vendu_le &lt; DATE '2026-04-01'
+GROUP BY region
+ORDER BY region;</code></pre></figure>
+
+<figure class="code-block" data-file="Résultat"><table><thead><tr><th>region</th><th>janvier</th><th>fevrier</th><th>mars</th></tr></thead><tbody><tr><td>Est</td><td>2000</td><td>2100</td><td>1800</td></tr><tr><td>Ouest</td><td>1500</td><td>1700</td><td>1600</td></tr></tbody></table></figure>
+
+<p>Sur un moteur sans <code>FILTER</code>, on remplace par <code>SUM(CASE WHEN … THEN montant END)</code>&nbsp;: même logique, syntaxe plus ancienne. PostgreSQL propose aussi <code>crosstab</code> (extension <code>tablefunc</code>) pour des pivots dynamiques, mais le résultat reste figé sur des colonnes connues à l'écriture.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un pivot a toujours des colonnes <em>fixées à l'écriture</em>&nbsp;: tu dois connaître la liste des mois ou produits d'avance. Pour un nombre de colonnes inconnu, génère le SQL dynamiquement côté application, ou laisse l'outil de BI faire le pivot à partir de données «&nbsp;en long&nbsp;».</p></div></div>
+
+<h2>Le fenêtrage au service de l'analyse</h2>
+
+<p>Tu connais déjà les fonctions de fenêtrage&nbsp;; voici les trois usages analytiques qui reviennent sans cesse. Le <strong>cumul</strong> (running total) avec une somme ordonnée&nbsp;:</p>
+
+<figure class="code-block" data-file="cumul.sql"><pre><code class="language-sql">SELECT vendu_le, montant,
+       SUM(montant) OVER (ORDER BY vendu_le
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul
+FROM ventes
+ORDER BY vendu_le;</code></pre></figure>
+
+<p>Le <strong>classement</strong> par groupe avec <code>RANK()</code> ou <code>ROW_NUMBER()</code>, et surtout la <strong>comparaison période à période</strong> avec <code>LAG</code>/<code>LEAD</code>, qui évite une auto-jointure&nbsp;:</p>
+
+<figure class="code-block" data-file="lag-croissance.sql"><pre><code class="language-sql">SELECT
+  mois,
+  total,
+  LAG(total) OVER (ORDER BY mois) AS mois_precedent,
+  ROUND(100.0 * (total - LAG(total) OVER (ORDER BY mois))
+        / NULLIF(LAG(total) OVER (ORDER BY mois), 0), 1) AS croissance_pct
+FROM (
+  SELECT date_trunc('month', vendu_le) AS mois, SUM(montant) AS total
+  FROM ventes
+  GROUP BY 1
+) m
+ORDER BY mois;</code></pre></figure>
+
+<figure class="code-block" data-file="Résultat"><table><thead><tr><th>mois</th><th>total</th><th>mois_precedent</th><th>croissance_pct</th></tr></thead><tbody><tr><td>2026-01-01</td><td>3500</td><td>NULL</td><td>NULL</td></tr><tr><td>2026-02-01</td><td>3800</td><td>3500</td><td>8.6</td></tr><tr><td>2026-03-01</td><td>3400</td><td>3800</td><td>-10.5</td></tr></tbody></table></figure>
+
+<p>Le <code>NULLIF(…, 0)</code> protège de la division par zéro&nbsp;; la première ligne reste à <code>NULL</code> car il n'y a pas de mois précédent. C'est le langage naturel des séries temporelles.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Quand la même clause <code>OVER (…)</code> se répète — comme les trois <code>LAG(total) OVER (ORDER BY mois)</code> ci-dessus — nomme-la une seule fois avec <code>WINDOW</code>&nbsp;: <code>SELECT …, LAG(total) OVER w … FROM … WINDOW w AS (ORDER BY mois)</code>. La requête raccourcit, se lit mieux, et le tri de la fenêtre n'est décrit qu'à un seul endroit.</p></div></div>
+
+<h2>Les vues matérialisées&nbsp;: pré-calculer le coûteux</h2>
+
+<p>Une vue ordinaire est une requête mémorisée&nbsp;: elle se rejoue à chaque appel. Une <strong>vue matérialisée</strong> stocke physiquement le résultat sur disque. Tu paies le calcul une fois, puis tu lis le cache. Idéal pour un rapport agrégé consulté cent fois par jour mais dont la source ne change qu'une fois par heure.</p>
+
+<figure class="code-block" data-file="vue-materialisee.sql"><pre><code class="language-sql">CREATE MATERIALIZED VIEW ventes_par_mois AS
+SELECT region,
+       date_trunc('month', vendu_le) AS mois,
+       SUM(montant) AS total,
+       COUNT(*)     AS nb_ventes
+FROM ventes
+GROUP BY region, date_trunc('month', vendu_le);
+
+-- Lecture instantanee ensuite (on lit le cache, pas la table source) :
+SELECT * FROM ventes_par_mois WHERE region = 'Est';</code></pre></figure>
+
+<p>Le piège&nbsp;: le résultat est <em>figé</em> à la création. Il faut le rafraîchir explicitement. Sur PostgreSQL, <code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code> reconstruit le cache sans bloquer les lecteurs (à condition d'avoir un index unique).</p>
+
+<figure class="code-block" data-file="refresh.sql"><pre><code class="language-sql">-- Index unique requis pour le rafraichissement non bloquant :
+CREATE UNIQUE INDEX ON ventes_par_mois (region, mois);
+REFRESH MATERIALIZED VIEW CONCURRENTLY ventes_par_mois;</code></pre></figure>
+
+<p>Quand l'utiliser&nbsp;? Quand le calcul est lourd, lu bien plus souvent qu'écrit, et qu'une fraîcheur «&nbsp;à la minute&nbsp;» ou «&nbsp;à l'heure&nbsp;» suffit. On planifie le <code>REFRESH</code> (cron, tâche planifiée, ou après un import). Pour de la fraîcheur en temps réel, ce n'est pas le bon outil.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un tableau de bord «&nbsp;chiffre d'affaires en direct&nbsp;» recalculait, à <em>chaque</em> ouverture, un <code>GROUP BY</code> sur 40 millions de ventes. Aux heures de pointe, chaque coup d'œil de la direction déclenchait un scan complet&nbsp;: la page mettait 9&nbsp;secondes… et surtout, elle <strong>ralentissait les prises de commande</strong> des clients sur la même base. La bascule&nbsp;: une <strong>vue matérialisée</strong> <code>ventes_par_mois</code> rafraîchie toutes les 15&nbsp;minutes par une tâche planifiée, lue en quelques millisecondes&nbsp;; puis l'analytique lourd déplacé sur un <strong>réplica en lecture</strong>. Le dashboard est devenu instantané et les commandes ont cessé de traîner. La morale&nbsp;: il payait très cher une fraîcheur «&nbsp;à la seconde&nbsp;» dont personne n'avait besoin.</p></div></div>
+
+<h2>Le partitionnement des très grosses tables</h2>
+
+<p>Quand une table atteint des centaines de millions de lignes, on la <strong>partitionne</strong>&nbsp;: une grande table logique découpée en sous-tables physiques. Les avantages&nbsp;: le moteur ne scanne que les partitions utiles (<em>partition pruning</em>), et purger d'anciennes données devient un <code>DROP</code> de partition instantané plutôt qu'un <code>DELETE</code> massif.</p>
+
+<figure class="code-block" data-file="partition-range.sql"><pre><code class="language-sql">CREATE TABLE ventes (
+  id         bigint GENERATED ALWAYS AS IDENTITY,
+  region     text,
+  produit    text,
+  vendu_le   date NOT NULL,
+  montant    numeric
+) PARTITION BY RANGE (vendu_le);
+
+CREATE TABLE ventes_2025 PARTITION OF ventes
+  FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+CREATE TABLE ventes_2026 PARTITION OF ventes
+  FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Sur une table partitionnée, toute clé primaire ou contrainte unique doit <strong>inclure la colonne de partition</strong>. Ici, une clé sur <code>id</code> seul est refusée&nbsp;; il faut <code>PRIMARY KEY (id, vendu_le)</code>. C'est le prix de la découpe physique.</p></div></div>
+
+<p>Une requête filtrée sur <code>vendu_le</code> ne touchera que la partition concernée&nbsp;:</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">EXPLAIN SELECT SUM(montant) FROM ventes WHERE vendu_le &gt;= '2026-01-01';
+-- Aggregate
+--   -&gt;  Seq Scan on ventes_2026   (ventes_2025 est ELAGUEE, jamais lue)</code></pre></figure>
+
+<p class="code-caption">Le plan ne lit que <code>ventes_2026</code>&nbsp;: c'est l'élagage de partition.</p>
+
+<p>On partitionne par <strong>plage</strong> (dates, le cas le plus courant), par <strong>liste</strong> (une partition par région) ou par <strong>hachage</strong> (répartition équilibrée sur une clé). Mais sur une petite table, le partitionnement ajoute de la complexité sans gain&nbsp;: un index suffit largement.</p>
+
+<h2>OLTP vs OLAP&nbsp;: où exécuter l'analytique</h2>
+
+<p>Deux mondes coexistent. L'<strong>OLTP</strong> (transactionnel) gère beaucoup de petites écritures concurrentes&nbsp;: passer une commande, mettre à jour un panier. Les bases relationnelles classiques (PostgreSQL, MySQL) y excellent, stockées <em>en lignes</em>. L'<strong>OLAP</strong> (analytique) balaie des millions de lignes pour quelques agrégats&nbsp;: là, le stockage <em>en colonnes</em> est bien plus rapide, car il ne lit que les colonnes utiles et compresse mieux.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Stockage en lignes contre stockage en colonnes. À gauche, l'OLTP range chaque ligne de façon contiguë sur le disque : un bloc par commande contenant id, région, produit et montant ; lire ou écrire une commande entière ne touche qu'un bloc. À droite, l'OLAP range chaque colonne de façon contiguë : un bloc pour tous les id, un pour toutes les régions, un pour tous les produits, un pour tous les montants mis en évidence ; une requête SUM(montant) ne lit que le bloc des montants, en ignorant les autres colonnes.">
+    <text class="d-label" x="160" y="18" text-anchor="middle" font-size="10.5">OLTP · stockage en lignes</text>
+    <rect class="d-accent" x="40" y="30" width="240" height="24" /><text class="d-text" x="48" y="46" font-size="8.5" font-family="monospace">12 · Est · Clé · 90</text>
+    <rect class="d-box" x="40" y="58" width="240" height="24" /><text class="d-text" x="48" y="74" font-size="8.5" font-family="monospace">13 · Est · Vis · 80</text>
+    <rect class="d-box" x="40" y="86" width="240" height="24" /><text class="d-text" x="48" y="102" font-size="8.5" font-family="monospace">14 · Ouest · Clé · 90</text>
+    <text class="d-mut" x="160" y="132" text-anchor="middle" font-size="8.5">1 commande = 1 bloc contigu</text>
+    <text class="d-mut" x="160" y="148" text-anchor="middle" font-size="8">idéal pour lire/écrire une ligne entière</text>
+
+    <text class="d-label" x="480" y="18" text-anchor="middle" font-size="10.5">OLAP · stockage en colonnes</text>
+    <rect class="d-box" x="360" y="30" width="240" height="22" /><text class="d-text" x="368" y="45" font-size="8.5" font-family="monospace">id : 12 · 13 · 14 · …</text>
+    <rect class="d-box" x="360" y="56" width="240" height="22" /><text class="d-text" x="368" y="71" font-size="8.5" font-family="monospace">région : Est · Est · Ouest</text>
+    <rect class="d-box" x="360" y="82" width="240" height="22" /><text class="d-text" x="368" y="97" font-size="8.5" font-family="monospace">produit : Clé · Vis · Clé</text>
+    <rect class="d-accent" x="360" y="108" width="240" height="22" /><text class="d-text" x="368" y="123" font-size="8.5" font-family="monospace">montant : 90 · 80 · 90 · …</text>
+    <text class="d-mut" x="480" y="150" text-anchor="middle" font-size="8.5">SUM(montant) ne lit que le bloc « montant »</text>
+  </svg>
+  <figcaption>Le stockage <strong>en lignes</strong> sert le transactionnel (une commande = un accès)&nbsp;; le stockage <strong>en colonnes</strong> sert l'analytique&nbsp;: un agrégat sur une colonne ignore toutes les autres et compresse mieux.</figcaption>
+</figure>
+
+<p>Faire tourner un gros rapport OLAP sur la base de production OLTP, c'est ralentir les clients qui passent commande. Les parades&nbsp;:</p>
+
+<ul>
+<li>la <strong>réplication</strong> et la <strong>lecture sur réplicas</strong>&nbsp;: les requêtes lourdes vont sur une copie en lecture seule&nbsp;;</li>
+<li>le <strong>sharding</strong>&nbsp;: découper les données sur plusieurs serveurs quand un seul ne suffit plus&nbsp;;</li>
+<li>l'<strong>entrepôt de données</strong> (data warehouse)&nbsp;: une base colonne dédiée, alimentée périodiquement, sur laquelle l'analytique ne dérange personne.</li>
+</ul>
+
+<p>Et le <strong>NoSQL</strong>&nbsp;? On sort du relationnel quand le schéma est très variable (documents), quand on a besoin d'un cache clé-valeur ultra-rapide, ou d'une échelle d'écriture qu'un seul nœud SQL ne tient pas. Ce n'est pas «&nbsp;mieux&nbsp;», c'est un compromis différent&nbsp;: on troque souvent les jointures et les garanties transactionnelles fortes contre l'échelle horizontale.</p>
+
+<h2>Bonnes pratiques analytiques</h2>
+
+<ul>
+<li>Agrège <strong>au plus près de la donnée</strong> et ne ramène que le résultat&nbsp;: pas de <code>SELECT *</code> de millions de lignes vers l'application.</li>
+<li>Filtre sur les colonnes <strong>indexées ou de partitionnement</strong> pour profiter de l'élagage.</li>
+<li>Matérialise ce qui est <strong>lu souvent et coûteux</strong>&nbsp;; planifie le rafraîchissement.</li>
+<li>Sépare les charges&nbsp;: l'analytique lourd va sur un <strong>réplica ou un entrepôt</strong>, jamais sur la production en heure de pointe.</li>
+<li>Vérifie tes plans avec <code>EXPLAIN (ANALYZE)</code> avant de conclure qu'une requête est «&nbsp;lente&nbsp;».</li>
+</ul>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Recalculer à chaque requête un agrégat qu'une vue matérialisée pourrait servir en cache — ou, à l'inverse, créer la vue puis <strong>oublier de la rafraîchir</strong> et servir des chiffres périmés. Décide d'une stratégie de <code>REFRESH</code> dès la création.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mal lire les lignes de <code>ROLLUP</code>/<code>CUBE</code>&nbsp;: leurs <code>NULL</code> de total se confondent avec de vraies valeurs manquantes. Étiquette-les avec <code>GROUPING()</code>. Et n'oublie pas qu'un <code>WHERE total IS NOT NULL</code> mal placé supprimerait justement les lignes de sous-total.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Partitionner une table qui n'en a pas besoin (petite, ou jamais filtrée sur la clé de partition) ajoute de la complexité pour zéro gain. De même, un pivot à vingt colonnes devient illisible&nbsp;: au-delà de quelques colonnes, laisse l'outil de BI pivoter des données «&nbsp;en long&nbsp;».</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les <strong>entrepôts cloud</strong> (BigQuery, Snowflake) et bases colonnes (ClickHouse) industrialisent l'OLAP&nbsp;; <strong>dbt</strong> outille la transformation et la documentation des modèles analytiques&nbsp;; le <strong>CDC</strong> et le streaming (Debezium, Kafka) alimentent l'entrepôt en quasi temps réel&nbsp;; et les fonctions de fenêtrage avancées (cadres <code>RANGE</code>, <code>PERCENTILE_CONT</code>) raffinent l'analyse. Côté restitution, c'est le domaine de la <strong>BI</strong> (Metabase, Looker, Power BI).</p></div></div>
+
+<h2>Antisèche&nbsp;: le bon outil analytique</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>À chaque besoin analytique ou de montée en charge, l'outil SQL adéquat.</caption>
+    <thead><tr><th>Besoin</th><th>Outil</th></tr></thead>
+    <tbody>
+      <tr><td>Sous-totaux et total en une requête</td><td><code>GROUP BY ROLLUP</code> · <code>CUBE</code> · <code>GROUPING SETS</code></td></tr>
+      <tr><td>Étiqueter les lignes de total</td><td><code>GROUPING(col) = 1</code></td></tr>
+      <tr><td>Transposer lignes &rarr; colonnes (pivot)</td><td><code>SUM(x) FILTER (WHERE …)</code> ou <code>SUM(CASE … END)</code></td></tr>
+      <tr><td>Cumul / total mobile</td><td><code>SUM(x) OVER (ORDER BY … ROWS …)</code></td></tr>
+      <tr><td>Comparer à la période précédente</td><td><code>LAG(x)</code> / <code>LEAD(x) OVER (ORDER BY …)</code></td></tr>
+      <tr><td>Classer à l'intérieur d'un groupe</td><td><code>RANK()</code> / <code>ROW_NUMBER() OVER (PARTITION BY …)</code></td></tr>
+      <tr><td>Mettre en cache un calcul coûteux</td><td><code>MATERIALIZED VIEW</code> + <code>REFRESH … CONCURRENTLY</code></td></tr>
+      <tr><td>Très grosse table (élagage, purge rapide)</td><td><code>PARTITION BY RANGE / LIST / HASH</code></td></tr>
+      <tr><td>Analytique lourd sans gêner la prod</td><td>Réplica en lecture · entrepôt colonne (OLAP)</td></tr>
+      <tr><td>Éviter la division par zéro</td><td><code>NULLIF(dénominateur, 0)</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>ROLLUP</dt><dd>Extension de <code>GROUP BY</code> qui ajoute des <strong>sous-totaux hiérarchiques</strong> (en remontant les colonnes de gauche à droite) puis le total général.</dd>
+  <dt>CUBE</dt><dd>Extension de <code>GROUP BY</code> qui génère <strong>toutes</strong> les combinaisons de sous-totaux des colonnes groupées, pas seulement la hiérarchie de <code>ROLLUP</code>.</dd>
+  <dt>GROUPING SETS</dt><dd>Écriture explicite de l'ensemble des regroupements voulus&nbsp;; <code>ROLLUP</code> et <code>CUBE</code> n'en sont que des raccourcis.</dd>
+  <dt>GROUPING(col)</dt><dd>Fonction qui renvoie <code>1</code> si <code>col</code> est agrégée sur la ligne (ligne de total) et <code>0</code> sinon&nbsp;; distingue un <code>NULL</code> de total d'un <code>NULL</code> de donnée.</dd>
+  <dt>Pivot</dt><dd>Transposition de lignes en colonnes («&nbsp;en long&nbsp;» &rarr; «&nbsp;en large&nbsp;»), écrite avec <code>FILTER</code> ou <code>CASE</code>&nbsp;; les colonnes sont fixées à l'écriture.</dd>
+  <dt>Vue matérialisée</dt><dd>Résultat de requête <strong>stocké physiquement</strong> sur disque&nbsp;: rapide à lire mais figé, il faut le <code>REFRESH</code> pour éviter des chiffres périmés.</dd>
+  <dt>Partitionnement</dt><dd>Découpe d'une grande table logique en sous-tables physiques (par plage, liste ou hachage)&nbsp;; permet l'<strong>élagage</strong> (<em>partition pruning</em>) et la purge par <code>DROP</code>.</dd>
+  <dt>OLTP / OLAP</dt><dd><strong>OLTP</strong>&nbsp;: transactionnel, beaucoup de petites écritures, stockage en lignes. <strong>OLAP</strong>&nbsp;: analytique, gros balayages pour des agrégats, stockage en colonnes.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li><code>ROLLUP</code>, <code>CUBE</code> et <code>GROUPING SETS</code> produisent sous-totaux et totaux en une requête&nbsp;; <code>GROUPING()</code> étiquette les lignes de total.</li>
+<li>Le pivot transpose lignes en colonnes avec <code>FILTER</code> ou <code>CASE</code>&nbsp;; les colonnes sont fixées à l'écriture.</li>
+<li>Le fenêtrage donne cumuls, classements et comparaisons période à période (<code>LAG</code>/<code>LEAD</code>) sans auto-jointure.</li>
+<li>Une vue matérialisée met en cache un calcul coûteux&nbsp;; il faut la <code>REFRESH</code>.</li>
+<li>Le partitionnement découpe les très grosses tables (plage/liste/hachage) pour l'élagage et la purge rapide.</li>
+<li>L'analytique lourd (OLAP) appartient à un réplica ou un entrepôt, pas à la production transactionnelle (OLTP).</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre <code>ROLLUP (a, b)</code> et <code>CUBE (a, b)</code>, et comment les exprimer en <code>GROUPING SETS</code>&nbsp;?</li><li>À quoi sert <code>GROUPING(colonne)</code> et quel problème de lecture résout-il&nbsp;?</li><li>Pourquoi une vue matérialisée peut-elle servir des données fausses, et comment l'éviter&nbsp;?</li><li>Donne un cas où partitionner n'apporte rien, et un cas où l'analytique ne doit pas tourner sur la base OLTP.</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle différence entre ROLLUP (a, b) et CUBE (a, b) ?","a":["ROLLUP produit les sous-totaux hiérarchiques (par a, par a+b, et le total) ; CUBE produit TOUTES les combinaisons (par a, par b, par a+b, et le total). Les deux s'expriment en GROUPING SETS","Ils sont identiques","CUBE ne fait que le total","ROLLUP fait toutes les combinaisons"],"correct":0,"explain":"ROLLUP suit une hiérarchie (du plus fin au total général). CUBE génère tous les sous-totaux possibles des colonnes. GROUPING SETS permet d'écrire à la main n'importe quel ensemble de regroupements, dont ces deux cas."},
+  {"q":"À quoi sert GROUPING(colonne), et quel problème de lecture résout-il ?","a":["Elle indique si une colonne est agrégée (1) ou non (0) dans une ligne de sous-total ; elle lève l'ambiguïté entre un vrai NULL de donnée et un NULL de sous-total","Elle compte les lignes","Elle trie le résultat","Elle supprime les NULL"],"correct":0,"explain":"Dans un ROLLUP/CUBE, les lignes de sous-total contiennent des NULL sur les colonnes agrégées. GROUPING(col) renvoie 1 pour ces NULL « techniques » et 0 pour un NULL réel des données, ce qui permet de les distinguer."},
+  {"q":"Pourquoi une vue matérialisée peut-elle servir des données fausses, et comment l'éviter ?","a":["Elle stocke un instantané figé : si les données sources changent, elle devient périmée. On la rafraîchit (REFRESH MATERIALIZED VIEW), périodiquement ou après les mises à jour","Elle est toujours à jour","Elle ne stocke rien","Il faut la supprimer après chaque requête"],"correct":0,"explain":"Contrairement à une vue ordinaire, une vue matérialisée conserve un résultat précalculé (rapide à lire) mais non synchronisé automatiquement. Sans rafraîchissement, elle reflète un état ancien : on la met à jour selon la fraîcheur requise."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["ROLLUP"],"placeholder":"le mot-clé pour des sous-totaux et un total général","hints":["On veut le détail, les sous-totaux par région et le total.","Une extension de GROUP BY génère ces agrégats.","Le mot-clé « cumule » les niveaux."],"link":{"href":"lecon-19.html","label":"Revoir « ROLLUP »"}},
+  {"type":"text","accept":["FILTER"],"placeholder":"le mot-clé pour agréger sous condition (pivot)","hints":["Chaque colonne ne somme qu'un seul trimestre.","On restreint chaque SUM à une condition.","Le mot-clé s'écrit après l'agrégat : SUM(...) … (WHERE …)."],"link":{"href":"lecon-19.html","label":"Revoir « FILTER et pivots »"}},
+  {"type":"text","accept":["vue matérialisée","MATERIALIZED VIEW","materialized view","vue materialisee"],"placeholder":"ce qu'on crée pour stocker un résultat agrégé précalculé","hints":["Une vue normale recalcule à chaque lecture.","Ici, on stocke physiquement le résultat agrégé.","C'est une vue « matérialisée »."],"link":{"href":"lecon-19.html","label":"Revoir « Vues matérialisées »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Sur <code>ventes(region, produit, montant)</code>, produis un rapport du chiffre par région et par produit, <strong>avec</strong> les sous-totaux par région et le total général. Étiquette les lignes de total avec un libellé lisible.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">SELECT
+  CASE WHEN GROUPING(region)  = 1 THEN 'TOTAL'        ELSE region  END AS region,
+  CASE WHEN GROUPING(produit) = 1 THEN 'Sous-total'   ELSE produit END AS produit,
+  SUM(montant) AS total
+FROM ventes
+GROUP BY ROLLUP (region, produit)
+ORDER BY GROUPING(region), region, GROUPING(produit), produit;</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Construis un pivot&nbsp;: une ligne par <code>region</code>, et trois colonnes <code>t1</code>, <code>t2</code>, <code>t3</code> donnant le total des trois premiers trimestres de 2026. Utilise <code>FILTER</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">SELECT
+  region,
+  SUM(montant) FILTER (WHERE EXTRACT(QUARTER FROM vendu_le) = 1) AS t1,
+  SUM(montant) FILTER (WHERE EXTRACT(QUARTER FROM vendu_le) = 2) AS t2,
+  SUM(montant) FILTER (WHERE EXTRACT(QUARTER FROM vendu_le) = 3) AS t3
+FROM ventes
+WHERE vendu_le &gt;= DATE '2026-01-01' AND vendu_le &lt; DATE '2026-10-01'
+GROUP BY region
+ORDER BY region;
+-- Sans FILTER : SUM(CASE WHEN EXTRACT(QUARTER FROM vendu_le) = 1 THEN montant END) AS t1, ...</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Crée une vue matérialisée <code>ca_mensuel</code> qui agrège le chiffre par région et par mois, avec un index unique pour permettre un rafraîchissement non bloquant. En commentaire, explique <strong>quand</strong> la rafraîchir.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">CREATE MATERIALIZED VIEW ca_mensuel AS
+SELECT region,
+       date_trunc('month', vendu_le) AS mois,
+       SUM(montant) AS total,
+       COUNT(*)     AS nb_ventes
+FROM ventes
+GROUP BY region, date_trunc('month', vendu_le);
+
+-- Index unique requis pour REFRESH ... CONCURRENTLY
+CREATE UNIQUE INDEX ca_mensuel_uk ON ca_mensuel (region, mois);
+
+-- Quand rafraichir ?
+--  - apres un import/batch nocturne de nouvelles ventes ;
+--  - ou sur une tache planifiee (cron) a la frequence de fraicheur acceptable
+--    (ex. toutes les heures) ; pas a chaque lecture.
+REFRESH MATERIALIZED VIEW CONCURRENTLY ca_mensuel;
+-- CONCURRENTLY : les lecteurs ne sont pas bloques pendant le rafraichissement.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

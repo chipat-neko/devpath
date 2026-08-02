@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Répliquer et partitionner — Leçon 09 · NoSQL · Syntaxe</title>
+    <meta name="description" content="Passer à l'échelle et rester disponible en NoSQL : la réplication (replica set primaire/secondaires, basculement automatique) pour la haute disponibilité, et le partitionnement (sharding, clé de partition) pour dépasser un seul serveur." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="nosql" data-lesson="lecon-09.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">NoSQL</a></li>
+            <li aria-current="page">Leçon 09</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin — Leçon 09</p>
+              <h1 class="lesson-header__title">Répliquer et partitionner</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 02 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer <strong>réplication</strong> et <strong>partitionnement</strong>&nbsp;;</li>
+                  <li>comprendre un <strong>replica set</strong> et le <strong>basculement</strong> automatique&nbsp;;</li>
+                  <li>ce qu'est une <strong>clé de partition</strong> et pourquoi elle est décisive&nbsp;;</li>
+                  <li>combiner les deux pour la <strong>haute disponibilité</strong> et l'<strong>échelle</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une base sur <strong>un seul serveur</strong> a deux limites&nbsp;: si la machine tombe, le service s'arrête&nbsp;; et si les données (ou le trafic) dépassent sa capacité, on est coincé. Le NoSQL a été pensé pour <strong>plusieurs machines</strong>&nbsp;: c'est même l'une de ses raisons d'être (leçon&nbsp;2). Deux mécanismes s'en chargent, souvent confondus mais très différents&nbsp;: la <strong>réplication</strong> (copier) et le <strong>partitionnement</strong> (découper).</p>
+
+<h2>La réplication : copier pour rester disponible</h2>
+<p>Répliquer, c'est tenir <strong>plusieurs copies identiques</strong> de la même donnée sur des serveurs distincts. Chez MongoDB, ce groupe s'appelle un <strong>replica set</strong>&nbsp;: un nœud <strong>primaire</strong> reçoit toutes les écritures, et les <strong>secondaires</strong> recopient en continu son journal d'opérations. But premier&nbsp;: la <strong>haute disponibilité</strong>&nbsp;— si un serveur meurt, un autre a déjà les données.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un replica set. L'application envoie ses écritures au nœud primaire au centre. Le primaire réplique en continu vers deux nœuds secondaires, à gauche et à droite, qui gardent une copie identique des données. Les lectures peuvent être servies par le primaire ou, si on l'accepte, par les secondaires.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Un replica set : une donnée, plusieurs copies</text>
+    <rect class="d-frame" x="258" y="40" width="124" height="34" rx="6" /><text class="d-text" x="320" y="61" text-anchor="middle" font-size="10">application</text>
+    <path class="d-accent" d="M320 74 L320 100" fill="none" stroke-width="2" /><path class="d-accent" d="M315 94 L320 102 L325 94" fill="none" stroke-width="2" /><text class="d-mut" x="360" y="92" text-anchor="middle" font-size="8">écritures</text>
+    <rect class="d-accent" x="256" y="104" width="128" height="46" rx="6" /><text class="d-text" x="320" y="126" text-anchor="middle" font-size="9.5">PRIMAIRE</text><text class="d-mut" x="320" y="141" text-anchor="middle" font-size="8">reçoit les écritures</text>
+    <rect class="d-box" x="30" y="150" width="150" height="46" rx="6" /><text class="d-text" x="105" y="172" text-anchor="middle" font-size="9.5">secondaire</text><text class="d-mut" x="105" y="187" text-anchor="middle" font-size="8">copie identique</text>
+    <rect class="d-box" x="460" y="150" width="150" height="46" rx="6" /><text class="d-text" x="535" y="172" text-anchor="middle" font-size="9.5">secondaire</text><text class="d-mut" x="535" y="187" text-anchor="middle" font-size="8">copie identique</text>
+    <path class="d-line" d="M270 150 L130 150" fill="none" /><path class="d-line" d="M138 146 L128 150 L138 154" fill="none" />
+    <path class="d-line" d="M370 150 L510 150" fill="none" /><path class="d-line" d="M502 146 L512 150 L502 154" fill="none" />
+    <text class="d-mut" x="320" y="205" text-anchor="middle" font-size="8.5">le primaire réplique son journal d'opérations vers les secondaires</text>
+  </svg>
+  <figcaption>Un <strong>replica set</strong>&nbsp;: le <strong>primaire</strong> reçoit les écritures et les réplique vers les <strong>secondaires</strong>, qui gardent une copie identique. Plusieurs copies = la panne d'un serveur ne perd ni les données ni le service.</figcaption>
+</figure>
+
+<h2>Le basculement automatique</h2>
+<p>Le vrai bénéfice se voit quand le primaire <strong>tombe</strong>. Les nœuds restants s'en aperçoivent (plus de signal de vie) et organisent une <strong>élection</strong>&nbsp;: un secondaire devient le nouveau primaire, en quelques secondes, <em>sans intervention humaine</em>. C'est le <strong>basculement</strong> (<em>failover</em>). L'application se reconnecte au nouveau primaire et le service continue.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le basculement automatique en trois temps. Avant : un primaire et deux secondaires fonctionnent. Panne : le primaire tombe, il ne répond plus. Après : les secondaires organisent une élection, l'un d'eux devient le nouveau primaire et le service reprend.">
+    <text class="d-label" x="106" y="24" text-anchor="middle" font-size="11">1. état normal</text>
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="11">2. le primaire tombe</text>
+    <text class="d-label" x="534" y="24" text-anchor="middle" font-size="11">3. après l'élection</text>
+    <rect class="d-accent" x="56" y="42" width="100" height="30" rx="5" /><text class="d-text" x="106" y="61" text-anchor="middle" font-size="8.5">primaire</text>
+    <rect class="d-box" x="56" y="82" width="100" height="26" rx="5" /><text class="d-mut" x="106" y="99" text-anchor="middle" font-size="8">secondaire</text>
+    <rect class="d-box" x="56" y="116" width="100" height="26" rx="5" /><text class="d-mut" x="106" y="133" text-anchor="middle" font-size="8">secondaire</text>
+    <rect class="d-box" x="270" y="42" width="100" height="30" rx="5" stroke-dasharray="4 3" /><text class="d-mut" x="320" y="61" text-anchor="middle" font-size="8.5">✗ hors service</text>
+    <rect class="d-box" x="270" y="82" width="100" height="26" rx="5" /><text class="d-mut" x="320" y="99" text-anchor="middle" font-size="8">secondaire</text>
+    <rect class="d-box" x="270" y="116" width="100" height="26" rx="5" /><text class="d-mut" x="320" y="133" text-anchor="middle" font-size="8">secondaire</text>
+    <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="8">élection…</text>
+    <rect class="d-box" x="484" y="42" width="100" height="30" rx="5" stroke-dasharray="4 3" /><text class="d-mut" x="534" y="61" text-anchor="middle" font-size="8.5">✗ (revient plus tard)</text>
+    <rect class="d-accent" x="484" y="82" width="100" height="26" rx="5" /><text class="d-text" x="534" y="99" text-anchor="middle" font-size="8">NOUVEAU primaire</text>
+    <rect class="d-box" x="484" y="116" width="100" height="26" rx="5" /><text class="d-mut" x="534" y="133" text-anchor="middle" font-size="8">secondaire</text>
+    <path class="d-accent" d="M170 92 L262 92" fill="none" stroke-width="1.6" /><path class="d-accent" d="M256 88 L264 92 L256 96" fill="none" stroke-width="1.6" />
+    <path class="d-accent" d="M384 92 L476 92" fill="none" stroke-width="1.6" /><path class="d-accent" d="M470 88 L478 92 L470 96" fill="none" stroke-width="1.6" />
+    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="8.5">un secondaire est élu primaire en quelques secondes, sans intervention humaine</text>
+  </svg>
+  <figcaption>Le <strong>basculement</strong>&nbsp;: quand le primaire tombe, les secondaires organisent une <strong>élection</strong> et l'un d'eux prend le relais. C'est ce qui rend le service tolérant aux pannes&nbsp;— la disponibilité, sans veille de nuit.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un site e-commerce ne peut pas «&nbsp;fermer&nbsp;» parce qu'un serveur a redémarré. Avec un replica set de trois nœuds répartis sur des zones différentes, la perte d'une machine (ou d'un centre de données entier) déclenche un basculement de quelques secondes&nbsp;: les clients continuent d'acheter, souvent sans rien remarquer. C'est le socle du <strong>«&nbsp;99,99&nbsp;% de disponibilité&nbsp;»</strong> promis dans les contrats de service.</p></div></div>
+
+<h2>Le partitionnement : découper pour grandir</h2>
+<p>La réplication multiplie les copies, mais chaque copie contient <strong>toutes</strong> les données&nbsp;: elle ne résout pas le cas où le volume dépasse un seul serveur. Là, on <strong>partitionne</strong> (<em>sharding</em>)&nbsp;: on découpe la collection en <strong>fragments</strong> (<em>shards</em>) répartis sur plusieurs machines. Chaque serveur ne détient qu'<em>une part</em> des données. C'est la <strong>montée en charge horizontale</strong> (<em>scale-out</em>)&nbsp;: pour grandir, on ajoute des machines plutôt que d'en acheter une plus grosse.</p>
+<p>Le découpage suit une <strong>clé de partition</strong> (<em>shard key</em>)&nbsp;: un champ des documents (par exemple <code>pays</code> ou un hachage de l'<code>_id</code>) qui décide sur quel fragment va chaque document. Un <strong>routeur</strong> reçoit les requêtes et les dirige vers le bon fragment.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Le partitionnement. L'application interroge un routeur. Selon la clé de partition, le routeur dirige chaque requête vers l'un des trois fragments (shards). Chaque fragment détient une part des documents : le premier les clés A à H, le deuxième I à P, le troisième Q à Z.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Le sharding : chaque serveur détient une part</text>
+    <rect class="d-frame" x="258" y="38" width="124" height="32" rx="6" /><text class="d-text" x="320" y="58" text-anchor="middle" font-size="10">application</text>
+    <path class="d-line" d="M320 70 L320 88" fill="none" /><path class="d-line" d="M315 82 L320 90 L325 82" fill="none" />
+    <rect class="d-accent" x="246" y="90" width="148" height="34" rx="6" /><text class="d-text" x="320" y="108" text-anchor="middle" font-size="9">routeur</text><text class="d-mut" x="320" y="120" text-anchor="middle" font-size="7.5">dirige selon la clé</text>
+    <rect class="d-box" x="30" y="150" width="164" height="50" rx="6" /><text class="d-text" x="112" y="172" text-anchor="middle" font-size="9">fragment 1</text><text class="d-mut" x="112" y="188" text-anchor="middle" font-size="8">clés A → H</text>
+    <rect class="d-box" x="238" y="150" width="164" height="50" rx="6" /><text class="d-text" x="320" y="172" text-anchor="middle" font-size="9">fragment 2</text><text class="d-mut" x="320" y="188" text-anchor="middle" font-size="8">clés I → P</text>
+    <rect class="d-box" x="446" y="150" width="164" height="50" rx="6" /><text class="d-text" x="528" y="172" text-anchor="middle" font-size="9">fragment 3</text><text class="d-mut" x="528" y="188" text-anchor="middle" font-size="8">clés Q → Z</text>
+    <path class="d-line" d="M300 124 L120 148" fill="none" /><path class="d-line" d="M320 124 L320 148" fill="none" /><path class="d-line" d="M340 124 L520 148" fill="none" />
+    <text class="d-mut" x="320" y="212" text-anchor="middle" font-size="8">pour grandir, on ajoute un fragment (scale-out) plutôt qu'un serveur plus gros</text>
+  </svg>
+  <figcaption>Le <strong>partitionnement</strong> découpe la collection selon une <strong>clé de partition</strong>&nbsp;: chaque <strong>fragment</strong> ne détient qu'une part des documents. Un <strong>routeur</strong> aiguille les requêtes. Pour grandir, on ajoute des serveurs&nbsp;: c'est l'échelle horizontale.</figcaption>
+</figure>
+
+<div class="callout callout--warning"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Le choix de la <strong>clé de partition</strong> est décisif et difficile à changer après coup. Une mauvaise clé crée un <strong>point chaud</strong> (<em>hotspot</em>)&nbsp;: si tout le trafic vise le même fragment (par exemple une clé «&nbsp;date du jour&nbsp;», où toutes les écritures récentes tombent au même endroit), on a payé plusieurs serveurs pour n'en solliciter qu'un. Vise une clé qui <strong>répartit</strong> uniformément la charge.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Réplication et partitionnement ne s'opposent pas&nbsp;: on les <strong>combine</strong>. En production, chaque fragment est lui-même un petit replica set. On obtient à la fois l'<strong>échelle</strong> (les données réparties) et la <strong>disponibilité</strong> (chaque part copiée). Commence par la réplication&nbsp;; ne partitionne que lorsqu'un seul serveur ne suffit plus.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Sur un replica set, on peut choisir de <strong>lire sur les secondaires</strong> (<em>read preference</em>) pour répartir la charge de lecture&nbsp;— au prix d'une donnée parfois un peu en retard (cohérence éventuelle, leçon&nbsp;2). Côté sharding, MongoDB rééquilibre automatiquement les fragments (<em>balancer</em>) et regroupe les documents en <em>chunks</em>. Cassandra et DynamoDB, elles, partitionnent par un <strong>hachage cohérent</strong> de la clé.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Répliquer vs partitionner — mémo</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Ce que ça fait</th><th scope="col">Ce que ça apporte</th></tr></thead>
+    <tbody>
+      <tr><td>réplication</td><td>copies identiques (replica set)</td><td>disponibilité, durabilité</td></tr>
+      <tr><td>primaire / secondaire</td><td>écritures / copies</td><td>un point d'écriture, plusieurs copies</td></tr>
+      <tr><td>basculement</td><td>élection auto d'un nouveau primaire</td><td>tolérance aux pannes</td></tr>
+      <tr><td>partitionnement</td><td>découpe en fragments (sharding)</td><td>échelle (volume, débit)</td></tr>
+      <tr><td>clé de partition</td><td>champ qui répartit les documents</td><td>bien la choisir = pas de hotspot</td></tr>
+      <tr><td>les deux ensemble</td><td>fragments répliqués</td><td>échelle + disponibilité</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Réplication</dt><dd>Tenir plusieurs copies identiques d'une donnée sur des serveurs distincts, pour la disponibilité et la durabilité.</dd>
+  <dt>Replica set</dt><dd>Groupe de nœuds répliquant la même donnée&nbsp;: un primaire et des secondaires (vocabulaire MongoDB).</dd>
+  <dt>Primaire / secondaire</dt><dd>Le primaire reçoit les écritures&nbsp;; les secondaires recopient son journal et servent de relève.</dd>
+  <dt>Basculement (<em>failover</em>)</dt><dd>Passage automatique à un nouveau primaire, par élection, quand l'ancien tombe.</dd>
+  <dt>Partitionnement (<em>sharding</em>)</dt><dd>Découper une collection en fragments répartis sur plusieurs serveurs&nbsp;; chaque serveur détient une part.</dd>
+  <dt>Clé de partition (<em>shard key</em>)</dt><dd>Champ qui décide sur quel fragment va chaque document&nbsp;; à choisir pour répartir la charge.</dd>
+  <dt>Point chaud (<em>hotspot</em>)</dt><dd>Fragment qui concentre trop de trafic à cause d'une mauvaise clé de partition.</dd>
+  <dt>Échelle horizontale (<em>scale-out</em>)</dt><dd>Grandir en ajoutant des machines, plutôt qu'en agrandissant une seule (scale-up).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>La <strong>réplication</strong> tient plusieurs copies identiques&nbsp;: elle apporte la <strong>disponibilité</strong> (basculement automatique si un nœud tombe).</li>
+  <li>Un <strong>replica set</strong> a un <strong>primaire</strong> (écritures) et des <strong>secondaires</strong> (copies, relève).</li>
+  <li>Le <strong>partitionnement</strong> découpe les données en fragments&nbsp;: il apporte l'<strong>échelle</strong> (dépasser un seul serveur).</li>
+  <li>La <strong>clé de partition</strong> conditionne la répartition&nbsp;; mal choisie, elle crée un point chaud. En production, on <strong>combine</strong> réplication et partitionnement.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quelle est la différence entre répliquer et partitionner&nbsp;?</li>
+  <li>Que se passe-t-il quand le primaire d'un replica set tombe&nbsp;?</li>
+  <li>Pourquoi la clé de partition est-elle un choix délicat&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre réplication et partitionnement ?","a":["La réplication tient plusieurs copies identiques (disponibilité) ; le partitionnement découpe les données en fragments répartis sur plusieurs serveurs (échelle)","Ce sont deux mots pour la même chose","La réplication découpe, le partitionnement copie","Aucune, seul le partitionnement existe en NoSQL"],"correct":0,"explain":"Répliquer = copier la même donnée ailleurs (si un serveur tombe, un autre l'a). Partitionner = découper la donnée pour qu'aucun serveur ne détienne tout. On les combine souvent."},
+  {"q":"Dans un replica set, que se passe-t-il quand le nœud primaire tombe ?","a":["Les secondaires organisent une élection et l'un d'eux devient le nouveau primaire, automatiquement, en quelques secondes","La base s'arrête définitivement","Il faut restaurer une sauvegarde à la main","Toutes les données sont perdues"],"correct":0,"explain":"C'est le basculement (failover) : sans intervention humaine, un secondaire est élu primaire et le service reprend. C'est ce qui procure la haute disponibilité."},
+  {"q":"Pourquoi le choix de la clé de partition (shard key) est-il délicat ?","a":["Parce qu'une mauvaise clé concentre le trafic sur un seul fragment (point chaud) et qu'elle est difficile à changer après coup","Parce qu'elle doit être un nombre","Parce qu'elle change à chaque requête","Parce qu'elle empêche la réplication"],"correct":0,"explain":"La clé décide où va chaque document. Si elle ne répartit pas bien (ex. « date du jour »), un fragment reçoit tout le trafic : on a payé plusieurs serveurs pour n'en solliciter qu'un."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["réplication","replication","répliquer","repliquer","replica set","replica-set"],"placeholder":"le mécanisme qui tient plusieurs copies identiques pour rester disponible","hints":["Il apporte la disponibilité, pas l'échelle.","Copies identiques sur des serveurs distincts.","« répli… »"],"link":{"href":"lecon-09.html","label":"Revoir « La réplication »"}},
+  {"type":"text","accept":["clé de partition","cle de partition","shard key","clé","cle","shard-key"],"placeholder":"le champ qui décide sur quel fragment va chaque document (sharding)","hints":["Mal choisie, elle crée un point chaud.","En anglais : shard key.","« clé de … »"],"link":{"href":"lecon-09.html","label":"Revoir « Le partitionnement »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Ton service tourne sur un seul serveur qui tient facilement le volume, mais tu veux qu'il survive à une panne matérielle sans coupure. Réplication ou partitionnement&nbsp;? Pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>Réplication.</strong> Le problème n'est pas le volume (un serveur suffit) mais la <em>disponibilité</em>. Un replica set de trois nœuds garde des copies identiques&nbsp;: si le primaire tombe, un secondaire est élu (basculement) et le service continue. Le partitionnement, lui, sert à dépasser la capacité d'un seul serveur&nbsp;— ce n'est pas le besoin ici.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour partitionner une collection de commandes, un collègue propose comme clé de partition «&nbsp;la date du jour&nbsp;». Quel risque, et quelle meilleure idée&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>Risque&nbsp;: un point chaud.</strong> Toutes les commandes récentes portent la même date&nbsp;; elles tombent donc <em>toutes</em> sur le même fragment. Ce fragment sature pendant que les autres dorment&nbsp;: on paie plusieurs serveurs pour n'en solliciter qu'un. <strong>Meilleure idée&nbsp;:</strong> une clé qui répartit uniformément, par exemple un <em>hachage</em> de l'identifiant de commande, ou une clé composée (comme <code>client + date</code>) qui étale les écritures sur tous les fragments.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

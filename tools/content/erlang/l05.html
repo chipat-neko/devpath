@@ -1,0 +1,81 @@
+<p>On sait créer des processus et échanger des messages. Mais une question demeure&nbsp;: comment garder un <strong>état</strong> qui évolue (un compteur, le solde d'un compte, le contenu d'un panier) quand les variables sont <em>immuables</em>&nbsp;? La réponse d'Erlang est élégante et profonde&nbsp;: le <strong>modèle acteur</strong>. Un processus garde son état dans les arguments de sa boucle récursive, et le fait évoluer à chaque tour. Cette leçon montre comment construire de vrais serveurs avec état.</p>
+
+<h2>Le modèle acteur</h2>
+<p>Un <strong>acteur</strong> est un processus qui&nbsp;: (1) possède un état privé, (2) reçoit des messages, (3) réagit en modifiant son état, en répondant, ou en créant d'autres acteurs. Tout se fait par messages&nbsp;: aucun acteur ne touche l'état d'un autre. Erlang a popularisé ce modèle, qui a depuis inspiré de nombreux systèmes (Akka, Pony…).</p>
+
+<h2>L'état dans la boucle récursive</h2>
+<p>L'astuce centrale&nbsp;: l'état est un <strong>argument</strong> de la fonction de boucle. À chaque tour, le processus se rappelle avec le <em>nouvel</em> état. Les variables restent immuables&nbsp;; c'est l'<em>argument transmis</em> qui change d'une itération à l'autre.</p>
+<figure class="code-block" data-file="compteur.erl"><pre><code class="language-erlang">-module(compteur).
+-export([demarrer/0, boucle/1]).
+
+demarrer() -&gt;
+    spawn(compteur, boucle, [0]).   % état initial : 0
+
+boucle(Valeur) -&gt;
+    receive
+        incr -&gt;
+            boucle(Valeur + 1);          % nouvel état
+        {lire, De} -&gt;
+            De ! {valeur, Valeur},       % on répond
+            boucle(Valeur);              % état inchangé
+        stop -&gt;
+            ok
+    end.</code></pre></figure>
+<p>Regarde bien&nbsp;: <code>boucle(Valeur + 1)</code> ne <em>modifie</em> pas <code>Valeur</code> (impossible, elle est immuable)&nbsp;; il relance la boucle avec une <strong>nouvelle</strong> valeur. L'état «&nbsp;vit&nbsp;» dans le passage de paramètre d'un tour au suivant. C'est ainsi qu'Erlang concilie immuabilité et état évolutif.</p>
+
+<h2>Répondre à l'expéditeur</h2>
+<p>Un message est asynchrone&nbsp;: l'envoyeur ne reçoit pas de réponse automatiquement. Pour obtenir une réponse, on inclut <strong>son propre PID</strong> dans le message (<code>self()</code> donne le PID courant), et le serveur répond à cette adresse.</p>
+<figure class="code-block" data-file="requete.erl"><pre><code class="language-erlang">% Côté client : demander la valeur et attendre la réponse
+Compteur ! {lire, self()},
+receive
+    {valeur, V} -&gt; V
+end.</code></pre></figure>
+<p>Ce patron — envoyer <code>{requete, self()}</code> puis attendre la réponse par <code>receive</code> — transforme l'échange asynchrone en un appel <strong>synchrone</strong> (question/réponse). C'est exactement ce qu'OTP automatisera (leçon 7).</p>
+
+<h2>Enregistrer un nom de processus</h2>
+<p>Mémoriser un PID partout est fastidieux. On peut <strong>enregistrer</strong> un processus sous un nom (un atome), et l'atteindre par ce nom comme par un annuaire.</p>
+<figure class="code-block" data-file="register.erl"><pre><code class="language-erlang">Pid = compteur:demarrer(),
+register(mon_compteur, Pid).      % associe un nom au PID
+
+% Désormais, on peut écrire :
+mon_compteur ! incr.              % au lieu de Pid ! incr</code></pre></figure>
+<p>Pratique pour les services «&nbsp;bien connus&nbsp;» (un journal, une base de configuration) qu'on veut joindre de partout sans transporter leur PID.</p>
+
+<h2>Un serveur complet&nbsp;: une pile</h2>
+<p>Assemblons tout dans un serveur qui maintient une pile (LIFO).</p>
+<figure class="code-block" data-file="pile.erl"><pre><code class="language-erlang">boucle(Pile) -&gt;
+    receive
+        {empiler, X} -&gt;
+            boucle([X | Pile]);           % ajoute en tête
+        {depiler, De} -&gt;
+            case Pile of
+                [] -&gt;
+                    De ! vide,
+                    boucle([]);
+                [Sommet | Reste] -&gt;
+                    De ! {ok, Sommet},
+                    boucle(Reste)
+            end
+    end.</code></pre></figure>
+<p>L'état (la liste <code>Pile</code>) évolue à chaque message, toujours transmis au tour suivant. Le <code>case</code> choisit le comportement selon que la pile est vide ou non.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Relancer la boucle avec l'<strong>ancien</strong> état au lieu du nouveau. Si tu écris <code>boucle(Valeur)</code> au lieu de <code>boucle(Valeur + 1)</code> dans la branche <code>incr</code>, le compteur ne s'incrémente jamais&nbsp;: l'état est «&nbsp;figé&nbsp;». Comme l'état n'est rien d'autre que l'argument transmis, c'est <em>lui</em> qu'il faut faire évoluer à chaque tour. Vérifie toujours quelle valeur tu passes à l'appel récursif.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Ce patron «&nbsp;boucle <code>receive</code> + état en argument&nbsp;» est si universel qu'OTP (leçon 7) l'a <strong>standardisé</strong> dans le <code>gen_server</code>&nbsp;: tu écris seulement <em>comment réagir à chaque message</em>, et OTP gère la boucle, la réception, l'état et les réponses pour toi. Comprendre le patron manuel, comme ici, est essentiel pour saisir ce que <code>gen_server</code> fait à ta place — et pourquoi il existe.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>acteur</strong> = un processus avec état privé, qui réagit aux messages.</li>
+  <li>L'<strong>état</strong> vit dans l'argument de la boucle&nbsp;: <code>boucle(NouvelEtat)</code> le fait évoluer (sans muter).</li>
+  <li>Pour une réponse, le client envoie son PID (<code>self()</code>)&nbsp;; échange synchrone question/réponse.</li>
+  <li><code>register/2</code> donne un nom à un processus&nbsp;; le patron se généralisera en <code>gen_server</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Où «&nbsp;vit&nbsp;» l'état d'un acteur Erlang&nbsp;?</li><li>Comment un client obtient-il une réponse du serveur&nbsp;?</li><li>Que fait <code>register/2</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle expression donne le PID du processus courant&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">self().</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans la boucle d'un compteur, écris la branche qui décrémente l'état sur le message <code>decr</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">decr -&gt;
+    boucle(Valeur - 1);</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique comment un processus peut maintenir un état qui change alors que toutes les variables sont immuables.</p><details><summary>Voir une solution</summary><p>L'état n'est pas stocké dans une variable mutable, mais passé en <strong>argument</strong> à la fonction de boucle. À chaque message traité, le processus s'appelle récursivement (<code>boucle(NouvelEtat)</code>) avec une <em>nouvelle</em> valeur calculée à partir de l'ancienne. Aucune variable n'est modifiée&nbsp;: c'est le <em>paramètre transmis</em> d'un tour de boucle au suivant qui porte l'état évolutif. L'immuabilité est respectée, et pourtant le processus «&nbsp;se souvient&nbsp;» et change au fil du temps.</p></details></div>

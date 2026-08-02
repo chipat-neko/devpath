@@ -1,0 +1,88 @@
+<p>Tu as parcouru tout OCaml&nbsp;: l'inférence de types, les variants et le pattern matching, les modules et foncteurs, les types avancés, la concurrence. Il est temps de <strong>tout assembler</strong> dans un vrai projet. On va construire un <strong>mini-interpréteur</strong> d'expressions arithmétiques — un programme qui <em>lit</em>, <em>comprend</em> et <em>évalue</em> du code. C'est l'exercice emblématique d'OCaml, le langage des compilateurs&nbsp;: tu verras pourquoi variants et pattern matching y sont si parfaitement adaptés.</p>
+
+<h2>Le plan&nbsp;: de l'expression au résultat</h2>
+<p>Un interpréteur transforme une expression en une valeur. On le décompose en deux temps&nbsp;:</p>
+<ol>
+  <li>représenter l'expression par une <strong>structure de données</strong> (l'arbre de syntaxe, ou AST)&nbsp;;</li>
+  <li>l'<strong>évaluer</strong> en parcourant cet arbre.</li>
+</ol>
+<p>OCaml excelle ici&nbsp;: l'AST est un variant, et l'évaluation un pattern matching. Le code suit la structure du problème.</p>
+
+<h2>Modéliser l'AST avec un variant</h2>
+<p>Notre langage&nbsp;: des nombres, et les quatre opérations. On le décrit par un type <code>expr</code> récursif.</p>
+<figure class="code-block" data-file="ast.ml"><pre><code class="language-ocaml">type expr =
+  | Nombre of float
+  | Add of expr * expr
+  | Sub of expr * expr
+  | Mul of expr * expr
+  | Div of expr * expr
+
+(* L'expression (2 + 3) * 4 se représente ainsi : *)
+let exemple = Mul (Add (Nombre 2., Nombre 3.), Nombre 4.)</code></pre></figure>
+<p>Le type est <strong>récursif</strong>&nbsp;: une <code>Add</code> contient deux <code>expr</code>, qui peuvent elles-mêmes être des additions, etc. C'est exactement la forme d'un arbre — d'où le nom «&nbsp;arbre de syntaxe&nbsp;».</p>
+
+<h2>Évaluer par pattern matching</h2>
+<p>L'évaluateur parcourt l'arbre récursivement&nbsp;: un cas par constructeur. La structure du <code>match</code> épouse celle du type.</p>
+<figure class="code-block" data-file="eval.ml"><pre><code class="language-ocaml">let rec eval e =
+  match e with
+  | Nombre n -&gt; n
+  | Add (a, b) -&gt; eval a +. eval b
+  | Sub (a, b) -&gt; eval a -. eval b
+  | Mul (a, b) -&gt; eval a *. eval b
+  | Div (a, b) -&gt; eval a /. eval b
+
+let () = Printf.printf "%g\n" (eval exemple)   (* 20 *)</code></pre></figure>
+<p>Remarque l'élégance&nbsp;: chaque cas est trivial, et le compilateur <strong>vérifie que tous les constructeurs sont traités</strong>. Si tu ajoutes un cas <code>Puissance</code> au type sans l'évaluer, OCaml t'avertit que le <code>match</code> est incomplet. La sûreté est gratuite.</p>
+
+<h2>Gérer les erreurs avec <code>result</code></h2>
+<p>Une division par zéro doit être gérée proprement. Plutôt qu'une exception, on utilise le type <code>result</code> (<code>Ok</code> / <code>Error</code>) pour rendre l'échec <strong>visible dans le type</strong>.</p>
+<figure class="code-block" data-file="result.ml"><pre><code class="language-ocaml">let rec eval e =
+  match e with
+  | Nombre n -&gt; Ok n
+  | Div (a, b) -&gt;
+    (match eval a, eval b with
+     | Ok _, Ok 0. -&gt; Error "division par zéro"
+     | Ok x, Ok y -&gt; Ok (x /. y)
+     | Error msg, _ | _, Error msg -&gt; Error msg)
+  | Add (a, b) -&gt;
+    (match eval a, eval b with
+     | Ok x, Ok y -&gt; Ok (x +. y)
+     | Error msg, _ | _, Error msg -&gt; Error msg)
+  (* ... idem pour Sub, Mul ... *)
+
+(* L'appelant DOIT gérer le cas Error : l'échec est dans le type *)</code></pre></figure>
+<p>Le type de retour devient <code>(float, string) result</code>&nbsp;: l'appelant ne peut pas ignorer l'erreur, car il doit faire un <code>match</code> sur <code>Ok</code>/<code>Error</code>. C'est le style fonctionnel de gestion d'erreurs&nbsp;: pas d'exception cachée, tout est explicite.</p>
+
+<h2>Étendre le langage</h2>
+<p>La beauté de cette architecture&nbsp;: pour ajouter une fonctionnalité (des variables, des conditions, des fonctions), on ajoute un constructeur au type <code>expr</code> et un cas à <code>eval</code>. Le compilateur guide&nbsp;: il signale chaque endroit à compléter. C'est ainsi qu'on bâtit, par étapes, un vrai langage de programmation — et c'est exactement ce que font les compilateurs écrits en OCaml.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ignorer l'avertissement «&nbsp;pattern matching non exhaustif&nbsp;». Quand OCaml signale qu'un <code>match</code> ne couvre pas tous les cas, ce n'est pas du zèle&nbsp;: c'est un bug en puissance (un cas oublié qui plantera à l'exécution). Traite ces avertissements comme des erreurs. À l'inverse, <strong>évite le joker <code>_ -&gt; …</code> attrape-tout</strong> sur un type que tu fais évoluer&nbsp;: il masquerait justement les cas oubliés. Liste les constructeurs explicitement, et laisse le compilateur veiller.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Tu as construit la moitié arrière d'un compilateur (l'évaluation). La moitié avant — l'<strong>analyse</strong> (transformer du texte «&nbsp;<code>(2 + 3) * 4</code>&nbsp;» en AST) — se fait avec un <em>lexer</em> et un <em>parser</em>&nbsp;: OCaml dispose d'excellents outils pour cela (<code>ocamllex</code>, <code>menhir</code>). Combine les deux et tu as un interpréteur complet, du texte au résultat. C'est l'aboutissement naturel de ce cours&nbsp;: OCaml est <em>le</em> langage pour écrire des langages. Félicitations, tu as fait le tour d'OCaml&nbsp;!</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un interpréteur&nbsp;: représenter l'expression par un <strong>AST</strong> (variant récursif), puis l'<strong>évaluer</strong> (pattern matching).</li>
+  <li>Le <code>match</code> épouse la structure du type&nbsp;; le compilateur vérifie l'<strong>exhaustivité</strong>.</li>
+  <li>Gérer les erreurs avec <code>result</code> (<code>Ok</code>/<code>Error</code>)&nbsp;: l'échec est <strong>dans le type</strong>, donc incontournable.</li>
+  <li>Étendre le langage = ajouter un constructeur + un cas&nbsp;; le compilateur guide les modifications.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelles sont les deux étapes d'un interpréteur&nbsp;?</li><li>Que vérifie le compilateur sur un <code>match</code>&nbsp;?</li><li>Pourquoi utiliser <code>result</code> plutôt qu'une exception&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Comment représente-t-on naturellement un AST (arbre de syntaxe) en OCaml ?","a":["Par un type variant récursif (un constructeur par forme d'expression)","Par un tableau mutable","Par une chaîne de caractères","Par un dictionnaire"],"correct":0,"explain":"Un variant récursif épouse la structure arborescente : une Add contient deux expr, etc. L'évaluation devient un simple pattern matching."},
+  {"q":"Que vérifie le compilateur OCaml sur un match ?","a":["Que tous les constructeurs du type sont traités (exhaustivité)","La vitesse d'exécution","Que le code est commenté","Rien de particulier"],"correct":0,"explain":"Si un cas manque, OCaml avertit que le match est non exhaustif : un bug potentiel attrapé à la compilation."},
+  {"q":"Pourquoi gérer une division par zéro avec result plutôt qu'une exception ?","a":["L'échec devient visible dans le type ; l'appelant doit le gérer explicitement (Ok/Error)","C'est plus rapide","result est obligatoire en OCaml","Les exceptions n'existent pas en OCaml"],"correct":0,"explain":"Avec (float, string) result, on ne peut pas ignorer l'erreur : c'est le style fonctionnel, sans exception cachée."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Représente l'expression <code>10 - 4</code> avec le type <code>expr</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let e = Sub (Nombre 10., Nombre 4.)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute un constructeur <code>Neg of expr</code> (négation) au type, et le cas correspondant dans <code>eval</code> (version simple sans <code>result</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">(* dans le type expr : *)
+  | Neg of expr
+
+(* dans eval : *)
+  | Neg a -&gt; -. (eval a)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi cette architecture (AST + eval) rend-elle l'ajout d'une fonctionnalité au langage simple et sûr&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'ajouter une fonctionnalité revient à <strong>ajouter un constructeur</strong> au type <code>expr</code> et <strong>un cas</strong> à <code>eval</code>. Et comme le compilateur vérifie l'<strong>exhaustivité</strong> du pattern matching, il signale automatiquement <em>tous</em> les endroits où il faut traiter le nouveau cas. On ne peut pas oublier un endroit&nbsp;: le compilateur guide la modification de bout en bout, ce qui rend l'extension à la fois simple et sûre.</p></details></div>

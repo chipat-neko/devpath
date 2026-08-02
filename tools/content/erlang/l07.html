@@ -1,0 +1,77 @@
+<p>Tu as construit des serveurs et entrevu la supervision «&nbsp;à la main&nbsp;». En pratique, on n'écrit presque jamais ce code soi-même&nbsp;: on s'appuie sur <strong>OTP</strong>, le cadre applicatif qui fait la vraie force d'Erlang. OTP fournit des <strong>behaviours</strong> — des squelettes éprouvés pour les patrons récurrents (serveur, superviseur, machine à états) — dans lesquels tu n'as qu'à remplir la logique métier. Le plus emblématique est le <strong>gen_server</strong>. Cette leçon t'y initie.</p>
+
+<h2>Qu'est-ce qu'OTP&nbsp;?</h2>
+<p><strong>OTP</strong> (Open Telecom Platform) est un ensemble de bibliothèques et de conventions livré avec Erlang. Malgré son nom télécom, il sert à <em>tout</em> système concurrent et fiable. OTP capture, sous forme réutilisable, des décennies d'expérience sur «&nbsp;comment construire un système qui ne tombe pas&nbsp;». En l'utilisant, tu hérites gratuitement de cette robustesse éprouvée.</p>
+
+<h2>Les behaviours&nbsp;: séparer le générique du spécifique</h2>
+<p>Un <strong>behaviour</strong> est un patron générique qui gère la «&nbsp;plomberie&nbsp;» (la boucle <code>receive</code>, la gestion des messages, les réponses, la supervision), et te laisse remplir seulement la <strong>logique métier</strong> via des fonctions de rappel (<em>callbacks</em>). C'est exactement la séparation qu'on a vue manuellement leçon 5 — mais standardisée et durcie.</p>
+<p>Les behaviours OTP principaux&nbsp;:</p>
+<ul>
+  <li><code>gen_server</code> — un serveur générique (le plus courant)&nbsp;;</li>
+  <li><code>supervisor</code> — un superviseur configurable&nbsp;;</li>
+  <li><code>gen_statem</code> — une machine à états&nbsp;;</li>
+  <li><code>application</code> — pour empaqueter et démarrer un système complet.</li>
+</ul>
+
+<h2>Le <code>gen_server</code></h2>
+<p>Le <strong><code>gen_server</code></strong> remplace la boucle <code>receive</code> manuelle. Tu déclares <code>-behaviour(gen_server)</code>, et tu implémentes des callbacks. OTP appelle&nbsp;:</p>
+<ul>
+  <li><code>init/1</code> — pour fournir l'état initial&nbsp;;</li>
+  <li><code>handle_call/3</code> — pour les requêtes <strong>synchrones</strong> (avec réponse)&nbsp;;</li>
+  <li><code>handle_cast/2</code> — pour les messages <strong>asynchrones</strong> (sans réponse).</li>
+</ul>
+<figure class="code-block" data-file="compteur_serv.erl"><pre><code class="language-erlang">-module(compteur_serv).
+-behaviour(gen_server).
+-export([start_link/0, incr/0, lire/0]).
+-export([init/1, handle_call/3, handle_cast/2]).
+
+%% API publique (ce que les clients appellent)
+start_link() -&gt; gen_server:start_link({local, ?MODULE}, ?MODULE, 0, []).
+incr()       -&gt; gen_server:cast(?MODULE, incr).
+lire()       -&gt; gen_server:call(?MODULE, lire).
+
+%% Callbacks (la logique, OTP gère le reste)
+init(EtatInitial) -&gt; {ok, EtatInitial}.
+
+handle_cast(incr, Valeur) -&gt;
+    {noreply, Valeur + 1}.
+
+handle_call(lire, _De, Valeur) -&gt;
+    {reply, Valeur, Valeur}.</code></pre></figure>
+<p>Compare avec la leçon 5&nbsp;: plus de <code>receive</code>, plus de boucle récursive explicite, plus de gestion manuelle des PID et des réponses. Tu écris seulement <em>comment réagir</em> à chaque message&nbsp;; OTP fait tourner la machine. <code>?MODULE</code> est une macro qui vaut le nom du module courant.</p>
+
+<h2>call et cast&nbsp;: synchrone ou non</h2>
+<p>Deux façons de parler à un <code>gen_server</code>&nbsp;:</p>
+<ul>
+  <li><code>gen_server:call</code> — <strong>synchrone</strong>&nbsp;: on envoie une requête et on <em>attend</em> la réponse (traité par <code>handle_call</code>)&nbsp;;</li>
+  <li><code>gen_server:cast</code> — <strong>asynchrone</strong>&nbsp;: on envoie un message et on continue sans attendre (traité par <code>handle_cast</code>).</li>
+</ul>
+<p>OTP gère pour toi tout le protocole question/réponse qu'on construisait à la main avec <code>self()</code> et <code>receive</code>. C'est plus sûr (gestion des délais d'attente, des erreurs) et plus concis.</p>
+
+<h2>Les superviseurs OTP</h2>
+<p>De même, le behaviour <code>supervisor</code> remplace le superviseur manuel de la leçon 6. On déclare ses enfants et une <strong>stratégie de redémarrage</strong>, et OTP applique la logique de résilience éprouvée.</p>
+<figure class="code-block" data-file="strategie.erl"><pre><code class="language-erlang">% Stratégies de redémarrage courantes :
+% one_for_one  : redémarrer seulement l'enfant mort
+% one_for_all  : redémarrer tous les enfants si un meurt
+% rest_for_one : redémarrer le mort et ceux démarrés après lui</code></pre></figure>
+<p>On choisit la stratégie selon les dépendances entre enfants. C'est de la configuration, pas du code de bas niveau&nbsp;: OTP a déjà écrit, testé et durci la mécanique.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir tout écrire «&nbsp;à la main&nbsp;» avec <code>spawn</code> et <code>receive</code> pour un vrai système. C'est formateur pour comprendre (leçons 4-6), mais en production, <strong>utilise toujours OTP</strong>&nbsp;: il gère des subtilités que tu oublierais (délais d'attente, ordre d'arrêt, fuites, redémarrages en cascade). Réinventer un <code>gen_server</code> maison, c'est se priver de décennies de robustesse éprouvée — et introduire des bugs déjà résolus.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Une <strong>application OTP</strong> complète est un arbre de supervision empaqueté, avec un point de démarrage et des dépendances déclarées. C'est l'unité de déploiement standard en Erlang (et en Elixir). Des systèmes comme la base de données distribuée <strong>Riak</strong> ou le broker de messages <strong>RabbitMQ</strong> sont entièrement bâtis sur OTP&nbsp;: des arbres de supervision imbriqués de <code>gen_server</code>. Maîtriser OTP, c'est tenir la vraie clé de l'ingénierie Erlang.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>OTP</strong> fournit des patrons éprouvés (behaviours) pour bâtir des systèmes fiables.</li>
+  <li>Un <strong>behaviour</strong> gère la plomberie&nbsp;; tu remplis la logique via des <strong>callbacks</strong>.</li>
+  <li><code>gen_server</code>&nbsp;: <code>init</code> (état), <code>handle_call</code> (synchrone), <code>handle_cast</code> (asynchrone).</li>
+  <li><code>supervisor</code> redémarre les enfants selon une <strong>stratégie</strong> (<code>one_for_one</code>…).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'un behaviour OTP&nbsp;?</li><li>Quelle différence entre <code>call</code> et <code>cast</code>&nbsp;?</li><li>Que choisit-on avec une stratégie de redémarrage&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quel callback d'un <code>gen_server</code> traite une requête synchrone&nbsp;?</p><details><summary>Voir une solution</summary><p><code>handle_call/3</code> (déclenché par <code>gen_server:call</code>).</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la fonction d'API <code>incr/0</code> qui envoie un cast <code>incr</code> au serveur enregistré sous <code>?MODULE</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">incr() -&gt; gen_server:cast(?MODULE, incr).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En une phrase, explique l'intérêt d'un behaviour par rapport à une boucle <code>receive</code> écrite à la main.</p><details><summary>Voir une solution</summary><p>Un behaviour <strong>sépare le générique du spécifique</strong>&nbsp;: il fournit une fois pour toutes la mécanique commune (boucle de réception, protocole de réponse, gestion des délais et des arrêts), durcie par des années d'usage, et te laisse n'écrire que la logique métier propre à ton serveur (les callbacks). On gagne en concision, en sûreté et en cohérence, tout en évitant de réintroduire des bugs déjà résolus dans la version manuelle.</p></details></div>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enquêter dans l'historique : blame, log et pickaxe — Leçon 22 · Git &amp; GitHub · Syntaxe</title>
+    <meta name="description" content="Interroger l'historique Git comme un enquêteur : git blame pour retrouver l'auteur d'une ligne, git log avancé (--author, --grep, -p), la pioche -S et -G, le suivi d'une fonction avec -L et d'un fichier renommé avec --follow." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="git" data-lesson="lecon-22.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Git &amp; GitHub</a></li>
+            <li aria-current="page">Leçon 22</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 07 · Pour aller plus loin — Leçon 22</p>
+              <h1 class="lesson-header__title">Enquêter dans l'historique : blame, log et pickaxe</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 03 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>retrouver <strong>qui</strong> a écrit une ligne, et <strong>dans quel commit</strong>, avec <code>git blame</code>&nbsp;;</li>
+                  <li>filtrer l'historique avec <code>git log</code> (par auteur, message, date, contenu)&nbsp;;</li>
+                  <li>traquer l'apparition d'une chaîne avec la <strong>pioche</strong> <code>-S</code> et <code>-G</code>&nbsp;;</li>
+                  <li>suivre une fonction avec <code>-L</code> et un fichier renommé avec <code>--follow</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un dépôt, c'est une <strong>archive vivante</strong> de toutes les décisions prises sur le code. Mais l'archive ne sert à rien si on ne sait pas l'interroger. «&nbsp;Depuis quand cette ligne est-elle là&nbsp;? Qui l'a écrite, et pourquoi&nbsp;? Quand cette variable a-t-elle disparu&nbsp;? Dans quel commit ce mot-clé est-il apparu&nbsp;?&nbsp;» — autant de questions dont la réponse est <em>déjà</em> dans l'historique.</p>
+<p>Cette leçon fait de toi un enquêteur. Trois outils&nbsp;: <code>git blame</code> annote chaque ligne, <code>git log</code> filtre les commits selon mille critères, et la <strong>pioche</strong> (<em>pickaxe</em>) retrouve le commit exact où un bout de texte est apparu ou a disparu. On travaille en lecture seule&nbsp;: aucune de ces commandes ne modifie ton dépôt.</p>
+
+<h2>git blame : qui a écrit cette ligne</h2>
+<p><code>git blame &lt;fichier&gt;</code> affiche le fichier ligne par ligne, chacune précédée du <strong>dernier commit</strong> qui l'a touchée&nbsp;: son SHA court, l'auteur et la date. C'est le point de départ de toute enquête sur une ligne suspecte.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 186" role="img" aria-label="Anatomie de la sortie de git blame. Chaque ligne du fichier est précédée de quatre informations : le SHA court du commit qui l'a modifiée en dernier, le nom de l'auteur, la date, et le numéro de ligne, suivis du contenu de la ligne de code. Trois lignes sont montrées ; la deuxième, mise en évidence, correspond à un commit récent d'un autre auteur, qu'on pourra ensuite inspecter avec git show.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">git blame : chaque ligne → le commit qui l'a écrite</text>
+    <rect class="d-frame" x="16" y="32" width="150" height="138" rx="8" />
+    <text class="d-mut" x="24" y="48" font-size="8">SHA · auteur · date</text>
+    <text class="d-tag" x="24" y="70" font-size="9">a1b2c3d</text><text class="d-mut" x="24" y="82" font-size="8">alice · 2024</text>
+    <text class="d-tag" x="24" y="108" font-size="9">9f7e2a1</text><text class="d-mut" x="24" y="120" font-size="8">bruno · 2026</text>
+    <text class="d-tag" x="24" y="150" font-size="9">a1b2c3d</text><text class="d-mut" x="24" y="162" font-size="8">alice · 2024</text>
+    <rect class="d-box" x="176" y="56" width="448" height="26" rx="5" />
+    <text class="d-mut" x="188" y="73" font-size="9">12</text><text class="d-text" x="214" y="73" font-size="9">function total(panier) {</text>
+    <rect class="d-accent" x="176" y="90" width="448" height="26" rx="5" />
+    <text class="d-mut" x="188" y="107" font-size="9">13</text><text class="d-text" x="214" y="107" font-size="9">  return somme(panier) * 1.20;  // ← ligne suspecte</text>
+    <rect class="d-box" x="176" y="124" width="448" height="26" rx="5" />
+    <text class="d-mut" x="188" y="141" font-size="9">14</text><text class="d-text" x="214" y="141" font-size="9">}</text>
+  </svg>
+  <figcaption>La ligne 13 a été modifiée en dernier par le commit <code>9f7e2a1</code> (Bruno, 2026). On tient le <strong>fil</strong>&nbsp;: <code>git show 9f7e2a1</code> donnera le <em>pourquoi</em> — le message et le diff complet du changement.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git blame src/panier.js
+# a1b2c3d (Alice  2024-03-02 10:11) 12) function total(panier) {
+# 9f7e2a1 (Bruno  2026-07-05 16:40) 13)   return somme(panier) * 1.20;
+# a1b2c3d (Alice  2024-03-02 10:11) 14) }
+
+# On inspecte le commit responsable de la ligne 13 :
+git show 9f7e2a1</code></pre></figure>
+
+<h2>Un blame ciblé, et sans le bruit</h2>
+<p>Sur un gros fichier, on cible quelques lignes avec <code>-L</code>. Et pour ne pas «&nbsp;accuser&nbsp;» à tort le commit qui a seulement <strong>reformaté</strong> le code, deux options précieuses&nbsp;:</p>
+<ul>
+<li><code>-w</code> ignore les changements d'<strong>espaces</strong> (indentation, reformatage) et remonte à l'auteur du vrai changement&nbsp;;</li>
+<li><code>-C</code> suit le code <strong>déplacé ou copié</strong> depuis un autre fichier&nbsp;;</li>
+<li><code>--ignore-rev</code> (et le fichier <code>.git-blame-ignore-revs</code>) écarte des commits entiers de reformatage massif.</li>
+</ul>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Seulement les lignes 40 à 60, en ignorant les seuls changements d'espaces
+git blame -L 40,60 -w src/panier.js
+
+# Ignorer un commit de reformatage global (ex. passage à Prettier)
+git blame --ignore-rev 1234567 src/panier.js
+
+# Mémoriser durablement ces commits « à ignorer » :
+echo 1234567890abcdef &gt; .git-blame-ignore-revs
+git config blame.ignoreRevsFile .git-blame-ignore-revs</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><code>blame</code> désigne le <strong>dernier</strong> commit à avoir touché la ligne, pas forcément celui qui a introduit la <em>logique</em>. Un simple reformatage (indentation, passage d'un formateur automatique) «&nbsp;vole&nbsp;» la paternité de toute la ligne. Le réflexe&nbsp;: <code>-w</code> pour ignorer les espaces, et un fichier <code>.git-blame-ignore-revs</code> pour neutraliser les gros commits cosmétiques.</p></div></div>
+
+<h2>git log en enquêteur</h2>
+<p>Tu connais <code>git log</code>&nbsp;; ses <strong>filtres</strong> en font un moteur de recherche de l'historique. Ils se combinent librement&nbsp;:</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git log --author="Bruno"            # commits d'un auteur
+git log --grep="TVA"                # message contenant « TVA »
+git log --since="2 weeks ago"       # depuis une date relative
+git log -p src/panier.js            # l'historique AVEC le diff de chaque commit
+git log --oneline -- src/panier.js  # limité aux commits touchant ce fichier
+
+# Combinés : ce que Bruno a changé sur ce fichier le mois dernier
+git log --author="Bruno" --since="1 month ago" -p -- src/panier.js</code></pre></figure>
+<p>Deux vues d'ensemble très utiles&nbsp;: <code>git shortlog -sn</code> résume les contributions par auteur (nombre de commits), et <code>git log --oneline --graph --all</code> dessine la topologie des branches.</p>
+
+<h2>La pioche : traquer une chaîne de caractères</h2>
+<p>Les questions les plus pointues portent sur le <em>contenu</em>&nbsp;: «&nbsp;dans quel commit la fonction <code>calculerTVA</code> est-elle apparue&nbsp;? quand cette clé de config a-t-elle été supprimée&nbsp;?&nbsp;» La <strong>pioche</strong> (<em>pickaxe</em>) fouille les <strong>diffs</strong>, pas seulement les messages. Deux variantes, à ne pas confondre&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison des deux formes de la pioche de git log. La forme tiret S majuscule cherche les commits où le NOMBRE d'occurrences d'une chaîne change : elle repère l'apparition ou la disparition de la chaîne, c'est-à-dire les commits qui l'ajoutent ou la retirent réellement. La forme tiret G majuscule cherche tout commit dont le diff contient la chaîne ou l'expression régulière, y compris quand une ligne qui la mentionne est simplement modifiée ou déplacée sans que le compte change.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">deux façons de fouiller les diffs</text>
+    <rect class="d-frame" x="16" y="32" width="300" height="162" rx="10" />
+    <text class="d-tag" x="34" y="56" font-size="12">-S "calculerTVA"</text>
+    <text class="d-mut" x="34" y="76" font-size="9">le NOMBRE d'occurrences change</text>
+    <rect class="d-accent" x="34" y="88" width="264" height="42" rx="7" />
+    <text class="d-text" x="46" y="106" font-size="9">commit qui AJOUTE la chaîne</text>
+    <text class="d-text" x="46" y="122" font-size="9">commit qui la SUPPRIME</text>
+    <text class="d-mut" x="34" y="150" font-size="9">→ «&nbsp;quand est-ce apparu / parti&nbsp;?&nbsp;»</text>
+    <text class="d-mut" x="34" y="168" font-size="9">réponse courte, ciblée</text>
+    <text class="d-mut" x="34" y="184" font-size="8">ignore les lignes juste déplacées</text>
+    <rect class="d-frame" x="324" y="32" width="300" height="162" rx="10" />
+    <text class="d-tag" x="342" y="56" font-size="12">-G "calculerTVA"</text>
+    <text class="d-mut" x="342" y="76" font-size="9">la chaîne APPARAÎT dans le diff</text>
+    <rect class="d-box" x="342" y="88" width="264" height="42" rx="7" />
+    <text class="d-text" x="354" y="106" font-size="9">ajout, suppression,</text>
+    <text class="d-text" x="354" y="122" font-size="9">ligne modifiée ou déplacée</text>
+    <text class="d-mut" x="342" y="150" font-size="9">→ «&nbsp;tout ce qui touche à…&nbsp;»</text>
+    <text class="d-mut" x="342" y="168" font-size="9">plus large, accepte une regex</text>
+    <text class="d-mut" x="342" y="184" font-size="8">peut ramener beaucoup de bruit</text>
+  </svg>
+  <figcaption><code>-S</code> répond à «&nbsp;<strong>quand</strong> ce texte est-il apparu ou parti&nbsp;?&nbsp;» (le compte change)&nbsp;; <code>-G</code> répond à «&nbsp;quels commits <strong>touchent</strong> à ce texte&nbsp;?&nbsp;» (présence dans le diff, regex admise).</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Dans quel commit "calculerTVA" est-il apparu (ou a disparu) ?
+git log -S"calculerTVA" --oneline
+# e7f8a9b Ajoute le calcul de TVA
+# c3d4e5f Renomme calculerTVA en calculerTaxe   ← ici il « disparaît »
+
+# Tous les commits dont le diff mentionne cette regex :
+git log -G"calcul(erTVA|Taxe)" --oneline -p
+
+# La pioche marche aussi ciblée sur un fichier :
+git log -S"API_KEY" -- config/</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une régression apparaît en production&nbsp;: le montant des commandes est faux depuis «&nbsp;quelque temps&nbsp;». <code>git blame</code> sur la ligne de calcul pointe un commit de <em>reformatage</em> — fausse piste. La développeuse dégaine alors la pioche&nbsp;: <code>git log -S"* 1.20" -p</code> retrouve en une commande le commit exact où le taux de TVA a été codé en dur à <code>1.20</code> au lieu d'être lu depuis la configuration, trois semaines plus tôt. Message du commit, auteur, contexte&nbsp;: toute l'histoire tient en un écran. Sans la pioche, il aurait fallu relire des dizaines de diffs à la main.</p></div></div>
+
+<h2>Suivre une fonction, suivre un fichier renommé</h2>
+<p>Deux options ferment l'arsenal. <code>-L</code> suit l'évolution d'une <strong>plage de lignes</strong> ou d'une <strong>fonction</strong> au fil du temps. Et <code>--follow</code> permet à <code>git log</code> de traverser un <strong>renommage</strong>&nbsp;: sans lui, l'historique d'un fichier s'arrête net au commit qui l'a rebaptisé.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 160" role="img" aria-label="Effet de l'option follow sur l'historique d'un fichier renommé. Le fichier s'est d'abord appelé utils point js, avec plusieurs commits, puis a été rencommé en helpers point js, avec d'autres commits ensuite. Sans follow, git log ne montre que les commits postérieurs au renommage. Avec follow, git log traverse le renommage et montre aussi les commits de l'ancien nom utils point js, donnant l'historique complet.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">--follow traverse le renommage d'un fichier</text>
+    <line class="d-line" x1="60" y1="70" x2="580" y2="70" />
+    <circle class="d-dot" cx="110" cy="70" r="7" /><circle class="d-dot" cx="200" cy="70" r="7" />
+    <circle class="d-box" cx="320" cy="70" r="9" />
+    <circle class="d-dot" cx="440" cy="70" r="7" /><circle class="d-dot" cx="530" cy="70" r="7" />
+    <text class="d-text" x="150" y="52" text-anchor="middle" font-size="9">utils.js</text>
+    <text class="d-text" x="485" y="52" text-anchor="middle" font-size="9">helpers.js</text>
+    <text class="d-mut" x="320" y="50" text-anchor="middle" font-size="8">renommage</text>
+    <line class="d-line" x1="360" y1="100" x2="580" y2="100" /><text class="d-mut" x="470" y="118" text-anchor="middle" font-size="9">sans --follow : s'arrête ici</text>
+    <line class="d-line" x1="90" y1="134" x2="560" y2="134" /><text class="d-mut" x="320" y="152" text-anchor="middle" font-size="9">avec --follow : historique complet, avant et après le renommage</text>
+  </svg>
+  <figcaption>Un fichier renommé «&nbsp;perd&nbsp;» son passé aux yeux de <code>git log</code>… sauf avec <code>--follow</code>, qui recolle les deux moitiés de son histoire.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># L'histoire d'une fonction précise, où qu'elle bouge dans le fichier
+git log -L :total:src/panier.js
+
+# Les lignes 30 à 45 d'un fichier, au fil des commits
+git log -L 30,45:src/panier.js
+
+# L'historique complet d'un fichier, même avant son renommage
+git log --follow --oneline src/helpers.js</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Combine les outils&nbsp;: <code>blame</code> pour repérer le commit d'une ligne, puis <code>git show &lt;sha&gt;</code> pour le <em>pourquoi</em>, et la pioche <code>-S</code> quand la ligne a bougé ou disparu. L'enquête va presque toujours de la <strong>ligne</strong> (blame) vers le <strong>commit</strong> (show), puis vers le <strong>contenu</strong> (pickaxe).</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Accuser le reformateur</strong>&nbsp;: <code>blame</code> montre le dernier toucher, pas l'auteur de la logique. Utilise <code>-w</code> et <code>.git-blame-ignore-revs</code>.</li>
+<li><strong>Confondre <code>-S</code> et <code>-G</code></strong>&nbsp;: <code>-S</code> traque un changement de <em>nombre</em> d'occurrences (apparition/disparition)&nbsp;; <code>-G</code> matche la présence dans le diff (regex), plus large mais plus bruyant.</li>
+<li><strong>Oublier <code>--follow</code></strong> et croire qu'un fichier «&nbsp;n'a pas d'histoire&nbsp;» alors qu'il a juste été renommé.</li>
+<li><strong>Chercher un texte avec <code>--grep</code></strong>&nbsp;: <code>--grep</code> fouille les <em>messages</em> de commit, pas le code. Pour le code, c'est la pioche.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Regarde <code>git log --pickaxe-regex</code> (traiter l'argument de <code>-S</code> comme une regex), <code>git grep</code> qui cherche dans l'<em>état</em> du code à une révision donnée (et non dans les diffs), et l'intégration <code>blame</code> des éditeurs (l'extension <em>GitLens</em> pour VS Code affiche l'auteur en bout de ligne, en direct). Pour l'archéologie lourde, <code>git log --follow -p -- &lt;fichier&gt;</code> déroule tout le film d'un fichier, renommages compris.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — enquêter dans l'historique</caption>
+    <thead><tr><th scope="col">Question</th><th scope="col">Commande</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Qui a écrit cette ligne&nbsp;?</td><td><code>git blame &lt;fichier&gt;</code></td><td>SHA + auteur + date par ligne</td></tr>
+      <tr><td>…sans le bruit du reformatage</td><td><code>git blame -w --ignore-rev …</code></td><td>remonte au vrai changement</td></tr>
+      <tr><td>Commits d'un auteur / d'un mot</td><td><code>git log --author=… --grep=…</code></td><td>filtres combinables</td></tr>
+      <tr><td>L'historique avec les diffs</td><td><code>git log -p -- &lt;fichier&gt;</code></td><td>le film du fichier</td></tr>
+      <tr><td>Quand ce texte est apparu&nbsp;?</td><td><code>git log -S"texte"</code></td><td>le nombre d'occurrences change</td></tr>
+      <tr><td>Quels diffs mentionnent…&nbsp;?</td><td><code>git log -G"regex"</code></td><td>présence dans le diff</td></tr>
+      <tr><td>L'histoire d'une fonction</td><td><code>git log -L :fn:&lt;fichier&gt;</code></td><td>suit la fonction</td></tr>
+      <tr><td>Traverser un renommage</td><td><code>git log --follow -- &lt;fichier&gt;</code></td><td>recolle le passé</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>git blame</dt><dd>Commande qui annote chaque ligne d'un fichier avec le dernier commit l'ayant modifiée (SHA, auteur, date).</dd>
+  <dt>Pioche (pickaxe)</dt><dd>Recherche de <code>git log</code> qui fouille le contenu des <em>diffs</em>&nbsp;: <code>-S</code> (le nombre d'occurrences d'une chaîne change) et <code>-G</code> (la chaîne/regex apparaît dans le diff).</dd>
+  <dt>-S</dt><dd>Variante de la pioche qui isole les commits où une chaîne <strong>apparaît ou disparaît</strong> (son décompte varie)&nbsp;: idéale pour dater une introduction ou une suppression.</dd>
+  <dt>-G</dt><dd>Variante de la pioche qui retient tout commit dont le diff <strong>contient</strong> le motif (expression régulière)&nbsp;: plus large, elle capte aussi les lignes modifiées ou déplacées.</dd>
+  <dt>--grep</dt><dd>Filtre de <code>git log</code> portant sur le <strong>message</strong> des commits (et non sur le code).</dd>
+  <dt>-L</dt><dd>Option qui suit l'évolution d'une plage de lignes ou d'une fonction (<code>-L :fonction:fichier</code>) au fil de l'historique.</dd>
+  <dt>--follow</dt><dd>Option qui fait suivre à <code>git log</code> l'historique d'un fichier <strong>au-delà d'un renommage</strong>.</dd>
+  <dt>.git-blame-ignore-revs</dt><dd>Fichier listant des commits (reformatages massifs) que <code>blame</code> doit ignorer pour ne pas fausser la paternité des lignes.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><code>git blame</code> relie chaque <strong>ligne</strong> à son dernier commit&nbsp;; <code>-w</code> et <code>.git-blame-ignore-revs</code> écartent le bruit du reformatage.</li>
+<li><code>git log</code> filtre par <strong>auteur</strong>, <strong>message</strong> (<code>--grep</code>), <strong>date</strong> et fichier, avec <code>-p</code> pour voir les diffs.</li>
+<li>La <strong>pioche</strong> fouille le contenu&nbsp;: <code>-S</code> pour l'apparition/disparition d'une chaîne, <code>-G</code> pour toute présence (regex).</li>
+<li><code>-L</code> suit une <strong>fonction</strong>&nbsp;; <code>--follow</code> traverse un <strong>renommage</strong>.</li>
+<li>L'enquête va de la <strong>ligne</strong> (blame) au <strong>commit</strong> (show) puis au <strong>contenu</strong> (pickaxe).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi <code>git blame</code> peut-il désigner un commit qui n'a fait que reformater&nbsp;? Comment l'éviter&nbsp;?</li>
+<li>Tu veux dater l'apparition du mot <code>API_KEY</code> dans le code&nbsp;: quelle commande&nbsp;?</li>
+<li>Quelle est la différence entre <code>-S</code> et <code>-G</code>&nbsp;?</li>
+<li>Un fichier semble n'avoir que trois commits alors qu'il est ancien&nbsp;: quelle option manque probablement&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi git blame peut-il « accuser » un commit qui n'a fait que reformater le code, et comment l'éviter ?","a":["Parce que blame montre le DERNIER commit ayant touché la ligne, même pour un simple changement d'espaces ; on l'évite avec -w (ignorer les espaces) et un fichier .git-blame-ignore-revs","Parce que blame choisit un commit au hasard","Parce que blame ne regarde que le premier commit du dépôt","On ne peut rien y faire, c'est une limite définitive"],"correct":0,"explain":"blame attribue la ligne à son dernier toucher. Un reformatage vole donc la paternité. -w ignore les espaces et .git-blame-ignore-revs neutralise les gros commits cosmétiques."},
+  {"q":"Quelle commande date l'apparition (ou la disparition) de la chaîne API_KEY dans le code ?","a":["git log -S\"API_KEY\" : la pioche repère les commits où le nombre d'occurrences de la chaîne change","git log --grep=\"API_KEY\" : elle cherche dans le code","git blame API_KEY","git show API_KEY"],"correct":0,"explain":"-S (pickaxe) fouille les diffs et isole les commits qui ajoutent ou retirent la chaîne. --grep, lui, ne cherche que dans les messages de commit."},
+  {"q":"Quelle est la différence entre git log -S et git log -G ?","a":["-S retient les commits où le NOMBRE d'occurrences d'une chaîne change (apparition/disparition) ; -G retient tout commit dont le diff CONTIENT le motif (regex), y compris une ligne juste modifiée ou déplacée","Ils sont identiques","-S cherche dans les messages, -G dans le code","-G est réservé aux fichiers binaires"],"correct":0,"explain":"-S répond à « quand est-ce apparu/parti ? » (le décompte varie) ; -G est plus large : il matche la présence du motif dans le diff, au risque de plus de bruit."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["git blame","blame"],"placeholder":"la commande qui annote chaque ligne d'un fichier avec son dernier commit (SHA, auteur, date)","hints":["Le mot anglais pour « attribuer la faute ».","git ?????","On l'utilise sur un fichier : git ????? fichier"],"link":{"href":"lecon-22.html","label":"Revoir « git blame »"}},
+  {"type":"text","accept":["-S","git log -S","S"],"placeholder":"l'option de git log (la pioche) qui date l'apparition/disparition d'une chaîne quand son NOMBRE change","hints":["Une majuscule précédée d'un tiret.","À distinguer de -G (présence dans le diff).","git log -?"],"link":{"href":"lecon-22.html","label":"Revoir « La pioche »"}},
+  {"type":"text","accept":["--follow","git log --follow","follow"],"placeholder":"l'option de git log pour voir l'historique d'un fichier AU-DELÀ d'un renommage","hints":["Elle « suit » le fichier à travers son changement de nom.","--??????","git log --?????? fichier"],"link":{"href":"lecon-22.html","label":"Revoir « Suivre un fichier renommé »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une ligne de <code>src/facture.js</code> te paraît fausse. Trouve le commit qui l'a modifiée en dernier, puis affiche le détail (message et diff) de ce commit.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git blame src/facture.js
+# … 9f7e2a1 (Bruno 2026-07-05) 42)   const taux = 0.19;
+
+# On inspecte le commit responsable :
+git show 9f7e2a1
+# commit 9f7e2a1…
+#   Ajuste le taux de TVA
+#   - const taux = 0.20;
+#   + const taux = 0.19;</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>La fonction <code>calculerTVA</code> n'existe plus dans le code, mais tu sais qu'elle a existé. Retrouve le commit qui l'a <strong>introduite</strong> et celui qui l'a <strong>supprimée</strong> (ou renommée), en une seule commande.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git log -S"calculerTVA" --oneline
+# c3d4e5f Renomme calculerTVA en calculerTaxe   ← disparition
+# e7f8a9b Ajoute le calcul de TVA               ← apparition
+
+# Pour voir précisément ce qui a changé dans ces commits :
+git log -S"calculerTVA" -p</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le fichier <code>src/helpers.js</code> ne montre que quelques commits récents avec <code>git log</code>, alors qu'il descend d'un ancien <code>src/utils.js</code>. Affiche son <strong>historique complet</strong> (renommage traversé), puis suis spécifiquement l'évolution de sa fonction <code>formaterPrix</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash"># Historique complet, y compris l'époque « utils.js » :
+git log --follow --oneline src/helpers.js
+
+# L'évolution de la seule fonction formaterPrix, où qu'elle bouge :
+git log -L :formaterPrix:src/helpers.js</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concurrence : goroutines et channels — Leçon 07 · Go · Syntaxe</title>
+    <meta name="description" content="Découvre la concurrence en Go : goroutines légères, channels typés, select, WaitGroup et Mutex. Partage la mémoire en communiquant plutôt que l'inverse." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="go" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Go</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Go idiomatique — Leçon 07</p>
+              <h1 class="lesson-header__title">Concurrence : goroutines et channels</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 6 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lancer une goroutine avec <code>go f()</code> et attendre sa fin avec un <code>sync.WaitGroup</code>&nbsp;;</li>
+                  <li>faire communiquer des goroutines via un <strong>channel</strong> typé (<code>ch &lt;- v</code>, <code>v := &lt;-ch</code>) et comprendre le blocage&nbsp;;</li>
+                  <li>fermer un channel, le parcourir avec <code>range</code> et arbitrer plusieurs channels avec <code>select</code>&nbsp;;</li>
+                  <li>éviter les pièges classiques (<strong>data race</strong>, deadlock, channel fermé) et utiliser <code>-race</code> et <code>sync.Mutex</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La concurrence, c'est <strong>la</strong> raison d'être de Go. Là où d'autres langages te demandent de jongler avec des threads système lourds, des callbacks ou des promesses, Go te donne deux outils d'une simplicité désarmante : les <strong>goroutines</strong> (des fils d'exécution ultra-légers) et les <strong>channels</strong> (des tuyaux typés pour les faire dialoguer). Avec ça, tu peux faire tourner des milliers de tâches en parallèle sans transpirer.</p>
+<p>Dans cette leçon, on part de la goroutine la plus basique pour arriver à des patterns de coordination propres et idiomatiques. La devise à garder en tête tout du long : <em>« Ne communique pas en partageant la mémoire ; partage la mémoire en communiquant. »</em> On va voir concrètement ce que ça veut dire.</p>
+
+<h2>Lancer une goroutine</h2>
+<p>Une <strong>goroutine</strong> est une fonction qui s'exécute en même temps que le reste du programme. Pour en lancer une, tu mets le mot-clé <code>go</code> devant un appel de fonction. C'est tout.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func dire(message string) {
+	for i := 0; i &lt; 3; i++ {
+		fmt.Println(message)
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func main() {
+	go dire("goroutine") // lancée en parallèle
+	dire("main")         // exécutée dans la goroutine principale
+}
+// Sortie (entrelacée, l'ordre peut varier) :
+// main
+// goroutine
+// main
+// goroutine
+// ...</code></pre></figure>
+<p>Une goroutine ne coûte presque rien : quelques kilo-octets de pile, contre plusieurs méga-octets pour un thread système. En lancer des milliers, voire des centaines de milliers, est parfaitement normal en Go. Le <em>runtime</em> les répartit lui-même sur les threads de l'OS.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>La fonction <code>main</code> tourne elle-même dans une goroutine, dite « principale ». Quand <code>main</code> se termine, <strong>tout le programme s'arrête</strong>, sans attendre les autres goroutines.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le runtime Go répartit de nombreuses goroutines légères sur un petit nombre de threads du système d'exploitation. En haut, une rangée de goroutines de quelques kilo-octets. Au milieu, l'ordonnanceur du runtime Go. En bas, trois threads OS de l'ordre du méga-octet, posés sur les cœurs du processeur.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Modèle M:N — des milliers de goroutines sur quelques threads</text>
+    <text class="d-mut" x="320" y="40" text-anchor="middle" font-size="9">goroutines — ~2 Ko de pile chacune</text>
+    <rect class="d-box" x="44" y="48" width="66" height="22" rx="5" />
+    <rect class="d-box" x="120" y="48" width="66" height="22" rx="5" />
+    <rect class="d-box" x="196" y="48" width="66" height="22" rx="5" />
+    <rect class="d-box" x="272" y="48" width="66" height="22" rx="5" />
+    <rect class="d-box" x="348" y="48" width="66" height="22" rx="5" />
+    <rect class="d-box" x="424" y="48" width="66" height="22" rx="5" />
+    <rect class="d-box" x="500" y="48" width="66" height="22" rx="5" />
+    <rect class="d-accent" x="150" y="92" width="340" height="32" rx="8" />
+    <text class="d-tag" x="320" y="113" text-anchor="middle" font-size="11">ordonnanceur du runtime Go</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">threads OS — ~1 Mo chacun, sur les cœurs du CPU</text>
+    <rect class="d-box" x="180" y="158" width="80" height="28" rx="6" />
+    <text class="d-text" x="220" y="176" text-anchor="middle" font-size="9">thread</text>
+    <rect class="d-box" x="280" y="158" width="80" height="28" rx="6" />
+    <text class="d-text" x="320" y="176" text-anchor="middle" font-size="9">thread</text>
+    <rect class="d-box" x="380" y="158" width="80" height="28" rx="6" />
+    <text class="d-text" x="420" y="176" text-anchor="middle" font-size="9">thread</text>
+  </svg>
+  <figcaption>Le <em>runtime</em> multiplexe les goroutines sur les threads système&nbsp;: en lancer des milliers est normal, car chacune ne coûte que quelques kilo-octets, là où un thread OS en pèse mille fois plus.</figcaption>
+</figure>
+
+<h2>Le problème : attendre les goroutines</h2>
+<p>Voici un piège qui touche tout le monde au début. Si <code>main</code> se termine avant qu'une goroutine ait fini, celle-ci est tuée net.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func main() {
+	go fmt.Println("salut depuis la goroutine")
+	// main se termine immédiatement : la goroutine
+	// n'a probablement pas le temps de s'exécuter.
+}
+// Sortie : (souvent rien du tout)</code></pre></figure>
+<p>Il faut donc un moyen de <strong>coordonner</strong> : dire à <code>main</code> « attends que tes goroutines aient fini ». Mettre un <code>time.Sleep</code> au hasard n'est PAS une solution (combien de temps ? trop, c'est lent ; trop peu, ça casse). Les vrais outils sont les <strong>channels</strong> et <code>sync.WaitGroup</code>, qu'on découvre maintenant.</p>
+
+<h2>Les channels : communiquer</h2>
+<p>Un <strong>channel</strong> est un tuyau typé qui relie des goroutines. Tu y envoies une valeur d'un côté, tu la reçois de l'autre. On le crée avec <code>make(chan T)</code>.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func main() {
+	ch := make(chan string) // un channel de chaînes
+
+	go func() {
+		ch &lt;- "résultat prêt" // envoyer dans le channel
+	}()
+
+	message := &lt;-ch // recevoir depuis le channel (bloque ici)
+	fmt.Println(message)
+}
+// Sortie :
+// résultat prêt</code></pre></figure>
+<p>L'opérateur <code>&lt;-</code> est une flèche qui indique le sens des données : <code>ch &lt;- v</code> envoie <code>v</code> <em>dans</em> <code>ch</code> ; <code>v := &lt;-ch</code> sort une valeur <em>de</em> <code>ch</code>. Le détail crucial : sur un channel non bufferisé, l'<strong>envoi bloque</strong> tant que personne ne reçoit, et la <strong>réception bloque</strong> tant que personne n'envoie. Ce blocage est en réalité une fonctionnalité : il <strong>synchronise</strong> les deux goroutines. Dans l'exemple, <code>&lt;-ch</code> attend sagement que la goroutine ait envoyé sa valeur — plus besoin de <code>Sleep</code>.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Tu peux restreindre la direction d'un channel dans une signature de fonction : <code>chan&lt;- T</code> pour un paramètre qui ne fait qu'<strong>envoyer</strong>, <code>&lt;-chan T</code> pour un qui ne fait que <strong>recevoir</strong>. Le compilateur vérifie le sens : c'est de la documentation qui ne ment pas.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Un channel comme un tuyau entre deux goroutines. La goroutine A envoie des valeurs vers le channel, un tampon de trois cases dont deux occupées, et la goroutine B lit depuis le channel. L'envoi bloque si le tampon est plein, la réception bloque s'il est vide ; un channel non bufferisé impose un rendez-vous direct.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un channel : un tuyau typé entre goroutines</text>
+    <rect class="d-box" x="30" y="66" width="110" height="40" rx="8" />
+    <text class="d-text" x="85" y="90" text-anchor="middle" font-size="10">goroutine A</text>
+    <text class="d-mut" x="185" y="80" text-anchor="middle" font-size="9">ch &lt;- v</text>
+    <line class="d-line" x1="140" y1="86" x2="228" y2="86" />
+    <rect class="d-frame" x="230" y="66" width="180" height="40" rx="6" />
+    <rect class="d-accent" x="238" y="72" width="52" height="28" rx="4" />
+    <rect class="d-accent" x="296" y="72" width="52" height="28" rx="4" />
+    <rect class="d-box" x="354" y="72" width="48" height="28" rx="4" />
+    <text class="d-mut" x="320" y="124" text-anchor="middle" font-size="9">make(chan T, 3) — capacité 3</text>
+    <text class="d-mut" x="455" y="80" text-anchor="middle" font-size="9">v := &lt;-ch</text>
+    <line class="d-line" x1="412" y1="86" x2="500" y2="86" />
+    <rect class="d-box" x="500" y="66" width="110" height="40" rx="8" />
+    <text class="d-text" x="555" y="90" text-anchor="middle" font-size="10">goroutine B</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">envoi bloque si plein · réception bloque si vide · non bufferisé = rendez-vous</text>
+  </svg>
+  <figcaption>La goroutine A dépose des valeurs, la goroutine B les retire. Sur un channel <strong>non bufferisé</strong>, l'envoi et la réception se font au même instant (rendez-vous)&nbsp;; un <strong>tampon</strong> découple les deux vitesses.</figcaption>
+</figure>
+
+<h2>Bufferisé, close et range</h2>
+<p>Un channel <strong>bufferisé</strong> possède une capacité interne : <code>make(chan int, 3)</code>. L'envoi ne bloque que si le tampon est plein, la réception ne bloque que s'il est vide. Pratique quand l'émetteur et le récepteur ne vont pas exactement à la même vitesse.</p>
+<p>Quand on n'a plus rien à envoyer, on <strong>ferme</strong> le channel avec <code>close(ch)</code>. On peut alors le parcourir avec <code>range</code>, qui s'arrête tout seul à la fermeture. C'est l'idiome pour un flux de valeurs.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func main() {
+	nombres := make(chan int, 3) // bufferisé, capacité 3
+
+	go func() {
+		for i := 1; i &lt;= 5; i++ {
+			nombres &lt;- i * i
+		}
+		close(nombres) // signale qu'il n'y aura plus rien
+	}()
+
+	// range s'arrête automatiquement quand le channel est fermé
+	for n := range nombres {
+		fmt.Println(n)
+	}
+}
+// Sortie :
+// 1
+// 4
+// 9
+// 16
+// 25</code></pre></figure>
+<p>Règle d'or : c'est <strong>l'émetteur</strong> qui ferme un channel, jamais le récepteur. Recevoir depuis un channel fermé renvoie immédiatement la valeur zéro du type ; la forme à deux retours <code>v, ok := &lt;-ch</code> te dit avec <code>ok == false</code> que le channel est fermé et vidé.</p>
+
+<h2>select : arbitrer plusieurs channels</h2>
+<p>Le mot-clé <code>select</code> est comme un <code>switch</code>, mais pour les channels : il attend que <strong>l'une</strong> de plusieurs opérations soit possible, puis exécute la branche correspondante. C'est l'outil pour combiner des sources, gérer un <em>timeout</em> ou ne pas bloquer.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func main() {
+	rapide := make(chan string)
+	lent := make(chan string)
+
+	go func() { time.Sleep(50 * time.Millisecond); rapide &lt;- "rapide" }()
+	go func() { time.Sleep(2 * time.Second); lent &lt;- "lent" }()
+
+	for i := 0; i &lt; 2; i++ {
+		select {
+		case msg := &lt;-rapide:
+			fmt.Println("reçu :", msg)
+		case msg := &lt;-lent:
+			fmt.Println("reçu :", msg)
+		case &lt;-time.After(500 * time.Millisecond):
+			fmt.Println("timeout : trop lent")
+		}
+	}
+}
+// Sortie :
+// reçu : rapide
+// timeout : trop lent</code></pre></figure>
+<p>Ici <code>time.After</code> renvoie un channel qui émet une valeur après le délai donné : c'est l'idiome standard du <strong>timeout</strong>. On peut aussi ajouter une branche <code>default</code> : si aucune opération n'est prête, <code>select</code> exécute <code>default</code> sans bloquer du tout (utile pour un essai non bloquant).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Le mot-clé select attend que l'une de plusieurs opérations de channel soit prête, puis exécute la branche correspondante. Trois branches : réception sur le channel rapide, qui est prête et est exécutée ; réception sur le channel lent, pas encore prête ; et un timeout via time.After. La première prête l'emporte.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">select : la première opération prête l'emporte</text>
+    <rect class="d-accent" x="250" y="38" width="140" height="34" rx="8" />
+    <text class="d-tag" x="320" y="60" text-anchor="middle" font-size="11">select { … }</text>
+    <line class="d-line" x1="320" y1="72" x2="120" y2="104" />
+    <line class="d-line" x1="320" y1="72" x2="320" y2="104" />
+    <line class="d-line" x1="320" y1="72" x2="520" y2="104" />
+    <rect class="d-box" x="40" y="106" width="160" height="42" rx="7" />
+    <text class="d-text" x="120" y="126" text-anchor="middle" font-size="9">case &lt;-rapide</text>
+    <text class="d-tag" x="120" y="141" text-anchor="middle" font-size="8">prêt → exécuté ✓</text>
+    <rect class="d-box" x="240" y="106" width="160" height="42" rx="7" />
+    <text class="d-text" x="320" y="126" text-anchor="middle" font-size="9">case &lt;-lent</text>
+    <text class="d-mut" x="320" y="141" text-anchor="middle" font-size="8">pas encore prêt</text>
+    <rect class="d-box" x="440" y="106" width="160" height="42" rx="7" />
+    <text class="d-text" x="520" y="126" text-anchor="middle" font-size="9">case &lt;-time.After(d)</text>
+    <text class="d-mut" x="520" y="141" text-anchor="middle" font-size="8">filet de sécurité (timeout)</text>
+    <text class="d-mut" x="320" y="174" text-anchor="middle" font-size="9">une branche default rendrait le select non bloquant</text>
+  </svg>
+  <figcaption>Comme un <code>switch</code>, mais pour les channels&nbsp;: <code>select</code> débloque la première branche dont l'opération est possible. <code>time.After</code> fournit l'idiome du <strong>timeout</strong>, <code>default</code> celui de l'essai non bloquant.</figcaption>
+</figure>
+
+<h2>WaitGroup : attendre N goroutines</h2>
+<p>Quand tu lances plusieurs goroutines et veux juste attendre qu'elles aient toutes fini (sans forcément récupérer de résultat par channel), <code>sync.WaitGroup</code> est l'outil idéal. Trois méthodes : <code>Add</code> pour annoncer combien on attend, <code>Done</code> que chaque goroutine appelle en finissant, et <code>Wait</code> qui bloque jusqu'à ce que le compteur retombe à zéro.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">func main() {
+	var wg sync.WaitGroup
+
+	for i := 1; i &lt;= 3; i++ {
+		wg.Add(1) // une goroutine de plus à attendre
+		go func() {
+			defer wg.Done() // garantit le décompte, même en cas de retour anticipé
+			fmt.Printf("tâche %d terminée\n", i)
+		}()
+	}
+
+	wg.Wait() // bloque tant que les 3 ne sont pas finies
+	fmt.Println("tout est terminé")
+}
+// Sortie (ordre des tâches variable) :
+// tâche 3 terminée
+// tâche 1 terminée
+// tâche 2 terminée
+// tout est terminé</code></pre></figure>
+<p>L'idiome <code>defer wg.Done()</code> sur la première ligne de la goroutine est essentiel : il garantit le décompte quoi qu'il arrive. Note aussi que depuis <strong>Go 1.22</strong>, la variable <code>i</code> de la boucle <code>for</code> est recréée à chaque tour : on peut donc l'utiliser directement dans la goroutine. Avant 1.22, il aurait fallu la passer en argument ou la recopier.</p>
+
+<h2>Mutex : quand le partage est nécessaire</h2>
+<p>L'approche Go privilégie les channels. Mais parfois, partager une variable est plus simple (un compteur, un cache). Sans protection, deux goroutines qui modifient la même variable en même temps créent une <strong>data race</strong> : un bug indéterministe et silencieux. La solution : <code>sync.Mutex</code>, un verrou qui garantit qu'<strong>une seule</strong> goroutine accède à la donnée à la fois.</p>
+<figure class="code-block" data-file="main.go"><pre><code class="language-go">type Compteur struct {
+	mu sync.Mutex
+	n  int
+}
+
+func (c *Compteur) Incr() {
+	c.mu.Lock()         // prend le verrou
+	defer c.mu.Unlock() // le libère à la fin, quoi qu'il arrive
+	c.n++
+}
+
+func main() {
+	c := &amp;Compteur{}
+	var wg sync.WaitGroup
+
+	for i := 0; i &lt; 1000; i++ {
+		wg.Add(1)
+		go func() { defer wg.Done(); c.Incr() }()
+	}
+
+	wg.Wait()
+	fmt.Println(c.n) // 1000, toujours
+}
+// Sortie :
+// 1000</code></pre></figure>
+<p>Sans le mutex, ce programme afficherait un nombre aléatoire inférieur à 1000, car des incréments se perdraient. Le <code>Compteur</code> exporté garde son champ <code>mu</code> en minuscule : le verrou est un détail interne, jamais exposé. Retiens la règle : préfère un channel pour <em>communiquer un résultat</em>, et un mutex pour <em>protéger un état partagé</em>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La <strong>data race</strong> est sournoise : ton programme « marche » sur ta machine, puis casse en production. Lance toujours tes tests concurrents avec le détecteur : <code>go run -race main.go</code>. Il signale précisément les accès concurrents non protégés.</p></div></div>
+<ul>
+<li><strong>Deadlock</strong> : toutes les goroutines sont bloquées en attente les unes des autres. Recevoir sur un channel où personne n'envoie jamais provoque le fameux <code>fatal error: all goroutines are asleep - deadlock!</code>.</li>
+<li><strong>Envoyer sur un channel fermé</strong> : c'est une <code>panic</code> immédiate. Ferme le channel une seule fois, côté émetteur, quand tu es sûr d'avoir tout envoyé.</li>
+<li><strong>Fuite de goroutine</strong> : une goroutine bloquée pour toujours sur un channel ne sera jamais nettoyée. Assure-toi que chaque goroutine a un chemin de sortie.</li>
+<li><strong>Oublier d'attendre</strong> : si <code>main</code> finit avant tes goroutines, leur travail est perdu. <code>WaitGroup</code> ou un channel de fin règlent ça.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore les patterns classiques : le <strong>worker pool</strong> (un groupe de goroutines qui consomment des tâches depuis un channel), le <strong>fan-out / fan-in</strong> (distribuer puis regrouper), le package <code>context</code> pour l'annulation et les délais propagés, <code>golang.org/x/sync/errgroup</code> pour gérer un groupe de goroutines qui peuvent échouer, et <code>sync.Once</code> pour une initialisation exécutée une seule fois.</p></div></div>
+
+<h2>Un cas réel : « concurrent map writes » un vendredi soir</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service Go mettait en cache des sessions dans une <code>map</code> globale, écrite par plusieurs goroutines traitant les requêtes HTTP <strong>en parallèle</strong>. Sur la machine du développeur, tout marchait. En production, sous charge, le processus s'arrêtait net avec <code>fatal error: concurrent map writes</code> — une protection du runtime Go qui plante <em>volontairement</em> dès qu'il détecte deux écritures simultanées d'une même map. Le bug ne se reproduisait qu'aux heures de pointe. Deux enseignements&nbsp;: (1)&nbsp;lancer les tests avec <code>go test -race</code> aurait signalé l'accès concurrent bien avant la mise en production&nbsp;; (2)&nbsp;le correctif a consisté à protéger la map par un <code>sync.Mutex</code> (ou à passer à <code>sync.Map</code>). Depuis, l'intégration continue exécute systématiquement <code>-race</code>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — concurrence en Go</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Outil</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Lancer en parallèle</td><td><code>go f()</code></td><td>goroutine légère</td></tr>
+      <tr><td>Créer un tuyau</td><td><code>make(chan T)</code></td><td>ajoute <code>, n</code> pour bufferiser</td></tr>
+      <tr><td>Envoyer / recevoir</td><td><code>ch &lt;- v</code> / <code>v := &lt;-ch</code></td><td>bloque pour synchroniser</td></tr>
+      <tr><td>Clôturer un flux</td><td><code>close(ch)</code></td><td>côté émetteur seulement</td></tr>
+      <tr><td>Parcourir un flux</td><td><code>for v := range ch</code></td><td>s'arrête à la fermeture</td></tr>
+      <tr><td>Arbitrer / timeout</td><td><code>select { … }</code></td><td>+ <code>time.After</code>, + <code>default</code></td></tr>
+      <tr><td>Attendre N goroutines</td><td><code>sync.WaitGroup</code></td><td>Add / Done / Wait</td></tr>
+      <tr><td>Protéger un état partagé</td><td><code>sync.Mutex</code></td><td>Lock / <code>defer</code> Unlock</td></tr>
+      <tr><td>Traquer les courses</td><td><code>go run -race</code></td><td>détecteur intégré</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Goroutine</dt><dd>Fil d'exécution ultra-léger géré par le runtime Go (quelques Ko de pile)&nbsp;; lancé avec <code>go f()</code>. On peut en avoir des milliers.</dd>
+  <dt>Channel</dt><dd>Tuyau typé qui relie des goroutines&nbsp;: <code>ch &lt;- v</code> envoie, <code>v := &lt;-ch</code> reçoit. Le blocage synchronise les deux extrémités.</dd>
+  <dt>Channel bufferisé</dt><dd>Channel doté d'une capacité (<code>make(chan T, n)</code>)&nbsp;; l'envoi ne bloque que si le tampon est plein, la réception que s'il est vide.</dd>
+  <dt><code>select</code></dt><dd>Aiguillage sur plusieurs opérations de channel&nbsp;: exécute la première branche prête. Avec <code>default</code>, il ne bloque pas.</dd>
+  <dt>Data race</dt><dd>Accès concurrent non synchronisé à une même donnée, dont au moins une écriture&nbsp;; bug indéterministe repéré par <code>-race</code>.</dd>
+  <dt>Deadlock</dt><dd>Situation où des goroutines s'attendent mutuellement sans qu'aucune ne progresse&nbsp;; Go la signale par <code>fatal error: … deadlock!</code>.</dd>
+  <dt><code>sync.WaitGroup</code></dt><dd>Compteur pour attendre la fin de N goroutines&nbsp;: <code>Add</code> pour annoncer, <code>Done</code> à la fin de chacune, <code>Wait</code> pour bloquer jusqu'à zéro.</dd>
+  <dt><code>sync.Mutex</code></dt><dd>Verrou d'exclusion mutuelle&nbsp;: <code>Lock</code>/<code>Unlock</code> garantissent qu'une seule goroutine accède à l'état partagé à la fois.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une <strong>goroutine</strong> se lance avec <code>go f()</code> ; elle est légère, on peut en avoir des milliers.</li>
+<li>Un <strong>channel</strong> (<code>make(chan T)</code>) fait communiquer les goroutines ; <code>ch &lt;- v</code> envoie, <code>v := &lt;-ch</code> reçoit, et le blocage synchronise.</li>
+<li><code>close</code> + <code>range</code> parcourent un flux ; c'est l'émetteur qui ferme.</li>
+<li><code>select</code> arbitre plusieurs channels, avec <code>default</code> (non bloquant) et <code>time.After</code> (timeout).</li>
+<li><code>sync.WaitGroup</code> attend N goroutines ; <code>sync.Mutex</code> protège un état partagé.</li>
+<li>Devise Go : partage la mémoire en communiquant (channels) plutôt que communiquer en partageant la mémoire (mutex), et traque les courses avec <code>-race</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que se passe-t-il si <code>main</code> se termine alors qu'une goroutine tourne encore, et comment l'éviter ?</li><li>Pourquoi un envoi sur un channel non bufferisé bloque-t-il, et en quoi est-ce utile ?</li><li>Quand choisis-tu un <code>channel</code> et quand choisis-tu un <code>sync.Mutex</code> ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que se passe-t-il si main se termine alors qu'une goroutine tourne encore, et comment l'éviter ?","a":["Le programme s'arrête : les goroutines encore actives sont interrompues sans finir. On l'évite en attendant leur fin (sync.WaitGroup) ou via un channel de synchronisation","Le programme attend les goroutines","La goroutine continue après main","Cela provoque une panique"],"correct":0,"explain":"Quand main retourne, le processus se termine et les goroutines restantes sont tuées net. Pour garantir leur achèvement, on synchronise avec un WaitGroup (Add/Done/Wait) ou un channel."},
+  {"q":"Pourquoi un envoi sur un channel non bufferisé bloque-t-il, et en quoi est-ce utile ?","a":["L'envoi attend qu'un récepteur soit prêt (rendez-vous) : cela synchronise fortement les goroutines, l'émetteur sachant que la valeur a été reçue","Il ne bloque jamais","C'est un bug","Le buffer est plein"],"correct":0,"explain":"Un channel sans tampon impose un rendez-vous : l'envoi ne se débloque que lorsqu'une autre goroutine reçoit. Cette synchronisation garantit la remise de la valeur, utile pour coordonner deux goroutines."},
+  {"q":"Quand choisis-tu un channel et quand choisis-tu un sync.Mutex ?","a":["Un channel pour communiquer et transférer des données entre goroutines (« partager en communiquant ») ; un mutex pour protéger un état partagé modifié en place","Toujours un mutex","Toujours un channel","Ils font la même chose"],"correct":0,"explain":"Le channel excelle à faire circuler des données et coordonner des étapes. Le mutex sérialise l'accès à une donnée partagée qu'on lit/écrit sur place. On choisit selon qu'on veut communiquer ou protéger."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["WaitGroup","sync.WaitGroup"],"placeholder":"l'objet de sync pour ATTENDRE la fin de plusieurs goroutines avant d'afficher « fini » : sync.…","hints":["Add(2), puis Done() dans chaque goroutine, puis Wait().","Compte les goroutines encore actives.","Wait?????"],"link":{"href":"lecon-07.html","label":"Revoir « WaitGroup »"}},
+  {"type":"text","accept":["channel","chan","canal","un channel"],"placeholder":"le mécanisme Go pour qu'une goroutine renvoie son résultat à main : un … (chan int)","hints":["On y envoie avec <- et on y reçoit avec <-.","Communiquer plutôt que partager la mémoire.","« … » (chan)."],"link":{"href":"lecon-07.html","label":"Revoir « Les channels »"}},
+  {"type":"text","accept":["select"],"placeholder":"le mot-clé pour attendre PLUSIEURS channels et abandonner après 300 ms (avec time.After) : …","hints":["Comme un switch, mais sur des opérations de channel.","La première branche prête l'emporte.","Six lettres."],"link":{"href":"lecon-07.html","label":"Revoir « select »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Lance deux goroutines qui affichent chacune un message, et attends qu'elles aient <strong>toutes deux</strong> fini avant d'afficher <code>fini</code>. Utilise un <code>sync.WaitGroup</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-go">package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func main() {
+	var wg sync.WaitGroup
+	messages := []string{"bonjour", "monde"}
+
+	for _, m := range messages {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fmt.Println(m)
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println("fini")
+}
+// Sortie (ordre des deux premiers variable) :
+// bonjour
+// monde
+// fini</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>somme</code> qui calcule la somme d'un <code>[]int</code> dans une goroutine et renvoie son résultat à <code>main</code> via un <strong>channel</strong>. Affiche le résultat reçu.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-go">package main
+
+import "fmt"
+
+func somme(nombres []int, resultat chan&lt;- int) {
+	total := 0
+	for _, n := range nombres {
+		total += n
+	}
+	resultat &lt;- total // envoie le résultat
+}
+
+func main() {
+	res := make(chan int)
+	go somme([]int{1, 2, 3, 4, 5}, res)
+
+	fmt.Println("somme :", &lt;-res) // bloque jusqu'à réception
+}
+// Sortie :
+// somme : 15</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Utilise un <code>select</code> pour recevoir un résultat d'une goroutine lente, mais abandonne avec un message si elle met plus de 300 ms. La goroutine, elle, dort 1 seconde avant de répondre.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-go">package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	res := make(chan string)
+
+	go func() {
+		time.Sleep(1 * time.Second) // travail lent
+		res &lt;- "données prêtes"
+	}()
+
+	select {
+	case msg := &lt;-res:
+		fmt.Println("reçu :", msg)
+	case &lt;-time.After(300 * time.Millisecond):
+		fmt.Println("abandon : la goroutine est trop lente")
+	}
+}
+// Sortie :
+// abandon : la goroutine est trop lente</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-go.min.js" defer></script>
+  </body>
+</html>

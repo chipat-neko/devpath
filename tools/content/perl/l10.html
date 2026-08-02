@@ -1,0 +1,110 @@
+<p>Perl n'a pas été conçu autour des objets, mais il en fait — à sa manière, qui surprend ceux qui viennent de Java ou Python. Comprendre la POO en Perl, c'est comprendre comment <strong>références</strong>, <strong>packages</strong> et une fonction nommée <code>bless</code> se combinent. Puis nous verrons l'approche <strong>moderne</strong> (Moo/Moose) qui rend tout cela bien plus agréable.</p>
+
+<h2>L'idée&nbsp;: un objet est une référence bénie</h2>
+<p>En Perl classique, un <strong>objet</strong> est une référence (souvent vers un hachage) que l'on a «&nbsp;<strong>bénie</strong>&nbsp;» avec <code>bless</code> pour l'associer à un package. Une <strong>classe</strong> est simplement un package&nbsp;; une <strong>méthode</strong> est un sous-programme dans ce package.</p>
+<figure class="code-block" data-file="Compte.pm"><pre><code class="language-perl">package Compte;
+use strict;
+use warnings;
+
+sub new {
+    my ($classe, %args) = @_;
+    my $self = {
+        titulaire =&gt; $args{titulaire},
+        solde     =&gt; $args{solde} // 0,
+    };
+    return bless $self, $classe;   # associe $self à la classe
+}
+
+1;</code></pre></figure>
+<p class="code-caption"><code>bless $self, $classe</code> transforme une simple référence de hachage en objet de la classe.</p>
+
+<h2>Des méthodes</h2>
+<p>Une méthode reçoit l'objet comme <strong>premier argument</strong> (par convention <code>$self</code>). On l'appelle avec la flèche <code>-&gt;</code>, qui passe l'objet automatiquement.</p>
+<figure class="code-block" data-file="Compte.pm"><pre><code class="language-perl">sub deposer {
+    my ($self, $montant) = @_;
+    $self-&gt;{solde} += $montant;
+    return $self-&gt;{solde};
+}
+
+sub solde {
+    my ($self) = @_;
+    return $self-&gt;{solde};
+}</code></pre></figure>
+<figure class="code-block" data-file="programme.pl"><pre><code class="language-perl">use Compte;
+my $c = Compte-&gt;new(titulaire =&gt; "Ada", solde =&gt; 100);
+$c-&gt;deposer(50);
+say $c-&gt;solde;        # 150</code></pre></figure>
+<p>Le <code>Compte-&gt;new(...)</code> appelle <code>new</code> en lui passant <code>"Compte"</code> comme premier argument&nbsp;; <code>$c-&gt;deposer(50)</code> passe <code>$c</code> puis <code>50</code>.</p>
+
+<h2>L'héritage</h2>
+<p>L'héritage passe par le tableau spécial <code>@ISA</code> (ou, plus proprement, par <code>use parent</code>). Une classe fille hérite des méthodes de la classe mère et peut les redéfinir.</p>
+<figure class="code-block" data-file="CompteEpargne.pm"><pre><code class="language-perl">package CompteEpargne;
+use strict;
+use warnings;
+use parent -norequire, 'Compte';   # hérite de Compte
+
+sub ajouter_interets {
+    my ($self, $taux) = @_;
+    $self-&gt;{solde} *= (1 + $taux);
+    return $self-&gt;{solde};
+}
+
+1;</code></pre></figure>
+<figure class="code-block" data-file="programme.pl"><pre><code class="language-perl">my $e = CompteEpargne-&gt;new(solde =&gt; 1000);
+$e-&gt;deposer(200);            # méthode héritée de Compte
+$e-&gt;ajouter_interets(0.05); # méthode propre
+say $e-&gt;solde;              # 1260</code></pre></figure>
+
+<h2>L'objet moderne&nbsp;: Moo et Moose</h2>
+<p>Écrire <code>new</code>, les accesseurs et l'héritage à la main est fastidieux et répétitif. Les modules <strong>Moo</strong> (léger) et <strong>Moose</strong> (complet) automatisent tout&nbsp;: attributs, validation, constructeur. C'est ainsi qu'on écrit de la POO Perl aujourd'hui.</p>
+<figure class="code-block" data-file="Compte.pm (avec Moo)"><pre><code class="language-perl">package Compte;
+use Moo;
+
+has titulaire =&gt; (is =&gt; 'ro');
+has solde     =&gt; (is =&gt; 'rw', default =&gt; 0);
+
+sub deposer {
+    my ($self, $montant) = @_;
+    $self-&gt;solde($self-&gt;solde + $montant);
+}
+
+1;</code></pre></figure>
+<p class="code-caption">Plus de <code>new</code> ni de <code>bless</code> à écrire&nbsp;: <code>has</code> déclare un attribut avec son accesseur. Beaucoup plus lisible.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Appeler une méthode avec un point ou des parenthèses à la façon d'un autre langage&nbsp;: en Perl, c'est <strong>toujours</strong> la flèche, <code>$objet-&gt;methode(...)</code>. Et <code>$self</code> n'est pas magique&nbsp;: il faut le récupérer soi-même depuis <code>@_</code> (sauf avec Moo/Moose).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Perl 5.38 introduit une syntaxe objet native expérimentale avec <code>use feature 'class'</code> (mots-clés <code>class</code>, <code>field</code>, <code>method</code>). En attendant qu'elle se stabilise, <strong>Moo</strong> reste la référence pratique pour les nouveaux projets objet.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>objet</strong> est une référence <code>bless</code>ée vers un package&nbsp;; une <strong>classe</strong> est un package.</li>
+  <li>Une <strong>méthode</strong> reçoit l'objet en premier argument&nbsp;; on l'appelle avec <code>-&gt;</code>.</li>
+  <li>L'héritage se déclare avec <code>use parent</code> (<code>@ISA</code>).</li>
+  <li>En pratique, <strong>Moo</strong>/<strong>Moose</strong> automatisent constructeur et accesseurs.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que fait <code>bless</code>&nbsp;?</li><li>Comment une méthode récupère-t-elle l'objet sur lequel elle est appelée&nbsp;?</li><li>Pourquoi préfère-t-on Moo/Moose au Perl objet «&nbsp;à la main&nbsp;»&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une classe <code>Point</code> avec <code>new</code> (x, y) et une méthode <code>afficher</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Point.pm"><pre><code class="language-perl">package Point;
+sub new {
+    my ($cl, %a) = @_;
+    return bless { x =&gt; $a{x}, y =&gt; $a{y} }, $cl;
+}
+sub afficher {
+    my $s = shift;
+    return "($s-&gt;{x}, $s-&gt;{y})";
+}
+1;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute à <code>Point</code> une méthode <code>distance_origine</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">sub distance_origine {
+    my $s = shift;
+    return sqrt($s-&gt;{x}**2 + $s-&gt;{y}**2);
+}
+# Point-&gt;new(x=&gt;3, y=&gt;4)-&gt;distance_origine  # 5</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Réécris la classe <code>Point</code> avec Moo (attributs <code>x</code> et <code>y</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Point.pm"><pre><code class="language-perl">package Point;
+use Moo;
+has x =&gt; (is =&gt; 'ro');
+has y =&gt; (is =&gt; 'ro');
+sub afficher { my $s = shift; "($s-&gt;{x}, $s-&gt;{y})" }
+1;</code></pre></figure></details></div>

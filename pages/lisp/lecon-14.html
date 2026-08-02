@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Programmation symbolique : eval et apply — Leçon 14 · Cours Lisp &amp; Scheme — Syntaxe</title>
+    <meta name="description" content="Le cœur de l'interpréteur Lisp : eval qui évalue une donnée comme du code, apply qui déballe une liste en arguments, la boucle REPL read-eval-print, construire du code puis l'exécuter, et le danger de eval." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="lisp" data-lesson="lecon-14.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Lisp</a></li>
+            <li aria-current="page">Leçon 14</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin — Leçon 14</p>
+              <h1 class="lesson-header__title">Programmation symbolique&nbsp;: eval et apply</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 8</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>utiliser <strong>eval</strong> pour évaluer une donnée comme du code&nbsp;;</li>
+                  <li>utiliser <strong>apply</strong> pour déballer une liste en arguments&nbsp;;</li>
+                  <li>construire du code avec la quasiquote, puis l'<strong>exécuter</strong>&nbsp;;</li>
+                  <li>comprendre la boucle <strong>REPL</strong> et pourquoi <code>eval</code> est dangereux.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Depuis la leçon 8, une idée te suit&nbsp;: en Lisp, le <strong>code est une donnée</strong>. Une expression comme <code>(+ 1 2)</code> est d'abord une simple liste de trois éléments. Jusqu'ici, les macros exploitaient cette idée <em>avant</em> l'exécution. Cette leçon franchit le dernier pas&nbsp;: <strong>évaluer une donnée comme du code, pendant l'exécution</strong>. Deux fonctions incarnent ce pouvoir&nbsp;: <code>eval</code> et <code>apply</code>. Ce sont les deux rouages qui, ensemble, forment le cœur de tout interpréteur Lisp — celui-là même que tu écriras au prochain projet.</p>
+
+<h2>eval&nbsp;: évaluer une donnée comme du code</h2>
+<p>Une liste citée avec <code>'</code> reste <strong>inerte</strong>&nbsp;: c'est de la donnée. La fonction <code>eval</code> la prend et l'<strong>évalue</strong> comme si tu venais de la taper&nbsp;: la liste redevient du code vivant.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Deux destins pour une même liste. En haut, la liste citée quote plus 1 2 laissée telle quelle reste une liste inerte de trois éléments, une simple donnée. En bas, la même liste passée à eval est évaluée comme du code et produit la valeur 3. Message : quote fige une expression en donnée, eval la ranime en code.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une même liste, deux destins</text>
+    <rect class="d-box" x="24" y="46" width="150" height="30" rx="6" /><text class="d-tag" x="99" y="66" text-anchor="middle" font-size="11" font-family="monospace">'(+ 1 2)</text>
+    <line class="d-line" x1="174" y1="61" x2="256" y2="61" /><path class="d-line" d="M252 57 L258 61 L252 65" fill="none" /><text class="d-mut" x="215" y="53" text-anchor="middle" font-size="8">telle quelle</text>
+    <rect class="d-frame" x="262" y="46" width="180" height="30" rx="6" /><text class="d-mut" x="352" y="66" text-anchor="middle" font-size="10" font-family="monospace">(+ 1 2)</text>
+    <text class="d-mut" x="530" y="65" text-anchor="middle" font-size="8.5">liste inerte (donnée)</text>
+    <rect class="d-box" x="24" y="120" width="150" height="30" rx="6" /><text class="d-tag" x="99" y="140" text-anchor="middle" font-size="11" font-family="monospace">'(+ 1 2)</text>
+    <line class="d-line" x1="174" y1="135" x2="256" y2="135" /><path class="d-line" d="M252 131 L258 135 L252 139" fill="none" /><text class="d-mut" x="215" y="127" text-anchor="middle" font-size="8" font-family="monospace">eval</text>
+    <rect class="d-accent" x="262" y="120" width="120" height="30" rx="6" /><text class="d-text" x="322" y="140" text-anchor="middle" font-size="12" font-family="monospace">3</text>
+    <text class="d-mut" x="500" y="139" text-anchor="middle" font-size="8.5">valeur calculée (code)</text>
+  </svg>
+  <figcaption><code>quote</code> transforme une expression en donnée&nbsp;; <code>eval</code> fait le chemin inverse&nbsp;: il ranime la donnée en code et l'exécute.</figcaption>
+</figure>
+<figure class="code-block" data-file="eval.lisp"><pre><code class="language-lisp">'(+ 1 2)             ; (+ 1 2)   ← une liste, rien n'est calculé
+(eval '(+ 1 2))      ; 3         ← la liste est évaluée comme du code
+
+; On peut fabriquer la liste, puis l'évaluer
+(define expr (list '+ 10 (* 2 16)))
+expr                 ; (+ 10 32)
+(eval expr)          ; 42</code></pre></figure>
+<p>Le point remarquable&nbsp;: rien ne distingue une liste «&nbsp;donnée&nbsp;» d'une liste «&nbsp;programme&nbsp;». C'est la même structure. <code>eval</code> décide simplement de la <em>lire comme du code</em>.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Un détail selon les dialectes</p><p>En Common Lisp, <code>(eval expr)</code> suffit. En Scheme (R7RS), <code>eval</code> attend un <strong>second argument</strong>, l'environnement d'évaluation&nbsp;: <code>(eval expr (interaction-environment))</code>. L'idée reste la même&nbsp;; on garde ici la forme courte pour la lisibilité.</p></div></div>
+
+<h2>apply&nbsp;: déballer une liste en arguments</h2>
+<p>Parfois, tu as une fonction d'un côté et une <strong>liste d'arguments</strong> de l'autre, et tu veux les réunir. Écrire <code>(f liste)</code> passerait la liste comme <em>un seul</em> argument. <code>apply</code> «&nbsp;déballe&nbsp;» la liste&nbsp;: chaque élément devient un argument distinct.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="apply réunit une fonction et une liste d'arguments. À gauche, une boîte fonction plus et une boîte liste 1 2 3. Une flèche apply les combine. À droite, le résultat 6. En dessous, l'équivalence : apply de plus sur la liste 1 2 3 revient à écrire plus 1 2 3, la liste est éclatée en arguments séparés. Message : apply déballe une liste en arguments individuels.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">apply&nbsp;: une fonction + une liste d'arguments</text>
+    <rect class="d-box" x="40" y="48" width="120" height="30" rx="6" /><text class="d-tag" x="100" y="68" text-anchor="middle" font-size="11" font-family="monospace">+</text>
+    <text class="d-mut" x="100" y="92" text-anchor="middle" font-size="8">une fonction</text>
+    <rect class="d-box" x="40" y="104" width="120" height="30" rx="6" /><text class="d-tag" x="100" y="124" text-anchor="middle" font-size="11" font-family="monospace">'(1 2 3)</text>
+    <text class="d-mut" x="100" y="148" text-anchor="middle" font-size="8">une liste</text>
+    <line class="d-line" x1="168" y1="90" x2="300" y2="90" /><path class="d-line" d="M296 86 L302 90 L296 94" fill="none" /><text class="d-mut" x="234" y="82" text-anchor="middle" font-size="9" font-family="monospace">apply</text>
+    <rect class="d-accent" x="310" y="74" width="90" height="32" rx="6" /><text class="d-text" x="355" y="95" text-anchor="middle" font-size="12" font-family="monospace">6</text>
+    <rect class="d-frame" x="430" y="70" width="188" height="40" rx="6" /><text class="d-mut" x="524" y="87" text-anchor="middle" font-size="8.5">revient à écrire</text><text class="d-tag" x="524" y="102" text-anchor="middle" font-size="11" font-family="monospace">(+ 1 2 3)</text>
+    <text class="d-mut" x="320" y="164" text-anchor="middle" font-size="8.5">la liste est éclatée en arguments séparés</text>
+  </svg>
+  <figcaption><code>apply</code> est le pont entre une liste construite à l'exécution et un appel de fonction ordinaire.</figcaption>
+</figure>
+<figure class="code-block" data-file="apply.lisp"><pre><code class="language-lisp">(apply + '(1 2 3))          ; 6      ≡ (+ 1 2 3)
+(apply max '(4 9 2 7))      ; 9      ≡ (max 4 9 2 7)
+
+; des arguments fixes AVANT la liste finale
+(apply + 100 '(1 2 3))      ; 106    ≡ (+ 100 1 2 3)
+
+; utile quand la liste vient d'ailleurs (fichier, réseau, calcul)
+(define nombres (list 5 10 15))
+(apply + nombres)           ; 30</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">apply vs map</p><p>Ne confonds pas&nbsp;: <code>map</code> applique une fonction à <em>chaque</em> élément (une fois par élément), tandis qu'<code>apply</code> l'appelle <em>une seule fois</em> avec tous les éléments comme arguments. <code>(apply + '(1 2 3))</code> donne <code>6</code>&nbsp;; <code>(map (lambda (x) (+ x 1)) '(1 2 3))</code> donne <code>(2 3 4)</code>.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">La fonction comme valeur</p><p>En Common Lisp, on désigne la fonction avec <code>#'</code>&nbsp;: <code>(apply #'+ '(1 2 3))</code>. En Scheme, le nom seul suffit&nbsp;: <code>(apply + '(1 2 3))</code>. Dans les deux cas, la fonction est une <strong>valeur de première classe</strong> que l'on passe en argument (revois la leçon 6).</p></div></div>
+
+<h2>eval et apply, les deux faces de l'interpréteur</h2>
+<p>Ces deux fonctions ne sont pas de simples utilitaires&nbsp;: ce sont les <strong>deux rouages</strong> de l'évaluation Lisp. <code>eval</code> examine une expression et décide quoi en faire&nbsp;; quand c'est un appel de fonction, il évalue les arguments puis passe la main à <code>apply</code>, qui exécute la fonction sur ces arguments. Puis <code>apply</code> peut avoir besoin d'<code>eval</code> pour le corps de la fonction… et ainsi de suite. Ils s'appellent <strong>mutuellement</strong>.</p>
+<figure class="cheat-table">
+  <table>
+    <caption>Deux rôles complémentaires</caption>
+    <thead><tr><th scope="col">&nbsp;</th><th scope="col"><code>eval</code></th><th scope="col"><code>apply</code></th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Reçoit</th><td>une expression</td><td>une fonction + une liste d'arguments</td></tr>
+      <tr><th scope="row">Fait</th><td>l'interprète selon sa forme</td><td>exécute la fonction sur les arguments</td></tr>
+      <tr><th scope="row">Question</th><td>«&nbsp;que veut dire ce code&nbsp;?&nbsp;»</td><td>«&nbsp;comment appliquer cette fonction&nbsp;?&nbsp;»</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Construire du code, puis l'exécuter</h2>
+<p>La quasiquote (leçon 13) fabrique une expression&nbsp;; <code>eval</code> l'exécute. Ensemble, ils permettent de <strong>générer un programme à la volée</strong>, à partir de valeurs connues seulement à l'exécution.</p>
+<figure class="code-block" data-file="build-eval.lisp"><pre><code class="language-lisp">(define (appliquer-op op a b)
+  (eval `(,op ,a ,b)))       ; construit (op a b) puis l'évalue
+
+(appliquer-op '+ 3 4)        ; 7
+(appliquer-op '* 6 7)        ; 42
+
+; choisir un opérateur selon une donnée
+(define (calcul signe x y)
+  (eval `(,(if (eq? signe 'plus) '+ '-) ,x ,y)))
+(calcul 'plus 10 5)          ; 15
+(calcul 'moins 10 5)         ; 5</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention — presque toujours, une autre voie existe</p><p>Générer puis évaluer du code est puissant, mais rarement nécessaire. Ici, une <code>lambda</code> ou une table de fonctions ferait le même travail sans <code>eval</code>, plus vite et plus sûrement. Garde <code>eval</code> pour les vrais cas&nbsp;: interpréteur, REPL, DSL chargé depuis un fichier.</p></div></div>
+
+<h2>La boucle REPL</h2>
+<p>Tu l'utilises depuis la leçon 1&nbsp;: le <strong>REPL</strong> (Read-Eval-Print Loop). Son nom <em>est</em> son fonctionnement — une boucle de quatre étapes, dont <code>eval</code> est le cœur.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le cycle du REPL en quatre étapes reliées en boucle. Read lit le texte tapé et le transforme en s-expression. Eval évalue cette expression et produit une valeur. Print affiche la valeur. Une flèche de retour, Loop, ramène de Print vers Read pour recommencer. Message : le REPL répète sans fin lire, évaluer, afficher.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">REPL&nbsp;: Read → Eval → Print → Loop</text>
+    <rect class="d-box" x="30" y="60" width="150" height="52" rx="8" /><text class="d-tag" x="105" y="84" text-anchor="middle" font-size="11">READ</text><text class="d-mut" x="105" y="100" text-anchor="middle" font-size="8">texte → s-expression</text>
+    <rect class="d-accent" x="245" y="60" width="150" height="52" rx="8" /><text class="d-text" x="320" y="84" text-anchor="middle" font-size="11">EVAL</text><text class="d-mut" x="320" y="100" text-anchor="middle" font-size="8">évalue l'expression</text>
+    <rect class="d-box" x="460" y="60" width="150" height="52" rx="8" /><text class="d-tag" x="535" y="84" text-anchor="middle" font-size="11">PRINT</text><text class="d-mut" x="535" y="100" text-anchor="middle" font-size="8">affiche la valeur</text>
+    <line class="d-line" x1="180" y1="86" x2="237" y2="86" /><path class="d-line" d="M233 82 L239 86 L233 90" fill="none" />
+    <line class="d-line" x1="395" y1="86" x2="452" y2="86" /><path class="d-line" d="M448 82 L454 86 L448 90" fill="none" />
+    <path class="d-line" d="M535 112 L535 160 L105 160 L105 112" fill="none" /><path class="d-line" d="M101 116 L105 110 L109 116" fill="none" />
+    <text class="d-mut" x="320" y="176" text-anchor="middle" font-size="9">LOOP — on recommence à l'infini</text>
+  </svg>
+  <figcaption>Un REPL n'est qu'une boucle qui lit, évalue et affiche. Écrire ta propre boucle autour d'<code>eval</code>, c'est écrire ton propre interpréteur.</figcaption>
+</figure>
+<figure class="code-block" data-file="repl.lisp"><pre><code class="language-lisp">; un REPL minimal, en pseudo-Scheme
+(define (repl)
+  (display "&gt; ")
+  (let ((expr (read)))            ; READ  : lit une s-expression
+    (unless (eof-object? expr)
+      (let ((valeur (eval expr))) ; EVAL  : l'évalue
+        (write valeur) (newline)) ; PRINT : l'affiche
+      (repl))))                   ; LOOP  : on recommence</code></pre></figure>
+
+<h2>Le danger de <code>eval</code></h2>
+<p><code>eval</code> exécute <em>tout</em> ce qu'on lui donne. Si l'expression provient d'une source non maîtrisée (saisie utilisateur, réseau, fichier externe), c'est une <strong>porte ouverte</strong>&nbsp;: on parle d'<em>injection de code</em>.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ne jamais évaluer une entrée non fiable</p><p>Faire <code>(eval (read))</code> sur une donnée venue d'un utilisateur revient à lui laisser exécuter n'importe quel code sur ta machine — effacer des fichiers, lire des secrets… Pour évaluer une expression <em>arithmétique</em> venue de l'extérieur, écris un petit interpréteur restreint (le projet de la leçon 15&nbsp;!) plutôt que d'appeler <code>eval</code>.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le même piège dans tous les langages</p><p>Le danger d'<code>eval</code> n'a rien de propre à Lisp. JavaScript (<code>eval</code>), Python (<code>eval</code>/<code>exec</code>), PHP (<code>eval</code>) ont exactement le même. Les guides de sécurité (OWASP) rangent l'appel d'<code>eval</code> sur une entrée utilisateur parmi les fautes graves. La règle est universelle&nbsp;: <strong>données et code doivent rester séparés</strong> — et n'évalue jamais ce que tu ne contrôles pas.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le fait qu'<code>eval</code> et <code>apply</code> puissent s'écrire <em>en Lisp lui-même</em> a donné l'un des textes fondateurs de l'informatique&nbsp;: l'article de John McCarthy (1960) où Lisp se définit par sa propre fonction <code>eval</code>. C'est aussi le sommet de <em>Structure and Interpretation of Computer Programs</em> (SICP, chapitre 4)&nbsp;: l'<strong>évaluateur métacirculaire</strong>. Tu en construiras une version au prochain projet.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>eval, apply et la boucle REPL</caption>
+    <thead><tr><th scope="col">Forme</th><th scope="col">Rôle</th><th scope="col">Exemple → résultat</th></tr></thead>
+    <tbody>
+      <tr><td><code>(eval e)</code></td><td>évalue une donnée comme du code</td><td><code>(eval '(+ 1 2))</code> → <code>3</code></td></tr>
+      <tr><td><code>(apply f liste)</code></td><td>déballe la liste en arguments</td><td><code>(apply + '(1 2 3))</code> → <code>6</code></td></tr>
+      <tr><td><code>(apply f a liste)</code></td><td>args fixes puis liste finale</td><td><code>(apply + 100 '(1 2))</code> → <code>103</code></td></tr>
+      <tr><td><code>(eval `(,op ,a ,b))</code></td><td>construire puis évaluer</td><td><code>op='+</code> → <code>(+ a b)</code></td></tr>
+      <tr><td>REPL</td><td>read → eval → print → loop</td><td><code>(eval (read))</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>eval</code></dt><dd>Fonction qui prend une expression (une donnée) et l'<strong>évalue comme du code</strong>, produisant sa valeur.</dd>
+  <dt><code>apply</code></dt><dd>Fonction qui appelle une fonction en <strong>déballant</strong> une liste comme arguments&nbsp;: <code>(apply + '(1 2))</code> ≡ <code>(+ 1 2)</code>.</dd>
+  <dt>Programmation symbolique</dt><dd>Manipuler des programmes comme des données (symboles et listes), puis les évaluer.</dd>
+  <dt>REPL</dt><dd><em>Read-Eval-Print Loop</em>&nbsp;: la boucle qui lit une expression, l'évalue et affiche le résultat.</dd>
+  <dt>Environnement</dt><dd>La table qui associe chaque symbole à sa valeur au moment de l'évaluation.</dd>
+  <dt>Injection de code</dt><dd>Faille où une entrée non fiable est <strong>exécutée</strong> comme du code&nbsp;; le risque majeur d'<code>eval</code>.</dd>
+  <dt>Évaluateur métacirculaire</dt><dd>Un interpréteur d'un langage écrit <strong>dans ce même langage</strong> (Lisp en Lisp).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>eval</code> évalue une <strong>donnée comme du code</strong>&nbsp;; <code>quote</code> fait l'inverse (fige le code en donnée).</li>
+  <li><code>apply</code> <strong>déballe</strong> une liste en arguments&nbsp;: <code>(apply f '(a b))</code> ≡ <code>(f a b)</code>.</li>
+  <li>Ensemble, <code>eval</code> et <code>apply</code> forment le cœur de tout interpréteur&nbsp;; ils s'appellent mutuellement.</li>
+  <li>Le <strong>REPL</strong> = read + eval + print + loop&nbsp;; <code>eval</code> sur une entrée non fiable est une faille de sécurité.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la différence entre <code>'(+ 1 2)</code> et <code>(eval '(+ 1 2))</code>&nbsp;?</li><li>Pourquoi <code>(apply + '(1 2 3))</code> vaut-il <code>6</code> et non <code>(1 2 3)</code>&nbsp;?</li><li>Pourquoi ne faut-il jamais évaluer une entrée utilisateur avec <code>eval</code>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre '(+ 1 2) et (eval '(+ 1 2)) ?","a":["La première est une liste inerte (une donnée) ; eval l'évalue comme du code et renvoie 3","Aucune, les deux valent 3","La première vaut 3, la seconde vaut (+ 1 2)","Les deux sont des erreurs"],"correct":0,"explain":"'(+ 1 2) est figée par quote : c'est une liste de trois éléments, une donnée. eval prend cette donnée et l'interprète comme du code, ce qui déclenche l'addition et renvoie 3."},
+  {"q":"Pourquoi (apply + '(1 2 3)) vaut-il 6 ?","a":["apply DÉBALLE la liste : chaque élément devient un argument, donc l'appel équivaut à (+ 1 2 3)","apply additionne toujours 1, 2 et 3","apply renvoie la liste inchangée","apply applique + à chaque élément séparément"],"correct":0,"explain":"apply prend une fonction et une liste, puis appelle la fonction avec les éléments de la liste comme arguments distincts. (apply + '(1 2 3)) revient donc exactement à écrire (+ 1 2 3), soit 6."},
+  {"q":"Pourquoi ne faut-il jamais faire (eval (read)) sur une entrée utilisateur ?","a":["eval exécute tout le code fourni : une entrée malveillante peut effacer des fichiers ou voler des données (injection de code)","Parce que read est trop lent","Parce que eval ne fonctionne pas sur du texte","Parce que cela consomme trop de mémoire"],"correct":0,"explain":"eval ranime n'importe quelle expression en code exécuté. Sur une donnée non maîtrisée, cela laisse l'attaquant exécuter du code arbitraire : c'est l'injection de code, une faille grave commune à tous les langages qui offrent eval."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["eval","(eval","(eval "],"placeholder":"la fonction qui évalue une donnée comme du code : (… '(+ 1 2)) → 3","hints":["Quatre lettres.","L'inverse de quote.","eval"],"link":{"href":"lecon-14.html","label":"Revoir « eval »"}},
+  {"type":"text","accept":["apply","(apply","(apply "],"placeholder":"la fonction qui déballe une liste en arguments : (… + '(1 2 3)) → 6","hints":["Cinq lettres.","(????? f liste).","apply"],"link":{"href":"lecon-14.html","label":"Revoir « apply »"}},
+  {"type":"text","accept":["REPL","repl","read-eval-print","read eval print"],"placeholder":"le nom de la boucle read-eval-print : le …","hints":["Un sigle de quatre lettres.","Read-Eval-Print-Loop.","REPL"],"link":{"href":"lecon-14.html","label":"Revoir « La boucle REPL »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Sans l'exécuter, dis ce que renvoie <code>(eval (list '* 6 7))</code>, puis vérifie.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(list '* 6 7)        ; (* 6 7)  ← une liste
+(eval (list '* 6 7)) ; 42       ← évaluée comme du code</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>somme-liste</code> qui additionne tous les nombres d'une liste, en une ligne, grâce à <code>apply</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define (somme-liste xs) (apply + xs))
+(somme-liste '(5 10 15))   ; 30</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>appliquer-op</code> qui reçoit un symbole d'opérateur et deux nombres, construit l'expression avec une quasiquote, puis l'évalue.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define (appliquer-op op a b)
+  (eval `(,op ,a ,b)))
+(appliquer-op '+ 3 4)   ; 7
+(appliquer-op '* 6 7)   ; 42</code></pre></figure><p>En pratique, préfère une table d'opérateurs à <code>eval</code>&nbsp;; ici, c'est pour l'entraînement.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-lisp.min.js" defer></script>
+  </body>
+</html>

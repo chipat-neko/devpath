@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mémoire : références faibles et fuites — Leçon 51 · Syntaxe</title>
+    <meta name="description" content="Maîtrise le ramasse-miettes de JavaScript, traque les fuites mémoire et exploite WeakMap, WeakSet, WeakRef et FinalizationRegistry comme un expert." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="javascript" data-lesson="lecon-51.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">JavaScript</a></li>
+            <li aria-current="page">Leçon 51</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 16 · Conception & qualité — Leçon 51</p>
+              <h1 class="lesson-header__title">Mémoire : références faibles et fuites</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 08 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer le critère d'<strong>atteignabilité</strong> du ramasse-miettes et pourquoi les cycles isolés sont collectés</li>
+                  <li>identifier et corriger les sources de fuites&nbsp;: globales oubliées, closures lourdes, écouteurs et timers non nettoyés, caches non bornés</li>
+                  <li>associer des métadonnées à un objet avec <code>WeakMap</code>/<code>WeakSet</code> sans empêcher sa libération</li>
+                  <li>manier <code>WeakRef</code> et <code>FinalizationRegistry</code> en connaissant leur non-déterminisme, et mesurer un tas avec les DevTools.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu connais déjà les closures, qui capturent leur environnement lexical, et tu utilises <code>Map</code> et <code>Set</code> au quotidien. Ces deux acquis sont précisément ceux qui causent — et qui résolvent — la majorité des fuites mémoire en JavaScript. Une closure ne se contente pas de capturer une valeur&nbsp;: elle maintient en vie tout l'objet référencé, parfois pour la durée de vie de l'application. Un cache en <code>Map</code> garde ses clés indéfiniment. Comprendre <em>quand</em> le moteur peut récupérer la mémoire transforme ces outils familiers en sources de bugs subtils ou en leviers de contrôle fin.</p>
+
+<p>Cette leçon part du modèle d'atteignabilité du ramasse-miettes (GC) pour aller jusqu'aux primitives expertes — <code>WeakMap</code>, <code>WeakSet</code>, <code>WeakRef</code>, <code>FinalizationRegistry</code> — et à la mesure réelle d'un tas dans les DevTools. À la fin, tu sauras lire un fragment de code et dire <em>pourquoi</em> tel objet ne sera jamais libéré.</p>
+
+<h2>Le GC raisonne en atteignabilité, pas en comptage</h2>
+
+<p>Le ramasse-miettes de V8 (et de tous les moteurs modernes) repose sur une idée unique&nbsp;: une valeur est conservée tant qu'elle reste <strong>atteignable</strong> depuis un ensemble de <em>racines</em> (les variables globales, les variables sur la pile d'appel en cours, les registres). À partir de ces racines, le moteur parcourt le graphe des références (algorithme <em>mark-and-sweep</em>)&nbsp;: tout ce qu'il atteint est marqué vivant, le reste est balayé.</p>
+
+<figure class="code-block" data-file="atteignabilite.js"><pre><code class="language-javascript">function build() {
+  const a = { nom: "a" };
+  const b = { nom: "b" };
+  a.lien = b;      // a référence b
+  b.lien = a;      // b référence a, formant un cycle
+  return null;     // on ne renvoie ni a ni b
+}
+
+build();
+// Après l'appel, a et b ne sont plus atteignables depuis aucune racine.
+// Le cycle (a vers b, b vers a) est ISOLÉ : il sera collecté
+// malgré un comptage de références non nul.</code></pre></figure>
+
+<p class="code-caption">Un cycle isolé est collecté&nbsp;: le critère n'est pas «&nbsp;personne ne me pointe&nbsp;» mais «&nbsp;aucune racine ne me trouve&nbsp;».</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 175" role="img" aria-label="Les racines du ramasse-miettes (globalThis, pile d'appel) atteignent les objets vivants, qui sont marqués. À droite, deux objets a et b forment un cycle mais aucune racine ne les atteint : ils sont balayés.">
+    <text class="d-label" x="24" y="22" font-size="13">Mark-and-sweep : atteignable = vivant</text>
+    <rect class="d-accent" x="24" y="44" width="120" height="30" rx="7" />
+    <text class="d-tag" x="84" y="63" text-anchor="middle" font-size="11">globalThis</text>
+    <rect class="d-accent" x="24" y="84" width="120" height="30" rx="7" />
+    <text class="d-tag" x="84" y="103" text-anchor="middle" font-size="11">pile d'appel</text>
+    <text class="d-mut" x="24" y="134" font-size="10">racines (GC roots)</text>
+    <line class="d-line" x1="144" y1="59" x2="224" y2="75" />
+    <line class="d-line" x1="144" y1="99" x2="224" y2="81" />
+    <rect class="d-box" x="224" y="62" width="70" height="30" rx="7" />
+    <text class="d-tag" x="259" y="82" text-anchor="middle" font-size="11">obj X</text>
+    <line class="d-line" x1="294" y1="77" x2="344" y2="77" />
+    <rect class="d-box" x="344" y="62" width="70" height="30" rx="7" />
+    <text class="d-tag" x="379" y="82" text-anchor="middle" font-size="11">obj Y</text>
+    <text class="d-mut" x="224" y="118" font-size="10">marqués (vivants)</text>
+    <rect class="d-frame" x="452" y="44" width="164" height="104" rx="10" />
+    <text class="d-mut" x="534" y="64" text-anchor="middle" font-size="10">cycle isolé</text>
+    <rect class="d-box" x="470" y="80" width="52" height="28" rx="6" />
+    <text class="d-tag" x="496" y="99" text-anchor="middle" font-size="12">a</text>
+    <rect class="d-box" x="546" y="80" width="52" height="28" rx="6" />
+    <text class="d-tag" x="572" y="99" text-anchor="middle" font-size="12">b</text>
+    <line class="d-line" x1="522" y1="88" x2="546" y2="88" />
+    <line class="d-line" x1="546" y1="100" x2="522" y2="100" />
+    <text class="d-mut" x="534" y="134" text-anchor="middle" font-size="10">aucune racine → balayé</text>
+  </svg>
+  <figcaption>Le moteur part des racines et marque tout ce qu'il atteint. Le cycle <code>a ↔ b</code>, coupé de toute racine, n'est jamais marqué&nbsp;: il est collecté malgré ses références mutuelles.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>L'ancien Internet Explorer 6 utilisait un comptage de références pour le DOM&nbsp;: un cycle entre un nœud DOM et un objet JS y fuyait pour de bon. Les moteurs actuels n'ont pas ce défaut. Si tu as une fuite, ce n'est pas un cycle&nbsp;: c'est une racine qui retient encore.</p></div></div>
+
+<h2>Une «&nbsp;fuite&nbsp;» = une référence vivante par erreur</h2>
+
+<p>En JavaScript géré, tu ne fuis pas en oubliant de libérer&nbsp;: tu fuis en <strong>gardant</strong> sans le vouloir un chemin depuis une racine. La mémoire grimpe parce que quelque chose, quelque part, tient encore l'objet. Les sources sont peu nombreuses et reconnaissables.</p>
+
+<figure class="code-block" data-file="sources.js"><pre><code class="language-javascript">// 1. Globale oubliée (oubli de const/let -> propriété de globalThis)
+function calcule() {
+  resultat = new Array(1_000_000); // FUITE : globale implicite, jamais libérée
+}
+
+// 2. Closure qui capture un gros objet
+function fabriqueLogger() {
+  const gros = new Array(1_000_000).fill("x"); // 8 Mo environ
+  return (msg) => console.log(msg.length); // capture TOUT l'environnement
+}
+const log = fabriqueLogger(); // 'gros' reste vivant tant que 'log' vit
+
+// 3. Écouteur jamais retiré
+const el = document.querySelector("#bouton");
+el.addEventListener("click", onClick); // sans removeEventListener -> retient onClick et son scope</code></pre></figure>
+
+<p class="code-caption">Trois racines involontaires&nbsp;: <code>globalThis</code>, la closure, le registre d'écouteurs du DOM.</p>
+
+<p>Le cas 2 mérite une nuance importante&nbsp;: une closure capture l'<em>environnement lexical</em>, pas seulement les variables qu'elle nomme. Même si <code>log</code> n'utilise jamais <code>gros</code>, V8 conserve souvent la variable si une <em>autre</em> closure du même scope l'utilise. La parade&nbsp;: isoler la donnée lourde hors du scope partagé, ou la mettre à <code>null</code> après usage.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un tableau de bord d'entreprise (React ou Vue) laissé ouvert toute la nuit sur un écran mural&nbsp;: chaque changement d'onglet monte un graphique temps réel avec un <code>setInterval</code> et un écouteur <code>resize</code>, mais l'ancien onglet n'est jamais nettoyé. Au matin, la page consomme plusieurs gigaoctets et le navigateur rame. Le coupable classique&nbsp;: des composants démontés dont les timers et écouteurs tournent toujours et retiennent leur scope. La correction tient en une discipline&nbsp;: nettoyer dans le crochet de démontage (la fonction renvoyée par <code>useEffect</code>, le <code>onUnmounted</code> de Vue, ou <code>disconnectedCallback</code> pour un Web Component).</p></div></div>
+
+<h2>Timers, intervals et nœuds DOM détachés</h2>
+
+<p>Un <code>setInterval</code> non arrêté est une racine permanente&nbsp;: le moteur garde sa callback (et son scope) vivante jusqu'au <code>clearInterval</code>. Idem pour un nœud DOM retiré du document mais encore référencé par du JS — il devient un <em>detached node</em>, invisible à l'écran mais bien présent en mémoire.</p>
+
+<figure class="code-block" data-file="cleanup.js"><pre><code class="language-javascript">class Widget {
+  constructor(el) {
+    this.el = el;
+    this.donnees = new Array(500_000); // état lourd
+    this.onResize = () => this.recalcule();
+    this.timer = setInterval(() => this.poll(), 1000);
+    window.addEventListener("resize", this.onResize);
+  }
+
+  // À APPELER quand le widget est détruit, sinon tout reste vivant
+  destroy() {
+    clearInterval(this.timer);                       // arrête la racine timer
+    window.removeEventListener("resize", this.onResize); // libère l'écouteur
+    this.el = null;                                  // lâche le nœud DOM
+    this.donnees = null;
+  }
+}</code></pre></figure>
+
+<p class="code-caption">La règle&nbsp;: tout ce qui s'<em>abonne</em> (timer, écouteur, observer) doit avoir un point de <em>désabonnement</em> symétrique.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Un <code>AbortController</code> nettoie en une fois. Passe <code>{ signal }</code> à chaque <code>addEventListener</code>, puis appelle <code>controller.abort()</code> à la destruction&nbsp;: tous les écouteurs liés au signal sont retirés d'un coup, sans garder de référence vers chaque handler.</p></div></div>
+
+<h2>WeakMap et WeakSet&nbsp;: des clés tenues faiblement</h2>
+
+<p>Voici le cœur de la leçon. Dans une <code>WeakMap</code>, les clés (obligatoirement des objets) sont référencées <strong>faiblement</strong>&nbsp;: leur présence dans la map n'empêche pas le GC de les collecter. Dès qu'une clé n'est plus atteignable <em>ailleurs</em>, le couple clé/valeur devient éligible à la collecte. C'est l'outil idéal pour attacher des métadonnées à un objet sans en prolonger la vie.</p>
+
+<figure class="code-block" data-file="weakmap-cache.js"><pre><code class="language-javascript">// Cache de résultats coûteux, indexé PAR objet
+const cache = new WeakMap();
+
+function analyser(noeud) {
+  if (cache.has(noeud)) return cache.get(noeud); // hit
+  const resultat = calculCouteux(noeud);
+  cache.set(noeud, resultat); // la clé 'noeud' reste faible
+  return resultat;
+}
+
+// Quand 'noeud' n'est plus utilisé nulle part ailleurs,
+// le moteur peut collecter noeud ET son entrée de cache.
+// Aucune éviction manuelle à coder : la mémoire se régule seule.</code></pre></figure>
+
+<p class="code-caption">Le même code avec une <code>Map</code> ordinaire retiendrait chaque <code>noeud</code> pour toujours&nbsp;: c'est exactement une fuite de cache.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Avec une Map, le lien vers la clé objet est fort : même quand le programme lâche l'objet, la Map le retient, ce qui fuit. Avec une WeakMap, le lien est faible : dès que le programme lâche l'objet, la clé et sa valeur sont collectées.">
+    <text class="d-label" x="24" y="22" font-size="13">Référence forte (Map) vs faible (WeakMap)</text>
+    <text class="d-mut" x="24" y="52" font-size="11">Map — clé tenue fort</text>
+    <rect class="d-accent" x="24" y="62" width="96" height="32" rx="7" />
+    <text class="d-tag" x="72" y="82" text-anchor="middle" font-size="11">map</text>
+    <line class="d-line" x1="120" y1="78" x2="182" y2="78" />
+    <rect class="d-box" x="182" y="62" width="96" height="32" rx="7" />
+    <text class="d-tag" x="230" y="82" text-anchor="middle" font-size="11">clé {obj}</text>
+    <text class="d-mut" x="300" y="76" font-size="11">le programme lâche l'objet</text>
+    <text class="d-tag" x="300" y="92" font-size="11">→ reste vivant : FUITE</text>
+    <text class="d-mut" x="24" y="150" font-size="11">WeakMap — clé tenue faible</text>
+    <rect class="d-accent" x="24" y="160" width="96" height="32" rx="7" />
+    <text class="d-tag" x="72" y="180" text-anchor="middle" font-size="11">weakmap</text>
+    <line class="d-line" x1="120" y1="176" x2="182" y2="176" stroke-dasharray="5 4" />
+    <rect class="d-box" x="182" y="160" width="96" height="32" rx="7" />
+    <text class="d-tag" x="230" y="180" text-anchor="middle" font-size="11">clé {obj}</text>
+    <text class="d-mut" x="300" y="174" font-size="11">le programme lâche l'objet</text>
+    <text class="d-tag" x="300" y="190" font-size="11">→ collectée avec sa valeur</text>
+  </svg>
+  <figcaption>Le lien plein retient la clé&nbsp;; le lien pointillé ne la retient pas. Une <code>WeakMap</code> laisse partir la clé (et sa valeur) dès que plus rien d'autre ne la référence.</figcaption>
+</figure>
+
+<p>Second usage canonique&nbsp;: les <strong>données privées</strong>. Avant les champs privés <code>#</code>, on stockait l'état interne d'une instance dans une <code>WeakMap</code> indexée par <code>this</code>. La donnée disparaît avec l'instance, sans la moindre fuite.</p>
+
+<figure class="code-block" data-file="prive.js"><pre><code class="language-javascript">const interne = new WeakMap();
+
+class Compte {
+  constructor(solde) {
+    interne.set(this, { solde }); // état non accessible de l'extérieur
+  }
+  deposer(n) {
+    interne.get(this).solde += n;
+  }
+  get solde() {
+    return interne.get(this).solde;
+  }
+}
+// Quand une instance Compte meurt, son entrée dans 'interne' part avec elle.</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p><code>WeakMap</code> et <code>WeakSet</code> ne sont <strong>pas itérables</strong>&nbsp;: pas de <code>.size</code>, pas de <code>keys()</code>, pas de boucle <code>for...of</code>. C'est volontaire&nbsp;: exposer le contenu rendrait observable le moment exact de la collecte, donc non déterministe d'une exécution à l'autre. Tu ne peux qu'interroger une clé précise avec <code>has</code>/<code>get</code>.</p></div></div>
+
+<h2>WeakRef et FinalizationRegistry&nbsp;: à manier avec parcimonie</h2>
+
+<p>Quand tu as besoin d'une référence faible vers <em>une seule</em> valeur (pas une clé de map), il existe <code>WeakRef</code>. Son <code>.deref()</code> renvoie l'objet… ou <code>undefined</code> s'il a été collecté entre-temps. <code>FinalizationRegistry</code>, lui, déclenche un rappel <em>après</em> qu'un objet a été collecté.</p>
+
+<figure class="code-block" data-file="weakref.js"><pre><code class="language-javascript">const registre = new FinalizationRegistry((cleNettoyage) => {
+  console.log(`objet ${cleNettoyage} collecté, on nettoie la ressource liée`);
+});
+
+function suivre(obj, id) {
+  const faible = new WeakRef(obj);
+  registre.register(obj, id); // 'id' (distinct de obj) sera passé au rappel
+
+  return () => {
+    const courant = faible.deref();
+    if (courant === undefined) {
+      console.log("déjà collecté"); // .deref() peut renvoyer undefined
+      return null;
+    }
+    return courant; // l'objet est encore vivant
+  };
+}</code></pre></figure>
+
+<p class="code-caption"><code>.deref()</code> n'a aucune garantie&nbsp;: il faut toujours tester son retour. La <em>held value</em> passée à <code>register</code> doit être distincte de la cible, sinon elle empêcherait la collecte.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le rappel d'un <code>FinalizationRegistry</code> n'est <strong>jamais garanti</strong>&nbsp;: il peut ne pas s'exécuter du tout (à la fermeture de la page, par exemple), s'exécuter bien plus tard, ou dans un ordre imprévisible. Ne t'en sers <em>jamais</em> pour libérer une ressource critique (fermer un fichier, un socket). Pour ça, garde un <code>close()</code>/<code>dispose()</code> explicite. Le registre n'est qu'un filet de sécurité opportuniste.</p></div></div>
+
+<p>En pratique, <code>WeakRef</code> et <code>FinalizationRegistry</code> sont rarement nécessaires. La spec elle-même recommande de les éviter&nbsp;: leur comportement dépend du planificateur du GC, donc varie entre moteurs et versions. Réserve-les à des caches sophistiqués ou à du pontage vers des ressources externes — et seulement après avoir mesuré qu'une <code>WeakMap</code> ne suffit pas.</p>
+
+<h2>Mesurer&nbsp;: les instantanés de tas (heap snapshots)</h2>
+
+<p>On ne corrige pas une fuite à l'intuition&nbsp;: on la mesure. Dans l'onglet <em>Memory</em> des DevTools, le protocole en trois temps est fiable&nbsp;: prends un snapshot, exécute le scénario suspect plusieurs fois (ouvrir/fermer un composant, naviguer en boucle), prends un second snapshot, puis compare.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 155" role="img" aria-label="Protocole en trois temps : prendre un premier instantané du tas, répéter N fois le scénario suspect, prendre un second instantané, puis comparer les deux ; ce qui grandit à chaque cycle est la fuite.">
+    <text class="d-label" x="24" y="22" font-size="13">Traquer une fuite : deux instantanés comparés</text>
+    <rect class="d-box" x="24" y="46" width="120" height="48" rx="8" />
+    <text class="d-tag" x="84" y="68" text-anchor="middle" font-size="11">Snapshot 1</text>
+    <text class="d-mut" x="84" y="84" text-anchor="middle" font-size="10">état de départ</text>
+    <line class="d-line" x1="144" y1="70" x2="190" y2="70" />
+    <rect class="d-accent" x="190" y="46" width="150" height="48" rx="8" />
+    <text class="d-tag" x="265" y="68" text-anchor="middle" font-size="11">scénario ×N</text>
+    <text class="d-mut" x="265" y="84" text-anchor="middle" font-size="10">ouvrir / fermer…</text>
+    <line class="d-line" x1="340" y1="70" x2="386" y2="70" />
+    <rect class="d-box" x="386" y="46" width="120" height="48" rx="8" />
+    <text class="d-tag" x="446" y="68" text-anchor="middle" font-size="11">Snapshot 2</text>
+    <text class="d-mut" x="446" y="84" text-anchor="middle" font-size="10">état d'arrivée</text>
+    <line class="d-line" x1="506" y1="70" x2="552" y2="70" />
+    <rect class="d-accent" x="552" y="46" width="64" height="48" rx="8" />
+    <text class="d-tag" x="584" y="68" text-anchor="middle" font-size="12">Δ</text>
+    <text class="d-mut" x="584" y="84" text-anchor="middle" font-size="10">compare</text>
+    <text class="d-mut" x="24" y="126" font-size="11">Ce qui grandit à chaque cycle (delta d'instances positif) est le coupable.</text>
+  </svg>
+  <figcaption>La fuite se lit dans le <em>delta</em>&nbsp;: en mode <em>Comparison</em>, on trie par «&nbsp;# Delta&nbsp;» et on suit la classe dont le nombre d'instances ne redescend jamais.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="scenario-test.js"><pre><code class="language-javascript">// Scénario à répéter entre deux snapshots pour révéler une fuite :
+async function cycleVie() {
+  for (let i = 0; i &lt; 20; i++) {
+    const w = new Widget(document.createElement("div"));
+    await new Promise((r) => setTimeout(r, 10));
+    // OUBLI VOLONTAIRE de w.destroy() -> les 20 Widget restent en mémoire
+  }
+}
+// Dans DevTools : Memory > comparaison "All objects" entre snap 1 et snap 2.
+// Filtre par classe (Widget) : un delta de +20 instances trahit la fuite.</code></pre></figure>
+
+<p class="code-caption">Compare les snapshots en mode <em>Comparison</em>&nbsp;: ce qui <strong>grandit</strong> à chaque cycle est ton coupable.</p>
+
+<p>Dans la vue d'un snapshot, deux colonnes guident l'analyse&nbsp;: <em>Shallow size</em> (la taille propre de l'objet) et <em>Retained size</em> (tout ce qui serait libéré si cet objet disparaissait). Un objet à faible <em>shallow</em> mais énorme <em>retained</em> est souvent la tête d'une chaîne de fuite. Le panneau <em>Retainers</em> affiche alors le chemin exact depuis une racine GC jusqu'à l'objet&nbsp;: tu y lis littéralement quelle variable le tient encore vivant. Le filtre prédéfini <em>Detached</em> isole en un clic les nœuds DOM détachés.</p>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un cache en <code>Map</code> qui ne fait que grossir. <code>map.set(cle, val)</code> dans une fonction appelée souvent, sans aucune éviction, est la fuite la plus courante en production. Si les clés sont des objets dont tu veux suivre la vie, passe à <code>WeakMap</code>. Sinon, borne le cache (taille max + éviction LRU, ou TTL).</p></div></div>
+
+<p>Trois autres erreurs récurrentes&nbsp;: oublier <code>removeEventListener</code> quand un composant est détruit (l'écouteur retient tout son scope, y compris le composant)&nbsp;; laisser un <code>setInterval</code> tourner après le démontage (<code>clearInterval</code> manquant)&nbsp;; et croire que <code>new WeakRef(obj)</code> ou <code>obj = null</code> libère la mémoire <em>immédiatement</em> — le GC décide seul de son moment, tu ne fais que <em>permettre</em> la collecte.</p>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le GC de V8 est <strong>générationnel</strong>&nbsp;: la plupart des objets meurent jeunes (hypothèse générationnelle), donc V8 sépare un <em>young generation</em> collecté très souvent et bon marché (<em>Scavenge</em>) d'un <em>old generation</em> collecté rarement par un balayage majeur incrémental et concurrent. Comprendre cette structure éclaire pourquoi allouer beaucoup d'objets éphémères reste peu coûteux, mais retenir longtemps de gros objets pèse lourd. Explore aussi l'allocation de la <em>large object space</em> et le profilage mémoire d'une page complète via l'<em>Allocation instrumentation on timeline</em> des DevTools, qui colore les allocations non libérées.</p></div></div>
+
+<h2>Antisèche&nbsp;: garder la mémoire sous contrôle</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo : outil, rôle, à retenir</caption>
+    <thead><tr><th>Outil</th><th>Rôle</th><th>À retenir</th></tr></thead>
+    <tbody>
+      <tr><td><code>WeakMap</code></td><td>métadonnées / privé par objet</td><td>clés objets, faibles, non itérable</td></tr>
+      <tr><td><code>WeakSet</code></td><td>marquer des objets («&nbsp;déjà vu&nbsp;»)</td><td>objets seulement, faibles, non itérable</td></tr>
+      <tr><td><code>WeakRef.deref()</code></td><td>référence faible vers 1 objet</td><td>peut renvoyer <code>undefined</code> — toujours tester</td></tr>
+      <tr><td><code>FinalizationRegistry</code></td><td>rappel après collecte</td><td>jamais garanti — pas pour une ressource critique</td></tr>
+      <tr><td><code>AbortController</code></td><td>désabonner en une fois</td><td><code>{ signal }</code> puis <code>abort()</code></td></tr>
+      <tr><td><code>clearInterval</code> / <code>clearTimeout</code></td><td>arrêter un timer</td><td>garder l'id, nettoyer au démontage</td></tr>
+      <tr><td>heap snapshot</td><td>mesurer une fuite</td><td>comparer 2 instantanés, colonne <em>Retained</em></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Atteignabilité (reachability)</dt>
+  <dd>Critère du ramasse-miettes&nbsp;: une valeur est conservée tant qu'un chemin de références la relie à une racine. Ce qui n'est plus atteignable est libéré, cycles isolés compris.</dd>
+  <dt>Racine (GC root)</dt>
+  <dd>Point de départ du parcours du GC&nbsp;: variables globales, variables de la pile d'appel en cours, registres. Tout ce qui en descend est marqué vivant.</dd>
+  <dt>Fuite mémoire</dt>
+  <dd>En JavaScript, une référence vivante par erreur&nbsp;: un objet reste atteignable alors qu'il ne sert plus (globale oubliée, closure lourde, écouteur ou timer non retiré, cache non borné).</dd>
+  <dt>Référence faible</dt>
+  <dd>Lien qui n'empêche pas la collecte de sa cible. Les clés d'une <code>WeakMap</code>/<code>WeakSet</code> et la cible d'un <code>WeakRef</code> sont tenues faiblement.</dd>
+  <dt><code>WeakMap</code> / <code>WeakSet</code></dt>
+  <dd>Collections à clés (ou éléments) objets tenus faiblement et <strong>non itérables</strong>&nbsp;: parfaites pour attacher des données à un objet sans prolonger sa vie.</dd>
+  <dt><code>WeakRef</code> / <code>FinalizationRegistry</code></dt>
+  <dd>Référence faible vers un objet (<code>.deref()</code> peut rendre <code>undefined</code>) et rappel déclenché après collecte. Non déterministes&nbsp;: à éviter pour toute ressource critique.</dd>
+  <dt>Nœud détaché (detached node)</dt>
+  <dd>Élément DOM retiré du document mais encore référencé par du JavaScript&nbsp;: invisible à l'écran, toujours en mémoire. Le filtre <em>Detached</em> des DevTools les isole.</dd>
+  <dt>Retained size</dt>
+  <dd>Mémoire qui serait libérée si un objet disparaissait (lui plus tout ce qu'il retient seul). Un faible <em>shallow</em> mais gros <em>retained</em> signale la tête d'une chaîne de fuite.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+  <li>Le GC libère ce qui n'est plus <strong>atteignable</strong> depuis les racines&nbsp;; les cycles isolés sont collectés.</li>
+  <li>Une fuite = une référence vivante par erreur&nbsp;: globale oubliée, closure lourde, écouteur/timer non retiré, cache non borné, nœud DOM détaché.</li>
+  <li><code>WeakMap</code>/<code>WeakSet</code> tiennent leurs clés faiblement&nbsp;: parfaits pour métadonnées et données privées, non itérables par conception.</li>
+  <li><code>WeakRef</code>/<code>FinalizationRegistry</code> sont non déterministes&nbsp;: jamais pour une ressource critique, rarement nécessaires.</li>
+  <li>On corrige par la mesure&nbsp;: deux heap snapshots comparés, colonne <em>Retained size</em> et panneau <em>Retainers</em>.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Un objet <code>a</code> et un objet <code>b</code> se référencent mutuellement mais ne sont atteignables depuis aucune racine. Seront-ils collectés&nbsp;? Pourquoi&nbsp;?</li><li>Pourquoi remplacer une <code>Map</code> par une <code>WeakMap</code> peut-il supprimer une fuite de cache, et dans quel cas est-ce impossible&nbsp;?</li><li>Pourquoi ne faut-il jamais s'appuyer sur <code>FinalizationRegistry</code> pour fermer un socket réseau&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Un objet a et un objet b se référencent mutuellement mais ne sont atteignables depuis aucune racine. Seront-ils collectés ?","a":["Oui : le ramasse-miettes raisonne par accessibilité (mark-and-sweep), pas par comptage de références ; un cycle inatteignable depuis les racines est collecté","Non, le cycle empêche la collecte","Seul a est collecté","Jamais, c'est une fuite définitive"],"correct":0,"explain":"Un GC moderne part des racines (variables vivantes, pile...) et marque tout ce qui est atteignable. Ce qui ne l'est pas est libéré, cycles compris : deux objets qui ne se référencent qu'entre eux, sans lien vers une racine, sont récupérés."},
+  {"q":"Pourquoi remplacer une Map par une WeakMap peut-il supprimer une fuite de cache, et dans quel cas est-ce impossible ?","a":["Une WeakMap tient ses clés par référence faible : si plus rien d'autre ne référence la clé, l'entrée est collectée, évitant l'accumulation. Impossible si les clés sont des primitives (WeakMap n'accepte que des objets) ou s'il faut énumérer le cache","WeakMap empêche toute collecte","WeakMap accepte les clés primitives","Une Map ne fuit jamais"],"correct":0,"explain":"Avec une Map ordinaire, garder une clé-objet dans le cache l'empêche d'être collectée (fuite). La WeakMap n'entrave pas la collecte de ses clés. Mais elle exige des clés objets et n'est pas énumérable : ces cas l'excluent."},
+  {"q":"Pourquoi ne faut-il jamais s'appuyer sur FinalizationRegistry pour fermer un socket réseau ?","a":["Parce que les rappels de finalisation ne sont pas garantis : ils peuvent ne jamais s'exécuter, à un moment imprévisible. Une ressource critique doit être fermée explicitement (close(), try/finally)","Parce que FinalizationRegistry est déprécié","Parce qu'il s'exécute trop tôt","Parce qu'il bloque le GC"],"correct":0,"explain":"La finalisation dépend du bon vouloir du GC : aucune garantie d'exécution ni de délai. Pour libérer une ressource importante (socket, fichier, verrou), on la ferme de façon déterministe, sans compter sur le ramasse-miettes."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["clearInterval","clearInterval()","clearinterval"],"placeholder":"la fonction pour arrêter le setInterval et libérer le gros tableau retenu : …","hints":["setInterval renvoie un identifiant à conserver.","Tant qu'il tourne, sa closure retient le tableau.","clear??????(id)"],"link":{"href":"lecon-09.html","label":"Revoir « Les fuites par closure »"}},
+  {"type":"text","accept":["WeakMap","une WeakMap","weakmap"],"placeholder":"la structure à clés FAIBLES pour mémoriser par objet sans empêcher sa collecte : …","hints":["Comme Map, mais les clés (objets) n'empêchent pas le ramasse-miettes.","Idéale pour associer des métadonnées à des objets.","Weak???"],"link":{"href":"lecon-09.html","label":"Revoir « WeakMap »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Le code ci-dessous fuit. Identifie la cause et corrige-la pour que le gros tableau puisse être libéré une fois l'abonnement terminé.</p>
+<figure class="code-block" data-file="exo1.js"><pre><code class="language-javascript">function demarrer() {
+  const donnees = new Array(1_000_000).fill(0);
+  setInterval(() => {
+    console.log(donnees.length);
+  }, 1000);
+}
+demarrer();</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution1.js"><pre><code class="language-javascript">// Le setInterval n'est jamais arrêté : sa callback capture 'donnees',
+// qui reste donc vivant pour toujours. On garde l'identifiant et on l'arrête.
+function demarrer() {
+  const donnees = new Array(1_000_000).fill(0);
+  let tics = 0;
+
+  const id = setInterval(() => {
+    console.log(donnees.length);
+    if (++tics >= 5) {
+      clearInterval(id); // libère la callback -> 'donnees' devient collectable
+    }
+  }, 1000);
+
+  return () => clearInterval(id); // permet aussi un arrêt externe
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un <code>memoise(fn)</code> qui mémorise le résultat de <code>fn(obj)</code> par objet, <strong>sans</strong> empêcher la collecte des objets passés. La fonction prend toujours un objet en argument.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution2.js"><pre><code class="language-javascript">function memoise(fn) {
+  const cache = new WeakMap(); // clés faibles : pas de rétention
+
+  return function (obj) {
+    if (cache.has(obj)) {
+      return cache.get(obj); // résultat déjà calculé pour cet objet
+    }
+    const valeur = fn(obj);
+    cache.set(obj, valeur); // 'obj' reste libérable s'il meurt ailleurs
+    return valeur;
+  };
+}
+
+// Démonstration
+const lourd = memoise((noeud) => noeud.id.repeat(1000));
+let n = { id: "x" };
+lourd(n); // calcule
+lourd(n); // hit
+n = null; // l'entrée du cache devient collectable avec l'objet</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sans code obligatoire&nbsp;: liste <strong>trois</strong> causes distinctes de fuite mémoire en JavaScript et, pour chacune, la correction précise (nomme l'API ou la structure utilisée). Puis illustre l'une d'elles par un avant/après en code.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution3.js"><pre><code class="language-javascript">// CAUSE 1 — Écouteur non retiré sur un composant détruit.
+//   Correction : removeEventListener (ou AbortController + { signal }).
+// CAUSE 2 — Cache en Map qui grossit sans borne.
+//   Correction : WeakMap (clés objets) OU borne + éviction LRU/TTL.
+// CAUSE 3 — Timer non arrêté (setInterval/setTimeout).
+//   Correction : clearInterval / clearTimeout au démontage.
+
+// --- Illustration de la CAUSE 1 ---
+
+// AVANT (fuit : l'écouteur retient le scope et le composant)
+function monterAvant(el, composant) {
+  el.addEventListener("click", () => composant.handle());
+}
+
+// APRÈS (nettoyable d'un coup via le signal)
+function monterApres(el, composant) {
+  const ctrl = new AbortController();
+  el.addEventListener("click", () => composant.handle(), {
+    signal: ctrl.signal,
+  });
+  return () => ctrl.abort(); // retire l'écouteur, libère composant
+}</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

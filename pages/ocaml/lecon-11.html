@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Types avancés : GADT et variants polymorphes — Leçon 11 · Cours OCaml — Syntaxe</title>
+    <meta name="description" content="Le système de types d'OCaml au-delà des bases : les variants polymorphes (réutilisables) et les GADT (types algébriques généralisés) pour des invariants au niveau du type." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="ocaml" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">OCaml</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · OCaml en profondeur — Leçon 11</p>
+              <h1 class="lesson-header__title">Types avancés : GADT et variants polymorphes</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 10</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>utiliser les <strong>variants polymorphes</strong> (<code>`Tag</code>)&nbsp;;</li>
+                  <li>comprendre les <strong>GADT</strong> et leur intérêt&nbsp;;</li>
+                  <li>encoder des invariants dans les types&nbsp;;</li>
+                  <li>saisir la puissance du typage OCaml.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le système de types d'OCaml est l'un des plus puissants qui soient&nbsp;: il <em>infère</em> les types tout seul, et il sait exprimer des garanties que peu de langages atteignent. Au-delà des variants et du pattern matching que tu connais, deux mécanismes avancés repoussent encore les limites&nbsp;: les <strong>variants polymorphes</strong> (souples et réutilisables) et les <strong>GADT</strong> (types algébriques généralisés), qui permettent d'encoder des invariants <em>dans le type lui-même</em>. Cette leçon t'ouvre ces portes — un aperçu de ce qui fait la réputation d'OCaml.</p>
+
+<h2>Rappel&nbsp;: les variants ordinaires</h2>
+<p>Un variant ordinaire définit un type fermé par une liste de constructeurs. C'est la base de la modélisation en OCaml.</p>
+<figure class="code-block" data-file="variant.ml"><pre><code class="language-ocaml">type couleur = Rouge | Vert | Bleu
+
+type forme =
+  | Cercle of float
+  | Rectangle of float * float</code></pre></figure>
+<p>Pratique, mais chaque constructeur appartient à <em>un seul</em> type. Si deux types ont un cas <code>Rouge</code>, ce sont deux constructeurs distincts. Les variants polymorphes lèvent cette contrainte.</p>
+
+<h2>Les variants polymorphes</h2>
+<p>Un <strong>variant polymorphe</strong> utilise un tag précédé d'un <strong>accent grave</strong> (<code>`</code>). Il n'a pas besoin d'être déclaré dans un type fermé&nbsp;: on peut l'utiliser à la volée, et le <em>partager</em> entre plusieurs types.</p>
+<figure class="code-block" data-file="poly-variant.ml"><pre><code class="language-ocaml">(* Pas de déclaration préalable : on utilise les tags directement *)
+let rouge = `Rouge
+let nombre = `Int 42
+
+(* Une fonction qui accepte plusieurs tags *)
+let decrire c =
+  match c with
+  | `Rouge -&gt; "rouge"
+  | `Vert -&gt; "vert"
+  | `Bleu -&gt; "bleu"
+
+(* Le type inféré est [&gt; `Bleu | `Rouge | `Vert ] : ouvert *)</code></pre></figure>
+<p>Les variants polymorphes brillent quand plusieurs modules partagent des étiquettes communes, ou pour des types «&nbsp;ouverts&nbsp;» qu'on étend. Leur souplesse a un coût&nbsp;: des messages d'erreur plus complexes&nbsp;; on les réserve donc aux cas où leur réutilisabilité est vraiment utile.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Variant ordinaire fermé comparé à un variant polymorphe ouvert. À gauche, le type couleur est déclaré avec les constructeurs Rouge, Vert et Bleu, qui appartiennent à ce seul type. À droite, le tag accent-grave Rouge s'utilise sans déclaration préalable et se partage entre plusieurs types ; le type inféré est ouvert.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12.5">Variant fermé contre variant polymorphe</text>
+    <rect class="d-box" x="24" y="36" width="278" height="120" rx="8" />
+    <text class="d-tag" x="163" y="56" text-anchor="middle" font-size="11">variant ordinaire (fermé)</text>
+    <text class="d-text" x="40" y="82" font-size="10.5">type couleur =</text>
+    <text class="d-text" x="54" y="102" font-size="10.5">Rouge | Vert | Bleu</text>
+    <text class="d-mut" x="163" y="128" text-anchor="middle" font-size="9.5">chaque constructeur appartient</text>
+    <text class="d-mut" x="163" y="144" text-anchor="middle" font-size="9.5">à CE type, et à lui seul</text>
+    <rect class="d-accent" x="338" y="36" width="278" height="120" rx="8" />
+    <text class="d-tag" x="477" y="56" text-anchor="middle" font-size="11">variant polymorphe (ouvert)</text>
+    <text class="d-text" x="354" y="82" font-size="10.5">let x = `Rouge</text>
+    <text class="d-text" x="354" y="102" font-size="10">type inféré : [&gt; `Rouge ]</text>
+    <text class="d-mut" x="477" y="128" text-anchor="middle" font-size="9.5">le tag `Rouge se partage entre</text>
+    <text class="d-mut" x="477" y="144" text-anchor="middle" font-size="9.5">types, sans déclaration préalable</text>
+  </svg>
+  <figcaption>L'accent grave (<code>`</code>) marque un tag <strong>ouvert</strong>&#160;: réutilisable et non déclaré. Un constructeur ordinaire, lui, est <strong>lié à son type</strong> — plus sûr, moins souple.</figcaption>
+</figure>
+
+<h2>Le problème que résolvent les GADT</h2>
+<p>Imagine un petit langage d'expressions&nbsp;: des entiers, des booléens, des additions. Avec un variant ordinaire, rien n'empêche d'écrire une expression <em>mal typée</em>, comme «&nbsp;additionner un booléen&nbsp;». L'évaluateur doit alors gérer des cas absurdes à l'exécution.</p>
+<figure class="code-block" data-file="probleme.ml"><pre><code class="language-ocaml">(* Variant ordinaire : on PEUT construire des expressions absurdes *)
+type expr =
+  | Int of int
+  | Bool of bool
+  | Add of expr * expr   (* rien n'interdit Add(Bool true, Int 1) ! *)</code></pre></figure>
+
+<h2>Les GADT&nbsp;: des invariants dans le type</h2>
+<p>Un <strong>GADT</strong> (Generalized Algebraic Data Type) permet à chaque constructeur de préciser le type de son résultat. On peut ainsi <strong>paramétrer</strong> l'expression par le type qu'elle produit — et rendre les expressions mal typées <em>impossibles à construire</em>.</p>
+<figure class="code-block" data-file="gadt.ml"><pre><code class="language-ocaml">type _ expr =
+  | Int  : int -&gt; int expr
+  | Bool : bool -&gt; bool expr
+  | Add  : int expr * int expr -&gt; int expr
+  | If   : bool expr * 'a expr * 'a expr -&gt; 'a expr
+
+(* L'évaluateur renvoie le BON type, garanti par le compilateur *)
+let rec eval : type a. a expr -&gt; a = function
+  | Int n -&gt; n
+  | Bool b -&gt; b
+  | Add (x, y) -&gt; eval x + eval y
+  | If (c, t, e) -&gt; if eval c then eval t else eval e</code></pre></figure>
+<p>La magie&nbsp;: <code>Add</code> n'accepte que des <code>int expr</code>. Écrire <code>Add (Bool true, Int 1)</code> est désormais <strong>rejeté à la compilation</strong>. Et <code>eval</code> renvoie un <code>int</code> pour une <code>int expr</code>, un <code>bool</code> pour une <code>bool expr</code> — la justesse de typage est garantie par le compilateur, pas par des vérifications à l'exécution.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le GADT rend les expressions mal typées impossibles à construire. Le constructeur Add a le type int expr fois int expr vers int expr. À gauche, Add appliqué à deux entiers compile et produit une int expr. À droite, Add appliqué à un booléen et un entier est rejeté à la compilation.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12.5">Le GADT rend l'expression mal typée impossible</text>
+    <text class="d-text" x="320" y="46" text-anchor="middle" font-size="10.5">Add : int expr * int expr → int expr</text>
+    <rect class="d-accent" x="34" y="62" width="262" height="66" rx="8" />
+    <text class="d-text" x="165" y="90" text-anchor="middle" font-size="11">Add (Int 1, Int 2)</text>
+    <text class="d-mut" x="165" y="112" text-anchor="middle" font-size="10">compile → int expr</text>
+    <rect class="d-frame" x="344" y="62" width="262" height="66" rx="8" stroke-dasharray="5 3" />
+    <text class="d-text" x="475" y="90" text-anchor="middle" font-size="11">Add (Bool true, Int 1)</text>
+    <text class="d-mut" x="475" y="112" text-anchor="middle" font-size="10">rejeté à la compilation</text>
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="10">« make illegal states unrepresentable » : l'erreur ne compile pas.</text>
+  </svg>
+  <figcaption>Parce que <code>Add</code> exige deux <code>int expr</code>, l'expression absurde n'est pas «&nbsp;attrapée à l'exécution&nbsp;»&#160;: elle est <strong>impossible à écrire</strong>. Le type porte l'invariant.</figcaption>
+</figure>
+
+<h2>Pourquoi c'est puissant</h2>
+<p>Les GADT permettent d'<strong>encoder des règles dans les types</strong>&nbsp;: un état impossible devient inexprimable. C'est l'idéal du «&nbsp;<em>make illegal states unrepresentable</em>&nbsp;» poussé à son extrême. On les emploie pour des interpréteurs typés, des encodeurs/décodeurs sûrs, des machines à états où chaque transition est vérifiée à la compilation. C'est l'une des raisons pour lesquelles OCaml est prisé là où la <em>correction</em> compte (compilateurs, finance, vérification).</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — des requêtes typées de bout en bout</p><p>Des bibliothèques de base de données (comme Caqti) et des DSL maison utilisent des GADT pour typer les requêtes&nbsp;: le type d'un <code>SELECT</code> encode exactement les colonnes renvoyées et leur type. Conséquence&nbsp;: impossible de lire un entier là où la base renvoie du texte, et une requête incohérente est refusée <em>avant</em> d'atteindre la production. La même idée sert aux machines à états d'un protocole réseau, où seules les transitions valides sont même exprimables.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c.7.7 1 1.5 1 2h6c0-.5.3-1.3 1-2a6 6 0 0 0-4-10Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — commence sans GADT</p><p>Modélise d'abord avec des variants ordinaires et du pattern matching&nbsp;: c'est lisible et suffisant dans l'immense majorité des cas. Ne passe aux GADT que si tu constates un <em>vrai</em> besoin de garantir un invariant au niveau du type — on reconnaît ce moment quand on se surprend à traiter des cas «&nbsp;impossibles&nbsp;» dans un <code>match</code> juste pour satisfaire le compilateur.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Atteindre les GADT trop tôt. Ce sont des outils <strong>avancés</strong>&nbsp;: pour la plupart des programmes, un variant ordinaire et du pattern matching suffisent amplement et restent plus lisibles. Les GADT (et leur annotation <code>type a. …</code> obligatoire sur les fonctions récursives polymorphes) ne se justifient que lorsqu'on a réellement besoin de garantir des invariants au niveau du type. N'alourdis pas un code simple avec de la machinerie de types dont il n'a pas besoin.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>OCaml possède un système de types parmi les plus expressifs du monde fonctionnel&nbsp;: au-delà des GADT, il offre les <strong>modules de première classe</strong>, les <strong>foncteurs</strong> (vus en leçon 8) et l'inférence de type complète. C'est cette richesse qui en fait le langage des <em>compilateurs</em> (le compilateur Rust a longtemps été écrit en OCaml, ainsi que de nombreux outils de preuve et de finance). Comprendre les GADT, c'est entrevoir pourquoi des équipes choisissent OCaml quand une erreur de logique coûte cher.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Types avancés : variants polymorphes et GADT</caption>
+    <thead><tr><th scope="col">Écriture</th><th scope="col">Rôle</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>`Tag</code></td><td>variant polymorphe (ouvert)</td><td><code>`Rouge</code>, <code>`Int 42</code></td></tr>
+      <tr><td><code>[&gt; … ]</code></td><td>type ouvert (au moins ces tags)</td><td><code>[&gt; `Rouge ]</code></td></tr>
+      <tr><td><code>[&lt; … ]</code></td><td>type borné (au plus ces tags)</td><td><code>[&lt; `A | `B ]</code></td></tr>
+      <tr><td><code>type _ t = …</code></td><td>déclarer un GADT</td><td><code>type _ expr</code></td></tr>
+      <tr><td><code>C : … -&gt; t</code></td><td>constructeur GADT typé</td><td><code>Int : int -&gt; int expr</code></td></tr>
+      <tr><td><code>type a. …</code></td><td>annotation polymorphe locale</td><td><code>let f : type a. a expr -&gt; a</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Variant (type somme)</dt><dd>Type défini par une liste de constructeurs alternatifs (<code>Cercle</code>, <code>Rectangle</code>…). Le pattern matching traite chaque cas.</dd>
+  <dt>Variant polymorphe</dt><dd>Tag préfixé d'un accent grave (<code>`Tag</code>), utilisable sans déclaration et partageable entre plusieurs types. Souple, mais aux erreurs plus verbeuses.</dd>
+  <dt>Type ouvert (<code>[&gt; … ]</code>)</dt><dd>Type de variant polymorphe qui accepte «&nbsp;au moins&nbsp;» les tags listés&#160;: il reste extensible par du code ultérieur.</dd>
+  <dt>GADT</dt><dd><em>Generalized Algebraic Data Type</em>&#160;: variant où chaque constructeur précise le <strong>type de son résultat</strong>, ce qui permet d'encoder des invariants dans le type.</dd>
+  <dt>Invariant</dt><dd>Propriété toujours vraie d'une valeur. Avec un GADT, on l'inscrit dans le type&#160;: le compilateur la garantit au lieu de la vérifier à l'exécution.</dd>
+  <dt>«&nbsp;Make illegal states unrepresentable&nbsp;»</dt><dd>Principe de conception&#160;: façonner ses types pour qu'un état invalide soit <strong>impossible à construire</strong>, plutôt que détecté après coup.</dd>
+  <dt>Inférence de type</dt><dd>Capacité du compilateur à déduire seul le type des expressions, sans annotations&#160;; les GADT récursifs demandent parfois une aide via <code>type a.</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>variants polymorphes</strong> (<code>`Tag</code>) sont ouverts et partageables, sans déclaration préalable (souples, mais plus délicats).</li>
+  <li>Un variant ordinaire laisse construire des valeurs «&nbsp;absurdes&nbsp;»&nbsp;; les <strong>GADT</strong> l'empêchent.</li>
+  <li>Un <strong>GADT</strong> précise le type de résultat de chaque constructeur&nbsp;: il encode des invariants dans le type.</li>
+  <li>On rend les <strong>états illégaux inexprimables</strong>&nbsp;; outil avancé, à réserver aux cas qui le justifient.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment reconnaît-on un variant polymorphe&nbsp;?</li><li>Que permet un GADT qu'un variant ordinaire ne permet pas&nbsp;?</li><li>Quand éviter les GADT&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Comment reconnaît-on un variant polymorphe en OCaml ?","a":["À l'accent grave devant le tag (par ex. `Rouge)","À sa déclaration obligatoire dans un type fermé","À la majuscule du constructeur uniquement","Il n'existe pas en OCaml"],"correct":0,"explain":"Le backtick (`Tag) marque un variant polymorphe : ouvert, réutilisable entre types, sans déclaration préalable."},
+  {"q":"Qu'apporte un GADT par rapport à un variant ordinaire ?","a":["Chaque constructeur précise son type de résultat, ce qui rend certains états impossibles à construire","Il est plus rapide à l'exécution","Il supprime le pattern matching","Il permet la mutation"],"correct":0,"explain":"En paramétrant l'expression par le type produit, on interdit à la compilation des valeurs absurdes (ex. additionner un booléen)."},
+  {"q":"Quand vaut-il mieux NE PAS utiliser de GADT ?","a":["Pour la plupart des programmes : un variant ordinaire suffit et reste plus lisible","Quand on veut garantir des invariants forts","Jamais : il faut toujours des GADT","Quand on écrit un compilateur"],"correct":0,"explain":"Les GADT sont avancés ; ils ne se justifient que lorsqu'on a réellement besoin d'invariants au niveau du type, sinon ils alourdissent inutilement."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["`","`Ok","backtick","accent grave"],"placeholder":"le caractère qui débute un variant POLYMORPHE (… Ok 1) : …","hints":["`Ok 1 (sans déclaration de type préalable).","L'accent grave.","Un backtick."],"link":{"href":"lecon-11.html","label":"Revoir « Les variants polymorphes »"}},
+  {"type":"text","accept":["sûreté de type","type safety","sécurité de type","surete de type","securite de type","sûreté","typage"],"placeholder":"ce que le GADT garantit en rejetant Add (Bool true, Int 1) à la compilation : la … de type","hints":["Add ne doit recevoir que des expressions entières.","Les types impossibles ne compilent même pas.","« … de type » (type safety)."],"link":{"href":"lecon-11.html","label":"Revoir « Les GADT »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une valeur de variant polymorphe représentant l'étiquette <code>Ok</code> portant l'entier 1.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let v = `Ok 1</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans le GADT <code>expr</code>, pourquoi <code>Add (Bool true, Int 1)</code> est-il rejeté&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que le constructeur <code>Add</code> a le type <code>int expr * int expr -&gt; int expr</code>&nbsp;: il n'accepte que des <code>int expr</code>. Or <code>Bool true</code> a le type <code>bool expr</code>. Le compilateur détecte l'incompatibilité et <strong>refuse de compiler</strong> — l'expression mal typée est tout simplement impossible à construire.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En une phrase, quel principe de conception les GADT poussent-ils à l'extrême&nbsp;?</p><details><summary>Voir une solution</summary><p>«&nbsp;Rendre les états illégaux inexprimables&nbsp;» (<em>make illegal states unrepresentable</em>)&nbsp;: en encodant des invariants directement dans le type, on fait en sorte que le compilateur rejette toute valeur qui violerait les règles, plutôt que de devoir les vérifier à l'exécution.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-ocaml.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La possession (ownership) — Leçon 05 · Rust · Syntaxe</title>
+    <meta name="description" content="La possession (ownership) en Rust : les 3 règles, le move, les traits Copy et Clone, et comment ce système garantit la sûreté mémoire sans ramasse-miettes." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="rust" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Rust</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Le système de possession — Leçon 05</p>
+              <h1 class="lesson-header__title">La possession (ownership)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 4 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer les <strong>3 règles de possession</strong> et le rôle de <code>drop</code> quand une valeur sort de portée&nbsp;;</li>
+                  <li>distinguer un <strong>move</strong> (types non <code>Copy</code>) d'une <strong>copie</strong> (trait <code>Copy</code>) et lire l'erreur du compilateur en cas d'usage-après-move&nbsp;;</li>
+                  <li>utiliser <code>clone()</code> à bon escient plutôt que par réflexe&nbsp;;</li>
+                  <li>comprendre comment la possession élimine fuites, <em>double-free</em> et <em>use-after-free</em> dès la compilation.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Voici <strong>le</strong> concept fondateur de Rust, celui qui rend tous les autres possibles : la <strong>possession</strong> (<em>ownership</em>). C'est lui qui permet à Rust de garantir la sûreté mémoire <strong>à la compilation</strong>, sans ramasse-miettes ni libération manuelle. Si tu viens du C, tu vas reconnaître les problèmes ; si tu viens d'un langage à GC, tu vas découvrir une autre façon de penser la mémoire.</p>
+<p>Le compilateur va parfois refuser ton code au début : c'est normal, et c'est même le but. Ses messages sont réputés pédagogiques. Apprends à les lire plutôt qu'à les contourner : le « combat avec le borrow checker » se gagne, et une fois gagné, il ne se rejoue plus.</p>
+
+<h2>Le problème : qui libère la mémoire, et quand ?</h2>
+<p>Toute valeur dynamique (une chaîne qui grandit, un vecteur) vit sur le <strong>tas</strong> et doit être libérée un jour. Deux écoles existaient avant Rust.</p>
+<p>En <strong>C</strong>, tu libères à la main avec <code>free</code>. Oublier&nbsp;? Fuite mémoire. Libérer deux fois&nbsp;? <em>Double-free</em>, corruption. Utiliser après libération&nbsp;? <em>Use-after-free</em>, faille de sécurité. Avec un <strong>ramasse-miettes</strong> (Java, Go, Python), la machine s'en occupe automatiquement — au prix de pauses et d'un surcoût à l'exécution.</p>
+<p>Rust prend une troisième voie : un système de <strong>possession vérifié à la compilation</strong>. Le compilateur sait, pour chaque valeur, qui la possède et quand elle doit être libérée. Aucun GC, aucun <code>free</code> manuel, et les trois bugs ci-dessus deviennent <strong>impossibles à compiler</strong>.</p>
+
+<h2>Les 3 règles de la possession</h2>
+<p>Tout tient en trois règles, à connaître par cœur :</p>
+<ul>
+<li>Chaque valeur a <strong>un propriétaire</strong> (une variable).</li>
+<li>Il ne peut y avoir qu'<strong>un seul propriétaire à la fois</strong>.</li>
+<li>Quand le propriétaire <strong>sort de portée</strong>, la valeur est <strong>libérée</strong> (Rust appelle automatiquement <code>drop</code>).</li>
+</ul>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    {
+        let s = String::from("bonjour"); // s devient propriétaire d'une String sur le tas
+        println!("{s}");                 // on l'utilise normalement
+    } // &lt;- fin du bloc : s sort de portée, Rust appelle drop(s), mémoire libérée
+
+    // println!("{s}"); // erreur : `s` n'existe plus ici
+}
+// Sortie :
+// bonjour</code></pre></figure>
+<p>Tu n'écris jamais « libère cette chaîne » : l'accolade fermante suffit. La libération est <strong>déterministe</strong> (elle a lieu à un point précis du code), contrairement à un GC.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un littéral comme <code>"bonjour"</code> est de type <code>&amp;str</code> : il est figé dans le binaire, pas alloué sur le tas. <code>String</code>, lui, possède un tampon redimensionnable sur le tas — c'est lui qui a besoin d'un propriétaire et d'un <code>drop</code>.</p></div></div>
+
+<h2>Le move : transférer la possession</h2>
+<p>Voici le mécanisme central. Quand tu assignes une valeur <strong>non <code>Copy</code></strong> (comme une <code>String</code>) à une autre variable, tu ne la copies pas : tu <strong>transfères la possession</strong>. C'est un <em>move</em>. L'ancienne variable devient <strong>invalide</strong>.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    let s1 = String::from("salut");
+    let s2 = s1;          // MOVE : la possession passe de s1 à s2
+
+    println!("{s2}");     // OK
+    println!("{s1}");     // ERREUR : s1 a été déplacée, on ne peut plus l'utiliser
+}</code></pre></figure>
+<p>Le compilateur refuse, avec un message très explicite :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">error[E0382]: borrow of moved value: `s1`
+ --&gt; src/main.rs:6:15
+  |
+2 |     let s1 = String::from("salut");
+  |         -- move occurs because `s1` has type `String`,
+  |            which does not implement the `Copy` trait
+3 |     let s2 = s1;
+  |              -- value moved here
+...
+6 |     println!("{s1}");
+  |               ^^^^ value borrowed here after move</code></pre></figure>
+<p>Pourquoi ce blocage&nbsp;? Sans lui, <code>s1</code> et <code>s2</code> pointeraient vers le <strong>même tampon</strong>. À la fin du <code>main</code>, Rust appellerait <code>drop</code> <strong>deux fois</strong> sur la même zone : le fameux <em>double-free</em>. Le move l'empêche par construction. Une valeur, un propriétaire, une libération.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le move d'une String. Avant : la variable s1, sur la pile, pointe vers un tampon salut sur le tas. Après l'exécution de let s2 = s1, la possession du tampon passe à s2 qui pointe désormais vers lui ; s1 est marquée invalide et ne pointe plus vers rien. Le tampon n'a jamais qu'un seul propriétaire, ce qui garantit une seule libération.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">let s2 = s1 : la possession se déplace, s1 devient invalide</text>
+    <rect class="d-frame" x="40" y="34" width="250" height="150" rx="10" />
+    <text class="d-mut" x="165" y="52" text-anchor="middle" font-size="11">Avant</text>
+    <rect class="d-box" x="112" y="60" width="105" height="30" rx="6" />
+    <text class="d-text" x="164" y="79" text-anchor="middle" font-size="11">s1</text>
+    <line class="d-line" x1="164" y1="90" x2="164" y2="126" />
+    <circle class="d-dot" cx="164" cy="90" r="3" />
+    <rect class="d-accent" x="99" y="126" width="130" height="34" rx="6" />
+    <text class="d-text" x="164" y="147" text-anchor="middle" font-size="10">"salut"</text>
+    <text class="d-mut" x="164" y="176" text-anchor="middle" font-size="9">tampon sur le tas</text>
+    <rect class="d-frame" x="350" y="34" width="260" height="150" rx="10" />
+    <text class="d-mut" x="480" y="52" text-anchor="middle" font-size="11">Après le move</text>
+    <rect class="d-box" x="362" y="60" width="108" height="30" rx="6" />
+    <text class="d-mut" x="416" y="79" text-anchor="middle" font-size="10">s1 ✗ invalide</text>
+    <rect class="d-box" x="488" y="60" width="108" height="30" rx="6" />
+    <text class="d-text" x="542" y="79" text-anchor="middle" font-size="11">s2</text>
+    <line class="d-line" x1="542" y1="90" x2="542" y2="126" />
+    <circle class="d-dot" cx="542" cy="90" r="3" />
+    <rect class="d-accent" x="477" y="126" width="130" height="34" rx="6" />
+    <text class="d-text" x="542" y="147" text-anchor="middle" font-size="10">"salut"</text>
+    <text class="d-mut" x="542" y="176" text-anchor="middle" font-size="9">même tampon, 1 seul propriétaire</text>
+  </svg>
+  <figcaption>Le <strong>move</strong> ne copie pas le tampon du tas&nbsp;: il transfère le <em>pointeur</em> de <code>s1</code> vers <code>s2</code> et invalide <code>s1</code>. Ainsi le tampon garde toujours <strong>un seul propriétaire</strong>, donc un seul <code>drop</code> — jamais de double libération.</figcaption>
+</figure>
+
+<h2>Le trait Copy : les types simples sur la pile</h2>
+<p>Les types entièrement stockés sur la <strong>pile</strong> et de taille connue — entiers, <code>f64</code>, <code>bool</code>, <code>char</code>, et les tuples qui n'en contiennent que — implémentent le trait <code>Copy</code>. Pour eux, l'assignation <strong>copie</strong> au lieu de déplacer : copier quelques octets sur la pile est trivial, alors les deux variables restent valides.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    let x = 5;
+    let y = x;            // COPIE (i32 est Copy), pas un move
+
+    println!("{x} et {y}"); // OK : x est toujours valide
+}
+// Sortie :
+// 5 et 5</code></pre></figure>
+<p>Retiens la frontière : <strong>tas → move</strong> (la possession se transfère), <strong>pile, type <code>Copy</code> → copie</strong> (les deux variables survivent). C'est cohérent : déplacer évite de dupliquer une grosse allocation ; copier évite de gêner pour quelques octets bon marché.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Copie ou move selon le type. À gauche, un type Copy comme i32 est entièrement sur la pile : l'assignation le duplique bit à bit, et les deux variables x et y restent valides. À droite, un type non Copy comme String possède un tampon sur le tas : l'assignation transfère la possession (move), la source devient invalide et seule la destination reste utilisable.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">let y = x : copie (pile) ou move (tas) ?</text>
+    <rect class="d-frame" x="34" y="34" width="270" height="150" rx="10" />
+    <text class="d-tag" x="169" y="54" text-anchor="middle" font-size="11">Type Copy — i32, bool, char, f64</text>
+    <rect class="d-box" x="70" y="66" width="90" height="28" rx="6" />
+    <text class="d-text" x="115" y="84" text-anchor="middle" font-size="10">x = 5</text>
+    <rect class="d-box" x="178" y="66" width="90" height="28" rx="6" />
+    <text class="d-text" x="223" y="84" text-anchor="middle" font-size="10">y = 5</text>
+    <text class="d-mut" x="169" y="120" text-anchor="middle" font-size="10">copie bit à bit sur la pile</text>
+    <text class="d-text" x="169" y="150" text-anchor="middle" font-size="11">x ✓ et y ✓ — les deux valides</text>
+    <rect class="d-frame" x="336" y="34" width="270" height="150" rx="10" />
+    <text class="d-tag" x="471" y="54" text-anchor="middle" font-size="11">Type non Copy — String, Vec, Box</text>
+    <rect class="d-box" x="372" y="66" width="90" height="28" rx="6" />
+    <text class="d-mut" x="417" y="84" text-anchor="middle" font-size="10">x ✗</text>
+    <rect class="d-accent" x="480" y="66" width="90" height="28" rx="6" />
+    <text class="d-text" x="525" y="84" text-anchor="middle" font-size="10">y</text>
+    <text class="d-mut" x="471" y="120" text-anchor="middle" font-size="10">move : le tampon du tas change de main</text>
+    <text class="d-text" x="471" y="150" text-anchor="middle" font-size="11">x ✗ invalide, seul y ✓</text>
+  </svg>
+  <figcaption>La règle&nbsp;: <strong>petit et sur la pile</strong> (<code>Copy</code>) → l'assignation <strong>copie</strong>, la source survit&nbsp;; <strong>propriétaire d'un tampon sur le tas</strong> (non <code>Copy</code>) → l'assignation <strong>déplace</strong>, la source devient inutilisable.</figcaption>
+</figure>
+
+<h2>Clone : une copie profonde, explicite</h2>
+<p>Et si tu veux <strong>vraiment</strong> deux <code>String</code> indépendantes&nbsp;? Tu le demandes explicitement avec <code>clone</code>, qui duplique aussi le tampon sur le tas.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn main() {
+    let s1 = String::from("salut");
+    let s2 = s1.clone();  // copie profonde : nouveau tampon sur le tas
+
+    println!("{s1} / {s2}"); // OK : s1 ET s2 sont valides et indépendantes
+}
+// Sortie :
+// salut / salut</code></pre></figure>
+<p>La philosophie de Rust : les copies coûteuses sont <strong>visibles</strong> dans le code. Un <code>.clone()</code> bien placé signale « ici, j'alloue à nouveau ». Rien ne se duplique dans ton dos.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le clone fait une copie profonde. La variable s1 pointe vers un premier tampon salut sur le tas. Appeler s1.clone() alloue un second tampon salut indépendant, vers lequel pointe s2. Contrairement au move, les deux variables sont valides et possèdent chacune leur propre tampon.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">let s2 = s1.clone() : deux tampons indépendants</text>
+    <rect class="d-box" x="110" y="46" width="110" height="30" rx="6" />
+    <text class="d-text" x="165" y="65" text-anchor="middle" font-size="11">s1</text>
+    <line class="d-line" x1="165" y1="76" x2="165" y2="110" />
+    <circle class="d-dot" cx="165" cy="76" r="3" />
+    <rect class="d-accent" x="100" y="110" width="130" height="34" rx="6" />
+    <text class="d-text" x="165" y="131" text-anchor="middle" font-size="10">"salut" — tampon A</text>
+    <rect class="d-box" x="420" y="46" width="110" height="30" rx="6" />
+    <text class="d-text" x="475" y="65" text-anchor="middle" font-size="11">s2</text>
+    <line class="d-line" x1="475" y1="76" x2="475" y2="110" />
+    <circle class="d-dot" cx="475" cy="76" r="3" />
+    <rect class="d-accent" x="410" y="110" width="130" height="34" rx="6" />
+    <text class="d-text" x="475" y="131" text-anchor="middle" font-size="10">"salut" — tampon B</text>
+    <text class="d-tag" x="320" y="86" text-anchor="middle" font-size="11">clone()</text>
+    <text class="d-mut" x="320" y="104" text-anchor="middle" font-size="9">nouvelle allocation</text>
+    <text class="d-mut" x="320" y="126" text-anchor="middle" font-size="9">s1 ✓ et s2 ✓</text>
+  </svg>
+  <figcaption>Contrairement au move, <code>clone()</code> <strong>duplique le tampon du tas</strong>&nbsp;: <code>s1</code> et <code>s2</code> possèdent chacune le leur et restent toutes deux valides. C'est une copie <em>profonde</em>, potentiellement coûteuse — d'où son caractère <strong>explicite</strong> en Rust.</figcaption>
+</figure>
+
+<h2>Possession et fonctions</h2>
+<p>Passer une valeur à une fonction suit exactement les mêmes règles qu'une assignation : un type non <code>Copy</code> est <strong>déplacé</strong> dans la fonction, un type <code>Copy</code> est copié. Et si la fonction n'en rend pas la possession, l'appelant la perd.</p>
+<figure class="code-block" data-file="main.rs"><pre><code class="language-rust">fn consomme(texte: String) {
+    println!("je possède : {texte}");
+} // texte sort de portée ici -&gt; drop
+
+fn redonne(texte: String) -&gt; String {
+    texte // on rend la possession en retournant la valeur
+}
+
+fn main() {
+    let a = String::from("a");
+    consomme(a);          // a est déplacée DANS la fonction
+    // println!("{a}");   // ERREUR : a a été déplacée, plus utilisable
+
+    let b = String::from("b");
+    let b = redonne(b);   // b déplacée puis rendue, on la récupère
+    println!("{b}");      // OK
+}
+// Sortie :
+// je possède : a
+// b</code></pre></figure>
+<p>Renvoyer la valeur pour la récupérer fonctionne, mais c'est lourd dès qu'on doit la « prêter » sans la perdre. La vraie solution s'appelle l'<strong>emprunt</strong> (références <code>&amp;</code>) — c'est l'objet de la leçon suivante.</p>
+
+<h2>Pourquoi c'est sûr : les trois bugs éliminés</h2>
+<p>Récapitulons ce que la possession nous garantit, gratuitement et à la compilation :</p>
+<ul>
+<li><strong>Pas de fuite</strong> : chaque valeur a un propriétaire, et la fin de portée déclenche <code>drop</code>. La mémoire est toujours rendue.</li>
+<li><strong>Pas de double-free</strong> : un seul propriétaire à la fois, donc un seul <code>drop</code>. Le move invalide l'ancienne variable.</li>
+<li><strong>Pas d'use-after-free</strong> : utiliser une variable déplacée est une <strong>erreur de compilation</strong>, pas un crash à l'exécution.</li>
+</ul>
+<p>Ces garanties tiennent <strong>sans aucun coût à l'exécution</strong> : tout le travail est fait par le compilateur. C'est exactement la promesse de Rust — la performance du C, la tranquillité d'un langage moderne.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Lance <code>cargo clippy</code> en plus de <code>cargo build</code>. Clippy repère les <code>.clone()</code> inutiles, les patterns non idiomatiques et te suggère souvent l'emprunt là où tu déplaçais sans raison.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Utiliser une variable après un move.</strong> C'est l'erreur n°1 du débutant : <code>let s2 = s1;</code> puis encore <code>s1</code>. Le message <code>borrow of moved value</code> te dit exactement où la valeur a été déplacée. Lis-le : il pointe la ligne du move et celle de l'usage fautif.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Cloner partout pour « faire taire » le compilateur.</strong> Ajouter <code>.clone()</code> dès qu'une erreur apparaît compile, mais multiplie les allocations inutiles. Une erreur de possession signale souvent qu'il fallait <strong>emprunter</strong> (<code>&amp;</code>), pas dupliquer. Clone est un choix, pas un réflexe.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre <code>Copy</code> et <code>Clone</code>, ou croire que tout est déplacé.</strong> <code>Copy</code> est <em>implicite</em> et réservé aux petits types sur la pile (donc un <code>i32</code> n'est jamais « déplacé » : il est copié). <code>Clone</code> est <em>explicite</em> et peut être coûteux. Un type ne devient <code>Copy</code> que si tu (ou la stdlib) le dérives, et seulement s'il ne possède rien sur le tas.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La prochaine leçon introduit les <strong>emprunts</strong> (<code>&amp;</code> et <code>&amp;mut</code>) : prêter une valeur sans en transférer la possession, pour éviter de tout déplacer ou cloner. Pour creuser : le trait <code>Drop</code> (personnaliser la libération, par exemple fermer un fichier), la différence <strong>pile vs tas</strong>, et la sémantique de move comme simple copie de pointeur sans appel à <code>drop</code> sur la source.</p></div></div>
+
+<h2>Un cas réel : le moteur de style de Firefox</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2017, <strong>Mozilla</strong> a livré <strong>Firefox Quantum</strong> avec un nouveau moteur de calcul des styles CSS, <strong>Stylo</strong>, écrit en Rust. L'objectif était de <strong>paralléliser</strong> le calcul des styles sur plusieurs cœurs — un chantier que les tentatives précédentes en C++ avaient <strong>abandonné</strong>, car partager des données entre threads y provoquait des <em>data races</em> et des corruptions mémoire quasi impossibles à traquer. Grâce à la possession et à l'emprunt, le compilateur Rust <strong>refuse à la compilation</strong> les accès concurrents dangereux&nbsp;: un même tampon ne peut avoir qu'un propriétaire, et le partage passe par des règles vérifiées. Ce qui était un champ de mines en C++ est devenu du code parallèle sûr <em>par construction</em>. Résultat&nbsp;: un moteur de style souvent bien plus rapide, débarrassé de la classe de bugs qui avait fait échouer les essais précédents. C'est cette réussite qui a convaincu l'industrie que la possession n'était pas une lubie académique, mais un outil de production.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — possession, move, copie et clone</caption>
+    <thead><tr><th scope="col">Situation</th><th scope="col">Comportement</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Fin de portée <code>}</code></td><td>appel de <code>drop</code></td><td>libération déterministe du tas</td></tr>
+      <tr><td><code>let s2 = s1;</code> (<code>String</code>)</td><td>move</td><td><code>s1</code> devient invalide</td></tr>
+      <tr><td><code>let y = x;</code> (<code>i32</code>)</td><td>copie</td><td>type <code>Copy</code>, <code>x</code> reste valide</td></tr>
+      <tr><td><code>s1.clone()</code></td><td>copie profonde</td><td>nouveau tampon, explicite &amp; coûteux</td></tr>
+      <tr><td><code>f(s: String)</code></td><td>move dans la fonction</td><td>perdue si non rendue au retour</td></tr>
+      <tr><td><code>f(n: i32)</code></td><td>copie</td><td><code>n</code> reste utilisable après l'appel</td></tr>
+      <tr><td>Réutiliser après un move</td><td>erreur de compilation</td><td><code>borrow of moved value</code></td></tr>
+      <tr><td>Types <code>Copy</code></td><td>pile, petits</td><td><code>i32</code>, <code>bool</code>, <code>char</code>, <code>f64</code>, tuples de <code>Copy</code></td></tr>
+      <tr><td><code>String</code>, <code>Vec</code>, <code>Box</code></td><td>tas, non <code>Copy</code></td><td>possèdent une ressource → move</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Possession (<em>ownership</em>)</dt><dd>Système par lequel Rust associe à chaque valeur un <strong>propriétaire</strong> unique et libère la valeur quand ce propriétaire disparaît — le tout vérifié <strong>à la compilation</strong>, sans ramasse-miettes.</dd>
+  <dt>Propriétaire</dt><dd>La variable qui « détient » une valeur et est responsable de sa libération. Il ne peut y en avoir qu'<strong>un seul à la fois</strong>.</dd>
+  <dt>Move (déplacement)</dt><dd>Transfert de possession lors d'une assignation ou d'un passage en argument d'un type non <code>Copy</code>&nbsp;: la source devient <strong>invalide</strong>, la destination devient propriétaire.</dd>
+  <dt><code>drop</code></dt><dd>Fonction appelée automatiquement quand le propriétaire sort de portée&nbsp;; elle restitue la mémoire (et toute autre ressource) de la valeur.</dd>
+  <dt>Trait <code>Copy</code></dt><dd>Marque <em>implicite</em> des types entièrement sur la pile et de taille connue&nbsp;: pour eux, l'assignation <strong>copie</strong> au lieu de déplacer, et la source reste valide.</dd>
+  <dt>Trait <code>Clone</code></dt><dd>Duplication <em>explicite</em> (<code>.clone()</code>), potentiellement profonde (elle recopie aussi le tas)&nbsp;: à utiliser à bon escient, pas par réflexe.</dd>
+  <dt>Pile / tas</dt><dd>La <strong>pile</strong> stocke les valeurs de taille fixe (rapide, automatique)&nbsp;; le <strong>tas</strong> stocke les données dynamiques (<code>String</code>, <code>Vec</code>) qui ont besoin d'un propriétaire et d'un <code>drop</code>.</dd>
+  <dt>Double-free / use-after-free</dt><dd>Deux bugs mémoire classiques du C (libérer deux fois, ou utiliser après libération) que la possession rend <strong>impossibles à compiler</strong>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Trois règles : un propriétaire par valeur, un seul à la fois, libération (<code>drop</code>) en sortie de portée.</li>
+<li>Assigner ou passer une valeur non <code>Copy</code> la <strong>déplace</strong> (move) ; l'ancienne variable devient invalide.</li>
+<li><code>Copy</code> (implicite, types sur la pile) copie ; <code>Clone</code> (explicite) duplique en profondeur, à utiliser avec discernement.</li>
+<li>La possession élimine fuites, <em>double-free</em> et <em>use-after-free</em> à la compilation, sans coût à l'exécution.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Énonce les trois règles de la possession. Que se passe-t-il précisément quand une <code>String</code> sort de portée&nbsp;?</li><li>Pourquoi <code>let s2 = s1;</code> rend-il <code>s1</code> inutilisable pour une <code>String</code>, alors que <code>let y = x;</code> laisse <code>x</code> valide pour un <code>i32</code>&nbsp;?</li><li>Quelle est la différence entre <code>Copy</code> et <code>Clone</code>, et en quoi le move empêche-t-il un <em>double-free</em>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Énonce les trois règles de la possession. Que se passe-t-il quand une String sort de portée ?","a":["1) Chaque valeur a un unique propriétaire ; 2) un seul propriétaire à la fois ; 3) à la sortie de portée du propriétaire, la valeur est libérée (drop). Pour une String, drop libère la mémoire du tas","Une String n'est jamais libérée","Plusieurs propriétaires sont autorisés","La valeur est copiée à la sortie"],"correct":0,"explain":"Le système de possession garantit une libération déterministe : à la fin de la portée, le propriétaire appelle drop, qui restitue la mémoire (le tampon de la String). Pas de ramasse-miettes ni de free manuel."},
+  {"q":"Pourquoi let s2 = s1; rend-il s1 inutilisable pour une String, alors que let y = x; laisse x valide pour un i32 ?","a":["String est déplacée (move) : la propriété passe à s2 et s1 devient invalide, pour éviter un double-free. i32 implémente Copy : x est copié bit à bit et reste valide","i32 est aussi déplacé","String est copiée","C'est un bug"],"correct":0,"explain":"Une String possède un tampon sur le tas : la copier transférerait la propriété (move), invalidant la source pour qu'un seul propriétaire libère la mémoire. Un i32 (Copy) est dupliqué trivialement, sans transfert de propriété."},
+  {"q":"Quelle est la différence entre Copy et Clone, et en quoi le move empêche-t-il un double-free ?","a":["Copy est une copie implicite bit à bit (types simples) ; Clone est une copie explicite (.clone(), potentiellement profonde). Le move garantit un seul propriétaire de la ressource, donc un seul drop : pas de double libération","Ils sont identiques","Clone est implicite","Copy duplique le tas"],"correct":0,"explain":"Copy s'applique aux types triviaux et copie sans appel explicite. Clone exige .clone() et peut dupliquer des données du tas. En transférant la propriété (move), Rust assure qu'une ressource n'a qu'un libérateur, évitant de la free deux fois."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["move","déplacement","deplacement","le move"],"placeholder":"le nom du transfert de possession qui invalide la première variable (usage-après-…) : …","hints":["Assigner une String à une autre variable la DÉPLACE.","L'ancienne ne peut plus être utilisée.","Quatre lettres, anglais."],"link":{"href":"lecon-05.html","label":"Revoir « Le move »"}},
+  {"type":"text","accept":["Copy","trait Copy","le trait Copy"],"placeholder":"le trait des types (comme i32) qui sont COPIÉS au lieu d'être déplacés : …","hints":["Les types simples sur la pile l'implémentent.","String, lui, ne l'a pas (donc move).","Quatre lettres."],"link":{"href":"lecon-05.html","label":"Revoir « Copy vs move »"}},
+  {"type":"text","accept":["clone","clone()",".clone()"],"placeholder":"la méthode pour DUPLIQUER explicitement une valeur possédée (conserver le mot d'origine) : …","hints":["Crée une copie indépendante (coûteuse).","À utiliser avec parcimonie.","Cinq lettres."],"link":{"href":"lecon-05.html","label":"Revoir « clone »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un programme qui crée une <code>String</code>, l'assigne à une deuxième variable, puis tente d'afficher la première. Compile-le pour <strong>provoquer</strong> l'erreur d'usage-après-move, lis le message, puis corrige le code pour qu'il compile (deux corrections possibles : utiliser la bonne variable, ou cloner).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">fn main() {
+    let original = String::from("données");
+    let copie = original.clone(); // on clone explicitement pour garder les deux
+    // (sans .clone(), `original` serait déplacée et l'affichage ci-dessous échouerait)
+
+    println!("original = {original}");
+    println!("copie    = {copie}");
+}
+// Sortie :
+// original = données
+// copie    = données</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Montre la différence de comportement entre un type <code>Copy</code> et un type qui se déplace. Crée une fonction <code>afficher_nombre(n: i32)</code> et une fonction <code>afficher_texte(s: String)</code>. Appelle chacune, puis essaie de réutiliser l'argument <strong>après</strong> l'appel. Explique en commentaire lequel des deux échoue et pourquoi.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">fn afficher_nombre(n: i32) {
+    println!("nombre = {n}");
+}
+
+fn afficher_texte(s: String) {
+    println!("texte = {s}");
+}
+
+fn main() {
+    let n = 42;
+    afficher_nombre(n); // i32 est Copy : n est COPIÉ dans la fonction
+    println!("après l'appel, n vaut toujours {n}"); // OK
+
+    let s = String::from("coucou");
+    afficher_texte(s);  // String n'est pas Copy : s est DÉPLACÉE
+    // println!("{s}"); // ERREUR : borrow of moved value: `s`
+}
+// Sortie :
+// nombre = 42
+// après l'appel, n vaut toujours 42
+// texte = coucou</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction <code>repeter(mot: String, fois: usize) -&gt; String</code> qui construit une chaîne en répétant <code>mot</code> séparé par des espaces. Dans <code>main</code>, tu veux conserver le <code>mot</code> d'origine ET obtenir le résultat répété. Utilise <code>clone</code> à <strong>bon escient</strong> : un seul clone, au bon endroit, en justifiant en commentaire pourquoi il est nécessaire ici (et pas ailleurs).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">fn repeter(mot: String, fois: usize) -&gt; String {
+    let mut resultat = String::new();
+    for i in 0..fois {
+        if i &gt; 0 {
+            resultat.push(' ');
+        }
+        resultat.push_str(&amp;mot); // on emprunte mot le temps de l'ajout
+    }
+    resultat // on rend la possession du résultat construit
+}
+
+fn main() {
+    let mot = String::from("écho");
+
+    // On clone ICI : repeter() consomme (déplace) son argument.
+    // Sans clone, `mot` serait déplacée et indisponible juste après.
+    let phrase = repeter(mot.clone(), 3);
+
+    println!("mot conservé : {mot}");   // toujours valide grâce au clone
+    println!("résultat      : {phrase}");
+}
+// Sortie :
+// mot conservé : écho
+// résultat      : écho écho écho</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-rust.min.js" defer></script>
+  </body>
+</html>

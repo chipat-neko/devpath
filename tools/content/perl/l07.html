@@ -1,0 +1,112 @@
+<p>Dès qu'un script dépasse quelques dizaines de lignes, on le découpe en <strong>sous-programmes</strong> (les fonctions de Perl). Ils nomment une logique, la rendent réutilisable, et structurent le code. Voyons comment les définir, leur passer des arguments et maîtriser la portée des variables.</p>
+
+<h2>Définir un sous-programme</h2>
+<p>Le mot-clé <code>sub</code>, un nom, un bloc. On l'appelle ensuite par son nom. La dernière expression évaluée est renvoyée automatiquement, mais <code>return</code> rend l'intention claire.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">use strict;
+use warnings;
+
+sub bonjour {
+    return "Bonjour !";
+}
+
+say bonjour();        # Bonjour !</code></pre></figure>
+
+<h2>Les arguments arrivent dans @_</h2>
+<p>Perl ne déclare pas les paramètres dans la signature&nbsp;: tous les arguments arrivent dans le tableau spécial <code>@_</code>. L'idiome moderne consiste à les <strong>déballer</strong> aussitôt dans des variables nommées avec <code>my</code>.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">sub additionner {
+    my ($a, $b) = @_;       # déballage des arguments
+    return $a + $b;
+}
+
+say additionner(3, 4);      # 7
+
+sub saluer {
+    my ($nom, $politesse) = @_;
+    $politesse //= "Bonjour";   # valeur par défaut (//= si indéfini)
+    return "$politesse, $nom !";
+}
+say saluer("Ada");          # Bonjour, Ada !</code></pre></figure>
+<p class="code-caption">Le déballage en première ligne rend la signature lisible, malgré l'absence de paramètres formels.</p>
+
+<h2>Recevoir une liste d'arguments</h2>
+<p>Comme <code>@_</code> est un tableau, on peut récupérer un nombre variable d'arguments&nbsp;: on déballe les premiers, et le reste va dans un tableau.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">sub somme {
+    my @nombres = @_;
+    my $total = 0;
+    $total += $_ for @nombres;
+    return $total;
+}
+say somme(1, 2, 3, 4);      # 10
+
+sub premier_et_reste {
+    my ($premier, @reste) = @_;
+    say "Premier : $premier, reste : @reste";
+}</code></pre></figure>
+
+<h2>Renvoyer selon le contexte</h2>
+<p>Un sous-programme peut renvoyer une liste ou un scalaire. Comme on l'a vu, le <strong>contexte</strong> d'appel décide. <code>wantarray</code> permet même d'adapter le retour.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">sub valeurs {
+    return (10, 20, 30);
+}
+
+my @liste  = valeurs();     # (10, 20, 30)
+my $combien = valeurs();    # 30 (dernière valeur en contexte scalaire)
+my ($x, $y) = valeurs();    # 10, 20</code></pre></figure>
+
+<h2>La portée lexicale avec my</h2>
+<p><code>my</code> crée une variable <strong>locale au bloc</strong> où elle est déclarée. Hors de ce bloc, elle n'existe pas. C'est ce qui rend les sous-programmes étanches et le code prévisible — la raison d'être de <code>use strict</code>.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">my $global = "visible partout dans ce fichier";
+
+sub compteur {
+    my $local = 0;          # n'existe que dans cette fonction
+    $local++;
+    return $local;
+}
+# 'say $local' ici provoquerait une erreur (use strict)</code></pre></figure>
+
+<h2>Les fermetures (closures)</h2>
+<p>Un sous-programme anonyme peut <strong>capturer</strong> une variable de son environnement&nbsp;: c'est une fermeture. Utile pour fabriquer des générateurs ou des compteurs privés.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">sub fabrique_compteur {
+    my $n = 0;
+    return sub { return ++$n; };   # capture $n
+}
+
+my $c = fabrique_compteur();
+say $c->();   # 1
+say $c->();   # 2  (l'état $n persiste)</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Passer un tableau ET un scalaire à une fonction&nbsp;: <code>ma_fonction(@liste, $x)</code> aplatit tout dans <code>@_</code>, et tu ne sais plus où finit la liste&nbsp;! Passe plutôt une <strong>référence</strong> (leçon suivante)&nbsp;: <code>ma_fonction(\@liste, $x)</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Perl moderne (5.36+) propose enfin des <strong>signatures</strong> natives&nbsp;: <code>use feature 'signatures'; sub addition($a, $b) { $a + $b }</code>. Plus besoin de déballer <code>@_</code> à la main&nbsp;— une syntaxe bienvenue pour le nouveau code.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>sub nom { … }</code> définit un sous-programme&nbsp;; <code>return</code> renvoie une valeur.</li>
+  <li>Les arguments arrivent dans <code>@_</code>&nbsp;; on les déballe avec <code>my ($a, $b) = @_;</code>.</li>
+  <li><code>my</code> crée une variable à <strong>portée lexicale</strong> (locale au bloc).</li>
+  <li>Un <code>sub</code> anonyme peut former une <strong>fermeture</strong> qui capture son état.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Où arrivent les arguments d'un sous-programme&nbsp;?</li><li>Que fait <code>my</code> à une variable&nbsp;?</li><li>Pourquoi éviter de passer plusieurs tableaux directement à une fonction&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un sous-programme <code>maximum</code> qui renvoie le plus grand de deux nombres.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">sub maximum {
+    my ($a, $b) = @_;
+    return $a &gt; $b ? $a : $b;
+}
+say maximum(3, 9);   # 9</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>moyenne</code> qui accepte un nombre quelconque d'arguments.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">sub moyenne {
+    my @n = @_;
+    return 0 unless @n;
+    my $s = 0; $s += $_ for @n;
+    return $s / @n;
+}
+say moyenne(4, 8, 6);   # 6</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Fabrique une fermeture qui génère des identifiants «&nbsp;ID-1&nbsp;», «&nbsp;ID-2&nbsp;»…</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-perl">sub fabrique_id {
+    my $n = 0;
+    return sub { "ID-" . ++$n };
+}
+my $gen = fabrique_id();
+say $gen->();   # ID-1
+say $gen->();   # ID-2</code></pre></figure></details></div>

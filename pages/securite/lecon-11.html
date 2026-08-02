@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Failles côté serveur : SSRF et désérialisation — Leçon 11 · Syntaxe</title>
+    <meta name="description" content="Deux failles serveur puissantes : la SSRF (Server-Side Request Forgery), où le serveur émet des requêtes vers des cibles internes, et la désérialisation non sécurisée, qui reconstruit des objets depuis des données non fiables. Causes, exemples et parades." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="securite" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Sécurité applicative</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Sécurité avancée &amp; opérations — Leçon 11</p>
+              <h1 class="lesson-header__title">Failles côté serveur : SSRF et désérialisation</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçons 02 et 03 (validation, injections)</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>ce qu'est la <strong>SSRF</strong> et pourquoi elle expose le réseau interne&nbsp;;</li>
+                  <li>défendre une requête sortante par <strong>liste blanche</strong> et blocage des IP internes&nbsp;;</li>
+                  <li>reconnaître la <strong>désérialisation non sécurisée</strong> et son risque de <strong>RCE</strong>&nbsp;;</li>
+                  <li>préférer des formats de données <strong>sûrs</strong> et validés.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, l'attaquant visait surtout le <strong>client</strong> (XSS) ou la <strong>base</strong> (injection SQL). Voici deux failles qui font agir le <strong>serveur lui-même</strong> contre ton système&nbsp;: la <strong>SSRF</strong>, qui le transforme en messager vers l'intérieur, et la <strong>désérialisation non sécurisée</strong>, qui peut aller jusqu'à l'<strong>exécution de code</strong>. Toutes deux partent de la même erreur&nbsp;: faire confiance à une <strong>entrée</strong> (rappel de la leçon 02).</p>
+
+<h2>SSRF : le serveur comme messager involontaire</h2>
+<p>La <strong>SSRF</strong> (<em>Server-Side Request Forgery</em>, « falsification de requête côté serveur ») survient quand une application récupère une <strong>URL fournie par l'utilisateur</strong> et va la chercher <strong>elle-même</strong>&nbsp;: aperçu de lien, import depuis une adresse, webhook, génération de PDF… Si rien ne filtre l'URL, l'attaquant peut viser des cibles <strong>internes</strong>, invisibles depuis l'extérieur.</p>
+<figure class="code-block" data-file="apercu.txt"><pre><code>  // L'utilisateur envoie une URL, le serveur va la chercher
+  POST /apercu   { "url": "http://exemple.fr/photo.png" }        // usage prévu
+  POST /apercu   { "url": "http://169.254.169.254/latest/meta-data/" }  // détourné !
+  POST /apercu   { "url": "http://localhost:6379/" }             // service interne</code></pre></figure>
+<p>Depuis Internet, personne n'atteint <code>localhost</code> ni le service de <strong>métadonnées</strong> du cloud (souvent à l'adresse <code>169.254.169.254</code>). Mais <strong>le serveur, lui, le peut</strong>&nbsp;: il est <em>à l'intérieur</em>. En lui faisant relayer la requête, l'attaquant lit des ressources internes — parfois des <strong>identifiants cloud</strong> temporaires.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="Mécanisme d'une SSRF. L'attaquant envoie au serveur une URL pointant vers l'intérieur. Le serveur, situé dans le réseau interne, exécute la requête vers des cibles inaccessibles depuis l'extérieur : le service de métadonnées cloud, une base de données interne ou un service d'administration. Les réponses reviennent à l'attaquant via le serveur.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">SSRF : l'attaquant emprunte l'accès interne du serveur</text>
+    <rect class="d-box" x="20" y="70" width="120" height="60" rx="9" /><text class="d-tag" x="80" y="96" text-anchor="middle" font-size="12">attaquant</text><text class="d-mut" x="80" y="114" text-anchor="middle" font-size="9">depuis Internet</text>
+    <line class="d-line" x1="140" y1="100" x2="196" y2="100" /><polygon class="d-dot" points="196,96 204,100 196,104" /><text class="d-mut" x="172" y="90" text-anchor="middle" font-size="9">url=…interne</text>
+    <rect class="d-accent" x="206" y="70" width="128" height="60" rx="9" /><text class="d-tag" x="270" y="96" text-anchor="middle" font-size="12">serveur</text><text class="d-mut" x="270" y="114" text-anchor="middle" font-size="9">va chercher l'URL</text>
+    <rect class="d-frame" x="360" y="40" width="264" height="146" rx="10" /><text class="d-mut" x="492" y="58" text-anchor="middle" font-size="9">réseau interne (invisible dehors)</text>
+    <line class="d-line" x1="334" y1="90" x2="418" y2="74" /><polygon class="d-dot" points="418,70 426,73 417,79" />
+    <line class="d-line" x1="334" y1="100" x2="418" y2="112" /><polygon class="d-dot" points="418,108 426,111 417,117" />
+    <line class="d-line" x1="334" y1="112" x2="418" y2="150" /><polygon class="d-dot" points="418,146 426,149 417,155" />
+    <rect class="d-box" x="426" y="66" width="180" height="22" rx="6" /><text class="d-text" x="516" y="81" text-anchor="middle" font-size="9">métadonnées cloud (169.254…)</text>
+    <rect class="d-box" x="426" y="104" width="180" height="22" rx="6" /><text class="d-text" x="516" y="119" text-anchor="middle" font-size="9">base de données interne</text>
+    <rect class="d-box" x="426" y="142" width="180" height="22" rx="6" /><text class="d-text" x="516" y="157" text-anchor="middle" font-size="9">console d'administration</text>
+  </svg>
+  <figcaption>Le serveur possède un accès que l'attaquant n'a pas. La SSRF <strong>emprunte</strong> cet accès&nbsp;: la requête part de l'intérieur et atteint des cibles normalement protégées.</figcaption>
+</figure>
+
+<h3>Se défendre contre la SSRF</h3>
+<ul>
+<li><strong>Liste blanche</strong> (<em>allowlist</em>)&nbsp;: n'autoriser que des domaines/hôtes explicitement prévus, plutôt que de tenter d'interdire les mauvais.</li>
+<li><strong>Bloquer les cibles internes</strong>&nbsp;: refuser <code>localhost</code>, les plages d'IP privées et l'adresse de métadonnées&nbsp;; résoudre le nom <strong>puis</strong> vérifier l'IP obtenue.</li>
+<li><strong>Ne pas suivre les redirections</strong> à l'aveugle&nbsp;: une URL autorisée peut rediriger vers une cible interne.</li>
+<li><strong>Cloisonner</strong>&nbsp;: le service qui émet ces requêtes ne devrait pas avoir accès aux ressources sensibles du réseau.</li>
+</ul>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Interdire ne suffit pas, il faut vérifier l'IP finale</p><p>Une simple liste noire de mots (« bloquer <code>localhost</code> ») se contourne&nbsp;: <code>127.0.0.1</code>, <code>0.0.0.0</code>, une écriture décimale de l'IP, un nom de domaine qui <strong>résout</strong> vers une IP privée, une <strong>redirection</strong>… La règle robuste&nbsp;: résoudre l'adresse, <strong>vérifier l'IP réellement obtenue</strong> contre une liste blanche, et recommencer après chaque redirection.</p></div></div>
+
+<h2>Cas réel — Capital One (2019)</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Une SSRF qui a exposé plus de 100 millions de dossiers</p><p>En 2019, la banque américaine <strong>Capital One</strong> a subi l'une des plus grosses fuites bancaires&nbsp;: les données d'environ <strong>100 millions</strong> de clients aux États-Unis et 6 millions au Canada. Le point de départ&nbsp;: une <strong>SSRF</strong> sur un service exposé, mal configuré. L'attaquante a fait interroger par le serveur le <strong>service de métadonnées</strong> du cloud (<code>169.254.169.254</code>), y a récupéré des <strong>identifiants temporaires</strong> associés au serveur, puis s'en est servie pour lire des espaces de stockage contenant les données. Deux leçons cumulées&nbsp;: filtrer les requêtes sortantes (anti-SSRF) <strong>et</strong> appliquer le <strong>moindre privilège</strong> aux droits du serveur, pour qu'un accès aux métadonnées ne déverrouille pas tout le stockage.</p></div></div>
+
+<h2>Désérialisation non sécurisée</h2>
+<p><strong>Sérialiser</strong>, c'est transformer un objet en octets pour le stocker ou le transmettre&nbsp;; <strong>désérialiser</strong>, c'est l'opération inverse. Le danger&nbsp;: certains formats <strong>natifs</strong> (comme <em>pickle</em> en Python ou la sérialisation Java) reconstruisent des objets <strong>arbitraires</strong> et peuvent déclencher du code pendant la reconstruction. Désérialiser une donnée <strong>non fiable</strong> dans ces formats, c'est potentiellement <strong>exécuter le code de l'attaquant</strong> (RCE).</p>
+<figure class="code-block" data-file="pickle.py"><pre><code class="language-python"># DANGER : ne JAMAIS désérialiser une donnée non fiable avec pickle
+import pickle
+donnee = requete.body            # contrôlée par l'utilisateur !
+objet = pickle.loads(donnee)     # peut exécuter du code arbitraire
+
+# Plus sûr : un format de données SANS exécution, puis validation
+import json
+objet = json.loads(donnee)       # ne construit que des types simples
+valider(objet)                   # on vérifie le schéma soi-même</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Comparaison de deux façons de désérialiser. Avec un format natif comme pickle ou Java, un flux d'octets non fiable est reconstruit en objet arbitraire, ce qui peut déclencher une chaîne de gadgets et une exécution de code à distance. Avec JSON suivi d'une validation de schéma, seuls des types simples sont créés, puis vérifiés, sans exécution.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Deux façons de reconstruire un objet reçu</text>
+    <rect class="d-frame" x="16" y="36" width="300" height="140" rx="10" /><text class="d-mut" x="166" y="54" text-anchor="middle" font-size="10">format natif (pickle, Java) — risqué</text>
+    <rect class="d-box" x="34" y="66" width="120" height="34" rx="7" /><text class="d-text" x="94" y="87" text-anchor="middle" font-size="9">octets non fiables</text>
+    <line class="d-line" x1="154" y1="83" x2="184" y2="83" /><polygon class="d-dot" points="184,79 192,83 184,87" />
+    <rect class="d-accent" x="192" y="66" width="108" height="34" rx="7" /><text class="d-text" x="246" y="87" text-anchor="middle" font-size="9">objet arbitraire</text>
+    <line class="d-line" x1="166" y1="112" x2="166" y2="134" /><polygon class="d-dot" points="162,134 166,142 170,134" />
+    <rect class="d-box" x="60" y="142" width="212" height="26" rx="7" /><text class="d-text" x="166" y="159" text-anchor="middle" font-size="9">chaîne de gadgets → RCE ✗</text>
+    <rect class="d-frame" x="324" y="36" width="300" height="140" rx="10" /><text class="d-mut" x="474" y="54" text-anchor="middle" font-size="10">JSON + validation — sûr</text>
+    <rect class="d-box" x="342" y="66" width="120" height="34" rx="7" /><text class="d-text" x="402" y="87" text-anchor="middle" font-size="9">octets non fiables</text>
+    <line class="d-line" x1="462" y1="83" x2="492" y2="83" /><polygon class="d-dot" points="492,79 500,83 492,87" />
+    <rect class="d-accent" x="500" y="66" width="108" height="34" rx="7" /><text class="d-text" x="554" y="87" text-anchor="middle" font-size="9">types simples</text>
+    <line class="d-line" x1="474" y1="112" x2="474" y2="134" /><polygon class="d-dot" points="470,134 474,142 478,134" />
+    <rect class="d-box" x="368" y="142" width="212" height="26" rx="7" /><text class="d-text" x="474" y="159" text-anchor="middle" font-size="9">schéma vérifié → sûr ✓</text>
+  </svg>
+  <figcaption>Un format de <strong>données</strong> (JSON) ne fait que décrire des valeurs&nbsp;; un format <strong>natif</strong> peut reconstruire des objets exécutant du code. Entre données non fiables, préfère le premier, puis <strong>valide</strong>.</figcaption>
+</figure>
+
+<h3>Se défendre contre la désérialisation non sécurisée</h3>
+<ul>
+<li><strong>Ne pas désérialiser</strong> de données non fiables avec un format natif (pickle, sérialisation Java brute…).</li>
+<li>Préférer un format de <strong>données pures</strong> (JSON) puis <strong>valider un schéma</strong> explicite (rappel leçon 02).</li>
+<li>Si un format riche est indispensable, <strong>signer</strong> les données (pour garantir l'origine) et restreindre les <strong>types</strong> autorisés.</li>
+</ul>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le fil conducteur : d'où vient la donnée&nbsp;?</p><p>SSRF et désérialisation partagent la racine de presque toutes les failles&nbsp;: une <strong>entrée non fiable</strong> utilisée sans contrôle. Avant d'agir sur une donnée reçue (aller chercher une URL, reconstruire un objet), pose-toi la question&nbsp;: <em>« Qui contrôle cette valeur, et qu'autorise-t-elle&nbsp;? »</em></p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>SSRF et désérialisation : cause et parade</caption>
+    <thead><tr><th scope="col">Faille</th><th scope="col">Cause</th><th scope="col">Parade principale</th></tr></thead>
+    <tbody>
+      <tr><td>SSRF</td><td>URL utilisateur récupérée par le serveur</td><td>Liste blanche + vérifier l'IP finale, pas de redirection aveugle</td></tr>
+      <tr><td>Accès métadonnées cloud</td><td>Serveur qui atteint 169.254.169.254</td><td>Bloquer les IP internes + moindre privilège</td></tr>
+      <tr><td>Désérialisation native</td><td>pickle/Java sur données non fiables</td><td>Ne pas le faire ; JSON + validation de schéma</td></tr>
+      <tr><td>Format riche imposé</td><td>Objets arbitraires reconstruits</td><td>Signer les données, restreindre les types</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>SSRF</dt><dd><em>Server-Side Request Forgery</em>&nbsp;: faire émettre par le serveur une requête vers une cible choisie par l'attaquant, souvent interne.</dd>
+  <dt>Métadonnées cloud</dt><dd>Service interne (souvent à <code>169.254.169.254</code>) exposant configuration et identifiants temporaires d'une machine cloud.</dd>
+  <dt>Liste blanche (allowlist)</dt><dd>N'autoriser explicitement que ce qui est prévu, plutôt que d'essayer d'interdire tout le reste.</dd>
+  <dt>Sérialisation</dt><dd>Transformer un objet en octets pour le stocker ou le transmettre.</dd>
+  <dt>Désérialisation</dt><dd>Reconstruire un objet à partir d'octets&nbsp;; dangereuse sur données non fiables avec un format natif.</dd>
+  <dt>Gadget (chaîne de gadgets)</dt><dd>Enchaînement de morceaux de code déjà présents, détourné pendant une désérialisation pour aboutir à une exécution.</dd>
+  <dt>RCE</dt><dd><em>Remote Code Execution</em>&nbsp;: exécution de code arbitraire à distance — la conséquence la plus grave.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La <strong>SSRF</strong> fait émettre au serveur des requêtes vers l'<strong>intérieur</strong>&nbsp;: défends par <strong>liste blanche</strong> et vérification de l'IP finale.</li>
+<li>Le service de <strong>métadonnées cloud</strong> est une cible de choix&nbsp;: combine anti-SSRF et <strong>moindre privilège</strong>.</li>
+<li>La <strong>désérialisation</strong> d'une donnée non fiable en format natif peut mener à une <strong>RCE</strong>.</li>
+<li>Préfère un format de <strong>données</strong> (JSON) puis <strong>valide</strong>&nbsp;: tout repose sur la méfiance envers l'entrée.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi le serveur atteint-il des cibles que l'attaquant ne peut pas joindre directement ?</li><li>Pourquoi une liste noire de mots-clés ne suffit-elle pas contre la SSRF ?</li><li>Qu'est-ce qui rend la désérialisation d'un format natif dangereuse ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"En quoi consiste une faille SSRF ?","a":["L'application récupère une URL fournie par l'utilisateur et va la chercher elle-même, permettant d'atteindre des cibles internes","L'utilisateur injecte du SQL dans un formulaire","Un script malveillant s'exécute dans le navigateur de la victime","Le serveur chiffre mal les mots de passe"],"correct":0,"explain":"La SSRF détourne la capacité du serveur à émettre des requêtes : depuis l'intérieur, il atteint localhost, des IP privées ou le service de métadonnées, invisibles depuis Internet."},
+  {"q":"Pourquoi le service de métadonnées cloud (169.254.169.254) est-il une cible SSRF prisée ?","a":["Il peut révéler des identifiants temporaires associés au serveur, réutilisables pour accéder à d'autres ressources","Il contient toujours les mots de passe des utilisateurs","Il permet de contourner le HTTPS","Il désactive les journaux du serveur"],"correct":0,"explain":"C'est ce qui s'est passé chez Capital One (2019) : la SSRF a mené aux identifiants du serveur, puis au stockage. D'où l'importance du moindre privilège en plus du filtrage."},
+  {"q":"Pourquoi une simple liste noire (« bloquer localhost ») est-elle insuffisante contre la SSRF ?","a":["Elle se contourne : 127.0.0.1, écritures alternatives de l'IP, noms qui résolvent en IP privée, redirections… Il faut vérifier l'IP réellement obtenue","Parce que localhost n'est jamais une cible","Parce qu'une liste noire bloque aussi le trafic légitime","Elle est suffisante si le site est en HTTPS"],"correct":0,"explain":"La parade robuste résout le nom, vérifie l'IP finale contre une liste blanche et recommence après chaque redirection, au lieu de filtrer des chaînes de caractères."},
+  {"q":"Qu'est-ce qui rend la désérialisation non sécurisée dangereuse ?","a":["Les formats natifs (pickle, Java) peuvent reconstruire des objets arbitraires et déclencher du code, menant à une RCE","La désérialisation est toujours impossible à sécuriser","JSON exécute du code à la lecture","Elle ralentit seulement l'application"],"correct":0,"explain":"Sur données non fiables, on évite les formats natifs. On préfère un format de données pures (JSON) puis on valide un schéma explicite ; si un format riche est imposé, on signe et on restreint les types."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["ssrf","server-side request forgery","server side request forgery"],"placeholder":"la faille où le serveur va chercher une URL fournie par l'utilisateur (sigle)","hints":["Server-Side Request Forgery.","Quatre lettres."],"link":{"href":"lecon-11.html","label":"Revoir « SSRF »"}},
+  {"type":"text","accept":["liste blanche","allowlist","allow-list","liste d'autorisation","liste d'autorisations"],"placeholder":"la stratégie « n'autoriser que ce qui est prévu » (2 mots)","hints":["L'inverse d'une liste noire.","« allow… » en anglais."],"link":{"href":"lecon-11.html","label":"Revoir « Se défendre contre la SSRF »"}},
+  {"type":"text","accept":["rce","remote code execution","execution de code a distance","exécution de code à distance"],"placeholder":"la conséquence la plus grave d'une désérialisation non sécurisée (sigle)","hints":["Remote Code Execution.","Trois lettres."],"link":{"href":"lecon-11.html","label":"Revoir « Désérialisation »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une fonctionnalité « aperçu de lien » prend une URL et affiche un résumé de la page. Pourquoi peut-elle devenir une SSRF, et quelle est la première défense&nbsp;?</p><details><summary>Voir une solution</summary><p>Pour générer l'aperçu, <strong>le serveur va chercher lui-même</strong> l'URL fournie par l'utilisateur. Si l'URL n'est pas filtrée, l'attaquant peut y mettre une cible <strong>interne</strong> (<code>http://localhost:…</code>, une IP privée, le service de métadonnées <code>169.254.169.254</code>) que le serveur, situé <em>à l'intérieur</em> du réseau, atteindra à sa place — c'est une <strong>SSRF</strong>. <strong>Première défense</strong>&nbsp;: une <strong>liste blanche</strong> de schémas et de domaines autorisés, le <strong>blocage des IP internes/privées</strong> après résolution du nom, et le refus de suivre les redirections à l'aveugle.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un développeur « corrige » une SSRF en rejetant toute URL contenant le texte <code>localhost</code> ou <code>127.0.0.1</code>. Pourquoi est-ce insuffisant&nbsp;?</p><details><summary>Voir une solution</summary><p>Le filtre porte sur des <strong>chaînes de caractères</strong>, pas sur la <strong>cible réelle</strong>. Il se contourne de multiples façons&nbsp;: d'autres écritures de l'adresse de bouclage (<code>0.0.0.0</code>, <code>[::1]</code>, notations décimales/octales de l'IP), un <strong>nom de domaine</strong> contrôlé par l'attaquant qui <strong>résout</strong> vers une IP privée, une URL autorisée qui <strong>redirige</strong> ensuite vers une cible interne, ou l'accès direct à <code>169.254.169.254</code> sans jamais écrire « localhost ». <strong>Approche correcte</strong>&nbsp;: résoudre le nom, <strong>vérifier l'IP réellement obtenue</strong> contre une liste blanche (et rejeter toutes les plages privées/lien-local), refaire cette vérification <strong>après chaque redirection</strong>, et cloisonner les droits du service émetteur.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une API reçoit un objet « préférences utilisateur » sérialisé et le reconstruit avec la désérialisation native du langage pour aller vite. Quel est le danger, et comment refondre proprement&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>Danger</strong>&nbsp;: la donnée provient du client, donc <strong>non fiable</strong>. Une désérialisation <strong>native</strong> (pickle, sérialisation Java…) peut reconstruire des <strong>objets arbitraires</strong> et déclencher une <strong>chaîne de gadgets</strong> aboutissant à une <strong>RCE</strong> — l'attaquant exécute son code sur le serveur, bien au-delà de « changer des préférences ». <strong>Refonte</strong>&nbsp;: transmettre les préférences dans un format de <strong>données pures</strong> (JSON), ne désérialiser que vers des <strong>types simples</strong>, puis <strong>valider un schéma explicite</strong> (champs attendus, types, bornes) avant usage — exactement la démarche de la leçon 02. Si un format riche était réellement imposé, il faudrait au minimum <strong>signer</strong> les données pour garantir l'origine et <strong>restreindre</strong> les types autorisés à la reconstruction. La rapidité ne justifie pas d'exposer une exécution de code.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

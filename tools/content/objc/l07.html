@@ -1,0 +1,65 @@
+<p>Voici un sujet qui a longtemps fait la réputation (et la difficulté) d'Objective-C&nbsp;: la <strong>gestion de la mémoire</strong>. Comme il descend du C, Objective-C n'a pas de ramasse-miettes automatique à la Java. Il utilise un mécanisme de <strong>comptage de références</strong>, longtemps manuel, aujourd'hui automatisé par <strong>ARC</strong>. Comprendre ce modèle est essentiel, car même avec ARC, certains pièges subsistent. Cette leçon démystifie le tout.</p>
+
+<h2>Le comptage de références</h2>
+<p>L'idée de base&nbsp;: chaque objet possède un <strong>compteur de références</strong>, le nombre de «&nbsp;propriétaires&nbsp;» qui le retiennent. Tant que ce compteur est supérieur à zéro, l'objet vit. Quand il tombe à zéro — plus personne n'en a besoin — l'objet est <strong>libéré</strong> et sa mémoire récupérée.</p>
+<figure class="code-block" data-file="comptage.m"><pre><code class="language-objectivec">// Conceptuellement :
+// - "retenir" un objet : compteur + 1
+// - "relâcher" un objet : compteur - 1
+// - compteur = 0  -->  objet détruit</code></pre></figure>
+
+<h2>Avant ARC&nbsp;: <code>retain</code> et <code>release</code> manuels</h2>
+<p>Historiquement, le programmeur gérait ce compteur <strong>à la main</strong>, avec les messages <code>retain</code> (retenir), <code>release</code> (relâcher) et <code>autorelease</code>. C'était puissant mais source de bugs redoutés&nbsp;: oublier un <code>release</code> causait une <strong>fuite mémoire</strong>&nbsp;; en faire un de trop provoquait un plantage (accès à un objet déjà détruit).</p>
+<figure class="code-block" data-file="manuel.m"><pre><code class="language-objectivec">// L'ANCIENNE façon (avant 2011) :
+Personne *p = [[Personne alloc] init];  // compteur = 1
+[p retain];                             // compteur = 2
+// ... usage ...
+[p release];                            // compteur = 1
+[p release];                            // compteur = 0 -> détruit</code></pre></figure>
+<p>Ce code n'est plus à écrire aujourd'hui, mais tu peux le rencontrer dans de l'ancien code&nbsp;: il est utile de savoir le lire.</p>
+
+<h2>ARC&nbsp;: la gestion automatique</h2>
+<p>Depuis 2011, <strong>ARC</strong> (Automatic Reference Counting) change la donne. Le <strong>compilateur</strong> insère automatiquement les <code>retain</code>/<code>release</code> au bon endroit, en analysant ton code. Tu raisonnes en termes de <em>propriété</em>, plus de compteurs.</p>
+<figure class="code-block" data-file="arc.m"><pre><code class="language-objectivec">// Avec ARC (aujourd'hui) :
+Personne *p = [[Personne alloc] init];
+// ... usage ...
+// Plus de retain/release : ARC s'en charge.
+// Quand 'p' n'est plus utilisé, l'objet est libéré.</code></pre></figure>
+<p>Attention&nbsp;: ARC n'est <strong>pas</strong> un ramasse-miettes. Il ne tourne pas en arrière-plan&nbsp;; il ajoute simplement les bons appels à la compilation. Le résultat est déterministe et performant — un objet est libéré dès qu'il n'a plus de propriétaire, pas «&nbsp;un jour&nbsp;».</p>
+
+<h2><code>strong</code> et <code>weak</code></h2>
+<p>Avec ARC, on décrit la <em>relation de propriété</em> via les attributs de propriété&nbsp;:</p>
+<ul>
+  <li><code>strong</code> — référence <strong>forte</strong>&nbsp;: «&nbsp;je retiens cet objet, il doit vivre tant que je le détiens&nbsp;». C'est le défaut pour les objets.</li>
+  <li><code>weak</code> — référence <strong>faible</strong>&nbsp;: «&nbsp;je pointe vers cet objet, mais je ne le retiens pas&nbsp;». Si l'objet est détruit, la référence passe automatiquement à <code>nil</code>.</li>
+</ul>
+
+<h2>Le cycle de rétention&nbsp;: le piège à éviter</h2>
+<p>Le problème classique du comptage de références&nbsp;: deux objets qui se retiennent <strong>mutuellement</strong> en <code>strong</code>. Leurs compteurs ne tombent jamais à zéro, même si plus personne d'autre ne les utilise&nbsp;: ils restent en mémoire pour toujours. C'est le <strong>cycle de rétention</strong> (une fuite).</p>
+<figure class="code-block" data-file="cycle.m"><pre><code class="language-objectivec">// Parent retient Enfant (strong), Enfant retient Parent (strong)
+// -> aucun ne peut être libéré : FUITE.
+
+// Solution : une des deux références en 'weak'
+@property (nonatomic, weak) Parent *parent;   // l'enfant ne retient pas son parent
+</code></pre></figure>
+<p>La règle pratique&nbsp;: dans une relation «&nbsp;parent ↔ enfant&nbsp;» ou «&nbsp;objet ↔ delegate&nbsp;», l'un des côtés (typiquement le retour, ou le <code>delegate</code>) doit être <code>weak</code>. C'est pourquoi les <code>delegate</code> sont presque toujours déclarés <code>weak</code> (leçon 6).</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'avec ARC, on n'a «&nbsp;plus à penser à la mémoire&nbsp;». ARC élimine les <code>retain</code>/<code>release</code> manuels, mais <strong>pas les cycles de rétention</strong>&nbsp;: lui ne sait pas les détecter. C'est au programmeur de rompre les cycles avec <code>weak</code> aux bons endroits (delegates, références «&nbsp;remontantes&nbsp;», blocks qui capturent <code>self</code>). Une fuite par cycle reste l'un des bugs mémoire les plus courants en Objective-C moderne.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le même modèle de comptage de références vit dans <strong>Swift</strong> (où l'on parle de <code>strong</code>/<code>weak</code>/<code>unowned</code>)&nbsp;: Apple a gardé ARC pour Swift plutôt qu'un ramasse-miettes, pour la prévisibilité et la performance (crucial sur mobile). Comprendre les cycles de rétention en Objective-C te prépare donc directement à Swift&nbsp;: c'est exactement le même piège, avec une syntaxe différente.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Comptage de références</strong>&nbsp;: un objet vit tant que son compteur &gt; 0&nbsp;; à 0, il est détruit.</li>
+  <li>Avant&nbsp;: <code>retain</code>/<code>release</code> manuels&nbsp;; aujourd'hui <strong>ARC</strong> les insère automatiquement (pas un GC).</li>
+  <li><code>strong</code> retient l'objet&nbsp;; <code>weak</code> non (et passe à <code>nil</code> à sa destruction).</li>
+  <li>Le <strong>cycle de rétention</strong> (deux <code>strong</code> mutuels) fuit&nbsp;: le casser avec <code>weak</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quand un objet est-il libéré&nbsp;?</li><li>ARC est-il un ramasse-miettes&nbsp;?</li><li>Comment éviter un cycle de rétention&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quel attribut de propriété utiliser pour un <code>delegate</code> afin d'éviter un cycle&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.h"><pre><code class="language-objectivec">@property (nonatomic, weak) id delegate;
+// 'weak' : le delegate n'est pas retenu, pas de cycle.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>En une phrase, explique la différence entre <code>strong</code> et <code>weak</code>.</p><details><summary>Voir une solution</summary><p><code>strong</code> retient l'objet (il reste en vie tant que la référence existe)&nbsp;; <code>weak</code> pointe vers l'objet <strong>sans</strong> le retenir, et la référence devient automatiquement <code>nil</code> si l'objet est détruit ailleurs.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Deux objets <code>A</code> et <code>B</code> se référencent mutuellement en <code>strong</code> et plus rien d'autre ne les utilise. Que se passe-t-il, et comment corriger&nbsp;?</p><details><summary>Voir une solution</summary><p>Leurs compteurs de références restent à 1 l'un pour l'autre&nbsp;: ils ne tombent jamais à zéro, donc <strong>aucun n'est libéré</strong> — c'est une fuite mémoire (cycle de rétention). Pour corriger, on passe <strong>l'une des deux références en <code>weak</code></strong> (par exemple celle qui «&nbsp;remonte&nbsp;», de B vers A)&nbsp;: ainsi B ne retient plus A, le cycle est rompu, et les deux objets peuvent être libérés.</p></details></div>

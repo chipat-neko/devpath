@@ -1,0 +1,82 @@
+<p>Jusqu'ici, on a laissé Prolog explorer librement toutes les pistes. Mais parfois, on veut <strong>maîtriser</strong> cette exploration&nbsp;: dire «&nbsp;cette réponse suffit, arrête de chercher&nbsp;», ou exprimer «&nbsp;ceci n'est <em>pas</em> vrai&nbsp;». Deux outils répondent à ce besoin&nbsp;: la <strong>coupure</strong> <code>!</code> et la <strong>négation par l'échec</strong> <code>\+</code>. Ils sont puissants — et délicats. Cette leçon t'apprend à les manier sans te brûler.</p>
+
+<h2>La coupure&nbsp;: élaguer la recherche</h2>
+<p>La <strong>coupure</strong>, notée <code>!</code>, est un but qui réussit toujours, mais avec un effet de bord&nbsp;: elle <strong>supprime les points de choix</strong> créés depuis l'entrée dans la clause. Autrement dit, elle dit à Prolog&nbsp;: «&nbsp;ne reviens plus en arrière au-delà de ce point&nbsp;».</p>
+<figure class="code-block" data-file="cut.pl"><pre><code class="language-prolog">% Sans coupure : max renvoie parfois deux réponses
+max(X, Y, X) :- X &gt;= Y.
+max(X, Y, Y) :- X &lt; Y.
+
+% Avec coupure : une fois la 1re clause validée,
+% on n'essaie plus la seconde.
+max2(X, Y, X) :- X &gt;= Y, !.
+max2(_, Y, Y).
+
+?- max2(7, 3, M).
+M = 7.          % une seule solution, nette</code></pre></figure>
+<p>Sans coupure, après avoir trouvé <code>M = 7</code>, le backtracking essaierait la seconde clause inutilement. La coupure <strong>fige</strong> le choix et rend la règle <strong>déterministe</strong>.</p>
+
+<h2>Coupures «&nbsp;vertes&nbsp;» et «&nbsp;rouges&nbsp;»</h2>
+<p>On distingue deux usages&nbsp;:</p>
+<ul>
+  <li>une coupure <strong>verte</strong> n'élimine que des pistes <em>vouées à l'échec</em>&nbsp;: elle améliore l'efficacité sans changer le sens du programme&nbsp;;</li>
+  <li>une coupure <strong>rouge</strong> élimine des pistes qui <em>auraient pu réussir</em>&nbsp;: elle change la logique, et la seconde clause dépend alors implicitement de l'échec de la première.</li>
+</ul>
+<p>Dans <code>max2</code> ci-dessus, la coupure est <strong>rouge</strong>&nbsp;: la deuxième clause <code>max2(_, Y, Y)</code> n'est correcte que parce que la première a échoué (sinon elle donnerait aussi une réponse pour <code>X &gt;= Y</code>). À manier avec soin&nbsp;: une coupure rouge mal placée introduit des bugs subtils.</p>
+
+<h2>La négation par l'échec</h2>
+<p>Prolog n'a pas de «&nbsp;faux&nbsp;» absolu&nbsp;; il raisonne sur ce qu'il peut <em>prouver</em>. La <strong>négation par l'échec</strong>, notée <code>\+ But</code>, réussit si Prolog <strong>ne parvient pas</strong> à prouver <code>But</code>. C'est «&nbsp;non prouvable&nbsp;», pas «&nbsp;faux dans l'absolu&nbsp;».</p>
+<figure class="code-block" data-file="negation.pl"><pre><code class="language-prolog">aime(ana, the).
+aime(ana, cafe).
+
+?- \+ aime(ana, the).
+false.        % on PEUT prouver qu'elle aime le thé → \+ échoue
+
+?- \+ aime(ana, jus).
+true.         % on ne peut PAS le prouver → \+ réussit</code></pre></figure>
+<p>On lit <code>\+</code> comme «&nbsp;il n'est pas prouvable que…&nbsp;». Pratique pour exprimer une exception&nbsp;: «&nbsp;tous les oiseaux volent, <em>sauf</em> ceux dont on sait qu'ils ne volent pas&nbsp;».</p>
+
+<h2>L'hypothèse du monde clos</h2>
+<p>Cette négation repose sur l'<strong>hypothèse du monde clos</strong>&nbsp;: ce qui n'est pas dans la base de connaissances (ni déductible) est considéré comme faux. Si tu n'as pas écrit le fait «&nbsp;ana aime le jus&nbsp;», Prolog conclut qu'elle ne l'aime pas — non parce que c'est prouvé faux, mais parce qu'il l'ignore.</p>
+<figure class="code-block" data-file="monde-clos.pl"><pre><code class="language-prolog">% "végétarien si on ne peut pas prouver qu'il mange de la viande"
+mange_viande(bob).
+
+vegetarien(P) :- \+ mange_viande(P).
+
+?- vegetarien(ana).
+true.     % aucun fait "ana mange de la viande" → présumée végé
+?- vegetarien(bob).
+false.</code></pre></figure>
+
+<h2>Coupure + échec&nbsp;: le motif <code>\+</code> «&nbsp;à la main&nbsp;»</h2>
+<p>Avant que <code>\+</code> ne soit standard, on combinait coupure et <code>fail</code> (un but qui échoue toujours) pour le même effet. C'est instructif&nbsp;: <code>different(X, Y) :- X = Y, !, fail. different(_, _).</code> — si <code>X</code> et <code>Y</code> s'unifient, la coupure interdit la seconde clause et <code>fail</code> fait échouer&nbsp;; sinon, la seconde clause réussit. Aujourd'hui, on préfère <code>\+</code> ou <code>\=</code>, plus lisibles.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Appliquer <code>\+</code> à un but contenant des <strong>variables non liées</strong>. <code>\+ aime(ana, X)</code> ne signifie pas «&nbsp;il existe quelque chose qu'ana n'aime pas&nbsp;»&nbsp;: il réussit seulement si <code>aime(ana, X)</code> échoue pour <em>tout</em> X. Comme la négation ne lie jamais de variable, son résultat dépend de ce qui est déjà connu. Utilise <code>\+</code> sur des buts dont les variables sont déjà instanciées.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La coupure révèle une tension dans Prolog&nbsp;: entre sa belle <em>sémantique déclarative</em> (décrire ce qui est vrai) et son <em>comportement procédural</em> (l'ordre réel d'exécution). Les puristes cherchent à l'éviter au profit de constructions plus déclaratives (<code>once/1</code>, conditions <code>-&gt;</code>). Bien l'employer demande de garder à l'esprit <em>comment</em> Prolog exécute, pas seulement <em>ce qu'</em>il signifie.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>La <strong>coupure</strong> <code>!</code> supprime les points de choix&nbsp;: elle rend une règle déterministe.</li>
+  <li>Coupure <strong>verte</strong> (optimisation) vs <strong>rouge</strong> (change la logique, à manier prudemment).</li>
+  <li><code>\+ But</code>&nbsp;: <strong>négation par l'échec</strong> — réussit si <code>But</code> n'est pas prouvable.</li>
+  <li><strong>Monde clos</strong>&nbsp;: l'inconnu est traité comme faux.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quel est l'effet de la coupure <code>!</code>&nbsp;?</li><li>Que signifie exactement <code>\+ But</code>&nbsp;?</li><li>Qu'est-ce que l'hypothèse du monde clos&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Avec <code>vole(moineau).</code> seul dans la base, que renvoie <code>?- \+ vole(pingouin).</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">true.
+% On ne peut pas prouver vole(pingouin) → la négation réussit.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>inconnu(P)</code>&nbsp;: vrai si <code>P</code> n'apparaît dans aucun fait <code>connu/1</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">inconnu(P) :- \+ connu(P).
+
+% Ex. avec connu(ana). :
+?- inconnu(bob).
+true.
+?- inconnu(ana).
+false.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Réécris <code>max(X, Y, M)</code> avec une coupure pour qu'il ne donne qu'une seule solution.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">max(X, Y, X) :- X &gt;= Y, !.
+max(_, Y, Y).
+
+?- max(3, 8, M).
+M = 8.    % une seule réponse</code></pre></figure></details></div>

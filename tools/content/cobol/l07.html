@@ -1,0 +1,96 @@
+<p>La vraie raison d'être de COBOL, c'est de traiter de gros volumes de données stockées dans des <strong>fichiers</strong>&nbsp;: relevés de comptes, paies, factures. Cette leçon t'apprend à déclarer, lire et écrire un fichier séquentiel — et la fameuse <strong>boucle de lecture</strong>, squelette de tout programme de traitement.</p>
+
+<h2>Associer un fichier&nbsp;: SELECT</h2>
+<p>Dans la division <code>ENVIRONMENT</code>, la section <code>FILE-CONTROL</code> relie un nom <strong>logique</strong> (utilisé dans le programme) à un fichier <strong>physique</strong> (sur le disque).</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT F-CLIENTS ASSIGN TO "clients.dat"
+               ORGANIZATION IS LINE SEQUENTIAL.</code></pre></figure>
+<p class="code-caption"><code>LINE SEQUENTIAL</code> = un fichier texte, une ligne par enregistrement.</p>
+
+<h2>Décrire l'enregistrement&nbsp;: FD</h2>
+<p>Dans la <code>FILE SECTION</code> de la division DATA, la <code>FD</code> (File Description) décrit la structure d'un enregistrement du fichier.</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">       DATA DIVISION.
+       FILE SECTION.
+       FD  F-CLIENTS.
+       01  CLIENT-REC.
+           05  CL-NOM    PIC X(20).
+           05  CL-SOLDE  PIC 9(7)V99.</code></pre></figure>
+
+<h2>Ouvrir, lire, fermer</h2>
+<p>On ouvre le fichier (<code>OPEN INPUT</code> pour lire), on lit avec <code>READ</code>, on ferme avec <code>CLOSE</code>. La clause <code>AT END</code> détecte la fin du fichier.</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">           OPEN INPUT F-CLIENTS.
+           READ F-CLIENTS
+               AT END DISPLAY "Fichier vide"
+           END-READ.
+           CLOSE F-CLIENTS.</code></pre></figure>
+
+<h2>La boucle de lecture</h2>
+<p>Voici le <strong>patron universel</strong> du traitement de fichier&nbsp;: lire un premier enregistrement, puis boucler tant qu'on n'est pas à la fin, en traitant puis relisant. On utilise un indicateur de fin.</p>
+<figure class="code-block" data-file="lire.cbl"><pre><code class="language-cobol">       01  FIN-FICHIER  PIC X VALUE "N".
+           88  C-EST-FINI VALUE "O".
+
+       PROCEDURE DIVISION.
+           OPEN INPUT F-CLIENTS.
+           PERFORM UNTIL C-EST-FINI
+               READ F-CLIENTS
+                   AT END SET C-EST-FINI TO TRUE
+                   NOT AT END
+                       DISPLAY CL-NOM " : " CL-SOLDE
+               END-READ
+           END-PERFORM.
+           CLOSE F-CLIENTS.
+           STOP RUN.</code></pre></figure>
+<p class="code-caption">Ce schéma — ouvrir, boucler en lisant jusqu'à <code>AT END</code>, fermer — revient dans des milliers de programmes.</p>
+
+<h2>Écrire dans un fichier</h2>
+<p>Pour produire un fichier, on l'ouvre en <code>OUTPUT</code>, on remplit l'enregistrement, puis on <code>WRITE</code>.</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">           OPEN OUTPUT F-SORTIE.
+           MOVE "Dupont" TO CL-NOM.
+           MOVE 1500.00  TO CL-SOLDE.
+           WRITE CLIENT-REC.
+           CLOSE F-SORTIE.</code></pre></figure>
+<p>Pour ajouter à un fichier existant sans l'écraser, on l'ouvre en <code>EXTEND</code>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Traiter l'enregistrement <strong>après</strong> avoir atteint la fin de fichier&nbsp;: à <code>AT END</code>, l'enregistrement ne contient plus de données valides. La clause <code>NOT AT END</code> garantit qu'on ne traite que les lectures réussies.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La variable <code>FILE STATUS</code> (déclarée dans le <code>SELECT</code>) reçoit un code après chaque opération de fichier&nbsp;: «&nbsp;00&nbsp;» = succès, «&nbsp;10&nbsp;» = fin de fichier, etc. Le code de production la teste systématiquement pour une gestion d'erreur robuste.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>SELECT … ASSIGN</code> relie un nom logique à un fichier physique&nbsp;; la <code>FD</code> décrit l'enregistrement.</li>
+  <li><code>OPEN INPUT/OUTPUT/EXTEND</code>, <code>READ</code> (avec <code>AT END</code>), <code>WRITE</code>, <code>CLOSE</code>.</li>
+  <li>La <strong>boucle de lecture</strong> (lire, traiter jusqu'à <code>AT END</code>) est le patron universel.</li>
+  <li>Un indicateur de fin (niveau 88) pilote proprement la boucle.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Où relie-t-on le nom logique au fichier physique&nbsp;?</li><li>Que détecte la clause <code>AT END</code>&nbsp;?</li><li>Pourquoi traiter l'enregistrement sous <code>NOT AT END</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la <code>SELECT</code> et la <code>FD</code> d'un fichier texte d'articles (code + libellé).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">       FILE-CONTROL.
+           SELECT F-ART ASSIGN TO "art.dat"
+               ORGANIZATION IS LINE SEQUENTIAL.
+       FD  F-ART.
+       01  ART-REC.
+           05  A-CODE     PIC 9(5).
+           05  A-LIBELLE  PIC X(20).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la boucle qui affiche chaque ligne d'un fichier client.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">           OPEN INPUT F-CLIENTS.
+           PERFORM UNTIL C-EST-FINI
+               READ F-CLIENTS
+                   AT END SET C-EST-FINI TO TRUE
+                   NOT AT END DISPLAY CL-NOM
+               END-READ
+           END-PERFORM.
+           CLOSE F-CLIENTS.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Compte le nombre d'enregistrements lus dans un fichier.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">           MOVE 0 TO NB.
+           OPEN INPUT F-CLIENTS.
+           PERFORM UNTIL C-EST-FINI
+               READ F-CLIENTS
+                   AT END SET C-EST-FINI TO TRUE
+                   NOT AT END ADD 1 TO NB
+               END-READ
+           END-PERFORM.
+           CLOSE F-CLIENTS.
+           DISPLAY NB " enregistrements".</code></pre></figure></details></div>

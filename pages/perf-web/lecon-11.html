@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fluidité à l'exécution : 60 fps, jank et tâches longues — Leçon 11 · Syntaxe</title>
+    <meta name="description" content="Après le chargement, l'exécution : comprendre le fil principal, le budget de 16 ms par image (60 fps), les tâches longues qui bloquent la réactivité (INP), le layout thrashing, et animer avec transform/opacity pour rester fluide." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="perf-web" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Performance &amp; SEO web</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Maîtriser — Leçon 11</p>
+              <h1 class="lesson-header__title">Fluidité à l'exécution : 60 fps, jank et tâches longues</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 01 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer pourquoi le <strong>fil principal</strong> ne fait qu'une chose à la fois&nbsp;;</li>
+                  <li>relier le budget de <strong>16&nbsp;ms</strong> par image aux 60&nbsp;fps et au <strong>jank</strong>&nbsp;;</li>
+                  <li>repérer une <strong>tâche longue</strong> et la découper pour garder la page réactive (INP)&nbsp;;</li>
+                  <li>éviter le <strong>layout thrashing</strong> et animer avec <code>transform</code>/<code>opacity</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, on a rendu la page <strong>rapide à charger</strong>. Mais une fois affichée, elle doit rester <strong>fluide</strong>&nbsp;: réagir au clic sans délai, défiler sans à-coups, animer sans saccade. Cette réactivité se joue sur le <strong>fil principal</strong> (le <em>main thread</em>) du navigateur — le même fil qui exécute ton JavaScript. Cette leçon explique ce budget de temps invisible, pourquoi on le dépasse, et comment ne pas le dépasser. C'est la face «&nbsp;exécution&nbsp;» de la performance, celle qui se cache derrière l'INP&nbsp;vu en <a href="lecon-01.html">leçon&nbsp;1</a>.</p>
+
+<h2>Le fil principal ne fait qu'une chose à la fois</h2>
+<p>Le navigateur exécute presque tout sur un <strong>seul fil</strong>&nbsp;: ton JavaScript, le calcul des styles, la mise en page, la peinture, et le traitement des événements (clic, saisie, défilement). Comme il n'y a qu'un fil, ces travaux <strong>s'attendent</strong>&nbsp;: pendant que le fil calcule, il ne peut <em>pas</em> répondre à un clic. Si un script tourne pendant 300&nbsp;ms, l'utilisateur qui clique pendant ce temps attend&nbsp;: le bouton semble «&nbsp;mort&nbsp;». La fluidité, c'est <strong>rendre le fil disponible</strong> le plus souvent possible.</p>
+
+<h2>Le budget de 16 ms : 60 images par seconde</h2>
+<p>Un écran se rafraîchit en général <strong>60 fois par seconde</strong>. Pour suivre, le navigateur doit produire une nouvelle image toutes les <strong>16,7&nbsp;ms</strong> (soit 1000&nbsp;ms&nbsp;/&nbsp;60). Dans ce court instant, il doit exécuter le JS en attente, recalculer le style, faire la mise en page (<em>layout</em>), peindre (<em>paint</em>) et composer (<em>composite</em>). Si tout cela tient dans 16&nbsp;ms&nbsp;: l'image sort à l'heure, l'animation est lisse. Si ça déborde&nbsp;: l'image est <strong>sautée</strong> (on dit qu'elle est <em>dropped</em>), le mouvement saccade — c'est le <strong>jank</strong>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Deux images successives comparées à leur budget de 16,7 millisecondes. La première image décompose son travail en cinq étapes courtes — JavaScript, style, mise en page, peinture, composition — qui tiennent toutes ensemble sous la limite des 16,7 millisecondes : l'image sort à l'heure, l'animation est fluide. La seconde image contient un bloc de JavaScript très long qui dépasse à lui seul la limite : l'étape déborde la barre des 16,7 millisecondes, l'image suivante ne peut pas être produite à temps, elle est sautée, ce qui produit une saccade appelée jank.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Chaque image dispose de 16,7 ms</text>
+    <line class="d-line" x1="470" y1="34" x2="470" y2="196" stroke-width="1.4" stroke-dasharray="4 3" /><text class="d-tag" x="470" y="30" text-anchor="middle" font-size="9">16,7 ms</text>
+    <text class="d-mut" x="30" y="66" font-size="9">image 1</text>
+    <rect class="d-box" x="90" y="54" width="70" height="20" rx="3" /><text class="d-text" x="125" y="68" text-anchor="middle" font-size="8">JS</text>
+    <rect class="d-box" x="162" y="54" width="60" height="20" rx="3" /><text class="d-text" x="192" y="68" text-anchor="middle" font-size="8">style</text>
+    <rect class="d-box" x="224" y="54" width="70" height="20" rx="3" /><text class="d-text" x="259" y="68" text-anchor="middle" font-size="8">layout</text>
+    <rect class="d-box" x="296" y="54" width="60" height="20" rx="3" /><text class="d-text" x="326" y="68" text-anchor="middle" font-size="8">paint</text>
+    <rect class="d-accent" x="358" y="54" width="70" height="20" rx="3" /><text class="d-text" x="393" y="68" text-anchor="middle" font-size="8">composite</text>
+    <text class="d-mut" x="200" y="94" text-anchor="middle" font-size="9">✓ tient dans le budget → image lisse</text>
+    <text class="d-mut" x="30" y="150" font-size="9">image 2</text>
+    <rect class="d-box" x="90" y="138" width="430" height="20" rx="3" /><text class="d-text" x="290" y="152" text-anchor="middle" font-size="8">une seule tâche JavaScript très longue</text>
+    <text class="d-mut" x="300" y="182" text-anchor="middle" font-size="9">✗ déborde 16,7 ms → image suivante sautée = jank</text>
+  </svg>
+  <figcaption>Tant que le travail d'une image tient sous <strong>16,7&nbsp;ms</strong>, le mouvement est fluide. Une tâche qui déborde fait <strong>sauter</strong> l'image suivante&nbsp;: c'est le jank.</figcaption>
+</figure>
+
+<h2>Les tâches longues bloquent la réactivité</h2>
+<p>Une <strong>tâche longue</strong> (<em>long task</em>) est un travail JavaScript qui occupe le fil <strong>plus de 50&nbsp;ms</strong> d'affilée. Pendant qu'elle tourne, un clic ou une frappe <strong>attendent</strong> leur tour&nbsp;: c'est exactement ce que mesure l'<strong>INP</strong>. Le remède n'est pas de faire «&nbsp;moins de calcul&nbsp;», mais de le <strong>découper</strong> pour <em>rendre la main</em> régulièrement au navigateur, qui en profite pour traiter les événements en attente.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// À éviter : traiter 100 000 éléments d'un bloc → une tâche de plusieurs
+// centaines de ms pendant lesquelles la page ne répond plus.
+function traiterTout(items) {
+  for (const item of items) coûteux(item);
+}
+
+// Mieux : découper en morceaux et rendre la main entre chaque.
+async function traiterParLots(items, taille = 500) {
+  for (let i = 0; i &lt; items.length; i += taille) {
+    for (let j = i; j &lt; i + taille &amp;&amp; j &lt; items.length; j++) coûteux(items[j]);
+    // yield : laisse le navigateur traiter clics, saisie et rendu
+    await new Promise((r) =&gt; setTimeout(r));
+  }
+}</code></pre></figure>
+<p>Les plateformes récentes offrent des outils dédiés&nbsp;: <code>scheduler.postTask()</code> pour donner une <strong>priorité</strong> à une tâche, <code>scheduler.yield()</code> pour rendre la main proprement, ou <code>requestIdleCallback()</code> pour le travail non urgent (analytics, préchargement) qui n'attend que les <strong>temps morts</strong>. L'idée reste la même&nbsp;: ne jamais monopoliser le fil.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Rendre la main, ce n'est pas ralentir</p><p>Découper une tâche ne la rend pas plus lente&nbsp;: le calcul total dure à peu près pareil. Ce qui change, c'est que le fil <strong>respire</strong> entre les morceaux&nbsp;: un clic reçu à ce moment est traité tout de suite, au lieu d'attendre la fin. On échange quelques millisecondes de débit contre une <strong>réactivité</strong> constante — c'est presque toujours le bon échange sur une interface.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Comparaison de la réaction à un clic selon que le travail est fait d'un bloc ou découpé. En haut, une longue tâche unique occupe le fil principal ; un clic arrive pendant son exécution mais ne peut être traité qu'à la toute fin, après un long délai. En bas, le même travail est découpé en plusieurs petites tâches séparées par de courtes pauses ; le clic qui arrive au même instant est traité dès la première pause, avec un délai très court. Découper le travail raccourcit fortement le temps de réponse ressenti.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un clic pendant le travail : combien attend-il ?</text>
+    <text class="d-mut" x="30" y="60" font-size="9">bloc</text>
+    <rect class="d-box" x="80" y="48" width="380" height="22" rx="3" /><text class="d-text" x="270" y="63" text-anchor="middle" font-size="8">une tâche longue (sans interruption)</text>
+    <path class="d-line" d="M170 44 L170 30" fill="none" /><text class="d-tag" x="170" y="26" text-anchor="middle" font-size="8">clic</text>
+    <path class="d-line" d="M460 59 L500 59" fill="none" /><circle class="d-dot" cx="500" cy="59" r="3" /><text class="d-mut" x="512" y="62" font-size="8">réponse</text>
+    <text class="d-mut" x="300" y="88" text-anchor="middle" font-size="8.5">délai long : le clic attend la fin de la tâche</text>
+    <text class="d-mut" x="30" y="140" font-size="9">découpé</text>
+    <rect class="d-box" x="80" y="128" width="70" height="22" rx="3" /><rect class="d-box" x="158" y="128" width="70" height="22" rx="3" /><rect class="d-box" x="236" y="128" width="70" height="22" rx="3" /><rect class="d-box" x="314" y="128" width="70" height="22" rx="3" /><rect class="d-box" x="392" y="128" width="70" height="22" rx="3" />
+    <path class="d-line" d="M170 124 L170 110" fill="none" /><text class="d-tag" x="170" y="106" text-anchor="middle" font-size="8">clic</text>
+    <path class="d-line" d="M228 139 L236 139" fill="none" /><circle class="d-dot" cx="236" cy="139" r="3" /><text class="d-mut" x="248" y="142" font-size="8">réponse</text>
+    <text class="d-mut" x="300" y="168" text-anchor="middle" font-size="8.5">délai court : le clic passe dès la première pause</text>
+  </svg>
+  <figcaption>Le même travail, découpé, laisse le clic passer <strong>entre deux morceaux</strong>&nbsp;: le délai de réponse (l'INP) fond, alors que le temps de calcul total est quasi identique.</figcaption>
+</figure>
+
+<h2>Le layout thrashing : lire puis écrire en boucle</h2>
+<p>Modifier le DOM ne recalcule pas la mise en page tout de suite&nbsp;: le navigateur <strong>groupe</strong> les changements et ne recalcule qu'au moment de peindre. Mais si, dans une boucle, tu <strong>écris</strong> (changer une taille) puis <strong>lis</strong> aussitôt une valeur géométrique (<code>offsetHeight</code>, <code>getBoundingClientRect()</code>), tu <strong>forces</strong> le navigateur à recalculer immédiatement pour te répondre&nbsp;: c'est le <strong>layout thrashing</strong>, un recalcul par tour de boucle.</p>
+<figure class="code-block" data-file="thrashing.js"><pre><code class="language-javascript">// À éviter : chaque lecture de offsetWidth force un recalcul (lecture ⇄ écriture)
+for (const el of boîtes) {
+  el.style.width = el.offsetWidth + 10 + "px"; // lit PUIS écrit, à chaque tour
+}
+
+// Mieux : lire tout d'abord, puis écrire tout ensuite
+const largeurs = boîtes.map((el) =&gt; el.offsetWidth); // toutes les lectures
+boîtes.forEach((el, i) =&gt; { el.style.width = largeurs[i] + 10 + "px"; }); // écritures</code></pre></figure>
+<p>La règle&nbsp;: <strong>lire d'abord, écrire ensuite</strong>. Et pour les mises à jour visuelles, on les planifie dans <code>requestAnimationFrame()</code>, appelé par le navigateur <strong>juste avant</strong> de peindre — au bon moment du cycle, une fois par image.</p>
+
+<h2>Animer sans saccade : transform et opacity</h2>
+<p>Toutes les propriétés CSS ne coûtent pas le même prix à animer. Changer <code>width</code>, <code>top</code> ou <code>margin</code> déclenche une <strong>mise en page</strong> puis une <strong>peinture</strong> à chaque image — cher. En revanche, <code>transform</code> (déplacer, redimensionner, tourner) et <code>opacity</code> sont traités par le <strong>compositeur</strong>, souvent sur le processeur graphique, <strong>sans</strong> refaire la mise en page&nbsp;: c'est ce qui reste fluide même sur mobile.</p>
+<figure class="code-block" data-file="anim.css"><pre><code class="language-css">/* Coûteux : anime la géométrie → layout + paint à chaque image */
+.menu { left: 0; transition: left 0.3s; }
+.menu.ouvert { left: 250px; }
+
+/* Fluide : anime une transformation → composition seule */
+.menu { transform: translateX(0); transition: transform 0.3s; }
+.menu.ouvert { transform: translateX(250px); }</code></pre></figure>
+<p>On peut <em>prévenir</em> le navigateur qu'un élément va être animé avec <code>will-change: transform</code>, pour qu'il le prépare sur sa propre couche — mais avec <strong>parcimonie</strong>&nbsp;: en abuser consomme de la mémoire et peut ralentir. Enfin, <code>content-visibility: auto</code> permet de <strong>ne pas peindre</strong> les sections hors de l'écran tant qu'on n'y arrive pas — un gain net sur les très longues pages.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: un défilement qui saccade</p><p>Sur une page d'articles, le défilement «&nbsp;accrochait&nbsp;» sur mobile. Le panneau <strong>Performance</strong> montrait, à chaque image, une <strong>tâche longue</strong>&nbsp;: un gestionnaire de <code>scroll</code> qui lisait <code>getBoundingClientRect()</code> sur des dizaines d'éléments <em>puis</em> ajustait leur <code>top</code> — du layout thrashing en plein défilement. Deux corrections&nbsp;: passer l'effet à <code>transform</code> (composition seule) et déplacer la détection d'apparition vers un <code>IntersectionObserver</code> (qui ne bloque pas le fil). Résultat&nbsp;: 60&nbsp;fps stables, plus aucune image sautée.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — rester fluide à l'exécution</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Ce qu'il faut retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Fil principal</td><td>un seul fil pour JS, style, layout, paint et événements&nbsp;: ne pas le monopoliser</td></tr>
+      <tr><td>Budget d'image</td><td>~16,7&nbsp;ms pour tenir 60&nbsp;fps&nbsp;; dépasser = image sautée = jank</td></tr>
+      <tr><td>Tâche longue</td><td>&gt; 50&nbsp;ms sur le fil&nbsp;: bloque le clic (INP)&nbsp;→ découper</td></tr>
+      <tr><td>Découper</td><td><code>setTimeout</code>, <code>scheduler.postTask/yield</code>, <code>requestIdleCallback</code></td></tr>
+      <tr><td>Layout thrashing</td><td>lire une valeur géométrique après une écriture force un recalcul&nbsp;: <strong>lire puis écrire</strong></td></tr>
+      <tr><td>Animer</td><td><code>transform</code>/<code>opacity</code> (composition) plutôt que <code>top</code>/<code>width</code> (layout+paint)</td></tr>
+      <tr><td><code>content-visibility</code></td><td>ne pas peindre le hors-écran des longues pages</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Fil principal (<em>main thread</em>)</dt><dd>Le fil unique où le navigateur exécute le JavaScript, calcule le rendu et traite les événements&nbsp;; un seul travail à la fois.</dd>
+  <dt>Image (<em>frame</em>)</dt><dd>Une mise à jour de l'affichage&nbsp;; à 60&nbsp;fps il faut en produire une toutes les ~16,7&nbsp;ms.</dd>
+  <dt>Jank</dt><dd>Saccade visible quand une image n'est pas produite à temps et se retrouve sautée.</dd>
+  <dt>Tâche longue (<em>long task</em>)</dt><dd>Travail qui occupe le fil principal plus de 50&nbsp;ms d'affilée&nbsp;; retarde la réaction aux interactions.</dd>
+  <dt>Layout thrashing</dt><dd>Recalculs de mise en page répétés causés par une alternance lecture/écriture du DOM dans une boucle.</dd>
+  <dt><code>requestAnimationFrame</code></dt><dd>Planifie une fonction juste avant la prochaine peinture&nbsp;: le bon moment pour une mise à jour visuelle.</dd>
+  <dt>Compositeur</dt><dd>Étape finale qui assemble les couches&nbsp;; <code>transform</code> et <code>opacity</code> y sont traités sans refaire la mise en page.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le <strong>fil principal</strong> est unique&nbsp;: tant qu'il calcule, la page ne répond pas.</li>
+  <li>Chaque image a ~<strong>16,7&nbsp;ms</strong>&nbsp;; dépasser fait sauter des images (<strong>jank</strong>).</li>
+  <li>On <strong>découpe</strong> les tâches &gt;&nbsp;50&nbsp;ms pour rendre la main et garder l'INP bas.</li>
+  <li>On <strong>lit puis écrit</strong> le DOM et on anime avec <code>transform</code>/<code>opacity</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi un script de 300&nbsp;ms rend-il un bouton «&nbsp;mort&nbsp;» pendant ce temps&nbsp;?</li>
+  <li>Que gagne-t-on à découper une tâche longue, puisque le calcul total ne raccourcit pas&nbsp;?</li>
+  <li>Pourquoi <code>transform: translateX()</code> est-il plus fluide que <code>left</code> pour déplacer un élément&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Que mesure « le budget de 16,7 ms » d'une image ?","a":["Le temps disponible pour produire une image et tenir 60 fps ; le dépasser fait sauter l'image (jank)","La taille maximale d'une image en Ko","Le temps de réponse du serveur","La durée d'une animation CSS"],"correct":0,"explain":"À 60 images par seconde, le navigateur dispose de 1000/60 ≈ 16,7 ms par image. Si le travail déborde, l'image suivante ne sort pas à temps : c'est le jank."},
+  {"q":"Une tâche JavaScript de 200 ms sur le fil principal pose problème parce que…","a":["Pendant qu'elle tourne, le fil ne peut pas traiter les clics ni les saisies : l'interface semble figée (mauvais INP)","Elle consomme trop de bande passante réseau","Elle empêche le cache de fonctionner","Elle dégrade le référencement"],"correct":0,"explain":"Le fil principal est unique. Une tâche longue le monopolise : toute interaction reçue pendant ce temps attend la fin, ce que mesure l'INP. On découpe la tâche pour rendre la main régulièrement."},
+  {"q":"Pourquoi préférer animer avec transform/opacity plutôt qu'avec top/left/width ?","a":["transform et opacity sont gérés par le compositeur sans refaire la mise en page ni la peinture, donc restent fluides","Ils sont plus courts à écrire","Ils fonctionnent sans CSS","Ils améliorent le SEO"],"correct":0,"explain":"Animer la géométrie (top, left, width) relance layout + paint à chaque image. transform et opacity passent par la seule composition, souvent accélérée par le GPU : le mouvement reste lisse."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["16,7","16.7","16","16 ms","16,7 ms","16.7 ms"],"placeholder":"le budget de temps (en ms) d'une image pour tenir 60 fps","hints":["C'est 1000 divisé par 60.","Arrondi, on parle souvent de « 16 ms ».","1000 / 60 ≈ __"],"link":{"href":"lecon-11.html","label":"Revoir « Le budget de 16 ms »"}},
+  {"type":"text","accept":["jank","le jank","saccade","saccades"],"placeholder":"le nom de la saccade visible quand une image est sautée","hints":["Un mot anglais de quatre lettres.","Il survient quand on dépasse le budget d'image.","« j… »"],"link":{"href":"lecon-11.html","label":"Revoir « Le budget de 16 ms »"}},
+  {"type":"text","accept":["layout thrashing","thrashing","le layout thrashing"],"placeholder":"le nom du problème quand on lit une valeur géométrique juste après une écriture, en boucle","hints":["Deux mots anglais.","La cure : lire d'abord, écrire ensuite.","« layout t… »"],"link":{"href":"lecon-11.html","label":"Revoir « Le layout thrashing »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un collègue dit&nbsp;: «&nbsp;Ma fonction ne dure que 120&nbsp;ms, ce n'est rien.&nbsp;» En quoi est-ce quand même un problème de <em>fluidité</em>, et comment le nomme-t-on&nbsp;?</p><details><summary>Voir une solution</summary><p>120&nbsp;ms dépassent le seuil des <strong>50&nbsp;ms</strong>&nbsp;: c'est une <strong>tâche longue</strong>. Pendant ces 120&nbsp;ms, le fil principal est occupé et ne peut traiter aucun clic ni aucune saisie&nbsp;: si l'utilisateur interagit à ce moment, il perçoit un délai — c'est ce que mesure l'<strong>INP</strong>. «&nbsp;Peu de temps&nbsp;» pour le calcul peut être «&nbsp;beaucoup&nbsp;» pour la réactivité.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Réécris cette boucle pour éviter le layout thrashing&nbsp;: <code>for (const el of items) { el.style.height = el.offsetHeight * 2 + "px"; }</code></p><details><summary>Voir une solution</summary><figure class="code-block" data-file="fix.js"><pre><code class="language-javascript">// 1) Lire toutes les hauteurs d'abord (aucune écriture entre-temps)
+const hauteurs = items.map((el) =&gt; el.offsetHeight);
+// 2) Puis écrire, sans plus lire de géométrie
+items.forEach((el, i) =&gt; { el.style.height = hauteurs[i] * 2 + "px"; });</code></pre></figure><p>En séparant la <strong>phase de lecture</strong> de la <strong>phase d'écriture</strong>, le navigateur ne recalcule la mise en page qu'<strong>une seule fois</strong> au lieu d'une fois par tour de boucle.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Tu dois filtrer et afficher une liste de 50&nbsp;000 lignes au fil de la frappe dans un champ de recherche. Fait naïvement, chaque frappe gèle la page. Propose une stratégie qui garde la saisie fluide.</p><details><summary>Voir une solution</summary><p>Plusieurs leviers se combinent&nbsp;: <strong>(1)</strong> ne pas tout recalculer à chaque frappe — <strong>débattre</strong> (<em>debounce</em>) l'entrée (attendre ~150&nbsp;ms de pause) pour ne filtrer qu'une fois la frappe stabilisée&nbsp;; <strong>(2)</strong> <strong>découper</strong> le filtrage en lots avec un <em>yield</em> (<code>await</code> entre les lots) pour ne jamais tenir le fil &gt;&nbsp;50&nbsp;ms&nbsp;; <strong>(3)</strong> n'afficher que le <strong>visible</strong> (virtualisation de liste) au lieu d'insérer 50&nbsp;000 nœuds&nbsp;; <strong>(4)</strong> si le filtrage reste lourd, le déléguer à un <strong>Web Worker</strong> (leçon suivante) pour libérer totalement le fil principal. La saisie, elle, reste toujours prioritaire.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-markup.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-css.min.js" defer></script>
+  </body>
+</html>

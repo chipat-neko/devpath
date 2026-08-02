@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Supervision et tolérance aux pannes — Leçon 10 · Cours Elixir — Syntaxe</title>
+    <meta name="description" content="Découvre « let it crash », les superviseurs Elixir, les stratégies de redémarrage et les arbres de supervision pour bâtir des systèmes résilients." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="elixir" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Elixir</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Concurrence et OTP — Leçon 10</p>
+              <h1 class="lesson-header__title">Supervision et tolérance aux pannes</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 9</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre la philosophie <strong>« let it crash »</strong> et pourquoi elle remplace la programmation défensive&nbsp;;</li>
+                  <li>écrire un superviseur avec <code>Supervisor.start_link/2</code> et un <code>child_spec</code>&nbsp;;</li>
+                  <li>choisir la bonne stratégie de redémarrage (<code>:one_for_one</code>, <code>:one_for_all</code>, <code>:rest_for_one</code>)&nbsp;;</li>
+                  <li>concevoir un <strong>arbre de supervision</strong> et situer <code>DynamicSupervisor</code> et <code>Task.Supervisor</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, tu as appris à écrire des processus qui font du travail&nbsp;: des <code>GenServer</code> qui gardent un état, répondent à des messages, vivent leur vie sur la BEAM. Mais que se passe-t-il quand l'un d'eux plante&nbsp;? Dans la plupart des langages, un crash, c'est la catastrophe&nbsp;: le serveur tombe, on perd des données, on se réveille la nuit. En Elixir, le crash est un événement <em>normal</em>, prévu, presque banal. On le laisse arriver, et quelqu'un le ramasse derrière.</p>
+
+<p>Ce «&nbsp;quelqu'un&nbsp;», c'est le <strong>superviseur</strong>. Dans cette leçon, tu vas découvrir la philosophie «&nbsp;let it crash&nbsp;», apprendre à surveiller un processus pour le faire redémarrer proprement, et comprendre pourquoi cette architecture, héritée des centraux téléphoniques Erlang, permet d'atteindre des disponibilités qu'on chiffre en «&nbsp;neuf neuf&nbsp;».</p>
+
+<h2>« Let it crash » : arrêter de coder la peur au ventre</h2>
+
+<p>Le réflexe que tu as sans doute acquis ailleurs, c'est de blinder ton code contre toutes les erreurs possibles&nbsp;: vérifier que la valeur n'est pas <code>nil</code>, attraper chaque exception, prévoir des branches «&nbsp;au cas où&nbsp;». Ce code défensif gonfle, complique la lecture, et ne couvre jamais <em>tous</em> les cas. Elixir prend le contre-pied&nbsp;: écris le chemin nominal, le cas où tout va bien. Si une donnée inattendue arrive, le pattern matching échoue, le processus plante&nbsp;— et c'est très bien.</p>
+
+<figure class="code-block" data-file="calcul.exs"><pre><code class="language-elixir"># Style défensif (ce qu'on évite en Elixir)
+def divise(a, b) do
+  if b == 0 do
+    {:error, :division_par_zero}
+  else
+    {:ok, a / b}
+  end
+end
+
+# Style « let it crash » : on écrit le cas heureux
+def divise(a, b), do: a / b
+# Si b vaut 0, le processus plante avec une ArithmeticError.
+# iex&gt; divise(10, 0)
+# ** (ArithmeticError) bad argument in arithmetic expression</code></pre></figure>
+
+<p>L'idée n'est pas de planter pour le plaisir. C'est que <strong>l'isolation des processus</strong> rend le crash sans danger&nbsp;: un processus qui meurt n'emporte ni la mémoire des autres, ni l'application entière. Et plutôt que de réparer un état corrompu après une erreur, on jette le processus malade et on en redémarre un neuf, dans un état propre connu. Redémarrer, c'est souvent le remède le plus fiable.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>«&nbsp;Let it crash&nbsp;» ne veut pas dire «&nbsp;ignore les erreurs&nbsp;». Les erreurs <em>attendues</em> (un fichier absent, une saisie invalide) se gèrent avec <code>{:ok, _}</code> / <code>{:error, _}</code>. On laisse planter les erreurs <em>inattendues</em>&nbsp;: les bugs, les états impossibles. La distinction est tout l'art.</p></div></div>
+
+<h2>Le rôle du superviseur</h2>
+
+<p>Un superviseur est un processus dont le <strong>seul travail</strong> est de surveiller d'autres processus, appelés ses <em>enfants</em>, et de les relancer quand ils meurent. Il ne fait aucune logique métier. Quand un enfant plante, le superviseur le détecte (il est lié à lui) et applique une <em>stratégie</em> pour décider qui redémarrer.</p>
+
+<p>Reprenons le <code>GenServer</code> de la leçon précédente&nbsp;: un compteur tout simple. On va le placer sous supervision.</p>
+
+<figure class="code-block" data-file="compteur.exs"><pre><code class="language-elixir">defmodule Compteur do
+  use GenServer
+
+  # API publique
+  def start_link(valeur_initiale) do
+    GenServer.start_link(__MODULE__, valeur_initiale, name: __MODULE__)
+  end
+
+  def incremente, do: GenServer.cast(__MODULE__, :incremente)
+  def valeur, do: GenServer.call(__MODULE__, :valeur)
+
+  # Callbacks
+  @impl true
+  def init(valeur), do: {:ok, valeur}
+
+  @impl true
+  def handle_cast(:incremente, etat), do: {:noreply, etat + 1}
+
+  @impl true
+  def handle_call(:valeur, _from, etat), do: {:reply, etat, etat}
+end</code></pre></figure>
+
+<p>Pour le superviser, on déclare une liste d'enfants et on appelle <code>Supervisor.start_link/2</code> avec une stratégie.</p>
+
+<figure class="code-block" data-file="appli.exs"><pre><code class="language-elixir">children = [
+  {Compteur, 0}
+]
+
+{:ok, _sup} = Supervisor.start_link(children, strategy: :one_for_one)
+
+# iex&gt; Compteur.incremente()
+# :ok
+# iex&gt; Compteur.valeur()
+# 1</code></pre></figure>
+
+<p>Chaque élément de <code>children</code> est une instruction de démarrage. La forme <code>{Compteur, 0}</code> signifie&nbsp;: «&nbsp;démarre le module <code>Compteur</code> en appelant <code>Compteur.start_link(0)</code>&nbsp;». Le superviseur sait faire ça grâce au <em>child spec</em>.</p>
+
+<h2>Le child spec : la fiche d'identité d'un enfant</h2>
+
+<p>Comment le superviseur sait-il comment démarrer un enfant, et quoi faire s'il plante&nbsp;? Grâce à une carte de configuration, le <strong>child spec</strong>. Quand tu écris <code>use GenServer</code>, Elixir génère pour toi une fonction <code>child_spec/1</code> avec des valeurs par défaut raisonnables. Tu peux la voir&nbsp;:</p>
+
+<figure class="code-block" data-file="spec.exs"><pre><code class="language-elixir"># iex&gt; Compteur.child_spec(0)
+# %{
+#   id: Compteur,
+#   start: {Compteur, :start_link, [0]},
+#   type: :worker,
+#   restart: :permanent,
+#   shutdown: 5000
+# }</code></pre></figure>
+
+<p>Décortiquons les champs qui comptent&nbsp;:</p>
+
+<ul>
+<li><code>id</code>&nbsp;: un identifiant unique parmi les enfants de ce superviseur.</li>
+<li><code>start</code>&nbsp;: le triplet <code>{module, fonction, arguments}</code> à appeler pour démarrer l'enfant.</li>
+<li><code>restart</code>&nbsp;: la politique de redémarrage. <code>:permanent</code> (toujours relancer), <code>:temporary</code> (jamais), ou <code>:transient</code> (relancer seulement si l'arrêt est anormal).</li>
+<li><code>shutdown</code>&nbsp;: combien de millisecondes laisser à l'enfant pour s'arrêter proprement avant de le tuer.</li>
+</ul>
+
+<p>Tu peux surcharger ces valeurs en passant un tuple <code>{Module, options}</code>, ou en redéfinissant <code>child_spec/1</code> dans ton module. Par exemple, pour ajuster la politique de redémarrage et l'identifiant d'un enfant&nbsp;:</p>
+
+<figure class="code-block" data-file="override.exs"><pre><code class="language-elixir">Supervisor.child_spec({Compteur, 0}, restart: :transient, id: :mon_compteur)
+# =&gt; %{id: :mon_compteur, start: {Compteur, :start_link, [0]}, restart: :transient, ...}</code></pre></figure>
+
+<h2>Voir un enfant planter et renaître</h2>
+
+<p>Ajoutons un message qui force le crash, pour observer la supervision en action. On rajoute un <code>handle_cast</code> qui lève une erreur.</p>
+
+<figure class="code-block" data-file="compteur_fragile.exs"><pre><code class="language-elixir">  def plante, do: GenServer.cast(__MODULE__, :plante)
+
+  @impl true
+  def handle_cast(:plante, _etat) do
+    raise "boom"
+  end</code></pre></figure>
+
+<p>Dans IEx, sous supervision avec <code>:one_for_one</code>&nbsp;:</p>
+
+<figure class="code-block" data-file="demo.exs"><pre><code class="language-elixir"># iex&gt; Compteur.incremente()
+# iex&gt; Compteur.incremente()
+# iex&gt; Compteur.valeur()
+# 2
+# iex&gt; Compteur.plante()
+# :ok
+# 18:42:03.114 [error] GenServer Compteur terminating
+# ** (RuntimeError) boom
+#
+# iex&gt; Compteur.valeur()
+# 0   # &lt;-- redémarré ! L'état est revenu à la valeur initiale.</code></pre></figure>
+
+<p>Observe deux choses. D'abord, le superviseur a relancé le <code>Compteur</code> automatiquement&nbsp;: l'appel suivant fonctionne. Ensuite, l'état a été <strong>perdu</strong>&nbsp;: on repart de <code>0</code>, la valeur initiale. C'est le prix du redémarrage propre&nbsp;— et c'est pourquoi un état précieux doit vivre ailleurs (une base, un autre processus dédié) plutôt que dans un worker qui peut planter.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le cycle de supervision. En haut, un superviseur surveille un worker par un lien. Étape 1 : le worker travaille avec l'état 42. Étape 2 : le worker plante et le lien remonte le crash au superviseur. Étape 3 : le superviseur redémarre un worker neuf, qui repart de son état initial 0. Le superviseur ne fait aucune logique métier : il surveille et relance.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le superviseur détecte le crash et relance un enfant neuf</text>
+    <rect class="d-accent" x="250" y="34" width="140" height="34" rx="6" /><text class="d-text" x="320" y="55" text-anchor="middle" font-size="10">Superviseur</text>
+    <rect class="d-box" x="40" y="112" width="150" height="46" rx="8" /><text class="d-text" x="115" y="132" text-anchor="middle" font-size="9">worker — état 42</text><text class="d-mut" x="115" y="147" text-anchor="middle" font-size="8">① il travaille</text>
+    <rect class="d-frame" x="245" y="112" width="150" height="46" rx="8" /><text class="d-text" x="320" y="132" text-anchor="middle" font-size="9">✗ crash</text><text class="d-mut" x="320" y="147" text-anchor="middle" font-size="8">② le lien remonte</text>
+    <rect class="d-box" x="450" y="112" width="150" height="46" rx="8" /><text class="d-text" x="525" y="132" text-anchor="middle" font-size="9">worker — état 0</text><text class="d-mut" x="525" y="147" text-anchor="middle" font-size="8">③ neuf, état initial</text>
+    <path class="d-line" d="M300 68 L150 112" fill="none" />
+    <path class="d-line" d="M320 68 L320 112" fill="none" />
+    <path class="d-line" d="M345 68 L505 112" fill="none" /><circle class="d-dot" cx="505" cy="112" r="2.5" />
+    <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="8">le superviseur ne fait aucune logique métier : il surveille et relance</text>
+  </svg>
+  <figcaption>Le crash remonte au superviseur par le lien&nbsp;; celui-ci jette le processus malade et en démarre un neuf, dans son état initial. L'état d'avant le crash est perdu&nbsp;— d'où l'intérêt de garder l'état précieux ailleurs.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Si un enfant plante trop souvent en peu de temps, le superviseur abandonne&nbsp;: il dépasse son <code>max_restarts</code> (3 redémarrages par défaut en 5 secondes) et se tue lui-même, en remontant l'échec à <em>son</em> superviseur. Un redémarrage en boucle n'est pas une solution&nbsp;; c'est le signe d'un bug à corriger.</p></div></div>
+
+<h2>Les trois stratégies de redémarrage</h2>
+
+<p>Quand plusieurs enfants cohabitent sous un même superviseur, la <strong>stratégie</strong> décide qui est affecté par le crash de l'un d'eux. Il y en a trois&nbsp;:</p>
+
+<ul>
+<li><code>:one_for_one</code>&nbsp;: seul l'enfant qui a planté est redémarré. Les autres ne bougent pas. C'est le choix par défaut, idéal quand les enfants sont <strong>indépendants</strong>.</li>
+<li><code>:one_for_all</code>&nbsp;: si un enfant plante, le superviseur arrête <strong>tous</strong> les enfants et les relance tous. À utiliser quand les enfants sont interdépendants et n'ont de sens qu'ensemble.</li>
+<li><code>:rest_for_one</code>&nbsp;: l'enfant qui plante et tous ceux <strong>démarrés après lui</strong> dans la liste sont redémarrés&nbsp;; ceux d'avant sont épargnés. Pratique quand il y a une chaîne de dépendances dans un ordre précis.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Les trois stratégies de redémarrage quand l'enfant B plante, sur trois enfants A, B, C. one_for_one : seul B redémarre, A et C restent intacts. one_for_all : A, B et C sont tous redémarrés. rest_for_one : B et ceux démarrés après, donc C, redémarrent ; A démarré avant reste intact.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">B plante : qui redémarre selon la stratégie ?</text>
+    <text class="d-tag" x="106" y="46" text-anchor="middle" font-size="10">:one_for_one</text>
+    <rect class="d-box" x="46" y="58" width="120" height="30" rx="5" /><text class="d-text" x="106" y="78" text-anchor="middle" font-size="9">A — intact</text>
+    <rect class="d-accent" x="46" y="94" width="120" height="30" rx="5" /><text class="d-text" x="106" y="114" text-anchor="middle" font-size="9">B ✗ → redémarre</text>
+    <rect class="d-box" x="46" y="130" width="120" height="30" rx="5" /><text class="d-text" x="106" y="150" text-anchor="middle" font-size="9">C — intact</text>
+    <text class="d-mut" x="106" y="176" text-anchor="middle" font-size="8">enfants indépendants</text>
+    <text class="d-tag" x="320" y="46" text-anchor="middle" font-size="10">:one_for_all</text>
+    <rect class="d-accent" x="260" y="58" width="120" height="30" rx="5" /><text class="d-text" x="320" y="78" text-anchor="middle" font-size="9">A → redémarre</text>
+    <rect class="d-accent" x="260" y="94" width="120" height="30" rx="5" /><text class="d-text" x="320" y="114" text-anchor="middle" font-size="9">B ✗ → redémarre</text>
+    <rect class="d-accent" x="260" y="130" width="120" height="30" rx="5" /><text class="d-text" x="320" y="150" text-anchor="middle" font-size="9">C → redémarre</text>
+    <text class="d-mut" x="320" y="176" text-anchor="middle" font-size="8">enfants interdépendants</text>
+    <text class="d-tag" x="534" y="46" text-anchor="middle" font-size="10">:rest_for_one</text>
+    <rect class="d-box" x="474" y="58" width="120" height="30" rx="5" /><text class="d-text" x="534" y="78" text-anchor="middle" font-size="9">A — intact</text>
+    <rect class="d-accent" x="474" y="94" width="120" height="30" rx="5" /><text class="d-text" x="534" y="114" text-anchor="middle" font-size="9">B ✗ → redémarre</text>
+    <rect class="d-accent" x="474" y="130" width="120" height="30" rx="5" /><text class="d-text" x="534" y="150" text-anchor="middle" font-size="9">C → redémarre</text>
+    <text class="d-mut" x="534" y="176" text-anchor="middle" font-size="8">chaîne : B et la suite</text>
+    <text class="d-mut" x="320" y="200" text-anchor="middle" font-size="8">l'ordre de la liste définit « démarrés après » — donc qui suit dans rest_for_one</text>
+  </svg>
+  <figcaption>La stratégie décide du rayon d'action d'un crash&nbsp;: isolé (<code>:one_for_one</code>), global (<code>:one_for_all</code>) ou en cascade sur la suite de la liste (<code>:rest_for_one</code>).</figcaption>
+</figure>
+
+<figure class="code-block" data-file="strategies.exs"><pre><code class="language-elixir">children = [
+  {Cache, []},        # démarré en 1er
+  {FileAttente, []},  # démarré en 2e, dépend du Cache
+  {Travailleur, []}   # démarré en 3e, dépend de la file
+]
+
+# Avec :rest_for_one, si FileAttente plante :
+#   - Cache       -&gt; intact (démarré avant)
+#   - FileAttente -&gt; redémarré
+#   - Travailleur -&gt; redémarré (démarré après)
+Supervisor.start_link(children, strategy: :rest_for_one)</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>L'ordre des enfants dans la liste compte&nbsp;: ils démarrent de haut en bas et s'arrêtent de bas en haut. Place toujours une dépendance <em>avant</em> ceux qui en ont besoin. C'est ce qui rend <code>:rest_for_one</code> si naturel pour des chaînes de services.</p></div></div>
+
+<h2>Arbres de supervision : l'architecture d'une vraie app</h2>
+
+<p>Un superviseur peut superviser… d'autres superviseurs. On obtient un <strong>arbre de supervision</strong>&nbsp;: à la racine, un superviseur principal&nbsp;; en dessous, des sous-superviseurs qui regroupent des familles de processus&nbsp;; aux feuilles, les workers qui font le travail. C'est l'ossature de toute application Elixir sérieuse.</p>
+
+<figure class="code-block" data-file="arbre.exs"><pre><code class="language-elixir">#            Superviseur racine (:one_for_one)
+#           /            |             \
+#     SupervBase   SupervWeb      SupervTaches
+#       /             |               |
+#   Repo         [Endpoint]      Task.Supervisor
+#                                       |
+#                              (tâches éphémères)</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un arbre de supervision. À la racine, le superviseur principal. En dessous, trois sous-superviseurs : Base, Web, Tâches. Sous Base, le worker Repo ; sous Web, l'Endpoint ; sous Tâches, un Task.Supervisor gérant des tâches éphémères. Les superviseurs aux nœuds ne font que surveiller, les feuilles font le travail.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un arbre de supervision : superviseurs aux nœuds, workers aux feuilles</text>
+    <rect class="d-accent" x="250" y="32" width="140" height="30" rx="6" /><text class="d-text" x="320" y="51" text-anchor="middle" font-size="9.5">Superviseur racine</text>
+    <rect class="d-box" x="40" y="98" width="150" height="30" rx="6" /><text class="d-text" x="115" y="117" text-anchor="middle" font-size="9">Superv. Base</text>
+    <rect class="d-box" x="245" y="98" width="150" height="30" rx="6" /><text class="d-text" x="320" y="117" text-anchor="middle" font-size="9">Superv. Web</text>
+    <rect class="d-box" x="450" y="98" width="150" height="30" rx="6" /><text class="d-text" x="525" y="117" text-anchor="middle" font-size="9">Superv. Tâches</text>
+    <rect class="d-frame" x="52" y="160" width="126" height="28" rx="6" /><text class="d-text" x="115" y="178" text-anchor="middle" font-size="9">Repo (worker)</text>
+    <rect class="d-frame" x="257" y="160" width="126" height="28" rx="6" /><text class="d-text" x="320" y="178" text-anchor="middle" font-size="9">Endpoint</text>
+    <rect class="d-frame" x="462" y="160" width="126" height="28" rx="6" /><text class="d-text" x="525" y="178" text-anchor="middle" font-size="8.5">tâches éphémères</text>
+    <path class="d-line" d="M290 62 L115 98" fill="none" />
+    <path class="d-line" d="M320 62 L320 98" fill="none" />
+    <path class="d-line" d="M350 62 L525 98" fill="none" />
+    <path class="d-line" d="M115 128 L115 160" fill="none" />
+    <path class="d-line" d="M320 128 L320 160" fill="none" />
+    <path class="d-line" d="M525 128 L525 160" fill="none" />
+  </svg>
+  <figcaption>À la racine, un superviseur principal&nbsp;; en dessous, des sous-superviseurs par famille de processus&nbsp;; aux feuilles, les workers. Un crash reste confiné à sa branche — c'est l'ossature de toute application OTP.</figcaption>
+</figure>
+
+<p>Quand tu génères une application avec <code>mix new mon_app --sup</code>, Mix crée un module <code>Application</code> qui démarre cet arbre au lancement. Son callback <code>start/2</code> ressemble à&nbsp;:</p>
+
+<figure class="code-block" data-file="application.ex"><pre><code class="language-elixir">defmodule MonApp.Application do
+  use Application
+
+  @impl true
+  def start(_type, _args) do
+    children = [
+      MonApp.Repo,
+      {Compteur, 0},
+      {Task.Supervisor, name: MonApp.TaskSup}
+    ]
+
+    opts = [strategy: :one_for_one, name: MonApp.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+end</code></pre></figure>
+
+<p>C'est ça, une <strong>application OTP</strong>&nbsp;: un module <code>Application</code> qui démarre un arbre de supervision, le tout empaqueté avec ses dépendances. Quand la BEAM lance ton app, elle appelle <code>start/2</code>&nbsp;; quand elle s'arrête, elle ferme l'arbre proprement, de bas en haut.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>C'est ce modèle qui donne les fameux «&nbsp;neuf neuf&nbsp;» (99,9999999&nbsp;% de disponibilité, soit à peine une trentaine de millisecondes d'indisponibilité par an) mesurés sur les commutateurs téléphoniques Ericsson AXD301 écrits en Erlang. Pas par magie&nbsp;: parce que chaque panne reste locale et qu'un superviseur remet toujours le système dans un état connu.</p></div></div>
+
+<h2>Superviseurs dynamiques et tâches supervisées</h2>
+
+<p>Le superviseur classique connaît ses enfants à l'avance, au démarrage. Mais parfois tu dois créer des processus <em>à la demande</em>&nbsp;: un par connexion entrante, un par partie de jeu, un par session utilisateur. C'est le rôle du <strong><code>DynamicSupervisor</code></strong>. Tu le démarres vide, puis tu lui ajoutes des enfants au fil de l'eau.</p>
+
+<figure class="code-block" data-file="dynamique.exs"><pre><code class="language-elixir"># Démarrage d'un superviseur dynamique vide
+{:ok, sup} = DynamicSupervisor.start_link(strategy: :one_for_one, name: MesSessions)
+
+# On ajoute un enfant quand un utilisateur se connecte
+DynamicSupervisor.start_child(MesSessions, {Session, user_id})
+# =&gt; {:ok, #PID&lt;0.215.0&gt;}
+
+# Chaque enfant est supervisé indépendamment et peut être arrêté seul.</code></pre></figure>
+
+<p>Dans le même esprit, <strong><code>Task.Supervisor</code></strong> sert à lancer des tâches concurrentes éphémères (un appel HTTP, un calcul en parallèle) sous supervision, sans qu'un échec ne fasse tomber le processus appelant. On le place dans l'arbre, puis on lance des tâches avec <code>Task.Supervisor.start_child/2</code> ou <code>async_nolink/2</code>.</p>
+
+<figure class="code-block" data-file="taches.exs"><pre><code class="language-elixir"># Lance une tâche supervisée, isolée de l'appelant
+Task.Supervisor.start_child(MonApp.TaskSup, fn -&gt;
+  envoie_email(utilisateur)
+end)
+# Si l'envoi plante, l'appelant n'est pas affecté.</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le worker qui plantait toutes les nuits (sans que personne ne le remarque)</p><p>Une équipe exploitait un service d'agrégation de données en Elixir. Chaque nuit, un message d'un partenaire arrivait avec un champ malformé&nbsp;; le worker qui le traitait plantait sur le pattern matching. Dans un système classique, c'eût été une panne à 3&nbsp;h du matin, une astreinte réveillée, un service à terre. Ici&nbsp;? Le superviseur en <code>:one_for_one</code> a simplement redémarré le worker dans un état propre&nbsp;: le message suivant est passé normalement, <strong>les utilisateurs n'ont jamais rien vu</strong>. Le seul témoin était une ligne d'erreur dans les logs. Au petit matin, l'équipe a lu le log, reproduit l'entrée fautive, ajouté une validation à la frontière (<code>{:ok, _}</code> / <code>{:error, _}</code>), et corrigé sereinement — sans jamais avoir été en panne. C'est ça, la promesse de la supervision&nbsp;: transformer un crash en <em>événement observable et local</em> plutôt qu'en incident de production.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que la supervision <em>conserve</em> l'état d'un worker. Non&nbsp;: un enfant redémarré repart de son <code>init</code>, état initial compris. Si tu as besoin de retrouver l'état après un crash, persiste-le ailleurs (ETS, base de données, processus dédié) et recharge-le dans <code>init/1</code>.</p></div></div>
+
+<p>Deux autres erreurs courantes&nbsp;:</p>
+
+<ul>
+<li><strong>Le mauvais <code>restart</code>.</strong> Mettre <code>:permanent</code> sur une tâche qui doit s'exécuter une seule fois la fait boucler à l'infini. Une tâche ponctuelle se déclare <code>:temporary</code> ou <code>:transient</code>.</li>
+<li><strong>Confondre arrêt normal et crash.</strong> Avec <code>:transient</code>, un arrêt avec raison <code>:normal</code> ne déclenche <em>pas</em> de redémarrage&nbsp;; seul un arrêt anormal le fait. Vérifie la raison que renvoient tes callbacks.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore le module <code>Registry</code> pour nommer dynamiquement des milliers de processus, et le pattern <code>DynamicSupervisor</code> + <code>Registry</code> qui sous-tend les apps temps réel (Phoenix Channels, LiveView). Lis aussi la doc de <code>Supervisor</code> sur <code>max_restarts</code> et <code>max_seconds</code> pour régler finement la tolérance aux pannes en cascade.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — supervision et tolérance aux pannes</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Démarrer un superviseur</td><td><code>Supervisor.start_link(children, opts)</code></td><td><code>opts</code> porte la stratégie</td></tr>
+      <tr><td>Déclarer un enfant</td><td><code>{Compteur, 0}</code></td><td>appelle <code>Compteur.start_link(0)</code></td></tr>
+      <tr><td>Seul le fautif redémarre</td><td><code>strategy: :one_for_one</code></td><td>défaut, enfants indépendants</td></tr>
+      <tr><td>Tous redémarrent</td><td><code>strategy: :one_for_all</code></td><td>enfants interdépendants</td></tr>
+      <tr><td>Le fautif + la suite</td><td><code>strategy: :rest_for_one</code></td><td>chaîne de dépendances</td></tr>
+      <tr><td>Toujours / jamais / si crash</td><td><code>restart: :permanent | :temporary | :transient</code></td><td>politique de redémarrage</td></tr>
+      <tr><td>Surcharger un child spec</td><td><code>Supervisor.child_spec({M, arg}, restart: …)</code></td><td>ou redéfinir <code>child_spec/1</code></td></tr>
+      <tr><td>Enfants à la demande</td><td><code>DynamicSupervisor.start_child(sup, spec)</code></td><td>1 par session/partie/connexion</td></tr>
+      <tr><td>Tâche éphémère isolée</td><td><code>Task.Supervisor.start_child(sup, fun)</code></td><td>l'échec n'atteint pas l'appelant</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Let it crash</dt><dd>Écrire le chemin nominal et laisser planter les erreurs <em>inattendues</em>&nbsp;; la récupération est déléguée à un superviseur.</dd>
+  <dt>Superviseur</dt><dd>Processus dont le seul rôle est de surveiller des enfants et de les relancer&nbsp;; il ne contient aucune logique métier.</dd>
+  <dt>Child spec</dt><dd>Fiche d'identité d'un enfant (<code>id</code>, <code>start</code>, <code>restart</code>, <code>shutdown</code>) indiquant comment le démarrer et le redémarrer.</dd>
+  <dt>Stratégie de redémarrage</dt><dd>Règle qui décide quels enfants sont relancés au crash de l'un&nbsp;: <code>:one_for_one</code>, <code>:one_for_all</code>, <code>:rest_for_one</code>.</dd>
+  <dt><code>restart</code></dt><dd>Politique par enfant&nbsp;: <code>:permanent</code> (toujours), <code>:temporary</code> (jamais), <code>:transient</code> (seulement si l'arrêt est anormal).</dd>
+  <dt>Arbre de supervision</dt><dd>Hiérarchie de superviseurs et de workers&nbsp;; ossature d'une application OTP où chaque panne reste locale à sa branche.</dd>
+  <dt><code>DynamicSupervisor</code></dt><dd>Superviseur démarré vide auquel on ajoute des enfants <em>à la demande</em> (une session, une partie, une connexion par enfant).</dd>
+  <dt><code>Task.Supervisor</code></dt><dd>Superviseur de tâches concurrentes éphémères&nbsp;: leur échec est isolé et n'affecte pas le processus appelant.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li><strong>« Let it crash »</strong>&nbsp;: on code le chemin nominal et on laisse planter les erreurs inattendues, car l'isolation des processus rend le crash inoffensif.</li>
+<li>Un <strong>superviseur</strong> surveille des enfants et les relance selon une stratégie, via <code>Supervisor.start_link/2</code>.</li>
+<li>Le <strong>child spec</strong> (<code>id</code>, <code>start</code>, <code>restart</code>, <code>shutdown</code>) décrit comment démarrer et redémarrer un enfant.</li>
+<li>Trois stratégies&nbsp;: <code>:one_for_one</code>, <code>:one_for_all</code>, <code>:rest_for_one</code>.</li>
+<li>Les <strong>arbres de supervision</strong> structurent une app OTP&nbsp;; <code>DynamicSupervisor</code> et <code>Task.Supervisor</code> gèrent les enfants créés à la demande.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>En quoi «&nbsp;let it crash&nbsp;» diffère-t-il de la programmation défensive, et pourquoi est-ce viable sur la BEAM&nbsp;?</li><li>Un superviseur a trois enfants <code>A</code>, <code>B</code>, <code>C</code> dans cet ordre, en stratégie <code>:rest_for_one</code>. <code>B</code> plante&nbsp;: qui est redémarré&nbsp;?</li><li>Après le redémarrage d'un <code>GenServer</code> par son superviseur, que devient l'état qu'il gardait avant le crash&nbsp;? Comment le préserver&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"En quoi « let it crash » diffère-t-il de la programmation défensive, et pourquoi est-ce viable sur la BEAM ?","a":["Au lieu de coder défensivement chaque erreur, on laisse le processus planter et un superviseur le redémarre dans un état propre ; c'est viable car les processus sont isolés (un crash n'affecte pas les autres) et la supervision est intégrée","On ignore simplement toutes les erreurs","On attrape chaque exception possible","C'est interdit en production"],"correct":0,"explain":"La philosophie « let it crash » consiste à ne pas surcharger le code de gardes : on traite le cas nominal et on délègue la récupération à un superviseur qui relance le processus fautif. L'isolation des processus rend un crash local sans conséquence sur le reste."},
+  {"q":"Un superviseur a trois enfants A, B, C dans cet ordre, en stratégie :rest_for_one. B plante : qui est redémarré ?","a":["B et C (le processus planté et tous ceux démarrés après lui) ; A, démarré avant, n'est pas touché","Seulement B","Les trois (A, B, C)","Seulement A et C"],"correct":0,"explain":"La stratégie :rest_for_one redémarre l'enfant défaillant et ceux qui le suivent dans l'ordre de démarrage, car ils peuvent en dépendre. B et C repartent ; A, démarré avant B, reste intact."},
+  {"q":"Après le redémarrage d'un GenServer par son superviseur, que devient l'état qu'il gardait avant le crash ? Comment le préserver ?","a":["L'état est perdu : le GenServer repart de son init. Pour le préserver, on le stocke à l'extérieur (ETS, base de données, autre processus) et on le recharge dans init","L'état est conservé automatiquement","L'état est dupliqué dans le superviseur","Le crash est annulé"],"correct":0,"explain":"Un redémarrage réinitialise le processus : la mémoire interne disparaît. Pour survivre aux crashs, on externalise l'état durable (table ETS, stockage persistant) et on le relit au démarrage dans la fonction init."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":[":one_for_one","one_for_one",":one for one"],"placeholder":"la stratégie de supervision où SEUL l'enfant planté redémarre : :one_for_…","hints":["Les autres enfants ne sont pas affectés.","strategy: :one_for_???.",":one_for_one"],"link":{"href":"lecon-10.html","label":"Revoir « Les stratégies »"}},
+  {"type":"text","accept":[":transient","transient"],"placeholder":"la valeur de restart pour redémarrer SEULEMENT après un crash (pas après un arrêt normal) : :…","hints":[":permanent redémarre toujours ; :temporary jamais.","Celle du milieu : seulement sur erreur.","Dix lettres (transient)."],"link":{"href":"lecon-10.html","label":"Revoir « Le champ restart »"}},
+  {"type":"text","accept":["DynamicSupervisor","dynamic supervisor"],"placeholder":"le type de superviseur pour des salles de chat créées DYNAMIQUEMENT (à la volée) : …","hints":["On y ajoute des enfants avec start_child.","Pas de liste children figée au démarrage.","Dynamic??????????"],"link":{"href":"lecon-10.html","label":"Revoir « DynamicSupervisor »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la liste <code>children</code> et l'appel <code>Supervisor.start_link/2</code> pour superviser un <code>GenServer</code> nommé <code>Horloge</code> démarré avec l'argument <code>:utc</code>, en stratégie <code>:one_for_one</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-elixir">children = [
+  {Horloge, :utc}
+]
+
+{:ok, _sup} = Supervisor.start_link(children, strategy: :one_for_one)
+# Le superviseur appelle Horloge.start_link(:utc) au démarrage.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>On veut qu'un worker <code>Importeur</code> ne soit <strong>jamais</strong> redémarré après un arrêt normal, mais le soit après un crash. Quel champ <code>restart</code> choisir&nbsp;? Écris le child spec surchargé correspondant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-elixir"># :transient = redémarré seulement si l'arrêt est anormal (crash).
+# Un arrêt avec raison :normal ne déclenche pas de redémarrage.
+
+children = [
+  Supervisor.child_spec({Importeur, []}, restart: :transient)
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Tu construis un service de chat&nbsp;: une <strong>salle</strong> par conversation, créée quand le premier utilisateur la rejoint, et chaque salle est un <code>GenServer</code> indépendant. Quel type de superviseur utiliser&nbsp;? Écris son démarrage et l'ajout d'une salle d'identifiant <code>"general"</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-elixir"># Les salles naissent à la demande et sont indépendantes
+# =&gt; DynamicSupervisor avec :one_for_one.
+
+{:ok, _sup} =
+  DynamicSupervisor.start_link(strategy: :one_for_one, name: Chat.SalleSup)
+
+# Quand un utilisateur crée/rejoint la salle "general" :
+{:ok, _pid} =
+  DynamicSupervisor.start_child(Chat.SalleSup, {Salle, "general"})
+
+# Si une salle plante, seule celle-là redémarre :
+# les autres conversations continuent sans être touchées.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-elixir.min.js" defer></script>
+  </body>
+</html>

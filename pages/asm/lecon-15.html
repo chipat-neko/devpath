@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet de synthèse : une fonction asm, du C au débogueur — Leçon 15 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="Capstone du module 4 : écrire une fonction en assembleur, l'appeler depuis C en respectant l'ABI, la construire avec la chaîne complète, la déboguer sous GDB et la comparer au code de l'optimiseur." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-15.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 15</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Assembleur en pratique — Leçon 15</p>
+              <h1 class="lesson-header__title">Projet de synthèse : une fonction asm, du C au débogueur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~60 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 11 à 14</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li><strong>écrire une fonction en assembleur</strong> respectant l'ABI et l'appeler depuis C&nbsp;;</li>
+                  <li><strong>construire</strong> le projet avec la chaîne complète (assembler, compiler, lier)&nbsp;;</li>
+                  <li><strong>déboguer</strong> ta fonction sous GDB, registre par registre&nbsp;;</li>
+                  <li><strong>comparer</strong> ton asm à celui que produit l'optimiseur pour la version C.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Voici l'épreuve qui réunit tout le module&nbsp;: tu vas écrire une petite fonction <em>entièrement en assembleur</em>, l'appeler depuis un vrai programme C, la construire à la main étape par étape, la faire tourner au ralenti sous GDB, puis regarder ce que l'optimiseur aurait produit à ta place. C'est le trajet complet d'un professionnel qui descend au bas niveau pour une raison précise — et remonte avec la certitude que sa fonction est correcte <em>et</em> rapide.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Une fonction <code>somme_tableau(const long *t, long n)</code> écrite en NASM, qui additionne <code>n</code> entiers 64 bits et renvoie le total dans <code>rax</code>. Un <code>main.c</code> l'appelle sur <code>{4, 8, 15, 16, 23, 42}</code> (total&nbsp;: 108) et affiche le résultat. Puis tu la débogues et la compares à la version C optimisée.</p></div></div>
+
+<h2>L'architecture du projet</h2>
+<p>Deux fichiers source, deux mondes qui se rencontrent à la frontière de l'<strong>ABI</strong> (leçon 5)&nbsp;: <code>main.c</code> passe le pointeur du tableau dans <code>rdi</code> et la taille dans <code>rsi</code>, <code>somme.s</code> rend le total dans <code>rax</code>. Chaque source suit la chaîne de la leçon 12 jusqu'à l'exécutable.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Architecture du projet de synthèse. En haut, deux fichiers source : main.c et somme.s. Chacun est traduit en fichier objet, main.o et somme.o, par le compilateur et l'assembleur. Les deux objets sont réunis par l'éditeur de liens en un seul exécutable prog. En bas, l'exécutable est examiné par les outils GDB pour le débogage et perf ou objdump pour la mesure et la lecture.">
+    <rect class="d-box" x="70" y="34" width="150" height="34" rx="7" /><text class="d-text" x="145" y="55" text-anchor="middle" font-size="10">main.c</text>
+    <rect class="d-accent" x="420" y="34" width="150" height="34" rx="7" /><text class="d-tag" x="495" y="55" text-anchor="middle" font-size="10">somme.s</text>
+    <rect class="d-frame" x="70" y="96" width="150" height="34" rx="7" /><text class="d-text" x="145" y="117" text-anchor="middle" font-size="10">main.o</text>
+    <rect class="d-frame" x="420" y="96" width="150" height="34" rx="7" /><text class="d-text" x="495" y="117" text-anchor="middle" font-size="10">somme.o</text>
+    <rect class="d-accent" x="245" y="152" width="150" height="34" rx="7" /><text class="d-tag" x="320" y="173" text-anchor="middle" font-size="10">prog (exécutable)</text>
+    <line class="d-line" x1="145" y1="68" x2="145" y2="94" /><polygon class="d-dot" points="145,96 140,86 150,86" />
+    <line class="d-line" x1="495" y1="68" x2="495" y2="94" /><polygon class="d-dot" points="495,96 490,86 500,86" />
+    <line class="d-line" x1="145" y1="130" x2="290" y2="150" /><polygon class="d-dot" points="294,151 283,148 287,141" />
+    <line class="d-line" x1="495" y1="130" x2="350" y2="150" /><polygon class="d-dot" points="346,151 357,141 353,148" />
+    <text class="d-mut" x="240" y="86" text-anchor="middle" font-size="7.5">gcc -c</text>
+    <text class="d-mut" x="400" y="86" text-anchor="middle" font-size="7.5">as / gcc -c</text>
+    <text class="d-label" x="320" y="145" text-anchor="middle" font-size="8">ld (via gcc)</text>
+    <text class="d-mut" x="150" y="176" text-anchor="middle" font-size="8">GDB ▶ débogage</text>
+    <text class="d-mut" x="500" y="176" text-anchor="middle" font-size="8">objdump / perf ▶ lecture</text>
+  </svg>
+  <figcaption>Le projet en une image&nbsp;: deux sources → deux objets → un exécutable, puis les outils du module (GDB pour comprendre, <code>objdump</code>/<code>perf</code> pour lire et mesurer). L'ABI est le contrat qui relie <code>main.c</code> et <code>somme.s</code>.</figcaption>
+</figure>
+
+<h2>La frontière ABI : qui met quoi, où&nbsp;?</h2>
+<p>C'est le cœur du projet. Pour que le C et l'assembleur se comprennent, <code>somme.s</code> doit lire ses arguments <em>exactement</em> là où l'appelant les a mis, et préserver les registres qu'il n'a pas le droit d'abîmer.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La frontière ABI entre main.c et la fonction somme en assembleur. À gauche, main.c appelle somme avec le pointeur du tableau et la taille. Au centre, la convention System V : le premier argument, le pointeur, arrive dans le registre rdi ; le deuxième argument, la taille, arrive dans rsi ; la valeur de retour, le total, repart dans rax. À droite, somme.s lit rdi et rsi et écrit rax.">
+    <rect class="d-box" x="24" y="60" width="130" height="56" rx="8" /><text class="d-text" x="89" y="84" text-anchor="middle" font-size="9.5">main.c</text><text class="d-mut" x="89" y="100" text-anchor="middle" font-size="7.5">somme(t, n)</text>
+    <rect class="d-frame" x="214" y="34" width="212" height="108" rx="9" />
+    <text class="d-label" x="320" y="52" text-anchor="middle" font-size="8.5">ABI System V</text>
+    <text class="d-tag" x="234" y="76" font-size="9">rdi</text><text class="d-mut" x="286" y="76" font-size="8">← pointeur t (arg 1)</text>
+    <text class="d-tag" x="234" y="98" font-size="9">rsi</text><text class="d-mut" x="286" y="98" font-size="8">← taille n (arg 2)</text>
+    <text class="d-accent" x="234" y="122" font-size="9">rax</text><text class="d-mut" x="286" y="122" font-size="8">→ total (retour)</text>
+    <rect class="d-accent" x="486" y="60" width="130" height="56" rx="8" /><text class="d-tag" x="551" y="84" text-anchor="middle" font-size="9.5">somme.s</text><text class="d-mut" x="551" y="100" text-anchor="middle" font-size="7.5">lit rdi/rsi, écrit rax</text>
+    <line class="d-line" x1="154" y1="88" x2="210" y2="88" /><polygon class="d-dot" points="214,88 204,83 204,93" />
+    <line class="d-line" x1="426" y1="88" x2="482" y2="88" /><polygon class="d-dot" points="486,88 476,83 476,93" />
+    <text class="d-mut" x="320" y="162" text-anchor="middle" font-size="8">rax est caller-saved : somme peut l'écraser librement</text>
+  </svg>
+  <figcaption>Le contrat&nbsp;: 1<sup>er</sup> argument entier dans <code>rdi</code>, 2<sup>e</sup> dans <code>rsi</code>, retour dans <code>rax</code>. Notre <code>somme</code> n'utilise que des registres <em>caller-saved</em> (<code>rax</code>, <code>rcx</code>)&nbsp;: rien à sauvegarder, l'épilogue est un simple <code>ret</code>.</figcaption>
+</figure>
+
+<h2>Les étapes du projet</h2>
+<p class="kicker kicker--gold">Étapes</p>
+<div class="steps">
+<div class="step"><h3>La fonction asm</h3><p>Dans <code>somme.s</code>, expose <code>somme_tableau</code> avec <code>global</code>. Lis le pointeur dans <code>rdi</code>, la taille dans <code>rsi</code>&nbsp;; boucle avec un index <code>rcx</code>, ajoute <code>[rdi + rcx*8]</code> à <code>rax</code>.</p></div>
+<div class="step"><h3>Le programme C</h3><p>Dans <code>main.c</code>, déclare la fonction (<code>extern long somme_tableau(const long *, long);</code>), prépare le tableau, appelle, affiche avec <code>printf</code>.</p></div>
+<div class="step"><h3>Construire</h3><p>Assemble et compile séparément (<code>nasm -f elf64</code> / <code>gcc -c</code>), puis lie les deux objets en un exécutable avec <code>gcc</code>.</p></div>
+<div class="step"><h3>Déboguer</h3><p>Sous GDB&nbsp;: <code>break somme_tableau</code>, <code>run</code>, puis <code>stepi</code> en surveillant <code>rax</code>, <code>rcx</code> et <code>x/6dg $rdi</code> (le tableau).</p></div>
+<div class="step"><h3>Comparer</h3><p>Écris la même somme en C, compile-la à <code>-O2</code>, et compare l'asm produit au tien avec <code>objdump -d</code> ou Compiler Explorer.</p></div>
+</div>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["rax","%rax"],"placeholder":"le registre qui porte la valeur de retour d'une fonction selon l'ABI System V : …","hints":["C'est aussi le registre « accumulateur ».","Notre somme_tableau y écrit le total.","r…"],"link":{"href":"lecon-15.html","label":"Revoir « La frontière ABI »"}},
+  {"type":"text","accept":["push","push/pop","push pop"],"placeholder":"l'instruction à utiliser pour sauvegarder un registre callee-saved en entrée de fonction : …","hints":["On la fait en miroir avec pop à la sortie.","Elle empile la valeur sur la pile.","p…"],"link":{"href":"lecon-14.html","label":"Revoir « Respecter l'ABI »"}},
+  {"type":"text","accept":["cmp","cmp rcx, rsi","cmp rcx,rsi"],"placeholder":"l'instruction qui compare rcx à rsi en positionnant les drapeaux : …","hints":["Elle soustrait sans stocker le résultat.","Le saut jge s'appuie ensuite sur ses drapeaux.","cm…"],"link":{"href":"lecon-15.html","label":"Revoir « La fonction asm »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Selon l'ABI System V (x86-64), dans quel registre la fonction appelée doit-elle placer sa valeur de retour entière&nbsp;? Donne le nom du registre 64 bits.</p><details><summary>Voir une solution</summary><p>La valeur de retour entière (ou pointeur) se place dans <strong><code>rax</code></strong>. C'est le contrat de l'ABI&nbsp;: l'appelant sait toujours où la lire après le <code>ret</code>. Si la valeur est sur 128 bits (rare), la moitié haute va dans <code>rdx</code>. Dans notre <code>somme_tableau</code>, l'instruction <code>xor rax, rax</code> initialise l'accumulateur (et donc le futur retour) à zéro dès l'entrée.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour préserver un registre <strong>callee-saved</strong> comme <code>rbx</code> à l'intérieur d'une fonction, quelle instruction faut-il exécuter en prologue pour l'empiler sur la pile (avant de le restaurer avec <code>pop</code> en épilogue)&nbsp;?</p><details><summary>Voir une solution</summary><p><code>rax</code> et <code>rcx</code> sont des registres <strong>caller-saved</strong> (volatils)&nbsp;: la fonction appelée peut les écraser librement — aucun <code>push</code>/<code>pop</code> n'est nécessaire. Si on utilisait <code>rbx</code> (registre <strong>callee-saved</strong>) à la place, on <em>devrait</em> le sauvegarder en prologue (<code>push rbx</code>) et le restaurer en épilogue (<code>pop rbx</code>) avant le <code>ret</code>. L'oublier corromprait la valeur de <code>rbx</code> vue par l'appelant — un bug qui ne se manifeste que dans le code C, loin du <code>ret</code>, et très difficile à tracer.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Dans la boucle de <code>somme_tableau</code>, quelle instruction <strong>compare</strong> l'index <code>rcx</code> à la taille <code>rsi</code> en positionnant les drapeaux, sans stocker de résultat&nbsp;? (Le saut conditionnel <code>jge</code> s'appuie ensuite sur ces drapeaux pour quitter la boucle.)</p><details><summary>Voir une solution</summary><p>La comparaison se fait avec <strong><code>cmp rcx, rsi</code></strong>&nbsp;: elle soustrait <code>rsi</code> de <code>rcx</code> et positionne les drapeaux sans stocker le résultat. Le saut conditionnel <strong><code>jge .fin</code></strong> (jump if greater or equal) quitte ensuite la boucle si <code>rcx &ge; rsi</code>. L'ensemble forme la garde de boucle&nbsp;: si l'index a atteint (ou dépassé) la taille, on saute à l'étiquette <code>.fin</code> et l'exécution tombe sur le <code>ret</code> qui renvoie le total accumulé dans <code>rax</code>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble les cinq étapes en un projet complet qui compile, s'exécute et affiche <code>108</code>. Essaie d'abord seul, puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary>
+<figure class="code-block" data-file="somme.s (NASM)"><pre><code class="language-nasm">section .text
+    global somme_tableau        ; visible depuis main.c
+
+; long somme_tableau(const long *t, long n)
+;   rdi = t (pointeur), rsi = n (taille)  → retour dans rax
+somme_tableau:
+    xor rax, rax                ; total = 0
+    xor rcx, rcx                ; i = 0
+.boucle:
+    cmp rcx, rsi                ; i &lt; n ?
+    jge .fin                    ; non → terminé
+    add rax, [rdi + rcx*8]      ; total += t[i]  (8 o par long)
+    inc rcx                     ; i++
+    jmp .boucle
+.fin:
+    ret                         ; total déjà dans rax
+</code></pre></figure>
+<figure class="code-block" data-file="main.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+
+/* définie en assembleur, liée à l'édition de liens */
+extern long somme_tableau(const long *t, long n);
+
+int main(void) {
+    long t[] = {4, 8, 15, 16, 23, 42};
+    long n = sizeof(t) / sizeof(t[0]);
+    printf("somme = %ld\n", somme_tableau(t, n));  /* 108 */
+    return 0;
+}
+</code></pre></figure>
+<figure class="code-block" data-file="Terminal — construire et lancer"><pre><code class="language-bash">nasm -f elf64 somme.s -o somme.o    # assembleur → objet ELF 64 bits
+gcc -c main.c -o main.o             # C → objet
+gcc main.o somme.o -o prog          # édition de liens des deux objets
+./prog                              # → somme = 108
+</code></pre></figure>
+<p>La clé&nbsp;: <code>somme_tableau</code> est <code>global</code> côté asm (symbole exporté) et <code>extern</code> côté C (symbole importé). L'éditeur de liens les rapproche — exactement le <code>U</code>/<code>T</code> de <code>nm</code> vu à la leçon 12.</p>
+</details></div>
+
+<h2>Déboguer et comparer</h2>
+<p>Une fois <code>prog</code> construit, fais rouler ta fonction au ralenti pour <em>voir</em> <code>rax</code> accumuler la somme, puis confronte ton code à celui de l'optimiseur.</p>
+<figure class="code-block" data-file="session GDB"><pre><code class="language-bash">gdb ./prog
+(gdb) break somme_tableau        # arrêt à l'entrée de ta fonction
+(gdb) run
+(gdb) x/6dg $rdi                 # les 6 entiers du tableau (décimal, 8 o)
+(gdb) stepi                       # avance ; répète en surveillant…
+(gdb) p/d $rax                    # …le total accumulé, tour après tour
+(gdb) p/d $rcx                    # …et l'index de boucle
+</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>C'est exactement le trajet d'un développeur de bibliothèque de calcul haute performance. Il écrit un noyau critique (produit scalaire, filtre) en assembleur ou en intrinsèques pour exploiter le SIMD, l'expose avec une signature C stable (l'ABI comme frontière), le <strong>valide</strong> sous GDB et par des tests, puis le <strong>compare</strong> en permanence à ce que produit le compilateur à <code>-O3 -march=native</code>. Souvent, l'optimiseur moderne égale voire dépasse l'asm écrit à la main&nbsp;: le professionnel garde alors la version C (plus portable et maintenable) et ne conserve son asm que là où il gagne <em>mesurablement</em>. La compétence-clé n'est pas «&nbsp;écrire de l'asm&nbsp;», c'est <strong>savoir lire, mesurer et décider</strong> — précisément ce que ce module t'a donné.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Si tu utilises un registre callee-saved</p><p>Notre <code>somme</code> ne touche que <code>rax</code> et <code>rcx</code> (caller-saved)&nbsp;: aucun sauvetage nécessaire. Mais si ta version utilise <code>rbx</code> ou <code>r12–r15</code>, tu <strong>dois</strong> les <code>push</code> en entrée et les <code>pop</code> en sortie&nbsp;: le C appelant compte les retrouver intacts. L'oublier donne un bug qui ne se manifeste que <em>chez l'appelant</em>, longtemps après le <code>ret</code> — le pire genre à traquer.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — le pipeline complet du projet</caption>
+    <thead><tr><th scope="col">Étape</th><th scope="col">Commande</th><th scope="col">Leçon</th></tr></thead>
+    <tbody>
+      <tr><td>Assembler l'asm</td><td><code>nasm -f elf64 somme.s -o somme.o</code></td><td>12</td></tr>
+      <tr><td>Compiler le C</td><td><code>gcc -c main.c -o main.o</code></td><td>12</td></tr>
+      <tr><td>Lier</td><td><code>gcc main.o somme.o -o prog</code></td><td>12</td></tr>
+      <tr><td>Vérifier les symboles</td><td><code>nm somme.o</code> (T somme_tableau)</td><td>12</td></tr>
+      <tr><td>Déboguer</td><td><code>gdb ./prog</code> · <code>break</code> · <code>stepi</code></td><td>11</td></tr>
+      <tr><td>Lire l'asm optimisé</td><td><code>gcc -O2 -S main.c -o -</code></td><td>13</td></tr>
+      <tr><td>Passer les arguments</td><td><code>rdi</code>, <code>rsi</code> → retour <code>rax</code></td><td>5 / 14</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>global</code> / <code>extern</code></dt><dd>Deux faces d'un même symbole&nbsp;: <code>global</code> l'<strong>exporte</strong> depuis l'asm, <code>extern</code> l'<strong>importe</strong> côté C. L'éditeur de liens les relie.</dd>
+  <dt>Frontière ABI</dt><dd>Le point de contact C ↔ asm régi par la convention d'appel&nbsp;: arguments dans <code>rdi</code>, <code>rsi</code>…, retour dans <code>rax</code>, registres à préserver.</dd>
+  <dt>Objet (<code>.o</code>)</dt><dd>Résultat de l'assemblage/compilation d'<em>un</em> fichier source&nbsp;; plusieurs objets sont réunis par l'éditeur de liens (leçon 12).</dd>
+  <dt>Adressage indexé</dt><dd><code>[rdi + rcx*8]</code>&nbsp;: adresse de base (le pointeur) plus un index mis à l'échelle (8&nbsp;octets par <code>long</code>) — l'accès à <code>t[i]</code>.</dd>
+  <dt><code>stepi</code></dt><dd>Avance d'une instruction machine sous GDB (leçon 11)&nbsp;; ici pour voir <code>rax</code> accumuler la somme tour après tour.</dd>
+  <dt>Caller-saved / callee-saved</dt><dd>Registres volatils (l'appelant les sauve&nbsp;: <code>rax</code>, <code>rcx</code>…) contre préservés (l'appelé les restitue&nbsp;: <code>rbx</code>, <code>r12–r15</code>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une fonction asm <code>global</code> + une déclaration C <code>extern</code> = un symbole résolu par l'éditeur de liens.</li>
+<li>Respecte l'ABI&nbsp;: arguments dans <code>rdi</code>/<code>rsi</code>, retour dans <code>rax</code>&nbsp;; <code>push</code>/<code>pop</code> les registres <em>callee-saved</em> si tu les utilises.</li>
+<li>Construis en trois temps&nbsp;: <code>nasm</code> → <code>gcc -c</code> → <code>gcc</code> (link)&nbsp;; débogue sous GDB avec <code>break</code>/<code>stepi</code>.</li>
+<li>Compare toujours ton asm à l'optimiseur (<code>-O2</code>/<code>-O3</code>)&nbsp;: garde l'asm manuel seulement là où il gagne <strong>mesurablement</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quels registres portent les deux arguments de <code>somme_tableau</code>, et où part le résultat&nbsp;?</li><li>Pourquoi notre fonction n'a-t-elle rien à <code>push</code>/<code>pop</code>&nbsp;?</li><li>Quelle commande construit l'exécutable à partir des deux objets&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Selon l'ABI System V (x86-64), dans quel registre une fonction place-t-elle sa valeur de retour entière ?","a":["rax","rdi","rsi","rcx"],"correct":0,"explain":"La valeur de retour entière va toujours dans rax. C'est le contrat de l'ABI : l'appelant sait où la lire après le ret. rdi et rsi portent les arguments (1er et 2e), rcx est un registre de travail volatile."},
+  {"q":"Parmi les registres suivants, lequel est callee-saved (préservé par l'appelé) ?","a":["rbx","rax","rcx","rdi"],"correct":0,"explain":"rbx est callee-saved : une fonction qui l'utilise doit le sauvegarder (push rbx) et le restaurer (pop rbx) avant de rendre la main. rax, rcx et rdi sont caller-saved : ils peuvent être écrasés librement par l'appelé."},
+  {"q":"Dans la boucle de somme_tableau, quelle instruction compare l'index rcx à la taille rsi sans stocker de résultat ?","a":["cmp rcx, rsi","sub rcx, rsi","test rcx, rsi","mov rcx, rsi"],"correct":0,"explain":"cmp soustrait le second opérande du premier et positionne les drapeaux (ZF, SF, OF…) sans modifier les registres. C'est l'instruction de comparaison de base en x86-64, utilisée avant un saut conditionnel comme jge."}
+]
+</script>
+
+<h2>Quiz bilan du cours</h2>
+<p>Ce QCM récapitule l'ensemble du cours, des registres jusqu'au projet de synthèse. Bonne relecture&nbsp;!</p>
+<script type="application/json" data-quiz-bilan>
+[
+  {"q":"Quel est le niveau de l'assembleur ?","a":["Le plus bas (instructions de la machine)","Un langage de haut niveau","Un langage de script","Un langage web"],"correct":0,"explain":"Chaque instruction correspond à une opération du processeur."},
+  {"q":"Où le processeur stocke-t-il ses valeurs de travail ?","a":["Dans les registres (rax, rbx…)","Dans des variables nommées","Sur le disque","Dans le cloud"],"correct":0,"explain":"Les registres sont ultra-rapides et peu nombreux."},
+  {"q":"Quel idiome met un registre à zéro efficacement ?","a":["xor rax, rax","mov rax, null","clear rax","reset rax"],"correct":0,"explain":"Plus court et rapide qu'un mov rax, 0."},
+  {"q":"Comment demande-t-on un service au système (Linux) ?","a":["syscall","call os","int system","require"],"correct":0,"explain":"Le numéro du service va dans rax."},
+  {"q":"Dans quelle section place-t-on le code exécutable ?","a":[".text",".data",".code",".main"],"correct":0,"explain":"Les données initialisées vont dans .data ; les globales à zéro dans .bss."},
+  {"q":"Comment appelle-t-on un sous-programme ?","a":["call (et ret pour revenir)","jump","goto","invoke"],"correct":0,"explain":"call empile l'adresse de retour."},
+  {"q":"Quel octet est le préfixe REX.W (opération 64 bits) ?","a":["48 (en hexadécimal)","64","0xFF","00"],"correct":0,"explain":"Il précède un mov rax,… mais pas un mov eax,…"},
+  {"q":"Sous GDB, quelle commande avance d'UNE instruction machine ?","a":["stepi (si) ; nexti enjambe un call","step","continue","run"],"correct":0,"explain":"step/next raisonnent en lignes de source ; stepi/nexti en instructions machine (leçon 11)."},
+  {"q":"« undefined reference to 'foo' » est produit par… ?","a":["L'éditeur de liens : aucune définition du symbole trouvée","Le préprocesseur","Le compilateur, pour une faute de syntaxe","Le noyau, au lancement"],"correct":0,"explain":"C'est une erreur de link : le symbole est déclaré mais non défini parmi les objets/bibliothèques liés (leçon 12)."},
+  {"q":"Où vit une globale non initialisée, et que pèse-t-elle sur disque ?","a":["Dans .bss : 0 octet (seule sa taille est enregistrée)","Dans .data : sa taille complète","Dans .text : rien","Dans .rodata : sa taille"],"correct":0,"explain":".bss ne stocke que la taille ; le noyau met la zone à zéro au chargement (leçon 12)."},
+  {"q":"À -O2, « return carre(3)+carre(4); » peut devenir « mov eax, 25 ; ret » grâce à… ?","a":["Inlining + propagation de constantes + élimination du code mort","L'auto-vectorisation seule","Le lien statique","Le préfixe REX.W"],"correct":0,"explain":"Trois optimisations enchaînées : la fonction est inlinée, 3*3 et 4*4 pliés à la compilation, puis carre() éliminée (leçon 13)."},
+  {"q":"Dans un asm étendu de GCC, à quoi sert le clobber « memory » ?","a":["Déclarer que le bloc touche la mémoire : l'optimiseur ne réordonne plus les accès autour","À réserver de la RAM","À choisir le niveau -O","À nommer une variable"],"correct":0,"explain":"Sans « memory », l'optimiseur peut déplacer des accès mémoire autour du bloc asm et corrompre les données (leçon 14)."}
+]
+</script>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-nasm.min.js" defer></script>
+  </body>
+</html>

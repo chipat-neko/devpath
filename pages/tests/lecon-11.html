@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tests de performance et de charge — Leçon 11 · Cours Tests &amp; qualité — Syntaxe</title>
+    <meta name="description" content="Mesurer si un système reste rapide sous charge : latence et débit, la moyenne qui ment face aux centiles (p95, p99), les quatre familles de tests (charge, stress, endurance, pic), les utilisateurs virtuels et les seuils qui font échouer le build." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="tests" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Tests &amp; qualité</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Tester au-delà du fonctionnel — Leçon 11</p>
+              <h1 class="lesson-header__title">Tests de performance et de charge</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 03, 09</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Distinguer <strong>latence</strong> et <strong>débit</strong>, et pourquoi la moyenne trompe&nbsp;;</li>
+                  <li>Lire les <strong>centiles</strong> (<code>p50</code>, <code>p95</code>, <code>p99</code>) d'un temps de réponse&nbsp;;</li>
+                  <li>Choisir la bonne famille&nbsp;: <strong>charge</strong>, <strong>stress</strong>, <strong>endurance</strong> ou <strong>pic</strong>&nbsp;;</li>
+                  <li>Écrire un premier scénario avec un <strong>seuil</strong> qui fait échouer le build.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, tes tests répondaient à une question&nbsp;: «&nbsp;le code est-il <strong>correct</strong>&nbsp;?&nbsp;». Il en reste une autre, tout aussi capable de faire tomber un service en production&nbsp;: «&nbsp;reste-t-il <strong>assez rapide</strong> quand des milliers d'utilisateurs arrivent en même temps&nbsp;?&nbsp;». C'est l'objet du <strong>test de performance</strong>. Une fonction juste mais qui répond en huit secondes sous charge est, pour l'utilisateur, une fonction cassée.</p>
+
+<h2>Latence, débit, et la moyenne qui ment</h2>
+
+<p>Deux grandeurs résument la performance. La <strong>latence</strong> est le temps d'une requête (en millisecondes)&nbsp;; le <strong>débit</strong> (<em>throughput</em>) est le nombre de requêtes servies par seconde. On veut une latence basse <em>et</em> un débit élevé — et les deux se dégradent quand la charge monte.</p>
+
+<p>Le piège classique&nbsp;: résumer la latence par sa <strong>moyenne</strong>. Quelques requêtes très lentes pèsent peu sur la moyenne mais ruinent l'expérience de vrais utilisateurs. On regarde donc des <strong>centiles</strong>&nbsp;: le <code>p95</code> est la valeur en dessous de laquelle tombent 95&nbsp;% des requêtes — autrement dit, ce que vivent les 5&nbsp;% les moins bien servis.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Distribution des temps de réponse : une courbe asymétrique avec un pic à gauche (le cas courant) et une longue traîne vers la droite. La médiane p50 est près du pic, la moyenne est tirée vers la droite par la traîne, et les centiles p95 et p99 se trouvent loin dans la traîne — là où vivent les requêtes lentes que la moyenne masque.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">La moyenne ment, les centiles parlent</text>
+    <line class="d-line" x1="48" y1="164" x2="602" y2="164" />
+    <path class="d-accent" d="M48 164 Q120 164 150 74 Q176 74 202 112 Q252 152 340 158 Q460 164 600 163 L600 164 L48 164 Z" fill-opacity="0.18" stroke="none" />
+    <path class="d-line" d="M48 164 Q120 164 150 74 Q176 74 202 112 Q252 152 340 158 Q460 164 600 163" fill="none" />
+    <line class="d-line" x1="168" y1="60" x2="168" y2="164" /><text class="d-text" x="168" y="52" text-anchor="middle" font-size="10">p50</text>
+    <line class="d-line" x1="232" y1="90" x2="232" y2="164" stroke-dasharray="3 3" /><text class="d-mut" x="232" y="82" text-anchor="middle" font-size="9">moyenne</text>
+    <line class="d-line" x1="388" y1="120" x2="388" y2="164" /><text class="d-text" x="388" y="112" text-anchor="middle" font-size="10">p95</text>
+    <line class="d-line" x1="470" y1="132" x2="470" y2="164" /><text class="d-text" x="470" y="124" text-anchor="middle" font-size="10">p99</text>
+    <text class="d-mut" x="120" y="182" text-anchor="middle" font-size="9">← rapide</text>
+    <text class="d-mut" x="520" y="182" text-anchor="middle" font-size="9">lent →</text>
+    <text class="d-mut" x="320" y="204" text-anchor="middle" font-size="10">p95 et p99 vivent dans la traîne&nbsp;: la moyenne les gomme</text>
+  </svg>
+  <figcaption>La distribution est <em>asymétrique</em>&nbsp;: une longue traîne de requêtes lentes. La médiane (p50) est basse, mais le p95/p99 raconte la vraie histoire de tes utilisateurs les plus mal servis.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi les grands services parlent en « neuf »</p><p>Sur une page qui déclenche cent requêtes internes, chaque utilisateur touche presque à coup sûr la traîne&nbsp;: un p99 mauvais devient l'expérience <em>ordinaire</em>. C'est pourquoi les équipes fixent des objectifs sur le p95, le p99, voire le p99,9 — jamais sur la moyenne seule.</p></div></div>
+
+<h2>Les quatre familles de tests de charge</h2>
+
+<p>«&nbsp;Test de charge&nbsp;» est un raccourci&nbsp;: il existe en réalité quatre profils, selon la <em>question</em> qu'on se pose. Chacun fait varier autrement le nombre d'<strong>utilisateurs virtuels</strong> dans le temps.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="Quatre profils de charge dans le temps. Charge : montée puis plateau au niveau du trafic attendu puis descente. Stress : paliers croissants jusqu'à la rupture. Endurance : un long plateau modéré. Pic : une montée brutale et brève puis retour au calme.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Quatre questions, quatre profils de charge (utilisateurs / temps)</text>
+    <g>
+      <rect class="d-box" x="20" y="40" width="140" height="110" rx="9" />
+      <line class="d-line" x1="34" y1="140" x2="150" y2="140" />
+      <path class="d-line" d="M34 140 L60 74 L124 74 L150 140" fill="none" />
+      <text class="d-text" x="90" y="170" text-anchor="middle" font-size="11">Charge</text>
+      <text class="d-mut" x="90" y="187" text-anchor="middle" font-size="8">« tient-il le trafic prévu ? »</text>
+    </g>
+    <g>
+      <rect class="d-box" x="175" y="40" width="140" height="110" rx="9" />
+      <line class="d-line" x1="189" y1="140" x2="305" y2="140" />
+      <path class="d-line" d="M189 140 L189 128 L219 128 L219 108 L249 108 L249 86 L279 86 L279 62 L297 62" fill="none" />
+      <text class="d-text" x="303" y="58" text-anchor="middle" font-size="12" font-weight="700">✗</text>
+      <text class="d-text" x="245" y="170" text-anchor="middle" font-size="11">Stress</text>
+      <text class="d-mut" x="245" y="187" text-anchor="middle" font-size="8">« où est le point de rupture ? »</text>
+    </g>
+    <g>
+      <rect class="d-box" x="330" y="40" width="140" height="110" rx="9" />
+      <line class="d-line" x1="344" y1="140" x2="460" y2="140" />
+      <path class="d-line" d="M344 140 L360 104 L444 104 L460 140" fill="none" />
+      <text class="d-text" x="400" y="170" text-anchor="middle" font-size="11">Endurance</text>
+      <text class="d-mut" x="400" y="187" text-anchor="middle" font-size="8">« fuite-t-il sur la durée ? »</text>
+    </g>
+    <g>
+      <rect class="d-box" x="485" y="40" width="140" height="110" rx="9" />
+      <line class="d-line" x1="499" y1="140" x2="615" y2="140" />
+      <path class="d-line" d="M499 140 L551 140 L556 54 L561 140 L615 140" fill="none" />
+      <text class="d-text" x="555" y="170" text-anchor="middle" font-size="11">Pic</text>
+      <text class="d-mut" x="555" y="187" text-anchor="middle" font-size="8">« encaisse-t-il une ruée ? »</text>
+    </g>
+  </svg>
+  <figcaption>Charge&nbsp;: le trafic nominal. Stress&nbsp;: on pousse jusqu'à la casse pour la connaître. Endurance&nbsp;: on reste longtemps pour débusquer les fuites mémoire. Pic&nbsp;: une ruée soudaine (une promo, un article viral).</figcaption>
+</figure>
+
+<h2>Écrire un scénario : les utilisateurs virtuels</h2>
+
+<p>Un outil de charge simule des <strong>utilisateurs virtuels</strong> (<em>VUs</em>) qui rejouent en boucle un scénario, en parallèle. On décrit combien d'utilisateurs, comment ils <strong>montent</strong> en charge (<em>ramp-up</em>) et pendant combien de temps. Voici un scénario minimal avec <a href="https://k6.io" rel="noopener">k6</a>, dont les scénarios s'écrivent… en JavaScript.</p>
+
+<figure class="code-block" data-file="charge.js"><pre><code class="language-javascript">import http from "k6/http";
+import { check, sleep } from "k6";
+
+// 20 utilisateurs virtuels pendant 30 s, après une montée en 10 s
+export const options = {
+  stages: [
+    { duration: "10s", target: 20 },  // montée : 0 → 20 VUs
+    { duration: "30s", target: 20 },  // plateau : 20 VUs
+    { duration: "5s",  target: 0 },   // descente
+  ],
+};
+
+export default function () {
+  const res = http.get("https://exemple.test/api/produits");
+  check(res, { "statut 200": (r) =&gt; r.status === 200 });
+  sleep(1);   // temps de réflexion entre deux actions
+}</code></pre></figure>
+
+<p>Chaque VU exécute la fonction par défaut en boucle&nbsp;; le <code>sleep</code> imite le temps de réflexion d'un humain entre deux clics. Sans lui, on ne mesure pas un usage réaliste mais un martèlement.</p>
+
+<h2>Le seuil qui fait échouer le build</h2>
+
+<p>Un test de perf qui produit un joli graphe mais ne <em>décide</em> rien finit ignoré. La clé, c'est le <strong>seuil</strong> (<em>threshold</em>)&nbsp;: une règle chiffrée, tirée d'un <strong>objectif de niveau de service</strong> (SLO), qui rend le test <strong>rouge</strong> quand la performance se dégrade. Le pipeline échoue&nbsp;: on l'apprend avant les utilisateurs.</p>
+
+<figure class="code-block" data-file="charge.js"><pre><code class="language-javascript">export const options = {
+  stages: [
+    { duration: "10s", target: 20 },
+    { duration: "30s", target: 20 },
+  ],
+  // Le build ÉCHOUE si l'une de ces règles est violée
+  thresholds: {
+    http_req_duration: ["p(95)&lt;500"],  // 95 % des requêtes sous 500 ms
+    http_req_failed:   ["rate&lt;0.01"],   // moins de 1 % d'erreurs
+  },
+};</code></pre></figure>
+
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># On lance le scénario ; le code de sortie ≠ 0 si un seuil casse
+k6 run charge.js
+
+#   ✓ statut 200
+#   ✗ http_req_duration..: p(95)=820ms  (seuil : p95&lt;500ms)  → BUILD ROUGE</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — un budget de performance, comme un budget de dépenses</p><p>Écris le seuil <em>avant</em> d'optimiser&nbsp;: «&nbsp;le p95 de la recherche doit rester sous 300&nbsp;ms&nbsp;». Chaque commit qui le dépasse casse le build. C'est un <strong>budget de perf</strong>&nbsp;: il empêche la lente dérive où chaque petite fonctionnalité ajoute «&nbsp;juste 20&nbsp;ms&nbsp;»… jusqu'à la seconde de trop.</p></div></div>
+
+<h2>Cas réel</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le lancement qui n'a pas tenu la ruée</p><p>Une billetterie ouvre les ventes d'un concert très attendu à 10&nbsp;h pile. Les tests fonctionnels étaient tous verts, la latence «&nbsp;moyenne&nbsp;» excellente en préproduction. Mais personne n'avait joué un <strong>test de pic</strong>&nbsp;: à 10&nbsp;h, 50&nbsp;000 personnes arrivent en dix secondes. La base de données sature, le p99 explose, le site tombe. Un simple scénario <em>spike</em> — montée à 50&nbsp;000&nbsp;VUs en 10&nbsp;s, seuil sur le p99 — aurait révélé la rupture une semaine plus tôt, quand il était encore temps d'ajouter une file d'attente. La performance ne se teste pas «&nbsp;en moyenne, un jour calme&nbsp;»&nbsp;: elle se teste au pire moment prévu.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent — mesurer sur sa machine de dev</p><p>Un cache chaud, une base vide, aucun autre trafic, un réseau local&nbsp;: rien à voir avec la production. Les chiffres obtenus sur son portable ne prouvent rien. Mesure sur un environnement <em>iso-prod</em>, avec des données réalistes, et ignore les premières secondes le temps que tout «&nbsp;s'échauffe&nbsp;» (caches, compilation à la volée).</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent — conclure sur la moyenne</p><p>«&nbsp;La latence moyenne est de 120&nbsp;ms, tout va bien.&nbsp;» Peut-être que le p99 est à 4&nbsp;secondes et qu'un client sur cent enrage. Raisonne toujours en centiles, et regarde <em>aussi</em> le débit et le taux d'erreurs&nbsp;: un serveur «&nbsp;rapide&nbsp;» qui rejette la moitié des requêtes n'est pas rapide.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Quand un seuil casse, le test de charge dit «&nbsp;c'est lent&nbsp;», pas «&nbsp;pourquoi&nbsp;». Pour le savoir, on <strong>profile</strong> (où passe le temps&nbsp;?) et on branche l'<strong>observabilité</strong> (métriques, traces) — le sujet du cours dédié. On automatise aussi ces tests dans le pipeline (leçon&nbsp;6) pour surveiller la performance à chaque version, pas seulement avant une grosse sortie. Enfin, la <strong>loi de Little</strong> relie débit, latence et concurrence&nbsp;: un repère utile pour dimensionner.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Tester la performance</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">En bref</th></tr></thead>
+    <tbody>
+      <tr><td>Latence</td><td>Temps d'une requête (ms) — à lire en centiles</td></tr>
+      <tr><td>Débit (throughput)</td><td>Requêtes servies par seconde</td></tr>
+      <tr><td>p95 / p99</td><td>Valeur sous laquelle tombent 95 % / 99 % des requêtes</td></tr>
+      <tr><td>Test de charge</td><td>Trafic attendu&nbsp;: «&nbsp;ça tient&nbsp;?&nbsp;»</td></tr>
+      <tr><td>Test de stress</td><td>Pousser jusqu'à la rupture&nbsp;: trouver le point de bascule</td></tr>
+      <tr><td>Test d'endurance (soak)</td><td>Durée longue&nbsp;: fuites mémoire, dégradation lente</td></tr>
+      <tr><td>Test de pic (spike)</td><td>Montée brutale&nbsp;: une ruée soudaine</td></tr>
+      <tr><td>VU</td><td>Utilisateur virtuel qui rejoue le scénario en boucle</td></tr>
+      <tr><td>Seuil (threshold)</td><td>Règle chiffrée qui fait échouer le build (issue d'un SLO)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Test de performance</dt><dd>Test qui mesure la rapidité et la stabilité d'un système sous une charge donnée, plutôt que sa seule justesse.</dd>
+  <dt>Latence</dt><dd>Durée d'une requête, du départ à la réponse&nbsp;; on la résume par des centiles, pas par la moyenne.</dd>
+  <dt>Débit (throughput)</dt><dd>Nombre de requêtes traitées par unité de temps (req/s).</dd>
+  <dt>Centile (p95, p99)</dt><dd>Valeur en dessous de laquelle tombe un pourcentage donné des mesures&nbsp;; révèle la traîne des cas lents.</dd>
+  <dt>Utilisateur virtuel (VU)</dt><dd>Client simulé par l'outil de charge qui rejoue un scénario en boucle, en parallèle des autres.</dd>
+  <dt>Montée en charge (ramp-up)</dt><dd>Augmentation progressive du nombre d'utilisateurs virtuels, plus réaliste qu'un démarrage brutal.</dd>
+  <dt>Seuil (threshold)</dt><dd>Règle chiffrée (ex. <code>p95&lt;500ms</code>) qui fait échouer le test — et donc le build — quand elle est violée.</dd>
+  <dt>SLO</dt><dd>Objectif de niveau de service&nbsp;: la cible chiffrée (latence, disponibilité) dont on dérive les seuils.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>Le test de performance répond à «&nbsp;est-ce assez <strong>rapide sous charge</strong>&nbsp;?&nbsp;», pas seulement «&nbsp;est-ce correct&nbsp;?&nbsp;».</li>
+<li>On lit la latence en <strong>centiles</strong> (p95, p99)&nbsp;: la <strong>moyenne</strong> gomme la traîne des cas lents.</li>
+<li>Quatre familles&nbsp;: <strong>charge</strong> (trafic prévu), <strong>stress</strong> (rupture), <strong>endurance</strong> (durée), <strong>pic</strong> (ruée).</li>
+<li>Un scénario simule des <strong>utilisateurs virtuels</strong>&nbsp;; le <strong>seuil</strong> issu d'un SLO fait <strong>échouer le build</strong>.</li>
+<li>Mesure iso-prod, ignore l'échauffement, et ne conclus jamais sur la seule moyenne.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi le <code>p95</code> est-il plus parlant que la moyenne des latences&nbsp;?</li><li>Quelle famille de test cherche le <em>point de rupture</em> du système&nbsp;?</li><li>À quoi sert un <em>seuil</em> (threshold) dans un scénario de charge&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi préférer le 95ᵉ centile (p95) à la moyenne pour juger une latence ?","a":["La moyenne est tirée par le gros des requêtes rapides et masque les cas lents ; le p95 montre ce que vivent les 5 % les moins bien servis","Le p95 est plus rapide à calculer que la moyenne","La moyenne n'existe pas pour des temps de réponse","Le p95 ne compte que les erreurs"],"correct":0,"explain":"La distribution des latences est asymétrique : une longue traîne de requêtes lentes. La moyenne les gomme, alors que les centiles (p95, p99) révèlent l'expérience des utilisateurs les plus mal servis."},
+  {"q":"Quelle famille de test de charge cherche à trouver le point de rupture du système ?","a":["Le test de stress : on augmente la charge par paliers jusqu'à ce que le système cède","Le test d'endurance","Le test de pic","Le test de charge nominale"],"correct":0,"explain":"Le stress pousse volontairement au-delà du trafic attendu pour découvrir la limite et le comportement à la rupture. La charge nominale, elle, vérifie seulement le trafic prévu."},
+  {"q":"À quoi sert un seuil (threshold) comme p(95)<500 dans un scénario k6 ?","a":["À faire échouer le build automatiquement quand la performance viole l'objectif fixé","À accélérer le serveur testé","À réduire le nombre d'utilisateurs virtuels","À masquer les requêtes lentes du rapport"],"correct":0,"explain":"Le seuil traduit un SLO en règle chiffrée : si le p95 dépasse 500 ms (ou le taux d'erreur 1 %), le test devient rouge et le pipeline échoue — on l'apprend avant les utilisateurs."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["centile","centiles","percentile","percentiles","p95","p99"],"placeholder":"l'indicateur qui montre la traîne des requêtes lentes que la moyenne cache : le … (p95, p99)","hints":["p95 et p99 en sont des exemples.","Synonyme : « percentile ».","cen????"],"link":{"href":"lecon-11.html","label":"Revoir « Latence, débit, et la moyenne qui ment »"}},
+  {"type":"text","accept":["stress","test de stress","de stress","le stress"],"placeholder":"la famille de test qui pousse le système jusqu'à la RUPTURE : test de …","hints":["On dépasse volontairement le trafic prévu.","Anglicisme de six lettres.","st????"],"link":{"href":"lecon-11.html","label":"Revoir « Les quatre familles de tests de charge »"}},
+  {"type":"text","accept":["threshold","thresholds","seuil","seuils","le seuil"],"placeholder":"le nom (fr ou en) de la règle chiffrée qui fait ÉCHOUER le build : un … (ex. p95<500)","hints":["« seuil » en français.","C'est la clé thresholds dans les options k6.","s???l / thr??hold"],"link":{"href":"lecon-11.html","label":"Revoir « Le seuil qui fait échouer le build »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un rapport indique&nbsp;: latence moyenne 90&nbsp;ms, p99 3&nbsp;800&nbsp;ms. Le service est-il «&nbsp;rapide&nbsp;»&nbsp;? Explique en une phrase ce que vit un utilisateur sur cent.</p><details><summary>Voir une solution</summary><p>Non&nbsp;: la moyenne basse cache une traîne sévère. Le <strong>p99 à 3,8&nbsp;s</strong> signifie qu'<strong>environ un appel sur cent</strong> met près de quatre secondes — une éternité perçue. Sur une page qui fait beaucoup de requêtes, presque chaque utilisateur touchera ce cas lent. Il faut cibler le p99, pas se rassurer avec la moyenne.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu veux vérifier qu'une <strong>promo éclair</strong> annoncée sur les réseaux ne fera pas tomber le site quand des milliers de curieux arrivent d'un coup. Quelle famille de test choisis-tu, et quelle forme a la courbe d'utilisateurs&nbsp;?</p><details><summary>Voir une solution</summary><p>Un <strong>test de pic</strong> (<em>spike</em>). La courbe d'utilisateurs virtuels reste basse, puis <strong>monte très brutalement</strong> (par exemple de 100 à 20&nbsp;000&nbsp;VUs en quelques secondes), tient un court instant, puis redescend. On observe si le système encaisse la ruée, s'il se dégrade proprement (file d'attente) plutôt que de s'effondrer, et à quelle vitesse il se rétablit ensuite.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Complète les <code>options</code> d'un scénario k6 pour que le build échoue si plus de 5&nbsp;% des requêtes dépassent 800&nbsp;ms, ou si le taux d'erreurs dépasse 2&nbsp;%.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">export const options = {
+  stages: [
+    { duration: "10s", target: 50 },
+    { duration: "1m",  target: 50 },
+  ],
+  thresholds: {
+    // « 95 % des requêtes sous 800 ms » = pas plus de 5 % au-dessus
+    http_req_duration: ["p(95)&lt;800"],
+    http_req_failed:   ["rate&lt;0.02"],   // moins de 2 % d'erreurs
+  },
+};
+// Si le p95 dépasse 800 ms OU le taux d'échec 2 %, k6 sort en code ≠ 0
+// → le pipeline d'intégration continue passe au rouge.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

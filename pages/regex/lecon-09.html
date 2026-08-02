@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Performance et ReDoS : écrire des regex sûres — Leçon 9 · Cours Regex — Syntaxe</title>
+    <meta name="description" content="Comprendre le backtracking, reconnaître les motifs explosifs (a+)+, et écrire des expressions régulières qui restent rapides même sur une entrée hostile." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="regex" data-lesson="lecon-09.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Regex</a></li>
+            <li aria-current="page">Leçon 9</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin — Leçon 9</p>
+              <h1 class="lesson-header__title">Performance et ReDoS : écrire des regex sûres</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~41 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 3 et 6</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer le <strong>backtracking</strong>&nbsp;: comment un moteur essaie et revient en arrière&nbsp;;</li>
+                  <li>reconnaître les motifs à <strong>explosion exponentielle</strong> (<code>(a+)+</code>, alternatives qui se chevauchent)&nbsp;;</li>
+                  <li>réécrire un motif dangereux en version <strong>linéaire</strong> et sûre&nbsp;;</li>
+                  <li>nommer ce qu'est un <strong>ReDoS</strong> et comment s'en prémunir en production.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une regex peut être parfaitement <strong>correcte</strong> et pourtant <strong>dangereuse</strong>&nbsp;: sur la bonne entrée, elle passe de quelques microsecondes à plusieurs <em>secondes</em>, voire fige le programme. Ce n'est pas un bug d'écriture, c'est une conséquence de la façon dont la plupart des moteurs cherchent. Comprendre ce mécanisme, c'est savoir éviter la panne.</p>
+
+<h2>Comment un moteur cherche&nbsp;: le backtracking</h2>
+
+<p>La majorité des moteurs (JavaScript, Python, Java, PCRE) utilisent un algorithme dit «&nbsp;à retour arrière&nbsp;». Face à <code>a*a</code> sur <code>"aaa"</code>, <code>a*</code> est <strong>gourmand</strong>&nbsp;: il prend d'abord les trois <code>a</code>. Puis le <code>a</code> final n'a plus rien à matcher&nbsp;: le moteur <strong>revient en arrière</strong>, rend un <code>a</code> à <code>a*</code>, réessaie… C'est le <strong>backtracking</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Face au motif a étoile a sur la chaîne aaa, le moteur essaie d'abord de prendre trois a, échoue sur le a final, rend un a, réessaie avec deux a et réussit. Chaque échec provoque un retour en arrière.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">a*a sur « aaa » : essayer, échouer, revenir en arrière</text>
+    <rect class="d-box" x="70" y="46" width="220" height="34" rx="5" /><text class="d-text" x="180" y="68" text-anchor="middle" font-size="11">a* prend « aaa » · a final : rien → échec</text>
+    <line class="d-line" x1="180" y1="80" x2="180" y2="104" marker-end="url(#a9)" />
+    <rect class="d-box" x="70" y="106" width="220" height="34" rx="5" /><text class="d-text" x="180" y="128" text-anchor="middle" font-size="11">rend 1 a · a* = « aa » · a = « a » → OK</text>
+    <rect class="d-accent" x="350" y="76" width="220" height="34" rx="5" /><text class="d-text" x="460" y="98" text-anchor="middle" font-size="11">succès après 1 retour arrière</text>
+    <text class="d-mut" x="460" y="132" text-anchor="middle" font-size="9">ici : 1 seul retour. Le danger,</text>
+    <text class="d-mut" x="460" y="148" text-anchor="middle" font-size="9">c'est quand les retours se multiplient.</text>
+    <line class="d-line" x1="290" y1="93" x2="346" y2="93" marker-end="url(#a9)" />
+    <text class="d-mut" x="180" y="170" text-anchor="middle" font-size="10">gourmand = prendre le maximum, puis relâcher au besoin</text>
+    <text class="d-mut" x="320" y="196" text-anchor="middle" font-size="9">Sur un motif ambigu, le nombre de combinaisons à essayer peut croître de façon explosive.</text>
+    <defs><marker id="a9" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" class="d-dot" /></marker></defs>
+  </svg>
+  <figcaption>Un retour arrière est normal et bon marché. Le problème naît quand un motif rend possible un <strong>nombre exponentiel</strong> de découpages à explorer.</figcaption>
+</figure>
+
+<h2>Le motif explosif&nbsp;: quantificateurs imbriqués</h2>
+
+<p>Le piège classique&nbsp;: un quantificateur <em>dans</em> un autre, comme <code>(a+)+</code> ou <code>(a|a)*</code>. Le même bloc de <code>a</code> peut être découpé d'un nombre astronomique de façons. Tant que l'entrée <em>correspond</em>, le moteur trouve vite&nbsp;; mais dès qu'elle <strong>échoue à la toute fin</strong> (un caractère intrus), il essaie <em>toutes</em> les découpes avant d'abandonner.</p>
+
+<figure class="code-block" data-file="explosif.js"><pre><code class="language-regex">// DANGEREUX : quantificateur imbriqué
+/^(a+)+$/.test("aaaaaaaaaaaaaaaaaaaaaaaa!")
+// L'entrée finit par « ! » : échec garanti, mais après un temps EXPONENTIEL.
+// Chaque « a » de plus DOUBLE le nombre de découpes à explorer.
+
+// SÛR : le même sens, sans imbrication
+/^a+$/.test("aaaaaaaaaaaaaaaaaaaaaaaa!")   // faux, en temps linéaire</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Deux courbes du temps de calcul en fonction de la longueur de l'entrée. Le motif a plus entre parenthèses plus reste très lent et explose vers le haut. Le motif a plus reste une ligne basse et plate.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Temps de calcul selon la longueur de l'entrée</text>
+    <line class="d-line" x1="70" y1="176" x2="600" y2="176" /><line class="d-line" x1="70" y1="176" x2="70" y2="44" />
+    <text class="d-mut" x="335" y="200" text-anchor="middle" font-size="10">longueur de l'entrée →</text>
+    <text class="d-mut" x="52" y="110" text-anchor="middle" font-size="10" transform="rotate(-90 52 110)">temps →</text>
+    <path class="d-accent" d="M70 174 C 300 172, 430 168, 520 60" fill="none" stroke-width="3" /><circle class="d-dot" cx="520" cy="60" r="3.5" /><text class="d-mut" x="522" y="52" text-anchor="start" font-size="10">(a+)+  exponentiel</text>
+    <path class="d-line" d="M70 170 L 600 162" fill="none" stroke-width="2.5" /><text class="d-mut" x="602" y="156" text-anchor="end" font-size="10">a+  linéaire</text>
+    <text class="d-mut" x="320" y="70" text-anchor="middle" font-size="9">quelques dizaines de caractères suffisent</text>
+    <text class="d-mut" x="320" y="86" text-anchor="middle" font-size="9">à faire passer (a+)+ de la microseconde à la seconde</text>
+  </svg>
+  <figcaption>Avec <code>(a+)+</code>, ajouter un caractère peut <strong>doubler</strong> le travail. Une entrée de 30 à 40 caractères suffit alors à bloquer un serveur&nbsp;: c'est le principe d'une attaque ReDoS.</figcaption>
+</figure>
+
+<h2>Reconnaître les motifs à risque</h2>
+
+<p>Trois familles reviennent presque toujours&nbsp;:</p>
+<ul>
+<li><strong>Quantificateur imbriqué</strong>&nbsp;: <code>(a+)+</code>, <code>(a*)*</code>, <code>(.+)+</code>.</li>
+<li><strong>Alternatives qui se chevauchent</strong> sous un quantificateur&nbsp;: <code>(a|ab)*</code>, <code>(\d|\d\d)+</code> — le moteur hésite entre deux découpes équivalentes.</li>
+<li><strong><code>.*</code> répété autour d'un texte optionnel</strong>&nbsp;: <code>^(.*,)*$</code> sur des listes mal formées.</li>
+</ul>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le danger vient de l'échec, pas du succès</p><p>Une regex vulnérable peut être ultra-rapide sur toutes tes entrées de test&nbsp;: elles <em>correspondent</em>. L'explosion ne se déclenche que sur une entrée qui <strong>échoue près de la fin</strong> — précisément ce qu'un attaquant fabrique. D'où la règle&nbsp;: teste toujours tes motifs sur une <strong>longue chaîne qui ne matche pas</strong>.</p></div></div>
+
+<h2>Écrire des regex sûres</h2>
+
+<p>Quelques réflexes suppriment l'immense majorité des risques&nbsp;:</p>
+
+<figure class="code-block" data-file="sures.js"><pre><code class="language-regex">// 1) Classes précises plutôt que . gourmand
+"[^"]*"          au lieu de    ".*"          // borne la recherche
+
+// 2) Pas de quantificateur imbriqué : aplatis-le
+\d+              au lieu de    (\d+)+
+
+// 3) Ancre pour couper court
+^\d{5}$          au lieu de    \d{5}          // évite les essais inutiles
+
+// 4) Alternatives disjointes (préfixes qui ne se recouvrent pas)
+(ab|cd)          au lieu de    (a|ab)</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: le test de la longue entrée</p><p>Avant de mettre une regex en production, lance-la sur <code>"a".repeat(50) + "!"</code> (adapté à ton motif). Si la réponse tarde, tu as un ReDoS. Certains moteurs proposent aussi des <strong>groupes atomiques</strong> <code>(?&gt;…)</code> ou des <strong>quantificateurs possessifs</strong> <code>a++</code> qui interdisent le retour arrière et coupent net l'explosion (disponibles en Java, PCRE, .NET&nbsp;; pas en JavaScript standard).</p></div></div>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le 20&nbsp;juillet 2016, <strong>Stack Overflow</strong> est tombé environ 34&nbsp;minutes. La cause&nbsp;: une regex qui supprimait les espaces en début et fin de ligne, du type <code>/^\s+|\s+$/</code>. Un message contenait une ligne d'environ 20&nbsp;000&nbsp;espaces consécutifs suivie d'un caractère visible&nbsp;: le <code>\s+</code> final partait explorer d'innombrables découpes avant d'échouer, saturant le processeur. Le correctif a tenu en une ligne&nbsp;: borner le nombre d'espaces et éviter le motif ambigu. La leçon&nbsp;: une regex de nettoyage, la plus anodine du monde, peut mettre un site majeur à terre si l'entrée est hostile.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Il existe des moteurs qui <strong>ne backtrackent jamais</strong>&nbsp;: <code>RE2</code> (Google), le moteur <code>regex</code> de Rust ou <code>grep</code> compilent le motif en <em>automate</em> et garantissent un temps <strong>linéaire</strong> quel que soit l'entrée — au prix de l'abandon des backréférences et des regards, incompatibles avec cette approche. En environnement exposé (validation de saisie utilisateur), on préfère souvent ces moteurs, ou l'on impose un <strong>délai maximal</strong> d'exécution à la regex.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Regex sûres — mémo</caption>
+    <thead><tr><th scope="col">À éviter</th><th scope="col">Préférer</th></tr></thead>
+    <tbody>
+      <tr><td><code>(a+)+</code>, <code>(a*)*</code></td><td><code>a+</code> (aplatir le quantificateur)</td></tr>
+      <tr><td><code>.*</code> non borné</td><td><code>[^x]*</code> (classe précise)</td></tr>
+      <tr><td><code>(a|ab)*</code></td><td>alternatives disjointes <code>(ab|cd)</code></td></tr>
+      <tr><td>motif non ancré</td><td><code>^…$</code> pour couper court</td></tr>
+      <tr><td>tester seulement des cas qui matchent</td><td>tester une longue entrée qui <em>échoue</em></td></tr>
+      <tr><td>backtracking sur saisie exposée</td><td>moteur linéaire (RE2) ou délai max</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Backtracking</dt><dd>Retour en arrière du moteur pour essayer d'autres découpes quand une piste échoue.</dd>
+  <dt>Gourmand (<em>greedy</em>)</dt><dd>Comportement par défaut d'un quantificateur&nbsp;: prendre le maximum, puis relâcher.</dd>
+  <dt>ReDoS</dt><dd><em>Regular expression Denial of Service</em>&nbsp;: une entrée qui fait exploser le temps de calcul d'une regex vulnérable.</dd>
+  <dt>Quantificateur imbriqué</dt><dd>Un quantificateur à l'intérieur d'un autre (<code>(a+)+</code>)&nbsp;; source n°1 d'explosion.</dd>
+  <dt>Groupe atomique</dt><dd><code>(?&gt;…)</code>&nbsp;: fige ce qui a été matché et interdit le retour arrière à l'intérieur.</dd>
+  <dt>Complexité linéaire</dt><dd>Temps qui croît proportionnellement à la longueur de l'entrée (l'objectif à viser).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La plupart des moteurs cherchent par <strong>backtracking</strong>&nbsp;: essayer, échouer, revenir en arrière.</li>
+<li>Un <strong>quantificateur imbriqué</strong> ou des <strong>alternatives qui se chevauchent</strong> rendent le nombre d'essais <em>exponentiel</em>.</li>
+<li>L'explosion se déclenche sur une entrée qui <strong>échoue près de la fin</strong>&nbsp;: teste toujours ce cas.</li>
+<li>Réflexes sûrs&nbsp;: classes précises, aplatir les quantificateurs, ancrer, alternatives disjointes.</li>
+<li>Un <strong>ReDoS</strong> peut geler un service entier&nbsp;; en zone exposée, envisage un moteur linéaire.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Qu'est-ce que le backtracking, en une phrase&nbsp;?</li>
+<li>Pourquoi <code>^(a+)+$</code> est-il dangereux alors que <code>^a+$</code> ne l'est pas&nbsp;?</li>
+<li>Quel type d'entrée révèle une regex vulnérable&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce que le backtracking ?","a":["Le retour en arrière du moteur pour essayer une autre découpe quand une piste échoue","Une erreur de syntaxe dans le motif","Le fait de lire la chaîne de droite à gauche","Un drapeau de performance"],"correct":0,"explain":"Le moteur avance de façon gourmande puis, en cas d'échec, revient sur ses pas pour tenter d'autres combinaisons."},
+  {"q":"Pourquoi ^(a+)+$ est-il dangereux ?","a":["Le quantificateur imbriqué autorise un nombre exponentiel de découpes, explorées avant d'échouer","Il ne compile pas","Il matche trop d'entrées","Il est insensible à la casse"],"correct":0,"explain":"(a+)+ peut découper un bloc de a d'innombrables façons ; sur une entrée qui échoue à la fin, le moteur les essaie toutes."},
+  {"q":"Quelle entrée révèle le mieux une regex vulnérable au ReDoS ?","a":["Une longue chaîne qui ÉCHOUE près de la fin","Une chaîne vide","Une chaîne qui correspond parfaitement","Une chaîne très courte"],"correct":0,"explain":"L'explosion se produit quand le moteur doit épuiser toutes les découpes avant de conclure à l'échec : c'est le cas d'une longue entrée non conforme."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["^\\d+$","^[0-9]+$"],"placeholder":"la version SÛRE, ancrée et linéaire, de ^(\\d+)+$ : …","hints":["Un seul quantificateur suffit.","Garde les ancres ^ et $.","^\\d+$"],"link":{"href":"lecon-09.html","label":"Revoir « Écrire des regex sûres »"}},
+  {"type":"text","accept":["backtracking","retour arrière","retour en arrière","backtrack"],"placeholder":"le nom du mécanisme « essayer, échouer, revenir en arrière » : …","hints":["Terme anglais courant, ou sa traduction.","Commence par « back… ».","Le moteur revient sur ses pas."],"link":{"href":"lecon-09.html","label":"Revoir « Comment un moteur cherche »"}},
+  {"type":"text","accept":["redos","redos","ReDoS"],"placeholder":"l'acronyme de l'attaque par regex trop lente : …","hints":["Re… D… o… S.","Regular expression Denial of Service.","4 lettres."],"link":{"href":"lecon-09.html","label":"Revoir « Cas réel »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Identifie lequel de ces motifs est à risque et explique pourquoi&nbsp;: <code>^\w+@\w+\.\w+$</code> ou <code>^(\w+)+@\w+$</code>.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-regex">Sûr :       ^\w+@\w+\.\w+$      (chaque \w+ est simple, non imbriqué)
+Dangereux : ^(\w+)+@\w+$        (\w+ à l'intérieur de ( )+ → explosion)</code></pre></figure>
+<p>Le second imbrique <code>\w+</code> dans <code>(…)+</code>&nbsp;: sur une entrée sans <code>@</code>, le moteur essaie un nombre exponentiel de découpes avant d'échouer.</p>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Réécris <code>".*"</code> (une chaîne entre guillemets) en une version qui ne déborde pas et ne peut pas exploser.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-regex">"[^"]*"
+
+// [^"]* s'arrête au prochain guillemet : pas d'ambiguïté, pas de gourmandise débordante.</code></pre></figure>
+<p>La classe négative borne la recherche&nbsp;: un seul découpage possible, donc un temps linéaire.</p>
+</details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique en une phrase pourquoi une regex vulnérable peut passer tous les tests unitaires de l'équipe et pourtant provoquer une panne en production.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution"><pre><code class="language-regex">Les tests utilisent des entrées VALIDES → elles matchent vite.
+L'explosion n'apparaît que sur une entrée INVALIDE et longue,
+que seul un utilisateur (ou un attaquant) finit par produire.</code></pre></figure>
+<p>D'où l'importance d'ajouter, dans la suite de tests, au moins une longue entrée censée <strong>échouer</strong>.</p>
+</details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-regex.min.js" defer></script>
+  </body>
+</html>

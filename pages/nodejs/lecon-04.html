@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>L'asynchrone et la boucle d'événements — Leçon 04 · Node.js · Syntaxe</title>
+    <meta name="description" content="Comprends le modèle non bloquant de Node : boucle d'événements, E/S asynchrones, callbacks error-first, callback hell et util.promisify." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="nodejs" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Node.js</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Le cœur asynchrone — Leçon 04</p>
+              <h1 class="lesson-header__title">L'asynchrone et la boucle d'événements</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Module 1 recommandé</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Expliquer pourquoi Node est <strong>mono-thread mais non bloquant</strong> grâce à la boucle d'événements&nbsp;;</li>
+                  <li>Distinguer le code <strong>bloquant</strong> (<code>fs.readFileSync</code>) du code asynchrone (<code>fs.readFile</code>)&nbsp;;</li>
+                  <li>Écrire et lire un callback <strong>error-first</strong> en traitant <code>err</code> en premier&nbsp;;</li>
+                  <li>Convertir une fonction à callback en promesse avec <code>util.promisify</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu connais déjà <code>async</code>/<code>await</code> et les promesses en JavaScript. Mais d'où vient cette obsession de Node pour l'asynchrone&nbsp;? La réponse tient en une idée&nbsp;: Node exécute ton code sur <strong>un seul thread</strong>, et pourtant il encaisse des milliers de requêtes réseau ou de lectures de fichiers en parallèle. Le secret, c'est la <strong>boucle d'événements</strong> (event loop).</p>
+
+<p>Dans cette leçon, on remonte sous le capot&nbsp;: comment un programme mono-thread reste réactif, pourquoi le code «&nbsp;synchrone&nbsp;» est un piège côté serveur, et comment les premiers patterns asynchrones de Node (les <em>callbacks</em>) fonctionnent. Ça pose les bases avant de passer aux promesses à la leçon suivante. Les exemples sont en <strong>ESM</strong> (fichier <code>.mjs</code> ou <code>package.json</code> avec <code>"type": "module"</code>)&nbsp;; je signale les différences avec CommonJS quand elles comptent.</p>
+
+<h2>Mono-thread mais non bloquant</h2>
+
+<p>Quand Node lance ton script, ton code JavaScript tourne sur un <strong>unique thread</strong>. Il n'y a pas dix copies de ton programme qui s'exécutent en même temps. Pourtant, Node n'attend jamais bêtement qu'un fichier soit lu ou qu'une réponse réseau arrive&nbsp;: il <strong>délègue</strong> ces opérations d'entrée/sortie (E/S) au système, puis continue à exécuter le reste du code. Quand le résultat est prêt, Node le récupère et déclenche la fonction que tu avais prévue.</p>
+
+<p>C'est le rôle de la <strong>boucle d'événements</strong>&nbsp;: une boucle infinie qui, à chaque tour, regarde s'il y a des résultats d'E/S terminés et exécute les fonctions associées (les <em>callbacks</em>).</p>
+
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import { readFile } from 'node:fs';
+
+console.log('1 — avant la lecture');
+
+// On DÉLÈGUE la lecture du fichier. Node n'attend pas ici.
+readFile('./data.txt', 'utf8', (err, contenu) =&gt; {
+  if (err) throw err;
+  console.log('3 — fichier lu, longueur :', contenu.length);
+});
+
+console.log('2 — après la lecture (s\'exécute AVANT le 3)');
+
+// affiche:
+// 1 — avant la lecture
+// 2 — après la lecture (s'exécute AVANT le 3)
+// 3 — fichier lu, longueur : 42
+</code></pre></figure>
+
+<p class="code-caption">Le «&nbsp;2&nbsp;» s'affiche avant le «&nbsp;3&nbsp;»&nbsp;: Node n'a pas bloqué sur la lecture, il a continué puis est revenu plus tard.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le thread qui exécute ton JavaScript est unique, mais Node s'appuie sur une bibliothèque C appelée <strong>libuv</strong> qui gère, elle, un petit pool de threads pour certaines opérations (fichiers, DNS via <code>dns.lookup</code>, certaines fonctions de chiffrement…). Le parallélisme existe donc, mais en dehors de <em>ton</em> code JavaScript.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 216" role="img" aria-label="La boucle d'événements de Node. Ton code JavaScript s'exécute sur un unique thread, une seule pile d'appels. Quand il lance une opération d'entrée-sortie (lecture de fichier, requête réseau, DNS), il la délègue à libuv et au système, qui la traitent en arrière-plan sans bloquer le thread. Lorsque le résultat est prêt, le callback associé rejoint une file d'attente. La boucle d'événements, à chaque tour, prend les callbacks prêts dans cette file et les fait exécuter par le thread JavaScript, qui reste ainsi toujours disponible.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Node : un thread JS unique, des E/S déléguées</text>
+    <rect class="d-accent" x="40" y="44" width="196" height="58" rx="10" />
+    <text class="d-text" x="138" y="70" text-anchor="middle" font-size="10">ton code JS</text>
+    <text class="d-mut" x="138" y="88" text-anchor="middle" font-size="8">1 seul thread · 1 pile d'appels</text>
+    <text class="d-tag" x="322" y="62" text-anchor="middle" font-size="8">délègue l'E/S</text>
+    <line class="d-line" x1="236" y1="73" x2="398" y2="73" /><polygon class="d-dot" points="406,73 394,68 394,78" />
+    <rect class="d-box" x="406" y="44" width="196" height="58" rx="10" />
+    <text class="d-text" x="504" y="70" text-anchor="middle" font-size="10">libuv + système</text>
+    <text class="d-mut" x="504" y="88" text-anchor="middle" font-size="8">disque · réseau · DNS (en fond)</text>
+    <text class="d-tag" x="556" y="126" text-anchor="middle" font-size="8">résultat prêt</text>
+    <line class="d-line" x1="504" y1="102" x2="504" y2="148" /><line class="d-line" x1="504" y1="148" x2="454" y2="148" /><polygon class="d-dot" points="446,148 458,143 458,153" />
+    <rect class="d-box" x="222" y="124" width="224" height="50" rx="10" />
+    <text class="d-text" x="334" y="146" text-anchor="middle" font-size="9.5">file des callbacks prêts</text>
+    <text class="d-mut" x="334" y="162" text-anchor="middle" font-size="8">chacun attend son tour</text>
+    <line class="d-line" x1="222" y1="150" x2="138" y2="150" /><line class="d-line" x1="138" y1="150" x2="138" y2="110" /><polygon class="d-dot" points="138,102 133,114 143,114" />
+    <text class="d-mut" x="320" y="200" text-anchor="middle" font-size="8">à chaque tour : « un callback est-il prêt ? » → le thread l'exécute, puis recommence</text>
+  </svg>
+  <figcaption>Le thread JS ne s'arrête jamais à attendre&nbsp;: il délègue l'E/S, continue, puis la <strong>boucle d'événements</strong> lui rend chaque callback quand son résultat est prêt.</figcaption>
+</figure>
+
+<h2>Bloquant vs non bloquant</h2>
+
+<p>La plupart des modules de Node proposent deux variantes&nbsp;: une version <strong>synchrone</strong> (suffixe <code>Sync</code>) qui <strong>bloque</strong> tout le thread jusqu'au résultat, et une version <strong>asynchrone</strong> qui rend la main immédiatement.</p>
+
+<figure class="code-block" data-file="bloquant.js"><pre><code class="language-javascript">import { readFileSync } from 'node:fs';
+
+console.log('début');
+
+// BLOQUANT : rien d'autre ne peut s'exécuter pendant la lecture.
+const contenu = readFileSync('./data.txt', 'utf8');
+console.log('contenu lu :', contenu.length, 'caractères');
+
+console.log('fin');
+
+// affiche, DANS L'ORDRE, en attendant la lecture entre les deux :
+// début
+// contenu lu : 42 caractères
+// fin
+</code></pre></figure>
+
+<p>Sur un script en ligne de commande qui lit un fichier puis s'arrête, <code>readFileSync</code> est parfaitement acceptable&nbsp;: c'est simple à lire. Le danger apparaît dans un <strong>serveur</strong>. Comme le thread est unique, un appel <code>Sync</code> qui prend 200&nbsp;ms gèle <em>tous</em> les clients connectés pendant ces 200&nbsp;ms&nbsp;: personne n'est servi tant que l'opération n'est pas finie.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Comparaison entre un appel bloquant et un appel non bloquant sur le thread unique. En haut, la version synchrone readFileSync : pendant toute la durée de la lecture, le thread est bloqué et ne peut rien exécuter d'autre ; le code qui suit n'a lieu qu'après. En bas, la version asynchrone readFile : l'opération est déléguée en un instant, le thread continue immédiatement d'exécuter la suite du code, et le callback ne s'exécute que plus tard, quand le résultat est prêt. Le thread n'est jamais immobilisé.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">le même thread : bloqué (Sync) ou libre (async)</text>
+    <text class="d-text" x="20" y="50" font-size="9">readFileSync</text>
+    <rect class="d-box" x="20" y="58" width="70" height="26" rx="5" /><text class="d-mut" x="55" y="75" text-anchor="middle" font-size="8">début</text>
+    <rect class="d-accent" x="90" y="58" width="330" height="26" rx="5" /><text class="d-text" x="255" y="75" text-anchor="middle" font-size="8.5">thread BLOQUÉ — lecture (200 ms)</text>
+    <rect class="d-box" x="420" y="58" width="90" height="26" rx="5" /><text class="d-mut" x="465" y="75" text-anchor="middle" font-size="8">suite du code</text>
+    <text class="d-tag" x="255" y="100" text-anchor="middle" font-size="7.5">rien d'autre ne tourne pendant ce temps</text>
+    <text class="d-text" x="20" y="128" font-size="9">readFile (async)</text>
+    <rect class="d-box" x="20" y="136" width="70" height="26" rx="5" /><text class="d-mut" x="55" y="153" text-anchor="middle" font-size="8">début</text>
+    <rect class="d-accent" x="90" y="136" width="58" height="26" rx="5" /><text class="d-text" x="119" y="153" text-anchor="middle" font-size="7.5">délègue</text>
+    <rect class="d-box" x="148" y="136" width="122" height="26" rx="5" /><text class="d-mut" x="209" y="153" text-anchor="middle" font-size="7.5">suite du code (tout de suite)</text>
+    <line class="d-line" x1="270" y1="149" x2="404" y2="149" stroke-dasharray="3 3" /><polygon class="d-dot" points="412,149 400,144 400,154" />
+    <rect class="d-box" x="412" y="136" width="120" height="26" rx="5" /><text class="d-mut" x="472" y="153" text-anchor="middle" font-size="8">callback : fichier prêt</text>
+    <text class="d-tag" x="209" y="180" text-anchor="middle" font-size="7.5">le thread reste libre entre les deux</text>
+  </svg>
+  <figcaption>La version <code>Sync</code> immobilise le thread du début à la fin&nbsp;; la version asynchrone délègue, laisse le code continuer, et n'exécute le callback qu'une fois le résultat prêt.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="serveur.js"><pre><code class="language-javascript">import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
+
+createServer((req, res) =&gt; {
+  // MAUVAIS dans un serveur : chaque requête bloque le thread
+  // et fait patienter TOUS les autres clients.
+  const page = readFileSync('./page.html', 'utf8');
+  res.end(page);
+}).listen(3000);
+</code></pre></figure>
+
+<p class="code-caption">À éviter&nbsp;: la version <code>Sync</code> dans le gestionnaire de requêtes transforme ton serveur en file d'attente à guichet unique.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser une fonction <code>…Sync</code> dans un serveur ou dans une boucle chaude. Réserve le synchrone au démarrage (charger un fichier de config une seule fois) ou aux petits scripts CLI, jamais dans le chemin d'une requête.</p></div></div>
+
+<h2>Le pattern callback «&nbsp;error-first&nbsp;»</h2>
+
+<p>Avant les promesses, l'API historique de Node repose sur les <strong>callbacks</strong>&nbsp;: tu passes une fonction qui sera appelée quand l'opération est terminée. La convention de Node est stricte&nbsp;: le callback reçoit <strong>l'erreur en premier argument</strong>, et le résultat ensuite. On parle de callback <em>error-first</em>.</p>
+
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import { readFile } from 'node:fs';
+
+readFile('./data.txt', 'utf8', (err, data) =&gt; {
+  // TOUJOURS traiter l'erreur en premier.
+  if (err) {
+    console.error('Échec de lecture :', err.message);
+    return; // on s'arrête là, data n'est pas fiable.
+  }
+  console.log('Contenu :', data);
+});
+</code></pre></figure>
+
+<p>La règle d'or&nbsp;: <strong>teste <code>err</code> avant de toucher à <code>data</code></strong>. Si <code>err</code> n'est pas <code>null</code>, le second argument est généralement <code>undefined</code> et n'a aucun sens. Le <code>return</code> après la gestion de l'erreur évite de continuer avec des données absentes.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier le premier argument <code>err</code>. Si tu écris <code>(data) =&gt; …</code> au lieu de <code>(err, data) =&gt; …</code>, ta variable <code>data</code> contient en réalité l'erreur, et la vraie donnée disparaît. Une erreur silencieuse qui plante plus loin sans explication.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 182" role="img" aria-label="Le déroulé d'un callback error-first de Node. Le callback reçoit deux arguments dans l'ordre : err puis data. La première chose à faire est de tester err. Si err n'est pas null, on gère l'erreur et on sort par un return, car data n'est pas exploitable. Si err est null, alors data est valide et on peut l'utiliser en toute sécurité.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">callback « error-first » : on teste err d'abord</text>
+    <rect class="d-accent" x="200" y="34" width="240" height="30" rx="7" /><text class="d-text" x="320" y="54" text-anchor="middle" font-size="10">(err, data) =&gt; { … }</text>
+    <text class="d-tag" x="320" y="86" text-anchor="middle" font-size="9">if (err) ?</text>
+    <line class="d-line" x1="320" y1="64" x2="320" y2="94" /><polygon class="d-dot" points="320,102 315,90 325,90" />
+    <line class="d-line" x1="250" y1="110" x2="170" y2="128" /><polygon class="d-dot" points="162,130 175,129 170,120" />
+    <rect class="d-box" x="24" y="130" width="252" height="42" rx="8" /><text class="d-text" x="150" y="149" text-anchor="middle" font-size="9">err ≠ null</text><text class="d-mut" x="150" y="164" text-anchor="middle" font-size="8">gérer l'erreur, puis return</text>
+    <line class="d-line" x1="390" y1="110" x2="470" y2="128" /><polygon class="d-dot" points="478,130 465,120 470,129" />
+    <rect class="d-accent" x="364" y="130" width="252" height="42" rx="8" /><text class="d-text" x="490" y="149" text-anchor="middle" font-size="9">err === null</text><text class="d-mut" x="490" y="164" text-anchor="middle" font-size="8">data est fiable → l'utiliser</text>
+  </svg>
+  <figcaption>Tant que tu n'as pas vérifié <code>err</code>, <code>data</code> n'a aucune valeur garantie. Le réflexe&nbsp;: <code>if (err) { … return; }</code> en tout premier.</figcaption>
+</figure>
+
+<h2>Le «&nbsp;callback hell&nbsp;»</h2>
+
+<p>Le problème des callbacks apparaît dès qu'on enchaîne plusieurs opérations asynchrones dépendantes. Chaque étape s'imbrique dans le callback de la précédente, et le code dérive vers la droite en escalier&nbsp;: c'est le <strong>callback hell</strong> (ou «&nbsp;pyramide de la mort&nbsp;»).</p>
+
+<figure class="code-block" data-file="hell.js"><pre><code class="language-javascript">import { readFile, writeFile } from 'node:fs';
+
+// Lire un fichier, le transformer, l'écrire, puis le relire.
+readFile('./entree.txt', 'utf8', (err, texte) =&gt; {
+  if (err) return console.error(err);
+  const majuscules = texte.toUpperCase();
+  writeFile('./sortie.txt', majuscules, (err) =&gt; {
+    if (err) return console.error(err);
+    readFile('./sortie.txt', 'utf8', (err, verif) =&gt; {
+      if (err) return console.error(err);
+      console.log('Vérifié :', verif);
+      // … et ça continue à s'enfoncer à droite à chaque étape.
+    });
+  });
+});
+</code></pre></figure>
+
+<p class="code-caption">Trois opérations seulement, et déjà trois niveaux d'imbrication, avec <code>if (err)</code> répété partout.</p>
+
+<p>Lisibilité en chute, gestion d'erreurs dupliquée, refactoring pénible&nbsp;: c'est exactement ce que les <strong>promesses</strong> et <code>async</code>/<code>await</code> vont résoudre (leçon&nbsp;5). Garde ce code en tête, on le réécrira proprement.</p>
+
+<h2>Un coup d'œil aux phases de la boucle</h2>
+
+<p>La boucle d'événements n'est pas une simple file&nbsp;: elle tourne en <strong>phases</strong>, chacune dédiée à un type de tâche (minuteries, E/S, etc.). Pas besoin de tout mémoriser, mais trois mécanismes reviennent souvent&nbsp;:</p>
+
+<ul>
+<li><code>setTimeout(fn, 0)</code>&nbsp;: planifie <code>fn</code> dans la phase des <strong>minuteries</strong>, après un délai minimal.</li>
+<li><code>setImmediate(fn)</code>&nbsp;: planifie <code>fn</code> juste après la phase d'E/S du tour courant.</li>
+<li><code>process.nextTick(fn)</code>&nbsp;: exécute <code>fn</code> <strong>avant</strong> que la boucle ne passe à la phase suivante&nbsp;; c'est le plus prioritaire.</li>
+</ul>
+
+<figure class="code-block" data-file="phases.js"><pre><code class="language-javascript">console.log('synchrone : début');
+
+setTimeout(() =&gt; console.log('setTimeout'), 0);
+setImmediate(() =&gt; console.log('setImmediate'));
+process.nextTick(() =&gt; console.log('nextTick'));
+
+console.log('synchrone : fin');
+
+// affiche (ordre typique) :
+// synchrone : début
+// synchrone : fin
+// nextTick        ← avant tout le reste de l'asynchrone
+// setTimeout      ← l'ordre timeout/immediate peut varier au top-level
+// setImmediate
+</code></pre></figure>
+
+<p>Retiens surtout deux choses&nbsp;: <strong>tout le code synchrone s'exécute d'abord</strong>, puis l'asynchrone&nbsp;; et <code>process.nextTick</code> passe avant les autres callbacks. Abuser de <code>nextTick</code> peut d'ailleurs «&nbsp;affamer&nbsp;» la boucle et empêcher les E/S de progresser.</p>
+
+<h2>Convertir un callback en promesse avec util.promisify</h2>
+
+<p>Beaucoup d'API anciennes n'existent qu'en version callback. Plutôt que de les emballer à la main, Node fournit <code>util.promisify</code>&nbsp;: il transforme une fonction error-first en fonction qui <strong>renvoie une promesse</strong>, directement utilisable avec <code>await</code>.</p>
+
+<figure class="code-block" data-file="promisify.js"><pre><code class="language-javascript">import { readFile } from 'node:fs';
+import { promisify } from 'node:util';
+
+// On enveloppe la fonction à callback...
+const readFileAsync = promisify(readFile);
+
+// ...et on l'utilise comme une promesse.
+// (top-level await : disponible dans un module ESM)
+const contenu = await readFileAsync('./data.txt', 'utf8');
+console.log('Lu via promesse :', contenu.length, 'caractères');
+// affiche: Lu via promesse : 42 caractères
+</code></pre></figure>
+
+<p class="code-caption"><code>promisify</code> attend une fonction respectant la convention error-first&nbsp;; il rejette la promesse si <code>err</code> est présent, la résout avec <code>data</code> sinon.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le <code>await</code> au niveau racine (<em>top-level await</em>) n'existe que dans les <strong>modules ESM</strong>. En CommonJS, place ton <code>await</code> dans une fonction <code>async</code> (par exemple <code>async function main() { … }</code> que tu appelles ensuite).</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour le système de fichiers, tu n'as même pas besoin de <code>promisify</code>&nbsp;: importe <code>node:fs/promises</code>, qui expose directement les versions promesse (<code>import { readFile } from 'node:fs/promises'</code>). Garde <code>promisify</code> pour les bibliothèques tierces qui ne proposent que des callbacks.</p></div></div>
+
+<h2>Cas réel : une seule requête bloque les mille autres</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une API Node répond en 20&nbsp;ms… sauf un endpoint qui, à <em>chaque</em> requête, relit et <em>parse</em> un gros fichier de configuration avec <code>readFileSync</code> + <code>JSON.parse</code> (≈ 80&nbsp;ms de CPU synchrone). Avec peu de trafic, personne ne le remarque. En pic, ces 80&nbsp;ms figent la <strong>boucle d'événements</strong> pour <em>tout le monde</em>&nbsp;: la latence P99 grimpe à plusieurs secondes alors qu'aucune requête n'est, prise seule, réellement lente. Le correctif tient aux deux idées de cette leçon&nbsp;: charger le fichier <strong>une seule fois au démarrage</strong> (là, le synchrone est acceptable) et sortir tout calcul lourd du chemin d'une requête. Sur un thread unique, <strong>bloquer une requête, c'est bloquer les mille autres</strong>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<ul>
+<li><strong>Appeler une fonction <code>…Sync</code> dans un serveur</strong>&nbsp;: le thread unique se bloque et tous les clients attendent. Réserve le synchrone au démarrage ou aux scripts CLI.</li>
+<li><strong>Oublier de gérer <code>err</code></strong>&nbsp;: le premier argument du callback contient l'erreur. Ne pas le tester, c'est risquer de manipuler des données invalides ou de masquer un échec.</li>
+<li><strong>Tomber dans le callback hell</strong>&nbsp;: au-delà de deux niveaux d'imbrication, passe aux promesses plutôt que de continuer à imbriquer.</li>
+<li><strong>Croire que ton JavaScript tourne sur plusieurs threads</strong>&nbsp;: il s'exécute sur un seul thread. Un calcul lourd et synchrone (boucle massive, parsing géant) bloque tout, même sans E/S.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les <strong>promesses</strong> et <code>async</code>/<code>await</code> (leçon&nbsp;5) remplacent les callbacks et aplatissent le callback hell. Pour du <em>vrai</em> calcul parallèle (et non de l'E/S), regarde les <strong>worker threads</strong>. Et pour comprendre le pool de threads sous le capot, explore <strong>libuv</strong>&nbsp;: c'est lui qui exécute les lectures de fichiers en arrière-plan sans bloquer ta boucle d'événements.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — l'asynchrone de Node</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>boucle d'événements</td><td>orchestre les callbacks prêts</td><td>1 thread JS, E/S déléguées</td></tr>
+      <tr><td><code>fs.readFileSync</code></td><td>lecture <em>bloquante</em></td><td>OK au démarrage / CLI, jamais en serveur</td></tr>
+      <tr><td><code>fs.readFile</code></td><td>lecture <em>non bloquante</em></td><td>callback error-first</td></tr>
+      <tr><td><code>(err, data) =&gt;</code></td><td>convention error-first</td><td>tester <code>err</code> puis <code>return</code></td></tr>
+      <tr><td><code>setTimeout</code> / <code>setImmediate</code></td><td>planifier plus tard</td><td>après le code synchrone</td></tr>
+      <tr><td><code>process.nextTick</code></td><td>planifier au plus tôt</td><td>prioritaire — à ne pas abuser</td></tr>
+      <tr><td><code>util.promisify</code></td><td>callback → promesse</td><td>ou <code>node:fs/promises</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Boucle d'événements</dt><dd>Boucle interne de Node qui, à chaque tour, exécute les callbacks dont le résultat d'E/S est prêt&nbsp;; c'est elle qui rend Node non bloquant malgré son thread unique.</dd>
+  <dt>Mono-thread</dt><dd>Ton code JavaScript s'exécute sur <strong>un seul</strong> fil d'exécution&nbsp;: un calcul lourd et synchrone y bloque tout le reste.</dd>
+  <dt>Bloquant / non bloquant</dt><dd>Une opération bloquante (<code>…Sync</code>) fige le thread jusqu'au résultat&nbsp;; une opération non bloquante rend la main aussitôt et prévient plus tard via un callback.</dd>
+  <dt>libuv</dt><dd>Bibliothèque C sous Node qui gère la boucle d'événements et un pool de threads pour certaines E/S (fichiers, DNS…), en dehors de ton thread JavaScript.</dd>
+  <dt>Callback error-first</dt><dd>Convention Node&nbsp;: le callback reçoit l'erreur en premier argument (<code>(err, data)</code>)&nbsp;; on teste <code>err</code> avant de toucher à <code>data</code>.</dd>
+  <dt>Callback hell</dt><dd>Empilement de callbacks imbriqués qui fait dériver le code «&nbsp;en escalier&nbsp;»&nbsp;; résolu par les promesses et <code>async/await</code>.</dd>
+  <dt><code>util.promisify</code></dt><dd>Utilitaire qui transforme une fonction à callback error-first en fonction renvoyant une <strong>promesse</strong>, utilisable avec <code>await</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>Node exécute ton JavaScript sur <strong>un seul thread</strong> mais reste <strong>non bloquant</strong> grâce à la boucle d'événements, qui délègue les E/S.</li>
+<li>Les fonctions <code>…Sync</code> <strong>bloquent</strong> le thread&nbsp;: à éviter dans un serveur.</li>
+<li>Les callbacks suivent la convention <strong>error-first</strong>&nbsp;: <code>(err, data) =&gt; …</code>, et on traite <code>err</code> d'abord.</li>
+<li>L'imbrication des callbacks mène au <strong>callback hell</strong>, que les promesses résolvent.</li>
+<li><code>util.promisify</code> convertit une fonction à callback en fonction renvoyant une <strong>promesse</strong>.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un appel <code>fs.readFileSync</code> dans un gestionnaire de requêtes pénalise-t-il <em>tous</em> les clients, alors qu'il n'y en a qu'un qui demande le fichier&nbsp;?</li><li>Dans un callback <code>(err, data)</code>, que doit faire ton code en tout premier, et pourquoi&nbsp;?</li><li>Quelle est la différence entre <code>node:fs/promises</code> et <code>util.promisify</code> appliqué à <code>fs.readFile</code>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un appel fs.readFileSync dans un gestionnaire de requêtes pénalise-t-il TOUS les clients ?","a":["Parce que la version synchrone bloque la boucle d'événements (mono-thread) pendant toute la lecture : aucune autre requête n'est traitée tant qu'elle dure. On utilise la version asynchrone","Parce qu'elle copie le fichier pour chacun","Parce qu'elle ouvre plusieurs connexions","Elle ne pénalise que le demandeur"],"correct":0,"explain":"Node traite les requêtes sur un seul fil grâce à l'asynchronisme. Un appel synchrone fige ce fil le temps de l'opération, mettant tous les autres clients en attente. On préfère fs.readFile (asynchrone)."},
+  {"q":"Dans un callback de style (err, data), que doit faire ton code en tout premier, et pourquoi ?","a":["Tester err (et sortir si elle est présente) avant d'utiliser data : c'est la convention « error-first », data n'est valide que si err est null","Utiliser data immédiatement","Ignorer err","Relancer la fonction"],"correct":0,"explain":"Node place l'erreur en premier argument. On la vérifie d'emblée (if (err) return ...) : en cas d'erreur, data n'a pas de valeur exploitable. Ce réflexe évite de travailler sur des données absentes."},
+  {"q":"Quelle est la différence entre node:fs/promises et util.promisify appliqué à fs.readFile ?","a":["fs/promises fournit directement des versions officielles à base de promesses ; util.promisify enveloppe une fonction à callback en promesse (solution générique, mais fs/promises est préférable quand il existe)","Les deux sont identiques","promisify est plus moderne","fs/promises n'existe pas"],"correct":0,"explain":"Quand une API propose déjà une variante promesses (fs/promises), on l'utilise. util.promisify reste utile pour convertir des fonctions à callback qui n'ont pas d'équivalent promesses tout fait."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["err","error","l'erreur","erreur","le premier","premier"],"placeholder":"le premier paramètre d'un callback « error-first » (à vérifier en tout premier)","hints":["La convention Node place l'erreur AVANT le résultat.","On teste if (err) { … } dès l'entrée du callback.","(???, contenu) => { … }"],"link":{"href":"lecon-04.html","label":"Revoir « Les callbacks error-first »"}},
+  {"type":"text","accept":["non bloquant","non-bloquant","non bloquante","asynchrone","non bloquent"],"placeholder":"fs.readFile (version callback) est-il bloquant ou non bloquant ?","hints":["Le « je continue » s'affiche AVANT le contenu du fichier.","Le code ne s'arrête pas en attendant le disque.","Le contraire de « bloquant »."],"link":{"href":"lecon-04.html","label":"Revoir « Bloquant vs non bloquant »"}},
+  {"type":"text","accept":["promisify","util.promisify"],"placeholder":"la fonction de node:util qui transforme une fonction à callback en fonction qui renvoie une promesse","hints":["Elle évite de réécrire le code à la main.","On peut ensuite l'utiliser avec await.","util.????????"],"link":{"href":"lecon-04.html","label":"Revoir « De callback à promesse »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un script qui lit le fichier <code>./notes.txt</code> avec <code>fs.readFile</code> (version callback) et affiche son contenu. Gère correctement l'erreur error-first&nbsp;: si la lecture échoue, affiche un message clair sur <code>console.error</code> et arrête-toi.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">import { readFile } from 'node:fs';
+
+readFile('./notes.txt', 'utf8', (err, contenu) =&gt; {
+  if (err) {
+    console.error('Impossible de lire le fichier :', err.message);
+    return;
+  }
+  console.log('Contenu du fichier :');
+  console.log(contenu);
+});
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans un même script, illustre la différence bloquant / non bloquant. Lance d'abord une lecture <strong>asynchrone</strong> avec <code>fs.readFile</code>, puis affiche immédiatement un message «&nbsp;je continue&nbsp;» juste après. Montre par l'ordre des <code>console.log</code> que le message s'affiche <em>avant</em> le contenu du fichier.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">import { readFile } from 'node:fs';
+
+console.log('1 — je lance la lecture (non bloquant)');
+
+readFile('./data.txt', 'utf8', (err, data) =&gt; {
+  if (err) {
+    console.error('Erreur :', err.message);
+    return;
+  }
+  console.log('3 — le contenu est enfin arrivé :', data.length, 'caractères');
+});
+
+console.log('2 — je continue sans attendre');
+
+// affiche:
+// 1 — je lance la lecture (non bloquant)
+// 2 — je continue sans attendre
+// 3 — le contenu est enfin arrivé : 42 caractères
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Imagine une fonction à callback error-first <code>chargerUtilisateur(id, callback)</code> qui appelle <code>callback(null, { id, nom })</code> après un délai (simule avec <code>setTimeout</code>). Convertis-la en promesse avec <code>util.promisify</code> et utilise-la avec <code>await</code> pour afficher le nom de l'utilisateur <code>42</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">import { promisify } from 'node:util';
+
+// Fonction historique à callback error-first.
+function chargerUtilisateur(id, callback) {
+  setTimeout(() =&gt; {
+    if (id &lt;= 0) {
+      callback(new Error('id invalide'));
+      return;
+    }
+    callback(null, { id, nom: 'Utilisateur ' + id });
+  }, 100);
+}
+
+// On la transforme en fonction renvoyant une promesse.
+const chargerUtilisateurAsync = promisify(chargerUtilisateur);
+
+// top-level await : valide dans un module ESM.
+const utilisateur = await chargerUtilisateurAsync(42);
+console.log('Nom :', utilisateur.nom);
+// affiche: Nom : Utilisateur 42
+</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

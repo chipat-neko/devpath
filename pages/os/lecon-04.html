@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La mémoire (virtuelle, pagination) — Leçon 04 · Syntaxe</title>
+    <meta name="description" content="Comprendre la mémoire virtuelle : l'illusion d'un espace mémoire propre par processus, la traduction adresse virtuelle/physique, la pagination, l'échange sur disque (swap) et pourquoi ça peut ralentir." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="os" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes d'exploitation</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Les ressources — Leçon 04</p>
+              <h1 class="lesson-header__title">La mémoire (virtuelle, pagination)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~33 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 01 conseillée</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer la <strong>mémoire virtuelle</strong> et son illusion&nbsp;;</li>
+                  <li>décrire la <strong>traduction</strong> virtuel→physique&nbsp;;</li>
+                  <li>comprendre la <strong>pagination</strong>&nbsp;;</li>
+                  <li>saisir l'<strong>échange sur disque</strong> (swap) et ses effets.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Chaque programme manipule de la « mémoire »&nbsp;: des variables, des tableaux, des objets. Mais comment des dizaines de programmes peuvent-ils utiliser la <strong>même</strong> mémoire physique sans se marcher dessus, et chacun croire qu'il en a énormément&nbsp;? La réponse est l'une des plus belles idées de l'informatique&nbsp;: la <strong>mémoire virtuelle</strong>.</p>
+
+<h2>L'illusion d'une mémoire à soi</h2>
+<p>L'OS donne à chaque processus l'illusion de disposer d'un <strong>grand espace mémoire continu et privé</strong>, qui commence à l'adresse 0, rien que pour lui. Ces adresses sont <strong>virtuelles</strong>&nbsp;: elles n'existent pas telles quelles dans la RAM physique. C'est une <strong>abstraction</strong> qui simplifie énormément la programmation (chaque programme raisonne sur son propre espace) et garantit l'<strong>isolation</strong> (un processus ne peut pas désigner la mémoire d'un autre).</p>
+<figure class="code-block" data-file="virtuel.txt"><pre><code>  Vu par CHAQUE processus :      Réalité physique (RAM) :
+  ┌───────────────────┐          ┌───────────────────────┐
+  │ espace virtuel A  │ ──┐      │  morceaux de A, de B,  │
+  │ (0 … grand)       │   ├────▶ │  de C… mélangés et     │
+  └───────────────────┘   │      │  dispersés en RAM      │
+  ┌───────────────────┐   │      │  (+ une partie sur     │
+  │ espace virtuel B  │ ──┘      │   disque)              │
+  └───────────────────┘          └───────────────────────┘
+  Chacun croit être seul ; l'OS fait correspondre virtuel ↔ physique.</code></pre></figure>
+
+<h2>La traduction virtuel → physique</h2>
+<p>Quand un programme accède à une adresse virtuelle, le matériel (la <strong>MMU</strong>) et l'OS la <strong>traduisent</strong> en l'adresse <strong>physique</strong> réelle en RAM, à l'aide d'une <strong>table</strong> propre à chaque processus. Cette traduction est <strong>transparente</strong> pour le programme et très rapide (assistée par le matériel). C'est elle qui permet de placer les données d'un processus n'importe où en RAM tout en lui présentant un espace bien rangé.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'isolation, par construction</p><p>Comme chaque processus a sa <strong>propre</strong> table de traduction, ses adresses virtuelles ne peuvent désigner que <strong>sa</strong> mémoire. Il lui est <strong>impossible</strong> de fabriquer une adresse pointant vers la mémoire d'un autre processus&nbsp;: l'isolation de la leçon&nbsp;1 est ici réalisée concrètement.</p></div></div>
+
+<h2>La pagination</h2>
+<p>Pour gérer tout cela efficacement, on découpe la mémoire en blocs de taille fixe&nbsp;: les <strong>pages</strong> (côté virtuel) et les <strong>cadres</strong> (côté physique), typiquement de 4&nbsp;Ko. La table de traduction associe chaque page virtuelle à un cadre physique. Avantage&nbsp;: on n'a pas besoin que la mémoire d'un processus soit <strong>contiguë</strong> en RAM&nbsp;; ses pages peuvent être <strong>dispersées</strong> n'importe où, ce qui élimine le gaspillage et simplifie l'allocation.</p>
+<figure class="code-block" data-file="pages.txt"><pre><code>  Pages virtuelles (processus)    Cadres physiques (RAM)
+   [page 0] ───────────────────▶  cadre 7
+   [page 1] ───────────────────▶  cadre 2
+   [page 2] ───────────────────▶  cadre 9
+  Les pages d'un processus sont dispersées en RAM, mais lui les voit
+  comme un espace continu.</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 216" role="img" aria-label="La traduction d'adresses par pagination. À gauche, l'espace virtuel du processus : quatre pages numérotées 0 à 3, empilées de façon continue. Au centre, la table des pages associe chaque page à un cadre physique : page 0 vers cadre 7, page 1 vers cadre 2, page 2 vers cadre 9, page 3 vers cadre 4. À droite, la mémoire physique découpée en cadres, où les pages du processus se retrouvent dispersées à des emplacements non contigus, entre des cadres libres.">
+    <text class="d-label" x="90" y="24" text-anchor="middle" font-size="11">Espace virtuel</text>
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="11">Table des pages</text>
+    <text class="d-label" x="552" y="24" text-anchor="middle" font-size="11">RAM (cadres)</text>
+    <rect class="d-frame" x="40" y="36" width="100" height="164" rx="4" />
+    <rect class="d-accent" x="48" y="44" width="84" height="35" rx="3" /><text class="d-text" x="90" y="66" text-anchor="middle" font-size="10">page 0</text>
+    <rect class="d-box" x="48" y="83" width="84" height="35" rx="3" /><text class="d-text" x="90" y="105" text-anchor="middle" font-size="10">page 1</text>
+    <rect class="d-box" x="48" y="122" width="84" height="35" rx="3" /><text class="d-text" x="90" y="144" text-anchor="middle" font-size="10">page 2</text>
+    <rect class="d-box" x="48" y="161" width="84" height="35" rx="3" /><text class="d-text" x="90" y="183" text-anchor="middle" font-size="10">page 3</text>
+    <rect class="d-frame" x="234" y="44" width="172" height="152" rx="4" />
+    <text class="d-mut" x="248" y="68" font-size="9.5">page 0 &#8594; cadre 7</text>
+    <text class="d-mut" x="248" y="106" font-size="9.5">page 1 &#8594; cadre 2</text>
+    <text class="d-mut" x="248" y="144" font-size="9.5">page 2 &#8594; cadre 9</text>
+    <text class="d-mut" x="248" y="182" font-size="9.5">page 3 &#8594; cadre 4</text>
+    <path class="d-line" d="M140 61 L232 63" fill="none" stroke-width="1.4" />
+    <path class="d-line" d="M140 100 L232 101" fill="none" stroke-width="1.4" />
+    <path class="d-line" d="M140 139 L232 139" fill="none" stroke-width="1.4" />
+    <path class="d-line" d="M140 178 L232 177" fill="none" stroke-width="1.4" />
+    <rect class="d-frame" x="498" y="36" width="112" height="164" rx="4" />
+    <rect class="d-accent" x="506" y="43" width="96" height="22" rx="2" /><text class="d-mut" x="554" y="58" text-anchor="middle" font-size="8.5">cadre 7 · page 0</text>
+    <rect class="d-box" x="506" y="68" width="96" height="22" rx="2" /><text class="d-mut" x="554" y="83" text-anchor="middle" font-size="8.5">cadre 2 · page 1</text>
+    <rect class="d-frame" x="506" y="93" width="96" height="22" rx="2" stroke-dasharray="4 3" /><text class="d-mut" x="554" y="108" text-anchor="middle" font-size="8.5">cadre libre</text>
+    <rect class="d-box" x="506" y="118" width="96" height="22" rx="2" /><text class="d-mut" x="554" y="133" text-anchor="middle" font-size="8.5">cadre 9 · page 2</text>
+    <rect class="d-frame" x="506" y="143" width="96" height="22" rx="2" stroke-dasharray="4 3" /><text class="d-mut" x="554" y="158" text-anchor="middle" font-size="8.5">cadre libre</text>
+    <rect class="d-box" x="506" y="168" width="96" height="22" rx="2" /><text class="d-mut" x="554" y="183" text-anchor="middle" font-size="8.5">cadre 4 · page 3</text>
+  </svg>
+  <figcaption>À gauche, le programme voit ses pages <strong>bien rangées</strong>&nbsp;; à droite, elles sont <strong>dispersées</strong> en RAM. La <strong>table des pages</strong> fait le lien&nbsp;: c'est elle qui rend la contiguïté inutile — et l'isolation garantie.</figcaption>
+</figure>
+
+<h2>L'échange sur disque (swap)</h2>
+<p>Et si la RAM est <strong>pleine</strong>&nbsp;? L'OS peut <strong>déplacer temporairement</strong> des pages peu utilisées de la RAM vers le <strong>disque</strong> (zone d'<em>échange</em> ou <em>swap</em>), libérant de la place. Si le programme y accède à nouveau, l'OS les <strong>recharge</strong> en RAM. Cela donne l'illusion d'avoir <strong>plus de mémoire</strong> que la RAM réelle.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Le mécanisme d'échange sur disque. À gauche, la mémoire vive presque pleine de pages actives, dont une page peu utilisée dite froide. Une flèche envoie cette page froide vers la droite, dans la zone d'échange sur le disque, ce qui libère un cadre en RAM. Une flèche de retour en pointillés indique que la page sera rechargée en mémoire si le programme y accède de nouveau. Le disque étant beaucoup plus lent que la RAM, cette opération ralentit fortement le système.">
+    <text class="d-label" x="150" y="26" text-anchor="middle" font-size="12">RAM (presque pleine)</text>
+    <text class="d-label" x="500" y="26" text-anchor="middle" font-size="12">Disque — zone d'échange</text>
+    <rect class="d-frame" x="60" y="40" width="180" height="116" rx="6" />
+    <rect class="d-box" x="72" y="50" width="156" height="22" rx="2" /><text class="d-mut" x="150" y="65" text-anchor="middle" font-size="9">page active</text>
+    <rect class="d-box" x="72" y="76" width="156" height="22" rx="2" /><text class="d-mut" x="150" y="91" text-anchor="middle" font-size="9">page active</text>
+    <rect class="d-accent" x="72" y="102" width="156" height="22" rx="2" /><text class="d-text" x="150" y="117" text-anchor="middle" font-size="9">page froide (peu utilisée)</text>
+    <rect class="d-box" x="72" y="128" width="156" height="22" rx="2" /><text class="d-mut" x="150" y="143" text-anchor="middle" font-size="9">page active</text>
+    <rect class="d-frame" x="380" y="40" width="200" height="116" rx="6" />
+    <rect class="d-accent" x="396" y="88" width="168" height="24" rx="2" /><text class="d-text" x="480" y="104" text-anchor="middle" font-size="9">page froide (sur disque)</text>
+    <path class="d-accent" d="M240 112 L376 100" fill="none" stroke-width="2" /><path class="d-accent" d="M369 96 L378 100 L369 105" fill="none" stroke-width="2" />
+    <text class="d-mut" x="308" y="92" text-anchor="middle" font-size="8.5">déplacée (swap out)</text>
+    <path class="d-line" d="M378 124 L242 136" fill="none" stroke-width="1.4" stroke-dasharray="4 3" /><path class="d-line" d="M251 132 L241 136 L250 141" fill="none" stroke-width="1.4" />
+    <text class="d-mut" x="308" y="150" text-anchor="middle" font-size="8.5">rechargée si besoin (lent)</text>
+  </svg>
+  <figcaption>Quand la RAM manque, l'OS <strong>déplace des pages froides sur le disque</strong> pour libérer des cadres. L'illusion de «&nbsp;plus de mémoire&nbsp;» fonctionne, mais le disque étant très lent, un swap intensif fait <em>ramer</em> toute la machine.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le swap, c'est lent</p><p>Le disque est <strong>des milliers de fois plus lent</strong> que la RAM. Quand un système manque de mémoire et « swappe » beaucoup, tout devient pénible&nbsp;: c'est le fameux ordinateur qui « rame » et n'en finit plus. Le swap dépanne, mais ce n'est pas de la RAM.</p></div></div>
+
+<h2>Quelques conséquences concrètes</h2>
+<ul>
+<li>Une <strong>erreur de segmentation</strong> (<em>segfault</em>) survient quand un programme accède à une adresse virtuelle <strong>non autorisée</strong>&nbsp;: l'OS l'arrête plutôt que de le laisser corrompre quoi que ce soit.</li>
+<li>La mémoire est souvent allouée « à la demande »&nbsp;: réserver beaucoup d'espace virtuel ne consomme de la RAM <strong>que</strong> pour les pages réellement utilisées.</li>
+<li>Quand on observe la « mémoire utilisée » d'un programme, virtuel et physique (<em>resident</em>) sont deux chiffres différents — d'où des outils qui distinguent les deux.</li>
+</ul>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Sur un PC avec peu de RAM, ouvre un gros projet, une machine virtuelle et un navigateur à cinquante onglets. À un moment, tout se met à <strong>saccader</strong>&nbsp;: le pointeur avance par à-coups, changer de fenêtre prend plusieurs secondes. Le système est en <strong>swap intensif</strong> (<em>thrashing</em>)&nbsp;: il passe son temps à faire des allers-retours de pages entre la RAM et le disque. Ferme quelques applications&nbsp;: la RAM se libère, le swap s'arrête, la fluidité revient instantanément. Tu viens d'observer la mémoire virtuelle à ses limites.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Mémoire virtuelle — le vocabulaire essentiel</caption>
+    <thead><tr><th scope="col">Terme</th><th scope="col">En bref</th></tr></thead>
+    <tbody>
+      <tr><td>Adresse virtuelle</td><td>celle que voit le programme, dans son espace privé</td></tr>
+      <tr><td>Adresse physique</td><td>l'emplacement réel en RAM</td></tr>
+      <tr><td>MMU</td><td>matériel qui traduit virtuel &#8594; physique, très vite</td></tr>
+      <tr><td>Table des pages</td><td>correspondance page &#8594; cadre, propre à chaque processus</td></tr>
+      <tr><td>Page / cadre</td><td>bloc de taille fixe (souvent 4 Ko), côté virtuel / côté physique</td></tr>
+      <tr><td>Swap</td><td>débordement des pages froides sur le disque — lent</td></tr>
+      <tr><td>Segfault</td><td>accès à une adresse non autorisée : l'OS tue le programme</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Mémoire virtuelle</dt><dd>Abstraction donnant à chaque processus l'illusion d'un espace mémoire privé, continu et vaste, traduit vers la RAM physique réelle.</dd>
+  <dt>Adresse virtuelle / physique</dt><dd>L'adresse manipulée par le programme (virtuelle) et l'emplacement réel en mémoire vive (physique) auquel elle correspond.</dd>
+  <dt>MMU (<em>Memory Management Unit</em>)</dt><dd>Composant matériel du processeur qui traduit les adresses virtuelles en adresses physiques à la volée, à l'aide de la table des pages.</dd>
+  <dt>Table des pages</dt><dd>Structure propre à chaque processus qui associe chaque page virtuelle à un cadre physique&nbsp;; garantit l'isolation.</dd>
+  <dt>Pagination</dt><dd>Découpage de la mémoire en blocs de taille fixe (pages côté virtuel, cadres côté physique) pouvant être dispersés en RAM.</dd>
+  <dt>Swap (échange)</dt><dd>Déplacement temporaire de pages peu utilisées de la RAM vers le disque quand la mémoire manque&nbsp;; dépanne, mais très lent.</dd>
+  <dt>Erreur de segmentation (<em>segfault</em>)</dt><dd>Accès à une adresse virtuelle non autorisée&nbsp;; l'OS interrompt le programme fautif pour protéger le reste du système.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La <strong>mémoire virtuelle</strong> donne à chaque processus un espace <strong>privé et continu</strong> (illusion + isolation).</li>
+<li>Les adresses <strong>virtuelles</strong> sont <strong>traduites</strong> en adresses <strong>physiques</strong> via une table par processus.</li>
+<li>La <strong>pagination</strong> découpe en pages/cadres de taille fixe&nbsp;: la RAM d'un processus n'a pas besoin d'être contiguë.</li>
+<li>Le <strong>swap</strong> déborde sur le disque quand la RAM manque — mais c'est <strong>lent</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle illusion la mémoire virtuelle crée-t-elle, et qu'apporte-t-elle ?</li><li>Qu'est-ce que la pagination ?</li><li>Pourquoi un système qui swappe beaucoup devient-il lent ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce que la mémoire virtuelle ?","a":["Une abstraction qui donne à chaque processus l'illusion d'un espace mémoire privé et continu, traduit vers la mémoire physique réelle","De la mémoire qui n'existe pas du tout","Un type de disque dur","Un langage de programmation"],"correct":0,"explain":"Chaque processus voit un grand espace continu commençant à 0, rien que pour lui. L'OS et le matériel traduisent ces adresses virtuelles vers la RAM physique."},
+  {"q":"Que garantit le fait que chaque processus ait sa propre table de traduction ?","a":["L'isolation : un processus ne peut pas fabriquer une adresse pointant vers la mémoire d'un autre","Que les programmes vont plus vite","Que la RAM est illimitée","Que les fichiers sont chiffrés"],"correct":0,"explain":"Les adresses virtuelles d'un processus ne désignent que sa propre mémoire. L'isolation de la leçon 1 est réalisée concrètement par cette traduction par processus."},
+  {"q":"Qu'est-ce que la pagination ?","a":["Le découpage de la mémoire en blocs de taille fixe (pages/cadres) ; les pages d'un processus peuvent être dispersées n'importe où en RAM","Le tri des pages web","Un type de fichier","La sauvegarde automatique"],"correct":0,"explain":"Pages (virtuel) et cadres (physique) de taille fixe (souvent 4 Ko). La mémoire d'un processus n'a pas besoin d'être contiguë : ses pages sont dispersées."},
+  {"q":"Pourquoi un système qui « swappe » beaucoup devient-il très lent ?","a":["Parce que le disque est des milliers de fois plus lent que la RAM : déplacer/recharger sans cesse des pages depuis le disque ralentit tout","Parce que le swap est interdit","Parce que la RAM tombe en panne","Parce que le CPU s'éteint"],"correct":0,"explain":"Le swap déborde sur disque quand la RAM manque. Il dépanne, mais comme le disque est très lent, un usage intensif rend la machine pénible (« ça rame »)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["memoire virtuelle","mémoire virtuelle","virtuelle"],"placeholder":"l'abstraction qui donne à chaque processus un espace privé continu","hints":["Adresses virtuelles vs physiques.","« mémoire … »."],"link":{"href":"lecon-04.html","label":"Revoir « L'illusion d'une mémoire à soi »"}},
+  {"type":"text","accept":["pagination","pages","page"],"placeholder":"le découpage de la mémoire en blocs de taille fixe","hints":["Pages et cadres.","Souvent 4 Ko."],"link":{"href":"lecon-04.html","label":"Revoir « La pagination »"}},
+  {"type":"text","accept":["swap","echange","échange","echange sur disque","échange sur disque"],"placeholder":"le déplacement de pages de la RAM vers le disque quand la RAM manque","hints":["En anglais : « swap ».","Lent (disque)."],"link":{"href":"lecon-04.html","label":"Revoir « L'échange sur disque »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Vrai ou faux&nbsp;: « Si un programme réserve 10 Go d'espace mémoire virtuel, il consomme aussitôt 10 Go de RAM. » Justifie.</p><details><summary>Voir une solution</summary><p><strong>Faux.</strong> Réserver de l'espace <strong>virtuel</strong> ne consomme pas de RAM physique tant que cet espace n'est pas <strong>réellement utilisé</strong>. La mémoire est généralement allouée « à la demande »&nbsp;: la RAM n'est attribuée que pour les <strong>pages effectivement touchées</strong> par le programme (lues ou écrites). Un programme peut donc réserver un grand espace virtuel (par exemple pour un tableau potentiellement énorme) tout en ne consommant que quelques pages de RAM s'il n'en remplit qu'une petite partie. C'est pourquoi, en observant un programme, on voit souvent une <strong>mémoire virtuelle</strong> bien plus grande que la <strong>mémoire physique (resident)</strong> réellement occupée&nbsp;: ce sont deux chiffres différents. Cette allocation paresseuse est efficace&nbsp;: on ne gaspille pas de RAM pour de l'espace prévu mais inutilisé.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>En quoi la mémoire virtuelle réalise-t-elle concrètement l'« isolation » des processus vue en leçon 1 ?</p><details><summary>Voir une solution</summary><p>L'isolation n'est pas qu'un principe&nbsp;: la mémoire virtuelle la rend <strong>matériellement impossible à contourner</strong>. Chaque processus dispose de sa <strong>propre table de traduction</strong> (adresses virtuelles → adresses physiques), gérée par l'OS et appliquée par le matériel (la MMU) à <em>chaque</em> accès mémoire. Conséquences&nbsp;: <strong>1)</strong> quand le processus A utilise une adresse virtuelle, elle est traduite uniquement via la table de A, donc elle ne peut pointer que vers des cadres physiques <strong>attribués à A</strong>. Il n'existe <strong>aucune</strong> adresse virtuelle que A pourrait écrire pour atteindre la mémoire de B&nbsp;: les espaces sont séparés par construction. <strong>2)</strong> Si un processus tente d'accéder à une adresse <strong>hors</strong> de ce qui lui est autorisé (non mappée, ou en lecture seule alors qu'il écrit), la traduction échoue et le matériel le signale à l'OS, qui <strong>arrête</strong> le processus (l'<em>erreur de segmentation</em>) au lieu de le laisser corrompre quoi que ce soit. <strong>3)</strong> L'OS, lui, contrôle les tables&nbsp;: c'est lui (en mode noyau) qui décide quelle page virtuelle correspond à quel cadre, et il ne fait jamais pointer deux processus vers la même zone privée. Ainsi, l'« illusion d'être seul » et l'« isolation » de la leçon&nbsp;1 sont <strong>la même mécanique</strong> vue sous deux angles&nbsp;: l'espace virtuel privé donne à chacun son monde, et l'impossibilité de désigner le monde des autres garantit la protection. C'est l'un des fondements de la sécurité et de la stabilité des systèmes modernes&nbsp;: même un programme bogué ou malveillant ne <em>peut pas</em> lire ou écraser la mémoire d'un autre, faute de pouvoir l'adresser.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un utilisateur ouvre trop d'applications gourmandes&nbsp;: tout devient extrêmement lent, le disque s'active sans cesse, mais le CPU n'est pas saturé. Que se passe-t-il, et quelles solutions ?</p><details><summary>Voir une solution</summary><p>Le symptôme — <strong>lenteur extrême</strong>, <strong>disque qui s'active en permanence</strong>, <strong>CPU pas saturé</strong> — est la signature classique d'un <strong>manque de RAM</strong> qui provoque un <strong>swap intensif</strong> (parfois appelé <em>thrashing</em>). Explication&nbsp;: les applications ouvertes réclament <strong>plus de mémoire que la RAM physique</strong> disponible. L'OS, pour faire de la place, <strong>déplace</strong> des pages vers la zone d'échange (swap) sur le <strong>disque</strong>. Mais comme tous les programmes restent actifs, ils <strong>réaccèdent</strong> sans cesse à leurs pages&nbsp;: l'OS doit alors les <strong>recharger</strong> depuis le disque (en évinçant d'autres pages, qu'il faudra à leur tour recharger…). Le système passe son temps à faire des allers-retours RAM↔disque. Or le disque est <strong>des milliers de fois plus lent</strong> que la RAM&nbsp;: chaque accès mémoire qui devrait prendre des nanosecondes en prend des millisecondes. D'où la lenteur générale. Et le <strong>CPU n'est pas saturé</strong> justement parce que les programmes passent leur temps <strong>bloqués en attente du disque</strong> (état bloqué, leçon&nbsp;3), pas à calculer&nbsp;: le goulot est la mémoire/le disque, pas le processeur. <strong>Solutions</strong>&nbsp;: <strong>1)</strong> <strong>fermer des applications</strong> pour réduire la pression mémoire — l'action immédiate la plus efficace. <strong>2)</strong> <strong>ajouter de la RAM</strong> physique si le problème est récurrent&nbsp;: c'est la vraie solution de fond (plus de RAM = moins de swap). <strong>3)</strong> utiliser des applications <strong>moins gourmandes</strong> ou en limiter le nombre simultané. <strong>4)</strong> un disque plus rapide (SSD/NVMe) atténue la douleur du swap, mais ne remplace pas de la vraie RAM. <strong>Le point clé du diagnostic</strong>&nbsp;: ne pas conclure « le CPU est trop faible » (il ne l'est pas ici)&nbsp;; reconnaître, grâce à la signature « disque actif + CPU bas + lenteur », un problème de <strong>mémoire</strong>. C'est exactement le genre de « mystère de lenteur » que la compréhension de la mémoire virtuelle et du swap permet d'élucider — et d'éviter de « réparer » au mauvais endroit.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

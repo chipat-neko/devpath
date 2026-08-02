@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La gestion de la mémoire en CPython — Leçon 46 · Python · Syntaxe</title>
+    <meta name="description" content="Comprendre la mémoire de CPython : comptage de références, cycles et ramasse-miettes générationnel, __slots__, références faibles et diagnostic de fuites avec tracemalloc." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="python" data-lesson="lecon-46.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Python</a></li>
+            <li aria-current="page">Leçon 46</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 16 · Pour aller plus loin — Leçon 46</p>
+              <h1 class="lesson-header__title">La gestion de la mémoire en CPython</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 11 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer le <strong>comptage de références</strong> de CPython et à quel instant un objet est libéré&nbsp;;</li>
+                  <li>comprendre pourquoi les <strong>cycles</strong> exigent le ramasse-miettes (<code>gc</code>) et comment fonctionnent les <strong>générations</strong>&nbsp;;</li>
+                  <li>réduire l'empreinte mémoire avec <code>__slots__</code> et savoir ce que tu y perds&nbsp;;</li>
+                  <li>utiliser des <strong>références faibles</strong> (<code>weakref</code>) pour des caches qui ne retiennent pas la mémoire&nbsp;;</li>
+                  <li>diagnostiquer une <strong>fuite mémoire</strong> avec <code>tracemalloc</code> et <code>gc</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En Python, on n'alloue ni ne libère la mémoire à la main&nbsp;: pas de <code>malloc</code>, pas de <code>free</code>. Pourtant, dès qu'un service tourne des jours entiers, la question «&nbsp;pourquoi la RAM grimpe-t-elle&nbsp;?&nbsp;» finit par se poser. Comprendre <em>comment</em> CPython gère la mémoire, c'est savoir écrire du code qui ne fuit pas — et savoir diagnostiquer quand il fuit quand même.</p>
+
+<p>CPython — l'implémentation de référence — combine <strong>deux mécanismes</strong>&nbsp;: un <strong>comptage de références</strong> immédiat qui libère la plupart des objets, et un <strong>ramasse-miettes</strong> (<em>garbage collector</em>, <code>gc</code>) qui rattrape le seul cas que le comptage ne sait pas traiter&nbsp;: les <strong>cycles</strong>.</p>
+
+<h2>Le comptage de références</h2>
+<p>Chaque objet Python porte un compteur interne&nbsp;: le nombre de références qui pointent vers lui. Créer une variable, l'ajouter à une liste, la passer en argument… chacune de ces actions <strong>incrémente</strong> le compteur&nbsp;; sortir d'une portée ou faire <code>del</code> le <strong>décrémente</strong>. Dès qu'il tombe à <strong>zéro</strong>, l'objet est détruit <em>immédiatement</em> (son <code>__del__</code> est appelé et la mémoire rendue à l'allocateur).</p>
+
+<figure class="code-block" data-file="refcount.py"><pre><code class="language-python">import sys
+
+donnees = [1, 2, 3]            # l'objet liste a maintenant 1 référence
+alias = donnees               # 2 références vers le MÊME objet
+# getrefcount renvoie 1 de plus (l'argument temporaire compte aussi)
+print(sys.getrefcount(donnees))   # 3  →  soit 2 « vraies » références
+
+del alias                      # 1 référence
+del donnees                    # 0 référence  →  la liste est libérée AUSSITÔT
+</code></pre></figure>
+
+<p>Ce déterminisme est une force&nbsp;: un fichier ouvert dans une variable locale est fermé à la sortie de la fonction, sans attendre un cycle de collecte. C'est aussi pourquoi la plupart des objets n'impliquent <em>jamais</em> le ramasse-miettes.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Cycle de vie d'un objet par comptage de références. À la création, la liste a un compteur de 1. Après un alias, le compteur passe à 2 : deux noms pointent le même objet. Après del alias, il retombe à 1. Après del donnees, il atteint 0 et l'objet est libéré immédiatement.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="11">Un compteur par objet&nbsp;: libéré dès qu'il atteint 0</text>
+    <rect class="d-box" x="10" y="40" width="140" height="70" rx="8" />
+    <text class="d-mut" x="80" y="58" text-anchor="middle" font-size="8.5">donnees = [1,2,3]</text>
+    <text class="d-tag" x="80" y="82" text-anchor="middle" font-size="15">1</text>
+    <text class="d-mut" x="80" y="100" text-anchor="middle" font-size="8">1 référence</text>
+    <rect class="d-box" x="166" y="40" width="140" height="70" rx="8" />
+    <text class="d-mut" x="236" y="58" text-anchor="middle" font-size="8.5">alias = donnees</text>
+    <text class="d-tag" x="236" y="82" text-anchor="middle" font-size="15">2</text>
+    <text class="d-mut" x="236" y="100" text-anchor="middle" font-size="8">2 références</text>
+    <rect class="d-box" x="322" y="40" width="140" height="70" rx="8" />
+    <text class="d-mut" x="392" y="58" text-anchor="middle" font-size="8.5">del alias</text>
+    <text class="d-tag" x="392" y="82" text-anchor="middle" font-size="15">1</text>
+    <text class="d-mut" x="392" y="100" text-anchor="middle" font-size="8">1 référence</text>
+    <rect class="d-accent" x="478" y="40" width="152" height="70" rx="8" />
+    <text class="d-mut" x="554" y="58" text-anchor="middle" font-size="8.5">del donnees</text>
+    <text class="d-tag" x="554" y="82" text-anchor="middle" font-size="15">0</text>
+    <text class="d-mut" x="554" y="100" text-anchor="middle" font-size="8">libéré aussitôt</text>
+    <line class="d-line" x1="150" y1="75" x2="166" y2="75" />
+    <line class="d-line" x1="306" y1="75" x2="322" y2="75" />
+    <line class="d-line" x1="462" y1="75" x2="478" y2="75" />
+    <rect class="d-frame" x="10" y="126" width="620" height="34" rx="8" />
+    <text class="d-text" x="320" y="147" text-anchor="middle" font-size="9.5">La libération est <tspan class="d-tag">immédiate</tspan> et déterministe&nbsp;: pas d'attente d'un cycle de collecte.</text>
+  </svg>
+  <figcaption>Le comptage de références&nbsp;: chaque nom qui apparaît ou disparaît ajuste le compteur&nbsp;; à zéro, l'objet meurt sur-le-champ.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le comptage de références est propre à <strong>CPython</strong>. D'autres implémentations (PyPy, Jython) utilisent un ramasse-miettes traçant pur&nbsp;: n'y compte jamais sur une fermeture «&nbsp;immédiate&nbsp;» d'un fichier laissé à la portée. Le bon réflexe reste le <code>with</code>, qui rend la libération explicite partout.</p></div></div>
+
+<h2>Les cycles et le ramasse-miettes générationnel</h2>
+<p>Le comptage a un angle mort&nbsp;: deux objets qui se référencent <strong>mutuellement</strong>. Même sans aucune référence extérieure, chacun maintient le compteur de l'autre à 1&nbsp;: il ne tombe jamais à zéro, et la mémoire ne serait <em>jamais</em> rendue. C'est le rôle du module <code>gc</code>, qui parcourt les objets conteneurs pour <strong>détecter et casser les cycles</strong> devenus inaccessibles.</p>
+
+<figure class="code-block" data-file="cycle.py"><pre><code class="language-python">import gc
+
+class Noeud:
+    def __init__(self):
+        self.voisin = None
+
+a = Noeud()
+b = Noeud()
+a.voisin = b       # a → b
+b.voisin = a       # b → a   (cycle !)
+
+del a, b           # plus AUCUNE référence externe...
+# ...mais chaque objet garde refcount = 1 à cause de l'autre : fuite potentielle
+collectes = gc.collect()   # force un passage : casse le cycle et libère
+print(collectes)           # nombre d'objets récupérés (&gt; 0)
+</code></pre></figure>
+
+<p>Pour rester efficace, le <code>gc</code> est <strong>générationnel</strong>&nbsp;: il classe les objets en trois générations (0, 1, 2). Les nouveaux naissent en génération&nbsp;0, inspectée souvent&nbsp;; ceux qui survivent sont «&nbsp;promus&nbsp;» vers des générations plus âgées, inspectées rarement. L'hypothèse (dite <em>générationnelle</em>)&nbsp;: la plupart des objets meurent jeunes, donc autant concentrer l'effort sur les plus récents.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="À gauche, un cycle : les objets a et b se référencent mutuellement, chacun garde un compteur de 1 malgré la suppression des références externes, donc le comptage seul ne les libère jamais. À droite, le ramasse-miettes générationnel : les nouveaux objets naissent en génération 0, inspectée souvent ; les survivants sont promus en génération 1 puis 2, inspectées de plus en plus rarement.">
+    <text class="d-label" x="160" y="18" text-anchor="middle" font-size="10.5">Le point aveugle&nbsp;: un cycle</text>
+    <rect class="d-box" x="40" y="40" width="90" height="46" rx="8" />
+    <text class="d-tag" x="85" y="62" text-anchor="middle" font-size="11">a</text>
+    <text class="d-mut" x="85" y="77" text-anchor="middle" font-size="8">refcount 1</text>
+    <rect class="d-box" x="200" y="40" width="90" height="46" rx="8" />
+    <text class="d-tag" x="245" y="62" text-anchor="middle" font-size="11">b</text>
+    <text class="d-mut" x="245" y="77" text-anchor="middle" font-size="8">refcount 1</text>
+    <line class="d-line" x1="130" y1="52" x2="200" y2="52" />
+    <text class="d-mut" x="165" y="47" text-anchor="middle" font-size="8">a.voisin</text>
+    <line class="d-line" x1="200" y1="74" x2="130" y2="74" />
+    <text class="d-mut" x="165" y="86" text-anchor="middle" font-size="8">b.voisin</text>
+    <text class="d-mut" x="165" y="106" text-anchor="middle" font-size="8.5">del a, b → jamais 0 → gc requis</text>
+    <line class="d-line" x1="320" y1="34" x2="320" y2="196" />
+    <text class="d-label" x="482" y="18" text-anchor="middle" font-size="10.5">Le gc générationnel</text>
+    <rect class="d-accent" x="352" y="40" width="80" height="58" rx="8" />
+    <text class="d-tag" x="392" y="64" text-anchor="middle" font-size="10">gén. 0</text>
+    <text class="d-mut" x="392" y="80" text-anchor="middle" font-size="7.5">souvent</text>
+    <rect class="d-box" x="452" y="40" width="80" height="58" rx="8" />
+    <text class="d-tag" x="492" y="64" text-anchor="middle" font-size="10">gén. 1</text>
+    <text class="d-mut" x="492" y="80" text-anchor="middle" font-size="7.5">parfois</text>
+    <rect class="d-box" x="552" y="40" width="78" height="58" rx="8" />
+    <text class="d-tag" x="591" y="64" text-anchor="middle" font-size="10">gén. 2</text>
+    <text class="d-mut" x="591" y="80" text-anchor="middle" font-size="7.5">rarement</text>
+    <line class="d-line" x1="432" y1="69" x2="452" y2="69" />
+    <line class="d-line" x1="532" y1="69" x2="552" y2="69" />
+    <text class="d-mut" x="492" y="118" text-anchor="middle" font-size="8">survivre = être promu</text>
+    <rect class="d-frame" x="352" y="132" width="278" height="60" rx="8" />
+    <text class="d-text" x="491" y="154" text-anchor="middle" font-size="9">Hypothèse générationnelle&nbsp;:</text>
+    <text class="d-mut" x="491" y="170" text-anchor="middle" font-size="8.5">la plupart des objets meurent jeunes,</text>
+    <text class="d-mut" x="491" y="183" text-anchor="middle" font-size="8.5">donc on inspecte surtout la génération 0.</text>
+  </svg>
+  <figcaption>Le comptage ne casse pas les cycles&nbsp;; le <code>gc</code> générationnel s'en charge, en concentrant l'effort sur les objets jeunes.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Sur une phase critique de latence (une requête à servir vite), tu peux suspendre le collecteur avec <code>gc.disable()</code> puis le réactiver après. Instagram a ainsi désactivé le <code>gc</code> pour réduire l'empreinte mémoire partagée entre processus. À manier avec mesure&nbsp;: si tu crées des cycles, tu risques de les accumuler.</p></div></div>
+
+<h2>Réduire l'empreinte&nbsp;: <code>__slots__</code></h2>
+<p>Par défaut, chaque instance stocke ses attributs dans un dictionnaire interne <code>__dict__</code>&nbsp;: flexible (on peut ajouter n'importe quel attribut à la volée) mais coûteux — une table de hachage par objet. Quand tu crées des <strong>millions</strong> de petites instances, ce coût domine. Déclarer <code>__slots__</code> remplace le dictionnaire par un stockage <strong>compact et fixe</strong>, à la manière d'un enregistrement C.</p>
+
+<figure class="code-block" data-file="slots.py"><pre><code class="language-python">class PointDict:              # version classique : un __dict__ par instance
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class PointSlots:            # version compacte : emplacements fixes
+    __slots__ = ("x", "y")   # plus de __dict__ ; x et y seulement
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+p = PointSlots(1, 2)
+# p.z = 3        →  AttributeError : 'PointSlots' object has no attribute 'z'
+</code></pre></figure>
+
+<p>Gain typique&nbsp;: <strong>40 à 50&nbsp;% de mémoire en moins</strong> par instance, et un accès aux attributs un peu plus rapide. Le prix&nbsp;: tu ne peux plus ajouter d'attribut non déclaré, et l'héritage multiple de plusieurs classes à slots demande de l'attention.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Comparaison de la disposition mémoire. Une instance normale pointe vers un dictionnaire __dict__ extensible, une table de hachage qui associe des noms d'attributs à des valeurs, avec de la place libre en réserve. Une instance avec __slots__ range ses valeurs dans des emplacements fixes, compacts, sans dictionnaire ni place perdue, mais sans possibilité d'ajouter un attribut.">
+    <text class="d-label" x="160" y="18" text-anchor="middle" font-size="10.5">Instance normale (<tspan class="d-tag">__dict__</tspan>)</text>
+    <rect class="d-box" x="40" y="34" width="90" height="30" rx="6" />
+    <text class="d-mut" x="85" y="53" text-anchor="middle" font-size="9">instance</text>
+    <line class="d-line" x1="130" y1="49" x2="176" y2="49" />
+    <rect class="d-frame" x="176" y="30" width="130" height="130" rx="8" />
+    <text class="d-mut" x="241" y="46" text-anchor="middle" font-size="8">__dict__ (hachage)</text>
+    <rect class="d-box" x="188" y="54" width="106" height="22" rx="5" />
+    <text class="d-text" x="241" y="69" text-anchor="middle" font-size="8.5">"x" → 1</text>
+    <rect class="d-box" x="188" y="82" width="106" height="22" rx="5" />
+    <text class="d-text" x="241" y="97" text-anchor="middle" font-size="8.5">"y" → 2</text>
+    <rect class="d-box" x="188" y="110" width="106" height="18" rx="5" />
+    <text class="d-mut" x="241" y="123" text-anchor="middle" font-size="8">réserve libre</text>
+    <rect class="d-box" x="188" y="132" width="106" height="18" rx="5" />
+    <text class="d-mut" x="241" y="145" text-anchor="middle" font-size="8">réserve libre</text>
+    <line class="d-line" x1="320" y1="28" x2="320" y2="164" />
+    <text class="d-label" x="480" y="18" text-anchor="middle" font-size="10.5">Instance <tspan class="d-tag">__slots__</tspan></text>
+    <rect class="d-box" x="360" y="34" width="90" height="30" rx="6" />
+    <text class="d-mut" x="405" y="53" text-anchor="middle" font-size="9">instance</text>
+    <line class="d-line" x1="450" y1="49" x2="496" y2="49" />
+    <rect class="d-accent" x="496" y="42" width="130" height="26" rx="5" />
+    <text class="d-text" x="561" y="59" text-anchor="middle" font-size="9">[0] x = 1</text>
+    <rect class="d-accent" x="496" y="74" width="130" height="26" rx="5" />
+    <text class="d-text" x="561" y="91" text-anchor="middle" font-size="9">[1] y = 2</text>
+    <text class="d-mut" x="561" y="126" text-anchor="middle" font-size="8">emplacements fixes,</text>
+    <text class="d-mut" x="561" y="139" text-anchor="middle" font-size="8">compacts, non extensibles</text>
+    <text class="d-mut" x="561" y="152" text-anchor="middle" font-size="8">≈ 40-50 % de RAM en moins</text>
+  </svg>
+  <figcaption>Sans <code>__slots__</code>, chaque instance traîne un dictionnaire&nbsp;; avec, les valeurs tiennent dans des emplacements fixes bien plus légers.</figcaption>
+</figure>
+
+<h2>Les références faibles&nbsp;: <code>weakref</code></h2>
+<p>Parfois, tu veux <em>désigner</em> un objet sans l'<em>empêcher de mourir</em>. Un cache, un registre d'observateurs, un index secondaire&nbsp;: si ces structures gardent des références «&nbsp;fortes&nbsp;», elles maintiennent en vie des objets que plus personne d'autre n'utilise — une fuite. Une <strong>référence faible</strong> pointe vers un objet <em>sans</em> incrémenter son compteur&nbsp;: dès que les dernières références fortes disparaissent, l'objet est collecté et la référence faible devient «&nbsp;morte&nbsp;».</p>
+
+<figure class="code-block" data-file="faibles.py"><pre><code class="language-python">import weakref
+
+class Image:
+    def __init__(self, nom): self.nom = nom
+
+img = Image("photo.png")
+faible = weakref.ref(img)     # ne compte PAS dans le refcount
+print(faible())               # &lt;Image ...&gt;  : l'objet est encore vivant
+
+del img                       # dernière référence forte supprimée
+print(faible())               # None : l'objet a été collecté
+
+# WeakValueDictionary : un cache qui se vide tout seul
+cache = weakref.WeakValueDictionary()
+a = Image("a.png"); cache["a"] = a
+del a                         # l'entrée "a" disparaît automatiquement du cache
+</code></pre></figure>
+
+<p>Le <code>WeakValueDictionary</code> est le patron idéal d'un cache «&nbsp;bien élevé&nbsp;»&nbsp;: il n'empêche jamais la libération de ses valeurs. À l'inverse, un simple <code>dict</code> global qui grossit sans borne est la première cause de fuite mémoire dans un service Python de longue durée.</p>
+
+<h2>Mesurer et traquer une fuite</h2>
+<p>Quand la RAM grimpe, ne devine pas&nbsp;: <strong>mesure</strong>. Trois outils de la bibliothèque standard suffisent à localiser la source. <code>sys.getsizeof</code> donne la taille d'un objet&nbsp;; <code>gc.get_objects()</code> énumère tout ce que le collecteur suit&nbsp;; et surtout <code>tracemalloc</code> capture <em>où</em> la mémoire a été allouée, ligne par ligne.</p>
+
+<figure class="code-block" data-file="tracer.py"><pre><code class="language-python">import tracemalloc
+
+tracemalloc.start()
+instantane1 = tracemalloc.take_snapshot()
+
+# ... le code suspect s'exécute (traite des requêtes, remplit des caches) ...
+
+instantane2 = tracemalloc.take_snapshot()
+diff = instantane2.compare_to(instantane1, "lineno")
+for stat in diff[:5]:          # les 5 lignes qui ont le plus alloué
+    print(stat)                # fichier:ligne  +12.4 MiB  (+18000 objets)
+</code></pre></figure>
+
+<p>Le réflexe&nbsp;: prendre un instantané, laisser tourner la charge, prendre un second instantané, puis <strong>comparer</strong>. Les lignes en tête du différentiel désignent le coupable — presque toujours une collection qui grossit sans jamais se vider.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>Le worker qui gonfle sur cinq jours.</strong> Un service d'API voyait la mémoire de chaque worker passer de 180&nbsp;Mo à 2&nbsp;Go en une semaine, jusqu'au redémarrage forcé par l'orchestrateur (OOM). Diagnostic en trois temps&nbsp;: (1)&nbsp;<code>tracemalloc</code> compare deux instantanés à 24&nbsp;h d'écart et pointe une ligne unique — un <code>dict</code> global <code>_cache_resultats</code> jamais purgé&nbsp;; (2)&nbsp;<code>gc.get_stats()</code> révèle en prime un cycle retenant de gros objets de réponse via un handler d'erreur qui gardait <code>self</code>. Deux corrections&nbsp;: remplacer le dict global par un <code>functools.lru_cache(maxsize=10_000)</code> borné, et couper la référence circulaire dans le handler (ou la rendre <code>weakref</code>). Résultat&nbsp;: mémoire stable à 200&nbsp;Mo, plus aucun redémarrage OOM.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le <strong>cache global non borné</strong> est la fuite numéro un&nbsp;: un <code>dict</code> de module qui n'oublie jamais rien finit par tout garder. Borne toujours (<code>lru_cache(maxsize=…)</code>, <code>WeakValueDictionary</code>, ou éviction manuelle). Méfie-toi aussi des <strong>fermetures</strong> et des <strong>handlers</strong> qui capturent <code>self</code> et créent des cycles avec de gros objets.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'allocateur <strong>pymalloc</strong> (arenas, pools, blocs) et l'<em>interning</em> des petits entiers et chaînes (pourquoi <code>a is b</code> peut être vrai pour <code>256</code> mais pas <code>257</code>)&nbsp;; <code>gc.freeze()</code> (Python&nbsp;3.7+) pour figer les objets de démarrage et améliorer le <em>copy-on-write</em> après un <code>fork</code>&nbsp;; <strong>objgraph</strong> et <strong>memray</strong> (Bloomberg) pour visualiser les graphes de références et les allocations natives&nbsp;; et l'impact du no-GIL (Python&nbsp;3.13+) sur le comptage de références.</p></div></div>
+
+<h2>Antisèche&nbsp;: la mémoire de CPython</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mécanisme, rôle et outil à connaître</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Rôle</th><th scope="col">Outil / mot-clé</th></tr></thead>
+    <tbody>
+      <tr><td>Comptage de références</td><td>Libère un objet dès 0 référence</td><td><code>sys.getrefcount(obj)</code></td></tr>
+      <tr><td>Ramasse-miettes</td><td>Casse les cycles inaccessibles</td><td><code>gc.collect()</code></td></tr>
+      <tr><td>Générations 0/1/2</td><td>Inspecter surtout les objets jeunes</td><td><code>gc.get_stats()</code></td></tr>
+      <tr><td><code>__slots__</code></td><td>Instances compactes, sans <code>__dict__</code></td><td><code>__slots__ = (...)</code></td></tr>
+      <tr><td>Référence faible</td><td>Désigner sans retenir en vie</td><td><code>weakref.ref</code> / <code>WeakValueDictionary</code></td></tr>
+      <tr><td>Taille d'un objet</td><td>Empreinte d'un objet isolé</td><td><code>sys.getsizeof(obj)</code></td></tr>
+      <tr><td>Traçage d'allocations</td><td>Localiser une fuite ligne par ligne</td><td><code>tracemalloc</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Comptage de références</dt><dd>Mécanisme de CPython qui associe à chaque objet le nombre de références pointant vers lui&nbsp;; l'objet est détruit dès que ce compteur atteint zéro.</dd>
+  <dt>Ramasse-miettes (<em>gc</em>)</dt><dd>Collecteur complémentaire qui détecte et libère les <strong>cycles</strong> d'objets devenus inaccessibles, que le comptage seul ne peut pas récupérer.</dd>
+  <dt>Cycle de références</dt><dd>Ensemble d'objets qui se pointent mutuellement&nbsp;; leur compteur ne tombe jamais à zéro même sans référence externe, d'où le besoin du <code>gc</code>.</dd>
+  <dt>Ramasse-miettes générationnel</dt><dd>Stratégie qui classe les objets par âge (générations 0, 1, 2) et inspecte plus souvent les jeunes, supposés mourir vite.</dd>
+  <dt><code>__slots__</code></dt><dd>Déclaration qui remplace le <code>__dict__</code> d'instance par un stockage fixe et compact&nbsp;: moins de mémoire, mais plus d'attributs dynamiques.</dd>
+  <dt>Référence faible</dt><dd>Référence (<code>weakref</code>) qui pointe un objet <strong>sans</strong> incrémenter son compteur&nbsp;: elle n'empêche pas sa collecte et vaut <code>None</code> une fois l'objet mort.</dd>
+  <dt><code>tracemalloc</code></dt><dd>Module standard qui capture l'origine des allocations mémoire&nbsp;; comparer deux instantanés révèle la ligne responsable d'une fuite.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><strong>Comptage de références</strong> : chaque objet a un compteur ; à zéro, il est libéré immédiatement — déterministe, sans <code>gc</code>.</li>
+<li><strong>Cycles</strong> : le comptage seul ne les casse pas ; le <code>gc</code> générationnel (0/1/2) s'en charge en concentrant l'effort sur les objets jeunes.</li>
+<li><strong><code>__slots__</code></strong> : supprime le <code>__dict__</code> d'instance, ~40-50 % de RAM en moins, au prix des attributs dynamiques.</li>
+<li><strong><code>weakref</code></strong> : désigne sans retenir en vie ; idéal pour un cache qui se vide tout seul (<code>WeakValueDictionary</code>).</li>
+<li><strong>Diagnostic</strong> : <code>tracemalloc</code> (comparer deux instantanés), <code>gc.get_stats()</code>, <code>sys.getsizeof</code> ; la fuite type est le cache global non borné.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi le comptage de références seul ne libère-t-il jamais deux objets qui se référencent mutuellement, et qu'apporte le <code>gc</code>&nbsp;?</li>
+<li>Que gagne-t-on et que perd-on en ajoutant <code>__slots__</code> à une classe&nbsp;?</li>
+<li>Dans quel cas une <code>weakref</code> évite-t-elle une fuite qu'un <code>dict</code> ordinaire provoquerait&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi le comptage de références seul ne libère-t-il jamais deux objets qui se référencent mutuellement, et qu'apporte le gc ?","a":["Parce que chaque objet du cycle maintient le compteur de l'autre à au moins 1 : il ne tombe jamais à 0, même sans référence externe. Le ramasse-miettes (gc) détecte ces cycles inaccessibles et les casse pour libérer la mémoire","Parce que le comptage de références n'existe pas en CPython","Parce que les objets liés ne sont jamais comptés","Le gc ralentit la libération, il ne l'aide pas"],"correct":0,"explain":"Un cycle garde chaque compteur ≥ 1 mutuellement, donc jamais 0 : le comptage seul ne peut pas le libérer. Le gc parcourt les conteneurs, repère les cycles devenus inaccessibles et les récupère."},
+  {"q":"Que gagne-t-on et que perd-on en ajoutant __slots__ à une classe ?","a":["On gagne de la mémoire (plus de __dict__ par instance, ~40-50 % en moins) et un accès un peu plus rapide ; on perd la possibilité d'ajouter des attributs non déclarés à la volée","On gagne en vitesse mais on double la mémoire","On ne gagne rien, c'est purement cosmétique","On perd le typage statique"],"correct":0,"explain":"__slots__ remplace le dictionnaire d'instance par un stockage fixe et compact : moins de RAM et un accès attribut légèrement plus rapide, au prix de l'impossibilité d'ajouter des attributs non prévus."},
+  {"q":"Dans quel cas une weakref évite-t-elle une fuite qu'un dict ordinaire provoquerait ?","a":["Quand une structure (cache, registre) doit désigner des objets sans les maintenir en vie : une référence faible n'incrémente pas le compteur, donc l'objet est collecté dès que les vraies références disparaissent, alors qu'un dict fort le garderait indéfiniment","weakref est toujours plus rapide qu'un dict","Un dict ne peut pas stocker d'objets","weakref chiffre les données du cache"],"correct":0,"explain":"Une référence forte dans un dict global empêche la collecte et fait fuir la mémoire. La weakref (ex. WeakValueDictionary) pointe sans retenir : l'entrée disparaît automatiquement quand l'objet meurt ailleurs."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["gc.collect","gc.collect()","collect","collect()"],"placeholder":"la fonction du module gc qui force un passage du ramasse-miettes et casse les cycles : gc.…","hints":["Elle renvoie le nombre d'objets récupérés.","On l'appelle sur le module gc.","gc._______()"],"link":{"href":"lecon-18.html","label":"Revoir « Les cycles et le gc »"}},
+  {"type":"text","accept":["__slots__","slots"],"placeholder":"l'attribut de classe qui supprime le __dict__ d'instance pour compacter la mémoire : …","hints":["On y liste les noms d'attributs autorisés.","Il empêche d'ajouter des attributs non prévus.","Entouré de doubles tirets bas."],"link":{"href":"lecon-18.html","label":"Revoir « Réduire l'empreinte »"}},
+  {"type":"text","accept":["tracemalloc"],"placeholder":"le module standard qui trace l'origine des allocations pour localiser une fuite : …","hints":["On compare deux take_snapshot().","« trace » + « malloc ».","Il pointe la ligne coupable."],"link":{"href":"lecon-18.html","label":"Revoir « Mesurer et traquer une fuite »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée une liste, fais-en un alias, et observe le compteur de références avant et après un <code>del</code> de l'alias avec <code>sys.getrefcount</code>. Explique en un commentaire pourquoi la valeur affichée est «&nbsp;plus grande de 1&nbsp;» que le nombre de vraies références.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.py"><pre><code class="language-python">import sys
+
+x = [10, 20]
+y = x
+print(sys.getrefcount(x))   # 3 : x, y, + l'argument temporaire de getrefcount
+del y
+print(sys.getrefcount(x))   # 2 : x + l'argument temporaire
+# getrefcount ajoute toujours 1 car son propre paramètre référence l'objet
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une classe <code>Pixel</code> avec <code>__slots__ = ("r", "v", "b")</code>. Instancie-la, vérifie que l'accès aux attributs fonctionne, puis montre par un <code>try/except</code> qu'ajouter un attribut non déclaré lève une <code>AttributeError</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="pixel.py"><pre><code class="language-python">class Pixel:
+    __slots__ = ("r", "v", "b")
+    def __init__(self, r, v, b):
+        self.r, self.v, self.b = r, v, b
+
+p = Pixel(255, 128, 0)
+print(p.r, p.v, p.b)        # 255 128 0
+
+try:
+    p.alpha = 200           # attribut non déclaré dans __slots__
+except AttributeError as e:
+    print("refusé :", e)    # 'Pixel' object has no attribute 'alpha'
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Construis un cache d'objets <code>Ressource</code> avec un <code>weakref.WeakValueDictionary</code>. Montre qu'après avoir supprimé la dernière référence forte à une ressource, son entrée disparaît <em>toute seule</em> du cache.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="cache.py"><pre><code class="language-python">import weakref
+
+class Ressource:
+    def __init__(self, nom): self.nom = nom
+
+cache = weakref.WeakValueDictionary()
+
+r = Ressource("config.json")
+cache["config"] = r
+print("config" in cache)    # True : la ressource est vivante
+
+del r                       # dernière référence forte supprimée
+print("config" in cache)    # False : l'entrée s'est évaporée automatiquement
+</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

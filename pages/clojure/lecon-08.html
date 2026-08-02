@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Macros et interop JVM — Leçon 08 · Cours Clojure — Syntaxe</title>
+    <meta name="description" content="La puissance de Clojure : les macros (code = données) et l'interopérabilité avec Java et toute la JVM." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="clojure" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Clojure</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Clojure en pratique — Leçon 08</p>
+              <h1 class="lesson-header__title">Macros et interop JVM</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 7</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre les <strong>macros</strong> (homoiconicité)&nbsp;;</li>
+                  <li>définir une macro simple&nbsp;;</li>
+                  <li>appeler du <strong>code Java</strong> et utiliser la JVM&nbsp;;</li>
+                  <li>saisir l'accès à tout l'écosystème Java.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Nous arrivons à ce qui fait l'aura particulière des Lisps, et de Clojure en particulier&nbsp;: les <strong>macros</strong>. Elles permettent d'<em>étendre le langage lui-même</em>, d'écrire du code qui écrit du code. Dans le même temps, comme Clojure vit sur la JVM, il dialogue sans friction avec <strong>tout l'univers Java</strong>&nbsp;: des millions de bibliothèques à portée de main. Cette leçon relie ces deux superpouvoirs.</p>
+
+<h2>Rappel&nbsp;: code = données</h2>
+<p>On l'a vu en leçon 2&nbsp;: une expression Clojure <em>est</em> une structure de données (une liste). <code>(+ 1 2)</code> est une liste de trois éléments&nbsp;: le symbole <code>+</code>, puis <code>1</code> et <code>2</code>. Cette propriété — l'<strong>homoiconicité</strong> — signifie qu'un programme peut <strong>manipuler du code comme de la donnée</strong> avant qu'il ne soit exécuté. C'est précisément ce que font les macros.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 182" role="img" aria-label="L'homoiconicité : une même expression (+ 1 2) est à la fois une donnée et du code. Au centre, la forme (+ 1 2). Vue comme une donnée, c'est une liste de trois éléments : le symbole + puis les nombres 1 et 2. Vue comme du code, elle s'évalue et donne 3. C'est parce que le code est une donnée manipulable qu'un programme peut le réécrire : c'est le principe des macros.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une même forme : à la fois donnée et code</text>
+    <rect class="d-accent" x="266" y="40" width="108" height="34" rx="7" /><text class="d-text" x="320" y="62" text-anchor="middle" font-size="13">(+ 1 2)</text>
+    <path class="d-line" d="M300 74 L192 104" fill="none" /><path class="d-line" d="M199 100 L190 105 L200 108" fill="none" />
+    <path class="d-line" d="M340 74 L448 104" fill="none" /><path class="d-line" d="M439 100 L450 105 L441 108" fill="none" />
+    <text class="d-tag" x="150" y="98" text-anchor="middle" font-size="9">comme donnée</text>
+    <text class="d-tag" x="492" y="98" text-anchor="middle" font-size="9">comme code</text>
+    <rect class="d-box" x="60" y="112" width="48" height="34" rx="5" /><text class="d-text" x="84" y="134" text-anchor="middle" font-size="12">+</text>
+    <rect class="d-box" x="110" y="112" width="48" height="34" rx="5" /><text class="d-text" x="134" y="134" text-anchor="middle" font-size="12">1</text>
+    <rect class="d-box" x="160" y="112" width="48" height="34" rx="5" /><text class="d-text" x="184" y="134" text-anchor="middle" font-size="12">2</text>
+    <text class="d-mut" x="134" y="162" text-anchor="middle" font-size="8">liste de 3 éléments (symbole, nombre, nombre)</text>
+    <rect class="d-accent" x="426" y="112" width="52" height="34" rx="5" /><text class="d-text" x="452" y="134" text-anchor="middle" font-size="13">3</text>
+    <text class="d-mut" x="452" y="162" text-anchor="middle" font-size="8">évaluée par le compilateur</text>
+  </svg>
+  <figcaption>Le code étant une donnée ordinaire, un programme peut le lire et le réécrire&nbsp;: c'est ce qui rend les macros possibles.</figcaption>
+</figure>
+
+<h2>Fonction ou macro&nbsp;?</h2>
+<p>Une <strong>fonction</strong> reçoit des <em>valeurs déjà évaluées</em>. Une <strong>macro</strong> reçoit le <em>code non évalué</em> (sous forme de données), le transforme, et renvoie un nouveau code qui sera ensuite évalué à sa place. La macro agit donc <strong>avant l'exécution</strong>, à la compilation.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Fonction contre macro. Une fonction comme carre reçoit des valeurs déjà évaluées : (carre 3) reçoit 3 et renvoie 9, tout se passe à l'exécution. Une macro comme when reçoit du code non évalué, les formes elles-mêmes : (when c a b) est réécrit à la compilation en (if c (do a b)), et c'est ce code produit qui sera ensuite évalué.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Ce que chacune reçoit</text>
+    <text class="d-tag" x="56" y="69" text-anchor="middle" font-size="9">fonction</text>
+    <rect class="d-box" x="102" y="48" width="104" height="34" rx="6" /><text class="d-text" x="154" y="70" text-anchor="middle" font-size="11">(carre 3)</text>
+    <path class="d-line" d="M206 65 L244 65" fill="none" /><path class="d-line" d="M237 61 L245 65 L237 69" fill="none" />
+    <rect class="d-box" x="246" y="48" width="90" height="34" rx="6" /><text class="d-text" x="291" y="70" text-anchor="middle" font-size="12">3</text>
+    <path class="d-line" d="M336 65 L374 65" fill="none" /><path class="d-line" d="M367 61 L375 65 L367 69" fill="none" />
+    <rect class="d-accent" x="376" y="48" width="78" height="34" rx="6" /><text class="d-text" x="415" y="70" text-anchor="middle" font-size="12">9</text>
+    <text class="d-mut" x="540" y="68" text-anchor="middle" font-size="8.5">valeurs · à l'exécution</text>
+    <text class="d-tag" x="56" y="131" text-anchor="middle" font-size="9">macro</text>
+    <rect class="d-box" x="102" y="110" width="122" height="34" rx="6" /><text class="d-text" x="163" y="132" text-anchor="middle" font-size="10.5">(when c a b)</text>
+    <path class="d-line" d="M224 127 L262 127" fill="none" /><path class="d-line" d="M255 123 L263 127 L255 131" fill="none" />
+    <rect class="d-box" x="264" y="110" width="96" height="34" rx="6" /><text class="d-mut" x="312" y="131" text-anchor="middle" font-size="8">code (formes)</text>
+    <path class="d-line" d="M360 127 L398 127" fill="none" /><path class="d-line" d="M391 123 L399 127 L391 131" fill="none" />
+    <rect class="d-accent" x="400" y="110" width="152" height="34" rx="6" /><text class="d-text" x="476" y="132" text-anchor="middle" font-size="10">(if c (do a b))</text>
+    <text class="d-mut" x="476" y="162" text-anchor="middle" font-size="8">code réécrit · à la compilation</text>
+  </svg>
+  <figcaption>La macro travaille sur le <strong>code</strong> avant qu'il tourne&nbsp;; la fonction, sur des <strong>valeurs</strong> pendant qu'il tourne.</figcaption>
+</figure>
+<figure class="code-block" data-file="macro-idee.clj"><pre><code class="language-clojure">;; Une fonction reçoit 3 et 0 (déjà évalués) :
+(defn carre [x] (* x x))
+
+;; Une macro reçoit le CODE (x . . .) tel quel et le réécrit.
+;; Par exemple, 'when' EST une macro fournie par Clojure :
+(when condition
+  (faire-ceci)
+  (faire-cela))
+;; … que Clojure réécrit en :
+(if condition
+  (do (faire-ceci) (faire-cela)))</code></pre></figure>
+<p>Beaucoup de «&nbsp;mots-clés&nbsp;» de Clojure (<code>when</code>, <code>cond</code>, <code>-&gt;</code>, <code>or</code>…) ne sont pas câblés dans le langage&nbsp;: ce sont des macros écrites en Clojure. Le langage s'étend largement avec ses propres moyens.</p>
+
+<h2>Définir une macro simple</h2>
+<p>On définit une macro avec <code>defmacro</code>. À l'intérieur, on construit le code à produire. La <strong>quasi-quote</strong> <code>`</code> (backtick) crée un gabarit de code&nbsp;; <code>~</code> y insère une valeur calculée.</p>
+<figure class="code-block" data-file="defmacro.clj"><pre><code class="language-clojure">;; Une macro 'sauf-si' : l'inverse de 'when'
+(defmacro sauf-si [condition &amp; corps]
+  `(if (not ~condition)
+     (do ~@corps)))
+
+(sauf-si false
+  (println "ceci s'affiche"))   ; → s'affiche
+
+;; Voir le code généré :
+(macroexpand '(sauf-si false (println "x")))
+; → (if (not false) (do (println "x")))</code></pre></figure>
+<p><code>~@</code> (unquote-splicing) déverse une séquence d'expressions dans le gabarit. <code>macroexpand</code> révèle le code produit — outil précieux pour comprendre et déboguer une macro.</p>
+
+<h2>Quand écrire une macro&nbsp;?</h2>
+<p>Les macros sont puissantes mais à manier avec parcimonie. La règle communautaire&nbsp;: <strong>n'écris une macro que si une fonction ne suffit pas</strong>. On a besoin d'une macro seulement quand il faut <em>contrôler l'évaluation</em> — par exemple ne pas évaluer un argument, ou introduire une nouvelle forme syntaxique. Pour tout le reste, une fonction est plus simple et composable.</p>
+
+<h2>L'interop Java&nbsp;: tout l'écosystème JVM</h2>
+<p>Clojure tourne sur la JVM&nbsp;; il appelle donc le code Java <strong>directement</strong>. La syntaxe d'interop est minimale&nbsp;:</p>
+<figure class="code-block" data-file="interop.clj"><pre><code class="language-clojure">;; Appeler une méthode statique : (Classe/methode args)
+(Math/sqrt 16)            ; → 4.0
+(Math/max 3 7)            ; → 7
+
+;; Créer un objet : (Classe. args)  — noter le point
+(java.util.Date.)        ; un objet Date (maintenant)
+
+;; Appeler une méthode d'instance : (.methode objet args)
+(.toUpperCase "bonjour") ; → "BONJOUR"
+(.length "bonjour")      ; → 7</code></pre></figure>
+<p>Trois formes à retenir&nbsp;: <code>Classe/methode</code> (statique), <code>(Classe. …)</code> (construction), <code>(.methode obj …)</code> (instance). Avec elles, n'importe quelle bibliothèque Java devient accessible depuis Clojure.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="L'interopérabilité JVM. Un grand cadre représente la JVM, la machine virtuelle Java. À l'intérieur cohabitent le code Clojure et tout l'écosystème Java : java.time, les pilotes de bases de données JDBC, les serveurs web. Une double flèche relie les deux : l'appel est direct, sans passerelle. En dessous, les trois formes d'interop : Classe slash methode pour une méthode statique, Classe point pour construire un objet, point methode objet pour une méthode d'instance.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une seule JVM : Clojure appelle Java directement</text>
+    <rect class="d-frame" x="46" y="38" width="548" height="80" rx="10" /><text class="d-mut" x="70" y="55" text-anchor="start" font-size="9">JVM</text>
+    <rect class="d-accent" x="80" y="64" width="150" height="42" rx="7" /><text class="d-text" x="155" y="89" text-anchor="middle" font-size="11">Clojure</text>
+    <path class="d-line" d="M234 81 L300 81" fill="none" /><path class="d-line" d="M293 77 L301 81 L293 85" fill="none" /><path class="d-line" d="M300 92 L234 92" fill="none" /><path class="d-line" d="M241 88 L233 92 L241 96" fill="none" />
+    <rect class="d-box" x="304" y="64" width="270" height="42" rx="7" /><text class="d-text" x="439" y="83" text-anchor="middle" font-size="9.5">écosystème Java</text><text class="d-mut" x="439" y="97" text-anchor="middle" font-size="7.5">java.time · JDBC · serveurs web · millions de libs</text>
+    <text class="d-mut" x="118" y="150" text-anchor="middle" font-size="8.5" font-family="monospace">(Math/sqrt 16)</text><text class="d-mut" x="118" y="164" text-anchor="middle" font-size="8">statique</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8.5" font-family="monospace">(java.util.Date.)</text><text class="d-mut" x="320" y="164" text-anchor="middle" font-size="8">construction</text>
+    <text class="d-mut" x="522" y="150" text-anchor="middle" font-size="8.5" font-family="monospace">(.length s)</text><text class="d-mut" x="522" y="164" text-anchor="middle" font-size="8">instance</text>
+  </svg>
+  <figcaption>Sur la JVM, toute bibliothèque Java devient une dépendance Clojure&nbsp;: c'est la force industrielle du langage.</figcaption>
+</figure>
+
+<h2>Importer et utiliser une bibliothèque Java</h2>
+<p>On déclare les classes Java dont on a besoin dans le <code>ns</code>, puis on les emploie comme du Clojure.</p>
+<figure class="code-block" data-file="import.clj"><pre><code class="language-clojure">(ns mon-app.core
+  (:import [java.time LocalDate]))
+
+(LocalDate/now)              ; la date du jour (API Java moderne)
+(.plusDays (LocalDate/now) 7) ; dans une semaine</code></pre></figure>
+<p>C'est ce qui explique l'adoption de Clojure en entreprise&nbsp;: on garde l'élégance fonctionnelle <em>et</em> on réutilise tout l'investissement Java existant (bases de données, serveurs web, bibliothèques métier).</p>
+
+<h2>Un cas concret</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Pourquoi une banque entièrement numérique comme <strong>Nubank</strong> (des dizaines de millions de clients) bâtit-elle son cœur bancaire en Clojure&nbsp;? Parce que l'interop JVM lui offre <em>gratuitement</em> les briques industrielles éprouvées du monde Java&nbsp;: pilotes de bases de données (JDBC), clients de messagerie (Kafka), calcul décimal exact (<code>BigDecimal</code>, indispensable pour de l'argent). L'équipe écrit une logique métier concise et immuable tout en s'appuyant sur trente ans de bibliothèques Java robustes — sans en réécrire une ligne. Ce compromis est précisément ce qui a fait entrer Clojure en production dans la finance.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Apprends des macros du langage</p><p>Beaucoup de formes que tu utilises déjà — <code>when</code>, <code>-&gt;</code>, <code>or</code>, <code>cond</code> — <strong>sont</strong> des macros écrites en Clojure. Deux outils pour les étudier&nbsp;: <code>(source when)</code> affiche leur définition, et <code>(macroexpand-1 '(when x y))</code> déroule <em>un seul</em> niveau de réécriture. Lire ces macros standard est la meilleure école avant d'écrire les tiennes.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Abuser des macros. Comme elles agissent à la compilation et ne sont pas des valeurs ordinaires, on ne peut pas les passer à <code>map</code> ou les composer comme des fonctions. Le réflexe du débutant enthousiaste — «&nbsp;tout en macros&nbsp;!&nbsp;» — produit du code rigide et difficile. Garde-les pour les cas où contrôler l'évaluation est réellement nécessaire&nbsp;; préfère les fonctions partout ailleurs.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le piège classique des macros est la <strong>capture de variable</strong>&nbsp;: un nom introduit par la macro qui entre en collision avec le code de l'utilisateur. Clojure y répond avec les symboles auto-générés via <code>#</code> (par ex. <code>x#</code> dans une quasi-quote), qui produisent un nom unique garanti. C'est l'hygiène des macros&nbsp;; à explorer quand tu écriras des macros non triviales.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — macros et interop JVM</caption>
+    <thead><tr><th scope="col">Forme</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>defmacro</code></td><td>définir une macro (reçoit du code, renvoie du code)</td></tr>
+      <tr><td><code>`</code> (quasi-quote)</td><td>gabarit de code à produire</td></tr>
+      <tr><td><code>~</code> (unquote)</td><td>insérer une valeur calculée dans le gabarit</td></tr>
+      <tr><td><code>~@</code> (unquote-splicing)</td><td>déverser une séquence d'expressions</td></tr>
+      <tr><td><code>macroexpand-1</code></td><td>voir le code produit (un niveau)</td></tr>
+      <tr><td><code>(Classe/methode …)</code></td><td>méthode <strong>statique</strong> Java</td></tr>
+      <tr><td><code>(Classe. …)</code></td><td><strong>construire</strong> un objet (noter le point)</td></tr>
+      <tr><td><code>(.methode obj …)</code></td><td>méthode d'<strong>instance</strong></td></tr>
+      <tr><td><code>(:import …)</code> dans <code>ns</code></td><td>importer une classe Java</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Homoiconicité</dt><dd>Propriété d'un langage dont le code est écrit dans ses propres structures de données&nbsp;; en Clojure, une expression <em>est</em> une liste manipulable.</dd>
+  <dt>Macro</dt><dd>Transformation qui reçoit du <em>code non évalué</em>, le réécrit à la compilation et renvoie le code à exécuter à sa place.</dd>
+  <dt><code>defmacro</code></dt><dd>Forme qui définit une macro&nbsp;; à l'intérieur, on construit le code produit.</dd>
+  <dt>Quasi-quote (<code>`</code>)</dt><dd>Crée un gabarit de code où l'on peut insérer des valeurs.</dd>
+  <dt>Unquote (<code>~</code>, <code>~@</code>)</dt><dd>Dans une quasi-quote&nbsp;: <code>~</code> insère une valeur, <code>~@</code> déverse une séquence d'expressions.</dd>
+  <dt><code>macroexpand</code></dt><dd>Affiche le code généré par un appel de macro sans l'exécuter&nbsp;; <code>macroexpand-1</code> ne déroule qu'un niveau.</dd>
+  <dt>Interop</dt><dd>Interopérabilité&nbsp;: appel direct de code Java depuis Clojure (statique, construction, instance).</dd>
+  <dt>JVM</dt><dd>Machine virtuelle Java&nbsp;; socle commun qui exécute Clojure et donne accès à tout l'écosystème Java.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Macro</strong>&nbsp;: reçoit du <em>code non évalué</em>, le réécrit, agit à la compilation (<code>defmacro</code>, <code>`</code>, <code>~</code>, <code>~@</code>).</li>
+  <li><code>macroexpand</code> montre le code généré&nbsp;; n'écris une macro que si une fonction ne suffit pas.</li>
+  <li><strong>Interop Java</strong>&nbsp;: <code>Classe/methode</code>, <code>(Classe. …)</code>, <code>(.methode obj …)</code>.</li>
+  <li>Accès complet à l'écosystème JVM&nbsp;: la force industrielle de Clojure.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre une fonction et une macro&nbsp;?</li><li>Quel outil affiche le code produit par une macro&nbsp;?</li><li>Comment appelle-t-on la méthode statique <code>sqrt</code> de <code>Math</code>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle différence entre une fonction et une macro ?","a":["Une fonction reçoit ses arguments déjà évalués (à l'exécution) ; une macro reçoit le code non évalué (les formes) à la compilation et le transforme, ce qui lui permet de contrôler l'évaluation","C'est l'inverse","Les deux évaluent leurs arguments","Une macro est juste une fonction lente"],"correct":0,"explain":"Une macro opère sur le code source comme donnée, avant exécution : elle peut décider quoi évaluer et générer de nouvelles formes (comme and ou when). Une fonction, elle, reçoit des valeurs déjà calculées."},
+  {"q":"Quel outil affiche le code produit par une macro ?","a":["macroexpand (ou macroexpand-1)","println","eval","read-string"],"correct":0,"explain":"macroexpand développe un appel de macro en montrant le code qu'elle génère, sans l'exécuter. macroexpand-1 ne déroule qu'un seul niveau, pratique pour comprendre et déboguer une macro pas à pas."},
+  {"q":"Comment appelle-t-on la méthode statique sqrt de Math ?","a":["(Math/sqrt 16), avec la syntaxe (Classe/methode args)","(Math.sqrt 16)","(sqrt Math 16)","(. Math sqrt)"],"correct":0,"explain":"L'interop Java pour une méthode statique utilise la forme (Classe/methode arguments) : (Math/sqrt 16) renvoie 4.0. Le slash distingue l'appel statique de l'accès à une méthode d'instance."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["/","Math/sqrt","interop"],"placeholder":"le séparateur pour appeler une méthode statique Java (Math…sqrt) : …","hints":["(Math?sqrt 81).","Classe puis méthode.","Une barre oblique."],"link":{"href":"lecon-08.html","label":"Revoir « L'interop JVM »"}},
+  {"type":"text","accept":["macroexpand"],"placeholder":"la fonction pour OBSERVER en quoi se réécrit (when true ...) : …","hints":["(???????????  '(when true (println \"ok\"))).","Montre le code généré par la macro.","macro??????"],"link":{"href":"lecon-08.html","label":"Revoir « macroexpand »"}},
+  {"type":"text","accept":["defmacro"],"placeholder":"la macro pour DÉFINIR une macro (deux-fois, qui exécute son corps deux fois) : …","hints":["(???????? deux-fois [& corps] ...).","def + macro.","Huit lettres."],"link":{"href":"lecon-08.html","label":"Revoir « defmacro »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Utilise l'interop pour calculer la racine carrée de 81 et mettre <code>"clojure"</code> en majuscules.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(Math/sqrt 81)            ; → 9.0
+(.toUpperCase "clojure")  ; → "CLOJURE"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec <code>macroexpand</code>, observe en quoi se réécrit <code>(when true (println "ok"))</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(macroexpand '(when true (println "ok")))
+; → (if true (do (println "ok")))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une macro <code>deux-fois</code> qui exécute son corps deux fois de suite.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(defmacro deux-fois [&amp; corps]
+  `(do ~@corps ~@corps))
+
+(deux-fois (println "salut"))
+; affiche "salut" deux fois
+(macroexpand '(deux-fois (println "x")))
+; → (do (println "x") (println "x"))</code></pre></figure></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clojure.min.js" defer></script>
+  </body>
+</html>

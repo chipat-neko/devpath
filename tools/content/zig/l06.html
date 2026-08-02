@@ -1,0 +1,71 @@
+<p>Voici le cœur philosophique de Zig&nbsp;: la <strong>gestion explicite de la mémoire</strong>. Là où la plupart des langages cachent l'allocation (un ramasse-miettes, ou un <code>malloc</code> déguisé), Zig la rend <em>visible</em>. Toute fonction qui a besoin de mémoire reçoit un <strong>allocateur</strong> en argument. Rien n'alloue dans ton dos. C'est plus de travail, mais un contrôle total.</p>
+
+<h2>Pourquoi pas d'allocation cachée&nbsp;?</h2>
+<p>En programmation système (noyaux, embarqué, temps réel), une allocation imprévue peut être catastrophique&nbsp;: latence, fragmentation, échec en mémoire pleine. En rendant chaque allocation explicite, Zig laisse le programmeur décider <em>où</em>, <em>quand</em> et <em>comment</em> la mémoire est utilisée. Tu peux même écrire du code qui n'alloue jamais.</p>
+
+<h2>Les allocateurs</h2>
+<p>Un <strong>allocateur</strong> est un objet qui sait allouer et libérer de la mémoire. Zig en fournit plusieurs&nbsp;: pour le tas (<code>GeneralPurposeAllocator</code>), pour la pile, à arène… On le crée, puis on le passe aux fonctions qui en ont besoin.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const std = @import("std");
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer _ = gpa.deinit();   // vérifie les fuites à la fin
+
+    // ... utiliser allocator ...
+}</code></pre></figure>
+<p class="code-caption">Le <code>GeneralPurposeAllocator</code> détecte même les <strong>fuites mémoire</strong> à la fin du programme&nbsp;!</p>
+
+<h2>Allouer et libérer</h2>
+<p>Avec un allocateur, <code>alloc</code> réserve un slice, <code>free</code> le rend. L'allocation <strong>peut échouer</strong> (mémoire pleine)&nbsp;: son type est une error union, d'où le <code>try</code>.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">    // Alloue un tableau de 100 entiers
+    const tampon = try allocator.alloc(i32, 100);
+    defer allocator.free(tampon);   // libération garantie
+
+    tampon[0] = 42;
+    std.debug.print("{}\n", .{tampon[0]});</code></pre></figure>
+
+<h2>defer&nbsp;: nettoyer à coup sûr</h2>
+<p>L'instruction <code>defer</code> repousse une action à la <strong>sortie de la portée</strong>, quoi qu'il arrive. C'est l'outil idéal pour garantir une libération ou une fermeture, juste après l'allocation — impossible de l'oublier.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">    const data = try allocator.alloc(u8, 50);
+    defer allocator.free(data);   // s'exécutera en sortant, toujours
+    // ... même si on quitte plus loin, data sera libéré
+</code></pre></figure>
+<p>Placer le <code>defer</code> juste après l'allocation est l'idiome Zig&nbsp;: l'œil voit immédiatement que la ressource sera rendue.</p>
+
+<h2>Les structures dynamiques</h2>
+<p>Les conteneurs qui grandissent (comme un tableau dynamique) prennent un allocateur. <code>ArrayList</code> est le tableau extensible de la stdlib.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">    var liste = std.ArrayList(i32).init(allocator);
+    defer liste.deinit();
+
+    try liste.append(10);
+    try liste.append(20);
+    std.debug.print("{}\n", .{liste.items.len});   // 2</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier de libérer&nbsp;: contrairement aux langages à ramasse-miettes, Zig ne nettoie pas pour toi. La parade&nbsp;: prends le réflexe d'écrire le <code>defer allocator.free(…)</code> <strong>immédiatement</strong> après chaque <code>alloc</code>. Le GeneralPurposeAllocator t'avertira des fuites restantes.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'<strong>arena allocator</strong> est un idiome puissant&nbsp;: il alloue beaucoup, puis libère <em>tout d'un coup</em> en une opération. Parfait pour une requête ou une frame de jeu&nbsp;: on alloue librement, et on rend toute la mémoire à la fin sans suivre chaque objet.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Zig n'a <strong>aucune allocation cachée</strong>&nbsp;: les fonctions reçoivent un <strong>allocateur</strong> explicite.</li>
+  <li><code>allocator.alloc</code> (qui peut échouer, d'où <code>try</code>) et <code>allocator.free</code>.</li>
+  <li><code>defer</code> garantit une action en sortie de portée&nbsp;: idéal pour libérer.</li>
+  <li>Les conteneurs dynamiques (<code>ArrayList</code>) prennent un allocateur et se libèrent (<code>deinit</code>).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi Zig rend-il les allocations explicites&nbsp;?</li><li>À quoi sert <code>defer</code>&nbsp;?</li><li>Pourquoi <code>alloc</code> nécessite-t-il un <code>try</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle ligne écris-tu juste après <code>const buf = try allocator.alloc(u8, 10);</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">defer allocator.free(buf);</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Alloue un tableau de 5 entiers, mets-y des valeurs et affiche le premier.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const t = try allocator.alloc(i32, 5);
+defer allocator.free(t);
+for (t, 0..) |*e, i| e.* = @intCast(i);
+std.debug.print("{}\n", .{t[0]});   // 0</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Remplis une <code>ArrayList</code> avec les nombres de 1 à 3 et affiche sa taille.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">var liste = std.ArrayList(i32).init(allocator);
+defer liste.deinit();
+try liste.append(1);
+try liste.append(2);
+try liste.append(3);
+std.debug.print("{}\n", .{liste.items.len});   // 3</code></pre></figure></details></div>

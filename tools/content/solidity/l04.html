@@ -1,0 +1,92 @@
+<p>Un contrat réel doit gérer des données structurées&nbsp;: les soldes de nombreux utilisateurs, une liste de propositions, les attributs d'un objet. Solidity offre pour cela trois outils essentiels&nbsp;: les <strong>mappings</strong> (des tables clé-valeur ultra-efficaces), les <strong>structs</strong> (des regroupements de champs) et les <strong>tableaux</strong>. Maîtriser ces structures, c'est pouvoir modéliser l'état d'une vraie application décentralisée. Cette leçon les explore.</p>
+
+<h2>Les mappings&nbsp;: la structure reine</h2>
+<p>Un <strong>mapping</strong> associe des <strong>clés</strong> à des <strong>valeurs</strong>, comme un dictionnaire. C'est <em>la</em> structure de Solidity pour suivre «&nbsp;qui possède quoi&nbsp;». L'exemple canonique&nbsp;: associer chaque adresse à un solde.</p>
+<figure class="code-block" data-file="mapping.sol"><pre><code class="language-solidity">contract Jeton {
+    // adresse -&gt; solde
+    mapping(address =&gt; uint256) public soldes;
+
+    function deposer(uint256 montant) public {
+        soldes[msg.sender] += montant;   // crédite l'appelant
+    }
+}</code></pre></figure>
+<p>On accède à une valeur par sa clé&nbsp;: <code>soldes[adresse]</code>. <code>msg.sender</code> est l'adresse de celui qui appelle la fonction (leçon 5). Un mapping est extrêmement efficace pour ces recherches «&nbsp;par adresse&nbsp;».</p>
+
+<h2>Une particularité des mappings</h2>
+<p>Un mapping a un comportement spécial&nbsp;: <strong>toutes les clés existent virtuellement</strong>, avec la valeur par défaut. Demander <code>soldes[uneAdresseInconnue]</code> ne provoque pas d'erreur&nbsp;: cela renvoie <code>0</code> (la valeur par défaut d'un <code>uint</code>). Conséquence&nbsp;: on ne peut pas «&nbsp;parcourir&nbsp;» un mapping ni connaître ses clés — il n'a pas de notion de taille ni de liste de clés. Pour énumérer, il faut maintenir un tableau séparé.</p>
+
+<h2>Les structs&nbsp;: regrouper des champs</h2>
+<p>Un <strong>struct</strong> regroupe plusieurs valeurs sous un même type, pour modéliser une «&nbsp;chose&nbsp;» (un utilisateur, une proposition, un produit).</p>
+<figure class="code-block" data-file="struct.sol"><pre><code class="language-solidity">contract Registre {
+    struct Personne {
+        string nom;
+        uint256 age;
+        bool actif;
+    }
+
+    Personne public proprietaire;
+
+    function definir(string memory _nom, uint256 _age) public {
+        proprietaire = Personne(_nom, _age, true);
+    }
+}</code></pre></figure>
+<p>On crée une instance avec <code>Personne(nom, age, actif)</code> et on accède aux champs avec un point (<code>proprietaire.nom</code>). Les structs se combinent souvent avec les mappings&nbsp;: <code>mapping(address =&gt; Personne)</code> associe chaque adresse à une fiche complète.</p>
+
+<h2>Les tableaux</h2>
+<p>Un <strong>tableau</strong> stocke une liste ordonnée. Il peut être de taille <strong>dynamique</strong> (croît à volonté) ou <strong>fixe</strong>.</p>
+<figure class="code-block" data-file="tableau.sol"><pre><code class="language-solidity">contract Liste {
+    uint256[] public nombres;          // tableau dynamique
+
+    function ajouter(uint256 n) public {
+        nombres.push(n);               // ajoute à la fin
+    }
+
+    function combien() public view returns (uint256) {
+        return nombres.length;         // taille
+    }
+}</code></pre></figure>
+<p><code>push</code> ajoute un élément, <code>.length</code> donne la taille, et on accède par index (<code>nombres[0]</code>). Attention&nbsp;: parcourir un grand tableau dans une fonction coûte beaucoup de gas (chaque élément a un prix)&nbsp;; on évite les boucles sur des tableaux non bornés.</p>
+
+<h2>Combiner mapping, struct et tableau</h2>
+<p>La modélisation réelle combine ces outils. Exemple&nbsp;: un système de vote où chaque adresse a voté ou non, et où l'on garde la liste des propositions.</p>
+<figure class="code-block" data-file="vote.sol"><pre><code class="language-solidity">contract Vote {
+    struct Proposition {
+        string nom;
+        uint256 voix;
+    }
+
+    Proposition[] public propositions;          // liste des propositions
+    mapping(address =&gt; bool) public aVote;       // qui a déjà voté
+
+    function voter(uint256 index) public {
+        require(!aVote[msg.sender], "Deja vote");
+        propositions[index].voix += 1;
+        aVote[msg.sender] = true;
+    }
+}</code></pre></figure>
+<p>Le tableau <code>propositions</code> liste les choix&nbsp;; le mapping <code>aVote</code> empêche les votes multiples. On verra <code>require</code> en détail leçon 5&nbsp;: il valide une condition et annule la transaction si elle est fausse.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Boucler sur un <strong>tableau de taille non bornée</strong>. Si un tableau grandit sans limite (par exemple la liste de tous les utilisateurs), une fonction qui le parcourt en entier verra son coût en gas <strong>augmenter sans cesse</strong> — jusqu'à dépasser la limite par transaction, rendant la fonction <em>inutilisable à jamais</em>. C'est un piège classique&nbsp;: préfère les mappings pour les accès directs, et évite les boucles dont la longueur dépend d'une donnée que les utilisateurs peuvent faire croître.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le fait qu'un mapping ne soit pas énumérable est une contrainte qui façonne l'architecture des contrats. Un patron courant, l'<strong>enumerable mapping</strong>, combine un mapping (pour l'accès rapide par clé) <em>et</em> un tableau (pour pouvoir lister les clés). La bibliothèque OpenZeppelin (leçon 9) fournit des structures toutes faites pour cela. Connaître les limites des mappings t'évite de concevoir des contrats impossibles à parcourir.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le <strong>mapping</strong> <code>mapping(clé =&gt; valeur)</code> associe des clés à des valeurs&nbsp;; toutes les clés «&nbsp;existent&nbsp;» (valeur par défaut), non énumérable.</li>
+  <li>Le <strong>struct</strong> regroupe des champs nommés&nbsp;; souvent combiné aux mappings.</li>
+  <li>Les <strong>tableaux</strong> (<code>push</code>, <code>.length</code>, index)&nbsp;: attention au gas sur les grands tableaux.</li>
+  <li>On combine les trois pour modéliser l'état (ex.&nbsp;: vote, soldes).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que renvoie un mapping pour une clé jamais utilisée&nbsp;?</li><li>Pourquoi ne peut-on pas parcourir un mapping&nbsp;?</li><li>Quel risque à boucler sur un tableau non borné&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare un mapping public <code>soldes</code> qui associe une <code>address</code> à un <code>uint256</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">mapping(address =&gt; uint256) public soldes;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Définis un struct <code>Produit</code> avec un <code>nom</code> (string) et un <code>prix</code> (uint256).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">struct Produit {
+    string nom;
+    uint256 prix;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction <code>crediter</code> qui ajoute un montant au solde de l'appelant dans le mapping <code>soldes</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">function crediter(uint256 montant) public {
+    soldes[msg.sender] += montant;
+}</code></pre></figure></details></div>

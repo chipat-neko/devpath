@@ -1,0 +1,88 @@
+<p>Nous arrivons à ce qui fait l'aura particulière des Lisps, et de Clojure en particulier&nbsp;: les <strong>macros</strong>. Elles permettent d'<em>étendre le langage lui-même</em>, d'écrire du code qui écrit du code. Dans le même temps, comme Clojure vit sur la JVM, il dialogue sans friction avec <strong>tout l'univers Java</strong>&nbsp;: des millions de bibliothèques à portée de main. Cette leçon relie ces deux superpouvoirs.</p>
+
+<h2>Rappel&nbsp;: code = données</h2>
+<p>On l'a vu en leçon 2&nbsp;: une expression Clojure <em>est</em> une structure de données (une liste). <code>(+ 1 2)</code> est une liste de trois éléments&nbsp;: le symbole <code>+</code>, puis <code>1</code> et <code>2</code>. Cette propriété — l'<strong>homoiconicité</strong> — signifie qu'un programme peut <strong>manipuler du code comme de la donnée</strong> avant qu'il ne soit exécuté. C'est précisément ce que font les macros.</p>
+
+<h2>Fonction ou macro&nbsp;?</h2>
+<p>Une <strong>fonction</strong> reçoit des <em>valeurs déjà évaluées</em>. Une <strong>macro</strong> reçoit le <em>code non évalué</em> (sous forme de données), le transforme, et renvoie un nouveau code qui sera ensuite évalué à sa place. La macro agit donc <strong>avant l'exécution</strong>, à la compilation.</p>
+<figure class="code-block" data-file="macro-idee.clj"><pre><code class="language-clojure">;; Une fonction reçoit 3 et 0 (déjà évalués) :
+(defn carre [x] (* x x))
+
+;; Une macro reçoit le CODE (x . . .) tel quel et le réécrit.
+;; Par exemple, 'when' EST une macro fournie par Clojure :
+(when condition
+  (faire-ceci)
+  (faire-cela))
+;; … que Clojure réécrit en :
+(if condition
+  (do (faire-ceci) (faire-cela)))</code></pre></figure>
+<p>Beaucoup de «&nbsp;mots-clés&nbsp;» de Clojure (<code>when</code>, <code>cond</code>, <code>-&gt;</code>, <code>or</code>…) ne sont pas câblés dans le langage&nbsp;: ce sont des macros écrites en Clojure. Le langage s'étend largement avec ses propres moyens.</p>
+
+<h2>Définir une macro simple</h2>
+<p>On définit une macro avec <code>defmacro</code>. À l'intérieur, on construit le code à produire. La <strong>quasi-quote</strong> <code>`</code> (backtick) crée un gabarit de code&nbsp;; <code>~</code> y insère une valeur calculée.</p>
+<figure class="code-block" data-file="defmacro.clj"><pre><code class="language-clojure">;; Une macro 'sauf-si' : l'inverse de 'when'
+(defmacro sauf-si [condition &amp; corps]
+  `(if (not ~condition)
+     (do ~@corps)))
+
+(sauf-si false
+  (println "ceci s'affiche"))   ; → s'affiche
+
+;; Voir le code généré :
+(macroexpand '(sauf-si false (println "x")))
+; → (if (not false) (do (println "x")))</code></pre></figure>
+<p><code>~@</code> (unquote-splicing) déverse une séquence d'expressions dans le gabarit. <code>macroexpand</code> révèle le code produit — outil précieux pour comprendre et déboguer une macro.</p>
+
+<h2>Quand écrire une macro&nbsp;?</h2>
+<p>Les macros sont puissantes mais à manier avec parcimonie. La règle communautaire&nbsp;: <strong>n'écris une macro que si une fonction ne suffit pas</strong>. On a besoin d'une macro seulement quand il faut <em>contrôler l'évaluation</em> — par exemple ne pas évaluer un argument, ou introduire une nouvelle forme syntaxique. Pour tout le reste, une fonction est plus simple et composable.</p>
+
+<h2>L'interop Java&nbsp;: tout l'écosystème JVM</h2>
+<p>Clojure tourne sur la JVM&nbsp;; il appelle donc le code Java <strong>directement</strong>. La syntaxe d'interop est minimale&nbsp;:</p>
+<figure class="code-block" data-file="interop.clj"><pre><code class="language-clojure">;; Appeler une méthode statique : (Classe/methode args)
+(Math/sqrt 16)            ; → 4.0
+(Math/max 3 7)            ; → 7
+
+;; Créer un objet : (Classe. args)  — noter le point
+(java.util.Date.)        ; un objet Date (maintenant)
+
+;; Appeler une méthode d'instance : (.methode objet args)
+(.toUpperCase "bonjour") ; → "BONJOUR"
+(.length "bonjour")      ; → 7</code></pre></figure>
+<p>Trois formes à retenir&nbsp;: <code>Classe/methode</code> (statique), <code>(Classe. …)</code> (construction), <code>(.methode obj …)</code> (instance). Avec elles, n'importe quelle bibliothèque Java devient accessible depuis Clojure.</p>
+
+<h2>Importer et utiliser une bibliothèque Java</h2>
+<p>On déclare les classes Java dont on a besoin dans le <code>ns</code>, puis on les emploie comme du Clojure.</p>
+<figure class="code-block" data-file="import.clj"><pre><code class="language-clojure">(ns mon-app.core
+  (:import [java.time LocalDate]))
+
+(LocalDate/now)              ; la date du jour (API Java moderne)
+(.plusDays (LocalDate/now) 7) ; dans une semaine</code></pre></figure>
+<p>C'est ce qui explique l'adoption de Clojure en entreprise&nbsp;: on garde l'élégance fonctionnelle <em>et</em> on réutilise tout l'investissement Java existant (bases de données, serveurs web, bibliothèques métier).</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Abuser des macros. Comme elles agissent à la compilation et ne sont pas des valeurs ordinaires, on ne peut pas les passer à <code>map</code> ou les composer comme des fonctions. Le réflexe du débutant enthousiaste — «&nbsp;tout en macros&nbsp;!&nbsp;» — produit du code rigide et difficile. Garde-les pour les cas où contrôler l'évaluation est réellement nécessaire&nbsp;; préfère les fonctions partout ailleurs.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le piège classique des macros est la <strong>capture de variable</strong>&nbsp;: un nom introduit par la macro qui entre en collision avec le code de l'utilisateur. Clojure y répond avec les symboles auto-générés via <code>#</code> (par ex. <code>x#</code> dans une quasi-quote), qui produisent un nom unique garanti. C'est l'hygiène des macros&nbsp;; à explorer quand tu écriras des macros non triviales.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Macro</strong>&nbsp;: reçoit du <em>code non évalué</em>, le réécrit, agit à la compilation (<code>defmacro</code>, <code>`</code>, <code>~</code>, <code>~@</code>).</li>
+  <li><code>macroexpand</code> montre le code généré&nbsp;; n'écris une macro que si une fonction ne suffit pas.</li>
+  <li><strong>Interop Java</strong>&nbsp;: <code>Classe/methode</code>, <code>(Classe. …)</code>, <code>(.methode obj …)</code>.</li>
+  <li>Accès complet à l'écosystème JVM&nbsp;: la force industrielle de Clojure.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre une fonction et une macro&nbsp;?</li><li>Quel outil affiche le code produit par une macro&nbsp;?</li><li>Comment appelle-t-on la méthode statique <code>sqrt</code> de <code>Math</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Utilise l'interop pour calculer la racine carrée de 81 et mettre <code>"clojure"</code> en majuscules.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(Math/sqrt 81)            ; → 9.0
+(.toUpperCase "clojure")  ; → "CLOJURE"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec <code>macroexpand</code>, observe en quoi se réécrit <code>(when true (println "ok"))</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(macroexpand '(when true (println "ok")))
+; → (if true (do (println "ok")))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une macro <code>deux-fois</code> qui exécute son corps deux fois de suite.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(defmacro deux-fois [&amp; corps]
+  `(do ~@corps ~@corps))
+
+(deux-fois (println "salut"))
+; affiche "salut" deux fois
+(macroexpand '(deux-fois (println "x")))
+; → (do (println "x") (println "x"))</code></pre></figure></details></div>

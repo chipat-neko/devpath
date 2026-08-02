@@ -1,0 +1,84 @@
+<p>Jusqu'ici, tu as travaillé surtout en console. Mais la vraie force de PowerShell, c'est l'<strong>automatisation</strong>&nbsp;: rassembler des commandes dans un <strong>script</strong> qu'on relance à volonté. Un script PowerShell est un fichier <code>.ps1</code>. Dans cette leçon, on passe de la frappe interactive au script réutilisable&nbsp;: politique d'exécution, paramètres, documentation et sortie propre.</p>
+
+<h2>La politique d'exécution</h2>
+<p>Par sécurité, Windows bloque par défaut l'exécution des scripts. C'est l'<strong>ExecutionPolicy</strong>. Pour ton usage, le réglage <code>RemoteSigned</code> (les scripts locaux passent, ceux téléchargés doivent être signés) est un bon compromis.</p>
+<figure class="code-block" data-file="Console (admin)"><pre><code class="language-powershell">Get-ExecutionPolicy
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser</code></pre></figure>
+<p class="code-caption">Le <code>-Scope CurrentUser</code> évite d'avoir à modifier la machine entière.</p>
+
+<h2>Anatomie d'un script</h2>
+<p>Un script s'exécute de haut en bas. On y place des commandes, des variables, des fonctions. Crée <code>info-disque.ps1</code>&nbsp;:</p>
+<figure class="code-block" data-file="info-disque.ps1"><pre><code class="language-powershell"># Affiche l'espace libre des disques
+Get-CimInstance Win32_LogicalDisk |
+  Where-Object DriveType -eq 3 |
+  Select-Object DeviceID,
+    @{N="LibreGo"; E={ [math]::Round($_.FreeSpace / 1GB, 1) }}</code></pre></figure>
+<p>Lance-le avec <code>.\info-disque.ps1</code>. Tu obtiens un vrai tableau d'objets.</p>
+
+<h2>Des paramètres avec param()</h2>
+<p>Un bon script ne code pas ses valeurs en dur&nbsp;: il accepte des <strong>paramètres</strong>. Le bloc <code>param()</code>, placé en tout début de fichier, les déclare. On peut typer chaque paramètre et lui donner une valeur par défaut.</p>
+<figure class="code-block" data-file="salue.ps1"><pre><code class="language-powershell">param(
+    [string]$Nom = "le monde",
+    [int]$Fois = 1
+)
+
+for ($i = 1; $i -le $Fois; $i++) {
+    Write-Output "Bonjour, $Nom !"
+}</code></pre></figure>
+<p>On l'appelle en nommant les paramètres&nbsp;: <code>.\salue.ps1 -Nom "Ada" -Fois 3</code>.</p>
+
+<h2>Lire une entrée et l'environnement</h2>
+<p><code>Read-Host</code> demande une saisie à l'utilisateur&nbsp;; les variables d'environnement sont accessibles via le lecteur <code>$env:</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">$ville = Read-Host "Ta ville"
+Write-Output "Bonjour depuis $ville, $env:USERNAME"
+$env:COMPUTERNAME      # nom de la machine</code></pre></figure>
+
+<h2>Documenter avec les commentaires d'aide</h2>
+<p>PowerShell sait générer une vraie page d'aide à partir de commentaires structurés. Place un bloc <code>&lt;# … #&gt;</code> en tête du script avec des sections <code>.SYNOPSIS</code>, <code>.DESCRIPTION</code>, <code>.PARAMETER</code>, <code>.EXAMPLE</code>.</p>
+<figure class="code-block" data-file="salue.ps1"><pre><code class="language-powershell">&lt;#
+.SYNOPSIS
+  Affiche un salut personnalisé.
+.PARAMETER Nom
+  Le nom à saluer.
+.EXAMPLE
+  .\salue.ps1 -Nom "Ada" -Fois 2
+#&gt;
+param([string]$Nom = "le monde", [int]$Fois = 1)</code></pre></figure>
+<p>Désormais <code>Get-Help .\salue.ps1</code> affiche cette documentation. Le commentaire devient utile à tout le monde, toi compris.</p>
+
+<h2>Retourner des objets, pas du texte</h2>
+<p>Un script réutilisable <strong>émet des objets</strong>&nbsp;: ils pourront être filtrés, triés, exportés par celui qui l'appelle. Évite de tout transformer en chaîne avec <code>Write-Host</code>.</p>
+<figure class="code-block" data-file="disques.ps1"><pre><code class="language-powershell"># Bien : on renvoie des objets exploitables
+Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3
+
+# Le script appelant peut alors :
+# .\disques.ps1 | Where-Object FreeSpace -lt 10GB</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le bloc <code>param()</code> doit être la <strong>toute première instruction</strong> du script (après un éventuel commentaire d'aide). Le placer plus bas provoque une erreur de syntaxe.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Ajoute <code>#Requires -Version 7.0</code> en tête pour exiger une version minimale, ou <code>#Requires -RunAsAdministrator</code> pour imposer les droits administrateur&nbsp;: le script refusera de tourner sinon.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>L'<strong>ExecutionPolicy</strong> contrôle l'exécution des scripts (<code>RemoteSigned</code> pour ton usage).</li>
+  <li><code>param()</code>, en tête de fichier, déclare des paramètres typés avec valeurs par défaut.</li>
+  <li>Un bloc <code>&lt;# .SYNOPSIS … #&gt;</code> alimente <code>Get-Help</code>.</li>
+  <li>Un bon script <strong>retourne des objets</strong>, réutilisables par l'appelant.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un script peut-il refuser de s'exécuter à la première tentative&nbsp;?</li><li>Où doit se trouver le bloc <code>param()</code>&nbsp;?</li><li>Pourquoi préférer renvoyer des objets plutôt que du texte&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un script <code>carre.ps1</code> qui prend un paramètre <code>-Nombre</code> et affiche son carré.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="carre.ps1"><pre><code class="language-powershell">param([int]$Nombre)
+Write-Output ($Nombre * $Nombre)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute à ce script un commentaire d'aide avec <code>.SYNOPSIS</code> et un <code>.EXAMPLE</code>, puis vérifie avec <code>Get-Help</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="carre.ps1"><pre><code class="language-powershell">&lt;#
+.SYNOPSIS
+  Renvoie le carré d'un nombre.
+.EXAMPLE
+  .\carre.ps1 -Nombre 5   # 25
+#&gt;
+param([int]$Nombre)
+Write-Output ($Nombre * $Nombre)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un script qui prend un paramètre <code>-Dossier</code> (défaut&nbsp;: le dossier courant) et renvoie le nombre de fichiers qu'il contient.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="compte.ps1"><pre><code class="language-powershell">param([string]$Dossier = ".")
+(Get-ChildItem -Path $Dossier -File).Count</code></pre></figure></details></div>

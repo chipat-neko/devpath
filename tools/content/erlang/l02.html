@@ -1,0 +1,74 @@
+<p>Avant la concurrence, il faut connaître la matière de base d'Erlang&nbsp;: ses <strong>données</strong> et le mécanisme qui les manipule, le <strong>pattern matching</strong> (filtrage par motif). Ce dernier est si central qu'il remplace à la fois l'affectation, la déstructuration et une partie du contrôle de flux. Bien le comprendre, c'est tenir l'une des clés du langage. Cette leçon explore les types de données et cette opération fondamentale.</p>
+
+<h2>Les types de base</h2>
+<p>Erlang propose un petit ensemble de types essentiels&nbsp;:</p>
+<ul>
+  <li>les <strong>nombres</strong>&nbsp;: entiers (de taille illimitée&nbsp;!) et flottants&nbsp;;</li>
+  <li>les <strong>atomes</strong>&nbsp;: des constantes symboliques en minuscule (<code>ok</code>, <code>error</code>, <code>true</code>)&nbsp;;</li>
+  <li>les <strong>tuples</strong>&nbsp;: des groupes de taille fixe, entre accolades (<code>{1, 2, 3}</code>)&nbsp;;</li>
+  <li>les <strong>listes</strong>&nbsp;: des suites de taille variable, entre crochets (<code>[1, 2, 3]</code>)&nbsp;;</li>
+  <li>les <strong>chaînes</strong>&nbsp;: en réalité des listes de codes de caractères.</li>
+</ul>
+<figure class="code-block" data-file="types.erl"><pre><code class="language-erlang">42.              % un entier
+3.14.            % un flottant
+ok.              % un atome
+{point, 3, 4}.   % un tuple : étiquette + coordonnées
+[1, 2, 3].       % une liste</code></pre></figure>
+
+<h2>Les atomes&nbsp;: des étiquettes constantes</h2>
+<p>Un <strong>atome</strong> est une valeur qui ne représente qu'elle-même&nbsp;: <code>ok</code>, <code>error</code>, <code>undefined</code>. On les utilise comme étiquettes ou drapeaux. C'est l'équivalent des symboles d'autres langages&nbsp;: deux atomes identiques sont la même valeur, comparables instantanément.</p>
+<figure class="code-block" data-file="atomes.erl"><pre><code class="language-erlang">% Convention répandue : étiqueter un résultat
+{ok, 42}.            % succès, avec une valeur
+{error, not_found}.  % échec, avec une raison</code></pre></figure>
+<p>Ce patron <code>{ok, Valeur}</code> / <code>{error, Raison}</code> est omniprésent en Erlang&nbsp;: une fonction renvoie un tuple étiqueté qui dit si elle a réussi, et porte le résultat ou la cause de l'échec.</p>
+
+<h2>Les variables immuables</h2>
+<p>Une variable Erlang commence par une <strong>majuscule</strong>. Et — particularité déroutante — elle ne peut être <strong>liée qu'une seule fois</strong>&nbsp;: une fois qu'elle a une valeur, on ne peut plus la changer. Il n'y a pas de réaffectation.</p>
+<figure class="code-block" data-file="variables.erl"><pre><code class="language-erlang">X = 10.       % X est lié à 10
+% X = 20.     % ERREUR : X est déjà lié, on ne peut pas le changer
+Y = X + 5.    % Y vaut 15</code></pre></figure>
+<p>Cette immuabilité totale surprend, mais elle est cohérente avec l'esprit fonctionnel&nbsp;: une variable est un <em>nom pour une valeur</em>, pas une boîte qu'on remplit et vide. C'est ce qui rend la concurrence sûre (leçon 1).</p>
+
+<h2>Le pattern matching avec <code>=</code></h2>
+<p>Voici le concept central. En Erlang, le signe <code>=</code> n'est pas une affectation&nbsp;: c'est un <strong>filtrage par motif</strong>. Il tente de rendre les deux côtés identiques&nbsp;; si la variable de gauche est libre, elle se <em>lie</em> à la valeur de droite&nbsp;; si elle est déjà liée, il <em>vérifie</em> l'égalité.</p>
+<figure class="code-block" data-file="match.erl"><pre><code class="language-erlang">X = 5.         % X libre : se lie à 5
+X = 5.         % X déjà lié à 5 : OK (correspondance vraie)
+% X = 6.       % X lié à 5, mais 5 /= 6 : ÉCHEC de correspondance</code></pre></figure>
+<p>Cette opération unique sert donc à la fois à <em>lier</em> une variable et à <em>tester</em> une valeur. C'est plus puissant qu'une simple affectation.</p>
+
+<h2>Déstructurer avec le pattern matching</h2>
+<p>La vraie magie&nbsp;: on peut filtrer des <strong>structures entières</strong> et extraire leurs morceaux en une seule opération.</p>
+<figure class="code-block" data-file="destructure.erl"><pre><code class="language-erlang">% Extraire les champs d'un tuple :
+{point, X, Y} = {point, 3, 4}.
+% X vaut 3, Y vaut 4
+
+% Séparer tête et queue d'une liste :
+[Premier | Reste] = [1, 2, 3, 4].
+% Premier vaut 1, Reste vaut [2, 3, 4]
+
+% Ignorer un champ avec _ (variable anonyme) :
+{_, _, Z} = {point, 3, 4}.
+% Z vaut 4, le reste est ignoré</code></pre></figure>
+<p>La notation <code>[T | Q]</code> (tête | queue) est l'outil de base pour parcourir les listes par récursion (leçon 3). Le souligné <code>_</code> est la variable anonyme&nbsp;: «&nbsp;peu importe&nbsp;».</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir «&nbsp;réutiliser&nbsp;» une variable comme dans un langage impératif&nbsp;: <code>X = 1, X = X + 1</code> échoue, car <code>X</code> est déjà lié à 1 et ne peut valoir 2. En Erlang, on introduit une <strong>nouvelle</strong> variable (<code>X1</code>, <code>Compteur2</code>…) à chaque étape. C'est inhabituel mais cohérent&nbsp;: les valeurs ne changent pas, on en nomme de nouvelles.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Erlang dispose aussi des <strong>maps</strong> (<code>#{cle =&gt; valeur}</code>), des structures clé-valeur ajoutées plus tard au langage, qui complètent tuples et listes pour modéliser des données plus riches. Et pour les données binaires (paquets réseau, protocoles), la syntaxe des <strong>binaries</strong> (<code>&lt;&lt;...&gt;&gt;</code>) permet de découper des octets avec une précision chirurgicale — un atout pour les télécoms, le domaine d'origine du langage.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Types&nbsp;: nombres, <strong>atomes</strong> (minuscule), <strong>tuples</strong> <code>{}</code>, <strong>listes</strong> <code>[]</code>.</li>
+  <li>Patron <code>{ok, V}</code> / <code>{error, R}</code> omniprésent&nbsp;; variables en <strong>majuscule</strong>, liées une seule fois.</li>
+  <li><code>=</code> est un <strong>filtrage par motif</strong>&nbsp;: lie si libre, vérifie si déjà liée.</li>
+  <li>On <strong>déstructure</strong> tuples et listes par motif&nbsp;; <code>[T | Q]</code> sépare tête et queue&nbsp;; <code>_</code> ignore.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que se passe-t-il si on lie deux fois une variable à des valeurs différentes&nbsp;?</li><li>Que valent <code>T</code> et <code>Q</code> dans <code>[T|Q] = [1,2,3]</code>&nbsp;?</li><li>À quoi sert le patron <code>{error, Raison}</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Lie une variable <code>Nom</code> à l'atome <code>ada</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">Nom = ada.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Extrais les coordonnées <code>X</code> et <code>Y</code> du tuple <code>{coord, 7, 9}</code> par pattern matching.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">{coord, X, Y} = {coord, 7, 9}.
+% X vaut 7, Y vaut 9</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>À partir de <code>[10, 20, 30]</code>, récupère le premier élément et le reste de la liste.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">[Premier | Reste] = [10, 20, 30].
+% Premier vaut 10, Reste vaut [20, 30]</code></pre></figure></details></div>

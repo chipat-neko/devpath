@@ -1,0 +1,82 @@
+<p>La leçon 7 t'a montré comment gérer l'état partagé avec les atoms et les refs. Mais il existe une autre façon de penser la concurrence&nbsp;: non plus par <em>état partagé</em>, mais par <strong>communication</strong>. Des tâches indépendantes s'échangent des messages via des <strong>canaux</strong>, sans rien partager. C'est le modèle <strong>CSP</strong> (Communicating Sequential Processes), et la bibliothèque <strong>core.async</strong> l'apporte à Clojure — le même modèle que les goroutines de Go. Cette leçon t'y initie.</p>
+
+<h2>L'idée&nbsp;: communiquer, pas partager</h2>
+<p>Plutôt que plusieurs tâches se disputant une variable, on a des tâches isolées qui se passent des valeurs par des <strong>canaux</strong> (channels). Un canal est une file&nbsp;: on y <em>met</em> des valeurs d'un côté, on les <em>prend</em> de l'autre. Le producteur et le consommateur n'ont pas besoin de se connaître&nbsp;; le canal les découple.</p>
+<figure class="code-block" data-file="require.clj"><pre><code class="language-clojure">(require '[clojure.core.async :as a
+           :refer [chan go &lt;! &gt;! &lt;!! &gt;!!]])</code></pre></figure>
+
+<h2>Créer un canal et y passer des valeurs</h2>
+<p>On crée un canal avec <code>chan</code>. On y dépose une valeur et on en retire une. Les opérations «&nbsp;bloquantes&nbsp;» (hors go-block) s'écrivent avec un double point d'exclamation.</p>
+<figure class="code-block" data-file="canal.clj"><pre><code class="language-clojure">(def c (chan))          ; un canal
+
+;; Dans un thread, déposer une valeur (>!!) ...
+(future (&gt;!! c "bonjour"))
+
+;; ... et la récupérer ailleurs (<!!)
+(&lt;!! c)                 ; → "bonjour" (attend qu'une valeur arrive)</code></pre></figure>
+<p>Convention de nommage&nbsp;: <code>&gt;!</code> «&nbsp;met dans&nbsp;» (la flèche pointe <em>vers</em> le canal), <code>&lt;!</code> «&nbsp;prend de&nbsp;». La version à un point (<code>&lt;!</code>, <code>&gt;!</code>) s'utilise dans un go-block&nbsp;; la version à deux points (<code>&lt;!!</code>, <code>&gt;!!</code>) bloque un vrai thread.</p>
+
+<h2>Les go-blocks</h2>
+<p>Le cœur de core.async&nbsp;: le <strong>go-block</strong>. Le code dans <code>(go …)</code> s'exécute de façon <strong>asynchrone</strong>&nbsp;; et quand il «&nbsp;attend&nbsp;» sur un canal (<code>&lt;!</code>), il ne bloque pas un thread — il se met en pause et libère le thread, qui reprendra plus tard. On peut donc lancer des <em>milliers</em> de go-blocks sur quelques threads.</p>
+<figure class="code-block" data-file="go.clj"><pre><code class="language-clojure">(def resultats (chan))
+
+(go
+  (let [x (&lt;! resultats)]      ; attend une valeur, sans bloquer de thread
+    (println "Reçu :" x)))
+
+(go (&gt;! resultats 42))          ; un autre go-block dépose 42
+;; affiche : Reçu : 42</code></pre></figure>
+<p>C'est ce qui rend core.async puissant pour l'asynchrone&nbsp;: un go-block en attente ne coûte presque rien. On structure un programme concurrent comme une suite de petites tâches qui se parlent par canaux.</p>
+
+<h2>Un pipeline producteur / consommateur</h2>
+<p>Le patron typique&nbsp;: un go-block produit des valeurs, un autre les consomme. Le canal régule le flux entre eux.</p>
+<figure class="code-block" data-file="pipeline.clj"><pre><code class="language-clojure">(def travaux (chan))
+
+;; Producteur : envoie 0, 1, 2 puis ferme le canal
+(go
+  (doseq [n (range 3)]
+    (&gt;! travaux n))
+  (a/close! travaux))
+
+;; Consommateur : lit jusqu'à la fermeture (nil)
+(go
+  (loop []
+    (when-let [n (&lt;! travaux)]    ; nil quand le canal est fermé
+      (println "Traite" n)
+      (recur))))</code></pre></figure>
+<p>Fermer un canal avec <code>close!</code> signale «&nbsp;plus rien à venir&nbsp;»&nbsp;: un <code>&lt;!</code> sur un canal fermé renvoie <code>nil</code>, ce qui termine proprement la boucle du consommateur.</p>
+
+<h2>core.async ou atoms&nbsp;?</h2>
+<p>Deux approches complémentaires de la concurrence&nbsp;:</p>
+<ul>
+  <li>les <strong>atoms/refs</strong> (leçon 7) gèrent un <em>état partagé</em> mutable de façon sûre — parfait pour «&nbsp;un compteur, un cache&nbsp;»&nbsp;;</li>
+  <li><strong>core.async</strong> gère la <em>communication</em> entre tâches et le flux de données — parfait pour «&nbsp;un pipeline, des événements, de l'asynchrone&nbsp;».</li>
+</ul>
+<p>On choisit selon le problème&nbsp;: as-tu un état à protéger, ou des tâches à coordonner&nbsp;? Souvent, on combine les deux.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser les versions bloquantes (<code>&lt;!!</code>, <code>&gt;!!</code>) <strong>à l'intérieur</strong> d'un go-block. C'est l'erreur classique&nbsp;: dans un <code>(go …)</code>, on utilise les versions à un point (<code>&lt;!</code>, <code>&gt;!</code>) qui «&nbsp;parkent&nbsp;» sans bloquer le thread. Mettre <code>&lt;!!</code> dans un go-block bloque un des rares threads du pool et peut figer tout le système. Règle&nbsp;: <strong>un point dans un go-block, deux points hors d'un go-block</strong>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>core.async offre bien plus&nbsp;: <code>alts!</code> (attendre sur <em>plusieurs</em> canaux à la fois, le premier prêt gagne), des canaux <strong>tamponnés</strong> (<code>(chan 10)</code>) qui acceptent N valeurs sans bloquer, et des <strong>transducers</strong> appliqués directement au canal pour transformer le flux. Et comme core.async existe aussi en ClojureScript, le <em>même</em> modèle de concurrence sert côté serveur (JVM) et côté navigateur (JS) — un atout rare.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>core.async&nbsp;: concurrence par <strong>communication</strong> (modèle CSP), via des <strong>canaux</strong> (<code>chan</code>).</li>
+  <li><code>&gt;!</code> met, <code>&lt;!</code> prend&nbsp;; un <strong>go-block</strong> (<code>go</code>) s'exécute en asynchrone et «&nbsp;parke&nbsp;» sans bloquer de thread.</li>
+  <li><code>close!</code> ferme un canal (<code>&lt;!</code> renvoie alors <code>nil</code>)&nbsp;; patron producteur/consommateur.</li>
+  <li><strong>Un point</strong> (<code>&lt;!</code>/<code>&gt;!</code>) dans un go-block, <strong>deux points</strong> (<code>&lt;!!</code>/<code>&gt;!!</code>) hors d'un go-block.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est l'idée du modèle CSP&nbsp;?</li><li>Que fait un go-block quand il attend sur un canal&nbsp;?</li><li>Quand utilise-t-on <code>&lt;!!</code> plutôt que <code>&lt;!</code>&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est l'idée centrale de core.async (modèle CSP) ?","a":["Des tâches isolées communiquent par des canaux, au lieu de partager un état","Toutes les tâches modifient une variable globale","On supprime toute concurrence","On bloque un thread par tâche"],"correct":0,"explain":"On découple producteur et consommateur par un canal : communiquer plutôt que partager. C'est le modèle des goroutines de Go."},
+  {"q":"Que fait un go-block lorsqu'il attend une valeur avec <! ?","a":["Il se met en pause et libère le thread, qui pourra servir d'autres tâches","Il bloque définitivement un thread","Il lève une exception","Il renvoie immédiatement nil"],"correct":0,"explain":"Le go-block « parke » sans bloquer de thread : on peut donc lancer des milliers de go-blocks sur quelques threads."},
+  {"q":"Où doit-on utiliser les versions à deux points <!! et >!! ?","a":["Hors d'un go-block (elles bloquent un vrai thread)","À l'intérieur d'un go-block","Uniquement en ClojureScript","Jamais"],"correct":0,"explain":"Dans un go-block on utilise <! et >! (un point) ; <!! et >!! (deux points) bloquent un thread et ne doivent pas être utilisés dans un go-block."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un canal nommé <code>messages</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(def messages (chan))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans un go-block, dépose la valeur <code>:salut</code> dans le canal <code>messages</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(go (&gt;! messages :salut))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Corrige ce code&nbsp;: un développeur a écrit <code>(go (&lt;!! c))</code>. Pourquoi est-ce dangereux et comment le corriger&nbsp;?</p><details><summary>Voir une solution</summary><p><code>&lt;!!</code> (deux points) <strong>bloque un thread</strong>, ce qu'on ne doit jamais faire dans un <code>go</code>-block (cela peut figer le pool de threads de core.async). Dans un go-block, on utilise la version à <strong>un point</strong>, qui «&nbsp;parke&nbsp;» sans bloquer&nbsp;:</p><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(go (&lt;! c))</code></pre></figure></details></div>

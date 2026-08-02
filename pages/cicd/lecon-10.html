@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Environnements, approbations et feature flags — Leçon 10 · CI/CD · Syntaxe</title>
+    <meta name="description" content="Gouverner la mise en production : environnements protégés avec relecteurs requis et fenêtres d'attente, portes d'approbation manuelle, et feature flags pour découpler « déployer » de « activer »." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="cicd" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">CI/CD</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · CI/CD en pratique — Leçon 10</p>
+              <h1 class="lesson-header__title">Environnements, approbations et feature flags</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 05 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>protéger un <strong>environnement</strong> par des relecteurs requis et une fenêtre d'attente&nbsp;;</li>
+                  <li>insérer une <strong>porte d'approbation</strong> manuelle avant la production&nbsp;;</li>
+                  <li>découpler <strong>déployer</strong> et <strong>activer</strong> avec des <strong>feature flags</strong>&nbsp;;</li>
+                  <li>couper une fonctionnalité en urgence sans redéployer (<strong>kill switch</strong>).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-05.html">leçon 05</a> a présenté les <em>stratégies</em> de déploiement — rolling, blue-green, canary — et le principe des environnements. Cette leçon les <strong>outille</strong>&nbsp;: comment poser des garde-fous pour que la production ne se déclenche pas toute seule, et comment séparer le moment où le code <strong>arrive</strong> en production du moment où on l'<strong>allume</strong>. Deux idées&nbsp;: des <strong>portes</strong> qui exigent une validation, et des <strong>interrupteurs</strong> (feature flags) qui rendent le déploiement réversible sans rejouer le pipeline.</p>
+
+<h2>Les environnements protégés</h2>
+
+<p>Un <strong>environnement</strong> (au sens de la plateforme CI, ici <em>GitHub Environments</em>) est un palier nommé — <code>staging</code>, <code>production</code> — auquel on attache des <strong>règles de protection</strong>. Un job qui vise cet environnement ne s'exécute que si les règles sont satisfaites&nbsp;: <strong>relecteurs requis</strong>, <strong>fenêtre d'attente</strong>, <strong>branches autorisées</strong>. On y range aussi des <strong>secrets propres à l'environnement</strong> (la clé de prod n'existe que pour <code>production</code>).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Une porte d'environnement protégé. Le job de déploiement demande à cibler l'environnement production. Une règle de protection s'interpose : elle exige l'approbation d'un relecteur et éventuellement une fenêtre d'attente. Tant que personne n'a approuvé, le job reste en pause. Une fois approuvé, le déploiement se lance et accède aux secrets propres à la production.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">environment: production — le job attend derrière la porte</text>
+    <rect class="d-box" x="20" y="58" width="140" height="60" rx="8" />
+    <text class="d-tag" x="90" y="82" text-anchor="middle" font-size="10">job deploy</text>
+    <text class="d-mut" x="90" y="100" text-anchor="middle" font-size="8.5">vise production</text>
+    <line class="d-line" x1="160" y1="88" x2="196" y2="88" /><path class="d-line" d="M189 83 L197 88 L189 93" fill="none" />
+    <rect class="d-frame" x="198" y="46" width="196" height="84" rx="8" />
+    <text class="d-tag" x="296" y="68" text-anchor="middle" font-size="10">règles de protection</text>
+    <text class="d-text" x="296" y="86" text-anchor="middle" font-size="8.5">relecteur requis</text>
+    <text class="d-text" x="296" y="100" text-anchor="middle" font-size="8.5">fenêtre d'attente</text>
+    <text class="d-mut" x="296" y="118" text-anchor="middle" font-size="8">branches autorisées</text>
+    <line class="d-line" x1="394" y1="88" x2="430" y2="88" /><path class="d-line" d="M423 83 L431 88 L423 93" fill="none" />
+    <rect class="d-accent" x="432" y="58" width="184" height="60" rx="8" />
+    <text class="d-tag" x="524" y="82" text-anchor="middle" font-size="10">déploiement</text>
+    <text class="d-mut" x="524" y="100" text-anchor="middle" font-size="8.5">secrets propres à prod</text>
+    <text class="d-mut" x="320" y="152" text-anchor="middle" font-size="9">tant que la règle n'est pas satisfaite, le job reste en pause</text>
+  </svg>
+  <figcaption>L'environnement protégé est une <strong>porte</strong>&nbsp;: le job attend que les règles (relecteur, délai) soient remplies.</figcaption>
+</figure>
+
+<figure class="code-block" data-file=".github/workflows/deploy.yml"><pre><code class="language-yaml">jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment:
+      name: production          # règles définies dans Settings → Environments
+      url: https://mon-app.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./deploy.sh
+        env:
+          API_KEY: ${{ secrets.PROD_API_KEY }}   # secret réservé à cet environnement</code></pre></figure>
+
+<p>Les règles elles-mêmes se configurent dans l'interface (Settings → Environments)&nbsp;: on y coche «&nbsp;<em>required reviewers</em>&nbsp;», un <em>wait timer</em>, et les branches habilitées à déployer. Le fichier de workflow, lui, n'a qu'à <em>déclarer</em> viser cet environnement.</p>
+
+<h2>Les approbations manuelles</h2>
+
+<p>Tout n'a pas à être automatique. Le déploiement continu pousse en <code>staging</code> sans intervention, mais beaucoup d'équipes veulent une <strong>validation humaine avant la production</strong>&nbsp;: c'est le <strong>déploiement sous condition</strong> (<em>gated deployment</em>). La porte de l'environnement <code>production</code> met le pipeline <em>en pause</em> et notifie les relecteurs&nbsp;; l'un d'eux approuve (ou rejette) d'un clic, et le déploiement reprend.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Un pipeline gouverné en deux paliers. Le job de test réussit, puis le déploiement vers staging se fait automatiquement. Vient ensuite une porte d'approbation manuelle : une personne examine et valide. Seulement après cette validation, le déploiement vers la production a lieu. Staging est automatique, la production est sous condition humaine.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">staging automatique → porte humaine → production</text>
+    <rect class="d-box" x="16" y="60" width="120" height="52" rx="8" /><text class="d-tag" x="76" y="82" text-anchor="middle" font-size="10">tests OK</text><text class="d-mut" x="76" y="99" text-anchor="middle" font-size="8.5">CI verte</text>
+    <line class="d-line" x1="136" y1="86" x2="166" y2="86" /><path class="d-line" d="M159 81 L167 86 L159 91" fill="none" />
+    <rect class="d-accent" x="168" y="60" width="128" height="52" rx="8" /><text class="d-tag" x="232" y="82" text-anchor="middle" font-size="10">deploy staging</text><text class="d-mut" x="232" y="99" text-anchor="middle" font-size="8.5">automatique</text>
+    <line class="d-line" x1="296" y1="86" x2="326" y2="86" /><path class="d-line" d="M319 81 L327 86 L319 91" fill="none" />
+    <rect class="d-frame" x="328" y="54" width="130" height="64" rx="8" /><text class="d-tag" x="393" y="78" text-anchor="middle" font-size="10">approbation</text><text class="d-text" x="393" y="94" text-anchor="middle" font-size="8.5">un humain valide</text><text class="d-mut" x="393" y="108" text-anchor="middle" font-size="8">en pause</text>
+    <line class="d-line" x1="458" y1="86" x2="488" y2="86" /><path class="d-line" d="M481 81 L489 86 L481 91" fill="none" />
+    <rect class="d-accent" x="490" y="60" width="134" height="52" rx="8" /><text class="d-tag" x="557" y="82" text-anchor="middle" font-size="10">deploy prod</text><text class="d-mut" x="557" y="99" text-anchor="middle" font-size="8.5">après feu vert</text>
+    <text class="d-mut" x="320" y="146" text-anchor="middle" font-size="9">la porte trace QUI a approuvé QUOI et QUAND — un journal d'audit</text>
+  </svg>
+  <figcaption>Le <em>gated deployment</em>&nbsp;: <code>staging</code> part seul, la <strong>production</strong> attend un feu vert humain tracé.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe fintech déploie chaque fusion vers <code>staging</code> automatiquement, plusieurs fois par jour. Pour la <strong>production</strong>, une contrainte réglementaire impose qu'une <em>seconde</em> personne valide chaque mise en ligne. Plutôt qu'un processus manuel hors de l'outil, ils ont mis un environnement <code>production</code> avec «&nbsp;<em>required reviewers</em>&nbsp;»&nbsp;: le pipeline s'arrête à la porte, notifie l'astreinte, et garde une <strong>trace horodatée</strong> de qui a approuvé. La conformité est satisfaite <em>sans</em> ralentir le rythme sur <code>staging</code> — et l'audit se lit directement dans l'historique des déploiements.</p></div></div>
+
+<h2>Feature flags : déployer n'est pas activer</h2>
+
+<p>Le levier le plus puissant&nbsp;: <strong>découpler la livraison du code de son activation</strong>. Un <strong>feature flag</strong> (drapeau de fonctionnalité) est une condition dans le code, pilotée par une configuration <em>externe</em>. On déploie la fonctionnalité <strong>éteinte</strong> (elle est en production mais invisible), puis on l'<strong>allume</strong> quand on veut&nbsp;: pour l'équipe seule, pour 5&nbsp;% des utilisateurs, puis pour tous — le tout <em>sans redéployer</em>.</p>
+
+<figure class="code-block" data-file="un feature flag dans le code"><pre><code class="language-javascript">if (flags.isEnabled("nouveau-panier", user)) {
+  renderNouveauPanier();     // déployé, mais activé seulement si le flag est ON
+} else {
+  renderAncienPanier();      // comportement inchangé tant que le flag est OFF
+}</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le cycle de vie d'un feature flag. Le code est d'abord déployé avec le drapeau éteint : présent en production mais invisible. On l'active ensuite pour une petite fraction des utilisateurs, par exemple cinq pour cent, pour observer. Si tout va bien, on élargit à cent pour cent. En cas de problème, on bascule le kill switch et la fonctionnalité s'éteint instantanément, sans nouveau déploiement.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">déployer éteint → activer par paliers → couper si besoin</text>
+    <rect class="d-box" x="16" y="56" width="132" height="56" rx="8" /><text class="d-tag" x="82" y="79" text-anchor="middle" font-size="10">déployé · OFF</text><text class="d-mut" x="82" y="97" text-anchor="middle" font-size="8.5">en prod, invisible</text>
+    <line class="d-line" x1="148" y1="84" x2="176" y2="84" /><path class="d-line" d="M169 79 L177 84 L169 89" fill="none" />
+    <rect class="d-accent" x="178" y="56" width="132" height="56" rx="8" /><text class="d-tag" x="244" y="79" text-anchor="middle" font-size="10">ON · 5 %</text><text class="d-mut" x="244" y="97" text-anchor="middle" font-size="8.5">on observe</text>
+    <line class="d-line" x1="310" y1="84" x2="338" y2="84" /><path class="d-line" d="M331 79 L339 84 L331 89" fill="none" />
+    <rect class="d-accent" x="340" y="56" width="132" height="56" rx="8" /><text class="d-tag" x="406" y="79" text-anchor="middle" font-size="10">ON · 100 %</text><text class="d-mut" x="406" y="97" text-anchor="middle" font-size="8.5">tout le monde</text>
+    <rect class="d-frame" x="502" y="56" width="122" height="56" rx="8" /><text class="d-tag" x="563" y="79" text-anchor="middle" font-size="10">kill switch</text><text class="d-mut" x="563" y="97" text-anchor="middle" font-size="8.5">OFF immédiat</text>
+    <path class="d-line" d="M406 112 L406 140 L563 140 L563 112" fill="none" stroke-dasharray="3 3" /><path class="d-line" d="M559 119 L563 111 L567 119" fill="none" />
+    <text class="d-mut" x="300" y="158" text-anchor="middle" font-size="9">chaque changement d'état = un réglage, PAS un déploiement</text>
+  </svg>
+  <figcaption>Le flag sépare «&nbsp;le code est là&nbsp;» de «&nbsp;la fonctionnalité est active&nbsp;»&nbsp;: activation graduelle, coupure immédiate.</figcaption>
+</figure>
+
+<p>Deux bénéfices majeurs. D'abord le <strong>kill switch</strong>&nbsp;: si la nouvelle fonctionnalité déraille, on la coupe en une bascule de configuration — pas de rollback de déploiement, pas de rebuild. Ensuite le <strong>dark launch</strong>&nbsp;: on livre du code inactif en continu (petits lots, moins de risque) et on décide de l'exposition <em>indépendamment</em>. C'est ce qui permet à de grandes équipes de fusionner sur la branche principale toute la journée tout en contrôlant finement ce que voient les utilisateurs.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — déployer souvent, activer quand c'est prêt</p><p>Un flag permet de fusionner une fonctionnalité <em>incomplète</em> sans bloquer les autres&nbsp;: elle part en production éteinte, invisible, et n'est allumée qu'une fois finie et validée. On évite ainsi les longues branches divergentes (<em>trunk-based development</em>)&nbsp;: le code intègre tôt et souvent, l'activation reste sous contrôle.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège — la dette des flags</p><p>Un flag est censé être <strong>temporaire</strong>. Laissés en place après un déploiement complet, les vieux drapeaux s'accumulent&nbsp;: chaque <code>if</code> mort double les chemins à tester et embrouille le code. Traite chaque flag comme une <em>tâche à clôturer</em>&nbsp;: une fois la fonctionnalité à 100&nbsp;% et stable, retire le drapeau et la branche <code>else</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Des services dédiés gèrent les flags à grande échelle (LaunchDarkly, Unleash, Flagsmith) avec ciblage par segment, pourcentages et audit&nbsp;; le standard <strong>OpenFeature</strong> uniformise l'API côté code. Pour automatiser le <em>canary</em> (leçon 05) en le pilotant sur les métriques, regarde <strong>Argo Rollouts</strong> et <strong>Flagger</strong>&nbsp;: ils augmentent la part de trafic seulement si les indicateurs restent bons, et rollback sinon — la livraison progressive devient pilotée par les données.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — gouverner la mise en production</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Mécanisme</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Protéger la prod</td><td><code>environment: production</code></td><td>règles dans Settings → Environments</td></tr>
+      <tr><td>Exiger une validation</td><td>required reviewers</td><td>pipeline en pause + notification</td></tr>
+      <tr><td>Temporiser</td><td>wait timer</td><td>fenêtre d'attente avant déploiement</td></tr>
+      <tr><td>Restreindre les branches</td><td>deployment branch policy</td><td>seule <code>main</code> déploie</td></tr>
+      <tr><td>Secret par environnement</td><td>secrets d'environnement</td><td>la clé de prod n'existe que là</td></tr>
+      <tr><td>Découpler déploiement/activation</td><td>feature flag</td><td>déployer éteint, activer plus tard</td></tr>
+      <tr><td>Couper en urgence</td><td>kill switch</td><td>OFF sans redéployer</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Environnement (protégé)</dt><dd>Palier nommé (<code>staging</code>, <code>production</code>) auquel on attache des règles de protection et des secrets propres.</dd>
+  <dt>Relecteur requis (<em>required reviewer</em>)</dt><dd>Personne ou équipe dont l'approbation est obligatoire avant qu'un job puisse déployer vers l'environnement.</dd>
+  <dt>Fenêtre d'attente (<em>wait timer</em>)</dt><dd>Délai imposé avant le déploiement, laissant le temps d'annuler ou de surveiller.</dd>
+  <dt>Déploiement sous condition (<em>gated deployment</em>)</dt><dd>Déploiement mis en pause jusqu'à une validation manuelle&nbsp;; trace qui a approuvé et quand.</dd>
+  <dt>Feature flag</dt><dd>Condition dans le code pilotée par une configuration externe&nbsp;: active ou non une fonctionnalité sans redéployer.</dd>
+  <dt>Dark launch</dt><dd>Livrer du code en production éteint (invisible) pour dissocier l'arrivée du code de son activation.</dd>
+  <dt>Kill switch</dt><dd>Bascule qui désactive instantanément une fonctionnalité en cas de problème, sans rollback ni rebuild.</dd>
+  <dt>Trunk-based development</dt><dd>Pratique d'intégration très fréquente sur la branche principale, rendue sûre par les flags.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>Un <strong>environnement protégé</strong> (relecteurs requis, fenêtre d'attente, branches autorisées) met une <strong>porte</strong> devant la production.</li>
+<li>Le <strong>déploiement sous condition</strong> exige une validation humaine tracée avant la mise en ligne.</li>
+<li>Un <strong>feature flag</strong> découple <em>déployer</em> de <em>activer</em>&nbsp;: dark launch, activation graduelle, <strong>kill switch</strong> sans redéployer.</li>
+<li>Les flags sont temporaires&nbsp;: les retirer une fois la fonctionnalité stable pour éviter la dette.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que se passe-t-il quand un job vise un environnement à relecteur requis&nbsp;?</li><li>En quoi un feature flag est-il différent d'un rollback&nbsp;?</li><li>Pourquoi faut-il retirer un flag après coup&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que se passe-t-il quand un job vise un environnement configuré avec des relecteurs requis ?","a":["Le pipeline se met en pause à la porte de l'environnement et notifie les relecteurs ; le déploiement ne reprend qu'après une approbation manuelle, tracée","Le job échoue immédiatement","Le job s'exécute mais sans les secrets","Le job est ignoré"],"correct":0,"explain":"L'environnement protégé agit comme une porte : tant qu'un relecteur habilité n'a pas approuvé, le job reste en attente. L'approbation (ou le rejet) est horodatée et attribuée, ce qui fournit un journal d'audit."},
+  {"q":"En quoi couper une fonctionnalité via un feature flag diffère-t-il d'un rollback de déploiement ?","a":["Le kill switch est un simple changement de configuration : il désactive la fonctionnalité instantanément, sans redéployer ni reconstruire, alors qu'un rollback rejoue un déploiement","Il n'y a aucune différence","Le flag supprime le code de production","Le rollback est plus rapide qu'un flag"],"correct":0,"explain":"Un feature flag est une condition pilotée de l'extérieur. Basculer le drapeau sur OFF éteint la fonctionnalité tout de suite, sans toucher au pipeline. Un rollback, lui, redéploie une version antérieure — plus lourd et plus lent."},
+  {"q":"Pourquoi faut-il retirer un feature flag une fois la fonctionnalité déployée à 100 % et stable ?","a":["Parce qu'un flag laissé en place est de la dette : chaque condition morte double les chemins à tester et complique le code","Parce que les flags coûtent cher au runtime","Parce que GitHub les supprime automatiquement","Parce qu'un flag empêche de déployer"],"correct":0,"explain":"Un flag est censé être temporaire. Accumulés, les vieux drapeaux multiplient les branches conditionnelles à maintenir et à tester. Une fois la fonctionnalité généralisée et sûre, on retire le drapeau et le chemin else."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["environment","environment:","environnement"],"placeholder":"la clé (au niveau du job) qui rattache un déploiement à un palier protégé comme production : ___: { name: production }","hints":["En anglais dans le YAML GitHub.","On y met name: production.","11 lettres."],"link":{"href":"lecon-10.html","label":"Revoir « Les environnements protégés »"}},
+  {"type":"text","accept":["feature flag","feature flags","flag","drapeau","feature-flag"],"placeholder":"le mécanisme qui active une fonctionnalité via une config externe, sans redéployer : un … de fonctionnalité","hints":["Un « drapeau » en anglais.","On déploie éteint, on allume plus tard.","feature … ."],"link":{"href":"lecon-10.html","label":"Revoir « Feature flags »"}},
+  {"type":"text","accept":["kill switch","kill-switch","killswitch","interrupteur"],"placeholder":"le nom de la bascule qui coupe instantanément une fonctionnalité en urgence (sans rollback) : le … ","hints":["Deux mots anglais : tuer + interrupteur.","On l'actionne quand ça déraille.","kill … ."],"link":{"href":"lecon-10.html","label":"Revoir « Feature flags »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un job <code>deploy-prod</code> qui vise l'environnement <code>production</code> (avec une URL). Les règles de protection sont supposées définies dans l'interface.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.yml"><pre><code class="language-yaml">deploy-prod:
+  runs-on: ubuntu-latest
+  environment:
+    name: production
+    url: https://mon-app.example.com
+  steps:
+    - uses: actions/checkout@v4
+    - run: ./deploy.sh
+# les « required reviewers » se cochent dans Settings -> Environments</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Enrobe l'appel à une nouvelle fonctionnalité dans un feature flag, avec un repli sur l'ancien comportement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">if (flags.isEnabled("recherche-v2", user)) {
+  return rechercheV2(query);   // deployee, active seulement si le flag est ON
+}
+return rechercheV1(query);     // repli tant que le drapeau est OFF</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Réflexion</span></div><p>Une fonctionnalité vient d'être déployée derrière un flag et provoque des erreurs pour 5&nbsp;% des utilisateurs. Décris la réaction immédiate, puis la suite propre.</p><details><summary>Voir une solution</summary><p><strong>Immédiat</strong>&nbsp;: actionner le <strong>kill switch</strong> — basculer le flag sur OFF. La fonctionnalité disparaît instantanément pour tous, <em>sans</em> redéployer ni rollback&nbsp;; le service revient au comportement de repli. <strong>Ensuite</strong>&nbsp;: corriger la cause au calme (le code fautif est toujours en production, mais inactif), ajouter un test qui reproduit le bug, redéployer, puis <strong>réactiver progressivement</strong> (5&nbsp;% → 100&nbsp;%) en surveillant les métriques. Enfin, une fois stable, <strong>retirer le flag</strong> pour ne pas laisser de dette.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

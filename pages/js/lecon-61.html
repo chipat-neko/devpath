@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les modules ES en profondeur — Leçon 61 · Syntaxe</title>
+    <meta name="description" content="Le système de modules ES d'expert : graphe et trois phases de chargement, liaisons vivantes vs CommonJS, import() dynamique et découpage du code, top-level await, import.meta et import maps." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="javascript" data-lesson="lecon-61.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">JavaScript</a></li>
+            <li aria-current="page">Leçon 61</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 20 · Pour aller plus loin — Leçon 61</p>
+              <h1 class="lesson-header__title">Les modules ES en profondeur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 18 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer le <strong>graphe de modules</strong> et ses trois phases (construction, instanciation, évaluation)&nbsp;;</li>
+                  <li>distinguer les <strong>liaisons vivantes</strong> de l'ESM de la copie de valeur de CommonJS&nbsp;;</li>
+                  <li>découper ton code avec <code>import()</code> <strong>dynamique</strong> et exploiter le <em>top-level await</em>&nbsp;;</li>
+                  <li>utiliser <code>import.meta</code> et une <strong>import map</strong> pour résoudre des modules sans bundler.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu écris <code>import</code> et <code>export</code> depuis longtemps, mais au niveau expert les <strong>modules ES</strong> (ESM) sont un système à part entière&nbsp;: un <em>graphe de dépendances</em> résolu en trois phases, des liaisons <em>vivantes</em> entre modules, un chargement dynamique à la demande, et une frontière nette avec l'ancien format CommonJS. Comprendre ces mécanismes, c'est savoir pourquoi un import circulaire fonctionne (ou casse), comment obtenir un bundle léger, et quand <code>import()</code> dynamique vaut mieux qu'un <code>import</code> statique.</p>
+<p>La différence fondamentale avec CommonJS&nbsp;: l'ESM est <strong>statique et asynchrone</strong>. Les <code>import</code>/<code>export</code> sont analysés <em>avant</em> l'exécution — c'est ce qui rend possibles le <em>tree-shaking</em>, les liaisons vivantes et la résolution du graphe entier avant le premier <code>console.log</code>.</p>
+
+<h2>Le graphe de modules et ses trois phases</h2>
+<p>Quand le moteur charge un module d'entrée, il ne l'exécute pas immédiatement. Il en fait la racine d'un <strong>graphe</strong> qu'il résout en trois phases distinctes. Cette séparation explique presque tous les comportements « surprenants » des modules.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Les trois phases du chargement d'un module ES. Phase 1 Construction : le moteur télécharge chaque fichier et le parse pour découvrir ses imports, construisant le graphe complet. Phase 2 Instanciation : il alloue en mémoire un emplacement pour chaque export et relie chaque import à l'export correspondant, sans exécuter de code ; ces liens sont des liaisons vivantes. Phase 3 Évaluation : il exécute le code de chaque module une seule fois, des feuilles vers la racine, et met le résultat en cache.">
+    <text class="d-label" x="16" y="24" font-size="13">Charger un module ES : trois phases, du graphe au code</text>
+
+    <rect class="d-box" x="24" y="44" width="180" height="66" rx="6" /><text class="d-text" x="114" y="68" text-anchor="middle" font-size="11">1. Construction</text><text class="d-mut" x="114" y="86" text-anchor="middle" font-size="9">télécharger + parser</text><text class="d-mut" x="114" y="100" text-anchor="middle" font-size="9">découvrir les imports</text>
+    <path class="d-line" d="M204 77 H236" /><path class="d-line" d="M228 71 L236 77 L228 83" />
+    <rect class="d-box" x="236" y="44" width="180" height="66" rx="6" /><text class="d-text" x="326" y="68" text-anchor="middle" font-size="11">2. Instanciation</text><text class="d-mut" x="326" y="86" text-anchor="middle" font-size="9">allouer les exports</text><text class="d-mut" x="326" y="100" text-anchor="middle" font-size="9">lier import ↔ export</text>
+    <path class="d-line" d="M416 77 H448" /><path class="d-line" d="M440 71 L448 77 L440 83" />
+    <rect class="d-accent" x="448" y="44" width="168" height="66" rx="6" /><text class="d-text" x="532" y="68" text-anchor="middle" font-size="11">3. Évaluation</text><text class="d-mut" x="532" y="86" text-anchor="middle" font-size="9">exécuter le code</text><text class="d-mut" x="532" y="100" text-anchor="middle" font-size="9">une seule fois</text>
+
+    <rect class="d-frame" x="24" y="132" width="592" height="46" rx="6" />
+    <text class="d-text" x="320" y="152" text-anchor="middle" font-size="10">Le graphe entier est résolu AVANT la première ligne exécutée.</text>
+    <text class="d-mut" x="320" y="168" text-anchor="middle" font-size="9">Chaque module n'est évalué qu'une fois ; son résultat est mis en cache et réutilisé.</text>
+  </svg>
+  <figcaption>Les imports étant analysés en phase 1 (avant toute exécution), le moteur connaît le graphe complet dès le départ&nbsp;: c'est ce qui autorise le <em>tree-shaking</em> et les liaisons vivantes. L'évaluation remonte des feuilles vers la racine, une fois par module.</figcaption>
+</figure>
+
+<p>Conséquence directe&nbsp;: un module importé par dix autres n'est <strong>évalué qu'une fois</strong>. Son objet d'exports est un singleton mis en cache par URL résolue. C'est le mécanisme le plus fiable pour partager un état unique dans une application.</p>
+<figure class="code-block" data-file="config.js"><pre><code class="language-javascript">// config.js — évalué UNE seule fois, quel que soit le nombre d'imports
+console.log('config évaluée');
+export const config = { theme: 'sombre', lang: 'fr' };</code></pre></figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import { config } from './config.js';
+import './a.js'; // a.js importe aussi config.js
+import './b.js'; // b.js importe aussi config.js
+// "config évaluée" ne s'affiche qu'UNE fois : module mis en cache</code></pre></figure>
+
+<h2>Les liaisons vivantes (live bindings)</h2>
+<p>Voici la différence la plus subtile avec CommonJS. Un <code>import</code> n'est <strong>pas une copie</strong> de la valeur exportée&nbsp;: c'est une <em>vue en lecture seule</em> sur la variable du module source. Si le module source réassigne la variable, tous les importateurs voient la nouvelle valeur. En CommonJS, <code>require</code> copie la valeur au moment de l'appel&nbsp;: une réassignation ultérieure reste invisible.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison entre la liaison vivante d'un module ES et la copie de valeur de CommonJS. À gauche, le module ES compteur exporte la variable n ; l'importateur voit une liaison vivante, si tick incrémente n l'importateur lit la nouvelle valeur 1. À droite, en CommonJS require copie la valeur de n au moment de l'appel ; incrémenter n plus tard ne change pas la copie qui reste à 0.">
+    <text class="d-label" x="16" y="24" font-size="13">Liaison vivante (ESM) vs copie de valeur (CommonJS)</text>
+    <text class="d-mut" x="164" y="44" text-anchor="middle" font-size="10">Module ES — liaison vivante</text>
+    <text class="d-mut" x="476" y="44" text-anchor="middle" font-size="10">CommonJS — copie</text>
+
+    <rect class="d-frame" x="24" y="54" width="280" height="132" rx="6" />
+    <rect class="d-box" x="44" y="70" width="110" height="34" rx="5" /><text class="d-text" x="99" y="91" text-anchor="middle" font-size="9">compteur.js : n</text>
+    <rect class="d-accent" x="180" y="70" width="104" height="34" rx="5" /><text class="d-text" x="232" y="91" text-anchor="middle" font-size="9">import n</text>
+    <path class="d-line" d="M154 87 H180" /><text class="d-mut" x="167" y="82" text-anchor="middle" font-size="8">lien</text>
+    <text class="d-mut" x="44" y="132" font-size="9">tick() ⟹ n = 1</text>
+    <path class="d-line" d="M99 138 V150" /><path class="d-line" d="M232 138 V150" />
+    <rect class="d-accent" x="60" y="152" width="180" height="26" rx="5" /><text class="d-text" x="150" y="169" text-anchor="middle" font-size="9">l'importateur lit 1 ✓</text>
+
+    <rect class="d-frame" x="336" y="54" width="280" height="132" rx="6" />
+    <rect class="d-box" x="356" y="70" width="110" height="34" rx="5" /><text class="d-text" x="411" y="91" text-anchor="middle" font-size="9">compteur.js : n</text>
+    <rect class="d-box" x="492" y="70" width="104" height="34" rx="5" /><text class="d-text" x="544" y="91" text-anchor="middle" font-size="9">copie = 0</text>
+    <path class="d-line" d="M466 87 H492" /><text class="d-mut" x="479" y="82" text-anchor="middle" font-size="8">copie</text>
+    <text class="d-mut" x="356" y="132" font-size="9">n = 1 plus tard</text>
+    <path class="d-line" d="M544 138 V150" />
+    <rect class="d-box" x="454" y="152" width="180" height="26" rx="5" /><text class="d-mut" x="544" y="169" text-anchor="middle" font-size="9">la copie reste 0 ✗</text>
+  </svg>
+  <figcaption>En ESM, <code>import { n }</code> pointe vers la variable vivante du module source&nbsp;: sa mise à jour est visible partout. En CommonJS, <code>const { n } = require(...)</code> fige la valeur au moment du <code>require</code>.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="compteur.js"><pre><code class="language-javascript">export let n = 0;
+export function tick() { n++; } // réassigne la variable du module</code></pre></figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import { n, tick } from './compteur.js';
+console.log(n); // 0
+tick();
+console.log(n); // 1  ← la liaison est VIVANTE, pas une copie
+
+// n = 5;  // ✗ TypeError : un import est en lecture seule côté importateur</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>La liaison est vivante mais <strong>en lecture seule</strong> du côté de l'importateur&nbsp;: seul le module qui possède l'export peut réassigner la variable. Cela évite qu'un consommateur casse l'état d'un module qu'il n'a pas écrit.</p></div></div>
+
+<h2>Import dynamique et découpage du code</h2>
+<p>L'<code>import</code> statique est résolu au chargement&nbsp;: son coût est payé d'entrée. Or une grande partie du code d'une application ne sert qu'à certaines routes ou après une action. La fonction <code>import()</code> — un opérateur, pas une déclaration — charge un module <strong>à la demande</strong> et renvoie une <em>promesse</em> résolue avec l'objet des exports. C'est la base du <em>code splitting</em>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Import statique dans le bundle contre import dynamique à la demande. À gauche, tous les modules sont regroupés dans un seul gros bundle chargé au démarrage, ce qui alourdit le premier chargement. À droite, le bundle principal est léger et un morceau séparé, l'éditeur, n'est téléchargé qu'au moment où l'utilisateur clique, via import().">
+    <text class="d-label" x="16" y="24" font-size="13">Statique dans le bundle vs import() à la demande</text>
+    <text class="d-mut" x="160" y="46" text-anchor="middle" font-size="10">import statique</text>
+    <text class="d-mut" x="482" y="46" text-anchor="middle" font-size="10">import() dynamique</text>
+
+    <rect class="d-frame" x="28" y="56" width="264" height="128" rx="6" />
+    <rect class="d-box" x="72" y="74" width="176" height="92" rx="6" /><text class="d-text" x="160" y="98" text-anchor="middle" font-size="10">bundle.js (gros)</text><text class="d-mut" x="160" y="120" text-anchor="middle" font-size="9">accueil + éditeur</text><text class="d-mut" x="160" y="136" text-anchor="middle" font-size="9">+ export + réglages</text><text class="d-tag" x="160" y="156" text-anchor="middle" font-size="9">chargé au démarrage</text>
+
+    <rect class="d-frame" x="348" y="56" width="264" height="128" rx="6" />
+    <rect class="d-accent" x="372" y="74" width="104" height="52" rx="6" /><text class="d-text" x="424" y="96" text-anchor="middle" font-size="9">principal</text><text class="d-mut" x="424" y="112" text-anchor="middle" font-size="8">léger</text>
+    <rect class="d-box" x="492" y="74" width="104" height="52" rx="6" /><text class="d-text" x="544" y="96" text-anchor="middle" font-size="9">éditeur.js</text><text class="d-mut" x="544" y="112" text-anchor="middle" font-size="8">morceau séparé</text>
+    <path class="d-line" d="M476 100 H492" /><path class="d-line" d="M484 94 L492 100 L484 106" />
+    <text class="d-tag" x="482" y="150" text-anchor="middle" font-size="9">téléchargé au clic</text>
+    <text class="d-mut" x="482" y="168" text-anchor="middle" font-size="9">await import('./éditeur.js')</text>
+  </svg>
+  <figcaption>Le découpage par <code>import()</code> garde le chargement initial minimal&nbsp;: le code d'une fonctionnalité secondaire n'est téléchargé que lorsqu'on en a besoin, ce qui améliore le temps d'affichage et d'interactivité.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// Statique : payé au chargement, même si l'éditeur n'est jamais ouvert
+// import { ouvrirEditeur } from './editeur.js';
+
+// Dynamique : le morceau n'arrive qu'au clic
+bouton.addEventListener('click', async () =&gt; {
+  const { ouvrirEditeur } = await import('./editeur.js');
+  ouvrirEditeur();
+});</code></pre></figure>
+<p>Le bundler (Vite, webpack, esbuild, Rollup) reconnaît chaque <code>import()</code> et en fait automatiquement un <em>chunk</em> distinct. Aucune configuration&nbsp;: écrire <code>import()</code> suffit à créer une frontière de découpage.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Les applications à page unique construites avec <strong>React&nbsp;Router</strong> ou <strong>Next.js</strong> découpent le code <em>par route</em>&nbsp;: <code>const Dashboard = lazy(() =&gt; import('./Dashboard'))</code>. Visiter la page d'accueil ne télécharge pas le JavaScript du tableau de bord, des réglages ou de l'éditeur — souvent <strong>60 à 80&nbsp;% de JavaScript en moins</strong> au premier chargement. Sur un site marchand, chaque 100&nbsp;ms gagnées au chargement se traduit mesurablement en conversions&nbsp;: c'est <code>import()</code> qui rend ce découpage trivial, là où l'ancien monde exigeait des acrobaties de configuration.</p></div></div>
+
+<h2>Top-level await</h2>
+<p>Dans un module ES, <code>await</code> est autorisé <strong>au premier niveau</strong>, hors de toute fonction <code>async</code>. Un module qui utilise le <em>top-level await</em> devient une dépendance <em>asynchrone</em>&nbsp;: les modules qui l'importent attendent sa résolution avant d'être évalués. C'est puissant pour l'initialisation (charger une config distante, ouvrir une base), à condition de mesurer que l'on bloque le graphe en aval.</p>
+<figure class="code-block" data-file="db.js"><pre><code class="language-javascript">// db.js — top-level await : le module s'auto-initialise
+const connexion = await ouvrirBase(); // pas de fonction async englobante
+export { connexion };</code></pre></figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// app.js attend que db.js soit prêt AVANT d'être évalué
+import { connexion } from './db.js';
+console.log('base prête :', connexion.nom);</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Le top-level await <strong>retarde l'évaluation de tous les importateurs</strong>. Un <code>await</code> lent en haut d'un module partagé peut geler le démarrage de l'application entière. Réserve-le à une initialisation réellement bloquante&nbsp;; sinon, exporte une promesse ou une fonction d'init explicite.</p></div></div>
+
+<h2>import.meta et les import maps</h2>
+<p><code>import.meta</code> est un objet propre à chaque module, alimenté par l'hôte. Sa propriété la plus utile est <code>import.meta.url</code> (l'URL du module courant), qui permet de résoudre des ressources <em>relativement au module</em> plutôt qu'à la page. <code>import.meta.resolve()</code> donne l'URL résolue d'un spécificateur sans le charger.</p>
+<figure class="code-block" data-file="widget.js"><pre><code class="language-javascript">// Résoudre un fichier voisin du module, où qu'il soit déployé
+const iconeURL = new URL('./icone.svg', import.meta.url);
+img.src = iconeURL.href; // robuste même si le module est déplacé</code></pre></figure>
+<p>Sans bundler, les navigateurs exigent des <em>spécificateurs</em> complets (URL ou chemin relatif) — <code>import x from 'lodash'</code> échoue. Une <strong>import map</strong> déclare la correspondance entre un nom nu et une URL réelle, ce qui autorise les imports lisibles directement dans le navigateur.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Le rôle d'une import map. Le code écrit import depuis lodash-es, un nom nu. L'import map traduit ce nom vers une URL complète pointant vers un CDN. Le navigateur charge alors le module depuis cette URL. Sans import map, le nom nu provoquerait une erreur.">
+    <text class="d-label" x="16" y="24" font-size="13">Une import map traduit un nom nu en URL</text>
+    <rect class="d-box" x="24" y="48" width="168" height="46" rx="6" /><text class="d-text" x="108" y="70" text-anchor="middle" font-size="9">import { map }</text><text class="d-mut" x="108" y="85" text-anchor="middle" font-size="9">from 'lodash-es'</text>
+    <path class="d-line" d="M192 71 H236" /><path class="d-line" d="M228 65 L236 71 L228 77" />
+    <rect class="d-accent" x="236" y="48" width="168" height="46" rx="6" /><text class="d-text" x="320" y="70" text-anchor="middle" font-size="9">import map</text><text class="d-mut" x="320" y="85" text-anchor="middle" font-size="8">"lodash-es" → https://…</text>
+    <path class="d-line" d="M404 71 H448" /><path class="d-line" d="M440 65 L448 71 L440 77" />
+    <rect class="d-box" x="448" y="48" width="168" height="46" rx="6" /><text class="d-text" x="532" y="70" text-anchor="middle" font-size="9">chargé depuis</text><text class="d-mut" x="532" y="85" text-anchor="middle" font-size="8">cdn.example/lodash-es</text>
+    <rect class="d-frame" x="24" y="116" width="592" height="34" rx="6" /><text class="d-mut" x="320" y="137" text-anchor="middle" font-size="9">Sans import map, le nom nu 'lodash-es' provoque une erreur de résolution.</text>
+  </svg>
+  <figcaption>La balise <code>&lt;script type="importmap"&gt;</code> centralise la résolution des noms nus&nbsp;: on garde des imports courts et lisibles sans bundler, et on peut changer une version en un seul endroit.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="index.html"><pre><code class="language-html">&lt;script type="importmap"&gt;
+{
+  "imports": {
+    "lodash-es": "https://cdn.example/lodash-es@4/lodash.js",
+    "utils/": "/assets/js/utils/"
+  }
+}
+&lt;/script&gt;
+&lt;script type="module"&gt;
+  import { debounce } from 'lodash-es'; // résolu par l'import map
+  import { fmt } from 'utils/format.js';
+&lt;/script&gt;</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Les import maps sont la base d'outils « sans build » comme <strong>importmap-rails</strong> (Ruby on Rails) ou <strong>es-module-shims</strong>. Pour un prototype ou un petit site, elles suppriment entièrement l'étape de bundling tout en gardant des imports propres.</p></div></div>
+
+<h2>ESM vs CommonJS et pièges fréquents</h2>
+<p>Les deux formats coexistent, surtout côté Node. Les différences ne sont pas cosmétiques&nbsp;: elles touchent le moment de la résolution, la nature des liaisons et la synchronicité.</p>
+<figure class="code-block" data-file="Résumé"><pre><code class="language-javascript">// ESM  : statique, asynchrone, liaisons vivantes, tree-shakable
+import { x } from './m.js';        // analysé avant exécution
+const m = await import('./m.js');  // dynamique = promesse
+
+// CommonJS : dynamique, synchrone, copie de valeur
+const { x } = require('./m.js');   // exécuté à l'appel
+module.exports = { x };            // objet copié</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Dans le navigateur, un module ES exige un <strong>chemin complet avec extension</strong> (<code>'./m.js'</code>, pas <code>'./m'</code>) et un serveur qui renvoie le bon type MIME (<code>text/javascript</code>). Une balise <code>&lt;script&gt;</code> qui charge un module doit porter <code>type="module"</code> — sans quoi <code>import</code> déclenche une erreur de syntaxe.</p></div></div>
+<p>Enfin, les <strong>imports circulaires</strong> (A importe B qui importe A) ne plantent pas en ESM grâce aux phases&nbsp;: les liaisons sont créées en phase d'instanciation, donc elles existent avant l'évaluation. Le seul risque est de <em>lire</em> une liaison avant que le module source ne l'ait initialisée — on obtient alors <code>undefined</code>, pas une erreur. La parade&nbsp;: n'utiliser les imports croisés qu'à l'intérieur de fonctions appelées plus tard, jamais au premier niveau.</p>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore le <strong>tree-shaking</strong> (pourquoi seuls les imports nommés statiques sont élaguables), les <strong>import attributes</strong> (<code>import data from './x.json' with { type: 'json' }</code>), la double distribution <em>ESM + CJS</em> via le champ <code>exports</code> du <code>package.json</code> (conditions <code>import</code>/<code>require</code>), et le <em>préchargement</em> par <code>&lt;link rel="modulepreload"&gt;</code> pour anticiper un <code>import()</code> à venir.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: le système de modules ES</caption>
+    <thead><tr><th>Besoin</th><th>Outil</th><th>À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Importer au chargement</td><td><code>import { x } from './m.js'</code></td><td>statique, analysé avant exécution, tree-shakable</td></tr>
+      <tr><td>Charger à la demande</td><td><code>await import('./m.js')</code></td><td>renvoie une promesse&nbsp;; crée un <em>chunk</em></td></tr>
+      <tr><td>Partager un état unique</td><td>un module avec <code>export</code></td><td>évalué une seule fois, mis en cache par URL</td></tr>
+      <tr><td>Init asynchrone</td><td><em>top-level await</em></td><td>bloque les importateurs&nbsp;: à réserver</td></tr>
+      <tr><td>Résoudre une ressource</td><td><code>new URL('./x', import.meta.url)</code></td><td>relatif au module, pas à la page</td></tr>
+      <tr><td>Nom nu sans bundler</td><td><code>&lt;script type="importmap"&gt;</code></td><td>traduit <code>'lodash'</code> → URL</td></tr>
+      <tr><td>Import circulaire</td><td>usage différé (dans une fonction)</td><td>liaison OK, lecture précoce = <code>undefined</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Module ES (ESM)</dt>
+  <dd>Format de module standard du langage, à imports/exports <strong>statiques</strong> et chargement asynchrone&nbsp;; chaque module est évalué une fois et son objet d'exports mis en cache.</dd>
+  <dt>Graphe de modules</dt>
+  <dd>Arbre des dépendances construit à partir du module d'entrée, résolu en trois phases (construction, instanciation, évaluation) avant toute exécution.</dd>
+  <dt>Liaison vivante (live binding)</dt>
+  <dd>Un <code>import</code> pointe vers la variable vivante du module source&nbsp;: sa réassignation par la source est visible chez tous les importateurs (contrairement à la copie de CommonJS).</dd>
+  <dt>Import dynamique</dt>
+  <dd>L'opérateur <code>import()</code> qui charge un module à la demande et renvoie une promesse&nbsp;; base du découpage du code (<em>code splitting</em>).</dd>
+  <dt>Top-level await</dt>
+  <dd><code>await</code> employé au premier niveau d'un module&nbsp;; rend le module asynchrone et retarde l'évaluation de ses importateurs.</dd>
+  <dt>import.meta</dt>
+  <dd>Objet propre à chaque module fourni par l'hôte&nbsp;; <code>import.meta.url</code> donne l'URL du module, utile pour résoudre des ressources voisines.</dd>
+  <dt>Import map</dt>
+  <dd>Balise <code>&lt;script type="importmap"&gt;</code> qui associe des noms nus (<code>'lodash'</code>) à des URL réelles, permettant des imports lisibles sans bundler.</dd>
+  <dt>Tree-shaking</dt>
+  <dd>Élimination du code mort rendue possible par les imports nommés statiques&nbsp;: le bundler ne garde que les exports réellement utilisés.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un module ES est chargé en trois phases (construction, instanciation, évaluation)&nbsp;: le graphe entier est résolu avant la première ligne exécutée.</li>
+<li>Un <code>import</code> est une <strong>liaison vivante</strong> en lecture seule, pas une copie&nbsp;: la réassignation par la source est visible partout (l'inverse de CommonJS).</li>
+<li><code>import()</code> charge à la demande et renvoie une promesse&nbsp;: c'est la base du découpage du code, sans configuration.</li>
+<li>Le <em>top-level await</em> permet une init asynchrone mais bloque les importateurs&nbsp;: à réserver aux cas réellement bloquants.</li>
+<li><code>import.meta.url</code> résout des ressources voisines&nbsp;; une <strong>import map</strong> autorise les noms nus sans bundler.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un module importé par cinq fichiers n'est-il évalué qu'une seule fois&nbsp;? Quelle phase garantit ce partage&nbsp;?</li><li>Quelle est la différence observable entre une liaison vivante ESM et la copie de valeur de CommonJS&nbsp;?</li><li>Dans quel cas <code>import()</code> dynamique est-il préférable à un <code>import</code> statique, et quel gain concret apporte-t-il&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un module importé par cinq fichiers n'est-il évalué qu'une seule fois ?","a":["Parce que le moteur met en cache l'objet d'exports par URL résolue : après la première évaluation, tous les autres imports réutilisent le même module (singleton)","Parce que le bundler supprime les doublons","Parce que import interdit d'importer deux fois","Parce que chaque import relance le module"],"correct":0,"explain":"En phase d'évaluation, chaque module est exécuté une seule fois et son objet d'exports est mis en cache par URL. Les imports suivants réutilisent ce singleton, ce qui en fait le mécanisme fiable pour partager un état unique."},
+  {"q":"Quelle est la différence observable entre une liaison vivante ESM et la copie de valeur de CommonJS ?","a":["En ESM, si le module source réassigne la variable exportée, l'importateur voit la nouvelle valeur (liaison vivante) ; en CommonJS, require copie la valeur au moment de l'appel et une réassignation ultérieure reste invisible","Il n'y a aucune différence observable","CommonJS met aussi à jour l'importateur","ESM copie la valeur comme CommonJS"],"correct":0,"explain":"Un import ES pointe vers la variable vivante du module source : sa mise à jour est propagée. En CommonJS, la déstructuration d'un require fige la valeur, donc une réassignation ultérieure du module source n'est pas vue."},
+  {"q":"Dans quel cas import() dynamique est-il préférable à un import statique ?","a":["Quand le module ne sert qu'à certaines routes ou après une action : import() le charge à la demande en créant un chunk séparé, ce qui allège le chargement initial","Toujours, import statique est déprécié","Jamais, import() est plus lent","Uniquement côté serveur"],"correct":0,"explain":"import() diffère le téléchargement d'un module jusqu'à ce qu'on en ait besoin et crée automatiquement un chunk distinct. Le chargement initial reste minimal, ce qui améliore le temps d'affichage et d'interactivité — l'inverse d'un import statique payé d'entrée."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["import()","import","dynamic import","await import()"],"placeholder":"l'opérateur qui charge un module À LA DEMANDE et renvoie une promesse : …","hints":["Il s'écrit comme un appel de fonction.","Il sert au découpage du code (code splitting).","import(...) renvoie une Promise."],"link":{"href":"lecon-19.html","label":"Revoir « Import dynamique »"}},
+  {"type":"text","accept":["import.meta.url","import.meta","meta.url"],"placeholder":"l'expression qui donne l'URL du module courant (pour résoudre une ressource voisine) : …","hints":["Objet fourni par l'hôte, propre au module.","On l'associe souvent à new URL('./x', …).","import.meta.???"],"link":{"href":"lecon-19.html","label":"Revoir « import.meta »"}},
+  {"type":"text","accept":["importmap","import map","import-map","type=importmap"],"placeholder":"le type de balise script qui traduit un nom nu (ex. 'lodash') en URL réelle : …","hints":["<script type=\"...\">","Elle contient un JSON avec une clé imports.","import + map."],"link":{"href":"lecon-19.html","label":"Revoir « Les import maps »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une page charge d'emblée un module <code>graphiques.js</code> lourd, alors que le graphique n'apparaît qu'après un clic sur « Voir les stats ». Convertis l'import statique en chargement à la demande.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import { dessinerGraphe } from './graphiques.js'; // payé au chargement
+bouton.addEventListener('click', () =&gt; dessinerGraphe(donnees));</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">// graphiques.js n'est téléchargé qu'au premier clic
+bouton.addEventListener('click', async () =&gt; {
+  const { dessinerGraphe } = await import('./graphiques.js');
+  dessinerGraphe(donnees);
+});
+// Le bundler crée automatiquement un chunk séparé pour graphiques.js :
+// le chargement initial de la page ne le contient plus.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Explique, code à l'appui, pourquoi le second <code>console.log</code> affiche <code>1</code> et non <code>0</code>. Quel concept est en jeu&nbsp;? Que se passerait-il avec <code>require</code> en CommonJS&nbsp;?</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// compteur.js : export let n = 0; export function tick(){ n++; }
+import { n, tick } from './compteur.js';
+console.log(n); // ?
+tick();
+console.log(n); // ?</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">console.log(n); // 0
+tick();
+console.log(n); // 1
+
+// Pourquoi : un import ES est une LIAISON VIVANTE en lecture seule vers
+// la variable du module source. tick() réassigne n dans compteur.js,
+// et l'importateur lit cette nouvelle valeur.
+//
+// En CommonJS :
+//   const { n, tick } = require('./compteur.js');
+//   console.log(n); // 0
+//   tick();
+//   console.log(n); // 0  ← la déstructuration a COPIÉ la valeur au require ;
+//                   //     la réassignation du module n'est pas vue.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sans bundler, une page en modules natifs veut écrire <code>import { z } from 'zod'</code> et <code>import { fmt } from 'utils/date.js'</code>. Rédige l'<strong>import map</strong> qui fait pointer <code>zod</code> vers un CDN et le préfixe <code>utils/</code> vers <code>/assets/js/utils/</code>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-html">&lt;script type="importmap"&gt;
+{
+  "imports": {
+    "zod": "https://cdn.example/zod@3/lib/index.mjs",
+    "utils/": "/assets/js/utils/"
+  }
+}
+&lt;/script&gt;
+
+&lt;script type="module"&gt;
+  import { z } from 'zod';            // → CDN
+  import { fmt } from 'utils/date.js'; // → /assets/js/utils/date.js
+  console.log(typeof z, typeof fmt);
+&lt;/script&gt;
+
+&lt;!-- Une clé qui finit par "/" agit comme un préfixe de dossier.
+     L'import map doit apparaître AVANT le premier script de module. --&gt;</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-markup.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

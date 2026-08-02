@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Développer dans des conteneurs — Leçon 08 · Docker · Syntaxe</title>
+    <meta name="description" content="Utiliser Docker comme environnement de développement : bind mount du code source, rechargement à chaud, docker compose watch, variables d'environnement et fichier .env, Dev Containers." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="docker" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Docker</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Docker au quotidien — Leçon 08</p>
+              <h1 class="lesson-header__title">Développer dans des conteneurs</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 07 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>monter ton code dans un conteneur avec un <strong>bind mount</strong>&nbsp;;</li>
+                  <li>obtenir un <strong>rechargement à chaud</strong> en développement&nbsp;;</li>
+                  <li>configurer tout ça dans Compose (<code>watch</code>, <code>.env</code>)&nbsp;;</li>
+                  <li>distinguer un usage <strong>dev</strong> d'un usage <strong>production</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Reconstruire une image à chaque <code>console.log</code> ajouté&nbsp;? Impensable au quotidien. En <strong>développement</strong>, on modifie le code des dizaines de fois par heure&nbsp;: il faut que le conteneur voie ces changements <strong>immédiatement</strong>, sans repasser par <code>docker build</code>. Tout tient en deux idées&nbsp;: <strong>monter</strong> le code source de ta machine dans le conteneur, et laisser un outil <strong>recharger</strong> l'application à chaque sauvegarde. Le conteneur devient alors un environnement de dev partagé et jetable — sans installer Node, Python ou PostgreSQL sur ta propre machine.</p>
+
+<h2>Le problème&nbsp;: reconstruire tue le rythme</h2>
+<p>Souviens-toi&nbsp;: une <strong>image</strong> est une photo <em>figée</em> du code au moment du <code>build</code>. Si tu modifies une ligne, l'image ne change pas&nbsp;; il faudrait la reconstruire puis relancer le conteneur pour voir l'effet. Quelques secondes à chaque fois&nbsp;? Multiplié par cent modifications par jour, c'est le rythme du développement qui s'effondre. Il nous faut un lien <strong>vivant</strong> entre le code sur le disque et le conteneur.</p>
+
+<h2>Monter son code&nbsp;: le bind mount</h2>
+<p>Un <strong>bind mount</strong> relie un dossier <em>précis</em> de ta machine à un dossier du conteneur. On l'active avec la même option <code>-v</code> que les volumes, mais en donnant un <strong>chemin</strong> à gauche&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Monter le dossier courant de l'hôte sur /app dans le conteneur
+docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure>
+<p>Désormais, <code>/app</code> dans le conteneur <strong>est</strong> ton dossier de travail&nbsp;: chaque fichier que tu enregistres dans l'éditeur est vu instantanément à l'intérieur. Attention à ne pas confondre avec le <strong>volume nommé</strong> de la leçon 4&nbsp;: celui-ci est géré par Docker pour <em>persister des données</em> (une base, par exemple), il est opaque et rangé hors de ton dossier. Le bind mount, lui, expose un dossier bien réel de ton disque — parfait pour le <strong>code en cours d'écriture</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Le bind mount relie un dossier de l'hôte à un dossier du conteneur. À gauche, ta machine contient un dossier de code source, point slash src, que tu édites dans ton éditeur. À droite, le conteneur possède un dossier slash app où l'application lit le code. L'option -v point slash src deux-points slash app relie les deux : toute modification faite sur l'hôte est visible aussitôt dans le conteneur, sans reconstruire l'image.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le bind mount : un dossier de l'hôte, vu dans le conteneur</text>
+    <rect class="d-frame" x="24" y="44" width="248" height="118" rx="6" />
+    <text class="d-tag" x="148" y="64" text-anchor="middle" font-size="9.5">Ta machine (hôte)</text>
+    <rect class="d-accent" x="44" y="78" width="208" height="26" rx="4" /><text class="d-text" x="148" y="95" text-anchor="middle" font-size="8.5">./src (code source)</text>
+    <text class="d-mut" x="148" y="126" text-anchor="middle" font-size="8">tu édites ici, dans VS Code</text>
+    <rect class="d-frame" x="368" y="44" width="248" height="118" rx="6" />
+    <text class="d-tag" x="492" y="64" text-anchor="middle" font-size="9.5">Conteneur</text>
+    <rect class="d-accent" x="388" y="78" width="208" height="26" rx="4" /><text class="d-text" x="492" y="95" text-anchor="middle" font-size="8.5">/app</text>
+    <text class="d-mut" x="492" y="126" text-anchor="middle" font-size="8">l'application lit ici</text>
+    <text class="d-tag" x="320" y="86" text-anchor="middle" font-size="8">-v ./src:/app</text>
+    <path class="d-line" d="M272 96 L368 96" fill="none" /><circle class="d-dot" cx="368" cy="96" r="2.5" /><circle class="d-dot" cx="272" cy="96" r="2.5" />
+    <text class="d-mut" x="320" y="112" text-anchor="middle" font-size="7.5">modifs visibles aussitôt</text>
+  </svg>
+  <figcaption>Le bind mount fait pointer un dossier du conteneur vers un dossier <strong>réel</strong> de ta machine. Ce que tu édites est vu à l'intérieur sans reconstruire — c'est ce qui rend le dev possible dans un conteneur.</figcaption>
+</figure>
+
+<h2>Recharger à chaud</h2>
+<p>Le bind mount rend les fichiers <em>visibles</em>&nbsp;; encore faut-il que l'application <strong>redémarre</strong> pour prendre en compte le nouveau code. C'est le rôle d'un outil de <strong>surveillance</strong> (watcher) que tu connais peut-être déjà&nbsp;: <code>nodemon</code> pour Node, le serveur de dev de <strong>Vite</strong>, <code>flask --debug</code>, <code>uvicorn --reload</code>… Il observe les fichiers montés et relance le process à chaque changement. Bind mount <strong>plus</strong> watcher, c'est la boucle «&nbsp;éditer → sauver → voir&nbsp;» en quelques secondes.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="La boucle de développement à chaud. Étape un, tu édites le code dans l'éditeur. Étape deux, tu sauvegardes avec Ctrl S. Étape trois, l'outil de surveillance détecte le changement grâce aux fichiers montés. Étape quatre, l'application se recharge sans reconstruire l'image. Une flèche de retour ramène de l'étape quatre à l'étape un : la boucle tourne en quelques secondes.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Éditer, sauver, recharger — sans rebuild</text>
+    <rect class="d-accent" x="24" y="60" width="132" height="44" rx="5" /><text class="d-text" x="90" y="80" text-anchor="middle" font-size="9">1 · éditer</text><text class="d-mut" x="90" y="94" text-anchor="middle" font-size="7.5">dans l'éditeur</text>
+    <rect class="d-box" x="176" y="60" width="132" height="44" rx="5" /><text class="d-text" x="242" y="80" text-anchor="middle" font-size="9">2 · sauvegarder</text><text class="d-mut" x="242" y="94" text-anchor="middle" font-size="7.5">Ctrl+S</text>
+    <rect class="d-box" x="328" y="60" width="140" height="44" rx="5" /><text class="d-text" x="398" y="80" text-anchor="middle" font-size="9">3 · le watcher voit</text><text class="d-mut" x="398" y="94" text-anchor="middle" font-size="7.5">fichiers montés</text>
+    <rect class="d-accent" x="488" y="60" width="128" height="44" rx="5" /><text class="d-text" x="552" y="80" text-anchor="middle" font-size="9">4 · recharge</text><text class="d-mut" x="552" y="94" text-anchor="middle" font-size="7.5">pas de rebuild</text>
+    <path class="d-line" d="M156 82 L176 82" fill="none" /><circle class="d-dot" cx="176" cy="82" r="2.5" />
+    <path class="d-line" d="M308 82 L328 82" fill="none" /><circle class="d-dot" cx="328" cy="82" r="2.5" />
+    <path class="d-line" d="M468 82 L488 82" fill="none" /><circle class="d-dot" cx="488" cy="82" r="2.5" />
+    <path class="d-line" d="M552 104 L552 130 L90 130 L90 104" fill="none" /><circle class="d-dot" cx="90" cy="104" r="2.5" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8">la boucle tourne en secondes</text>
+  </svg>
+  <figcaption>Le bind mount rend le code visible&nbsp;; le <strong>watcher</strong> relance l'app à la sauvegarde. Ensemble, ils reproduisent dans le conteneur le confort du développement local.</figcaption>
+</figure>
+
+<h2>Avec Compose&nbsp;: bind mounts et <code>watch</code></h2>
+<p>En pratique, on décrit tout ça dans <code>compose.yaml</code>. La façon classique&nbsp;: un bind mount déclaré dans <code>volumes</code>. La façon moderne&nbsp;: la section <code>develop:</code> avec <code>watch:</code>, qui <strong>synchronise</strong> les fichiers (ou reconstruit) automatiquement.</p>
+<figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app            # bind mount : le code de l'hôte dans le conteneur
+    env_file: .env         # charge les variables depuis le fichier .env
+    develop:
+      watch:
+        - action: sync     # copie les fichiers modifiés dans le conteneur
+          path: ./src
+          target: /app/src
+        - action: rebuild  # reconstruit si les dépendances changent
+          path: package.json</code></pre></figure>
+<p>Lancé avec <code>docker compose watch</code>, Compose surveille les chemins déclarés&nbsp;: une modification dans <code>./src</code> est <em>synchronisée</em> à chaud, tandis qu'un changement de <code>package.json</code> déclenche une <em>reconstruction</em>. Tu obtiens un environnement de dev complet (app + base + cache) qui se met à jour tout seul.</p>
+
+<h2>La configuration&nbsp;: variables et <code>.env</code></h2>
+<p>Une application a besoin de <strong>configuration</strong>&nbsp;: URL de base de données, clés, mode debug. On ne la code pas en dur&nbsp;: on la passe par des <strong>variables d'environnement</strong>. Compose lit automatiquement un fichier <code>.env</code> placé à côté du <code>compose.yaml</code> et substitue les <code>${VARIABLES}</code>&nbsp;:</p>
+<figure class="code-block" data-file=".env"><pre><code class="language-bash">POSTGRES_PASSWORD=secret
+APP_PORT=3000</code></pre></figure>
+<figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    ports:
+      - "${APP_PORT}:3000"     # valeur lue depuis .env
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}</code></pre></figure>
+<p>Séparer la <strong>configuration</strong> du <strong>code</strong> permet de changer un port ou un mot de passe sans toucher aux fichiers versionnés&nbsp;; le <code>.env</code>, lui, reste hors du dépôt (via <code>.gitignore</code>).</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Protéger <code>node_modules</code> du bind mount</p><p>Piège classique&nbsp;: en montant tout ton dossier (<code>./:/app</code>), tu <strong>écrases</strong> le <code>node_modules</code> installé <em>dans</em> l'image par celui — souvent absent ou incompatible — de ton hôte. La parade&nbsp;: ajouter un <strong>volume anonyme</strong> qui préserve le dossier du conteneur, <code>- /app/node_modules</code>. Déclaré <em>après</em> le bind mount, il «&nbsp;protège&nbsp;» ce sous-dossier et laisse les dépendances de l'image intactes.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le bind mount, c'est pour le dev — pas la prod</p><p>En production, une image doit être <strong>autonome</strong>&nbsp;: elle contient son code, on la déploie telle quelle. Un bind mount la rendrait dépendante d'un dossier présent sur le serveur — fragile et non reproductible. Réserve les bind mounts au <strong>développement</strong>&nbsp;; pour la prod, le code est <code>COPY</code>é dans l'image au build (leçon 6). Beaucoup d'équipes ont deux fichiers&nbsp;: <code>compose.yaml</code> (base) et <code>compose.override.yaml</code> (surcouche dev avec les bind mounts).</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Deux usages de l'option -v à ne pas confondre. À gauche, le bind mount : la valeur -v point slash src deux-points slash app relie un dossier précis de ton disque, il est idéal pour le code en développement, et tu vois et édites les fichiers directement. À droite, le volume nommé : la valeur -v donnees deux-points slash var slash lib slash db est gérée par Docker en dehors de ton dossier, elle est idéale pour persister des données comme une base, et elle est opaque, tu n'édites pas dedans.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Bind mount (dev) ≠ volume nommé (données)</text>
+    <rect class="d-frame" x="24" y="40" width="280" height="118" rx="6" />
+    <text class="d-tag" x="164" y="60" text-anchor="middle" font-size="9.5">Bind mount</text>
+    <rect class="d-accent" x="44" y="70" width="240" height="24" rx="4" /><text class="d-text" x="164" y="86" text-anchor="middle" font-size="8.5">-v ./src:/app</text>
+    <text class="d-mut" x="164" y="110" text-anchor="middle" font-size="8">un dossier précis de TON disque</text>
+    <text class="d-mut" x="164" y="126" text-anchor="middle" font-size="8">idéal pour le code en dev</text>
+    <text class="d-mut" x="164" y="142" text-anchor="middle" font-size="8">tu vois et édites les fichiers</text>
+    <rect class="d-frame" x="336" y="40" width="280" height="118" rx="6" />
+    <text class="d-tag" x="476" y="60" text-anchor="middle" font-size="9.5">Volume nommé</text>
+    <rect class="d-accent" x="356" y="70" width="240" height="24" rx="4" /><text class="d-text" x="476" y="86" text-anchor="middle" font-size="8.5">-v donnees:/var/lib/db</text>
+    <text class="d-mut" x="476" y="110" text-anchor="middle" font-size="8">géré par Docker, hors de ton dossier</text>
+    <text class="d-mut" x="476" y="126" text-anchor="middle" font-size="8">idéal pour PERSISTER des données</text>
+    <text class="d-mut" x="476" y="142" text-anchor="middle" font-size="8">opaque (tu n'édites pas dedans)</text>
+  </svg>
+  <figcaption>Même option <code>-v</code>, deux intentions&nbsp;: à <strong>gauche</strong> un chemin de l'hôte (le code, pour développer), à <strong>droite</strong> un nom géré par Docker (les données, pour persister).</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le même environnement pour toute l'équipe</p><p>Sur un projet réel, chaque développeur avait «&nbsp;sa&nbsp;» version de Node, «&nbsp;sa&nbsp;» base locale, «&nbsp;ses&nbsp;» variables&nbsp;: les bugs «&nbsp;ça marche chez moi&nbsp;» pullulaient. En passant le dev dans Compose — bind mount du code, base PostgreSQL en service, <code>.env</code> d'exemple versionné — l'intégration est devenue&nbsp;: <code>git clone</code>, <code>cp .env.example .env</code>, <code>docker compose watch</code>. Trois lignes, et chacun code dans <strong>exactement</strong> le même environnement que la production, quelle que soit sa machine. Les incidents d'environnement ont quasiment disparu.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: les Dev Containers</p><p>VS Code pousse l'idée plus loin avec les <strong>Dev Containers</strong>&nbsp;: un fichier <code>.devcontainer/devcontainer.json</code> décrit l'image, les extensions et les réglages de l'éditeur. Ouvre le projet, et VS Code s'exécute <em>à l'intérieur</em> du conteneur&nbsp;: terminal, débogueur, IntelliSense, tout tourne dans l'environnement conteneurisé. GitHub Codespaces s'appuie sur le même format pour offrir un poste de dev complet dans le navigateur.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — développer avec Docker</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Moyen</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>Voir son code sans rebuild</td><td>bind mount</td><td><code>-v "$(pwd):/app"</code> · <code>volumes: - ./:/app</code></td></tr>
+      <tr><td>Recharger à la sauvegarde</td><td>watcher</td><td><code>nodemon</code>, Vite, <code>--reload</code></td></tr>
+      <tr><td>Automatiser en Compose</td><td><code>develop.watch</code></td><td><code>docker compose watch</code></td></tr>
+      <tr><td>Configurer</td><td>variables + <code>.env</code></td><td><code>${APP_PORT}</code>, <code>env_file: .env</code></td></tr>
+      <tr><td>Préserver <code>node_modules</code></td><td>volume anonyme</td><td><code>- /app/node_modules</code></td></tr>
+      <tr><td>Séparer dev / prod</td><td>fichier de surcouche</td><td><code>compose.override.yaml</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Bind mount</dt><dd>Montage d'un <strong>dossier précis de l'hôte</strong> dans le conteneur (<code>-v ./src:/app</code>)&nbsp;: les fichiers y sont partagés en direct, idéal pour le code en dev.</dd>
+  <dt>Volume nommé</dt><dd>Stockage géré par Docker, hors de ton dossier, pour <strong>persister des données</strong> (opaque)&nbsp;; à ne pas confondre avec le bind mount.</dd>
+  <dt>Rechargement à chaud</dt><dd>Redémarrage automatique de l'application quand le code change&nbsp;; assuré par un <strong>watcher</strong> (nodemon, Vite…).</dd>
+  <dt>Watcher</dt><dd>Outil qui surveille les fichiers et relance le process à chaque modification.</dd>
+  <dt><code>docker compose watch</code></dt><dd>Commande qui synchronise (<code>sync</code>) ou reconstruit (<code>rebuild</code>) selon la section <code>develop.watch</code> du <code>compose.yaml</code>.</dd>
+  <dt><code>.env</code></dt><dd>Fichier de variables lu <strong>automatiquement</strong> par Compose pour substituer les <code>${VARIABLES}</code>&nbsp;; gardé hors du dépôt.</dd>
+  <dt>Variable d'environnement</dt><dd>Valeur de configuration passée au conteneur (port, mot de passe, mode)&nbsp;; sépare la config du code.</dd>
+  <dt>Dev Container</dt><dd>Environnement de développement décrit par <code>devcontainer.json</code>, dans lequel l'éditeur s'exécute directement.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>bind mount</strong> (<code>-v ./src:/app</code>) rend ton code visible dans le conteneur, sans reconstruire.</li>
+  <li>Un <strong>watcher</strong> (nodemon, Vite…) recharge l'app à chaque sauvegarde&nbsp;: boucle de dev rapide.</li>
+  <li>Compose automatise via <code>develop.watch</code> (<code>docker compose watch</code>) et lit la config depuis <code>.env</code>.</li>
+  <li>Le bind mount est réservé au <strong>dev</strong>&nbsp;; en prod, le code est inclus dans l'image (autonome).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Comment voir ses modifications de code dans un conteneur sans <code>docker build</code>&nbsp;?</li>
+  <li>Le bind mount suffit-il à recharger l'application&nbsp;?</li>
+  <li>Pourquoi ajouter <code>- /app/node_modules</code> quand on monte tout son dossier&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Comment voir ses modifications de code dans le conteneur sans reconstruire l'image ?","a":["Avec un bind mount : monter le dossier de code de l'hôte dans le conteneur (-v ./src:/app)","En relançant docker build après chaque modification","En copiant les fichiers avec docker cp à chaque fois","Ce n'est pas possible, il faut toujours rebuild"],"correct":0,"explain":"Le bind mount relie un dossier réel de ta machine à un dossier du conteneur : les fichiers édités sont vus instantanément à l'intérieur, sans passer par build."},
+  {"q":"Le bind mount suffit-il à recharger automatiquement l'application ?","a":["Non : il rend les fichiers visibles, mais il faut un watcher (nodemon, Vite, --reload) pour relancer le process quand le code change","Oui, Docker redémarre l'app tout seul","Oui, mais seulement en production","Non, il faut obligatoirement docker compose down puis up"],"correct":0,"explain":"Le bind mount partage les fichiers ; le rechargement à chaud vient d'un outil de surveillance qui détecte les changements et relance l'application. Les deux se combinent."},
+  {"q":"Tu montes tout ton dossier dans le conteneur (volumes: - ./:/app) et l'application ne trouve plus ses dépendances. Pourquoi, et quelle est la parade ?","a":["Le montage a recouvert le node_modules installé DANS l'image par celui de l'hôte (souvent absent) ; on ajoute un volume anonyme - /app/node_modules après le bind mount pour préserver ce sous-dossier","Docker supprime toujours node_modules au démarrage : il faut relancer npm install à chaque fois","Le bind mount ne fonctionne pas avec les dossiers cachés : il faut renommer node_modules","Il manque l'option --privileged sur le service"],"correct":0,"explain":"Un montage masque ce qui existait au même chemin dans l'image. En déclarant après lui un volume anonyme sur /app/node_modules, tu remets par-dessus les dépendances de l'image : ton code reste partagé en direct, mais les dépendances installées au build restent intactes."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["-v","--volume","-v ./src:/app","volume"],"placeholder":"l'option de docker run qui monte un dossier de l'hôte dans le conteneur","hints":["C'est la même option que pour les volumes.","À gauche un chemin de l'hôte, à droite le chemin dans le conteneur.","-? ou --volume"],"link":{"href":"lecon-08.html","label":"Revoir « Monter son code »"}},
+  {"type":"text","accept":[".env","env",".env file"],"placeholder":"le fichier que Docker Compose lit automatiquement pour les variables d'environnement","hints":["Il est placé à côté du compose.yaml.","Il alimente les ${VARIABLES}.","Un nom qui commence par un point."],"link":{"href":"lecon-08.html","label":"Revoir « La configuration »"}},
+  {"type":"text","accept":["watch","docker compose watch","compose watch","develop watch"],"placeholder":"la commande/section Compose qui synchronise ou reconstruit à la modification","hints":["Section develop: … dans le compose.yaml.","docker compose ????","Il « surveille » les fichiers."],"link":{"href":"lecon-08.html","label":"Revoir « bind mounts et watch »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une commande <code>docker run</code> qui lance <code>node:20</code> en montant le dossier courant sur <code>/app</code> et en s'y plaçant, puis exécute <code>npm run dev</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure><p><code>-v "$(pwd):/app"</code> monte le dossier courant, <code>-w /app</code> définit le répertoire de travail, et la commande finale démarre le serveur de dev.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans un <code>compose.yaml</code>, ajoute à un service <code>web</code> un bind mount du dossier courant vers <code>/app</code>, et fais lire le port depuis une variable <code>${APP_PORT}</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    build: .
+    volumes:
+      - ./:/app
+    ports:
+      - "${APP_PORT}:3000"</code></pre></figure><p>Le bind mount partage le code&nbsp;; <code>${APP_PORT}</code> est lu depuis le fichier <code>.env</code> voisin. On sépare ainsi la config du code.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Ton bind mount <code>./:/app</code> écrase le <code>node_modules</code> installé dans l'image. Comment le préserver tout en gardant le partage du code&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    build: .
+    volumes:
+      - ./:/app
+      - /app/node_modules   # volume anonyme : protège ce sous-dossier</code></pre></figure><p>Le volume anonyme <code>/app/node_modules</code>, déclaré après le bind mount, «&nbsp;masque&nbsp;» ce sous-dossier&nbsp;: Docker y garde les dépendances installées dans l'image au lieu de les faire écraser par le dossier de l'hôte.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La concurrence : threads, GVL et Ractor — Leçon 21 · Ruby · Syntaxe</title>
+    <meta name="description" content="Faire plusieurs choses à la fois en Ruby : les threads et le GVL, la différence entre tâches I/O-bound et CPU-bound, protéger l'état partagé avec Mutex et Queue, et le parallélisme réel des Ractor de Ruby 3." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="ruby" data-lesson="lecon-21.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ruby</a></li>
+            <li aria-current="page">Leçon 21</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 7 · Aller plus loin — Leçon 21</p>
+              <h1 class="lesson-header__title">La concurrence : threads, GVL et Ractor</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~42 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Objets et erreurs requis</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lancer des <strong>threads</strong> et comprendre le rôle du <strong>GVL</strong>&nbsp;;</li>
+                  <li>distinguer une tâche <strong>I/O-bound</strong> d'une tâche <strong>CPU-bound</strong>&nbsp;;</li>
+                  <li>protéger un état partagé avec un <code>Mutex</code> et une <code>Queue</code>&nbsp;;</li>
+                  <li>savoir quand viser le vrai parallélisme avec un <strong>Ractor</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Attendre une réponse réseau, lire dix fichiers, interroger trois APIs&nbsp;: souvent, un programme passe le plus clair de son temps à <strong>attendre</strong>. Pendant ces attentes, il pourrait faire autre chose. La <strong>concurrence</strong> consiste à structurer un programme pour qu'il progresse sur plusieurs tâches à la fois. Ruby offre plusieurs outils pour ça — mais avec une particularité qu'il faut comprendre avant tout&nbsp;: le <strong>GVL</strong>.</p>
+
+<h2>Les threads et le GVL</h2>
+<p>Un <strong>thread</strong> est un fil d'exécution au sein du programme. On en crée un avec <code>Thread.new</code> et on attend sa fin avec <code>join</code>. Mais dans l'interpréteur de référence (MRI/CRuby), un verrou global — le <strong>GVL</strong> (<em>Global VM Lock</em>, jadis «&nbsp;GIL&nbsp;») — garantit qu'<strong>un seul thread exécute du code Ruby à la fois</strong>.</p>
+<figure class="code-block" data-file="threads.rb"><pre><code class="language-ruby">threads = 3.times.map do |i|
+  Thread.new do
+    puts "thread #{i} démarre"
+    resultat = appel_reseau(i)   # ← ici, le GVL est relâché
+    puts "thread #{i} : #{resultat}"
+  end
+end
+
+threads.each(&amp;:join)             # attend que les 3 aient fini
+puts "tout est terminé"</code></pre></figure>
+<p>Le point clé&nbsp;: le GVL est <strong>relâché pendant les opérations d'entrée/sortie bloquantes</strong> (réseau, disque, <code>sleep</code>). Un thread qui attend le réseau laisse donc les autres avancer. C'est pourquoi les threads Ruby accélèrent bel et bien les tâches d'attente — mais pas le calcul pur.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Le rôle du GVL. Trois threads sont représentés par trois lignes horizontales. À tout instant, un seul segment Ruby est actif, symbolisé par un cadenas GVL au centre. Quand un thread entre dans une opération d'entrée-sortie, il relâche le cadenas : le segment d'attente est grisé et un autre thread peut alors exécuter du Ruby. Les attentes d'entrée-sortie se chevauchent, ce qui fait gagner du temps.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">un seul thread exécute du Ruby à la fois — mais l'attente se chevauche</text>
+    <rect class="d-frame" x="286" y="30" width="68" height="22" rx="6" /><text class="d-tag" x="320" y="45" text-anchor="middle" font-size="10" font-family="monospace">GVL</text>
+    <text class="d-mut" x="40" y="80" font-size="9">th 0</text>
+    <rect class="d-accent" x="70" y="70" width="70" height="16" rx="4" /><rect class="d-box" x="140" y="70" width="150" height="16" rx="4" /><text class="d-mut" x="215" y="82" text-anchor="middle" font-size="8">attente réseau (GVL relâché)</text>
+    <text class="d-mut" x="40" y="112" font-size="9">th 1</text>
+    <rect class="d-accent" x="140" y="102" width="70" height="16" rx="4" /><rect class="d-box" x="210" y="102" width="150" height="16" rx="4" /><text class="d-mut" x="285" y="114" text-anchor="middle" font-size="8">attente réseau</text>
+    <text class="d-mut" x="40" y="144" font-size="9">th 2</text>
+    <rect class="d-accent" x="210" y="134" width="70" height="16" rx="4" /><rect class="d-box" x="280" y="134" width="150" height="16" rx="4" /><text class="d-mut" x="355" y="146" text-anchor="middle" font-size="8">attente réseau</text>
+    <text class="d-tag" x="105" y="176" text-anchor="middle" font-size="8">Ruby actif</text><rect class="d-accent" x="150" y="167" width="14" height="10" rx="2" /><text class="d-mut" x="215" y="176" font-size="8">= exécution (exclusive)</text>
+  </svg>
+  <figcaption>Les segments «&nbsp;Ruby actif&nbsp;» ne se chevauchent jamais (le GVL les sérialise), mais les <strong>attentes</strong> d'entrée/sortie, elles, se recouvrent. Trois attentes réseau d'une seconde lancées ensemble prennent ≈ une seconde au total, pas trois.</figcaption>
+</figure>
+
+<h2>I/O-bound contre CPU-bound</h2>
+<p>Une tâche est <strong>I/O-bound</strong> si son temps est dominé par des <em>attentes</em> (requête HTTP, base de données, lecture de fichier). Elle est <strong>CPU-bound</strong> si son temps est dominé par du <em>calcul</em> (hachage, compression, traitement d'image). Les threads MRI accélèrent la première catégorie, pas la seconde&nbsp;: pour du calcul pur, le GVL empêche deux threads de progresser en même temps.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Séquentiel contre concurrent pour trois requêtes réseau. En haut, en séquentiel, les trois requêtes s'enchaînent bout à bout et le temps total est la somme des trois. En bas, en concurrent avec des threads, les trois requêtes démarrent ensemble et se recouvrent ; le temps total est proche de la durée d'une seule requête.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">3 requêtes réseau : séquentiel contre concurrent</text>
+    <text class="d-mut" x="40" y="52" font-size="9">série</text>
+    <rect class="d-box" x="70" y="42" width="150" height="18" rx="4" /><text class="d-mut" x="145" y="55" text-anchor="middle" font-size="8">requête 1</text>
+    <rect class="d-box" x="222" y="42" width="150" height="18" rx="4" /><text class="d-mut" x="297" y="55" text-anchor="middle" font-size="8">requête 2</text>
+    <rect class="d-box" x="374" y="42" width="150" height="18" rx="4" /><text class="d-mut" x="449" y="55" text-anchor="middle" font-size="8">requête 3</text>
+    <text class="d-mut" x="536" y="55" font-size="8">= 3 t</text>
+    <text class="d-mut" x="40" y="104" font-size="9">threads</text>
+    <rect class="d-accent" x="70" y="82" width="150" height="18" rx="4" /><text class="d-mut" x="145" y="95" text-anchor="middle" font-size="8">requête 1</text>
+    <rect class="d-accent" x="70" y="104" width="150" height="18" rx="4" /><text class="d-mut" x="145" y="117" text-anchor="middle" font-size="8">requête 2</text>
+    <rect class="d-accent" x="70" y="126" width="150" height="18" rx="4" /><text class="d-mut" x="145" y="139" text-anchor="middle" font-size="8">requête 3</text>
+    <line class="d-line" x1="220" y1="78" x2="220" y2="148" /><text class="d-tag" x="250" y="117" font-size="8">≈ 1 t</text>
+    <text class="d-mut" x="320" y="164" text-anchor="middle" font-size="8">gain réel car les requêtes sont I/O-bound (attente relâchant le GVL)</text>
+  </svg>
+  <figcaption>Le gain n'existe que parce que les requêtes <strong>attendent</strong>. Si les trois tâches étaient du calcul intensif, la version «&nbsp;threads&nbsp;» prendrait le même temps que la série&nbsp;: le GVL les forcerait à s'exécuter l'une après l'autre.</figcaption>
+</figure>
+
+<h2>Partager sans corrompre : Mutex et Queue</h2>
+<p>Dès que plusieurs threads touchent la <strong>même</strong> donnée, un danger apparaît&nbsp;: la <strong>condition de course</strong> (<em>race condition</em>). Même <code>compteur += 1</code> n'est pas atomique&nbsp;: c'est <em>lire</em>, <em>incrémenter</em>, <em>écrire</em>. Deux threads peuvent lire la même valeur avant que l'un n'écrive, et une incrémentation est perdue. Un <code>Mutex</code> (<em>mutual exclusion</em>) sérialise l'accès&nbsp;: <code>synchronize</code> garantit qu'un seul thread est dans le bloc à la fois.</p>
+<figure class="code-block" data-file="mutex.rb"><pre><code class="language-ruby">compteur = 0
+mutex = Mutex.new
+
+threads = 1000.times.map do
+  Thread.new do
+    mutex.synchronize { compteur += 1 }   # section critique protégée
+  end
+end
+threads.each(&amp;:join)
+compteur   # =&gt; 1000  (sans le mutex : souvent moins !)</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Une condition de course sur un compteur. Sans mutex, le thread A et le thread B lisent tous deux la valeur 41, ajoutent un, puis écrivent 42 : une incrémentation est perdue, le résultat final est 42 au lieu de 43. Avec un mutex, l'accès est sérialisé : A lit 41 et écrit 42, puis B lit 42 et écrit 43. Le résultat correct est 43.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">condition de course : deux « +1 » qui se marchent dessus</text>
+    <text class="d-tag" x="160" y="42" text-anchor="middle" font-size="10">sans mutex</text>
+    <rect class="d-box" x="40" y="52" width="110" height="24" rx="6" /><text class="d-mut" x="95" y="68" text-anchor="middle" font-size="8" font-family="monospace">A lit 41 → écrit 42</text>
+    <rect class="d-box" x="170" y="52" width="110" height="24" rx="6" /><text class="d-mut" x="225" y="68" text-anchor="middle" font-size="8" font-family="monospace">B lit 41 → écrit 42</text>
+    <rect class="d-frame" x="40" y="84" width="240" height="22" rx="6" /><text class="d-mut" x="160" y="99" text-anchor="middle" font-size="9">résultat : 42 ✗ (un +1 perdu)</text>
+    <text class="d-tag" x="480" y="42" text-anchor="middle" font-size="10">avec mutex</text>
+    <rect class="d-accent" x="360" y="52" width="110" height="24" rx="6" /><text class="d-mut" x="415" y="68" text-anchor="middle" font-size="8" font-family="monospace">A lit 41 → écrit 42</text>
+    <rect class="d-accent" x="490" y="52" width="110" height="24" rx="6" /><text class="d-mut" x="545" y="68" text-anchor="middle" font-size="8" font-family="monospace">B lit 42 → écrit 43</text>
+    <line class="d-line" x1="470" y1="64" x2="490" y2="64" /><polygon class="d-dot" points="490,64 480,59 480,69" />
+    <rect class="d-frame" x="360" y="84" width="240" height="22" rx="6" /><text class="d-mut" x="480" y="99" text-anchor="middle" font-size="9">résultat : 43 ✓ (sérialisé)</text>
+    <text class="d-mut" x="320" y="132" text-anchor="middle" font-size="9">Une <tspan font-family="monospace">Queue</tspan> (Thread::Queue) est déjà sûre : idéale pour un schéma producteur / consommateur.</text>
+    <text class="d-mut" x="320" y="152" text-anchor="middle" font-size="8">push d'un côté, pop de l'autre — sans mutex à gérer soi-même</text>
+  </svg>
+  <figcaption>Le GVL ne te protège <strong>pas</strong> des conditions de course au niveau Ruby&nbsp;: il peut céder la main entre la lecture et l'écriture. Pour tout état mutable partagé, un <code>Mutex</code> est nécessaire&nbsp;; pour une file de travail, préfère <code>Queue</code>, déjà thread-safe.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1 1 2.5h6c0-1.5.3-1.8 1-2.5A6 6 0 0 0 12 3Z" /><path d="M9 21h6" /></svg><div class="callout__body"><p class="callout__title">Mesure avant d'optimiser</p><p>Ne parallélise pas à l'aveugle. Chronomètre avec <code>Benchmark.realtime</code> une version séquentielle, puis une version à threads. Si la tâche est I/O-bound, tu verras un gain net&nbsp;; si elle est CPU-bound en MRI, le temps ne bougera pas — c'est le signal qu'il faut des <strong>processus</strong> ou des <strong>Ractor</strong>, pas des threads.</p></div></div>
+
+<h2>Ractor : le vrai parallélisme</h2>
+<p>Pour exécuter du <strong>calcul</strong> Ruby réellement en parallèle sur plusieurs cœurs, Ruby&nbsp;3 introduit les <strong>Ractor</strong> (<em>Ruby actors</em>). Chaque Ractor a son propre GVL et n'accède pas à la mémoire mutable des autres&nbsp;: ils communiquent par <strong>messages</strong> (<code>send</code>/<code>receive</code>). Cette isolation supprime par construction les conditions de course.</p>
+<figure class="code-block" data-file="ractor.rb"><pre><code class="language-ruby"># Chaque Ractor calcule sur son propre cœur, sans mémoire partagée
+ractors = (1..4).map do |n|
+  Ractor.new(n) do |base|
+    (1..1_000_000).sum { |i| i * base }   # calcul CPU-bound
+  end
+end
+
+totaux = ractors.map(&amp;:take)   # récupère le résultat de chacun
+puts totaux.sum</code></pre></figure>
+<p>Les Ractor restent <strong>expérimentaux</strong> et imposent des contraintes fortes (les objets échangés doivent être immuables ou copiés). Pour la plupart des besoins courants — surtout I/O-bound — les threads suffisent&nbsp;; réserve les Ractor au calcul lourd qu'on veut vraiment étaler sur plusieurs cœurs.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le GVL n'est pas un bouclier</p><p>On lit parfois «&nbsp;le GVL rend Ruby thread-safe&nbsp;»&nbsp;: c'est faux. Le GVL protège les structures <em>internes</em> de l'interpréteur, pas <strong>tes</strong> données. Un <code>tableau &lt;&lt; x</code> concurrent, un <code>hash[k] = v</code> partagé, un <code>compteur += 1</code>&nbsp;: tous peuvent se corrompre sans <code>Mutex</code>. Ne partage jamais d'état mutable entre threads sans protection explicite.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: agréger cinquante flux RSS</p><p>Un tableau de bord interne devait récupérer les cinquante flux RSS de l'équipe et les fusionner. En version séquentielle, chaque <code>Net::HTTP.get</code> attendait sa réponse avant de lancer le suivant&nbsp;: <strong>38&nbsp;secondes</strong> de rafraîchissement, l'essentiel passé à ne rien faire. En enveloppant chaque téléchargement dans un <code>Thread.new</code> et en collectant les résultats dans une <code>Queue</code>, le temps est tombé à <strong>2,5&nbsp;secondes</strong>&nbsp;: les cinquante attentes réseau se sont recouvertes. Aucun Ractor, aucun code savant — juste la bonne lecture «&nbsp;c'est de l'I/O, donc les threads vont aider&nbsp;».</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Trois pistes selon le besoin&nbsp;: les <strong>Fibers</strong> (coroutines coopératives, <code>Fiber.new</code>/<code>resume</code>) et le <em>Fiber Scheduler</em> de Ruby&nbsp;3 sous-tendent la gem <code>async</code> pour des milliers de connexions I/O légères&nbsp;; les <strong>processus</strong> (<code>fork</code>, ou la gem <code>parallel</code>) offrent un vrai parallélisme CPU au prix d'une mémoire non partagée&nbsp;; et dans le monde web, les serveurs comme <em>Puma</em> combinent <strong>plusieurs processus</strong> (pour le CPU) et <strong>plusieurs threads</strong> par processus (pour l'I/O).</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — concurrence en Ruby</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Outil</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Lancer un fil</td><td><code>Thread.new { ... }</code></td><td>attendre avec <code>join</code></td></tr>
+      <tr><td>Récupérer un résultat</td><td><code>th.value</code></td><td>attend puis renvoie</td></tr>
+      <tr><td>Protéger un état</td><td><code>mutex.synchronize { }</code></td><td>section critique</td></tr>
+      <tr><td>File thread-safe</td><td><code>Queue</code> (push/pop)</td><td>producteur/consommateur</td></tr>
+      <tr><td>Accélérer de l'attente</td><td>threads</td><td>tâches I/O-bound</td></tr>
+      <tr><td>Accélérer du calcul</td><td><code>Ractor</code> / processus</td><td>tâches CPU-bound</td></tr>
+      <tr><td>Chronométrer</td><td><code>Benchmark.realtime</code></td><td>mesurer le gain</td></tr>
+      <tr><td>Verrou global</td><td>GVL (MRI)</td><td>1 thread Ruby à la fois</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Thread</dt><dd>Fil d'exécution au sein d'un processus&nbsp;; créé par <code>Thread.new</code>, attendu par <code>join</code>.</dd>
+  <dt>GVL</dt><dd><em>Global VM Lock</em>&nbsp;: verrou de MRI garantissant qu'un seul thread exécute du bytecode Ruby à la fois&nbsp;; relâché durant les I/O.</dd>
+  <dt>I/O-bound</dt><dd>Tâche dont le temps est dominé par l'attente (réseau, disque)&nbsp;; accélérable par des threads.</dd>
+  <dt>CPU-bound</dt><dd>Tâche dont le temps est dominé par le calcul&nbsp;; non accélérée par les threads en MRI.</dd>
+  <dt>Condition de course</dt><dd>Bug où le résultat dépend de l'entrelacement imprévisible de threads accédant à un même état.</dd>
+  <dt>Mutex</dt><dd><em>Mutual exclusion</em>&nbsp;: verrou assurant qu'un seul thread entre dans une section critique (<code>synchronize</code>).</dd>
+  <dt>Queue</dt><dd>File thread-safe intégrée&nbsp;; <code>push</code> d'un côté, <code>pop</code> (bloquant) de l'autre, sans mutex manuel.</dd>
+  <dt>Ractor</dt><dd>Acteur isolé de Ruby&nbsp;3 sans mémoire mutable partagée&nbsp;; permet un vrai parallélisme par messages.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>thread</strong> (<code>Thread.new</code> + <code>join</code>) exécute un fil concurrent&nbsp;; le <strong>GVL</strong> n'en laisse qu'un exécuter du Ruby à la fois.</li>
+  <li>Le GVL est <strong>relâché pendant les I/O</strong>&nbsp;: les threads accélèrent l'<strong>I/O-bound</strong>, pas le <strong>CPU-bound</strong>.</li>
+  <li>Tout état mutable partagé exige un <code>Mutex</code>&nbsp;; une <code>Queue</code> est déjà sûre.</li>
+  <li>Pour du vrai parallélisme de calcul, vise les <strong>Ractor</strong> ou des <strong>processus</strong>.</li>
+  <li>Règle d'or&nbsp;: <strong>mesure</strong> (Benchmark) avant de conclure qu'une parallélisation aide.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi les threads accélèrent-ils une série de requêtes HTTP mais pas un gros calcul&nbsp;?</li>
+  <li>Le GVL protège-t-il <code>compteur += 1</code> partagé entre threads&nbsp;? Pourquoi&nbsp;?</li>
+  <li>Quand choisir un <code>Ractor</code> plutôt qu'un <code>Thread</code>&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que garantit le GVL (Global VM Lock) dans l'interpréteur MRI ?","a":["Un seul thread exécute du code Ruby à la fois","Deux threads calculent toujours en parallèle","Les threads sont interdits","Les I/O sont bloquées"],"correct":0,"explain":"Le GVL sérialise l'exécution du bytecode Ruby : un seul thread à la fois. Il est toutefois relâché pendant les opérations d'entrée/sortie bloquantes."},
+  {"q":"Pour quelle catégorie de tâches les threads MRI apportent-ils un vrai gain ?","a":["Les tâches I/O-bound (attente réseau, disque)","Les tâches CPU-bound (calcul intensif)","Toutes, sans distinction","Aucune"],"correct":0,"explain":"Le GVL étant relâché pendant les I/O, les attentes se recouvrent : gain net pour l'I/O-bound. Pour du calcul pur, le GVL empêche le parallélisme."},
+  {"q":"Pourquoi compteur += 1 partagé entre threads peut-il perdre des incrémentations ?","a":["L'opération n'est pas atomique : lire, incrémenter, écrire peuvent s'entrelacer","Parce que += est interdit dans un thread","Parce que le GVL corrompt la variable","Parce que les entiers sont trop grands"],"correct":0,"explain":"+= est une lecture puis une écriture ; le GVL peut céder la main entre les deux. Deux threads lisent la même valeur et une incrémentation est perdue. Il faut un Mutex."},
+  {"q":"Quel outil est DÉJÀ thread-safe pour un schéma producteur / consommateur ?","a":["Queue (Thread::Queue)","Array","Hash","String"],"correct":0,"explain":"Queue gère elle-même la synchronisation : push d'un côté, pop (bloquant) de l'autre. Pas besoin d'écrire son propre Mutex pour une file de travail."},
+  {"q":"Quand un Ractor est-il préférable à un Thread ?","a":["Pour du calcul CPU-bound qu'on veut vraiment étaler sur plusieurs cœurs","Pour attendre des réponses réseau","Pour lire un fichier","Toujours, il remplace les threads"],"correct":0,"explain":"Les Ractor ont chacun leur GVL et une mémoire isolée : ils permettent un parallélisme réel du calcul. Pour l'I/O, les threads restent plus simples et suffisants."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["join","join()"],"placeholder":"la méthode qui attend la fin d'un thread : …","hints":["Quatre lettres.","On « rejoint » le thread.","j___"],"link":{"href":"lecon-21.html","label":"Revoir « Les threads et le GVL »"}},
+  {"type":"text","accept":["mutex","Mutex","un mutex"],"placeholder":"l'objet à utiliser pour protéger un état mutable partagé entre threads : …","hints":["« mutual exclusion ».","On appelle synchronize dessus.","M____"],"link":{"href":"lecon-21.html","label":"Revoir « Partager sans corrompre »"}},
+  {"type":"text","accept":["io-bound","i/o-bound","io bound","i/o bound","entrées/sorties","io"],"placeholder":"le type de tâche (I/O-bound ou CPU-bound ?) que les threads MRI accélèrent : …","hints":["Celui dominé par l'attente.","Pas le calcul pur.","I/O-…"],"link":{"href":"lecon-21.html","label":"Revoir « I/O-bound contre CPU-bound »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Lance trois threads qui affichent chacun leur numéro, puis attends-les tous avant d'afficher <code>"terminé"</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.rb"><pre><code class="language-ruby">threads = 3.times.map do |i|
+  Thread.new { puts "thread #{i}" }
+end
+threads.each(&amp;:join)
+puts "terminé"</code></pre></figure><p><code>each(&amp;:join)</code> attend la fin de chaque thread&nbsp;: sans lui, le programme pourrait afficher <code>"terminé"</code> avant les threads.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Mille threads incrémentent un compteur partagé. Protège l'accès avec un <code>Mutex</code> pour que le total final soit exactement 1000.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.rb"><pre><code class="language-ruby">compteur = 0
+mutex = Mutex.new
+
+threads = 1000.times.map do
+  Thread.new { mutex.synchronize { compteur += 1 } }
+end
+threads.each(&amp;:join)
+puts compteur   # =&gt; 1000</code></pre></figure><p>Sans le <code>synchronize</code>, le résultat serait souvent inférieur à 1000&nbsp;: c'est la condition de course en action.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique en une phrase pourquoi remplacer <code>Thread.new</code> par <code>Ractor.new</code> peut accélérer un calcul lourd mais compliquer le partage de données.</p><details><summary>Voir une solution</summary><p>Un <code>Ractor</code> possède son propre GVL, donc plusieurs Ractor calculent <strong>réellement en parallèle</strong> sur plusieurs cœurs (gain pour le CPU-bound)&nbsp;; mais comme ils <strong>ne partagent pas</strong> de mémoire mutable, toute donnée doit être <em>copiée</em> ou <em>immuable</em> et échangée par messages (<code>send</code>/<code>take</code>), ce qui alourdit le code par rapport à des threads qui, eux, partagent la mémoire (au prix des conditions de course).</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-ruby.min.js" defer></script>
+  </body>
+</html>

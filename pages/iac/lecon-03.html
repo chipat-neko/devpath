@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Variables, state, plan/apply — Leçon 03 · Syntaxe</title>
+    <meta name="description" content="Paramétrer Terraform avec des variables et des outputs, comprendre le fichier d'état (state) et son stockage distant, et maîtriser le cycle plan / apply / destroy." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="iac" data-lesson="lecon-03.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Infrastructure as Code</a></li>
+            <li aria-current="page">Leçon 03</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 01 · Les bases — Leçon 03</p>
+              <h1 class="lesson-header__title">Variables, state, plan/apply</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 02</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>paramétrer avec des <strong>variables</strong> et exposer des <strong>outputs</strong>&nbsp;;</li>
+                  <li>expliquer le rôle du <strong>state</strong>&nbsp;;</li>
+                  <li>stocker le state <strong>à distance</strong> et le verrouiller&nbsp;;</li>
+                  <li>maîtriser <strong>plan / apply / destroy</strong> et les secrets.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une configuration codée en dur n'est pas réutilisable. Les <strong>variables</strong> la paramètrent, les <strong>outputs</strong> en exposent les résultats, et le <strong>state</strong> est la mémoire qui relie ton code à la réalité. Trois notions au cœur de Terraform.</p>
+
+<h2>Les variables</h2>
+<p>Une <strong>variable</strong> d'entrée paramètre la configuration (région, taille, nom…). On la déclare, puis on l'utilise avec <code>var.nom</code>. Les valeurs viennent d'un fichier <code>.tfvars</code>, de la ligne de commande ou de l'environnement.</p>
+<figure class="code-block" data-file="variables.tf"><pre><code class="language-hcl">variable "taille_serveur" {
+  type    = string
+  default = "small"
+}
+
+resource "cloud_server" "web" {
+  name = "serveur-web"
+  size = var.taille_serveur   # paramétré
+}</code></pre></figure>
+
+<h2>Les outputs</h2>
+<p>Un <strong>output</strong> expose une valeur calculée après l'<code>apply</code> (l'adresse IP créée, l'URL d'un service…), utile pour l'afficher ou la transmettre à un autre module.</p>
+<figure class="code-block" data-file="outputs.tf"><pre><code class="language-hcl">output "adresse_ip" {
+  value = cloud_server.web.ip
+}</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Une configuration paramétrable. À gauche, les entrées : les variables comme region ou taille, fournies par un fichier tfvars, la ligne de commande ou l'environnement. Au centre, la configuration Terraform qui les utilise via var point nom. À droite, les sorties : les outputs, valeurs calculées après apply comme l'adresse IP ou l'URL, à afficher ou à transmettre à un autre module.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">variables (entrée) → configuration → outputs (sortie)</text>
+    <rect class="d-box" x="24" y="50" width="168" height="58" rx="6" />
+    <text class="d-tag" x="108" y="74" text-anchor="middle" font-size="11">variables</text>
+    <text class="d-mut" x="108" y="92" text-anchor="middle" font-size="8.5">.tfvars, CLI, env</text>
+    <line class="d-line" x1="192" y1="79" x2="234" y2="79" /><path class="d-line" d="M227 75 L235 79 L227 83" fill="none" />
+    <rect class="d-accent" x="238" y="50" width="164" height="58" rx="6" />
+    <text class="d-tag" x="320" y="74" text-anchor="middle" font-size="11">configuration</text>
+    <text class="d-mut" x="320" y="92" text-anchor="middle" font-size="8.5">utilise var.nom</text>
+    <line class="d-line" x1="402" y1="79" x2="444" y2="79" /><path class="d-line" d="M437 75 L445 79 L437 83" fill="none" />
+    <rect class="d-box" x="448" y="50" width="168" height="58" rx="6" />
+    <text class="d-tag" x="532" y="74" text-anchor="middle" font-size="11">outputs</text>
+    <text class="d-mut" x="532" y="92" text-anchor="middle" font-size="8.5">IP, URL… après apply</text>
+    <text class="d-mut" x="320" y="134" text-anchor="middle" font-size="9">mêmes fichiers, valeurs différentes → une config réutilisable</text>
+  </svg>
+  <figcaption>Les <strong>variables</strong> entrent, la config les emploie, les <strong>outputs</strong> ressortent&nbsp;: le même code sert plusieurs environnements.</figcaption>
+</figure>
+
+<h2>Le state : la mémoire de Terraform</h2>
+<p>Comment Terraform sait-il ce qui existe déjà&nbsp;? Grâce au <strong>state</strong> (fichier <code>terraform.tfstate</code>) : il y mémorise la correspondance entre ton code et les ressources réelles (leurs identifiants). Au prochain <code>plan</code>, il compare <em>code</em> ↔ <em>state</em> ↔ <em>réalité</em> pour calculer les changements.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le state est précieux — et sensible</p><p>Perdre le state, c'est perdre le lien avec ton infrastructure (Terraform voudrait tout recréer). Et il peut contenir des <strong>valeurs sensibles</strong> (mots de passe générés). On ne le commit <strong>jamais</strong> en clair dans Git ; on le protège.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le rôle du state. Au sommet, le code décrit l'état voulu. En bas à gauche, le state, mémoire de Terraform, associe chaque ressource du code à son identifiant réel. En bas à droite, la réalité, les ressources chez le fournisseur. Lors d'un plan, Terraform relie les trois — code, state et réalité — pour calculer les changements. Perdre le state casse le lien entre le code et la réalité.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">plan compare code, state et réalité</text>
+    <rect class="d-accent" x="234" y="36" width="172" height="46" rx="6" />
+    <text class="d-tag" x="320" y="58" text-anchor="middle" font-size="11">code</text>
+    <text class="d-mut" x="320" y="74" text-anchor="middle" font-size="8.5">état voulu</text>
+    <rect class="d-box" x="40" y="112" width="204" height="46" rx="6" />
+    <text class="d-tag" x="142" y="134" text-anchor="middle" font-size="11">state</text>
+    <text class="d-mut" x="142" y="150" text-anchor="middle" font-size="8.5">code ↔ identifiants réels</text>
+    <rect class="d-box" x="396" y="112" width="204" height="46" rx="6" />
+    <text class="d-tag" x="498" y="134" text-anchor="middle" font-size="11">réalité</text>
+    <text class="d-mut" x="498" y="150" text-anchor="middle" font-size="8.5">ressources du fournisseur</text>
+    <line class="d-line" x1="288" y1="82" x2="168" y2="112" /><line class="d-line" x1="352" y1="82" x2="472" y2="112" /><line class="d-line" x1="244" y1="135" x2="396" y2="135" />
+  </svg>
+  <figcaption>Le <strong>state</strong> est le chaînon entre ton code et la réalité&nbsp;: sans lui, Terraform ne sait plus ce qui existe déjà.</figcaption>
+</figure>
+
+<h2>Le state distant</h2>
+<p>En équipe, on stocke le state <strong>à distance</strong> (un stockage objet partagé, par ex.) plutôt qu'en local. Deux bénéfices : tout le monde travaille sur le <strong>même</strong> état, et un <strong>verrou</strong> empêche deux personnes d'appliquer en même temps (ce qui corromprait le state).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 186" role="img" aria-label="State local contre state distant. En haut, deux développeurs ont chacun leur propre state local : les deux copies divergent, personne n'a la vraie image de l'infrastructure. En bas, les deux développeurs partagent un seul state distant protégé par un verrou : tout le monde lit et écrit le même état, et le verrou empêche deux apply simultanés de le corrompre.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">local = deux vérités qui divergent · distant = une seule, verrouillée</text>
+    <rect class="d-box" x="40" y="40" width="130" height="40" rx="6" /><text class="d-mut" x="105" y="64" text-anchor="middle" font-size="9">dev A · state local</text>
+    <rect class="d-box" x="470" y="40" width="130" height="40" rx="6" /><text class="d-mut" x="535" y="64" text-anchor="middle" font-size="9">dev B · state local</text>
+    <text class="d-text" x="320" y="64" text-anchor="middle" font-size="11">≠ divergence</text>
+    <rect class="d-accent" x="250" y="112" width="140" height="46" rx="6" />
+    <text class="d-tag" x="320" y="134" text-anchor="middle" font-size="10.5">state distant</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8.5">partagé + verrou</text>
+    <rect class="d-box" x="40" y="119" width="120" height="32" rx="6" /><text class="d-mut" x="100" y="139" text-anchor="middle" font-size="9">dev A</text>
+    <rect class="d-box" x="480" y="119" width="120" height="32" rx="6" /><text class="d-mut" x="540" y="139" text-anchor="middle" font-size="9">dev B</text>
+    <line class="d-line" x1="160" y1="135" x2="250" y2="135" /><line class="d-line" x1="390" y1="135" x2="480" y2="135" />
+    <text class="d-mut" x="320" y="178" text-anchor="middle" font-size="9">un verrou empêche deux apply en même temps</text>
+  </svg>
+  <figcaption>En équipe, le state <strong>distant verrouillé</strong> garantit une image unique et évite les corruptions.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le verrou qui évite la corruption</p><p>Deux ingénieurs d'astreinte réagissent au même incident et lancent chacun <code>terraform apply</code> à quelques secondes d'intervalle. Avec un state local, les deux auraient écrit par-dessus le même état&nbsp;: corruption et ressources fantômes. Grâce au state distant, le second <code>apply</code> est refusé net (<em>«&nbsp;Error: state locked&nbsp;»</em>)&nbsp;: un seul passe, l'autre attend. Le verrouillage transforme une course dangereuse en simple file d'attente.</p></div></div>
+
+<h2>Le cycle plan / apply / destroy</h2>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">terraform plan      # aperçu des changements
+terraform apply     # applique (après confirmation)
+terraform destroy   # détruit toutes les ressources gérées</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title"><code>destroy</code> : puissant et dangereux</p><p><code>terraform destroy</code> supprime <strong>tout</strong> ce que la configuration gère. Génial pour nettoyer un environnement de test ; catastrophique lancé par erreur en production. Vérifie toujours sur quel environnement tu es.</p></div></div>
+
+<h2>Gérer les secrets</h2>
+<p>Les valeurs sensibles (mots de passe, clés) ne se mettent pas en dur dans le code. On les passe par des <strong>variables marquées sensibles</strong>, fournies via l'environnement ou un gestionnaire de secrets, et on protège le <strong>state</strong> (qui peut les contenir) par le chiffrement et des accès restreints.</p>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Commiter le state en clair.</strong> Il contient des secrets et l'image de ton infra : protège-le, ne le versionne pas en clair.</li>
+<li><strong>Travailler en local à plusieurs.</strong> Deux states divergent ; utilise un state <strong>distant verrouillé</strong>.</li>
+<li><strong>Éditer le state à la main.</strong> Risque de corruption ; passe par les commandes prévues.</li>
+<li><strong>Lancer <code>destroy</code> sans vérifier l'environnement.</strong> Toujours s'assurer de ne pas être en production.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>Pour découper une grande infrastructure, on sépare les <strong>states</strong> par périmètre (réseau, applications, données) afin de limiter le « rayon de souffle » d'un changement et de paralléliser les équipes. Un grand state unique devient vite lent et risqué.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Beaucoup d'équipes n'autorisent l'<code>apply</code> que depuis le <strong>pipeline CI/CD</strong>, jamais depuis un poste. Le state est distant, le pipeline est la seule porte : traçabilité et sécurité maximales.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — variables, state et cycle de vie</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Rôle</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td><code>variable</code> / <code>var.nom</code></td><td>paramétrer (entrée)</td><td>valeurs dans <code>.tfvars</code>, CLI, env</td></tr>
+      <tr><td><code>output</code></td><td>exposer un résultat (sortie)</td><td>IP, URL… après <code>apply</code></td></tr>
+      <tr><td>state (<code>tfstate</code>)</td><td>mémoire code ↔ réel</td><td>précieux <em>et</em> sensible</td></tr>
+      <tr><td>state distant</td><td>partager en équipe</td><td>toujours <strong>verrouillé</strong></td></tr>
+      <tr><td><code>plan</code> / <code>apply</code> / <code>destroy</code></td><td>prévoir / appliquer / tout détruire</td><td>vérifie l'environnement avant <code>destroy</code></td></tr>
+      <tr><td>secret</td><td>valeur sensible</td><td>variable sensible + state protégé, jamais en dur</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Variable d'entrée</dt><dd>Paramètre de la configuration (région, taille, nom…) déclaré par <code>variable</code> et utilisé avec <code>var.nom</code>&nbsp;; ses valeurs viennent d'un <code>.tfvars</code>, de la CLI ou de l'environnement.</dd>
+  <dt>Output</dt><dd>Valeur calculée exposée après l'<code>apply</code> (adresse IP, URL…), pour l'afficher ou la transmettre à un autre module.</dd>
+  <dt>State</dt><dd>Fichier (<code>terraform.tfstate</code>) qui mémorise la correspondance entre le code et les ressources réelles (leurs identifiants)&nbsp;; base de calcul de chaque <code>plan</code>.</dd>
+  <dt>State distant</dt><dd>State stocké sur un support partagé plutôt qu'en local, pour que toute l'équipe travaille sur le même état.</dd>
+  <dt>Verrou (lock)</dt><dd>Mécanisme qui empêche deux <code>apply</code> simultanés d'écrire dans le state en même temps et de le corrompre.</dd>
+  <dt><code>destroy</code></dt><dd>Commande qui supprime <strong>toutes</strong> les ressources gérées par la configuration&nbsp;: utile pour nettoyer un environnement de test, dangereuse en production.</dd>
+  <dt>Variable sensible</dt><dd>Variable marquée comme secrète&nbsp;; sa valeur n'est pas affichée et provient de l'environnement ou d'un gestionnaire de secrets.</dd>
+  <dt>Rayon de souffle</dt><dd>Étendue des ressources qu'un changement peut impacter&nbsp;; on le limite en découpant l'infra en plusieurs states.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Les <strong>variables</strong> (<code>var.nom</code>) paramètrent ; les <strong>outputs</strong> exposent les résultats.</li>
+<li>Le <strong>state</strong> mémorise le lien code ↔ réalité ; il est précieux et <strong>sensible</strong>.</li>
+<li>Stocke le state <strong>à distance</strong> et <strong>verrouillé</strong> pour le travail en équipe.</li>
+<li><code>plan</code> (aperçu) → <code>apply</code> → <code>destroy</code> ; protège les secrets et le state.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert le fichier de state ?</li><li>Pourquoi un state distant verrouillé en équipe ?</li><li>Pourquoi ne pas commiter le state en clair ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"À quoi sert le fichier d'état (state) de Terraform ?","a":["À mémoriser la correspondance entre le code et les ressources réelles, pour calculer les changements au prochain plan","À stocker le code source de l'application","À configurer le provider","À remplacer les variables"],"correct":0,"explain":"Le state relie ta configuration aux ressources réelles (identifiants). Terraform compare code, state et réalité pour déterminer quoi créer/modifier/détruire."},
+  {"q":"Pourquoi stocker le state à distance et verrouillé quand on travaille en équipe ?","a":["Pour que tout le monde partage le même état, et qu'un verrou empêche deux applications simultanées de corrompre le state","Pour accélérer le code","Parce que le local est interdit","Pour chiffrer l'application"],"correct":0,"explain":"Un state local par personne diverge. Un state distant partagé, avec verrou, garantit un état unique et évite les corruptions par applications concurrentes."},
+  {"q":"Pourquoi ne faut-il jamais committer le fichier de state en clair dans Git ?","a":["Parce qu'il peut contenir des valeurs sensibles (mots de passe générés) et l'image complète de l'infrastructure","Parce qu'il est trop volumineux","Parce que Git le refuse","Parce qu'il ralentit les commandes"],"correct":0,"explain":"Le state peut contenir des secrets et décrit toute l'infra. On le protège (state distant chiffré, accès restreints), jamais en clair dans le dépôt."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["variable","variables","une variable"],"placeholder":"ce qui paramètre une configuration (région, taille…)","hints":["On l'utilise avec var.nom.","Valeurs dans un .tfvars.","« var… »."],"link":{"href":"lecon-03.html","label":"Revoir « Les variables »"}},
+  {"type":"text","accept":["state","le state","etat","état","tfstate"],"placeholder":"le fichier qui mémorise le lien code ↔ ressources réelles","hints":["terraform.tfstate.","Précieux et sensible.","Cinq lettres (en anglais)."],"link":{"href":"lecon-03.html","label":"Revoir « Le state »"}},
+  {"type":"text","accept":["destroy","terraform destroy"],"placeholder":"la commande qui détruit toutes les ressources gérées","hints":["À manier avec précaution.","terraform ____.","« dest… »."],"link":{"href":"lecon-03.html","label":"Revoir « Le cycle »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une variable <code>region</code> (chaîne, défaut « europe-ouest ») et utilise-la dans la configuration du provider.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo1.tf"><pre><code class="language-hcl">variable "region" {
+  type    = string
+  default = "europe-ouest"
+}
+
+provider "cloud" {
+  region = var.region
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Expose en output l'adresse IP d'un serveur <code>cloud_server.web</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo2.tf"><pre><code class="language-hcl">output "ip_serveur" {
+  value = cloud_server.web.ip
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Deux personnes d'une équipe travaillent sur la même infra avec un state <strong>local</strong>, chacune sur sa machine. Quels problèmes vont survenir, et quelle est la bonne pratique ?</p><details><summary>Voir une solution</summary><p>Problèmes : chacune a son <strong>propre state local</strong>, donc deux visions <strong>divergentes</strong> de l'infrastructure. Quand l'une applique un changement, l'autre ne le voit pas dans son state ; au prochain <code>apply</code>, elle pourrait <strong>recréer ou détruire</strong> des ressources qu'elle « croit » absentes/présentes. Sans verrou, des <code>apply</code> <strong>simultanés</strong> peuvent en plus <strong>corrompre</strong> l'état. Bonne pratique : un <strong>state distant partagé</strong> (stockage objet ou backend dédié) avec <strong>verrouillage</strong> — tout le monde lit/écrit le même état, et un seul <code>apply</code> s'exécute à la fois. Idéalement, n'autoriser l'<code>apply</code> que depuis le <strong>pipeline CI/CD</strong>, pour la traçabilité.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-hcl.min.js" defer></script>
+  </body>
+</html>

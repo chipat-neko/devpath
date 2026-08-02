@@ -1,0 +1,87 @@
+<p>On a entrevu les trois ingrédients de Prolog&nbsp;; construisons maintenant une vraie <strong>base de connaissances</strong> et apprenons à l'interroger finement. Cette leçon détaille comment énoncer des faits, écrire des règles expressives, et lire les réponses multiples que Prolog sait produire. À la fin, tu sauras modéliser un petit domaine et lui poser des questions utiles.</p>
+
+<h2>Les faits&nbsp;: la connaissance de base</h2>
+<p>Un <strong>fait</strong> affirme qu'une relation est vraie. Sa forme&nbsp;: un <em>prédicat</em> (le nom de la relation) suivi de ses <em>arguments</em> entre parenthèses, et un point.</p>
+<figure class="code-block" data-file="cours.pl"><pre><code class="language-prolog">% prédicat 'enseigne(Professeur, Matiere)'
+enseigne(durand, maths).
+enseigne(martin, physique).
+enseigne(durand, informatique).
+
+% prédicat 'suit(Eleve, Matiere)'
+suit(alice, maths).
+suit(alice, physique).
+suit(bob, informatique).</code></pre></figure>
+<p>L'ordre des arguments est une <strong>convention que tu fixes</strong> et dois respecter partout&nbsp;: ici, toujours <code>(personne, matiere)</code>. Prolog ne connaît pas le «&nbsp;sens&nbsp;» des mots&nbsp;; seule compte la cohérence de tes relations.</p>
+
+<h2>Les requêtes et les solutions multiples</h2>
+<p>Une <strong>requête</strong> demande à Prolog de vérifier ou de compléter une relation. Avec une variable, Prolog cherche <em>toutes</em> les valeurs qui conviennent&nbsp;; dans l'interpréteur, on tape <code>;</code> pour demander la solution suivante.</p>
+<figure class="code-block" data-file="requetes.pl"><pre><code class="language-prolog">?- enseigne(durand, Matiere).
+Matiere = maths ;
+Matiere = informatique.
+
+?- suit(Eleve, physique).
+Eleve = alice.</code></pre></figure>
+<p>Chaque solution est une <strong>liaison</strong> de la variable à une valeur qui rend la requête vraie. Prolog les énumère une à une, dans l'ordre des faits.</p>
+
+<h2>Les règles&nbsp;: déduire du nouveau</h2>
+<p>Une <strong>règle</strong> définit une relation à partir d'autres. Sa forme&nbsp;: <code>Tete :- Corps.</code> où la tête est vraie <em>si</em> le corps l'est. Le corps est une suite de conditions séparées par des virgules (le «&nbsp;et&nbsp;»).</p>
+<figure class="code-block" data-file="regles.pl"><pre><code class="language-prolog">% Un élève a un professeur P s'il suit une matière M
+% que P enseigne.
+a_pour_prof(Eleve, Prof) :-
+    suit(Eleve, Matiere),
+    enseigne(Prof, Matiere).
+
+?- a_pour_prof(alice, Prof).
+Prof = durand ;   % via maths
+Prof = martin.    % via physique</code></pre></figure>
+<p>La variable <code>Matiere</code>, partagée entre les deux conditions, fait le lien&nbsp;: elle doit désigner <em>la même</em> matière dans <code>suit</code> et dans <code>enseigne</code>. C'est ce partage de variable qui crée la déduction.</p>
+
+<h2>La conjonction&nbsp;: la virgule «&nbsp;et&nbsp;»</h2>
+<p>Dans le corps d'une règle, la virgule combine des conditions qui doivent <strong>toutes</strong> être vraies. On peut en chaîner autant qu'on veut.</p>
+<figure class="code-block" data-file="conjonction.pl"><pre><code class="language-prolog">% Deux élèves sont camarades s'ils suivent la même matière
+% (et ne sont pas la même personne).
+camarades(A, B) :-
+    suit(A, M),
+    suit(B, M),
+    A \= B.       % \= signifie "différent"
+
+?- camarades(alice, X).
+X = bob.   % si bob et alice partagent une matière</code></pre></figure>
+<p><code>\=</code> exprime «&nbsp;ne s'unifie pas avec&nbsp;» (différent). Sans cette condition, Prolog renverrait aussi <code>alice</code> comme camarade d'elle-même.</p>
+
+<h2>La disjonction&nbsp;: plusieurs règles pour un «&nbsp;ou&nbsp;»</h2>
+<p>Pour exprimer un «&nbsp;ou&nbsp;», la façon la plus lisible est d'écrire <strong>plusieurs clauses</strong> du même prédicat. Prolog les essaie chacune.</p>
+<figure class="code-block" data-file="disjonction.pl"><pre><code class="language-prolog">% Une personne est occupée si elle enseigne OU si elle suit un cours.
+occupe(P) :- enseigne(P, _).
+occupe(P) :- suit(P, _).
+
+?- occupe(durand).
+true.</code></pre></figure>
+<p>Le <code>_</code> (souligné) est la <strong>variable anonyme</strong>&nbsp;: «&nbsp;peu importe quoi&nbsp;». Ici, on veut juste savoir si <code>durand</code> enseigne <em>quelque chose</em>, sans nommer quoi.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mélanger l'ordre des arguments d'un prédicat. Si tu écris parfois <code>enseigne(maths, durand)</code> et parfois <code>enseigne(durand, maths)</code>, tes requêtes échoueront sans erreur visible — Prolog ne «&nbsp;trouve&nbsp;» simplement rien. Fixe une convention d'arguments dès le départ et documente-la en commentaire.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'ensemble des faits et règles s'appelle la <strong>base de connaissances</strong>. Prolog est, à sa manière, une <strong>base de données déductive</strong>&nbsp;: les faits sont les données, les règles sont des vues calculées, et les requêtes ressemblent à du SQL — mais en plus expressif, car les règles peuvent être récursives (leçon 5). Ce lien a donné naissance à <strong>Datalog</strong>, encore utilisé aujourd'hui.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>fait</strong> énonce une relation vraie&nbsp;; respecte un ordre d'arguments constant.</li>
+  <li>Une <strong>règle</strong> <code>Tete :- Corps.</code> déduit&nbsp;; les variables partagées créent le lien.</li>
+  <li>La <strong>virgule</strong> = «&nbsp;et&nbsp;»&nbsp;; plusieurs clauses = «&nbsp;ou&nbsp;».</li>
+  <li><code>_</code> est la variable anonyme&nbsp;; <code>\=</code> signifie «&nbsp;différent&nbsp;».</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment exprime-t-on un «&nbsp;et&nbsp;» dans le corps d'une règle&nbsp;?</li><li>À quoi sert la variable anonyme <code>_</code>&nbsp;?</li><li>Comment exprimer un «&nbsp;ou&nbsp;» entre deux conditions&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris deux faits&nbsp;: «&nbsp;alice aime le thé&nbsp;» et «&nbsp;bob aime le café&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">aime(alice, the).
+aime(bob, cafe).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec <code>parent/2</code>, écris une règle <code>frere_ou_soeur(A, B)</code>&nbsp;: A et B ont un parent commun et sont différents.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">frere_ou_soeur(A, B) :-
+    parent(P, A),
+    parent(P, B),
+    A \= B.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Définis <code>a_un_enfant(P)</code>&nbsp;: vrai si <code>P</code> est parent d'au moins une personne, sans nommer laquelle.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">a_un_enfant(P) :- parent(P, _).
+
+% Le _ ignore l'identité de l'enfant : on veut juste
+% savoir s'il en existe un.</code></pre></figure></details></div>

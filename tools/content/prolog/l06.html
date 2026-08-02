@@ -1,0 +1,95 @@
+<p>Prolog excelle à raisonner sur des relations, mais il sait aussi <strong>calculer</strong>. Encore faut-il distinguer deux mondes&nbsp;: la <strong>logique</strong> (unifier, déduire) et l'<strong>arithmétique</strong> (évaluer des nombres). Le pont entre eux porte un nom&nbsp;: l'opérateur <code>is</code>. Cette leçon clarifie le calcul en Prolog et muscle ta maîtrise de la <strong>récursion</strong>, le seul moyen de «&nbsp;répéter&nbsp;» dans ce langage sans boucle.</p>
+
+<h2>Calculer avec <code>is</code></h2>
+<p>On l'a vu&nbsp;: <code>=</code> unifie mais n'évalue pas. Pour obtenir <em>la valeur</em> d'une expression arithmétique, on utilise <code>is</code>&nbsp;: il évalue le terme de droite et unifie le résultat à gauche.</p>
+<figure class="code-block" data-file="is.pl"><pre><code class="language-prolog">?- X is 2 + 3.
+X = 5.
+?- X is 4 * (10 - 2).
+X = 32.
+?- X is 17 mod 5.
+X = 2.          % reste de la division
+?- X is 17 // 5.
+X = 3.          % division entière</code></pre></figure>
+<p>Contrainte importante&nbsp;: à droite de <code>is</code>, toutes les variables doivent <strong>déjà être liées</strong> à des nombres. <code>X is Y + 1</code> échoue si <code>Y</code> est encore libre.</p>
+
+<h2>Comparer des nombres</h2>
+<p>Pour comparer des <em>valeurs</em> numériques (et non unifier des termes), Prolog offre des opérateurs dédiés qui évaluent leurs deux côtés&nbsp;:</p>
+<figure class="code-block" data-file="comparaisons.pl"><pre><code class="language-prolog">?- 5 &gt; 3.          true.
+?- 2 &lt; 10.         true.
+?- 4 =&lt; 4.         true.     % inférieur ou égal
+?- 5 &gt;= 6.         false.    % supérieur ou égal
+?- 2 + 2 =:= 4.    true.     % ÉGALITÉ arithmétique
+?- 2 + 2 =\= 5.    true.     % DIFFÉRENCE arithmétique</code></pre></figure>
+<p>Ne confonds pas&nbsp;: <code>=:=</code> compare des <em>valeurs</em> (il calcule), tandis que <code>=</code> tente d'<em>unifier</em> des <em>termes</em> (il n'évalue pas). <code>4 =:= 2+2</code> est vrai&nbsp;; <code>4 = 2+2</code> est faux.</p>
+
+<h2>La récursion arithmétique&nbsp;: la factorielle</h2>
+<p>Sans boucle, on répète par récursion&nbsp;: un cas de base et un cas qui se ramène à un problème plus petit. L'exemple canonique&nbsp;: la factorielle.</p>
+<figure class="code-block" data-file="factorielle.pl"><pre><code class="language-prolog">factorielle(0, 1).              % cas de base : 0! = 1
+factorielle(N, F) :-           % cas récursif :
+    N &gt; 0,
+    N1 is N - 1,
+    factorielle(N1, F1),       % calculer (N-1)!
+    F is N * F1.               % puis multiplier par N
+
+?- factorielle(5, F).
+F = 120.</code></pre></figure>
+<p>Le déroulé pour <code>5</code>&nbsp;: il faut <code>4!</code>, qui exige <code>3!</code>… jusqu'à <code>0!</code>=1, puis Prolog «&nbsp;remonte&nbsp;» en multipliant&nbsp;: 1, 1, 2, 6, 24, 120. La condition <code>N &gt; 0</code> garantit qu'on s'arrête bien au cas de base.</p>
+
+<h2>Sommer une liste</h2>
+<p>On combine le patron tête/queue (leçon 5) avec <code>is</code>. Le cas de base&nbsp;: la somme de la liste vide vaut 0.</p>
+<figure class="code-block" data-file="somme.pl"><pre><code class="language-prolog">somme([], 0).
+somme([T|Q], S) :-
+    somme(Q, S1),
+    S is S1 + T.
+
+?- somme([10, 20, 30], S).
+S = 60.</code></pre></figure>
+
+<h2>L'accumulateur&nbsp;: une récursion plus efficace</h2>
+<p>La version ci-dessus calcule la queue <em>avant</em> de combiner&nbsp;: elle empile les appels. Un <strong>accumulateur</strong> — un argument qui transporte le résultat partiel — donne une récursion <em>terminale</em>, plus économe en mémoire.</p>
+<figure class="code-block" data-file="accumulateur.pl"><pre><code class="language-prolog">% On démarre l'accumulateur à 0.
+somme_acc(L, S) :- somme_acc(L, 0, S).
+
+somme_acc([], Acc, Acc).            % liste finie : le résultat EST l'accu
+somme_acc([T|Q], Acc, S) :-
+    Acc1 is Acc + T,               % on ajoute la tête à l'accu
+    somme_acc(Q, Acc1, S).         % et on continue
+
+?- somme_acc([10, 20, 30], S).
+S = 60.</code></pre></figure>
+<p>Le motif «&nbsp;prédicat public à 2 arguments qui appelle un prédicat interne à 3 avec un accumulateur initial&nbsp;» est un grand classique de Prolog. Garde-le sous la main.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Écrire <code>N = N - 1</code> en pensant «&nbsp;décrémenter&nbsp;». En Prolog, c'est une <em>unification</em> qui échoue toujours (un nombre n'est jamais égal à lui-même moins un). Il faut une <strong>nouvelle</strong> variable et <code>is</code>&nbsp;: <code>N1 is N - 1</code>. De même, oublier le cas de base ou la condition <code>N &gt; 0</code> mène à une récursion <strong>infinie</strong>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'arithmétique de <code>is</code> n'est <strong>pas réversible</strong>&nbsp;: <code>?- 5 is X + 2.</code> échoue, car Prolog ne sait pas «&nbsp;inverser&nbsp;» le calcul. Pour résoudre des équations dans les deux sens, on utilise la <strong>programmation par contraintes</strong> (bibliothèque <code>clpfd</code> de SWI-Prolog), où <code>X #= 5 - 2</code> fonctionne quel que soit le membre inconnu. C'est l'évolution moderne du calcul en logique.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>is</code> <strong>évalue</strong> l'arithmétique&nbsp;; ses variables de droite doivent être liées.</li>
+  <li>Comparaisons numériques&nbsp;: <code>&lt;</code>, <code>&gt;</code>, <code>=&lt;</code>, <code>&gt;=</code>, <code>=:=</code>, <code>=\=</code> (qui calculent).</li>
+  <li>On «&nbsp;répète&nbsp;» par <strong>récursion</strong>&nbsp;: cas de base + cas plus petit.</li>
+  <li>L'<strong>accumulateur</strong> rend la récursion terminale et plus efficace.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi utiliser <code>is</code> et non <code>=</code> pour calculer&nbsp;?</li><li>Quelle différence entre <code>=:=</code> et <code>=</code>&nbsp;?</li><li>Que se passe-t-il si on oublie le cas de base d'une récursion&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle requête lie <code>X</code> à la valeur de <code>7 * 6</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">?- X is 7 * 6.
+X = 42.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>double(X, Y)</code> qui lie <code>Y</code> au double de <code>X</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">double(X, Y) :- Y is X * 2.
+
+?- double(21, Y).
+Y = 42.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>compte_a_rebours(N)</code> qui affiche les entiers de <code>N</code> à <code>0</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">compte_a_rebours(0) :- write(0), nl.
+compte_a_rebours(N) :-
+    N &gt; 0,
+    write(N), nl,
+    N1 is N - 1,
+    compte_a_rebours(N1).
+
+?- compte_a_rebours(3).
+3
+2
+1
+0</code></pre></figure></details></div>

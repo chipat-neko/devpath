@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bien évaluer une classification — Leçon 09 · Syntaxe</title>
+    <meta name="description" content="Au-delà de l'exactitude : matrice de confusion, précision, rappel, F1 et courbe ROC / AUC. Comprendre le compromis précision-rappel et évaluer un classifieur sur des classes déséquilibrées avec scikit-learn." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="ml" data-lesson="lecon-09.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Machine Learning</a></li>
+            <li aria-current="page">Leçon 09</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 09</p>
+              <h1 class="lesson-header__title">Bien évaluer une classification</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçons 05-06</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lire une <strong>matrice de confusion</strong> (VP, FP, VN, FN)&nbsp;;</li>
+                  <li>calculer et choisir entre <strong>précision</strong>, <strong>rappel</strong> et <strong>F1</strong>&nbsp;;</li>
+                  <li>comprendre pourquoi l'<strong>exactitude</strong> trompe sur des classes déséquilibrées&nbsp;;</li>
+                  <li>interpréter une <strong>courbe ROC</strong> et son aire <strong>AUC</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>« Mon modèle a 98 % de bonnes réponses. » Impressionnant… jusqu'à ce qu'on apprenne que 98 % des e-mails ne sont pas des spams : un modèle qui répond <em>toujours</em> « pas spam » obtient le même score sans rien détecter. Cette leçon te donne les métriques qui <strong>ne se laissent pas berner</strong>.</p>
+
+<h2>L'exactitude ne suffit pas</h2>
+<p>L'<strong>exactitude</strong> (<em>accuracy</em>), vue en leçon 05, est la proportion de prédictions correctes. Elle est trompeuse dès qu'une classe est <strong>rare</strong> (données <em>déséquilibrées</em>) : maladie rare, fraude, panne… Là, la classe intéressante est justement la minoritaire, et l'exactitude la noie dans la masse.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Sur un dépistage où 1 % des gens sont malades, un modèle qui déclare « <strong>tout le monde est sain</strong> » atteint <strong>99 % d'exactitude</strong>… et rate <strong>100 % des malades</strong>. L'exactitude seule est ici dangereusement flatteuse.</p></div></div>
+
+<h2>La matrice de confusion</h2>
+<p>Tout part de la <strong>matrice de confusion</strong> : un tableau qui croise la <strong>réalité</strong> et la <strong>prédiction</strong>. Pour deux classes (positif / négatif), elle a quatre cases&nbsp;:</p>
+<ul>
+<li><strong>VP</strong> (vrai positif) : positif, bien prédit positif&nbsp;;</li>
+<li><strong>FN</strong> (faux négatif) : positif, prédit négatif à tort — un <em>raté</em>&nbsp;;</li>
+<li><strong>FP</strong> (faux positif) : négatif, prédit positif à tort — une <em>fausse alerte</em>&nbsp;;</li>
+<li><strong>VN</strong> (vrai négatif) : négatif, bien prédit négatif.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Matrice de confusion à quatre cases. Les colonnes sont la prédiction (positif, négatif), les lignes la réalité (positif, négatif). En haut à gauche, réel positif prédit positif : vrai positif, correct. En haut à droite, réel positif prédit négatif : faux négatif, un raté. En bas à gauche, réel négatif prédit positif : faux positif, une fausse alerte. En bas à droite, réel négatif prédit négatif : vrai négatif, correct.">
+    <text class="d-label" x="330" y="26" text-anchor="middle" font-size="12">La matrice de confusion</text>
+    <text class="d-mut" x="330" y="52" text-anchor="middle" font-size="10">Prédiction du modèle</text>
+    <text class="d-mut" x="266" y="70" text-anchor="middle" font-size="9.5">positif</text>
+    <text class="d-mut" x="426" y="70" text-anchor="middle" font-size="9.5">négatif</text>
+    <text class="d-mut" x="120" y="120" text-anchor="middle" font-size="10" transform="rotate(-90 120 120)">Réalité</text>
+    <text class="d-mut" x="176" y="112" text-anchor="end" font-size="9.5">positif</text>
+    <text class="d-mut" x="176" y="182" text-anchor="end" font-size="9.5">négatif</text>
+    <rect class="d-accent" x="196" y="80" width="140" height="60" rx="5" />
+    <rect class="d-box" x="356" y="80" width="140" height="60" rx="5" />
+    <rect class="d-box" x="196" y="150" width="140" height="60" rx="5" />
+    <rect class="d-accent" x="356" y="150" width="140" height="60" rx="5" />
+    <text class="d-label" x="266" y="106" text-anchor="middle" font-size="12">VP</text>
+    <text class="d-mut" x="266" y="124" text-anchor="middle" font-size="8.5">bien détecté</text>
+    <text class="d-label" x="426" y="106" text-anchor="middle" font-size="12">FN</text>
+    <text class="d-mut" x="426" y="124" text-anchor="middle" font-size="8.5">raté</text>
+    <text class="d-label" x="266" y="176" text-anchor="middle" font-size="12">FP</text>
+    <text class="d-mut" x="266" y="194" text-anchor="middle" font-size="8.5">fausse alerte</text>
+    <text class="d-label" x="426" y="176" text-anchor="middle" font-size="12">VN</text>
+    <text class="d-mut" x="426" y="194" text-anchor="middle" font-size="8.5">bien écarté</text>
+    <text class="d-tag" x="330" y="236" text-anchor="middle" font-size="9">la diagonale (VP, VN) = les bonnes réponses</text>
+  </svg>
+  <figcaption>Les deux cases en couleur (VP, VN) sont les <strong>succès</strong>&nbsp;; les deux autres, les <strong>erreurs</strong>. Un <em>faux négatif</em> et un <em>faux positif</em> n'ont pas du tout les mêmes conséquences.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="matrice.py"><pre><code class="language-python">from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+y_pred = modele.predict(X_test)
+print(confusion_matrix(y_test, y_pred))    # [[VN, FP], [FN, VP]] par défaut
+ConfusionMatrixDisplay.from_estimator(modele, X_test, y_test)  # version visuelle</code></pre></figure>
+
+<h2>Précision, rappel, F1</h2>
+<p>Deux métriques se lisent directement sur la matrice, et répondent à deux questions différentes&nbsp;:</p>
+<ul>
+<li><strong>Précision</strong> = VP / (VP + FP). <em>Quand le modèle dit « positif », a-t-il raison&nbsp;?</em> Elle chute s'il y a beaucoup de fausses alertes.</li>
+<li><strong>Rappel</strong> = VP / (VP + FN). <em>Parmi tous les vrais positifs, combien en attrape-t-il&nbsp;?</em> Il chute s'il en rate beaucoup.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 228" role="img" aria-label="Deux ovales qui se chevauchent. L'ovale de gauche représente les cas réellement positifs, celui de droite les cas prédits positifs par le modèle. Leur intersection est l'ensemble des vrais positifs. La partie gauche seule est faite de faux négatifs, la partie droite seule de faux positifs. La précision est la part des vrais positifs dans l'ovale de droite ; le rappel, la part des vrais positifs dans l'ovale de gauche.">
+    <text class="d-label" x="320" y="26" text-anchor="middle" font-size="12">Précision et rappel</text>
+    <ellipse class="d-line" cx="256" cy="118" rx="150" ry="64" fill="none" />
+    <ellipse class="d-accent" cx="400" cy="118" rx="150" ry="64" fill="none" />
+    <text class="d-mut" x="180" y="70" text-anchor="middle" font-size="9.5">réellement positifs</text>
+    <text class="d-tag" x="486" y="70" text-anchor="middle" font-size="9.5">prédits positifs</text>
+    <text class="d-mut" x="190" y="122" text-anchor="middle" font-size="9.5">FN</text>
+    <text class="d-mut" x="190" y="136" text-anchor="middle" font-size="8">(ratés)</text>
+    <text class="d-label" x="328" y="120" text-anchor="middle" font-size="11">VP</text>
+    <text class="d-mut" x="466" y="122" text-anchor="middle" font-size="9.5">FP</text>
+    <text class="d-mut" x="466" y="136" text-anchor="middle" font-size="8">(alertes)</text>
+    <text class="d-mut" x="150" y="206" text-anchor="middle" font-size="9">rappel = VP / (VP + FN)</text>
+    <text class="d-mut" x="490" y="206" text-anchor="middle" font-size="9">précision = VP / (VP + FP)</text>
+  </svg>
+  <figcaption>La <strong>précision</strong> regarde à l'intérieur des « prédits positifs » (à droite)&nbsp;; le <strong>rappel</strong> regarde à l'intérieur des « réellement positifs » (à gauche). Le VP est leur intersection.</figcaption>
+</figure>
+
+<p>On aimerait les deux au maximum, mais elles <strong>s'opposent</strong> souvent : élargir les alertes améliore le rappel mais dégrade la précision, et inversement. Le <strong>F1</strong> les résume en une seule note (leur <em>moyenne harmonique</em>), qui n'est élevée que si <strong>les deux</strong> le sont.</p>
+<figure class="code-block" data-file="rapport.py"><pre><code class="language-python">from sklearn.metrics import classification_report
+
+print(classification_report(y_test, y_pred))
+#               precision    recall  f1-score   support
+#            0       0.99      0.99      0.99       970
+#            1       0.78      0.71      0.74        30   &lt;- la classe rare, bien plus dure</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Deux domaines, deux priorités opposées. Pour un <strong>dépistage médical</strong>, on veut un <strong>rappel</strong> maximal : rater un malade (faux négatif) est bien plus grave qu'une fausse alerte, qu'un second examen lèvera. Pour un <strong>filtre anti-spam</strong>, on privilégie la <strong>précision</strong> : mieux vaut laisser passer quelques spams que d'envoyer un vrai message important (faux positif) dans les indésirables. La <em>bonne</em> métrique dépend du coût de chaque type d'erreur, pas d'une règle universelle.</p></div></div>
+
+<h2>Le seuil : de la probabilité à la décision</h2>
+<p>Un classifieur ne sort pas seulement « oui / non » : il estime une <strong>probabilité</strong> (via <code>predict_proba</code>). La décision vient d'un <strong>seuil</strong>, 0,5 par défaut. Le <strong>baisser</strong> (dire « positif » plus facilement) augmente le rappel mais multiplie les fausses alertes ; le <strong>monter</strong> fait l'inverse. Régler le seuil, c'est choisir <em>où</em> placer le curseur précision / rappel.</p>
+<figure class="code-block" data-file="seuil.py"><pre><code class="language-python">proba = modele.predict_proba(X_test)[:, 1]   # probabilité de la classe positive
+y_prudent = (proba &gt;= 0.30).astype(int)       # seuil bas : plus de rappel
+y_strict  = (proba &gt;= 0.70).astype(int)       # seuil haut : plus de précision</code></pre></figure>
+
+<h2>La courbe ROC et l'AUC</h2>
+<p>Plutôt que de figer un seuil, la <strong>courbe ROC</strong> les balaie <em>tous</em>. Elle trace le <strong>taux de vrais positifs</strong> (le rappel) contre le <strong>taux de faux positifs</strong>. Une diagonale correspond au hasard ; plus la courbe monte vers le coin haut-gauche, meilleur est le modèle. L'<strong>AUC</strong> (aire sous la courbe) résume le tout : <strong>0,5</strong> = hasard, <strong>1,0</strong> = parfait.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 236" role="img" aria-label="Courbe ROC. L'axe horizontal est le taux de faux positifs de 0 à 1, l'axe vertical le taux de vrais positifs de 0 à 1. Une diagonale en pointillés relie le coin bas-gauche au coin haut-droit : elle représente un modèle au hasard, d'AUC 0,5. Une courbe pleine s'élève rapidement vers le coin haut-gauche puis rejoint le coin haut-droit : c'est un bon modèle, dont l'aire sous la courbe est proche de 1.">
+    <text class="d-label" x="330" y="26" text-anchor="middle" font-size="12">Courbe ROC &amp; aire (AUC)</text>
+    <line class="d-line" x1="96" y1="44" x2="96" y2="196" />
+    <line class="d-line" x1="96" y1="196" x2="586" y2="196" />
+    <text class="d-mut" x="72" y="120" text-anchor="middle" font-size="9.5" transform="rotate(-90 72 120)">taux vrais positifs</text>
+    <text class="d-mut" x="336" y="224" text-anchor="middle" font-size="9.5">taux faux positifs →</text>
+    <line class="d-line" x1="96" y1="196" x2="586" y2="44" stroke-dasharray="5 4" />
+    <text class="d-mut" x="470" y="150" font-size="9" transform="rotate(-17 470 150)">hasard (AUC 0,5)</text>
+    <path class="d-accent" d="M96 196 C 130 96, 240 60, 586 44" fill="none" stroke-width="2.6" />
+    <text class="d-tag" x="250" y="96" font-size="10">bon modèle</text>
+    <text class="d-tag" x="250" y="112" font-size="9">AUC ≈ 0,92</text>
+    <circle class="d-dot" cx="150" cy="112" r="3.5" /><circle class="d-dot" cx="200" cy="80" r="3.5" /><circle class="d-dot" cx="320" cy="60" r="3.5" />
+    <text class="d-mut" x="96" y="212" text-anchor="middle" font-size="8.5">0</text>
+    <text class="d-mut" x="586" y="212" text-anchor="middle" font-size="8.5">1</text>
+  </svg>
+  <figcaption>Chaque point de la courbe correspond à un <strong>seuil</strong>. Plus la courbe « pousse » vers le coin haut-gauche, plus l'<strong>AUC</strong> s'approche de 1&nbsp;: le modèle sépare bien les deux classes.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="auc.py"><pre><code class="language-python">from sklearn.metrics import roc_auc_score, RocCurveDisplay
+
+print(roc_auc_score(y_test, proba))          # l'AUC, entre 0,5 et 1,0
+RocCurveDisplay.from_estimator(modele, X_test, y_test)   # tracer la courbe</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Sur des classes très déséquilibrées, l'AUC ROC peut rester flatteuse. On lui préfère alors la <strong>courbe précision-rappel</strong> et son aire (<em>average precision</em>), plus sensible aux performances sur la classe rare.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Se fier à l'exactitude sur des classes déséquilibrées.</strong> Regarde d'abord la matrice de confusion et le rappel de la classe rare.</li>
+<li><strong>Confondre précision et rappel.</strong> Précision = « quand je dis oui, ai-je raison » ; rappel = « est-ce que j'attrape tout ».</li>
+<li><strong>Garder le seuil 0,5 par réflexe.</strong> Il se règle selon le coût des erreurs (FP vs FN).</li>
+<li><strong>Optimiser le seuil sur le jeu de test.</strong> Comme tout réglage, il se choisit en validation, jamais sur le test final.</li>
+</ul>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Avec plus de deux classes, précision et rappel se calculent par classe puis se moyennent : moyenne <strong>macro</strong> (chaque classe compte pareil, utile quand les rares importent) ou <strong>pondérée</strong> (proportionnelle aux effectifs). Contre le déséquilibre, on peut aussi <em>rééchantillonner</em> (sur- ou sous-échantillonnage, SMOTE) ou pondérer les classes via <code>class_weight="balanced"</code>.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Évaluer une classification — mémo</caption>
+    <thead><tr><th scope="col">Métrique</th><th scope="col">Question posée</th><th scope="col">scikit-learn</th></tr></thead>
+    <tbody>
+      <tr><td>Matrice de confusion</td><td>répartition VP / FP / VN / FN</td><td><code>confusion_matrix</code></td></tr>
+      <tr><td>Précision</td><td>quand je dis « positif », ai-je raison ?</td><td><code>precision_score</code></td></tr>
+      <tr><td>Rappel</td><td>quelle part des positifs j'attrape ?</td><td><code>recall_score</code></td></tr>
+      <tr><td>F1</td><td>équilibre précision / rappel</td><td><code>f1_score</code></td></tr>
+      <tr><td>Vue d'ensemble</td><td>tout par classe d'un coup</td><td><code>classification_report</code></td></tr>
+      <tr><td>AUC</td><td>séparation, tous seuils confondus</td><td><code>roc_auc_score</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Matrice de confusion</dt><dd>Tableau croisant réalité et prédiction&nbsp;; ses quatre cases (VP, FP, VN, FN) fondent toutes les métriques.</dd>
+  <dt>Faux positif (FP)</dt><dd>Cas négatif prédit positif à tort — une <strong>fausse alerte</strong>.</dd>
+  <dt>Faux négatif (FN)</dt><dd>Cas positif prédit négatif à tort — un <strong>raté</strong>, souvent le plus coûteux.</dd>
+  <dt>Précision</dt><dd>VP / (VP + FP)&nbsp;: fiabilité des prédictions positives du modèle.</dd>
+  <dt>Rappel (sensibilité)</dt><dd>VP / (VP + FN)&nbsp;: part des vrais positifs effectivement retrouvés.</dd>
+  <dt>F1</dt><dd>Moyenne harmonique de la précision et du rappel&nbsp;; élevée seulement si les deux le sont.</dd>
+  <dt>Seuil</dt><dd>Probabilité au-delà de laquelle on décide « positif »&nbsp;; le régler déplace le curseur précision / rappel.</dd>
+  <dt>Courbe ROC / AUC</dt><dd>Courbe du taux de vrais positifs contre les faux positifs pour tous les seuils&nbsp;; l'aire (AUC) va de 0,5 (hasard) à 1 (parfait).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>L'<strong>exactitude</strong> trompe sur des classes déséquilibrées&nbsp;: regarde la <strong>matrice de confusion</strong>.</li>
+<li><strong>Précision</strong> = fiabilité des « positifs » ; <strong>rappel</strong> = part des positifs attrapés ; <strong>F1</strong> les concilie.</li>
+<li>Le <strong>seuil</strong> arbitre entre précision et rappel selon le coût des erreurs.</li>
+<li>La <strong>courbe ROC</strong> et l'<strong>AUC</strong> résument la performance sur tous les seuils.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi le F1 n'est-il pas la simple moyenne de la précision et du rappel ?</li><li>Dans quel sens bouge le rappel quand on abaisse le seuil de décision ?</li><li>Quelle métrique privilégier pour ne surtout pas rater de cas positifs ?</li><li>Que signifie une AUC de 0,5 ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Un modèle affiche une précision de 0,90 et un rappel de 0,10. Que vaut environ son F1, et que révèle cet écart ?","a":["Environ 0,18 : la moyenne harmonique s'effondre dès qu'une des deux mesures est basse — ici le modèle rate 9 positifs sur 10","0,50, la moyenne des deux valeurs","0,90 : le F1 retient la meilleure des deux","0,10 : le F1 retient toujours le rappel"],"correct":0,"explain":"F1 = 2 × (P × R) / (P + R) = 2 × 0,09 / 1,00 ≈ 0,18. Contrairement à la moyenne arithmétique (0,50), la moyenne harmonique n'est élevée que si les DEUX le sont : elle démasque un modèle très prudent, qui n'annonce « positif » que dans les cas évidents et laisse filer presque tous les autres."},
+  {"q":"Tu abaisses le seuil de décision de 0,50 à 0,30 sur les probabilités de predict_proba. Qu'arrive-t-il à la précision et au rappel ?","a":["Le rappel monte (le modèle déclare « positif » plus facilement) mais la précision baisse : il y a davantage de fausses alertes","La précision monte et le rappel baisse","Les deux montent : baisser le seuil est toujours un gain net","Rien ne change : le seuil n'agit que sur le temps de calcul"],"correct":0,"explain":"Baisser le seuil élargit le filet : on attrape plus de vrais positifs (rappel en hausse), mais on ramasse aussi plus de faux positifs (précision en baisse). Le monter fait l'inverse. Le seuil est donc un curseur entre les deux erreurs, et il se règle en validation, jamais sur le jeu de test."},
+  {"q":"Pour un dépistage médical, quelle erreur veut-on surtout éviter, et quelle métrique maximiser ?","a":["Éviter les faux négatifs (rater un malade) : on maximise le rappel","Éviter les faux positifs : on maximise la précision","Aucune, l'exactitude suffit","Éviter les vrais positifs"],"correct":0,"explain":"Rater un malade (faux négatif) est le plus grave ; une fausse alerte se lève par un second examen. On privilégie donc le rappel."},
+  {"q":"Que signifie une AUC (aire sous la courbe ROC) de 0,5 ?","a":["Le modèle ne fait pas mieux que le hasard pour séparer les deux classes","Le modèle est parfait","Le modèle a 50 % d'exactitude","Le seuil est mal réglé"],"correct":0,"explain":"Une AUC de 0,5 correspond à la diagonale de la ROC, c'est-à-dire au hasard. Une AUC proche de 1 indique une bonne séparation des classes."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["rappel","recall","sensibilite","sensibilité"],"placeholder":"la métrique = part des positifs réellement retrouvés","hints":["VP / (VP + FN).","En anglais : recall.","On veut le maximiser en dépistage médical."],"link":{"href":"lecon-09.html","label":"Revoir « Précision, rappel, F1 »"}},
+  {"type":"text","accept":["precision","précision"],"placeholder":"la métrique = fiabilité des prédictions positives","hints":["VP / (VP + FP).","« Quand je dis oui, ai-je raison ? »","On la veut haute pour un anti-spam."],"link":{"href":"lecon-09.html","label":"Revoir « Précision, rappel, F1 »"}},
+  {"type":"text","accept":["matrice de confusion","confusion matrix","confusion_matrix"],"placeholder":"le tableau qui croise réalité et prédiction","hints":["Quatre cases : VP, FP, VN, FN.","En anglais : confusion matrix.","Fonction scikit-learn : confusion_matrix."],"link":{"href":"lecon-09.html","label":"Revoir « La matrice de confusion »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une matrice de confusion donne VP = 40, FP = 10, FN = 20, VN = 930. Calcule la précision et le rappel de la classe positive.</p><details><summary>Voir une solution</summary><p><strong>Précision</strong> = 40 / (40 + 10) = <strong>0,80</strong>. <strong>Rappel</strong> = 40 / (40 + 20) ≈ <strong>0,67</strong>. Le modèle est plutôt fiable quand il annonce un positif (80 %), mais il en rate un tiers (rappel 67 %).</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Affiche le rapport de classification complet des prédictions d'un modèle sur le jeu de test.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo2.py"><pre><code class="language-python">from sklearn.metrics import classification_report
+y_pred = modele.predict(X_test)
+print(classification_report(y_test, y_pred))</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un modèle de détection de fraude a une précision de 0,95 mais un rappel de 0,40. Explique ce que cela veut dire concrètement, et comment agir sur le seuil pour attraper plus de fraudes.</p><details><summary>Voir une solution</summary><p>Quand le modèle crie « fraude », il a presque toujours raison (précision 0,95, peu de fausses alertes), mais il ne repère que <strong>40 % des fraudes réelles</strong> (rappel 0,40) : il en laisse passer 60 %. Pour en attraper davantage, on <strong>baisse le seuil</strong> de décision (par ex. de 0,5 à 0,3) : le modèle déclare « fraude » plus facilement, le rappel monte… au prix d'une précision qui baisse (plus de fausses alertes). C'est le compromis précision-rappel, à arbitrer selon le coût d'une fraude ratée face à celui d'un contrôle inutile.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

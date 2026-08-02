@@ -1,0 +1,59 @@
+<p>Voici la fonctionnalité qui a fait la légende de Lisp&nbsp;: les <strong>macros</strong>. Parce que le code Lisp <em>est</em> une liste de données (l'homoiconicité de la leçon 2), un programme peut écrire et transformer du code Lisp. Les macros te permettent d'ajouter de <strong>nouvelles constructions syntaxiques</strong> au langage — comme si tu en étendais la grammaire. Aucun autre langage n'offre cela aussi naturellement.</p>
+
+<h2>Fonction vs macro&nbsp;: l'évaluation des arguments</h2>
+<p>La différence clé&nbsp;: une <strong>fonction</strong> reçoit ses arguments <em>déjà évalués</em>. Une <strong>macro</strong> reçoit ses arguments <em>non évalués</em>, sous forme de code (de listes), qu'elle transforme en un nouveau code — lequel sera ensuite évalué. La macro agit donc <em>avant</em> l'exécution, à la transformation du programme.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">; Une fonction voit (carre 3) déjà calculé à 9 quand on lui passe le résultat.
+; Une macro voit la liste (carre 3) elle-même, comme du texte à réécrire.</code></pre></figure>
+
+<h2>Pourquoi une fonction ne suffit pas toujours</h2>
+<p>Imagine vouloir créer ta propre construction <code>(sauf condition corps)</code> qui n'exécute le corps que si la condition est <em>fausse</em>. Avec une fonction, impossible&nbsp;: le corps serait évalué avant l'appel, même si la condition est vraie. Il faut contrôler <em>quand</em> les arguments sont évalués&nbsp;— c'est précisément le rôle d'une macro.</p>
+
+<h2>Définir une macro simple</h2>
+<p>En Scheme, on utilise <code>define-syntax</code> avec un motif de réécriture (<code>syntax-rules</code>). La macro dit&nbsp;: «&nbsp;quand tu vois <em>cette</em> forme, remplace-la par <em>celle-ci</em>&nbsp;».</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define-syntax sauf
+  (syntax-rules ()
+    ((sauf condition corps ...)
+     (if (not condition)
+         (begin corps ...)))))
+
+(sauf (&gt; 3 5)
+  (display "3 n'est pas plus grand que 5"))   ; s'exécute</code></pre></figure>
+<p class="code-caption">La macro réécrit <code>(sauf C corps...)</code> en <code>(if (not C) (begin corps...))</code> avant l'évaluation.</p>
+
+<h2>L'équivalent en Common Lisp</h2>
+<p>Common Lisp utilise <code>defmacro</code>, qui construit le nouveau code avec le quasiquote (leçon 2). C'est plus puissant (du vrai code dans la macro) mais demande plus de soin.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(defmacro sauf (condition &amp;rest corps)
+  `(if (not ,condition)
+       (progn ,@corps)))</code></pre></figure>
+<p>Le <code>,</code> insère la condition, le <code>,@</code> «&nbsp;déplie&nbsp;» la liste du corps&nbsp;: on construit littéralement le code à produire.</p>
+
+<h2>Construire un mini-langage</h2>
+<p>Les macros permettent d'écrire des <strong>DSL</strong> (langages dédiés)&nbsp;: une syntaxe sur mesure pour un domaine. Beaucoup de formes de Lisp lui-même (comme <code>when</code>, <code>unless</code>, <code>cond</code>) sont en réalité des macros bâties sur <code>if</code>. Tu peux en ajouter de nouvelles, indiscernables des formes natives.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">; 'when' lui-même peut se définir comme une macro :
+(define-syntax mon-when
+  (syntax-rules ()
+    ((mon-when c corps ...)
+     (if c (begin corps ...)))))</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Abuser des macros&nbsp;: si une <em>fonction</em> suffit, utilise une fonction (plus simple, composable, débogable). Réserve les macros aux cas où tu dois contrôler l'évaluation ou créer une syntaxe — pas pour ce qu'une fonction ferait très bien.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le grand danger des macros est la <strong>capture de variable</strong> (une variable introduite par la macro entre en collision avec celle de l'utilisateur). Le <code>syntax-rules</code> de Scheme est <em>hygiénique</em>&nbsp;: il évite ce piège automatiquement. En Common Lisp, on génère des noms uniques avec <code>gensym</code>.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une <strong>macro</strong> reçoit ses arguments <em>non évalués</em> (du code) et les réécrit en un nouveau code.</li>
+  <li>Contrairement à une fonction, elle contrôle <strong>quand</strong> et <strong>si</strong> les arguments sont évalués.</li>
+  <li><code>define-syntax</code>/<code>syntax-rules</code> (Scheme) ou <code>defmacro</code> (Common Lisp) les définissent.</li>
+  <li>Les macros permettent d'<strong>étendre le langage</strong> et de créer des DSL&nbsp;; à n'utiliser que si une fonction ne suffit pas.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la différence fondamentale entre une fonction et une macro&nbsp;?</li><li>Pourquoi une fonction ne peut-elle pas implémenter une construction comme <code>unless</code>&nbsp;?</li><li>Qu'est-ce que l'hygiène des macros&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Explique pourquoi <code>(sauf (vrai?) (effacer-tout))</code> ne peut pas être une fonction.</p><details><summary>Voir une solution</summary><p>Parce qu'une fonction évalue ses arguments avant l'appel&nbsp;: <code>(effacer-tout)</code> s'exécuterait <strong>toujours</strong>, même quand la condition est vraie. Seule une macro peut empêcher l'évaluation du corps selon la condition.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une macro <code>mon-unless</code> (le contraire de <code>when</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define-syntax mon-unless
+  (syntax-rules ()
+    ((mon-unless c corps ...)
+     (if (not c) (begin corps ...)))))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une macro <code>echange</code> ne servant qu'avec des effets de bord… non&nbsp;: explique plutôt pourquoi les macros rendent Lisp si extensible, en une phrase.</p><details><summary>Voir une solution</summary><p>Parce que le code étant une simple liste de données, une macro peut générer n'importe quelle structure de code avant l'exécution&nbsp;: on peut donc ajouter au langage de nouvelles formes de contrôle ou des syntaxes entières, indiscernables des formes natives, sans modifier le compilateur.</p></details></div>

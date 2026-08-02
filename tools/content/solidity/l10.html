@@ -1,0 +1,97 @@
+<p>On l'a martelé depuis la première leçon&nbsp;: en Solidity, <strong>le code, c'est l'argent</strong>, et un contrat déployé ne se corrige plus. La seule façon responsable de travailler est donc de <strong>tester massivement avant de déployer</strong>. L'outil de référence aujourd'hui est <strong>Foundry</strong>&nbsp;: rapide, et — fait unique — il te fait écrire tes tests <em>en Solidity</em>, pas dans un autre langage. Cette leçon t'apprend à tester comme un ingénieur, y compris avec le <strong>fuzzing</strong>.</p>
+
+<h2>Foundry en deux mots</h2>
+<p><strong>Foundry</strong> est une boîte à outils en ligne de commande. Ses deux commandes phares&nbsp;: <code>forge</code> (compiler, tester, déployer) et <code>cast</code> (interagir avec la chaîne). On écrit ses tests dans des fichiers <code>.t.sol</code>, et on les lance avec <code>forge test</code>. Comme les tests sont en Solidity, on reste dans un seul langage et on teste le contrat exactement tel qu'il s'exécutera.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-solidity">$ forge test            // lance tous les tests
+$ forge test -vvv       // avec les traces détaillées (utile au débogage)
+$ forge test --match-test testRetrait   // un test précis</code></pre></figure>
+
+<h2>Un premier test</h2>
+<p>Un contrat de test hérite de <code>Test</code> (fourni par Foundry). Chaque fonction dont le nom commence par <code>test</code> est un cas de test. On y déploie le contrat à éprouver, on appelle ses fonctions, et on <strong>affirme</strong> le résultat attendu.</p>
+<figure class="code-block" data-file="Compteur.t.sol"><pre><code class="language-solidity">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/Compteur.sol";
+
+contract CompteurTest is Test {
+    Compteur compteur;
+
+    // setUp() s'exécute AVANT chaque test : on repart d'un état neuf
+    function setUp() public {
+        compteur = new Compteur();
+    }
+
+    function testIncremente() public {
+        compteur.incrementer();
+        assertEq(compteur.valeur(), 1);   // affirme l'égalité
+    }
+}</code></pre></figure>
+<p>La fonction spéciale <code>setUp()</code> est rejouée <em>avant chaque test</em>&nbsp;: chaque cas part d'un contrat fraîchement déployé, donc isolé des autres. <code>assertEq(a, b)</code> échoue le test si <code>a</code> et <code>b</code> diffèrent. Il existe <code>assertTrue</code>, <code>assertGt</code>, etc.</p>
+
+<h2>Tester qu'une transaction échoue</h2>
+<p>Tester le «&nbsp;chemin heureux&nbsp;» ne suffit pas&nbsp;: il faut vérifier que les protections fonctionnent. <code>vm.expectRevert</code> affirme que l'appel <em>suivant</em> doit être annulé (revert).</p>
+<figure class="code-block" data-file="revert.t.sol"><pre><code class="language-solidity">function testRetraitTropGrandEchoue() public {
+    vm.expectRevert("Solde insuffisant");
+    banque.retirer(1000 ether);     // doit revert : on n'a pas ces fonds
+}</code></pre></figure>
+<p>Un bon jeu de tests vérifie <em>autant</em> les échecs attendus que les succès&nbsp;: «&nbsp;un non-propriétaire ne peut pas appeler cette fonction&nbsp;», «&nbsp;on ne peut pas retirer plus que son solde&nbsp;».</p>
+
+<h2>Les cheatcodes&nbsp;: simuler comptes, temps et ether</h2>
+<p>Foundry fournit des <strong>cheatcodes</strong> (via l'objet <code>vm</code>) pour simuler des conditions impossibles à reproduire autrement&nbsp;: changer l'appelant, avancer le temps, donner de l'ether à une adresse.</p>
+<figure class="code-block" data-file="cheatcodes.t.sol"><pre><code class="language-solidity">address alice = address(0x1);
+
+function testSeulProprietaire() public {
+    vm.prank(alice);                 // le PROCHAIN appel vient d'alice
+    vm.expectRevert();
+    contrat.fonctionAdmin();         // alice n'est pas admin -> revert
+
+    vm.warp(block.timestamp + 1 days); // avance le temps d'un jour
+    vm.deal(alice, 5 ether);           // donne 5 ether à alice
+}</code></pre></figure>
+<p><code>vm.prank</code> usurpe l'appelant le temps d'un appel&nbsp;; <code>vm.warp</code> déplace l'horloge (pour tester un verrouillage temporel)&nbsp;; <code>vm.deal</code> crédite une adresse. Ces outils rendent testables des scénarios réalistes.</p>
+
+<h2>Le fuzzing&nbsp;: des milliers d'entrées aléatoires</h2>
+<p>Voici la fonctionnalité qui change tout. Si une fonction de test prend un <strong>paramètre</strong>, Foundry l'appelle des centaines de fois avec des <strong>valeurs aléatoires</strong> (<em>fuzzing</em>), cherchant une entrée qui casse une de tes affirmations. C'est un chasseur de bugs automatique.</p>
+<figure class="code-block" data-file="fuzz.t.sol"><pre><code class="language-solidity">// Foundry va tester cette propriété avec plein de 'montant' différents
+function testFuzz_DepotPuisRetrait(uint96 montant) public {
+    vm.assume(montant &gt; 0);          // ignore le cas trivial 0
+    vm.deal(address(this), montant);
+
+    banque.deposer{value: montant}();
+    banque.retirer(montant);
+    assertEq(banque.soldeDe(address(this)), 0);  // doit toujours tenir
+}</code></pre></figure>
+<p>On exprime une <strong>propriété générale</strong> («&nbsp;déposer puis retirer le même montant ramène le solde à zéro&nbsp;») et Foundry cherche un contre-exemple. <code>vm.assume</code> écarte les entrées non pertinentes. Le fuzzing débusque des bugs de bornes (débordements, arrondis) qu'on n'aurait jamais pensé à tester à la main.</p>
+
+<h2>Le fork-testing</h2>
+<p>Foundry peut aussi <strong>forker</strong> l'état réel d'Ethereum (<code>forge test --fork-url …</code>)&nbsp;: tes tests s'exécutent alors contre les <em>vrais</em> contrats déployés (un échange, un protocole de prêt). Indispensable pour tester une intégration avec la DeFi existante sans risquer de vrais fonds.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne tester que le «&nbsp;chemin heureux&nbsp;» et négliger les cas adverses. Un attaquant ne fera jamais ce que tu attends&nbsp;: il appellera tes fonctions dans le mauvais ordre, avec l'adresse zéro, avec zéro ether, ou en boucle. Tes tests doivent <em>penser comme l'attaquant</em>&nbsp;: vérifie systématiquement les reverts attendus, les contrôles d'accès, et laisse le <strong>fuzzing</strong> explorer les bornes que tu n'imagines pas.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Au-delà du fuzzing, Foundry propose les <strong>tests invariants</strong> (<em>stateful fuzzing</em>)&nbsp;: il enchaîne des appels aléatoires à plusieurs fonctions et vérifie qu'une propriété tient <em>toujours</em> (par ex. «&nbsp;la somme des soldes égale le solde du contrat&nbsp;»). C'est l'une des techniques les plus puissantes pour trouver les bugs profonds des protocoles DeFi. Les meilleurs projets visent une couverture de test proche de 100&nbsp;% avant tout audit.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Foundry</strong> (<code>forge test</code>)&nbsp;: tests écrits <strong>en Solidity</strong>, rapides&nbsp;; <code>setUp()</code> isole chaque cas.</li>
+  <li>Affirmer&nbsp;: <code>assertEq</code> et consorts&nbsp;; tester les échecs avec <code>vm.expectRevert</code>.</li>
+  <li><strong>Cheatcodes</strong> (<code>vm.prank</code>, <code>vm.warp</code>, <code>vm.deal</code>) pour simuler comptes, temps et ether.</li>
+  <li><strong>Fuzzing</strong> (paramètre aléatoire) et fork-testing débusquent les bugs invisibles à l'œil.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi écrire ses tests en Solidity est-il un avantage&nbsp;?</li><li>À quoi sert <code>vm.expectRevert</code>&nbsp;?</li><li>Qu'est-ce que le fuzzing&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce que le fuzzing dans Foundry ?","a":["Appeler une fonction de test des centaines de fois avec des entrées aléatoires pour trouver un contre-exemple","Compiler le contrat plus vite","Déployer sur le réseau principal","Mélanger l'ordre des fonctions du contrat"],"correct":0,"explain":"Si un test prend un paramètre, Foundry le bombarde de valeurs aléatoires en cherchant une entrée qui casse une assertion : un chasseur de bugs automatique."},
+  {"q":"À quoi sert vm.expectRevert ?","a":["Affirmer que l'appel suivant doit échouer (revert)","Donner de l'ether à une adresse","Avancer l'horloge de la blockchain","Déployer un nouveau contrat"],"correct":0,"explain":"On teste autant les échecs attendus que les succès : vm.expectRevert vérifie qu'une protection annule bien la transaction."},
+  {"q":"Que fait la fonction setUp() dans un test Foundry ?","a":["Elle s'exécute avant chaque test pour repartir d'un état neuf","Elle s'exécute une seule fois au déploiement réel","Elle envoie le contrat sur le mainnet","Elle supprime les tests précédents"],"correct":0,"explain":"setUp() est rejouée avant chaque cas de test, ce qui isole les tests les uns des autres."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle commande lance tous les tests d'un projet Foundry&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-solidity">$ forge test</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une assertion qui vérifie que <code>compteur.valeur()</code> vaut 3.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.t.sol"><pre><code class="language-solidity">assertEq(compteur.valeur(), 3);</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec un cheatcode, fais en sorte que le prochain appel à <code>contrat.admin()</code> provienne de l'adresse <code>alice</code>, et vérifie qu'il échoue (alice n'est pas admin).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.t.sol"><pre><code class="language-solidity">vm.prank(alice);
+vm.expectRevert();
+contrat.admin();</code></pre></figure></details></div>

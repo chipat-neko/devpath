@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gros dépôts et récupération avancée — Leçon 19 · Git & GitHub · Syntaxe</title>
+    <meta name="description" content="Gérer les gros dépôts Git : LFS, sparse/partial clone, réécriture d'historique avec filter-repo, reflog, bisect, rerere et retrait de secrets." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="git" data-lesson="lecon-19.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Git & GitHub</a></li>
+            <li aria-current="page">Leçon 19</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 06 · Collaboration et automatisation — Leçon 19</p>
+              <h1 class="lesson-header__title">Gros dépôts et récupération avancée</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 18 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir gérer les gros fichiers et les gros dépôts avec <strong>Git LFS</strong>, le <code>sparse-checkout</code> et le <em>partial clone</em>&nbsp;;</li>
+                  <li>savoir réécrire l'historique en profondeur avec <code>git filter-repo</code> et en mesurer les conséquences&nbsp;;</li>
+                  <li>savoir récupérer un travail perdu avec le <code>reflog</code> et <code>git fsck</code>, et localiser un bug avec <code>git bisect</code>&nbsp;;</li>
+                  <li>savoir retirer un secret de tout l'historique et comprendre qu'il faut <strong>le révoquer</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu maîtrises désormais le cycle complet du versionnement et de la collaboration. Reste un terrain plus rugueux : celui de l'<strong>échelle</strong> (dépôts de plusieurs gigaoctets, monorepos, gros assets binaires) et celui des <strong>situations difficiles</strong> (un secret commité, un <code>reset</code> qui a effacé du travail, un bug qui s'est glissé entre deux versions). Ces problèmes ne se résolvent pas avec les commandes du quotidien : ils demandent des outils spécialisés et une bonne compréhension de ce que Git stocke réellement.</p>
+<p>Cette leçon est une boîte à outils de survie. Chaque section répond à une question concrète : comment ne pas faire exploser la taille du dépôt, comment ne cloner qu'une partie, comment effacer définitivement un fichier, comment retrouver ce qu'on croyait perdu, comment isoler un commit fautif. On ne réexplique pas les bases : on suppose que <code>commit</code>, <code>rebase</code> et <code>reset</code> te sont familiers.</p>
+
+<h2>Les gros fichiers : pourquoi Git souffre, et Git LFS</h2>
+<p>Git est conçu pour du texte. Quand tu modifies une ligne d'un fichier source, il stocke efficacement la différence. Mais un fichier binaire (image PSD, vidéo, build, modèle 3D) est opaque : à chaque modification, Git en garde une <strong>copie complète compressée</strong> dans l'historique. Un asset de 50 Mo modifié vingt fois, c'est potentiellement 1 Go dans <code>.git</code>, cloné par chaque membre de l'équipe, à jamais.</p>
+<p><strong>Git LFS</strong> (Large File Storage) résout cela en remplaçant le contenu du fichier par un petit <em>pointeur</em> texte dans l'historique. Le contenu réel est stocké sur un serveur LFS séparé et téléchargé à la demande.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 232" role="img" aria-label="Comparaison du stockage d'un gros fichier binaire sans et avec Git LFS. Sans LFS, le dossier point-git conserve une copie complète du fichier à chaque version : trois versions de cinquante mégaoctets pèsent environ cent cinquante mégaoctets, clonés par toute l'équipe et conservés pour toujours. Avec LFS, le dossier point-git ne contient qu'un pointeur texte d'environ cent trente octets identifiant le contenu ; le contenu réel du fichier est hébergé sur un serveur LFS séparé et téléchargé seulement à la demande.">
+    <text class="d-label" x="161" y="18" text-anchor="middle" font-size="11">Sans LFS — .git grossit</text>
+    <text class="d-label" x="479" y="18" text-anchor="middle" font-size="11">Avec LFS — .git reste léger</text>
+    <rect class="d-frame" x="16" y="28" width="290" height="196" rx="12" />
+    <text class="d-mut" x="161" y="46" text-anchor="middle" font-size="9">chaque version = copie complète</text>
+    <rect class="d-box" x="48" y="56" width="226" height="26" rx="6" />
+    <text class="d-text" x="60" y="73" font-size="9">maquette.psd — v1 · 50 Mo</text>
+    <rect class="d-box" x="48" y="88" width="226" height="26" rx="6" />
+    <text class="d-text" x="60" y="105" font-size="9">maquette.psd — v2 · 50 Mo</text>
+    <rect class="d-box" x="48" y="120" width="226" height="26" rx="6" />
+    <text class="d-text" x="60" y="137" font-size="9">maquette.psd — v3 · 50 Mo</text>
+    <rect class="d-accent" x="48" y="164" width="226" height="42" rx="8" />
+    <text class="d-text" x="161" y="182" text-anchor="middle" font-size="10">≈ 150 Mo dans .git</text>
+    <text class="d-mut" x="161" y="197" text-anchor="middle" font-size="8">cloné par chacun, à jamais</text>
+    <rect class="d-frame" x="334" y="28" width="290" height="196" rx="12" />
+    <text class="d-mut" x="479" y="46" text-anchor="middle" font-size="9">.git ne garde qu'un pointeur</text>
+    <rect class="d-box" x="366" y="56" width="226" height="44" rx="7" />
+    <text class="d-tag" x="378" y="74" font-size="9">pointeur ~130 o</text>
+    <text class="d-text" x="378" y="90" font-size="8">oid sha256:a1b2c3… · size 52428800</text>
+    <line class="d-line" x1="479" y1="100" x2="479" y2="138" />
+    <polygon class="d-dot" points="479,138 474,129 484,129" />
+    <text class="d-mut" x="493" y="122" font-size="8">à la demande</text>
+    <rect class="d-accent" x="366" y="142" width="226" height="64" rx="8" />
+    <text class="d-label" x="479" y="162" text-anchor="middle" font-size="10">serveur LFS</text>
+    <text class="d-text" x="479" y="180" text-anchor="middle" font-size="9">contenu réel des .psd / .mp4</text>
+    <text class="d-mut" x="479" y="195" text-anchor="middle" font-size="8">hors du clone Git</text>
+  </svg>
+  <figcaption>Sans LFS, chaque version d'un binaire est stockée <strong>en entier</strong> dans <code>.git</code>&nbsp;: le poids s'accumule pour toujours. Avec LFS, l'historique ne contient qu'un <strong>pointeur</strong> léger&nbsp;; le contenu vit sur un <strong>serveur LFS</strong> et n'est récupéré qu'au besoin.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git lfs install
+# Updated Git hooks.
+# Git LFS initialized.
+
+git lfs track "*.psd"
+# Tracking "*.psd"
+
+git add .gitattributes
+git add maquette.psd
+git commit -m "Ajoute la maquette (suivie par LFS)"</code></pre></figure>
+<p class="code-caption">La première commande installe les hooks LFS ; la deuxième déclare un motif de fichiers à suivre.</p>
+<p>La commande <code>git lfs track</code> écrit une règle dans le fichier <code>.gitattributes</code>, à la racine du dépôt. C'est ce fichier, versionné et partagé, qui dit à Git quels chemins passent par LFS :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Contenu de .gitattributes
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+
+git lfs ls-files
+# a1b2c3d4e5 * maquette.psd</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Mettre en place LFS <strong>après</strong> avoir déjà commité des binaires ne nettoie pas l'historique : les anciennes versions restent dans <code>.git</code>. Pour migrer rétroactivement, il faut <code>git lfs migrate import</code>, qui réécrit l'historique (donc avec les mêmes précautions que la section suivante).</p></div></div>
+
+<h2>Les gros dépôts : ne cloner qu'une partie</h2>
+<p>Un <strong>monorepo</strong> regroupe plusieurs projets dans un seul dépôt. Pratique pour partager du code, mais le clone peut devenir énorme. Trois leviers permettent de ne récupérer que le nécessaire.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 248" role="img" aria-label="Trois façons de cloner un gros dépôt, comparées. Le clone complet récupère tous les commits de l'historique et tous les contenus de fichiers : c'est lourd. Le clone superficiel, option depth un, ne récupère que le dernier commit. Le clone partiel combiné au sparse-checkout garde toute la structure des commits mais télécharge les contenus seulement à la demande, et ne matérialise dans le répertoire de travail qu'un sous-dossier choisi.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">ce que chaque clone récupère</text>
+    <rect class="d-frame" x="16" y="30" width="608" height="62" rx="10" />
+    <text class="d-tag" x="30" y="56" font-size="11">git clone</text>
+    <text class="d-mut" x="30" y="72" font-size="9">tout l'historique</text>
+    <line class="d-line" x1="205" y1="61" x2="365" y2="61" />
+    <circle class="d-dot" cx="205" cy="61" r="6" /><circle class="d-dot" cx="245" cy="61" r="6" /><circle class="d-dot" cx="285" cy="61" r="6" /><circle class="d-dot" cx="325" cy="61" r="6" /><circle class="d-dot" cx="365" cy="61" r="6" />
+    <rect class="d-accent" x="430" y="49" width="182" height="24" rx="8" />
+    <text class="d-text" x="521" y="65" text-anchor="middle" font-size="9">blobs : tous (lourd)</text>
+    <rect class="d-frame" x="16" y="98" width="608" height="62" rx="10" />
+    <text class="d-tag" x="30" y="124" font-size="11">--depth 1</text>
+    <text class="d-mut" x="30" y="140" font-size="9">clone superficiel</text>
+    <circle class="d-box" cx="205" cy="129" r="6" /><circle class="d-box" cx="245" cy="129" r="6" /><circle class="d-box" cx="285" cy="129" r="6" /><circle class="d-box" cx="325" cy="129" r="6" /><circle class="d-dot" cx="365" cy="129" r="6" />
+    <rect class="d-accent" x="430" y="117" width="182" height="24" rx="8" />
+    <text class="d-text" x="521" y="133" text-anchor="middle" font-size="9">un seul commit</text>
+    <rect class="d-frame" x="16" y="166" width="608" height="74" rx="10" />
+    <text class="d-tag" x="30" y="192" font-size="10">--filter=blob:none --sparse</text>
+    <text class="d-mut" x="30" y="208" font-size="9">structure complète</text>
+    <line class="d-line" x1="205" y1="199" x2="365" y2="199" />
+    <circle class="d-dot" cx="205" cy="199" r="6" /><circle class="d-dot" cx="245" cy="199" r="6" /><circle class="d-dot" cx="285" cy="199" r="6" /><circle class="d-dot" cx="325" cy="199" r="6" /><circle class="d-dot" cx="365" cy="199" r="6" />
+    <rect class="d-box" x="430" y="178" width="182" height="22" rx="8" />
+    <text class="d-text" x="521" y="193" text-anchor="middle" font-size="8">blobs : à la demande</text>
+    <rect class="d-box" x="430" y="206" width="182" height="22" rx="8" />
+    <text class="d-text" x="521" y="221" text-anchor="middle" font-size="8">working tree : apps/site-web</text>
+  </svg>
+  <figcaption>Trois leviers cumulables&nbsp;: <code>--depth</code> tronque l'<strong>historique</strong>, <code>--filter=blob:none</code> diffère le <strong>contenu</strong> des fichiers, et <code>sparse-checkout</code> limite les <strong>fichiers déployés</strong> dans le répertoire de travail.</figcaption>
+</figure>
+<p>Le <strong>shallow clone</strong> (<code>--depth</code>) ne récupère que les N derniers commits, pas tout l'historique. Idéal pour une CI qui n'a besoin que du dernier état :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git clone --depth 1 https://github.com/org/monorepo.git
+# Cloning into 'monorepo'...
+# receiving objects: 100% (déjà bien plus rapide)</code></pre></figure>
+<p>Le <strong>partial clone</strong> (<code>--filter=blob:none</code>) récupère toute la structure de l'historique mais <em>aucun</em> contenu de fichier : les blobs sont téléchargés paresseusement, seulement quand tu y accèdes. Tu gardes un historique complet sans payer le poids des fichiers d'emblée :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git clone --filter=blob:none https://github.com/org/monorepo.git
+# Les commits arrivent vite ; les blobs sont récupérés à la demande.</code></pre></figure>
+<p>Le <strong>sparse-checkout</strong> limite les fichiers <em>présents dans ton répertoire de travail</em> à un sous-ensemble. Couplé au partial clone, c'est la combinaison gagnante pour ne travailler que sur un dossier d'un monorepo :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git clone --filter=blob:none --sparse https://github.com/org/monorepo.git
+git -C monorepo sparse-checkout set apps/site-web packages/ui
+# Seuls apps/site-web et packages/ui apparaissent dans le working tree.
+
+git -C monorepo sparse-checkout list
+# apps/site-web
+# packages/ui</code></pre></figure>
+<p class="code-caption"><code>--sparse</code> active le mode dès le clone ; <code>set</code> choisit les chemins à matérialiser.</p>
+
+<h2>Réécrire l'historique en profondeur avec filter-repo</h2>
+<p>Supprimer un fichier d'un seul commit est trivial. Le supprimer de <strong>tout l'historique</strong> (parce qu'il contient un secret ou un binaire géant) demande de réécrire chaque commit où il apparaît. L'ancien outil <code>git filter-branch</code> est lent et truffé de pièges ; l'outil recommandé aujourd'hui est <strong>git-filter-repo</strong> (un script Python à installer séparément).</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Supprimer un fichier de TOUT l'historique
+git filter-repo --path config/secrets.env --invert-paths
+# Parsed 412 commits
+# New history written, now repacking...
+# Completely finished after 3.1 seconds.
+
+# Variante : ne garder qu'un sous-dossier (pour découper un dépôt)
+git filter-repo --path packages/ui/ --path-rename packages/ui/:</code></pre></figure>
+<p class="code-caption"><code>--invert-paths</code> inverse la sélection : on retire le chemin au lieu de le garder.</p>
+<p>La réécriture change <strong>tous les identifiants de commit</strong> à partir du premier commit touché. Conséquence : ton historique local n'a plus rien à voir avec celui du distant. Il faudra <code>push --force</code> et prévenir tout le monde, car chaque collègue devra re-synchroniser son clone.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Réécrire un historique <strong>déjà partagé</strong> casse les clones des autres : leurs branches divergent, leurs <code>rebase</code> et <code>merge</code> repartent sur les anciens commits, et les doublons s'accumulent. Ne réécris l'histoire publique qu'en dernier recours, sur une fenêtre annoncée, avec l'équipe au courant.</p></div></div>
+
+<h2>La récupération : reflog et fsck</h2>
+<p>Le <strong>reflog</strong> est ton filet de sécurité. Git y journalise chaque déplacement de <code>HEAD</code> et des branches : commits, <code>reset</code>, <code>rebase</code>, <code>checkout</code>. Même un commit qui n'est plus pointé par aucune branche y reste accessible (par défaut 90 jours). C'est ainsi qu'on annule un <code>reset --hard</code> ou un <code>rebase</code> raté.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git reflog
+# 9f3c1a0 HEAD@{0}: reset: moving to HEAD~3
+# 4b8d2e1 HEAD@{1}: commit: Ajoute le calcul de TVA
+# a07f5c9 HEAD@{2}: commit: Refactor du panier
+# ...
+
+# Le travail effacé par le reset est le commit 4b8d2e1 :
+git reset --hard HEAD@{1}
+# HEAD is now at 4b8d2e1 Ajoute le calcul de TVA</code></pre></figure>
+<p class="code-caption">Chaque entrée <code>HEAD@{n}</code> est une position passée de <code>HEAD</code> ; on y revient comme à n'importe quel commit.</p>
+<p>Quand même le reflog ne suffit pas (par exemple un commit d'un autre clone, ou après un nettoyage agressif), <code>git fsck</code> inspecte la base d'objets et liste les commits <em>orphelins</em> (« dangling »), non rattachés à une branche :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git fsck --lost-found
+# dangling commit 4b8d2e1c9a...
+# Checking object directories: 100% done
+
+git show 4b8d2e1c9a   # on inspecte, puis on récupère si c'est le bon</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Avant toute manipulation risquée (rebase massif, <code>reset --hard</code>, filter-repo), pose une étiquette ou une branche de secours : <code>git branch sauvegarde</code>. Tu auras un point de retour nommé, sans dépendre du reflog.</p></div></div>
+
+<h2>Bisect appliqué à un vrai bug</h2>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Illustration de la recherche dichotomique de git bisect. Une suite de commits va d'un commit bon connu à gauche, la version v1.4.0, jusqu'au commit mauvais HEAD à droite. Git place le curseur au milieu de l'intervalle ; selon que ce commit du milieu est jugé bon ou mauvais, la moitié saine ou la moitié fautive est éliminée, et l'intervalle est de nouveau divisé par deux. Le nombre d'essais croît comme le logarithme en base deux du nombre de commits : mille commits demandent environ dix tests.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">recherche dichotomique : l'intervalle ÷ 2 à chaque test</text>
+    <line class="d-line" x1="60" y1="78" x2="580" y2="78" />
+    <circle class="d-accent" cx="60" cy="78" r="9" />
+    <circle class="d-dot" cx="125" cy="78" r="6" /><circle class="d-dot" cx="190" cy="78" r="6" /><circle class="d-dot" cx="255" cy="78" r="6" />
+    <circle class="d-box" cx="320" cy="78" r="10" />
+    <circle class="d-dot" cx="385" cy="78" r="6" /><circle class="d-dot" cx="450" cy="78" r="6" /><circle class="d-dot" cx="515" cy="78" r="6" />
+    <circle class="d-accent" cx="580" cy="78" r="9" />
+    <text class="d-text" x="60" y="102" text-anchor="middle" font-size="9">bon ✓</text>
+    <text class="d-mut" x="60" y="114" text-anchor="middle" font-size="8">v1.4.0</text>
+    <text class="d-text" x="580" y="102" text-anchor="middle" font-size="9">mauvais ✗</text>
+    <text class="d-mut" x="580" y="114" text-anchor="middle" font-size="8">HEAD</text>
+    <line class="d-line" x1="320" y1="48" x2="320" y2="64" />
+    <polygon class="d-dot" points="320,64 315,55 325,55" />
+    <text class="d-label" x="320" y="42" text-anchor="middle" font-size="10">git te place ici</text>
+    <text class="d-mut" x="320" y="146" text-anchor="middle" font-size="9">jugé bon → on écarte la moitié gauche · jugé mauvais → la moitié droite</text>
+    <text class="d-text" x="320" y="170" text-anchor="middle" font-size="10">≈ log₂(N) essais — 1000 commits → 10 tests</text>
+  </svg>
+  <figcaption>À chaque étape, tu juges le commit du <strong>milieu</strong> et Git écarte la moitié qui ne peut pas contenir la régression. La recherche est <strong>logarithmique</strong>&nbsp;: elle trouve le coupable en une poignée d'essais, même sur des milliers de commits.</figcaption>
+</figure>
+<p><code>git bisect</code> fait une recherche dichotomique dans l'historique pour trouver le commit qui a introduit un bug. Tu lui donnes un commit <strong>bon</strong> (sans le bug) et un commit <strong>mauvais</strong> (avec), et il te place au milieu pour que tu juges. En mode manuel :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git bisect start
+git bisect bad                 # le HEAD actuel est cassé
+git bisect good v1.4.0         # cette version marchait
+# Bisecting: 6 revisions left to test after this (roughly 3 steps)
+# [c3d4e5f] Optimise le rendu du panier
+
+# Tu vérifies si le bug est là, puis :
+git bisect good   # ou : git bisect bad
+# ... Git réduit l'intervalle jusqu'à :
+# c3d4e5f is the first bad commit
+
+git bisect reset   # revient à l'état de départ</code></pre></figure>
+<p class="code-caption">À chaque étape, tu classes le commit courant, et l'intervalle est divisé par deux.</p>
+<p>Si tu disposes d'un test ou d'un script qui renvoie <code>0</code> quand tout va bien et un code non nul sinon, automatise tout avec <code>git bisect run</code>. La forme positionnelle <code>git bisect start &lt;mauvais&gt; &lt;bon&gt;</code> donne les deux bornes en une fois :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git bisect start HEAD v1.4.0   # &lt;mauvais&gt; puis &lt;bon&gt;, en un coup
+git bisect run npm test -- --silent
+# running 'npm test' --silent
+# ...
+# c3d4e5f is the first bad commit
+# bisect found first bad commit</code></pre></figure>
+<p class="code-caption">Le script doit sortir avec un code non nul sur le bug ; <code>125</code> signale un commit à ignorer (par exemple s'il ne compile pas).</p>
+
+<h2>rerere et stratégies de fusion</h2>
+<p>Si tu rebases souvent une longue branche, tu résous parfois <strong>plusieurs fois le même conflit</strong>. <code>rerere</code> (« reuse recorded resolution ») mémorise comment tu as résolu un conflit donné et rejoue automatiquement cette résolution la prochaine fois qu'il réapparaît.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">git config --global rerere.enabled true
+
+# Lors d'un merge conflictuel, après résolution :
+# Recorded resolution for "src/panier.js".
+# La prochaine fois que ce conflit surgit :
+# Resolved 'src/panier.js' using previous resolution.</code></pre></figure>
+<p>Les <strong>stratégies de fusion</strong> permettent d'imposer un parti pris quand le conflit est attendu. Avec l'option <code>-X</code>, tu privilégies un côté <em>sur les zones en conflit</em> sans jeter le reste :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># En cas de conflit, garder NOTRE version sur les zones disputées
+git merge -X ours feature/refonte
+
+# Garder la version de l'autre branche sur les zones disputées
+git merge -X theirs feature/refonte</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne confonds pas l'<strong>option</strong> <code>-X ours</code> avec la <strong>stratégie</strong> <code>-s ours</code>. <code>-X ours</code> n'agit que sur les lignes en conflit. <code>-s ours</code>, elle, ignore totalement le contenu de l'autre branche : la fusion garde <em>exactement</em> ton arbre. Très utile pour neutraliser une branche, dévastateur si déclenché par erreur.</p></div></div>
+
+<h2>Sécurité : retirer un secret commité</h2>
+<p>Un mot de passe, un token, une clé d'API se sont glissés dans un commit. Premier réflexe, contre-intuitif mais vital : considère le secret comme <strong>compromis et révoque-le immédiatement</strong>. Tant qu'il a existé dans l'historique (poussé sur un distant, vu par la CI, présent dans un fork), tu dois partir du principe qu'il a fuité.</p>
+<p>Le retirer du <em>dernier</em> commit ne suffit jamais : il reste dans tous les commits antérieurs. Il faut le purger de tout l'historique, comme un fichier ordinaire, puis force-pusher :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># 1. Révoquer/regénérer la clé côté fournisseur (priorité absolue).
+# 2. Purger le fichier de tout l'historique :
+git filter-repo --path config/secrets.env --invert-paths
+
+# 3. Republier l'historique réécrit (après accord de l'équipe) :
+git push --force-with-lease origin main</code></pre></figure>
+<p class="code-caption">On préfère <code>--force-with-lease</code> à <code>--force</code> : il refuse d'écraser si le distant a bougé depuis ta dernière synchro.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Réécrire l'historique ne purge pas les copies déjà existantes : caches de la plateforme, forks, clones des collègues. C'est pourquoi la révocation prime sur le nettoyage : seule la rotation de la clé garantit que le secret ne sert plus à rien.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un développeur a poussé par mégarde une clé d'accès <strong>AWS</strong> dans un dépôt public&nbsp;: des robots qui scrutent GitHub en continu l'ont trouvée en <strong>quelques minutes</strong> et ont démarré des dizaines de serveurs de minage, laissant une facture de plusieurs milliers d'euros avant la fin de la journée. La leçon du terrain&nbsp;: dès qu'un secret a touché un dépôt, <code>filter-repo</code> nettoie l'historique mais n'efface pas l'exposition passée&nbsp;— seule la <strong>révocation immédiate</strong> de la clé stoppe l'hémorragie. C'est pourquoi les plateformes proposent le <em>secret scanning</em>, qui alerte automatiquement les fournisseurs quand un jeton connu apparaît dans un commit.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Committer de gros binaires <strong>sans LFS</strong> fait gonfler <code>.git</code> de façon irréversible : chaque version reste stockée pour toujours. Mets LFS en place <em>avant</em> d'ajouter le premier asset, pas après.</p></div></div>
+<ul>
+<li><strong>Croire qu'un secret retiré du dernier commit est parti</strong> : il vit dans tout l'historique tant que tu ne réécris pas. Et même après, considère-le comme fuité : révoque.</li>
+<li><strong>Force-pusher sur <code>main</code></strong> sans prévenir : tu casses la branche de référence de toute l'équipe. Protège la branche côté plateforme et utilise <code>--force-with-lease</code>.</li>
+<li><strong>Réécrire un historique partagé en douce</strong> : annonce-le, planifie une fenêtre, accompagne la re-synchronisation des clones.</li>
+<li><strong>Ignorer le reflog</strong> : la plupart des « j'ai tout perdu » sont en réalité récupérables pendant 90 jours.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Creuse <strong>git-filter-repo</strong> (callbacks de réécriture, remplacement de contenu via <code>--replace-text</code>) et <strong>BFG Repo-Cleaner</strong>, une alternative plus rapide et plus simple pour purger fichiers et secrets. Côté monorepos, regarde <strong>Nx</strong> et <strong>Turborepo</strong> (orchestration des builds) et <strong>Scalar</strong> (intégré à Git, il optimise les très gros dépôts via partial clone, sparse-checkout et maintenance en arrière-plan). Pour la sécurité, étudie la <strong>signature</strong> des commits, l'audit, et les <strong>hooks de détection de secrets</strong> (par exemple gitleaks ou trufflehog en pre-commit) pour bloquer une fuite avant le commit plutôt que d'avoir à la nettoyer.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — gros dépôts et récupération avancée</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Commande</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Suivre un gros binaire</td><td><code>git lfs track "*.psd"</code></td><td>écrit <code>.gitattributes</code> (à committer)</td></tr>
+      <tr><td>Cloner sans l'historique</td><td><code>git clone --depth 1</code></td><td>clone superficiel</td></tr>
+      <tr><td>Cloner sans les contenus</td><td><code>--filter=blob:none</code></td><td>blobs à la demande</td></tr>
+      <tr><td>Ne déployer qu'un dossier</td><td><code>git sparse-checkout set …</code></td><td>limite le working tree</td></tr>
+      <tr><td>Purger un fichier de l'historique</td><td><code>git filter-repo --path … --invert-paths</code></td><td>change tous les SHA → force-push</td></tr>
+      <tr><td>Récupérer un commit perdu</td><td><code>git reflog</code> → <code>reset --hard HEAD@{n}</code></td><td>filet de sécurité ~90 j</td></tr>
+      <tr><td>Trouver un objet orphelin</td><td><code>git fsck --lost-found</code></td><td>commits «&nbsp;dangling&nbsp;»</td></tr>
+      <tr><td>Localiser un commit fautif</td><td><code>git bisect run ./test.sh</code></td><td>dichotomie automatisée</td></tr>
+      <tr><td>Rejouer une résolution de conflit</td><td><code>git config rerere.enabled true</code></td><td>«&nbsp;reuse recorded resolution&nbsp;»</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Git LFS</dt><dd>Extension qui remplace un gros fichier par un <strong>pointeur</strong> texte dans l'historique et héberge le contenu réel sur un serveur séparé, téléchargé à la demande.</dd>
+  <dt>Pointeur LFS</dt><dd>Petit fichier texte (une centaine d'octets) stocké dans le dépôt à la place du binaire&nbsp;; il contient l'empreinte (<code>oid</code>) et la taille du contenu réel.</dd>
+  <dt>Shallow clone</dt><dd>Clone tronqué en profondeur (<code>--depth N</code>) qui ne récupère que les N derniers commits, pas tout l'historique.</dd>
+  <dt>Partial clone</dt><dd>Clone (<code>--filter=blob:none</code>) qui télécharge la structure des commits mais diffère les <em>contenus</em> de fichiers (blobs), récupérés paresseusement.</dd>
+  <dt>Sparse-checkout</dt><dd>Mécanisme qui ne matérialise dans le répertoire de travail qu'un sous-ensemble choisi de fichiers ou de dossiers.</dd>
+  <dt>Reflog</dt><dd>Journal local de chaque déplacement de <code>HEAD</code> et des branches&nbsp;; il garde accessibles ~90 jours des commits même «&nbsp;perdus&nbsp;», d'où la récupération d'un <code>reset</code> raté.</dd>
+  <dt>git bisect</dt><dd>Recherche dichotomique entre un commit <strong>bon</strong> et un commit <strong>mauvais</strong> pour isoler celui qui a introduit un bug, en ~log₂(N) essais.</dd>
+  <dt>filter-repo</dt><dd>Outil de réécriture d'historique en profondeur (purge d'un fichier, découpe d'un dépôt)&nbsp;; il change tous les identifiants de commit et impose un force-push coordonné.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><strong>Git LFS</strong> remplace les gros binaires par des pointeurs ; configuré via <code>.gitattributes</code>, à mettre en place avant le premier asset.</li>
+<li><strong>Shallow</strong> (<code>--depth</code>), <strong>partial</strong> (<code>--filter=blob:none</code>) et <strong>sparse-checkout</strong> permettent de cloner et travailler vite sur de gros dépôts.</li>
+<li><strong>git filter-repo</strong> réécrit l'historique en profondeur (purge, découpe) mais change tous les identifiants : force-push et coordination obligatoires.</li>
+<li><strong>reflog</strong> et <strong>git fsck</strong> rattrapent un travail perdu ; <strong>bisect</strong> localise un commit fautif, manuellement ou via un script.</li>
+<li><strong>rerere</strong> rejoue les résolutions de conflits ; <code>-X ours/theirs</code> et <code>-s ours</code> orientent une fusion.</li>
+<li>Un secret commité doit être <strong>révoqué</strong> puis purgé : le retirer du dernier commit ne suffit pas.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Pourquoi un fichier binaire modifié souvent fait-il grossir le dépôt, et comment LFS l'évite-t-il ?</li>
+<li>Quelle est la différence entre un <code>--depth 1</code>, un <code>--filter=blob:none</code> et un <code>sparse-checkout</code> ?</li>
+<li>Après avoir retiré un secret de tout l'historique avec filter-repo, quelle action reste indispensable, et pourquoi ?</li>
+<li>Tu viens de faire <code>git reset --hard</code> et tu as perdu trois commits : par quelle commande commences-tu la récupération ?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un fichier binaire modifié souvent fait-il grossir le dépôt, et comment LFS l'évite-t-il ?","a":["Parce que Git stocke une nouvelle copie complète à chaque version d'un binaire (il ne sait pas en faire un diff efficace), ce qui gonfle l'historique ; Git LFS ne met qu'un pointeur dans le dépôt et stocke les gros fichiers à part, gardant le dépôt léger","Parce que Git compresse mal le texte","LFS supprime l'historique","LFS interdit les binaires"],"correct":0,"explain":"Les binaires se diffusent mal : chaque version est conservée intégralement, alourdissant le dépôt cloné par tous. Git LFS remplace le fichier par un petit pointeur et héberge le contenu volumineux sur un serveur dédié, téléchargé à la demande."},
+  {"q":"Quelle est la différence entre un --depth 1, un --filter=blob:none et un sparse-checkout ?","a":["--depth 1 fait un clone superficiel (un seul commit, pas tout l'historique) ; --filter=blob:none fait un clone partiel (blobs téléchargés à la demande, historique des commits conservé) ; sparse-checkout ne matérialise qu'une partie des fichiers/dossiers de l'arbre","Ils font tous la même chose","--depth 1 ne récupère qu'un dossier","sparse-checkout supprime l'historique"],"correct":0,"explain":"Trois leviers distincts : --depth tronque la profondeur d'historique, --filter diffère le téléchargement des contenus (blobs) tout en gardant la liste des commits, et sparse-checkout limite quels fichiers sont déployés dans le répertoire de travail."},
+  {"q":"Après avoir retiré un secret de tout l'historique avec filter-repo, quelle action reste indispensable, et pourquoi ?","a":["Révoquer (et régénérer) le secret, car il a pu être cloné ou lu avant le nettoyage : réécrire l'historique ne le rend pas inconnu","Aucune, l'historique est propre","Supprimer le dépôt local","Renommer la branche main"],"correct":0,"explain":"Nettoyer l'historique empêche de retrouver le secret dans le dépôt à l'avenir, mais ne défait pas son exposition passée (forks, clones, caches). La seule garantie est de considérer le secret compromis et de le remplacer."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":[".gitattributes","gitattributes"],"placeholder":"le fichier (en plus de l'archive) à committer impérativement quand on suit des fichiers avec Git LFS","hints":["git lfs track écrit le motif quelque part.","Ce fichier dit à Git quels chemins passent par LFS.",".git??????es"],"link":{"href":"lecon-19.html","label":"Revoir « Git LFS »"}},
+  {"type":"text","accept":["git reflog","reflog"],"placeholder":"la commande pour retrouver des commits perdus après un reset --hard (sans connaître leur SHA)","hints":["Git journalise chaque déplacement de HEAD.","On y lit les SHA même « disparus » de la branche.","git ???"],"link":{"href":"lecon-19.html","label":"Revoir « Récupérer un commit perdu »"}},
+  {"type":"text","accept":["git bisect run","git bisect run ./check-bug.sh"],"placeholder":"la commande pour automatiser entièrement la dichotomie avec un script de test","hints":["Le script renvoie 0 (sain) ou 1 (cassé).","Git enchaîne alors les étapes tout seul.","git bisect ??? ./check-bug.sh"],"link":{"href":"lecon-19.html","label":"Revoir « bisect automatisé »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Configure Git LFS pour suivre tous les fichiers <code>.zip</code> d'un dépôt, ajoute un tel fichier et vérifie qu'il est bien pris en charge par LFS. Quel fichier dois-tu impérativement commiter en plus de l'archive ?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git lfs install
+git lfs track "*.zip"
+# Tracking "*.zip"
+
+# Le motif est écrit dans .gitattributes : il faut le versionner.
+git add .gitattributes
+git add archive.zip
+git commit -m "Suivi des archives via LFS"
+
+git lfs ls-files
+# 7f9a2b1c4d * archive.zip</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu as exécuté <code>git reset --hard HEAD~2</code> par erreur : deux commits ont disparu de la branche. Retrouve-les et restaure la branche à son état d'avant le reset, sans connaître à l'avance leur identifiant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git reflog
+# 1a2b3c4 HEAD@{0}: reset: moving to HEAD~2
+# 8d9e0f1 HEAD@{1}: commit: Termine le formulaire   &lt;- état recherché
+# 5c6d7e8 HEAD@{2}: commit: Ajoute la validation
+
+# HEAD@{1} est la position juste avant le reset :
+git reset --hard HEAD@{1}
+# HEAD is now at 8d9e0f1 Termine le formulaire
+
+# Vérification :
+git log --oneline -3</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un bug est apparu entre la version <code>v2.0.0</code> (saine) et <code>HEAD</code> (cassée). Tu disposes d'un script <code>./check-bug.sh</code> qui renvoie <code>0</code> si le code est sain et <code>1</code> sinon. Localise le commit fautif de façon entièrement automatisée, puis remets le dépôt dans son état initial.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git bisect start HEAD v2.0.0      # &lt;mauvais&gt; (HEAD) puis &lt;bon&gt; (v2.0.0)
+git bisect run ./check-bug.sh
+# running './check-bug.sh'
+# Bisecting: 4 revisions left to test after this ...
+# ...
+# e7f8a9b is the first bad commit
+#     Ajoute le cache de session
+# bisect found first bad commit
+
+git bisect reset                  # nettoyage : retour au point de départ
+
+# Pour inspecter le coupable :
+git show e7f8a9b</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

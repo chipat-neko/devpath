@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Processus et messages — Leçon 04 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="Le cœur d'Erlang : les processus ultra-légers et l'échange de messages avec spawn, ! et receive." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Le modèle concurrent — Leçon 04</p>
+              <h1 class="lesson-header__title">Processus et messages</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 3</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>créer des <strong>processus</strong> avec <code>spawn</code>&nbsp;;</li>
+                  <li>envoyer des messages avec <code>!</code>&nbsp;;</li>
+                  <li>recevoir avec <code>receive</code>&nbsp;;</li>
+                  <li>comprendre l'isolation des processus.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Nous arrivons au cœur d'Erlang, ce qui le rend unique&nbsp;: la <strong>concurrence par processus</strong>. Là où d'autres langages s'appuient sur des threads lourds et de la mémoire partagée (avec verrous et bugs à la clé), Erlang propose un modèle radicalement plus simple et plus sûr&nbsp;: une multitude de <strong>processus isolés</strong>, ultra-légers, qui ne partagent <em>rien</em> et communiquent uniquement par <strong>messages</strong>. Cette leçon te fait créer tes premiers processus.</p>
+
+<h2>Les processus Erlang&nbsp;: légers à l'extrême</h2>
+<p>Un <strong>processus</strong> Erlang n'est pas un processus du système d'exploitation, ni même un thread&nbsp;: c'est une unité d'exécution gérée par la BEAM, si légère qu'on peut en lancer des <strong>centaines de milliers</strong> sans peine (quelques centaines d'octets chacun). Chaque processus a sa propre mémoire, totalement <strong>isolée</strong>&nbsp;: aucun ne peut toucher les données d'un autre.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 185" role="img" aria-label="Deux processus Erlang isolés. Chaque processus a sa propre mémoire privée, représentée par une boîte interne inaccessible à l'autre. Ils ne partagent aucune mémoire commune : le seul lien entre eux est l'envoi de messages, figuré par une flèche qui va du processus A au processus B et porte l'écriture A point d'exclamation accolade msg accolade. Aucune mémoire n'est commune aux deux.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Rien de partagé — on ne communique que par messages</text>
+    <rect class="d-frame" x="34" y="46" width="200" height="118" rx="10" /><text class="d-text" x="134" y="70" text-anchor="middle" font-size="10">processus A</text>
+    <rect class="d-box" x="64" y="84" width="140" height="62" rx="8" /><text class="d-mut" x="134" y="110" text-anchor="middle" font-size="8.5">mémoire privée</text><text class="d-tag" x="134" y="128" text-anchor="middle" font-size="8.5">état de A</text>
+    <rect class="d-frame" x="406" y="46" width="200" height="118" rx="10" /><text class="d-text" x="506" y="70" text-anchor="middle" font-size="10">processus B</text>
+    <rect class="d-box" x="436" y="84" width="140" height="62" rx="8" /><text class="d-mut" x="506" y="110" text-anchor="middle" font-size="8.5">mémoire privée</text><text class="d-tag" x="506" y="128" text-anchor="middle" font-size="8.5">état de B</text>
+    <text class="d-text" x="320" y="96" text-anchor="middle" font-size="9">B ! {msg, …}</text>
+    <path class="d-line" d="M234 108 L406 108" fill="none" /><circle class="d-dot" cx="406" cy="108" r="3" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8">aucune mémoire commune → pas de verrou, pas de corruption partagée</text>
+  </svg>
+  <figcaption>L'<strong>isolation</strong> est la clé de la sûreté d'Erlang&nbsp;: sans mémoire partagée, pas de verrou ni de corruption entre processus. Le seul canal entre eux est le message.</figcaption>
+</figure>
+
+<h2>Créer un processus avec <code>spawn</code></h2>
+<p>On lance un processus avec <code>spawn</code>, en lui indiquant la fonction qu'il doit exécuter. <code>spawn</code> renvoie un <strong>identifiant de processus</strong> (un <em>PID</em>), qui sert à lui envoyer des messages.</p>
+<figure class="code-block" data-file="spawn.erl"><pre><code class="language-erlang">% Lancer un processus qui exécute bonjour:dire()
+Pid = spawn(bonjour, dire, []).
+% Pid ressemble à &lt;0.85.0&gt;
+
+% spawn(Module, Fonction, ListeArguments)</code></pre></figure>
+<p>Le processus s'exécute <strong>en parallèle</strong> du reste du programme. Le PID (affiché sous une forme comme <code>&lt;0.85.0&gt;</code>) est l'adresse à laquelle on lui parlera.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="La création d'un processus avec spawn. Le processus parent appelle spawn du module bonjour, fonction dire, sans argument. Cela lance un nouveau processus enfant qui exécute bonjour dire en parallèle, puis renvoie au parent son identifiant de processus, le PID, ici inférieur 0 point 85 point 0 supérieur. Le parent conserve ce PID pour lui envoyer plus tard des messages.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">spawn crée un processus et renvoie son PID</text>
+    <rect class="d-box" x="30" y="58" width="180" height="72" rx="8" /><text class="d-text" x="120" y="86" text-anchor="middle" font-size="10">processus parent</text><text class="d-tag" x="120" y="110" text-anchor="middle" font-size="8.5">spawn(bonjour, dire, [])</text>
+    <text class="d-mut" x="255" y="86" text-anchor="middle" font-size="8">lance</text>
+    <path class="d-line" d="M210 94 L300 94" fill="none" /><circle class="d-dot" cx="300" cy="94" r="3" />
+    <rect class="d-accent" x="300" y="58" width="210" height="72" rx="8" /><text class="d-text" x="405" y="86" text-anchor="middle" font-size="10">processus enfant</text><text class="d-mut" x="405" y="110" text-anchor="middle" font-size="8.5">exécute bonjour:dire() en parallèle</text>
+    <path class="d-line" d="M405 130 L405 154 L120 154 L120 132" fill="none" /><circle class="d-dot" cx="120" cy="132" r="3" />
+    <text class="d-tag" x="262" y="170" text-anchor="middle" font-size="9">renvoie le PID &lt;0.85.0&gt;</text>
+  </svg>
+  <figcaption>Le <strong>PID</strong> renvoyé par <code>spawn</code> est l'adresse du nouveau processus. Le parent le garde pour lui adresser des messages&nbsp;; l'enfant, lui, tourne en parallèle.</figcaption>
+</figure>
+
+<h2>Envoyer un message avec <code>!</code></h2>
+<p>On envoie un message à un processus avec l'opérateur <strong><code>!</code></strong> (le «&nbsp;bang&nbsp;»), suivi du message. L'envoi est <strong>asynchrone</strong>&nbsp;: on n'attend pas, le message est déposé dans la <em>boîte aux lettres</em> du destinataire.</p>
+<figure class="code-block" data-file="send.erl"><pre><code class="language-erlang">Pid ! {bonjour, "Ada"}.
+Pid ! {nombre, 42}.
+
+% Pid ! Message  : dépose Message dans la boîte de Pid
+% On peut envoyer n'importe quelle valeur comme message.</code></pre></figure>
+<p>Le message peut être n'importe quelle donnée&nbsp;: un atome, un tuple, une liste. La convention habituelle est un tuple étiqueté (<code>{type, données}</code>), pour que le destinataire sache de quoi il s'agit.</p>
+
+<h2>Recevoir avec <code>receive</code></h2>
+<p>Un processus lit sa boîte aux lettres avec <code>receive</code>, qui fait du <strong>pattern matching</strong> sur les messages&nbsp;: chaque motif correspond à un type de message à traiter.</p>
+<figure class="code-block" data-file="receive.erl"><pre><code class="language-erlang">boucle() -&gt;
+    receive
+        {bonjour, Nom} -&gt;
+            io:format("Salut, ~s !~n", [Nom]),
+            boucle();
+        {nombre, N} -&gt;
+            io:format("Recu : ~p~n", [N]),
+            boucle();
+        stop -&gt;
+            io:format("Arret.~n")
+    end.</code></pre></figure>
+<p>Le processus attend un message, le fait correspondre à l'un des motifs, exécute le code associé, puis se rappelle lui-même (<code>boucle()</code>) pour traiter le suivant — sauf sur <code>stop</code>, où il s'arrête. Si aucun message ne correspond, le processus <strong>attend</strong> patiemment qu'il en arrive un.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="La boîte aux lettres d'un processus. À gauche, trois envois avec l'opérateur point d'exclamation déposent des messages dans la boîte aux lettres : bonjour Ada, nombre 42, stop. Au centre, la boîte aux lettres accumule ces messages dans l'ordre d'arrivée. À droite, le bloc receive lit la boîte et fait correspondre chaque message à un motif : le motif bonjour Nom, le motif nombre N, le motif stop pour l'arrêt. Si aucun motif ne correspond, le processus attend le message suivant.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">« ! » remplit la boîte — « receive » la vide par filtrage</text>
+    <text class="d-tag" x="24" y="58" font-size="8.5">Pid ! {bonjour,"Ada"}</text>
+    <text class="d-tag" x="24" y="80" font-size="8.5">Pid ! {nombre, 42}</text>
+    <text class="d-tag" x="24" y="102" font-size="8.5">Pid ! stop</text>
+    <path class="d-line" d="M188 80 L238 80" fill="none" /><circle class="d-dot" cx="238" cy="80" r="3" />
+    <rect class="d-frame" x="246" y="40" width="124" height="126" rx="8" /><text class="d-mut" x="308" y="56" text-anchor="middle" font-size="8.5">boîte aux lettres</text>
+    <rect class="d-box" x="260" y="66" width="96" height="24" rx="4" /><text class="d-text" x="308" y="82" text-anchor="middle" font-size="7.5">{bonjour,"Ada"}</text>
+    <rect class="d-box" x="260" y="96" width="96" height="24" rx="4" /><text class="d-text" x="308" y="112" text-anchor="middle" font-size="7.5">{nombre, 42}</text>
+    <rect class="d-box" x="260" y="126" width="96" height="24" rx="4" /><text class="d-text" x="308" y="142" text-anchor="middle" font-size="7.5">stop</text>
+    <path class="d-line" d="M370 104 L410 104" fill="none" /><circle class="d-dot" cx="410" cy="104" r="3" />
+    <rect class="d-accent" x="418" y="48" width="200" height="110" rx="8" /><text class="d-text" x="518" y="68" text-anchor="middle" font-size="9.5">receive</text>
+    <text class="d-tag" x="432" y="92" font-size="8">{bonjour, Nom} -&gt; …</text>
+    <text class="d-tag" x="432" y="114" font-size="8">{nombre, N} -&gt; …</text>
+    <text class="d-tag" x="432" y="136" font-size="8">stop -&gt; arrêt</text>
+    <text class="d-mut" x="320" y="192" text-anchor="middle" font-size="8">aucun motif ne correspond&nbsp;? le processus attend le prochain message</text>
+  </svg>
+  <figcaption>L'envoi <code>!</code> est asynchrone&nbsp;: il dépose et repart. Le <code>receive</code> puise dans la <strong>boîte aux lettres</strong> et exécute la branche dont le motif correspond au message.</figcaption>
+</figure>
+
+<h2>Un exemple complet</h2>
+<p>Assemblons&nbsp;: un processus «&nbsp;écho&nbsp;» qui réaffiche ce qu'on lui envoie.</p>
+<figure class="code-block" data-file="echo.erl"><pre><code class="language-erlang">-module(echo).
+-export([demarrer/0, boucle/0]).
+
+demarrer() -&gt;
+    spawn(echo, boucle, []).
+
+boucle() -&gt;
+    receive
+        {message, Texte} -&gt;
+            io:format("Echo : ~s~n", [Texte]),
+            boucle();
+        stop -&gt;
+            ok
+    end.
+
+% Usage :
+% P = echo:demarrer().
+% P ! {message, "coucou"}.   -&gt; affiche "Echo : coucou"
+% P ! stop.</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Dans le shell, pour tester vite un envoi sans écrire de module, utilise une <strong>fonction anonyme</strong>&nbsp;: <code>Pid = spawn(fun() -&gt; receive M -&gt; io:format("recu ~p~n", [M]) end end)</code>. Et quand un processus <em>te</em> répond, la commande <code>flush().</code> vide et affiche la boîte aux lettres du shell&nbsp;: pratique pour voir d'un coup d'œil ce qu'on t'a envoyé.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>RabbitMQ</strong>, l'un des courtiers de messages les plus utilisés au monde (banques, e-commerce, IoT), est écrit en Erlang — et ce n'est pas un hasard. Chaque connexion, chaque file d'attente y est un <em>processus</em> isolé qui reçoit et transmet des messages, exactement comme dans cette leçon. Le modèle «&nbsp;processus + boîte aux lettres&nbsp;» qui te sert à écrire un écho de dix lignes est le même qui route des <strong>millions de messages par seconde</strong> en production, sans mémoire partagée à verrouiller.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier de <strong>rappeler la boucle</strong> après avoir traité un message. Si une clause de <code>receive</code> ne se termine pas par un appel récursif (<code>boucle()</code>), le processus traite <em>un seul</em> message puis <strong>meurt</strong>. Pour un processus qui doit vivre et répondre en continu, chaque branche (sauf l'arrêt volontaire) doit relancer la boucle. C'est le ressort qui maintient un processus serveur en vie.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Comme les processus ne partagent <strong>aucune mémoire</strong> et ne communiquent que par copie de messages, ce modèle s'étend naturellement à <strong>plusieurs machines</strong> (leçon 8)&nbsp;: envoyer un message à un processus sur un autre serveur s'écrit exactement comme un envoi local. L'isolation par messages, conçue pour la fiabilité sur une machine, devient gratuitement le socle du calcul distribué. C'est l'une des plus belles idées d'Erlang.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — processus et messages</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Créer un processus</td><td><code>spawn(Mod, Fonc, Args)</code></td><td>renvoie un PID</td></tr>
+      <tr><td>Créer (fonction anonyme)</td><td><code>spawn(fun() -&gt; … end)</code></td><td>pratique dans le shell</td></tr>
+      <tr><td>PID courant</td><td><code>self()</code></td><td>l'adresse du processus</td></tr>
+      <tr><td>Envoyer (asynchrone)</td><td><code>Pid ! Message</code></td><td>dépose dans la boîte, ne bloque pas</td></tr>
+      <tr><td>Recevoir</td><td><code>receive Motif -&gt; … end</code></td><td>filtre par motif</td></tr>
+      <tr><td>Recevoir avec délai</td><td><code>receive … after 1000 -&gt; … end</code></td><td>expire après 1000 ms</td></tr>
+      <tr><td>Message typé</td><td><code>{type, Données}</code></td><td>convention (tuple étiqueté)</td></tr>
+      <tr><td>Rester en vie</td><td>rappeler <code>boucle()</code></td><td>sinon le processus meurt après 1 message</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Processus</dt><dd>Unité d'exécution légère gérée par la BEAM (pas un thread du système)&nbsp;; à mémoire isolée, on peut en lancer des centaines de milliers.</dd>
+  <dt>PID</dt><dd>Identifiant de processus (ex. <code>&lt;0.85.0&gt;</code>) renvoyé par <code>spawn</code>&nbsp;; adresse à laquelle on envoie des messages.</dd>
+  <dt>spawn</dt><dd>Fonction qui démarre un nouveau processus exécutant une fonction donnée et renvoie son PID.</dd>
+  <dt>Envoi (<code>!</code>)</dt><dd>Opérateur d'envoi <strong>asynchrone</strong>&nbsp;: <code>Pid ! Message</code> dépose le message dans la boîte du destinataire sans attendre de réponse.</dd>
+  <dt>Boîte aux lettres</dt><dd>File des messages reçus par un processus, dans laquelle <code>receive</code> vient puiser dans l'ordre d'arrivée.</dd>
+  <dt>receive</dt><dd>Bloc qui lit la boîte aux lettres en filtrant les messages par motif&nbsp;; si aucun ne correspond, le processus attend.</dd>
+  <dt>Isolation</dt><dd>Propriété selon laquelle chaque processus possède sa propre mémoire&nbsp;; aucun ne peut lire ou modifier celle d'un autre.</dd>
+  <dt>self()</dt><dd>Fonction renvoyant le PID du processus courant, souvent glissé dans un message pour indiquer où répondre.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>processus</strong> Erlang sont ultra-légers, isolés (mémoire séparée), gérés par la BEAM.</li>
+  <li><code>spawn</code> crée un processus et renvoie son <strong>PID</strong>&nbsp;; on lui parle via ce PID.</li>
+  <li><code>Pid ! Message</code> envoie (asynchrone)&nbsp;; <code>receive</code> lit la boîte par pattern matching.</li>
+  <li>Un processus serveur <strong>se rappelle</strong> (boucle récursive) pour traiter les messages en continu.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que renvoie <code>spawn</code>&nbsp;?</li><li>Quel opérateur envoie un message&nbsp;?</li><li>Pourquoi un processus serveur doit-il se rappeler lui-même&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que renvoie spawn ?","a":["L'identifiant du processus créé (un PID), qui sert à lui envoyer des messages","La valeur de retour de la fonction lancée","Le nombre de processus","rien"],"correct":0,"explain":"spawn démarre un nouveau processus et renvoie son PID (identifiant de processus). On conserve ce PID pour communiquer avec le processus, notamment lui envoyer des messages."},
+  {"q":"Quel opérateur envoie un message ?","a":["! (l'opérateur d'envoi), comme dans Pid ! Message","-> ","<- ","send()"],"correct":0,"explain":"L'envoi de message asynchrone s'écrit Pid ! Message : le message est déposé dans la boîte aux lettres du processus destinataire. Celui-ci le récupère ensuite avec receive."},
+  {"q":"Pourquoi un processus serveur doit-il se rappeler lui-même ?","a":["Pour boucler et continuer à traiter les messages suivants avec son état mis à jour ; la récursion maintient le processus vivant en attente du prochain message","Pour se cloner","Pour libérer la mémoire","Ce n'est pas nécessaire"],"correct":0,"explain":"Un serveur attend un message, le traite, puis se rappelle avec l'état actualisé pour attendre le suivant. Cette boucle récursive le garde actif ; sans ce rappel, il se terminerait après avoir traité un seul message."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["!","bang","point d'exclamation"],"placeholder":"l'opérateur Erlang pour ENVOYER un message à un processus (Pid … {salut, \"Bob\"}) : …","hints":["Pid ? Message.","Asynchrone : on n'attend pas.","Un point d'exclamation."],"link":{"href":"lecon-04.html","label":"Revoir « Envoyer un message »"}},
+  {"type":"text","accept":["receive"],"placeholder":"le bloc pour ATTENDRE et filtrer un message {addition, A, B} : …","hints":["??????? {addition, A, B} -> io:format(...) end.","Bloque jusqu'à un message correspondant.","Sept lettres."],"link":{"href":"lecon-04.html","label":"Revoir « receive »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris l'instruction qui envoie le message <code>{salut, "Bob"}</code> au processus <code>Pid</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">Pid ! {salut, "Bob"}.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une clause <code>receive</code> qui, sur un message <code>{addition, A, B}</code>, affiche la somme.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">receive
+    {addition, A, B} -&gt;
+        io:format("Somme : ~p~n", [A + B])
+end.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi peut-on créer des centaines de milliers de processus Erlang, mais pas autant de threads système&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que les processus Erlang ne sont <strong>pas</strong> des threads du système d'exploitation&nbsp;: ce sont des unités légères gérées <em>par la BEAM</em> elle-même, occupant quelques centaines d'octets et ordonnancées par la machine virtuelle. Un thread système, lui, réserve une pile de plusieurs kilo-octets (voire méga-octets) et dépend de l'ordonnanceur de l'OS&nbsp;: en lancer des centaines de milliers épuiserait la mémoire et écroulerait les performances. La légèreté des processus Erlang est précisément ce qui rend possible sa concurrence massive.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

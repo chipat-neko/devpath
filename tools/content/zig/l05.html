@@ -1,0 +1,102 @@
+<p>Pour modéliser des données, Zig offre les <strong>structs</strong> (regrouper des champs), les <strong>enums</strong> (un choix parmi des variantes) et les <strong>unions étiquetées</strong> (une valeur qui peut être de plusieurs types). Combinés au <code>switch</code>, ils donnent un système de types expressif et sûr — sans la lourdeur de la POO classique.</p>
+
+<h2>Les structs</h2>
+<p>Un <code>struct</code> regroupe des champs nommés. On peut lui donner des valeurs par défaut, et même des <strong>méthodes</strong> (des fonctions définies à l'intérieur).</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const Point = struct {
+    x: f64,
+    y: f64,
+
+    fn distance(self: Point) f64 {
+        return @sqrt(self.x * self.x + self.y * self.y);
+    }
+};
+
+const p = Point{ .x = 3.0, .y = 4.0 };
+std.debug.print("{}\n", .{p.x});           // 3.0
+std.debug.print("{d}\n", .{p.distance()}); // 5.0</code></pre></figure>
+<p class="code-caption">On construit avec <code>.{ .champ = valeur }</code>&nbsp;; une méthode reçoit <code>self</code> en premier argument.</p>
+
+<h2>Les types sont des valeurs</h2>
+<p>Concept déroutant mais puissant&nbsp;: en Zig, un <strong>type est une valeur</strong> comme une autre, qu'on peut stocker dans une <code>const</code>. C'est pourquoi <code>const Point = struct {…}</code> ressemble à une affectation&nbsp;: on assigne un type à un nom. Cette idée est la clé de la généricité (leçon 8).</p>
+
+<h2>Les enums</h2>
+<p>Un <code>enum</code> définit un type à valeurs limitées. Le <code>switch</code> sur un enum est exhaustif&nbsp;: le compilateur exige tous les cas.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const Couleur = enum { rouge, vert, bleu };
+
+const c = Couleur.vert;
+const code = switch (c) {
+    .rouge =&gt; "#FF0000",
+    .vert =&gt; "#00FF00",
+    .bleu =&gt; "#0000FF",
+};
+std.debug.print("{s}\n", .{code});   // #00FF00</code></pre></figure>
+<p>Dans le <code>switch</code>, on peut écrire <code>.vert</code> sans répéter le nom du type&nbsp;: Zig le déduit.</p>
+
+<h2>Les unions étiquetées</h2>
+<p>Une <strong>union étiquetée</strong> (tagged union) représente une valeur qui peut être de <em>plusieurs</em> types, mais d'un seul à la fois — l'équivalent des types somme. Chaque variante peut porter une donnée.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const Forme = union(enum) {
+    cercle: f64,           // un rayon
+    rectangle: struct { l: f64, h: f64 },
+};
+
+fn aire(f: Forme) f64 {
+    return switch (f) {
+        .cercle =&gt; |r| 3.14159 * r * r,
+        .rectangle =&gt; |rect| rect.l * rect.h,
+    };
+}
+
+const c = Forme{ .cercle = 2.0 };
+std.debug.print("{d}\n", .{aire(c)});   // 12.566</code></pre></figure>
+<p class="code-caption">Le <code>switch</code> déballe la donnée de chaque variante via la capture <code>|r|</code>.</p>
+
+<h2>Le pattern résultat</h2>
+<p>Les unions étiquetées servent à modéliser des états ou des résultats de façon sûre&nbsp;: chaque cas est traité explicitement, impossible d'en oublier un.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const Etat = union(enum) {
+    chargement,
+    succes: []const u8,
+    echec: []const u8,
+};</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Accéder à la mauvaise variante d'une union&nbsp;: lire <code>f.rectangle</code> alors que <code>f</code> est un <code>.cercle</code> est une erreur (détectée en mode debug). Passe toujours par un <code>switch</code> qui te donne la bonne donnée pour le bon cas.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Zig n'a pas d'héritage de classe. Pour partager du comportement, on compose des structs et on utilise les unions et la généricité <code>comptime</code>. Cette absence est délibérée&nbsp;: elle évite la complexité et les hiérarchies fragiles de la POO classique.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <code>struct</code> regroupe des champs et peut avoir des <strong>méthodes</strong> (<code>self</code> en premier).</li>
+  <li>En Zig, un <strong>type est une valeur</strong> (<code>const Point = struct{…}</code>).</li>
+  <li>Les <strong>enums</strong> limitent les valeurs&nbsp;; le <code>switch</code> dessus est exhaustif.</li>
+  <li>Les <strong>unions étiquetées</strong> (<code>union(enum)</code>) modélisent des types somme&nbsp;; on les déballe par <code>switch</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment construit-on une instance de struct&nbsp;?</li><li>Que signifie «&nbsp;un type est une valeur&nbsp;» en Zig&nbsp;?</li><li>À quoi sert une union étiquetée&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un struct <code>Rectangle</code> (l, h) et calcule son aire.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const Rectangle = struct {
+    l: f64,
+    h: f64,
+    fn aire(self: Rectangle) f64 {
+        return self.l * self.h;
+    }
+};</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un enum <code>Direction</code> (nord, sud, est, ouest) et un <code>switch</code> qui renvoie son opposé.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const Direction = enum { nord, sud, est, ouest };
+fn oppose(d: Direction) Direction {
+    return switch (d) {
+        .nord =&gt; .sud,
+        .sud =&gt; .nord,
+        .est =&gt; .ouest,
+        .ouest =&gt; .est,
+    };
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Modélise avec une union une valeur qui est soit un entier, soit du texte, et affiche-la selon le cas.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const Valeur = union(enum) {
+    nombre: i32,
+    texte: []const u8,
+};
+fn afficher(v: Valeur) void {
+    switch (v) {
+        .nombre =&gt; |n| std.debug.print("{}\n", .{n}),
+        .texte =&gt; |t| std.debug.print("{s}\n", .{t}),
+    }
+}</code></pre></figure></details></div>

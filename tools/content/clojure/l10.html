@@ -1,0 +1,87 @@
+<p>Jusqu'ici, on a modélisé nos données avec des maps et manipulé tout par des fonctions. C'est souple, mais quand un programme grandit, on a besoin d'<strong>abstractions</strong> et de <strong>polymorphisme</strong>&nbsp;: faire qu'un même appel se comporte différemment selon le type de donnée. Clojure offre trois outils pour cela, chacun à sa place&nbsp;: les <strong>protocols</strong>, les <strong>records</strong> et les <strong>multimethods</strong>. Cette leçon t'apprend à structurer du code polymorphe à la manière de Clojure.</p>
+
+<h2>Les protocols&nbsp;: des interfaces</h2>
+<p>Un <strong>protocol</strong> déclare un ensemble de fonctions que différents types pourront implémenter — exactement comme une <em>interface</em> dans d'autres langages. On le définit avec <code>defprotocol</code>.</p>
+<figure class="code-block" data-file="protocol.clj"><pre><code class="language-clojure">(defprotocol Forme
+  (aire [f])
+  (perimetre [f]))</code></pre></figure>
+<p>Le protocol <code>Forme</code> annonce deux opérations, <code>aire</code> et <code>perimetre</code>, sans dire comment les calculer. Chaque type qui adopte <code>Forme</code> devra les fournir. C'est un <strong>contrat</strong> partagé.</p>
+
+<h2>Les records&nbsp;: des types de données</h2>
+<p>Un <strong>record</strong> (<code>defrecord</code>) crée un type concret avec des champs nommés. Contrairement à une map ordinaire, un record est plus rapide et peut <strong>implémenter des protocols</strong> directement.</p>
+<figure class="code-block" data-file="record.clj"><pre><code class="language-clojure">(defrecord Cercle [rayon]
+  Forme
+  (aire [_] (* Math/PI rayon rayon))
+  (perimetre [_] (* 2 Math/PI rayon)))
+
+(defrecord Rectangle [largeur hauteur]
+  Forme
+  (aire [_] (* largeur hauteur))
+  (perimetre [_] (* 2 (+ largeur hauteur))))
+
+(def c (->Cercle 10))     ; crée un Cercle de rayon 10
+(aire c)                  ; → 314.159...
+(perimetre (->Rectangle 4 5))  ; → 18</code></pre></figure>
+<p><code>->Cercle</code> est le constructeur généré automatiquement. Chaque record implémente <code>Forme</code> à sa façon. L'appel <code>(aire c)</code> est <strong>polymorphe</strong>&nbsp;: Clojure choisit la bonne implémentation selon le type de <code>c</code>. Un record reste une map&nbsp;: on accède à ses champs par keyword (<code>(:rayon c)</code>).</p>
+
+<h2>Les multimethods&nbsp;: répartir sur une valeur calculée</h2>
+<p>Les protocols répartissent sur le <em>type</em> du premier argument. Mais parfois, on veut choisir l'implémentation selon une <strong>valeur</strong> arbitraire (un champ, une combinaison). Les <strong>multimethods</strong> le permettent&nbsp;: on fournit une <em>fonction de répartition</em> qui calcule une clé, et on définit une méthode par clé.</p>
+<figure class="code-block" data-file="multimethod.clj"><pre><code class="language-clojure">;; La fonction de dispatch renvoie la valeur de :type
+(defmulti decrire :type)
+
+(defmethod decrire :chien [animal]
+  (str (:nom animal) " aboie"))
+
+(defmethod decrire :chat [animal]
+  (str (:nom animal) " miaule"))
+
+(defmethod decrire :default [animal]
+  (str (:nom animal) " fait un bruit"))
+
+(decrire {:type :chien :nom "Rex"})   ; → "Rex aboie"
+(decrire {:type :oiseau :nom "Coco"}) ; → "Coco fait un bruit"</code></pre></figure>
+<p>Ici, <code>decrire</code> répartit sur <code>:type</code>. La grande force&nbsp;: la fonction de dispatch peut être <em>n'importe quoi</em> — on pourrait répartir sur <code>(juxt :type :age)</code>, sur une plage, etc. Les multimethods offrent un polymorphisme bien plus libre que la répartition sur le seul type.</p>
+
+<h2>Protocols ou multimethods&nbsp;?</h2>
+<p>Deux outils, deux usages&nbsp;:</p>
+<ul>
+  <li><strong>Protocols</strong>&nbsp;: répartition sur le <em>type</em>, très rapides, idéaux pour un ensemble d'opérations sur des types fermés (comme une interface). C'est le choix par défaut.</li>
+  <li><strong>Multimethods</strong>&nbsp;: répartition sur une <em>valeur calculée</em>, plus lents mais plus flexibles, parfaits quand le critère n'est pas le type (par ex. une étiquette dans une map).</li>
+</ul>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Atteindre trop vite les records et protocols par réflexe «&nbsp;orienté objet&nbsp;». En Clojure, on modélise <strong>par défaut avec des maps simples</strong> et des fonctions&nbsp;: c'est plus souple et plus composable. Les protocols/records ne se justifient que lorsqu'on a besoin de <em>polymorphisme</em> performant ou d'interopérer avec Java. Ne crée pas une hiérarchie de types là où une map et quelques fonctions suffisent.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les protocols résolvent un problème célèbre, le «&nbsp;<em>expression problem</em>&nbsp;»&nbsp;: pouvoir ajouter à la fois de nouveaux types <em>et</em> de nouvelles opérations sans modifier le code existant. Avec <code>extend-protocol</code>, on peut même faire qu'un type <em>déjà existant</em> (y compris une classe Java) implémente un protocol après coup. Cette extensibilité ouverte est l'une des forces discrètes de Clojure.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Protocol</strong> (<code>defprotocol</code>)&nbsp;: une interface (ensemble d'opérations) répartie sur le <strong>type</strong>.</li>
+  <li><strong>Record</strong> (<code>defrecord</code>)&nbsp;: un type concret à champs nommés, rapide, qui implémente des protocols&nbsp;; constructeur <code>-&gt;Nom</code>.</li>
+  <li><strong>Multimethod</strong> (<code>defmulti</code>/<code>defmethod</code>)&nbsp;: répartition sur une <strong>valeur calculée</strong> (très flexible).</li>
+  <li>Par défaut, modéliser avec des <strong>maps + fonctions</strong>&nbsp;; protocols/records seulement si polymorphisme/perf le justifient.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Sur quoi un protocol répartit-il l'appel&nbsp;?</li><li>Qu'apporte un multimethod par rapport à un protocol&nbsp;?</li><li>Pourquoi privilégier les maps simples par défaut&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Sur quoi un protocol (defprotocol) répartit-il l'appel ?","a":["Sur le type du premier argument","Sur la valeur d'un champ :type","Sur l'ordre de définition","De façon aléatoire"],"correct":0,"explain":"Un protocol est comme une interface : la bonne implémentation est choisie selon le type. Les multimethods, eux, répartissent sur une valeur calculée."},
+  {"q":"Quand préférer un multimethod à un protocol ?","a":["Quand on veut répartir selon une valeur calculée (ex. un champ), pas seulement le type","Quand on veut le maximum de performance","Quand on n'a qu'un seul type","Jamais : les protocols couvrent tous les cas"],"correct":0,"explain":"Le multimethod accepte n'importe quelle fonction de dispatch (un champ, une combinaison…), bien plus flexible que la répartition par type."},
+  {"q":"En Clojure, comment modélise-t-on les données par défaut ?","a":["Avec des maps simples et des fonctions","Avec une hiérarchie de classes","Toujours avec defrecord","Avec des tableaux mutables"],"correct":0,"explain":"Les maps + fonctions sont le réflexe idiomatique ; records et protocols ne se justifient que pour le polymorphisme performant ou l'interop Java."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un protocol <code>Sonore</code> avec une fonction <code>son</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(defprotocol Sonore
+  (son [x]))</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un record <code>Carre</code> (champ <code>cote</code>) qui implémente <code>Forme</code> et calcule son aire.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(defrecord Carre [cote]
+  Forme
+  (aire [_] (* cote cote))
+  (perimetre [_] (* 4 cote)))
+
+(aire (->Carre 5))   ; → 25</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un multimethod <code>tarif</code> qui répartit sur <code>:categorie</code> et renvoie 0 pour <code>:enfant</code>, 10 pour <code>:adulte</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(defmulti tarif :categorie)
+(defmethod tarif :enfant [_] 0)
+(defmethod tarif :adulte [_] 10)
+
+(tarif {:categorie :adulte})   ; → 10</code></pre></figure></details></div>

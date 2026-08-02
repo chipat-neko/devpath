@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Écrire une application en ligne de commande — Leçon 21 · Rust · Syntaxe</title>
+    <meta name="description" content="Construire un outil en ligne de commande en Rust : lire les arguments avec std::env, renvoyer des codes de sortie, lire l'entrée standard, et analyser les arguments proprement avec clap et son mode derive." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="rust" data-lesson="lecon-21.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Rust</a></li>
+            <li aria-current="page">Leçon 21</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 07 · Rust au quotidien — Leçon 21</p>
+              <h1 class="lesson-header__title">Écrire une application en ligne de commande</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~33 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Entrées/sorties (leçon 19) utile</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lire les arguments à la main avec <code>std::env::args</code>&nbsp;;</li>
+                  <li>renvoyer un <strong>code de sortie</strong> et écrire les erreurs sur <code>stderr</code>&nbsp;;</li>
+                  <li>lire l'entrée standard (<code>stdin</code>) pour t'enchaîner dans un <em>pipe</em>&nbsp;;</li>
+                  <li>analyser les arguments proprement avec <strong>clap</strong> et son mode <code>derive</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Rust brille pour écrire des <strong>outils en ligne de commande</strong> — rapides, autonomes (un seul binaire), sans dépendances à installer chez l'utilisateur. Beaucoup des remplaçants modernes des classiques Unix (<code>ripgrep</code> pour <code>grep</code>, <code>bat</code> pour <code>cat</code>, <code>fd</code> pour <code>find</code>) sont écrits en Rust. Voyons comment lire des arguments, dialoguer avec l'entrée/sortie standard, et signaler le succès ou l'échec — d'abord à la main, puis avec l'outil de référence, <strong>clap</strong>.</p>
+
+<h2>Lire les arguments à la main</h2>
+<p><code>std::env::args</code> renvoie un itérateur sur les arguments. Attention&nbsp;: <code>args[0]</code> est le <strong>nom du programme</strong>&nbsp;; les vrais arguments commencent à l'indice 1.</p>
+<figure class="code-block" data-file="src/main.rs"><pre><code class="language-rust">use std::env;
+
+fn main() {
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    // args[0] = chemin du programme ; on regarde le premier vrai argument :
+    match args.get(1).map(|s| s.as_str()) {
+        Some("version") =&gt; println!("outil 1.0"),
+        Some("bonjour")  =&gt; println!("Salut !"),
+        Some(autre)      =&gt; eprintln!("commande inconnue : {autre}"),
+        None             =&gt; eprintln!("usage : outil &lt;commande&gt;"),
+    }
+}</code></pre></figure>
+<p>On passe par <code>args.get(1)</code> (qui renvoie une <code>Option</code>) plutôt que <code>args[1]</code>&nbsp;: si l'utilisateur ne fournit rien, <code>get</code> donne <code>None</code> au lieu de <strong>paniquer</strong>. Le <code>.map(|s| s.as_str())</code> convertit l'<code>Option&lt;&amp;String&gt;</code> en <code>Option&lt;&amp;str&gt;</code> pour pouvoir comparer aux littéraux dans le <code>match</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Anatomie d'une ligne de commande : outil espace tiret-tiret repete espace 3 espace Alice. Le premier mot outil est le nom du programme, disponible en position zéro des arguments. Le groupe tiret-tiret repete suivi de 3 est une option nommée avec sa valeur. Le dernier mot Alice est un argument positionnel. clap sépare et valide automatiquement ces trois natures.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">anatomie d'une ligne de commande</text>
+    <rect class="d-frame" x="40" y="40" width="560" height="34" rx="8" />
+    <text class="d-tag" x="95" y="62" text-anchor="middle" font-size="12" font-family="monospace">outil</text>
+    <text class="d-text" x="270" y="62" text-anchor="middle" font-size="12" font-family="monospace">--repete 3</text>
+    <text class="d-text" x="510" y="62" text-anchor="middle" font-size="12" font-family="monospace">Alice</text>
+    <line class="d-line" x1="95" y1="74" x2="95" y2="96" />
+    <line class="d-line" x1="270" y1="74" x2="270" y2="96" />
+    <line class="d-line" x1="510" y1="74" x2="510" y2="96" />
+    <rect class="d-box" x="40" y="96" width="110" height="34" rx="6" />
+    <text class="d-mut" x="95" y="112" text-anchor="middle" font-size="8">nom du programme</text>
+    <text class="d-mut" x="95" y="124" text-anchor="middle" font-size="8">args[0]</text>
+    <rect class="d-accent" x="185" y="96" width="170" height="34" rx="6" />
+    <text class="d-mut" x="270" y="112" text-anchor="middle" font-size="8">option nommée + valeur</text>
+    <text class="d-mut" x="270" y="124" text-anchor="middle" font-size="8">--repete = 3</text>
+    <rect class="d-box" x="455" y="96" width="110" height="34" rx="6" />
+    <text class="d-mut" x="510" y="112" text-anchor="middle" font-size="8">argument positionnel</text>
+    <text class="d-mut" x="510" y="124" text-anchor="middle" font-size="8">nom = "Alice"</text>
+  </svg>
+  <figcaption>Trois natures se côtoient sur une ligne&nbsp;: le nom du programme (<code>args[0]</code>), les <strong>options nommées</strong> (<code>--repete 3</code>) et les <strong>arguments positionnels</strong> (<code>Alice</code>). Les distinguer à la main est fastidieux&nbsp;: c'est le métier de clap.</figcaption>
+</figure>
+
+<h2>Codes de sortie et flux d'erreur</h2>
+<p>Un outil en ligne de commande communique son résultat de deux façons&nbsp;: son <strong>code de sortie</strong> (0 = succès, ≠0 = échec) et la séparation <code>stdout</code>&nbsp;/&nbsp;<code>stderr</code>. Le résultat exploitable va sur <code>stdout</code> (<code>println!</code>)&nbsp;; les messages et erreurs vont sur <code>stderr</code> (<code>eprintln!</code>).</p>
+<figure class="code-block" data-file="src/main.rs"><pre><code class="language-rust">use std::process;
+
+fn main() {
+    let ok = traiter();
+    if !ok {
+        eprintln!("erreur : traitement échoué");
+        process::exit(1);   // code de sortie 1 → la CI ou le shell voit l'échec
+    }
+    // sortie implicite avec le code 0 (succès)
+}</code></pre></figure>
+<p>Le shell et les scripts s'appuient sur ce code&nbsp;: <code>mon_outil &amp;&amp; suite</code> n'exécute <code>suite</code> que si <code>mon_outil</code> a renvoyé 0. Alternative plus idiomatique&nbsp;: faire renvoyer <code>Result</code> à <code>main</code> (leçon&nbsp;19) — un <code>Err</code> produit automatiquement un code non nul.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Les canaux d'un programme en ligne de commande. À gauche, l'entrée standard stdin alimente le programme, par exemple via un tuyau depuis un autre outil. Au centre, le programme. À droite, deux sorties distinctes : la sortie standard stdout porte le résultat exploitable, et la sortie d'erreur stderr porte les messages et diagnostics. En dessous, le programme renvoie un code de sortie : zéro pour succès, différent de zéro pour échec.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">stdin → programme → stdout / stderr (+ code de sortie)</text>
+    <rect class="d-box" x="24" y="60" width="120" height="40" rx="8" />
+    <text class="d-tag" x="84" y="80" text-anchor="middle" font-size="10">stdin</text>
+    <text class="d-mut" x="84" y="94" text-anchor="middle" font-size="8">entrée (pipe)</text>
+    <line class="d-line" x1="144" y1="80" x2="236" y2="80" />
+    <rect class="d-accent" x="236" y="54" width="150" height="52" rx="10" />
+    <text class="d-tag" x="311" y="78" text-anchor="middle" font-size="10">programme</text>
+    <text class="d-mut" x="311" y="94" text-anchor="middle" font-size="8">traite les données</text>
+    <line class="d-line" x1="386" y1="70" x2="478" y2="58" />
+    <line class="d-line" x1="386" y1="90" x2="478" y2="112" />
+    <rect class="d-box" x="478" y="40" width="138" height="34" rx="7" />
+    <text class="d-text" x="547" y="61" text-anchor="middle" font-size="9">stdout · le résultat</text>
+    <rect class="d-frame" x="478" y="98" width="138" height="34" rx="7" />
+    <text class="d-text" x="547" y="119" text-anchor="middle" font-size="9">stderr · les messages</text>
+    <text class="d-mut" x="311" y="140" text-anchor="middle" font-size="9">code de sortie : 0 = succès · ≠0 = échec</text>
+  </svg>
+  <figcaption>Trois canaux, un code. Séparer le <strong>résultat</strong> (<code>stdout</code>) des <strong>messages</strong> (<code>stderr</code>) rend l'outil composable&nbsp;: on peut brancher <code>stdout</code> dans un autre programme sans être pollué par les diagnostics.</figcaption>
+</figure>
+
+<h2>Lire l'entrée standard</h2>
+<p>Un bon outil sait aussi lire <code>stdin</code>&nbsp;: cela permet de l'enchaîner dans un <em>pipe</em>. Ici, un filtre qui met chaque ligne reçue en majuscules.</p>
+<figure class="code-block" data-file="src/main.rs"><pre><code class="language-rust">use std::io::{self, BufRead};
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let entree = io::stdin();
+    for ligne in entree.lock().lines() {
+        let ligne = ligne?;
+        println!("{}", ligne.to_uppercase());
+    }
+    Ok(())
+}
+// Utilisation : echo "salut" | ./crie  →  SALUT</code></pre></figure>
+<p><code>entree.lock()</code> prend un verrou sur <code>stdin</code> (plus efficace pour lire beaucoup de lignes), puis <code>.lines()</code> itère comme pour un fichier. Ce petit programme s'insère dans une chaîne&nbsp;: <code>cat notes.txt | ./crie | wc -l</code>.</p>
+
+<h2>clap : l'analyseur d'arguments</h2>
+<p>Dès qu'il y a plusieurs options, écrire l'analyse à la main devient pénible et bogué. <strong>clap</strong> le fait pour toi&nbsp;: tu décris tes arguments dans une struct, et clap génère l'analyse, la validation, <code>--help</code> et <code>--version</code>.</p>
+<figure class="code-block" data-file="Cargo.toml"><pre><code class="language-toml">[dependencies]
+clap = { version = "4", features = ["derive"] }</code></pre></figure>
+<figure class="code-block" data-file="src/main.rs"><pre><code class="language-rust">use clap::Parser;
+
+/// Salue une personne, éventuellement plusieurs fois.
+#[derive(Parser)]
+#[command(version, about)]
+struct Args {
+    /// Nom de la personne à saluer
+    nom: String,
+
+    /// Nombre de répétitions
+    #[arg(short, long, default_value_t = 1)]
+    repete: u8,
+}
+
+fn main() {
+    let args = Args::parse();   // analyse, valide, ou affiche l'aide et quitte
+    for _ in 0..args.repete {
+        println!("Bonjour, {} !", args.nom);
+    }
+}</code></pre></figure>
+<p>Chaque commentaire <code>///</code> devient un texte d'aide&nbsp;; <code>#[arg(short, long)]</code> crée <code>-r</code> et <code>--repete</code>&nbsp;; <code>default_value_t</code> fixe la valeur par défaut. <code>Args::parse()</code> fait tout&nbsp;: si l'utilisateur tape <code>--help</code>, clap affiche une aide soignée et quitte&nbsp;; s'il oublie <code>nom</code>, clap affiche l'erreur et sort avec un code non nul. Tu n'écris que la <em>déclaration</em>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — pourquoi les outils Rust s'enchaînent si bien</p><p>Les commandes Unix (<code>grep</code>, <code>wc</code>, <code>sort</code>) partagent une discipline&nbsp;: lire <code>stdin</code> ou des fichiers en argument, écrire le résultat sur <code>stdout</code>, les erreurs sur <code>stderr</code>, renvoyer 0 si tout va bien. Un outil Rust qui respecte cette convention se branche dans un pipe&nbsp;: <code>cat acces.log | mon_filtre | wc -l</code>. C'est précisément ce qui a fait le succès de <code>ripgrep</code>&nbsp;: même interface que <code>grep</code>, mais bâti sur des lectures bufferisées et du parallélisme sûr. La leçon&nbsp;: une CLI de qualité, ce n'est pas mille options&nbsp;; c'est <strong>respecter les conventions</strong> pour se composer avec le reste du système.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — déclare, ne parse pas</p><p>Avec clap en mode <code>derive</code>, la struct <strong>est</strong> la spécification&nbsp;: types, valeurs par défaut, aide, tout est au même endroit. Ajouter une option = ajouter un champ. Le typage fait le reste&nbsp;: un champ <code>u8</code> refuse automatiquement <code>--repete abc</code> avec un message clair, sans une ligne de validation de ta part.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Erreur fréquente</p><p><code>env::args().nth(0)</code> (ou <code>args[0]</code>) n'est <strong>pas</strong> le premier argument utilisateur&nbsp;: c'est le nom du programme. Le premier vrai argument est à l'indice <strong>1</strong>. Et n'indexe jamais <code>args[1]</code> sans vérifier sa présence&nbsp;: sur une commande sans argument, ça panique. Utilise <code>args.get(1)</code>, ou laisse clap gérer.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>clap gère les <strong>sous-commandes</strong> (comme <code>git commit</code> / <code>git push</code>) via un <code>enum</code> dérivant <code>Subcommand</code>. Pour aller plus loin&nbsp;: <code>indicatif</code> (barres de progression), <code>anstyle</code> / <code>owo-colors</code> (couleurs dans le terminal), <code>dialoguer</code> (invites interactives), et <code>assert_cmd</code> pour tester ta CLI. Pour distribuer&nbsp;: <code>cargo build --release</code> produit un binaire unique, facile à partager.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — outils en ligne de commande</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Récupérer les arguments</td><td><code>env::args().collect()</code></td><td><code>[0]</code> = nom du prog.</td></tr>
+      <tr><td>Argument sûr</td><td><code>args.get(1)</code></td><td>renvoie une <code>Option</code></td></tr>
+      <tr><td>Afficher le résultat</td><td><code>println!("…")</code></td><td>sur <code>stdout</code></td></tr>
+      <tr><td>Afficher une erreur</td><td><code>eprintln!("…")</code></td><td>sur <code>stderr</code></td></tr>
+      <tr><td>Quitter en échec</td><td><code>process::exit(1)</code></td><td>code ≠ 0</td></tr>
+      <tr><td>Quitter en succès</td><td>fin de <code>main</code></td><td>code 0</td></tr>
+      <tr><td>Lire l'entrée</td><td><code>io::stdin().lock().lines()</code></td><td>pour les <em>pipes</em></td></tr>
+      <tr><td>Analyser les arguments</td><td>clap + <code>#[derive(Parser)]</code></td><td>génère <code>--help</code></td></tr>
+      <tr><td>Option courte + longue</td><td><code>#[arg(short, long)]</code></td><td><code>-r</code> / <code>--repete</code></td></tr>
+      <tr><td>Valeur par défaut</td><td><code>#[arg(default_value_t = 1)]</code></td><td>si non fournie</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>CLI</dt><dd><em>Command-Line Interface</em>&nbsp;: un programme piloté par des arguments texte dans un terminal.</dd>
+  <dt>Argument positionnel</dt><dd>Valeur identifiée par sa <strong>place</strong> sur la ligne (ex. le nom de fichier), sans nom d'option.</dd>
+  <dt>Option (flag)</dt><dd>Argument <strong>nommé</strong> comme <code>--repete 3</code> ou <code>-v</code>&nbsp;; peut porter une valeur ou être un simple interrupteur.</dd>
+  <dt><code>std::env::args</code></dt><dd>Itérateur des arguments du programme&nbsp;; l'élément 0 est le nom du binaire.</dd>
+  <dt>Code de sortie</dt><dd>Entier renvoyé au système à la fin&nbsp;: <code>0</code> = succès, tout autre = échec (lu par le shell et la CI).</dd>
+  <dt><code>stdin</code> / <code>stdout</code> / <code>stderr</code></dt><dd>Les trois flux standard&nbsp;: entrée, sortie du résultat, sortie des erreurs.</dd>
+  <dt>Pipe</dt><dd>Connexion du <code>stdout</code> d'un programme au <code>stdin</code> d'un autre (<code>a | b</code>), pour composer des outils.</dd>
+  <dt>clap</dt><dd>Crate de référence pour analyser les arguments&nbsp;; en mode <code>derive</code>, une struct décrit toute l'interface.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>env::args</code> donne les arguments&nbsp;; <code>args[0]</code> est le nom du programme, les vrais commencent à 1.</li>
+  <li>Utilise <code>args.get(1)</code> (une <code>Option</code>) pour ne pas paniquer si l'argument manque.</li>
+  <li>Résultat sur <code>stdout</code> (<code>println!</code>), messages sur <code>stderr</code> (<code>eprintln!</code>)&nbsp;; code de sortie 0 / ≠0.</li>
+  <li>Lire <code>stdin</code> (<code>io::stdin().lock().lines()</code>) rend l'outil composable dans un pipe.</li>
+  <li>Au-delà de deux options&nbsp;: <strong>clap</strong> + <code>#[derive(Parser)]</code> — la struct décrit toute l'interface.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Que contient <code>env::args()[0]</code>&nbsp;?</li>
+  <li>Pourquoi séparer <code>stdout</code> et <code>stderr</code>&nbsp;?</li>
+  <li>Que génère automatiquement clap à partir de ta struct d'arguments&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que contient le premier élément de env::args() (indice 0) ?","a":["Le nom (ou chemin) du programme lui-même ; les vrais arguments commencent à l'indice 1","Le premier argument fourni par l'utilisateur","Toujours une chaîne vide","Le code de sortie"],"correct":0,"explain":"Par convention, args[0] est le nom du binaire. C'est pourquoi on lit args.get(1) pour le premier argument utilisateur, en gérant son absence via l'Option."},
+  {"q":"Pourquoi séparer stdout et stderr dans un outil en ligne de commande ?","a":["Pour que le résultat (stdout) puisse être branché dans un pipe sans être pollué par les messages/erreurs (stderr)","Parce que stdout est plus rapide","Parce que Rust l'impose","Pour économiser la mémoire"],"correct":0,"explain":"stdout porte le résultat exploitable, stderr les diagnostics. Ainsi `outil | autre` transmet des données propres, tandis que les messages restent visibles à l'écran."},
+  {"q":"Qu'apporte clap avec #[derive(Parser)] sur une struct d'arguments ?","a":["Il génère l'analyse, la validation typée, ainsi que --help et --version, à partir de la déclaration","Il exécute le programme en parallèle","Il compile plus vite","Il remplace main"],"correct":0,"explain":"En mode derive, la struct EST la spécification : clap en déduit le parsing, les messages d'erreur, l'aide et la version. On déclare, clap fait le reste."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["1"],"placeholder":"l'indice du PREMIER argument utilisateur dans le Vec renvoyé par env::args().collect() : …","hints":["L'indice 0 est le nom du programme.","Juste après le nom du binaire.","Un chiffre."],"link":{"href":"lecon-21.html","label":"Revoir « Lire les arguments »"}},
+  {"type":"text","accept":["stderr","la sortie d'erreur","erreur"],"placeholder":"le flux sur lequel eprintln! écrit (≠ stdout) : …","hints":["« standard error ».","Les messages, pas le résultat.","std???"],"link":{"href":"lecon-21.html","label":"Revoir « Codes de sortie »"}},
+  {"type":"text","accept":["clap"],"placeholder":"la crate de référence pour analyser les arguments (mode derive) : …","hints":["4 lettres.","Elle génère --help toute seule.","c???"],"link":{"href":"lecon-21.html","label":"Revoir « clap »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un programme qui affiche <code>"Bonjour, X !"</code> où <code>X</code> est le premier argument. S'il n'y en a pas, affiche <code>"usage : salut &lt;nom&gt;"</code> sur <code>stderr</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">use std::env;
+
+fn main() {
+    let args: Vec&lt;String&gt; = env::args().collect();
+    match args.get(1) {
+        Some(nom) =&gt; println!("Bonjour, {nom} !"),
+        None =&gt; eprintln!("usage : salut &lt;nom&gt;"),
+    }
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un filtre qui lit <code>stdin</code> ligne par ligne et n'affiche que les lignes non vides (après <code>trim</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">use std::io::{self, BufRead};
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    for ligne in io::stdin().lock().lines() {
+        let ligne = ligne?;
+        if !ligne.trim().is_empty() {
+            println!("{ligne}");
+        }
+    }
+    Ok(())
+}
+// echo -e "a\n\n b" | ./sansvide  →  a puis " b"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec clap, crée un outil <code>additionne</code> qui prend deux entiers positionnels <code>a</code> et <code>b</code> et affiche leur somme. Profite de la validation typée de clap.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-rust">use clap::Parser;
+
+/// Additionne deux entiers.
+#[derive(Parser)]
+struct Args {
+    /// Premier nombre
+    a: i64,
+    /// Second nombre
+    b: i64,
+}
+
+fn main() {
+    let args = Args::parse();
+    println!("{}", args.a + args.b);
+}
+// ./additionne 20 22  →  42
+// ./additionne 20 x   →  erreur claire de clap (x n'est pas un i64)</code></pre></figure><p>Comme <code>a</code> et <code>b</code> sont typés <code>i64</code>, clap <strong>refuse</strong> une entrée non numérique avec un message explicite&nbsp;: aucune validation manuelle à écrire.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-rust.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-toml.min.js" defer></script>
+  </body>
+</html>

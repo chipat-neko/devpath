@@ -1,0 +1,67 @@
+<p>Zig ne vit pas en vase clos&nbsp;: l'un de ses arguments les plus forts est sa <strong>relation exceptionnelle avec le C</strong>. Il peut importer des en-têtes C directement, compiler du code C, et faire de la compilation croisée sans configuration. Beaucoup adoptent Zig d'abord… comme un meilleur compilateur C&nbsp;! Cette leçon couvre l'interopérabilité et le système de build.</p>
+
+<h2>Importer du C</h2>
+<p>La fonction intégrée <code>@cImport</code> lit un en-tête C et rend ses fonctions et types disponibles en Zig — sans écrire de liaisons à la main.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const c = @cImport({
+    @cInclude("stdio.h");
+});
+
+pub fn main() void {
+    _ = c.printf("Bonjour depuis le C !\n");
+}</code></pre></figure>
+<p class="code-caption">On appelle <code>printf</code> du C aussi naturellement qu'une fonction Zig.</p>
+
+<h2>Zig comme compilateur C</h2>
+<p>Surprise&nbsp;: la commande <code>zig cc</code> est un compilateur C complet (basé sur Clang/LLVM), souvent plus simple à utiliser que GCC pour la compilation croisée. On peut donc utiliser Zig pour bâtir des projets C existants.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-clike">zig cc -o programme programme.c    # compile du C avec Zig
+zig build-exe main.zig main.c      # mélange Zig et C dans un projet</code></pre></figure>
+
+<h2>La compilation croisée</h2>
+<p>Atout phare&nbsp;: Zig embarque tout ce qu'il faut pour compiler vers <strong>n'importe quelle plateforme</strong>, depuis n'importe quelle machine, sans installer de chaîne d'outils. Une option <code>-target</code> suffit.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-clike"># Depuis un Mac, produire un exécutable Linux ARM :
+zig build-exe main.zig -target aarch64-linux
+
+# ... ou Windows x86_64 :
+zig build-exe main.zig -target x86_64-windows</code></pre></figure>
+<p>Ce que d'autres langages rendent pénible (installer des SDK, des sysroots), Zig le fait d'une ligne.</p>
+
+<h2>Le système de build&nbsp;: build.zig</h2>
+<p>Pour un vrai projet, on écrit la configuration de build… <strong>en Zig</strong>, dans un fichier <code>build.zig</code>. Pas de langage de build séparé (comme Make ou CMake)&nbsp;: c'est du Zig normal qui décrit comment construire le projet.</p>
+<figure class="code-block" data-file="build.zig"><pre><code class="language-clike">const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const exe = b.addExecutable(.{
+        .name = "mon_app",
+        .root_source_file = b.path("src/main.zig"),
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{}),
+    });
+    b.installArtifact(exe);
+}</code></pre></figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-clike">zig build              # construit selon build.zig
+zig build run          # construit et exécute</code></pre></figure>
+
+<h2>Les modes d'optimisation</h2>
+<p>Zig propose plusieurs modes&nbsp;: <code>Debug</code> (vérifications de sécurité, lent), <code>ReleaseSafe</code> (rapide + vérifications), <code>ReleaseFast</code> (vitesse maximale), <code>ReleaseSmall</code> (binaire minuscule). On choisit selon le besoin.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-clike">zig build-exe main.zig -OReleaseFast   # optimisé pour la vitesse</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que les vérifications de sécurité de Zig sont toujours actives&nbsp;: en mode <code>ReleaseFast</code>, elles sont <strong>désactivées</strong> pour la vitesse. Un débordement qui plantait proprement en Debug devient un comportement indéfini. Utilise <code>ReleaseSafe</code> si tu veux garder les garde-fous en production.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Cette interop C exceptionnelle fait de Zig un excellent outil pour <strong>moderniser progressivement</strong> une base de code C&nbsp;: on remplace des fichiers un à un, en gardant le reste, puisque Zig compile et appelle le C sans friction.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>@cImport</code>/<code>@cInclude</code> importent des en-têtes C directement utilisables.</li>
+  <li><code>zig cc</code> est un compilateur C&nbsp;; on mélange Zig et C dans un projet.</li>
+  <li>La <strong>compilation croisée</strong> se fait avec <code>-target</code>, sans chaîne d'outils à installer.</li>
+  <li>Le build se décrit en Zig (<code>build.zig</code>)&nbsp;; modes <code>Debug</code>/<code>ReleaseSafe</code>/<code>ReleaseFast</code>/<code>ReleaseSmall</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Comment appeler une fonction C depuis Zig&nbsp;?</li><li>Qu'est-ce qui rend la compilation croisée si simple en Zig&nbsp;?</li><li>Quelle différence entre <code>ReleaseSafe</code> et <code>ReleaseFast</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris l'import de <code>stdio.h</code> et appelle <code>printf</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const c = @cImport({ @cInclude("stdio.h"); });
+// _ = c.printf("Salut\n");</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Donne la commande pour compiler <code>main.zig</code> vers Windows 64 bits.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Terminal"><pre><code class="language-clike">zig build-exe main.zig -target x86_64-windows</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Quel mode d'optimisation choisir pour un binaire le plus petit possible&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Terminal"><pre><code class="language-clike">zig build-exe main.zig -OReleaseSmall</code></pre></figure></details></div>

@@ -1,0 +1,71 @@
+<p>Ce qui distingue Solidity de tout autre langage&nbsp;: le code manipule directement de l'<strong>argent</strong>. Un contrat peut <strong>recevoir</strong>, <strong>détenir</strong> et <strong>envoyer</strong> de l'<strong>ether</strong> (la cryptomonnaie d'Ethereum). Et chaque opération a un coût&nbsp;: le <strong>gas</strong>. Cette leçon explore ces concepts monétaires — au cœur de la puissance et des risques de Solidity. C'est aussi là que la sécurité (leçon 7) devient vitale.</p>
+
+<h2>L'ether et ses unités</h2>
+<p>L'<strong>ether</strong> est la monnaie d'Ethereum. En interne, tout se compte en <strong>wei</strong>, la plus petite unité&nbsp;: <code>1 ether = 10^18 wei</code>. Solidity fournit des suffixes pratiques.</p>
+<figure class="code-block" data-file="unites.sol"><pre><code class="language-solidity">uint256 a = 1 ether;     // 1000000000000000000 wei
+uint256 b = 1 gwei;      // 1000000000 wei
+uint256 c = 100 wei;     // 100 wei
+
+// Toujours raisonner et stocker en wei pour la précision !</code></pre></figure>
+<p>On manipule toujours des entiers (en wei)&nbsp;: Solidity n'a pas de nombres à virgule, justement pour éviter les imprécisions quand il s'agit d'argent. <code>1 ether</code> est simplement une façon lisible d'écrire un grand nombre de wei.</p>
+
+<h2>Recevoir de l'ether&nbsp;: <code>payable</code></h2>
+<p>Par défaut, une fonction ne peut <strong>pas</strong> recevoir d'ether. Pour qu'elle le puisse, on la marque <strong><code>payable</code></strong>. L'ether envoyé avec l'appel est alors accessible via <code>msg.value</code> (en wei).</p>
+<figure class="code-block" data-file="payable.sol"><pre><code class="language-solidity">contract Tirelire {
+    mapping(address =&gt; uint256) public depots;
+
+    // payable : cette fonction peut recevoir de l'ether
+    function deposer() public payable {
+        require(msg.value &gt; 0, "Envoyez de l'ether");
+        depots[msg.sender] += msg.value;   // msg.value = ether reçu
+    }
+}</code></pre></figure>
+<p><code>msg.value</code> est le montant d'ether (en wei) joint à la transaction. Sans <code>payable</code>, envoyer de l'ether à la fonction provoquerait un rejet. C'est une sécurité&nbsp;: seules les fonctions explicitement <code>payable</code> acceptent des paiements.</p>
+
+<h2>Connaître le solde du contrat</h2>
+<p>Un contrat a sa propre adresse et son propre solde en ether. On le lit avec <code>address(this).balance</code> (<code>this</code> désigne le contrat courant).</p>
+<figure class="code-block" data-file="balance.sol"><pre><code class="language-solidity">function soldeContrat() public view returns (uint256) {
+    return address(this).balance;   // ether détenu par le contrat (en wei)
+}</code></pre></figure>
+
+<h2>Envoyer de l'ether de façon sûre</h2>
+<p>Pour <strong>envoyer</strong> de l'ether à une adresse, la méthode recommandée aujourd'hui est <code>call</code> avec vérification du succès. Les anciennes méthodes (<code>transfer</code>, <code>send</code>) sont déconseillées car elles limitent le gas de façon rigide.</p>
+<figure class="code-block" data-file="envoyer.sol"><pre><code class="language-solidity">function retirer(uint256 montant) public {
+    require(depots[msg.sender] &gt;= montant, "Solde insuffisant");
+    depots[msg.sender] -= montant;     // on met à jour AVANT d'envoyer
+
+    (bool succes, ) = msg.sender.call{value: montant}("");
+    require(succes, "Echec de l'envoi");
+}</code></pre></figure>
+<p>La syntaxe <code>msg.sender.call{value: montant}("")</code> envoie <code>montant</code> wei à l'adresse, et renvoie un booléen de succès qu'on <strong>doit</strong> vérifier. Remarque l'ordre crucial&nbsp;: on <strong>décrémente le solde AVANT d'envoyer</strong>. Cet ordre est au cœur de la sécurité (leçon 7)&nbsp;; le respecter prévient l'attaque de réentrance.</p>
+
+<h2>Le gas&nbsp;: payer pour exécuter</h2>
+<p>Chaque opération exécutée par l'EVM consomme du <strong>gas</strong>, une mesure du travail de calcul. L'utilisateur qui déclenche une transaction <strong>paie</strong> le gas consommé (en ether). Conséquences&nbsp;:</p>
+<ul>
+  <li>une transaction qui modifie l'état coûte de l'argent réel&nbsp;;</li>
+  <li>les opérations coûteuses (écritures en storage, boucles) augmentent la facture&nbsp;;</li>
+  <li>chaque transaction a une <strong>limite de gas</strong>&nbsp;: si l'exécution la dépasse, tout est annulé (mais le gas déjà consommé est perdu).</li>
+</ul>
+<p>Optimiser le gas — minimiser les écritures, éviter les boucles non bornées — n'est donc pas un luxe&nbsp;: c'est économiser l'argent des utilisateurs.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne pas vérifier le succès d'un envoi d'ether. <code>msg.sender.call{value: x}("")</code> renvoie un booléen&nbsp;: si tu l'ignores et que l'envoi <strong>échoue</strong>, ton contrat continue comme si tout allait bien — alors que l'argent n'est pas parti. <strong>Vérifie toujours</strong> ce booléen avec <code>require(succes, ...)</code>. Et n'oublie jamais de mettre l'état à jour <em>avant</em> d'envoyer (pattern checks-effects-interactions, leçon 7).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le gas a un effet économique profond&nbsp;: il <strong>protège le réseau</strong> contre les abus. Sans coût, un attaquant pourrait soumettre une boucle infinie qui bloquerait tous les nœuds&nbsp;; avec le gas, une telle transaction s'arrête net dès qu'elle épuise le gas payé. Le gas transforme «&nbsp;le temps de calcul&nbsp;» en ressource tarifée&nbsp;: c'est ce qui rend une machine mondiale partagée économiquement viable.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>L'<strong>ether</strong> se compte en <strong>wei</strong> (<code>1 ether = 10^18 wei</code>)&nbsp;; on raisonne en entiers.</li>
+  <li>Une fonction <code>payable</code> peut recevoir de l'ether&nbsp;; <code>msg.value</code> donne le montant reçu.</li>
+  <li>Envoi sûr&nbsp;: <code>adresse.call{value: x}("")</code> + <strong>vérifier le succès</strong>&nbsp;; mettre l'état à jour <em>avant</em>.</li>
+  <li>Le <strong>gas</strong> tarife chaque opération&nbsp;; optimiser, c'est économiser l'argent des utilisateurs.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que faut-il pour qu'une fonction reçoive de l'ether&nbsp;?</li><li>Que contient <code>msg.value</code>&nbsp;?</li><li>Pourquoi chaque transaction coûte-t-elle du gas&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris l'en-tête d'une fonction <code>recevoir</code> publique capable d'accepter de l'ether.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">function recevoir() public payable {
+    // ...
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans une fonction <code>payable</code>, exige que l'ether reçu soit d'au moins 1 ether.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">require(msg.value &gt;= 1 ether, "Au moins 1 ether");</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi met-on à jour le solde de l'utilisateur <em>avant</em> de lui envoyer l'ether, et non après&nbsp;?</p><details><summary>Voir une solution</summary><p>Pour se protéger de l'attaque de <strong>réentrance</strong> (leçon 7). Lorsqu'on envoie de l'ether à une adresse, si celle-ci est un contrat malveillant, il peut <em>rappeler</em> notre fonction de retrait <em>avant</em> que celle-ci ne soit terminée. Si le solde n'a pas encore été décrémenté, l'attaquant peut retirer plusieurs fois le même montant et vider le contrat. En mettant le solde à jour <strong>avant</strong> l'envoi (pattern checks-effects-interactions), un rappel trouve un solde déjà à zéro et échoue. L'ordre des opérations est ici une question de sécurité, pas de style.</p></details></div>

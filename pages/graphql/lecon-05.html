@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les résolveurs (resolvers) — Leçon 05 · Syntaxe</title>
+    <meta name="description" content="Les résolveurs GraphQL : les fonctions serveur qui fournissent la valeur de chaque champ. Signature (parent, args, context, info), résolveurs par champ, contexte et le problème N+1." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="graphql" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">GraphQL</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Écrire & modifier — Leçon 05</p>
+              <h1 class="lesson-header__title">Les résolveurs (resolvers)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 04</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>définir ce qu'est un <strong>résolveur</strong> et son rôle&nbsp;;</li>
+                  <li>lire sa <strong>signature</strong> (parent, args, context, info)&nbsp;;</li>
+                  <li>écrire des résolveurs par <strong>champ</strong> et par <strong>type</strong>&nbsp;;</li>
+                  <li>reconnaître le <strong>problème N+1</strong> et l'idée du regroupement.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le schéma décrit <em>ce qui</em> existe ; les <strong>résolveurs</strong> disent <em>comment</em> l'obtenir. Pour chaque champ demandé, le serveur appelle une fonction qui en fournit la valeur. C'est le pont entre le schéma et tes données réelles (base de données, autre API…).</p>
+
+<h2>Qu'est-ce qu'un résolveur ?</h2>
+<p>Un <strong>résolveur</strong> est une fonction associée à un champ. Quand une requête demande <code>user.name</code>, GraphQL appelle le résolveur du champ <code>user</code>, puis celui de <code>name</code>, et ainsi de suite pour chaque champ sélectionné. La plupart sont implicites (lire une propriété de l'objet), et on n'écrit que ceux qui nécessitent une logique.</p>
+<figure class="code-block" data-file="resolvers.js"><pre><code class="language-javascript">const resolvers = {
+  Query: {
+    // résout le champ Query.user
+    user: (parent, args, context) =&gt; {
+      return context.db.findUser(args.id);
+    },
+    users: (parent, args, context) =&gt; context.db.allUsers(),
+  },
+};</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Arbre de résolution : le résolveur de Query.user renvoie un objet User ; le champ name est lu directement sur cet objet (résolveur implicite), le champ posts a son propre résolveur qui renvoie une liste de Post, dont le champ title est lu directement.">
+    <text class="d-label" x="24" y="20" font-size="12">GraphQL appelle un résolveur pour chaque champ demandé — racine → feuilles</text>
+    <rect class="d-accent" x="24" y="78" width="160" height="48" rx="10" /><text class="d-tag" x="104" y="99" text-anchor="middle" font-size="11">Query.user</text><text class="d-mut" x="104" y="115" text-anchor="middle" font-size="9">résolveur → User</text>
+    <line class="d-line" x1="184" y1="94" x2="242" y2="58" /><polygon class="d-dot" points="248,55 236,52 238,64" />
+    <line class="d-line" x1="184" y1="110" x2="242" y2="150" /><polygon class="d-dot" points="248,153 238,142 236,154" />
+    <rect class="d-box" x="248" y="38" width="184" height="40" rx="9" /><text class="d-text" x="340" y="56" text-anchor="middle" font-size="10">name</text><text class="d-mut" x="340" y="70" text-anchor="middle" font-size="9">lu direct (implicite)</text>
+    <rect class="d-accent" x="248" y="128" width="184" height="48" rx="10" /><text class="d-tag" x="340" y="149" text-anchor="middle" font-size="11">posts</text><text class="d-mut" x="340" y="165" text-anchor="middle" font-size="9">résolveur → [Post]</text>
+    <line class="d-line" x1="432" y1="152" x2="490" y2="152" /><polygon class="d-dot" points="496,152 484,146 484,158" />
+    <rect class="d-box" x="496" y="130" width="120" height="44" rx="9" /><text class="d-text" x="556" y="150" text-anchor="middle" font-size="10">title</text><text class="d-mut" x="556" y="164" text-anchor="middle" font-size="9">lu direct</text>
+  </svg>
+  <figcaption>Chaque champ demandé a un résolveur&nbsp;: <strong>explicite</strong> quand il faut aller chercher la donnée (accentué), <strong>implicite</strong> quand la valeur est déjà sur l'objet parent.</figcaption>
+</figure>
+
+<h2>La signature d'un résolveur</h2>
+<p>Un résolveur reçoit quatre arguments, dans cet ordre&nbsp;:</p>
+<ul>
+<li><strong>parent</strong> : l'objet parent (le résultat du champ d'au-dessus).</li>
+<li><strong>args</strong> : les arguments passés au champ (ex. <code>args.id</code>).</li>
+<li><strong>context</strong> : un objet partagé par toute la requête (utilisateur connecté, accès aux données…).</li>
+<li><strong>info</strong> : des métadonnées sur la requête en cours (plus rarement utilisé).</li>
+</ul>
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Un résolveur reçoit quatre arguments — parent, args, context, info — et renvoie la valeur du champ.">
+    <text class="d-label" x="24" y="20" font-size="12">quatre entrées, une sortie</text>
+    <rect class="d-box" x="24" y="30" width="212" height="30" rx="7" /><text class="d-tag" x="36" y="49" font-size="10.5">parent</text><text class="d-mut" x="104" y="49" font-size="9">objet du dessus</text>
+    <rect class="d-box" x="24" y="66" width="212" height="30" rx="7" /><text class="d-tag" x="36" y="85" font-size="10.5">args</text><text class="d-mut" x="104" y="85" font-size="9">arguments du champ</text>
+    <rect class="d-box" x="24" y="102" width="212" height="30" rx="7" /><text class="d-tag" x="36" y="121" font-size="10.5">context</text><text class="d-mut" x="104" y="121" font-size="9">partagé par la requête</text>
+    <rect class="d-box" x="24" y="138" width="212" height="30" rx="7" /><text class="d-tag" x="36" y="157" font-size="10.5">info</text><text class="d-mut" x="104" y="157" font-size="9">métadonnées</text>
+    <line class="d-line" x1="236" y1="45" x2="288" y2="92" /><line class="d-line" x1="236" y1="81" x2="288" y2="97" /><line class="d-line" x1="236" y1="117" x2="288" y2="103" /><line class="d-line" x1="236" y1="153" x2="288" y2="108" />
+    <rect class="d-accent" x="290" y="74" width="160" height="52" rx="10" /><text class="d-tag" x="370" y="96" text-anchor="middle" font-size="11">resolver(…)</text><text class="d-mut" x="370" y="113" text-anchor="middle" font-size="9">calcule la valeur</text>
+    <line class="d-line" x1="450" y1="100" x2="508" y2="100" /><polygon class="d-dot" points="514,100 502,94 502,106" />
+    <rect class="d-box" x="514" y="78" width="102" height="44" rx="9" /><text class="d-text" x="565" y="104" text-anchor="middle" font-size="10">valeur du champ</text>
+  </svg>
+  <figcaption>Signature <code>(parent, args, context, info)</code>&nbsp;: quatre entrées, une sortie — la valeur du champ résolu.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le context est précieux</p><p>Le <strong>context</strong> est construit à chaque requête : on y met l'utilisateur authentifié, les accès à la base, des chargeurs… Il évite de passer ces dépendances partout et centralise l'<strong>autorisation</strong>.</p></div></div>
+
+<h2>Des résolveurs par champ</h2>
+<p>Pour les champs <strong>calculés</strong> ou les <strong>relations</strong>, on écrit un résolveur sur le type concerné. Exemple : les articles d'un utilisateur ne sont pas dans l'objet <code>user</code>, on va les chercher&nbsp;:</p>
+<figure class="code-block" data-file="resolvers.js"><pre><code class="language-javascript">const resolvers = {
+  User: {
+    // résout User.posts à partir de l'utilisateur (parent)
+    posts: (parent, args, context) =&gt; {
+      return context.db.postsByAuthor(parent.id);
+    },
+    // champ calculé : nom complet
+    displayName: (parent) =&gt; `${parent.firstName} ${parent.lastName}`,
+  },
+};</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">On résout au besoin</p><p>Les résolveurs ne s'exécutent que pour les champs <strong>demandés</strong>. Si le client ne réclame pas <code>posts</code>, le résolveur de <code>posts</code> n'est jamais appelé : pas de travail inutile.</p></div></div>
+
+<h2>Le problème N+1</h2>
+<p>Attention à un piège classique. Pour une liste de 100 utilisateurs dont on demande les <code>posts</code>, un résolveur naïf fera 1 requête pour les utilisateurs… puis 100 requêtes pour leurs articles : c'est le <strong>problème N+1</strong>. La parade est de <strong>regrouper</strong> ces appels (par exemple avec un <em>DataLoader</em> qui rassemble les identifiants et fait une seule requête groupée).</p>
+<figure class="code-block" data-file="dataloader.js"><pre><code class="language-javascript">// Idée : au lieu d'une requête par utilisateur,
+// on regroupe les ids et on charge tout en une fois.
+const postLoader = new DataLoader(ids =&gt; db.postsByAuthorIds(ids));
+// dans le résolveur :
+posts: (parent) =&gt; postLoader.load(parent.id),</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Sans regroupement, lister trois auteurs déclenche une requête pour la liste puis une requête par auteur pour ses livres, soit 1+3 = 4 requêtes. Avec un DataLoader, les identifiants sont regroupés en une seule requête, soit 2 requêtes au total.">
+    <text class="d-label" x="24" y="20" font-size="12">Sans regroupement — 1 + N requêtes</text>
+    <rect class="d-box" x="24" y="30" width="150" height="34" rx="8" /><text class="d-text" x="99" y="51" text-anchor="middle" font-size="10">1 requête : la liste</text>
+    <line class="d-line" x1="174" y1="47" x2="212" y2="47" /><polygon class="d-dot" points="218,47 206,41 206,53" />
+    <rect class="d-accent" x="220" y="30" width="120" height="34" rx="8" /><text class="d-text" x="280" y="51" text-anchor="middle" font-size="10">auteur 1 → +1</text>
+    <rect class="d-accent" x="348" y="30" width="120" height="34" rx="8" /><text class="d-text" x="408" y="51" text-anchor="middle" font-size="10">auteur 2 → +1</text>
+    <rect class="d-accent" x="476" y="30" width="120" height="34" rx="8" /><text class="d-text" x="536" y="51" text-anchor="middle" font-size="10">auteur 3 → +1</text>
+    <text class="d-mut" x="24" y="86" font-size="10.5">total : 1 (liste) + 3 (un par auteur) = 4 requêtes à la base</text>
+    <line class="d-line" x1="24" y1="104" x2="616" y2="104" />
+    <text class="d-label" x="24" y="130" font-size="12">Avec un DataLoader — 2 requêtes</text>
+    <rect class="d-box" x="24" y="140" width="150" height="34" rx="8" /><text class="d-text" x="99" y="161" text-anchor="middle" font-size="10">1 requête : la liste</text>
+    <line class="d-line" x1="174" y1="157" x2="212" y2="157" /><polygon class="d-dot" points="218,157 206,151 206,163" />
+    <rect class="d-accent" x="220" y="140" width="216" height="34" rx="8" /><text class="d-text" x="328" y="161" text-anchor="middle" font-size="10">DataLoader regroupe [id1, id2, id3]</text>
+    <line class="d-line" x1="436" y1="157" x2="474" y2="157" /><polygon class="d-dot" points="480,157 468,151 468,163" />
+    <rect class="d-box" x="482" y="140" width="134" height="34" rx="8" /><text class="d-text" x="549" y="161" text-anchor="middle" font-size="10">1 requête groupée</text>
+    <text class="d-mut" x="24" y="196" font-size="10.5">total : 1 (liste) + 1 (groupée) = 2 requêtes, quel que soit le nombre d'auteurs</text>
+  </svg>
+  <figcaption>Le <code>DataLoader</code> rassemble les identifiants du même tour et remplace « une requête par élément » par une seule requête groupée.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une page de blog affiche 30 articles avec le nom de leur auteur. Un résolveur <code>author</code> naïf faisait 1 requête pour les articles… puis <strong>30 requêtes</strong> pour les auteurs&nbsp;: aux heures de pointe, la charge de la base était multipliée par 30. La parade — un <strong>DataLoader</strong> qui regroupe les <code>author_id</code> en un seul <code>SELECT … WHERE id IN (…)</code> — a ramené le tout à 2 requêtes. Ce n'est pas un détail d'optimisation&nbsp;: <strong>Facebook a créé GraphQL <em>et</em> DataLoader</strong> (open source en 2015) précisément pour agréger des centaines de champs par requête sans écrouler ses bases. Aujourd'hui, le regroupement est intégré d'office dans les serveurs GraphQL (Apollo, Yoga).</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Mettre la logique métier dans le schéma.</strong> Le schéma décrit la forme ; la logique vit dans les résolveurs.</li>
+<li><strong>Ignorer le N+1.</strong> Sans regroupement, les relations peuvent générer une avalanche de requêtes.</li>
+<li><strong>Oublier le context pour l'autorisation.</strong> Vérifie les droits dans le résolveur, avec l'utilisateur du context.</li>
+<li><strong>Tout résoudre, même le non-demandé.</strong> Laisse GraphQL n'appeler que les résolveurs des champs réclamés.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>GraphQL exécute les résolveurs en parcourant l'arbre de la requête, de la racine vers les feuilles. Les frères d'un même niveau sont résolus en parallèle ; un champ objet attend son résolveur avant de résoudre ses sous-champs. Comprendre cet ordre aide à raisonner sur les performances.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Schéma + résolveurs forment ce qu'on appelle parfois le « schéma exécutable ». Des bibliothèques (Apollo Server, GraphQL Yoga…) assemblent les deux et exposent l'endpoint HTTP — c'est ce que tu mettras en place au capstone.</p></div></div>
+
+<h2>Antisèche&nbsp;: les résolveurs</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Résoudre les champs GraphQL</caption>
+    <thead><tr><th>Notion</th><th>À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Résolveur</td><td>Fonction qui fournit la valeur d'un champ</td></tr>
+      <tr><td><code>parent</code></td><td>Objet renvoyé par le champ du dessus</td></tr>
+      <tr><td><code>args</code></td><td>Arguments passés au champ (ex. <code>args.id</code>)</td></tr>
+      <tr><td><code>context</code></td><td>Objet partagé par la requête (auth, accès données)</td></tr>
+      <tr><td><code>info</code></td><td>Métadonnées de la requête (rarement utilisé)</td></tr>
+      <tr><td>Implicite</td><td>Champ lu directement sur le parent (aucun code)</td></tr>
+      <tr><td>Problème N+1</td><td>1 requête liste + 1 par élément → regrouper</td></tr>
+      <tr><td>DataLoader</td><td>Regroupe les identifiants en une requête groupée</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Résolveur</dt><dd>Fonction serveur associée à un champ&nbsp;; elle en fournit la valeur et relie le schéma aux données réelles.</dd>
+  <dt>parent</dt><dd>Premier argument d'un résolveur&nbsp;: l'objet renvoyé par le résolveur du champ situé au-dessus.</dd>
+  <dt>args</dt><dd>Deuxième argument&nbsp;: les arguments passés au champ dans la requête (ex.&nbsp;<code>args.id</code>).</dd>
+  <dt>context</dt><dd>Objet construit à chaque requête et partagé par tous les résolveurs&nbsp;: utilisateur authentifié, accès aux données, autorisation.</dd>
+  <dt>Résolveur implicite</dt><dd>Champ dont la valeur est simplement lue sur l'objet parent&nbsp;; aucun code à écrire.</dd>
+  <dt>Problème N+1</dt><dd>Une requête de liste qui déclenche une requête par élément pour une relation, soit 1+N appels à la base.</dd>
+  <dt>DataLoader</dt><dd>Utilitaire qui rassemble les identifiants d'un même tour d'exécution pour faire une seule requête groupée, corrigeant le N+1.</dd>
+  <dt>Schéma exécutable</dt><dd>L'assemblage du schéma (types) et des résolveurs (logique) qu'une bibliothèque comme Apollo Server expose en un endpoint HTTP.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un <strong>résolveur</strong> est la fonction qui fournit la valeur d'un champ ; il relie le schéma aux données.</li>
+<li>Signature : <strong>(parent, args, context, info)</strong>.</li>
+<li>On écrit des résolveurs par champ pour les <strong>relations</strong> et champs <strong>calculés</strong>.</li>
+<li>Attention au <strong>N+1</strong> : regroupe les appels (DataLoader) pour éviter l'avalanche de requêtes.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que fait un résolveur, et que reçoit-il en arguments ?</li><li>À quoi sert le context ?</li><li>Qu'est-ce que le problème N+1 et comment l'éviter ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un résolveur en GraphQL ?","a":["Une fonction serveur qui fournit la valeur d'un champ : elle relie le schéma aux données réelles","Un type du schéma","Une requête cliente","Un cache de réponses"],"correct":0,"explain":"Pour chaque champ demandé, GraphQL appelle son résolveur. Le schéma décrit ce qui existe ; les résolveurs disent comment l'obtenir."},
+  {"q":"Quelle est la signature standard d'un résolveur ?","a":["(parent, args, context, info)","(request, response)","(id, callback)","(schema, query)"],"correct":0,"explain":"parent = objet parent, args = arguments du champ, context = objet partagé par la requête (auth, accès données), info = métadonnées."},
+  {"q":"Qu'est-ce que le « problème N+1 » et comment l'éviter ?","a":["Une requête de liste qui déclenche une requête par élément pour une relation ; on l'évite en regroupant les appels (ex. DataLoader)","Un bug d'authentification","Un dépassement de mémoire du schéma","Une erreur de syntaxe dans la query"],"correct":0,"explain":"Résoudre une relation élément par élément génère 1+N requêtes. Le regroupement (DataLoader) rassemble les identifiants pour faire une seule requête groupée."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["resolver","résolveur","resolveur","un resolver","le resolver"],"placeholder":"la fonction qui fournit la valeur d'un champ","hints":["Relie le schéma aux données.","En anglais : resolver.","« résol… »."],"link":{"href":"lecon-05.html","label":"Revoir « Qu'est-ce qu'un résolveur ? »"}},
+  {"type":"text","accept":["context","contexte","le context","le contexte"],"placeholder":"l'objet partagé par toute la requête (auth, accès aux données)","hints":["3e argument du résolveur.","On y met l'utilisateur connecté.","« cont… »."],"link":{"href":"lecon-05.html","label":"Revoir « La signature »"}},
+  {"type":"text","accept":["n+1","n + 1","probleme n+1","problème n+1"],"placeholder":"le nom du piège : 1 requête de liste + 1 par élément","hints":["Une lettre, un plus, un chiffre.","On l'évite avec un DataLoader.","« N__ »."],"link":{"href":"lecon-05.html","label":"Revoir « Le problème N+1 »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris le résolveur de <code>Query.book</code> qui renvoie un livre par son <code>id</code> (la base est dans <code>context.db</code>).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo1.js"><pre><code class="language-javascript">const resolvers = {
+  Query: {
+    book: (parent, args, context) =&gt; context.db.findBook(args.id),
+  },
+};</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute un résolveur de relation <code>Author.books</code> qui renvoie les livres d'un auteur à partir de l'objet parent.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo2.js"><pre><code class="language-javascript">const resolvers = {
+  Author: {
+    books: (parent, args, context) =&gt; context.db.booksByAuthor(parent.id),
+  },
+};</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une requête liste 50 auteurs et demande, pour chacun, ses <code>books</code>. Avec le résolveur de l'exercice 2, que se passe-t-il côté base de données, et comment l'améliorer&nbsp;?</p><details><summary>Voir une solution</summary><p>On déclenche <strong>1 requête</strong> pour les 50 auteurs, puis <strong>50 requêtes</strong> (une par auteur) pour leurs livres : c'est le <strong>problème N+1</strong> (ici 1+50). On l'améliore en <strong>regroupant</strong> les chargements, par exemple avec un <em>DataLoader</em> qui collecte tous les <code>author.id</code> et fait une seule requête <code>booksByAuthorIds([...])</code>, puis répartit les résultats. On passe de 51 requêtes à 2.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

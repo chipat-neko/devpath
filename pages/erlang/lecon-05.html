@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le modèle acteur et l'état — Leçon 05 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="Le modèle acteur en Erlang : maintenir un état via une boucle récursive de processus, et construire un serveur de messages." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Le modèle concurrent — Leçon 05</p>
+              <h1 class="lesson-header__title">Le modèle acteur et l'état</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 4</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre le <strong>modèle acteur</strong>&nbsp;;</li>
+                  <li>maintenir un <strong>état</strong> sans variables mutables&nbsp;;</li>
+                  <li>construire un processus serveur (boucle <code>receive</code>)&nbsp;;</li>
+                  <li>gérer des requêtes synchrones.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>On sait créer des processus et échanger des messages. Mais une question demeure&nbsp;: comment garder un <strong>état</strong> qui évolue (un compteur, le solde d'un compte, le contenu d'un panier) quand les variables sont <em>immuables</em>&nbsp;? La réponse d'Erlang est élégante et profonde&nbsp;: le <strong>modèle acteur</strong>. Un processus garde son état dans les arguments de sa boucle récursive, et le fait évoluer à chaque tour. Cette leçon montre comment construire de vrais serveurs avec état.</p>
+
+<h2>Le modèle acteur</h2>
+<p>Un <strong>acteur</strong> est un processus qui&nbsp;: (1) possède un état privé, (2) reçoit des messages, (3) réagit en modifiant son état, en répondant, ou en créant d'autres acteurs. Tout se fait par messages&nbsp;: aucun acteur ne touche l'état d'un autre. Erlang a popularisé ce modèle, qui a depuis inspiré de nombreux systèmes (Akka, Pony…).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 195" role="img" aria-label="Le modèle acteur. Au centre, l'acteur contient son état privé. À gauche, sa boîte aux lettres reçoit les messages. À droite, trois réactions possibles à un message : un, modifier son propre état ; deux, répondre à l'expéditeur ; trois, créer un nouvel acteur. Aucun acteur ne touche l'état d'un autre : tout passe par messages.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un acteur&nbsp;: un état privé + des réactions aux messages</text>
+    <rect class="d-box" x="26" y="94" width="120" height="42" rx="8" /><text class="d-mut" x="86" y="112" text-anchor="middle" font-size="8">messages reçus</text><text class="d-tag" x="86" y="128" text-anchor="middle" font-size="8">boîte aux lettres</text>
+    <path class="d-line" d="M146 115 L214 115" fill="none" /><circle class="d-dot" cx="214" cy="115" r="3" />
+    <rect class="d-frame" x="216" y="68" width="196" height="94" rx="12" /><text class="d-text" x="314" y="92" text-anchor="middle" font-size="10">acteur (processus)</text><rect class="d-accent" x="248" y="104" width="132" height="40" rx="8" /><text class="d-text" x="314" y="128" text-anchor="middle" font-size="9">état privé</text>
+    <text class="d-mut" x="524" y="58" text-anchor="middle" font-size="8.5">réactions possibles</text>
+    <rect class="d-box" x="442" y="68" width="182" height="26" rx="6" /><text class="d-text" x="533" y="85" text-anchor="middle" font-size="8.5">1 · modifier son état</text>
+    <rect class="d-box" x="442" y="100" width="182" height="26" rx="6" /><text class="d-text" x="533" y="117" text-anchor="middle" font-size="8.5">2 · répondre à l'envoyeur</text>
+    <rect class="d-box" x="442" y="132" width="182" height="26" rx="6" /><text class="d-text" x="533" y="149" text-anchor="middle" font-size="8.5">3 · créer un autre acteur</text>
+    <path class="d-line" d="M412 105 L442 82" fill="none" /><path class="d-line" d="M412 114 L442 114" fill="none" /><path class="d-line" d="M412 123 L442 145" fill="none" />
+  </svg>
+  <figcaption>Un <strong>acteur</strong> encapsule son état&nbsp;: il ne l'expose jamais directement. À chaque message reçu, il choisit de faire évoluer cet état, de répondre, ou de créer d'autres acteurs — jamais de toucher l'état d'un voisin.</figcaption>
+</figure>
+
+<h2>L'état dans la boucle récursive</h2>
+<p>L'astuce centrale&nbsp;: l'état est un <strong>argument</strong> de la fonction de boucle. À chaque tour, le processus se rappelle avec le <em>nouvel</em> état. Les variables restent immuables&nbsp;; c'est l'<em>argument transmis</em> qui change d'une itération à l'autre.</p>
+<figure class="code-block" data-file="compteur.erl"><pre><code class="language-erlang">-module(compteur).
+-export([demarrer/0, boucle/1]).
+
+demarrer() -&gt;
+    spawn(compteur, boucle, [0]).   % état initial : 0
+
+boucle(Valeur) -&gt;
+    receive
+        incr -&gt;
+            boucle(Valeur + 1);          % nouvel état
+        {lire, De} -&gt;
+            De ! {valeur, Valeur},       % on répond
+            boucle(Valeur);              % état inchangé
+        stop -&gt;
+            ok
+    end.</code></pre></figure>
+<p>Regarde bien&nbsp;: <code>boucle(Valeur + 1)</code> ne <em>modifie</em> pas <code>Valeur</code> (impossible, elle est immuable)&nbsp;; il relance la boucle avec une <strong>nouvelle</strong> valeur. L'état «&nbsp;vit&nbsp;» dans le passage de paramètre d'un tour au suivant. C'est ainsi qu'Erlang concilie immuabilité et état évolutif.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 165" role="img" aria-label="L'état porté par la boucle récursive d'un compteur. Le processus démarre avec boucle 0. À la réception du message incr, il se rappelle avec boucle 1. À un nouveau incr, boucle 2. À la réception du message lire, il répond la valeur 2 mais se rappelle avec le même état boucle 2. L'état n'est jamais modifié en place : c'est l'argument passé au tour suivant qui change.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">L'état vit dans l'argument passé au tour suivant</text>
+    <rect class="d-accent" x="22" y="56" width="100" height="40" rx="8" /><text class="d-text" x="72" y="81" text-anchor="middle" font-size="10">boucle(0)</text>
+    <text class="d-mut" x="146" y="74" text-anchor="middle" font-size="8">incr</text><path class="d-line" d="M122 82 L168 82" fill="none" /><circle class="d-dot" cx="168" cy="82" r="2.5" />
+    <rect class="d-accent" x="170" y="56" width="100" height="40" rx="8" /><text class="d-text" x="220" y="81" text-anchor="middle" font-size="10">boucle(1)</text>
+    <text class="d-mut" x="294" y="74" text-anchor="middle" font-size="8">incr</text><path class="d-line" d="M270 82 L316 82" fill="none" /><circle class="d-dot" cx="316" cy="82" r="2.5" />
+    <rect class="d-accent" x="318" y="56" width="100" height="40" rx="8" /><text class="d-text" x="368" y="81" text-anchor="middle" font-size="10">boucle(2)</text>
+    <text class="d-mut" x="446" y="74" text-anchor="middle" font-size="8">{lire, De}</text><path class="d-line" d="M418 82 L470 82" fill="none" /><circle class="d-dot" cx="470" cy="82" r="2.5" />
+    <rect class="d-box" x="474" y="56" width="144" height="40" rx="8" /><text class="d-text" x="546" y="77" text-anchor="middle" font-size="9">boucle(2)</text><text class="d-mut" x="546" y="91" text-anchor="middle" font-size="7.5">répond 2, état inchangé</text>
+    <text class="d-mut" x="320" y="138" text-anchor="middle" font-size="8.5">chaque flèche = un message traité&nbsp;; la valeur entre parenthèses est l'état courant</text>
+  </svg>
+  <figcaption>Le compteur ne «&nbsp;mute&nbsp;» jamais&nbsp;: chaque message déclenche un <strong>nouvel</strong> appel <code>boucle(...)</code> avec l'état mis à jour. Sur <code>{lire, De}</code>, il répond mais repasse le même état.</figcaption>
+</figure>
+
+<h2>Répondre à l'expéditeur</h2>
+<p>Un message est asynchrone&nbsp;: l'envoyeur ne reçoit pas de réponse automatiquement. Pour obtenir une réponse, on inclut <strong>son propre PID</strong> dans le message (<code>self()</code> donne le PID courant), et le serveur répond à cette adresse.</p>
+<figure class="code-block" data-file="requete.erl"><pre><code class="language-erlang">% Côté client : demander la valeur et attendre la réponse
+Compteur ! {lire, self()},
+receive
+    {valeur, V} -&gt; V
+end.</code></pre></figure>
+<p>Ce patron — envoyer <code>{requete, self()}</code> puis attendre la réponse par <code>receive</code> — transforme l'échange asynchrone en un appel <strong>synchrone</strong> (question/réponse). C'est exactement ce qu'OTP automatisera (leçon 7).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 175" role="img" aria-label="Transformer un échange asynchrone en appel synchrone. Le client envoie au serveur le message lire accompagné de son propre PID obtenu par self, puis se met en attente sur un receive, bloqué. Le serveur traite la demande et renvoie le message valeur V au PID du client. Le client reçoit alors la réponse et poursuit. En glissant son PID dans la demande, le client obtient une réponse : c'est un appel question-réponse.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Glisser self() dans la demande = obtenir une réponse</text>
+    <rect class="d-box" x="34" y="58" width="156" height="82" rx="8" /><text class="d-text" x="112" y="84" text-anchor="middle" font-size="10">client</text><text class="d-mut" x="112" y="104" text-anchor="middle" font-size="8">attend sur receive</text><text class="d-mut" x="112" y="120" text-anchor="middle" font-size="8">(bloqué)</text>
+    <rect class="d-accent" x="450" y="58" width="156" height="82" rx="8" /><text class="d-text" x="528" y="84" text-anchor="middle" font-size="10">serveur</text><text class="d-mut" x="528" y="106" text-anchor="middle" font-size="8">boucle receive</text>
+    <text class="d-tag" x="320" y="80" text-anchor="middle" font-size="8.5">{lire, self()}</text>
+    <path class="d-line" d="M190 88 L450 88" fill="none" /><circle class="d-dot" cx="450" cy="88" r="3" />
+    <text class="d-tag" x="320" y="112" text-anchor="middle" font-size="8.5">{valeur, V}</text>
+    <path class="d-line" d="M450 120 L190 120" fill="none" /><circle class="d-dot" cx="190" cy="120" r="3" />
+    <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="8">1) demande + PID → 2) attente → 3) réponse → 4) suite</text>
+  </svg>
+  <figcaption>Erlang n'a pas d'appel synchrone natif&nbsp;: on le <strong>fabrique</strong>. Le client envoie sa demande avec <code>self()</code>, se bloque sur un <code>receive</code>, et le serveur lui répond à cette adresse.</figcaption>
+</figure>
+
+<h2>Enregistrer un nom de processus</h2>
+<p>Mémoriser un PID partout est fastidieux. On peut <strong>enregistrer</strong> un processus sous un nom (un atome), et l'atteindre par ce nom comme par un annuaire.</p>
+<figure class="code-block" data-file="register.erl"><pre><code class="language-erlang">Pid = compteur:demarrer(),
+register(mon_compteur, Pid).      % associe un nom au PID
+
+% Désormais, on peut écrire :
+mon_compteur ! incr.              % au lieu de Pid ! incr</code></pre></figure>
+<p>Pratique pour les services «&nbsp;bien connus&nbsp;» (un journal, une base de configuration) qu'on veut joindre de partout sans transporter leur PID.</p>
+
+<h2>Un serveur complet&nbsp;: une pile</h2>
+<p>Assemblons tout dans un serveur qui maintient une pile (LIFO).</p>
+<figure class="code-block" data-file="pile.erl"><pre><code class="language-erlang">boucle(Pile) -&gt;
+    receive
+        {empiler, X} -&gt;
+            boucle([X | Pile]);           % ajoute en tête
+        {depiler, De} -&gt;
+            case Pile of
+                [] -&gt;
+                    De ! vide,
+                    boucle([]);
+                [Sommet | Reste] -&gt;
+                    De ! {ok, Sommet},
+                    boucle(Reste)
+            end
+    end.</code></pre></figure>
+<p>L'état (la liste <code>Pile</code>) évolue à chaque message, toujours transmis au tour suivant. Le <code>case</code> choisit le comportement selon que la pile est vide ou non.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Quand l'état grossit (plusieurs champs), ne multiplie pas les arguments de <code>boucle/N</code>&nbsp;: rassemble-les dans une <strong>map</strong>. Écris <code>boucle(#{solde =&gt; 0, historique =&gt; []})</code> plutôt que <code>boucle(0, [])</code>. Ajouter un champ plus tard ne casse alors <em>aucune</em> signature, et chaque valeur porte un nom parlant — bien plus lisible qu'un tuple positionnel <code>boucle(S, H, N, ...)</code>.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>Discord</strong> (des centaines de millions d'utilisateurs) repose sur ce modèle via Elixir, qui tourne sur la même machine virtuelle qu'Erlang. Chaque salon, chaque serveur vocal y est un <em>processus acteur</em> qui garde en mémoire son état — la liste des membres présents, les messages récents — exactement comme notre compteur garde sa valeur. Faire évoluer l'état par rappel de boucle, plutôt que par une base de données à chaque clic, est ce qui permet à Discord d'afficher «&nbsp;qui est en ligne&nbsp;» en temps réel pour des millions de salons simultanés.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Relancer la boucle avec l'<strong>ancien</strong> état au lieu du nouveau. Si tu écris <code>boucle(Valeur)</code> au lieu de <code>boucle(Valeur + 1)</code> dans la branche <code>incr</code>, le compteur ne s'incrémente jamais&nbsp;: l'état est «&nbsp;figé&nbsp;». Comme l'état n'est rien d'autre que l'argument transmis, c'est <em>lui</em> qu'il faut faire évoluer à chaque tour. Vérifie toujours quelle valeur tu passes à l'appel récursif.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Ce patron «&nbsp;boucle <code>receive</code> + état en argument&nbsp;» est si universel qu'OTP (leçon 7) l'a <strong>standardisé</strong> dans le <code>gen_server</code>&nbsp;: tu écris seulement <em>comment réagir à chaque message</em>, et OTP gère la boucle, la réception, l'état et les réponses pour toi. Comprendre le patron manuel, comme ici, est essentiel pour saisir ce que <code>gen_server</code> fait à ta place — et pourquoi il existe.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — modèle acteur et état</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>État initial</td><td><code>spawn(m, boucle, [0])</code></td><td>passé en argument</td></tr>
+      <tr><td>Boucle avec état</td><td><code>boucle(Etat) -&gt; receive … end</code></td><td>l'état = paramètre</td></tr>
+      <tr><td>Faire évoluer l'état</td><td><code>boucle(NouvelEtat)</code></td><td>rappel récursif</td></tr>
+      <tr><td>Garder l'état</td><td><code>boucle(Etat)</code></td><td>on repasse le même</td></tr>
+      <tr><td>Répondre au client</td><td><code>De ! {valeur, V}</code></td><td><code>De</code> = PID reçu</td></tr>
+      <tr><td>Appel synchrone</td><td><code>S ! {lire, self()}, receive {valeur, V} -&gt; V end</code></td><td>question / réponse</td></tr>
+      <tr><td>Nommer un processus</td><td><code>register(nom, Pid)</code></td><td>joindre par un atome</td></tr>
+      <tr><td>Envoyer par nom</td><td><code>nom ! Message</code></td><td>via l'annuaire</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Acteur</dt><dd>Processus qui possède un état privé, reçoit des messages et réagit&nbsp;: modifier son état, répondre, ou créer d'autres acteurs.</dd>
+  <dt>État (dans la boucle)</dt><dd>Valeur portée en argument de la fonction de boucle, transmise mise à jour d'un tour au suivant — sans variable mutable.</dd>
+  <dt>Boucle récursive</dt><dd>Fonction qu'un processus se rappelle après chaque message pour rester actif et conserver son état.</dd>
+  <dt>Appel synchrone</dt><dd>Échange question/réponse fabriqué en envoyant son PID (<code>self()</code>) puis en attendant la réponse par <code>receive</code>.</dd>
+  <dt>self()</dt><dd>Renvoie le PID du processus courant&nbsp;; on le glisse dans une demande pour indiquer où renvoyer la réponse.</dd>
+  <dt>register/2</dt><dd>Associe un nom (atome) à un PID, pour joindre un processus par son nom plutôt que par son PID.</dd>
+  <dt>gen_server</dt><dd>Comportement OTP qui standardise le patron «&nbsp;boucle <code>receive</code> + état&nbsp;» en gérant la réception, l'état et les réponses (leçon 7).</dd>
+  <dt>Pile (LIFO)</dt><dd>«&nbsp;Dernier entré, premier sorti&nbsp;»&nbsp;: structure du serveur d'exemple, où l'on empile en tête et dépile en tête.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>acteur</strong> = un processus avec état privé, qui réagit aux messages.</li>
+  <li>L'<strong>état</strong> vit dans l'argument de la boucle&nbsp;: <code>boucle(NouvelEtat)</code> le fait évoluer (sans muter).</li>
+  <li>Pour une réponse, le client envoie son PID (<code>self()</code>)&nbsp;; échange synchrone question/réponse.</li>
+  <li><code>register/2</code> donne un nom à un processus&nbsp;; le patron se généralisera en <code>gen_server</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Où «&nbsp;vit&nbsp;» l'état d'un acteur Erlang&nbsp;?</li><li>Comment un client obtient-il une réponse du serveur&nbsp;?</li><li>Que fait <code>register/2</code>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Où « vit » l'état d'un acteur Erlang ?","a":["Dans les arguments de sa fonction de boucle : l'état est passé d'un appel récursif au suivant (il n'y a pas de variable mutable)","Dans une variable globale","Dans un fichier","Dans la BEAM directement"],"correct":0,"explain":"Comme les variables sont immuables, l'état d'un processus serveur circule en paramètre de sa boucle récursive. Chaque tour reçoit l'état courant et appelle la boucle avec l'état mis à jour : l'état persiste ainsi sans mutation."},
+  {"q":"Comment un client obtient-il une réponse du serveur ?","a":["Il envoie son propre PID dans le message (ex. {self(), Requête}) ; le serveur lui renvoie un message, que le client attend avec receive","Le serveur écrit dans un fichier partagé","Par une variable globale","Le client ne peut pas avoir de réponse"],"correct":0,"explain":"Erlang étant asynchrone, le client inclut self() dans sa requête pour indiquer où répondre. Le serveur traite puis renvoie un message à ce PID. Le client le récupère via un receive, réalisant un échange requête/réponse."},
+  {"q":"Que fait register/2 ?","a":["Il associe un nom (atome) à un PID, de sorte qu'on puisse envoyer des messages au processus par ce nom plutôt que par son PID","Il crée un nouveau processus","Il supprime un processus","Il enregistre un fichier"],"correct":0,"explain":"register(nom, Pid) donne un nom public à un processus. On peut alors lui adresser des messages avec nom ! Message, sans connaître son PID, ce qui est pratique pour les services bien identifiés du système."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["self","self()"],"placeholder":"la fonction qui renvoie le PID du processus COURANT : …","hints":["Pid = ????().","Utile pour recevoir une réponse.","Quatre lettres."],"link":{"href":"lecon-05.html","label":"Revoir « self »"}},
+  {"type":"text","accept":["loop","loop()","la fonction loop"],"placeholder":"le nom usuel de la fonction qu'on RAPPELLE avec le nouvel état (boucle du processus) : …","hints":["receive ... -> ????(NouvelEtat) end.","La récursion porte l'état d'un message à l'autre.","Quatre lettres."],"link":{"href":"lecon-05.html","label":"Revoir « La boucle d'état »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle expression donne le PID du processus courant&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">self().</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans la boucle d'un compteur, écris la branche qui décrémente l'état sur le message <code>decr</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">decr -&gt;
+    boucle(Valeur - 1);</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique comment un processus peut maintenir un état qui change alors que toutes les variables sont immuables.</p><details><summary>Voir une solution</summary><p>L'état n'est pas stocké dans une variable mutable, mais passé en <strong>argument</strong> à la fonction de boucle. À chaque message traité, le processus s'appelle récursivement (<code>boucle(NouvelEtat)</code>) avec une <em>nouvelle</em> valeur calculée à partir de l'ancienne. Aucune variable n'est modifiée&nbsp;: c'est le <em>paramètre transmis</em> d'un tour de boucle au suivant qui porte l'état évolutif. L'immuabilité est respectée, et pourtant le processus «&nbsp;se souvient&nbsp;» et change au fil du temps.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

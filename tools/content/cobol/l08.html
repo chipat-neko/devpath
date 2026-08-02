@@ -1,0 +1,82 @@
+<p>Le mot magique de l'informatique de gestion, c'est <strong>batch</strong>&nbsp;: le traitement par lots. La nuit, des programmes COBOL lisent des millions d'enregistrements, calculent, totalisent et produisent des états — relevés bancaires, bulletins de paie, factures. Cette leçon assemble ce que tu sais en un vrai traitement par lots, et introduit les <strong>fichiers indexés</strong>.</p>
+
+<h2>L'anatomie d'un batch</h2>
+<p>Un traitement par lots suit presque toujours trois temps&nbsp;: une <strong>initialisation</strong> (ouvrir, remettre à zéro), un <strong>traitement</strong> (la boucle de lecture qui calcule et totalise), une <strong>finalisation</strong> (afficher les totaux, fermer). C'est le squelette à reconnaître.</p>
+<figure class="code-block" data-file="batch.cbl"><pre><code class="language-cobol">       PROCEDURE DIVISION.
+           PERFORM INITIALISATION.
+           PERFORM TRAITEMENT UNTIL C-EST-FINI.
+           PERFORM FINALISATION.
+           STOP RUN.
+
+       INITIALISATION.
+           OPEN INPUT F-VENTES.
+           MOVE 0 TO TOTAL-GENERAL.
+           READ F-VENTES AT END SET C-EST-FINI TO TRUE END-READ.</code></pre></figure>
+
+<h2>Totaliser et compter</h2>
+<p>Le paragraphe de traitement accumule. On lit l'enregistrement <em>en fin</em> de paragraphe pour préparer le tour suivant&nbsp;: c'est le schéma «&nbsp;lire avant la boucle, relire en fin de traitement&nbsp;».</p>
+<figure class="code-block" data-file="batch.cbl"><pre><code class="language-cobol">       TRAITEMENT.
+           ADD V-MONTANT TO TOTAL-GENERAL.
+           ADD 1 TO NB-VENTES.
+           READ F-VENTES
+               AT END SET C-EST-FINI TO TRUE
+           END-READ.</code></pre></figure>
+
+<h2>Produire un état</h2>
+<p>Un <strong>état</strong> (rapport) est un fichier de sortie soigneusement formaté avec des champs édités. On compose chaque ligne, puis on l'écrit.</p>
+<figure class="code-block" data-file="batch.cbl"><pre><code class="language-cobol">       01  LIGNE-ETAT.
+           05  FILLER       PIC X(10) VALUE "TOTAL    :".
+           05  E-TOTAL      PIC $,$$$,$$9.99.
+
+       FINALISATION.
+           MOVE TOTAL-GENERAL TO E-TOTAL.
+           DISPLAY LIGNE-ETAT.
+           DISPLAY NB-VENTES " ventes traitées".
+           CLOSE F-VENTES.</code></pre></figure>
+<p class="code-caption"><code>FILLER</code> désigne une zone sans nom (texte fixe, espacement) dans une ligne d'état.</p>
+
+<h2>Les fichiers indexés</h2>
+<p>Un fichier <strong>séquentiel</strong> se lit du début à la fin. Un fichier <strong>indexé</strong> possède une <strong>clé</strong> qui permet d'accéder <em>directement</em> à un enregistrement — comme chercher un compte par son numéro, sans tout parcourir.</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">           SELECT F-COMPTES ASSIGN TO "comptes.idx"
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS RANDOM
+               RECORD KEY IS CPT-NUMERO.</code></pre></figure>
+
+<h2>Lire par clé</h2>
+<p>Avec un fichier indexé en accès <code>RANDOM</code>, on place la clé puis on lit l'enregistrement correspondant&nbsp;; <code>INVALID KEY</code> gère le cas «&nbsp;clé absente&nbsp;».</p>
+<figure class="code-block" data-file="exemple.cbl"><pre><code class="language-cobol">           MOVE 100245 TO CPT-NUMERO.
+           READ F-COMPTES
+               INVALID KEY DISPLAY "Compte inconnu"
+               NOT INVALID KEY DISPLAY "Solde : " CPT-SOLDE
+           END-READ.</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier la première lecture <em>avant</em> la boucle (l'amorçage)&nbsp;: sans elle, le premier enregistrement n'est jamais traité, ou la condition de fin est mal évaluée. Le schéma «&nbsp;lire une fois, puis lire en fin de traitement&nbsp;» évite ce piège.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le traitement de masse classique est le <strong>rapprochement</strong> de deux fichiers triés (par ex. mouvements + comptes)&nbsp;: on les lit en parallèle en comparant les clés. C'est l'algorithme du «&nbsp;match/merge&nbsp;», pilier des batchs bancaires.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>batch</strong> s'organise en initialisation, traitement (boucle), finalisation.</li>
+  <li>On totalise et compte dans la boucle&nbsp;; <code>FILLER</code> compose les lignes d'<strong>état</strong>.</li>
+  <li>Un fichier <strong>indexé</strong> a une <strong>clé</strong> (<code>RECORD KEY</code>) pour un accès direct.</li>
+  <li>On lit par clé avec gestion de <code>INVALID KEY</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelles sont les trois phases d'un traitement par lots&nbsp;?</li><li>Qu'apporte un fichier indexé par rapport à un séquentiel&nbsp;?</li><li>À quoi sert <code>FILLER</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris les trois appels <code>PERFORM</code> du squelette d'un batch.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">           PERFORM INITIALISATION.
+           PERFORM TRAITEMENT UNTIL C-EST-FINI.
+           PERFORM FINALISATION.
+           STOP RUN.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans le paragraphe de traitement, ajoute le montant au total et relis le fichier.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">       TRAITEMENT.
+           ADD V-MONTANT TO TOTAL.
+           READ F-VENTES
+               AT END SET C-EST-FINI TO TRUE
+           END-READ.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris la lecture par clé d'un compte 200300 avec gestion de l'absence.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.cbl"><pre><code class="language-cobol">           MOVE 200300 TO CPT-NUMERO.
+           READ F-COMPTES
+               INVALID KEY DISPLAY "Inconnu"
+               NOT INVALID KEY DISPLAY CPT-SOLDE
+           END-READ.</code></pre></figure></details></div>

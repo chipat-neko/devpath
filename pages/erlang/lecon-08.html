@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Distribution et tolérance aux pannes — Leçon 08 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="Erlang distribué : faire communiquer des nœuds sur plusieurs machines, et atteindre les fameux « neuf neuf » de disponibilité." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Erlang en pratique — Leçon 08</p>
+              <h1 class="lesson-header__title">Distribution et tolérance aux pannes</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 7</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>connecter des <strong>nœuds</strong> Erlang&nbsp;;</li>
+                  <li>envoyer des messages à distance de façon transparente&nbsp;;</li>
+                  <li>comprendre les « neuf neuf » de disponibilité&nbsp;;</li>
+                  <li>saisir le mises à jour à chaud (hot code).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Erlang a une dernière carte maîtresse&nbsp;: la <strong>distribution</strong>. Le même modèle de processus et de messages qui fonctionne sur une machine s'étend, presque sans changement, à <strong>plusieurs machines</strong>. Cela permet de bâtir des systèmes répartis sur de nombreux serveurs, et d'atteindre une disponibilité extrême — les fameux «&nbsp;neuf neuf&nbsp;». Cette leçon explore comment Erlang relie des nœuds et résiste aux pannes à grande échelle.</p>
+
+<h2>Les nœuds Erlang</h2>
+<p>Une instance d'Erlang qui tourne s'appelle un <strong>nœud</strong> (<em>node</em>). On peut démarrer plusieurs nœuds — sur une même machine ou sur des serveurs différents — et les <strong>connecter</strong> pour qu'ils forment un cluster. Chaque nœud porte un nom.</p>
+<figure class="code-block" data-file="noeuds"><pre><code class="language-erlang">% Démarrer un nœud nommé, sur deux terminaux :
+$ erl -name alice@192.168.1.10
+$ erl -name bob@192.168.1.11
+
+% Depuis alice, se connecter à bob :
+(alice@...)1&gt; net_adm:ping('bob@192.168.1.11').
+pong       % "pong" = connexion réussie ("pang" = échec)</code></pre></figure>
+<p>Une fois connectés, les nœuds se «&nbsp;voient&nbsp;» et peuvent s'échanger des processus et des messages comme s'ils étaient locaux.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un cluster de trois nœuds Erlang. Trois nœuds nommés alice, bob et carol, chacun une instance de la machine virtuelle BEAM, sont reliés deux à deux par des liens : le cluster forme un maillage complet où chaque nœud connaît les autres. La commande net_adm:ping établit et vérifie ces connexions.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Des nœuds connectés forment un cluster maillé</text>
+    <line class="d-line" x1="300" y1="92" x2="170" y2="150" />
+    <line class="d-line" x1="340" y1="92" x2="470" y2="150" />
+    <line class="d-line" x1="220" y1="173" x2="420" y2="173" />
+    <rect class="d-accent" x="250" y="46" width="140" height="46" rx="9" /><text class="d-text" x="320" y="68" text-anchor="middle" font-size="9.5">alice@hôte-1</text><text class="d-mut" x="320" y="83" text-anchor="middle" font-size="7.5">BEAM</text>
+    <rect class="d-box" x="80" y="150" width="140" height="46" rx="9" /><text class="d-text" x="150" y="172" text-anchor="middle" font-size="9.5">bob@hôte-2</text><text class="d-mut" x="150" y="187" text-anchor="middle" font-size="7.5">BEAM</text>
+    <rect class="d-box" x="420" y="150" width="140" height="46" rx="9" /><text class="d-text" x="490" y="172" text-anchor="middle" font-size="9.5">carol@hôte-3</text><text class="d-mut" x="490" y="187" text-anchor="middle" font-size="7.5">BEAM</text>
+    <text class="d-tag" x="206" y="116" text-anchor="middle" font-size="7.5">net_adm:ping → pong</text>
+  </svg>
+  <figcaption>Chaque <strong>nœud</strong> est une BEAM nommée. Une fois reliés (par <code>net_adm:ping</code>), les nœuds se connaissent tous&nbsp;: les processus de l'un peuvent parler à ceux des autres comme s'ils étaient locaux.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Deux nœuds ne se connectent que s'ils partagent le même <strong>cookie</strong> (un secret, dans <code>~/.erlang.cookie</code>)&nbsp;: c'est le contrôle d'accès de base du cluster. Un service annexe, <strong>epmd</strong> (<em>Erlang Port Mapper Daemon</em>), joue l'annuaire qui traduit un nom de nœud en port réseau. Si un <code>ping</code> renvoie <code>pang</code>, vérifie d'abord le cookie, le nom (<code>-name</code> long vs <code>-sname</code> court) et que le pare-feu laisse passer&nbsp;: ce sont les causes les plus fréquentes.</p></div></div>
+
+<h2>Envoyer un message à distance</h2>
+<p>Voici la beauté du modèle&nbsp;: envoyer un message à un processus sur un <em>autre</em> nœud s'écrit <strong>exactement</strong> comme en local. La même syntaxe <code>!</code> fonctionne, que le destinataire soit dans la même machine ou à l'autre bout du réseau. C'est la <strong>transparence de localisation</strong>.</p>
+<figure class="code-block" data-file="distant.erl"><pre><code class="language-erlang">% Spawner un processus sur un nœud distant :
+Pid = spawn('bob@192.168.1.11', module, fonction, []).
+
+% Lui envoyer un message : IDENTIQUE au local
+Pid ! {bonjour, "depuis alice"}.
+
+% Atteindre un processus enregistré sur un autre nœud :
+{mon_service, 'bob@192.168.1.11'} ! requete.</code></pre></figure>
+<p>Le code concurrent que tu as écrit pour une machine fonctionne donc, presque tel quel, en distribué. Erlang a été pensé pour ça dès l'origine&nbsp;: les centraux téléphoniques sont par nature répartis sur de nombreux équipements.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="La transparence de localisation. À gauche, un envoi local : l'expéditeur P1 et le destinataire P2 sont dans le même nœud, le message passe par l'opérateur point d'exclamation, c'est quasi instantané et sûr. À droite, un envoi distant : P1 est sur le nœud alice, P2 sur le nœud bob, séparés par le réseau ; le message emprunte exactement le même opérateur point d'exclamation, mais subit latence et pannes possibles. Le code est identique, seul le coût diffère.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le même «&nbsp;!&nbsp;» relie deux processus, proches ou lointains</text>
+    <text class="d-text" x="160" y="46" text-anchor="middle" font-size="10">envoi local (même nœud)</text>
+    <rect class="d-frame" x="40" y="58" width="240" height="92" rx="10" /><text class="d-mut" x="160" y="76" text-anchor="middle" font-size="8">un seul nœud</text>
+    <rect class="d-box" x="60" y="92" width="80" height="40" rx="7" /><text class="d-text" x="100" y="116" text-anchor="middle" font-size="9">P1</text>
+    <rect class="d-box" x="180" y="92" width="80" height="40" rx="7" /><text class="d-text" x="220" y="116" text-anchor="middle" font-size="9">P2</text>
+    <path class="d-line" d="M140 112 L180 112" fill="none" /><text class="d-tag" x="160" y="106" text-anchor="middle" font-size="10">!</text>
+    <text class="d-mut" x="160" y="168" text-anchor="middle" font-size="8">quasi instantané, sûr</text>
+    <line class="d-line" x1="320" y1="40" x2="320" y2="182" />
+    <text class="d-text" x="480" y="46" text-anchor="middle" font-size="10">envoi distant (autre nœud)</text>
+    <rect class="d-frame" x="360" y="80" width="110" height="60" rx="9" /><text class="d-mut" x="415" y="96" text-anchor="middle" font-size="7.5">alice@…</text><rect class="d-box" x="378" y="102" width="74" height="30" rx="6" /><text class="d-text" x="415" y="122" text-anchor="middle" font-size="9">P1</text>
+    <rect class="d-frame" x="524" y="80" width="112" height="60" rx="9" /><text class="d-mut" x="580" y="96" text-anchor="middle" font-size="7.5">bob@…</text><rect class="d-box" x="542" y="102" width="74" height="30" rx="6" /><text class="d-text" x="580" y="122" text-anchor="middle" font-size="9">P2</text>
+    <path class="d-line" d="M470 117 L524 117" fill="none" /><text class="d-tag" x="497" y="110" text-anchor="middle" font-size="10">!</text><text class="d-mut" x="497" y="150" text-anchor="middle" font-size="7.5">réseau</text>
+    <text class="d-mut" x="480" y="168" text-anchor="middle" font-size="8">latence + pannes possibles</text>
+  </svg>
+  <figcaption>C'est la <strong>transparence de localisation</strong>&nbsp;: <code>Pid ! Msg</code> s'écrit pareil ici et là-bas. Pratique, mais rappelle-toi qu'un envoi distant traverse le réseau — même syntaxe, coût différent.</figcaption>
+</figure>
+
+<h2>Les «&nbsp;neuf neuf&nbsp;» de disponibilité</h2>
+<p>La combinaison «&nbsp;processus isolés + supervision + distribution&nbsp;» permet une <strong>disponibilité</strong> exceptionnelle. Le central téléphonique AXD301 d'Ericsson, écrit en Erlang, a atteint une fiabilité mesurée à <strong>neuf «&nbsp;9&nbsp;»</strong> (99,9999999&nbsp;%), soit l'équivalent de <em>32 millisecondes</em> d'indisponibilité par an. Comment&nbsp;? Si un nœud tombe, les autres continuent&nbsp;; si un processus plante, un superviseur le relance&nbsp;; et l'on peut réparer ou remplacer une partie pendant que le reste tourne.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="L'échelle des « neuf » de disponibilité. Plus on ajoute de 9 au pourcentage de disponibilité, plus le temps d'indisponibilité annuel toléré diminue. 99 pour cent autorise environ 3,65 jours d'arrêt par an ; 99,9 pour cent environ 8,8 heures ; 99,99 pour cent environ 52 minutes ; 99,999 pour cent, les cinq neuf, environ 5 minutes ; et 99,9999999 pour cent, les neuf neuf atteints par le central AXD301 d'Ericsson, environ 32 millisecondes par an.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Chaque «&nbsp;9&nbsp;» de plus divise le temps d'arrêt annuel</text>
+    <text class="d-mut" x="105" y="44" text-anchor="middle" font-size="9">disponibilité</text>
+    <text class="d-mut" x="400" y="44" text-anchor="middle" font-size="9">arrêt toléré par an</text>
+    <text class="d-tag" x="30" y="70" font-size="9">99 %</text><rect class="d-box" x="150" y="60" width="380" height="14" rx="4" /><text class="d-mut" x="340" y="71" text-anchor="middle" font-size="8">≈ 3,65 jours</text>
+    <text class="d-tag" x="30" y="96" font-size="9">99,9 %</text><rect class="d-box" x="150" y="86" width="300" height="14" rx="4" /><text class="d-mut" x="300" y="97" text-anchor="middle" font-size="8">≈ 8,8 heures</text>
+    <text class="d-tag" x="30" y="122" font-size="9">99,99 %</text><rect class="d-box" x="150" y="112" width="220" height="14" rx="4" /><text class="d-mut" x="260" y="123" text-anchor="middle" font-size="8">≈ 52 minutes</text>
+    <text class="d-tag" x="30" y="148" font-size="9">99,999 %</text><rect class="d-box" x="150" y="138" width="140" height="14" rx="4" /><text class="d-mut" x="215" y="149" text-anchor="middle" font-size="8">≈ 5 minutes</text>
+    <text class="d-tag" x="30" y="174" font-size="9">99,9999999 %</text><rect class="d-accent" x="150" y="164" width="60" height="14" rx="4" /><text class="d-mut" x="330" y="175" text-anchor="middle" font-size="8">≈ 32 ms («&nbsp;neuf neuf&nbsp;», AXD301)</text>
+  </svg>
+  <figcaption>Les fameux «&nbsp;neuf neuf&nbsp;» (99,9999999&nbsp;%) ne laissent qu'environ <strong>32 millisecondes</strong> d'indisponibilité par an. Processus isolés + supervision + distribution&nbsp;: c'est la combinaison qui rend ce chiffre atteignable.</figcaption>
+</figure>
+
+<h2>La mise à jour à chaud</h2>
+<p>Conséquence remarquable&nbsp;: Erlang peut <strong>remplacer du code en cours d'exécution</strong>, sans arrêter le système (<em>hot code swapping</em>). Un central téléphonique ne peut pas s'éteindre pour une mise à jour&nbsp;; Erlang permet de charger une nouvelle version d'un module pendant que les appels continuent.</p>
+<figure class="code-block" data-file="hot.erl"><pre><code class="language-erlang">% Recharger un module à chaud (sans arrêter le système) :
+code:load_file(mon_module).
+% Les processus passent à la nouvelle version
+% à leur prochain appel qualifié du module.</code></pre></figure>
+<p>C'est une capacité rare et précieuse, directement issue du besoin télécom d'origine&nbsp;: «&nbsp;ça ne s'arrête jamais&nbsp;».</p>
+
+<h2>Les limites&nbsp;: cohérence et réseau</h2>
+<p>La distribution n'est pas magique. Sur un réseau, des messages peuvent se perdre, un nœud peut devenir injoignable (une <em>partition</em> réseau). Erlang fournit les <em>outils</em> (détection de nœuds morts, supervision distribuée), mais c'est au concepteur de décider comment gérer la cohérence des données réparties — un problème difficile, commun à tous les systèmes distribués.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>La base de données <strong>Riak</strong>, écrite en Erlang, répartit les données sur de nombreux nœuds pour rester disponible même quand certains tombent. Mais elle illustre aussi la limite&nbsp;: lors d'une <em>partition réseau</em> (deux moitiés du cluster qui ne se voient plus), il faut choisir — refuser des écritures pour rester <strong>cohérent</strong>, ou continuer à répondre au risque de divergences à réconcilier ensuite (<strong>disponible</strong>). C'est le fameux compromis du théorème <strong>CAP</strong>. Erlang fournit les outils de distribution&nbsp;; la stratégie de cohérence, elle, reste une décision d'architecture.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que «&nbsp;transparence de localisation&nbsp;» signifie «&nbsp;le réseau est gratuit et fiable&nbsp;». Envoyer un message distant a le <em>même code</em> qu'en local, mais pas le même <em>coût</em>&nbsp;: latence réseau, possibilité de perte, nœud injoignable. Un message local est quasi instantané et sûr&nbsp;; un message distant traverse le réseau. Conçois en gardant à l'esprit que «&nbsp;distant&nbsp;» implique de la latence et des pannes possibles, même si la syntaxe le cache.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'histoire la plus célèbre est celle de <strong>WhatsApp</strong>&nbsp;: en 2015, l'application gérait des centaines de millions d'utilisateurs et des dizaines de milliards de messages par jour avec une équipe d'ingénieurs minuscule, grâce à Erlang. La concurrence massive, la supervision et la distribution leur ont permis de tenir une charge colossale avec une fiabilité remarquable — une démonstration éclatante que les choix d'Erlang, nés du téléphone, valent pour l'Internet moderne.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — distribution &amp; disponibilité</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Nommer un nœud</td><td><code>erl -name alice@hôte</code></td><td><code>-sname</code> pour un nom court</td></tr>
+      <tr><td>Connecter / tester</td><td><code>net_adm:ping('bob@hôte')</code></td><td><code>pong</code> = OK, <code>pang</code> = échec</td></tr>
+      <tr><td>Voir les nœuds reliés</td><td><code>nodes()</code></td><td>liste du cluster</td></tr>
+      <tr><td>Créer à distance</td><td><code>spawn('bob@hôte', M, F, A)</code></td><td>même modèle qu'en local</td></tr>
+      <tr><td>Envoyer (nom + nœud)</td><td><code>{svc, 'bob@hôte'} ! Msg</code></td><td>opérateur <code>!</code> identique</td></tr>
+      <tr><td>Secret du cluster</td><td>cookie <code>~/.erlang.cookie</code></td><td>doit être partagé</td></tr>
+      <tr><td>Mise à jour à chaud</td><td><code>code:load_file(mod)</code></td><td>sans arrêter le système</td></tr>
+      <tr><td>Disponibilité</td><td>«&nbsp;neuf neuf&nbsp;» = 99,9999999 %</td><td>≈ 32 ms d'arrêt / an</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Nœud (node)</dt><dd>Une instance nommée de la machine virtuelle BEAM en cours d'exécution.</dd>
+  <dt>Cluster</dt><dd>Ensemble de nœuds connectés qui se «&nbsp;voient&nbsp;» et échangent processus et messages.</dd>
+  <dt>Transparence de localisation</dt><dd>Propriété qui fait qu'un envoi de message s'écrit pareil, que le destinataire soit local ou distant.</dd>
+  <dt>Cookie Erlang</dt><dd>Secret partagé (<code>~/.erlang.cookie</code>) qu'exigent deux nœuds pour se connecter.</dd>
+  <dt>epmd</dt><dd><em>Erlang Port Mapper Daemon</em>&nbsp;: l'annuaire qui associe un nom de nœud à son port réseau.</dd>
+  <dt>Disponibilité («&nbsp;neuf neuf&nbsp;»)</dt><dd>Part du temps où le système répond&nbsp;; 99,9999999&nbsp;% ≈ 32 ms d'arrêt par an.</dd>
+  <dt>Mise à jour à chaud</dt><dd>Remplacement du code d'un module pendant que le système tourne, sans interruption (<em>hot code swapping</em>).</dd>
+  <dt>Partition réseau</dt><dd>Coupure qui isole des nœuds les uns des autres&nbsp;; impose un choix entre cohérence et disponibilité (CAP).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>nœud</strong> est une instance Erlang&nbsp;; on connecte des nœuds pour former un cluster (<code>net_adm:ping</code>).</li>
+  <li><strong>Transparence de localisation</strong>&nbsp;: envoyer un message distant s'écrit comme en local (<code>!</code>).</li>
+  <li>Processus isolés + supervision + distribution → disponibilité extrême («&nbsp;neuf neuf&nbsp;»).</li>
+  <li><strong>Mise à jour à chaud</strong> possible&nbsp;; mais le réseau implique latence et pannes à gérer.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'un nœud Erlang&nbsp;?</li><li>En quoi consiste la transparence de localisation&nbsp;?</li><li>Que permet la mise à jour à chaud&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un nœud Erlang ?","a":["Une instance de la machine virtuelle Erlang en cours d'exécution (avec un nom) ; plusieurs nœuds peuvent se connecter pour former un système distribué","Un processus unique","Un fichier de code","Un type de message"],"correct":0,"explain":"Un nœud est un runtime BEAM nommé. En reliant plusieurs nœuds (sur la même machine ou sur le réseau), on construit un système distribué où les processus de nœuds différents communiquent."},
+  {"q":"En quoi consiste la transparence de localisation ?","a":["On envoie un message à un processus de la même façon qu'il soit local ou sur un autre nœud (via son PID ou son nom) : le code ne change pas selon l'emplacement","On voit le code source à distance","On masque les adresses IP","On chiffre les messages"],"correct":0,"explain":"La distribution est transparente : l'opérateur d'envoi ! fonctionne identiquement pour un processus local ou distant. Le programme s'écrit sans se soucier de l'emplacement réel du destinataire, ce qui simplifie les systèmes répartis."},
+  {"q":"Que permet la mise à jour à chaud ?","a":["Remplacer le code d'un module pendant que le système tourne, sans l'arrêter : une mise à jour sans interruption de service","De compiler plus vite","De réchauffer le processeur","De sauvegarder l'état sur disque"],"correct":0,"explain":"Le hot code swapping autorise le chargement d'une nouvelle version d'un module sur un système en fonctionnement. Les processus basculent vers le code à jour sans coupure, atout majeur pour les services à haute disponibilité."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["net_adm:ping","ping","net_adm:ping/1"],"placeholder":"la fonction pour TESTER la connexion vers un autre nœud : net_adm:…","hints":["net_adm:????('bob@hote') renvoie pong si OK.","Établit la connexion au passage.","p???"],"link":{"href":"lecon-08.html","label":"Revoir « La distribution »"}},
+  {"type":"text","accept":["!","{serveur, 'bob@hote'}","{serveur, 'bob@hote'} ! ping","{Nom, Noeud}"],"placeholder":"l'opérateur pour ENVOYER ping à un processus enregistré sur un autre nœud ({serveur, 'bob@hote'} … ping) : …","hints":["{NomEnregistre, Noeud} ? Message.","Le même opérateur qu'en local.","Un point d'exclamation."],"link":{"href":"lecon-08.html","label":"Revoir « Envoyer à distance »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle fonction teste la connexion vers un autre nœud&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">net_adm:ping('bob@hote').
+% renvoie pong (succès) ou pang (échec)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris l'envoi d'un message <code>ping</code> au processus enregistré <code>serveur</code> sur le nœud <code>'bob@hote'</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">{serveur, 'bob@hote'} ! ping.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique comment Erlang atteint une disponibilité de «&nbsp;neuf neuf&nbsp;».</p><details><summary>Voir une solution</summary><p>Par la combinaison de trois mécanismes&nbsp;: (1) des <strong>processus isolés</strong> qui ne s'entraînent pas mutuellement dans leur chute&nbsp;; (2) la <strong>supervision</strong>, qui redémarre automatiquement tout processus défaillant dans un état sain («&nbsp;let it crash&nbsp;»)&nbsp;; (3) la <strong>distribution</strong> sur plusieurs nœuds, de sorte que la panne d'une machine n'arrête pas le système, et la possibilité de réparer ou mettre à jour une partie (à chaud) pendant que le reste continue de fonctionner. Aucun point de défaillance unique ne peut tout arrêter.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

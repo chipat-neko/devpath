@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sous le capot : les objets de Git — Leçon 15 · Git & GitHub · Syntaxe</title>
+    <meta name="description" content="Plonge sous le capot de Git : magasin clé-valeur adressé par contenu, objets blob, tree, commit, références et dossier .git expliqués pas à pas." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="git" data-lesson="lecon-15.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Git &amp; GitHub</a></li>
+            <li aria-current="page">Leçon 15</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Git en profondeur — Leçon 15</p>
+              <h1 class="lesson-header__title">Sous le capot : les objets de Git</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Cours Git recommandé</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>décrire le modèle de Git comme un <strong>magasin clé-valeur adressé par contenu</strong> et nommer les quatre types d'objets&nbsp;;</li>
+                  <li>explorer un dépôt avec les commandes de plomberie <code>git cat-file</code>, <code>git hash-object</code> et <code>git ls-tree</code>&nbsp;;</li>
+                  <li>expliquer qu'une branche n'est qu'une <strong>référence</strong> (un fichier contenant un SHA) et situer <code>HEAD</code>, <code>refs/heads</code> et <code>refs/tags</code>&nbsp;;</li>
+                  <li>distinguer les commandes <em>plumbing</em> des commandes <em>porcelain</em> et comprendre que Git stocke des <strong>instantanés</strong>, pas des différences.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais déjà committer, fusionner, rebaser et pousser. Mais que se passe-t-il <strong>réellement</strong> quand tu tapes <code>git commit</code>&nbsp;? Cette leçon ouvre la boîte noire. Tu vas découvrir que Git n'est, au fond, qu'une petite base de données très simple&nbsp;: un magasin d'objets adressés par leur contenu. Une fois ce modèle compris, des comportements qui semblaient magiques (l'intégrité des données, la rapidité des branches, le <code>reflog</code>) deviennent évidents.</p>
+
+<p>Tout ce qui suit s'observe avec des commandes de <em>plomberie</em> (bas niveau). On ne va rien casser&nbsp;: on regarde, on inspecte, on comprend. Garde sous la main un dépôt avec au moins un commit pour suivre les exemples.</p>
+
+<h2>Git, un magasin clé-valeur adressé par le contenu</h2>
+<p>Le cœur de Git est un magasin clé-valeur&nbsp;: tu lui donnes du contenu, il te rend une <strong>clé</strong>&nbsp;; tu lui rends la clé plus tard, il te ressort le contenu exact. La particularité&nbsp;: la clé n'est pas arbitraire, c'est le <strong>hash</strong> du contenu lui-même (SHA-1 historiquement, SHA-256 dans les dépôts récents). On parle de stockage <em>content-addressed</em>.</p>
+<p>Conséquence directe&nbsp;: si deux fichiers ont le même contenu, ils partagent le même objet et donc la même clé. Et si un seul octet change, le hash change entièrement. C'est ce qui garantit l'<strong>intégrité</strong>&nbsp;: un objet corrompu ne correspond plus à son identifiant.</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash"># On demande a Git le hash du contenu "bonjour", sans rien stocker
+echo "bonjour" | git hash-object --stdin
+# 6b584e8ece562ebffc15d38808cd6b98fc3d97ea
+# Le meme contenu donnera TOUJOURS ce meme hash, sur n'importe quelle machine</code></pre></figure>
+<p class="code-caption">Le hash est calculé à partir du contenu (plus un petit en-tête)&nbsp;: il est déterministe.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Git comme magasin clé-valeur. Un contenu, ici le mot bonjour, passe par une fonction de hachage SHA qui produit une clé, le hash 6b584e jusqu'à 97ea. Git range alors l'objet blob dans le dossier point git objects sous cette clé. Une flèche de retour montre que rendre la clé à Git ressort le contenu exact ; changer un seul octet du contenu produirait une clé entièrement différente.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Un magasin clé-valeur : le contenu fabrique sa propre clé</text>
+    <rect class="d-box" x="24" y="58" width="150" height="60" rx="8" />
+    <text class="d-label" x="99" y="84" text-anchor="middle" font-size="10">contenu</text>
+    <text class="d-text" x="99" y="104" text-anchor="middle" font-size="12">bonjour</text>
+    <line class="d-line" x1="174" y1="88" x2="248" y2="88" />
+    <polygon class="d-dot" points="248,88 240,84 240,92" />
+    <text class="d-tag" x="211" y="80" text-anchor="middle" font-size="9">SHA</text>
+    <text class="d-mut" x="211" y="106" text-anchor="middle" font-size="8">hachage</text>
+    <rect class="d-accent" x="250" y="58" width="176" height="60" rx="8" />
+    <text class="d-label" x="338" y="84" text-anchor="middle" font-size="10">clé = hash</text>
+    <text class="d-text" x="338" y="104" text-anchor="middle" font-size="11">6b584e…97ea</text>
+    <line class="d-line" x1="426" y1="88" x2="498" y2="88" />
+    <polygon class="d-dot" points="498,88 490,84 490,92" />
+    <rect class="d-frame" x="500" y="52" width="116" height="72" rx="8" />
+    <text class="d-mut" x="558" y="70" text-anchor="middle" font-size="9">.git/objects</text>
+    <rect class="d-box" x="514" y="80" width="88" height="32" rx="6" />
+    <text class="d-text" x="558" y="100" text-anchor="middle" font-size="10">blob</text>
+    <line class="d-line" x1="500" y1="152" x2="120" y2="152" stroke-dasharray="5 4" />
+    <polygon class="d-dot" points="120,152 128,148 128,156" />
+    <text class="d-mut" x="330" y="172" text-anchor="middle" font-size="9">rends la clé → Git ressort le contenu exact · 1 octet changé = clé entièrement différente</text>
+  </svg>
+  <figcaption>Tu donnes un contenu, Git te rend une clé (le hash)&nbsp;; tu rends la clé, il te ressort le contenu. La clé <em>est</em> le contenu haché&nbsp;: d'où la <strong>déduplication</strong> et l'<strong>intégrité</strong>.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la déduplication chez GitHub et l'affaire SHAttered</p><p>Un dépôt très populaire (le noyau Linux, par exemple) est <em>forké</em> des milliers de fois. Grâce à l'adressage par contenu, les objets identiques entre un dépôt et ses forks ne sont stockés qu'<strong>une seule fois</strong> côté serveur&nbsp;: des téraoctets économisés. Revers de la médaille&nbsp;: puisque toute l'intégrité repose sur le hash, une <strong>collision</strong> serait dangereuse. C'est arrivé en 2017 (attaque <em>SHAttered</em>&nbsp;: deux PDF différents au même SHA-1). Git a réagi en activant une détection de collision, puis en ajoutant le support de <strong>SHA-256</strong> pour les nouveaux dépôts.</p></div></div>
+
+<h2>Les quatre types d'objets</h2>
+<p>Tout l'historique de Git tient dans quatre types d'objets, tous stockés de la même manière dans le magasin.</p>
+<ul>
+<li><strong>blob</strong>&nbsp;: le <em>contenu</em> d'un fichier, et rien d'autre. Pas de nom, pas de date, pas de permissions. Juste les octets.</li>
+<li><strong>tree</strong>&nbsp;: un répertoire. Il associe des <em>noms</em> à des blobs (fichiers) et à d'autres trees (sous-dossiers), avec leur mode.</li>
+<li><strong>commit</strong>&nbsp;: un instantané. Il pointe vers un tree <em>racine</em> (l'état complet du projet), vers son ou ses <em>parents</em>, et porte l'auteur, le committer, les dates et le message.</li>
+<li><strong>tag annoté</strong>&nbsp;: un objet nommé qui pointe vers un autre objet (souvent un commit), avec un message et un signataire.</li>
+</ul>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">              commit
+            +----------+
+            | tree   --+----&gt; tree (racine)
+            | parent --+--&gt; commit precedent       +--------------------+
+            | author   |                           | tree (racine)      |
+            | message  |                           |  "src"   --&gt; tree  |
+            +----------+                           |  "README"--&gt; blob  |
+                                                   +--------------------+
+                                                          |
+                                              blob "README" = octets du fichier</code></pre></figure>
+<p class="code-caption">Un commit pointe vers un tree&nbsp;; un tree pointe vers des blobs et d'autres trees.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le nom d'un fichier ne vit pas dans le blob, mais dans le <strong>tree</strong> qui le référence. Renommer un fichier sans changer son contenu ne crée donc pas de nouveau blob&nbsp;: seul le tree change.</p></div></div>
+
+<h2>Explorer les objets&nbsp;: cat-file, hash-object, ls-tree</h2>
+<p>Trois commandes de plomberie suffisent pour fouiller le magasin. <code>git cat-file -t</code> donne le <em>type</em> d'un objet&nbsp;; <code>git cat-file -p</code> l'affiche joliment (<em>pretty-print</em>).</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash"># Quel est le type de l'objet pointe par la branche courante ?
+git cat-file -t HEAD
+# commit
+
+# Affiche le contenu du commit
+git cat-file -p HEAD
+# tree 9a72c1f...        (le tree racine)
+# parent 902bfe1...      (le commit precedent)
+# author Noah &lt;noah@example.com&gt; 1749513600 +0200
+# committer Noah &lt;noah@example.com&gt; 1749513600 +0200
+#
+# Ajoute la page d'accueil</code></pre></figure>
+<p class="code-caption">Un commit, en clair&nbsp;: un pointeur vers un tree, un parent, un auteur et un message.</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash"># Lister le contenu du tree racine du dernier commit
+git ls-tree HEAD
+# 100644 blob a45e3b1...    README.md
+# 040000 tree b23f8d0...    src
+
+# On peut descendre dans un sous-dossier directement
+git ls-tree HEAD src/</code></pre></figure>
+<p class="code-caption"><code>git ls-tree</code> montre l'association nom → objet, avec le mode (100644 = fichier, 040000 = dossier).</p>
+
+<h2>Les références&nbsp;: une branche n'est qu'un pointeur</h2>
+<p>Voici la révélation la plus utile&nbsp;: une branche <strong>ne contient pas</strong> de commits. Une branche, c'est un simple fichier texte qui contient <em>un</em> SHA, celui de son dernier commit. Ce fichier vit dans <code>.git/refs/heads/</code>.</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash"># Le contenu de la reference "main" : juste un SHA
+cat .git/refs/heads/main
+# 4c1da97...b7
+
+# La maniere "propre" (porcelain-friendly) de lire une ref
+git rev-parse main
+# 4c1da97...b7</code></pre></figure>
+<p class="code-caption">Créer une branche, c'est juste écrire un SHA dans un nouveau fichier&nbsp;: voilà pourquoi c'est instantané.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Les références de Git ne sont que des pointeurs. HEAD est une référence symbolique qui pointe vers la branche main. La branche main est un fichier contenant le SHA 4c1da97 du commit C2. Ce commit C2 pointe vers son parent, le commit C1 de SHA 902bfe1. Une autre branche, feat slash x, pointe indépendamment vers le commit C1. Un tag v1.0 pointe vers le commit C2. Toutes ces références ne sont que des fichiers contenant un SHA.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">HEAD → une branche → un commit : rien que des pointeurs</text>
+    <text class="d-mut" x="234" y="58" text-anchor="middle" font-size="8">refs/heads/</text>
+    <rect class="d-accent" x="20" y="66" width="96" height="48" rx="8" />
+    <text class="d-label" x="68" y="88" text-anchor="middle" font-size="11">HEAD</text>
+    <text class="d-mut" x="68" y="104" text-anchor="middle" font-size="8">symbolique</text>
+    <line class="d-line" x1="116" y1="90" x2="164" y2="90" />
+    <polygon class="d-dot" points="164,90 156,86 156,94" />
+    <text class="d-tag" x="140" y="82" text-anchor="middle" font-size="8">ref:</text>
+    <rect class="d-box" x="168" y="66" width="132" height="48" rx="8" />
+    <text class="d-label" x="234" y="88" text-anchor="middle" font-size="11">main</text>
+    <text class="d-text" x="234" y="104" text-anchor="middle" font-size="9">4c1da97</text>
+    <line class="d-line" x1="300" y1="90" x2="372" y2="90" />
+    <polygon class="d-dot" points="372,90 364,86 364,94" />
+    <circle class="d-accent" cx="400" cy="90" r="13" />
+    <text class="d-text" x="400" y="94" text-anchor="middle" font-size="9">C2</text>
+    <line class="d-line" x1="416" y1="90" x2="516" y2="90" />
+    <polygon class="d-dot" points="516,90 508,86 508,94" />
+    <text class="d-mut" x="466" y="82" text-anchor="middle" font-size="8">parent</text>
+    <circle class="d-dot" cx="534" cy="90" r="13" />
+    <text class="d-text" x="534" y="94" text-anchor="middle" font-size="9">C1</text>
+    <rect class="d-box" x="168" y="140" width="132" height="40" rx="8" />
+    <text class="d-label" x="234" y="158" text-anchor="middle" font-size="10">feat/x</text>
+    <text class="d-text" x="234" y="172" text-anchor="middle" font-size="9">902bfe1</text>
+    <line class="d-line" x1="300" y1="158" x2="522" y2="102" />
+    <polygon class="d-dot" points="522,102 513,103 517,110" />
+    <rect class="d-box" x="452" y="140" width="150" height="40" rx="8" />
+    <text class="d-label" x="527" y="158" text-anchor="middle" font-size="10">tag v1.0</text>
+    <text class="d-mut" x="527" y="172" text-anchor="middle" font-size="8">refs/tags/</text>
+    <line class="d-line" x1="470" y1="140" x2="412" y2="104" />
+    <polygon class="d-dot" points="412,104 416,112 421,105" />
+  </svg>
+  <figcaption>Une <strong>référence</strong> n'est qu'un fichier contenant un SHA. <code>HEAD</code> pointe (symboliquement) vers <code>main</code>, <code>main</code> vers un commit, chaque commit vers son parent&nbsp;; un tag est un autre pointeur. Créer une branche = écrire 40&nbsp;caractères.</figcaption>
+</figure>
+<p>Et <code>HEAD</code>&nbsp;? C'est généralement une référence <em>symbolique</em>&nbsp;: un fichier qui dit «&nbsp;je pointe vers telle branche&nbsp;». Quand tu committes, Git fait avancer la branche pointée par <code>HEAD</code>.</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash">cat .git/HEAD
+# ref: refs/heads/main    &lt;- HEAD pointe vers la branche main
+
+# Les tags vivent a part
+cat .git/refs/tags/v1.0
+# 4c1da97...b7</code></pre></figure>
+<p class="code-caption">Une tête détachée (<em>detached HEAD</em>), c'est simplement <code>HEAD</code> contenant un SHA au lieu de <code>ref: …</code>.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Avec <code>git pack-refs</code> ou sur un dépôt fraîchement cloné, certaines refs sont regroupées dans le fichier <code>.git/packed-refs</code> au lieu d'un fichier par branche. <code>git rev-parse</code> et <code>git show-ref</code> les lisent indifféremment&nbsp;: c'est pourquoi on préfère ces commandes à un <code>cat</code> brut.</p></div></div>
+
+<h2>Tour d'horizon du dossier .git</h2>
+<p>Tout le dépôt tient dans le dossier caché <code>.git</code>. En voici les pièces maîtresses.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">.git/
+├── HEAD          # ou pointe la tete courante (ex: ref: refs/heads/main)
+├── config        # configuration LOCALE du depot (remotes, user...)
+├── index         # la zone de preparation (staging area), en binaire
+├── objects/      # LE magasin : blobs, trees, commits, tags
+│   └── pack/     # objets compresses ensemble (packfiles)
+└── refs/
+    ├── heads/    # une branche = un fichier (un SHA)
+    └── tags/     # un tag leger = un fichier (un SHA)</code></pre></figure>
+<p class="code-caption">Le magasin d'objets est dans <code>objects/</code>&nbsp;; les pointeurs lisibles sont dans <code>refs/</code>.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>N'édite jamais <code>.git</code> à la main pour «&nbsp;réparer&nbsp;» quelque chose. Passe par les commandes Git&nbsp;: elles maintiennent la cohérence entre objets, refs et index. Un fichier <code>index</code> bricolé à la main peut corrompre ton staging.</p></div></div>
+
+<h2>Un commit contient tout l'historique</h2>
+<p>Comme chaque commit pointe vers son ou ses parents, et ceux-ci vers les leurs, un seul SHA de commit «&nbsp;contient&nbsp;» implicitement toute la chaîne qui le précède. C'est cette chaîne de hash qui rend l'historique <strong>infalsifiable</strong>&nbsp;: changer un vieux commit change son hash, donc celui de tous ses descendants.</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash"># Suivre la chaine des parents, du plus recent au plus ancien
+git log --pretty=format:"%h %p %s"
+# 4c1da97 902bfe1 Ajoute la page d'accueil   (%p = parent)
+# 902bfe1         Premier commit             (la racine n'a pas de parent)</code></pre></figure>
+<p class="code-caption"><code>%h</code> = hash court du commit, <code>%p</code> = hash de son parent.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un commit de fusion a simplement <strong>deux parents</strong> (ou plus). Le premier parent est la branche sur laquelle tu étais, le second celle que tu as fusionnée.</p></div></div>
+
+<h2>Instantanés, pas différences</h2>
+<p>Contrairement à beaucoup de systèmes plus anciens, Git ne stocke pas des <em>diffs</em> entre versions. Chaque commit référence un tree qui décrit l'état <strong>complet</strong> du projet à cet instant&nbsp;: un <strong>instantané</strong>. Les diffs que tu vois (<code>git diff</code>, <code>git show</code>) sont <em>calculés à la volée</em> entre deux instantanés.</p>
+<p>«&nbsp;Mais ce serait énorme&nbsp;!&nbsp;» En fait non&nbsp;: si un fichier ne change pas d'un commit à l'autre, le tree réutilise exactement le même blob (même contenu = même hash = un seul objet). Et plus tard, Git compresse les objets ensemble dans des <em>packfiles</em>, où il peut alors stocker des deltas pour gagner de la place. Le <em>modèle</em> reste l'instantané&nbsp;; la compression est un détail de stockage.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 216" role="img" aria-label="Trois commits successifs, chacun un instantané complet d'un projet à trois fichiers A, B et C. Au commit C1, les fichiers pointent vers les blobs a1, b1, c1. Au commit C2, seul le fichier B change : les blobs sont a1, b2, c1 ; a1 et c1 sont les mêmes objets qu'en C1, réutilisés car leur contenu n'a pas changé, tandis que b2 est un nouveau blob surligné. Au commit C3, rien ne change : a1, b2, c1 sont tous réutilisés. Git stocke des instantanés complets mais ne duplique jamais un contenu identique.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Chaque commit = un instantané complet ; un blob identique n'est stocké qu'une fois</text>
+    <rect class="d-frame" x="36" y="42" width="160" height="150" rx="10" />
+    <text class="d-label" x="116" y="64" text-anchor="middle" font-size="11">commit C1</text>
+    <rect class="d-box" x="52" y="76" width="128" height="30" rx="6" /><text class="d-text" x="116" y="96" text-anchor="middle" font-size="10">A → a1</text>
+    <rect class="d-box" x="52" y="112" width="128" height="30" rx="6" /><text class="d-text" x="116" y="132" text-anchor="middle" font-size="10">B → b1</text>
+    <rect class="d-box" x="52" y="148" width="128" height="30" rx="6" /><text class="d-text" x="116" y="168" text-anchor="middle" font-size="10">C → c1</text>
+    <rect class="d-frame" x="240" y="42" width="160" height="150" rx="10" />
+    <text class="d-label" x="320" y="64" text-anchor="middle" font-size="11">commit C2</text>
+    <rect class="d-box" x="256" y="76" width="128" height="30" rx="6" /><text class="d-text" x="320" y="96" text-anchor="middle" font-size="10">A → a1</text>
+    <rect class="d-accent" x="256" y="112" width="128" height="30" rx="6" /><text class="d-text" x="320" y="132" text-anchor="middle" font-size="10">B → b2</text>
+    <rect class="d-box" x="256" y="148" width="128" height="30" rx="6" /><text class="d-text" x="320" y="168" text-anchor="middle" font-size="10">C → c1</text>
+    <rect class="d-frame" x="444" y="42" width="160" height="150" rx="10" />
+    <text class="d-label" x="524" y="64" text-anchor="middle" font-size="11">commit C3</text>
+    <rect class="d-box" x="460" y="76" width="128" height="30" rx="6" /><text class="d-text" x="524" y="96" text-anchor="middle" font-size="10">A → a1</text>
+    <rect class="d-box" x="460" y="112" width="128" height="30" rx="6" /><text class="d-text" x="524" y="132" text-anchor="middle" font-size="10">B → b2</text>
+    <rect class="d-box" x="460" y="148" width="128" height="30" rx="6" /><text class="d-text" x="524" y="168" text-anchor="middle" font-size="10">C → c1</text>
+    <line class="d-line" x1="196" y1="91" x2="256" y2="91" stroke-dasharray="4 3" />
+    <line class="d-line" x1="400" y1="91" x2="460" y2="91" stroke-dasharray="4 3" />
+    <line class="d-line" x1="400" y1="127" x2="460" y2="127" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="208" text-anchor="middle" font-size="9">– – → blob réutilisé (même hash) · surligné = nouveau blob (B a changé en C2)</text>
+  </svg>
+  <figcaption>Git versionne des <strong>instantanés</strong> complets, mais un contenu identique n'est stocké qu'une fois (même hash = un seul blob). Le fichier B change en C2&nbsp;: seul un nouveau blob <code>b2</code> apparaît&nbsp;; <code>a1</code> et <code>c1</code> sont réutilisés.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour visualiser le partage de blobs, compare deux trees&nbsp;: <code>git ls-tree HEAD</code> et <code>git ls-tree HEAD~1</code>. Les fichiers inchangés affichent le <em>même</em> SHA de blob.</p></div></div>
+
+<h2>Plomberie (plumbing) vs convivial (porcelain)</h2>
+<p>Git distingue deux familles de commandes. Le <strong>porcelain</strong>, c'est ce que tu utilises au quotidien&nbsp;: <code>git status</code>, <code>git commit</code>, <code>git log</code>, <code>git push</code> — pensé pour les humains, l'affichage peut changer d'une version à l'autre. La <strong>plomberie</strong> (<em>plumbing</em>), c'est le bas niveau&nbsp;: <code>git cat-file</code>, <code>git hash-object</code>, <code>git rev-parse</code>, <code>git update-ref</code> — stable, pensé pour les scripts.</p>
+<figure class="code-block" data-file="bash"><pre><code class="language-bash"># Porcelain : confortable, sortie destinee a l'humain
+git log --oneline -1
+# 4c1da97 Ajoute la page d'accueil
+
+# Plumbing : brut, stable, scriptable
+git rev-parse HEAD
+# 4c1da97bf0a3e2d5c8...   (le SHA complet)</code></pre></figure>
+<p class="code-caption">Dans un script, préfère la plomberie&nbsp;: sa sortie ne bougera pas entre les versions de Git.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'une branche «&nbsp;contient&nbsp;» ses commits. Une branche est un <strong>pointeur</strong> vers un seul commit&nbsp;; les commits accessibles le sont via la chaîne des parents. Supprimer une branche n'efface pas les commits (ils restent atteignables tant qu'une autre ref ou le reflog les retient).</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre un <strong>blob</strong> (du contenu, sans nom) et un <strong>fichier</strong> (un nom listé dans un tree). Deux fichiers identiques pointent vers un seul et même blob. Et ne crois pas que Git stocke des différences&nbsp;: il stocke des instantanés, la compression en deltas n'arrive qu'ensuite.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore les <strong>packfiles</strong> et <code>git gc</code> (qui compresse et range les objets), <code>git fsck</code> (qui vérifie l'intégrité et liste les objets inaccessibles, les <em>dangling</em>), et le <code>git reflog</code> (le journal local des déplacements de <code>HEAD</code> et des branches, ton filet de sécurité après un reset). Tu verras alors comment Git récupère un commit «&nbsp;perdu&nbsp;» tant qu'il n'a pas été nettoyé.</p></div></div>
+
+<h2>Antisèche&nbsp;: objets et références</h2>
+<p>Le mémo du modèle interne de Git et des commandes de plomberie pour l'explorer.</p>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: les quatre objets, les références et la plomberie</caption>
+    <thead><tr><th>Élément</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><strong>blob</strong></td><td>Contenu d'un fichier (octets), sans nom ni date&nbsp;; identifié par le hash de son contenu</td></tr>
+      <tr><td><strong>tree</strong></td><td>Un répertoire&nbsp;: associe des noms à des blobs et des sous-trees, avec leur mode</td></tr>
+      <tr><td><strong>commit</strong></td><td>Un instantané&nbsp;: pointe vers un tree racine + parent(s) + auteur/date/message</td></tr>
+      <tr><td><strong>tag annoté</strong></td><td>Objet nommé pointant vers un autre objet, avec message et signataire</td></tr>
+      <tr><td><code>git hash-object</code></td><td>Calcule (et avec <code>-w</code> stocke) le hash d'un contenu</td></tr>
+      <tr><td><code>git cat-file -t</code> / <code>-p</code></td><td>Affiche le <em>type</em> / le contenu <em>pretty-print</em> d'un objet</td></tr>
+      <tr><td><code>git ls-tree</code></td><td>Liste les entrées d'un tree (mode, type, sha, nom)</td></tr>
+      <tr><td><code>git rev-parse</code></td><td>Résout un nom (<code>HEAD</code>, <code>main</code>…) en SHA complet — plomberie stable</td></tr>
+      <tr><td><code>HEAD</code></td><td>Référence symbolique vers la branche courante (<code>ref: refs/heads/…</code>)</td></tr>
+      <tr><td><code>refs/heads/&lt;b&gt;</code></td><td>Une branche = un fichier contenant un SHA de commit</td></tr>
+      <tr><td><code>refs/tags/&lt;t&gt;</code></td><td>Un tag léger = un fichier contenant un SHA</td></tr>
+      <tr><td><code>.git/objects</code></td><td>Le magasin d'objets (+ <code>pack/</code> pour les packfiles)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Adressage par contenu (<em>content-addressed</em>)</dt>
+  <dd>Principe où la clé d'un objet <strong>est</strong> le hash de son contenu&nbsp;: même contenu = même clé, d'où la déduplication et la détection de corruption.</dd>
+  <dt>blob</dt>
+  <dd>Objet Git contenant <strong>uniquement</strong> le contenu d'un fichier — ni nom, ni date, ni permissions.</dd>
+  <dt>tree</dt>
+  <dd>Objet Git représentant un répertoire&nbsp;; il relie des <em>noms</em> à des blobs (fichiers) et à d'autres trees (sous-dossiers).</dd>
+  <dt>commit</dt>
+  <dd>Objet Git = un <strong>instantané</strong>&nbsp;: il pointe vers un tree racine, vers son ou ses parents, et porte l'auteur, les dates et le message.</dd>
+  <dt>Référence (<em>ref</em>)</dt>
+  <dd>Fichier contenant un SHA qui désigne un objet&nbsp;: une branche (<code>refs/heads/</code>), un tag (<code>refs/tags/</code>) ou <code>HEAD</code>.</dd>
+  <dt>HEAD</dt>
+  <dd>Référence généralement <em>symbolique</em> qui désigne la branche — donc le commit — courante&nbsp;; une «&nbsp;tête détachée&nbsp;» contient directement un SHA.</dd>
+  <dt>Plomberie / porcelain</dt>
+  <dd>Commandes bas niveau, stables et scriptables (<em>plumbing</em>&nbsp;: <code>cat-file</code>, <code>rev-parse</code>…) par opposition aux commandes conviviales du quotidien (<em>porcelain</em>&nbsp;: <code>status</code>, <code>log</code>…).</dd>
+  <dt>Instantané (<em>snapshot</em>)</dt>
+  <dd>État complet du projet à un commit&nbsp;; les blobs inchangés sont <strong>réutilisés</strong> et non dupliqués, et les <em>diffs</em> sont calculés à la volée entre deux instantanés.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Git est un <strong>magasin clé-valeur adressé par contenu</strong>&nbsp;: la clé est le hash du contenu, d'où l'intégrité.</li>
+<li>Quatre objets&nbsp;: <strong>blob</strong> (contenu), <strong>tree</strong> (noms → objets), <strong>commit</strong> (tree racine + parents + métadonnées), <strong>tag</strong> annoté.</li>
+<li>On inspecte avec <code>git cat-file -t/-p</code>, <code>git hash-object</code>, <code>git ls-tree</code>.</li>
+<li>Une branche est un <strong>fichier contenant un SHA</strong> dans <code>refs/heads/</code>&nbsp;; <code>HEAD</code> pointe vers la branche courante&nbsp;; les tags sont dans <code>refs/tags/</code>.</li>
+<li>Git stocke des <strong>instantanés</strong> (réutilisant les blobs inchangés), pas des diffs&nbsp;; la <em>plomberie</em> est stable, le <em>porcelain</em> est convivial.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi modifier un seul octet d'un fichier change-t-il complètement le hash de son blob&nbsp;?</li><li>Où se trouve le <em>nom</em> d'un fichier&nbsp;: dans le blob ou dans le tree&nbsp;? Pourquoi&nbsp;?</li><li>Que contient exactement le fichier <code>.git/refs/heads/main</code>, et qu'est-ce que cela implique sur ce qu'est une branche&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi modifier un seul octet d'un fichier change-t-il complètement le hash de son blob ?","a":["Parce que le contenu est haché par une fonction cryptographique (SHA-1) : le moindre changement produit une empreinte entièrement différente (effet d'avalanche)","Parce que Git renomme le fichier","Parce que le hash dépend de la date","Parce que le blob stocke le nom"],"correct":0,"explain":"Git identifie un blob par le hachage de son contenu. Une propriété des fonctions de hachage cryptographiques est l'effet d'avalanche : une entrée à peine modifiée donne une sortie radicalement différente."},
+  {"q":"Où se trouve le nom d'un fichier : dans le blob ou dans le tree ? Pourquoi ?","a":["Dans le tree : le blob ne contient que le contenu (pas le nom), si bien que deux fichiers identiques partagent le même blob ; le tree associe les noms aux blobs","Dans le blob","Dans le commit uniquement","Nulle part, Git devine"],"correct":0,"explain":"Un blob est purement du contenu, identifié par son hash : deux fichiers au contenu identique se déduplique sur le même blob. C'est le tree (l'arbre de répertoire) qui relie chaque nom de fichier à un blob."},
+  {"q":"Que contient exactement le fichier .git/refs/heads/main, et qu'est-ce que cela implique sur ce qu'est une branche ?","a":["Il contient le SHA-1 du commit de pointe ; une branche n'est donc qu'un pointeur mobile vers un commit, d'où la légèreté et la rapidité des branches Git","Tout l'historique de la branche","Une copie des fichiers","La configuration du dépôt"],"correct":0,"explain":"Une référence de branche est un simple fichier contenant l'identifiant du dernier commit. Créer ou déplacer une branche revient à écrire 40 caractères : c'est pourquoi les branches Git sont si peu coûteuses."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["git cat-file -p HEAD","git cat-file -p","git cat-file"],"placeholder":"la commande pour afficher le contenu brut du dernier commit (lignes tree, parent, author)","hints":["cat-file inspecte les objets internes de Git.","-p « pretty-print » affiche le contenu lisible.","git cat-file ??? HEAD"],"link":{"href":"lecon-15.html","label":"Revoir « L'objet commit »"}},
+  {"type":"text","accept":["git ls-tree","git ls-tree HEAD"],"placeholder":"la commande pour lister le contenu d'un tree (chaque nom → un blob ou un sous-tree)","hints":["Un tree est l'équivalent d'un dossier dans Git.","Cette commande en affiche les entrées.","git ???-tree <tree>"],"link":{"href":"lecon-15.html","label":"Revoir « L'objet tree »"}},
+  {"type":"text","accept":["commit","un commit","SHA de commit","un sha de commit"],"placeholder":"le type d'objet Git vers lequel pointe refs/heads/main","hints":["Une branche n'est qu'un pointeur léger.","Le fichier refs/heads/main contient un seul SHA.","Le SHA d'un… ?"],"link":{"href":"lecon-15.html","label":"Revoir « Les références »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Affiche le contenu brut de ton dernier commit et identifie les lignes <code>tree</code>, <code>parent</code> et <code>author</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="bash"><pre><code class="language-bash">git cat-file -p HEAD
+# tree 9a72c1f...     &lt;- le tree racine de cet instantane
+# parent 902bfe1...   &lt;- le commit precedent (absent si c'est le tout premier)
+# author Noah &lt;noah@example.com&gt; 1749513600 +0200
+# committer Noah &lt;noah@example.com&gt; 1749513600 +0200
+#
+# Ajoute la page d'accueil</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pars de <code>HEAD</code>, récupère le SHA de son tree racine, liste ce tree, puis affiche le <em>contenu</em> d'un des blobs qu'il référence.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="bash"><pre><code class="language-bash"># 1. Recuperer le SHA du tree racine
+git rev-parse HEAD^{tree}
+# 9a72c1f...
+
+# 2. Lister ce tree (nom -&gt; blob/tree)
+git ls-tree HEAD^{tree}
+# 100644 blob a45e3b1...   README.md
+
+# 3. Afficher le contenu du blob (par son SHA)
+git cat-file -p a45e3b1
+# (le contenu exact du fichier README.md, sans son nom)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique, preuves à l'appui, ce que contient <code>refs/heads/main</code> et montre qu'il pointe vers le même objet que <code>HEAD</code> quand <code>main</code> est la branche courante.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="bash"><pre><code class="language-bash"># refs/heads/main contient UNIQUEMENT un SHA de commit
+git rev-parse refs/heads/main
+# 4c1da97...
+
+# HEAD est symbolique : il pointe vers la branche main
+cat .git/HEAD
+# ref: refs/heads/main
+
+# Donc resoudre HEAD et main donne le MEME commit
+git rev-parse HEAD main
+# 4c1da97...   (HEAD)
+# 4c1da97...   (main)
+# Conclusion : "main" n'est qu'un pointeur (un fichier-SHA) ;
+# HEAD suit cette branche, et committer fera avancer ce pointeur.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

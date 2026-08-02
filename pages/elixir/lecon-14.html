@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Task et Agent — Leçon 14 · Elixir · Syntaxe</title>
+    <meta name="description" content="La concurrence de haut niveau en Elixir : Task pour lancer des calculs en parallèle (async/await, async_stream, max_concurrency) et Agent pour partager un état simple sans écrire un GenServer complet." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="elixir" data-lesson="lecon-14.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Elixir</a></li>
+            <li aria-current="page">Leçon 14</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Elixir : aller plus loin — Leçon 14</p>
+              <h1 class="lesson-header__title">Task et Agent</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 13 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lancer un calcul en parallèle avec <code>Task.async</code> / <code>Task.await</code>&nbsp;;</li>
+                  <li>paralléliser une collection avec <code>Task.async_stream</code> et borner la concurrence&nbsp;;</li>
+                  <li>partager un état simple avec un <strong>Agent</strong>&nbsp;;</li>
+                  <li>choisir entre <strong>Task</strong>, <strong>Agent</strong> et <strong>GenServer</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais créer des processus à la main (<code>spawn</code>, <code>send</code>, <code>receive</code>) et écrire un <code>GenServer</code> complet (leçon&nbsp;9). C'est puissant, mais souvent <em>trop</em> pour deux besoins très courants&nbsp;: <strong>lancer un calcul en parallèle et récupérer son résultat</strong>, et <strong>garder un petit état partagé</strong>. Elixir fournit deux abstractions taillées exactement pour ça&nbsp;: <code>Task</code> et <code>Agent</code>. Ce sont des raccourcis bâtis <em>au-dessus</em> des processus et d'OTP&nbsp;; ils t'évitent d'écrire la plomberie à chaque fois.</p>
+
+<h2>Task : calculer en parallèle</h2>
+<p>Un <strong>Task</strong> exécute une fonction dans un processus séparé. La forme la plus utile est le couple <code>Task.async/1</code> + <code>Task.await/2</code>&nbsp;: <code>async</code> démarre le travail <em>tout de suite</em> et rend la main aussitôt&nbsp;; <code>await</code> attend le résultat quand tu en as besoin.</p>
+<figure class="code-block" data-file="iex"><pre><code class="language-elixir"># Séquentiel : chaque appel bloque le suivant (≈ 600 ms au total)
+meteo = appel_lent(:meteo)
+actus = appel_lent(:actus)
+bourse = appel_lent(:bourse)
+
+# Parallèle : les trois démarrent ensemble, on attend ensuite (≈ 200 ms)
+t1 = Task.async(fn -> appel_lent(:meteo) end)
+t2 = Task.async(fn -> appel_lent(:actus) end)
+t3 = Task.async(fn -> appel_lent(:bourse) end)
+
+[Task.await(t1), Task.await(t2), Task.await(t3)]
+# => [%{...}, %{...}, %{...}]</code></pre></figure>
+<p>Le travail total ne change pas&nbsp;; ce qui change, c'est l'<em>attente</em>. Trois appels de 200&nbsp;ms lancés ensemble se terminent en ≈&nbsp;200&nbsp;ms au lieu de 600. C'est le gain typique quand des tâches sont <strong>indépendantes</strong> et surtout limitées par l'attente (réseau, disque).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 216" role="img" aria-label="Trois appels réseau exécutés d'abord en série, puis en parallèle. En série, les trois barres météo, actus et bourse de 200 millisecondes chacune se suivent bout à bout, soit environ 600 millisecondes. En parallèle avec Task.async, les trois barres démarrent au même instant et se superposent : le temps total tombe à environ 200 millisecondes, la durée du plus lent. Même travail, trois fois moins d'attente.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Trois appels réseau : en série, puis en parallèle</text>
+    <text class="d-tag" x="24" y="48" font-size="9.5">En série — un await après l'autre</text>
+    <rect class="d-box" x="24" y="56" width="150" height="22" rx="3" /><text class="d-mut" x="99" y="71" text-anchor="middle" font-size="8">météo · 200 ms</text>
+    <rect class="d-box" x="178" y="56" width="150" height="22" rx="3" /><text class="d-mut" x="253" y="71" text-anchor="middle" font-size="8">actus · 200 ms</text>
+    <rect class="d-box" x="332" y="56" width="150" height="22" rx="3" /><text class="d-mut" x="407" y="71" text-anchor="middle" font-size="8">bourse · 200 ms</text>
+    <text class="d-mut" x="494" y="71" font-size="8.5">≈ 600 ms</text>
+    <text class="d-tag" x="24" y="112" font-size="9.5">En parallèle — Task.async puis await</text>
+    <rect class="d-accent" x="24" y="120" width="150" height="18" rx="3" /><text class="d-text" x="99" y="133" text-anchor="middle" font-size="8">météo</text>
+    <rect class="d-accent" x="24" y="142" width="150" height="18" rx="3" /><text class="d-text" x="99" y="155" text-anchor="middle" font-size="8">actus</text>
+    <rect class="d-accent" x="24" y="164" width="150" height="18" rx="3" /><text class="d-text" x="99" y="177" text-anchor="middle" font-size="8">bourse</text>
+    <path class="d-line" d="M178 120 L178 182" fill="none" /><circle class="d-dot" cx="178" cy="151" r="2.5" />
+    <text class="d-mut" x="192" y="147" font-size="8.5">≈ 200 ms</text>
+    <text class="d-mut" x="192" y="161" font-size="8">(la durée du plus lent)</text>
+    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="8">même travail, trois fois moins d'attente</text>
+  </svg>
+  <figcaption><code>Task.async</code> démarre chaque calcul immédiatement&nbsp;; <code>Task.await</code> ne fait que <em>récolter</em> les résultats. Le gain vient des tâches indépendantes exécutées en même temps.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: agréger un tableau de bord</p><p>Une page d'accueil affiche la <strong>météo</strong>, les <strong>dernières actualités</strong> et un <strong>cours de bourse</strong>, chacun servi par une API distincte. En séquentiel, l'utilisateur attend la somme des trois latences&nbsp;; si une API rame à 400&nbsp;ms, toute la page traîne. En enveloppant les trois appels dans des <code>Task.async</code> et en récoltant par <code>Task.await</code>, la page se construit en ≈&nbsp;la durée de l'appel le plus lent. C'est le motif « scatter-gather » (éclater puis rassembler), omniprésent dans les <em>back-ends</em> qui composent plusieurs services.</p></div></div>
+
+<h2>Paralléliser une collection : <code>Task.async_stream</code></h2>
+<p>Lancer un <code>Task</code> par élément d'une liste de 10&nbsp;000 URL saturerait la machine (et le serveur d'en face). <code>Task.async_stream/3</code> résout ça&nbsp;: il mappe une fonction sur une collection <strong>en parallèle</strong>, mais avec une <strong>concurrence bornée</strong> (par défaut, le nombre de cœurs). C'est un <code>Enum.map</code> concurrent et discipliné.</p>
+<figure class="code-block" data-file="iex"><pre><code class="language-elixir">urls = ["https://a.example", "https://b.example", "https://c.example"]
+
+urls
+|> Task.async_stream(&amp;telecharger/1, max_concurrency: 8, timeout: 5_000)
+|> Enum.map(fn
+  {:ok, contenu} -> contenu
+  {:exit, raison} -> {:erreur, raison}
+end)</code></pre></figure>
+<p>Chaque résultat arrive sous la forme <code>{:ok, valeur}</code> ou <code>{:exit, raison}</code> (par exemple un dépassement de délai)&nbsp;: un élément qui échoue n'interrompt pas les autres. <code>max_concurrency</code> plafonne le nombre de tâches simultanées&nbsp;; c'est <em>le</em> réglage qui protège tes ressources.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title"><code>await</code> a un délai par défaut de 5&nbsp;secondes</p><p><code>Task.await(task)</code> lève une erreur si le résultat n'arrive pas en <strong>5&nbsp;000&nbsp;ms</strong>. Pour un travail plus long, passe le délai explicitement&nbsp;: <code>Task.await(task, 30_000)</code> (ou <code>:infinity</code>). Pense-y dès qu'une tâche interroge un service lent&nbsp;: le bug se manifeste seulement en production, sous charge.</p></div></div>
+
+<h2>Agent : un état partagé sans cérémonie</h2>
+<p>Elixir est immuable&nbsp;: pour <em>partager</em> une valeur qui évolue entre plusieurs processus, il faut un processus qui la détient. Écrire un <code>GenServer</code> juste pour « garder un compteur » est verbeux. L'<strong>Agent</strong> est précisément ce GenServer minimal&nbsp;: il enveloppe un état et expose <code>get</code> (lire) et <code>update</code> (transformer).</p>
+<figure class="code-block" data-file="iex"><pre><code class="language-elixir"># Démarrer un agent avec un état initial (une fonction qui le produit)
+{:ok, pid} = Agent.start_link(fn -> %{total: 0} end)
+
+# Lire : une fonction reçoit l'état, renvoie ce qu'on veut en sortir
+Agent.get(pid, fn etat -> etat.total end)      # => 0
+
+# Mettre à jour : une fonction reçoit l'état, renvoie le NOUVEL état
+Agent.update(pid, fn etat -> %{etat | total: etat.total + 5} end)
+
+Agent.get(pid, &amp; &amp;1.total)                       # => 5
+
+# Lire ET écrire d'un seul coup (atomique)
+Agent.get_and_update(pid, fn e -> {e.total, %{e | total: 0}} end)
+# => 5  (renvoie l'ancien total, remet à zéro)</code></pre></figure>
+<p>Chaque opération est un message&nbsp;: l'agent les traite <strong>une à la fois</strong>, ce qui sérialise les accès et évite toute course entre processus. Tu obtiens un état partagé sûr sans le moindre verrou.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 198" role="img" aria-label="Un Agent est un processus qui détient un état. Au centre, une boîte Agent contient l'état, une map avec total égal à 42. À gauche, deux clients envoient des messages : l'un appelle Agent.get pour lire, l'autre Agent.update pour transformer. Les flèches partent des clients vers l'Agent. À droite, une note indique que les messages sont traités un par un, ce qui sérialise les accès et rend inutile tout verrou.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un Agent : un processus qui garde l'état</text>
+    <rect class="d-accent" x="250" y="74" width="150" height="58" rx="8" /><text class="d-text" x="325" y="98" text-anchor="middle" font-size="9.5">Agent</text><text class="d-mut" x="325" y="115" text-anchor="middle" font-size="8">état : %{total: 42}</text>
+    <rect class="d-box" x="30" y="52" width="160" height="32" rx="5" /><text class="d-text" x="110" y="72" text-anchor="middle" font-size="8">Agent.get(pid, &amp; &amp;1)</text>
+    <rect class="d-box" x="30" y="122" width="160" height="32" rx="5" /><text class="d-text" x="110" y="142" text-anchor="middle" font-size="8">Agent.update(pid, f)</text>
+    <path class="d-line" d="M190 68 L250 92" fill="none" /><circle class="d-dot" cx="250" cy="92" r="2.5" /><text class="d-mut" x="206" y="76" font-size="7.5">lire</text>
+    <path class="d-line" d="M190 138 L250 116" fill="none" /><circle class="d-dot" cx="250" cy="116" r="2.5" /><text class="d-mut" x="200" y="150" font-size="7.5">transformer</text>
+    <rect class="d-frame" x="440" y="74" width="176" height="58" rx="6" /><text class="d-mut" x="528" y="98" text-anchor="middle" font-size="8">messages traités</text><text class="d-mut" x="528" y="112" text-anchor="middle" font-size="8">un par un →</text><text class="d-mut" x="528" y="126" text-anchor="middle" font-size="8">aucun verrou nécessaire</text>
+    <path class="d-line" d="M400 103 L440 103" fill="none" /><circle class="d-dot" cx="440" cy="103" r="2.5" />
+  </svg>
+  <figcaption>L'Agent centralise l'état dans un processus. Comme il traite les demandes <strong>séquentiellement</strong>, deux mises à jour concurrentes ne peuvent pas se corrompre&nbsp;: la sûreté vient du modèle à messages, pas d'un verrou.</figcaption>
+</figure>
+
+<h2>Task, Agent ou GenServer ?</h2>
+<p>Les trois reposent sur des processus&nbsp;; le bon choix dépend du besoin&nbsp;:</p>
+<ul>
+  <li><strong>Task</strong> — « fais ce calcul (en parallèle) et rends-moi le résultat ». Cycle de vie court, orienté <em>travail ponctuel</em>.</li>
+  <li><strong>Agent</strong> — « garde cette valeur et laisse plusieurs processus la lire/l'écrire ». Orienté <em>état simple</em>, sans logique métier.</li>
+  <li><strong>GenServer</strong> — état <em>plus</em> comportement&nbsp;: réagir à des messages variés, gérer des règles, planifier du travail. C'est l'outil complet quand Task et Agent deviennent trop justes.</li>
+</ul>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un Agent ne doit pas porter de calcul lourd</p><p>Comme l'Agent traite les messages un par un, tout le monde attend derrière l'opération en cours. Ne mets <strong>jamais</strong> un calcul long dans la fonction passée à <code>update</code>&nbsp;: fais le calcul <em>avant</em> (dans l'appelant, éventuellement via un <code>Task</code>), puis passe la valeur déjà prête à l'Agent. Sinon, ton état partagé devient un goulot d'étranglement pour tous ses clients.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title"><code>async</code> lie le Task à son parent</p><p>Un <code>Task.async</code> est <em>lié</em> au processus qui l'a lancé&nbsp;: si l'un plante, l'autre aussi, et le résultat <strong>doit</strong> être récolté par <code>await</code>. C'est voulu pour du «&nbsp;calcule-et-rends&nbsp;». Pour du <em>fire-and-forget</em> qui doit survivre à son parent, on passe par un <code>Task.Supervisor</code> et <code>Task.start_child</code>&nbsp;: la tâche est alors supervisée indépendamment (revoir la leçon&nbsp;10 sur la supervision).</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p><code>Task.async_stream</code> accepte <code>ordered: false</code> pour renvoyer les résultats <em>dès qu'ils arrivent</em> (plus rapide si les durées varient) et <code>on_timeout: :kill_task</code> pour ignorer les traînards. Pour des pipelines de données concurrents plus ambitieux — back-pressure, étapes multiples — regarde <strong>GenStage</strong> et <strong>Flow</strong>, qui industrialisent ce que <code>async_stream</code> fait à petite échelle.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — Task et Agent</caption>
+    <thead><tr><th scope="col">But</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Lancer en parallèle</td><td><code>t = Task.async(fn -&gt; … end)</code></td><td>démarre aussitôt</td></tr>
+      <tr><td>Récolter le résultat</td><td><code>Task.await(t, 30_000)</code></td><td>délai défaut 5 s</td></tr>
+      <tr><td>Mapper une liste en //</td><td><code>Task.async_stream(coll, f, max_concurrency: 8)</code></td><td>concurrence bornée</td></tr>
+      <tr><td>Fire-and-forget supervisé</td><td><code>Task.Supervisor.start_child(sup, f)</code></td><td>survit au parent</td></tr>
+      <tr><td>Démarrer un état</td><td><code>Agent.start_link(fn -&gt; %{} end)</code></td><td>état initial</td></tr>
+      <tr><td>Lire l'état</td><td><code>Agent.get(pid, &amp; &amp;1)</code></td><td>fonction de lecture</td></tr>
+      <tr><td>Modifier l'état</td><td><code>Agent.update(pid, f)</code></td><td>renvoie le nouvel état</td></tr>
+      <tr><td>Lire et modifier</td><td><code>Agent.get_and_update(pid, f)</code></td><td>atomique</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Task</dt><dd>Abstraction pour exécuter une fonction dans un processus séparé, typiquement pour un calcul concurrent ponctuel.</dd>
+  <dt><code>Task.async</code> / <code>await</code></dt><dd><code>async</code> démarre le travail immédiatement et rend la main&nbsp;; <code>await</code> attend puis renvoie le résultat.</dd>
+  <dt><code>Task.async_stream</code></dt><dd>Applique une fonction à une collection en parallèle, avec une concurrence plafonnée&nbsp;; renvoie <code>{:ok, v}</code> ou <code>{:exit, raison}</code> par élément.</dd>
+  <dt><code>max_concurrency</code></dt><dd>Nombre maximal de tâches simultanées d'un <code>async_stream</code>&nbsp;; protège la machine et les services appelés.</dd>
+  <dt>Agent</dt><dd>Processus qui détient un état partagé, exposé via <code>get</code>/<code>update</code>&nbsp;; un GenServer minimal pour «&nbsp;juste garder une valeur&nbsp;».</dd>
+  <dt><code>get_and_update</code></dt><dd>Opération d'Agent qui lit et remplace l'état en une seule étape atomique.</dd>
+  <dt>Fire-and-forget</dt><dd>Tâche lancée sans attendre son résultat&nbsp;; à superviser via <code>Task.Supervisor</code> pour qu'elle survive à son parent.</dd>
+  <dt>Timeout</dt><dd>Délai maximal d'attente (par défaut 5&nbsp;s pour <code>await</code>) au-delà duquel l'opération échoue.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Task</strong> exécute un calcul en parallèle&nbsp;: <code>async</code> lance, <code>await</code> récolte&nbsp;; le gain vient des tâches indépendantes.</li>
+  <li><strong><code>Task.async_stream</code></strong> parallélise une collection avec une concurrence <em>bornée</em> (<code>max_concurrency</code>).</li>
+  <li><strong>Agent</strong> partage un état simple (<code>get</code>/<code>update</code>), traité message par message&nbsp;: sûr, sans verrou.</li>
+  <li>Choisis&nbsp;: <strong>Task</strong> = travail ponctuel, <strong>Agent</strong> = état simple, <strong>GenServer</strong> = état + logique.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi <code>Task.async</code> + <code>await</code> accélère-t-il trois appels réseau&nbsp;?</li>
+  <li>À quoi sert <code>max_concurrency</code> dans <code>async_stream</code>&nbsp;?</li>
+  <li>Quand préférer un Agent à un GenServer&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi Task.async suivi de Task.await accélère-t-il trois appels réseau indépendants ?","a":["Les trois calculs démarrent en même temps ; le temps total tombe à celui du plus lent au lieu de la somme","Le code s'exécute deux fois plus vite sur chaque cœur","await met en cache les résultats","async supprime la latence réseau"],"correct":0,"explain":"async lance chaque tâche immédiatement, donc elles s'exécutent en parallèle. await ne fait que récolter. Pour des tâches indépendantes limitées par l'attente, le total ≈ la durée du plus lent."},
+  {"q":"À quoi sert l'option max_concurrency de Task.async_stream ?","a":["À plafonner le nombre de tâches exécutées simultanément, pour protéger la machine et les services appelés","À fixer le nombre de résultats renvoyés","À trier les résultats","À définir le délai d'attente de chaque tâche"],"correct":0,"explain":"async_stream mappe en parallèle mais avec une concurrence bornée. max_concurrency évite de lancer des dizaines de milliers de tâches d'un coup et de saturer les ressources."},
+  {"q":"Dans quel cas un Agent est-il préférable à un GenServer complet ?","a":["Quand on veut seulement garder et partager un état simple, sans logique métier ni messages variés","Quand il faut réagir à de nombreux types de messages","Quand on a besoin de planifier du travail périodique","Quand l'état doit contenir un calcul lourd"],"correct":0,"explain":"L'Agent est un GenServer minimal centré sur l'état (get/update). Dès qu'il faut de la logique, des messages variés ou du travail planifié, on passe au GenServer."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["Task.async","async"],"placeholder":"la fonction qui démarre un calcul dans un processus séparé et rend la main aussitôt","hints":["On récolte ensuite son résultat avec await.","Module Task.","Task.?????(fn -> … end)"],"link":{"href":"lecon-14.html","label":"Revoir « Task : calculer en parallèle »"}},
+  {"type":"text","accept":["max_concurrency"],"placeholder":"l'option de async_stream qui plafonne le nombre de tâches simultanées","hints":["Deux mots reliés par un tiret bas.","Elle protège la machine et le service appelé.","Task.async_stream(coll, f, ????????????: 8)"],"link":{"href":"lecon-14.html","label":"Revoir « Task.async_stream »"}},
+  {"type":"text","accept":["Agent.update","update"],"placeholder":"la fonction d'Agent qui transforme l'état (reçoit l'état, renvoie le nouvel état)","hints":["Son pendant en lecture est Agent.get.","Elle prend le pid et une fonction.","Agent.??????(pid, fn e -> … end)"],"link":{"href":"lecon-14.html","label":"Revoir « Agent : un état partagé »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Tu as trois fonctions <code>lire_fichier(a)</code>, <code>lire_fichier(b)</code>, <code>lire_fichier(c)</code> indépendantes. Lance-les en parallèle et récupère la liste des trois contenus.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="iex"><pre><code class="language-elixir">[a, b, c]
+|> Enum.map(fn f -> Task.async(fn -> lire_fichier(f) end) end)
+|> Enum.map(&amp;Task.await/1)</code></pre></figure><p>Premier <code>map</code>&nbsp;: on démarre les trois tasks (ils tournent déjà en parallèle). Second <code>map</code>&nbsp;: on récolte dans l'ordre. Ne jamais <code>await</code> juste après chaque <code>async</code>, sinon on retombe en séquentiel&nbsp;!</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Télécharge une liste d'URL en limitant à <strong>4</strong> téléchargements simultanés, et récupère uniquement les succès.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="iex"><pre><code class="language-elixir">urls
+|> Task.async_stream(&amp;telecharger/1, max_concurrency: 4, timeout: 10_000)
+|> Enum.flat_map(fn
+  {:ok, contenu} -> [contenu]
+  {:exit, _raison} -> []
+end)</code></pre></figure><p><code>max_concurrency: 4</code> borne la charge&nbsp;; <code>flat_map</code> avec <code>[]</code> pour les échecs jette proprement les résultats <code>{:exit, …}</code>.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un module <code>Compteur</code> qui, avec un Agent, expose <code>demarrer/0</code>, <code>incrementer/1</code> et <code>valeur/1</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="compteur.ex"><pre><code class="language-elixir">defmodule Compteur do
+  def demarrer, do: Agent.start_link(fn -> 0 end)
+  def incrementer(pid), do: Agent.update(pid, &amp;(&amp;1 + 1))
+  def valeur(pid), do: Agent.get(pid, &amp; &amp;1)
+end
+
+{:ok, c} = Compteur.demarrer()
+Compteur.incrementer(c)
+Compteur.valeur(c)   # => 1</code></pre></figure><p>L'Agent tient l'entier&nbsp;; <code>update</code> l'incrémente atomiquement, <code>get</code> le lit. Plusieurs processus peuvent appeler <code>incrementer</code> sans course grâce au traitement message par message.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-elixir.min.js" defer></script>
+  </body>
+</html>

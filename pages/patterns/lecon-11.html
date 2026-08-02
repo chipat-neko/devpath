@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet — un éditeur avec annulation (undo/redo) — Leçon 11 · Design patterns · Syntaxe</title>
+    <meta name="description" content="Assembler Command, Memento et Observer dans un vrai projet : un éditeur de texte avec annulation et rétablissement (undo/redo), le fameux Ctrl+Z." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="patterns" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Design patterns</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Projet — Leçon 11</p>
+              <h1 class="lesson-header__title">Projet — un éditeur avec annulation (undo/redo)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 10 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>encapsuler chaque édition dans une <strong>commande</strong> (Command)&nbsp;;</li>
+                  <li>capturer et restaurer un état avec un <strong>Memento</strong>&nbsp;;</li>
+                  <li>gérer l'<strong>annulation et le rétablissement</strong> avec deux piles&nbsp;;</li>
+                  <li>rafraîchir l'affichage automatiquement avec un <strong>Observateur</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu connais maintenant les patterns un par un. Mais dans un vrai projet, ils ne vivent jamais seuls&nbsp;: ils <strong>collaborent</strong>. Pour t'en convaincre, construisons une fonctionnalité que tu utilises chaque jour sans y penser — l'<strong>annulation / rétablissement</strong> (<em>undo/redo</em>), le fameux <kbd>Ctrl</kbd>+<kbd>Z</kbd>. Derrière ce raccourci si banal se cache une petite mécanique élégante qui réunit <strong>trois</strong> patterns comportementaux&nbsp;: <strong>Command</strong>, <strong>Memento</strong> et <strong>Observer</strong>.</p>
+
+<h2>Ce que tu vas construire</h2>
+<p>Un mini-éditeur de texte capable de&nbsp;: saisir du texte, <strong>annuler</strong> la dernière saisie, la <strong>rétablir</strong>, et prévenir <strong>automatiquement</strong> un aperçu à chaque changement. C'est exactement le squelette d'un traitement de texte ou d'un éditeur de code.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le brief</p><p>Trois patterns, trois rôles précis&nbsp;: <strong>Command</strong> transforme chaque édition en objet <em>que l'on peut défaire</em>&nbsp;; <strong>Memento</strong> photographie l'état avant chaque geste&nbsp;; <strong>Observer</strong> tient l'affichage à jour sans qu'on ait à y penser. Aucun ne suffirait seul&nbsp;: c'est leur <em>assemblage</em> qui fait la fonctionnalité.</p></div></div>
+
+<h2>La conception : trois patterns qui collaborent</h2>
+<p>Avant de coder, dessinons les rôles. Le cœur est l'<strong>Éditeur</strong> (qui détient le texte). Autour de lui&nbsp;: des <strong>commandes</strong> qui agissent sur lui, un <strong>historique</strong> qui les empile pour permettre l'aller-retour, des <strong>mementos</strong> qui capturent son état, et des <strong>observateurs</strong> qu'il prévient.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Les trois patterns autour de l'Éditeur. Au centre, l'Éditeur détient le texte. À gauche, le pattern Command : chaque édition est un objet avec executer et annuler, empilé dans l'historique. En haut, le pattern Memento : l'Éditeur produit des instantanés de son état que les commandes conservent pour les restaurer. À droite, le pattern Observer : l'Éditeur notifie ses observateurs, comme un aperçu, à chaque changement.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Trois patterns, trois responsabilités autour de l'Éditeur</text>
+    <rect class="d-accent" x="250" y="86" width="140" height="52" rx="8" /><text class="d-text" x="320" y="110" text-anchor="middle" font-size="12">Éditeur</text><text class="d-mut" x="320" y="126" text-anchor="middle" font-size="9">détient le texte</text>
+    <rect class="d-box" x="24" y="86" width="170" height="52" rx="8" /><text class="d-tag" x="109" y="107" text-anchor="middle" font-size="11">Command</text><text class="d-mut" x="109" y="124" text-anchor="middle" font-size="9">executer() / annuler()</text>
+    <rect class="d-box" x="235" y="150" width="170" height="44" rx="8" /><text class="d-tag" x="320" y="170" text-anchor="middle" font-size="11">Memento</text><text class="d-mut" x="320" y="185" text-anchor="middle" font-size="9">instantané de l'état</text>
+    <rect class="d-box" x="446" y="86" width="170" height="52" rx="8" /><text class="d-tag" x="531" y="107" text-anchor="middle" font-size="11">Observer</text><text class="d-mut" x="531" y="124" text-anchor="middle" font-size="9">aperçu, compteur…</text>
+    <path class="d-line" d="M194 112 L248 112" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="248,112 240,108 240,116" /><text class="d-mut" x="221" y="104" text-anchor="middle" font-size="8">agit sur</text>
+    <path class="d-line" d="M320 150 L320 140" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="320,138 316,146 324,146" /><text class="d-mut" x="320" y="149" text-anchor="middle" font-size="8"> </text>
+    <path class="d-line" d="M390 112 L444 112" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="444,112 436,108 436,116" /><text class="d-mut" x="417" y="104" text-anchor="middle" font-size="8">notifie</text>
+  </svg>
+  <figcaption>Chaque pattern porte <strong>une</strong> responsabilité. Leur assemblage — pas l'un d'eux — produit l'undo/redo.</figcaption>
+</figure>
+
+<h2>Command : chaque édition devient un objet</h2>
+<p>Première brique, le pattern <strong>Command</strong> (vu en leçon 05)&nbsp;: au lieu d'agir directement sur le texte, on <em>emballe</em> chaque geste dans un objet qui sait s'<strong>exécuter</strong> et s'<strong>annuler</strong>. C'est ce qui rend l'action <em>réversible</em> et <em>stockable</em>.</p>
+<figure class="code-block" data-file="une commande sait se faire… et se défaire"><pre><code class="language-javascript">// COMMAND : une saisie encapsulée, qui mémorise l'état d'avant
+class CommandeSaisir {
+  constructor(editeur, texte) {
+    this.editeur = editeur;
+    this.texte = texte;
+  }
+  executer() {
+    this.avant = this.editeur.sauvegarder(); // instantané AVANT (Memento)
+    this.editeur.saisir(this.texte);         // puis on agit
+  }
+  annuler() {
+    this.editeur.restaurer(this.avant);      // on remet l'instantané
+  }
+}</code></pre></figure>
+<p>Remarque comment Command et Memento se donnent la main&nbsp;: la commande ne calcule pas «&nbsp;l'inverse&nbsp;» de son geste, elle <strong>photographie</strong> l'état d'avant et le restaure pour annuler. Simple et robuste, quelle que soit la complexité de l'édition.</p>
+
+<h2>L'historique : deux piles pour annuler et rétablir</h2>
+<p>Pour offrir un <em>redo</em> en plus du <em>undo</em>, il faut <strong>deux piles</strong>. La pile d'<strong>annulation</strong> reçoit chaque commande jouée&nbsp;; annuler dépile la dernière et la range dans la pile de <strong>rétablissement</strong>. Rétablir fait l'inverse. Une pile est une structure <em>LIFO</em> — dernier entré, premier sorti — exactement ce qu'il faut pour revenir en arrière pas à pas.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Les deux piles de l'historique. À gauche, la pile Annuler contient les commandes jouées, la plus récente au sommet. Une flèche annuler part du sommet de la pile Annuler vers la pile Refaire à droite. Une flèche refaire fait le chemin inverse. Toute nouvelle commande jouée s'empile sur Annuler et vide la pile Refaire.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Deux piles se renvoient la commande</text>
+    <text class="d-label" x="150" y="52" text-anchor="middle" font-size="11">Pile Annuler</text>
+    <rect class="d-frame" x="70" y="60" width="160" height="26" rx="5" /><text class="d-text" x="150" y="77" text-anchor="middle" font-size="10">cmd 3 · sommet</text>
+    <rect class="d-box" x="70" y="90" width="160" height="26" rx="5" /><text class="d-text" x="150" y="107" text-anchor="middle" font-size="10">cmd 2</text>
+    <rect class="d-box" x="70" y="120" width="160" height="26" rx="5" /><text class="d-text" x="150" y="137" text-anchor="middle" font-size="10">cmd 1</text>
+    <text class="d-label" x="490" y="52" text-anchor="middle" font-size="11">Pile Refaire</text>
+    <rect class="d-box" x="410" y="90" width="160" height="26" rx="5" /><text class="d-mut" x="490" y="107" text-anchor="middle" font-size="10">(vide au départ)</text>
+    <path class="d-line" d="M232 66 C320 60 320 60 408 100" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="408,100 399,97 402,91" /><text class="d-tag" x="320" y="70" text-anchor="middle" font-size="10">annuler()</text>
+    <path class="d-line" d="M408 116 C320 150 320 150 232 132" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="232,132 241,133 238,139" /><text class="d-tag" x="320" y="150" text-anchor="middle" font-size="10">refaire()</text>
+    <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="9">Toute nouvelle saisie s'empile sur Annuler… et vide la pile Refaire.</text>
+  </svg>
+  <figcaption>Une commande transite d'une pile à l'autre. Le sommet de «&nbsp;Annuler&nbsp;» est la prochaine à défaire&nbsp;; celui de «&nbsp;Refaire&nbsp;», la prochaine à rejouer.</figcaption>
+</figure>
+<figure class="code-block" data-file="l'invocateur : il joue, annule, rétablit"><pre><code class="language-javascript">// L'HISTORIQUE : deux piles, l'une pour annuler, l'autre pour rétablir
+class Historique {
+  constructor() {
+    this.pileAnnuler = [];
+    this.pileRefaire = [];
+  }
+  faire(commande) {
+    commande.executer();
+    this.pileAnnuler.push(commande);
+    this.pileRefaire = []; // une nouvelle action rend le « redo » caduc
+  }
+  annuler() {
+    const cmd = this.pileAnnuler.pop();
+    if (!cmd) return;            // rien à annuler
+    cmd.annuler();
+    this.pileRefaire.push(cmd);
+  }
+  refaire() {
+    const cmd = this.pileRefaire.pop();
+    if (!cmd) return;            // rien à rétablir
+    cmd.executer();
+    this.pileAnnuler.push(cmd);
+  }
+}</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le détail qui fait tout</p><p>La ligne <code>this.pileRefaire = []</code> dans <code>faire()</code> est cruciale. Si l'on annule trois fois puis qu'on <em>tape</em> quelque chose de nouveau, on ne peut plus «&nbsp;rétablir&nbsp;» l'ancien futur&nbsp;: il n'a plus de sens. Vider la pile de rétablissement à chaque nouvelle action est le comportement qu'attend <em>tout</em> utilisateur — même s'il ne saurait pas l'expliquer.</p></div></div>
+
+<h2>Memento : capturer et restaurer l'état</h2>
+<p>Le pattern <strong>Memento</strong> permet de sauvegarder l'état d'un objet <em>sans violer son encapsulation</em>&nbsp;: l'objet produit lui-même un instantané opaque, que l'extérieur conserve sans pouvoir en trifouiller le contenu, et qu'il pourra plus tard lui rendre pour être restauré. L'objet qui crée le memento s'appelle l'<strong>originator</strong> — ici, l'Éditeur.</p>
+<figure class="code-block" data-file="l'éditeur produit et relit ses instantanés"><pre><code class="language-javascript">// MEMENTO : un instantané opaque de l'état de l'éditeur
+class Memento {
+  constructor(contenu) { this.etat = contenu; }
+}
+
+// ORIGINATOR : l'Éditeur sait se photographier et se restaurer
+class Editeur {
+  constructor() {
+    this.contenu = "";
+    this.observateurs = [];
+  }
+  saisir(texte)      { this.contenu += texte; this.notifier(); }
+  sauvegarder()      { return new Memento(this.contenu); }      // capture
+  restaurer(memento) { this.contenu = memento.etat; this.notifier(); } // restaure
+  // (méthodes Observer ci-dessous)
+  abonner(o)  { this.observateurs.push(o); }
+  notifier()  { for (const o of this.observateurs) o.miseAJour(this.contenu); }
+}</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Memento complet ou commande inverse&nbsp;?</p><p>Sauvegarder l'état <em>entier</em> à chaque geste est simple, mais peut coûter cher en mémoire si le document est gros (photographier tout un roman à chaque lettre tapée&nbsp;!). L'alternative — une commande qui <em>calcule l'inverse</em> de son geste (annuler une insertion = supprimer les mêmes caractères) — est plus économe mais plus délicate à écrire. Les vrais éditeurs mêlent les deux&nbsp;: mementos périodiques + petites deltas. Pour notre projet, le memento suffit et reste limpide.</p></div></div>
+
+<h2>Observer : rafraîchir l'affichage tout seul</h2>
+<p>Dernière brique&nbsp;: l'<strong>Observer</strong>. À chaque changement, l'Éditeur (le <em>sujet</em>) prévient ses <strong>observateurs</strong> — ici un aperçu du texte, mais ce pourrait être un compteur de caractères, une barre d'état… Aucun code de saisie n'a besoin de savoir <em>qui</em> écoute&nbsp;: c'est tout l'intérêt du <strong>découplage</strong>. On l'a déjà branché plus haut (<code>abonner</code>, <code>notifier</code>)&nbsp;; il ne reste qu'à s'abonner.</p>
+<figure class="code-block" data-file="un observateur suit chaque changement"><pre><code class="language-javascript">const editeur = new Editeur();
+// OBSERVER : un aperçu se met à jour à chaque changement
+editeur.abonner({ miseAJour: (texte) =&gt; console.log(`Aperçu : "${texte}"`) });</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi passer par l'Observer&nbsp;?</p><p>Sans lui, chaque endroit qui modifie le texte devrait penser à rafraîchir l'aperçu, le compteur, la sauvegarde… et on oublierait forcément un cas (par exemple après un <em>undo</em>). En centralisant la notification dans <code>saisir()</code> et <code>restaurer()</code>, <strong>tout</strong> changement — saisie, annulation, rétablissement — prévient l'affichage automatiquement. Un seul point de vérité.</p></div></div>
+
+<h2>Assembler le tout</h2>
+<p>Les briques sont prêtes. On les monte&nbsp;: un éditeur, un observateur, un historique, puis on joue quelques gestes et on fait l'aller-retour dans le temps.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La démarche du projet en quatre étapes. Étape un : analyser le besoin, saisir, annuler, rétablir, afficher. Étape deux : concevoir en choisissant Command, Memento et Observer. Étape trois : coder les classes et les brancher. Étape quatre : tester le scénario faire, annuler, refaire et vérifier l'aperçu.">
+    <rect class="d-box" x="16" y="60" width="140" height="56" rx="8" /><text class="d-label" x="86" y="84" text-anchor="middle" font-size="11">1 · Analyser</text><text class="d-mut" x="86" y="101" text-anchor="middle" font-size="8">le besoin réel</text>
+    <rect class="d-accent" x="180" y="60" width="140" height="56" rx="8" /><text class="d-label" x="250" y="84" text-anchor="middle" font-size="11">2 · Concevoir</text><text class="d-mut" x="250" y="101" text-anchor="middle" font-size="8">choisir les patterns</text>
+    <rect class="d-box" x="344" y="60" width="140" height="56" rx="8" /><text class="d-label" x="414" y="84" text-anchor="middle" font-size="11">3 · Coder</text><text class="d-mut" x="414" y="101" text-anchor="middle" font-size="8">classes + montage</text>
+    <rect class="d-box" x="508" y="60" width="120" height="56" rx="8" /><text class="d-label" x="568" y="84" text-anchor="middle" font-size="11">4 · Tester</text><text class="d-mut" x="568" y="101" text-anchor="middle" font-size="8">faire/annuler/refaire</text>
+    <path class="d-line" d="M156 88 L178 88" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="180,88 172,84 172,92" />
+    <path class="d-line" d="M320 88 L342 88" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="344,88 336,84 336,92" />
+    <path class="d-line" d="M484 88 L506 88" fill="none" stroke-width="1.4" /><polygon class="d-dot" points="508,88 500,84 500,92" />
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">On ne code qu'après avoir nommé le besoin et choisi les patterns qui le servent.</text>
+  </svg>
+  <figcaption>La démarche est toujours la même&nbsp;: comprendre le besoin, choisir les outils, coder, vérifier.</figcaption>
+</figure>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Capstone</span></div><p>Assemble l'éditeur complet, puis déroule le scénario <em>faire → faire → annuler → refaire</em>. Essaie d'abord seul, puis compare.</p><details><summary>Voir la solution complète</summary><figure class="code-block" data-file="editeur-undo-redo.js"><pre><code class="language-javascript">class Memento {
+  constructor(contenu) { this.etat = contenu; }
+}
+
+class Editeur {                       // Originator + Sujet (Observer)
+  constructor() { this.contenu = ""; this.observateurs = []; }
+  saisir(texte)      { this.contenu += texte; this.notifier(); }
+  sauvegarder()      { return new Memento(this.contenu); }
+  restaurer(memento) { this.contenu = memento.etat; this.notifier(); }
+  abonner(o)  { this.observateurs.push(o); }
+  notifier()  { for (const o of this.observateurs) o.miseAJour(this.contenu); }
+}
+
+class CommandeSaisir {                 // Command
+  constructor(editeur, texte) { this.editeur = editeur; this.texte = texte; }
+  executer() { this.avant = this.editeur.sauvegarder(); this.editeur.saisir(this.texte); }
+  annuler()  { this.editeur.restaurer(this.avant); }
+}
+
+class Historique {                     // Invocateur : deux piles
+  constructor() { this.pileAnnuler = []; this.pileRefaire = []; }
+  faire(cmd)  { cmd.executer(); this.pileAnnuler.push(cmd); this.pileRefaire = []; }
+  annuler()   { const c = this.pileAnnuler.pop(); if (!c) return; c.annuler(); this.pileRefaire.push(c); }
+  refaire()   { const c = this.pileRefaire.pop(); if (!c) return; c.executer(); this.pileAnnuler.push(c); }
+}
+
+// --- Montage ---
+const editeur = new Editeur();
+editeur.abonner({ miseAJour: (t) =&gt; console.log(`Aperçu : "${t}"`) });
+const histo = new Historique();
+
+histo.faire(new CommandeSaisir(editeur, "Bonjour"));   // Aperçu : "Bonjour"
+histo.faire(new CommandeSaisir(editeur, " le monde")); // Aperçu : "Bonjour le monde"
+histo.annuler();                                        // Aperçu : "Bonjour"
+histo.refaire();                                        // Aperçu : "Bonjour le monde"</code></pre></figure><p>Les trois patterns collaborent&nbsp;: <strong>Command</strong> emballe chaque geste, <strong>Memento</strong> mémorise l'état d'avant pour l'annulation, <strong>Observer</strong> tient l'aperçu à jour à chaque étape — y compris pendant l'undo et le redo. Change l'observateur pour afficher aussi la longueur du texte&nbsp;: tu verras qu'aucune autre ligne n'est à toucher.</p></details></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le Ctrl+Z est partout</p><p>Cette mécanique fait tourner les logiciels que tu utilises&nbsp;: le <em>panneau d'historique</em> de Photoshop est une pile de commandes&nbsp;; l'undo de VS Code, de Word ou de Figma repose sur le même principe. Plus loin encore, les <strong>bases de données</strong> tiennent des <em>journaux redo/undo</em> pour rejouer ou défaire des transactions après une panne, et l'<em>event sourcing</em> reconstruit un état en rejouant la suite des commandes. Le modeste <kbd>Ctrl</kbd>+<kbd>Z</kbd> et la robustesse d'un moteur de base de données partagent la même idée&nbsp;: <strong>garder la trace des actions pour pouvoir les rejouer ou les défaire</strong>.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le pattern Command ouvre de belles suites&nbsp;: les <strong>macro-commandes</strong> (une commande qui en regroupe d'autres, pour annuler tout un lot d'un coup — c'est aussi le pattern <em>Composite</em>)&nbsp;; le <strong>bus de commandes</strong> (<em>command bus</em>) qui reçoit, journalise et distribue les commandes&nbsp;; ou encore <strong>CQRS</strong> et l'<strong>event sourcing</strong>, où l'état de toute une application <em>est</em> la somme de ses commandes passées. Notre petit éditeur est la première marche de cet escalier.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Les trois patterns du projet — rôle et acteur</caption>
+    <thead><tr><th scope="col">Pattern</th><th scope="col">Rôle dans le projet</th><th scope="col">Acteur / méthode clé</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Command</strong></td><td>rendre chaque édition réversible et stockable</td><td><code>CommandeSaisir</code> · <code>executer()</code> / <code>annuler()</code></td></tr>
+      <tr><td><strong>Memento</strong></td><td>capturer l'état avant un geste pour le restaurer</td><td><code>Editeur.sauvegarder()</code> / <code>restaurer()</code></td></tr>
+      <tr><td><strong>Observer</strong></td><td>rafraîchir l'affichage à chaque changement</td><td><code>Editeur.notifier()</code> · <code>abonner()</code></td></tr>
+      <tr><td><em>Invocateur</em></td><td>gérer l'aller-retour undo / redo (deux piles)</td><td><code>Historique</code> · <code>faire</code>/<code>annuler</code>/<code>refaire</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Command (commande)</dt><dd>Pattern qui <em>encapsule une action</em> dans un objet doté d'<code>executer()</code> (et souvent <code>annuler()</code>)&nbsp;; l'action devient stockable, rejouable et réversible.</dd>
+  <dt>Memento</dt><dd>Pattern qui sauvegarde l'état d'un objet dans un instantané <em>opaque</em>, sans exposer ses détails internes, pour pouvoir le restaurer plus tard.</dd>
+  <dt>Originator</dt><dd>L'objet qui produit ses propres mementos et sait s'y restaurer — ici, l'<code>Editeur</code>.</dd>
+  <dt>Observer (observateur)</dt><dd>Pattern où un <em>sujet</em> notifie automatiquement ses abonnés à chaque changement, sans les connaître individuellement.</dd>
+  <dt>Undo / Redo</dt><dd>Annuler la dernière action et la rétablir&nbsp;; obtenu ici avec deux piles de commandes et l'aide des mementos.</dd>
+  <dt>Pile (LIFO)</dt><dd>Structure «&nbsp;dernier entré, premier sorti&nbsp;»&nbsp;: <code>push</code> ajoute au sommet, <code>pop</code> retire le sommet — idéale pour revenir en arrière pas à pas.</dd>
+  <dt>Invocateur (invoker)</dt><dd>L'objet qui déclenche les commandes et tient leur historique&nbsp;; ici, la classe <code>Historique</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Command</strong> emballe chaque édition dans un objet <code>executer()</code>/<code>annuler()</code>&nbsp;: elle devient réversible.</li>
+  <li><strong>Memento</strong> photographie l'état avant chaque geste&nbsp;; annuler = restaurer l'instantané.</li>
+  <li>Deux <strong>piles</strong> (annuler / refaire) gèrent l'aller-retour&nbsp;; une nouvelle action vide la pile «&nbsp;refaire&nbsp;».</li>
+  <li><strong>Observer</strong> rafraîchit l'affichage à chaque changement, undo et redo compris&nbsp;: un seul point de vérité.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quel pattern rend une édition <em>réversible</em>, et grâce à quelles méthodes&nbsp;?</li>
+  <li>Pourquoi faut-il <strong>deux</strong> piles pour l'undo/redo&nbsp;?</li>
+  <li>Que se passe-t-il si l'on tape du texte après avoir annulé&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quel pattern rend chaque édition réversible dans notre éditeur ?","a":["Command : chaque geste devient un objet doté d'executer() et annuler(), donc stockable et défaisable","Observer, qui annule les changements","Singleton, qui garde une seule édition","Adapter, qui traduit les éditions"],"correct":0,"explain":"Le pattern Command encapsule l'action dans un objet. Doté d'executer() et annuler(), il peut être empilé dans un historique, ce qui rend l'undo/redo possible."},
+  {"q":"Pourquoi l'historique utilise-t-il DEUX piles ?","a":["Une pour annuler (les commandes jouées) et une pour rétablir (les commandes annulées) : une commande transite de l'une à l'autre","Pour aller deux fois plus vite","Parce qu'une pile ne peut contenir qu'une commande","Pour sauvegarder sur le disque"],"correct":0,"explain":"Annuler dépile la dernière commande jouée et la range dans la pile « refaire » ; rétablir fait l'inverse. Sans la seconde pile, on pourrait annuler mais jamais rétablir."},
+  {"q":"Que fait notre code quand l'utilisateur tape du texte après avoir annulé plusieurs fois ?","a":["Il vide la pile de rétablissement : l'ancien « futur » n'a plus de sens, on ne peut plus le refaire","Il rétablit automatiquement tout","Il plante","Il ignore la nouvelle saisie"],"correct":0,"explain":"La ligne this.pileRefaire = [] dans faire() efface le redo dès qu'une nouvelle action est jouée. C'est le comportement attendu de tout éditeur : une fois qu'on repart dans une autre direction, l'ancien chemin est perdu."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  null,
+  {"type":"text","accept":["Command","command","commande","le pattern command"],"placeholder":"le pattern qui encapsule une édition dans un objet executer()/annuler()…","hints":["Il rend l'action stockable et réversible.","On l'empile dans un historique.","« … » (anglais pour « commande »)."],"link":{"href":"lecon-11.html","label":"Revoir « Command »"}},
+  {"type":"text","accept":["Memento","memento","le memento","instantané","instantane"],"placeholder":"le pattern qui capture l'état de l'éditeur dans un instantané opaque…","hints":["L'objet se photographie lui-même.","On le restaure pour annuler.","« M… »."],"link":{"href":"lecon-11.html","label":"Revoir « Memento »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans le scénario <code>faire("A")</code>, <code>faire("B")</code>, <code>annuler()</code>, <code>annuler()</code>, quel est le contenu final de l'éditeur&nbsp;? Et que contient chaque pile&nbsp;?</p><details><summary>Voir une solution</summary><p>Le contenu final est <strong>vide</strong> (<code>""</code>). Après les deux <code>faire</code>, le contenu est <code>"AB"</code> et la pile <em>Annuler</em> contient <code>[cmdA, cmdB]</code>. Le premier <code>annuler()</code> défait <code>cmdB</code> (retour à <code>"A"</code>) et la déplace vers <em>Refaire</em>. Le second <code>annuler()</code> défait <code>cmdA</code> (retour à <code>""</code>) et la déplace aussi. Résultat&nbsp;: pile <em>Annuler</em> <strong>vide</strong>, pile <em>Refaire</em> = <code>[cmdB, cmdA]</code> (cmdA au sommet). Un <code>refaire()</code> rejouerait alors <code>cmdA</code> en premier.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute un observateur qui affiche aussi le <strong>nombre de caractères</strong> à chaque changement, sans modifier les classes <code>CommandeSaisir</code>, <code>Historique</code> ni les méthodes de saisie.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">editeur.abonner({
+  miseAJour: (texte) =&gt; console.log(`${texte.length} caractère(s)`)
+});</code></pre></figure><p>C'est toute la force de l'<strong>Observer</strong>&nbsp;: il suffit d'ajouter un abonné. Aucune ligne de <code>saisir()</code>, <code>restaurer()</code>, <code>CommandeSaisir</code> ou <code>Historique</code> ne change&nbsp;: le nouveau compteur se met à jour tout seul, même pendant les undo/redo, parce que <code>notifier()</code> est appelé à chaque changement d'état.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On te demande d'ajouter une commande <code>CommandeEffacerTout</code> qui vide l'éditeur, tout en restant <strong>annulable</strong>. Écris-la, et explique pourquoi l'approche par Memento la rend triviale.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">class CommandeEffacerTout {
+  constructor(editeur) { this.editeur = editeur; }
+  executer() {
+    this.avant = this.editeur.sauvegarder();  // instantané AVANT
+    this.editeur.contenu = "";
+    this.editeur.notifier();
+  }
+  annuler() { this.editeur.restaurer(this.avant); }
+}
+// Usage : histo.faire(new CommandeEffacerTout(editeur));  puis histo.annuler();</code></pre></figure><p>Grâce au <strong>Memento</strong>, <code>annuler()</code> n'a <em>rien à calculer</em>&nbsp;: la commande a photographié tout le texte avant de l'effacer, il suffit de restaurer l'instantané. Si l'on avait choisi l'approche «&nbsp;commande inverse&nbsp;», il aurait fallu mémoriser l'intégralité du texte supprimé pour le réinsérer — ce qui revient exactement à… un memento. Le pattern nous donne cette solution gratuitement, quelle que soit la commande. On aurait aussi pu réutiliser <code>CommandeSaisir</code> comme brique, mais une commande dédiée reste plus lisible.</p></details></div>
+
+<h2>Mini-projet fil rouge — le patron Observateur</h2>
+<p>Pour terminer, isolons le patron <strong>Observateur</strong> dans un petit projet à part, plus élémentaire que le gros montage ci-dessus. Le revoir seul aide à bien le maîtriser&nbsp;: une <strong>classe sujet</strong> qui gère ses abonnés, des <strong>observateurs</strong> interchangeables, le <strong>découplage</strong> (le sujet ignore qui l'écoute) et le <strong>polymorphisme</strong> — un patron de conception complet.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Une station météo (le sujet) qui notifie automatiquement plusieurs afficheurs (les observateurs) à chaque nouvelle mesure.</p></div></div>
+<p class="kicker kicker--gold">Étapes</p>
+<div class="steps">
+<div class="step"><h3>Le sujet</h3><p>Une classe <code>Sujet</code> qui garde une liste d'observateurs et sait les notifier.</p></div>
+<div class="step"><h3>S'abonner</h3><p>Une méthode <code>abonner(observateur)</code> qui ajoute à la liste.</p></div>
+<div class="step"><h3>Notifier</h3><p><code>notifier(donnee)</code> appelle <code>miseAJour</code> sur chaque observateur.</p></div>
+<div class="step"><h3>Les observateurs</h3><p>Une classe <code>Affichage</code> implémentant <code>miseAJour</code> (interchangeable).</p></div>
+<div class="step"><h3>Brancher</h3><p>Abonne plusieurs afficheurs au sujet, puis émets une mesure.</p></div>
+</div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble le patron complet. Essaie d'abord par toi-même, puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary><figure class="code-block" data-file="observateur.js"><pre><code class="language-javascript">// Patron Observateur : un sujet notifie ses observateurs
+class Sujet {
+  constructor() {
+    this.observateurs = [];
+  }
+  abonner(observateur) {
+    this.observateurs.push(observateur);
+  }
+  notifier(donnee) {
+    for (const o of this.observateurs) o.miseAJour(donnee);
+  }
+}
+
+class Affichage {
+  constructor(nom) {
+    this.nom = nom;
+  }
+  miseAJour(donnee) {
+    console.log(`${this.nom} reçoit : ${donnee}`);
+  }
+}
+
+const meteo = new Sujet();
+meteo.abonner(new Affichage("Téléphone"));
+meteo.abonner(new Affichage("Tablette"));
+meteo.notifier("23 °C");</code></pre></figure></details></div>
+
+<script type="application/json" data-quiz-bilan>
+[
+  {"q":"Qu'est-ce qu'un design pattern ?","a":["Une solution éprouvée à un problème de conception récurrent","Une bibliothèque toute faite","Un langage","Un framework"],"correct":0,"explain":"Un vocabulaire commun entre développeurs."},
+  {"q":"Quel pattern garantit une seule instance d'une classe ?","a":["Singleton","Factory","Observer","Adapter"],"correct":0,"explain":"Un point d'accès global unique."},
+  {"q":"Quel pattern crée des objets sans exposer la logique de création ?","a":["Factory (fabrique)","Singleton","Decorator","Proxy"],"correct":0,"explain":"On demande un objet, la fabrique décide lequel."},
+  {"q":"Quel pattern notifie automatiquement des abonnés d'un changement ?","a":["Observer (observateur)","Strategy","Command","Facade"],"correct":0,"explain":"Un sujet prévient ses observateurs."},
+  {"q":"Quel pattern rend compatibles deux interfaces incompatibles ?","a":["Adapter (adaptateur)","Bridge","Composite","Flyweight"],"correct":0,"explain":"Une couche de traduction entre les deux."},
+  {"q":"Quel pattern permet d'échanger un algorithme à l'exécution ?","a":["Strategy (stratégie)","Observer","Singleton","Memento"],"correct":0,"explain":"On injecte le comportement voulu."},
+  {"q":"Quel pattern encapsule une action dans un objet pour la stocker ou l'annuler ?","a":["Command (commande)","Observer","Builder","Facade"],"correct":0,"explain":"executer()/annuler() : c'est la base de l'undo/redo."},
+  {"q":"Quel pattern capture l'état d'un objet pour le restaurer plus tard ?","a":["Memento","Adapter","Singleton","Strategy"],"correct":0,"explain":"Un instantané opaque, produit par l'objet lui-même (originator)."},
+  {"q":"Pour offrir l'annulation ET le rétablissement (undo/redo), il faut…","a":["Deux piles : une pour annuler, une pour rétablir","Une seule pile suffit","Aucune structure","Une base de données"],"correct":0,"explain":"Une commande transite de la pile « annuler » à la pile « refaire » et inversement."},
+  {"q":"Que signifie le « S » de SOLID ?","a":["Responsabilité unique (Single Responsibility)","Sécurité","Simplicité","Stockage"],"correct":0,"explain":"Une classe = une seule raison de changer."},
+  {"q":"Quand faut-il introduire un pattern ?","a":["Quand le besoin réel le justifie (éviter la sur-ingénierie)","Le plus tôt possible, partout","Jamais","Au hasard"],"correct":0,"explain":"On laisse émerger le pattern."},
+  {"q":"Dans un vrai projet (comme notre éditeur undo/redo), les patterns…","a":["Collaborent : Command, Memento et Observer se combinent pour une seule fonctionnalité","Doivent rester isolés l'un de l'autre","S'excluent mutuellement","Ne servent qu'en théorie"],"correct":0,"explain":"La valeur vient de leur assemblage : chacun porte une responsabilité, l'ensemble fait l'outil."}
+]
+</script>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

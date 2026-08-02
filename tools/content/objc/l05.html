@@ -1,0 +1,100 @@
+<p>Une classe sans données ni comportements serait une coquille vide. Cette leçon détaille les deux ingrédients qui la remplissent&nbsp;: les <strong>propriétés</strong> (les données qu'un objet possède) et les <strong>méthodes</strong> (ce qu'il sait faire). On verra comment Objective-C génère automatiquement les accesseurs, et la distinction importante entre méthodes d'instance et de classe.</p>
+
+<h2>Les propriétés&nbsp;: <code>@property</code></h2>
+<p>Une <strong>propriété</strong> déclare un attribut de l'objet. On précise des <strong>attributs</strong> entre parenthèses qui décrivent son comportement mémoire et d'accès.</p>
+<figure class="code-block" data-file="property.h"><pre><code class="language-objectivec">@interface Personne : NSObject
+
+@property (nonatomic, strong) NSString *nom;
+@property (nonatomic, assign) int age;
+@property (nonatomic, strong) NSArray *amis;
+
+@end</code></pre></figure>
+<p>Les attributs courants&nbsp;:</p>
+<ul>
+  <li><code>nonatomic</code> — accès non thread-safe mais plus rapide (le défaut en pratique)&nbsp;;</li>
+  <li><code>strong</code> — pour un objet&nbsp;: l'objet est «&nbsp;retenu&nbsp;» en mémoire (leçon 7)&nbsp;;</li>
+  <li><code>assign</code> — pour un type primitif (<code>int</code>, <code>BOOL</code>)&nbsp;: simple copie de valeur&nbsp;;</li>
+  <li><code>weak</code> — référence faible, pour éviter les cycles (leçon 7)&nbsp;;</li>
+  <li><code>copy</code> — fait une copie (fréquent pour <code>NSString</code>).</li>
+</ul>
+
+<h2>Les accesseurs générés</h2>
+<p>Magie d'Objective-C&nbsp;: déclarer une <code>@property</code> génère automatiquement les <strong>accesseurs</strong> — un <em>getter</em> pour lire, un <em>setter</em> pour écrire — ainsi qu'une variable d'instance sous-jacente. Tu n'as rien à écrire.</p>
+<figure class="code-block" data-file="acces.m"><pre><code class="language-objectivec">Personne *p = [[Personne alloc] init];
+
+// Notation pointée (la plus lisible) :
+p.nom = @"Ada";              // appelle le setter
+NSString *n = p.nom;         // appelle le getter
+
+// Équivaut aux messages explicites :
+[p setNom:@"Ada"];           // setter
+NSString *m = [p nom];       // getter</code></pre></figure>
+<p>La <strong>notation pointée</strong> (<code>p.nom</code>) est un raccourci pour les messages d'accesseurs. Sous le capot, <code>p.nom = @"Ada"</code> envoie réellement le message <code>setNom:</code>. C'est plus lisible, et c'est l'usage recommandé.</p>
+
+<h2>Les méthodes d'instance</h2>
+<p>Une méthode d'<strong>instance</strong> (signe <code>-</code>) s'envoie à un objet particulier et agit sur ses données. Elle accède aux propriétés via <code>self</code>.</p>
+<figure class="code-block" data-file="instance.m"><pre><code class="language-objectivec">// Dans @implementation Personne :
+- (BOOL)estMajeur {
+    return self.age &gt;= 18;
+}
+
+- (void)vieillirDe:(int)annees {
+    self.age = self.age + annees;
+}
+
+// Usage :
+if ([p estMajeur]) { /* ... */ }
+[p vieillirDe:1];</code></pre></figure>
+
+<h2>Les méthodes de classe</h2>
+<p>Une méthode de <strong>classe</strong> (signe <code>+</code>) s'envoie à la classe, pas à un objet. Elle sert souvent de <strong>fabrique</strong>&nbsp;: créer et renvoyer un objet prêt à l'emploi.</p>
+<figure class="code-block" data-file="classe-methode.m"><pre><code class="language-objectivec">// Déclaration (.h) :
++ (Personne *)personneAvecNom:(NSString *)nom;
+
+// Implémentation (.m) :
++ (Personne *)personneAvecNom:(NSString *)nom {
+    Personne *p = [[Personne alloc] init];
+    p.nom = nom;
+    return p;
+}
+
+// Usage : on envoie à la CLASSE, pas à un objet
+Personne *ada = [Personne personneAvecNom:@"Ada"];</code></pre></figure>
+<p>Les méthodes de classe que tu connais déjà&nbsp;: <code>[NSString stringWithFormat:…]</code>, <code>[NSArray array]</code>. Elles fabriquent des objets sans qu'on écrive <code>alloc</code>/<code>init</code> soi-même.</p>
+
+<h2><code>self</code> et <code>super</code></h2>
+<p><code>self</code> désigne l'objet courant (ou la classe courante dans une méthode <code>+</code>). <code>super</code> désigne la classe parente&nbsp;: on l'utilise pour appeler la version héritée d'une méthode, typiquement dans un initialiseur.</p>
+<figure class="code-block" data-file="super.m"><pre><code class="language-objectivec">- (instancetype)init {
+    self = [super init];      // initialise la partie héritée
+    if (self) {
+        _age = 0;             // _age = variable d'instance
+    }
+    return self;
+}</code></pre></figure>
+<p>Note <code>_age</code>&nbsp;: la variable d'instance générée par la propriété <code>age</code> porte un tiret bas. Dans un initialiseur, on y accède souvent directement plutôt que par <code>self.age</code>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre la propriété <code>self.age</code> et la variable d'instance <code>_age</code>. <code>self.age</code> passe par l'accesseur (le setter/getter, qui peut faire des traitements)&nbsp;; <code>_age</code> accède directement à la donnée. La règle courante&nbsp;: utiliser <code>self.propriete</code> partout (pour bénéficier des accesseurs), <strong>sauf</strong> dans <code>init</code> et <code>dealloc</code>, où l'on préfère <code>_variable</code> directement, car l'objet n'est pas encore (ou plus) pleinement formé.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Tu peux <strong>redéfinir un accesseur</strong> à la main pour ajouter un comportement&nbsp;: par exemple, un setter <code>setNom:</code> qui met automatiquement le nom en majuscules, ou un getter calculé qui ne stocke rien. C'est ainsi qu'une propriété peut être «&nbsp;virtuelle&nbsp;» (calculée à la volée) plutôt que stockée. Cette flexibilité — entre donnée et comportement — est l'un des intérêts du modèle de propriétés d'Objective-C.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>@property (attributs) Type nom;</code> déclare un attribut&nbsp;; attributs&nbsp;: <code>nonatomic</code>, <code>strong</code>/<code>weak</code>/<code>assign</code>/<code>copy</code>.</li>
+  <li>Les <strong>accesseurs</strong> (getter/setter) sont générés&nbsp;; notation pointée <code>p.nom</code> ≡ messages d'accesseurs.</li>
+  <li>Méthodes&nbsp;: <code>-</code> d'instance (agit sur <code>self</code>), <code>+</code> de classe (souvent fabriques).</li>
+  <li><code>self</code> = objet courant, <code>super</code> = parent&nbsp;; variable d'instance <code>_nom</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'une <code>@property</code> génère automatiquement&nbsp;?</li><li>Quelle différence entre une méthode <code>-</code> et <code>+</code>&nbsp;?</li><li>Que désigne <code>super</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une propriété <code>NSString *titre</code> en <code>nonatomic, strong</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.h"><pre><code class="language-objectivec">@property (nonatomic, strong) NSString *titre;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une méthode d'instance <code>doubleAge</code> qui renvoie le double de l'âge.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">- (int)doubleAge {
+    return self.age * 2;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une méthode de classe <code>animalAvecNom:</code> qui crée et renvoie un <code>Animal</code> avec un nom donné.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">+ (Animal *)animalAvecNom:(NSString *)nom {
+    Animal *a = [[Animal alloc] init];
+    a.nom = nom;
+    return a;
+}</code></pre></figure></details></div>

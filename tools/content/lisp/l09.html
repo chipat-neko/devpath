@@ -1,0 +1,80 @@
+<p>Les listes sont l'âme de Lisp, mais ce ne sont pas ses seules structures de données. Pour des accès rapides ou de gros volumes, on dispose de <strong>vecteurs</strong> et de <strong>tables de hachage</strong>. Et bien que Lisp privilégie l'immuabilité, il sait aussi gérer l'<strong>état mutable</strong> quand c'est justifié. Cette leçon élargit ta boîte à outils.</p>
+
+<h2>Les vecteurs</h2>
+<p>Une liste s'accède séquentiellement (le n-ième élément coûte n étapes). Un <strong>vecteur</strong> offre un accès <strong>direct</strong> par indice, en temps constant — comme un tableau.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define v (vector 10 20 30))
+(vector-ref v 0)        ; 10  (accès direct)
+(vector-set! v 1 99)    ; modifie : v devient #(10 99 30)
+(vector-length v)       ; 3
+(make-vector 5 0)       ; #(0 0 0 0 0) — vecteur de 5 zéros</code></pre></figure>
+<p class="code-caption">Choisis le vecteur pour l'accès indexé, la liste pour le parcours et la construction récursive.</p>
+
+<h2>Les tables de hachage</h2>
+<p>Pour associer des clés à des valeurs avec une recherche rapide, on utilise une <strong>table de hachage</strong> (le dictionnaire moderne de Lisp).</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define ages (make-hash))
+(hash-set! ages "Ada" 36)
+(hash-set! ages "Lin" 29)
+(hash-ref ages "Ada")        ; 36
+(hash-ref ages "Sam" 0)      ; 0  (valeur par défaut si absente)
+(hash-has-key? ages "Lin")   ; #t</code></pre></figure>
+<p>La syntaxe exacte varie selon le dialecte (ici style Racket)&nbsp;; l'idée est universelle.</p>
+
+<h2>Modéliser une structure&nbsp;: les records</h2>
+<p>Pour des données nommées (un point, une personne), les dialectes offrent des <strong>structures</strong> (records). <code>define-struct</code> (Racket) crée un type avec constructeur et accesseurs.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(struct point (x y))
+(define p (point 3 4))
+(point-x p)             ; 3
+(point-y p)             ; 4</code></pre></figure>
+
+<h2>L'état mutable&nbsp;: set!</h2>
+<p>Par défaut, on ne <em>modifie</em> pas une variable en Lisp&nbsp;: on en crée de nouvelles. Mais pour un état qui change vraiment (un compteur, un cache), <code>set!</code> réaffecte une variable. La convention&nbsp;: les opérations qui mutent finissent par <code>!</code>.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define compteur 0)
+(set! compteur (+ compteur 1))
+compteur                ; 1</code></pre></figure>
+
+<h2>État encapsulé dans une fermeture</h2>
+<p>Idiome élégant&nbsp;: combiner fermeture (leçon 6) et <code>set!</code> pour créer un objet à <strong>état privé</strong>, invisible de l'extérieur — l'ancêtre de l'encapsulation objet.</p>
+<figure class="code-block" data-file="exemple.lisp"><pre><code class="language-lisp">(define (fabrique-compteur)
+  (let ((n 0))
+    (lambda ()
+      (set! n (+ n 1))
+      n)))
+
+(define c (fabrique-compteur))
+(c)                     ; 1
+(c)                     ; 2  (n est privé, persistant)</code></pre></figure>
+
+<h2>Quand préférer l'immuabilité</h2>
+<p>Le style fonctionnel privilégie l'immuabilité&nbsp;: pas de mutation, des fonctions pures, un code plus prévisible et parallélisable. Réserve <code>set!</code> et les opérations <code>!</code> aux cas où l'état mutable simplifie vraiment (performance, ressources, état intrinsèquement changeant). Dans le doute, reste immuable.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Utiliser <code>set!</code> par habitude impérative&nbsp;: en Lisp, beaucoup de problèmes se résolvent plus clairement <em>sans</em> mutation, par récursion ou par <code>fold</code>. Avant de muter, demande-toi si une transformation pure ne serait pas plus simple et plus sûre.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Clojure, le Lisp moderne sur la JVM, pousse l'immuabilité à l'extrême avec ses <strong>structures de données persistantes</strong>&nbsp;: «&nbsp;modifier&nbsp;» renvoie une nouvelle version partageant la structure de l'ancienne, sans copie coûteuse. Une réponse élégante à l'état partagé et à la concurrence.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>vecteurs</strong> offrent un accès indexé en temps constant&nbsp;; les <strong>tables de hachage</strong> associent clés et valeurs.</li>
+  <li>Les <strong>structures</strong> (records) modélisent des données nommées.</li>
+  <li><code>set!</code> mute une variable (convention <code>!</code>)&nbsp;; une fermeture + <code>set!</code> = état privé.</li>
+  <li>Privilégie l'<strong>immuabilité</strong>&nbsp;; réserve la mutation aux cas qui le justifient.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quand préférer un vecteur à une liste&nbsp;?</li><li>Que fait <code>set!</code>&nbsp;?</li><li>Comment crée-t-on un état privé persistant&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un vecteur de 3 éléments et modifie le deuxième.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define v (vector 1 2 3))
+(vector-set! v 1 20)
+v   ; #(1 20 3)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec une table de hachage, associe trois pays à leur capitale et lis-en une.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define caps (make-hash))
+(hash-set! caps "France" "Paris")
+(hash-set! caps "Italie" "Rome")
+(hash-ref caps "France")   ; "Paris"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Fabrique un «&nbsp;sac&nbsp;» avec une fonction <code>ajouter</code> et <code>total</code> partageant un état privé.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define (fabrique-sac)
+  (let ((somme 0))
+    (lambda (x)
+      (set! somme (+ somme x))
+      somme)))
+(define sac (fabrique-sac))
+(sac 5)    ; 5
+(sac 3)    ; 8</code></pre></figure></details></div>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observer et déboguer ses conteneurs — Leçon 09 · Docker · Syntaxe</title>
+    <meta name="description" content="Diagnostiquer un conteneur : lire les journaux avec docker logs, entrer avec docker exec, inspecter avec inspect et stats, vérifier la santé (HEALTHCHECK) et gérer le redémarrage automatique (restart policies)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="docker" data-lesson="lecon-09.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Docker</a></li>
+            <li aria-current="page">Leçon 09</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Docker au quotidien — Leçon 09</p>
+              <h1 class="lesson-header__title">Observer et déboguer ses conteneurs</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 08 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lire les journaux d'un conteneur (<code>docker&nbsp;logs</code>)&nbsp;;</li>
+                  <li>entrer dedans avec <code>docker&nbsp;exec</code> et l'inspecter&nbsp;;</li>
+                  <li>mesurer ses ressources et vérifier sa <strong>santé</strong>&nbsp;;</li>
+                  <li>configurer le <strong>redémarrage automatique</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Ton application tourne dans un conteneur… mais que fait-elle vraiment&nbsp;? Un conteneur peut sembler une <strong>boîte noire</strong>&nbsp;: pas d'écran, pas de fenêtre. En réalité, Docker fournit une petite <strong>trousse de diagnostic</strong> pour regarder à l'intérieur&nbsp;: lire ce que l'application écrit, ouvrir un terminal dedans, inspecter sa configuration, mesurer sa consommation, et surveiller sa santé. Ces réflexes te feront gagner des heures le jour où «&nbsp;ça ne marche pas&nbsp;».</p>
+
+<h2>Lire les journaux&nbsp;: <code>docker logs</code></h2>
+<p>Premier réflexe devant un problème&nbsp;: <strong>regarder les logs</strong>. Un conteneur capture tout ce que le process écrit sur la <strong>sortie standard</strong> (<code>stdout</code>) et la <strong>sortie d'erreur</strong> (<code>stderr</code>).</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Afficher les journaux d'un conteneur
+docker logs mon-conteneur
+
+# Les suivre en direct (comme tail -f)
+docker logs -f mon-conteneur
+
+# Ne montrer que les 50 dernières lignes, avec l'heure
+docker logs --tail 50 -t mon-conteneur
+
+# En Compose : les logs d'un service
+docker compose logs -f web</code></pre></figure>
+<p>Bonne pratique héritée du monde conteneur&nbsp;: une application <strong>écrit ses logs sur <code>stdout</code></strong> (pas dans un fichier interne). Docker les collecte, et un orchestrateur pourra les centraliser. Si <code>docker logs</code> reste vide alors que l'app plante, c'est souvent qu'elle écrit dans un fichier au lieu de la sortie standard.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 212" role="img" aria-label="La trousse de diagnostic d'un conteneur. Au centre se trouve le conteneur en cours d'exécution. Quatre outils l'entourent et pointent vers lui. En haut à gauche, docker logs -f montre ce qu'il écrit sur la sortie standard et la sortie d'erreur. En haut à droite, docker exec -it suivi de sh ouvre un shell à l'intérieur. En bas à gauche, docker inspect révèle sa configuration : adresse IP, montages, variables. En bas à droite, docker stats affiche sa consommation de processeur et de mémoire en direct.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La trousse de diagnostic d'un conteneur</text>
+    <rect class="d-accent" x="250" y="94" width="140" height="46" rx="6" /><text class="d-text" x="320" y="114" text-anchor="middle" font-size="9.5">conteneur</text><text class="d-mut" x="320" y="128" text-anchor="middle" font-size="8">en cours</text>
+    <rect class="d-box" x="34" y="44" width="180" height="44" rx="5" /><text class="d-tag" x="124" y="62" text-anchor="middle" font-size="9">docker logs -f</text><text class="d-mut" x="124" y="78" text-anchor="middle" font-size="7.5">ce qu'il écrit (stdout/stderr)</text>
+    <rect class="d-box" x="426" y="44" width="180" height="44" rx="5" /><text class="d-tag" x="516" y="62" text-anchor="middle" font-size="8.5">docker exec -it … sh</text><text class="d-mut" x="516" y="78" text-anchor="middle" font-size="7.5">ouvrir un shell dedans</text>
+    <rect class="d-box" x="34" y="146" width="180" height="44" rx="5" /><text class="d-tag" x="124" y="164" text-anchor="middle" font-size="9">docker inspect</text><text class="d-mut" x="124" y="180" text-anchor="middle" font-size="7.5">config : IP, montages, env</text>
+    <rect class="d-box" x="426" y="146" width="180" height="44" rx="5" /><text class="d-tag" x="516" y="164" text-anchor="middle" font-size="9">docker stats</text><text class="d-mut" x="516" y="180" text-anchor="middle" font-size="7.5">CPU / mémoire en direct</text>
+    <path class="d-line" d="M214 70 L250 100" fill="none" /><circle class="d-dot" cx="250" cy="100" r="2.5" />
+    <path class="d-line" d="M426 70 L390 100" fill="none" /><circle class="d-dot" cx="390" cy="100" r="2.5" />
+    <path class="d-line" d="M214 166 L250 132" fill="none" /><circle class="d-dot" cx="250" cy="132" r="2.5" />
+    <path class="d-line" d="M426 166 L390 132" fill="none" /><circle class="d-dot" cx="390" cy="132" r="2.5" />
+  </svg>
+  <figcaption>Quatre commandes couvrent l'essentiel du diagnostic&nbsp;: <code>logs</code> (ce qu'il dit), <code>exec</code> (entrer dedans), <code>inspect</code> (sa config), <code>stats</code> (ses ressources).</figcaption>
+</figure>
+
+<h2>Entrer dans un conteneur&nbsp;: <code>docker exec</code></h2>
+<p>Parfois, lire les logs ne suffit pas&nbsp;: on veut <strong>ouvrir un terminal à l'intérieur</strong> pour vérifier un fichier, tester une connexion, lister des variables. C'est le rôle de <code>docker exec</code>&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Ouvrir un shell dans un conteneur qui tourne déjà
+docker exec -it mon-conteneur sh      # ou bash si disponible
+
+# Exécuter une commande ponctuelle sans ouvrir de shell
+docker exec mon-conteneur env         # lister les variables
+docker exec mon-conteneur ls /app     # regarder un dossier</code></pre></figure>
+<p>Ne confonds pas <code>exec</code> et <code>run</code>&nbsp;: <code>docker exec</code> lance une commande <strong>dans un conteneur déjà en cours</strong>, alors que <code>docker run</code> crée un <strong>nouveau conteneur</strong> à partir d'une image. Pour aller inspecter le conteneur qui pose problème, c'est bien <code>exec</code> qu'il te faut.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="La différence entre exec et run. À gauche, docker exec tiret i tiret t web sh entre dans le conteneur web déjà lancé et y ouvre un shell. À droite, docker run tiret i tiret t image sh crée un nouveau conteneur qui repart de l'image, isolé du premier. Pour inspecter un conteneur existant, on utilise exec.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">exec entre dans l'existant · run en crée un neuf</text>
+    <rect class="d-frame" x="24" y="42" width="280" height="94" rx="6" />
+    <text class="d-tag" x="164" y="62" text-anchor="middle" font-size="8.5">docker exec -it web sh</text>
+    <rect class="d-accent" x="44" y="72" width="240" height="30" rx="4" /><text class="d-text" x="164" y="91" text-anchor="middle" font-size="8">conteneur « web » déjà lancé</text>
+    <text class="d-mut" x="164" y="122" text-anchor="middle" font-size="8">ouvre un shell DEDANS</text>
+    <rect class="d-frame" x="336" y="42" width="280" height="94" rx="6" />
+    <text class="d-tag" x="476" y="62" text-anchor="middle" font-size="8.5">docker run -it image sh</text>
+    <rect class="d-box" x="356" y="72" width="240" height="30" rx="4" /><text class="d-text" x="476" y="91" text-anchor="middle" font-size="8">NOUVEAU conteneur</text>
+    <text class="d-mut" x="476" y="122" text-anchor="middle" font-size="8">repart de l'image, isolé</text>
+  </svg>
+  <figcaption><code>exec</code> se branche sur un conteneur qui <strong>existe déjà</strong>&nbsp;; <code>run</code> en fabrique un <strong>nouveau</strong>. Pour déboguer «&nbsp;celui qui tourne&nbsp;», c'est <code>exec</code>.</figcaption>
+</figure>
+
+<h2>L'état, la config, les ressources</h2>
+<p>Trois commandes complètent le tableau&nbsp;:</p>
+<ul>
+  <li><code>docker ps</code>&nbsp;: la liste des conteneurs actifs, leur <strong>statut</strong> et leurs <strong>ports</strong> publiés (<code>docker ps -a</code> montre aussi ceux qui sont arrêtés).</li>
+  <li><code>docker inspect</code>&nbsp;: toute la <strong>configuration</strong> d'un conteneur en JSON (adresse IP, montages, variables, réseau…). Un <code>--format</code> cible une valeur précise.</li>
+  <li><code>docker stats</code>&nbsp;: la <strong>consommation</strong> CPU et mémoire en temps réel, conteneur par conteneur.</li>
+</ul>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker ps                 # conteneurs actifs, statut, ports
+docker stats              # CPU / mémoire en direct
+
+# Extraire une valeur précise de inspect (ici l'état de santé)
+docker inspect --format '{{.State.Health.Status}}' mon-conteneur</code></pre></figure>
+
+<h2>La santé d'un conteneur&nbsp;: <code>HEALTHCHECK</code></h2>
+<p>Un conteneur «&nbsp;en cours d'exécution&nbsp;» n'est pas forcément <strong>prêt</strong>&nbsp;: le process tourne, mais l'application peut être bloquée ou incapable de répondre. Un <strong>healthcheck</strong> teste périodiquement qu'elle va bien. On le déclare dans le Dockerfile&nbsp;:</p>
+<figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker">HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1</code></pre></figure>
+<p>Docker exécute la commande à intervalles réguliers&nbsp;; selon le résultat, le conteneur passe de <code>starting</code> à <strong><code>healthy</code></strong> (sain) ou <strong><code>unhealthy</code></strong> (en échec), visible dans <code>docker ps</code>. En Compose, on peut alors faire <em>attendre</em> un service qu'une dépendance soit réellement saine (<code>depends_on</code> avec <code>condition: service_healthy</code>) — la vraie réponse au piège de la leçon 5.</p>
+
+<h2>Le redémarrage automatique&nbsp;: <em>restart policies</em></h2>
+<p>Que se passe-t-il si un conteneur <strong>plante</strong> ou si la machine redémarre&nbsp;? Par défaut, il reste arrêté. Une <strong>politique de redémarrage</strong> le relance automatiquement&nbsp;:</p>
+<figure class="code-block" data-file="terminal / compose.yaml"><pre><code class="language-bash"># En ligne de commande
+docker run -d --restart unless-stopped mon-image</code></pre></figure>
+<figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    build: .
+    restart: unless-stopped   # relance sauf si on l'a arrêté à la main</code></pre></figure>
+<p>Les valeurs&nbsp;: <code>no</code> (jamais, défaut), <code>on-failure</code> (seulement en cas d'erreur), <code>always</code> (toujours), <code>unless-stopped</code> (toujours, sauf arrêt manuel). En production, <code>unless-stopped</code> est un choix courant&nbsp;: le service se relève seul après un plantage ou un reboot.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 182" role="img" aria-label="De la santé au redémarrage automatique. Un conteneur démarre à l'état starting. Le healthcheck le teste périodiquement et le fait basculer soit vers healthy, c'est-à-dire sain, soit vers unhealthy, c'est-à-dire en échec. En cas d'échec ou d'arrêt, la politique de redémarrage relance le conteneur, ce qui ramène au démarrage. Les valeurs possibles sont no, on-failure, always et unless-stopped.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La santé, puis le redémarrage automatique</text>
+    <rect class="d-box" x="24" y="64" width="120" height="44" rx="5" /><text class="d-text" x="84" y="83" text-anchor="middle" font-size="9">démarrage</text><text class="d-mut" x="84" y="97" text-anchor="middle" font-size="7.5">starting</text>
+    <rect class="d-accent" x="178" y="64" width="136" height="44" rx="5" /><text class="d-text" x="246" y="83" text-anchor="middle" font-size="8.5">HEALTHCHECK</text><text class="d-mut" x="246" y="97" text-anchor="middle" font-size="7.5">teste périodiquement</text>
+    <rect class="d-accent" x="360" y="34" width="130" height="40" rx="5" /><text class="d-text" x="425" y="58" text-anchor="middle" font-size="8.5">healthy · sain</text>
+    <rect class="d-box" x="360" y="98" width="130" height="40" rx="5" /><text class="d-text" x="425" y="122" text-anchor="middle" font-size="8.5">unhealthy · échec</text>
+    <rect class="d-box" x="516" y="98" width="100" height="40" rx="5" /><text class="d-text" x="566" y="116" text-anchor="middle" font-size="8">restart</text><text class="d-mut" x="566" y="129" text-anchor="middle" font-size="7.5">relance</text>
+    <path class="d-line" d="M144 86 L178 86" fill="none" /><circle class="d-dot" cx="178" cy="86" r="2.5" />
+    <path class="d-line" d="M314 78 L360 56" fill="none" /><circle class="d-dot" cx="360" cy="56" r="2.5" />
+    <path class="d-line" d="M314 94 L360 118" fill="none" /><circle class="d-dot" cx="360" cy="118" r="2.5" />
+    <path class="d-line" d="M490 118 L516 118" fill="none" /><circle class="d-dot" cx="516" cy="118" r="2.5" />
+    <path class="d-line" d="M566 138 L566 158 L84 158 L84 108" fill="none" /><circle class="d-dot" cx="84" cy="108" r="2.5" />
+    <text class="d-mut" x="300" y="174" text-anchor="middle" font-size="7.5">no · on-failure · always · unless-stopped</text>
+  </svg>
+  <figcaption>Le <strong>healthcheck</strong> dit si l'application va bien&nbsp;; la <strong>restart policy</strong> relance le conteneur en cas de plantage ou de reboot. Ensemble, ils rendent un service résilient.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le conteneur qui redémarre en boucle</p><p>En production, un service apparaît sans cesse en <code>Restarting</code> dans <code>docker ps</code>. La trousse de diagnostic livre le coupable en trois commandes&nbsp;: <code>docker logs</code> montre un <em>OOMKilled</em> — le conteneur dépasse sa limite mémoire et le noyau le tue&nbsp;; <code>docker stats</code> confirme une mémoire au plafond&nbsp;; <code>docker inspect</code> révèle une limite (<code>--memory</code>) trop basse pour la charge. Diagnostic&nbsp;: fuite mémoire côté app ou limite mal calibrée. Sans ces outils, on redémarrerait à l'aveugle&nbsp;; avec eux, la cause saute aux yeux en deux minutes.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Tester la connexion entre services depuis l'intérieur</p><p>Un service n'arrive pas à joindre la base&nbsp;? Entre dans son conteneur et teste depuis <em>là où le problème se pose</em>&nbsp;: <code>docker compose exec web sh</code>, puis <code>ping bdd</code> ou <code>wget -qO- http://bdd:5432</code>. Tu vérifies ainsi le <strong>DNS interne</strong> de Compose (joindre un service par son nom) et le réseau, sans quitter le contexte réel du conteneur.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que tu modifies via <code>exec</code> est éphémère</p><p><code>docker exec</code> est parfait pour <em>observer</em>, mais tout ce que tu changes à la main dans un conteneur (installer un paquet, éditer un fichier) <strong>disparaît</strong> à sa recréation&nbsp;: un conteneur est jetable. Une fois la cause comprise, la correction durable se fait dans le <strong>Dockerfile</strong> ou le <code>compose.yaml</code>, puis on reconstruit. L'<code>exec</code> diagnostique&nbsp;; le fichier corrige.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>À plusieurs conteneurs, on ne lit plus les logs un par un&nbsp;: on les <strong>centralise</strong> (pilotes de logs Docker, pile ELK/Loki) et on collecte des <strong>métriques</strong> (Prometheus + Grafana) pour visualiser CPU, mémoire et santé dans le temps. C'est le domaine de l'<strong>observabilité</strong>, indispensable dès qu'un système grandit — et cœur des orchestrateurs comme Kubernetes.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — observer et déboguer</caption>
+    <thead><tr><th scope="col">Question</th><th scope="col">Commande</th><th scope="col">Remarque</th></tr></thead>
+    <tbody>
+      <tr><td>Qu'écrit-il&nbsp;?</td><td><code>docker logs -f c</code></td><td><code>--tail N</code>, <code>-t</code> · Compose&nbsp;: <code>compose logs</code></td></tr>
+      <tr><td>Entrer dedans</td><td><code>docker exec -it c sh</code></td><td>conteneur déjà lancé (≠ <code>run</code>)</td></tr>
+      <tr><td>Qui tourne&nbsp;?</td><td><code>docker ps</code></td><td><code>-a</code> inclut les arrêtés</td></tr>
+      <tr><td>Sa config</td><td><code>docker inspect c</code></td><td><code>--format '{{…}}'</code> cible une valeur</td></tr>
+      <tr><td>Ses ressources</td><td><code>docker stats</code></td><td>CPU / mémoire en direct</td></tr>
+      <tr><td>Est-il sain&nbsp;?</td><td><code>HEALTHCHECK … CMD</code></td><td>statut <code>healthy</code> / <code>unhealthy</code></td></tr>
+      <tr><td>Le relancer seul</td><td><code>--restart unless-stopped</code></td><td><code>no</code>, <code>on-failure</code>, <code>always</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>docker logs</code></dt><dd>Affiche ce que le conteneur écrit sur <code>stdout</code>/<code>stderr</code>&nbsp;; <code>-f</code> suit en direct, <code>--tail</code> limite.</dd>
+  <dt><code>stdout</code> / <code>stderr</code></dt><dd>Sorties standard et d'erreur du process&nbsp;; une app conteneurisée y écrit ses logs pour que Docker les collecte.</dd>
+  <dt><code>docker exec</code></dt><dd>Lance une commande (souvent un shell) <strong>dans un conteneur en cours</strong>&nbsp;; à distinguer de <code>run</code> qui en crée un nouveau.</dd>
+  <dt><code>docker inspect</code></dt><dd>Renvoie toute la configuration d'un conteneur en JSON&nbsp;; <code>--format</code> extrait une valeur précise.</dd>
+  <dt><code>docker stats</code></dt><dd>Affiche la consommation CPU et mémoire des conteneurs en temps réel.</dd>
+  <dt>Healthcheck</dt><dd>Test périodique de bon fonctionnement&nbsp;; fait passer le conteneur en <code>healthy</code> ou <code>unhealthy</code>.</dd>
+  <dt>Restart policy</dt><dd>Règle de redémarrage automatique&nbsp;: <code>no</code>, <code>on-failure</code>, <code>always</code>, <code>unless-stopped</code>.</dd>
+  <dt>OOMKilled</dt><dd>État d'un conteneur tué par le noyau pour dépassement de sa limite mémoire (<em>Out Of Memory</em>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>docker logs -f</code> montre ce que l'app écrit&nbsp;; premier réflexe de débogage.</li>
+  <li><code>docker exec -it … sh</code> ouvre un shell <strong>dans le conteneur qui tourne</strong> (≠ <code>run</code>).</li>
+  <li><code>ps</code>, <code>inspect</code>, <code>stats</code> donnent état, configuration et ressources.</li>
+  <li>Un <strong>healthcheck</strong> dit si le service va bien&nbsp;; une <strong>restart policy</strong> le relance seul.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quelle commande pour lire, en direct, ce qu'écrit un conteneur&nbsp;?</li>
+  <li>Que devient un paquet installé à la main via <code>docker exec</code>&nbsp;?</li>
+  <li>À quoi sert une politique de redémarrage&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle commande permet de lire, en direct, ce qu'écrit une application conteneurisée ?","a":["docker logs -f mon-conteneur","docker inspect mon-conteneur","docker build -f","docker ps -a"],"correct":0,"explain":"docker logs affiche ce que le process envoie sur stdout/stderr ; l'option -f suit le flux en continu, comme tail -f. C'est le premier réflexe face à un problème."},
+  {"q":"Tu entres avec docker exec dans un conteneur qui plante, tu installes un paquet manquant et tout repart. Que vaut cette correction ?","a":["Rien de durable : la modification vit dans ce conteneur seulement et disparaît à sa recréation ; la vraie correction se fait dans le Dockerfile ou le compose.yaml, puis on reconstruit","Elle est définitive : Docker enregistre la modification dans l'image","Elle sera reprise au prochain docker compose up","Elle se propage à tous les conteneurs issus de la même image"],"correct":0,"explain":"Un conteneur est jetable : ce que tu bricoles dedans s'évapore au premier docker compose up --build. L'exec sert à DIAGNOSTIQUER ; le fichier versionné (Dockerfile, compose.yaml) sert à CORRIGER."},
+  {"q":"À quoi sert une politique de redémarrage (ex. restart: unless-stopped) ?","a":["À relancer automatiquement un conteneur qui plante ou après un reboot de la machine (sauf arrêt manuel)","À reconstruire l'image à chaque démarrage","À limiter la mémoire du conteneur","À suivre les journaux"],"correct":0,"explain":"Par défaut un conteneur arrêté le reste. unless-stopped le relève seul après un plantage ou un redémarrage, mais respecte un arrêt volontaire : un bon défaut en production."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["docker logs -f","logs -f","docker logs"],"placeholder":"la commande pour suivre en direct les journaux d'un conteneur","hints":["Comme tail -f pour un conteneur.","L'option -f « suit » le flux.","docker ????  -f"],"link":{"href":"lecon-09.html","label":"Revoir « Lire les journaux »"}},
+  {"type":"text","accept":["docker exec","exec","docker exec -it"],"placeholder":"la commande pour ouvrir un shell dans un conteneur qui tourne déjà","hints":["Ce n'est pas run (qui en crée un nouveau).","docker ???? -it web sh","« exécuter dans »"],"link":{"href":"lecon-09.html","label":"Revoir « Entrer dans un conteneur »"}},
+  {"type":"text","accept":["HEALTHCHECK","healthcheck"],"placeholder":"l'instruction Dockerfile qui teste périodiquement si le conteneur est « sain »","hints":["Elle fait passer le statut à healthy ou unhealthy.","Un seul mot, en majuscules dans le Dockerfile.","« vérification de santé » en anglais."],"link":{"href":"lecon-09.html","label":"Revoir « La santé d'un conteneur »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un conteneur nommé <code>api</code> semble bloqué. Donne deux commandes pour&nbsp;: (1) suivre ses journaux en direct, (2) ouvrir un shell à l'intérieur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker logs -f api          # suivre les journaux
+docker exec -it api sh      # ouvrir un shell dedans</code></pre></figure><p>Les logs révèlent souvent l'erreur&nbsp;; si besoin, l'<code>exec</code> permet d'inspecter fichiers, variables et connexions depuis l'intérieur.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Dans un <code>compose.yaml</code>, configure le service <code>web</code> pour qu'il redémarre automatiquement, sauf si on l'a arrêté manuellement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    build: .
+    restart: unless-stopped</code></pre></figure><p><code>unless-stopped</code> relance le conteneur après un plantage ou un reboot, mais respecte un <code>docker compose stop</code> volontaire.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Ajoute à un Dockerfile un <code>HEALTHCHECK</code> qui interroge <code>http://localhost:8080/health</code> toutes les 30&nbsp;secondes et échoue après 3&nbsp;essais.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker">HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1</code></pre></figure><p>Docker appelle l'URL toutes les 30&nbsp;s&nbsp;; si la commande échoue 3&nbsp;fois de suite, le conteneur passe <code>unhealthy</code>, ce qu'on voit dans <code>docker ps</code> et qu'un orchestrateur peut exploiter.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-docker.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

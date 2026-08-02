@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Performance et gestion mémoire — Leçon 15 · Cours Lua — Syntaxe</title>
+    <meta name="description" content="Écrire du Lua rapide et sobre : variables locales, construction de chaînes avec table.concat, le ramasse-miettes, réutilisation des tables, tables faibles et mémoïsation." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="lua" data-lesson="lecon-15.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Lua</a></li>
+            <li aria-current="page">Leçon 15</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Aller plus loin — Leçon 15</p>
+              <h1 class="lesson-header__title">Performance et gestion mémoire</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 6 et 9</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>pourquoi les variables <strong>locales</strong> sont plus rapides que les globales, et comment en profiter&nbsp;;</li>
+                  <li>construire de longues chaînes efficacement avec <code>table.concat</code>&nbsp;;</li>
+                  <li>expliquer ce que fait le <strong>ramasse-miettes</strong> et comment l'observer avec <code>collectgarbage</code>&nbsp;;</li>
+                  <li>réduire les allocations, et utiliser <strong>tables faibles</strong> et <strong>mémoïsation</strong> à bon escient.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Lua est déjà l'un des langages interprétés les plus rapides. Mais quelques réflexes font une différence spectaculaire dans le code «&nbsp;chaud&nbsp;» — celui qui tourne des millions de fois&nbsp;: une boucle de jeu à 60&nbsp;images par seconde, un traitement de gros fichier, un serveur sous charge. Cette leçon rassemble les habitudes qui comptent vraiment, en évitant l'optimisation prématurée.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note&nbsp;: mesurer avant d'optimiser</p><p>La règle d'or&nbsp;: n'optimise que ce que tu as <strong>mesuré</strong>. <code>os.clock()</code> donne le temps processeur écoulé&nbsp;; encadre-en la portion suspecte et compare deux versions. Optimiser au jugé fait souvent perdre en lisibilité pour un gain nul.</p></div></div>
+
+<h2>Locales contre globales</h2>
+
+<p>En Lua, une variable <strong>globale</strong> n'est pas une simple case&nbsp;: c'est une entrée dans une table (l'environnement <code>_ENV</code>). Y accéder demande une recherche par clé. Une variable <strong>locale</strong>, elle, vit dans un <em>registre</em> de la fonction&nbsp;: l'accès est direct, quasi gratuit. Dans une boucle serrée, la différence se voit.</p>
+
+<figure class="code-block" data-file="script.lua"><pre><code class="language-lua">-- LENT : chaque tour cherche « math » puis « sqrt » dans des tables globales
+local total = 0
+for i = 1, 1e7 do
+  total = total + math.sqrt(i)
+end
+
+-- RAPIDE : on capture la fonction dans une locale, une fois pour toutes
+local sqrt = math.sqrt          -- une seule recherche globale
+local somme = 0
+for i = 1, 1e7 do
+  somme = somme + sqrt(i)       -- accès local, direct
+end</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Comparaison de l'accès à une variable locale et à une variable globale. À gauche, la variable locale est lue directement dans un registre de la fonction, en une étape. À droite, la variable globale exige un détour : chercher la clé dans la table d'environnement _ENV avant d'obtenir la valeur, soit deux étapes. L'accès local est plus court, donc plus rapide.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Deux chemins vers une valeur</text>
+    <rect class="d-accent" x="40" y="44" width="220" height="96" rx="8" /><text class="d-text" x="150" y="66" text-anchor="middle" font-size="10">variable LOCALE</text>
+    <rect class="d-frame" x="70" y="82" width="70" height="40" rx="4" /><text class="d-mut" x="105" y="106" text-anchor="middle" font-size="9">registre</text>
+    <rect class="d-frame" x="170" y="82" width="60" height="40" rx="4" /><text class="d-mut" x="200" y="106" text-anchor="middle" font-size="9">valeur</text>
+    <path class="d-line" d="M140 102 L168 102" fill="none" /><path class="d-line" d="M162 96 L169 102 L162 108" fill="none" />
+    <text class="d-mut" x="150" y="134" text-anchor="middle" font-size="8.5">1 étape</text>
+    <rect class="d-box" x="380" y="44" width="230" height="96" rx="8" /><text class="d-text" x="495" y="66" text-anchor="middle" font-size="10">variable GLOBALE</text>
+    <rect class="d-frame" x="398" y="82" width="60" height="40" rx="4" /><text class="d-mut" x="428" y="102" text-anchor="middle" font-size="8.5">nom</text>
+    <rect class="d-frame" x="470" y="82" width="66" height="40" rx="4" /><text class="d-mut" x="503" y="99" text-anchor="middle" font-size="8" font-family="monospace">_ENV</text><text class="d-mut" x="503" y="112" text-anchor="middle" font-size="8">(table)</text>
+    <rect class="d-frame" x="548" y="82" width="52" height="40" rx="4" /><text class="d-mut" x="574" y="106" text-anchor="middle" font-size="8.5">valeur</text>
+    <path class="d-line" d="M458 102 L468 102" fill="none" /><path class="d-line" d="M536 102 L546 102" fill="none" /><path class="d-line" d="M462 96 L469 102 L462 108" fill="none" /><path class="d-line" d="M542 96 L549 102 L542 108" fill="none" />
+    <text class="d-mut" x="495" y="134" text-anchor="middle" font-size="8.5">2 étapes (recherche par clé)</text>
+  </svg>
+  <figcaption>Capturer <code>math.sqrt</code> dans une locale, c'est payer la recherche <em>une</em> fois au lieu d'à chaque tour. Le même principe vaut pour toute fonction très sollicitée.</figcaption>
+</figure>
+
+<h2>Construire des chaînes&nbsp;: le piège du <code>..</code></h2>
+
+<p>Les chaînes Lua sont <strong>immuables</strong>&nbsp;: chaque <code>..</code> crée une <em>nouvelle</em> chaîne en recopiant les deux morceaux. Concaténer dans une boucle recopie donc un texte de plus en plus long à chaque tour — un coût qui explose (comportement quadratique). La solution&nbsp;: empiler les morceaux dans une table, puis les joindre en une seule fois avec <code>table.concat</code>.</p>
+
+<figure class="code-block" data-file="script.lua"><pre><code class="language-lua">-- LENT : recopie toute la chaîne à chaque tour (coût quadratique)
+local s = ""
+for i = 1, 100000 do
+  s = s .. i .. "\n"
+end
+
+-- RAPIDE : on accumule, on joint une seule fois
+local morceaux = {}
+for i = 1, 100000 do
+  morceaux[#morceaux + 1] = i          -- ou morceaux[i] = i
+end
+local s2 = table.concat(morceaux, "\n") -- une seule allocation finale</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Deux façons de construire une longue chaîne. À gauche, la concaténation répétée : à chaque tour on recopie tout le texte déjà accumulé plus le nouveau morceau, ce qui forme un escalier de plus en plus large, donc lent. À droite, on range les morceaux côte à côte dans une table sans les recopier, puis table.concat les assemble en une seule passe finale, ce qui est bien plus rapide.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Accumuler puis joindre &gt; concaténer en boucle</text>
+    <text class="d-tag" x="150" y="42" text-anchor="middle" font-size="10">s = s .. x (lent)</text>
+    <rect class="d-frame" x="70" y="52" width="40" height="14" rx="2" /><rect class="d-frame" x="70" y="70" width="80" height="14" rx="2" /><rect class="d-frame" x="70" y="88" width="120" height="14" rx="2" /><rect class="d-frame" x="70" y="106" width="160" height="14" rx="2" />
+    <text class="d-mut" x="150" y="140" text-anchor="middle" font-size="8.5">chaque tour recopie</text><text class="d-mut" x="150" y="153" text-anchor="middle" font-size="8.5">tout le texte précédent</text>
+    <text class="d-tag" x="480" y="42" text-anchor="middle" font-size="10">table + concat (rapide)</text>
+    <rect class="d-box" x="400" y="60" width="36" height="26" rx="3" /><rect class="d-box" x="440" y="60" width="36" height="26" rx="3" /><rect class="d-box" x="480" y="60" width="36" height="26" rx="3" /><rect class="d-box" x="520" y="60" width="36" height="26" rx="3" />
+    <text class="d-mut" x="418" y="77" text-anchor="middle" font-size="9" font-family="monospace">1</text><text class="d-mut" x="458" y="77" text-anchor="middle" font-size="9" font-family="monospace">2</text><text class="d-mut" x="498" y="77" text-anchor="middle" font-size="9" font-family="monospace">3</text><text class="d-mut" x="538" y="77" text-anchor="middle" font-size="9" font-family="monospace">4</text>
+    <rect class="d-accent" x="400" y="104" width="156" height="26" rx="4" /><text class="d-text" x="478" y="121" text-anchor="middle" font-size="9">table.concat — 1 passe</text>
+    <path class="d-line" d="M478 86 L478 104" fill="none" /><path class="d-line" d="M472 98 L478 105 L484 98" fill="none" />
+    <text class="d-mut" x="478" y="152" text-anchor="middle" font-size="8.5">aucune recopie intermédiaire</text>
+  </svg>
+  <figcaption>Pour assembler beaucoup de fragments (générer du HTML, un CSV, un rapport), la table tampon suivie de <code>table.concat</code> est la technique de référence.</figcaption>
+</figure>
+
+<h2>Le ramasse-miettes en deux mots</h2>
+
+<p>Lua libère la mémoire tout seul&nbsp;: dès qu'une valeur n'est plus référencée nulle part, le <strong>ramasse-miettes</strong> (<em>garbage collector</em>, GC) finit par la récupérer. Tu n'as jamais à libérer à la main. Mais il faut savoir qu'il existe&nbsp;: créer beaucoup d'objets éphémères lui donne du travail, ce qui peut provoquer de petits à-coups.</p>
+
+<figure class="code-block" data-file="script.lua"><pre><code class="language-lua">-- Observer la mémoire (en kilo-octets)
+print(collectgarbage("count"))   -- mémoire Lua actuellement utilisée
+
+local gros = {}
+for i = 1, 1e6 do gros[i] = i end
+print(collectgarbage("count"))   -- a nettement augmenté
+
+gros = nil                        -- plus aucune référence
+collectgarbage("collect")         -- force un cycle complet
+print(collectgarbage("count"))    -- redescend : la mémoire est récupérée</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Le GC de Lua est <em>incrémental</em>&nbsp;: il travaille par petites touches pour éviter les longues pauses. Sauf besoin précis, ne l'appelle pas à la main en boucle&nbsp;: <code>collectgarbage("collect")</code> à chaque image d'un jeu ferait plus de mal que de bien. Laisse-le respirer&nbsp;; agis surtout sur la <em>quantité</em> d'objets créés.</p></div></div>
+
+<h2>Réutiliser plutôt qu'allouer</h2>
+
+<p>La meilleure façon d'aider le GC, c'est de lui donner moins à ramasser. Dans une boucle chaude, éviter de créer une table neuve à chaque tour réduit d'autant la pression mémoire.</p>
+
+<figure class="code-block" data-file="script.lua"><pre><code class="language-lua">-- COÛTEUX : une table jetable créée à chaque appel
+local function deplacer(x, y, dx, dy)
+  return { x = x + dx, y = y + dy }   -- alloue une table à chaque frame
+end
+
+-- SOBRE : on écrit dans une table existante, réutilisée
+local function deplacer_dans(pos, dx, dy)
+  pos.x = pos.x + dx
+  pos.y = pos.y + dy
+  return pos                           -- zéro allocation
+end
+
+local joueur = { x = 0, y = 0 }
+deplacer_dans(joueur, 5, 0)            -- même table, mise à jour en place</code></pre></figure>
+
+<h2>Tables faibles&nbsp;: des caches qui s'effacent</h2>
+
+<p>Un cache classique <em>empêche</em> ses valeurs d'être ramassées, puisqu'il les référence. Parfois on veut l'inverse&nbsp;: «&nbsp;garde ceci <strong>tant que</strong> quelqu'un d'autre l'utilise&nbsp;». Une <strong>table faible</strong> le permet&nbsp;: ses références ne comptent pas pour le GC. On la déclare via la métaméthode <code>__mode</code> (<code>"k"</code> clés faibles, <code>"v"</code> valeurs faibles, <code>"kv"</code> les deux).</p>
+
+<figure class="code-block" data-file="script.lua"><pre><code class="language-lua">-- Un cache dont les valeurs disparaissent si plus personne ne les tient
+local cache = setmetatable({}, { __mode = "v" })
+
+local function image_pour(nom)
+  local img = cache[nom]
+  if not img then
+    img = charger_image(nom)   -- opération coûteuse
+    cache[nom] = img
+  end
+  return img
+end
+-- Si le reste du programme oublie une image, le GC peut la retirer du cache :
+-- la mémoire ne gonfle pas indéfiniment.</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Le principe d'une table faible. Un objet est référencé à la fois par le programme, avec une référence forte, et par un cache à valeurs faibles. Tant que la référence forte existe, l'objet reste. Si le programme relâche sa référence forte, il ne reste que la référence faible du cache, qui n'empêche pas le ramasse-miettes : l'objet est alors collecté et retiré du cache.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Une référence faible n'empêche pas le nettoyage</text>
+    <rect class="d-accent" x="270" y="66" width="110" height="44" rx="8" /><text class="d-text" x="325" y="90" text-anchor="middle" font-size="10">objet (image)</text>
+    <rect class="d-box" x="40" y="66" width="150" height="44" rx="8" /><text class="d-text" x="115" y="84" text-anchor="middle" font-size="9.5">programme</text><text class="d-mut" x="115" y="100" text-anchor="middle" font-size="8.5">référence FORTE</text>
+    <rect class="d-frame" x="460" y="66" width="150" height="44" rx="8" /><text class="d-mut" x="535" y="84" text-anchor="middle" font-size="9.5">cache __mode="v"</text><text class="d-mut" x="535" y="100" text-anchor="middle" font-size="8.5">référence faible</text>
+    <path class="d-line" d="M190 88 L268 88" fill="none" /><path class="d-line" d="M262 82 L269 88 L262 94" fill="none" /><text class="d-mut" x="228" y="80" text-anchor="middle" font-size="8">retient</text>
+    <path class="d-line" d="M458 88 L382 88" fill="none" stroke-dasharray="4 3" /><text class="d-mut" x="420" y="80" text-anchor="middle" font-size="8">n'empêche pas</text>
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="9">programme relâche → il ne reste que le faible → l'objet est collecté et sort du cache</text>
+    <text class="d-mut" x="320" y="156" text-anchor="middle" font-size="8.5">idéal pour un cache qui ne doit jamais gonfler sans fin</text>
+  </svg>
+  <figcaption>La table faible est l'outil des caches «&nbsp;polis&nbsp;»&nbsp;: ils accélèrent tant que la mémoire est disponible, mais s'effacent d'eux-mêmes sous pression.</figcaption>
+</figure>
+
+<h2>Mémoïsation&nbsp;: calculer une fois, retenir</h2>
+
+<p>Si une fonction pure (même entrée → même sortie) est coûteuse et souvent appelée avec les mêmes arguments, on peut <strong>mémoïser</strong>&nbsp;: stocker chaque résultat dans un cache indexé par l'argument.</p>
+
+<figure class="code-block" data-file="script.lua"><pre><code class="language-lua">local function memoize(f)
+  local cache = {}
+  return function(x)
+    local v = cache[x]
+    if v == nil then      -- pas encore calculé
+      v = f(x)
+      cache[x] = v
+    end
+    return v
+  end
+end
+
+-- Exemple : une fonction lente rendue instantanée sur les rappels
+local carre_lent = memoize(function(n)
+  for _ = 1, 1e7 do end   -- simule un calcul coûteux
+  return n * n
+end)
+
+print(carre_lent(9))   -- lent la 1re fois
+print(carre_lent(9))   -- immédiat : lu dans le cache</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: la boucle de jeu</p><p>Dans un jeu LÖVE (leçon&nbsp;12), <code>love.update</code> tourne <strong>60&nbsp;fois par seconde</strong>. Y créer des tables temporaires — un vecteur <code>{x=…, y=…}</code> par ennemi et par image — nourrit le GC, qui finit par déclencher une collecte au pire moment&nbsp;: l'image saute (<em>stutter</em>). Les studios appliquent exactement les règles de cette leçon&nbsp;: variables locales, tables réutilisées, <em>pools</em> d'objets, et <code>table.concat</code> pour les textes d'interface. Résultat&nbsp;: un rythme d'images stable.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Réflexes de performance Lua</caption>
+    <thead><tr><th scope="col">Situation</th><th scope="col">À faire</th><th scope="col">Pourquoi</th></tr></thead>
+    <tbody>
+      <tr><td>fonction appelée en boucle</td><td><code>local f = math.sqrt</code></td><td>évite la recherche globale</td></tr>
+      <tr><td>construire un long texte</td><td>table + <code>table.concat</code></td><td><code>..</code> en boucle = quadratique</td></tr>
+      <tr><td>observer la mémoire</td><td><code>collectgarbage("count")</code></td><td>en kilo-octets</td></tr>
+      <tr><td>forcer un nettoyage</td><td><code>collectgarbage("collect")</code></td><td>rarement nécessaire</td></tr>
+      <tr><td>boucle chaude</td><td>réutiliser les tables</td><td>moins de pression GC</td></tr>
+      <tr><td>cache qui doit s'effacer</td><td><code>__mode = "v"</code></td><td>table faible</td></tr>
+      <tr><td>fonction pure coûteuse</td><td>mémoïsation</td><td>calculer une seule fois</td></tr>
+      <tr><td>doute sur un gain</td><td><code>os.clock()</code> avant/après</td><td>mesurer, pas deviner</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Variable locale / globale</dt><dd>La <strong>locale</strong> (<code>local</code>) vit dans un registre&nbsp;: accès direct. La <strong>globale</strong> est une entrée de la table <code>_ENV</code>&nbsp;: accès par recherche, plus lent.</dd>
+  <dt>Chaîne immuable</dt><dd>Une chaîne Lua ne se modifie jamais&nbsp;: toute opération en crée une nouvelle. D'où le coût de <code>..</code> répété.</dd>
+  <dt><code>table.concat</code></dt><dd>Joint les éléments d'une table en une seule chaîne, en une passe&nbsp;; la bonne façon d'assembler beaucoup de fragments.</dd>
+  <dt>Ramasse-miettes (GC)</dt><dd>Mécanisme qui récupère automatiquement la mémoire des valeurs devenues inaccessibles. En Lua, il est <em>incrémental</em>.</dd>
+  <dt><code>collectgarbage</code></dt><dd>Fonction de pilotage du GC&nbsp;: <code>"count"</code> mesure la mémoire, <code>"collect"</code> force un cycle, <code>"step"</code> avance d'un pas.</dd>
+  <dt>Table faible</dt><dd>Table dont les références (clés et/ou valeurs, selon <code>__mode</code>) n'empêchent pas le GC de collecter les objets. Idéale pour un cache borné.</dd>
+  <dt>Mémoïsation</dt><dd>Mise en cache du résultat d'une fonction pure en fonction de ses arguments, pour ne le calculer qu'une fois.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<p>Écrire du Lua rapide, ce n'est pas ruser&nbsp;: c'est adopter quelques habitudes sobres et mesurer. Capture les fonctions chaudes en locales, assemble les chaînes avec <code>table.concat</code>, crée moins d'objets éphémères, et confie le reste au ramasse-miettes. Les tables faibles et la mémoïsation sont là pour les cas précis où un cache aide sans faire gonfler la mémoire.</p>
+
+<ul>
+<li>Locales &gt; globales dans les boucles serrées&nbsp;; <code>local f = math.sqrt</code>.</li>
+<li>Concaténer en boucle est quadratique&nbsp;: préfère table + <code>table.concat</code>.</li>
+<li>Le GC libère tout seul&nbsp;; <code>collectgarbage("count")</code> pour observer, sans en abuser.</li>
+<li>Réutiliser les tables allège la pression mémoire du code chaud.</li>
+<li>Tables faibles (<code>__mode</code>) et mémoïsation&nbsp;: des caches, à choisir selon le besoin.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>local sqrt = math.sqrt</code> accélère-t-il une boucle de calcul&nbsp;?</li><li>Qu'est-ce qui rend <code>s = s .. x</code> lent quand on le répète des milliers de fois&nbsp;?</li><li>Que renvoie <code>collectgarbage("count")</code>&nbsp;?</li><li>Dans quel cas une table faible (<code>__mode = "v"</code>) est-elle préférable à un cache ordinaire&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi une variable locale est-elle plus rapide d'accès qu'une variable globale en Lua ?","a":["La locale vit dans un registre (accès direct), tandis que la globale est une entrée de la table _ENV, atteinte par une recherche par clé","La globale est chiffrée","La locale est mise en cache par le processeur uniquement","Il n'y a aucune différence de vitesse"],"correct":0,"explain":"Les globales Lua sont des champs de la table d'environnement _ENV : y accéder implique une indexation. Une locale est un simple registre de la fonction, lu directement. Dans du code chaud, capturer une globale dans une locale supprime cette recherche répétée."},
+  {"q":"Pourquoi construire une chaîne avec s = s .. x dans une grande boucle est-il coûteux ?","a":["Les chaînes sont immuables : chaque .. recopie tout le texte déjà accumulé, d'où un coût qui croît quadratiquement","Lua interdit la concaténation en boucle","Cela consomme le ramasse-miettes qui plante","Le .. ne fonctionne qu'avec des nombres"],"correct":0,"explain":"Une chaîne Lua ne se modifie pas sur place : s .. x alloue une nouvelle chaîne en copiant s (de plus en plus long) plus x. Répété N fois, le total des copies est en N². On accumule plutôt dans une table et on appelle table.concat une seule fois."},
+  {"q":"À quoi sert une table faible déclarée avec __mode = \"v\" ?","a":["À faire un cache dont les valeurs peuvent être ramassées si plus rien d'autre ne les référence, évitant que la mémoire gonfle sans fin","À accélérer l'accès aux valeurs","À interdire toute modification de la table","À trier automatiquement les valeurs"],"correct":0,"explain":"Avec __mode = \"v\", les valeurs sont référencées faiblement : elles n'empêchent pas le GC. Si le reste du programme relâche un objet, il peut être collecté et disparaître du cache. Parfait pour un cache borné qui ne doit pas retenir la mémoire indéfiniment."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["table.concat","concat"],"placeholder":"la fonction qui joint les éléments d'une table en une chaîne, en une passe : table.…","hints":["À préférer à .. répété dans une boucle.","table.??????(morceaux, \"\\n\").","Six lettres."],"link":{"href":"lecon-15.html","label":"Revoir « Construire des chaînes »"}},
+  {"type":"text","accept":["local"],"placeholder":"le mot-clé qui déclare une variable rapide d'accès (registre), à préférer au global : …","hints":["local f = math.sqrt.","Cinq lettres.","Sans lui, la variable est globale."],"link":{"href":"lecon-15.html","label":"Revoir « Locales contre globales »"}},
+  {"type":"text","accept":["count","\"count\""],"placeholder":"l'argument de collectgarbage qui renvoie la mémoire utilisée (en Ko) : collectgarbage(\"…\")","hints":["Ce n'est pas \"collect\" ni \"step\".","Il compte les kilo-octets.","Cinq lettres."],"link":{"href":"lecon-15.html","label":"Revoir « Le ramasse-miettes »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Réécris cette construction de chaîne pour éviter le <code>..</code> en boucle&nbsp;: on veut une chaîne <code>"1;2;3;…;1000"</code>. Utilise une table tampon et <code>table.concat</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-lua">local morceaux = {}
+for i = 1, 1000 do
+  morceaux[i] = i            -- table.concat convertit les nombres
+end
+local resultat = table.concat(morceaux, ";")
+
+print(#resultat)             -- longueur de la chaîne finale
+-- Une seule allocation à la fin, au lieu de 1000 recopies successives.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Mesure l'écart. Écris deux boucles qui somment <code>math.sin(i)</code> pour <code>i</code> de 1 à 5&nbsp;000&nbsp;000 — l'une via <code>math.sin</code>, l'autre via une locale <code>local sin = math.sin</code> — et chronomètre chacune avec <code>os.clock()</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-lua">local N = 5e6
+
+local t1 = os.clock()
+local s1 = 0
+for i = 1, N do s1 = s1 + math.sin(i) end   -- recherche globale à chaque tour
+print("global :", os.clock() - t1)
+
+local t2 = os.clock()
+local sin = math.sin                          -- capturée une fois
+local s2 = 0
+for i = 1, N do s2 = s2 + sin(i) end
+print("local  :", os.clock() - t2)
+-- La version locale est mesurablement plus rapide (souvent 10 à 30 %).</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Synthèse</span></div><p>Écris une version mémoïsée de la suite de Fibonacci récursive. Sans cache, <code>fib(40)</code> est très lent (appels redondants)&nbsp;; avec un cache, il devient instantané. Utilise une table locale <code>cache</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-lua">local cache = {}
+local function fib(n)
+  if n &lt; 2 then return n end
+  local memo = cache[n]
+  if memo then return memo end        -- déjà calculé
+  local r = fib(n - 1) + fib(n - 2)
+  cache[n] = r                          -- on retient
+  return r
+end
+
+print(fib(40))   --&gt; 102334155  (immédiat)
+-- Sans cache, fib(40) recalcule des milliards de fois les mêmes valeurs.
+-- Le cache transforme un coût exponentiel en coût linéaire.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-lua.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ETS : le stockage en mémoire — Leçon 10 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="ETS (Erlang Term Storage) : des tables en mémoire, gérées par la VM, accessibles en concurrence par plusieurs processus sans recopier les données. Types de tables, opérations de base, propriété (ownership) et usages réels (cache, sessions, compteurs)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Erlang : aller plus loin — Leçon 10</p>
+              <h1 class="lesson-header__title">ETS : le stockage en mémoire</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~52 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 9</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer ce qu'est une table <strong>ETS</strong> et pourquoi elle échappe au goulot d'un processus&nbsp;;</li>
+                  <li>créer une table, y <strong>insérer</strong> et <strong>lire</strong> des tuples&nbsp;;</li>
+                  <li>choisir le bon <strong>type</strong> de table (set, ordered_set, bag…)&nbsp;;</li>
+                  <li>comprendre la <strong>propriété</strong> d'une table et sa durée de vie.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Depuis la leçon&nbsp;5, tu sais garder un état dans un <strong>processus</strong> acteur. C'est parfait pour un état modéré, mais un processus traite ses messages <strong>un par un</strong>&nbsp;: s'il détient un gros dictionnaire lu par des milliers de clients, il devient un goulot d'étranglement. Erlang offre une autre voie&nbsp;: <strong>ETS</strong> (<em>Erlang Term Storage</em>), des tables en mémoire gérées directement par la machine virtuelle, que plusieurs processus peuvent lire et écrire <strong>en parallèle</strong>, sans se recopier les données par messages.</p>
+
+<h2>Le problème : un processus, un goulot</h2>
+<p>Un <code>gen_server</code> qui garde une map partagée sérialise tous les accès&nbsp;: mille lecteurs attendent leur tour. Une table ETS, elle, vit <em>en dehors</em> du tas d'un processus&nbsp;; les lectures concurrentes ne s'attendent pas.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Comparaison de deux approches du partage de données. À gauche, trois processus clients envoient tous leurs requêtes à un unique processus serveur qui détient l'état ; les flèches convergent vers ce serveur, formant un goulot d'étranglement où les demandes font la queue. À droite, les trois mêmes processus accèdent directement et en parallèle à une table ETS, une zone mémoire partagée gérée par la VM ; chaque processus a sa propre flèche vers la table, sans file d'attente. La légende oppose accès sérialisés à gauche et accès concurrents à droite.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux façons de partager des données</text>
+    <text class="d-mut" x="160" y="40" text-anchor="middle" font-size="8.5">via un processus (sérialisé)</text>
+    <rect class="d-box" x="30" y="52" width="54" height="24" rx="4" /><text class="d-text" x="57" y="68" text-anchor="middle" font-size="8">P1</text>
+    <rect class="d-box" x="30" y="86" width="54" height="24" rx="4" /><text class="d-text" x="57" y="102" text-anchor="middle" font-size="8">P2</text>
+    <rect class="d-box" x="30" y="120" width="54" height="24" rx="4" /><text class="d-text" x="57" y="136" text-anchor="middle" font-size="8">P3</text>
+    <rect class="d-accent" x="196" y="80" width="86" height="36" rx="5" /><text class="d-text" x="239" y="96" text-anchor="middle" font-size="8">serveur</text><text class="d-mut" x="239" y="108" text-anchor="middle" font-size="7">détient l'état</text>
+    <path class="d-line" d="M84 64 L196 92" fill="none" /><path class="d-line" d="M84 98 L196 98" fill="none" /><path class="d-line" d="M84 132 L196 106" fill="none" />
+    <text class="d-mut" x="150" y="150" text-anchor="middle" font-size="7.5">file d'attente : un message à la fois</text>
+    <line class="d-line" x1="320" y1="44" x2="320" y2="170" stroke-dasharray="3 3" />
+    <text class="d-mut" x="480" y="40" text-anchor="middle" font-size="8.5">via ETS (concurrent)</text>
+    <rect class="d-box" x="356" y="52" width="54" height="24" rx="4" /><text class="d-text" x="383" y="68" text-anchor="middle" font-size="8">P1</text>
+    <rect class="d-box" x="356" y="86" width="54" height="24" rx="4" /><text class="d-text" x="383" y="102" text-anchor="middle" font-size="8">P2</text>
+    <rect class="d-box" x="356" y="120" width="54" height="24" rx="4" /><text class="d-text" x="383" y="136" text-anchor="middle" font-size="8">P3</text>
+    <rect class="d-accent" x="512" y="72" width="96" height="52" rx="6" /><text class="d-text" x="560" y="93" text-anchor="middle" font-size="8">table ETS</text><text class="d-mut" x="560" y="106" text-anchor="middle" font-size="7">mémoire partagée</text><text class="d-mut" x="560" y="116" text-anchor="middle" font-size="7">(gérée par la VM)</text>
+    <path class="d-line" d="M410 64 L512 88" fill="none" /><circle class="d-dot" cx="512" cy="88" r="2.5" />
+    <path class="d-line" d="M410 98 L512 98" fill="none" /><circle class="d-dot" cx="512" cy="98" r="2.5" />
+    <path class="d-line" d="M410 132 L512 108" fill="none" /><circle class="d-dot" cx="512" cy="108" r="2.5" />
+    <text class="d-mut" x="480" y="150" text-anchor="middle" font-size="7.5">lectures parallèles, sans attente</text>
+  </svg>
+  <figcaption>Un processus sérialise les accès&nbsp;; une table ETS autorise des lectures (et, réglages à l'appui, des écritures) <strong>concurrentes</strong>. C'est l'outil des données lues très souvent par beaucoup de monde.</figcaption>
+</figure>
+
+<h2>Créer, insérer, lire</h2>
+<p>Une table stocke des <strong>tuples</strong>&nbsp;; par défaut, le <em>premier</em> élément sert de <strong>clé</strong>. On crée la table, on insère, on lit&nbsp;:</p>
+<figure class="code-block" data-file="shell"><pre><code class="language-erlang">%% Une table nommée, lisible/inscriptible par tout le monde
+Tab = ets:new(cache, [set, public, named_table]).
+
+%% Insérer des tuples {Cle, Valeur}
+ets:insert(cache, {"session_42", "alice"}).
+ets:insert(cache, {"session_99", "bob"}).
+
+%% Lire par clé : renvoie une LISTE de tuples correspondants
+ets:lookup(cache, "session_42").
+%% =&gt; [{"session_42","alice"}]
+
+ets:lookup(cache, "inconnu").
+%% =&gt; []          % rien trouvé : liste vide, pas d'erreur
+
+ets:delete(cache, "session_99").   % retirer une clé</code></pre></figure>
+<p>Trois idées clés&nbsp;: <code>ets:lookup</code> renvoie toujours une <strong>liste</strong> (vide si absent, jamais d'exception)&nbsp;; l'option <code>named_table</code> permet de désigner la table par son <em>nom</em> plutôt que par l'identifiant renvoyé&nbsp;; et <code>public</code> ouvre l'accès à tous les processus (par défaut, seul le propriétaire écrit).</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Un compteur atomique gratuit</p><p><code>ets:update_counter(stats, requetes, 1)</code> incrémente un entier <strong>de façon atomique</strong>, sans passer par un processus. C'est la manière idiomatique de tenir des compteurs très sollicités (nombre de requêtes, hits de cache) sans créer de goulot ni de condition de course.</p></div></div>
+
+<h2>Choisir le type de table</h2>
+<p>À la création, le premier drapeau choisit la sémantique des clés&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Les quatre types de tables ETS, présentés en quatre lignes. set : les clés sont uniques et non triées, une clé écrase la précédente. ordered_set : les clés sont uniques et maintenues triées, ce qui permet de parcourir dans l'ordre. bag : une même clé peut apparaître plusieurs fois mais chaque tuple complet doit être unique. duplicate_bag : tout est autorisé, y compris des tuples identiques en double. Chaque ligne montre un petit exemple de contenu illustrant la règle.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Les quatre types de tables ETS</text>
+    <rect class="d-accent" x="30" y="34" width="120" height="30" rx="5" /><text class="d-text" x="90" y="53" text-anchor="middle" font-size="8.5">set</text>
+    <text class="d-mut" x="164" y="46" font-size="8">clés uniques, non triées — une clé écrase l'ancienne valeur</text>
+    <text class="d-mut" x="164" y="59" font-size="7.5">{a,1} {b,2}  puis insert {a,9} ⇒ {a,9} {b,2}</text>
+    <rect class="d-box" x="30" y="74" width="120" height="30" rx="5" /><text class="d-text" x="90" y="93" text-anchor="middle" font-size="8.5">ordered_set</text>
+    <text class="d-mut" x="164" y="86" font-size="8">clés uniques ET triées — parcours dans l'ordre</text>
+    <text class="d-mut" x="164" y="99" font-size="7.5">insert {c,_} {a,_} {b,_} ⇒ lit a, b, c</text>
+    <rect class="d-box" x="30" y="114" width="120" height="30" rx="5" /><text class="d-text" x="90" y="133" text-anchor="middle" font-size="8.5">bag</text>
+    <text class="d-mut" x="164" y="126" font-size="8">clé répétée OK, mais chaque tuple complet unique</text>
+    <text class="d-mut" x="164" y="139" font-size="7.5">{a,1} {a,2} OK ; {a,1} {a,1} ⇒ un seul gardé</text>
+    <rect class="d-box" x="30" y="154" width="120" height="30" rx="5" /><text class="d-text" x="90" y="173" text-anchor="middle" font-size="8.5">duplicate_bag</text>
+    <text class="d-mut" x="164" y="166" font-size="8">tout est permis, doublons de tuples inclus</text>
+    <text class="d-mut" x="164" y="179" font-size="7.5">{a,1} {a,1} ⇒ les deux conservés</text>
+  </svg>
+  <figcaption>Le type par défaut est <code>set</code>. Choisis <code>ordered_set</code> quand l'ordre des clés compte, et un <code>bag</code> quand une clé porte plusieurs valeurs distinctes.</figcaption>
+</figure>
+
+<h2>À qui appartient une table&nbsp;?</h2>
+<p>Une table ETS a un <strong>propriétaire</strong>&nbsp;: le processus qui l'a créée. Point crucial pour la tolérance aux pannes vue à la leçon&nbsp;6&nbsp;: si le propriétaire <strong>meurt</strong>, la table est <strong>détruite</strong> avec lui (sauf si l'on a désigné un héritier via l'option <code>heir</code>). Une table ETS n'est donc <em>pas</em> une base de données persistante&nbsp;: son contenu vit en mémoire et disparaît au redémarrage.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">ETS n'est pas persistant</p><p>Tout est en RAM. Après un crash de la VM ou un redémarrage, une table ETS est <strong>vide</strong>. Pour survivre au processus, confie-la à un <strong>propriétaire stable</strong> (souvent un <code>gen_server</code> dédié dans l'arbre de supervision) ou désigne un <code>heir</code>. Pour une vraie persistance sur disque, on passe à <strong>DETS</strong> ou, mieux, à la base distribuée <strong>Mnesia</strong>.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le registre de processus d'Elixir</p><p>Dans le monde BEAM, ETS est partout, souvent invisible. Le <em>Registry</em> d'Elixir et la table interne qui associe un <code>named_table</code> à son identifiant reposent dessus. Les serveurs web comme <strong>Cowboy</strong> gardent leurs routes en ETS pour un routage sans verrou&nbsp;; les caches (<em>cachex</em>, <em>con_cache</em>) ne sont que des tables ETS habillées. Quand une application BEAM sert des centaines de milliers de connexions avec des temps de réponse stables, ETS y est presque toujours pour quelque chose.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les options <code>{read_concurrency, true}</code> et <code>{write_concurrency, true}</code> optimisent selon ton profil d'accès. <code>ets:select/2</code> et les <em>match specifications</em> permettent des requêtes riches côté table (sans tout recopier). Enfin, <strong>Mnesia</strong> bâtit sur ETS/DETS une base transactionnelle et distribuée&nbsp;: le prolongement naturel quand il faut de la persistance et de la réplication.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — ETS</caption>
+    <thead><tr><th scope="col">But</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Créer</td><td><code>ets:new(nom, [set, public, named_table])</code></td><td>renvoie un id / le nom</td></tr>
+      <tr><td>Insérer</td><td><code>ets:insert(t, {Cle, Val})</code></td><td>1er élément = clé</td></tr>
+      <tr><td>Lire</td><td><code>ets:lookup(t, Cle)</code></td><td>liste (vide si absent)</td></tr>
+      <tr><td>Supprimer une clé</td><td><code>ets:delete(t, Cle)</code></td><td>—</td></tr>
+      <tr><td>Compter</td><td><code>ets:update_counter(t, Cle, 1)</code></td><td>atomique</td></tr>
+      <tr><td>Détruire la table</td><td><code>ets:delete(t)</code></td><td>ou mort du propriétaire</td></tr>
+      <tr><td>Persister</td><td>DETS / Mnesia</td><td>ETS = RAM only</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>ETS</dt><dd><em>Erlang Term Storage</em>&nbsp;: tables en mémoire gérées par la VM, accessibles en concurrence par plusieurs processus.</dd>
+  <dt>Clé</dt><dd>Par défaut le premier élément du tuple stocké&nbsp;; sert à retrouver l'entrée avec <code>lookup</code>.</dd>
+  <dt>set / ordered_set</dt><dd>Tables à clés uniques, non triées (<code>set</code>) ou maintenues triées (<code>ordered_set</code>).</dd>
+  <dt>bag / duplicate_bag</dt><dd>Tables autorisant plusieurs tuples par clé&nbsp;; <code>duplicate_bag</code> accepte même les tuples identiques.</dd>
+  <dt>named_table</dt><dd>Option qui permet de désigner la table par son nom plutôt que par l'identifiant renvoyé.</dd>
+  <dt>Propriétaire (owner)</dt><dd>Processus créateur d'une table&nbsp;; à sa mort, la table est détruite (sauf <code>heir</code>).</dd>
+  <dt>Mnesia</dt><dd>Base de données distribuée d'Erlang, bâtie sur ETS/DETS, transactionnelle et persistante.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>ETS stocke des tuples en mémoire, <strong>hors</strong> du tas d'un processus, avec accès <strong>concurrent</strong>.</li>
+  <li><code>lookup</code> renvoie une <strong>liste</strong> (vide si la clé manque)&nbsp;; le premier élément du tuple est la clé.</li>
+  <li>Le <strong>type</strong> (set, ordered_set, bag…) fixe l'unicité et l'ordre des clés.</li>
+  <li>Une table appartient à un <strong>processus</strong> et meurt avec lui&nbsp;: ETS n'est pas persistant.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi une table ETS évite-t-elle le goulot d'un <code>gen_server</code> partagé&nbsp;?</li>
+  <li>Que renvoie <code>ets:lookup</code> pour une clé absente&nbsp;?</li>
+  <li>Qu'advient-il d'une table quand son propriétaire meurt&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi ETS évite-t-il le goulot d'étranglement d'un processus qui partage un gros état ?","a":["Les données vivent hors du tas d'un processus et sont lues en concurrence, sans file d'attente","Parce qu'ETS est écrit en C","Parce qu'il compresse les données","Parce qu'il n'y a qu'un seul lecteur autorisé"],"correct":0,"explain":"Un processus sérialise ses messages ; une table ETS est une zone mémoire partagée gérée par la VM, que plusieurs processus lisent en parallèle sans s'attendre."},
+  {"q":"Que renvoie ets:lookup(cache, Cle) si la clé n'existe pas ?","a":["Une liste vide []","L'atome undefined","Une exception badkey","Le tuple {error, not_found}"],"correct":0,"explain":"lookup renvoie toujours une liste de tuples correspondants ; vide si rien ne correspond. Aucune exception n'est levée."},
+  {"q":"Qu'arrive-t-il à une table ETS quand le processus propriétaire meurt ?","a":["La table est détruite avec lui, sauf si un heir a été désigné","Elle est sauvegardée sur disque automatiquement","Elle est transférée au superviseur","Rien, elle survit indéfiniment"],"correct":0,"explain":"ETS est en mémoire et rattaché à son propriétaire : sa mort détruit la table. On peut prévoir un héritier (heir) ou confier la table à un processus stable."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["ets:lookup","lookup"],"placeholder":"la fonction ETS qui lit les tuples associés à une clé","hints":["Renvoie une liste.","ets:??????(cache, Cle)","Vide si la clé manque."],"link":{"href":"lecon-10.html","label":"Revoir « Créer, insérer, lire »"}},
+  {"type":"text","accept":["ordered_set"],"placeholder":"le type de table à clés uniques ET maintenues triées","hints":["Permet de parcourir dans l'ordre.","Un mot avec un souligné.","set… mais trié."],"link":{"href":"lecon-10.html","label":"Revoir « Choisir le type de table »"}},
+  {"type":"text","accept":["update_counter","ets:update_counter"],"placeholder":"la fonction ETS qui incrémente un entier de façon atomique","hints":["Idéale pour un compteur très sollicité.","ets:??????_???????(t, Cle, 1)","Pas de condition de course."],"link":{"href":"lecon-10.html","label":"Revoir « Un compteur atomique »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée une table nommée <code>villes</code> de type <code>set</code>, insère <code>{"paris", 2}</code> et <code>{"lyon", 0.5}</code> (millions d'habitants), puis lis la population de Paris.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">ets:new(villes, [set, named_table]).
+ets:insert(villes, {"paris", 2}).
+ets:insert(villes, {"lyon", 0.5}).
+ets:lookup(villes, "paris").
+%% =&gt; [{"paris",2}]</code></pre></figure><p>La table étant un <code>set</code>, réinsérer <code>{"paris", 3}</code> remplacerait l'entrée existante.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu tiens un compteur de visites par page. Quelle table et quelle fonction utiliser pour incrémenter la page <code>"/accueil"</code> à chaque visite, sans risque de condition de course&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">ets:new(visites, [set, public, named_table]).
+%% à chaque visite :
+ets:update_counter(visites, "/accueil", {2, 1}).
+%% incrémente de 1 la 2e position ; atomique, sans processus</code></pre></figure><p><code>update_counter</code> lit-modifie-écrit en une seule opération atomique&nbsp;: deux requêtes simultanées ne peuvent pas s'écraser.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On veut associer à chaque utilisateur <em>plusieurs</em> rôles (<code>{"alice", admin}</code>, <code>{"alice", editeur}</code>). Quel type de table choisir et pourquoi&nbsp;? Que renverrait alors <code>lookup("alice")</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">ets:new(roles, [bag, named_table]).
+ets:insert(roles, {"alice", admin}).
+ets:insert(roles, {"alice", editeur}).
+ets:lookup(roles, "alice").
+%% =&gt; [{"alice",admin},{"alice",editeur}]</code></pre></figure><p>Un <code>bag</code> autorise plusieurs tuples pour une même clé (tant qu'ils diffèrent). <code>lookup</code> renvoie <strong>tous</strong> les tuples de la clé&nbsp;: la liste des rôles. Un <code>set</code> n'en aurait gardé qu'un seul.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

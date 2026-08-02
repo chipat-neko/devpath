@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tableaux, chaînes et structures — Leçon 07 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="Tableaux, chaînes terminées par zéro et structures en assembleur x86-64 : accès indexé, offsets de champs, boutisme, alignement, padding, movsx et movzx." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Données et lecture — Leçon 07</p>
+              <h1 class="lesson-header__title">Tableaux, chaînes et structures</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 6</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>accéder à un élément de tableau par <code>base + i*taille</code> et le parcourir en boucle&nbsp;;</li>
+                  <li>parcourir et transformer une chaîne terminée par zéro (convention C)&nbsp;;</li>
+                  <li>lire un champ de structure via un déplacement fixe <code>[rax + offset]</code> et comprendre <strong>padding</strong> et <strong>alignement</strong>&nbsp;;</li>
+                  <li>convertir des entiers avec extension de signe ou de zéro grâce à <code>movsx</code> et <code>movzx</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En C, tu écris <code>tab[i]</code>, <code>s[i]</code> ou <code>p-&gt;champ</code> sans jamais te demander où ces octets vivent vraiment. Le compilateur, lui, traduit chacune de ces notations en une petite arithmétique d'adresses. Dans cette leçon, on enlève la couche de sucre et on regarde la mémoire telle qu'elle est : une longue suite d'octets numérotés, sur laquelle tableaux, chaînes et structures ne sont que des <em>conventions de lecture</em>.</p>
+
+<p>Tout ce que tu vas voir ici éclaire le C autant que l'assembleur : pourquoi un <code>struct</code> a parfois des trous, pourquoi un <code>int</code> et un <code>char</code> ne se mélangent pas innocemment, pourquoi <code>0x12345678</code> apparaît à l'envers dans un débogueur. Comprendre la machine démystifie le langage du dessus.</p>
+
+<h2>La mémoire, c'est un grand tableau d'octets</h2>
+
+<p>La mémoire n'a pas de type. C'est une rangée d'octets, chacun avec une adresse (un nombre). Quand tu déclares quoi que ce soit, tu réserves simplement une plage d'octets et tu décides comment l'interpréter. En NASM, on réserve de la place dans la section <code>.data</code> (avec valeurs) ou <code>.bss</code> (zone vierge).</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">section .data
+    ; un tableau de 5 entiers 64 bits, comme int64_t notes[5] = {...};
+    notes   dq  17, 12, 20, 8, 15      ; dq = define quadword (8 octets chacun)
+
+section .bss
+    ; une zone vierge de 256 octets, comme char buffer[256];
+    buffer  resb 256                   ; resb = reserve bytes</code></pre></figure>
+
+<p>Quelques tailles à connaître : <code>db</code> réserve des octets (1), <code>dw</code> des words (2), <code>dd</code> des doublewords (4), <code>dq</code> des quadwords (8). Côté <code>.bss</code>, <code>resb</code>/<code>resw</code>/<code>resd</code>/<code>resq</code> réservent <em>n</em> éléments sans les initialiser. Le nom (<code>notes</code>, <code>buffer</code>) n'est rien d'autre qu'une étiquette pour l'adresse du premier octet.</p>
+
+<h2>Tableaux : l'adresse se calcule</h2>
+
+<p>Un tableau, c'est une base (l'adresse du premier élément) et des éléments de taille fixe collés les uns aux autres. L'élément d'indice <code>i</code> se trouve à <code>base + i * taille</code>. C'est exactement ce que le C fait derrière <code>tab[i]</code>. Le processeur sait faire ce calcul tout seul grâce à l'<strong>adressage indexé avec échelle</strong> : <code>[base + index*echelle]</code>, où l'échelle vaut 1, 2, 4 ou 8.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; lire notes[2] (des quadwords, donc taille 8)
+    lea     rbx, [notes]        ; rbx = adresse de base du tableau
+    mov     rcx, 2              ; l'indice i
+    mov     rax, [rbx + rcx*8]  ; rax = *(base + i*8) = notes[2]
+    ; rax vaut maintenant 20
+
+    ; equivalent C : long x = notes[2];</code></pre></figure>
+
+<p>Le <code>*8</code> dans <code>[rbx + rcx*8]</code> correspond au <code>sizeof(int64_t)</code>. Si c'était un tableau d'<code>int</code> (4 octets), tu écrirais <code>*4</code> ; pour des octets, <code>*1</code> (ou rien). L'instruction <code>lea</code> (<em>load effective address</em>) calcule une adresse sans lire la mémoire : pratique pour récupérer la base d'un tableau.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 185" role="img" aria-label="L'accès à un tableau se calcule. Le tableau notes contient cinq quadwords de huit octets : 17, 12, 20, 8 puis 15, rangés côte à côte. Le premier est à l'adresse de base, le deuxième à base plus 8, le troisième à base plus 16, et ainsi de suite. Pour lire notes d'indice 2, le processeur calcule base plus 2 fois 8, soit base plus 16, et trouve la valeur 20.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">notes[i] = base + i × taille (ici taille = 8)</text>
+    <text class="d-mut" x="96" y="48" text-anchor="middle" font-size="9">notes[0]</text>
+    <rect class="d-box" x="44" y="54" width="104" height="34" rx="4" /><text class="d-text" x="96" y="76" text-anchor="middle" font-size="12">17</text>
+    <text class="d-mut" x="96" y="104" text-anchor="middle" font-size="8">base + 0</text>
+    <text class="d-mut" x="208" y="48" text-anchor="middle" font-size="9">notes[1]</text>
+    <rect class="d-box" x="156" y="54" width="104" height="34" rx="4" /><text class="d-text" x="208" y="76" text-anchor="middle" font-size="12">12</text>
+    <text class="d-mut" x="208" y="104" text-anchor="middle" font-size="8">base + 8</text>
+    <text class="d-tag" x="320" y="48" text-anchor="middle" font-size="9">notes[2]</text>
+    <rect class="d-accent" x="268" y="54" width="104" height="34" rx="4" /><text class="d-text" x="320" y="76" text-anchor="middle" font-size="12">20</text>
+    <text class="d-tag" x="320" y="104" text-anchor="middle" font-size="8">base + 2×8 = base + 16</text>
+    <text class="d-mut" x="432" y="48" text-anchor="middle" font-size="9">notes[3]</text>
+    <rect class="d-box" x="380" y="54" width="104" height="34" rx="4" /><text class="d-text" x="432" y="76" text-anchor="middle" font-size="12">8</text>
+    <text class="d-mut" x="432" y="104" text-anchor="middle" font-size="8">base + 24</text>
+    <text class="d-mut" x="544" y="48" text-anchor="middle" font-size="9">notes[4]</text>
+    <rect class="d-box" x="492" y="54" width="104" height="34" rx="4" /><text class="d-text" x="544" y="76" text-anchor="middle" font-size="12">15</text>
+    <text class="d-mut" x="544" y="104" text-anchor="middle" font-size="8">base + 32</text>
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="9">en asm : mov rax, [rbx + rcx*8]  avec rcx = 2  →  rax = 20</text>
+    <text class="d-mut" x="320" y="162" text-anchor="middle" font-size="8">l'échelle (1, 2, 4 ou 8) vaut la taille d'un élément</text>
+  </svg>
+  <figcaption>L'élément d'indice <code>i</code> vit à <code>base + i×taille</code>&nbsp;; l'adressage <code>[rbx + rcx*8]</code> fait le calcul en une instruction.</figcaption>
+</figure>
+
+<h2>Parcourir un tableau en boucle</h2>
+
+<p>Faire la somme d'un tableau, c'est la boucle <code>for</code> du C transposée presque mot pour mot. On garde l'indice dans un registre, on incrémente, on s'arrête à la longueur.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; long somme = 0;
+    ; for (long i = 0; i &lt; 5; i++) somme += notes[i];
+    xor     rax, rax            ; somme = 0 (xor d'un registre avec lui-meme = 0)
+    xor     rcx, rcx            ; i = 0
+    lea     rbx, [notes]
+.boucle:
+    cmp     rcx, 5              ; i &lt; 5 ?
+    jge     .fin                ; si i &gt;= 5, on sort
+    add     rax, [rbx + rcx*8]  ; somme += notes[i]
+    inc     rcx                 ; i++
+    jmp     .boucle
+.fin:
+    ; rax = 17+12+20+8+15 = 72</code></pre></figure>
+
+<p>Note le <code>xor rax, rax</code> pour mettre un registre à zéro : un registre XORé avec lui-même donne toujours zéro, et cette instruction est plus courte et plus rapide que <code>mov rax, 0</code>. C'est un réflexe d'assembleur que tu verras partout.</p>
+
+<h2>Chaînes : la convention du zéro final</h2>
+
+<p>En C, une chaîne n'a pas de longueur stockée : c'est une suite d'octets terminée par un octet <code>0</code> (le caractère NUL, à ne pas confondre avec le caractère <code>'0'</code> qui vaut 48). Pour connaître la longueur, on lit jusqu'à tomber sur ce zéro. C'est <em>exactement</em> ce que fait <code>strlen</code>.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">section .data
+    msg db "Salut", 0           ; 5 lettres + l'octet 0 final -&gt; 6 octets en memoire
+
+section .text
+    ; size_t len = 0; while (msg[len] != 0) len++;
+    lea     rsi, [msg]
+    xor     rcx, rcx            ; len = 0
+.compte:
+    mov     al, [rsi + rcx]     ; al = msg[len] (un seul octet : registre 8 bits al)
+    test    al, al             ; al == 0 ?  (test = ET logique, met ZF si nul)
+    jz      .fini               ; si zero, fin de chaine
+    inc     rcx
+    jmp     .compte
+.fini:
+    ; rcx = 5</code></pre></figure>
+
+<p>On lit un octet à la fois avec <code>al</code>, la partie 8 bits de <code>rax</code>. Le <code>test al, al</code> est l'idiome standard pour « est-ce zéro ? » : il fait un ET logique sans écrire de résultat, juste pour positionner les drapeaux. <code>jz</code> saute si le résultat est nul.</p>
+
+<h2>Transformer une chaîne : passage en majuscules</h2>
+
+<p>Une lettre minuscule ASCII et sa majuscule diffèrent d'exactement 32 (par exemple <code>'a'</code> = 97, <code>'A'</code> = 65). Mettre en majuscules revient à soustraire 32 aux octets compris entre <code>'a'</code> et <code>'z'</code>. On modifie la chaîne <em>en place</em>, octet par octet.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; for (char *p = s; *p; p++) if (*p &gt;= 'a' &amp;&amp; *p &lt;= 'z') *p -= 32;
+    lea     rsi, [msg]
+.maj:
+    mov     al, [rsi]           ; al = *p
+    test    al, al
+    jz      .termine            ; fin de chaine
+    cmp     al, 'a'             ; *p &lt; 'a' ?
+    jb      .suivant            ; jb = jump if below (comparaison non signee)
+    cmp     al, 'z'             ; *p &gt; 'z' ?
+    ja      .suivant
+    sub     al, 32              ; passe en majuscule
+    mov     [rsi], al           ; *p = al  (on reecrit l'octet)
+.suivant:
+    inc     rsi                 ; p++
+    jmp     .maj
+.termine:
+    ; "Salut" -&gt; "SALUT" (le 'S' deja majuscule n'est pas touche)</code></pre></figure>
+
+<p>On utilise <code>jb</code>/<code>ja</code> (below/above) et non <code>jl</code>/<code>jg</code> : les codes ASCII sont des valeurs non signées, et ces sauts comparent sans tenir compte du bit de signe. Choisir le bon type de saut selon que les données sont signées ou non est une source d'erreurs classique.</p>
+
+<h2>Structures : des champs à des déplacements fixes</h2>
+
+<p>Un <code>struct</code> C, vu de la machine, est juste un bloc d'octets où chaque champ vit à un <strong>déplacement (offset)</strong> connu depuis le début du bloc. Le compilateur calcule ces offsets ; en assembleur, on les écrit à la main. Accéder à un champ, c'est <code>[adresse_du_struct + offset]</code>.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; struct Point { int32_t x; int32_t y; int64_t id; };
+;   x  -&gt; offset 0  (4 octets)
+;   y  -&gt; offset 4  (4 octets)
+;   id -&gt; offset 8  (8 octets)   taille totale : 16 octets
+
+section .data
+    p   dd 10          ; x = 10  (offset 0)
+        dd 20          ; y = 20  (offset 4)
+        dq 99          ; id = 99 (offset 8)
+
+section .text
+    lea     rbx, [p]
+    mov     eax, [rbx + 0]      ; eax = p.x  -&gt; 10  (champ 32 bits : registre eax)
+    mov     edx, [rbx + 4]      ; edx = p.y  -&gt; 20
+    mov     rcx, [rbx + 8]      ; rcx = p.id -&gt; 99  (champ 64 bits : registre rcx)</code></pre></figure>
+
+<p>NASM permet de nommer ces offsets proprement avec <code>struc</code>, mais le principe reste celui-ci : un champ = un déplacement constant. Quand tu écris <code>p.id</code> en C, le compilateur produit littéralement <code>[adresse + 8]</code>.</p>
+
+<h2>Boutisme : pourquoi les octets semblent inversés</h2>
+
+<p>x86-64 est <strong>petit-boutiste</strong> (little-endian) : pour un nombre multi-octets, l'octet de poids faible est rangé en premier (à l'adresse la plus basse). La valeur <code>0x12345678</code> stockée sur 4 octets occupe la mémoire ainsi : <code>78 56 34 12</code>. Ce n'est pas un bug, juste une convention de rangement.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">section .data
+    n   dd 0x12345678       ; un doubleword
+
+section .text
+    ; en memoire, du plus bas au plus haut :  78  56  34  12
+    lea     rbx, [n]
+    movzx   eax, byte [rbx + 0] ; eax = 0x78  (octet de poids faible en premier !)
+    movzx   edx, byte [rbx + 3] ; edx = 0x12  (octet de poids fort en dernier)
+
+    ; mais lu d'un coup, la valeur est correcte :
+    mov     ecx, [rbx]          ; ecx = 0x12345678  -&gt; le CPU reassemble pour toi</code></pre></figure>
+
+<p>Quand tu lis le nombre <em>entier</em> dans un registre, le processeur remet tout dans l'ordre : tu manipules bien <code>0x12345678</code>. Le boutisme ne se voit que si tu inspectes les octets un par un, par exemple dans un débogueur ou en écrivant des données dans un fichier.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Le boutisme petit-boutiste de x86-64. La valeur hexadécimale 0x12345678 se décompose en quatre octets : 12 est l'octet de poids fort, puis 34, 56, et 78 l'octet de poids faible. En mémoire, du plus petit au plus grand, x86-64 range d'abord l'octet de poids faible : à l'adresse base plus 0 on trouve 78, puis 56, puis 34, et enfin 12 à base plus 3. Les octets semblent donc inversés quand on les inspecte un par un.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Little-endian : l'octet de poids faible d'abord</text>
+    <text class="d-mut" x="320" y="44" text-anchor="middle" font-size="10">valeur : 0x12345678 (un doubleword de 4 octets)</text>
+    <rect class="d-box" x="200" y="54" width="60" height="30" rx="3" /><text class="d-text" x="230" y="74" text-anchor="middle" font-size="11">12</text>
+    <rect class="d-box" x="262" y="54" width="60" height="30" rx="3" /><text class="d-text" x="292" y="74" text-anchor="middle" font-size="11">34</text>
+    <rect class="d-box" x="324" y="54" width="60" height="30" rx="3" /><text class="d-text" x="354" y="74" text-anchor="middle" font-size="11">56</text>
+    <rect class="d-box" x="386" y="54" width="60" height="30" rx="3" /><text class="d-text" x="416" y="74" text-anchor="middle" font-size="11">78</text>
+    <text class="d-mut" x="230" y="98" text-anchor="middle" font-size="8">poids fort</text>
+    <text class="d-mut" x="416" y="98" text-anchor="middle" font-size="8">poids faible</text>
+    <text class="d-mut" x="70" y="135" text-anchor="start" font-size="9">en mémoire →</text>
+    <rect class="d-accent" x="200" y="116" width="60" height="30" rx="3" /><text class="d-text" x="230" y="136" text-anchor="middle" font-size="11">78</text>
+    <rect class="d-box" x="262" y="116" width="60" height="30" rx="3" /><text class="d-text" x="292" y="136" text-anchor="middle" font-size="11">56</text>
+    <rect class="d-box" x="324" y="116" width="60" height="30" rx="3" /><text class="d-text" x="354" y="136" text-anchor="middle" font-size="11">34</text>
+    <rect class="d-box" x="386" y="116" width="60" height="30" rx="3" /><text class="d-text" x="416" y="136" text-anchor="middle" font-size="11">12</text>
+    <text class="d-mut" x="230" y="160" text-anchor="middle" font-size="8">base + 0</text>
+    <text class="d-mut" x="416" y="160" text-anchor="middle" font-size="8">base + 3</text>
+  </svg>
+  <figcaption>Le processeur range l'octet de poids faible à l'adresse la plus basse&nbsp;; lu d'un bloc, le nombre reste <code>0x12345678</code>.</figcaption>
+</figure>
+
+<h2>Alignement et padding : pourquoi le struct a des trous</h2>
+
+<p>Le processeur lit la mémoire plus efficacement quand une donnée de <em>n</em> octets commence à une adresse multiple de <em>n</em> (un <code>int</code> 4 octets à une adresse multiple de 4, etc.). Pour respecter cet <strong>alignement</strong>, le compilateur insère parfois des octets de remplissage (<strong>padding</strong>) entre les champs. C'est pour ça qu'un struct peut être plus gros que la somme de ses champs.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; struct Mixte { char  c;     // offset 0  (1 octet)
+;                int32_t v;   // offset 4  (PAS 1 ! il faut un multiple de 4) };
+;   -&gt; 3 octets de padding entre c et v
+;   -&gt; sizeof(Mixte) = 8, pas 5
+
+section .data
+    m   db 65          ; c = 'A'  (offset 0)
+        db 0, 0, 0     ; padding manuel (offsets 1,2,3)  -&gt; le compilo C le ferait seul
+        dd 1000        ; v = 1000 (offset 4)</code></pre></figure>
+
+<p>Si tu réordonnes les champs (les plus gros d'abord), tu réduis souvent le padding. Voilà pourquoi, en C, l'ordre des membres d'un <code>struct</code> influe sur sa taille en mémoire : ce n'est pas une bizarrerie du langage, c'est l'alignement matériel qui transparaît.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="L'alignement crée du remplissage dans une structure. La structure Mixte contient un char c d'un octet puis un entier v de quatre octets. Comme un entier de 4 octets doit commencer à une adresse multiple de 4, c occupe l'offset 0, puis trois octets de remplissage occupent les offsets 1, 2 et 3, et v occupe les offsets 4 à 7. La taille totale est donc 8 octets, et non 5 comme la simple somme des champs le laisserait croire.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">struct Mixte { char c; int32_t v; } → 8 octets, pas 5</text>
+    <rect class="d-accent" x="43" y="50" width="64" height="34" rx="3" /><text class="d-text" x="75" y="72" text-anchor="middle" font-size="10">c</text>
+    <rect class="d-frame" x="113" y="50" width="64" height="34" rx="3" /><text class="d-mut" x="145" y="72" text-anchor="middle" font-size="10">×</text>
+    <rect class="d-frame" x="183" y="50" width="64" height="34" rx="3" /><text class="d-mut" x="215" y="72" text-anchor="middle" font-size="10">×</text>
+    <rect class="d-frame" x="253" y="50" width="64" height="34" rx="3" /><text class="d-mut" x="285" y="72" text-anchor="middle" font-size="10">×</text>
+    <rect class="d-box" x="323" y="50" width="64" height="34" rx="3" /><text class="d-text" x="355" y="72" text-anchor="middle" font-size="10">v</text>
+    <rect class="d-box" x="393" y="50" width="64" height="34" rx="3" /><text class="d-text" x="425" y="72" text-anchor="middle" font-size="10">v</text>
+    <rect class="d-box" x="463" y="50" width="64" height="34" rx="3" /><text class="d-text" x="495" y="72" text-anchor="middle" font-size="10">v</text>
+    <rect class="d-box" x="533" y="50" width="64" height="34" rx="3" /><text class="d-text" x="565" y="72" text-anchor="middle" font-size="10">v</text>
+    <text class="d-mut" x="75" y="100" text-anchor="middle" font-size="8">0</text>
+    <text class="d-mut" x="145" y="100" text-anchor="middle" font-size="8">1</text>
+    <text class="d-mut" x="215" y="100" text-anchor="middle" font-size="8">2</text>
+    <text class="d-mut" x="285" y="100" text-anchor="middle" font-size="8">3</text>
+    <text class="d-mut" x="355" y="100" text-anchor="middle" font-size="8">4</text>
+    <text class="d-mut" x="425" y="100" text-anchor="middle" font-size="8">5</text>
+    <text class="d-mut" x="495" y="100" text-anchor="middle" font-size="8">6</text>
+    <text class="d-mut" x="565" y="100" text-anchor="middle" font-size="8">7</text>
+    <text class="d-mut" x="215" y="130" text-anchor="middle" font-size="9">× = 3 octets de padding (v doit tomber sur un multiple de 4)</text>
+    <text class="d-mut" x="320" y="156" text-anchor="middle" font-size="8">réordonner les champs (les plus gros d'abord) réduit souvent le padding</text>
+  </svg>
+  <figcaption>L'entier <code>v</code> doit commencer à un offset multiple de 4&nbsp;: trois octets de remplissage s'insèrent après <code>c</code>, d'où une taille de 8.</figcaption>
+</figure>
+
+<h2>Conversion de types : extension de signe et de zéro</h2>
+
+<p>Charger un octet ou un word dans un registre plus large pose une question : que met-on dans les bits du haut ? Deux réponses. Pour un nombre <em>non signé</em>, on complète avec des zéros (<code>movzx</code>, <em>move with zero-extend</em>). Pour un nombre <em>signé</em>, on recopie le bit de signe (<code>movsx</code>, <em>move with sign-extend</em>) afin de préserver la valeur négative.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; un octet valant 0xFF :  255 en non signe,  -1 en signe (complement a deux)
+    mov     bl, 0xFF
+
+    movzx   eax, bl     ; eax = 0x000000FF = 255   (extension de zero : unsigned char -&gt; int)
+    movsx   ecx, bl     ; ecx = 0xFFFFFFFF = -1    (extension de signe : signed char -&gt; int)
+
+    ; en C :
+    ;   unsigned char u = 0xFF; int a = u;  // a == 255   -&gt; movzx
+    ;   signed   char s = 0xFF; int b = s;  // b == -1    -&gt; movsx</code></pre></figure>
+
+<p>C'est précisément ce que fait une promotion d'entier en C. Confondre les deux donne des bugs sournois : un octet à <code>0xFF</code> devient <code>255</code> ou <code>-1</code> selon le choix, et le résultat d'un calcul peut basculer du tout au tout.</p>
+
+<h2>Mise en pratique : inverser une chaîne en place</h2>
+
+<p>On combine tout : parcours de chaîne, accès indexé, échange d'octets. On place deux indices (début et fin), on échange leurs octets, on les rapproche jusqu'à ce qu'ils se croisent. Aucune copie : on modifie la chaîne sur place.</p>
+
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">section .data
+    txt db "abcdef", 0
+
+section .text
+    ; 1) trouver la longueur (rcx)
+    lea     rsi, [txt]
+    xor     rcx, rcx
+.len:
+    cmp     byte [rsi + rcx], 0
+    je      .inv
+    inc     rcx
+    jmp     .len
+.inv:
+    ; 2) gauche = 0, droite = len-1, echanger jusqu'au croisement
+    xor     rbx, rbx            ; rbx = indice gauche = 0
+    dec     rcx                 ; rcx = indice droite = len-1
+.swap:
+    cmp     rbx, rcx            ; gauche &gt;= droite ?
+    jge     .fini
+    mov     al, [rsi + rbx]     ; al = txt[gauche]
+    mov     dl, [rsi + rcx]     ; dl = txt[droite]
+    mov     [rsi + rbx], dl     ; txt[gauche] = ancien droite
+    mov     [rsi + rcx], al     ; txt[droite] = ancien gauche
+    inc     rbx                 ; gauche++
+    dec     rcx                 ; droite--
+    jmp     .swap
+.fini:
+    ; txt contient maintenant "fedcba", 0</code></pre></figure>
+
+<p>Remarque qu'on utilise <code>byte [rsi + rcx]</code> dans la comparaison : sans préciser <code>byte</code>, NASM ne saurait pas combien d'octets lire. Cette annotation de taille est l'équivalent assembleur du type que le C connaît implicitement.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le boutisme frappe dès qu'on quitte la machine. Deux serveurs échangent un entier sur le réseau&nbsp;: l'un l'écrit en little-endian, l'autre le relit… à l'envers, et se connecte à la mauvaise adresse. C'est pourquoi TCP/IP impose un ordre unique, le <em>network byte order</em>, qui est <strong>big-endian</strong> (poids fort d'abord). Tout code réseau convertit donc explicitement avec <code>htonl</code>/<code>htons</code> à l'envoi et <code>ntohl</code>/<code>ntohs</code> à la réception. Le même piège existe pour les fichiers binaires portables (PNG, ZIP…)&nbsp;: leur spécification fixe un boutisme indépendant de la machine qui les écrit. Oublier la conversion donne des bugs qui ne se manifestent que «&nbsp;sur l'autre machine&nbsp;» — exactement le genre d'anomalie que comprendre le little-endian permet d'anticiper.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier l'échelle dans l'adressage. Pour un tableau de quadwords, <code>[rbx + rcx]</code> avance d'<em>un octet</em>, pas d'un élément. Il faut <code>[rbx + rcx*8]</code>. L'erreur passe souvent inaperçue sur les tableaux d'octets (échelle 1) puis casse tout dès qu'on change de taille.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Comparer des octets ASCII avec <code>jl</code>/<code>jg</code> (sauts signés) au lieu de <code>jb</code>/<code>ja</code> (non signés). Tant que les valeurs restent sous 128 ça marche, mais un octet <code>&gt;= 0x80</code> est vu comme négatif et la comparaison s'inverse.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Écrire dans <code>eax</code> (32 bits) met automatiquement à zéro le haut de <code>rax</code> (64 bits). Mais écrire dans <code>al</code> (8 bits) ou <code>ax</code> (16 bits) laisse les bits supérieurs intacts. D'où l'utilité de <code>movzx</code>/<code>movsx</code> pour repartir d'un état propre quand on charge un petit champ dans un large registre.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Regarde la directive <code>struc</code>/<code>endstruc</code> de NASM pour nommer les offsets de champs au lieu de les écrire à la main. Explore aussi les instructions de chaîne <code>movsb</code>, <code>stosb</code>, <code>lodsb</code> avec le préfixe <code>rep</code> : elles parcourent la mémoire via <code>rsi</code>/<code>rdi</code> et automatisent les boucles d'octets qu'on a écrites ici.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — mémoire, tableaux, structures</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th><th scope="col">Remarque</th></tr></thead>
+    <tbody>
+      <tr><td>Réserver (initialisé)</td><td><code>db dw dd dq</code></td><td>1 / 2 / 4 / 8 octets</td></tr>
+      <tr><td>Réserver (vierge, .bss)</td><td><code>resb resw resd resq</code></td><td>n éléments non initialisés</td></tr>
+      <tr><td>Élément de tableau</td><td><code>[base + i*taille]</code></td><td>échelle ∈ {1,2,4,8}</td></tr>
+      <tr><td>Adresse sans lire</td><td><code>lea rbx, [notes]</code></td><td><em>load effective address</em></td></tr>
+      <tr><td>Fin de chaîne C</td><td><code>test al, al</code> ; <code>jz</code></td><td>octet 0 terminal</td></tr>
+      <tr><td>Champ de struct</td><td><code>[adr + offset]</code></td><td>offset fixe par champ</td></tr>
+      <tr><td>Extension non signée</td><td><code>movzx</code></td><td>complète par des 0</td></tr>
+      <tr><td>Extension signée</td><td><code>movsx</code></td><td>recopie le bit de signe</td></tr>
+      <tr><td>Taille explicite</td><td><code>byte/word/dword [..]</code></td><td>sinon NASM ignore la taille</td></tr>
+      <tr><td>Boutisme</td><td>little-endian</td><td>poids faible à l'adresse basse</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Adressage indexé (avec échelle)</dt><dd><code>[base + index*échelle]</code>&nbsp;: le processeur calcule l'adresse d'un élément de tableau, l'échelle valant la taille d'un élément (1, 2, 4 ou 8).</dd>
+  <dt><code>lea</code></dt><dd><em>Load effective address</em>&nbsp;: calcule une adresse sans accéder à la mémoire (utile pour obtenir la base d'un tableau).</dd>
+  <dt>Chaîne terminée par zéro</dt><dd>Convention C&nbsp;: une chaîne est une suite d'octets close par un octet <code>0</code> (NUL)&nbsp;; sa longueur se déduit du parcours.</dd>
+  <dt>Offset (déplacement)</dt><dd>Distance en octets d'un champ depuis le début d'une structure&nbsp;; accéder au champ = <code>[adresse + offset]</code>.</dd>
+  <dt>Alignement</dt><dd>Exigence qu'une donnée de <em>n</em> octets commence à une adresse multiple de <em>n</em>, pour un accès mémoire efficace.</dd>
+  <dt>Padding (remplissage)</dt><dd>Octets insérés entre les champs pour respecter l'alignement&nbsp;; ils expliquent qu'un struct soit plus gros que la somme de ses champs.</dd>
+  <dt>Boutisme (endianness)</dt><dd>Ordre de rangement des octets d'un nombre&nbsp;; x86-64 est <em>little-endian</em> (octet de poids faible à l'adresse la plus basse).</dd>
+  <dt><code>movzx</code> / <code>movsx</code></dt><dd>Charger une petite valeur dans un large registre en complétant par des zéros (non signé) ou en recopiant le bit de signe (signé).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>La mémoire est un tableau d'octets sans type ; tableaux, chaînes et structures ne sont que des conventions de lecture qu'on impose à ces octets.</li>
+<li>Un élément de tableau est à <code>base + i*taille</code>, calculé par l'adressage <code>[base + index*echelle]</code> (échelle 1, 2, 4 ou 8).</li>
+<li>Une chaîne C se termine par un octet <code>0</code> ; on la parcourt jusqu'à ce zéro et on peut la transformer en place.</li>
+<li>Un champ de struct vit à un offset fixe : <code>[adresse + offset]</code> ; l'alignement impose parfois du padding, d'où des structs plus gros que prévu.</li>
+<li>x86-64 est little-endian ; <code>movzx</code> étend avec des zéros (non signé), <code>movsx</code> recopie le bit de signe (signé).</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pour un tableau de doublewords (4 octets), quelle échelle écris-tu dans <code>[rbx + rcx*?]</code> pour atteindre l'élément d'indice <code>rcx</code> ?</li><li>Comment la machine sait-elle où s'arrête une chaîne C, puisque sa longueur n'est stockée nulle part ?</li><li>Tu charges un octet valant <code>0x80</code> dans un registre 32 bits avec <code>movsx</code>. Quelle valeur décimale signée obtiens-tu, et pourquoi <code>movzx</code> donnerait-il autre chose ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pour un tableau de doublewords (4 octets), quelle échelle écris-tu dans [rbx + rcx*?] pour atteindre l'élément d'indice rcx ?","a":["L'échelle 4 : [rbx + rcx*4] (l'échelle vaut la taille d'un élément)","L'échelle 1","L'échelle 8","L'échelle 2"],"correct":0,"explain":"L'adressage indexé multiplie l'indice par la taille de l'élément. Pour des doublewords de 4 octets, on écrit [base + indice*4]. Le mode d'adressage du x86 accepte les facteurs d'échelle 1, 2, 4 ou 8."},
+  {"q":"Comment la machine sait-elle où s'arrête une chaîne C, puisque sa longueur n'est stockée nulle part ?","a":["Par un octet nul (de valeur 0) terminal : la chaîne se termine au premier octet zéro rencontré","Par un compteur caché au début","Par un octet valant 255","La machine ne le sait pas"],"correct":0,"explain":"Les chaînes du C sont terminées par un octet nul. Les fonctions parcourent la mémoire caractère par caractère jusqu'à tomber sur ce zéro, qui marque la fin. La longueur n'est donc pas mémorisée, elle se déduit du parcours."},
+  {"q":"Tu charges un octet valant 0x80 dans un registre 32 bits avec movsx. Quelle valeur décimale signée obtiens-tu, et pourquoi movzx donnerait-il autre chose ?","a":["movsx étend le signe : 0x80 a son bit de poids fort à 1, on obtient -128 ; movzx étend par des zéros et donnerait +128 (0x00000080)","On obtient 128 avec movsx","Les deux donnent -128","Les deux donnent 0"],"correct":0,"explain":"0x80 sur 8 bits a le bit de signe à 1. movsx (extension signée) propage ce bit, donnant -128 sur 32 bits. movzx (extension par zéros) complète avec des 0 et produit la valeur non signée 128. Le choix dépend du caractère signé ou non de la donnée."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+{"type":"text","accept":["8"],"placeholder":"Le facteur d'ÉCHELLE pour un tableau de quadwords (dq) : *… (un nombre)","hints":["Un dq (quadword) occupe 8 octets.","Adressage : [base + indice * échelle].","Un seul chiffre."],"link":{"href":"lecon-07.html","label":"Revoir l'adressage indexé"}},
+{"type":"text","accept":["3"],"placeholder":"Le nombre de 'a' dans « banana » (un nombre)","hints":["b-a-n-a-n-a : compte les a.","Trois voyelles identiques.","Un seul chiffre."],"link":{"href":"lecon-07.html","label":"Revoir le parcours de chaîne"}},
+{"type":"text","accept":["4"],"placeholder":"L'offset (décalage) du champ prix dans la structure (octets)","hints":["qte est un int32 (4 octets) à l'offset 0.","prix vient juste après qte.","Un seul chiffre."],"link":{"href":"lecon-07.html","label":"Revoir les structures"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un tableau <code>vals dq 3, 9, 4, 7, 1</code>. Écris le code qui charge le dernier élément (indice 4) dans <code>rax</code>, en utilisant l'adressage indexé avec échelle.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">section .data
+    vals dq 3, 9, 4, 7, 1
+
+section .text
+    lea     rbx, [vals]
+    mov     rcx, 4              ; indice du dernier element
+    mov     rax, [rbx + rcx*8]  ; echelle 8 car quadwords
+    ; rax = 1</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une boucle qui compte le nombre de lettres <code>'a'</code> dans la chaîne <code>mot db "banana", 0</code>, et laisse le compte dans <code>rdx</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">section .data
+    mot db "banana", 0
+
+section .text
+    lea     rsi, [mot]
+    xor     rdx, rdx            ; compteur = 0
+.boucle:
+    mov     al, [rsi]           ; al = caractere courant
+    test    al, al             ; fin de chaine ?
+    jz      .fin
+    cmp     al, 'a'             ; est-ce un 'a' ?
+    jne     .suivant
+    inc     rdx                 ; oui : compteur++
+.suivant:
+    inc     rsi                 ; avance d'un octet
+    jmp     .boucle
+.fin:
+    ; rdx = 3</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Soit <code>struct Article { int32_t qte; int32_t prix; };</code> (offsets 0 et 4, taille 8). On a un tableau de 3 articles. Calcule le total <code>qte*prix</code> de chacun, additionné dans <code>rax</code>. Astuce : pour passer à l'article suivant, ajoute 8 à l'adresse.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">section .data
+    ; 3 articles : {2,10}, {5,3}, {1,8}
+    arts dd 2, 10
+         dd 5, 3
+         dd 1, 8
+
+section .text
+    lea     rbx, [arts]
+    xor     rax, rax            ; total = 0
+    xor     rcx, rcx            ; i = 0
+.boucle:
+    cmp     rcx, 3              ; i &lt; 3 ?
+    jge     .fin
+    ; adresse de l'article i = base + i*8
+    mov     rsi, rcx
+    imul    rsi, 8              ; rsi = i*8 (taille du struct)
+    movsx   rdi, dword [rbx + rsi + 0]   ; qte (champ signe 32 bits)
+    movsx   r8,  dword [rbx + rsi + 4]   ; prix
+    imul    rdi, r8             ; qte * prix
+    add     rax, rdi            ; total += qte*prix
+    inc     rcx
+    jmp     .boucle
+.fin:
+    ; rax = 2*10 + 5*3 + 1*8 = 20 + 15 + 8 = 43</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-nasm.min.js" defer></script>
+  </body>
+</html>

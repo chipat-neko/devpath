@@ -1,0 +1,78 @@
+<p>Zig a un argument qui, à lui seul, séduit beaucoup de développeurs&nbsp;: la <strong>cross-compilation triviale</strong>. Produire un exécutable pour Windows depuis un Mac, ou pour un Raspberry Pi depuis un PC, tient en une seule option de ligne de commande — là où c'est un calvaire dans la plupart des écosystèmes. Derrière cela&nbsp;: un <strong>système de build intégré</strong> (<code>build.zig</code>) et un compilateur qui embarque tout ce qu'il faut. Cette leçon, qui clôt le cours, te montre comment construire et cibler n'importe quelle plateforme.</p>
+
+<h2>Le système de build&nbsp;: <code>build.zig</code></h2>
+<p>Zig n'utilise ni Makefile, ni CMake, ni outil externe&nbsp;: le build se décrit dans un fichier <strong><code>build.zig</code></strong>… écrit <em>en Zig</em>. On y déclare ses exécutables, ses bibliothèques, ses options. La logique de build est donc un vrai programme, pas un format de configuration figé.</p>
+<figure class="code-block" data-file="build.zig"><pre><code class="language-clike">const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    // la cible (par défaut : la machine courante) et le mode d'optimisation
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const exe = b.addExecutable(.{
+        .name = "mon_app",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(exe);
+}</code></pre></figure>
+<p>On lance le tout avec <code>zig build</code>. Les commandes courantes&nbsp;: <code>zig build</code> (compile), <code>zig build run</code> (compile et exécute), <code>zig build test</code> (lance les tests).</p>
+
+<h2>La cross-compilation en une commande</h2>
+<p>Voici l'atout phare. Pour cibler une <em>autre</em> plateforme, on ajoute simplement l'option <code>-Dtarget</code>. Pas de chaîne de compilation croisée à installer, pas de bibliothèques système à récupérer&nbsp;: Zig embarque tout.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-clike"># Depuis n'importe quelle machine, produire un binaire pour :
+zig build -Dtarget=x86_64-windows      # Windows 64 bits
+zig build -Dtarget=aarch64-linux       # Linux ARM (ex. Raspberry Pi)
+zig build -Dtarget=x86_64-macos        # macOS Intel
+
+# Avec le compilateur directement :
+zig build-exe main.zig -target wasm32-freestanding   # WebAssembly</code></pre></figure>
+<p>Une <strong>cible</strong> Zig s'écrit <code>architecture-os</code> (parfois <code>-abi</code>). Que tu sois sur Linux, Windows ou Mac, tu produis un binaire pour n'importe quelle autre plateforme. Cette simplicité est, pour beaucoup, <em>la</em> raison d'essayer Zig.</p>
+
+<h2>Les modes d'optimisation</h2>
+<p>Zig propose quatre modes, choisis explicitement&nbsp;: on décide du compromis entre sûreté, vitesse et taille.</p>
+<ul>
+  <li><code>Debug</code> (défaut)&nbsp;: compilation rapide, toutes les vérifications de sûreté actives&nbsp;;</li>
+  <li><code>ReleaseSafe</code>&nbsp;: optimisé <em>mais</em> avec les vérifications de sûreté (débordements, accès hors bornes)&nbsp;;</li>
+  <li><code>ReleaseFast</code>&nbsp;: vitesse maximale, vérifications retirées&nbsp;;</li>
+  <li><code>ReleaseSmall</code>&nbsp;: binaire le plus petit possible.</li>
+</ul>
+<figure class="code-block" data-file="terminal"><pre><code class="language-clike">zig build -Doptimize=ReleaseSafe   # rapide ET sûr (souvent le bon choix)
+zig build -Doptimize=ReleaseSmall  # pour l'embarqué / le WASM</code></pre></figure>
+
+<h2>Zig comme compilateur C</h2>
+<p>Bonus inattendu&nbsp;: le compilateur Zig est <em>aussi</em> un excellent compilateur C, avec la même cross-compilation triviale. <code>zig cc</code> peut remplacer <code>gcc</code>/<code>clang</code> et compiler du C pour n'importe quelle cible, sans installer de toolchain croisée.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-clike"># Compiler un programme C pour Windows, depuis Linux :
+zig cc -target x86_64-windows hello.c -o hello.exe</code></pre></figure>
+<p>Beaucoup de projets utilisent <code>zig cc</code> <em>uniquement</em> pour cette capacité, sans écrire une ligne de Zig&nbsp;: c'est dire la qualité de son outillage de compilation.</p>
+
+<h2>Pourquoi c'est si simple en Zig</h2>
+<p>La cross-compilation est difficile ailleurs parce qu'il faut, pour chaque cible, la bonne chaîne d'outils et les bibliothèques système correspondantes. Zig fait un choix d'ingénierie&nbsp;: il <strong>embarque les en-têtes et bibliothèques nécessaires</strong> et gère lui-même la génération de code pour chaque architecture. La complexité a été absorbée une fois pour toutes dans le compilateur — pour que toi, tu n'aies qu'une option à taper.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre <code>build.zig</code> (le programme de build, en Zig) et <code>build.zig.zon</code> (le manifeste de dépendances, au format données). Le premier <em>décrit comment construire</em>&nbsp;; le second <em>liste les paquets</em> dont le projet dépend. Et n'oublie pas que Zig est <strong>encore jeune</strong> (avant la version 1.0)&nbsp;: la syntaxe de <code>build.zig</code> a évolué entre versions. Vérifie toujours que la documentation que tu suis correspond à <em>ta</em> version de Zig.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Tu as bouclé le cours Zig&nbsp;: des bases au comptime, aux allocateurs et à la cross-compilation. Pour continuer, construis un <strong>vrai petit outil</strong> (un convertisseur, un mini-utilitaire en ligne de commande) et compile-le pour trois plateformes différentes — tu mesureras concrètement ce que «&nbsp;cross-compilation triviale&nbsp;» veut dire. Suis aussi l'évolution du langage&nbsp;: Zig n'a pas encore atteint sa version 1.0, et chaque version affine l'outillage. C'est un langage jeune, mais dont les idées (pas d'allocation cachée, comptime, cross-compilation) influencent déjà toute une génération.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le build se décrit dans <code>build.zig</code>, <strong>écrit en Zig</strong>&nbsp;; <code>zig build</code>, <code>zig build run</code>, <code>zig build test</code>.</li>
+  <li><strong>Cross-compilation</strong> en une option&nbsp;: <code>-Dtarget=arch-os</code>&nbsp;; Zig embarque tout le nécessaire.</li>
+  <li>Quatre modes d'optimisation&nbsp;: <code>Debug</code>, <code>ReleaseSafe</code>, <code>ReleaseFast</code>, <code>ReleaseSmall</code>.</li>
+  <li><code>zig cc</code> compile aussi du <strong>C</strong> avec la même cross-compilation&nbsp;; Zig est jeune (avant la 1.0).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Dans quel langage écrit-on <code>build.zig</code>&nbsp;?</li><li>Comment cibler une autre plateforme&nbsp;?</li><li>Pourquoi la cross-compilation est-elle si simple en Zig&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans quel langage écrit-on le fichier de build build.zig ?","a":["En Zig (c'est un vrai programme, pas un format de config)","En Make","En YAML","En CMake"],"correct":0,"explain":"build.zig décrit la construction en Zig même : la logique de build est un programme, pas une configuration figée."},
+  {"q":"Comment cross-compiler vers une autre plateforme en Zig ?","a":["En ajoutant l'option -Dtarget=arch-os, sans installer de toolchain croisée","En installant un compilateur séparé par plateforme","Ce n'est pas possible","En réécrivant le code pour chaque OS"],"correct":0,"explain":"Zig embarque les en-têtes et bibliothèques nécessaires : une seule option suffit pour produire un binaire pour Windows, Linux ARM, macOS, WASM…"},
+  {"q":"Que permet zig cc ?","a":["Compiler du C (pas seulement du Zig) avec la même cross-compilation triviale","Convertir du C en Zig automatiquement","Exécuter du C sans le compiler","Rien, c'est une erreur"],"correct":0,"explain":"Le compilateur Zig est aussi un excellent compilateur C ; beaucoup l'utilisent juste pour cross-compiler du C, sans écrire de Zig."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle commande compile <em>et</em> exécute un projet Zig&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-clike">zig build run</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la commande qui produit un binaire pour Linux ARM (aarch64).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-clike">zig build -Dtarget=aarch64-linux</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En une phrase, pourquoi la cross-compilation est-elle plus simple en Zig que dans la plupart des autres écosystèmes&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que Zig <strong>embarque lui-même</strong> les en-têtes, les bibliothèques système et la génération de code pour chaque architecture&nbsp;: il n'y a aucune chaîne d'outils croisée ni bibliothèque cible à installer séparément. La complexité a été absorbée une fois dans le compilateur, si bien qu'il suffit d'une option (<code>-Dtarget=…</code>) pour viser n'importe quelle plateforme.</p></details></div>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scripts de production et outils modernes — Leçon 11 · Bash · Syntaxe</title>
+    <meta name="description" content="Écris des scripts Bash dignes de la production : squelette robuste, getopts, mktemp, trap, journalisation, jq, find avancé et ShellCheck." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="bash" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Bash</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 03 · Aller plus loin — Leçon 11</p>
+              <h1 class="lesson-header__title">Scripts de production et outils modernes</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 10 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir poser un squelette robuste avec <code>set -euo pipefail</code>, <code>usage()</code> et <code>getopts</code>&nbsp;;</li>
+                  <li>savoir gérer les fichiers temporaires en sécurité avec <code>mktemp</code> et un <code>trap … EXIT</code>&nbsp;;</li>
+                  <li>savoir parser du <strong>JSON</strong> avec <code>jq</code> et explorer un système de fichiers avec <code>find</code> avancé&nbsp;;</li>
+                  <li>savoir vérifier la qualité avec <strong>ShellCheck</strong> et reconnaître quand passer à Python.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais écrire des scripts qui marchent sur ta machine. Mais un script de <strong>production</strong> tourne sans surveillance, sur des serveurs que tu ne vois pas, avec des données que tu n'as pas choisies. Il doit échouer proprement, ne rien laisser traîner, et hurler quand quelque chose cloche. La différence entre un script jetable et un script robuste tient dans quelques réflexes que cette leçon va te donner.</p>
+
+<p>On part du principe que tu maîtrises déjà les variables, le quoting, les conditions et les fonctions. Ici, on assemble tout ça en outils fiables, et on ajoute les armes modernes du sysadmin : <code>jq</code>, <code>find</code> avancé et <code>ShellCheck</code>.</p>
+
+<h2>Le squelette robuste</h2>
+
+<p>Tout script sérieux commence par les mêmes lignes. Elles transforment Bash, laxiste par défaut, en interpréteur strict qui refuse de continuer dans le brouillard.</p>
+
+<figure class="code-block" data-file="squelette.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# -e   : sort des qu'une commande echoue (statut non nul)
+# -u   : erreur si une variable non definie est utilisee
+# -o pipefail : un pipe echoue si UN maillon echoue (pas juste le dernier)
+# IFS  : on retire l'espace du separateur -&gt; decoupage plus previsible</code></pre></figure>
+
+<p><code>#!/usr/bin/env bash</code> trouve <code>bash</code> via le <code>PATH</code> au lieu de le coder en dur : plus portable que <code>#!/bin/bash</code>. Le trio <code>set -euo pipefail</code> est ta ceinture de sécurité : sans lui, un script continue allègrement après une erreur et peut faire des dégâts.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Les trois garde-fous de set -euo pipefail. L'option -e arrête le script à la première commande qui échoue. L'option -u traite l'usage d'une variable non définie comme une erreur. L'option -o pipefail fait échouer tout un pipeline si l'un de ses maillons échoue, pas seulement le dernier. Ensemble, ils transforment Bash laxiste en interpréteur strict.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">set -euo pipefail : trois garde-fous</text>
+    <rect class="d-accent" x="20" y="36" width="192" height="104" rx="6" />
+    <text class="d-tag" x="116" y="61" text-anchor="middle" font-size="13" font-family="monospace">-e</text>
+    <text class="d-text" x="116" y="84" text-anchor="middle" font-size="10">arrêt à la 1re</text>
+    <text class="d-text" x="116" y="100" text-anchor="middle" font-size="10">commande qui échoue</text>
+    <text class="d-mut" x="116" y="124" text-anchor="middle" font-size="8.5">fini de continuer dans le noir</text>
+    <rect class="d-accent" x="224" y="36" width="192" height="104" rx="6" />
+    <text class="d-tag" x="320" y="61" text-anchor="middle" font-size="13" font-family="monospace">-u</text>
+    <text class="d-text" x="320" y="84" text-anchor="middle" font-size="10">variable non définie</text>
+    <text class="d-text" x="320" y="100" text-anchor="middle" font-size="10">= erreur</text>
+    <text class="d-mut" x="320" y="124" text-anchor="middle" font-size="8.5">une typo attrapée aussitôt</text>
+    <rect class="d-accent" x="428" y="36" width="192" height="104" rx="6" />
+    <text class="d-tag" x="524" y="61" text-anchor="middle" font-size="12" font-family="monospace">-o pipefail</text>
+    <text class="d-text" x="524" y="84" text-anchor="middle" font-size="10">un maillon rompu</text>
+    <text class="d-text" x="524" y="100" text-anchor="middle" font-size="10">= pipe en échec</text>
+    <text class="d-mut" x="524" y="124" text-anchor="middle" font-size="8.5">l'erreur ne se cache plus</text>
+    <text class="d-label" x="320" y="158" text-anchor="middle" font-size="10">Bash laxiste → interpréteur strict</text>
+  </svg>
+  <figcaption>Le trio en tête de script&nbsp;: échouer <strong>vite</strong>, <strong>fort</strong> et <strong>visiblement</strong> plutôt que de continuer sur une erreur.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Avec <code>-u</code>, pour donner une valeur par défaut sans planter, utilise l'expansion <code>${VAR:-valeur}</code>. Par exemple <code>${1:-}</code> évite l'erreur si l'argument n'existe pas. Sache aussi que <code>IFS=$'\n\t'</code> est un choix volontairement strict : il fait itérer une boucle <code>for</code> ligne par ligne plutôt que mot par mot. Pratique pour les chemins, mais à connaître si une boucle ne se découpe pas comme tu l'attendais.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2015, un bug célèbre du client <strong>Steam sous Linux</strong> a effacé les fichiers personnels d'utilisateurs. Le script contenait <code>rm -rf "$STEAMROOT/"*</code>&nbsp;; dans certains cas la variable <code>STEAMROOT</code> était <strong>vide</strong>, si bien que la commande devenait <code>rm -rf /*</code> — la suppression de tout ce à quoi l'utilisateur avait accès. Deux réflexes de cette leçon désamorcent le drame&nbsp;: <code>set -u</code> aurait fait échouer le script sur la variable non définie, et une garde <code>[ -n "$STEAMROOT" ] || exit 1</code> avant tout <code>rm</code> aurait refusé d'agir sur un chemin vide. En scripting, une variable vide n'est jamais anodine.</p></div></div>
+
+<h2>Options et aide : usage() et getopts</h2>
+
+<p>Un outil de production se pilote par options, pas par positions devinées. <code>getopts</code> (intégré à Bash) lit les options courtes proprement, et <code>usage()</code> documente l'usage en cas d'erreur ou de <code>-h</code>.</p>
+
+<figure class="code-block" data-file="deploy.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+verbose=0
+sortie="resultat.txt"
+
+usage() {
+  cat &lt;&lt;EOF
+Usage : $(basename "$0") [-v] [-o FICHIER] CIBLE
+  -v          mode verbeux
+  -o FICHIER  fichier de sortie (defaut : $sortie)
+  -h          affiche cette aide
+EOF
+}
+
+while getopts ":vo:h" opt; do
+  case "$opt" in
+    v) verbose=1 ;;
+    o) sortie="$OPTARG" ;;
+    h) usage; exit 0 ;;
+    :) echo "Option -$OPTARG attend un argument" &gt;&amp;2; usage; exit 2 ;;
+    \?) echo "Option inconnue : -$OPTARG" &gt;&amp;2; usage; exit 2 ;;
+  esac
+done
+shift $((OPTIND - 1))   # retire les options traitees
+
+cible="${1:-}"
+[ -n "$cible" ] || { echo "CIBLE manquante" &gt;&amp;2; usage; exit 2; }
+
+echo "Cible=$cible sortie=$sortie verbeux=$verbose"</code></pre></figure>
+
+<p>La chaîne <code>":vo:h"</code> se lit ainsi : le <code>:</code> initial active le mode silencieux (tu gères les erreurs toi-même), <code>v</code> et <code>h</code> sont des drapeaux, et <code>o:</code> attend un argument récupéré dans <code>$OPTARG</code>. Le <code>shift $((OPTIND - 1))</code> est indispensable : il fait disparaître les options pour que <code>$1</code> pointe enfin sur l'argument positionnel.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 158" role="img" aria-label="Comment getopts lit les options. La chaîne deux-points v o deux-points h décrit les options attendues : v et h sont des drapeaux, o attend un argument récupéré dans la variable OPTARG. La boucle while getopts parcourt les options une à une. À la fin, shift OPTIND moins un retire les options traitées pour que dollar 1 pointe enfin sur l'argument positionnel, la cible.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">getopts : des options au 1er argument positionnel</text>
+    <rect class="d-box" x="24" y="38" width="180" height="76" rx="6" />
+    <text class="d-tag" x="114" y="61" text-anchor="middle" font-size="12" font-family="monospace">":vo:h"</text>
+    <text class="d-text" x="114" y="83" text-anchor="middle" font-size="9.5">v, h = drapeaux</text>
+    <text class="d-text" x="114" y="100" text-anchor="middle" font-size="9.5">o: attend un argument</text>
+    <rect class="d-accent" x="230" y="38" width="180" height="76" rx="6" />
+    <text class="d-tag" x="320" y="61" text-anchor="middle" font-size="11" font-family="monospace">while getopts</text>
+    <text class="d-text" x="320" y="83" text-anchor="middle" font-size="9.5">case sur $opt</text>
+    <text class="d-text" x="320" y="100" text-anchor="middle" font-size="9.5">argument → $OPTARG</text>
+    <rect class="d-box" x="436" y="38" width="180" height="76" rx="6" />
+    <text class="d-tag" x="526" y="61" text-anchor="middle" font-size="10" font-family="monospace">shift $((OPTIND-1))</text>
+    <text class="d-text" x="526" y="83" text-anchor="middle" font-size="9.5">retire les options</text>
+    <text class="d-text" x="526" y="100" text-anchor="middle" font-size="9.5">$1 = la cible</text>
+    <line class="d-line" x1="204" y1="76" x2="228" y2="76" /><path class="d-line" d="M221 71 L231 76 L221 81" fill="none" />
+    <line class="d-line" x1="410" y1="76" x2="434" y2="76" /><path class="d-line" d="M427 71 L437 76 L427 81" fill="none" />
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="9">Sans le shift, $1 resterait sur une option, pas sur l'argument</text>
+  </svg>
+  <figcaption>La chaîne <code>":vo:h"</code> déclare les options&nbsp;; <code>OPTARG</code> porte l'argument&nbsp;; <code>shift</code> découvre l'argument positionnel.</figcaption>
+</figure>
+
+<h2>Fichiers temporaires sûrs</h2>
+
+<p>N'écris <em>jamais</em> dans <code>/tmp/monfichier</code> : deux exécutions simultanées se marcheraient dessus, et un nom prévisible est une faille de sécurité. <code>mktemp</code> crée un nom unique, et un <code>trap … EXIT</code> garantit le nettoyage, même si le script plante.</p>
+
+<figure class="code-block" data-file="temp.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+tmp="$(mktemp -d)"                 # dossier temporaire unique
+trap 'rm -rf "$tmp"' EXIT          # nettoyage garanti a la sortie
+
+echo "Espace de travail : $tmp"
+curl -s https://example.com &gt; "$tmp/page.html"
+wc -l "$tmp/page.html"
+# A la fin (succes, erreur ou Ctrl-C), le trap supprime $tmp</code></pre></figure>
+
+<p>Le <code>trap</code> s'arme une seule fois et se déclenche sur le signal <code>EXIT</code>, qui couvre <em>toutes</em> les façons de quitter. C'est le réflexe le plus rentable de toute la leçon : zéro déchet sur le disque.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Tu peux trapper plusieurs signaux à la fois : <code>trap 'rm -rf "$tmp"' EXIT INT TERM</code>. Mais <code>EXIT</code> suffit presque toujours, car <code>INT</code> (Ctrl-C) et <code>TERM</code> mènent eux aussi à une sortie, donc déclenchent déjà le piège <code>EXIT</code>.</p></div></div>
+
+<h2>Journalisation propre</h2>
+
+<p>Sur un serveur, ta seule fenêtre sur l'exécution, ce sont les logs. Les messages d'information et d'erreur doivent partir sur <strong>la sortie d'erreur</strong> (<code>&gt;&amp;2</code>), pour ne pas polluer la vraie sortie de données que d'autres commandes pourraient lire dans un pipe.</p>
+
+<figure class="code-block" data-file="log.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+# Horodatage ISO + niveau, tout sur stderr (&gt;&amp;2)
+log() { printf '%s [INFO] %s\n' "$(date +%FT%T)" "$*" &gt;&amp;2; }
+err() { printf '%s [ERR ] %s\n' "$(date +%FT%T)" "$*" &gt;&amp;2; }
+
+log "Demarrage du traitement"
+if ! cp inexistant.txt /tmp/ 2&gt;/dev/null; then
+  err "Copie impossible, on continue"
+fi
+log "Termine"
+# 2026-06-11T14:03:21 [INFO] Demarrage du traitement
+# 2026-06-11T14:03:21 [ERR ] Copie impossible, on continue
+# 2026-06-11T14:03:21 [INFO] Termine</code></pre></figure>
+
+<p>Avantage concret : <code>./log.sh &gt; donnees.txt</code> envoie les vraies données dans le fichier, et tu vois quand même les logs défiler à l'écran. Note aussi le <code>if !</code> autour du <code>cp</code> : sous <code>set -e</code>, c'est ainsi qu'on teste une commande qui a le droit d'échouer sans interrompre le script. Séparer les flux, c'est la base d'un script composable.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Séparer les deux sorties. Un script émet ses vraies données sur la sortie standard, le canal 1, et ses messages de log ou d'erreur sur la sortie d'erreur, le canal 2, grâce à la redirection supérieur-esperluette-2. On peut alors rediriger les données dans un fichier tout en voyant les logs défiler à l'écran, car les deux flux voyagent séparément.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux canaux séparés</text>
+    <rect class="d-accent" x="220" y="34" width="200" height="40" rx="6" />
+    <text class="d-text" x="320" y="59" text-anchor="middle" font-size="11" font-family="monospace">mon-script.sh</text>
+    <line class="d-line" x1="290" y1="74" x2="152" y2="104" /><path class="d-line" d="M160 97 L148 106 L162 108" fill="none" />
+    <line class="d-line" x1="350" y1="74" x2="488" y2="104" /><path class="d-line" d="M480 97 L492 106 L478 108" fill="none" />
+    <rect class="d-box" x="24" y="106" width="252" height="54" rx="6" />
+    <text class="d-tag" x="150" y="128" text-anchor="middle" font-size="10.5" font-family="monospace">stdout (1)</text>
+    <text class="d-text" x="150" y="147" text-anchor="middle" font-size="9.5">données → fichier / pipe</text>
+    <rect class="d-frame" x="364" y="106" width="252" height="54" rx="6" />
+    <text class="d-tag" x="490" y="128" text-anchor="middle" font-size="10.5" font-family="monospace">stderr (2) via &gt;&amp;2</text>
+    <text class="d-text" x="490" y="147" text-anchor="middle" font-size="9.5">logs / erreurs → écran</text>
+  </svg>
+  <figcaption><code>./script.sh &gt; donnees.txt</code> range les données dans le fichier&nbsp;; les logs envoyés sur <code>&gt;&amp;2</code> restent visibles à l'écran.</figcaption>
+</figure>
+
+<h2>Manipuler du JSON avec jq</h2>
+
+<p>Les API parlent JSON. <code>curl</code> le télécharge, et <code>jq</code> le découpe avec un vrai langage de requête. Parser du JSON à coups de <code>grep</code>/<code>sed</code> est fragile : un saut de ligne ou un champ réordonné, et tout casse.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">curl -s https://api.github.com/repos/torvalds/linux | jq '.stargazers_count'
+# 189342
+
+# Plusieurs champs d'un coup, dans un objet reformate
+curl -s https://api.github.com/repos/torvalds/linux \
+  | jq '{nom: .name, etoiles: .stargazers_count, langue: .language}'
+# {
+#   "nom": "linux",
+#   "etoiles": 189342,
+#   "langue": "C"
+# }</code></pre></figure>
+
+<p class="code-caption">Le <code>-s</code> de <code>curl</code> coupe la barre de progression ; <code>jq</code> lit le JSON sur son entrée standard.</p>
+
+<p>Pour parcourir un tableau, <code>.[]</code> itère sur chaque élément. L'option <code>-r</code> (raw) retire les guillemets, parfait pour réinjecter le résultat dans une boucle Bash.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">curl -s https://api.github.com/users/torvalds/repos \
+  | jq -r '.[] | "\(.name) -&gt; \(.stargazers_count) etoiles"'
+# linux -&gt; 189342 etoiles
+# subsurface -&gt; 4210 etoiles
+# ...</code></pre></figure>
+
+<h2>find avancé</h2>
+
+<p>Tu connais <code>find</code> pour lister. En production, on l'enchaîne avec des actions efficaces. La règle d'or : <code>-exec … {} +</code> regroupe les fichiers en un minimum d'appels, là où <code>-exec … {} \;</code> lance un processus <em>par fichier</em> (lent sur des milliers de fichiers).</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Lent : un 'gzip' par fichier
+find /var/log -name '*.log' -type f -exec gzip {} \;
+
+# Rapide : gzip recoit les fichiers par paquets grace au '+'
+find /var/log -name '*.log' -type f -exec gzip {} +
+
+# Fichiers modifies depuis un fichier repere, gestion sure des noms
+find . -type f -newer .dernier_run -print0 | xargs -0 ls -l</code></pre></figure>
+
+<p>Le duo <code>-print0</code> / <code>xargs -0</code> sépare les noms par un octet nul plutôt que par un retour à la ligne : c'est la seule façon fiable de traiter des fichiers dont le nom contient des espaces ou des caractères exotiques. <code>-newer FICHIER</code> filtre par date de modification, idéal pour des traitements incrémentaux.</p>
+
+<h2>Portabilité et qualité : ShellCheck</h2>
+
+<p><strong>ShellCheck</strong> est le linter de référence pour les scripts shell. Il attrape les bugs avant l'exécution : variables non quotées, comparaisons fausses, pièges de quoting. Lance-le sur chaque script, sans exception.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">shellcheck deploy.sh
+# In deploy.sh line 12:
+#   rm -rf $tmp
+#          ^--^ SC2086: Double quote to prevent globbing and word splitting.
+#
+# Did you mean:
+#   rm -rf "$tmp"</code></pre></figure>
+
+<p>Attention au shebang. <code>#!/bin/sh</code> n'est <em>pas</em> Bash : c'est un shell POSIX minimal. Les « bashismes » comme <code>[[ … ]]</code>, les tableaux <code>arr=(a b c)</code> ou <code>$'\n'</code> n'y existent pas. Si tu utilises ces fonctionnalités, mets <code>#!/usr/bin/env bash</code> ; sinon, reste en POSIX strict. ShellCheck adapte ses avertissements au shebang déclaré.</p>
+
+<h2>Quand passer à un vrai langage</h2>
+
+<p>Bash brille pour coller des commandes, déplacer des fichiers, enchaîner des outils. Mais dès que tu manipules des structures de données complexes, de l'arithmétique flottante, du JSON imbriqué profond ou plus de ~100 lignes de logique, <strong>Python</strong> devient plus lisible et plus testable. Voici un mini-script de production qui rassemble tout :</p>
+
+<figure class="code-block" data-file="rapport.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+log() { printf '%s [INFO] %s\n' "$(date +%FT%T)" "$*" &gt;&amp;2; }
+err() { printf '%s [ERR ] %s\n' "$(date +%FT%T)" "$*" &gt;&amp;2; }
+
+usage() { echo "Usage : $(basename "$0") -u UTILISATEUR [-o FICHIER]" &gt;&amp;2; }
+
+utilisateur=""
+sortie="rapport.txt"
+while getopts ":u:o:h" opt; do
+  case "$opt" in
+    u) utilisateur="$OPTARG" ;;
+    o) sortie="$OPTARG" ;;
+    h) usage; exit 0 ;;
+    *) usage; exit 2 ;;
+  esac
+done
+[ -n "$utilisateur" ] || { err "option -u obligatoire"; usage; exit 2; }
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+log "Recuperation des depots de $utilisateur"
+curl -s "https://api.github.com/users/$utilisateur/repos" &gt; "$tmp/repos.json"
+
+log "Extraction et tri par etoiles"
+jq -r '.[] | "\(.stargazers_count)\t\(.name)"' "$tmp/repos.json" \
+  | sort -rn &gt; "$sortie"
+
+log "Rapport ecrit dans $sortie ($(wc -l &lt; "$sortie") lignes)"</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier <code>set -euo pipefail</code>. Sans lui, <code>cd /dossier/inexistant; rm -rf *</code> exécute quand même le <code>rm</code> dans le mauvais répertoire après l'échec du <code>cd</code> (le <code>;</code> enchaîne sans condition). Avec <code>set -e</code>, le script s'arrête net dès que le <code>cd</code> échoue : le scénario catastrophe est désamorcé.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Parser du JSON avec <code>grep</code>/<code>sed</code>, utiliser <code>-exec … \;</code> au lieu de <code>+</code> sur des milliers de fichiers, glisser des bashismes dans un script <code>#!/bin/sh</code>, ou ne jamais lancer ShellCheck. Chacun marche « chez toi » et casse en production.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore <code>jq</code> en profondeur (filtres, <code>map</code>, <code>select</code>), le framework de test <strong>bats</strong> pour tester tes scripts, <code>make</code> pour orchestrer des tâches, le <strong>Google Shell Style Guide</strong> pour les conventions, et <strong>Ansible</strong> pour automatiser à grande échelle au-delà du shell.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — un script de production robuste</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Syntaxe</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>En-tête</td><td><code>#!/usr/bin/env bash</code></td><td>portable via le <code>PATH</code></td></tr>
+      <tr><td>Mode strict</td><td><code>set -euo pipefail</code></td><td>+ <code>IFS=$'\n\t'</code></td></tr>
+      <tr><td>Valeur par défaut</td><td><code>${1:-défaut}</code></td><td>survit à <code>-u</code></td></tr>
+      <tr><td>Options</td><td><code>while getopts ":o:h" opt</code></td><td>argument dans <code>$OPTARG</code></td></tr>
+      <tr><td>Fin des options</td><td><code>shift $((OPTIND-1))</code></td><td><code>$1</code> = 1er positionnel</td></tr>
+      <tr><td>Fichier temporaire</td><td><code>tmp=$(mktemp -d)</code></td><td>nom unique et sûr</td></tr>
+      <tr><td>Nettoyage garanti</td><td><code>trap 'rm -rf "$tmp"' EXIT</code></td><td>couvre succès, erreur, Ctrl-C</td></tr>
+      <tr><td>Log / erreur</td><td><code>echo "…" &gt;&amp;2</code></td><td>données propres sur stdout</td></tr>
+      <tr><td>Lire du JSON</td><td><code>curl -s … | jq -r '.champ'</code></td><td>jamais avec grep/sed</td></tr>
+      <tr><td>find rapide</td><td><code>find … -exec cmd {} +</code></td><td>regroupe les fichiers</td></tr>
+      <tr><td>Qualité</td><td><code>shellcheck script.sh</code></td><td>linter, avant chaque commit</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Shebang</dt><dd>La 1re ligne <code>#!/usr/bin/env bash</code>&nbsp;: désigne l'interpréteur qui exécute le script.</dd>
+  <dt><code>set -euo pipefail</code></dt><dd>Mode strict&nbsp;: arrêt sur erreur (<code>-e</code>), variable non définie interdite (<code>-u</code>), échec propagé dans un pipe (<code>pipefail</code>).</dd>
+  <dt><code>getopts</code> / <code>OPTARG</code></dt><dd>Analyseur d'options courtes intégré&nbsp;; l'argument d'une option (ex.&nbsp;<code>-o fichier</code>) atterrit dans <code>OPTARG</code>.</dd>
+  <dt><code>mktemp</code></dt><dd>Crée un fichier ou un dossier (<code>-d</code>) au nom unique et imprévisible&nbsp;: pas de collision, pas de faille.</dd>
+  <dt><code>trap … EXIT</code></dt><dd>Planifie un nettoyage déclenché à toute sortie du script&nbsp;: normale, erreur ou signal.</dd>
+  <dt><code>jq</code></dt><dd>Processeur JSON en ligne de commande&nbsp;; <code>-r</code> (raw) retire les guillemets pour réinjecter dans Bash.</dd>
+  <dt>ShellCheck</dt><dd>Linter des scripts shell&nbsp;: repère guillemets manquants, comparaisons fausses et bashismes avant l'exécution.</dd>
+  <dt><code>stdout</code> / <code>stderr</code></dt><dd>Sortie standard (données, canal 1) vs sortie d'erreur (logs, canal 2, via <code>&gt;&amp;2</code>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>Commence par <code>#!/usr/bin/env bash</code> + <code>set -euo pipefail</code> + <code>IFS</code> sûr.</li>
+<li>Pilote par <code>getopts</code>, documente avec <code>usage()</code>, gère <code>-h</code> et les erreurs.</li>
+<li>Fichiers temporaires : <code>mktemp</code> + <code>trap 'rm -rf "$tmp"' EXIT</code>.</li>
+<li>Logs horodatés sur <code>&gt;&amp;2</code> ; données sur la sortie standard.</li>
+<li>JSON avec <code>jq</code>, jamais avec <code>grep</code>/<code>sed</code>.</li>
+<li><code>find … -exec {} +</code> et <code>-print0 | xargs -0</code> pour la vitesse et la sûreté.</li>
+<li>Passe chaque script à <strong>ShellCheck</strong> ; au-delà de la logique simple, vise Python.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi créer un dossier temporaire avec <code>mktemp -d</code> et le nettoyer via un <code>trap … EXIT</code> plutôt qu'un nom fixe dans <code>/tmp</code> ?</li><li>Pourquoi <code>-exec commande {} +</code> est-il plus rapide que <code>-exec commande {} \;</code> ?</li><li>Pourquoi envoyer les logs sur <code>&gt;&amp;2</code> plutôt que sur la sortie standard ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi combiner mktemp -d avec un trap 'rm -rf \"$tmp\"' EXIT pour un dossier temporaire ?","a":["mktemp -d fournit un nom unique et imprévisible (pas de collision ni de faille), et le trap … EXIT garantit la suppression du dossier quelle que soit la façon dont le script se termine : succès, erreur ou Ctrl-C","mktemp chiffre le contenu du dossier et trap le déchiffre à la sortie","Le trap … EXIT ne se déclenche que si le script réussit ; en cas d'erreur, le dossier reste pour inspection","mktemp -d crée toujours le même dossier /tmp/tmp, et trap sert seulement à afficher un message de fin"],"correct":0,"explain":"Un nom fixe comme /tmp/travail est prévisible (faille de sécurité) et entre en collision si deux exécutions tournent ensemble ; mktemp -d règle les deux. Le trap armé sur EXIT se déclenche à toute sortie — normale, erreur ou signal — donc le dossier est nettoyé même si le script plante."},
+  {"q":"Pourquoi -exec commande {} + est-il plus rapide que -exec commande {} \\; ?","a":["Parce que \\; lance la commande une fois par fichier (beaucoup de processus), tandis que + regroupe plusieurs fichiers en un seul appel (comme xargs), réduisant fortement le nombre de processus","C'est l'inverse","+ ne traite qu'un fichier","Les deux sont identiques"],"correct":0,"explain":"Avec \\;, find invoque la commande séparément pour chaque résultat, ce qui multiplie les lancements de processus. Avec +, il agrège autant de fichiers que possible par appel, à la manière de xargs, d'où un gain de performance net."},
+  {"q":"Pourquoi envoyer les logs sur >&2 plutôt que sur la sortie standard ?","a":["Pour séparer les messages de diagnostic (sortie d'erreur) des données utiles (sortie standard) : on peut alors rediriger ou filtrer les données sans mélanger les logs, qui restent visibles même si stdout est redirigé","Parce que stderr est plus rapide","Parce que stdout est réservé aux erreurs","Cela chiffre les logs"],"correct":0,"explain":"Envoyer les journaux sur la sortie d'erreur (>&2) garde la sortie standard propre pour les vraies données. On peut ainsi rediriger les résultats dans un fichier ou un pipe sans y mêler les messages d'information, et inversement."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["getopts"],"placeholder":"la commande intégrée pour analyser les options -n NOM et -h d'un script : …","hints":["while ??????? \"n:h\" opt; do ... done.","La façon standard de gérer les options.","get????"],"link":{"href":"lecon-11.html","label":"Revoir « getopts »"}},
+  {"type":"text","accept":["jq"],"placeholder":"l'outil pour EXTRAIRE un champ d'une réponse JSON (le nombre d'étoiles) : …","hints":["curl ... | ?? '.stargazers_count'.","Un processeur JSON en ligne de commande.","Deux lettres."],"link":{"href":"lecon-11.html","label":"Revoir « curl et jq »"}},
+  {"type":"text","accept":["mktemp","mktemp -d"],"placeholder":"la commande pour créer un dossier TEMPORAIRE sûr (puis nettoyé par un trap EXIT) : …","hints":["dir=$(?????? -d).","Génère un nom unique.","mk????"],"link":{"href":"lecon-11.html","label":"Revoir « mktemp »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un script <code>saluer.sh</code> avec <code>set -euo pipefail</code>, une fonction <code>usage()</code>, et <code>getopts</code> pour une option <code>-n NOM</code> (obligatoire) et <code>-h</code>. Il affiche <code>Bonjour NOM</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+usage() { echo "Usage : $(basename "$0") -n NOM" &gt;&amp;2; }
+
+nom=""
+while getopts ":n:h" opt; do
+  case "$opt" in
+    n) nom="$OPTARG" ;;
+    h) usage; exit 0 ;;
+    *) usage; exit 2 ;;
+  esac
+done
+[ -n "$nom" ] || { usage; exit 2; }
+echo "Bonjour $nom"
+# $ ./saluer.sh -n Noah
+# Bonjour Noah</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Intermédiaire</span></div><p>Avec <code>curl</code> et <code>jq</code>, récupère le dépôt <code>cli/cli</code> sur l'API GitHub et affiche uniquement son nombre d'étoiles, puis son langage principal.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+url="https://api.github.com/repos/cli/cli"
+curl -s "$url" | jq -r '"Etoiles : \(.stargazers_count)\nLangage : \(.language)"'
+# Etoiles : 38211
+# Langage : Go</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Avancé</span></div><p>Écris un script qui crée un dossier temporaire avec <code>mktemp -d</code>, y écrit deux fichiers, les compte, et garantit la suppression du dossier via un <code>trap … EXIT</code> — même si le script échoue avant la fin.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+printf 'un\n'   &gt; "$tmp/a.txt"
+printf 'deux\n' &gt; "$tmp/b.txt"
+
+n=$(find "$tmp" -type f | wc -l)
+echo "Fichiers crees dans $tmp : $n"
+# Verification : apres la sortie, le dossier n'existe plus
+# $ ls "$tmp"
+# ls: ... : No such file or directory</code></pre></figure></details></div>
+
+<h2>Et maintenant&nbsp;?</h2>
+<p>Tu sais désormais écrire des scripts dignes de la production. Le module «&nbsp;Maîtrise du shell&nbsp;» va plus loin&nbsp;: <a href="lecon-12.html">déboguer</a> tes scripts, exploiter les <a href="lecon-13.html">expansions de paramètres</a>, manier les <a href="lecon-14.html">tableaux</a>, orchestrer les <a href="lecon-15.html">entrées/sorties avancées</a>, et tout réunir dans un <a href="lecon-16.html">script de sauvegarde robuste</a> où t'attend le mini-projet fil rouge du cours.</p>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

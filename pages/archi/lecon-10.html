@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Résilience & tolérance aux pannes — Leçon 10 · Syntaxe</title>
+    <meta name="description" content="Concevoir un système qui survit aux défaillances : timeouts, réessais avec recul, disjoncteur (circuit breaker), cloisonnement et dégradation gracieuse." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="archi" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Architecture logicielle</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Architecture en pratique — Leçon 10</p>
+              <h1 class="lesson-header__title">Résilience &amp; tolérance aux pannes</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 09</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>poser des <strong>timeouts</strong> et échouer vite&nbsp;;</li>
+                  <li>réessayer avec <strong>recul</strong> sans amplifier la panne&nbsp;;</li>
+                  <li>protéger un appel par un <strong>disjoncteur</strong>&nbsp;;</li>
+                  <li><strong>cloisonner</strong> et <strong>dégrader</strong> proprement.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Dès qu'un système se répartit sur plusieurs machines, la <strong>panne cesse d'être exceptionnelle</strong>&nbsp;: le réseau lâche, un service ralentit, une base sature. La <strong>résilience</strong>, c'est la capacité à continuer de rendre le service — même dégradé — malgré ces défaillances. Elle ne s'improvise pas&nbsp;: elle se conçoit avec quelques <strong>patterns de stabilité</strong> éprouvés.</p>
+
+<h2>La panne est la norme, pas l'exception</h2>
+<p>On code souvent en supposant que «&nbsp;l'appel réussit&nbsp;». Dans un système distribué, cette hypothèse est <strong>fausse par défaut</strong>&nbsp;: tout appel réseau peut être lent, échouer, ou pire — <strong>ne jamais répondre</strong>. Le vrai danger n'est pas l'erreur franche (facile à gérer)&nbsp;: c'est la <strong>lenteur</strong>, qui bloque des ressources et se propage. La résilience commence donc par une règle&nbsp;: <strong>ne jamais attendre indéfiniment</strong>.</p>
+
+<h2>Le timeout&nbsp;: échouer vite</h2>
+<p>Un <strong>timeout</strong> fixe une durée maximale d'attente. Passé ce délai, on abandonne l'appel et on traite l'échec. Sans lui, un service lent en aval retient un fil d'exécution&nbsp;; les requêtes s'accumulent, les fils se remplissent, et le service <strong>en amont</strong> tombe à son tour — la cascade de pannes vue en leçon 8.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="À gauche, sans timeout : A appelle B qui ne répond pas, et A reste bloqué indéfiniment, sa ressource retenue. À droite, avec timeout : A appelle B, et après un délai maximal T l'appel échoue vite, libérant la ressource de A.">
+    <text class="d-label" x="150" y="26" text-anchor="middle" font-size="10">Sans timeout</text>
+    <rect class="d-box" x="30" y="66" width="76" height="38" rx="8" /><text class="d-text" x="68" y="89" text-anchor="middle" font-size="9">A</text>
+    <rect class="d-frame" x="212" y="66" width="76" height="38" rx="8" /><text class="d-mut" x="250" y="85" text-anchor="middle" font-size="8">B (mort)</text><text class="d-mut" x="250" y="97" text-anchor="middle" font-size="7">ne répond pas</text>
+    <line class="d-line" x1="106" y1="80" x2="208" y2="80" /><polygon class="d-dot" points="212,80 200,74 200,86" />
+    <text class="d-mut" x="68" y="128" text-anchor="middle" font-size="8">A bloqué</text>
+    <text class="d-tag" x="68" y="142" text-anchor="middle" font-size="9">∞</text>
+    <text class="d-mut" x="68" y="160" text-anchor="middle" font-size="7.5">ressource retenue</text>
+    <line class="d-line" x1="320" y1="18" x2="320" y2="172" />
+    <text class="d-label" x="486" y="26" text-anchor="middle" font-size="10">Avec timeout</text>
+    <rect class="d-box" x="360" y="66" width="76" height="38" rx="8" /><text class="d-text" x="398" y="89" text-anchor="middle" font-size="9">A</text>
+    <rect class="d-frame" x="544" y="66" width="76" height="38" rx="8" /><text class="d-mut" x="582" y="89" text-anchor="middle" font-size="8">B (lent)</text>
+    <line class="d-line" x1="436" y1="80" x2="540" y2="80" /><polygon class="d-dot" points="544,80 532,74 532,86" />
+    <text class="d-accent" x="488" y="72" text-anchor="middle" font-size="8">T max</text>
+    <text class="d-tag" x="398" y="128" text-anchor="middle" font-size="9">échec rapide</text>
+    <text class="d-mut" x="398" y="146" text-anchor="middle" font-size="7.5">après T&nbsp;: on abandonne</text>
+    <text class="d-mut" x="398" y="160" text-anchor="middle" font-size="7.5">ressource libérée</text>
+  </svg>
+  <figcaption>Un appel sans timeout est une bombe à retardement&nbsp;: il retient une ressource jusqu'à l'épuisement. Avec un timeout, on <strong>échoue vite</strong> et on garde la main.</figcaption>
+</figure>
+
+<h2>Réessayer… avec recul</h2>
+<p>Beaucoup de pannes sont <strong>passagères</strong> (un pic, une coupure réseau d'une seconde). Réessayer a du sens — mais <strong>pas n'importe comment</strong>. Réessayer immédiatement et en boucle, depuis des milliers de clients, <strong>achève</strong> un service déjà à genoux&nbsp;: c'est la <em>tempête de réessais</em>. La parade&nbsp;: le <strong>recul exponentiel</strong> (attendre 1&nbsp;s, puis 2, puis 4…) additionné d'un <strong>bruit aléatoire</strong> (<em>jitter</em>) pour désynchroniser les clients, avec un <strong>nombre d'essais limité</strong>.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Réessayer peut aggraver la panne</p><p>Sous surcharge, des réessais immédiats <strong>doublent ou triplent</strong> la charge exactement quand le service faiblit&nbsp;: on transforme une gêne en panne totale. Toujours&nbsp;: recul <strong>exponentiel</strong> + <strong>jitter</strong> + <strong>plafond d'essais</strong>. Et ne réessaie que les erreurs <em>transitoires</em> (un <code>500</code>, un timeout), jamais une erreur <em>définitive</em> (un <code>400</code>, «&nbsp;compte introuvable&nbsp;»).</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Réessai suppose idempotence</p><p>Si un appel a peut-être <strong>déjà abouti</strong> avant l'échec (le timeout n'a fait que rater la réponse), le rejouer peut <strong>débiter deux fois</strong>. Comme en leçon 8&nbsp;: rendre l'opération <strong>idempotente</strong> (clé d'idempotence, identifiant unique) est le préalable pour pouvoir réessayer sans risque.</p></div></div>
+
+<h2>Le disjoncteur (circuit breaker)</h2>
+<p>Quand un service est <strong>durablement en panne</strong>, insister est inutile et coûteux. Le <strong>disjoncteur</strong> — comme celui d'un tableau électrique — <strong>coupe le courant</strong> après trop d'échecs&nbsp;: les appels suivants échouent <strong>immédiatement</strong> (sans même tenter le réseau), ce qui protège l'appelant <em>et</em> laisse le service en aval respirer. Il vit en trois états.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Machine à états du disjoncteur : l'état Fermé laisse passer les appels ; après trop d'échecs il passe à Ouvert où les appels échouent aussitôt ; après un délai il passe à Demi-ouvert et laisse passer un appel test ; si ce test réussit il revient à Fermé, s'il échoue il repasse à Ouvert.">
+    <rect class="d-accent" x="40" y="80" width="120" height="50" rx="10" /><text class="d-tag" x="100" y="102" text-anchor="middle" font-size="10">Fermé</text><text class="d-mut" x="100" y="118" text-anchor="middle" font-size="7.5">les appels passent</text>
+    <rect class="d-box" x="260" y="80" width="120" height="50" rx="10" /><text class="d-text" x="320" y="102" text-anchor="middle" font-size="10">Ouvert</text><text class="d-mut" x="320" y="118" text-anchor="middle" font-size="7.5">échec immédiat</text>
+    <rect class="d-box" x="480" y="80" width="120" height="50" rx="10" /><text class="d-text" x="540" y="100" text-anchor="middle" font-size="9.5">Demi-ouvert</text><text class="d-mut" x="540" y="116" text-anchor="middle" font-size="7.5">un appel test</text>
+    <line class="d-line" x1="160" y1="98" x2="256" y2="98" /><polygon class="d-dot" points="260,98 248,92 248,104" /><text class="d-mut" x="208" y="90" text-anchor="middle" font-size="7.5">trop d'échecs</text>
+    <line class="d-line" x1="380" y1="105" x2="476" y2="105" /><polygon class="d-dot" points="480,105 468,99 468,111" /><text class="d-mut" x="428" y="97" text-anchor="middle" font-size="7.5">après un délai</text>
+    <path class="d-line" d="M540 130 q0 40 -220 40 q-220 0 -220 -36" /><polygon class="d-dot" points="100,138 94,150 106,150" /><text class="d-tag" x="320" y="184" text-anchor="middle" font-size="8">test réussi → Fermé</text>
+    <path class="d-line" d="M540 78 q0 -34 -110 -34 q-110 0 -110 30" /><polygon class="d-dot" points="320,72 314,60 326,62" /><text class="d-mut" x="430" y="34" text-anchor="middle" font-size="7.5">test échoué → Ouvert</text>
+  </svg>
+  <figcaption><strong>Fermé</strong> (tout va bien, on laisse passer) → trop d'échecs → <strong>Ouvert</strong> (on coupe, échec immédiat) → après un délai → <strong>Demi-ouvert</strong> (on tente <em>un</em> appel)&nbsp;: s'il réussit on referme, sinon on rouvre.</figcaption>
+</figure>
+
+<h2>Cloisonner et dégrader proprement</h2>
+<p>Le <strong>cloisonnement</strong> (<em>bulkhead</em>, comme les compartiments étanches d'un navire) consiste à <strong>isoler les ressources</strong> par dépendance&nbsp;: un pool de connexions dédié à chaque service appelé. Ainsi, si un service sature son pool, il n'<strong>épuise pas</strong> celui des autres&nbsp;: la panne reste <strong>confinée</strong>. Complément indispensable&nbsp;: la <strong>dégradation gracieuse</strong> (<em>fallback</em>) — servir une réponse par défaut quand la vraie est indisponible (une liste vide, une valeur en cache, un message «&nbsp;temporairement indisponible&nbsp;») plutôt qu'une page d'erreur.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="À gauche, sans cloisonnement : un pool de ressources unique partagé, qu'un seul service défaillant épuise entièrement, bloquant tout. À droite, avec cloisonnement : trois pools séparés, un par dépendance ; la panne de l'un ne touche pas les deux autres.">
+    <text class="d-label" x="150" y="26" text-anchor="middle" font-size="10">Sans cloisons</text>
+    <rect class="d-frame" x="60" y="52" width="180" height="60" rx="10" /><text class="d-mut" x="150" y="86" text-anchor="middle" font-size="8.5">pool unique partagé</text>
+    <text class="d-mut" x="150" y="140" text-anchor="middle" font-size="8">un service qui sature</text>
+    <text class="d-tag" x="150" y="154" text-anchor="middle" font-size="8">épuise tout →</text>
+    <text class="d-mut" x="150" y="170" text-anchor="middle" font-size="8">tout tombe</text>
+    <line class="d-line" x1="320" y1="18" x2="320" y2="182" />
+    <text class="d-label" x="486" y="26" text-anchor="middle" font-size="10">Avec cloisons</text>
+    <rect class="d-accent" x="360" y="52" width="72" height="60" rx="8" /><text class="d-tag" x="396" y="86" text-anchor="middle" font-size="8">pool A</text>
+    <rect class="d-frame" x="450" y="52" width="72" height="60" rx="8" /><text class="d-mut" x="486" y="82" text-anchor="middle" font-size="8">pool B</text><text class="d-mut" x="486" y="94" text-anchor="middle" font-size="7">saturé</text>
+    <rect class="d-accent" x="540" y="52" width="72" height="60" rx="8" /><text class="d-tag" x="576" y="86" text-anchor="middle" font-size="8">pool C</text>
+    <text class="d-mut" x="486" y="140" text-anchor="middle" font-size="8">B tombe, mais</text>
+    <text class="d-tag" x="486" y="156" text-anchor="middle" font-size="8">A et C continuent</text>
+  </svg>
+  <figcaption>Sans cloisons, une seule dépendance défaillante <strong>vide</strong> le pool commun et fige tout. Avec des pools <strong>séparés</strong>, la défaillance reste <strong>enfermée</strong> dans son compartiment.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Chez <strong>Netflix</strong>, la page d'accueil agrège des dizaines de services (recommandations, historique, jaquettes…). Avec la bibliothèque <strong>Hystrix</strong>, chaque appel est protégé par un <strong>disjoncteur</strong> et un <strong>fallback</strong>&nbsp;: si le service de recommandations personnalisées devient lent, le disjoncteur s'ouvre et l'interface affiche une liste <strong>générique</strong> (les tendances du moment) au lieu de faire tourner un sablier ou de planter la page. L'utilisateur voit un contenu légèrement moins pertinent — mais la page <strong>s'affiche</strong>. Mieux vaut un service <strong>partiellement dégradé</strong> qu'une panne totale&nbsp;: c'est tout l'esprit de la résilience.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Les réflexes de base</p><p>Un timeout sur <strong>chaque</strong> appel réseau. Des réessais <strong>bornés</strong> avec recul et jitter. Un disjoncteur sur les dépendances <strong>critiques</strong>. Un <strong>fallback</strong> prévu pour les fonctions non essentielles. Ces quatre gestes suffisent déjà à transformer un système fragile en système qui <strong>plie sans rompre</strong>.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Bibliothèques&nbsp;: <strong>Resilience4j</strong> (Java), <strong>Polly</strong> (.NET), <strong>Hystrix/opossum</strong>. À l'échelle&nbsp;: le <em>service mesh</em> (Istio, Linkerd) applique timeouts et disjoncteurs <strong>hors du code</strong>&nbsp;; les <em>health checks</em> retirent un nœud malade&nbsp;; l'<em>arrêt gracieux</em> (graceful shutdown) laisse finir les requêtes en cours&nbsp;; l'<em>ingénierie du chaos</em> (Chaos Monkey) teste tout ça en cassant volontairement en production.</p></div></div>
+
+<h2>Antisèche&nbsp;: les patterns de stabilité</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Quatre gestes pour survivre aux pannes</caption>
+    <thead><tr><th>Pattern</th><th>Rôle</th><th>Point clé</th></tr></thead>
+    <tbody>
+      <tr><td>Timeout</td><td>Ne pas attendre indéfiniment</td><td>Sur chaque appel réseau&nbsp;; échouer vite</td></tr>
+      <tr><td>Réessai + recul</td><td>Absorber les pannes passagères</td><td>Exponentiel + jitter + plafond&nbsp;; idempotent</td></tr>
+      <tr><td>Disjoncteur</td><td>Arrêter d'insister sur un service mort</td><td>Fermé → Ouvert → Demi-ouvert</td></tr>
+      <tr><td>Cloisonnement</td><td>Confiner une défaillance</td><td>Pools de ressources isolés par dépendance</td></tr>
+      <tr><td>Dégradation</td><td>Servir un repli plutôt qu'une erreur</td><td>Fallback&nbsp;: cache, valeur par défaut, vide</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Résilience</dt><dd>Capacité d'un système à <strong>continuer de fonctionner</strong> (même dégradé) malgré les défaillances de ses composants.</dd>
+  <dt>Timeout</dt><dd>Durée maximale d'attente d'un appel&nbsp;; passé ce délai, on abandonne et on traite l'échec.</dd>
+  <dt>Recul exponentiel (backoff)</dt><dd>Espacer les réessais en doublant l'attente à chaque fois (1&nbsp;s, 2&nbsp;s, 4&nbsp;s…) pour ne pas saturer le service.</dd>
+  <dt>Jitter</dt><dd>Bruit aléatoire ajouté au délai de réessai pour <strong>désynchroniser</strong> les clients et éviter les rafales simultanées.</dd>
+  <dt>Disjoncteur (circuit breaker)</dt><dd>Coupe-circuit qui, après trop d'échecs, fait échouer les appels <strong>immédiatement</strong>&nbsp;; états fermé / ouvert / demi-ouvert.</dd>
+  <dt>Cloisonnement (bulkhead)</dt><dd>Isolation des ressources (pools séparés) pour qu'une dépendance défaillante n'épuise pas les autres.</dd>
+  <dt>Dégradation gracieuse (fallback)</dt><dd>Servir une réponse de repli (cache, valeur par défaut, contenu générique) quand la vraie est indisponible.</dd>
+  <dt>Tempête de réessais</dt><dd>Amplification d'une panne par des réessais massifs et immédiats&nbsp;; évitée par recul, jitter et plafond.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Dans un système distribué, la <strong>panne est la norme</strong>&nbsp;: le pire danger est la <strong>lenteur</strong> qui se propage.</li>
+<li><strong>Timeout</strong> partout&nbsp;; <strong>réessai</strong> borné avec <strong>recul + jitter</strong> et sur opérations <strong>idempotentes</strong> seulement.</li>
+<li>Le <strong>disjoncteur</strong> arrête d'insister sur un service mort (fermé / ouvert / demi-ouvert).</li>
+<li><strong>Cloisonner</strong> confine les pannes&nbsp;; <strong>dégrader</strong> sert un repli. Mieux vaut dégradé que tombé.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un appel sans timeout est-il dangereux&nbsp;?</li><li>Décris les trois états d'un disjoncteur.</li><li>Qu'est-ce qu'une dégradation gracieuse&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi poser un timeout sur chaque appel réseau ?","a":["Sans lui, un service lent ou muet retient des ressources jusqu'à l'épuisement, ce qui propage la panne en amont","Pour chiffrer la connexion","Pour accélérer les appels réussis","Pour éviter d'écrire des tests"],"correct":0,"explain":"Le vrai danger d'un système distribué n'est pas l'erreur franche mais la lenteur : un appel qui ne répond jamais bloque un fil, les requêtes s'accumulent, et le service amont tombe. Le timeout fait échouer vite."},
+  {"q":"Quels sont les trois états d'un disjoncteur (circuit breaker) ?","a":["Fermé (les appels passent), Ouvert (échec immédiat), Demi-ouvert (un appel test)","Démarré, En pause, Arrêté","Lecture, Écriture, Suppression","Vert, Orange, Rouge sans transition"],"correct":0,"explain":"Fermé : tout passe. Après trop d'échecs → Ouvert : on coupe, échec immédiat. Après un délai → Demi-ouvert : on tente un appel ; s'il réussit on referme, sinon on rouvre."},
+  {"q":"Pourquoi réessayer immédiatement et en boucle est-il dangereux ?","a":["Cela multiplie la charge sur un service déjà en difficulté : c'est la tempête de réessais qui achève la panne","Cela consomme trop de mémoire côté client uniquement","Cela chiffre les données par erreur","Il n'y a aucun danger"],"correct":0,"explain":"Des milliers de clients qui réessaient en même temps doublent la charge quand le service faiblit. D'où le recul exponentiel + jitter + un plafond d'essais, et seulement sur des erreurs transitoires."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["timeout","délai d'attente","delai d'attente"],"placeholder":"la durée maximale d'attente au-delà de laquelle on abandonne l'appel","hints":["Un mot anglais courant.","Fait « échouer vite ».","« time… »."],"link":{"href":"lecon-10.html","label":"Revoir « Le timeout »"}},
+  {"type":"text","accept":["disjoncteur","circuit breaker","circuit-breaker","coupe-circuit"],"placeholder":"le pattern qui coupe les appels après trop d'échecs (fermé/ouvert/demi-ouvert)","hints":["Comme un tableau électrique.","Circuit breaker en anglais.","« dis… »."],"link":{"href":"lecon-10.html","label":"Revoir « Le disjoncteur »"}},
+  {"type":"text","accept":["fallback","dégradation","degradation","dégradation gracieuse","repli"],"placeholder":"servir une réponse de repli quand la vraie est indisponible","hints":["Anglais « fall… » ou français « dégra… ».","Liste par défaut, cache.","Mieux que planter."],"link":{"href":"lecon-10.html","label":"Revoir « Cloisonner et dégrader »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un service de paiement met parfois 8&nbsp;s à répondre, alors que 99&nbsp;% des réponses arrivent en moins de 400&nbsp;ms. Quel timeout choisir, et pourquoi pas «&nbsp;aucun&nbsp;»&nbsp;?</p><details><summary>Voir une solution</summary><p>On cale le timeout un peu <strong>au-dessus du cas normal</strong> — par exemple 1 à 2&nbsp;s (marge sur les 400&nbsp;ms), pas 8&nbsp;s. «&nbsp;Aucun timeout&nbsp;» est le pire choix&nbsp;: les rares appels à 8&nbsp;s (ou ceux qui ne répondent <em>jamais</em>) <strong>retiennent des fils d'exécution</strong>&nbsp;; sous trafic, ces fils s'accumulent et font tomber le service. Un timeout serré fait <strong>échouer vite</strong> les cas anormaux, libère les ressources, et déclenche proprement un réessai ou un repli. On règle sa valeur d'après les <strong>percentiles réels</strong> observés (p99), pas au hasard.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Après une coupure réseau, 5&nbsp;000 clients réessaient <strong>tous en même temps, toutes les secondes</strong>. Le service, qui redémarrait, retombe aussitôt. Explique le phénomène et corrige la stratégie.</p><details><summary>Voir une solution</summary><p>C'est une <strong>tempête de réessais</strong> synchronisée&nbsp;: 5&nbsp;000 appels simultanés chaque seconde <strong>submergent</strong> le service dès qu'il tente de revenir, l'empêchant de se rétablir. Corrections cumulées&nbsp;: (1) <strong>recul exponentiel</strong> — chaque client attend 1&nbsp;s, puis 2, 4, 8… entre deux essais&nbsp;; (2) <strong>jitter</strong> — un délai aléatoire s'ajoute pour <strong>désynchroniser</strong> les clients (ils ne frappent plus tous à la même seconde)&nbsp;; (3) <strong>plafond d'essais</strong> — après N tentatives, on abandonne et on affiche un repli&nbsp;; (4) idéalement un <strong>disjoncteur</strong> qui, une fois ouvert, stoppe net les tentatives et ne laisse repasser qu'un appel test. Le service reçoit alors une charge <strong>étalée</strong> et peut se rétablir.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sur une page produit, le bloc «&nbsp;articles recommandés&nbsp;» dépend d'un service tiers instable. Quand il rame, toute la page met 10&nbsp;s à s'afficher. Conçois une réponse résiliente.</p><details><summary>Voir une solution</summary><p>Le problème&nbsp;: une fonction <strong>non essentielle</strong> (les recommandations) dégrade une fonction <strong>essentielle</strong> (voir le produit). On applique plusieurs patterns&nbsp;: (1) <strong>timeout court</strong> sur l'appel aux recommandations (ex. 300&nbsp;ms)&nbsp;: au-delà, on n'attend plus&nbsp;; (2) <strong>dégradation gracieuse</strong> — en cas d'échec/timeout, on affiche un <strong>fallback</strong> (des best-sellers en cache, ou on masque simplement le bloc) plutôt que de bloquer&nbsp;; (3) <strong>disjoncteur</strong> sur ce service&nbsp;: s'il échoue souvent, on cesse de l'appeler un moment et on sert directement le repli, ce qui le laisse récupérer&nbsp;; (4) <strong>cloisonnement</strong>&nbsp;: un pool de connexions dédié aux recommandations, pour que sa saturation n'assèche pas les appels au catalogue ou au panier. Résultat&nbsp;: la page produit s'affiche <strong>vite et toujours</strong>&nbsp;; seul le bloc secondaire peut manquer. On protège l'essentiel en <strong>isolant</strong> et en <strong>repliant</strong> l'accessoire.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

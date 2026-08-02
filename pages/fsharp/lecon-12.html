@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les active patterns — Leçon 12 · Cours F# — Syntaxe</title>
+    <meta name="description" content="Étendre le pattern matching de F# avec les active patterns : motifs totaux, motifs partiels (|X|_|) pour parser et valider, motifs paramétrés et gardes." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="fsharp" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">F#</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin en F# — Leçon 12</p>
+              <h1 class="lesson-header__title">Les active patterns</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 5</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre ce qu'apporte un <strong>active pattern</strong>&nbsp;;</li>
+                  <li>définir un motif <strong>total</strong> à plusieurs cas&nbsp;;</li>
+                  <li>définir un motif <strong>partiel</strong> <code>(|X|_|)</code> pour parser ou valider&nbsp;;</li>
+                  <li>rendre un <code>match</code> lisible sur des données non structurées.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le pattern matching classique reconnaît la <strong>structure</strong> des données&nbsp;: les cas d'une union, la forme d'un tuple, une constante. Mais comment filtrer sur une propriété <em>calculée</em> — «&nbsp;ce nombre est-il pair&nbsp;?&nbsp;», «&nbsp;cette chaîne est-elle un entier valide&nbsp;?&nbsp;» — sans retomber dans des cascades de <code>if</code>/<code>elif</code>&nbsp;? Les <strong>active patterns</strong> transforment une fonction en motif&nbsp;: on étend le vocabulaire du <code>match</code>.</p>
+
+<h2>Rappel&nbsp;: la limite du match ordinaire</h2>
+<p>Pour classer un entier, on écrit souvent une cascade de conditions. Ça marche, mais on perd l'élégance et l'exhaustivité du <code>match</code>.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let categorie n =
+    if n &lt; 0 then "négatif"
+    elif n = 0 then "zéro"
+    else "positif"</code></pre></figure>
+
+<h2>Un active pattern total</h2>
+<p>Un active pattern encadre ses noms de cas entre «&nbsp;<em>banana clips</em>&nbsp;» <code>(| ... |)</code>. Il calcule, à partir de la valeur, <strong>quel cas</strong> s'applique&nbsp;— exactement comme s'il s'agissait des cas d'une union.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let (|Negatif|Zero|Positif|) n =
+    if n &lt; 0 then Negatif
+    elif n = 0 then Zero
+    else Positif
+
+let categorie n =
+    match n with
+    | Negatif -&gt; "négatif"
+    | Zero    -&gt; "zéro"
+    | Positif -&gt; "positif"</code></pre></figure>
+<p>Le <code>match</code> retrouve toute sa lisibilité, et le compilateur vérifie qu'on couvre bien les trois cas.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Un active pattern total agit comme un classeur. La valeur n entre dans le motif Negatif, Zero, Positif, qui calcule lequel des trois cas s'applique. Ce cas est ensuite reconnu par le match, qui choisit la branche correspondante : négatif, zéro ou positif. La fonction devient un jeu de cas nommés utilisables dans un match.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">(|Negatif|Zero|Positif|) : une fonction devient des cas de match</text>
+    <rect class="d-box" x="34" y="66" width="70" height="40" rx="8" /><text class="d-text" x="69" y="91" text-anchor="middle" font-size="12" font-family="monospace">n</text>
+    <path class="d-line" d="M104 86 L150 86" fill="none" />
+    <rect class="d-accent" x="150" y="58" width="180" height="56" rx="8" /><text class="d-tag" x="240" y="80" text-anchor="middle" font-size="9" font-family="monospace">(|Negatif|Zero|Positif|)</text><text class="d-mut" x="240" y="98" text-anchor="middle" font-size="8.5">calcule le cas</text>
+    <path class="d-line" d="M330 70 L378 58" fill="none" /><path class="d-line" d="M330 86 L378 86" fill="none" /><path class="d-line" d="M330 102 L378 114" fill="none" />
+    <rect class="d-box" x="382" y="46" width="220" height="26" rx="7" /><text class="d-text" x="492" y="63" text-anchor="middle" font-size="9" font-family="monospace">| Negatif -&gt; "négatif"</text>
+    <rect class="d-box" x="382" y="76" width="220" height="26" rx="7" /><text class="d-text" x="492" y="93" text-anchor="middle" font-size="9" font-family="monospace">| Zero -&gt; "zéro"</text>
+    <rect class="d-box" x="382" y="106" width="220" height="26" rx="7" /><text class="d-text" x="492" y="123" text-anchor="middle" font-size="9" font-family="monospace">| Positif -&gt; "positif"</text>
+    <text class="d-mut" x="320" y="152" text-anchor="middle" font-size="8.5">exhaustif : le compilateur vérifie que les trois cas sont couverts</text>
+  </svg>
+  <figcaption>Un active pattern <strong>total</strong> partitionne la valeur en cas nommés. Le <code>match</code> les utilise comme s'ils venaient d'une union&nbsp;: on gagne la lisibilité et la vérification d'exhaustivité.</figcaption>
+</figure>
+
+<h2>Un active pattern partiel <code>(|X|_|)</code></h2>
+<p>Quand un motif <em>peut ne pas s'appliquer</em> (parser, valider), on utilise la forme <strong>partielle</strong> <code>(|X|_|)</code>, qui renvoie un <code>option</code>&nbsp;: <code>Some</code> quand il reconnaît, <code>None</code> sinon. Le <code>_</code> signale «&nbsp;peut échouer&nbsp;».</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let (|Entier|_|) (s: string) =
+    match System.Int32.TryParse s with
+    | true, n  -&gt; Some n      // reconnu : on capture n
+    | false, _ -&gt; None        // pas un entier
+
+let lire s =
+    match s with
+    | Entier n -&gt; sprintf "nombre : %d" n
+    | _        -&gt; "pas un nombre"
+
+lire "42"     // "nombre : 42"
+lire "abc"    // "pas un nombre"</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 160" role="img" aria-label="Un active pattern partiel sert de garde de parsing. La chaîne entre dans le motif Entier avec barre soulignée. S'il réussit à convertir, il renvoie Some n et la branche Entier n est prise, capturant le nombre. Sinon il renvoie None et l'exécution passe à la branche par défaut, soulignée. Ainsi le parsing tient dans un match propre.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">(|Entier|_|) : reconnaît (Some) ou laisse passer (None)</text>
+    <rect class="d-box" x="34" y="62" width="90" height="40" rx="8" /><text class="d-text" x="79" y="87" text-anchor="middle" font-size="10" font-family="monospace">"42"</text>
+    <path class="d-line" d="M124 82 L168 82" fill="none" />
+    <rect class="d-accent" x="168" y="54" width="150" height="56" rx="8" /><text class="d-tag" x="243" y="78" text-anchor="middle" font-size="9.5" font-family="monospace">(|Entier|_|)</text><text class="d-mut" x="243" y="96" text-anchor="middle" font-size="8.5">TryParse</text>
+    <path class="d-line" d="M318 70 L366 62" fill="none" /><text class="d-mut" x="345" y="58" text-anchor="middle" font-size="8">Some 42</text>
+    <path class="d-line" d="M318 98 L366 116" fill="none" /><text class="d-mut" x="345" y="120" text-anchor="middle" font-size="8">None</text>
+    <rect class="d-box" x="370" y="48" width="238" height="26" rx="7" /><text class="d-text" x="489" y="65" text-anchor="middle" font-size="9" font-family="monospace">| Entier n -&gt; "nombre : 42"</text>
+    <rect class="d-frame" x="370" y="104" width="238" height="26" rx="7" /><text class="d-mut" x="489" y="121" text-anchor="middle" font-size="9" font-family="monospace">| _ -&gt; "pas un nombre"</text>
+    <text class="d-mut" x="243" y="144" text-anchor="middle" font-size="8.5">le parsing hasardeux devient un cas de match, lisible et typé</text>
+  </svg>
+  <figcaption>Un active pattern <strong>partiel</strong> renvoie <code>Some</code> (reconnu, avec la valeur capturée) ou <code>None</code> (on passe au cas suivant). Le parsing d'une chaîne devient une simple branche de <code>match</code>, sans <code>if</code> imbriqués.</figcaption>
+</figure>
+
+<h2>Composer&nbsp;: gardes et motifs paramétrés</h2>
+<p>On combine les active patterns avec des gardes <code>when</code>, et on peut leur passer des <strong>paramètres</strong>. Le fameux FizzBuzz devient limpide&nbsp;:</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let (|DivisiblePar|_|) diviseur n =
+    if n % diviseur = 0 then Some () else None
+
+let fizzbuzz n =
+    match n with
+    | DivisiblePar 3 &amp; DivisiblePar 5 -&gt; "FizzBuzz"
+    | DivisiblePar 3 -&gt; "Fizz"
+    | DivisiblePar 5 -&gt; "Buzz"
+    | _ -&gt; string n
+
+[ 1..15 ] |&gt; List.map fizzbuzz
+// ["1";"2";"Fizz";"4";"Buzz";"Fizz";"7";"8";"Fizz";"Buzz";...;"FizzBuzz"]</code></pre></figure>
+<p><code>DivisiblePar 3</code> passe l'argument <code>3</code> au motif, et <code>&amp;</code> exige que <em>les deux</em> motifs s'appliquent.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Les active patterns brillent dans les <strong>parseurs</strong> et l'analyse de données. Un idiome très répandu est <code>(|Regex|_|)</code>&nbsp;: un motif partiel qui teste une chaîne contre une expression régulière et capture ses groupes. Le traitement d'un fichier de configuration ou de logs, d'ordinaire truffé de <code>if</code> et de découpages fragiles, se réécrit en un <code>match</code> propre&nbsp;: <code>| Regex "(\\d+)-(\\d+)" [ a; b ] -&gt; ...</code>. Le compilateur F# lui-même s'appuie sur les active patterns pour analyser le code.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un active pattern est <strong>recalculé à chaque essai</strong> dans un <code>match</code>. Un motif coûteux (requête, gros calcul) essayé sur de nombreuses branches peut surprendre côté performance. Garde-les <em>légers</em>, ou mémorise le résultat en amont. Attention aussi à la casse&nbsp;: un nom de cas commence par une <strong>majuscule</strong> (comme les cas d'union).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Un active pattern peut capturer <strong>plusieurs valeurs</strong> à la fois en renvoyant un tuple (<code>Some (x, y)</code>). Il en existe un intégré très utile&nbsp;: <code>(|KeyValue|)</code> décompose une entrée de dictionnaire en <code>(clé, valeur)</code>. On peut aussi les employer hors d'un <code>match</code>, directement dans un <code>let</code> pour déconstruire&nbsp;: <code>let (Entier n) = "7"</code> (à réserver aux motifs qui ne peuvent pas échouer).</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — active patterns</caption>
+    <thead><tr><th scope="col">Forme</th><th scope="col">Usage</th></tr></thead>
+    <tbody>
+      <tr><td><code>(|A|B|C|) x</code></td><td>total&nbsp;: classe <code>x</code> en A, B ou C</td></tr>
+      <tr><td><code>(|X|_|) x</code></td><td>partiel&nbsp;: renvoie <code>Some</code> / <code>None</code></td></tr>
+      <tr><td><code>(|X|_|) param x</code></td><td>partiel paramétré</td></tr>
+      <tr><td><code>match s with Entier n -&gt;</code></td><td>utiliser le motif (avec capture)</td></tr>
+      <tr><td><code>Motif when cond</code></td><td>motif + garde</td></tr>
+      <tr><td><code>A &amp; B</code></td><td>exige les deux motifs</td></tr>
+      <tr><td><code>(|Regex|_|)</code></td><td>idiome de parsing par expression régulière</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Active pattern</dt><dd>Fonction utilisable comme un motif dans un <code>match</code>&nbsp;: elle calcule, à partir de la valeur, quel cas s'applique. Étend le vocabulaire du pattern matching.</dd>
+  <dt>Active pattern total</dt><dd>Motif à plusieurs cas nommés couvrant <em>toutes</em> les valeurs&nbsp;: <code>(|A|B|C|)</code>. Le compilateur vérifie l'exhaustivité.</dd>
+  <dt>Active pattern partiel</dt><dd>Motif <code>(|X|_|)</code> qui peut échouer&nbsp;: renvoie <code>Some</code> (reconnu) ou <code>None</code> (on passe au cas suivant). Idéal pour parser/valider.</dd>
+  <dt>Banana clips</dt><dd>Surnom des délimiteurs <code>(| ... |)</code> qui encadrent les noms de cas d'un active pattern.</dd>
+  <dt>Garde (<code>when</code>)</dt><dd>Condition booléenne ajoutée à un motif&nbsp;: la branche n'est prise que si elle est vraie.</dd>
+  <dt>Motif paramétré</dt><dd>Active pattern acceptant un argument avant la valeur testée&nbsp;: <code>DivisiblePar 3</code>.</dd>
+  <dt><code>&amp;</code> (motif)</dt><dd>Combine deux motifs&nbsp;: la branche s'applique seulement si les deux réussissent.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>active pattern</strong> fait d'une fonction un motif de <code>match</code>.</li>
+  <li>Le motif <strong>total</strong> <code>(|A|B|C|)</code> classe une valeur en cas exhaustifs.</li>
+  <li>Le motif <strong>partiel</strong> <code>(|X|_|)</code> renvoie <code>Some</code>/<code>None</code>&nbsp;: parfait pour parser et valider.</li>
+  <li>Gardes <code>when</code>, motifs <strong>paramétrés</strong> et <code>&amp;</code> composent des filtres puissants et lisibles.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle forme d'active pattern utilise-t-on pour un motif qui peut échouer&nbsp;?</li><li>Que renvoie un active pattern partiel quand il reconnaît la valeur&nbsp;?</li><li>Comment passer un paramètre à un active pattern dans un <code>match</code>&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle forme d'active pattern utilise-t-on pour un motif qui PEUT échouer (parsing, validation) ?","a":["La forme partielle (|X|_|), qui renvoie une option : Some quand elle reconnaît, None sinon","La forme totale (|A|B|C|)","Une simple fonction booléenne","Un match imbriqué"],"correct":0,"explain":"Un active pattern partiel s'écrit (|X|_|) : le _ indique qu'il peut ne pas s'appliquer. Il renvoie Some (avec la valeur capturée) en cas de reconnaissance, None sinon, ce qui fait passer le match au cas suivant. C'est la forme idéale pour parser ou valider."},
+  {"q":"Que renvoie un active pattern partiel quand il reconnaît la valeur ?","a":["Some avec éventuellement la valeur capturée (par ex. Some n) ; il renvoie None quand il ne reconnaît pas","true","La valeur brute, sans emballage","Toujours None"],"correct":0,"explain":"Un active pattern partiel a pour type de retour une option. Reconnaissance : Some x (x étant la donnée extraite, comme l'entier parsé). Échec : None, et le match essaie la branche suivante. C'est ce qui permet d'enchaîner plusieurs motifs partiels proprement."},
+  {"q":"Comment passe-t-on un paramètre à un active pattern dans un match, comme DivisiblePar 3 ?","a":["On écrit l'argument avant la valeur dans la définition (|DivisiblePar|_|) diviseur n, puis on l'utilise dans le motif : | DivisiblePar 3 -> ...","On ne peut pas paramétrer un active pattern","On passe le paramètre via une variable globale","On l'écrit après le match, entre crochets"],"correct":0,"explain":"Un active pattern peut prendre des paramètres, déclarés avant la valeur testée : (|DivisiblePar|_|) diviseur n. Dans le match, on écrit alors | DivisiblePar 3 -> ... : 3 est passé comme diviseur. On peut même combiner deux motifs avec & (DivisiblePar 3 & DivisiblePar 5)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["Some","Some n","Some ()"],"placeholder":"dans (|Entier|_|), la valeur renvoyée quand la chaîne EST un entier : …","hints":["C'est une option.","Le contraire de None.","… n"],"link":{"href":"lecon-12.html","label":"Revoir « motif partiel »"}},
+  {"type":"text","accept":["None"],"placeholder":"la valeur renvoyée par (|Entier|_|) quand la chaîne n'est PAS un entier : …","hints":["Une option vide.","4 lettres.","Le match passe alors au cas suivant."],"link":{"href":"lecon-12.html","label":"Revoir « motif partiel »"}},
+  {"type":"text","accept":["when"],"placeholder":"le mot-clé qui ajoute une condition à un motif : | Entier n … n > 0 -> …","hints":["Une « garde » sur le motif.","4 lettres, en anglais.","| motif ??? condition ->"],"link":{"href":"lecon-12.html","label":"Revoir « gardes »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un active pattern total <code>(|Pair|Impair|)</code> sur un entier, puis une fonction <code>parite</code> qui l'utilise.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let (|Pair|Impair|) n =
+    if n % 2 = 0 then Pair else Impair
+
+let parite n =
+    match n with
+    | Pair   -&gt; "pair"
+    | Impair -&gt; "impair"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un active pattern partiel <code>(|Positif|_|)</code> qui reconnaît un entier strictement positif et capture sa valeur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let (|Positif|_|) n =
+    if n &gt; 0 then Some n else None
+
+let signe n =
+    match n with
+    | Positif p -&gt; sprintf "positif : %d" p
+    | _         -&gt; "négatif ou nul"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>À l'aide d'un <code>(|Entier|_|)</code> et d'une garde, écris <code>classer</code>&nbsp;: «&nbsp;grand&nbsp;» si la chaîne est un entier &gt; 100, «&nbsp;petit&nbsp;» si c'est un entier ≤ 100, «&nbsp;texte&nbsp;» sinon.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let (|Entier|_|) (s: string) =
+    match System.Int32.TryParse s with
+    | true, n  -&gt; Some n
+    | false, _ -&gt; None
+
+let classer s =
+    match s with
+    | Entier n when n &gt; 100 -&gt; "grand"
+    | Entier _              -&gt; "petit"
+    | _                     -&gt; "texte"</code></pre></figure></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-fsharp.min.js" defer></script>
+  </body>
+</html>

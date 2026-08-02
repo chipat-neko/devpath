@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La concurrence avec Grand Central Dispatch — Leçon 13 · Cours Objective-C — Syntaxe</title>
+    <meta name="description" content="Ne plus geler l'interface : les files de Grand Central Dispatch (GCD), dispatch_async et dispatch_sync, la file principale et les files globales, et le motif « travailler en fond puis revenir au principal »." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="objc" data-lesson="lecon-13.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Objective-C</a></li>
+            <li aria-current="page">Leçon 13</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin — Leçon 13</p>
+              <h1 class="lesson-header__title">La concurrence avec Grand Central Dispatch</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~52 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 8</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer pourquoi il ne faut jamais <strong>bloquer le thread principal</strong>&nbsp;;</li>
+                  <li>utiliser les <strong>files</strong> de GCD (principale et globales)&nbsp;;</li>
+                  <li>distinguer <code>dispatch_async</code> et <code>dispatch_sync</code>&nbsp;;</li>
+                  <li>appliquer le motif <strong>travail en fond → retour au principal</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une application Apple s'anime sur un fil d'exécution privilégié&nbsp;: le <strong>thread principal</strong>. C'est lui qui dessine l'interface et réagit aux gestes de l'utilisateur. Si on lui confie une tâche longue — télécharger un fichier, lire une grosse base — il ne peut plus rien afficher&nbsp;: l'écran <strong>gèle</strong>. La solution s'appelle <strong>Grand Central Dispatch</strong> (GCD)&nbsp;: une bibliothèque C, intégrée à Foundation, qui distribue le travail sur plusieurs fils sans qu'on ait à gérer les threads à la main. Cette leçon en pose les bases.</p>
+
+<h2>Le problème : un thread principal qui gèle</h2>
+<p>Tout le code que tu as écrit jusqu'ici s'exécute <strong>séquentiellement</strong> sur un seul fil. Dans une vraie application, ce fil est le thread principal, et il a un contrat&nbsp;: rester <em>disponible</em> pour redessiner l'écran ~60 fois par seconde. Une opération qui dure une seconde le bloque une seconde&nbsp;; pendant ce temps, plus aucune animation, plus aucun bouton ne répond.</p>
+<figure class="code-block" data-file="probleme.m"><pre><code class="language-objectivec">// SUR LE THREAD PRINCIPAL — à ne pas faire :
+NSData *donnees = [self telechargementTresLong];  // bloque 3 secondes...
+[self afficher:donnees];                          // ...l'écran est gelé pendant ce temps</code></pre></figure>
+<p>La règle est simple&nbsp;: <strong>le travail long va ailleurs</strong>, et seule la mise à jour de l'interface revient au thread principal.</p>
+
+<h2>Les files de distribution (dispatch queues)</h2>
+<p>GCD ne raisonne pas en «&nbsp;threads&nbsp;» mais en <strong>files</strong> (<em>queues</em>)&nbsp;: on <em>dépose</em> un bloc de travail dans une file, et GCD se charge de l'exécuter sur un fil disponible du système. Deux familles suffisent pour commencer&nbsp;:</p>
+<ul>
+  <li>la <strong>file principale</strong> (<code>dispatch_get_main_queue()</code>)&nbsp;: <em>série</em> (une tâche à la fois), liée au thread principal — c'est la <strong>seule</strong> où l'on a le droit de toucher à l'interface&nbsp;;</li>
+  <li>les <strong>files globales</strong> (<code>dispatch_get_global_queue(...)</code>)&nbsp;: <em>concurrentes</em>, partagées, faites pour le travail de fond.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Les deux familles de files de Grand Central Dispatch. En haut, la file principale : une file série, liée au thread principal, où les tâches passent une à une ; c'est la seule où l'on peut mettre à jour l'interface. En bas, une file globale : une file concurrente qui exécute plusieurs tâches de fond en parallèle sur les fils du système ; on n'y touche jamais à l'interface.">
+    <rect class="d-frame" x="24" y="30" width="592" height="70" rx="10" />
+    <text class="d-label" x="40" y="52" font-size="12">File principale — série (UI)</text>
+    <rect class="d-accent" x="360" y="60" width="60" height="28" rx="5" />
+    <text class="d-mut" x="390" y="78" text-anchor="middle" font-size="10">tâche</text>
+    <rect class="d-box" x="430" y="60" width="60" height="28" rx="5" />
+    <text class="d-mut" x="460" y="78" text-anchor="middle" font-size="10">tâche</text>
+    <rect class="d-box" x="500" y="60" width="60" height="28" rx="5" />
+    <text class="d-mut" x="530" y="78" text-anchor="middle" font-size="10">tâche</text>
+    <text class="d-mut" x="150" y="82" text-anchor="middle" font-size="10">une à la fois →</text>
+    <rect class="d-frame" x="24" y="112" width="592" height="72" rx="10" />
+    <text class="d-label" x="40" y="134" font-size="12">File globale — concurrente (fond)</text>
+    <rect class="d-box" x="360" y="142" width="76" height="26" rx="5" />
+    <text class="d-mut" x="398" y="159" text-anchor="middle" font-size="9.5">tâche</text>
+    <rect class="d-box" x="446" y="142" width="76" height="26" rx="5" />
+    <text class="d-mut" x="484" y="159" text-anchor="middle" font-size="9.5">tâche</text>
+    <rect class="d-box" x="532" y="142" width="76" height="26" rx="5" />
+    <text class="d-mut" x="570" y="159" text-anchor="middle" font-size="9.5">tâche</text>
+    <text class="d-mut" x="150" y="159" text-anchor="middle" font-size="10">en parallèle ⇉</text>
+  </svg>
+  <figcaption>La <strong>file principale</strong> est série et réservée à l'interface&nbsp;; les <strong>files globales</strong> sont concurrentes et faites pour le travail de fond.</figcaption>
+</figure>
+
+<h2>Déposer du travail : async et sync</h2>
+<p>On dépose un <strong>block</strong> (leçon 8) dans une file avec deux fonctions&nbsp;:</p>
+<ul>
+  <li><code>dispatch_async(file, ^{ … })</code> — dépose et <strong>rend la main aussitôt</strong>&nbsp;: le code qui suit continue sans attendre&nbsp;;</li>
+  <li><code>dispatch_sync(file, ^{ … })</code> — dépose et <strong>attend</strong> la fin du bloc avant de continuer.</li>
+</ul>
+<p>Dans l'immense majorité des cas, on veut <code>dispatch_async</code>&nbsp;: lancer le travail sans bloquer l'appelant. <code>dispatch_sync</code> est un piège classique&nbsp;: appelé sur la file principale <em>vers</em> la file principale, il fige l'application (<em>deadlock</em>).</p>
+<figure class="code-block" data-file="async.m"><pre><code class="language-objectivec">// Récupérer une file globale de fond :
+dispatch_queue_t fond =
+    dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0);
+
+dispatch_async(fond, ^{
+    NSData *donnees = [self telechargementTresLong];  // en fond : l'UI reste fluide
+    NSLog(@"Téléchargé : %lu octets", (unsigned long)donnees.length);
+});
+// cette ligne s'exécute SANS attendre la fin du bloc ci-dessus</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Jamais d'interface hors du thread principal</p><p>Modifier une vue (<code>label.text</code>, <code>imageView.image</code>…) depuis une file de fond provoque des bugs d'affichage imprévisibles, voire des plantages. <strong>Toute</strong> mise à jour d'interface doit repasser par <code>dispatch_get_main_queue()</code>. C'est l'erreur nº 1 des débutants en concurrence sur iOS.</p></div></div>
+
+<h2>Le motif fondamental : travailler en fond, revenir au principal</h2>
+<p>Ces deux idées se combinent en un motif qu'on retrouve partout dans le code Cocoa&nbsp;: on part sur une file de fond pour le travail long, puis on <strong>imbrique</strong> un retour sur la file principale pour l'affichage.</p>
+<figure class="code-block" data-file="motif.m"><pre><code class="language-objectivec">dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+    // 1) en FOND : le travail long
+    NSData *donnees = [self telechargementTresLong];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // 2) de retour sur le PRINCIPAL : la mise à jour de l'UI
+        [self afficher:donnees];
+    });
+});</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Le motif fond puis retour au principal, en quatre temps de gauche à droite. Un, sur le thread principal, on appelle dispatch_async vers une file globale. Deux, le travail long s'exécute en fond, pendant que le thread principal reste libre d'animer l'interface. Trois, une fois le travail fini, on appelle depuis le fond dispatch_async vers la file principale. Quatre, de retour sur le thread principal, on met à jour l'interface avec le résultat.">
+    <rect class="d-box" x="20" y="30" width="140" height="52" rx="8" />
+    <text class="d-label" x="90" y="52" text-anchor="middle" font-size="11">Thread principal</text>
+    <text class="d-mut" x="90" y="69" text-anchor="middle" font-size="9.5">dispatch_async →</text>
+    <rect class="d-accent" x="250" y="30" width="150" height="52" rx="8" />
+    <text class="d-label" x="325" y="52" text-anchor="middle" font-size="11">Fond (globale)</text>
+    <text class="d-mut" x="325" y="69" text-anchor="middle" font-size="9.5">travail long</text>
+    <rect class="d-box" x="480" y="106" width="150" height="52" rx="8" />
+    <text class="d-label" x="555" y="128" text-anchor="middle" font-size="11">Thread principal</text>
+    <text class="d-mut" x="555" y="145" text-anchor="middle" font-size="9.5">mise à jour de l'UI</text>
+    <line class="d-line" x1="160" y1="56" x2="248" y2="56" /><path class="d-dot" d="M248 56 l-9 -4 v8 z" />
+    <path class="d-line" d="M325 82 V132 H478" fill="none" /><path class="d-dot" d="M478 132 l-9 -4 v8 z" />
+    <text class="d-mut" x="205" y="46" text-anchor="middle" font-size="9">async</text>
+    <text class="d-text" x="360" y="122" text-anchor="middle" font-size="9.5">dispatch_async(main)</text>
+    <text class="d-mut" x="200" y="176" text-anchor="middle" font-size="9.5">l'UI reste fluide pendant tout le travail de fond</text>
+  </svg>
+  <figcaption>Le va-et-vient&nbsp;: <code>async</code> vers le fond pour le travail long, puis <code>async</code> vers le principal pour toucher l'interface. L'écran ne gèle jamais.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Charger l'avatar d'un contact dans une liste (par exemple une cellule de <code>UITableView</code>) est l'usage type. Le réseau est lent et imprévisible&nbsp;; le faire sur le thread principal saccaderait le défilement. On télécharge donc l'image en fond, puis on revient au principal pour l'afficher&nbsp;:</p><figure class="code-block" data-file="avatar.m"><pre><code class="language-objectivec">dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+    NSData *d = [NSData dataWithContentsOfURL:url];   // lent : en fond
+    UIImage *img = [UIImage imageWithData:d];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        cellule.imageView.image = img;                // UI : sur le principal
+    });
+});</code></pre></figure><p>C'est exactement ce que font, en coulisses, les bibliothèques d'images comme SDWebImage&nbsp;; GCD en est le moteur.</p></div></div>
+
+<h2>Trois outils GCD bien utiles</h2>
+<p>Au-delà du motif principal, trois fonctions reviennent souvent&nbsp;:</p>
+<figure class="code-block" data-file="outils.m"><pre><code class="language-objectivec">// Différer un travail (ici 2 secondes plus tard, sur le principal) :
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)),
+               dispatch_get_main_queue(), ^{
+    [self masquerLeMessage];
+});
+
+// Exécuter un code UNE SEULE FOIS dans la vie du programme (singleton) :
+static dispatch_once_t jeton;
+static Reglages *partage = nil;
+dispatch_once(&amp;jeton, ^{
+    partage = [[Reglages alloc] init];   // garanti thread-safe, une seule fois
+});</code></pre></figure>
+<p><code>dispatch_after</code> planifie un bloc dans le futur&nbsp;; <code>dispatch_once</code> garantit qu'un code (typiquement la création d'un singleton) ne s'exécute qu'une fois, même si plusieurs fils l'atteignent en même temps.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Choisir la bonne priorité (QoS)</p><p>Le premier argument de <code>dispatch_get_global_queue</code> est une <strong>classe de qualité de service</strong> qui indique au système l'urgence du travail&nbsp;: <code>QOS_CLASS_USER_INTERACTIVE</code> (quasi immédiat), <code>USER_INITIATED</code> (l'utilisateur attend le résultat), <code>UTILITY</code> (tâche longue avec barre de progression), <code>BACKGROUND</code> (invisible, économe en énergie). Bien la choisir aide le système à ménager la batterie.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Au-dessus de GCD</p><p>GCD est la couche <em>bas niveau</em>. Par-dessus, Cocoa offre <code>NSOperation</code> et <code>NSOperationQueue</code>, qui ajoutent l'annulation, les dépendances entre tâches et une limite de concurrence — pratique pour orchestrer plusieurs travaux. Et côté Swift moderne, <code>async</code>/<code>await</code> et les <em>acteurs</em> reprennent ces idées avec une syntaxe linéaire&nbsp;; mais sous le capot, on retrouve toujours ces mêmes files. Comprendre GCD, c'est comprendre le socle de toute la concurrence Apple.</p></div></div>
+
+<h2>Antisèche — GCD au quotidien</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Files et fonctions de Grand Central Dispatch.</caption>
+    <thead><tr><th scope="col">Écriture</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>dispatch_get_main_queue()</code></td><td>File principale (série)&nbsp;: la <strong>seule</strong> pour l'interface</td></tr>
+      <tr><td><code>dispatch_get_global_queue(qos, 0)</code></td><td>File de fond concurrente pour le travail long</td></tr>
+      <tr><td><code>dispatch_async(file, ^{…})</code></td><td>Déposer et continuer <strong>sans attendre</strong> (le cas courant)</td></tr>
+      <tr><td><code>dispatch_sync(file, ^{…})</code></td><td>Déposer et <strong>attendre</strong> la fin (attention aux <em>deadlocks</em>)</td></tr>
+      <tr><td><code>dispatch_after(t, file, ^{…})</code></td><td>Exécuter plus tard</td></tr>
+      <tr><td><code>dispatch_once(&amp;jeton, ^{…})</code></td><td>Exécuter une seule fois (singleton)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Grand Central Dispatch (GCD)</dt><dd>Bibliothèque C d'Apple qui répartit des blocs de travail sur des files, sans gérer les threads soi-même.</dd>
+  <dt>Thread principal</dt><dd>Le fil qui dessine l'interface et traite les gestes&nbsp;; il ne doit jamais être bloqué par un travail long.</dd>
+  <dt>File (queue)</dt><dd>Une file d'attente où l'on dépose des blocs&nbsp;; GCD les exécute sur un fil disponible.</dd>
+  <dt>File principale</dt><dd><code>dispatch_get_main_queue()</code>&nbsp;: file série liée au thread principal, seule autorisée à toucher l'interface.</dd>
+  <dt>File globale</dt><dd><code>dispatch_get_global_queue(...)</code>&nbsp;: file concurrente partagée, pour le travail de fond.</dd>
+  <dt><code>dispatch_async</code></dt><dd>Dépose un bloc et rend la main immédiatement, sans attendre son exécution.</dd>
+  <dt>QoS (qualité de service)</dt><dd>Étiquette d'urgence d'un travail qui aide le système à arbitrer priorité et énergie.</dd>
+  <dt><code>dispatch_once</code></dt><dd>Garantit qu'un bloc ne s'exécute qu'une fois dans la vie du programme, même en concurrence.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le <strong>thread principal</strong> dessine l'interface&nbsp;: ne jamais l'occuper avec un travail long.</li>
+  <li>GCD distribue des blocs dans des <strong>files</strong>&nbsp;: principale (série, UI) et globales (concurrentes, fond).</li>
+  <li><code>dispatch_async</code> dépose sans attendre&nbsp;; <code>dispatch_sync</code> attend (gare aux <em>deadlocks</em>).</li>
+  <li>Motif clé&nbsp;: travailler en <strong>fond</strong>, puis <code>dispatch_async(main)</code> pour <strong>toucher l'UI</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi ne faut-il pas exécuter un travail long sur le thread principal&nbsp;?</li><li>Sur quelle file doit-on <strong>toujours</strong> mettre à jour l'interface&nbsp;?</li><li>Quelle fonction dépose un bloc sans attendre sa fin&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi ne faut-il pas exécuter un travail long directement sur le thread principal ?","a":["Parce qu'il dessine l'interface : l'occuper gèle l'écran et les interactions","Parce que c'est interdit par le compilateur","Parce que le thread principal est plus lent","Parce que GCD n'existe que sur le thread principal"],"correct":0,"explain":"Le thread principal doit rester disponible pour redessiner l'interface ~60 fois par seconde et traiter les gestes. Une opération longue l'occupe et fige l'écran : c'est pourquoi on décharge le travail long sur une file de fond."},
+  {"q":"Sur quelle file doit-on toujours mettre à jour l'interface ?","a":["La file principale : dispatch_get_main_queue()","N'importe quelle file globale","La file BACKGROUND uniquement","Aucune, l'UI est thread-safe"],"correct":0,"explain":"Toucher à une vue depuis une file de fond provoque des bugs d'affichage et des plantages. Toute mise à jour d'interface doit repasser par dispatch_get_main_queue()."},
+  {"q":"Quelle fonction dépose un bloc dans une file et rend la main sans attendre sa fin ?","a":["dispatch_async","dispatch_sync","dispatch_once","dispatch_wait"],"correct":0,"explain":"dispatch_async dépose le bloc et continue immédiatement. dispatch_sync, lui, attend la fin du bloc — et peut provoquer un deadlock s'il vise la file principale depuis la file principale."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["dispatch_get_main_queue","dispatch_get_main_queue()","main queue","file principale"],"placeholder":"la file sur laquelle mettre à jour l'interface : …","hints":["C'est une file série.","dispatch_get_…_queue().","La file du thread principal."],"link":{"href":"lecon-13.html","label":"Revoir « Les files »"}},
+  {"type":"text","accept":["dispatch_async","dispatch_async()"],"placeholder":"la fonction qui dépose un bloc sans attendre : …","hints":["L'opposé de dispatch_sync.","On l'utilise dans presque tous les cas.","dispatch_a…"],"link":{"href":"lecon-13.html","label":"Revoir « async et sync »"}},
+  {"type":"text","accept":["dispatch_once","dispatch_once()"],"placeholder":"la fonction qui n'exécute un bloc qu'une seule fois (singleton) : …","hints":["Utilise un dispatch_once_t.","Sert à créer un partagé thread-safe.","dispatch_o…"],"link":{"href":"lecon-13.html","label":"Revoir « Trois outils »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris l'appel qui lance <code>[self calculLong]</code> sur une file de fond, sans bloquer l'appelant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+    [self calculLong];
+});</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Complète le motif&nbsp;: calcule <code>NSString *r = [self resultat];</code> en fond, puis affecte-le à <code>label.text</code> au bon endroit.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+    NSString *r = [self resultat];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        label.text = r;   // l'UI revient sur le principal
+    });
+});</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi <code>dispatch_sync(dispatch_get_main_queue(), ^{ … });</code> appelé <em>depuis le thread principal</em> fige-t-il l'application&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que <code>dispatch_sync</code> <strong>attend</strong> que le bloc s'exécute avant de rendre la main. Or la file principale est <em>série</em>&nbsp;: elle est justement occupée par le code qui vient d'appeler <code>dispatch_sync</code>. Le bloc ne pourra donc jamais démarrer, et l'appelant l'attend indéfiniment&nbsp;: c'est un <strong>deadlock</strong>. On utilise <code>dispatch_async</code> (qui n'attend pas), ou l'on vérifie qu'on n'est pas déjà sur la file visée.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-objectivec.min.js" defer></script>
+  </body>
+</html>

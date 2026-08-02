@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le state à distance et le travail en équipe — Leçon 07 · Syntaxe</title>
+    <meta name="description" content="Partager le state Terraform en équipe : les backends distants (S3, GCS, Terraform Cloud), le verrouillage (locking) contre les applications simultanées, la lecture de sorties entre states, et la protection des secrets contenus dans le state." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="iac" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Infrastructure as Code</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · IaC en production — Leçon 07</p>
+              <h1 class="lesson-header__title">Le state à distance et le travail en équipe</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçons 03 et 05 conseillées</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer pourquoi le <strong>state local</strong> ne tient pas en équipe&nbsp;;</li>
+                  <li>configurer un <strong>backend distant</strong> (S3, GCS, Terraform Cloud)&nbsp;;</li>
+                  <li>comprendre le <strong>verrouillage</strong> (locking)&nbsp;;</li>
+                  <li>lire des <strong>sorties d'un autre state</strong> et protéger les <strong>secrets</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le <strong>state</strong> (leçon 03) est la mémoire de Terraform&nbsp;: la carte entre ton code et les ressources réelles. Tant que tu travailles seul, il vit tranquillement dans un fichier <code>terraform.tfstate</code> sur ton disque. Dès qu'une <strong>équipe</strong> touche à la même infrastructure, ce fichier local devient un problème. Cette leçon montre comment le <strong>partager en sécurité</strong>.</p>
+
+<h2>Pourquoi le state local ne tient pas en équipe</h2>
+<p>Imagine deux collègues qui modifient la même infra. Chacun a <strong>sa</strong> copie du state sur son poste. Alice applique un changement&nbsp;: son state local est à jour, pas celui de Bob. Bob applique à son tour&nbsp;: à partir d'un state <strong>périmé</strong>, il croit devoir recréer des ressources qui existent déjà. Les states <strong>divergent</strong>, l'infrastructure part en vrille — et si un poste tombe en panne, le state (donc la carte de l'infra) est <strong>perdu</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison du state local et du state distant. À gauche, « state local » : Alice et Bob ont chacun leur propre fichier terraform.tfstate sur leur poste ; les deux copies divergent et pointent vers la même infrastructure, ce qui provoque des conflits. À droite, « state distant » : Alice et Bob écrivent et lisent un state unique stocké dans un backend distant, verrouillé, qui reste la source de vérité partagée de l'infrastructure.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un fichier par poste, ou une source de vérité partagée</text>
+    <line class="d-line" x1="320" y1="34" x2="320" y2="200" stroke-dasharray="3 3" />
+    <text class="d-label" x="160" y="48" text-anchor="middle" font-size="11">state local</text>
+    <rect class="d-box" x="34" y="58" width="110" height="30" rx="5" /><text class="d-mut" x="89" y="77" text-anchor="middle" font-size="9">Alice · .tfstate</text>
+    <rect class="d-box" x="176" y="58" width="110" height="30" rx="5" /><text class="d-mut" x="231" y="77" text-anchor="middle" font-size="9">Bob · .tfstate</text>
+    <line class="d-line" x1="89" y1="88" x2="140" y2="150" /><line class="d-line" x1="231" y1="88" x2="180" y2="150" />
+    <rect class="d-accent" x="96" y="150" width="128" height="30" rx="5" /><text class="d-tag" x="160" y="169" text-anchor="middle" font-size="9">même infra</text>
+    <text class="d-mut" x="160" y="196" text-anchor="middle" font-size="8.5">deux copies divergent → conflits, perte</text>
+    <text class="d-label" x="480" y="48" text-anchor="middle" font-size="11">state distant</text>
+    <rect class="d-box" x="356" y="58" width="104" height="30" rx="5" /><text class="d-mut" x="408" y="77" text-anchor="middle" font-size="9">Alice</text>
+    <rect class="d-box" x="500" y="58" width="104" height="30" rx="5" /><text class="d-mut" x="552" y="77" text-anchor="middle" font-size="9">Bob</text>
+    <line class="d-line" x1="408" y1="88" x2="470" y2="128" /><line class="d-line" x1="552" y1="88" x2="490" y2="128" />
+    <rect class="d-accent" x="396" y="128" width="168" height="32" rx="5" /><text class="d-tag" x="480" y="148" text-anchor="middle" font-size="9.5">backend distant (verrouillé)</text>
+    <line class="d-line" x1="480" y1="160" x2="480" y2="182" /><circle class="d-dot" cx="480" cy="182" r="2.5" />
+    <text class="d-mut" x="480" y="200" text-anchor="middle" font-size="8.5">un seul state = source de vérité</text>
+  </svg>
+  <figcaption>Le <strong>state distant</strong> remplace les copies locales par une <strong>source de vérité unique</strong>, que toute l'équipe lit et écrit — sans divergence ni perte.</figcaption>
+</figure>
+
+<h2>Le backend distant</h2>
+<p>Un <strong>backend</strong> indique <em>où</em> Terraform stocke son state. Par défaut, c'est le backend <code>local</code> (un fichier). En équipe, on déclare un backend <strong>distant</strong>&nbsp;: un stockage d'objets (AWS S3, Google Cloud Storage, Azure Blob) ou une plateforme dédiée (Terraform Cloud). Le state y est central, chiffré et sauvegardé.</p>
+<figure class="code-block" data-file="backend.tf"><pre><code class="language-hcl">terraform {
+  backend "s3" {
+    bucket = "mon-entreprise-tfstate"
+    key    = "prod/reseau/terraform.tfstate"
+    region = "eu-west-3"
+    encrypt = true
+    dynamodb_table = "tf-locks"   # verrouillage
+  }
+}</code></pre></figure>
+<p>La clé <code>key</code> range chaque state dans un «&nbsp;dossier&nbsp;» logique&nbsp;: on isole ainsi <strong>prod</strong> de <strong>dev</strong>, et le <strong>réseau</strong> de la <strong>base de données</strong>. Après avoir écrit ce bloc, <code>terraform init</code> propose de <strong>migrer</strong> le state local vers le backend.</p>
+
+<h2>Le verrouillage (locking)</h2>
+<p>Que se passe-t-il si Alice et Bob lancent <code>apply</code> <strong>en même temps</strong>&nbsp;? Sans protection, ils écriraient le state simultanément et le corrompraient. Le <strong>verrouillage</strong> l'empêche&nbsp;: avant d'écrire, Terraform <strong>pose un verrou</strong>&nbsp;; le second doit <strong>attendre</strong> que le premier ait fini.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le verrouillage du state. Alice lance apply et obtient le verrou : elle peut écrire le state. Au même moment, Bob lance apply mais le verrou est déjà pris : Terraform refuse et lui demande d'attendre. Quand Alice a terminé, elle libère le verrou et Bob peut alors l'obtenir à son tour. Un seul apply écrit le state à la fois.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un seul apply écrit le state à la fois</text>
+    <rect class="d-box" x="24" y="52" width="120" height="40" rx="6" /><text class="d-tag" x="84" y="70" text-anchor="middle" font-size="10">Alice · apply</text><text class="d-mut" x="84" y="85" text-anchor="middle" font-size="8">obtient le verrou</text>
+    <line class="d-line" x1="144" y1="72" x2="248" y2="72" /><circle class="d-dot" cx="248" cy="72" r="2.5" />
+    <rect class="d-accent" x="250" y="50" width="140" height="44" rx="6" /><text class="d-tag" x="320" y="70" text-anchor="middle" font-size="10">🔒 state verrouillé</text><text class="d-mut" x="320" y="85" text-anchor="middle" font-size="8">écriture en cours</text>
+    <rect class="d-box" x="496" y="52" width="120" height="40" rx="6" /><text class="d-tag" x="556" y="70" text-anchor="middle" font-size="10">Bob · apply</text><text class="d-mut" x="556" y="85" text-anchor="middle" font-size="8">doit attendre</text>
+    <line class="d-line" x1="496" y1="72" x2="392" y2="72" stroke-dasharray="3 3" /><text class="d-mut" x="444" y="64" text-anchor="middle" font-size="8">refusé</text>
+    <line class="d-line" x1="320" y1="94" x2="320" y2="120" /><circle class="d-dot" cx="320" cy="120" r="2.5" />
+    <rect class="d-box" x="230" y="122" width="180" height="30" rx="6" /><text class="d-text" x="320" y="141" text-anchor="middle" font-size="9">Alice finit → verrou libéré → Bob passe</text>
+    <text class="d-mut" x="320" y="168" text-anchor="middle" font-size="8.5">Le verrou sérialise les écritures : jamais deux apply concurrents sur le même state.</text>
+  </svg>
+  <figcaption>Le <strong>verrou</strong> sérialise les écritures. Avec le backend S3, il est souvent géré par une table DynamoDB&nbsp;; Terraform Cloud et GCS le font nativement.</figcaption>
+</figure>
+
+<h2>Lire les sorties d'un autre state</h2>
+<p>On découpe souvent une grande infra en plusieurs states (réseau, base de données, application) pour limiter le rayon d'action de chaque changement. La source de données <code>terraform_remote_state</code> permet à un state de <strong>lire les sorties</strong> (leçon 03) d'un autre&nbsp;: par exemple, l'application récupère l'identifiant du réseau produit par le state «&nbsp;réseau&nbsp;».</p>
+<figure class="code-block" data-file="app/data.tf"><pre><code class="language-hcl">data "terraform_remote_state" "reseau" {
+  backend = "s3"
+  config = {
+    bucket = "mon-entreprise-tfstate"
+    key    = "prod/reseau/terraform.tfstate"
+    region = "eu-west-3"
+  }
+}
+
+# On réutilise une sortie du state « reseau »
+resource "aws_instance" "app" {
+  subnet_id = data.terraform_remote_state.reseau.outputs.subnet_id
+}</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le state contient des secrets en clair</p><p>Un mot de passe généré, une clé d'accès, une chaîne de connexion&nbsp;: tout cela peut apparaître <strong>en clair</strong> dans le state. Deux règles absolues&nbsp;: ne <strong>jamais</strong> committer le state dans Git, et n'utiliser qu'un backend <strong>chiffré</strong> (au repos) dont l'<strong>accès est restreint</strong> aux personnes autorisées. Le state se traite comme un coffre-fort, pas comme un fichier de config anodin.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — un state versionné par erreur</p><p>C'est une bévue classique&nbsp;: un fichier <code>terraform.tfstate</code> qui atterrit dans un dépôt Git, parfois <strong>public</strong>. Comme le state contient des identifiants et des clés en clair, l'incident revient à publier des secrets d'infrastructure&nbsp;: des robots scannent GitHub en continu pour exactement cela. La parade est double et connue&nbsp;: mettre <code>*.tfstate*</code> dans le <code>.gitignore</code> <em>dès le premier commit</em>, et déplacer le state vers un <strong>backend distant</strong> chiffré à accès restreint. Beaucoup d'équipes n'y pensent qu'après la première frayeur&nbsp;; autant le faire d'emblée.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Migrer un state existant sans le perdre</p><p>Tu passes d'un state local à un backend distant&nbsp;? Ajoute le bloc <code>backend</code>, puis lance <code>terraform init</code>&nbsp;: Terraform détecte le changement et propose de <strong>copier</strong> le state existant vers le nouveau backend (<em>«&nbsp;Do you want to copy existing state?&nbsp;»</em>). Réponds <code>yes</code>. Le state est migré sans recréer une seule ressource&nbsp;: c'est un simple déménagement de la mémoire.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p><strong>Terraform Cloud</strong> (et ses équivalents comme Spacelift ou Scalr) va plus loin qu'un simple stockage&nbsp;: state distant chiffré et verrouillé, mais aussi exécution des <code>plan</code>/<code>apply</code> à distance, historique des versions du state, variables sensibles chiffrées et contrôle d'accès par équipe. Pour un usage sérieux en entreprise, c'est souvent le pas suivant après le backend S3/GCS «&nbsp;fait maison&nbsp;».</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — state distant &amp; équipe</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Moyen</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Partager le state</td><td>backend distant</td><td>S3, GCS, Azure Blob, Terraform Cloud</td></tr>
+      <tr><td>Déclarer le backend</td><td><code>terraform { backend "s3" {…} }</code></td><td><code>bucket</code>, <code>key</code>, <code>region</code>, <code>encrypt</code></td></tr>
+      <tr><td>Éviter les écritures concurrentes</td><td>verrouillage (locking)</td><td>ex. table DynamoDB pour S3</td></tr>
+      <tr><td>Isoler les states</td><td>clé <code>key</code> par périmètre/env</td><td><code>prod/reseau</code>, <code>dev/app</code>…</td></tr>
+      <tr><td>Réutiliser une sortie</td><td><code>terraform_remote_state</code></td><td><code>.outputs.xxx</code></td></tr>
+      <tr><td>Protéger les secrets</td><td>chiffrement + accès restreint</td><td>jamais dans Git</td></tr>
+      <tr><td>Migrer le state</td><td><code>terraform init</code></td><td>copie l'existant vers le backend</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Backend</dt><dd>Configuration qui indique <em>où</em> Terraform stocke son <em>state</em>&nbsp;: <code>local</code> (un fichier) par défaut, ou distant (S3, GCS, Terraform Cloud…).</dd>
+  <dt>State distant</dt><dd>State stocké sur un service partagé plutôt que sur un poste&nbsp;: une source de vérité unique pour toute l'équipe, sauvegardée et chiffrée.</dd>
+  <dt>Verrouillage (locking)</dt><dd>Mécanisme qui empêche deux <code>apply</code> d'écrire le state en même temps&nbsp;: le second attend la libération du verrou.</dd>
+  <dt>Clé de state (<code>key</code>)</dt><dd>Chemin logique qui range un state donné dans le backend&nbsp;; sert à séparer environnements et périmètres.</dd>
+  <dt><code>terraform_remote_state</code></dt><dd>Source de données qui lit les <em>sorties</em> d'un autre state, pour partager des valeurs entre configurations.</dd>
+  <dt>Migration de state</dt><dd>Déplacement du state d'un backend vers un autre&nbsp;; <code>terraform init</code> copie l'existant sans recréer les ressources.</dd>
+  <dt>Chiffrement au repos</dt><dd>Chiffrement des données stockées (ici le state)&nbsp;; indispensable car le state peut contenir des secrets en clair.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>state local</strong> ne tient pas en équipe&nbsp;: copies divergentes, risque de perte.</li>
+<li>Un <strong>backend distant</strong> (S3, GCS, Terraform Cloud) offre une <strong>source de vérité</strong> partagée, chiffrée, sauvegardée.</li>
+<li>Le <strong>verrouillage</strong> évite deux <code>apply</code> concurrents&nbsp;; la clé <code>key</code> isole les states.</li>
+<li><code>terraform_remote_state</code> partage des sorties&nbsp;; le state contient des <strong>secrets</strong> à protéger (jamais dans Git).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un state local pose-t-il problème à plusieurs&nbsp;?</li><li>À quoi sert le verrouillage&nbsp;?</li><li>Que fait <code>terraform init</code> quand on ajoute un backend distant&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un state Terraform stocké localement pose-t-il problème quand plusieurs personnes travaillent sur la même infrastructure ?","a":["Chacun a une copie qui diverge ; les states se désynchronisent et peuvent être perdus si un poste tombe","Parce que le state local est plus lent à lire","Parce que Terraform interdit le state local","Parce qu'un state local ne peut pas contenir de secrets"],"correct":0,"explain":"Avec un fichier par poste, les copies divergent dès qu'une personne applique un changement : l'infra part en conflit, et le state (la carte de l'infra) est perdu si le poste disparaît. D'où le besoin d'un state distant partagé."},
+  {"q":"À quoi sert le verrouillage (locking) d'un state distant ?","a":["À empêcher deux apply d'écrire le state en même temps : le second attend la libération du verrou","À chiffrer le state au repos","À accélérer terraform plan","À versionner le code Terraform"],"correct":0,"explain":"Le verrou sérialise les écritures : un seul apply modifie le state à la fois, ce qui évite de le corrompre. Avec le backend S3, il est souvent géré par une table DynamoDB."},
+  {"q":"Ton state est local ; tu ajoutes un bloc backend \"s3\" puis tu lances terraform init. Que se passe-t-il ?","a":["Terraform détecte le changement et propose de copier le state existant vers le backend : rien n'est recréé","Terraform détruit les ressources puis les recrée pour les enregistrer dans le nouveau backend","Terraform repart d'un state vide : le prochain plan proposerait de tout recréer","Rien de spécial : il faut téléverser soi-même le fichier tfstate dans le bucket"],"correct":0,"explain":"Changer de backend est un simple déménagement de la mémoire : terraform init demande « Do you want to copy existing state? », et le state migre tel quel. Les ressources réelles ne bougent pas, puisque le state conserve leurs identifiants. Répondre « non » repartirait au contraire d'un state vide : le prochain plan voudrait tout recréer."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["backend","backend distant","remote backend"],"placeholder":"le bloc qui indique OÙ Terraform stocke son state (local ou distant)","hints":["terraform { … \"s3\" {…} }","local par défaut.","Un « … » distant en équipe."],"link":{"href":"lecon-07.html","label":"Revoir « Le backend distant »"}},
+  {"type":"text","accept":["verrouillage","verrou","locking","lock"],"placeholder":"ce qui empêche deux apply d'écrire le state en même temps","hints":["Le second doit attendre.","Table DynamoDB pour S3.","« … » / locking."],"link":{"href":"lecon-07.html","label":"Revoir « Le verrouillage »"}},
+  {"type":"text","accept":["terraform_remote_state","remote_state","terraform remote state"],"placeholder":"la source de données pour lire les sorties d'un AUTRE state","hints":["data \"…\" \"reseau\" {…}","On lit .outputs.xxx.","« terraform_… »."],"link":{"href":"lecon-07.html","label":"Revoir « Lire les sorties d'un autre state »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris le bloc <code>terraform { backend … }</code> pour stocker le state d'un environnement de production dans un bucket S3 nommé <code>infra-tfstate</code>, région <code>eu-west-3</code>, avec chiffrement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="backend.tf"><pre><code class="language-hcl">terraform {
+  backend "s3" {
+    bucket  = "infra-tfstate"
+    key     = "prod/terraform.tfstate"
+    region  = "eu-west-3"
+    encrypt = true
+  }
+}</code></pre></figure><p>La clé <code>key</code> range ce state dans un «&nbsp;dossier&nbsp;» <code>prod/</code> du bucket, ce qui permettra d'y ranger d'autres states (dev, périmètres) sans collision. <code>encrypt = true</code> demande le chiffrement au repos.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Bob voit ce message quand il lance <code>apply</code>&nbsp;: <em>«&nbsp;Error acquiring the state lock&nbsp;»</em>. Que se passe-t-il, et que doit-il faire&nbsp;?</p><details><summary>Voir une solution</summary><p>Le <strong>verrou du state est déjà pris</strong>&nbsp;: quelqu'un d'autre (ou un pipeline) est en train de faire un <code>apply</code> sur le même state, ou un apply précédent ne s'est pas terminé proprement. La bonne réaction est d'<strong>attendre</strong> que l'opération en cours se termine, puis de relancer&nbsp;: le verrou sera libéré automatiquement. Il ne faut <strong>pas</strong> forcer le déverrouillage (<code>terraform force-unlock</code>) à la légère&nbsp;: on ne le fait que si l'on est <em>certain</em> qu'aucune opération n'est réellement en cours (par exemple après un pipeline qui a planté), car forcer pendant une écriture réelle corromprait le state. C'est justement le rôle du verrou&nbsp;: garantir qu'un seul <code>apply</code> écrit à la fois.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une équipe gère le réseau et l'application dans <strong>deux states séparés</strong>. L'application a besoin de l'identifiant du sous-réseau créé par le state «&nbsp;réseau&nbsp;». Comment relier proprement les deux sans copier-coller l'identifiant à la main&nbsp;?</p><details><summary>Voir une solution</summary><p>Deux ingrédients. <strong>1. Côté «&nbsp;réseau&nbsp;»</strong>, exposer l'identifiant en <strong>sortie</strong> (leçon 03)&nbsp;: <code>output "subnet_id" { value = aws_subnet.principal.id }</code>. Cette sortie est enregistrée dans le state «&nbsp;réseau&nbsp;». <strong>2. Côté «&nbsp;application&nbsp;»</strong>, lire ce state avec la source <code>terraform_remote_state</code> pointant vers le backend et la <code>key</code> du réseau, puis utiliser <code>data.terraform_remote_state.reseau.outputs.subnet_id</code> là où on a besoin de l'identifiant. Résultat&nbsp;: si le réseau change son sous-réseau, l'application lira automatiquement la nouvelle valeur au prochain <code>plan</code>, <strong>sans</strong> qu'on recopie quoi que ce soit. On a couplé les deux states par leurs <em>sorties</em>, proprement et de façon reproductible. C'est le motif standard pour découper une grande infrastructure en states indépendants tout en les faisant communiquer.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-hcl.min.js" defer></script>
+  </body>
+</html>

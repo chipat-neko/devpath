@@ -1,0 +1,77 @@
+<p>Voici le mécanisme qui fait <em>tout</em> fonctionner en Prolog&nbsp;: l'<strong>unification</strong>. Chaque fois que tu poses une requête, que tu appelles une règle, que deux termes se rencontrent, Prolog tente de les rendre <strong>identiques</strong> en liant des variables. Comprendre l'unification, c'est comprendre le cœur battant du langage. Cette leçon la décortique pas à pas.</p>
+
+<h2>Qu'est-ce qu'unifier&nbsp;?</h2>
+<p><strong>Unifier</strong> deux termes, c'est trouver une affectation des variables qui les rende <strong>égaux</strong>. Si c'est possible, l'unification <em>réussit</em> et les variables restent liées&nbsp;; sinon, elle <em>échoue</em>. L'opérateur <code>=</code> demande explicitement d'unifier deux termes.</p>
+<figure class="code-block" data-file="unif.pl"><pre><code class="language-prolog">?- X = pomme.
+X = pomme.            % X se lie à pomme
+
+?- chat = chat.
+true.                % déjà identiques
+
+?- chat = chien.
+false.               % impossible : deux atomes différents
+
+?- point(X, 5) = point(3, Y).
+X = 3, Y = 5.        % unification de termes composés</code></pre></figure>
+<p>Dans le dernier exemple, pour que <code>point(X, 5)</code> et <code>point(3, Y)</code> soient identiques, il faut <code>X = 3</code> et <code>Y = 5</code>. Prolog le déduit automatiquement&nbsp;: c'est de l'<strong>appariement de structure</strong>.</p>
+
+<h2>Les variables&nbsp;: des inconnues, pas des cases mémoire</h2>
+<p>Une variable Prolog n'est pas une «&nbsp;boîte&nbsp;» qu'on remplit et vide comme en impératif. C'est une <strong>inconnue logique</strong>&nbsp;: tant qu'elle n'est pas liée, elle représente «&nbsp;n'importe quoi&nbsp;»&nbsp;; une fois liée par unification, elle garde cette valeur pour toute la résolution en cours. On ne la <em>réaffecte</em> jamais.</p>
+<figure class="code-block" data-file="variables.pl"><pre><code class="language-prolog">?- X = 3, X = 4.
+false.    % X vaut déjà 3 : impossible de l'unifier avec 4
+
+?- X = 3, Y = X, Y = 3.
+X = 3, Y = 3.   % cohérent : tout vaut 3</code></pre></figure>
+<p>C'est déroutant au début&nbsp;: <code>X = 3, X = 4</code> échoue, là où un langage impératif accepterait deux affectations. En logique, une variable a <strong>une</strong> valeur cohérente, pas une succession de valeurs.</p>
+
+<h2>La variable anonyme</h2>
+<p>Quand une position doit accepter «&nbsp;n'importe quoi&nbsp;» sans qu'on ait besoin de retenir la valeur, on utilise <code>_</code>. Chaque <code>_</code> est <strong>indépendant</strong> des autres.</p>
+<figure class="code-block" data-file="anonyme.pl"><pre><code class="language-prolog">% "Est-ce une liste à exactement trois éléments ?"
+trois_elements([_, _, _]).
+
+?- trois_elements([a, b, c]).
+true.
+?- trois_elements([a, b]).
+false.</code></pre></figure>
+<p>Les trois <code>_</code> ne sont pas forcés d'être égaux entre eux&nbsp;: chacun absorbe son élément indépendamment.</p>
+
+<h2>Les termes composés</h2>
+<p>Tout, en Prolog, est un <strong>terme</strong>&nbsp;: un atome (<code>marie</code>), un nombre (<code>42</code>), une variable (<code>X</code>), ou un <strong>terme composé</strong> — un foncteur appliqué à des arguments, comme <code>date(2026, 6, 13)</code> ou <code>point(3, 4)</code>. Les termes composés structurent les données, et l'unification sait les apparier en profondeur.</p>
+<figure class="code-block" data-file="termes.pl"><pre><code class="language-prolog">% Représenter un livre par un terme composé
+livre(titre("1984"), auteur(orwell), annee(1949)).
+
+% Extraire l'auteur par unification :
+?- livre(_, auteur(A), _) = livre(titre("1984"), auteur(orwell), annee(1949)).
+A = orwell.</code></pre></figure>
+
+<h2>Unifier n'est pas calculer</h2>
+<p>Distinction essentielle&nbsp;: <code>=</code> <strong>unifie</strong>, il ne <strong>calcule pas</strong>. <code>X = 2 + 3</code> ne donne pas <code>5</code>&nbsp;: il lie <code>X</code> au <em>terme</em> <code>2 + 3</code> (la structure «&nbsp;plus de 2 et 3&nbsp;»). Pour évaluer une arithmétique, il faudra <code>is</code> (leçon 6).</p>
+<figure class="code-block" data-file="pas-calcul.pl"><pre><code class="language-prolog">?- X = 2 + 3.
+X = 2+3.        % le TERME, pas 5 !
+
+?- X is 2 + 3.
+X = 5.          % 'is' évalue réellement</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Attendre que <code>=</code> fasse un calcul. <code>?- 4 = 2 + 2.</code> renvoie <code>false</code>&nbsp;! Car <code>4</code> (un nombre) et <code>2 + 2</code> (un terme composé) ne sont pas la <em>même structure</em>. Pour comparer des valeurs numériques, utilise <code>=:=</code> (égalité arithmétique)&nbsp;: <code>?- 4 =:= 2 + 2.</code> donne <code>true</code>. Garde en tête&nbsp;: <code>=</code> apparie des formes, il n'évalue rien.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'unification est si fondamentale qu'elle a essaimé hors de Prolog&nbsp;: l'inférence de types des langages fonctionnels (ML, Haskell) repose sur un algorithme d'unification, et le filtrage par motifs (<em>pattern matching</em>) en est un proche cousin. Comprendre l'unification, c'est saisir un mécanisme partagé par toute une famille de langages.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Unifier</strong> = rendre deux termes identiques en liant des variables&nbsp;; <code>=</code> le demande.</li>
+  <li>Une <strong>variable</strong> est une inconnue logique&nbsp;: une seule valeur cohérente, jamais réaffectée.</li>
+  <li>Tout est un <strong>terme</strong>&nbsp;; les termes composés structurent les données.</li>
+  <li><code>=</code> <strong>n'évalue pas</strong>&nbsp;: <code>X = 2+3</code> lie le terme, pas <code>5</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que signifie «&nbsp;unifier&nbsp;» deux termes&nbsp;?</li><li>Pourquoi <code>X = 3, X = 4</code> échoue-t-il&nbsp;?</li><li>Que lie <code>X = 1 + 2</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Prédis le résultat de <code>?- X = bonjour.</code> puis de <code>?- chat = chien.</code></p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">?- X = bonjour.
+X = bonjour.
+?- chat = chien.
+false.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Quelles liaisons rendent vrai <code>?- paire(X, 2) = paire(1, Y).</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.pl"><pre><code class="language-prolog">X = 1, Y = 2.
+% pour que les deux termes paire/2 soient identiques.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique pourquoi <code>?- 6 = 2 * 3.</code> renvoie <code>false</code> et donne la requête correcte pour tester l'égalité des valeurs.</p><details><summary>Voir une solution</summary><p><code>6</code> est le nombre six&nbsp;; <code>2 * 3</code> est un <em>terme composé</em> (le foncteur <code>*</code> appliqué à 2 et 3), pas encore évalué. Les deux n'ont pas la même structure, donc l'unification échoue. Pour comparer les valeurs numériques&nbsp;: <code>?- 6 =:= 2 * 3.</code> → <code>true</code> (l'opérateur <code>=:=</code> évalue les deux côtés puis compare).</p></details></div>

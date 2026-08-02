@@ -1,0 +1,74 @@
+<p>Voici ce qui rend Groovy vraiment spécial&nbsp;: sa nature <strong>dynamique</strong>. À l'exécution, on peut <strong>ajouter des méthodes</strong> à des objets ou des classes, intercepter des appels, et construire des structures de données par des <strong>builders</strong> élégants. Ces capacités — la <strong>métaprogrammation</strong> — sont à la base des fameux DSL (langages dédiés) qui font la réputation de Groovy, comme ceux de Gradle. Cette leçon t'y initie.</p>
+
+<h2>Qu'est-ce que la métaprogrammation&nbsp;?</h2>
+<p>La <strong>métaprogrammation</strong>, c'est écrire du code qui <em>manipule le code lui-même</em> ou modifie le comportement des objets à l'exécution. En Groovy, chaque objet a une <strong>MetaClass</strong> — une description de ses méthodes et propriétés — qu'on peut <em>modifier</em> à chaud. On peut ainsi greffer des comportements sans toucher au code source des classes.</p>
+
+<h2>Ajouter une méthode à l'exécution</h2>
+<p>Grâce à l'<code>ExpandoMetaClass</code>, on ajoute une méthode à une classe existante — même une classe Java comme <code>String</code> — pendant l'exécution du programme.</p>
+<figure class="code-block" data-file="metaclass.groovy"><pre><code class="language-groovy">// Ajouter une méthode "crier" à toutes les String :
+String.metaClass.crier = {
+    delegate.toUpperCase() + " !"
+}
+
+println "bonjour".crier()    // BONJOUR !</code></pre></figure>
+<p>Dans la closure, <code>delegate</code> désigne l'objet sur lequel la méthode est appelée (ici la chaîne <code>"bonjour"</code>). Après cette greffe, <em>toutes</em> les chaînes du programme possèdent <code>crier()</code>. C'est puissant — et à manier avec discernement.</p>
+
+<h2>Intercepter les appels manquants</h2>
+<p>Groovy peut intercepter l'appel d'une méthode <strong>inexistante</strong> via <code>methodMissing</code> (et l'accès à une propriété inexistante via <code>propertyMissing</code>). Cela permet de créer des objets au comportement «&nbsp;magique&nbsp;», qui répondent à des méthodes définies dynamiquement.</p>
+<figure class="code-block" data-file="missing.groovy"><pre><code class="language-groovy">class Magique {
+    def methodMissing(String nom, args) {
+        "Tu as appelé '$nom' avec $args"
+    }
+}
+
+def m = new Magique()
+println m.nimporteQuoi(1, 2)
+// Tu as appelé 'nimporteQuoi' avec [1, 2]</code></pre></figure>
+<p>C'est ce mécanisme qui sous-tend des bibliothèques où l'on «&nbsp;invente&nbsp;» des méthodes&nbsp;: un objet de configuration qui accepte n'importe quel nom de réglage, un constructeur de requêtes, etc.</p>
+
+<h2>Les builders</h2>
+<p>Un <strong>builder</strong> exploite les closures et la métaprogrammation pour construire des structures hiérarchiques (XML, HTML, JSON) avec une syntaxe qui <em>épouse</em> la forme des données. Exemple avec <code>MarkupBuilder</code> pour générer du HTML&nbsp;:</p>
+<figure class="code-block" data-file="builder.groovy"><pre><code class="language-groovy">def writer = new StringWriter()
+def html = new groovy.xml.MarkupBuilder(writer)
+
+html.ul {
+    li "Pomme"
+    li "Poire"
+    li "Kiwi"
+}
+// Génère :
+// &lt;ul&gt;
+//   &lt;li&gt;Pomme&lt;/li&gt;
+//   &lt;li&gt;Poire&lt;/li&gt;
+//   &lt;li&gt;Kiwi&lt;/li&gt;
+// &lt;/ul&gt;</code></pre></figure>
+<p>Les noms <code>ul</code> et <code>li</code> ne sont pas des méthodes définies&nbsp;: le builder les intercepte (via la métaprogrammation) et les transforme en balises. Le code Groovy <em>ressemble</em> à la structure HTML qu'il produit. C'est l'essence d'un <strong>DSL</strong> (Domain-Specific Language).</p>
+
+<h2>Les DSL&nbsp;: du Groovy qui ne ressemble pas à du Groovy</h2>
+<p>En combinant closures, métaprogrammation et la règle «&nbsp;closure en dernier argument&nbsp;», Groovy permet d'écrire des configurations qui se lisent comme un langage dédié. Quand tu vois dans un <code>build.gradle</code>&nbsp;:</p>
+<figure class="code-block" data-file="dsl.groovy"><pre><code class="language-groovy">dependencies {
+    implementation 'org.example:lib:1.0'
+    testImplementation 'junit:junit:4.13'
+}</code></pre></figure>
+<p>…c'est du <strong>Groovy pur</strong>&nbsp;: <code>dependencies</code> est une méthode qui reçoit une closure, et <code>implementation</code> / <code>testImplementation</code> sont des appels de méthode interceptés. On le verra en détail leçon 8.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Abuser de la métaprogrammation. Ajouter des méthodes partout et intercepter des appels rend le code <strong>«&nbsp;magique&nbsp;»</strong>&nbsp;: difficile à lire, à déboguer (d'où vient cette méthode&nbsp;?), et à maintenir. C'est un outil de <em>bibliothèque</em> et de <em>DSL</em>, pas un style de programmation quotidien. Pour du code applicatif ordinaire, préfère les classes claires et le typage statique. Réserve la magie aux cas où elle apporte une vraie valeur (un DSL expressif), et documente-la.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La métaprogrammation de Groovy se décline en deux temps&nbsp;: à l'<strong>exécution</strong> (runtime, comme <code>metaClass</code>) et à la <strong>compilation</strong> (les <em>AST transformations</em>, comme <code>@ToString</code> vu leçon 6). Les transformations à la compilation sont plus sûres et performantes&nbsp;: elles génèrent du vrai code une fois pour toutes, sans coût à l'exécution. C'est ainsi que des frameworks comme Grails ou Spock ajoutent leurs super-pouvoirs «&nbsp;gratuitement&nbsp;».</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>La <strong>métaprogrammation</strong> modifie le comportement des objets à l'exécution (via la <code>metaClass</code>).</li>
+  <li>On peut <strong>ajouter des méthodes</strong> à des classes existantes&nbsp;; <code>methodMissing</code> intercepte les appels inconnus.</li>
+  <li>Les <strong>builders</strong> (ex. <code>MarkupBuilder</code>) construisent des structures avec une syntaxe qui épouse les données.</li>
+  <li>Ces mécanismes fondent les <strong>DSL</strong> (Gradle, Jenkins)&nbsp;; à employer avec mesure.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que permet d'ajouter l'<code>ExpandoMetaClass</code>&nbsp;?</li><li>À quoi sert <code>methodMissing</code>&nbsp;?</li><li>Qu'est-ce qu'un DSL en Groovy&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>En une phrase, qu'est-ce que la métaprogrammation&nbsp;?</p><details><summary>Voir une solution</summary><p>C'est la capacité d'écrire du code qui <strong>modifie le comportement des objets ou des classes à l'exécution</strong> (ou à la compilation)&nbsp;: par exemple ajouter des méthodes à une classe existante, ou intercepter des appels de méthodes inconnues.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute à toutes les String une méthode <code>doubler()</code> qui répète la chaîne deux fois.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.groovy"><pre><code class="language-groovy">String.metaClass.doubler = { delegate + delegate }
+println "ab".doubler()    // abab</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique pourquoi le bloc <code>dependencies { ... }</code> d'un build Gradle est «&nbsp;du Groovy pur&nbsp;».</p><details><summary>Voir une solution</summary><p>Parce que <code>dependencies</code> est en réalité un <strong>appel de méthode</strong> à laquelle on passe une <strong>closure</strong> (le bloc <code>{ ... }</code>), grâce à la règle «&nbsp;une closure en dernier argument peut sortir des parenthèses&nbsp;». À l'intérieur, des noms comme <code>implementation</code> sont eux aussi des appels de méthode, interceptés par la métaprogrammation du builder Gradle. Ce qui ressemble à un langage de configuration dédié n'est donc que de la syntaxe Groovy ordinaire (closures + méthodes), ce qui fait de Gradle un <strong>DSL</strong> bâti sur Groovy.</p></details></div>

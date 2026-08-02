@@ -1,0 +1,69 @@
+<p>Pendant longtemps, OCaml avait une réputation tenace&nbsp;: excellent pour le calcul et les compilateurs, mais limité en concurrence (un seul cœur à la fois). Cette page est tournée. Côté <strong>asynchrone</strong>, la bibliothèque <strong>Lwt</strong> permet depuis des années de gérer des milliers de connexions sans bloquer. Et <strong>OCaml 5</strong> (2022) a apporté deux révolutions&nbsp;: le <strong>parallélisme multicœur</strong> et les <strong>effects handlers</strong>, une façon nouvelle et élégante de structurer la concurrence. Cette leçon fait le tour de la concurrence en OCaml moderne — un domaine longtemps absent des cours.</p>
+
+<h2>Le besoin&nbsp;: ne pas bloquer</h2>
+<p>Un serveur qui attend une réponse réseau ne doit pas <em>bloquer</em> pendant ce temps&nbsp;: il doit pouvoir traiter d'autres requêtes. La <strong>concurrence asynchrone</strong> répond à ce besoin&nbsp;: lancer une opération, faire autre chose, et reprendre quand le résultat arrive. C'est ce que fournit Lwt.</p>
+
+<h2>Lwt&nbsp;: les promesses</h2>
+<p><strong>Lwt</strong> (Lightweight Threads) repose sur les <strong>promesses</strong>&nbsp;: une valeur «&nbsp;qui arrivera plus tard&nbsp;», de type <code>'a Lwt.t</code>. On enchaîne les promesses avec <code>bind</code> (ou l'opérateur <code>let*</code> moderne, bien plus lisible).</p>
+<figure class="code-block" data-file="lwt.ml"><pre><code class="language-ocaml">open Lwt.Syntax
+
+(* Une promesse : lire un fichier puis afficher sa taille *)
+let traiter nom =
+  let* contenu = Lwt_io.(with_file ~mode:Input nom read) in
+  let* () = Lwt_io.printf "Taille : %d\n" (String.length contenu) in
+  Lwt.return ()
+
+(* let* déballe la promesse : "quand 'contenu' est prêt, continue" *)</code></pre></figure>
+<p>L'opérateur <code>let*</code> se lit «&nbsp;attends que la promesse soit résolue, lie le résultat, puis continue&nbsp;». Sous le capot, rien ne bloque&nbsp;: pendant l'attente d'une promesse, Lwt exécute d'autres tâches. C'est le même principe que l'<code>async/await</code> d'autres langages.</p>
+
+<h2>Lancer des tâches en parallèle (logique)</h2>
+<p>Lwt permet d'attendre <em>plusieurs</em> promesses à la fois. <code>Lwt.both</code> combine deux promesses&nbsp;; <code>Lwt.join</code> en attend une liste.</p>
+<figure class="code-block" data-file="parallele.ml"><pre><code class="language-ocaml">let* (a, b) = Lwt.both (lire "f1.txt") (lire "f2.txt") in
+(* a et b sont lus "en même temps" du point de vue logique *)
+Lwt.return (a ^ b)</code></pre></figure>
+<p>Attention&nbsp;: Lwt offre une concurrence <em>coopérative</em> sur un seul cœur (idéale pour l'attente d'entrées/sorties), pas du vrai parallélisme de calcul. Pour utiliser <em>plusieurs cœurs</em>, il faut OCaml 5.</p>
+
+<h2>OCaml 5&nbsp;: le parallélisme multicœur</h2>
+<p>La grande nouveauté d'OCaml 5&nbsp;: les <strong>domains</strong>, qui permettent enfin d'exécuter du code OCaml sur <strong>plusieurs cœurs simultanément</strong>. On crée un domaine pour exécuter une tâche en vrai parallèle.</p>
+<figure class="code-block" data-file="domains.ml"><pre><code class="language-ocaml">(* OCaml 5 : exécuter un calcul sur un autre cœur *)
+let d = Domain.spawn (fun () -&gt; calcul_lourd ()) in
+let resultat_principal = autre_calcul () in
+let resultat_parallele = Domain.join d in
+(* les deux calculs ont tourné en MÊME temps, sur 2 cœurs *)</code></pre></figure>
+<p>C'est un changement majeur&nbsp;: OCaml peut désormais exploiter pleinement les processeurs modernes pour le calcul intensif, là où il était auparavant limité à un cœur.</p>
+
+<h2>Les effects handlers&nbsp;: la révolution discrète</h2>
+<p>OCaml 5 introduit aussi les <strong>effects handlers</strong>, un mécanisme abstrait et puissant. L'idée&nbsp;: une fonction peut <em>déclencher un effet</em> (comme «&nbsp;je veux attendre&nbsp;»), et un <em>handler</em> extérieur décide quoi en faire — y compris suspendre et reprendre le calcul. C'est ce qui permet d'écrire du code asynchrone qui <em>ressemble</em> à du code synchrone ordinaire, sans <code>let*</code> partout.</p>
+<figure class="code-block" data-file="effects.ml"><pre><code class="language-ocaml">(* Idée conceptuelle : un effet déclenché, attrapé par un handler *)
+(* Les bibliothèques modernes (Eio) s'en servent pour offrir une
+   concurrence directe, sans "couleur" de fonction async/sync. *)
+let lire_donnees () = Eio.Path.load chemin   (* a l'air synchrone... *)
+(* ...mais ne bloque pas : l'effet "attendre" est géré par le runtime *)</code></pre></figure>
+<p>Les effects handlers résolvent un vieux problème (la «&nbsp;couleur des fonctions&nbsp;»&nbsp;: devoir distinguer fonctions async et sync). La bibliothèque <strong>Eio</strong>, bâtie dessus, propose une concurrence moderne où le code asynchrone se lit naturellement. C'est l'avenir de la concurrence en OCaml.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre <strong>concurrence asynchrone</strong> (Lwt, sur un cœur&nbsp;: idéale pour les entrées/sorties, gérer beaucoup d'attentes) et <strong>parallélisme</strong> (domains d'OCaml 5, sur plusieurs cœurs&nbsp;: pour accélérer du calcul). Lancer un calcul lourd dans Lwt ne le rend pas plus rapide — il bloquera la seule tâche. Pour du calcul, utilise les domains&nbsp;; pour de l'attente réseau, Lwt ou Eio. Choisir le bon outil selon «&nbsp;j'attends&nbsp;» ou «&nbsp;je calcule&nbsp;» est la clé.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les effects handlers d'OCaml 5 sont observés de près par toute la communauté des langages&nbsp;: ils offrent une base théorique unifiée pour l'asynchrone, les générateurs, les exceptions reprenables, et bien d'autres structures de contrôle — le tout <em>sans</em> teinter les fonctions de «&nbsp;couleur&nbsp;». OCaml est ainsi devenu un laboratoire de référence pour la concurrence moderne. La bibliothèque <strong>Eio</strong> en est la vitrine&nbsp;: à suivre de près si tu veux écrire des serveurs OCaml performants.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Lwt</strong>&nbsp;: concurrence asynchrone par <strong>promesses</strong> (<code>'a Lwt.t</code>)&nbsp;; enchaînement avec <code>let*</code> (≈ async/await), sur un seul cœur.</li>
+  <li><strong>OCaml 5 — domains</strong>&nbsp;: vrai <strong>parallélisme multicœur</strong> (<code>Domain.spawn</code>/<code>join</code>) pour le calcul.</li>
+  <li><strong>Effects handlers</strong>&nbsp;: déclencher/attraper des effets&nbsp;; base d'<strong>Eio</strong> (concurrence sans «&nbsp;couleur&nbsp;» de fonction).</li>
+  <li>Distinguer <strong>attendre</strong> (Lwt/Eio) de <strong>calculer</strong> (domains).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que représente un <code>'a Lwt.t</code>&nbsp;?</li><li>Qu'ont apporté les domains d'OCaml 5&nbsp;?</li><li>Quelle différence entre concurrence asynchrone et parallélisme&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Que représente une valeur de type 'a Lwt.t en OCaml ?","a":["Une promesse : une valeur qui sera disponible plus tard","Un tableau de threads système","Un type d'erreur","Une fonction parallèle"],"correct":0,"explain":"Lwt repose sur les promesses ; on les enchaîne avec let* (≈ async/await), sans bloquer pendant l'attente."},
+  {"q":"Qu'a apporté OCaml 5 avec les domains ?","a":["Le vrai parallélisme multicœur (exécuter du code OCaml sur plusieurs cœurs)","Le pattern matching","Les variants polymorphes","Le ramasse-miettes"],"correct":0,"explain":"Avant OCaml 5, un seul cœur exécutait du code OCaml à la fois ; les domains permettent enfin le calcul parallèle réel."},
+  {"q":"Quelle est la différence entre Lwt et les domains ?","a":["Lwt = concurrence asynchrone sur un cœur (idéale pour l'attente I/O) ; domains = parallélisme multicœur (pour le calcul)","Ils font exactement la même chose","Lwt est plus rapide pour le calcul lourd","Les domains servent à l'asynchrone réseau"],"correct":0,"explain":"On choisit selon le besoin : « j'attends » (réseau/I/O) → Lwt/Eio ; « je calcule » → domains. Un calcul lourd dans Lwt ne va pas plus vite."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quel opérateur Lwt enchaîne deux promesses de façon lisible&nbsp;?</p><details><summary>Voir une solution</summary><p>L'opérateur <code>let*</code> (de <code>Lwt.Syntax</code>)&nbsp;: <code>let* x = promesse in ...</code> attend la résolution de la promesse, lie son résultat à <code>x</code>, puis continue — sans bloquer.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour accélérer un calcul lourd sur une machine à plusieurs cœurs, utilises-tu Lwt ou les domains&nbsp;? Pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Les <strong>domains</strong> (OCaml 5)&nbsp;: ils offrent un vrai parallélisme multicœur, donc le calcul s'exécute réellement sur plusieurs cœurs en même temps. Lwt, lui, est une concurrence <em>coopérative sur un seul cœur</em>&nbsp;: il excelle pour gérer beaucoup d'<em>attentes</em> (réseau, fichiers), mais n'accélère pas un calcul intensif.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Quel vieux problème les effects handlers d'OCaml 5 résolvent-ils&nbsp;?</p><details><summary>Voir une solution</summary><p>La «&nbsp;<strong>couleur des fonctions</strong>&nbsp;»&nbsp;: dans beaucoup de langages, il faut distinguer les fonctions asynchrones des synchrones (et propager <code>async</code>/<code>await</code> partout). Les effects handlers permettent d'écrire du code asynchrone qui <em>ressemble</em> à du code synchrone ordinaire — l'effet «&nbsp;attendre&nbsp;» est géré par un handler du runtime, sans teinter les signatures. La bibliothèque Eio s'appuie dessus.</p></details></div>

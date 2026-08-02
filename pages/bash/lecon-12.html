@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Déboguer ses scripts Bash — Leçon 12 · Bash · Syntaxe</title>
+    <meta name="description" content="Traque les bugs de tes scripts Bash : vérification de syntaxe avec bash -n, trace d'exécution set -x et PS4, capture d'erreur avec trap ERR, variables LINENO et BASH_COMMAND, et le linter ShellCheck." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="bash" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Bash</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Maîtrise du shell — Leçon 12</p>
+              <h1 class="lesson-header__title">Déboguer ses scripts Bash</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 11 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>vérifier la syntaxe d'un script sans l'exécuter avec <code>bash -n</code>&nbsp;;</li>
+                  <li>voir chaque commande réellement exécutée avec <code>set -x</code> et personnaliser la trace via <code>PS4</code>&nbsp;;</li>
+                  <li>localiser un plantage avec un <code>trap … ERR</code>, <code>$LINENO</code> et <code>$BASH_COMMAND</code>&nbsp;;</li>
+                  <li>attraper les pièges avant l'exécution avec <strong>ShellCheck</strong> et ses directives.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un script Bash ne « plante » pas toujours bruyamment. Le plus souvent, il tourne jusqu'au bout… mais fait la <em>mauvaise</em> chose&nbsp;: il efface le mauvais fichier, saute une boucle, ou traite un chemin coupé en deux. Le débogage, en Bash, ce n'est pas coller des <code>echo</code> partout au hasard&nbsp;: c'est utiliser les quatre outils que le shell te donne déjà. Cette leçon te les met en main.</p>
+
+<p>On suppose que tu écris déjà des scripts avec variables, conditions et fonctions (leçons 5 à 8) et que tu connais le mode strict <code>set -euo pipefail</code> (leçon 11). Ici, on apprend à <strong>voir</strong> ce que le script fait vraiment, et à <strong>situer</strong> précisément là où il déraille.</p>
+
+<h2>Lire avant d'exécuter : bash -n</h2>
+
+<p>Avant même de lancer un script, tu peux demander à Bash de le <strong>lire</strong> sans rien exécuter. L'option <code>-n</code> (<em>no-exec</em>) ne fait qu'analyser la syntaxe&nbsp;: un <code>do</code> sans <code>done</code>, un <code>if</code> sans <code>fi</code>, une accolade non fermée sont signalés tout de suite, sans le moindre risque.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">bash -n deploiement.sh
+# deploiement.sh: line 20: syntax error: unexpected end of file
+# (un 'do' n'a jamais ete ferme par 'done')
+
+# Rien n'a ete execute : aucune commande, aucun fichier touche.
+# On corrige la syntaxe, puis on relance la verification.</code></pre></figure>
+
+<p>C'est le premier réflexe sur un gros script&nbsp;: <code>bash -n</code> attrape les fautes de <em>structure</em> en une fraction de seconde. Attention toutefois&nbsp;: il ne détecte que la syntaxe, pas la logique. Un script syntaxiquement parfait peut très bien effacer ton disque.</p>
+
+<h2>Voir le script s'exécuter : set -x</h2>
+
+<p>L'outil roi du débogage Bash, c'est la <strong>trace d'exécution</strong>. Avec <code>set -x</code> (ou <code>bash -x script.sh</code>), le shell affiche chaque commande <em>juste avant</em> de la lancer, mais surtout <strong>après avoir remplacé les variables et le globbing</strong>. Tu vois donc ce qui s'exécute vraiment, pas ce que tu croyais avoir écrit.</p>
+
+<figure class="code-block" data-file="trace.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+fichier="mon rapport.txt"
+
+set -x                 # a partir d'ici, on trace
+rm $fichier            # BUG : variable non quotee
+set +x                 # on arrete la trace</code></pre></figure>
+
+<p>La trace révèle immédiatement le bug&nbsp;: la variable non quotée est découpée en deux mots, et <code>rm</code> reçoit <strong>deux arguments</strong> au lieu d'un seul nom de fichier.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La trace set -x montre les commandes après expansion. À gauche, le code source contient rm dollar fichier, avec la variable fichier valant mon rapport point txt. À droite, la trace préfixée par un plus montre rm suivi de deux arguments distincts, mon et rapport point txt, entre guillemets séparés : la variable non quotée a été découpée en deux mots. La trace révèle ce que rm reçoit réellement, ce que la lecture du code ne montrait pas.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">set -x : le code écrit vs ce qui s'exécute</text>
+    <rect class="d-box" x="24" y="36" width="270" height="118" rx="6" />
+    <text class="d-tag" x="159" y="58" text-anchor="middle" font-size="10.5">le code source</text>
+    <text class="d-text" x="42" y="84" font-size="10.5" font-family="monospace">fichier="mon rapport.txt"</text>
+    <text class="d-text" x="42" y="108" font-size="10.5" font-family="monospace">rm $fichier</text>
+    <text class="d-mut" x="159" y="138" text-anchor="middle" font-size="9">« a l'air » de supprimer 1 fichier</text>
+    <rect class="d-accent" x="346" y="36" width="270" height="118" rx="6" />
+    <text class="d-tag" x="481" y="58" text-anchor="middle" font-size="10.5">la trace (set -x)</text>
+    <text class="d-text" x="364" y="84" font-size="10.5" font-family="monospace">+ rm 'mon' 'rapport.txt'</text>
+    <text class="d-text" x="364" y="108" font-size="10" fill="#c0392b">2 arguments, pas 1 !</text>
+    <text class="d-mut" x="481" y="138" text-anchor="middle" font-size="9">la variable non quotée a été découpée</text>
+    <line class="d-line" x1="294" y1="95" x2="344" y2="95" /><path class="d-line" d="M337 90 L347 95 L337 100" fill="none" />
+  </svg>
+  <figcaption>La trace affiche les commandes <strong>après</strong> expansion des variables&nbsp;: le mot coupé en deux saute aux yeux.</figcaption>
+</figure>
+
+<p>Chaque ligne tracée commence par un <code>+</code>. Ce préfixe est réglable via la variable <code>PS4</code>&nbsp;: en y glissant le numéro de ligne et le nom de la fonction, la trace devient une carte précise de l'exécution.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Un PS4 riche : numero de ligne + fonction courante
+export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]:-main}: '
+bash -x ./trace.sh
+# + ./trace.sh:2:main: fichier='mon rapport.txt'
+# + ./trace.sh:5:main: rm mon rapport.txt</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pas besoin de modifier le fichier pour tracer&nbsp;: <code>bash -x script.sh</code> trace tout le script depuis l'extérieur. Pour n'éclairer qu'une zone suspecte, encadre-la de <code>set -x</code> … <code>set +x</code> à l'intérieur du script. Tu limites ainsi le bruit à la partie qui t'intéresse.</p></div></div>
+
+<h2>Attraper l'erreur au vol : trap ERR</h2>
+
+<p>Sous <code>set -e</code>, un script s'arrête dès qu'une commande échoue&nbsp;— mais <em>sans</em> te dire où. Un <code>trap … ERR</code> comble le vide&nbsp;: il déclenche un gestionnaire à chaque commande qui renvoie un statut non nul. Deux variables magiques t'y attendent&nbsp;: <code>$LINENO</code> (la ligne fautive) et <code>$BASH_COMMAND</code> (la commande qui vient d'échouer).</p>
+
+<figure class="code-block" data-file="garde.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+# Affiche la ligne et la commande des qu'un echec survient
+trap 'echo "ERREUR ligne $LINENO : \"$BASH_COMMAND\" (code $?)" &gt;&amp;2' ERR
+
+echo "Debut"
+cp source_absente.txt /tmp/   # echoue : le fichier n'existe pas
+echo "Jamais atteint"
+# Debut
+# ERREUR ligne 8 : "cp source_absente.txt /tmp/" (code 1)</code></pre></figure>
+
+<p>Au lieu d'un script qui s'éteint en silence, tu obtiens un message qui pointe la ligne exacte et la commande exacte. C'est la différence entre « ça n'a pas marché » et « la copie de la ligne 8 a échoué avec le code 1 ».</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Le déclenchement d'un trap ERR. Une commande s'exécute et renvoie un statut non nul, c'est-à-dire un échec. Ce statut non nul déclenche le trap ERR. Le gestionnaire lit alors trois informations : la variable LINENO donne le numéro de ligne fautive, la variable BASH_COMMAND donne le texte de la commande qui a échoué, et dollar point-d'interrogation donne le code de retour. Il affiche un message de diagnostic précis sur la sortie d'erreur.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">trap … ERR : d'un échec muet à un message précis</text>
+    <rect class="d-box" x="20" y="40" width="168" height="66" rx="6" />
+    <text class="d-tag" x="104" y="66" text-anchor="middle" font-size="10.5" font-family="monospace">cp absent.txt …</text>
+    <text class="d-text" x="104" y="88" text-anchor="middle" font-size="9.5">statut = 1 (échec)</text>
+    <rect class="d-accent" x="236" y="40" width="168" height="66" rx="6" />
+    <text class="d-tag" x="320" y="66" text-anchor="middle" font-size="11" font-family="monospace">trap ' … ' ERR</text>
+    <text class="d-text" x="320" y="88" text-anchor="middle" font-size="9.5">se déclenche</text>
+    <rect class="d-frame" x="452" y="40" width="168" height="66" rx="6" />
+    <text class="d-tag" x="536" y="63" text-anchor="middle" font-size="9.5">message sur stderr</text>
+    <text class="d-text" x="536" y="83" text-anchor="middle" font-size="9">ligne + commande</text>
+    <text class="d-text" x="536" y="97" text-anchor="middle" font-size="9">+ code de retour</text>
+    <line class="d-line" x1="188" y1="73" x2="234" y2="73" /><path class="d-line" d="M227 68 L237 73 L227 78" fill="none" />
+    <line class="d-line" x1="404" y1="73" x2="450" y2="73" /><path class="d-line" d="M443 68 L453 73 L443 78" fill="none" />
+    <text class="d-mut" x="104" y="132" text-anchor="middle" font-size="9" font-family="monospace">$?</text>
+    <text class="d-mut" x="320" y="132" text-anchor="middle" font-size="9" font-family="monospace">$LINENO · $BASH_COMMAND</text>
+    <text class="d-mut" x="320" y="152" text-anchor="middle" font-size="9">le gestionnaire lit ces variables pour situer le bug</text>
+  </svg>
+  <figcaption>Un <code>trap … ERR</code> transforme un arrêt silencieux en diagnostic&nbsp;: ligne, commande et code de retour.</figcaption>
+</figure>
+
+<h2>Les variables qui situent le bug</h2>
+
+<p>Bash entretient plusieurs variables spéciales dédiées à l'introspection. Elles répondent à la question « où suis-je&nbsp;? » au moment d'une erreur, surtout dans un script découpé en fonctions.</p>
+
+<figure class="code-block" data-file="pile.sh"><pre><code class="language-bash">#!/usr/bin/env bash
+
+tracer() {
+  echo "fichier : ${BASH_SOURCE[0]}"   # chemin du script
+  echo "ligne   : ${LINENO}"           # ligne courante
+  echo "fonction: ${FUNCNAME[0]}"      # nom de la fonction en cours
+  echo "appelee par : ${FUNCNAME[1]}"  # la fonction appelante
+}
+
+principale() { tracer; }
+principale
+# fichier : ./pile.sh
+# ligne   : 4
+# fonction: tracer
+# appelee par : principale</code></pre></figure>
+
+<p><code>FUNCNAME</code> est un <em>tableau</em>&nbsp;: <code>FUNCNAME[0]</code> est la fonction courante, <code>FUNCNAME[1]</code> celle qui l'a appelée, et ainsi de suite. Combiné à <code>BASH_LINENO</code>, il permet de reconstruire toute la <strong>pile d'appels</strong>&nbsp;— exactement ce qu'affiche une « stack trace » dans les autres langages.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p><code>$LINENO</code> vaut le numéro de la ligne <em>où il est lu</em>, pas celle de l'erreur en général. Dans un <code>trap … ERR</code>, il donne bien la ligne fautive car le piège s'exécute « comme si » il était à cet endroit. Ailleurs, il indique simplement sa propre ligne&nbsp;: pratique pour jalonner un script de repères <code>echo "point $LINENO"</code>.</p></div></div>
+
+<h2>ShellCheck, le filet avant l'exécution</h2>
+
+<p>Tu as croisé <strong>ShellCheck</strong> à la leçon 11&nbsp;: c'est le linter de référence, qui lit ton script et signale les pièges <em>sans l'exécuter</em>. Là où <code>set -x</code> montre un bug pendant qu'il se produit, ShellCheck l'anticipe. Chaque avertissement porte un code <code>SCxxxx</code> documenté en ligne.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">shellcheck sauvegarde.sh
+# In sauvegarde.sh line 6:
+# for f in $(ls *.log); do
+#          ^-------^ SC2045: Iterating over ls output is fragile. Use globs.
+#
+# In sauvegarde.sh line 7:
+#   cp $f /backup/
+#      ^-- SC2086: Double quote to prevent globbing and word splitting.</code></pre></figure>
+
+<p>Chaque code renvoie à une explication détaillée (par exemple <code>github.com/koalaman/shellcheck/wiki/SC2086</code>). Quand un avertissement est un <em>faux positif</em> assumé, tu peux le désactiver localement par une directive en commentaire&nbsp;— mais avec parcimonie, et jamais pour masquer un vrai problème.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Desactiver UN avertissement, juste pour la ligne suivante
+# shellcheck disable=SC2086
+echo $VARIABLE_QUE_JE_VEUX_DECOUPER_EXPRES
+
+# Indiquer le shell vise en tete de fichier (ajuste les regles)
+# shellcheck shell=bash</code></pre></figure>
+
+<h2>La boucle de débogage</h2>
+
+<p>Ces outils ne se remplacent pas&nbsp;: ils se relaient. Chacun attrape une classe de bugs différente, à un moment différent. L'ordre naturel va du statique (sans exécuter) au dynamique (pendant l'exécution).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Les quatre outils du débogage Bash, du statique au dynamique. Premièrement, bash tiret n vérifie la syntaxe sans rien exécuter et attrape les erreurs de structure comme un do sans done. Deuxièmement, ShellCheck analyse le script sans l'exécuter et attrape les pièges de quoting et de logique. Troisièmement, set tiret x trace l'exécution réelle et montre les valeurs après expansion. Quatrièmement, trap ERR se déclenche à l'exécution et indique la ligne et la commande qui échouent. L'ensemble mène à un script fiable.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Quatre outils, du statique au dynamique</text>
+    <rect class="d-box" x="16" y="40" width="146" height="96" rx="6" />
+    <text class="d-tag" x="89" y="63" text-anchor="middle" font-size="10.5" font-family="monospace">bash -n</text>
+    <text class="d-text" x="89" y="86" text-anchor="middle" font-size="9">syntaxe</text>
+    <text class="d-mut" x="89" y="106" text-anchor="middle" font-size="8.5">do sans done,</text>
+    <text class="d-mut" x="89" y="119" text-anchor="middle" font-size="8.5">if sans fi</text>
+    <rect class="d-box" x="170" y="40" width="146" height="96" rx="6" />
+    <text class="d-tag" x="243" y="63" text-anchor="middle" font-size="10.5">ShellCheck</text>
+    <text class="d-text" x="243" y="86" text-anchor="middle" font-size="9">pièges statiques</text>
+    <text class="d-mut" x="243" y="106" text-anchor="middle" font-size="8.5">quoting, tests,</text>
+    <text class="d-mut" x="243" y="119" text-anchor="middle" font-size="8.5">bashismes</text>
+    <rect class="d-accent" x="324" y="40" width="146" height="96" rx="6" />
+    <text class="d-tag" x="397" y="63" text-anchor="middle" font-size="10.5" font-family="monospace">set -x</text>
+    <text class="d-text" x="397" y="86" text-anchor="middle" font-size="9">exécution réelle</text>
+    <text class="d-mut" x="397" y="106" text-anchor="middle" font-size="8.5">valeurs après</text>
+    <text class="d-mut" x="397" y="119" text-anchor="middle" font-size="8.5">expansion</text>
+    <rect class="d-accent" x="478" y="40" width="146" height="96" rx="6" />
+    <text class="d-tag" x="551" y="63" text-anchor="middle" font-size="10.5" font-family="monospace">trap ERR</text>
+    <text class="d-text" x="551" y="86" text-anchor="middle" font-size="9">où ça casse</text>
+    <text class="d-mut" x="551" y="106" text-anchor="middle" font-size="8.5">ligne +</text>
+    <text class="d-mut" x="551" y="119" text-anchor="middle" font-size="8.5">commande</text>
+    <line class="d-line" x1="162" y1="88" x2="169" y2="88" /><line class="d-line" x1="316" y1="88" x2="323" y2="88" /><line class="d-line" x1="470" y1="88" x2="477" y2="88" />
+    <text class="d-mut" x="150" y="164" text-anchor="middle" font-size="9">sans exécuter</text>
+    <text class="d-mut" x="490" y="164" text-anchor="middle" font-size="9">pendant l'exécution</text>
+    <text class="d-label" x="320" y="182" text-anchor="middle" font-size="10">→ un script fiable</text>
+  </svg>
+  <figcaption>On filtre d'abord sans risque (<code>bash -n</code>, ShellCheck), puis on éclaire l'exécution (<code>set -x</code>, <code>trap ERR</code>).</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>En 2017, un ingénieur de <strong>GitLab</strong> a effacé par erreur le répertoire de données de la base de production&nbsp;: une commande <code>rm -rf</code> lancée sur le mauvais serveur, dans une console où rien ne distinguait la production de la copie. L'enquête publique a recommandé, entre autres, des scripts qui <strong>affichent le contexte avant d'agir</strong> et refusent les chemins ambigus. La morale pour nous&nbsp;: une trace <code>set -x</code> qui montre <em>quel</em> chemin va être supprimé, ou une garde <code>[ -n "$dir" ] || exit 1</code> lisible dans la trace, valent tous les <code>echo</code> ajoutés en panique après coup.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que <code>bash -n</code> valide le script. Il ne teste que la <strong>syntaxe</strong>&nbsp;: <code>rm -rf /</code> passe la vérification sans broncher. Pour la logique, rien ne remplace une trace <code>set -x</code> sur un jeu de données de test, dans un dossier bac à sable.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Laisser <code>set -x</code> actif dans un script de production&nbsp;: la trace peut divulguer des <strong>mots de passe</strong> ou des jetons passés en argument. Trace en développement, retire (ou encadre étroitement) avant de livrer&nbsp;; et n'affiche jamais de secret en clair dans une commande tracée.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore <code>trap … DEBUG</code> (exécuté avant <em>chaque</em> commande, pour un pas-à-pas fin), la variable <code>BASH_XTRACEFD</code> qui redirige la trace vers un fichier de log, l'option <code>set -v</code> (affiche les lignes avant expansion, complément de <code>-x</code>), et l'extension <strong>Bash Debug</strong> de VS Code pour poser de vrais points d'arrêt.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — déboguer un script Bash</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Outil</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Vérifier la syntaxe</td><td><code>bash -n script.sh</code></td><td>sans rien exécuter</td></tr>
+      <tr><td>Tracer l'exécution</td><td><code>bash -x script.sh</code></td><td>ou <code>set -x</code> … <code>set +x</code></td></tr>
+      <tr><td>Trace plus riche</td><td><code>PS4='+ ${LINENO}: '</code></td><td>ligne, fonction, fichier</td></tr>
+      <tr><td>Situer une erreur</td><td><code>trap '…' ERR</code></td><td>lit <code>$LINENO</code>, <code>$BASH_COMMAND</code></td></tr>
+      <tr><td>Ligne courante</td><td><code>$LINENO</code></td><td>numéro de la ligne lue</td></tr>
+      <tr><td>Pile d'appels</td><td><code>${FUNCNAME[@]}</code></td><td>fonctions imbriquées</td></tr>
+      <tr><td>Analyse statique</td><td><code>shellcheck script.sh</code></td><td>codes <code>SCxxxx</code></td></tr>
+      <tr><td>Ignorer un warning</td><td><code># shellcheck disable=SC2086</code></td><td>ligne suivante seulement</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>bash -n</code></dt><dd>Mode <em>no-exec</em>&nbsp;: lit le script et vérifie sa syntaxe sans exécuter la moindre commande.</dd>
+  <dt><code>set -x</code> (xtrace)</dt><dd>Affiche chaque commande après expansion des variables et du globbing, juste avant son exécution.</dd>
+  <dt><code>PS4</code></dt><dd>Chaîne de préfixe de la trace <code>-x</code> (par défaut <code>+ </code>)&nbsp;; on y met <code>$LINENO</code>, <code>$FUNCNAME</code>, etc.</dd>
+  <dt><code>trap … ERR</code></dt><dd>Piège déclenché à chaque commande renvoyant un statut non nul&nbsp;: idéal pour signaler l'échec.</dd>
+  <dt><code>$LINENO</code></dt><dd>Numéro de la ligne du script en cours de lecture.</dd>
+  <dt><code>$BASH_COMMAND</code></dt><dd>Texte de la commande en cours d'exécution&nbsp;: précieux dans un <code>trap ERR</code>.</dd>
+  <dt><code>FUNCNAME</code></dt><dd>Tableau des fonctions actives&nbsp;: <code>[0]</code> = courante, <code>[1]</code> = appelante… la pile d'appels.</dd>
+  <dt>ShellCheck</dt><dd>Linter statique des scripts shell&nbsp;: repère quoting, tests douteux et bashismes via des codes <code>SCxxxx</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li><code>bash -n</code> valide la <strong>syntaxe</strong> sans exécuter&nbsp;: premier réflexe, zéro risque.</li>
+<li><code>set -x</code> (ou <code>bash -x</code>) montre les commandes <strong>après expansion</strong>&nbsp;: on voit le vrai déroulé.</li>
+<li>Un <code>PS4</code> enrichi ajoute ligne et fonction à chaque étape tracée.</li>
+<li><code>trap '…' ERR</code> + <code>$LINENO</code> + <code>$BASH_COMMAND</code> = message qui pointe le plantage.</li>
+<li><strong>ShellCheck</strong> anticipe les pièges avant l'exécution&nbsp;; désactive un warning seulement à bon escient.</li>
+<li>On filtre d'abord sans risque, puis on éclaire l'exécution.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre <code>bash -n</code> et <code>bash -x</code>&nbsp;?</li><li>Pourquoi <code>set -x</code> révèle-t-il un bug de variable non quotée que la lecture du code cache&nbsp;?</li><li>Quelles deux variables lis-tu dans un <code>trap … ERR</code> pour situer l'échec&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que fait précisément bash -n script.sh ?","a":["Il vérifie la syntaxe du script sans exécuter aucune commande","Il exécute le script en affichant chaque commande","Il exécute le script en mode silencieux","Il numérote les lignes du script"],"correct":0,"explain":"L'option -n (no-exec) ne fait qu'analyser la structure : do sans done, if sans fi, etc. Aucune commande n'est lancée, donc aucun risque — mais la logique n'est pas testée."},
+  {"q":"Pourquoi set -x aide-t-il à trouver un bug de variable non quotée ?","a":["Parce qu'il affiche chaque commande APRÈS expansion des variables et du globbing : on voit alors que le mot a été découpé en plusieurs arguments","Parce qu'il corrige automatiquement les guillemets manquants","Parce qu'il refuse d'exécuter les variables non quotées","Parce qu'il met les variables en majuscules"],"correct":0,"explain":"La trace montre ce que la commande reçoit réellement. Une variable non quotée contenant un espace apparaît découpée en deux arguments dans la trace, ce que la simple lecture du code ne révèle pas."},
+  {"q":"Dans un trap '…' ERR, quelles variables situent l'échec ?","a":["$LINENO (la ligne fautive) et $BASH_COMMAND (la commande qui a échoué)","$? et $! uniquement","$PATH et $HOME","$1 et $2"],"correct":0,"explain":"$LINENO donne le numéro de ligne au moment du piège, et $BASH_COMMAND le texte de la commande en échec. Avec $? pour le code de retour, on obtient un diagnostic complet."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["bash -n","-n"],"placeholder":"la commande pour VÉRIFIER LA SYNTAXE d'un script sans l'exécuter : …","hints":["… script.sh, sans rien lancer.","L'option 'no-exec'.","bash -?"],"link":{"href":"lecon-12.html","label":"Revoir « bash -n »"}},
+  {"type":"text","accept":["set -x","-x","xtrace"],"placeholder":"l'option qui TRACE chaque commande (après expansion) avant de l'exécuter : …","hints":["set -? ou bash -?.","On l'appelle aussi xtrace.","Une seule lettre après le tiret."],"link":{"href":"lecon-12.html","label":"Revoir « set -x »"}},
+  {"type":"text","accept":["BASH_COMMAND","$BASH_COMMAND"],"placeholder":"la variable qui contient LE TEXTE de la commande en cours (utile dans trap ERR) : …","hints":["echo \"$????_???????\".","Elle donne la commande qui échoue.","Commence par BASH_."],"link":{"href":"lecon-12.html","label":"Revoir « trap ERR »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Tu as un script <code>maj.sh</code> que tu viens d'écrire. Donne la commande qui vérifie sa syntaxe <strong>sans</strong> exécuter la moindre ligne, puis celle qui le lance en affichant chaque commande tracée.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash"># 1) Verifier la syntaxe (aucune execution)
+bash -n maj.sh
+
+# 2) Executer en tracant chaque commande
+bash -x maj.sh
+# Chaque ligne executee apparait prefixee par un '+'</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute à un script un <code>trap … ERR</code> qui affiche, sur la sortie d'erreur, la ligne et la commande fautives dès qu'une commande échoue. Teste-le avec une commande qui plante.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+trap 'echo "Echec ligne $LINENO : $BASH_COMMAND (code $?)" &gt;&amp;2' ERR
+
+echo "Etape 1 : OK"
+ls /dossier/inexistant        # provoque un echec
+echo "Etape 2 : jamais atteinte"
+# Etape 1 : OK
+# Echec ligne 7 : ls /dossier/inexistant (code 2)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Personnalise <code>PS4</code> pour que la trace affiche le numéro de ligne et la fonction courante, puis trace un petit script à deux fonctions imbriquées. Observe comment la trace suit la pile d'appels.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">#!/usr/bin/env bash
+export PS4='+ ${LINENO}:${FUNCNAME[0]:-main}: '
+set -x
+
+interne() { echo "coeur"; }
+externe() { interne; }
+externe
+# + 5:externe: interne
+# + 4:interne: echo coeur
+# + coeur
+# La trace montre externe qui appelle interne, ligne par ligne.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

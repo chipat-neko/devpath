@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La Streams API — Leçon 57 · Syntaxe</title>
+    <meta name="description" content="Maîtrise la Streams API web : ReadableStream, WritableStream, TransformStream, pipeThrough/pipeTo, fetch en streaming et backpressure." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="javascript" data-lesson="lecon-57.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">JavaScript</a></li>
+            <li aria-current="page">Leçon 57</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 18 · La plateforme bas niveau & les flux — Leçon 57</p>
+              <h1 class="lesson-header__title">La Streams API</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 14 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir lire un <code>ReadableStream</code> morceau par morceau avec <code>getReader()</code>, la boucle <code>read()</code> et <code>releaseLock()</code>&nbsp;;</li>
+                  <li>savoir chaîner des flux avec <code>pipeThrough()</code> et <code>pipeTo()</code>, en passant par un <strong>TransformStream</strong> comme <code>TextDecoderStream</code>&nbsp;;</li>
+                  <li>savoir consommer une réponse <code>fetch</code> via <code>response.body</code> pour traiter et afficher une <strong>progression</strong> avant la fin du téléchargement&nbsp;;</li>
+                  <li>savoir expliquer la <strong>backpressure</strong> et distinguer les streams web des streams Node.js.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, tu traites une réponse réseau en un bloc&nbsp;: <code>await response.json()</code> ou <code>await response.text()</code> attend que <strong>tout</strong> le corps soit arrivé, le met en mémoire, puis te le rend. Pour un payload de quelques kilo-octets, c'est parfait. Pour un fichier de plusieurs centaines de mégaoctets, un flux vidéo, un export CSV interminable ou un log en temps réel, c'est un mur&nbsp;: tu paies la latence du dernier octet avant de pouvoir commencer, et tu charges en RAM ce que tu pourrais consommer au fil de l'eau.</p>
+<p>La <strong>Streams API</strong> (la version <em>web</em>, standardisée par le WHATWG) résout exactement ça&nbsp;: elle modélise les données comme une suite de <strong>morceaux</strong> (<em>chunks</em>) qui arrivent dans le temps, que tu peux lire, transformer et écrire un à un — sans jamais tout matérialiser. Tu connais déjà les itérateurs asynchrones&nbsp;; vois les streams comme leur cousin de bas niveau, avec en prime un mécanisme de régulation que les itérateurs n'ont pas&nbsp;: la <em>backpressure</em>.</p>
+
+<h2>Pourquoi streamer plutôt que bufferiser</h2>
+<p>Le gain est double. <strong>Mémoire</strong>&nbsp;: tu ne détiens jamais qu'un morceau à la fois, donc l'empreinte reste constante quelle que soit la taille totale. <strong>Latence perçue</strong>&nbsp;: tu commences à <em>travailler</em> dès le premier morceau reçu — afficher, parser, écrire sur disque — au lieu d'attendre la fin. Un lecteur vidéo qui démarre après 200&nbsp;ms plutôt qu'après le téléchargement complet, c'est exactement ce principe.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Comparaison entre bufferiser et streamer sur une même durée de réception. En mode bufferiser, tout le corps est reçu avant qu'on puisse agir, puis un bloc de traitement final produit le premier résultat très tard. En mode streamer, la réception est découpée en quatre morceaux traités au fil de l'eau, si bien que le premier résultat utile tombe dès le premier morceau.">
+    <text class="d-label" x="20" y="22" font-size="13">Sur une même durée : quand tombe le premier résultat utile</text>
+    <text class="d-mut" x="20" y="46" font-size="11">Bufferiser — on attend tout, puis on agit</text>
+    <rect class="d-box" x="20" y="54" width="470" height="26" rx="5" />
+    <text class="d-text" x="255" y="71" text-anchor="middle" font-size="10">réception du corps entier (rien d'exploitable)</text>
+    <rect class="d-accent" x="494" y="54" width="88" height="26" rx="5" />
+    <text class="d-text" x="538" y="71" text-anchor="middle" font-size="10">traite tout</text>
+    <path class="d-line" d="M538 80 V92" />
+    <circle class="d-dot" cx="538" cy="96" r="4" />
+    <text class="d-mut" x="538" y="112" text-anchor="middle" font-size="10">1er résultat : tardif</text>
+    <text class="d-mut" x="20" y="134" font-size="11">Streamer — on agit à chaque morceau</text>
+    <rect class="d-box" x="20" y="142" width="114" height="26" rx="5" /><text class="d-text" x="77" y="159" text-anchor="middle" font-size="10">morceau 1</text>
+    <rect class="d-box" x="138" y="142" width="114" height="26" rx="5" /><text class="d-text" x="195" y="159" text-anchor="middle" font-size="10">morceau 2</text>
+    <rect class="d-box" x="256" y="142" width="114" height="26" rx="5" /><text class="d-text" x="313" y="159" text-anchor="middle" font-size="10">morceau 3</text>
+    <rect class="d-box" x="374" y="142" width="116" height="26" rx="5" /><text class="d-text" x="432" y="159" text-anchor="middle" font-size="10">morceau 4</text>
+    <path class="d-line" d="M77 168 V180" />
+    <circle class="d-dot" cx="77" cy="184" r="4" />
+    <text class="d-mut" x="152" y="188" text-anchor="middle" font-size="10">1er résultat : dès le 1er morceau</text>
+  </svg>
+  <figcaption>Même durée de transfert&nbsp;: en bufferisant, le premier résultat n'arrive qu'après le dernier octet&nbsp;; en streamant, il tombe dès le premier morceau — et la mémoire ne détient jamais qu'un morceau à la fois.</figcaption>
+</figure>
+<figure class="code-block" data-file="pourquoi.js"><pre><code class="language-javascript">// Logique pure : la différence conceptuelle entre bufferiser et streamer.
+// On simule une source qui produit des morceaux dans le temps.
+async function* sourceSimulee() {
+  yield "Pre"; yield "mier "; yield "mor"; yield "ceau";
+}
+
+// Approche "tout bufferiser" : on accumule, puis on agit à la fin.
+let complet = "";
+for await (const morceau of sourceSimulee()) complet += morceau;
+console.log("Bufferisé:", complet.length);
+// affiche: Bufferisé: 16
+
+// Approche "streamer" : on agit À CHAQUE morceau, sans tout garder.
+let octets = 0;
+for await (const morceau of sourceSimulee()) octets += morceau.length;
+console.log("Streamé, octets vus:", octets);
+// affiche: Streamé, octets vus: 16</code></pre></figure>
+<p class="code-caption">Même total, mais le mode <em>streamé</em> n'accumule rien&nbsp;: il consomme chaque morceau puis l'oublie. C'est ce comportement que la Streams API généralise au réseau et aux fichiers.</p>
+
+<h2>ReadableStream&nbsp;: une source lisible par morceaux</h2>
+<p>Un <code>ReadableStream</code> représente une <strong>source</strong> de données poussées morceau par morceau. Pour la consommer manuellement, tu obtiens un <strong>reader</strong> avec <code>getReader()</code>, puis tu appelles <code>read()</code> en boucle&nbsp;: chaque appel renvoie une promesse résolue en <code>{ value, done }</code>. Tant que <code>done</code> est <code>false</code>, <code>value</code> contient le prochain morceau (typiquement un <code>Uint8Array</code> pour des octets)&nbsp;; quand <code>done</code> passe à <code>true</code>, le flux est épuisé.</p>
+<figure class="code-block" data-file="reader.js"><pre><code class="language-javascript">// On construit un ReadableStream à la main pour illustrer le contrat
+// du reader. (Logique pure : pas de réseau, donc on maîtrise la source.)
+const flux = new ReadableStream({
+  start(controller) {
+    controller.enqueue("a");
+    controller.enqueue("b");
+    controller.enqueue("c");
+    controller.close(); // signale la fin → done deviendra true
+  },
+});
+
+const reader = flux.getReader();
+const recus = [];
+while (true) {
+  const { value, done } = await reader.read();
+  if (done) break;       // plus de morceau : on sort de la boucle
+  recus.push(value);     // on traite le morceau ici, un à un
+}
+reader.releaseLock();    // on relâche le verrou sur le flux
+console.log(recus.join("-"));
+// affiche: a-b-c</code></pre></figure>
+<p class="code-caption">La boucle <code>read()</code>/<code>done</code> est le motif fondamental. Tant que tu détiens le reader, le flux est <strong>verrouillé</strong>&nbsp;: personne d'autre ne peut le lire avant <code>releaseLock()</code>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un <code>ReadableStream</code> est aussi <strong>itérable asynchrone</strong> (interface <em>Baseline</em>, mais l'async-iteration est arrivée plus tard que le reste de l'API&nbsp;: vérifie la cible si tu vises de très vieux moteurs)&nbsp;: <code>for await (const morceau of flux) { … }</code> remplace la boucle manuelle et gère le verrou et <code>releaseLock()</code> pour toi. La forme <code>getReader()</code> reste utile quand tu veux un contrôle fin (lecture partielle, lecture concurrente coordonnée, annulation explicite).</p></div></div>
+
+<h2>WritableStream&nbsp;: une destination</h2>
+<p>Symétrique du <code>ReadableStream</code>, le <code>WritableStream</code> est une <strong>destination</strong>&nbsp;: un puits qui reçoit des morceaux. Tu obtiens un <strong>writer</strong> avec <code>getWriter()</code>, puis tu écris avec <code>write(morceau)</code> (qui renvoie une promesse), et tu termines avec <code>close()</code>. Le writer expose aussi <code>ready</code>, une promesse qui te dit quand la destination est prête à accepter d'autres écritures — c'est déjà de la backpressure.</p>
+<figure class="code-block" data-file="writable.js"><pre><code class="language-javascript">// Un WritableStream qui accumule ce qu'on lui écrit (logique pure).
+const sortie = [];
+const puits = new WritableStream({
+  write(morceau) { sortie.push(morceau.toUpperCase()); },
+  close() { sortie.push("[fin]"); },
+});
+
+const writer = puits.getWriter();
+await writer.ready;            // on attend que le puits soit prêt
+await writer.write("alpha");
+await writer.write("beta");
+await writer.close();          // signale qu'il n'y aura plus rien
+writer.releaseLock();
+console.log(sortie.join(" "));
+// affiche: ALPHA BETA [fin]</code></pre></figure>
+<p class="code-caption">Le <code>write()</code> renvoie une promesse&nbsp;: <code>await</code>-la pour respecter le rythme du puits. La méthode <code>close()</code> du <em>sink</em> (le descripteur passé au constructeur) sert à finaliser.</p>
+
+<h2>TransformStream&nbsp;: transformer à la volée</h2>
+<p>Un <code>TransformStream</code> est un flux à deux faces&nbsp;: un côté <strong>écriture</strong> (<code>writable</code>) où entrent les morceaux bruts, un côté <strong>lecture</strong> (<code>readable</code>) d'où sortent les morceaux transformés. Entre les deux, ta fonction <code>transform(morceau, controller)</code> traite chaque morceau et émet zéro, un ou plusieurs morceaux via <code>controller.enqueue()</code>. C'est l'outil idéal pour décoder, découper en lignes, filtrer ou compresser <em>sans</em> tout charger.</p>
+<figure class="code-block" data-file="transform.js"><pre><code class="language-javascript">// TransformStream qui met chaque morceau de texte en majuscules,
+// puis on le branche entre une source et une lecture. (Logique pure.)
+const majuscules = new TransformStream({
+  transform(morceau, controller) {
+    controller.enqueue(morceau.toUpperCase());
+  },
+});
+
+const source = new ReadableStream({
+  start(c) { c.enqueue("flux"); c.enqueue(" web"); c.close(); },
+});
+
+// pipeThrough branche la source sur le côté writable du transform
+// et renvoie son côté readable, déjà transformé.
+const transforme = source.pipeThrough(majuscules);
+
+let texte = "";
+for await (const morceau of transforme) texte += morceau;
+console.log(texte);
+// affiche: FLUX WEB</code></pre></figure>
+<p class="code-caption">Un <code>TransformStream</code> = un <code>writable</code> + un <code>readable</code> reliés par ta logique. <code>controller.enqueue()</code> peut émettre plus ou moins de morceaux qu'il n'en reçoit (utile pour le découpage en lignes).</p>
+
+<h2>Chaîner avec pipeThrough() et pipeTo()</h2>
+<p>Deux méthodes assemblent les flux. <code>pipeThrough(transform)</code> insère un <code>TransformStream</code> dans la chaîne et <strong>renvoie</strong> le <code>readable</code> résultant&nbsp;: tu peux donc l'enchaîner. <code>pipeTo(writable)</code> branche un flux lisible sur une destination finale et renvoie une promesse qui se résout quand <strong>tout</strong> a coulé. La différence&nbsp;: <code>pipeThrough</code> est un maillon intermédiaire, <code>pipeTo</code> est le terminus.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Un pipeline de flux en trois maillons. À gauche, un ReadableStream source. La méthode pipeThrough le relie à un TransformStream au centre et renvoie un nouveau flux lisible, ce qui permet de continuer à chaîner. La méthode pipeTo relie ensuite ce flux au WritableStream de destination à droite et renvoie une promesse qui se résout quand tout a coulé : c'est le terminus de la chaîne.">
+    <text class="d-label" x="20" y="24" font-size="13">Un pipeline : pipeThrough enchaîne, pipeTo termine</text>
+    <rect class="d-box" x="20" y="66" width="150" height="50" rx="6" />
+    <text class="d-tag" x="95" y="88" text-anchor="middle" font-size="11">ReadableStream</text>
+    <text class="d-mut" x="95" y="104" text-anchor="middle" font-size="10">source (response.body)</text>
+    <rect class="d-accent" x="250" y="66" width="150" height="50" rx="6" />
+    <text class="d-tag" x="325" y="88" text-anchor="middle" font-size="11">TransformStream</text>
+    <text class="d-mut" x="325" y="104" text-anchor="middle" font-size="10">ex. TextDecoderStream</text>
+    <rect class="d-box" x="480" y="66" width="140" height="50" rx="6" />
+    <text class="d-tag" x="550" y="88" text-anchor="middle" font-size="11">WritableStream</text>
+    <text class="d-mut" x="550" y="104" text-anchor="middle" font-size="10">destination</text>
+    <text class="d-text" x="210" y="56" text-anchor="middle" font-size="10">pipeThrough()</text>
+    <path class="d-line" d="M170 91 H250" />
+    <text class="d-mut" x="210" y="136" text-anchor="middle" font-size="9">renvoie un readable</text>
+    <text class="d-text" x="440" y="56" text-anchor="middle" font-size="10">pipeTo()</text>
+    <path class="d-line" d="M400 91 H480" />
+    <text class="d-mut" x="440" y="136" text-anchor="middle" font-size="9">renvoie une promesse</text>
+    <text class="d-mut" x="320" y="170" text-anchor="middle" font-size="10">source.pipeThrough(transform).pipeTo(destination)</text>
+  </svg>
+  <figcaption>Chaque <code>pipeThrough()</code> rend un flux lisible que l'on peut encore enchaîner&nbsp;; <code>pipeTo()</code> raccorde à une destination et clôt le pipeline. La backpressure se propage automatiquement d'un bout à l'autre.</figcaption>
+</figure>
+<figure class="code-block" data-file="pipe.js"><pre><code class="language-javascript">// Chaîne complète : source → transform → destination. (Logique pure.)
+const source = new ReadableStream({
+  start(c) { c.enqueue("un"); c.enqueue("deux"); c.close(); },
+});
+
+const prefixe = new TransformStream({
+  transform(m, c) { c.enqueue(`• ${m}`); },
+});
+
+const collectes = [];
+const destination = new WritableStream({
+  write(m) { collectes.push(m); },
+});
+
+// pipeThrough renvoie un readable ; pipeTo le draine vers le writable
+// et résout sa promesse à la toute fin.
+await source.pipeThrough(prefixe).pipeTo(destination);
+console.log(collectes.join(", "));
+// affiche: • un, • deux</code></pre></figure>
+<p class="code-caption">Le pipeline gère lui-même la boucle de lecture, l'écriture, la fin et — point crucial — la propagation de la backpressure d'un bout à l'autre.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Le navigateur fournit des <code>TransformStream</code> prêts à l'emploi&nbsp;: <code>TextDecoderStream</code> (octets → texte), <code>TextEncoderStream</code> (texte → octets), <code>CompressionStream</code>/<code>DecompressionStream</code> (gzip, deflate). Tu les enchaînes directement&nbsp;: <code>response.body.pipeThrough(new TextDecoderStream())</code> te donne un flux de chaînes au lieu d'un flux de <code>Uint8Array</code>.</p></div></div>
+
+<h2>fetch en streaming et progression</h2>
+<p>Voici la pièce qui rend tout concret&nbsp;: la propriété <code>response.body</code> d'un <code>fetch</code> <strong>est</strong> un <code>ReadableStream</code> d'octets. Tu n'es donc pas obligé d'appeler <code>.json()</code> ou <code>.text()</code>&nbsp;: tu peux lire le corps au fur et à mesure, cumuler les octets reçus et afficher une barre de progression — même chose pour brancher directement un <code>TextDecoderStream</code> et traiter le texte ligne par ligne avant la fin du transfert.</p>
+<figure class="code-block" data-file="fetch-streaming.js"><pre><code class="language-javascript">// EXEMPLE NAVIGATEUR (non exécutable dans l'éditeur : dépend du réseau).
+// Lit une réponse fetch au fur et à mesure et affiche une progression.
+async function telechargerAvecProgression(url) {
+  const reponse = await fetch(url);
+  // Content-Length n'est pas toujours présent (réponses chunked).
+  const total = Number(reponse.headers.get("Content-Length")) || 0;
+
+  const reader = reponse.body.getReader(); // response.body = ReadableStream
+  let recus = 0;
+  const morceaux = [];
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    morceaux.push(value);   // value est un Uint8Array
+    recus += value.length;  // on traite/affiche AVANT la fin du transfert
+    if (total) {
+      // Effet : met à jour une UI de progression, ex. 0 → 100 %.
+      const pourcent = Math.round((recus / total) * 100);
+      console.log(`${pourcent}% (${recus}/${total} octets)`);
+    } else {
+      console.log(`${recus} octets reçus`);
+    }
+  }
+  reader.releaseLock();
+
+  // On ne reconstitue le tout QUE si on en a vraiment besoin :
+  return new Blob(morceaux);
+}
+
+// Variante "texte au fil de l'eau" : décodage en flux via pipeThrough.
+async function lireTexte(url) {
+  const reponse = await fetch(url);
+  const fluxTexte = reponse.body.pipeThrough(new TextDecoderStream());
+  for await (const fragment of fluxTexte) {
+    // Effet : chaque fragment de texte est traité dès son arrivée.
+    console.log("fragment:", fragment.length, "caractères");
+  }
+}</code></pre></figure>
+<p class="code-caption">Comme <code>response.body</code> est un <code>ReadableStream</code>, la progression sort gratuitement de la boucle <code>read()</code>. Le <code>TextDecoderStream</code> gère même les caractères multi-octets coupés entre deux morceaux.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Quand tu vois la réponse d'un assistant IA (ChatGPT, Claude, Gemini) <strong>s'écrire mot à mot</strong> sous tes yeux, c'est exactement ça&nbsp;: le serveur renvoie un flux (souvent en <em>Server-Sent Events</em>) et le client lit <code>response.body.pipeThrough(new TextDecoderStream())</code> pour afficher chaque fragment <strong>dès son arrivée</strong>, sans attendre la fin de la génération. Même principe pour les <strong>logs qui défilent</strong> dans une console de déploiement, un <strong>export CSV volumineux</strong> écrit ligne à ligne, ou une <strong>transcription audio en direct</strong>. Sans streaming, l'utilisateur fixerait un <em>spinner</em> pendant dix secondes&nbsp;; avec, il voit le résultat se construire — la latence perçue s'effondre.</p></div></div>
+
+<h2>La backpressure&nbsp;: le consommateur régule le producteur</h2>
+<p>C'est le concept qui distingue vraiment les streams d'une simple boucle d'itération. La <strong>backpressure</strong> (contre-pression) est le mécanisme par lequel un consommateur <em>lent</em> ralentit un producteur <em>rapide</em>, pour que la file de morceaux en attente ne gonfle pas indéfiniment en mémoire. Chaque flux a une <strong>file interne</strong> bornée par un <em>high-water mark</em>&nbsp;: tant qu'elle est pleine, le producteur est mis en pause (sa promesse <code>ready</code>, ou son <code>controller.desiredSize</code> qui tombe à 0 ou moins, le lui signale) et ne reprend que lorsque le consommateur a vidé de la place.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Le mécanisme de backpressure. Un producteur rapide à gauche pousse des morceaux dans une file interne centrale bornée par un high-water mark de deux emplacements. Un consommateur lent à droite retire les morceaux un à un. Quand la file est pleine, la place restante desiredSize tombe à zéro et le producteur est mis en pause ; dès que le consommateur libère un emplacement, desiredSize repasse au-dessus de zéro et le producteur reprend.">
+    <text class="d-label" x="20" y="24" font-size="13">Backpressure : la file bornée régule le producteur</text>
+    <rect class="d-accent" x="20" y="70" width="120" height="54" rx="6" />
+    <text class="d-tag" x="80" y="92" text-anchor="middle" font-size="11">Producteur</text>
+    <text class="d-mut" x="80" y="108" text-anchor="middle" font-size="10">rapide</text>
+    <path class="d-line" d="M140 97 H210" />
+    <rect class="d-frame" x="210" y="60" width="220" height="74" rx="6" />
+    <text class="d-mut" x="320" y="52" text-anchor="middle" font-size="10">file interne — high-water mark = 2</text>
+    <rect class="d-box" x="228" y="78" width="88" height="38" rx="4" /><text class="d-text" x="272" y="101" text-anchor="middle" font-size="10">morceau</text>
+    <rect class="d-box" x="324" y="78" width="88" height="38" rx="4" /><text class="d-text" x="368" y="101" text-anchor="middle" font-size="10">morceau</text>
+    <path class="d-line" d="M430 97 H500" />
+    <rect class="d-box" x="500" y="70" width="120" height="54" rx="6" />
+    <text class="d-tag" x="560" y="92" text-anchor="middle" font-size="11">Consommateur</text>
+    <text class="d-mut" x="560" y="108" text-anchor="middle" font-size="10">lent</text>
+    <text class="d-mut" x="320" y="164" text-anchor="middle" font-size="11">file pleine → desiredSize = 0 → producteur en pause</text>
+    <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="10">le consommateur lit → un emplacement se libère → le producteur reprend</text>
+  </svg>
+  <figcaption>La file interne bornée par le <em>high-water mark</em> est le tampon&nbsp;: tant qu'elle est pleine (<code>desiredSize</code> ≤ 0), la source se tait&nbsp;; elle reprend dès qu'un morceau est consommé. <code>pipeTo()</code>/<code>pipeThrough()</code> appliquent cette régulation sans code.</figcaption>
+</figure>
+<figure class="code-block" data-file="backpressure.js"><pre><code class="language-javascript">// On observe la backpressure via desiredSize : la place restante dans
+// la file interne. Quand elle tombe à 0 ou moins, il faut arrêter de
+// pousser. (Logique pure : on inspecte le controller du ReadableStream.)
+let journal = [];
+const flux = new ReadableStream(
+  {
+    start(controller) {
+      // desiredSize = highWaterMark - taille de la file actuelle
+      journal.push(controller.desiredSize); // 2 (file vide, hwm = 2)
+      controller.enqueue("x");
+      journal.push(controller.desiredSize); // 1
+      controller.enqueue("y");
+      journal.push(controller.desiredSize); // 0 → file pleine : on s'arrête
+      controller.close();
+    },
+  },
+  { highWaterMark: 2 }, // la file accepte 2 morceaux avant de saturer
+);
+
+// On ne lit pas encore : la file reste pleine, desiredSize observé = 0.
+console.log(journal.join(", "));
+// affiche: 2, 1, 0</code></pre></figure>
+<p class="code-caption">Quand <code>desiredSize</code> atteint 0, un producteur <em>bien élevé</em> cesse d'émettre jusqu'à ce que le consommateur lise. Avec <code>pipeTo</code>/<code>pipeThrough</code>, cette régulation est <strong>automatique</strong> — c'est leur grand avantage sur une boucle écrite à la main.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Tout bufferiser annule l'intérêt du streaming.</strong> Si ta première ligne est <code>const tout = await response.text()</code> ou que tu pousses chaque morceau dans un tableau global pour ne le traiter qu'à <code>done</code>, tu repaies la mémoire et la latence que la Streams API venait justement d'éliminer. Traite chaque morceau <em>dès</em> qu'il arrive, et ne reconstitue le total que si c'est strictement nécessaire.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier <code>reader.releaseLock()</code></strong> laisse le flux verrouillé&nbsp;: toute tentative ultérieure de <code>getReader()</code> ou de <code>pipeThrough()</code> sur le même flux lèvera <code>TypeError: locked</code>. De même, <strong>ignorer la backpressure</strong> dans une source manuelle (pousser sans regarder <code>desiredSize</code>) fait gonfler la file interne et ruine le bénéfice mémoire. Enfin, ne confonds pas les <strong>streams web</strong> (ce cours&nbsp;: <code>ReadableStream</code>, <code>getReader</code>) et les <strong>streams Node.js</strong> (<code>stream.Readable</code>, événements <code>data</code>/<code>end</code>, <code>.pipe()</code>)&nbsp;: API différentes, abordées dans le cours Node.js — un pont existe via <code>Readable.fromWeb()</code>/<code>Readable.toWeb()</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Construis tes propres <strong>TransformStream personnalisés</strong> (un découpeur en lignes qui tamponne les fins de ligne entre morceaux est l'exercice canonique). Explore <code>CompressionStream</code>/<code>DecompressionStream</code> pour gzip/deflate à la volée, et <code>File.stream()</code> / <code>Blob.stream()</code> pour lire un fichier local sans le charger entièrement — combinés à <code>fetch</code> en <code>POST</code> avec un corps en flux (<code>duplex: "half"</code>), tu obtiens des téléversements progressifs. Enfin, compare avec les <strong>streams Node.js</strong> pour le travail côté serveur&nbsp;: même philosophie, autre API.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: lire, écrire, transformer et chaîner des flux web</caption>
+    <thead><tr><th>Élément</th><th>Rôle</th><th>Exemple minimal</th></tr></thead>
+    <tbody>
+      <tr><td><code>getReader()</code></td><td>obtient un reader (verrouille le flux)</td><td><code>const r = flux.getReader()</code></td></tr>
+      <tr><td><code>read()</code></td><td>lit le morceau suivant → <code>{ value, done }</code></td><td><code>const { value, done } = await r.read()</code></td></tr>
+      <tr><td><code>releaseLock()</code></td><td>relâche le verrou du reader/writer</td><td><code>r.releaseLock()</code></td></tr>
+      <tr><td><code>getWriter()</code> / <code>write()</code></td><td>écrit dans un WritableStream</td><td><code>await w.write(morceau)</code></td></tr>
+      <tr><td><code>new TransformStream()</code></td><td>transforme chaque morceau à la volée</td><td><code>new TransformStream({ transform(m, c){ c.enqueue(m) } })</code></td></tr>
+      <tr><td><code>pipeThrough(t)</code></td><td>insère un transform, renvoie un readable</td><td><code>flux.pipeThrough(new TextDecoderStream())</code></td></tr>
+      <tr><td><code>pipeTo(w)</code></td><td>draine vers une destination (terminus)</td><td><code>await flux.pipeTo(destination)</code></td></tr>
+      <tr><td><code>response.body</code></td><td>le corps d'un fetch EST un ReadableStream</td><td><code>fetch(url).then(r =&gt; r.body)</code></td></tr>
+      <tr><td><code>desiredSize</code> / <code>highWaterMark</code></td><td>place restante / capacité de la file (backpressure)</td><td><code>controller.desiredSize</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Flux (stream)</dt>
+  <dd>Suite de <strong>morceaux</strong> de données qui arrivent dans le temps, lus, transformés ou écrits un à un plutôt que tous ensemble.</dd>
+  <dt>Morceau (chunk)</dt>
+  <dd>Une unité de données du flux&nbsp;: souvent un <code>Uint8Array</code> pour des octets, une chaîne après décodage.</dd>
+  <dt>ReadableStream</dt>
+  <dd>Une <strong>source</strong> lisible par morceaux&nbsp;: on la consomme via <code>getReader()</code> + boucle <code>read()</code>, ou par <code>for await</code>.</dd>
+  <dt>WritableStream</dt>
+  <dd>Une <strong>destination</strong> qui reçoit des morceaux via un writer (<code>getWriter()</code>, <code>write()</code>, <code>close()</code>).</dd>
+  <dt>TransformStream</dt>
+  <dd>Un flux à deux faces (<code>writable</code> + <code>readable</code>) reliées par <code>transform(morceau, controller)</code>&nbsp;; ex. natifs&nbsp;: <code>TextDecoderStream</code>, <code>CompressionStream</code>.</dd>
+  <dt>pipeThrough / pipeTo</dt>
+  <dd><code>pipeThrough()</code> insère un transform et <strong>renvoie un readable</strong> (on continue de chaîner)&nbsp;; <code>pipeTo()</code> raccorde à une destination et <strong>termine</strong> la chaîne.</dd>
+  <dt>Backpressure (contre-pression)</dt>
+  <dd>Mécanisme par lequel un consommateur lent ralentit un producteur rapide pour que la file interne ne gonfle pas indéfiniment en mémoire.</dd>
+  <dt>High-water mark / desiredSize</dt>
+  <dd>La <strong>capacité</strong> de la file interne et la <strong>place restante</strong>&nbsp;: quand <code>desiredSize</code> tombe à 0 ou moins, un producteur bien élevé cesse d'émettre.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>flux</strong> modélise des données comme une suite de <strong>morceaux</strong> dans le temps&nbsp;: empreinte mémoire constante et traitement <em>avant</em> la fin.</li>
+  <li><code>ReadableStream</code> = source&nbsp;: <code>getReader()</code> puis boucle <code>read()</code> → <code>{ value, done }</code>, terminée par <code>releaseLock()</code>.</li>
+  <li><code>WritableStream</code> = destination&nbsp;: <code>getWriter()</code>, <code>write()</code>, <code>ready</code>, <code>close()</code>.</li>
+  <li><code>TransformStream</code> = <code>writable</code> + <code>readable</code> reliés par <code>transform(morceau, controller)</code>&nbsp;; exemples natifs&nbsp;: <code>TextDecoderStream</code>, <code>CompressionStream</code>.</li>
+  <li><code>pipeThrough()</code> insère un transform et renvoie un <code>readable</code>&nbsp;; <code>pipeTo()</code> draine vers une destination et résout à la fin.</li>
+  <li><code>response.body</code> d'un <code>fetch</code> <strong>est</strong> un <code>ReadableStream</code>&nbsp;: d'où progression et traitement au fil de l'eau.</li>
+  <li>La <strong>backpressure</strong> laisse le consommateur réguler le producteur via la file interne (<code>desiredSize</code>, <code>highWaterMark</code>)&nbsp;; <code>pipeTo</code>/<code>pipeThrough</code> la gèrent automatiquement.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Que contient l'objet renvoyé par <code>reader.read()</code>, et comment sais-tu que le flux est épuisé&nbsp;?</li>
+  <li>Quelle est la différence entre <code>pipeThrough()</code> et <code>pipeTo()</code>, et lequel termine une chaîne&nbsp;?</li>
+  <li>En une phrase&nbsp;: qu'est-ce que la backpressure et quel problème évite-t-elle&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que contient l'objet renvoyé par reader.read(), et comment sais-tu que le flux est épuisé ?","a":["Un objet { value, done } ; done === true signale la fin du flux (value vaut alors undefined)","Un tableau d'octets ; le flux est fini quand il est vide","Une promesse jamais résolue","Un booléen seul"],"correct":0,"explain":"Comme les itérateurs, un reader de flux renvoie { value, done } à chaque read(). Tant que done est false, value contient un morceau ; done devient true à l'épuisement, sans nouvelle valeur."},
+  {"q":"Quelle est la différence entre pipeThrough() et pipeTo(), et lequel termine une chaîne ?","a":["pipeThrough(transform) renvoie un nouveau ReadableStream (on continue de chaîner) ; pipeTo(destination) envoie vers un WritableStream et renvoie une promesse : il termine la chaîne","C'est l'inverse","Les deux terminent la chaîne","Les deux renvoient un stream"],"correct":0,"explain":"pipeThrough insère une transformation au milieu et redonne un flux lisible, donc on enchaîne. pipeTo connecte la source à une destination d'écriture et clôt le pipeline (la promesse se résout quand tout est écrit)."},
+  {"q":"En une phrase : qu'est-ce que la backpressure et quel problème évite-t-elle ?","a":["C'est le mécanisme par lequel un consommateur lent fait ralentir le producteur, évitant l'accumulation des données en mémoire (saturation)","C'est une compression des données","C'est une erreur de flux","C'est le débit maximal d'un flux"],"correct":0,"explain":"Quand on produit plus vite qu'on ne consomme, les données s'entassent. La backpressure propage le « ralentis » vers la source pour qu'elle s'adapte au rythme du consommateur, protégeant la mémoire."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["read","read()","reader.read()",".read()"],"placeholder":"la méthode du reader d'un flux pour lire le morceau suivant (renvoie { value, done }) : …","hints":["On boucle tant que done est faux.","const { value, done } = await reader.????().","Trois lettres."],"link":{"href":"lecon-15.html","label":"Revoir « Lire un flux »"}},
+  {"type":"text","accept":["pipeThrough","pipeThrough()",".pipeThrough()"],"placeholder":"la méthode pour faire passer un flux à travers un TextDecoderStream (transform) : …","hints":["Elle enchaîne un ReadableStream à un TransformStream.","response.body.??????????(new TextDecoderStream()).","pipe + Through."],"link":{"href":"lecon-15.html","label":"Revoir « Transformer un flux »"}},
+  {"type":"text","accept":["backpressure","contre-pression","contrepression","contre pression"],"placeholder":"le mécanisme par lequel un consommateur LENT ralentit un producteur RAPIDE : …","hints":["La file interne et le high-water mark le pilotent.","pipeTo() la gère automatiquement.","En anglais : … (contre-pression)."],"link":{"href":"lecon-15.html","label":"Revoir « La backpressure »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>compterOctets(url)</code> qui lance un <code>fetch</code>, lit <code>response.body</code> via son reader morceau par morceau, cumule la longueur de chaque <code>Uint8Array</code> reçu, et renvoie le total d'octets une fois <code>done</code> atteint. N'oublie pas de relâcher le verrou.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Exemple navigateur : dépend du réseau, non exécutable dans l'éditeur.
+async function compterOctets(url) {
+  const reponse = await fetch(url);
+  const reader = reponse.body.getReader(); // ReadableStream d'octets
+  let total = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;          // flux épuisé
+    total += value.length;    // value est un Uint8Array
+  }
+  reader.releaseLock();        // indispensable : on relâche le verrou
+  return total;
+}
+
+// Usage :
+// const n = await compterOctets("/gros-fichier.bin");
+// console.log(n, "octets"); // affiche le total sans tout garder en RAM</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>À partir de <code>response.body</code>, construis un flux de <strong>texte</strong> en le faisant passer dans un <code>TextDecoderStream</code> via <code>pipeThrough()</code>, puis itère dessus avec <code>for await</code> pour concaténer tout le texte. Explique en commentaire pourquoi <code>TextDecoderStream</code> est préférable à un décodage manuel morceau par morceau.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Exemple navigateur : dépend du réseau, non exécutable dans l'éditeur.
+async function lireTexteComplet(url) {
+  const reponse = await fetch(url);
+  // pipeThrough branche le décodeur sur le flux d'octets et
+  // renvoie un ReadableStream de chaînes.
+  const fluxTexte = reponse.body.pipeThrough(new TextDecoderStream());
+
+  let texte = "";
+  for await (const fragment of fluxTexte) {
+    texte += fragment; // chaque fragment arrive dès qu'il est décodé
+  }
+  return texte;
+}
+
+// Pourquoi TextDecoderStream plutôt qu'un new TextDecoder().decode(m)
+// appelé par morceau :
+//   - un caractère multi-octets (UTF-8) peut être COUPÉ à la frontière
+//     entre deux morceaux ; TextDecoderStream tamponne le morceau
+//     incomplet et ne l'émet qu'une fois complet — un décodage manuel
+//     naïf produirait des caractères corrompus (�) ;
+//   - il s'intègre au pipeline et propage donc la backpressure.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique avec tes mots, en illustrant par un scénario concret, ce qu'est la <strong>backpressure</strong>&nbsp;: quel rôle jouent la file interne et le <em>high-water mark</em>, qui ralentit qui, et pourquoi <code>pipeTo()</code> la gère automatiquement là où une boucle <code>read()</code> écrite à la main peut l'ignorer.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// La backpressure (contre-pression) est le mécanisme par lequel un
+// CONSOMMATEUR lent ralentit un PRODUCTEUR rapide, afin que la file
+// de morceaux en attente ne gonfle pas indéfiniment en mémoire.
+//
+// Comment ça marche :
+//   - chaque flux a une file interne bornée par un high-water mark (hwm),
+//     la quantité de morceaux qu'il accepte d'avance ;
+//   - tant que la file a de la place, le producteur peut pousser ;
+//   - quand la file est pleine (desiredSize &lt;= 0), le producteur DOIT
+//     attendre : sa promesse `ready` (writer) ou son `desiredSize`
+//     (controller readable) lui dit de patienter ;
+//   - dès que le consommateur lit un morceau, de la place se libère et
+//     le producteur reprend.
+//
+// Scénario concret :
+//   On télécharge une vidéo (producteur réseau rapide) et on l'écrit
+//   sur le disque (consommateur lent). Sans backpressure, les octets
+//   reçus s'empilent en RAM plus vite qu'on ne les écrit → la mémoire
+//   explose. Avec backpressure, le réseau est mis en pause tant que le
+//   disque n'a pas rattrapé son retard.
+//
+// Pourquoi pipeTo l'a "gratuitement" :
+//   pipeTo (et pipeThrough) lit la source au rythme exact où la
+//   destination accepte d'écrire : il attend `write()` avant de
+//   redemander `read()`. La régulation est donc intégrée.
+//   Une boucle read()/write() écrite à la main respecte la backpressure
+//   SEULEMENT si tu fais `await writer.write(value)` avant le prochain
+//   `read()` ; si tu écris sans attendre (fire-and-forget), tu accumules
+//   et tu perds la régulation.
+console.log("backpressure = le consommateur impose le rythme au producteur");
+// affiche: backpressure = le consommateur impose le rythme au producteur</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

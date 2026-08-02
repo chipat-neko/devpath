@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Optimiser le gas : écrire un contrat économe — Leçon 13 · Syntaxe</title>
+    <meta name="description" content="Sur Ethereum, chaque opération coûte du gas, payé en vrai argent. Comprendre d'où vient le coût, empaqueter le stockage en slots de 32 octets, préférer calldata et les événements, et appliquer les réflexes d'optimisation sans sacrifier la sécurité." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="solidity" data-lesson="lecon-13.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Solidity</a></li>
+            <li aria-current="page">Leçon 13</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 05 · Solidity avancé — Leçon 13</p>
+              <h1 class="lesson-header__title">Optimiser le gas : écrire un contrat économe</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Avoir suivi « L'argent : ether, payable et gas »</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>d'où vient le <strong>coût en gas</strong> d'une opération&nbsp;;</li>
+                  <li><strong>empaqueter</strong> le stockage en slots de 32 octets&nbsp;;</li>
+                  <li>préférer <strong>calldata</strong> et les <strong>événements</strong> quand c'est possible&nbsp;;</li>
+                  <li>appliquer les réflexes d'optimisation <strong>sans sacrifier la sécurité</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Sur Ethereum, exécuter du code n'est pas gratuit&nbsp;: chaque opération consomme du <strong>gas</strong>, converti en ether puis en argent bien réel. Un contrat appelé souvent et mal optimisé peut coûter des <strong>dizaines de dollars par transaction</strong> à ses utilisateurs. Savoir écrire un contrat <strong>économe</strong> est donc une compétence d'ingénieur — à condition de ne jamais le faire au détriment de la <strong>sécurité</strong>.</p>
+
+<h2>D'où vient le coût ?</h2>
+<p>Chaque instruction de l'EVM a un <strong>prix</strong> en gas. Les écarts sont énormes&nbsp;: une addition coûte quelques unités, tandis qu'<strong>écrire dans le stockage</strong> (l'opération <code>SSTORE</code>) en coûte des <strong>milliers</strong>. La règle d'or&nbsp;: <strong>le stockage est cher, le calcul est bon marché</strong>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Coût relatif de quelques opérations de l'EVM, en ordre de grandeur. Écrire un slot de stockage vierge coûte environ 20000 gas, la barre la plus longue. Modifier un slot existant environ 5000. Lire un slot environ 2100. Une opération arithmétique environ 3, une barre minuscule.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Coût en gas (ordres de grandeur)</text>
+    <text class="d-text" x="16" y="56" font-size="10">écrire un slot vierge</text>
+    <rect class="d-accent" x="200" y="44" width="420" height="18" rx="4" /><text class="d-mut" x="500" y="57" text-anchor="middle" font-size="9">~20 000 gas</text>
+    <text class="d-text" x="16" y="92" font-size="10">modifier un slot</text>
+    <rect class="d-box" x="200" y="80" width="105" height="18" rx="4" /><text class="d-mut" x="330" y="93" font-size="9">~5 000</text>
+    <text class="d-text" x="16" y="128" font-size="10">lire un slot (SLOAD)</text>
+    <rect class="d-box" x="200" y="116" width="44" height="18" rx="4" /><text class="d-mut" x="270" y="129" font-size="9">~2 100</text>
+    <text class="d-text" x="16" y="164" font-size="10">une addition</text>
+    <rect class="d-box" x="200" y="152" width="6" height="18" rx="3" /><text class="d-mut" x="230" y="165" font-size="9">~3</text>
+    <text class="d-mut" x="320" y="188" text-anchor="middle" font-size="9">optimiser, c'est d'abord réduire les écritures en stockage</text>
+  </svg>
+  <figcaption>Les valeurs exactes varient selon la version de l'EVM, mais les <strong>proportions</strong> tiennent&nbsp;: une écriture de stockage coûte des milliers de fois plus qu'un calcul. On optimise là où c'est cher.</figcaption>
+</figure>
+<p>Rappelle-toi les trois <strong>emplacements de données</strong> vus au module 2&nbsp;: <code>storage</code> (permanent, cher), <code>memory</code> (temporaire, coût modéré) et <code>calldata</code> (lecture seule, le moins cher). Le choix de l'emplacement pèse directement sur la facture.</p>
+
+<h2>Le stockage : penser en slots de 32 octets</h2>
+<p>L'état d'un contrat est rangé dans des <strong>slots</strong> de 32 octets (256 bits). Chaque slot <strong>touché</strong> pour la première fois coûte cher. L'astuce&nbsp;: si plusieurs variables tiennent <strong>ensemble</strong> dans un slot, le compilateur les <strong>empaquette</strong> (<em>variable packing</em>) et n'écrit qu'une fois.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="Comparaison de l'empaquetage du stockage. En haut, un mauvais ordre : un uint128, puis un uint256, puis un autre uint128, occupent trois slots car le uint256 ne peut pas partager. En bas, un bon ordre : les deux uint128 côte à côte tiennent dans un seul slot, le uint256 dans un second, soit deux slots au lieu de trois.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Empaqueter les variables réduit le nombre de slots</text>
+    <text class="d-mut" x="16" y="52" font-size="10">Mauvais ordre — 3 slots</text>
+    <rect class="d-box" x="150" y="40" width="150" height="26" rx="5" /><text class="d-text" x="225" y="57" text-anchor="middle" font-size="9">uint128 a</text><text class="d-mut" x="330" y="57" font-size="9">slot 0</text>
+    <rect class="d-box" x="150" y="70" width="300" height="26" rx="5" /><text class="d-text" x="300" y="87" text-anchor="middle" font-size="9">uint256 b</text><text class="d-mut" x="470" y="87" font-size="9">slot 1</text>
+    <rect class="d-box" x="150" y="100" width="150" height="26" rx="5" /><text class="d-text" x="225" y="117" text-anchor="middle" font-size="9">uint128 c</text><text class="d-mut" x="330" y="117" font-size="9">slot 2</text>
+    <text class="d-mut" x="16" y="156" font-size="10">Bon ordre — 2 slots</text>
+    <rect class="d-accent" x="150" y="144" width="150" height="26" rx="5" /><text class="d-text" x="225" y="161" text-anchor="middle" font-size="9">uint128 a</text>
+    <rect class="d-accent" x="300" y="144" width="150" height="26" rx="5" /><text class="d-text" x="375" y="161" text-anchor="middle" font-size="9">uint128 c</text><text class="d-mut" x="470" y="161" font-size="9">slot 0</text>
+    <rect class="d-box" x="150" y="174" width="300" height="26" rx="5" /><text class="d-text" x="300" y="191" text-anchor="middle" font-size="9">uint256 b</text><text class="d-mut" x="470" y="191" font-size="9">slot 1</text>
+  </svg>
+  <figcaption>Deux <code>uint128</code> côte à côte partagent un slot&nbsp;; un <code>uint256</code> en occupe toujours un entier. <strong>Regrouper</strong> les petits types voisins fait tomber le nombre de slots — donc d'écritures.</figcaption>
+</figure>
+<figure class="code-block" data-file="Packing.sol"><pre><code class="language-solidity">// Coûteux : l'ordre casse l'empaquetage (3 slots)
+struct MalRange {
+    uint128 a;   // slot 0
+    uint256 b;   // slot 1 (ne peut pas partager)
+    uint128 c;   // slot 2
+}
+
+// Économe : les petits types voisins tiennent ensemble (2 slots)
+struct BienRange {
+    uint128 a;   // slot 0 ...
+    uint128 c;   // ... même slot 0
+    uint256 b;   // slot 1
+}</code></pre></figure>
+
+<h2>calldata plutôt que memory</h2>
+<p>Pour les paramètres d'une fonction <code>external</code> que l'on ne fait que <strong>lire</strong> (tableaux, <code>bytes</code>, <code>string</code>), déclarer <code>calldata</code> évite une <strong>copie</strong> coûteuse vers la mémoire. C'est une optimisation gratuite&nbsp;: un seul mot-clé change.</p>
+<figure class="code-block" data-file="Calldata.sol"><pre><code class="language-solidity">// memory : copie tout le tableau en mémoire (coûteux)
+function sommeM(uint[] memory valeurs) external pure returns (uint s) {
+    for (uint i; i &lt; valeurs.length; i++) s += valeurs[i];
+}
+
+// calldata : lit directement les données d'appel, sans copie
+function sommeC(uint[] calldata valeurs) external pure returns (uint s) {
+    for (uint i; i &lt; valeurs.length; i++) s += valeurs[i];
+}</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Mets en cache tes lectures de stockage</p><p>Lire une variable de <code>storage</code> plusieurs fois répète des <code>SLOAD</code> coûteux. Copie-la <strong>une fois</strong> dans une variable locale (<code>memory</code>/pile), travaille dessus, puis réécris une seule fois en stockage si nécessaire. Idem pour <code>tableau.length</code> dans une boucle&nbsp;: mémorise-le hors de la boucle.</p></div></div>
+
+<h2>Événements plutôt que stockage</h2>
+<p>Une donnée qui ne sert qu'à l'<strong>historique</strong> (elle n'est jamais relue <em>par le contrat</em>) n'a pas besoin d'un slot. L'émettre en <strong>événement</strong> coûte bien moins cher, tout en restant consultable hors chaîne par les applications.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">La nuance importante</p><p>Un événement est <strong>lisible depuis l'extérieur</strong> (interface web, indexeur) mais <strong>pas depuis un autre contrat</strong>. Si ta logique <em>on-chain</em> doit relire la donnée, garde-la en stockage. Sinon, l'événement suffit et économise beaucoup.</p></div></div>
+
+<h2>Les autres réflexes</h2>
+<ul>
+<li><strong><code>constant</code> et <code>immutable</code></strong>&nbsp;: une valeur figée n'occupe <strong>aucun slot</strong> (elle est inscrite dans le bytecode)&nbsp;; sa lecture est quasi gratuite.</li>
+<li><strong><code>unchecked</code></strong>&nbsp;: depuis Solidity 0.8, chaque opération arithmétique vérifie le débordement. Dans un bloc <code>unchecked</code>, on saute cette vérification — <strong>uniquement</strong> quand on a <em>prouvé</em> qu'aucun débordement n'est possible (ex.&nbsp;: un compteur de boucle borné).</li>
+<li><strong>Court-circuit</strong>&nbsp;: place le test le moins cher ou le plus discriminant en premier dans un <code>&amp;&amp;</code>/<code>||</code>.</li>
+<li><strong>Boucles bornées</strong>&nbsp;: une boucle sur un tableau qui grandit sans limite peut rendre une fonction <strong>impossible à exécuter</strong> (dépassement du plafond de gas d'un bloc).</li>
+</ul>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Jamais d'optimisation au prix de la sécurité</p><p>Le gas économisé ne vaut <strong>rien</strong> face à un contrat piraté. Un <code>unchecked</code> mal placé ou une vérification retirée «&nbsp;pour gagner du gas&nbsp;» peut ouvrir une faille qui coûte tout le solde du contrat. Optimise la lisibilité et la sûreté d'abord&nbsp;; le gas ensuite, en mesurant.</p></div></div>
+
+<h2>Cas réel — l'obsession du gas dans la DeFi</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Quand quelques milliers de gas pèsent des millions</p><p>Les grands protocoles de finance décentralisée (échanges, jetons stables) sont appelés des <strong>millions de fois</strong>. Sur un contrat à ce volume, économiser quelques milliers de gas par transaction représente, cumulé, des <strong>millions de dollars</strong> épargnés aux utilisateurs. C'est pourquoi ces équipes empaquettent minutieusement leurs structures, regroupent les écritures et mesurent chaque fonction. Des concours d'optimisation (le «&nbsp;<em>gas golf</em>&nbsp;») sont même une tradition de l'écosystème. La leçon&nbsp;: l'optimisation n'est pas de la coquetterie — à grande échelle, c'est de la valeur rendue aux utilisateurs. Mais les mêmes équipes font <strong>auditer</strong> chaque optimisation&nbsp;: jamais de gain de gas au prix d'un risque.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Réflexes d'optimisation du gas</caption>
+    <thead><tr><th scope="col">Situation</th><th scope="col">Réflexe économe</th></tr></thead>
+    <tbody>
+      <tr><td>Beaucoup d'écritures d'état</td><td>Regrouper&nbsp;; empaqueter les petits types voisins</td></tr>
+      <tr><td>Paramètre <code>external</code> en lecture</td><td><code>calldata</code> plutôt que <code>memory</code></td></tr>
+      <tr><td>Lecture répétée d'une variable d'état</td><td>La mettre en cache dans une locale</td></tr>
+      <tr><td>Donnée d'historique</td><td>Événement plutôt que stockage</td></tr>
+      <tr><td>Valeur figée</td><td><code>constant</code> / <code>immutable</code></td></tr>
+      <tr><td>Arithmétique prouvée sûre</td><td><code>unchecked</code> — avec prudence</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Gas</dt><dd>Unité mesurant le coût de calcul d'une opération sur l'EVM&nbsp;; payée en ether par l'émetteur de la transaction.</dd>
+  <dt>Slot de stockage</dt><dd>Case de 32 octets dans laquelle l'état d'un contrat est rangé&nbsp;; chaque slot touché coûte cher.</dd>
+  <dt>SSTORE / SLOAD</dt><dd>Instructions d'écriture / de lecture d'un slot de stockage&nbsp;; parmi les plus coûteuses de l'EVM.</dd>
+  <dt>Variable packing</dt><dd>Regroupement, par le compilateur, de plusieurs variables plus petites que 32 octets dans un même slot.</dd>
+  <dt>calldata</dt><dd>Emplacement en lecture seule des paramètres d'appel&nbsp;; le moins cher, à privilégier pour les fonctions <code>external</code>.</dd>
+  <dt>immutable</dt><dd>Variable fixée à la construction et inscrite dans le bytecode&nbsp;; lecture quasi gratuite, aucun slot occupé.</dd>
+  <dt>unchecked</dt><dd>Bloc où les vérifications de débordement arithmétique sont désactivées, à n'utiliser que si le débordement est impossible.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>stockage</strong> est de loin l'opération la plus chère&nbsp;: optimiser, c'est d'abord <strong>réduire les écritures</strong>.</li>
+<li><strong>Empaqueter</strong> les petits types voisins fait tenir plusieurs variables dans un slot de 32 octets.</li>
+<li>Préfère <code>calldata</code> aux paramètres <code>memory</code>, mets en <strong>cache</strong> les lectures d'état, et utilise les <strong>événements</strong> pour l'historique.</li>
+<li><code>constant</code>/<code>immutable</code> et <code>unchecked</code> aident — mais <strong>jamais</strong> d'optimisation au prix de la sécurité.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle opération de l'EVM est de loin la plus chère ?</li><li>Pourquoi ordonner les champs d'un struct peut-il réduire le gas ?</li><li>Quand une donnée peut-elle être un événement plutôt qu'une variable d'état ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle opération pèse le plus lourd dans le coût en gas d'un contrat ?","a":["L'écriture dans le stockage (SSTORE)","Une addition entre deux entiers","La déclaration d'une variable locale","Un commentaire dans le code"],"correct":0,"explain":"Écrire un slot de stockage coûte des milliers de gas, contre quelques unités pour un calcul. Optimiser, c'est d'abord réduire les écritures d'état."},
+  {"q":"Pourquoi l'ordre des champs d'un struct influence-t-il le gas ?","a":["Le compilateur empaquette dans un même slot de 32 octets les petits types voisins, réduisant le nombre de slots écrits","Parce que Solidity trie les champs par ordre alphabétique","Parce que les champs du haut sont lus plus vite","L'ordre n'a aucun effet"],"correct":0,"explain":"Deux uint128 côte à côte partagent un slot ; un uint256 intercalé casse ce regroupement. Ordonner les petits types ensemble économise des écritures."},
+  {"q":"Pour un paramètre de fonction external que l'on ne fait que lire, quel emplacement est le plus économe ?","a":["calldata, qui évite la copie en mémoire","memory, qui est toujours le moins cher","storage, pour le garder en base","peu importe, le coût est identique"],"correct":0,"explain":"calldata lit directement les données d'appel sans les copier en mémoire. C'est une optimisation gratuite pour les tableaux, bytes et string en lecture seule."},
+  {"q":"Quand peut-on remplacer une variable de stockage par un événement ?","a":["Quand la donnée ne sert qu'à l'historique et n'est jamais relue par le contrat lui-même","Toujours : les événements remplacent le stockage","Jamais : un événement ne conserve rien","Seulement pour les adresses"],"correct":0,"explain":"Un événement est lisible depuis l'extérieur mais pas par un autre contrat. Si la logique on-chain doit relire la donnée, elle doit rester en stockage."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["calldata"],"placeholder":"l'emplacement de données en lecture seule, le moins cher pour un paramètre external","hints":["Moins cher que memory.","On l'écrit après le type du paramètre."],"link":{"href":"lecon-13.html","label":"Revoir « calldata plutôt que memory »"}},
+  {"type":"text","accept":["packing","variable packing","empaquetage","empaquetement"],"placeholder":"le regroupement de plusieurs petites variables dans un même slot de 32 octets","hints":["En anglais : variable packing.","Dépend de l'ordre des champs."],"link":{"href":"lecon-13.html","label":"Revoir « Penser en slots »"}},
+  {"type":"text","accept":["immutable"],"placeholder":"le mot-clé d'une variable fixée à la construction, inscrite dans le bytecode (aucun slot)","hints":["Cousin de constant.","Sa valeur est fixée au déploiement."],"link":{"href":"lecon-13.html","label":"Revoir « Les autres réflexes »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Réordonne les champs de ce struct pour qu'il occupe moins de slots&nbsp;: <code>uint128 a; uint256 b; uint128 c;</code>.</p><details><summary>Voir une solution</summary><p>On place les deux <code>uint128</code> <strong>côte à côte</strong> pour qu'ils partagent un slot, puis le <code>uint256</code>&nbsp;: <code>uint128 a; uint128 c; uint256 b;</code>. Résultat&nbsp;: <strong>2 slots</strong> au lieu de 3. Le <code>uint256</code> occupe toujours un slot entier&nbsp;; l'astuce ne joue qu'entre types <strong>plus petits</strong> que 32 octets.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Cette fonction relit <code>total</code> (une variable d'état) à chaque tour de boucle. Propose une version qui économise des <code>SLOAD</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="cache.sol"><pre><code class="language-solidity">// Avant : SLOAD sur `total` à chaque itération
+// for (uint i; i &lt; n; i++) total += montants[i];
+
+// Après : on met `total` en cache dans une locale
+function ajouter(uint[] calldata montants) external {
+    uint acc = total;               // un seul SLOAD
+    for (uint i; i &lt; montants.length; i++) {
+        acc += montants[i];
+    }
+    total = acc;                    // un seul SSTORE
+}</code></pre></figure><p>On lit la variable d'état <strong>une fois</strong>, on accumule dans une locale (sur la pile, quasi gratuite), puis on réécrit <strong>une seule fois</strong>. On passe de N lectures + N écritures à 1 + 1. Bonus&nbsp;: <code>montants</code> est en <code>calldata</code>.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue veut envelopper toute la logique d'un transfert dans un bloc <code>unchecked</code> «&nbsp;pour gagner du gas&nbsp;». Que lui réponds-tu&nbsp;?</p><details><summary>Voir une solution</summary><p>Non&nbsp;: <code>unchecked</code> ne doit couvrir que des opérations dont on a <strong>prouvé</strong> qu'elles ne peuvent pas déborder (typiquement l'incrément d'un compteur de boucle borné). Sur une logique de transfert, désactiver les vérifications de débordement peut transformer une soustraction de solde en <strong>débordement</strong> (un solde qui «&nbsp;repasse&nbsp;» à une valeur énorme), soit une faille grave. Le gain de gas est dérisoire face au risque. On garde les vérifications&nbsp;; on n'utilise <code>unchecked</code> que ponctuellement, sur des lignes sûres et commentées, idéalement après audit.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-solidity.min.js" defer></script>
+  </body>
+</html>

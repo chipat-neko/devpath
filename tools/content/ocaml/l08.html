@@ -1,0 +1,86 @@
+<p>Pour organiser un programme à grande échelle, OCaml possède l'un des systèmes de <strong>modules</strong> les plus puissants qui soient. Un module regroupe types et fonctions&nbsp;; une <strong>signature</strong> en décrit l'interface&nbsp;; et les <strong>foncteurs</strong> — des modules paramétrés par d'autres modules — offrent une généricité d'une rare expressivité. C'est une marque de fabrique d'OCaml.</p>
+
+<h2>Les modules</h2>
+<p>Un <strong>module</strong> est un regroupement nommé de définitions. Tout fichier <code>mon_module.ml</code> définit automatiquement un module <code>Mon_module</code>. On peut aussi en définir explicitement avec <code>module ... = struct ... end</code>.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">module Pile = struct
+  type 'a t = 'a list
+  let vide = []
+  let empiler x p = x :: p
+  let sommet p = match p with [] -&gt; None | x :: _ -&gt; Some x
+end
+
+let p = Pile.empiler 1 Pile.vide
+let s = Pile.sommet p              (* Some 1 *)</code></pre></figure>
+<p class="code-caption">On accède aux membres d'un module avec un point&nbsp;: <code>Pile.empiler</code>.</p>
+
+<h2>Les signatures&nbsp;: cacher l'implémentation</h2>
+<p>Une <strong>signature</strong> (<code>module type</code>) décrit ce qu'un module <em>expose</em>, en cachant le reste. On peut ainsi rendre un type <strong>abstrait</strong>&nbsp;: l'extérieur sait qu'il existe, mais pas comment il est fait. C'est l'encapsulation, garantie par le typeur.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">module type PILE = sig
+  type 'a t
+  val vide : 'a t
+  val empiler : 'a -&gt; 'a t -&gt; 'a t
+  val sommet : 'a t -&gt; 'a option
+end
+
+(* On masque l'implémentation list derrière l'interface : *)
+module Pile : PILE = struct
+  type 'a t = 'a list
+  let vide = []
+  let empiler x p = x :: p
+  let sommet p = match p with [] -&gt; None | x :: _ -&gt; Some x
+end</code></pre></figure>
+<p>Désormais, l'extérieur ne peut plus traiter une <code>Pile.t</code> comme une liste&nbsp;: elle est abstraite. On peut changer l'implémentation sans casser le code client.</p>
+
+<h2>Ouvrir un module</h2>
+<p><code>open</code> rend les membres d'un module accessibles sans préfixe. Pratique, mais à utiliser avec mesure pour ne pas masquer des noms.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">open List          (* maintenant : map au lieu de List.map *)
+let r = map (fun x -&gt; x + 1) [1; 2; 3]
+
+(* Ouverture locale, plus sûre : *)
+let r = List.(map (fun x -&gt; x + 1) [1; 2; 3])</code></pre></figure>
+
+<h2>Les foncteurs</h2>
+<p>Voici la pièce maîtresse&nbsp;: un <strong>foncteur</strong> est un module <em>paramétré par un autre module</em>. Donne-lui un module qui satisfait une certaine signature, il te renvoie un module construit dessus. C'est de la généricité au niveau des modules.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">module type COMPARABLE = sig
+  type t
+  val compare : t -&gt; t -&gt; int
+end
+
+module Ensemble (E : COMPARABLE) = struct
+  type element = E.t
+  let max a b = if E.compare a b &gt; 0 then a else b
+end
+
+(* On instancie le foncteur avec un module concret : *)
+module EnsInt = Ensemble (Int)
+let m = EnsInt.max 3 7             (* 7 *)</code></pre></figure>
+<p class="code-caption">Le foncteur <code>Ensemble</code> fonctionne pour <em>tout</em> type comparable&nbsp;: on l'instancie avec <code>Int</code>, <code>String</code>, ou un type maison.</p>
+
+<h2>Pourquoi c'est puissant</h2>
+<p>Les foncteurs permettent d'écrire du code <strong>générique et réutilisable</strong> avec des garanties de types fortes. La bibliothèque standard les utilise abondamment&nbsp;: <code>Map.Make</code> et <code>Set.Make</code> sont des foncteurs qui fabriquent des dictionnaires et ensembles pour le type de clé que tu fournis.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">module StringMap = Map.Make (String)
+let m = StringMap.add "Ada" 36 StringMap.empty</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Abuser de <code>open</code> en tête de fichier&nbsp;: ouvrir plusieurs gros modules crée des conflits de noms et rend le code difficile à suivre (d'où vient cette fonction&nbsp;?). Préfère le préfixe explicite (<code>List.map</code>) ou l'ouverture locale <code>Module.(...)</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le système de modules d'OCaml est si expressif qu'il constitue presque un «&nbsp;langage dans le langage&nbsp;». Les foncteurs servent à l'injection de dépendances, au paramétrage d'algorithmes, à la construction de bibliothèques modulaires&nbsp;— là où d'autres langages utilisent l'héritage ou les interfaces.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>module</strong> regroupe types et fonctions&nbsp;; chaque fichier est un module.</li>
+  <li>Une <strong>signature</strong> (<code>module type</code>) décrit l'interface et peut rendre un type <strong>abstrait</strong>.</li>
+  <li>Un <strong>foncteur</strong> est un module paramétré par un module&nbsp;: généricité de haut niveau.</li>
+  <li><code>Map.Make</code>/<code>Set.Make</code> sont des foncteurs de la stdlib&nbsp;; <code>open</code> avec parcimonie.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert une signature de module&nbsp;?</li><li>Qu'est-ce qu'un type abstrait et que protège-t-il&nbsp;?</li><li>Qu'est-ce qu'un foncteur&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Définis un module <code>Maths</code> avec une fonction <code>carre</code>, et appelle-la.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">module Maths = struct
+  let carre x = x * x
+end
+let r = Maths.carre 5   (* 25 *)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un dictionnaire string→int avec <code>Map.Make(String)</code> et ajoute une entrée.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">module SM = Map.Make (String)
+let m = SM.add "Lin" 29 SM.empty</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Explique en une phrase l'intérêt de rendre un type abstrait via une signature.</p><details><summary>Voir une solution</summary><p>Cacher l'implémentation derrière une interface permet de la changer librement sans casser le code qui utilise le module, et empêche le code client de dépendre de détails internes (il ne peut manipuler le type qu'à travers les fonctions exposées).</p></details></div>

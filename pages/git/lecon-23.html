@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Échanger sans serveur : patch, bundle et archive — Leçon 23 · Git &amp; GitHub · Syntaxe</title>
+    <meta name="description" content="Partager du travail Git sans dépôt central : transformer des commits en fichiers avec git format-patch, les rejouer avec git am (vs git apply), empaqueter un dépôt entier dans un .bundle transférable, et exporter un instantané des fichiers avec git archive." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="git" data-lesson="lecon-23.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Git &amp; GitHub</a></li>
+            <li aria-current="page">Leçon 23</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 07 · Pour aller plus loin — Leçon 23</p>
+              <h1 class="lesson-header__title">Échanger sans serveur : patch, bundle et archive</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 09 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>transformer des commits en fichiers <code>.patch</code> avec <code>git format-patch</code> et les rejouer avec <code>git am</code>&nbsp;;</li>
+                  <li>distinguer <code>git am</code> (recrée le commit complet) de <code>git apply</code> (applique le seul diff)&nbsp;;</li>
+                  <li>empaqueter un dépôt entier ou un sous-ensemble dans un fichier <code>.bundle</code> transférable&nbsp;;</li>
+                  <li>exporter un instantané des fichiers, sans historique, avec <code>git archive</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici, partager du code voulait dire <strong>pousser vers un serveur commun</strong> — <code>git push</code> vers <code>origin</code> sur GitHub, et chacun tire depuis là. Mais ce serveur central n'est pas toujours disponible. Comment contribuer à un projet qui n'accepte pas les <em>pull requests</em>&nbsp;? Comment transférer un dépôt vers un réseau <strong>isolé</strong>, sans accès internet&nbsp;? Comment livrer une version à quelqu'un qui n'a même pas Git&nbsp;?</p>
+<p>Git a été conçu, dès l'origine, pour fonctionner <strong>sans serveur</strong>&nbsp;: chaque clone est un dépôt complet. Cette leçon présente trois façons d'échanger de main à main, par simple fichier — un courriel, une clé USB, un partage réseau — sans jamais passer par un dépôt distant partagé&nbsp;: le <strong>patch</strong> (des commits par courriel), le <strong>bundle</strong> (un dépôt entier dans un fichier) et l'<strong>archive</strong> (un instantané des fichiers).</p>
+
+<h2>format-patch : des commits en fichiers</h2>
+<p><code>git format-patch</code> transforme une série de commits en <strong>fichiers texte</strong>, un par commit. Chaque fichier est un courriel complet&nbsp;: en-tête <code>From</code> (l'auteur), date, ligne de sujet (le titre du commit), corps du message, puis le <em>diff</em> unifié. On indique <strong>quels</strong> commits emballer, en général une plage.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="git format-patch transforme trois commits en trois fichiers patch numérotés. À gauche, une branche avec trois commits successifs : ajoute la connexion, corrige la validation, met à jour l'aide. À droite, trois fichiers texte 0001, 0002 et 0003, chacun portant le titre du commit. Le contenu d'un fichier patch est détaillé en dessous : une ligne From avec l'empreinte et l'auteur, une ligne Date, une ligne Subject reprenant le titre, puis le diff des lignes ajoutées et retirées.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">un fichier .patch par commit, au format courriel</text>
+    <rect class="d-frame" x="16" y="32" width="250" height="150" rx="10" />
+    <text class="d-mut" x="30" y="52" font-size="9">3 commits à partager</text>
+    <line class="d-line" x1="46" y1="70" x2="46" y2="164" />
+    <circle class="d-dot" cx="46" cy="76" r="6" /><text class="d-text" x="62" y="80" font-size="9">ajoute la connexion</text>
+    <circle class="d-dot" cx="46" cy="112" r="6" /><text class="d-text" x="62" y="116" font-size="9">corrige la validation</text>
+    <circle class="d-accent" cx="46" cy="148" r="7" /><text class="d-text" x="62" y="152" font-size="9">met à jour l'aide</text>
+    <text class="d-tag" x="300" y="52" font-size="20">→</text>
+    <rect class="d-box" x="334" y="36" width="290" height="26" rx="6" /><text class="d-text" x="346" y="53" font-size="9">0001-ajoute-la-connexion.patch</text>
+    <rect class="d-box" x="334" y="66" width="290" height="26" rx="6" /><text class="d-text" x="346" y="83" font-size="9">0002-corrige-la-validation.patch</text>
+    <rect class="d-accent" x="334" y="96" width="290" height="26" rx="6" /><text class="d-text" x="346" y="113" font-size="9">0003-met-a-jour-l-aide.patch</text>
+    <rect class="d-frame" x="334" y="132" width="290" height="50" rx="8" />
+    <text class="d-mut" x="346" y="148" font-size="8">From a1b2c3d — Alice</text>
+    <text class="d-mut" x="346" y="160" font-size="8">Subject: [PATCH 1/3] ajoute la connexion</text>
+    <text class="d-mut" x="346" y="172" font-size="8">+ ligne ajoutée / − ligne retirée</text>
+  </svg>
+  <figcaption>Chaque <code>.patch</code> est autonome&nbsp;: il porte l'<strong>auteur</strong>, la <strong>date</strong>, le <strong>message</strong> et le <strong>diff</strong>. C'est un commit sérialisé sous forme de courriel, prêt à être envoyé et rejoué à l'identique.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Emballer les commits de ma branche qui ne sont pas encore sur main
+git format-patch main
+# 0001-ajoute-la-connexion.patch
+# 0002-corrige-la-validation.patch
+# 0003-met-a-jour-l-aide.patch
+
+# Variantes utiles :
+git format-patch -3                    # les 3 derniers commits
+git format-patch origin/main..HEAD     # une plage explicite
+git format-patch -1 a1b2c3d            # un commit précis</code></pre></figure>
+<p>Pour une série de plusieurs patchs, l'option <code>--cover-letter</code> ajoute un fichier <code>0000-cover-letter.patch</code>&nbsp;: une <strong>lettre d'accompagnement</strong> où résumer l'ensemble avant d'énumérer chaque changement.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Quand tu renvoies une <strong>deuxième version</strong> d'une série après retours, ajoute <code>-v2</code>&nbsp;: les sujets deviennent <code>[PATCH v2 1/3]</code>. Le relecteur voit tout de suite qu'il s'agit d'une révision, et non de doublons.</p></div></div>
+
+<h2>am : rejouer les patchs reçus</h2>
+<p>Côté destinataire, <code>git am</code> («&nbsp;<em>apply mailbox</em>&nbsp;») lit un ou plusieurs fichiers <code>.patch</code> et <strong>recrée les commits</strong> — avec l'auteur d'origine, sa date, son message. Le contributeur n'apparaît pas comme «&nbsp;toi qui appliques&nbsp;», mais bien comme l'auteur réel&nbsp;: la paternité est préservée.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Flux de contribution par courriel en deux rôles. À gauche, le contributeur exécute git format-patch pour produire des fichiers patch, puis git send-email pour les envoyer. Au centre, un canal courriel ou liste de diffusion transporte les fichiers. À droite, le mainteneur reçoit les patchs et exécute git am, ce qui recrée les commits à l'identique dans son dépôt, en conservant l'auteur d'origine.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">contribuer par courriel, sans dépôt partagé</text>
+    <rect class="d-frame" x="16" y="36" width="200" height="140" rx="10" />
+    <text class="d-label" x="116" y="56" text-anchor="middle" font-size="10">Contributeur</text>
+    <rect class="d-box" x="32" y="68" width="168" height="30" rx="6" /><text class="d-text" x="116" y="87" text-anchor="middle" font-size="9">git format-patch</text>
+    <text class="d-mut" x="116" y="114" text-anchor="middle" font-size="8">→ 0001.patch, 0002.patch…</text>
+    <rect class="d-accent" x="32" y="126" width="168" height="30" rx="6" /><text class="d-text" x="116" y="145" text-anchor="middle" font-size="9">git send-email</text>
+    <rect class="d-box" x="236" y="86" width="168" height="42" rx="8" />
+    <text class="d-text" x="320" y="103" text-anchor="middle" font-size="9">courriel · liste LKML</text>
+    <text class="d-mut" x="320" y="118" text-anchor="middle" font-size="8">transporte les fichiers</text>
+    <line class="d-line" x1="216" y1="107" x2="236" y2="107" /><polygon class="d-dot" points="236,107 227,102 227,112" />
+    <line class="d-line" x1="404" y1="107" x2="424" y2="107" /><polygon class="d-dot" points="424,107 415,102 415,112" />
+    <rect class="d-frame" x="424" y="36" width="200" height="140" rx="10" />
+    <text class="d-label" x="524" y="56" text-anchor="middle" font-size="10">Mainteneur</text>
+    <rect class="d-accent" x="440" y="68" width="168" height="30" rx="6" /><text class="d-text" x="524" y="87" text-anchor="middle" font-size="9">git am *.patch</text>
+    <text class="d-mut" x="524" y="114" text-anchor="middle" font-size="8">commits recréés à l'identique</text>
+    <circle class="d-dot" cx="464" cy="146" r="6" /><circle class="d-dot" cx="500" cy="146" r="6" /><circle class="d-dot" cx="536" cy="146" r="6" />
+    <line class="d-line" x1="464" y1="146" x2="536" y2="146" />
+  </svg>
+  <figcaption>Le contributeur <strong>emballe</strong> et <strong>envoie</strong>&nbsp;; le mainteneur <strong>applique</strong>. Aucun dépôt distant partagé&nbsp;: les commits voyagent sous forme de courriels et sont reconstitués tels quels, auteur compris.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Sur une branche dédiée, appliquer les patchs reçus dans l'ordre
+git switch -c contribution-alice
+git am *.patch
+# Applying: ajoute la connexion
+# Applying: corrige la validation
+# Applying: met à jour l'aide
+
+# En cas de conflit, on résout puis on continue (comme un rebase) :
+git am --continue      # ou --skip pour sauter, --abort pour tout annuler</code></pre></figure>
+<p>Attention à ne pas confondre <code>git am</code> avec <code>git apply</code>. <code>git apply</code> se contente d'appliquer le <strong>diff</strong> au répertoire de travail&nbsp;: aucun commit n'est créé, l'auteur et le message sont perdus. C'est utile pour essayer un correctif, pas pour intégrer une contribution.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><code>git apply fichier.patch</code> modifie tes fichiers <strong>sans créer de commit</strong> et sans conserver l'auteur d'origine. Pour intégrer une contribution en gardant la paternité et le message, c'est <code>git am</code> qu'il faut. Retiens&nbsp;: <em>apply</em> pose le diff, <em>am</em> reconstruit le commit.</p></div></div>
+
+<h2>bundle : un dépôt dans un fichier</h2>
+<p>Un patch transporte des <em>commits récents</em>. Pour déplacer un dépôt <strong>entier</strong> — historique, branches, tags — vers un endroit sans réseau commun, on utilise <code>git bundle</code>. Il empaquette des objets Git et des références dans un <strong>seul fichier</strong> <code>.bundle</code>, qui se comporte ensuite comme un dépôt distant&nbsp;: on peut <code>clone</code> ou <code>fetch</code> depuis lui.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison entre un bundle et une archive. À gauche, le bundle contient les objets Git et les références : c'est un dépôt complet avec tout l'historique, empaqueté dans un fichier point bundle, depuis lequel on peut cloner ou faire un fetch. À droite, l'archive ne contient que l'arbre de fichiers d'un instantané précis, sans le dossier point git ni l'historique : c'est un zip ou un tar de code source, qu'on décompresse simplement.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">deux paquets très différents</text>
+    <rect class="d-frame" x="16" y="32" width="300" height="164" rx="10" />
+    <text class="d-tag" x="34" y="54" font-size="12">repo.bundle</text>
+    <text class="d-mut" x="34" y="72" font-size="9">un dépôt complet dans un fichier</text>
+    <rect class="d-box" x="34" y="82" width="264" height="24" rx="6" /><text class="d-text" x="46" y="98" font-size="9">objets : commits, arbres, blobs</text>
+    <rect class="d-box" x="34" y="110" width="264" height="24" rx="6" /><text class="d-text" x="46" y="126" font-size="9">références : branches, tags</text>
+    <rect class="d-accent" x="34" y="146" width="264" height="38" rx="7" /><text class="d-text" x="166" y="163" text-anchor="middle" font-size="9">git clone / git fetch possibles</text>
+    <text class="d-mut" x="166" y="177" text-anchor="middle" font-size="8">tout l'historique voyage</text>
+    <rect class="d-frame" x="324" y="32" width="300" height="164" rx="10" />
+    <text class="d-tag" x="342" y="54" font-size="12">site.zip</text>
+    <text class="d-mut" x="342" y="72" font-size="9">un instantané, sans historique</text>
+    <rect class="d-box" x="342" y="82" width="264" height="24" rx="6" /><text class="d-text" x="354" y="98" font-size="9">fichiers du commit choisi</text>
+    <rect class="d-box" x="342" y="110" width="264" height="24" rx="6" /><text class="d-mut" x="354" y="126" font-size="9">pas de dossier .git</text>
+    <rect class="d-accent" x="342" y="146" width="264" height="38" rx="7" /><text class="d-text" x="474" y="163" text-anchor="middle" font-size="9">on décompresse, c'est tout</text>
+    <text class="d-mut" x="474" y="177" text-anchor="middle" font-size="8">aucun outil Git requis</text>
+  </svg>
+  <figcaption>Le <strong>bundle</strong> est un dépôt Git déguisé en fichier&nbsp;: il garde l'historique et se clone. L'<strong>archive</strong> n'est qu'une photo des fichiers à un instant&nbsp;: pratique à livrer, mais sans passé versionné.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Empaqueter TOUT le dépôt (toutes les branches et tags)
+git bundle create repo.bundle --all
+
+# Le destinataire clone depuis le fichier, comme depuis une URL :
+git clone repo.bundle mon-projet
+
+# Transporter seulement les NOUVEAUX commits (mise à jour incrémentale) :
+git bundle create maj.bundle origin/main..main
+git bundle verify maj.bundle     # vérifie que le dépôt cible a les prérequis
+git -C mon-projet pull ../maj.bundle main</code></pre></figure>
+<p>Le cas d'usage typique&nbsp;: un réseau <strong>isolé</strong> (<em>air-gapped</em>), sans connexion vers l'extérieur. On crée le bundle d'un côté, on le copie sur une clé USB, on l'importe de l'autre — tout l'historique traverse, alors qu'aucun <code>git push</code> n'aurait été possible.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Un bundle est aussi une excellente <strong>sauvegarde</strong> hors-ligne&nbsp;: <code>git bundle create sauvegarde.bundle --all</code> tient tout le dépôt — historique compris — dans un unique fichier facile à archiver ou à chiffrer, contrairement à un dossier <code>.git</code> éclaté en milliers d'objets.</p></div></div>
+
+<h2>archive : un instantané sans historique</h2>
+<p>Parfois on ne veut <em>pas</em> partager l'historique&nbsp;: juste livrer les fichiers d'une version. <code>git archive</code> produit un <code>.zip</code> ou un <code>.tar.gz</code> du contenu d'un commit, d'une branche ou d'un tag — <strong>sans le dossier <code>.git</code></strong>. C'est la commande pour empaqueter une <em>release</em> ou envoyer le code à quelqu'un qui n'utilise pas Git.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Un zip des fichiers de la dernière version
+git archive --format=zip -o site.zip HEAD
+
+# Un tar.gz d'un tag, avec un dossier racine site/ dans l'archive
+git archive --format=tar.gz --prefix=site/ -o site-1.0.tar.gz v1.0.0
+
+# Exporter seulement un sous-dossier
+git archive --format=zip -o docs.zip HEAD:docs/</code></pre></figure>
+<p>Comme l'archive part d'un commit, elle est <strong>reproductible</strong>&nbsp;: le même tag donne toujours exactement les mêmes fichiers, sans les éléments non suivis qui traînent dans ton répertoire de travail. L'option <code>--prefix=</code> évite le classique dossier qui «&nbsp;déballe en vrac&nbsp;» dans le répertoire courant.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le développement du <strong>noyau Linux</strong> repose depuis 2005 sur l'échange de patchs par courriel&nbsp;: des milliers de contributeurs préparent leurs changements avec <code>git format-patch</code>, les envoient sur la liste de diffusion <em>LKML</em> avec <code>git send-email</code>, et les mainteneurs les intègrent avec <code>git am</code>. Il n'y a pas de «&nbsp;bouton <em>Merge</em>&nbsp;»&nbsp;: la revue se fait dans les réponses au courriel, et c'est précisément ce flux que Git a été créé pour servir. Git lui-même, PostgreSQL et bien d'autres projets fonctionnent ainsi. À l'inverse, pour transférer un dépôt vers un site classifié coupé d'internet, les équipes copient un <code>.bundle</code> sur support amovible&nbsp;: l'historique complet franchit la barrière réseau dans un seul fichier vérifiable.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Confondre <code>am</code> et <code>apply</code></strong>&nbsp;: <code>apply</code> pose le diff sans commit ni auteur&nbsp;; <code>am</code> reconstruit le commit complet. Pour intégrer une contribution, c'est <code>am</code>.</li>
+<li><strong>Croire qu'une archive est un dépôt</strong>&nbsp;: <code>git archive</code> ne contient <em>aucun</em> historique ni dossier <code>.git</code>&nbsp;; on ne peut ni <code>clone</code> ni <code>fetch</code> depuis un zip. Pour l'historique, c'est <code>bundle</code>.</li>
+<li><strong>Oublier la plage de <code>format-patch</code></strong>&nbsp;: sans borne, il peut emballer bien plus de commits que prévu. Précise <code>origin/main..HEAD</code> ou <code>-N</code>.</li>
+<li><strong>Appliquer des patchs dans le désordre</strong>&nbsp;: la numérotation <code>0001</code>, <code>0002</code>… est là pour l'ordre. <code>git am *.patch</code> les prend triés&nbsp;; ne les renomme pas.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Regarde <code>git send-email</code> (envoi direct via un serveur SMTP, la configuration <code>sendemail.*</code>) et <code>git request-pull</code>, qui génère un message résumant les commits à tirer depuis une URL publique — le «&nbsp;pull request&nbsp;» d'origine, par courriel. Explore aussi <code>git apply --3way</code> (fusion à trois points quand le patch ne s'applique pas net), <code>git format-patch --stat</code> pour joindre un résumé, et les forges décentralisées (<em>git-appraise</em>, <em>SourceHut</em>) bâties autour de ce flux. Enfin, <code>git archive</code> peut lire directement un dépôt distant avec <code>--remote</code>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — échanger sans serveur</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Commande</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Emballer des commits en fichiers</td><td><code>git format-patch origin/main..HEAD</code></td><td>un <code>.patch</code> par commit</td></tr>
+      <tr><td>Joindre une lettre d'ensemble</td><td><code>git format-patch --cover-letter …</code></td><td>fichier <code>0000</code></td></tr>
+      <tr><td>Rejouer des patchs reçus</td><td><code>git am *.patch</code></td><td>recrée les commits (auteur gardé)</td></tr>
+      <tr><td>Juste essayer un diff</td><td><code>git apply fichier.patch</code></td><td>pas de commit, pas d'auteur</td></tr>
+      <tr><td>Envoyer par courriel</td><td><code>git send-email *.patch</code></td><td>via SMTP configuré</td></tr>
+      <tr><td>Dépôt entier dans un fichier</td><td><code>git bundle create repo.bundle --all</code></td><td>on peut <code>clone</code>/<code>fetch</code></td></tr>
+      <tr><td>Mise à jour incrémentale</td><td><code>git bundle create maj.bundle A..B</code></td><td><code>bundle verify</code> avant</td></tr>
+      <tr><td>Instantané des fichiers</td><td><code>git archive --format=zip -o x.zip HEAD</code></td><td>sans <code>.git</code>, sans historique</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>format-patch</dt><dd>Commande qui sérialise une plage de commits en fichiers <code>.patch</code>, un par commit, chacun au format courriel (auteur, date, sujet, diff).</dd>
+  <dt>git am</dt><dd>«&nbsp;Apply mailbox&nbsp;»&nbsp;: applique des fichiers <code>.patch</code> en <strong>recréant les commits</strong>, en préservant l'auteur et le message d'origine.</dd>
+  <dt>git apply</dt><dd>Applique le seul <em>diff</em> d'un patch au répertoire de travail, <strong>sans créer de commit</strong> ni conserver l'auteur.</dd>
+  <dt>Bundle</dt><dd>Fichier unique <code>.bundle</code> contenant des objets Git et des références&nbsp;: un dépôt complet (historique inclus) transportable, depuis lequel on peut <code>clone</code> ou <code>fetch</code>.</dd>
+  <dt>Archive</dt><dd>Fichier <code>.zip</code>/<code>.tar.gz</code> produit par <code>git archive</code> contenant les <strong>fichiers</strong> d'un commit donné, sans le dossier <code>.git</code> ni l'historique.</dd>
+  <dt>Cover letter</dt><dd>Fichier <code>0000-cover-letter.patch</code> généré par <code>--cover-letter</code>&nbsp;: une lettre d'accompagnement résumant une série de patchs.</dd>
+  <dt>send-email</dt><dd>Commande (<code>git send-email</code>) qui envoie des fichiers <code>.patch</code> directement par courriel via un serveur SMTP configuré.</dd>
+  <dt>Air-gapped</dt><dd>Se dit d'un réseau volontairement <strong>isolé</strong> d'internet&nbsp;; on y transfère un dépôt via un <code>bundle</code> sur support amovible, faute de pouvoir pousser.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li><code>git format-patch</code> emballe une <strong>plage de commits</strong> en fichiers courriel&nbsp;; <code>--cover-letter</code> ajoute une lettre d'ensemble.</li>
+<li><code>git am</code> <strong>recrée les commits</strong> (auteur préservé)&nbsp;; <code>git apply</code> ne pose que le diff, sans commit.</li>
+<li><code>git bundle</code> met un <strong>dépôt entier</strong> (historique compris) dans un fichier, clonable&nbsp;: idéal pour les réseaux isolés.</li>
+<li><code>git archive</code> exporte un <strong>instantané des fichiers</strong> d'un commit ou d'un tag, sans <code>.git</code>&nbsp;: pour livrer une version.</li>
+<li>Le choix dépend du besoin&nbsp;: <em>contribution</em> → patch, <em>dépôt à déplacer</em> → bundle, <em>fichiers à livrer</em> → archive.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Quelle est la différence entre <code>git am</code> et <code>git apply</code>&nbsp;?</li>
+<li>Tu dois transférer un dépôt complet vers une machine sans réseau&nbsp;: quel outil, et pourquoi pas une archive&nbsp;?</li>
+<li>Comment n'emballer que les commits d'une branche absents de <code>main</code>&nbsp;?</li>
+<li>Pourquoi <code>git archive</code> est-il adapté pour livrer une <em>release</em> à quelqu'un sans Git&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre git am et git apply ?","a":["git am recrée le commit complet (auteur, date, message conservés) ; git apply ne pose que le diff dans le répertoire de travail, sans créer de commit","Ils sont identiques","git apply garde l'auteur, git am le perd","git am ne marche que sur un seul fichier"],"correct":0,"explain":"am = « apply mailbox » : il reconstruit les commits à l'identique. apply se contente d'appliquer les modifications du diff, sans commit ni paternité — utile pour essayer un correctif, pas pour intégrer une contribution."},
+  {"q":"Tu dois transférer un dépôt complet (historique, branches, tags) vers une machine coupée d'internet. Quel outil ?","a":["git bundle : il empaquette objets et références dans un fichier unique depuis lequel on peut cloner ou fetcher — l'historique voyage","git archive : il contient tout l'historique dans un zip","git format-patch --all","On ne peut pas sans serveur"],"correct":0,"explain":"Le bundle est un dépôt dans un fichier : clonable/fetchable, il transporte l'historique. Une archive ne contient QUE les fichiers d'un instantané, sans .git : on ne peut ni cloner ni fetcher depuis elle."},
+  {"q":"Pourquoi git archive convient-il pour livrer une release à quelqu'un qui n'a pas Git ?","a":["Parce qu'il produit un zip/tar.gz des seuls fichiers d'un commit ou tag, sans dossier .git : le destinataire décompresse, aucun outil Git requis","Parce qu'il inclut tout l'historique","Parce qu'il crée un dépôt clonable","Parce qu'il envoie automatiquement un courriel"],"correct":0,"explain":"git archive exporte un instantané reproductible des fichiers (le même tag donne toujours le même contenu), sans historique ni .git. C'est exactement ce qu'il faut pour une livraison de code source."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["git format-patch","format-patch"],"placeholder":"la commande qui transforme une série de commits en fichiers .patch (un par commit)","hints":["Elle « formate » chaque commit en courriel.","git ??????-?????","On lui donne une plage : git format-patch origin/main..HEAD"],"link":{"href":"lecon-23.html","label":"Revoir « format-patch »"}},
+  {"type":"text","accept":["git am","am"],"placeholder":"la commande qui applique des .patch en RECRÉANT les commits (auteur conservé)","hints":["« apply mailbox ».","À distinguer de git apply qui ne pose que le diff.","git ??"],"link":{"href":"lecon-23.html","label":"Revoir « am »"}},
+  {"type":"text","accept":["git bundle","bundle"],"placeholder":"la commande qui met un dépôt entier (historique compris) dans un seul fichier clonable","hints":["Utile pour un réseau isolé (air-gapped).","On peut clone/fetch depuis le fichier produit.","git ??????"],"link":{"href":"lecon-23.html","label":"Revoir « bundle »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Tu as fait trois commits sur la branche <code>feature/aide</code> à partir de <code>main</code>. Emballe-les en fichiers <code>.patch</code>, avec une lettre d'accompagnement, puis liste ce qui a été produit.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git format-patch main --cover-letter
+# 0000-cover-letter.patch
+# 0001-....patch
+# 0002-....patch
+# 0003-....patch
+
+# On édite 0000-cover-letter.patch pour résumer la série, puis on envoie.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu reçois trois fichiers <code>.patch</code> d'un contributeur. Applique-les sur une branche dédiée en <strong>préservant l'auteur d'origine</strong>, sans les mélanger à tes propres commits.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">git switch -c revue-contribution main
+git am *.patch
+# Applying: ...
+# Applying: ...
+# Applying: ...
+
+# Vérifier que l'auteur d'origine est bien conservé :
+git log --format="%an — %s" -3</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une machine est isolée d'internet. Transfère-lui tout ton dépôt via un <strong>bundle</strong>, puis livre séparément un <code>.zip</code> des seuls fichiers de la version <code>v2.0.0</code> (sans historique) pour l'équipe qui n'utilise pas Git.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash"># 1. Empaqueter le dépôt entier et le copier (clé USB, partage…)
+git bundle create projet.bundle --all
+git bundle verify projet.bundle
+
+# Sur la machine isolée :
+git clone projet.bundle projet
+
+# 2. Livrer un instantané des fichiers de v2.0.0, sans .git
+git archive --format=zip --prefix=projet-2.0/ -o projet-2.0.zip v2.0.0</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

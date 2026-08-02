@@ -1,0 +1,73 @@
+<p>Un contrat sécurisé doit contrôler <strong>qui</strong> peut faire <strong>quoi</strong>, signaler ce qui se passe, et refuser les actions invalides. Solidity offre trois mécanismes pour cela&nbsp;: les <strong>modificateurs</strong> (des gardes réutilisables), les <strong>événements</strong> (un journal des actions), et la <strong>gestion d'erreurs</strong> avec <code>require</code> et <code>revert</code>. Ces outils sont au cœur de la sécurité d'un contrat. Cette leçon les met en place.</p>
+
+<h2>Identifier l'appelant&nbsp;: <code>msg.sender</code></h2>
+<p>À tout moment, une fonction connaît l'adresse de celui qui l'appelle&nbsp;: <code>msg.sender</code>. C'est la base du <strong>contrôle d'accès</strong>&nbsp;: comparer <code>msg.sender</code> à une adresse autorisée (le propriétaire) pour décider si l'action est permise.</p>
+<figure class="code-block" data-file="sender.sol"><pre><code class="language-solidity">contract Possede {
+    address public proprietaire;
+
+    constructor() {
+        proprietaire = msg.sender;   // celui qui déploie est propriétaire
+    }
+}</code></pre></figure>
+<p>Le <strong>constructeur</strong> (<code>constructor</code>) s'exécute <em>une seule fois</em>, au déploiement. Ici, il enregistre le déployeur comme propriétaire&nbsp;: un patron quasi universel.</p>
+
+<h2>La gestion d'erreurs&nbsp;: <code>require</code></h2>
+<p><code>require</code> vérifie une condition&nbsp;: si elle est <strong>vraie</strong>, l'exécution continue&nbsp;; si elle est <strong>fausse</strong>, toute la transaction est <strong>annulée</strong> (revert), et les modifications déjà faites sont défaites. C'est la garde de validation par excellence.</p>
+<figure class="code-block" data-file="require.sol"><pre><code class="language-solidity">function retirer(uint256 montant) public {
+    require(soldes[msg.sender] &gt;= montant, "Solde insuffisant");
+    soldes[msg.sender] -= montant;
+}</code></pre></figure>
+<p>Si le solde est insuffisant, <code>require</code> annule tout et renvoie le message <code>"Solde insuffisant"</code>. Crucial&nbsp;: une transaction annulée laisse l'état <strong>intact</strong> (comme si rien ne s'était passé), ce qui protège contre les états incohérents. On utilise aussi <code>revert("message")</code> pour annuler explicitement, et <code>require</code> pour valider les entrées et les conditions.</p>
+
+<h2>Les modificateurs&nbsp;: des gardes réutilisables</h2>
+<p>Un <strong>modificateur</strong> (<code>modifier</code>) encapsule une vérification qu'on veut réutiliser sur plusieurs fonctions. Le <code>_;</code> à l'intérieur marque l'endroit où s'insère le code de la fonction décorée.</p>
+<figure class="code-block" data-file="modifier.sol"><pre><code class="language-solidity">modifier seulementProprietaire() {
+    require(msg.sender == proprietaire, "Non autorise");
+    _;       // ici s'exécute le corps de la fonction
+}
+
+function changerReglage(uint256 x) public seulementProprietaire {
+    // ce code ne tourne QUE si le require du modifier passe
+    reglage = x;
+}</code></pre></figure>
+<p>Le modificateur <code>seulementProprietaire</code> s'applique en l'ajoutant à la signature de la fonction. Avant d'exécuter le corps, Solidity lance le modificateur&nbsp;: s'il échoue, la fonction n'est jamais exécutée. C'est le moyen idiomatique de protéger des fonctions sensibles, sans répéter la même vérification partout.</p>
+
+<h2>Les événements&nbsp;: journaliser les actions</h2>
+<p>Un <strong>événement</strong> (<code>event</code>) émet une trace dans le journal de la blockchain, qu'on peut écouter depuis l'extérieur (une application web). Les contrats ne peuvent pas «&nbsp;notifier&nbsp;» directement&nbsp;; les événements sont le moyen de signaler ce qui s'est passé.</p>
+<figure class="code-block" data-file="event.sol"><pre><code class="language-solidity">event Transfert(address indexed de, address indexed vers, uint256 montant);
+
+function transferer(address vers, uint256 montant) public {
+    require(soldes[msg.sender] &gt;= montant, "Solde insuffisant");
+    soldes[msg.sender] -= montant;
+    soldes[vers] += montant;
+    emit Transfert(msg.sender, vers, montant);   // on émet l'événement
+}</code></pre></figure>
+<p>On déclare l'événement avec <code>event</code>, et on l'émet avec <code>emit</code>. Le mot <code>indexed</code> sur certains paramètres permet de les <strong>filtrer</strong> efficacement (par exemple «&nbsp;tous les transferts vers cette adresse&nbsp;»). Les applications web (dApps) s'abonnent à ces événements pour réagir et afficher l'activité du contrat.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'un événement <em>change</em> l'état ou <em>renvoie</em> une valeur à l'appelant&nbsp;: ce n'est pas le cas. Un événement n'est qu'un <strong>journal</strong>, lisible <em>hors</em> de la blockchain (par les applications), pas par les contrats. À l'inverse, ne te repose pas sur la valeur de retour d'une fonction qui <em>modifie</em> l'état&nbsp;: depuis l'extérieur, une transaction ne renvoie pas sa valeur de retour directement. Pour communiquer un résultat à une dApp, utilise un <strong>événement</strong>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Solidity moderne (0.8.4+) propose les <strong>erreurs personnalisées</strong> (<code>error</code>), plus économes en gas que les longs messages de <code>require</code>&nbsp;: <code>error SoldeInsuffisant(uint256 demande, uint256 dispo);</code> puis <code>revert SoldeInsuffisant(montant, solde);</code>. Elles transmettent des données structurées sur l'échec tout en coûtant moins cher à déployer et à exécuter. C'est devenu la bonne pratique pour les contrats soucieux du gas.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>msg.sender</code> identifie l'appelant&nbsp;; le <code>constructor</code> s'exécute une fois au déploiement.</li>
+  <li><code>require(condition, "msg")</code> valide&nbsp;; sinon <strong>annule</strong> toute la transaction (état intact). <code>revert</code> annule explicitement.</li>
+  <li>Un <strong>modificateur</strong> (<code>modifier</code> + <code>_;</code>) factorise une garde réutilisable (ex. contrôle d'accès).</li>
+  <li>Un <strong>événement</strong> (<code>event</code>/<code>emit</code>, <code>indexed</code>) journalise pour les applications externes.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que se passe-t-il quand un <code>require</code> échoue&nbsp;?</li><li>À quoi sert le <code>_;</code> dans un modificateur&nbsp;?</li><li>Qui peut lire un événement&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un <code>require</code> qui vérifie que <code>montant</code> est strictement positif.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">require(montant &gt; 0, "Montant doit etre positif");</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un modificateur <code>seulementProprietaire</code> qui exige que <code>msg.sender</code> soit le <code>proprietaire</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">modifier seulementProprietaire() {
+    require(msg.sender == proprietaire, "Non autorise");
+    _;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Déclare un événement <code>Depot</code> avec l'adresse (indexée) et le montant, et émets-le dans une fonction <code>deposer</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">event Depot(address indexed de, uint256 montant);
+
+function deposer(uint256 montant) public {
+    soldes[msg.sender] += montant;
+    emit Depot(msg.sender, montant);
+}</code></pre></figure></details></div>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Consommer des API et gérer l'état — Leçon 36 · Syntaxe</title>
+    <meta name="description" content="Consomme une API avec fetch (états, AbortController, races) et construis un store maison pub/sub persisté en localStorage, sans framework." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="javascript" data-lesson="lecon-36.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cours JavaScript</a></li>
+            <li aria-current="page">Leçon 36</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 12 · JavaScript en pratique pro — Leçon 36</p>
+              <h1 class="lesson-header__title">Consommer des API et gérer l'état</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 35 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>savoir appeler une API avec <code>fetch</code> en vérifiant <code>response.ok</code> et en distinguant erreurs réseau et HTTP&nbsp;;</li>
+                  <li>savoir annuler et temporiser une requête avec <code>AbortController</code> et gérer les races avec un jeton&nbsp;;</li>
+                  <li>savoir modéliser les états <code>loading</code>/<code>success</code>/<code>error</code> et centraliser l'état dans un <strong>store</strong> pub/sub&nbsp;;</li>
+                  <li>savoir persister l'état dans <code>localStorage</code> et debouncer une recherche tapée.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu as appris à appeler <code>fetch</code>, à manipuler les promesses et à écouter le DOM. Maintenant on assemble tout ça pour construire le cœur d'une vraie app front : une couche qui parle au serveur et un <strong>état</strong> centralisé qui pilote l'affichage. Sans framework, à la main, pour comprendre ce que React ou Zustand font sous le capot.</p>
+<p>Le fil rouge : une app de recherche d'utilisateurs. On tape un nom, l'app interroge une API, gère le chargement et les erreurs, mémorise les résultats dans un store et persiste les préférences. À la fin, tu auras un mini state management réutilisable.</p>
+
+<h2>fetch en pratique : GET, POST et la vraie gestion d'erreurs</h2>
+<p>Le piège numéro un de <code>fetch</code> : une réponse 404 ou 500 <strong>ne déclenche pas</strong> de rejet. La promesse n'échoue que sur une erreur réseau (DNS, connexion coupée). Pour le reste, c'est à toi de vérifier <code>response.ok</code>.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">async function getJSON(url, options = {}) {
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (cause) {
+    // Vraie panne réseau : pas de réponse du tout
+    throw new Error("Réseau injoignable", { cause });
+  }
+
+  if (!response.ok) {
+    // 404, 500... la promesse a RÉUSSI, mais le serveur dit non
+    throw new Error(`HTTP ${response.status} sur ${url}`);
+  }
+  return response.json();
+}
+
+// GET
+const users = await getJSON("/api/users?q=ada");
+
+// POST avec corps JSON
+const created = await getJSON("/api/users", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ name: "Ada", role: "dev" }),
+});
+// created vaut par ex. { id: 42, name: "Ada", role: "dev" }</code></pre></figure>
+<p>On distingue trois cas : panne réseau (le <code>catch</code>), erreur HTTP (le <code>!response.ok</code>), et succès. Le <code>{ cause }</code> de l'objet <code>Error</code> garde la trace de l'erreur d'origine pour le débogage.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Pour un POST JSON, deux choses sont obligatoires : sérialiser le corps avec <code>JSON.stringify</code> et poser l'en-tête <code>Content-Type: application/json</code>. Sans l'en-tête, beaucoup de serveurs ignorent le corps.</p></div></div>
+
+<h2>Annulation, timeout et requêtes concurrentes</h2>
+<p>Une requête lancée peut devenir inutile : l'utilisateur a changé de page, ou tapé une nouvelle recherche. On l'annule avec un <code>AbortController</code>. Le même mécanisme sert à poser un timeout.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// Timeout maison : AbortSignal.timeout (ES2023) crée un signal qui s'avorte seul
+async function getWithTimeout(url, ms = 5000) {
+  const signal = AbortSignal.timeout(ms);
+  return getJSON(url, { signal });
+}
+
+try {
+  const data = await getWithTimeout("/api/slow", 2000);
+} catch (err) {
+  // Au-delà de 2 s : err.name vaut "TimeoutError"
+}
+
+// Annulation manuelle
+const controller = new AbortController();
+getJSON("/api/users", { signal: controller.signal });
+controller.abort(); // la promesse rejette avec un AbortError</code></pre></figure>
+<p>Pour des requêtes <strong>indépendantes</strong> à lancer en même temps, <code>Promise.all</code> les parallélise et attend tout. Si l'une échoue, <code>Promise.all</code> rejette ; utilise <code>Promise.allSettled</code> quand tu veux le détail de chaque résultat même en cas d'échec partiel.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">const [profil, repos, abonnements] = await Promise.all([
+  getJSON("/api/user/ada"),
+  getJSON("/api/user/ada/repos"),
+  getJSON("/api/user/ada/following"),
+]);
+// Les trois partent ensemble : ~1 aller-retour au lieu de 3 en série</code></pre></figure>
+
+<h2>Les trois états d'une requête</h2>
+<p>Toute requête asynchrone traverse trois phases : <strong>chargement</strong>, <strong>succès</strong>, <strong>erreur</strong>. Une UI sérieuse les modélise explicitement plutôt que de les déduire à coups de variables éparpillées.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Machine à états d'une requête : depuis idle, un appel passe à loading, qui aboutit soit à success soit à error.">
+    <rect class="d-box" x="24" y="74" width="120" height="44" rx="9" />
+    <text class="d-text" x="84" y="101" text-anchor="middle" font-size="12">idle</text>
+    <line class="d-line" x1="144" y1="96" x2="212" y2="96" />
+    <polygon class="d-dot" points="212,91 212,101 221,96" />
+    <text class="d-mut" x="178" y="88" text-anchor="middle" font-size="9">appel</text>
+    <rect class="d-accent" x="224" y="74" width="140" height="44" rx="9" />
+    <text class="d-text" x="294" y="101" text-anchor="middle" font-size="12">loading</text>
+    <line class="d-line" x1="364" y1="88" x2="470" y2="52" />
+    <polygon class="d-dot" points="470,52 462,59 459,51" />
+    <text class="d-mut" x="410" y="58" text-anchor="middle" font-size="9">response.ok</text>
+    <line class="d-line" x1="364" y1="104" x2="470" y2="140" />
+    <polygon class="d-dot" points="470,140 459,141 462,133" />
+    <text class="d-mut" x="405" y="134" text-anchor="middle" font-size="9">réseau / HTTP</text>
+    <rect class="d-box" x="474" y="30" width="150" height="44" rx="9" />
+    <text class="d-text" x="549" y="57" text-anchor="middle" font-size="11">success · data</text>
+    <rect class="d-frame" x="474" y="118" width="150" height="44" rx="9" />
+    <text class="d-text" x="549" y="145" text-anchor="middle" font-size="11">error · message</text>
+  </svg>
+  <figcaption>Chaque requête est une petite machine à états : <code>idle</code> → <code>loading</code> → <code>success</code> ou <code>error</code>. L'UI ne fait que traduire l'état courant ; aucun écran « entre deux » n'est oublié.</figcaption>
+</figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">// Une seule source de vérité pour l'état de la requête
+let req = { status: "idle", data: null, error: null };
+
+async function chargerUtilisateurs(q) {
+  req = { status: "loading", data: null, error: null };
+  rendre(req); // affiche le spinner
+
+  try {
+    const data = await getJSON(`/api/users?q=${encodeURIComponent(q)}`);
+    req = { status: "success", data, error: null };
+  } catch (err) {
+    req = { status: "error", data: null, error: err.message };
+  }
+  rendre(req);
+}
+
+function rendre(etat) {
+  if (etat.status === "loading") { /* afficher « Chargement… » */ }
+  else if (etat.status === "error") { /* afficher etat.error */ }
+  else if (etat.status === "success") { /* afficher la liste */ }
+}</code></pre></figure>
+<p>Le <code>status</code> est une machine à états minuscule. L'UI ne fait que <em>traduire</em> cet état : tant que tu raisonnes sur ces quatre valeurs (<code>idle</code>, <code>loading</code>, <code>success</code>, <code>error</code>), il n'y a pas d'écran « entre deux » oublié.</p>
+
+<h2>Centraliser l'état : un store maison avec pub/sub</h2>
+<p>Quand plusieurs morceaux de l'UI dépendent des mêmes données, muter des variables un peu partout devient ingérable. La solution : un <strong>store</strong> unique, modifié par une seule fonction, qui <strong>notifie</strong> les abonnés à chaque changement. C'est le pattern observateur (pub/sub).</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Un store pub/sub : toutes les actions passent par setState, qui met à jour l'état unique puis notifie chaque abonné.">
+    <rect class="d-box" x="20" y="30" width="120" height="30" rx="7" />
+    <text class="d-text" x="80" y="50" text-anchor="middle" font-size="10">fetch / clic</text>
+    <rect class="d-box" x="20" y="86" width="120" height="30" rx="7" />
+    <text class="d-text" x="80" y="106" text-anchor="middle" font-size="10">saisie</text>
+    <rect class="d-box" x="20" y="142" width="120" height="30" rx="7" />
+    <text class="d-text" x="80" y="162" text-anchor="middle" font-size="10">réhydratation</text>
+    <line class="d-line" x1="140" y1="45" x2="238" y2="96" />
+    <line class="d-line" x1="140" y1="101" x2="238" y2="101" />
+    <line class="d-line" x1="140" y1="157" x2="238" y2="108" />
+    <rect class="d-accent" x="240" y="80" width="130" height="44" rx="9" />
+    <text class="d-text" x="305" y="100" text-anchor="middle" font-size="11">setState(partiel)</text>
+    <text class="d-mut" x="305" y="115" text-anchor="middle" font-size="9">porte unique</text>
+    <line class="d-line" x1="370" y1="102" x2="430" y2="102" />
+    <polygon class="d-dot" points="430,97 430,107 439,102" />
+    <rect class="d-frame" x="440" y="20" width="180" height="160" rx="10" stroke-dasharray="5 4" />
+    <text class="d-mut" x="530" y="16" text-anchor="middle" font-size="9">abonnés notifiés</text>
+    <rect class="d-box" x="456" y="34" width="148" height="30" rx="7" />
+    <text class="d-text" x="530" y="54" text-anchor="middle" font-size="10">vue : liste</text>
+    <rect class="d-box" x="456" y="86" width="148" height="30" rx="7" />
+    <text class="d-text" x="530" y="106" text-anchor="middle" font-size="10">vue : compteur</text>
+    <rect class="d-box" x="456" y="138" width="148" height="30" rx="7" />
+    <text class="d-text" x="530" y="158" text-anchor="middle" font-size="10">persistance</text>
+  </svg>
+  <figcaption>Toutes les sources de changement passent par <code>setState</code> — l'unique porte d'entrée. À chaque appel, le store crée un nouvel état et <strong>notifie</strong> ses abonnés, qui se redessinent. C'est le pattern observateur (pub/sub).</figcaption>
+</figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">function creerStore(etatInitial) {
+  let etat = etatInitial;
+  const abonnes = new Set();
+
+  return {
+    getState() { return etat; },
+
+    setState(partiel) {
+      // On remplace par un NOUVEL objet, on ne mute jamais l'ancien
+      etat = { ...etat, ...partiel };
+      for (const fn of abonnes) fn(etat);
+    },
+
+    subscribe(fn) {
+      abonnes.add(fn);
+      return () =&gt; abonnes.delete(fn); // fonction de désabonnement
+    },
+  };
+}
+
+const store = creerStore({ query: "", utilisateurs: [], status: "idle" });
+
+// Un abonné = une vue qui se redessine quand l'état change
+const stop = store.subscribe((etat) =&gt; {
+  rendreListe(etat.utilisateurs);
+});
+
+store.setState({ status: "loading" });
+// L'abonné est rappelé automatiquement, sans qu'on l'appelle à la main</code></pre></figure>
+<p>On utilise un <code>Set</code> pour les abonnés (pas de doublon, retrait en O(1)) et on renvoie une fonction de <strong>désabonnement</strong> depuis <code>subscribe</code> : indispensable pour éviter les fuites quand une vue disparaît. <code>setState</code> crée toujours un nouvel objet — l'état est traité comme immuable, ce qui rend les comparaisons « avant/après » fiables.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Branche les appels API sur le store : la fonction de fetch fait <code>store.setState({ status: "loading" })</code>, puis <code>success</code> ou <code>error</code>. L'UI n'écoute que le store, jamais directement le réseau. Données et affichage restent séparés.</p></div></div>
+
+<h2>Persister et synchroniser l'état</h2>
+<p>Certaines parties de l'état doivent survivre au rechargement : dernière recherche, préférences, thème. On les persiste dans <code>localStorage</code> et on réhydrate au démarrage.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">const CLE = "app:prefs";
+
+function chargerPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(CLE)) ?? {};
+  } catch {
+    return {}; // JSON corrompu : on repart propre
+  }
+}
+
+const store = creerStore({ query: "", ...chargerPrefs() });
+
+// Persister à chaque changement, mais SEULEMENT le sous-ensemble utile
+store.subscribe((etat) =&gt; {
+  localStorage.setItem(CLE, JSON.stringify({ query: etat.query }));
+});
+
+// Synchroniser entre onglets : un autre onglet a modifié localStorage
+window.addEventListener("storage", (e) =&gt; {
+  if (e.key !== CLE || e.newValue == null) return; // pas notre clé, ou clé vidée
+  try {
+    store.setState(JSON.parse(e.newValue));
+  } catch {
+    // valeur illisible : on ignore plutôt que de casser l'app
+  }
+});</code></pre></figure>
+<p>L'événement <code>storage</code> ne se déclenche que dans les <em>autres</em> onglets de la même origine : c'est le moyen gratuit de garder deux onglets cohérents. Comme <code>e.newValue</code> peut valoir <code>null</code> (clé supprimée) ou contenir du JSON invalide, on filtre et on parse dans un <code>try</code>. On ne persiste qu'un sous-ensemble (ici <code>query</code>) — inutile de stocker des résultats de fetch volatils.</p>
+
+<h2>Debouncer la recherche tapée</h2>
+<p>Lancer une requête à chaque frappe inonde le serveur et provoque des races. Le <strong>debounce</strong> attend une courte pause dans la frappe avant d'appeler l'API.</p>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">function debounce(fn, delai = 300) {
+  let id;
+  return (...args) =&gt; {
+    clearTimeout(id);
+    id = setTimeout(() =&gt; fn(...args), delai);
+  };
+}
+
+const chercher = debounce((q) =&gt; chargerUtilisateurs(q), 300);
+
+input.addEventListener("input", (e) =&gt; {
+  store.setState({ query: e.target.value });
+  chercher(e.target.value); // ne part que 300 ms après la dernière frappe
+});</code></pre></figure>
+<p>Tape « ada » d'un coup et une seule requête part, pas trois. Mais le debounce ne résout pas tout : si deux requêtes finissent par partir, laquelle gagne ? C'est le problème des races, qu'on règle ensuite.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>La barre de recherche de GitHub, la complétion d'adresse de Google Maps ou le champ « À&nbsp;: » de Gmail combinent exactement ces briques : un <strong>debounce</strong> (ne rien lancer tant que tu tapes), un <strong>AbortController</strong> (annuler la requête devenue inutile) et un <strong>jeton</strong> (n'afficher que la réponse de la dernière frappe). Sans eux, la suggestion « ada » clignoterait par-dessus « adam » au gré du hasard réseau — le bug qu'on a tous déjà vu sur un site mal fichu.</p></div></div>
+
+<h2>Bonnes pratiques : séparer données et affichage, gérer les races</h2>
+<p>Une race survient quand la <strong>dernière réponse reçue</strong> n'est pas celle de la <strong>dernière demande</strong> : tu tapes « ada » puis « bob », la réponse d'« ada » arrive en retard et écrase « bob ». Deux parades, souvent combinées : annuler la requête obsolète, et estampiller chaque requête pour ignorer les réponses périmées.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Deux recherches se chevauchent : la réponse lente d'ada arrive après celle de bob ; le jeton fait ignorer la réponse périmée.">
+    <text class="d-text" x="20" y="62" font-size="10">q=ada</text>
+    <circle class="d-dot" cx="82" cy="58" r="5" />
+    <line class="d-line" x1="82" y1="58" x2="470" y2="58" stroke-dasharray="4 4" />
+    <rect class="d-frame" x="470" y="44" width="160" height="28" rx="7" />
+    <text class="d-mut" x="550" y="62" text-anchor="middle" font-size="9">réponse ada · jeton 1</text>
+    <text class="d-tag" x="550" y="88" text-anchor="middle" font-size="9">✗ 1 ≠ 2 → ignorée</text>
+    <text class="d-text" x="20" y="118" font-size="10">q=bob</text>
+    <circle class="d-dot" cx="152" cy="114" r="5" />
+    <line class="d-line" x1="152" y1="114" x2="300" y2="114" />
+    <rect class="d-accent" x="300" y="100" width="160" height="28" rx="7" />
+    <text class="d-text" x="380" y="118" text-anchor="middle" font-size="9">réponse bob · jeton 2</text>
+    <text class="d-tag" x="380" y="142" text-anchor="middle" font-size="9">✓ 2 = 2 → affichée</text>
+    <line class="d-line" x1="40" y1="162" x2="622" y2="162" />
+    <polygon class="d-dot" points="622,157 622,167 631,162" />
+    <text class="d-mut" x="596" y="156" text-anchor="middle" font-size="9">temps</text>
+  </svg>
+  <figcaption>On tape « ada » puis « bob ». La réponse d'« ada » est plus lente et arrive <em>après</em> celle de « bob » : sans garde-fou, elle écraserait le bon résultat. Le <strong>jeton</strong> (numéro de version) fait ignorer toute réponse qui n'est plus la plus récente ; l'<code>abort</code> coupe en prime la requête obsolète.</figcaption>
+</figure>
+<figure class="code-block" data-file="app.js"><pre><code class="language-javascript">let controleurActuel = null;
+let dernierJeton = 0;
+
+async function chargerUtilisateurs(q) {
+  controleurActuel?.abort();          // annule la requête précédente
+  const controleur = new AbortController();
+  controleurActuel = controleur;
+  const jeton = ++dernierJeton;       // estampille cette requête
+
+  store.setState({ status: "loading" });
+  try {
+    const data = await getJSON(`/api/users?q=${encodeURIComponent(q)}`,
+      { signal: controleur.signal });
+    if (jeton !== dernierJeton) return; // une requête plus récente a pris la main
+    store.setState({ utilisateurs: data, status: "success" });
+  } catch (err) {
+    if (err.name === "AbortError") return; // annulation volontaire : on ignore
+    store.setState({ error: err.message, status: "error" });
+  }
+}</code></pre></figure>
+<p>Le jeton garantit que seule la réponse de la <em>dernière</em> demande met à jour l'état. L'<code>abort</code> libère en plus la connexion réseau inutile. Et tout passe par <code>store.setState</code> : l'affichage n'a aucune logique réseau, il réagit au store.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'une 404 lève une exception. <code>fetch</code> ne rejette que sur erreur réseau. Sans <code>if (!response.ok)</code>, tu appelles <code>response.json()</code> sur une page d'erreur et tu obtiens des données fantômes ou un crash de parsing.</p></div></div>
+<ul>
+<li><strong>Races ignorées</strong> : sans jeton ni <code>abort</code>, la réponse la plus lente écrase la plus récente. L'utilisateur voit les résultats de la mauvaise recherche.</li>
+<li><strong>Mutation éparpillée</strong> : modifier l'état depuis dix endroits différents rend les bugs introuvables. Une seule porte d'entrée : <code>setState</code>.</li>
+<li><strong>États oubliés</strong> : pas de spinner, pas de message d'erreur. L'utilisateur reste devant un écran figé sans savoir si ça charge ou si c'est cassé.</li>
+<li><strong>Fuites d'abonnés</strong> : un <code>subscribe</code> jamais relâché continue de tourner sur une vue détruite. Garde toujours la fonction de désabonnement.</li>
+<li><strong>Persister trop</strong> : stocker des résultats de fetch volatils dans <code>localStorage</code> affiche des données périmées au rechargement. Ne persiste que ce qui doit survivre.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les bibliothèques de data-fetching comme <strong>TanStack Query</strong> automatisent cache, états et déduplication des requêtes. Les stores comme <strong>Zustand</strong> ou <strong>Redux</strong> généralisent le pattern de cette leçon. Côté temps réel, regarde les <strong>WebSockets</strong> et les <strong>SSE</strong>. Et pour une UI nerveuse, l'<strong>optimistic UI</strong> applique le changement avant la confirmation serveur, puis le défait en cas d'échec.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: fetch, états et store</caption>
+    <thead><tr><th>Besoin</th><th>Outil</th><th>Point clé</th></tr></thead>
+    <tbody>
+      <tr><td>Détecter une erreur HTTP</td><td><code>if (!response.ok)</code></td><td>fetch ne rejette que sur panne réseau</td></tr>
+      <tr><td>Lire le corps JSON</td><td><code>await response.json()</code></td><td>après avoir vérifié <code>ok</code></td></tr>
+      <tr><td>Poser un timeout</td><td><code>AbortSignal.timeout(ms)</code></td><td>rejette avec <code>TimeoutError</code></td></tr>
+      <tr><td>Annuler une requête</td><td><code>controller.abort()</code></td><td>passer <code>signal</code> à fetch</td></tr>
+      <tr><td>Lancer en parallèle</td><td><code>Promise.all([...])</code></td><td><code>allSettled</code> si échec partiel toléré</td></tr>
+      <tr><td>Modéliser une requête</td><td><code>status</code> idle/loading/success/error</td><td>une seule source de vérité</td></tr>
+      <tr><td>Centraliser l'état</td><td><code>setState</code> + <code>subscribe</code></td><td>porte unique, abonnés notifiés</td></tr>
+      <tr><td>Persister</td><td><code>localStorage</code> + événement <code>storage</code></td><td>un sous-ensemble seulement</td></tr>
+      <tr><td>Limiter les appels</td><td><code>debounce(fn, 300)</code></td><td>attend une pause dans la frappe</td></tr>
+      <tr><td>Éviter les races</td><td>jeton de version + <code>abort</code></td><td>ignorer toute réponse périmée</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>fetch</dt>
+  <dd>API du navigateur pour lancer une requête HTTP. Sa promesse ne rejette que sur erreur réseau&nbsp;; un statut 4xx/5xx est un succès qu'il faut tester avec <code>response.ok</code>.</dd>
+  <dt>response.ok</dt>
+  <dd>Booléen vrai quand le statut HTTP est dans la plage 200–299. Le point de contrôle pour distinguer une vraie réponse d'une page d'erreur.</dd>
+  <dt>AbortController</dt>
+  <dd>Objet qui fournit un <code>signal</code> passé à <code>fetch</code> et une méthode <code>abort()</code> annulant la requête (rejet <code>AbortError</code>).</dd>
+  <dt>Machine à états</dt>
+  <dd>Modélisation d'une requête par un <code>status</code> explicite (<code>idle</code>, <code>loading</code>, <code>success</code>, <code>error</code>)&nbsp;: l'UI traduit l'état courant, sans cas oublié.</dd>
+  <dt>Store</dt>
+  <dd>Objet qui détient l'état applicatif, le modifie via une unique fonction <code>setState</code> et prévient ses abonnés à chaque changement.</dd>
+  <dt>Pub/sub (observateur)</dt>
+  <dd>Patron où des abonnés (<code>subscribe</code>) sont notifiés automatiquement quand la source publie un changement&nbsp;; <code>subscribe</code> renvoie une fonction de désabonnement.</dd>
+  <dt>Debounce</dt>
+  <dd>Technique qui retarde l'exécution d'une fonction jusqu'à une courte pause&nbsp;: la recherche ne part qu'après la dernière frappe.</dd>
+  <dt>Race (condition de course)</dt>
+  <dd>Situation où une réponse lente arrive après une plus récente et l'écrase&nbsp;; on la neutralise avec un jeton de version et/ou <code>abort</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Vérifie toujours <code>response.ok</code> : une 404 n'est pas une exception.</li>
+<li>Distingue panne réseau, erreur HTTP et succès.</li>
+<li><code>AbortController</code> (et <code>AbortSignal.timeout</code>) annule les requêtes obsolètes et pose des timeouts.</li>
+<li>Modélise chaque requête en trois états : chargement, succès, erreur.</li>
+<li>Centralise l'état dans un store unique, modifié par <code>setState</code>, qui notifie ses abonnés (pub/sub).</li>
+<li>Persiste un sous-ensemble dans <code>localStorage</code> et synchronise via l'événement <code>storage</code>.</li>
+<li>Combine debounce, <code>abort</code> et jeton pour tuer les races de recherche.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un <code>fetch</code> vers une URL renvoyant 500 n'entre-t-il pas dans le <code>catch</code> ?</li><li>Quel mécanisme garantit qu'une réponse lente ne remplace pas le résultat d'une recherche plus récente ?</li><li>À quoi sert la fonction renvoyée par <code>subscribe</code>, et que se passe-t-il si tu l'oublies ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un fetch vers une URL qui renvoie 500 n'entre-t-il pas dans le catch ?","a":["fetch ne rejette que sur erreur réseau ; un statut HTTP 500 est une réponse bien reçue, donc la promesse se résout. Il faut tester reponse.ok et lever l'erreur soi-même","Parce que 500 est un succès","Parce que catch ne capte que les erreurs de syntaxe","Parce que fetch n'a pas de catch"],"correct":0,"explain":"Pour fetch, recevoir une réponse (même 4xx/5xx) est un succès réseau : la promesse n'est pas rejetée. On vérifie donc reponse.ok (ou le statut) et on déclenche manuellement une erreur pour atterrir dans le catch."},
+  {"q":"Quel mécanisme garantit qu'une réponse lente ne remplace pas le résultat d'une recherche plus récente ?","a":["Marquer chaque requête (un numéro/jeton de version) ou annuler la précédente avec AbortController, puis ignorer toute réponse qui n'est plus la plus récente","Augmenter le délai d'attente","Lancer toutes les requêtes en parallèle","Désactiver le cache"],"correct":0,"explain":"Sans précaution, une ancienne requête qui répond tardivement peut écraser un résultat plus récent (réponse périmée). On associe un identifiant à chaque requête (ou on annule la précédente via AbortController) et on n'applique que la réponse correspondant à la dernière demande."},
+  {"q":"À quoi sert la fonction renvoyée par un subscribe, et que se passe-t-il si tu l'oublies ?","a":["C'est la fonction de désabonnement (nettoyage) : l'oublier laisse l'abonné actif → fuite mémoire et appels continus sur un élément qui n'existe plus","Elle relance l'abonnement","Elle n'a aucune utilité","Elle supprime les données"],"correct":0,"explain":"Un abonnement (à un événement, un store...) renvoie souvent une fonction pour s'en détacher. Ne pas l'appeler au bon moment laisse l'écouteur vivre indéfiniment : la mémoire n'est pas libérée et des rappels s'exécutent sur du contenu disparu."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["false"],"placeholder":"la valeur de reponse.ok pour une 404","hints":["reponse.ok est vrai pour les statuts 200 à 299.","404 signale une ressource introuvable.","Ce n'est pas un succès : ok vaut donc…"],"link":{"href":"lecon-36.html","label":"Revoir « Les états loading/success/error »"}},
+  {"type":"code","run":{"expect":"notifié : 1"},"placeholder":"écris creerStore (getState/setState/subscribe), abonne-toi, setState({n:1}), désabonne, setState({n:2})","hints":["setState fusionne sans muter ({ ...etat, ...partiel }) puis notifie les abonnés.","subscribe ajoute la fonction et renvoie une fonction de désabonnement.","Après désabonnement, le second setState ne notifie plus personne."],"link":{"href":"lecon-36.html","label":"Revoir « Un mini store »"}},
+  {"type":"text","accept":["AbortController"],"placeholder":"ce qui annule la requête précédente","hints":["À chaque frappe, on veut interrompre la requête en cours.","fetch accepte un signal d'annulation.","Cet objet fournit ce signal et une méthode abort()."],"link":{"href":"lecon-36.html","label":"Revoir « Annuler une requête »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>charger(url, rendre)</code> qui passe par trois états (<code>loading</code>, <code>success</code>, <code>error</code>) et appelle <code>rendre(etat)</code> à chaque transition. Elle doit traiter une 404 comme une erreur, pas comme un succès.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">async function charger(url, rendre) {
+  rendre({ status: "loading", data: null, error: null });
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    rendre({ status: "success", data, error: null });
+  } catch (err) {
+    rendre({ status: "error", data: null, error: err.message });
+  }
+}
+
+// charger("/api/inconnu", (e) =&gt; console.log(e.status, e.error));
+// Sortie : "loading null" puis "error HTTP 404"</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Implémente un mini store avec <code>getState</code>, <code>setState</code> (sans muter l'ancien état) et <code>subscribe</code> renvoyant un désabonnement. Vérifie qu'un abonné désabonné n'est plus notifié.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">function creerStore(initial) {
+  let etat = initial;
+  const abonnes = new Set();
+  return {
+    getState: () =&gt; etat,
+    setState(partiel) {
+      etat = { ...etat, ...partiel };
+      abonnes.forEach((fn) =&gt; fn(etat));
+    },
+    subscribe(fn) {
+      abonnes.add(fn);
+      return () =&gt; abonnes.delete(fn);
+    },
+  };
+}
+
+const store = creerStore({ n: 0 });
+const stop = store.subscribe((e) =&gt; console.log("notifié :", e.n));
+store.setState({ n: 1 }); // affiche : notifié : 1
+stop();
+store.setState({ n: 2 }); // rien : abonné retiré</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>rechercher(q, surResultat)</code> qui annule la requête précédente avec un <code>AbortController</code> et ignore les réponses périmées grâce à un jeton. Une frappe rapide « a » puis « ab » ne doit garder que le résultat d'« ab ».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">let ctrl = null;
+let jetonCourant = 0;
+
+async function rechercher(q, surResultat) {
+  ctrl?.abort();
+  ctrl = new AbortController();
+  const jeton = ++jetonCourant;
+  try {
+    const r = await fetch(`/api/users?q=${encodeURIComponent(q)}`,
+      { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (jeton !== jetonCourant) return; // réponse périmée : on jette
+    surResultat(data);
+  } catch (err) {
+    if (err.name === "AbortError") return; // annulation : silence
+    surResultat({ erreur: err.message });
+  }
+}
+
+// rechercher("a", afficher); rechercher("ab", afficher);
+// Seule la réponse d'"ab" appelle surResultat (la requête "a" est avortée)</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

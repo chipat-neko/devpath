@@ -1,0 +1,88 @@
+<p>S'il fallait ne retenir qu'une fonctionnalité d'OCaml, ce serait le <strong>pattern matching</strong> (filtrage par motifs). Bien plus qu'un <code>switch</code>, c'est un outil qui <strong>déstructure</strong> les données, vérifie l'<strong>exhaustivité</strong> des cas, et rend le code à la fois concis et sûr. Tu l'as déjà entrevu&nbsp;; voici toute sa puissance.</p>
+
+<h2>match ... with</h2>
+<p>On compare une valeur à une série de <strong>motifs</strong>, et on exécute la branche du premier qui correspond. Chaque cas commence par <code>|</code>.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let jour_texte n =
+  match n with
+  | 1 -&gt; "lundi"
+  | 2 -&gt; "mardi"
+  | 3 -&gt; "mercredi"
+  | _ -&gt; "autre"          (* _ : le motif universel *)
+
+let r = jour_texte 2      (* "mardi" *)</code></pre></figure>
+<p class="code-caption">Le motif <code>_</code> attrape tout ce qui n'a pas été couvert (le «&nbsp;joker&nbsp;»).</p>
+
+<h2>L'exhaustivité&nbsp;: une sécurité unique</h2>
+<p>Atout majeur&nbsp;: le compilateur <strong>vérifie que tu as couvert tous les cas</strong>. Si tu en oublies un, il t'avertit. Et si tu ajoutes plus tard une nouvelle possibilité au type, il te signale tous les <code>match</code> à compléter. Cette garantie élimine une classe entière de bugs.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">(* Si on oublie le cas [], le compilateur prévient :
+   "Warning: this pattern-matching is not exhaustive" *)
+let premier liste =
+  match liste with
+  | x :: _ -&gt; x
+  | [] -&gt; failwith "liste vide"</code></pre></figure>
+
+<h2>Déstructurer les listes</h2>
+<p>Le filtrage décompose directement une liste en tête et queue&nbsp;— c'est l'idiome central des fonctions récursives sur listes.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let decrire liste =
+  match liste with
+  | [] -&gt; "vide"
+  | [x] -&gt; "un seul : " ^ string_of_int x
+  | [x; y] -&gt; "deux éléments"
+  | x :: _ -&gt; "commence par " ^ string_of_int x</code></pre></figure>
+
+<h2>Déstructurer les tuples</h2>
+<p>Le filtrage extrait aussi les composantes d'un tuple, en une ligne.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let origine point =
+  match point with
+  | (0, 0) -&gt; "à l'origine"
+  | (x, 0) -&gt; "sur l'axe X"
+  | (0, y) -&gt; "sur l'axe Y"
+  | (x, y) -&gt; "ailleurs"
+
+(* On peut aussi déstructurer directement dans un let : *)
+let (a, b) = (3, 4)        (* a = 3, b = 4 *)</code></pre></figure>
+
+<h2>Les gardes (when)</h2>
+<p>On affine un motif avec une condition <code>when</code>&nbsp;: la branche ne s'applique que si le motif correspond <em>et</em> que la garde est vraie.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let signe n =
+  match n with
+  | 0 -&gt; "nul"
+  | n when n &gt; 0 -&gt; "positif"
+  | _ -&gt; "négatif"</code></pre></figure>
+
+<h2>Le motif ou (|)</h2>
+<p>Plusieurs motifs peuvent partager la même branche avec <code>|</code>.</p>
+<figure class="code-block" data-file="exemple.ml"><pre><code class="language-ocaml">let est_weekend jour =
+  match jour with
+  | "samedi" | "dimanche" -&gt; true
+  | _ -&gt; false</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mettre un <code>_</code> trop tôt&nbsp;: comme le filtrage prend le <em>premier</em> motif qui correspond, un <code>| _ -&gt; ...</code> placé avant des cas spécifiques les rend inatteignables. Le compilateur le signale («&nbsp;unused match case&nbsp;»)&nbsp;: place toujours les motifs du plus précis au plus général.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La vraie puissance du filtrage se révèle avec les <strong>types variants</strong> (leçon suivante)&nbsp;: filtrer sur un type que <em>tu</em> as défini, avec l'exhaustivité garantie. C'est cette combinaison — types algébriques + pattern matching — que Rust a directement empruntée à OCaml.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>match ... with | motif -&gt; ...</code> compare une valeur à des motifs et <strong>déstructure</strong>.</li>
+  <li>Le compilateur vérifie l'<strong>exhaustivité</strong>&nbsp;: tous les cas doivent être couverts.</li>
+  <li>On filtre listes, tuples&nbsp;; les <strong>gardes</strong> (<code>when</code>) affinent, <code>|</code> regroupe des motifs.</li>
+  <li><code>_</code> est le motif universel&nbsp;; place les motifs du plus précis au plus général.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce que l'exhaustivité d'un <code>match</code> et pourquoi est-ce utile&nbsp;?</li><li>Comment filtrer la tête et la queue d'une liste&nbsp;?</li><li>À quoi sert une garde <code>when</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>est_vide</code> qui renvoie <code>true</code> si une liste est vide.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let est_vide l =
+  match l with
+  | [] -&gt; true
+  | _ -&gt; false</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris <code>classifier</code> qui renvoie "nul", "positif" ou "négatif" avec une garde.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let classifier n =
+  match n with
+  | 0 -&gt; "nul"
+  | n when n &gt; 0 -&gt; "positif"
+  | _ -&gt; "négatif"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>second</code> qui renvoie le deuxième élément d'une liste s'il existe (sinon lève une erreur).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ml"><pre><code class="language-ocaml">let second l =
+  match l with
+  | _ :: y :: _ -&gt; y
+  | _ -&gt; failwith "moins de deux éléments"</code></pre></figure></details></div>

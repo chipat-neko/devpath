@@ -1,0 +1,75 @@
+<p>On arrive au terrain de jeu naturel de PowerShell&nbsp;: l'<strong>administration système</strong>. Lire et écrire des fichiers, parcourir le registre, surveiller des processus et des services&nbsp;— autant de tâches où PowerShell remplace avantageusement des dizaines de clics. Et grâce aux <strong>providers</strong>, tout se manipule avec les mêmes cmdlets.</p>
+
+<h2>Le système de fichiers et les providers</h2>
+<p>PowerShell expose différentes sources de données comme des «&nbsp;lecteurs&nbsp;» navigables&nbsp;: le disque, le registre, les variables d'environnement… Ce sont les <strong>providers</strong>. Les mêmes cmdlets (<code>Get-ChildItem</code>, <code>Get-Item</code>, <code>Set-Location</code>) fonctionnent partout.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-ChildItem -Path C:\Temp           # fichiers et dossiers
+Get-ChildItem -Recurse -Filter *.log  # récursif, filtré
+Get-PSDrive                            # tous les lecteurs : C, HKLM, Env…</code></pre></figure>
+
+<h2>Lire et écrire des fichiers texte</h2>
+<p><code>Get-Content</code> lit (ligne par ligne, sous forme de tableau), <code>Set-Content</code> écrit (remplace), <code>Add-Content</code> ajoute à la fin.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">$lignes = Get-Content "journal.txt"
+$lignes.Count
+Set-Content "sortie.txt" -Value "Ligne 1"
+Add-Content "sortie.txt" -Value "Ligne 2"</code></pre></figure>
+<p class="code-caption">Pour de gros fichiers, <code>Get-Content -ReadCount</code> ou le streaming évitent de tout charger en mémoire.</p>
+
+<h2>CSV et JSON&nbsp;: des données structurées</h2>
+<p>C'est ici que les objets brillent. <code>Import-Csv</code> transforme chaque ligne d'un CSV en objet&nbsp;; <code>Export-Csv</code> fait l'inverse. <code>ConvertFrom-Json</code> et <code>ConvertTo-Json</code> font de même pour le JSON.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">$users = Import-Csv "users.csv"
+$users | Where-Object Age -gt 30 | Select-Object Nom
+
+# Vers JSON
+$config = @{ theme = "sombre"; taille = 14 }
+$config | ConvertTo-Json | Set-Content "config.json"
+
+# Depuis JSON
+$lu = Get-Content "config.json" -Raw | ConvertFrom-Json
+$lu.theme    # sombre</code></pre></figure>
+<p>Note le <code>-Raw</code>&nbsp;: il lit tout le fichier en une seule chaîne, ce qu'attend <code>ConvertFrom-Json</code>.</p>
+
+<h2>Le registre Windows</h2>
+<p>Le registre se parcourt comme un disque, via les lecteurs <code>HKLM:</code> (machine) et <code>HKCU:</code> (utilisateur courant). On lit une valeur avec <code>Get-ItemProperty</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-ChildItem "HKCU:\Software"
+Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" |
+  Select-Object -ExpandProperty *</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Prudence</p><p>Modifier le registre peut déstabiliser Windows. Lis librement, mais avant d'écrire (<code>Set-ItemProperty</code>), sauvegarde la clé concernée et teste sur une valeur sans risque.</p></div></div>
+
+<h2>Processus et services</h2>
+<p><code>Get-Process</code> liste les processus&nbsp;; <code>Get-Service</code> les services. On peut les arrêter, démarrer, redémarrer&nbsp;— avec, le plus souvent, des droits administrateur.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-Process | Where-Object CPU -gt 100 | Sort-Object CPU -Descending
+Get-Service | Where-Object Status -eq "Stopped"
+# Stop-Process -Name "bloc-notes"
+# Restart-Service -Name "Spooler"</code></pre></figure>
+
+<h2>Tester l'existence avant d'agir</h2>
+<p><code>Test-Path</code> renvoie <code>$true</code>/<code>$false</code> selon qu'un chemin existe&nbsp;— le réflexe avant de lire, créer ou supprimer.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">if (-not (Test-Path "C:\Logs")) {
+    New-Item -ItemType Directory -Path "C:\Logs"
+}</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier <code>-Raw</code> avant <code>ConvertFrom-Json</code>&nbsp;: <code>Get-Content</code> renvoie un tableau de lignes, et la conversion échoue sur du JSON multiligne. <code>Get-Content fichier.json -Raw</code> règle le problème.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour interroger Windows en profondeur (matériel, OS, réseau), <code>Get-CimInstance</code> donne accès à WMI/CIM&nbsp;: <code>Get-CimInstance Win32_OperatingSystem</code> révèle version, mémoire, temps de démarrage et bien plus.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>providers</strong> font naviguer disque, registre et environnement avec les mêmes cmdlets.</li>
+  <li><code>Get/Set/Add-Content</code> pour le texte&nbsp;; <code>Import/Export-Csv</code> et <code>ConvertFrom/To-Json</code> pour les données.</li>
+  <li>Le registre s'explore via <code>HKLM:</code> et <code>HKCU:</code> (lire sans risque, écrire avec prudence).</li>
+  <li><code>Test-Path</code> vérifie l'existence avant toute action.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que renvoie <code>Get-Content</code> par défaut&nbsp;: une chaîne ou un tableau&nbsp;?</li><li>Pourquoi ajoute-t-on <code>-Raw</code> avant <code>ConvertFrom-Json</code>&nbsp;?</li><li>Quelle cmdlet teste si un dossier existe&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un fichier <code>notes.txt</code> contenant trois lignes, puis relis-le et compte ses lignes.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">Set-Content notes.txt -Value "a","b","c"
+(Get-Content notes.txt).Count   # 3</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Exporte la liste des 5 plus gros processus (nom, mémoire) vers un CSV.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">Get-Process |
+  Sort-Object WorkingSet -Descending |
+  Select-Object -First 5 Name, WorkingSet |
+  Export-Csv "top5.csv" -NoTypeInformation</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sauvegarde une petite configuration (deux clés) en JSON, puis relis-la et affiche une des valeurs.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">@{ langue = "fr"; volume = 7 } | ConvertTo-Json | Set-Content cfg.json
+$cfg = Get-Content cfg.json -Raw | ConvertFrom-Json
+$cfg.langue   # fr</code></pre></figure></details></div>

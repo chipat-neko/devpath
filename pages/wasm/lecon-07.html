@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>L'anatomie d'un module : le format WAT — Leçon 07 · Syntaxe</title>
+    <meta name="description" content="Lire l'intérieur d'un module WebAssembly : le format texte WAT, les blocs (module), (func), (param), (result), (export), le modèle à pile et les quatre types numériques." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="wasm" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">WebAssembly</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 07</p>
+              <h1 class="lesson-header__title">L'anatomie d'un module : le format WAT</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçons 01 à 06 conseillées</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lire le <strong>format texte WAT</strong> d'un module&nbsp;;</li>
+                  <li>reconnaître <code>(module)</code>, <code>(func)</code>, <code>(param)</code>, <code>(result)</code>, <code>(export)</code>&nbsp;;</li>
+                  <li>comprendre le <strong>modèle à pile</strong> de Wasm&nbsp;;</li>
+                  <li>distinguer les quatre types numériques <code>i32 · i64 · f32 · f64</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un fichier <code>.wasm</code> est <strong>binaire</strong>&nbsp;: illisible dans un éditeur. Mais il possède un jumeau <strong>texte</strong>, le <strong>WAT</strong> (<em>WebAssembly Text</em>), fait de parenthèses lisibles. Apprendre à le lire, c'est ouvrir le capot&nbsp;: on comprend enfin <em>ce qu'il y a dedans</em>, on peut inspecter, déboguer, et même écrire un petit module à la main.</p>
+
+<h2>Passer du binaire au texte, et retour</h2>
+<p>Les deux formats décrivent le <strong>même</strong> module et se convertissent l'un en l'autre avec la boîte à outils <strong>WABT</strong> (<em>WebAssembly Binary Toolkit</em>)&nbsp;: <code>wasm2wat</code> pour lire, <code>wat2wasm</code> pour produire le binaire.</p>
+<figure class="code-block" data-file="convertir.sh"><pre><code class="language-bash"># Inspecter un binaire : le traduire en texte lisible
+wasm2wat module.wasm -o module.wat
+
+# Assembler un texte écrit à la main en binaire exécutable
+wat2wasm module.wat -o module.wasm</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Aller-retour entre binaire et texte. À gauche le fichier point wasm binaire, une suite d'octets. Une flèche wasm2wat vers la droite produit le fichier point wat texte, lisible. Une flèche wat2wasm revient vers la gauche. Les deux décrivent le même module.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">Le même module, deux formats interchangeables</text>
+    <rect class="d-accent" x="34" y="46" width="230" height="82" rx="8" /><text class="d-label" x="149" y="70" text-anchor="middle" font-size="11">module.wasm</text><text class="d-mut" x="149" y="90" text-anchor="middle" font-size="11" font-family="monospace">00 61 73 6D 01…</text><text class="d-mut" x="149" y="112" text-anchor="middle" font-size="9">binaire — exécuté</text>
+    <rect class="d-box" x="376" y="46" width="230" height="82" rx="8" /><text class="d-label" x="491" y="70" text-anchor="middle" font-size="11">module.wat</text><text class="d-mut" x="491" y="90" text-anchor="middle" font-size="11" font-family="monospace">(module (func …))</text><text class="d-mut" x="491" y="112" text-anchor="middle" font-size="9">texte — lisible</text>
+    <line class="d-line" x1="264" y1="74" x2="374" y2="74" marker-end="url(#w7a)" /><text class="d-mut" x="319" y="66" text-anchor="middle" font-size="9" font-family="monospace">wasm2wat</text>
+    <line class="d-line" x1="374" y1="100" x2="264" y2="100" marker-end="url(#w7a)" /><text class="d-mut" x="319" y="118" text-anchor="middle" font-size="9" font-family="monospace">wat2wasm</text>
+    <defs><marker id="w7a" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Le <strong>binaire</strong> s'exécute&nbsp;; le <strong>WAT</strong> sert à lire, apprendre et déboguer. WABT fait l'aller-retour.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Tu n'écriras (presque) jamais de WAT à la main</p><p>En pratique on part du C, du C++ ou du Rust. Le WAT sert surtout à <strong>inspecter</strong> ce que le compilateur a produit, à comprendre Wasm, ou à bricoler de tout petits modules. Le lire est plus utile que l'écrire.</p></div></div>
+
+<h2>L'ossature : le bloc (module)</h2>
+<p>Tout WAT est une grande expression entre parenthèses qui commence par <code>(module …)</code>. À l'intérieur, on <strong>déclare</strong> des éléments&nbsp;: des fonctions, ce qu'on <strong>exporte</strong> vers l'extérieur, une zone de <strong>mémoire</strong>, des variables globales, ce qu'on <strong>importe</strong> de l'hôte. Voici un module minimal qui additionne deux entiers&nbsp;:</p>
+<figure class="code-block" data-file="add.wat"><pre><code>(module
+  ;; Une fonction nommée $add, exportée sous le nom "add"
+  (func $add (export "add") (param $a i32) (param $b i32) (result i32)
+    local.get $a      ;; empile a
+    local.get $b      ;; empile b
+    i32.add))         ;; dépile a et b, empile a + b</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Structure en arbre d'un module. La racine module contient plusieurs sections : func une fonction, export ce qui est rendu visible, memory une zone de mémoire, global une variable partagée, import ce qui vient de l'hôte. Les sections func, memory et export sont mises en avant comme les plus courantes.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Ce qu'un (module) peut contenir</text>
+    <rect class="d-accent" x="260" y="34" width="120" height="38" rx="8" /><text class="d-text" x="320" y="58" text-anchor="middle" font-size="12" font-family="monospace">(module)</text>
+    <line class="d-line" x1="320" y1="72" x2="90" y2="104" /><line class="d-line" x1="320" y1="72" x2="235" y2="104" /><line class="d-line" x1="320" y1="72" x2="405" y2="104" /><line class="d-line" x1="320" y1="72" x2="550" y2="104" />
+    <rect class="d-box" x="24" y="106" width="132" height="40" rx="7" /><text class="d-text" x="90" y="126" text-anchor="middle" font-size="10" font-family="monospace">(func)</text><text class="d-mut" x="90" y="140" text-anchor="middle" font-size="9">une fonction</text>
+    <rect class="d-box" x="170" y="106" width="132" height="40" rx="7" /><text class="d-text" x="236" y="126" text-anchor="middle" font-size="10" font-family="monospace">(memory)</text><text class="d-mut" x="236" y="140" text-anchor="middle" font-size="9">zone de données</text>
+    <rect class="d-box" x="340" y="106" width="132" height="40" rx="7" /><text class="d-text" x="406" y="126" text-anchor="middle" font-size="10" font-family="monospace">(export)</text><text class="d-mut" x="406" y="140" text-anchor="middle" font-size="9">rendu visible</text>
+    <rect class="d-frame" x="486" y="106" width="132" height="40" rx="7" /><text class="d-text" x="552" y="126" text-anchor="middle" font-size="10" font-family="monospace">(global)</text><text class="d-mut" x="552" y="140" text-anchor="middle" font-size="9">variable partagée</text>
+    <rect class="d-frame" x="255" y="158" width="130" height="30" rx="7" /><text class="d-text" x="320" y="177" text-anchor="middle" font-size="10" font-family="monospace">(import)</text>
+    <line class="d-line" x1="320" y1="146" x2="320" y2="156" />
+    <text class="d-mut" x="405" y="177" font-size="9">…&nbsp;fourni par l'hôte JS</text>
+  </svg>
+  <figcaption>La racine <code>(module)</code> regroupe des <strong>sections</strong>. Les plus courantes&nbsp;: <code>(func)</code>, <code>(memory)</code> et <code>(export)</code>.</figcaption>
+</figure>
+
+<h2>Anatomie d'une fonction</h2>
+<p>Une <code>(func)</code> se lit de gauche à droite&nbsp;: un nom interne (<code>$add</code>), un éventuel <code>(export "…")</code> pour la rendre appelable de l'extérieur, ses <strong>paramètres</strong> typés, son <strong>type de retour</strong>, puis le <strong>corps</strong> — une suite d'instructions.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Décomposition de la ligne func dollar add export add param dollar a i32 param dollar b i32 result i32. Le nom dollar add est l'identifiant interne. export add est le nom public visible depuis JavaScript. param dollar a i32 et param dollar b i32 sont les deux entrées entières. result i32 est le type de la valeur renvoyée.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Lire une déclaration de fonction</text>
+    <rect class="d-box" x="20" y="40" width="80" height="30" rx="6" /><text class="d-text" x="60" y="60" text-anchor="middle" font-size="11" font-family="monospace">(func</text>
+    <rect class="d-accent" x="108" y="40" width="86" height="30" rx="6" /><text class="d-text" x="151" y="60" text-anchor="middle" font-size="11" font-family="monospace">$add</text>
+    <rect class="d-box" x="202" y="40" width="150" height="30" rx="6" /><text class="d-text" x="277" y="60" text-anchor="middle" font-size="10" font-family="monospace">(export "add")</text>
+    <rect class="d-box" x="360" y="40" width="140" height="30" rx="6" /><text class="d-text" x="430" y="60" text-anchor="middle" font-size="9" font-family="monospace">(param $a i32)</text>
+    <rect class="d-box" x="508" y="40" width="112" height="30" rx="6" /><text class="d-text" x="564" y="60" text-anchor="middle" font-size="9" font-family="monospace">(result i32)</text>
+    <line class="d-line" x1="151" y1="70" x2="151" y2="92" marker-end="url(#w7b)" /><text class="d-mut" x="151" y="108" text-anchor="middle" font-size="9">nom interne</text>
+    <line class="d-line" x1="277" y1="70" x2="277" y2="92" marker-end="url(#w7b)" /><text class="d-mut" x="277" y="108" text-anchor="middle" font-size="9">nom public (JS)</text>
+    <line class="d-line" x1="430" y1="70" x2="430" y2="92" marker-end="url(#w7b)" /><text class="d-mut" x="430" y="108" text-anchor="middle" font-size="9">une entrée typée</text>
+    <line class="d-line" x1="564" y1="70" x2="564" y2="92" marker-end="url(#w7b)" /><text class="d-mut" x="564" y="108" text-anchor="middle" font-size="9">type renvoyé</text>
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="10">Tout est typé&nbsp;: Wasm connaît à l'avance la forme de chaque entrée et de la sortie.</text>
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="10">C'est ce qui permet de le valider avant de l'exécuter.</text>
+    <defs><marker id="w7b" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Nom interne, nom public, entrées typées, sortie typée&nbsp;: une <code>(func)</code> annonce tout d'avance.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Nom interne ≠ nom exporté</p><p><code>$add</code> n'est qu'une étiquette pratique pour <em>toi</em>, à l'intérieur du module. Ce que JavaScript voit, c'est le nom entre guillemets de <code>(export "add")</code>. Les deux peuvent différer&nbsp;: on peut exporter <code>$add</code> sous le nom <code>"somme"</code>.</p></div></div>
+
+<h2>Une machine à pile</h2>
+<p>Wasm n'a pas de registres nommés comme un processeur classique&nbsp;: c'est une <strong>machine à pile</strong>. Chaque instruction <em>empile</em> ou <em>dépile</em> des valeurs. <code>local.get</code> pousse la valeur d'un paramètre sur la pile&nbsp;; <code>i32.add</code> retire les <strong>deux</strong> valeurs du sommet et y remet leur somme.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Exécution pas à pas de local.get a puis local.get b puis i32.add, avec a égal 3 et b égal 4. Étape 1 : après local.get a, la pile contient 3. Étape 2 : après local.get b, la pile contient 3 puis 4 au sommet. Étape 3 : après i32.add, la pile ne contient plus que 7. L'addition a consommé deux valeurs et en a produit une.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">La pile pour add(3, 4)</text>
+    <text class="d-mut" x="110" y="44" text-anchor="middle" font-size="10" font-family="monospace">local.get $a</text>
+    <rect class="d-frame" x="60" y="98" width="100" height="70" rx="4" /><rect class="d-accent" x="60" y="138" width="100" height="30" rx="4" /><text class="d-text" x="110" y="158" text-anchor="middle" font-size="12" font-family="monospace">3</text>
+    <text class="d-mut" x="110" y="186" text-anchor="middle" font-size="9">pile : [3]</text>
+    <text class="d-mut" x="320" y="44" text-anchor="middle" font-size="10" font-family="monospace">local.get $b</text>
+    <rect class="d-frame" x="270" y="98" width="100" height="70" rx="4" /><rect class="d-box" x="270" y="138" width="100" height="30" rx="4" /><text class="d-text" x="320" y="158" text-anchor="middle" font-size="12" font-family="monospace">3</text><rect class="d-accent" x="270" y="108" width="100" height="30" rx="4" /><text class="d-text" x="320" y="128" text-anchor="middle" font-size="12" font-family="monospace">4</text>
+    <text class="d-mut" x="320" y="186" text-anchor="middle" font-size="9">pile : [3, 4]</text>
+    <text class="d-mut" x="530" y="44" text-anchor="middle" font-size="10" font-family="monospace">i32.add</text>
+    <rect class="d-frame" x="480" y="98" width="100" height="70" rx="4" /><rect class="d-accent" x="480" y="138" width="100" height="30" rx="4" /><text class="d-text" x="530" y="158" text-anchor="middle" font-size="12" font-family="monospace">7</text>
+    <text class="d-mut" x="530" y="186" text-anchor="middle" font-size="9">pile : [7]</text>
+    <line class="d-line" x1="164" y1="133" x2="266" y2="133" marker-end="url(#w7c)" /><line class="d-line" x1="374" y1="133" x2="476" y2="133" marker-end="url(#w7c)" />
+    <text class="d-mut" x="320" y="205" text-anchor="middle" font-size="9">i32.add consomme deux valeurs et en produit une</text>
+    <defs><marker id="w7c" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Chaque instruction agit sur le <strong>sommet</strong> de la pile. Le résultat d'une fonction, c'est ce qu'il reste sur la pile à la fin.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Deux écritures, un même sens</p><p>WAT accepte aussi une forme <strong>imbriquée</strong>&nbsp;: <code>(i32.add (local.get $a) (local.get $b))</code>. Elle se lit comme une expression mathématique et se ramène exactement à la version «&nbsp;à plat&nbsp;» empilée. Choisis celle que tu lis le mieux.</p></div></div>
+
+<h2>Les quatre types de nombres</h2>
+<p>Wasm ne connaît, au fond, que <strong>quatre types numériques</strong>. Tout le reste — chaînes, tableaux, objets — se construit par-dessus, dans la mémoire linéaire (leçon&nbsp;4).</p>
+<figure class="code-block" data-file="types.wat"><pre><code>i32   ;; entier sur 32 bits   (le plus courant : indices, booléens, pointeurs)
+i64   ;; entier sur 64 bits   (grands compteurs, temps en nanosecondes)
+f32   ;; flottant 32 bits     (précision simple)
+f64   ;; flottant 64 bits     (précision double — le "number" de JS)</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Les types doivent concorder</p><p>Une instruction <code>i32.add</code> attend <strong>deux <code>i32</code></strong> sur la pile, ni un <code>f64</code>, ni un seul opérande. Si les types ne collent pas, le module est <strong>rejeté à la validation</strong>, avant même de s'exécuter. C'est une force de Wasm&nbsp;: pas de mauvaise surprise à l'exécution.</p></div></div>
+
+<h2>Importer et exporter</h2>
+<p>Un module dialogue avec son hôte (le navigateur) dans les deux sens. Il <strong>exporte</strong> ce qu'il offre (des fonctions, sa mémoire) et <strong>importe</strong> ce dont il a besoin (une fonction fournie par JavaScript, par exemple pour journaliser).</p>
+<figure class="code-block" data-file="io.wat"><pre><code>(module
+  ;; On importe une fonction "log" fournie par l'hôte JS
+  (import "console" "log" (func $log (param i32)))
+  ;; On exporte notre fonction et notre mémoire
+  (func (export "salut") (param $n i32)
+    local.get $n
+    call $log)
+  (memory (export "memory") 1))   ;; 1 page = 64 Kio</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — inspecter le WAT pour débusquer un module trop lourd</p><p>Une équipe compile une bibliothèque C en Wasm et trouve le <code>.wasm</code> étonnamment gros. En le passant à <code>wasm2wat</code>, elle découvre des dizaines de fonctions <strong>exportées inutilement</strong> et une grosse section <code>(data)</code> de chaînes de débogage. Le WAT rend le problème <em>visible</em>&nbsp;: après nettoyage des exports et compilation en <code>--release</code>, le binaire fond de moitié. C'est le rôle premier du format texte&nbsp;: <strong>voir</strong> ce que le compilateur a réellement produit. Des explorateurs en ligne comme <strong>WasmExplorer</strong> ou l'onglet «&nbsp;wat&nbsp;» de <em>godbolt.org</em> font la même chose dans le navigateur.</p></div></div>
+
+<h2>Récapituler la syntaxe</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le WAT en une page</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Écriture WAT</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td>Module</td><td><code>(module …)</code></td><td>l'enveloppe qui contient tout</td></tr>
+      <tr><td>Fonction</td><td><code>(func $n (param i32) (result i32) …)</code></td><td>un calcul typé</td></tr>
+      <tr><td>Exporter</td><td><code>(export "nom")</code></td><td>rendre visible depuis JS</td></tr>
+      <tr><td>Importer</td><td><code>(import "obj" "clé" (func …))</code></td><td>recevoir de l'hôte</td></tr>
+      <tr><td>Mémoire</td><td><code>(memory 1)</code></td><td>zone d'octets (par pages de 64&nbsp;Kio)</td></tr>
+      <tr><td>Empiler</td><td><code>local.get · i32.const</code></td><td>pousser une valeur sur la pile</td></tr>
+      <tr><td>Opérer</td><td><code>i32.add · f64.mul · call</code></td><td>consommer la pile, produire un résultat</td></tr>
+      <tr><td>Convertir</td><td><code>wasm2wat · wat2wasm</code> (WABT)</td><td>binaire ⇄ texte</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>WAT (WebAssembly Text)</dt><dd>Représentation <em>textuelle</em> et lisible d'un module Wasm, faite d'expressions entre parenthèses.</dd>
+  <dt>WABT</dt><dd>La <em>WebAssembly Binary Toolkit</em>&nbsp;: des outils comme <code>wasm2wat</code> et <code>wat2wasm</code> pour convertir texte ⇄ binaire.</dd>
+  <dt>(module)</dt><dd>L'expression racine qui enveloppe toutes les déclarations (fonctions, mémoire, exports, imports…).</dd>
+  <dt>(func)</dt><dd>Déclaration d'une fonction&nbsp;: nom interne, exports éventuels, paramètres typés, type de retour, corps.</dd>
+  <dt>Machine à pile</dt><dd>Modèle d'exécution où les instructions empilent et dépilent des valeurs plutôt que d'utiliser des registres nommés.</dd>
+  <dt>local.get</dt><dd>Instruction qui pousse sur la pile la valeur d'un paramètre ou d'une variable locale.</dd>
+  <dt>i32 / i64 / f32 / f64</dt><dd>Les quatre types numériques de Wasm&nbsp;: entiers 32/64 bits et flottants simple/double précision.</dd>
+  <dt>Page de mémoire</dt><dd>Unité d'allocation de la mémoire linéaire&nbsp;: 64&nbsp;Kio. <code>(memory 1)</code> réserve une page.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>WAT</strong> est le jumeau texte lisible du <code>.wasm</code> binaire&nbsp;; WABT fait l'aller-retour.</li>
+<li>Un <code>(module)</code> déclare des <code>(func)</code>, exporte et importe, et peut réserver de la <code>(memory)</code>.</li>
+<li>Wasm est une <strong>machine à pile</strong> entièrement <strong>typée</strong> (<code>i32 · i64 · f32 · f64</code>).</li>
+<li>Lire le WAT sert surtout à <strong>inspecter</strong> et déboguer ce que le compilateur a produit.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle commande transforme un <code>.wasm</code> en texte lisible ?</li><li>Que fait <code>i32.add</code> sur la pile ?</li><li>Quelle différence entre le nom interne <code>$add</code> et le nom d'export ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"À quoi sert le format WAT ?","a":["C'est la représentation texte lisible d'un module Wasm, utile pour inspecter, apprendre et déboguer","C'est un langage de programmation concurrent de Rust","C'est un format d'image","C'est une base de données du navigateur"],"correct":0,"explain":"Le WAT décrit le même module que le binaire, mais sous une forme lisible ; on l'obtient avec wasm2wat."},
+  {"q":"Comment fonctionne l'exécution dans Wasm ?","a":["Comme une machine à pile : les instructions empilent et dépilent des valeurs","Avec des registres nommés comme un processeur x86","En interprétant du texte ligne par ligne à chaque appel","En envoyant chaque opération au serveur"],"correct":0,"explain":"local.get empile une valeur ; i32.add dépile deux valeurs et empile leur somme."},
+  {"q":"Quels sont les types numériques de base de WebAssembly ?","a":["i32, i64, f32, f64","string, number, boolean, object","int, float, double, char","u8, u16, u32, u64"],"correct":0,"explain":"Wasm ne connaît que ces quatre types ; chaînes et tableaux se construisent par-dessus, en mémoire linéaire."},
+  {"q":"Dans (func $add (export \"add\") …), que voit JavaScript ?","a":["Le nom d'export \"add\" ; $add n'est qu'une étiquette interne au module","Uniquement $add","Les deux noms indifféremment","Rien : la fonction reste privée"],"correct":0,"explain":"JS accède à la fonction par son nom d'export. Le nom interne $add sert seulement à s'y référer dans le WAT."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["wasm2wat","wasm2wat module.wasm"],"placeholder":"la commande WABT qui traduit un .wasm en texte","hints":["Elle va du binaire vers le texte.","« wasm2___ »."],"link":{"href":"lecon-07.html","label":"Revoir « Passer du binaire au texte »"}},
+  {"type":"text","accept":["i32.add","add"],"placeholder":"l'instruction qui dépile deux i32 et empile leur somme","hints":["Elle commence par le type i32.","« i32.___ »."],"link":{"href":"lecon-07.html","label":"Revoir « Une machine à pile »"}},
+  {"type":"text","accept":["export","(export)","export \"add\""],"placeholder":"le mot-clé qui rend une fonction visible depuis JS","hints":["Il s'oppose à import.","« ex____ »."],"link":{"href":"lecon-07.html","label":"Revoir « Anatomie d'une fonction »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Voici un module&nbsp;: <code>(module (func (export "double") (param $x i32) (result i32) local.get $x local.get $x i32.add))</code>. Que renvoie <code>double(5)</code> et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>10.</strong> La fonction empile <code>$x</code> (5), puis <code>$x</code> à nouveau (5) — la pile vaut <code>[5, 5]</code> —, puis <code>i32.add</code> dépile ces deux valeurs et empile leur somme <code>10</code>. Comme il ne reste que <code>10</code> sur la pile à la fin et que le <code>(result i32)</code> l'annonce, c'est la valeur renvoyée. C'est bien un doublement, écrit comme <code>x + x</code>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu inspectes un <code>.wasm</code> et vois <code>(import "env" "now" (func $now (result f64)))</code>. Qu'est-ce que cela t'apprend sur le module&nbsp;?</p><details><summary>Voir une solution</summary><p>Le module <strong>n'est pas autonome</strong>&nbsp;: il <strong>importe</strong> une fonction <code>now</code> depuis un objet <code>env</code> que <strong>l'hôte doit fournir</strong> au moment de l'instanciation. Cette fonction ne prend aucun paramètre et renvoie un <code>f64</code> (typiquement un horodatage, comme <code>performance.now()</code>). Concrètement, côté JavaScript, il faudra passer un objet d'import du type <code>{ env: { now: () =&gt; performance.now() } }</code> à <code>WebAssembly.instantiate</code>, sinon l'instanciation échoue. Lire les <code>(import)</code> d'un module, c'est lire son <strong>contrat</strong> avec l'extérieur.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue affirme&nbsp;: «&nbsp;Le WAT, c'est juste une autre façon d'écrire du JavaScript.&nbsp;» Corrige-le en deux ou trois arguments.</p><details><summary>Voir une solution</summary><p>C'est faux sur plusieurs plans. <strong>(1) Ce n'est pas un langage source qu'on écrit au quotidien</strong>&nbsp;: le WAT est la vue <em>texte</em> d'un binaire d'assemblage, généralement <em>produit</em> par un compilateur (C, Rust…), pas tapé à la main. <strong>(2) Le modèle d'exécution diffère radicalement</strong>&nbsp;: Wasm est une <em>machine à pile</em> à instructions typées de bas niveau (<code>local.get</code>, <code>i32.add</code>), là où JavaScript est un langage de haut niveau, dynamique, avec objets, fermetures et ramasse-miettes. <strong>(3) Le typage est statique et vérifié avant exécution</strong>&nbsp;: un module mal typé est rejeté à la validation, alors que JS ne détecte les erreurs de type qu'à l'exécution. Le WAT et JS <em>collaborent</em> (l'un importe/exporte vers l'autre) mais ne sont pas la même chose.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

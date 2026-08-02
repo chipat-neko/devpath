@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gérer l'espace et le stockage — Leçon 14 · Docker · Syntaxe</title>
+    <meta name="description" content="Reprendre le contrôle de l'espace disque de Docker : docker system df, images dangling, conteneurs arrêtés, volumes orphelins, cache de build, et le nettoyage avec prune (sans effacer ses données)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="docker" data-lesson="lecon-14.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Docker</a></li>
+            <li aria-current="page">Leçon 14</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Aller plus loin — Leçon 14</p>
+              <h1 class="lesson-header__title">Gérer l'espace et le stockage</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 02 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>voir où part l'espace disque avec <code>docker system df</code>&nbsp;;</li>
+                  <li>reconnaître images <em>dangling</em>, conteneurs arrêtés et volumes orphelins&nbsp;;</li>
+                  <li>nettoyer avec <code>prune</code> <strong>sans effacer tes données</strong>&nbsp;;</li>
+                  <li>inspecter le poids couche par couche avec <code>docker history</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Après quelques semaines d'usage, Docker occupe étonnamment vite plusieurs gigaoctets&nbsp;: images empilées, conteneurs oubliés, volumes de bases éphémères, cache de build. Un jour, le disque est plein et un <code>docker build</code> échoue faute d'espace. Cette leçon t'apprend à <strong>voir</strong> où va cet espace et à le <strong>récupérer</strong> — sans jamais supprimer par mégarde des données qui comptent.</p>
+
+<h2>Où passe l'espace disque</h2>
+<p>Docker range ce qu'il stocke en quatre catégories&nbsp;: les <strong>images</strong>, les <strong>conteneurs</strong>, les <strong>volumes</strong> et le <strong>cache de build</strong>. Une seule commande dresse le bilan&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker system df   # « disk free » : la répartition de l'espace</code></pre></figure>
+<figure class="code-block" data-file="sortie"><pre><code>TYPE            TOTAL   ACTIVE   SIZE     RECLAIMABLE
+Images          12      4        2.3GB    1.6GB (69%)
+Containers      6       2        120MB    90MB (75%)
+Local Volumes   8       3        1.1GB    600MB (54%)
+Build Cache     40      0        900MB    900MB (100%)</code></pre></figure>
+<p>La colonne <strong>RECLAIMABLE</strong> («&nbsp;récupérable&nbsp;») est la plus parlante&nbsp;: c'est l'espace que tu peux libérer sans toucher à ce qui sert. Ici, près de 4&nbsp;Go dorment. La différence <code>TOTAL</code> − <code>ACTIVE</code> donne ce qui n'est plus référencé par rien.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Les quatre postes qui consomment l'espace Docker, résumés par docker system df. Premier poste, les images : les couches téléchargées et construites, souvent le plus gros. Deuxième, les conteneurs : la fine couche d'écriture propre à chaque conteneur, même arrêté. Troisième, les volumes : les données persistantes, à traiter avec le plus de prudence. Quatrième, le cache de build : les étapes mises en cache par BuildKit. Pour chacun, une part est active et sert, une autre est récupérable.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">docker system df : quatre postes d'espace</text>
+    <rect class="d-box" x="30" y="44" width="140" height="96" rx="6" /><text class="d-text" x="100" y="66" text-anchor="middle" font-size="9">Images</text><text class="d-mut" x="100" y="86" text-anchor="middle" font-size="7.5">couches tirées</text><text class="d-mut" x="100" y="98" text-anchor="middle" font-size="7.5">et construites</text><text class="d-tag" x="100" y="122" text-anchor="middle" font-size="8">souvent le + gros</text>
+    <rect class="d-box" x="185" y="44" width="140" height="96" rx="6" /><text class="d-text" x="255" y="66" text-anchor="middle" font-size="9">Conteneurs</text><text class="d-mut" x="255" y="86" text-anchor="middle" font-size="7.5">couche d'écriture</text><text class="d-mut" x="255" y="98" text-anchor="middle" font-size="7.5">même arrêtés</text>
+    <rect class="d-accent" x="340" y="44" width="140" height="96" rx="6" /><text class="d-text" x="410" y="66" text-anchor="middle" font-size="9">Volumes</text><text class="d-mut" x="410" y="86" text-anchor="middle" font-size="7.5">DONNÉES</text><text class="d-mut" x="410" y="98" text-anchor="middle" font-size="7.5">persistantes</text><text class="d-tag" x="410" y="122" text-anchor="middle" font-size="8">prudence !</text>
+    <rect class="d-box" x="495" y="44" width="115" height="96" rx="6" /><text class="d-text" x="552" y="66" text-anchor="middle" font-size="9">Cache</text><text class="d-mut" x="552" y="86" text-anchor="middle" font-size="7.5">de build</text><text class="d-mut" x="552" y="98" text-anchor="middle" font-size="7.5">(BuildKit)</text>
+    <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="7.5">colonne RECLAIMABLE = ce qu'on peut libérer sans rien casser</text>
+  </svg>
+  <figcaption>Quatre postes se partagent le disque. Les trois premiers se nettoient sans risque&nbsp;; les <strong>volumes</strong>, eux, contiennent les données — on ne les efface jamais à la légère.</figcaption>
+</figure>
+
+<h2>Images dangling et anciennes versions</h2>
+<p>Chaque fois que tu reconstruis une image sous le même nom, l'ancienne version perd son tag mais <strong>reste sur le disque</strong>, affichée <code>&lt;none&gt;</code> dans <code>docker images</code>&nbsp;: c'est une image <em>dangling</em> («&nbsp;qui pend&nbsp;»). Ajoute les anciennes versions taguées (<code>monapp:0.9</code>, <code>:0.8</code>…) qu'on ne lance plus, et les gigaoctets s'accumulent.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker images                 # lister les images (les &lt;none&gt; sont dangling)
+docker image prune            # supprimer seulement les images dangling
+docker image prune -a         # AGRESSIF : toutes les images non utilisées</code></pre></figure>
+<p><code>docker image prune</code> (sans option) est <strong>sûr</strong>&nbsp;: il ne retire que les <code>&lt;none&gt;</code>, jamais une image taguée. Le <code>-a</code> va bien plus loin&nbsp;: il supprime <strong>toute</strong> image qu'aucun conteneur n'utilise <em>actuellement</em> — y compris des images taguées que tu comptais réutiliser. À réserver à un vrai grand ménage.</p>
+
+<h2>Conteneurs arrêtés et volumes orphelins</h2>
+<p>Un conteneur qui s'arrête ne <strong>disparaît pas</strong>&nbsp;: il reste, avec sa couche d'écriture, visible par <code>docker ps -a</code>. Lancer beaucoup de conteneurs jetables (tests, essais) en laisse des dizaines. De même, un <strong>volume</strong> dont plus aucun conteneur ne se sert devient <em>orphelin</em>.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker ps -a                  # tous les conteneurs, y compris arrêtés
+docker container prune        # supprimer les conteneurs arrêtés (sûr)
+
+docker volume ls              # lister les volumes
+docker volume prune           # supprimer les volumes NON utilisés</code></pre></figure>
+<p>Supprimer un conteneur arrêté est sans danger&nbsp;: ses données utiles, si l'application est bien faite, vivent dans un <strong>volume</strong>, pas dans le conteneur (<a href="lecon-04.html">leçon&nbsp;4</a>). En revanche, <code>docker volume prune</code> touche au stockage&nbsp;: un volume «&nbsp;non utilisé&nbsp;» aujourd'hui peut contenir la base d'un projet simplement arrêté. À manier en regardant d'abord la liste.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le <code>prune</code> qui a effacé la base de données</p><p>Le piège classique&nbsp;: un développeur veut «&nbsp;faire de la place&nbsp;» et lance <code>docker system prune -a --volumes</code> en fin de journée. Le <code>--volumes</code> supprime tous les volumes non attachés à un conteneur <strong>en marche</strong>&nbsp;: la base de développement, dont le conteneur était simplement <em>arrêté</em>, part avec. Les données sont perdues. La règle&nbsp;: <code>--volumes</code> ne se tape jamais par réflexe. Vérifie d'abord <code>docker volume ls</code>, et garde tes données importantes dans des volumes nommés que tu sais identifier.</p></div></div>
+
+<h2>Nettoyer sans se blesser</h2>
+<p>Plutôt que quatre commandes, <code>docker system prune</code> fait le ménage «&nbsp;sûr&nbsp;» d'un coup. Ce qu'il touche dépend des options — et c'est là qu'il faut être précis&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># SÛR : conteneurs arrêtés + réseaux inutilisés + images dangling + cache
+docker system prune
+
+# AGRESSIF : + toutes les images non utilisées (même taguées)
+docker system prune -a
+
+# DANGEREUX : + les volumes non utilisés (⚠ efface des DONNÉES)
+docker system prune -a --volumes
+
+# cibler le seul cache de build (souvent le coupable après BuildKit)
+docker builder prune</code></pre></figure>
+<p>Retiens l'échelle&nbsp;: <code>system prune</code> seul est <strong>sûr</strong> (il ne touche ni les images que tu utilises, ni les volumes)&nbsp;; <code>-a</code> ajoute les images non utilisées&nbsp;; <code>--volumes</code> ajoute les <strong>données</strong>. Chaque cran demande plus de vigilance. Docker demande d'ailleurs confirmation avant d'agir — lis ce qu'il annonce.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Trois niveaux de nettoyage, du plus sûr au plus dangereux. Premier niveau, docker system prune : supprime les conteneurs arrêtés, les réseaux inutilisés, les images dangling et le cache de build ; c'est sûr. Deuxième niveau, avec l'option -a : ajoute la suppression de toutes les images non utilisées, même taguées ; à réserver à un grand ménage. Troisième niveau, avec -a et --volumes : ajoute la suppression des volumes non utilisés, c'est-à-dire des données ; dangereux, à éviter par réflexe.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Trois crans, du sûr au dangereux</text>
+    <rect class="d-box" x="24" y="40" width="196" height="118" rx="6" /><text class="d-tag" x="122" y="60" text-anchor="middle" font-size="9">system prune</text><text class="d-text" x="122" y="80" text-anchor="middle" font-size="8">conteneurs arrêtés</text><text class="d-text" x="122" y="96" text-anchor="middle" font-size="8">réseaux inutilisés</text><text class="d-text" x="122" y="112" text-anchor="middle" font-size="8">images dangling</text><text class="d-text" x="122" y="128" text-anchor="middle" font-size="8">cache de build</text><text class="d-mut" x="122" y="148" text-anchor="middle" font-size="8">SÛR</text>
+    <rect class="d-box" x="228" y="40" width="184" height="118" rx="6" /><text class="d-tag" x="320" y="60" text-anchor="middle" font-size="9">+ option -a</text><text class="d-text" x="320" y="88" text-anchor="middle" font-size="8">toutes les images</text><text class="d-text" x="320" y="104" text-anchor="middle" font-size="8">non utilisées</text><text class="d-mut" x="320" y="148" text-anchor="middle" font-size="8">grand ménage</text>
+    <rect class="d-accent" x="420" y="40" width="196" height="118" rx="6" /><text class="d-tag" x="518" y="60" text-anchor="middle" font-size="9">+ --volumes</text><text class="d-text" x="518" y="88" text-anchor="middle" font-size="8">les volumes</text><text class="d-text" x="518" y="104" text-anchor="middle" font-size="8">= les DONNÉES</text><text class="d-mut" x="518" y="148" text-anchor="middle" font-size="8">DANGEREUX</text>
+    <path class="d-line" d="M220 99 L228 99" fill="none" /><path class="d-line" d="M412 99 L420 99" fill="none" />
+  </svg>
+  <figcaption>Chaque option élargit ce qui est supprimé. <code>system prune</code> est sûr&nbsp;; <code>-a</code> retire les images non utilisées&nbsp;; <code>--volumes</code> efface les données. On monte les crans en connaissance de cause.</figcaption>
+</figure>
+
+<h2>Inspecter le poids couche par couche</h2>
+<p>Quand une image est trop lourde, <code>docker history</code> montre le poids <strong>couche par couche</strong> et désigne le coupable&nbsp;: une dépendance oubliée, un fichier volumineux copié par erreur, un cache de paquets non nettoyé.</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">docker history monapp:1.0.0   # taille de chaque couche</code></pre></figure>
+<figure class="code-block" data-file="sortie"><pre><code>IMAGE      CREATED        CREATED BY                      SIZE
+a1b2c3d4   2 hours ago    CMD ["node" "server.js"]        0B
+&lt;missing&gt;  2 hours ago    COPY . . # buildkit             12MB
+&lt;missing&gt;  2 hours ago    RUN npm ci                      180MB
+&lt;missing&gt;  3 days ago     /bin/sh -c apk add ...          46MB</code></pre></figure>
+<p>On lit d'un coup d'œil que <code>npm ci</code> pèse 180&nbsp;Mo&nbsp;: c'est là qu'un multi-stage (<a href="lecon-06.html">leçon&nbsp;6</a>) ou un <code>--omit=dev</code> ferait fondre l'image. <code>docker history</code> est aussi l'outil qui <strong>révèle un secret</strong> resté dans une couche&nbsp;: si tu y vois un <code>COPY .env</code>, c'est le signal d'alarme vu à la leçon&nbsp;6.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Prévenir plutôt que nettoyer</p><p>Le meilleur nettoyage est celui qu'on n'a pas à faire. Deux réflexes limitent l'accumulation&nbsp;: <code>docker run --rm</code> supprime le conteneur automatiquement à sa fin (idéal pour les commandes jetables), et un bon <code>.dockerignore</code> (<a href="lecon-03.html">leçon&nbsp;3</a>) évite de gonfler le contexte et les images. Pour le reste, un <code>docker system prune</code> périodique suffit à garder un environnement sain.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — voir et récupérer l'espace</caption>
+    <thead><tr><th scope="col">Commande</th><th scope="col">Effet</th><th scope="col">Risque</th></tr></thead>
+    <tbody>
+      <tr><td><code>docker system df</code></td><td>répartition de l'espace (images, conteneurs, volumes, cache)</td><td>aucun (lecture)</td></tr>
+      <tr><td><code>docker image prune</code></td><td>supprime les images dangling (<code>&lt;none&gt;</code>)</td><td>sûr</td></tr>
+      <tr><td><code>docker container prune</code></td><td>supprime les conteneurs arrêtés</td><td>sûr</td></tr>
+      <tr><td><code>docker builder prune</code></td><td>vide le cache de build</td><td>sûr</td></tr>
+      <tr><td><code>docker system prune</code></td><td>ménage sûr d'un coup</td><td>sûr</td></tr>
+      <tr><td><code>docker system prune -a</code></td><td>+ toutes les images non utilisées</td><td>fort</td></tr>
+      <tr><td><code>docker … prune --volumes</code></td><td>+ les volumes = les <strong>données</strong></td><td>dangereux</td></tr>
+      <tr><td><code>docker history img</code></td><td>poids couche par couche</td><td>aucun (lecture)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>docker system df</code></dt><dd>Affiche l'espace occupé par les images, conteneurs, volumes et cache, avec la part récupérable.</dd>
+  <dt>Image dangling</dt><dd>Image sans tag (<code>&lt;none&gt;</code>), typiquement une version remplacée par un rebuild&nbsp;; se supprime sans risque.</dd>
+  <dt>Conteneur arrêté</dt><dd>Conteneur qui a fini de tourner mais reste sur le disque (visible avec <code>docker ps -a</code>) tant qu'on ne le supprime pas.</dd>
+  <dt>Volume orphelin</dt><dd>Volume qu'aucun conteneur n'utilise&nbsp;; il peut malgré tout contenir des données précieuses.</dd>
+  <dt><code>prune</code></dt><dd>Famille de commandes qui suppriment les objets inutilisés&nbsp;; <code>-a</code> et <code>--volumes</code> élargissent (et risquent) la coupe.</dd>
+  <dt>RECLAIMABLE</dt><dd>Colonne de <code>system df</code> indiquant l'espace libérable sans casser ce qui sert.</dd>
+  <dt><code>docker history</code></dt><dd>Liste les couches d'une image et leur taille&nbsp;; révèle une couche trop lourde ou un secret oublié.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>docker system df</code> montre où part l'espace&nbsp;: images, conteneurs, volumes, cache de build.</li>
+  <li>Les images <code>&lt;none&gt;</code> (dangling), conteneurs arrêtés et cache se nettoient <strong>sans risque</strong>.</li>
+  <li><code>system prune</code> est sûr&nbsp;; <code>-a</code> retire les images non utilisées&nbsp;; <code>--volumes</code> efface des <strong>données</strong>.</li>
+  <li><code>docker history</code> révèle la couche trop lourde — ou le secret resté dans l'image.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Quelle commande donne la répartition de l'espace, et quelle colonne regarder&nbsp;?</li>
+  <li>Pourquoi <code>docker system prune --volumes</code> est-il risqué&nbsp;?</li>
+  <li>À quoi sert <code>docker history</code> sur une image trop lourde&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle commande montre comment l'espace disque de Docker se répartit entre images, conteneurs, volumes et cache ?","a":["docker system df","docker images -a","docker inspect","docker stats"],"correct":0,"explain":"docker system df (« disk free ») résume l'espace par catégorie, avec une colonne RECLAIMABLE indiquant ce qu'on peut libérer. docker stats, lui, montre l'usage CPU/mémoire en temps réel."},
+  {"q":"Pourquoi docker image prune (sans -a) est-il sûr, contrairement à docker image prune -a ?","a":["Sans -a, il ne supprime que les images dangling (<none>) ; avec -a, il retire aussi les images taguées qu'aucun conteneur n'utilise actuellement","Sans -a, il ne supprime rien","-a ne concerne que les conteneurs","Les deux sont identiques"],"correct":0,"explain":"prune seul ne touche qu'aux images sans tag (remplacées par un rebuild). L'option -a élargit à toutes les images non utilisées sur le moment, y compris des images taguées que tu voulais peut-être garder."},
+  {"q":"Quel est le danger de docker system prune -a --volumes ?","a":["--volumes supprime les volumes non attachés à un conteneur EN MARCHE : la base d'un projet simplement arrêté peut être effacée","Il redémarre le serveur","Il supprime le Dockerfile","Il désinstalle Docker"],"correct":0,"explain":"Les volumes contiennent les données persistantes. Un projet arrêté (conteneur éteint) a un volume « non utilisé » du point de vue de Docker : --volumes l'efface. On vérifie toujours docker volume ls avant."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["docker system df","system df"],"placeholder":"la commande qui affiche la répartition de l'espace disque (images, conteneurs, volumes, cache)","hints":["« df » comme « disk free ».","docker system ???","Elle a une colonne RECLAIMABLE."],"link":{"href":"lecon-14.html","label":"Revoir « Où passe l'espace disque »"}},
+  {"type":"text","accept":["docker image prune","image prune"],"placeholder":"la commande sûre qui supprime seulement les images dangling (sans -a)","hints":["Sans l'option -a, elle ne touche qu'aux <none>.","docker image ????","prune, pas remove."],"link":{"href":"lecon-14.html","label":"Revoir « Images dangling »"}},
+  {"type":"text","accept":["docker history","history","docker history monapp"],"placeholder":"la commande qui montre la taille de chaque couche d'une image","hints":["Elle aide à trouver la couche trop lourde.","Elle révèle aussi un secret copié par erreur.","docker ??????? monapp:1.0.0"],"link":{"href":"lecon-14.html","label":"Revoir « Inspecter le poids »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans la sortie de <code>docker images</code>, tu vois plusieurs lignes marquées <code>&lt;none&gt;</code>. Qu'est-ce que c'est, et quelle commande les enlève sans toucher au reste&nbsp;?</p><details><summary>Voir une solution</summary><p>Ce sont des images <strong>dangling</strong>&nbsp;: d'anciennes versions qui ont perdu leur tag lors d'un rebuild, mais restent sur le disque. <code>docker image prune</code> (sans <code>-a</code>) les supprime toutes, et <strong>uniquement</strong> elles&nbsp;: aucune image taguée n'est touchée.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un collègue veut «&nbsp;tout nettoyer&nbsp;» et s'apprête à taper <code>docker system prune -a --volumes</code>. Que lui conseilles-tu de vérifier d'abord, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>De regarder d'abord <code>docker volume ls</code> (et <code>docker ps -a</code>). Le <code>--volumes</code> efface les volumes non rattachés à un conteneur <strong>en marche</strong>&nbsp;: la base d'un projet simplement arrêté partirait avec ses données. Pour un ménage courant, <code>docker system prune</code> seul suffit et ne touche pas aux volumes.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une image pèse 1,2&nbsp;Go alors qu'elle ne sert qu'un petit site statique. Quelle commande utilises-tu pour comprendre, et vers quelle technique du cours te tourneras-tu&nbsp;?</p><details><summary>Voir une solution</summary><p><code>docker history monimage</code> montre la taille de chaque couche. On y repère typiquement une base trop lourde ou des outils de build (compilateur, <code>node_modules</code>) restés dans l'image. La parade&nbsp;: un <strong>build multi-stage</strong> (<a href="lecon-06.html">leçon&nbsp;6</a>) qui ne copie que le résultat compilé dans une image finale minimale, plus une base <code>-alpine</code>. On passe souvent du gigaoctet à quelques dizaines de Mo.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

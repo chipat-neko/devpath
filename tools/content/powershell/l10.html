@@ -1,0 +1,93 @@
+<p>PowerShell ne se limite pas à ses cmdlets&nbsp;: on peut l'<strong>étendre</strong> avec des <strong>modules</strong> (des paquets de commandes), et plonger directement dans tout l'écosystème <strong>.NET</strong>. C'est ce qui le rend aussi puissant&nbsp;: derrière le shell se cache une plateforme de programmation complète.</p>
+
+<h2>Installer des modules</h2>
+<p>La <strong>PowerShell Gallery</strong> est le dépôt officiel de modules. <code>Find-Module</code> cherche, <code>Install-Module</code> installe, <code>Import-Module</code> charge dans la session, <code>Get-Module</code> liste.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Find-Module -Name *Json*
+Install-Module -Name Pester -Scope CurrentUser
+Import-Module Pester
+Get-Module                       # modules chargés
+Get-Command -Module Pester       # ce qu'ils apportent</code></pre></figure>
+<p class="code-caption">Le <code>-Scope CurrentUser</code> installe sans droits administrateur.</p>
+
+<h2>Écrire son propre module</h2>
+<p>Un module est un fichier <code>.psm1</code> regroupant des fonctions. On l'importe comme n'importe quel module. <code>Export-ModuleMember</code> choisit ce qui est public.</p>
+<figure class="code-block" data-file="Outils.psm1"><pre><code class="language-powershell">function Get-Carre { param([int]$N) $N * $N }
+function Get-Cube  { param([int]$N) $N * $N * $N }
+
+Export-ModuleMember -Function Get-Carre, Get-Cube</code></pre></figure>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Import-Module .\Outils.psm1
+Get-Carre -N 5    # 25</code></pre></figure>
+
+<h2>Le manifeste de module</h2>
+<p>Pour un vrai module, un <strong>manifeste</strong> <code>.psd1</code> décrit version, auteur, dépendances et fonctions exportées. <code>New-ModuleManifest</code> le génère.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">New-ModuleManifest -Path .\Outils.psd1 `
+  -RootModule "Outils.psm1" `
+  -ModuleVersion "1.0.0" `
+  -Author "Noah" `
+  -FunctionsToExport "Get-Carre", "Get-Cube"</code></pre></figure>
+<p>Le caractère <code>`</code> (accent grave) en fin de ligne permet de continuer une commande sur la suivante.</p>
+
+<h2>Appeler directement .NET</h2>
+<p>Toute classe .NET est accessible entre crochets. <code>[Math]</code> pour les maths, <code>[DateTime]</code> pour les dates, <code>[System.IO.Path]</code> pour les chemins… On appelle les méthodes statiques avec <code>::</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">[Math]::Sqrt(144)              # 12
+[Math]::Pow(2, 10)             # 1024
+[DateTime]::Now                # date et heure actuelles
+[guid]::NewGuid()              # un identifiant unique
+[System.IO.Path]::GetExtension("rapport.pdf")   # .pdf</code></pre></figure>
+<p class="code-caption">Quand aucune cmdlet ne fait l'affaire, .NET a presque toujours la réponse.</p>
+
+<h2>Créer une instance d'objet .NET</h2>
+<p>Pour les méthodes non statiques, on instancie avec <code>::new()</code> (ou l'ancien <code>New-Object</code>).</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">$sb = [System.Text.StringBuilder]::new()
+[void]$sb.Append("Bonjour")
+[void]$sb.Append(", monde")
+$sb.ToString()    # Bonjour, monde</code></pre></figure>
+
+<h2>Définir ses propres classes</h2>
+<p>PowerShell 5+ permet de déclarer des <strong>classes</strong>, avec propriétés et méthodes&nbsp;— utile pour modéliser proprement un domaine.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">class Compte {
+    [string]$Titulaire
+    [double]$Solde = 0
+
+    [void] Deposer([double]$montant) {
+        $this.Solde += $montant
+    }
+}
+
+$c = [Compte]::new()
+$c.Titulaire = "Ada"
+$c.Deposer(100)
+$c.Solde    # 100</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Les méthodes d'objets .NET qui renvoient une valeur (comme <code>$sb.Append(...)</code> ou <code>$liste.Add(...)</code>) polluent le pipeline de sortie. Préfixe-les de <code>[void]</code> ou affecte le résultat pour éviter des objets parasites dans ta sortie.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Un module bien rangé suit une structure&nbsp;: dossier <code>MonModule/</code> contenant <code>MonModule.psm1</code> et <code>MonModule.psd1</code>. Place-le dans un des chemins de <code>$env:PSModulePath</code> et <code>Import-Module MonModule</code> le trouvera par son nom.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>La <strong>PowerShell Gallery</strong> fournit des modules (<code>Install-Module</code>, <code>Import-Module</code>).</li>
+  <li>Un module <code>.psm1</code> regroupe des fonctions&nbsp;; un manifeste <code>.psd1</code> le décrit.</li>
+  <li>Les classes .NET s'appellent entre crochets (<code>[Math]::Sqrt</code>) et s'instancient avec <code>::new()</code>.</li>
+  <li>PowerShell sait définir ses propres <strong>classes</strong> avec <code>class</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle cmdlet installe un module depuis la Gallery&nbsp;?</li><li>Comment appeler la méthode statique <code>Sqrt</code> de la classe <code>Math</code>&nbsp;?</li><li>Pourquoi préfixer <code>$sb.Append(...)</code> de <code>[void]</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Calcule la racine carrée de 2 et arrondis-la à 4 décimales avec .NET.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">[Math]::Round([Math]::Sqrt(2), 4)   # 1,4142</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un module <code>Texte.psm1</code> avec une fonction <code>Get-Inverse</code> qui inverse une chaîne, puis importe-le et teste-le.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Texte.psm1"><pre><code class="language-powershell">function Get-Inverse {
+    param([string]$Texte)
+    $chars = $Texte.ToCharArray()
+    [array]::Reverse($chars)
+    -join $chars
+}
+Export-ModuleMember -Function Get-Inverse
+# Import-Module .\Texte.psm1 ; Get-Inverse "abc"  # cba</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Définis une classe <code>Rectangle</code> avec largeur et hauteur, et une méthode <code>Aire()</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">class Rectangle {
+    [double]$Largeur
+    [double]$Hauteur
+    [double] Aire() { return $this.Largeur * $this.Hauteur }
+}
+$r = [Rectangle]@{ Largeur = 4; Hauteur = 3 }
+$r.Aire()   # 12</code></pre></figure></details></div>

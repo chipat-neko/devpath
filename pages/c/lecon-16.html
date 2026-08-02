@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tester son code C — Leçon 16 · C · Syntaxe</title>
+    <meta name="description" content="Tester en C : assert.h pour les invariants, un mini-framework de tests fait main, vérifier les cas limites, et les sanitizers pour traquer les bugs mémoire." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="c" data-lesson="lecon-16.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">C</a></li>
+            <li aria-current="page">Leçon 16</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · C en profondeur — Leçon 16</p>
+              <h1 class="lesson-header__title">Tester son code C</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Compilation multi-fichiers (leçon 10) utile</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>utiliser <code>assert()</code> pour vérifier des invariants&nbsp;;</li>
+                  <li>construire un <strong>mini-framework</strong> de tests en quelques macros&nbsp;;</li>
+                  <li>organiser et compter ses tests, couvrir les <strong>cas limites</strong>&nbsp;;</li>
+                  <li>traquer les bugs mémoire avec les <strong>sanitizers</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En C, une erreur de logique ne se contente pas de donner un mauvais résultat&nbsp;: elle peut corrompre la mémoire, planter au hasard, ou ouvrir une faille. Les <strong>tests automatisés</strong> sont donc encore plus précieux ici qu'ailleurs. La bibliothèque standard du C ne fournit pas de framework de test&nbsp;; mais le langage est si simple qu'on en construit un en quelques macros — et c'est exactement ce qu'on va faire, avant de citer les outils prêts à l'emploi.</p>
+
+<h2>assert() : vérifier un invariant</h2>
+<p>La macro <code>assert()</code> de <code>&lt;assert.h&gt;</code> arrête le programme si une condition est fausse, en affichant fichier et ligne. Elle exprime un <strong>invariant</strong>&nbsp;: une chose qui doit toujours être vraie à ce point du code.</p>
+<figure class="code-block" data-file="invariant.c"><pre><code class="language-c">#include &lt;assert.h&gt;
+
+int facteur(int n) {
+    assert(n &gt;= 0);          // invariant : n ne doit jamais être négatif
+    int r = 1;
+    for (int i = 2; i &lt;= n; i++) r *= i;
+    return r;
+}
+// facteur(-3) déclenche :
+// Assertion failed: n &gt;= 0, file invariant.c, line 4</code></pre></figure>
+<p>Deux limites&nbsp;: <code>assert()</code> disparaît si on compile avec <code>-DNDEBUG</code> (build optimisé), et il <em>arrête tout</em> au premier échec. C'est idéal pour documenter une précondition pendant le développement, mais une vraie suite de tests doit tous les exécuter et faire un rapport.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Comparaison entre assert et une vraie suite de tests. À gauche, assert : dès que la première condition est fausse, le programme s'arrête net ; les tests suivants ne sont jamais exécutés, et tout disparaît si l'on compile avec -DNDEBUG. À droite, un mini-framework : chaque test est exécuté, les succès et les échecs sont comptés, et un bilan final est affiché avec un code de sortie.">
+    <text class="d-label" x="160" y="22" text-anchor="middle" font-size="12">assert()</text>
+    <rect class="d-box" x="60" y="40" width="200" height="26" rx="4" /><text class="d-text" x="160" y="57" text-anchor="middle" font-size="9">test 1 ✓</text>
+    <rect class="d-accent" x="60" y="72" width="200" height="26" rx="4" /><text class="d-text" x="160" y="89" text-anchor="middle" font-size="9">test 2 ✗ → abort()</text>
+    <rect class="d-frame" x="60" y="104" width="200" height="26" rx="4" /><text class="d-mut" x="160" y="121" text-anchor="middle" font-size="9">test 3 — jamais exécuté</text>
+    <text class="d-mut" x="160" y="152" text-anchor="middle" font-size="8">stoppe au 1er échec</text>
+    <text class="d-mut" x="160" y="168" text-anchor="middle" font-size="8">disparaît avec -DNDEBUG</text>
+    <text class="d-label" x="480" y="22" text-anchor="middle" font-size="12">suite VERIFIER</text>
+    <rect class="d-box" x="380" y="40" width="200" height="26" rx="4" /><text class="d-text" x="480" y="57" text-anchor="middle" font-size="9">test 1 ✓ passes++</text>
+    <rect class="d-box" x="380" y="72" width="200" height="26" rx="4" /><text class="d-text" x="480" y="89" text-anchor="middle" font-size="9">test 2 ✗ échecs++ (+ ligne)</text>
+    <rect class="d-box" x="380" y="104" width="200" height="26" rx="4" /><text class="d-text" x="480" y="121" text-anchor="middle" font-size="9">test 3 ✓ passes++</text>
+    <rect class="d-accent" x="380" y="140" width="200" height="26" rx="4" /><text class="d-text" x="480" y="157" text-anchor="middle" font-size="9">bilan : 2 réussis, 1 échoué → exit 1</text>
+    <text class="d-mut" x="480" y="184" text-anchor="middle" font-size="8">exécute tout, agrège, reste actif en release</text>
+  </svg>
+  <figcaption><code>assert</code> documente un invariant mais s'arrête au premier échec&nbsp;; une suite exécute tous les cas et rend un <strong>bilan</strong> exploitable par la CI.</figcaption>
+</figure>
+
+<h2>Un mini-framework en quelques macros</h2>
+<p>On construit notre propre cadre&nbsp;: une macro qui compare un résultat à l'attendu, compte les succès et les échecs, et continue après un échec. Pas de dépendance, juste du C.</p>
+<figure class="code-block" data-file="test.c"><pre><code class="language-c">#include &lt;stdio.h&gt;
+
+static int tests_passes = 0;
+static int tests_echoues = 0;
+
+// Vérifie une condition ; affiche un message clair en cas d'échec.
+#define VERIFIER(condition)                                    \
+    do {                                                       \
+        if (condition) {                                       \
+            tests_passes++;                                    \
+        } else {                                               \
+            tests_echoues++;                                   \
+            printf("ÉCHEC ligne %d : %s\n", __LINE__, #condition); \
+        }                                                      \
+    } while (0)
+
+int additionner(int a, int b) { return a + b; }
+
+int main(void) {
+    VERIFIER(additionner(2, 3) == 5);
+    VERIFIER(additionner(-1, 1) == 0);
+    VERIFIER(additionner(0, 0) == 0);
+
+    printf("\nBilan : %d réussis, %d échoués\n", tests_passes, tests_echoues);
+    return tests_echoues == 0 ? 0 : 1;   // code de sortie != 0 si échec
+}
+// Sortie :
+// Bilan : 3 réussis, 0 échoués</code></pre></figure>
+<p>Deux astuces de préprocesseur (module&nbsp;3) font tout le travail&nbsp;: <code>#condition</code> transforme l'expression en chaîne pour l'afficher, et <code>__LINE__</code> donne le numéro de ligne. Le <code>do { ... } while (0)</code> est l'idiome qui rend une macro multi-instructions sûre à utiliser dans un <code>if</code>. Le <strong>code de sortie</strong> (0 = succès) permet à un script ou à la CI de savoir si la suite a réussi.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 175" role="img" aria-label="Le flux de la macro VERIFIER. On évalue une condition. Si elle est vraie, on incrémente le compteur de succès. Si elle est fausse, on incrémente le compteur d'échecs et on affiche un message contenant le texte de la condition, via l'opérateur dièse, et le numéro de ligne, via LINE. À la fin, le bilan des succès et échecs donne le code de sortie : zéro si tout passe, un sinon, ce que la CI exploite.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La macro VERIFIER : de la condition au code de sortie</text>
+    <rect class="d-accent" x="30" y="66" width="110" height="44" rx="6" /><text class="d-text" x="85" y="92" text-anchor="middle" font-size="10">condition ?</text>
+    <line class="d-line" x1="140" y1="80" x2="200" y2="60" /><text class="d-mut" x="170" y="54" text-anchor="middle" font-size="8">vrai</text>
+    <line class="d-line" x1="140" y1="96" x2="200" y2="118" /><text class="d-mut" x="170" y="126" text-anchor="middle" font-size="8">faux</text>
+    <rect class="d-box" x="200" y="42" width="150" height="34" rx="6" /><text class="d-text" x="275" y="63" text-anchor="middle" font-size="9">passes++</text>
+    <rect class="d-box" x="200" y="100" width="150" height="46" rx="6" /><text class="d-text" x="275" y="120" text-anchor="middle" font-size="9">échecs++ + message</text><text class="d-tag" x="275" y="136" text-anchor="middle" font-size="8">#cond · __LINE__</text>
+    <line class="d-line" x1="350" y1="60" x2="410" y2="82" />
+    <line class="d-line" x1="350" y1="122" x2="410" y2="96" />
+    <rect class="d-box" x="410" y="66" width="100" height="44" rx="6" /><text class="d-text" x="460" y="86" text-anchor="middle" font-size="9">bilan</text><text class="d-mut" x="460" y="101" text-anchor="middle" font-size="8">passes / échecs</text>
+    <line class="d-line" x1="510" y1="88" x2="545" y2="88" />
+    <rect class="d-accent" x="545" y="66" width="82" height="44" rx="6" /><text class="d-text" x="586" y="86" text-anchor="middle" font-size="9">exit 0/1</text><text class="d-mut" x="586" y="101" text-anchor="middle" font-size="8">→ CI</text>
+    <text class="d-mut" x="320" y="166" text-anchor="middle" font-size="9">le code de sortie (0 = succès) rend la suite automatisable</text>
+  </svg>
+  <figcaption>Deux astuces de préprocesseur font tout&nbsp;: <code>#cond</code> affiche l'expression testée, <code>__LINE__</code> donne la ligne&nbsp;; le code de sortie relie la suite à la CI.</figcaption>
+</figure>
+
+<h2>Couvrir les cas limites</h2>
+<p>Un bon test ne vérifie pas que le cas «&nbsp;qui marche&nbsp;»&nbsp;: il cible les <strong>frontières</strong>, là où les bugs se cachent. Pour une fonction sur des chaînes ou des tableaux&nbsp;: l'entrée vide, l'élément unique, le dépassement potentiel.</p>
+<figure class="code-block" data-file="test.c"><pre><code class="language-c">#include &lt;string.h&gt;
+
+// longueur_sure : comme strlen, mais bornée pour éviter de lire trop loin.
+size_t longueur_sure(const char *s, size_t max) {
+    size_t n = 0;
+    while (n &lt; max &amp;&amp; s[n] != '\0') n++;
+    return n;
+}
+
+void tester_longueur(void) {
+    VERIFIER(longueur_sure("", 10) == 0);          // chaîne vide
+    VERIFIER(longueur_sure("abc", 10) == 3);       // cas normal
+    VERIFIER(longueur_sure("abc", 2) == 2);        // borne atteinte avant '\0'
+    VERIFIER(longueur_sure("a", 1) == 1);          // limite exacte
+}</code></pre></figure>
+<p>Chaque ligne teste un cas <em>différent</em>&nbsp;: vide, normal, borne, limite. C'est cette variété qui donne confiance — pas le nombre de tests, mais leur diversité face aux situations réelles.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Un test fonctionnel peut passer alors qu'un bug mémoire se cache. À gauche, la suite de tests affiche tout au vert : le résultat calculé est correct. Mais au milieu, la mémoire contient un accès hors limites ou un use-after-free silencieux. À droite, en compilant avec l'option -fsanitize=address, AddressSanitizer instrumente le programme et signale précisément l'accès fautif avec sa ligne. Le test seul ne voyait rien.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un test « vert » peut cacher un bug mémoire</text>
+    <rect class="d-box" x="30" y="54" width="160" height="70" rx="8" /><text class="d-text" x="110" y="82" text-anchor="middle" font-size="10">suite de tests</text><text class="d-mut" x="110" y="100" text-anchor="middle" font-size="9">3 réussis ✓</text><text class="d-mut" x="110" y="114" text-anchor="middle" font-size="8">résultat correct</text>
+    <rect class="d-accent" x="240" y="54" width="160" height="70" rx="8" /><text class="d-text" x="320" y="82" text-anchor="middle" font-size="10">la mémoire</text><text class="d-mut" x="320" y="100" text-anchor="middle" font-size="9">hors limites / use-after-free</text><text class="d-mut" x="320" y="114" text-anchor="middle" font-size="8">silencieux</text>
+    <rect class="d-box" x="450" y="54" width="160" height="70" rx="8" /><text class="d-text" x="530" y="82" text-anchor="middle" font-size="10">AddressSanitizer</text><text class="d-tag" x="530" y="100" text-anchor="middle" font-size="8">-fsanitize=address</text><text class="d-mut" x="530" y="114" text-anchor="middle" font-size="8">signale ligne + pile</text>
+    <line class="d-line" x1="190" y1="89" x2="240" y2="89" />
+    <line class="d-line" x1="400" y1="89" x2="450" y2="89" />
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="9">compile et lance TA suite sous ASan : le bug invisible devient une erreur localisée</text>
+  </svg>
+  <figcaption>Le test valide le <em>résultat</em>&nbsp;; le sanitizer valide la <em>mémoire</em>. En C, il faut les deux.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Les sanitizers : tester aussi la mémoire</p><p>En C, un test peut <em>passer</em> tout en cachant un bug mémoire (lecture hors limites, fuite, <em>use-after-free</em>). Compile et lance tes tests avec l'<strong>AddressSanitizer</strong>&nbsp;: <code>gcc -fsanitize=address,undefined -g test.c</code>. Il instrumente le programme et <strong>signale précisément</strong> l'accès fautif avec sa pile d'appels. C'est l'outil le plus rentable du C moderne&nbsp;: active-le sur toute ta suite de tests.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>Heartbleed</strong> (2014) reste l'illustration parfaite. Une faille dans <strong>OpenSSL</strong> — écrite en C — laissait recopier jusqu'à 64&nbsp;Kio de mémoire du serveur en se fiant à une longueur fournie par le client, sans vérifier qu'elle correspondait aux données réellement reçues. Les tests fonctionnels passaient au vert&nbsp;: sur une requête normale, la réponse était correcte. C'était une <strong>lecture hors limites</strong> que seuls le <em>fuzzing</em> et les sanitizers mémoire révèlent — et qui a exposé mots de passe et clés privées sur des centaines de milliers de serveurs. La leçon&nbsp;: en C, «&nbsp;le test passe&nbsp;» ne veut pas dire «&nbsp;la mémoire est saine&nbsp;». Teste les cas limites, et lance ta suite sous <code>-fsanitize=address</code>.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour de vrais projets, des frameworks dédiés évitent de réinventer la roue&nbsp;: <strong>Unity</strong> (très léger, idéal pour l'embarqué), <strong>Check</strong>, <strong>CMocka</strong> (avec mocks et tests isolés par processus), ou <strong>Criterion</strong>. Couple-les à <code>valgrind</code> ou aux sanitizers pour la mémoire, à <code>gcov</code> pour la couverture, et lance le tout via <code>make test</code> dans ta chaîne d'intégration continue.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — tester son code C</caption>
+    <thead><tr><th scope="col">Outil / notion</th><th scope="col">Rôle</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>assert(cond)</code></td><td>vérifier un invariant en développement</td><td>s'arrête au 1er échec ; ôté par <code>-DNDEBUG</code></td></tr>
+      <tr><td>Macro <code>VERIFIER</code></td><td>exécuter tous les cas, compter, continuer</td><td><code>do { … } while (0)</code></td></tr>
+      <tr><td><code>#cond</code></td><td>stringification : afficher l'expression</td><td><code>"additionner(2,3)==5"</code></td></tr>
+      <tr><td><code>__LINE__</code></td><td>numéro de ligne du test</td><td>message d'échec localisé</td></tr>
+      <tr><td>Cas limites</td><td>tester les frontières</td><td>vide, unique, borne, débordement</td></tr>
+      <tr><td>Code de sortie</td><td>0 = succès, ≠ 0 = échec</td><td><code>return echecs == 0 ? 0 : 1;</code></td></tr>
+      <tr><td>Sanitizers</td><td>détecter les bugs mémoire / UB</td><td><code>-fsanitize=address,undefined</code></td></tr>
+      <tr><td>Couverture</td><td>lignes réellement testées</td><td><code>gcov</code></td></tr>
+      <tr><td>Frameworks</td><td>suites structurées, mocks</td><td>Unity, Check, CMocka, Criterion</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Invariant</dt><dd>Propriété toujours vraie à un point donné du code&nbsp;; <code>assert()</code> la vérifie et interrompt le programme si elle est fausse.</dd>
+  <dt><code>assert()</code></dt><dd>Macro de <code>&lt;assert.h&gt;</code> qui stoppe l'exécution sur condition fausse&nbsp;; désactivée par <code>-DNDEBUG</code>.</dd>
+  <dt>Cas limite</dt><dd>Situation frontière (entrée vide, élément unique, borne atteinte, débordement) où les bugs se concentrent.</dd>
+  <dt>Stringification</dt><dd>Opérateur <code>#</code> du préprocesseur qui transforme un argument de macro en chaîne de caractères.</dd>
+  <dt><code>__LINE__</code></dt><dd>Macro prédéfinie donnant le numéro de la ligne courante&nbsp;; utile pour localiser un test qui échoue.</dd>
+  <dt>Code de sortie</dt><dd>Entier renvoyé par le programme (<code>0</code> = succès)&nbsp;; permet à un script ou à la CI de savoir si la suite a réussi.</dd>
+  <dt>Sanitizer</dt><dd>Instrumentation du compilateur (<code>-fsanitize=address,undefined</code>) qui signale à l'exécution les accès mémoire invalides et les comportements indéfinis.</dd>
+  <dt>Régression</dt><dd>Bug réapparu après coup&nbsp;; un test de non-régression, conservé après correction, empêche son retour.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>assert()</code> documente un <strong>invariant</strong>, mais s'arrête au premier échec et disparaît avec <code>-DNDEBUG</code>.</li>
+  <li>Un <strong>mini-framework</strong> tient en une macro <code>VERIFIER</code> (avec <code>#x</code> et <code>__LINE__</code>) qui compte et continue.</li>
+  <li>Le <strong>code de sortie</strong> (0 = succès) permet l'automatisation par script/CI.</li>
+  <li>On cible les <strong>cas limites</strong> (vide, unique, borne), pas seulement le cas nominal.</li>
+  <li>Les <strong>sanitizers</strong> (<code>-fsanitize=address,undefined</code>) attrapent les bugs mémoire qu'un test seul ne voit pas.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi <code>assert()</code> seul ne suffit-il pas comme suite de tests&nbsp;?</li>
+  <li>À quoi servent <code>#condition</code> et <code>__LINE__</code> dans la macro de test&nbsp;?</li>
+  <li>Pourquoi lancer ses tests sous AddressSanitizer en C&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi assert() seul ne suffit-il pas comme suite de tests ?","a":["Parce qu'il arrête le programme au premier échec (pas de rapport groupé ni de poursuite des autres cas) et qu'il est désactivé en release (NDEBUG), ne testant alors plus rien","assert() est trop lent","assert() teste tout automatiquement","assert() génère des rapports complets"],"correct":0,"explain":"assert interrompt brutalement à la première condition fausse et disparaît quand NDEBUG est défini. Un cadre de test exécute tous les cas, agrège les résultats et reste actif : assert ne remplace pas une vraie suite de tests."},
+  {"q":"À quoi servent #condition et __LINE__ dans une macro de test ?","a":["#condition (stringification) affiche le texte de la condition testée ; __LINE__ donne le numéro de ligne, pour des messages d'échec localisés et lisibles","Ils accélèrent les tests","Ils suppriment les erreurs","Ils ne servent à rien"],"correct":0,"explain":"L'opérateur # transforme l'expression de la condition en chaîne de caractères, et __LINE__ fournit la ligne où l'assertion a échoué. Combinés, ils produisent un message clair indiquant quoi a échoué et où."},
+  {"q":"Pourquoi lancer ses tests sous AddressSanitizer en C ?","a":["Parce qu'il détecte les erreurs mémoire (débordements de tampon, use-after-free, fuites) que les tests fonctionnels ne révèlent pas","Parce qu'il accélère le programme","Parce qu'il remplace le compilateur","Parce qu'il écrit les tests"],"correct":0,"explain":"Un test peut « passer » alors qu'un comportement indéfini mémoire se produit en silence. AddressSanitizer instrumente le code pour repérer ces erreurs (accès hors limites, libération double, lectures après free), révélant des bugs invisibles autrement."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["compteur","compteur d'échecs","échecs","nombre d'échecs","compteur d echecs","echecs"],"placeholder":"ce que la macro VERIFIER incrémente quand la condition est fausse (un … d'échecs)","hints":["On l'affiche à la fin pour un bilan.","Il recense les tests ratés.","Un … (d'échecs)."],"link":{"href":"lecon-16.html","label":"Revoir « Une mini-base de tests »"}},
+  {"type":"text","accept":["size_t","size_t "],"placeholder":"le type entier NON SIGNÉ recommandé pour une taille de tableau (paramètre n) : …","hints":["Le type renvoyé par sizeof.","Jamais négatif, assez grand pour tout index.","size_?"],"link":{"href":"lecon-16.html","label":"Revoir « Le type des tailles »"}},
+  {"type":"text","accept":["-fsanitize","sanitizer","fsanitize","-fsanitize=address","AddressSanitizer","-fsanitize=undefined","asan"],"placeholder":"l'option de gcc/clang pour détecter accès mémoire invalides et comportements indéfinis : -f…","hints":["-fsanitize=address (ASan) et =undefined (UBSan).","Instrumente le binaire pour signaler les fautes à l'exécution.","-f????????=address"],"link":{"href":"lecon-16.html","label":"Revoir « Les sanitizers »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une macro <code>VERIFIER(cond)</code> qui incrémente un compteur d'échecs et affiche la ligne fautive si <code>cond</code> est fausse.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-c">static int echecs = 0;
+
+#define VERIFIER(cond)                                     \
+    do {                                                   \
+        if (!(cond)) {                                     \
+            echecs++;                                      \
+            printf("ÉCHEC ligne %d : %s\n", __LINE__, #cond); \
+        }                                                  \
+    } while (0)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>int maximum(const int *t, size_t n)</code> et trois vérifications&nbsp;: un tableau normal, un tableau à un seul élément, et un tableau dont le max est en première position.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-c">int maximum(const int *t, size_t n) {
+    int m = t[0];
+    for (size_t i = 1; i &lt; n; i++)
+        if (t[i] &gt; m) m = t[i];
+    return m;
+}
+
+void tester_maximum(void) {
+    int a[] = {3, 7, 2, 9, 4};
+    int b[] = {42};
+    int c[] = {9, 1, 5};
+    VERIFIER(maximum(a, 5) == 9);   // cas normal
+    VERIFIER(maximum(b, 1) == 42);  // un seul élément
+    VERIFIER(maximum(c, 3) == 9);   // max en première position
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Quelle commande de compilation lance tes tests en activant la détection des accès mémoire invalides et des comportements indéfinis&nbsp;? Explique pourquoi c'est crucial en C.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">gcc -fsanitize=address,undefined -g -o tests test.c
+./tests</code></pre></figure><p><code>-fsanitize=address</code> instrumente chaque accès mémoire pour détecter dépassements de tableau, <em>use-after-free</em> et fuites&nbsp;; <code>-fsanitize=undefined</code> attrape les comportements indéfinis (débordement d'entier signé, décalage invalide…). En C, un test peut réussir tout en corrompant la mémoire&nbsp;: le programme «&nbsp;a l'air&nbsp;» de marcher mais plantera ailleurs, plus tard, de façon imprévisible. Les sanitizers transforment ces bugs silencieux en erreurs immédiates et localisées.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-c.min.js" defer></script>
+  </body>
+</html>

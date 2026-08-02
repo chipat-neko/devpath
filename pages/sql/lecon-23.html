@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migrations et évolution du schéma — Leçon 23 · SQL · Syntaxe</title>
+    <meta name="description" content="Faire évoluer un schéma en production : migrations versionnées et immuables (up/down), table de suivi, outils (Flyway, Alembic, Prisma), changements rétro-compatibles, patron expand/contract et backfill sans interruption." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="sql" data-lesson="lecon-23.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">SQL</a></li>
+            <li aria-current="page">Leçon 23</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 08 · Pour aller plus loin — Leçon 23</p>
+              <h1 class="lesson-header__title">Migrations et évolution du schéma</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 11 (DDL) recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>versionner le schéma comme du code avec des <strong>migrations</strong> ordonnées et immuables&nbsp;;</li>
+                  <li>écrire une migration <strong>up</strong> (et sa <strong>down</strong>) et suivre l'état avec une table de versions&nbsp;;</li>
+                  <li>distinguer un changement <strong>rétro-compatible</strong> d'un changement <strong>cassant</strong>&nbsp;;</li>
+                  <li>déployer un renommage sans interruption grâce au patron <strong>expand/contract</strong> et au <strong>backfill</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le schéma n'est jamais figé&nbsp;: on ajoute une colonne, une table, un index. La question n'est pas <em>comment</em> écrire l'<code>ALTER TABLE</code> (leçon 11 l'a montré), mais comment <strong>propager ce changement partout de la même façon</strong>&nbsp;: sur ta machine, celle des coéquipiers, la base de test de la CI, et la production — sans oublier une étape ni casser l'application en vol. La réponse&nbsp;: traiter les changements de schéma comme du <strong>code versionné</strong>, appelé <em>migrations</em>.</p>
+
+<h2>Le problème : garder toutes les bases synchronisées</h2>
+<p>Appliquer un <code>ALTER TABLE</code> à la main dans un client SQL fonctionne… une fois, sur une base. Multiplie par cinq environnements et trois personnes&nbsp;: quelqu'un oublie, la CI diverge, la prod plante au prochain déploiement. Une <strong>migration</strong> est un fichier numéroté, rangé dans le dépôt Git à côté du code, qui décrit un changement. Un outil les applique <em>dans l'ordre</em> et note lesquels ont déjà tourné.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Des migrations ordonnées appliquées à toutes les bases. À gauche, une suite de fichiers de migration numérotés V1, V2, V3 versionnés dans Git. Une flèche mène à trois bases : développement, intégration continue et production. Chaque base applique les mêmes migrations dans le même ordre. Une table schema_migrations note la dernière version appliquée, ici V3, pour ne jamais rejouer une migration déjà passée.">
+    <text class="d-label" x="16" y="24" font-size="13">Les migrations synchronisent toutes les bases</text>
+    <text class="d-mut" x="24" y="46" font-size="9">migrations versionnées (Git)</text>
+    <rect class="d-frame" x="20" y="52" width="150" height="112" rx="6" />
+    <rect class="d-box" x="32" y="62" width="126" height="26" rx="3" /><text class="d-text" x="42" y="79" font-size="8">V1 création tables</text>
+    <rect class="d-box" x="32" y="94" width="126" height="26" rx="3" /><text class="d-text" x="42" y="111" font-size="8">V2 add colonne</text>
+    <rect class="d-accent" x="32" y="126" width="126" height="26" rx="3" /><text class="d-text" x="42" y="143" font-size="8">V3 add index</text>
+
+    <path class="d-line" d="M176 108 H236" /><path class="d-line" d="M228 102 L236 108 L228 114" /><text class="d-mut" x="206" y="100" text-anchor="middle" font-size="8">appliquées</text><text class="d-mut" x="206" y="126" text-anchor="middle" font-size="8">dans l'ordre</text>
+
+    <rect class="d-frame" x="248" y="54" width="150" height="34" rx="5" /><text class="d-text" x="323" y="75" text-anchor="middle" font-size="9">base développement</text>
+    <rect class="d-frame" x="248" y="94" width="150" height="34" rx="5" /><text class="d-text" x="323" y="115" text-anchor="middle" font-size="9">base intégration (CI)</text>
+    <rect class="d-frame" x="248" y="134" width="150" height="30" rx="5" /><text class="d-text" x="323" y="153" text-anchor="middle" font-size="9">base production</text>
+
+    <rect class="d-accent" x="430" y="80" width="190" height="56" rx="6" /><text class="d-tag" x="525" y="102" text-anchor="middle" font-size="9">schema_migrations</text><text class="d-text" x="525" y="122" text-anchor="middle" font-size="9">dernière appliquée : V3</text>
+  </svg>
+  <figcaption>Un même jeu de migrations, appliqué dans le même ordre partout&nbsp;; la table <code>schema_migrations</code> mémorise la dernière version pour ne jamais rejouer un fichier déjà passé. Le schéma devient reproductible.</figcaption>
+</figure>
+
+<h2>Une migration = un fichier ordonné et immuable</h2>
+<p>Chaque migration a une partie <strong>up</strong> (appliquer le changement) et, idéalement, une partie <strong>down</strong> (le défaire). Une fois qu'une migration a été appliquée ailleurs qu'en local — surtout en prod — elle est <strong>immuable</strong>&nbsp;: on ne la réécrit pas, on en crée une nouvelle.</p>
+<figure class="code-block" data-file="V2__ajout_email_verifie.sql"><pre><code class="language-sql">-- up : appliquer le changement (rétro-compatible)
+ALTER TABLE comptes
+  ADD COLUMN email_verifie BOOLEAN NOT NULL DEFAULT false;
+
+-- down : revenir en arrière si besoin
+-- ALTER TABLE comptes DROP COLUMN email_verifie;</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne <strong>jamais</strong> modifier une migration déjà appliquée en production. Les autres bases l'ont déjà exécutée&nbsp;; la corriger crée une divergence silencieuse (leur schéma ne correspondra plus au fichier). Une erreur se répare par une <em>nouvelle</em> migration qui vient après. Les migrations forment un historique, pas un brouillon.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note — les outils, un par écosystème</p><p>Le principe est universel&nbsp;; chaque monde a son outil&nbsp;: <strong>Flyway</strong> et <strong>Liquibase</strong> (Java), <strong>Alembic</strong> (Python/SQLAlchemy), <strong>Prisma Migrate</strong> et <strong>Knex</strong> (Node), les migrations <strong>Rails</strong> et <strong>Django</strong>. Tous font la même chose&nbsp;: un dossier de fichiers ordonnés + une table de suivi + une commande <code>migrate</code>. Apprends le concept une fois, tu les retrouves partout.</p></div></div>
+
+<h2>Rétro-compatible ou cassant ?</h2>
+<p>Un changement est <strong>rétro-compatible</strong> si l'<em>ancienne</em> version de l'application continue de fonctionner avec le nouveau schéma. C'est crucial&nbsp;: pendant un déploiement progressif, l'ancien et le nouveau code tournent <em>en même temps</em> quelques minutes. La migration passe avant le code&nbsp;; l'ancien code doit survivre au nouveau schéma.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 178" role="img" aria-label="Changement rétro-compatible contre changement cassant pendant un déploiement. En haut, ajouter une colonne avec valeur par défaut : l'ancienne version du code, qui ignore la colonne, continue de fonctionner, c'est sûr. En bas, renommer ou supprimer une colonne d'un coup : l'ancienne version du code cherche l'ancien nom, ne le trouve plus et plante pendant que les deux versions coexistent.">
+    <text class="d-label" x="16" y="24" font-size="13">Pendant un déploiement, ancien et nouveau code coexistent</text>
+    <rect class="d-frame" x="20" y="36" width="600" height="60" rx="6" />
+    <rect class="d-accent" x="32" y="48" width="150" height="36" rx="4" /><text class="d-text" x="107" y="64" text-anchor="middle" font-size="9">ADD COLUMN</text><text class="d-mut" x="107" y="78" text-anchor="middle" font-size="8">+ DEFAULT</text>
+    <text class="d-text" x="200" y="62" font-size="9">ancien code ignore la colonne</text>
+    <text class="d-tag" x="200" y="80" font-size="10">→ rétro-compatible, sûr ✓</text>
+
+    <rect class="d-frame" x="20" y="106" width="600" height="60" rx="6" />
+    <rect class="d-box" x="32" y="118" width="150" height="36" rx="4" /><text class="d-text" x="107" y="134" text-anchor="middle" font-size="9">RENAME / DROP</text><text class="d-mut" x="107" y="148" text-anchor="middle" font-size="8">d'un coup</text>
+    <text class="d-text" x="200" y="132" font-size="9">ancien code cherche l'ancien nom</text>
+    <text class="d-tag" x="200" y="150" font-size="10">→ cassant, plante ✗</text>
+  </svg>
+  <figcaption>Ajouter (colonne, table, index) est presque toujours sûr. Renommer ou supprimer d'un seul coup casse l'ancienne version encore en service&nbsp;: il faut passer par plusieurs étapes.</figcaption>
+</figure>
+
+<h2>Le patron expand/contract</h2>
+<p>Comment renommer <code>nom</code> en <code>nom_complet</code> sans jamais couper le service&nbsp;? On <em>n'échange pas</em> la colonne d'un coup. On <strong>élargit</strong> (expand), on migre, puis on <strong>resserre</strong> (contract), en plusieurs déploiements&nbsp;:</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Le patron expand contract en trois temps pour renommer une colonne sans interruption. Temps un, élargir : on ajoute la nouvelle colonne nom_complet et le code écrit dans les deux colonnes à la fois. Temps deux, migrer : on recopie les anciennes valeurs vers la nouvelle colonne par un backfill et le code lit désormais la nouvelle. Temps trois, resserrer : plus personne n'utilise l'ancienne colonne, on la supprime.">
+    <text class="d-label" x="16" y="24" font-size="13">Renommer sans coupure : élargir → migrer → resserrer</text>
+    <rect class="d-frame" x="20" y="40" width="192" height="132" rx="6" /><text class="d-tag" x="116" y="62" text-anchor="middle" font-size="10">1 · Élargir</text>
+    <rect class="d-accent" x="34" y="74" width="164" height="24" rx="3" /><text class="d-text" x="116" y="90" text-anchor="middle" font-size="8">ADD nom_complet</text>
+    <text class="d-mut" x="116" y="120" text-anchor="middle" font-size="8">le code écrit</text>
+    <text class="d-mut" x="116" y="134" text-anchor="middle" font-size="8">dans les DEUX colonnes</text>
+    <text class="d-mut" x="116" y="154" text-anchor="middle" font-size="8">(nom + nom_complet)</text>
+
+    <rect class="d-frame" x="224" y="40" width="192" height="132" rx="6" /><text class="d-tag" x="320" y="62" text-anchor="middle" font-size="10">2 · Migrer</text>
+    <rect class="d-accent" x="238" y="74" width="164" height="24" rx="3" /><text class="d-text" x="320" y="90" text-anchor="middle" font-size="8">backfill nom → nom_complet</text>
+    <text class="d-mut" x="320" y="120" text-anchor="middle" font-size="8">on recopie l'ancien</text>
+    <text class="d-mut" x="320" y="134" text-anchor="middle" font-size="8">vers le nouveau,</text>
+    <text class="d-mut" x="320" y="154" text-anchor="middle" font-size="8">le code LIT nom_complet</text>
+
+    <rect class="d-frame" x="428" y="40" width="192" height="132" rx="6" /><text class="d-tag" x="524" y="62" text-anchor="middle" font-size="10">3 · Resserrer</text>
+    <rect class="d-box" x="442" y="74" width="164" height="24" rx="3" /><text class="d-text" x="524" y="90" text-anchor="middle" font-size="8">DROP COLUMN nom</text>
+    <text class="d-mut" x="524" y="120" text-anchor="middle" font-size="8">plus personne</text>
+    <text class="d-mut" x="524" y="134" text-anchor="middle" font-size="8">n'utilise l'ancienne</text>
+    <text class="d-mut" x="524" y="154" text-anchor="middle" font-size="8">→ suppression sûre</text>
+  </svg>
+  <figcaption>Trois déploiements, jamais de coupure&nbsp;: on ajoute et on double-écrit, on recopie l'existant et on bascule les lectures, puis — une fois l'ancienne colonne inutilisée — on la supprime.</figcaption>
+</figure>
+<figure class="code-block" data-file="expand_contract.sql"><pre><code class="language-sql">-- Étape 1 (migration) : élargir. Le code se met à écrire dans les deux.
+ALTER TABLE clients ADD COLUMN nom_complet TEXT;
+
+-- Étape 2 (migration) : backfill des lignes existantes, par lots
+UPDATE clients SET nom_complet = nom
+WHERE nom_complet IS NULL AND id BETWEEN 1 AND 10000;
+-- … répéter par tranches d'id jusqu'à couvrir toute la table …
+
+-- Étape 3 (migration, plus tard) : resserrer, une fois le code basculé
+ALTER TABLE clients DROP COLUMN nom;</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — backfill par lots</p><p>Un <code>UPDATE</code> qui touche des millions de lignes d'un coup verrouille longtemps et gonfle le journal de transactions. Découpe-le en <strong>tranches</strong> (par plage d'<code>id</code>, par exemple 10 000 lignes), avec une pause entre chaque. La production respire, et une interruption ne perd que le lot en cours.</p></div></div>
+
+<h2>Créer un index sans bloquer</h2>
+<p>Sur une grosse table, un <code>CREATE INDEX</code> classique verrouille les écritures le temps de la construction — parfois de longues minutes. PostgreSQL propose <code>CREATE INDEX CONCURRENTLY</code>, qui construit l'index sans bloquer les écritures (plus lent, mais transparent pour les utilisateurs).</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe qui déploie <strong>plusieurs fois par jour</strong> voulait renommer <code>email</code> en <code>email_pro</code>. Version naïve&nbsp;: une migration <code>RENAME COLUMN</code> juste avant le déploiement. Résultat&nbsp;: pendant les 90 secondes où les anciens serveurs cohabitaient avec les nouveaux, l'ancien code cherchait <code>email</code>, disparu&nbsp;: vague de <em>500</em>, alertes, rollback en catastrophe. Rejoué en <strong>expand/contract</strong> sur trois déploiements successifs — ajout + double écriture, backfill + bascule des lectures, suppression une semaine plus tard — le renommage est passé <em>sans un seul incident</em>. C'est le mode de fonctionnement standard des grandes plateformes en déploiement continu.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Deux styles de gestion&nbsp;: <strong>impératif</strong> (tu écris chaque migration, façon Flyway/Alembic) ou <strong>déclaratif</strong> (tu décris le schéma cible, l'outil calcule le <em>diff</em>, façon Prisma). Ajoute des <strong>vérifications</strong>&nbsp;: rejouer toutes les migrations sur une base vide en CI, tester la <code>down</code>, et bloquer les changements cassants par revue. Enfin, garde les migrations de <em>schéma</em> (DDL) séparées des migrations de <em>données</em> lourdes.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo&nbsp;: migrations et évolution du schéma</caption>
+    <thead><tr><th>Besoin</th><th>Approche</th><th>Détail</th></tr></thead>
+    <tbody>
+      <tr><td>Changer le schéma partout</td><td>migration versionnée</td><td>fichier ordonné + table de suivi</td></tr>
+      <tr><td>Corriger une migration passée</td><td>une NOUVELLE migration</td><td>jamais réécrire l'ancienne</td></tr>
+      <tr><td>Ajouter une colonne</td><td><code>ADD COLUMN … DEFAULT</code></td><td>rétro-compatible, sûr</td></tr>
+      <tr><td>Renommer/supprimer sans coupure</td><td>expand → migrer → contract</td><td>plusieurs déploiements</td></tr>
+      <tr><td>Remplir des millions de lignes</td><td>backfill par lots</td><td>tranches d'<code>id</code> + pauses</td></tr>
+      <tr><td>Indexer une grosse table</td><td><code>CREATE INDEX CONCURRENTLY</code></td><td>sans bloquer les écritures</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Migration</dt>
+  <dd>Fichier versionné et ordonné décrivant un changement de schéma, appliqué de façon reproductible sur toutes les bases.</dd>
+  <dt>up / down</dt>
+  <dd>Les deux sens d'une migration&nbsp;: <em>up</em> applique le changement, <em>down</em> le défait (retour arrière).</dd>
+  <dt>schema_migrations</dt>
+  <dd>Table de suivi où l'outil note les migrations déjà appliquées, pour ne jamais les rejouer.</dd>
+  <dt>Rétro-compatible</dt>
+  <dd>Se dit d'un changement de schéma avec lequel l'<em>ancienne</em> version du code continue de fonctionner.</dd>
+  <dt>Changement cassant</dt>
+  <dd>Modification (renommage, suppression, <code>NOT NULL</code> sans défaut) qui fait échouer l'ancienne version du code.</dd>
+  <dt>Expand/contract</dt>
+  <dd>Patron en trois temps (élargir, migrer, resserrer) pour transformer un schéma sans interruption de service.</dd>
+  <dt>Backfill</dt>
+  <dd>Remplissage des lignes existantes après l'ajout d'une colonne, idéalement par lots pour ne pas bloquer la base.</dd>
+  <dt>CREATE INDEX CONCURRENTLY</dt>
+  <dd>Variante PostgreSQL qui construit un index sans verrouiller les écritures de la table.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une migration = un fichier <strong>ordonné, versionné dans Git, immuable</strong> une fois appliqué ailleurs&nbsp;; la table de suivi évite de le rejouer.</li>
+<li>Corriger une migration passée = en écrire une <strong>nouvelle</strong>, jamais réécrire l'ancienne.</li>
+<li>Un changement <strong>rétro-compatible</strong> (ajout) laisse tourner l'ancien code&nbsp;; un renommage/suppression d'un coup est <strong>cassant</strong>.</li>
+<li>Le patron <strong>expand/contract</strong> (élargir, migrer, resserrer) renomme ou supprime sans coupure, en plusieurs déploiements.</li>
+<li>Remplis les grosses tables par <strong>backfill en lots</strong>&nbsp;; indexe-les avec <code>CONCURRENTLY</code> pour ne pas bloquer.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi ne faut-il jamais réécrire une migration déjà appliquée en production&nbsp;?</li><li>Pourquoi <code>ADD COLUMN … DEFAULT</code> est-il rétro-compatible mais <code>RENAME COLUMN</code> ne l'est pas&nbsp;?</li><li>Quelles sont les trois étapes du patron expand/contract pour renommer une colonne&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi ne faut-il jamais réécrire une migration déjà appliquée en production ?","a":["Parce que les autres bases l'ont déjà exécutée telle quelle : la modifier crée une divergence silencieuse entre le fichier et les schémas réels. On corrige par une NOUVELLE migration qui vient après","Parce que c'est interdit par SQL","Parce que ça efface les données","Parce que les migrations sont chiffrées"],"correct":0,"explain":"Les migrations forment un historique appliqué partout. Si tu réécris un fichier déjà passé en prod, les environnements qui l'ont exécuté ne rejoueront pas la version corrigée : leur schéma diverge. La règle est d'ajouter une migration, pas d'éditer le passé."},
+  {"q":"Pourquoi ADD COLUMN … DEFAULT est-il rétro-compatible alors que RENAME COLUMN d'un coup ne l'est pas ?","a":["Parce que l'ancienne version du code ignore simplement la nouvelle colonne et continue de fonctionner, tandis qu'un renommage fait disparaître le nom que l'ancien code cherche encore pendant la coexistence des deux versions","Parce que ADD COLUMN est plus rapide","Parce que RENAME COLUMN n'existe pas","Parce que DEFAULT verrouille la table"],"correct":0,"explain":"Pendant un déploiement progressif, ancien et nouveau code tournent ensemble. Ajouter une colonne ne gêne pas l'ancien code (il l'ignore) ; renommer d'un coup casse l'ancien code qui référence toujours l'ancien nom. D'où le patron expand/contract."},
+  {"q":"Quelles sont les trois étapes du patron expand/contract pour renommer une colonne sans coupure ?","a":["Élargir (ajouter la nouvelle colonne et écrire dans les deux), migrer (backfill des anciennes valeurs et basculer les lectures sur la nouvelle), resserrer (supprimer l'ancienne colonne une fois inutilisée)","Sauvegarder, renommer, restaurer","Verrouiller, renommer, déverrouiller","Copier la table, la renommer, la supprimer"],"correct":0,"explain":"Expand : on ajoute la colonne cible et le code double-écrit. Migrate : on recopie l'existant (backfill) et on lit désormais la nouvelle colonne. Contract : plus personne n'utilise l'ancienne, on la supprime. Chaque étape est un déploiement séparé, sans coupure."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["expand/contract","expand contract","élargir migrer resserrer","expand-contract"],"placeholder":"le nom du patron en trois temps (élargir, migrer, resserrer) pour renommer une colonne sans interruption","hints":["Deux mots anglais opposés.","expand … / … contract.","élargir puis resserrer"],"link":{"href":"lecon-23.html","label":"Revoir « Le patron expand/contract »"}},
+  {"type":"text","accept":["backfill","le backfill","remplissage par lots"],"placeholder":"le nom du remplissage des lignes existantes après l'ajout d'une colonne, fait par lots pour ne pas bloquer","hints":["Terme anglais.","On recopie l'ancien vers le nouveau.","back…"],"link":{"href":"lecon-23.html","label":"Revoir « expand/contract »"}},
+  {"type":"text","accept":["schema_migrations","table de suivi","table de versions"],"placeholder":"la table où l'outil note les migrations déjà appliquées, pour ne pas les rejouer","hints":["Elle mémorise la dernière version.","schema_…","une table de suivi"],"link":{"href":"lecon-23.html","label":"Revoir « garder toutes les bases synchronisées »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une migration rétro-compatible qui ajoute à <code>produits</code> une colonne <code>en_stock</code> booléenne, valant <code>true</code> par défaut, sans casser l'ancien code.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- up
+ALTER TABLE produits
+  ADD COLUMN en_stock BOOLEAN NOT NULL DEFAULT true;
+-- down
+-- ALTER TABLE produits DROP COLUMN en_stock;
+-- L'ancien code ignore la colonne : rétro-compatible.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu dois remplir une nouvelle colonne <code>slug</code> pour 5 millions d'articles. Écris le principe du backfill par lots (montre une tranche).</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Une tranche parmi d'autres ; on répète en avançant les bornes d'id
+UPDATE articles
+SET slug = LOWER(REPLACE(titre, ' ', '-'))
+WHERE slug IS NULL
+  AND id BETWEEN 1 AND 100000;
+-- Puis 100001..200000, etc., avec une courte pause entre les lots.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Décris, dans l'ordre, les migrations et déploiements pour renommer <code>tel</code> en <code>telephone</code> sans aucune coupure.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- 1) Élargir : migration + déploiement du code qui écrit dans les deux
+ALTER TABLE contacts ADD COLUMN telephone TEXT;
+-- (le code écrit désormais tel ET telephone)
+
+-- 2) Migrer : backfill par lots + déploiement du code qui LIT telephone
+UPDATE contacts SET telephone = tel
+WHERE telephone IS NULL AND id BETWEEN 1 AND 10000;  -- puis tranches suivantes
+
+-- 3) Resserrer : une fois plus personne ne lit/écrit tel, migration finale
+ALTER TABLE contacts DROP COLUMN tel;</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

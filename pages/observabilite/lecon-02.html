@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les journaux (logs) structurés — Leçon 02 · Syntaxe</title>
+    <meta name="description" content="Écrire de bons journaux : du texte libre aux logs structurés (clé/valeur, JSON), les niveaux de log, le contexte et la corrélation, et les pièges (données sensibles, trop ou trop peu de logs)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="observabilite" data-lesson="lecon-02.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Observabilité &amp; SRE</a></li>
+            <li aria-current="page">Leçon 02</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 01 · Voir l'état du système — Leçon 02</p>
+              <h1 class="lesson-header__title">Les journaux (logs) structurés</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~31 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 01 conseillée</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire des journaux <strong>structurés</strong> (clé/valeur, JSON)&nbsp;;</li>
+                  <li>choisir le bon <strong>niveau</strong> de log&nbsp;;</li>
+                  <li>ajouter du <strong>contexte</strong> et corréler&nbsp;;</li>
+                  <li>éviter les <strong>pièges</strong> (secrets, bruit).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le premier pilier de l'observabilité, ce sont les <strong>journaux</strong> (logs)&nbsp;: le récit détaillé de ce que fait l'application. Mais tous les logs ne se valent pas. Un log <em>bien écrit</em> se cherche, se filtre et raconte&nbsp;; un log brouillon se noie dans le bruit.</p>
+
+<h2>Du texte libre au log structuré</h2>
+<p>Le réflexe naïf est d'écrire des phrases&nbsp;: <code>"Erreur lors du paiement de la commande 4521 pour user 88"</code>. C'est lisible par un humain… mais difficile à <strong>filtrer</strong> en masse. Un <strong>log structuré</strong> sépare le message des <strong>données</strong> (clé/valeur), souvent en <strong>JSON</strong>&nbsp;:</p>
+<figure class="code-block" data-file="texte-vs-structure.txt"><pre><code>  Texte libre (difficile à exploiter) :
+   "Erreur paiement commande 4521 pour user 88, carte refusée"
+
+  Structuré (filtrable, analysable) :
+   niveau=error  event=payment_failed  order_id=4521
+   user_id=88    reason=card_declined  duration_ms=320</code></pre></figure>
+<figure class="code-block" data-file="log.json"><pre><code class="language-json">{
+  "timestamp": "2026-06-26T14:32:10Z",
+  "level": "error",
+  "event": "payment_failed",
+  "order_id": 4521,
+  "user_id": 88,
+  "reason": "card_declined",
+  "duration_ms": 320
+}</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Pourquoi ça change tout</p><p>Avec des logs structurés, on peut demander « tous les <code>payment_failed</code> de l'heure passée, groupés par <code>reason</code> » en une requête. Avec du texte libre, il faudrait éplucher des lignes à la main. Le structuré rend les logs <strong>interrogeables</strong>.</p></div></div>
+
+<h2>Les niveaux de log</h2>
+<p>Chaque message a un <strong>niveau</strong> de gravité, qui permet de filtrer selon le besoin&nbsp;:</p>
+<ul>
+<li><strong>DEBUG</strong> : détails fins, utiles en développement (souvent désactivés en production).</li>
+<li><strong>INFO</strong> : événements normaux notables (« utilisateur connecté », « commande créée »).</li>
+<li><strong>WARN</strong> : quelque chose d'anormal mais non bloquant (« nouvelle tentative », « quota proche »).</li>
+<li><strong>ERROR</strong> : une opération a échoué (« paiement refusé », « exception non gérée »).</li>
+</ul>
+<p>Bien choisir le niveau évite deux travers&nbsp;: tout mettre en <code>ERROR</code> (et noyer les vraies erreurs), ou tout mettre en <code>INFO</code> (et rater les problèmes).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Les quatre niveaux de log par gravité croissante, de gauche à droite en escalier montant. DEBUG : détails fins, surtout en développement. INFO : événements normaux notables, par exemple utilisateur connecté. WARN : anormal mais non bloquant, par exemple une nouvelle tentative. ERROR : une opération a échoué, par exemple un paiement refusé. Une flèche en haut indique que la gravité augmente de DEBUG vers ERROR.">
+    <line class="d-line" x1="20" y1="26" x2="600" y2="26" /><path class="d-dot" d="M600 26 l-9 -4 v8 z" />
+    <text class="d-label" x="300" y="18" text-anchor="middle" font-size="10">gravité croissante →</text>
+    <rect class="d-box" x="20" y="112" width="140" height="40" rx="6" />
+    <text class="d-label" x="90" y="130" text-anchor="middle" font-size="12">DEBUG</text>
+    <text class="d-mut" x="90" y="146" text-anchor="middle" font-size="9">détails fins (dev)</text>
+    <rect class="d-box" x="170" y="86" width="140" height="66" rx="6" />
+    <text class="d-label" x="240" y="106" text-anchor="middle" font-size="12">INFO</text>
+    <text class="d-mut" x="240" y="124" text-anchor="middle" font-size="9">événements normaux</text>
+    <text class="d-mut" x="240" y="140" text-anchor="middle" font-size="9">« user connecté »</text>
+    <rect class="d-accent" x="320" y="60" width="140" height="92" rx="6" />
+    <text class="d-label" x="390" y="80" text-anchor="middle" font-size="12">WARN</text>
+    <text class="d-mut" x="390" y="98" text-anchor="middle" font-size="9">anormal, non bloquant</text>
+    <text class="d-mut" x="390" y="114" text-anchor="middle" font-size="9">« nouvelle tentative »</text>
+    <rect class="d-accent" x="470" y="34" width="150" height="118" rx="6" />
+    <text class="d-label" x="545" y="54" text-anchor="middle" font-size="12">ERROR</text>
+    <text class="d-mut" x="545" y="72" text-anchor="middle" font-size="9">une opération a échoué</text>
+    <text class="d-mut" x="545" y="88" text-anchor="middle" font-size="9">« paiement refusé »</text>
+  </svg>
+  <figcaption>Le <strong>niveau</strong> classe chaque message par gravité, de <code>DEBUG</code> à <code>ERROR</code>. Il permet de <strong>filtrer</strong>&nbsp;: en production, on ne garde souvent que <code>INFO</code> et au-dessus.</figcaption>
+</figure>
+
+<h2>Le contexte et la corrélation</h2>
+<p>Un log isolé dit peu. Ce qui le rend puissant, c'est le <strong>contexte</strong>&nbsp;: à quel utilisateur, quelle requête, quelle commande se rapporte-t-il&nbsp;? On ajoute des champs comme <code>user_id</code>, <code>order_id</code>… et surtout un <strong>identifiant de requête</strong> (<em>request id</em> ou <em>trace id</em>) qui permet de <strong>relier tous les logs</strong> d'une même requête, même répartis sur plusieurs services.</p>
+<figure class="code-block" data-file="correlation.txt"><pre><code>  Tous ces logs partagent request_id=abc-123 :
+
+   service-api      event=request_received  request_id=abc-123
+   service-paiement event=charge_attempt    request_id=abc-123
+   service-paiement event=payment_failed    request_id=abc-123
+
+  → on reconstitue toute l'histoire d'UNE requête, bout en bout.</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La corrélation par identifiant de requête. Trois logs empilés provenant de services différents : service API avec l'événement request_received, service paiement avec charge_attempt, service paiement avec payment_failed. Des lignes les relient à droite à une même étiquette request_id égale abc tiret 123, ce qui reconstitue une seule requête de bout en bout à travers les services.">
+    <rect class="d-box" x="24" y="34" width="372" height="34" rx="6" />
+    <text class="d-text" x="40" y="55" font-size="10.5">service-api · event=request_received</text>
+    <rect class="d-box" x="24" y="78" width="372" height="34" rx="6" />
+    <text class="d-text" x="40" y="99" font-size="10.5">service-paiement · event=charge_attempt</text>
+    <rect class="d-accent" x="24" y="122" width="372" height="34" rx="6" />
+    <text class="d-text" x="40" y="143" font-size="10.5">service-paiement · event=payment_failed</text>
+    <line class="d-line" x1="396" y1="51" x2="440" y2="51" />
+    <line class="d-line" x1="396" y1="95" x2="440" y2="95" />
+    <line class="d-line" x1="396" y1="139" x2="440" y2="139" />
+    <line class="d-line" x1="440" y1="51" x2="440" y2="139" />
+    <line class="d-line" x1="440" y1="95" x2="472" y2="95" /><path class="d-dot" d="M472 95 l-9 -4 v8 z" />
+    <text class="d-tag" x="536" y="91" text-anchor="middle" font-size="11">request_id = abc-123</text>
+    <text class="d-mut" x="536" y="111" text-anchor="middle" font-size="9">→ une requête, bout en bout</text>
+  </svg>
+  <figcaption>Un <strong>identifiant de requête</strong> partagé (<code>request_id</code>) relie tous les logs d'un même parcours, même éparpillés sur plusieurs services&nbsp;: on reconstitue l'histoire complète en filtrant dessus.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe cherche pourquoi <strong>certaines</strong> commandes échouent au paiement, sans motif visible. Comme chaque log porte un <code>request_id</code> et un champ <code>reason</code>, une simple requête «&nbsp;<code>payment_failed</code> groupés par <code>reason</code> sur 24&nbsp;h&nbsp;» révèle que 90&nbsp;% des échecs partagent <code>reason=card_expired</code> pour un seul émetteur de cartes. En suivant un <code>request_id</code> précis, on retrouve la trace complète&nbsp;: l'application envoyait au prestataire un format de date erroné pour cet émetteur. Sans logs <strong>structurés</strong> ni identifiant de corrélation, ce motif serait resté noyé dans des millions de lignes.</p></div></div>
+
+<h2>Les pièges à éviter</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ne jamais journaliser de secrets</p><p>Mots de passe, jetons, numéros de carte, données personnelles&nbsp;: ils n'ont <strong>rien</strong> à faire dans les logs (risque de fuite, obligations légales). On les <strong>masque</strong> ou on ne les écrit pas.</p></div></div>
+<ul>
+<li><strong>Trop de logs</strong> : noie l'information utile et coûte cher (stockage). Journaliser ce qui <em>sert</em>, pas tout.</li>
+<li><strong>Trop peu</strong> : on ne voit rien le jour de l'incident. Les points clés (entrées/sorties, erreurs, décisions) méritent un log.</li>
+<li><strong>Messages vagues</strong> : « ça a échoué » sans contexte n'aide personne. Dire <em>quoi</em>, <em>pour qui</em>, <em>pourquoi</em>.</li>
+</ul>
+
+<h2>Centraliser les journaux</h2>
+<p>En production, l'application tourne sur plusieurs serveurs. Lire les logs machine par machine est impraticable. On les <strong>centralise</strong> dans un système de collecte (par ex. Loki, ELK…) où l'on peut <strong>rechercher et filtrer</strong> sur l'ensemble — ce qui n'a de sens que si les logs sont… <strong>structurés</strong>. La boucle est bouclée.</p>
+
+<h2>Antisèche — les logs</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Bien journaliser en un coup d'œil.</caption>
+    <thead><tr><th scope="col">Sujet</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Structuré</td><td>Clé/valeur ou JSON — filtrable, pas du texte libre</td></tr>
+      <tr><td>Niveaux</td><td><code>DEBUG</code> &lt; <code>INFO</code> &lt; <code>WARN</code> &lt; <code>ERROR</code></td></tr>
+      <tr><td>Contexte</td><td><code>user_id</code>, <code>order_id</code>… + un <code>request_id</code></td></tr>
+      <tr><td>Corrélation</td><td>Même <code>request_id</code> → toute l'histoire d'une requête</td></tr>
+      <tr><td>Jamais</td><td>Mots de passe, jetons, cartes, données personnelles</td></tr>
+      <tr><td>Centraliser</td><td>Un collecteur (Loki, ELK…) pour tout chercher</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Log (journal)</dt><dd>Enregistrement horodaté d'un événement de l'application.</dd>
+  <dt>Log structuré</dt><dd>Log où message et données sont séparés en champs clé/valeur (souvent JSON), donc filtrable et analysable.</dd>
+  <dt>Niveau de log</dt><dd>Gravité d'un message&nbsp;: <code>DEBUG</code>, <code>INFO</code>, <code>WARN</code>, <code>ERROR</code>&nbsp;; sert à filtrer.</dd>
+  <dt>Request id / trace id</dt><dd>Identifiant partagé par tous les logs d'une même requête&nbsp;; permet de les corréler.</dd>
+  <dt>Corrélation</dt><dd>Relier entre eux des logs épars grâce à un champ commun (souvent l'identifiant de requête).</dd>
+  <dt>Centralisation</dt><dd>Rassembler les logs de toutes les machines dans un système unique de recherche (Loki, ELK…).</dd>
+  <dt>Masquage (redaction)</dt><dd>Remplacer ou omettre les données sensibles avant de les écrire dans un log.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un <strong>log structuré</strong> (clé/valeur, JSON) est <strong>filtrable</strong> et analysable, contrairement au texte libre.</li>
+<li>Choisir le bon <strong>niveau</strong> (DEBUG/INFO/WARN/ERROR) pour filtrer utilement.</li>
+<li>Ajouter du <strong>contexte</strong> et un <strong>request id</strong> pour corréler les logs d'une même requête.</li>
+<li>Éviter&nbsp;: les <strong>secrets</strong>, le trop/trop peu, les messages vagues. <strong>Centraliser</strong> les journaux.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un log structuré vaut-il mieux que du texte libre ?</li><li>À quoi sert un identifiant de requête dans les logs ?</li><li>Que ne faut-il jamais journaliser ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi préférer des logs structurés (clé/valeur, JSON) au texte libre ?","a":["Parce qu'ils sont filtrables et analysables : on peut interroger « tous les payment_failed groupés par raison » en une requête","Parce qu'ils sont plus jolis","Parce qu'ils prennent moins de place","Parce que le texte libre est interdit"],"correct":0,"explain":"Le structuré sépare le message des données. On interroge les logs comme des données ; avec du texte libre, il faudrait éplucher les lignes à la main."},
+  {"q":"À quoi sert un identifiant de requête (request id / trace id) dans les logs ?","a":["À relier tous les logs d'une même requête, même répartis sur plusieurs services, pour reconstituer son histoire","À chiffrer les logs","À remplacer le niveau de log","À accélérer l'application"],"correct":0,"explain":"Avec un request id commun, on retrouve d'un coup tous les événements d'une requête de bout en bout — indispensable dans un système réparti."},
+  {"q":"Que ne faut-il jamais écrire dans les journaux ?","a":["Des secrets et données sensibles : mots de passe, jetons, numéros de carte, données personnelles","Le niveau de gravité","L'horodatage","Le nom de l'événement"],"correct":0,"explain":"Journaliser des secrets crée un risque de fuite et des problèmes légaux. On les masque ou on ne les écrit pas."},
+  {"q":"Quel est le bon dosage pour les logs ?","a":["Journaliser ce qui sert (points clés, erreurs, décisions) : ni trop (bruit, coût) ni trop peu (on ne voit rien)","Tout journaliser en niveau ERROR","Ne rien journaliser pour économiser","Mettre tout en DEBUG en production"],"correct":0,"explain":"Trop de logs noie l'information et coûte cher ; trop peu rend aveugle le jour de l'incident. On vise les points utiles, avec le bon niveau."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["structures","structurés","structure","structuré","logs structures","logs structurés"],"placeholder":"le type de log (clé/valeur, JSON) qui est filtrable et analysable","hints":["Par opposition au texte libre.","« struct… »."],"link":{"href":"lecon-02.html","label":"Revoir « Du texte libre au log structuré »"}},
+  {"type":"text","accept":["request id","trace id","identifiant de requete","identifiant de requête","request_id"],"placeholder":"l'identifiant qui relie tous les logs d'une même requête","hints":["Partagé entre services.","« request … »."],"link":{"href":"lecon-02.html","label":"Revoir « Le contexte et la corrélation »"}},
+  {"type":"text","accept":["niveau","niveaux","niveau de log","level"],"placeholder":"ce qui distingue DEBUG, INFO, WARN, ERROR","hints":["La gravité du message.","« niv… »."],"link":{"href":"lecon-02.html","label":"Revoir « Les niveaux de log »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Choisis le niveau de log approprié pour&nbsp;: (a) « utilisateur connecté » ; (b) « impossible de joindre la base de données » ; (c) « le quota d'API atteint 80 % ».</p><details><summary>Voir une solution</summary><p>(a) « utilisateur connecté » → <strong>INFO</strong>&nbsp;: un événement normal et notable, ni anormal ni grave. (b) « impossible de joindre la base de données » → <strong>ERROR</strong>&nbsp;: une opération essentielle a échoué, ça demande attention. (c) « le quota d'API atteint 80 % » → <strong>WARN</strong>&nbsp;: rien n'est cassé, mais c'est un signal d'alerte précoce (on approche d'une limite). Bien doser les niveaux permet ensuite de <strong>filtrer</strong> efficacement&nbsp;: par exemple n'afficher que les WARN et ERROR en production pour repérer vite ce qui mérite attention.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Transforme ce log en texte libre en un log structuré utile&nbsp;: <code>"Echec d'envoi de l'email de confirmation à l'utilisateur 42 après 3 essais"</code>.</p><details><summary>Voir une solution</summary><p>On sépare le <strong>message/événement</strong> des <strong>données</strong>, en clés explicites&nbsp;: par exemple <code>level=error</code>, <code>event=email_send_failed</code>, <code>email_type=confirmation</code>, <code>user_id=42</code>, <code>attempts=3</code>, et un <code>request_id</code> pour la corrélation, plus le <code>timestamp</code>. En JSON&nbsp;: <code>{ "level": "error", "event": "email_send_failed", "email_type": "confirmation", "user_id": 42, "attempts": 3, "request_id": "abc-123" }</code>. <strong>Ce que ça apporte&nbsp;</strong>: on peut maintenant interroger « tous les <code>email_send_failed</code> », les <strong>grouper</strong> par <code>email_type</code>, compter combien ont eu lieu après plusieurs <code>attempts</code>, ou retrouver tous les événements liés à l'utilisateur 42 — autant de questions impossibles à poser proprement sur la phrase d'origine. On veillera aussi à ne <strong>pas</strong> inclure l'adresse e-mail complète si elle est considérée comme donnée personnelle sensible (ou à la masquer).</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une équipe se plaint&nbsp;: « On a des millions de lignes de logs, et pourtant on ne trouve jamais ce qu'on cherche pendant un incident. » Quels problèmes soupçonnes-tu, et quelles améliorations proposes-tu ?</p><details><summary>Voir une solution</summary><p>Le paradoxe « beaucoup de logs, mais inexploitables » révèle plusieurs problèmes classiques. <strong>1) Logs non structurés</strong>&nbsp;: si tout est en texte libre, on ne peut pas <strong>filtrer/agréger</strong> ; on est réduit à des recherches de mots-clés fragiles dans un océan de lignes. <strong>Amélioration</strong>&nbsp;: passer au log <strong>structuré</strong> (clé/valeur, JSON) pour rendre les logs interrogeables. <strong>2) Trop de bruit</strong>&nbsp;: trop de logs de bas niveau (DEBUG en prod, événements sans intérêt) noient les signaux importants. <strong>Amélioration</strong>&nbsp;: revoir les <strong>niveaux</strong>, désactiver le DEBUG en production, ne journaliser que ce qui sert. <strong>3) Absence de corrélation</strong>&nbsp;: sans <strong>request id / trace id</strong>, impossible de relier les logs d'une même requête à travers les services&nbsp;; on a des fragments épars. <strong>Amélioration</strong>&nbsp;: propager un identifiant de requête partout. <strong>4) Manque de contexte</strong>&nbsp;: des messages vagues (« erreur ») sans <em>quoi/qui/pourquoi</em>. <strong>Amélioration</strong>&nbsp;: enrichir chaque log clé de champs de contexte (user_id, order_id, durée, raison). <strong>5) Pas de centralisation efficace</strong> ou pas d'outil de recherche adapté. <strong>Amélioration</strong>&nbsp;: centraliser dans un système qui indexe les champs structurés et permet des requêtes (filtrer par event, grouper par raison, suivre un request id). <strong>En résumé</strong>&nbsp;: le volume n'est pas la valeur. Des logs <strong>structurés, dosés, contextualisés et corrélés</strong>, centralisés dans un outil de recherche, transforment « des millions de lignes inutiles » en une mine d'or pendant un incident. Mieux vaut <strong>moins de logs, mais meilleurs</strong>.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-json.min.js" defer></script>
+  </body>
+</html>

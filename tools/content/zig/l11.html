@@ -1,0 +1,96 @@
+<p>Si un seul trait définit Zig, c'est <strong>comptime</strong> (<em>compile-time</em>)&nbsp;: la capacité d'exécuter du code Zig <strong>pendant la compilation</strong>. Là où d'autres langages ont des macros (un langage à part) ou des templates (une syntaxe spéciale), Zig répond&nbsp;: «&nbsp;c'est le même langage, simplement exécuté plus tôt&nbsp;». De cette idée unique découlent la généricité, la génération de code et la métaprogrammation — sans nouvelle syntaxe à apprendre. Cette leçon approfondit ce qui fait la singularité de Zig.</p>
+
+<h2>L'idée&nbsp;: du Zig exécuté à la compilation</h2>
+<p>Le mot-clé <code>comptime</code> force l'évaluation d'une expression au moment de la compilation. Le résultat est alors une constante, calculée avant même que le programme ne tourne.</p>
+<figure class="code-block" data-file="comptime.zig"><pre><code class="language-clike">const std = @import("std");
+
+comptime {
+    // Ce bloc s'exécute pendant la COMPILATION
+    const carre = 7 * 7;   // calculé une fois, à la compilation
+    _ = carre;
+}
+
+// Une valeur connue à la compilation :
+const TAILLE = comptime blk: {
+    var n: usize = 1;
+    for (0..10) |_| n *= 2;   // boucle exécutée à la compilation
+    break :blk n;             // 1024
+};</code></pre></figure>
+<p>Ici, la boucle ne s'exécute <em>pas</em> à l'exécution&nbsp;: elle est déroulée par le compilateur, et <code>TAILLE</code> arrive dans le binaire comme la constante <code>1024</code>. Tout ce qui peut être calculé tôt l'est.</p>
+
+<h2>Les types sont des valeurs</h2>
+<p>Voici la clé qui débloque tout&nbsp;: en Zig, un <strong>type est une valeur</strong> de type <code>type</code>, manipulable à la compilation. On peut donc passer un type à une fonction, comme on passe un nombre.</p>
+<figure class="code-block" data-file="type-valeur.zig"><pre><code class="language-clike">const T1 = u32;          // un type rangé dans une constante
+const T2 = []const u8;   // un autre type (tranche d'octets)
+
+fn tailleDe(comptime T: type) usize {
+    return @sizeOf(T);   // taille du type, calculée à la compilation
+}
+
+// tailleDe(u32) vaut 4, tailleDe(u64) vaut 8 — résolus à la compilation</code></pre></figure>
+<p>Le paramètre <code>comptime T: type</code> reçoit un <em>type</em> connu à la compilation. C'est la brique des fonctions génériques.</p>
+
+<h2>Les fonctions génériques</h2>
+<p>Une fonction <strong>générique</strong> en Zig n'est qu'une fonction qui prend un <code>comptime T: type</code> et l'utilise. Le compilateur génère une version spécialisée pour chaque type appelé — sans syntaxe de template dédiée.</p>
+<figure class="code-block" data-file="generique.zig"><pre><code class="language-clike">fn max(comptime T: type, a: T, b: T) T {
+    return if (a &gt; b) a else b;
+}
+
+const x = max(i32, 3, 9);      // 9, version i32
+const y = max(f64, 2.5, 1.0);  // 2.5, version f64
+const z = max(u8, 200, 50);    // 200, version u8</code></pre></figure>
+<p>Une seule définition, spécialisée à la compilation pour chaque type. C'est l'équivalent des <em>templates</em> C++ ou des <em>generics</em> Rust, mais exprimé avec le langage lui-même.</p>
+
+<h2>Générer des types</h2>
+<p>Puisqu'une fonction peut <em>renvoyer</em> un type, on génère des types à la demande&nbsp;— c'est ainsi que sont écrites les structures de données génériques de la bibliothèque standard (par ex. <code>ArrayList(T)</code>).</p>
+<figure class="code-block" data-file="generer-type.zig"><pre><code class="language-clike">fn Paire(comptime T: type) type {
+    return struct {
+        premier: T,
+        second: T,
+    };
+}
+
+const PaireInt = Paire(i32);    // un type struct { premier: i32, second: i32 }
+const p = PaireInt{ .premier = 1, .second = 2 };</code></pre></figure>
+<p><code>Paire(i32)</code> <em>est</em> un type, construit à la compilation. C'est exactement ainsi que <code>std.ArrayList(T)</code> et les conteneurs génériques fonctionnent&nbsp;: une fonction qui prend un type et renvoie un type.</p>
+
+<h2>comptime vs macros vs templates</h2>
+<p>La grande élégance&nbsp;: une seule notion remplace plusieurs mécanismes des autres langages.</p>
+<ul>
+  <li>Pas de <strong>macros</strong> (C, Rust)&nbsp;: pas de langage de macros à part, pas de préprocesseur&nbsp;; on écrit du Zig normal exécuté plus tôt.</li>
+  <li>Pas de syntaxe de <strong>templates</strong> (C++)&nbsp;: la généricité passe par des paramètres <code>comptime</code> ordinaires&nbsp;;</li>
+  <li>Les erreurs sont des erreurs Zig <em>normales</em>, lisibles, pas les messages cryptiques des templates C++.</li>
+</ul>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier que ce qui dépend d'un <code>comptime</code> doit être <strong>connaissable à la compilation</strong>. Tu ne peux pas choisir un type à partir d'une valeur lue au clavier&nbsp;: le type doit être fixé avant l'exécution. Si le compilateur se plaint qu'une valeur «&nbsp;doit être comptime-known&nbsp;», c'est que tu essaies de décider à l'exécution quelque chose qui doit l'être à la compilation. Sépare clairement ce qui est connu tôt (types, tailles) de ce qui ne l'est qu'à l'exécution (données).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>comptime permet l'<strong>introspection de types</strong> via <code>@typeInfo</code>&nbsp;: on peut, à la compilation, parcourir les champs d'un struct, leurs types, et générer du code en conséquence (sérialisation automatique, par exemple). C'est de la métaprogrammation complète — écrire du code qui inspecte et fabrique du code — mais en Zig ordinaire, vérifié par le compilateur. Une poignée d'idées simples (le type est une valeur, le code s'exécute à la compilation) suffit à remplacer tout l'arsenal macro/template des autres langages.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>comptime</code> exécute du code Zig <strong>à la compilation</strong>&nbsp;; le résultat devient une constante.</li>
+  <li>Un <strong>type est une valeur</strong> de type <code>type</code>&nbsp;; un paramètre <code>comptime T: type</code> reçoit un type.</li>
+  <li>Les <strong>fonctions génériques</strong> prennent un <code>comptime T: type</code>&nbsp;; une fonction peut <strong>renvoyer un type</strong> (génériques comme <code>ArrayList(T)</code>).</li>
+  <li>Une seule notion remplace <strong>macros et templates</strong>&nbsp;: du Zig normal, exécuté plus tôt.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que fait <code>comptime</code>&nbsp;?</li><li>Comment écrit-on une fonction générique en Zig&nbsp;?</li><li>Comment crée-t-on un type générique comme <code>Paire(T)</code>&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Que fait le mot-clé comptime en Zig ?","a":["Il exécute du code Zig pendant la compilation","Il accélère le programme à l'exécution","Il définit une macro du préprocesseur","Il alloue de la mémoire"],"correct":0,"explain":"comptime force l'évaluation à la compilation : le résultat arrive dans le binaire comme une constante déjà calculée."},
+  {"q":"Comment écrit-on une fonction générique en Zig ?","a":["En prenant un paramètre comptime T: type","Avec une syntaxe de template <T>","Avec une macro #define","C'est impossible en Zig"],"correct":0,"explain":"Un type est une valeur : on le passe en paramètre comptime, et le compilateur génère une version spécialisée par type — sans syntaxe dédiée."},
+  {"q":"Comment crée-t-on un type générique comme Paire(T) ?","a":["Une fonction qui prend un comptime T: type et renvoie un struct","Une classe abstraite","Une macro qui génère du texte","On ne peut pas générer de types"],"correct":0,"explain":"En Zig, une fonction peut renvoyer un type ; c'est ainsi que std.ArrayList(T) et les conteneurs génériques sont définis."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une constante <code>DOUBLE</code> calculée à la compilation, valant <code>21 * 2</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const DOUBLE = 21 * 2;   // 42, évalué à la compilation</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction générique <code>identite</code> qui renvoie son argument, pour n'importe quel type.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn identite(comptime T: type, valeur: T) T {
+    return valeur;
+}
+// identite(i32, 5) -> 5</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction <code>Tableau3</code> qui, pour un type <code>T</code>, renvoie le type «&nbsp;tableau de 3 éléments de T&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn Tableau3(comptime T: type) type {
+    return [3]T;
+}
+// Tableau3(u8) est le type [3]u8</code></pre></figure></details></div>

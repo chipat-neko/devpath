@@ -1,0 +1,106 @@
+<p>Un vrai programme scientifique se compte en milliers de lignes réparties sur plusieurs fichiers. L'outil d'organisation de Fortran moderne, c'est le <strong>module</strong>&nbsp;: il regroupe données et procédures liées, contrôle ce qui est visible, et — avantage majeur — donne des <strong>interfaces explicites</strong> qui font vérifier tes appels par le compilateur.</p>
+
+<h2>Définir un module</h2>
+<p>Un module va de <code>module</code> à <code>end module</code>. Les déclarations (constantes, types) viennent d'abord&nbsp;; les procédures après <code>contains</code>.</p>
+<figure class="code-block" data-file="geometrie.f90"><pre><code class="language-fortran">module geometrie
+    implicit none
+    real, parameter :: pi = 3.14159265358979
+
+contains
+
+    function aire_cercle(r) result(a)
+        real, intent(in) :: r
+        real :: a
+        a = pi * r**2
+    end function aire_cercle
+
+end module geometrie</code></pre></figure>
+<p class="code-caption"><code>parameter</code> déclare une <strong>constante</strong>&nbsp;: <code>pi</code> ne pourra pas être modifié.</p>
+
+<h2>Utiliser un module&nbsp;: use</h2>
+<p>On importe avec <code>use</code>, placé tout en haut de l'unité de programme (avant <code>implicit none</code>). Tout ce que le module rend public devient disponible.</p>
+<figure class="code-block" data-file="programme.f90"><pre><code class="language-fortran">program calcul
+    use geometrie
+    implicit none
+    print *, aire_cercle(2.0)   ! 12.566...
+    print *, pi
+end program calcul</code></pre></figure>
+
+<h2>Importer avec parcimonie&nbsp;: only</h2>
+<p>Pour ne prendre que ce dont on a besoin (et documenter les dépendances), on précise <code>only</code>. On peut aussi renommer avec <code>=&gt;</code>.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">    use geometrie, only: aire_cercle
+    use geometrie, only: tau =&gt; pi   ! renomme pi en tau localement</code></pre></figure>
+
+<h2>Contrôler la visibilité&nbsp;: public et private</h2>
+<p>Par défaut, tout est public. On peut rendre certains éléments <code>private</code> (internes au module) pour exposer une interface propre et cacher les détails d'implémentation.</p>
+<figure class="code-block" data-file="exemple.f90"><pre><code class="language-fortran">module stats
+    implicit none
+    private                      ! tout privé par défaut
+    public :: moyenne           ! sauf ce qu'on expose
+
+contains
+    function moyenne(v) result(m)
+        real, intent(in) :: v(:)
+        real :: m
+        m = sum(v) / size(v)
+    end function moyenne
+end module stats</code></pre></figure>
+
+<h2>L'avantage des interfaces explicites</h2>
+<p>Quand une procédure vit dans un module, le compilateur connaît exactement sa signature. Si tu l'appelles avec un mauvais type ou un mauvais nombre d'arguments, il le <strong>détecte à la compilation</strong> — au lieu d'un bug silencieux. C'est la raison numéro un de toujours ranger ses procédures en modules.</p>
+
+<h2>Compiler plusieurs fichiers</h2>
+<p>On compile d'abord les modules (qui produisent des fichiers <code>.mod</code>), puis le programme qui les utilise.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">gfortran -c geometrie.f90      # compile le module
+gfortran geometrie.f90 programme.f90 -o calcul
+./calcul</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Compiler les fichiers dans le mauvais ordre&nbsp;: le module doit être compilé <strong>avant</strong> le programme qui l'utilise (sinon le <code>.mod</code> n'existe pas encore). Un outil de build (leçon 9) gère cet ordre automatiquement.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les modules peuvent aussi définir des <strong>types dérivés</strong> (<code>type :: particule … end type</code>) — l'équivalent des structures — et leurs procédures associées, jusqu'à une vraie programmation orientée objet (Fortran 2003+). Le module est l'unité de base de l'architecture.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Un <strong>module</strong> regroupe constantes, types et procédures liés.</li>
+  <li>On importe avec <code>use</code> (et <code>only</code> pour cibler, <code>=&gt;</code> pour renommer).</li>
+  <li><code>private</code>/<code>public</code> contrôlent ce que le module expose.</li>
+  <li>Les procédures en module ont une <strong>interface explicite</strong>&nbsp;: les appels sont vérifiés.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quel est le principal avantage de ranger une procédure dans un module&nbsp;?</li><li>Comment n'importer qu'une seule fonction d'un module&nbsp;?</li><li>Dans quel ordre compiler module et programme&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un module <code>constantes</code> qui expose <code>pi</code> et <code>e</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">module constantes
+    implicit none
+    real, parameter :: pi = 3.14159265
+    real, parameter :: e  = 2.71828183
+end module constantes</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Mets une fonction <code>factorielle</code> dans un module et appelle-la depuis un programme.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">module maths
+contains
+    function fact(n) result(f)
+        integer, intent(in) :: n
+        integer :: f, i
+        f = 1
+        do i = 2, n
+            f = f * i
+        end do
+    end function fact
+end module maths
+! use maths ; print *, fact(5)   ! 120</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Dans un module <code>stats</code>, rends <code>moyenne</code> publique et une fonction interne <code>somme</code> privée.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.f90"><pre><code class="language-fortran">module stats
+    implicit none
+    private
+    public :: moyenne
+contains
+    function somme(v) result(s)
+        real, intent(in) :: v(:)
+        real :: s
+        s = sum(v)
+    end function somme
+    function moyenne(v) result(m)
+        real, intent(in) :: v(:)
+        real :: m
+        m = somme(v) / size(v)
+    end function moyenne
+end module stats</code></pre></figure></details></div>

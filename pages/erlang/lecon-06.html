@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>« Let it crash » et la supervision — Leçon 06 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="La philosophie de fiabilité d'Erlang : « let it crash », les liens entre processus, et la supervision pour redémarrer après une panne." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Le modèle concurrent — Leçon 06</p>
+              <h1 class="lesson-header__title">« Let it crash » et la supervision</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 5</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre la philosophie <strong>« let it crash »</strong>&nbsp;;</li>
+                  <li>lier des processus (<code>link</code>, <code>monitor</code>)&nbsp;;</li>
+                  <li>saisir le rôle des <strong>superviseurs</strong>&nbsp;;</li>
+                  <li>concevoir des systèmes auto-réparants.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Voici la philosophie qui a rendu Erlang célèbre, et qui prend le contre-pied de tout ce qu'on enseigne d'habitude&nbsp;: «&nbsp;<strong>let it crash</strong>&nbsp;» — laisse planter. Au lieu de blinder chaque ligne de code contre toutes les erreurs imaginables, Erlang laisse un processus défaillant <em>mourir</em> proprement, et un autre processus, le <strong>superviseur</strong>, le redémarre dans un état sain. Cette approche, contre-intuitive, est la clé de la fiabilité légendaire d'Erlang. Cette leçon l'explique.</p>
+
+<h2>Pourquoi «&nbsp;laisser planter&nbsp;»&nbsp;?</h2>
+<p>Le raisonnement est le suivant&nbsp;: tenter de gérer <em>chaque</em> erreur possible à l'intérieur d'un processus rend le code énorme, illisible, et truffé de cas que personne n'a jamais testés. Pire, après une erreur inattendue, l'état du processus est peut-être corrompu. Erlang préfère&nbsp;: si quelque chose tourne mal, le processus <strong>meurt immédiatement</strong>, et on le <strong>recrée à neuf</strong>, dans un état propre connu. Un redémarrage vaut mieux qu'un état douteux.</p>
+<figure class="code-block" data-file="philosophie.erl"><pre><code class="language-erlang">% On écrit le "chemin heureux", sans défense excessive :
+traiter({division, A, B}) -&gt;
+    A / B.        % si B = 0, le processus plante... et c'est OK !
+                  % Un superviseur le redémarrera proprement.</code></pre></figure>
+<p>On code le <strong>cas normal</strong> clairement, sans noyer la logique sous des vérifications. Les erreurs rares sont gérées <em>structurellement</em> par la supervision, pas <em>localement</em> par des <code>if</code> partout.</p>
+
+<h2>Lier des processus avec <code>link</code></h2>
+<p>Pour qu'un processus soit informé de la mort d'un autre, on les <strong>lie</strong> avec <code>link</code>. Quand un processus lié meurt anormalement, il propage un signal de sortie aux processus liés.</p>
+<figure class="code-block" data-file="link.erl"><pre><code class="language-erlang">Pid = spawn_link(module, fonction, []).
+% Si Pid plante, le processus courant est averti
+% (et plante aussi, par défaut, sauf s'il "piège" les sorties).</code></pre></figure>
+<p><code>spawn_link</code> crée et lie en une fois. Par défaut, la mort se propage&nbsp;: tout un groupe de processus liés peut s'éteindre ensemble — ce qui est voulu, pour éviter de continuer dans un état partiellement cassé.</p>
+
+<h2>Surveiller avec <code>monitor</code></h2>
+<p>Parfois, on veut être <em>averti</em> de la mort d'un processus sans mourir avec lui. C'est le rôle de <code>monitor</code>&nbsp;: il envoie un message au surveillant quand le processus surveillé disparaît.</p>
+<figure class="code-block" data-file="monitor.erl"><pre><code class="language-erlang">Ref = monitor(process, Pid).
+% Si Pid meurt, on reçoit :
+receive
+    {'DOWN', Ref, process, Pid, Raison} -&gt;
+        io:format("Le processus est mort : ~p~n", [Raison])
+end.</code></pre></figure>
+<p><code>link</code> est <em>symétrique</em> (les deux sont liés), <code>monitor</code> est <em>unidirectionnel</em> (un surveille l'autre). Les superviseurs s'appuient sur ces mécanismes pour savoir quand redémarrer un enfant.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 195" role="img" aria-label="link contre monitor. À gauche, link est symétrique : deux processus A et B sont reliés par un double lien ; si l'un meurt anormalement, la sortie se propage et l'autre meurt aussi par défaut. À droite, monitor est unidirectionnel : un observateur surveille une cible par une flèche simple ; si la cible meurt, l'observateur reçoit un message DOWN et survit.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">link&nbsp;: symétrique (mort partagée) — monitor&nbsp;: à sens unique</text>
+    <text class="d-text" x="158" y="50" text-anchor="middle" font-size="10">link</text>
+    <rect class="d-box" x="40" y="68" width="86" height="46" rx="8" /><text class="d-text" x="83" y="96" text-anchor="middle" font-size="9">A</text>
+    <rect class="d-box" x="190" y="68" width="86" height="46" rx="8" /><text class="d-text" x="233" y="96" text-anchor="middle" font-size="9">B</text>
+    <path class="d-line" d="M126 86 L190 86" fill="none" /><path class="d-line" d="M126 96 L190 96" fill="none" />
+    <text class="d-mut" x="158" y="140" text-anchor="middle" font-size="8">si B meurt anormalement → A meurt aussi</text>
+    <text class="d-mut" x="158" y="156" text-anchor="middle" font-size="8">(la sortie se propage)</text>
+    <line class="d-line" x1="320" y1="40" x2="320" y2="176" />
+    <text class="d-text" x="480" y="50" text-anchor="middle" font-size="10">monitor</text>
+    <rect class="d-box" x="360" y="68" width="112" height="46" rx="8" /><text class="d-text" x="416" y="90" text-anchor="middle" font-size="9">observateur</text><text class="d-mut" x="416" y="105" text-anchor="middle" font-size="7.5">survit</text>
+    <rect class="d-box" x="512" y="68" width="88" height="46" rx="8" /><text class="d-text" x="556" y="96" text-anchor="middle" font-size="9">cible</text>
+    <path class="d-line" d="M472 91 L512 91" fill="none" /><circle class="d-dot" cx="512" cy="91" r="3" />
+    <text class="d-mut" x="480" y="140" text-anchor="middle" font-size="8">si la cible meurt → l'observateur reçoit</text>
+    <text class="d-tag" x="480" y="156" text-anchor="middle" font-size="8">{'DOWN', Ref, process, …}</text>
+  </svg>
+  <figcaption>Choisis selon le besoin&nbsp;: <code>link</code> pour lier le destin de deux processus, <code>monitor</code> pour <em>observer</em> sans subir. Un superviseur veut survivre à ses enfants&nbsp;: il combine <code>trap_exit</code> et liens.</figcaption>
+</figure>
+
+<h2>Le superviseur</h2>
+<p>Un <strong>superviseur</strong> est un processus dont l'unique rôle est de surveiller d'autres processus (ses «&nbsp;enfants&nbsp;») et de les <strong>redémarrer</strong> selon une stratégie quand ils meurent. Il ne fait pas de travail métier&nbsp;: il assure la <em>résilience</em>.</p>
+<figure class="code-block" data-file="superviseur.erl"><pre><code class="language-erlang">% Idée d'un superviseur (version conceptuelle) :
+superviser(Module, Fonction, Args) -&gt;
+    process_flag(trap_exit, true),     % piéger les sorties
+    Pid = spawn_link(Module, Fonction, Args),
+    receive
+        {'EXIT', Pid, Raison} -&gt;
+            io:format("Enfant mort (~p), redemarrage.~n", [Raison]),
+            superviser(Module, Fonction, Args)   % on relance !
+    end.</code></pre></figure>
+<p>Quand l'enfant meurt, le superviseur en relance un neuf. C'est le principe d'auto-réparation&nbsp;: le système se rétablit tout seul, sans intervention humaine. En pratique, on n'écrit pas ce code à la main — OTP fournit des superviseurs robustes et configurables (leçon 7).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="Le cycle d'auto-réparation. Un superviseur surveille un processus enfant qui travaille. À un moment, l'enfant plante à cause d'une erreur et meurt, envoyant un signal EXIT au superviseur. Le superviseur en est averti et démarre un nouvel enfant, dans un état initial sain. Le service est rétabli sans intervention humaine.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un enfant plante&nbsp;? Le superviseur en relance un neuf</text>
+    <rect class="d-accent" x="240" y="42" width="160" height="42" rx="8" /><text class="d-text" x="320" y="68" text-anchor="middle" font-size="10">superviseur</text>
+    <rect class="d-box" x="58" y="132" width="130" height="46" rx="8" /><text class="d-text" x="123" y="153" text-anchor="middle" font-size="9">enfant</text><text class="d-mut" x="123" y="169" text-anchor="middle" font-size="7.5">① travaille</text>
+    <path class="d-line" d="M266 84 L150 132" fill="none" /><text class="d-mut" x="196" y="104" text-anchor="middle" font-size="7.5">surveille</text>
+    <rect class="d-box" x="255" y="132" width="130" height="46" rx="8" /><text class="d-text" x="320" y="153" text-anchor="middle" font-size="9">enfant ✗</text><text class="d-mut" x="320" y="169" text-anchor="middle" font-size="7.5">② plante et meurt</text>
+    <path class="d-line" d="M320 84 L320 132" fill="none" /><text class="d-tag" x="358" y="112" text-anchor="middle" font-size="7.5">{'EXIT', …}</text>
+    <rect class="d-accent" x="452" y="132" width="130" height="46" rx="8" /><text class="d-text" x="517" y="153" text-anchor="middle" font-size="9">enfant neuf</text><text class="d-mut" x="517" y="169" text-anchor="middle" font-size="7.5">③ état propre</text>
+    <path class="d-line" d="M374 84 L490 132" fill="none" /><text class="d-mut" x="444" y="104" text-anchor="middle" font-size="7.5">redémarre</text>
+    <text class="d-mut" x="320" y="197" text-anchor="middle" font-size="8">le service repart d'un état sain connu, sans intervention humaine</text>
+  </svg>
+  <figcaption>L'<strong>auto-réparation</strong> en trois temps&nbsp;: l'enfant travaille, plante et meurt, le superviseur le remplace par une instance neuve. Redémarrer vaut mieux que raccommoder un état corrompu.</figcaption>
+</figure>
+
+<h2>Les arbres de supervision</h2>
+<p>En assemblant des superviseurs qui surveillent d'autres superviseurs, on bâtit un <strong>arbre de supervision</strong>&nbsp;: une hiérarchie où chaque niveau peut redémarrer le niveau inférieur. Si une panne se propage, elle est «&nbsp;rattrapée&nbsp;» au bon étage. C'est l'architecture standard d'une application Erlang robuste.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 205" role="img" aria-label="Un arbre de supervision. Au sommet, un superviseur racine. Il surveille deux superviseurs intermédiaires. Chaque superviseur intermédiaire surveille deux processus de travail, les workers, qui exécutent le travail métier. Si un worker meurt, son superviseur le redémarre ; si tout un sous-arbre échoue, le niveau supérieur le rattrape. La panne est traitée au bon étage.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une hiérarchie qui rattrape la panne au bon étage</text>
+    <rect class="d-accent" x="262" y="40" width="116" height="34" rx="8" /><text class="d-text" x="320" y="62" text-anchor="middle" font-size="9">superviseur racine</text>
+    <path class="d-line" d="M320 74 L170 100" fill="none" /><path class="d-line" d="M320 74 L470 100" fill="none" />
+    <rect class="d-box" x="110" y="100" width="120" height="32" rx="7" /><text class="d-text" x="170" y="120" text-anchor="middle" font-size="8.5">superviseur</text>
+    <rect class="d-box" x="410" y="100" width="120" height="32" rx="7" /><text class="d-text" x="470" y="120" text-anchor="middle" font-size="8.5">superviseur</text>
+    <path class="d-line" d="M170 132 L120 160" fill="none" /><path class="d-line" d="M170 132 L220 160" fill="none" />
+    <path class="d-line" d="M470 132 L420 160" fill="none" /><path class="d-line" d="M470 132 L520 160" fill="none" />
+    <rect class="d-box" x="76" y="160" width="88" height="30" rx="6" /><text class="d-text" x="120" y="179" text-anchor="middle" font-size="8">worker</text>
+    <rect class="d-box" x="176" y="160" width="88" height="30" rx="6" /><text class="d-text" x="220" y="179" text-anchor="middle" font-size="8">worker</text>
+    <rect class="d-box" x="376" y="160" width="88" height="30" rx="6" /><text class="d-text" x="420" y="179" text-anchor="middle" font-size="8">worker</text>
+    <rect class="d-box" x="476" y="160" width="88" height="30" rx="6" /><text class="d-text" x="520" y="179" text-anchor="middle" font-size="8">worker</text>
+  </svg>
+  <figcaption>Les <strong>workers</strong> font le travail métier&nbsp;; les <strong>superviseurs</strong> ne font que les surveiller et les relancer. Une défaillance est isolée puis rattrapée à l'étage juste au-dessus.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Un superviseur OTP se règle par une <strong>stratégie</strong>&nbsp;: <code>one_for_one</code> (relancer seulement l'enfant mort), <code>one_for_all</code> (relancer tous les enfants du groupe), <code>rest_for_one</code> (relancer le mort et ceux démarrés après lui). Il applique aussi une <strong>limite d'intensité</strong> — par exemple «&nbsp;5 crashs en 10 s&nbsp;»&nbsp;: au-delà, il renonce et remonte la panne d'un cran, pour ne pas masquer un bug <em>permanent</em> derrière des redémarrages en boucle.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le commutateur téléphonique <strong>AXD301</strong> d'Ericsson, écrit en Erlang et bâti sur des arbres de supervision, a atteint une disponibilité mesurée de <strong>neuf «&nbsp;9&nbsp;»</strong> (99,9999999&nbsp;%)&nbsp;: l'équivalent de quelques <em>dizaines de millisecondes</em> d'indisponibilité par an. Ce chiffre légendaire n'a pas été obtenu en écrivant du code sans bug, mais en <em>acceptant</em> les pannes&nbsp;: chaque défaillance reste locale, un superviseur relance le composant fautif, et le service global ne tombe jamais. «&nbsp;Let it crash&nbsp;» n'est pas un slogan — c'est ce qui a rendu ces neuf 9 possibles.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Comprendre «&nbsp;let it crash&nbsp;» comme «&nbsp;ne jamais gérer les erreurs&nbsp;». C'est l'inverse&nbsp;: on gère les erreurs <strong>structurellement</strong>, via la supervision, au lieu de les disperser en mille vérifications locales. On laisse planter les erreurs <em>imprévisibles</em> (un bug, une donnée corrompue), mais on traite normalement les cas <em>attendus</em> (un fichier absent, une saisie invalide). La supervision n'excuse pas le code bâclé&nbsp;: elle isole les défaillances rares pour qu'elles ne propagent pas leur dégât.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Cette idée de «&nbsp;l'isolation des défaillances&nbsp;» a influencé bien au-delà d'Erlang&nbsp;: les architectures modernes en <strong>micro-services</strong>, les conteneurs qu'un orchestrateur redémarre automatiquement, les <em>circuit breakers</em>… reprennent le même principe à plus grande échelle. Erlang l'avait compris dès les années 1980 au niveau du processus&nbsp;: il vaut mieux concevoir un système qui se <em>répare</em> qu'un système qui prétend ne jamais échouer.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — « let it crash » et supervision</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">Écriture</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+      <tr><td>Philosophie</td><td>«&nbsp;let it crash&nbsp;»</td><td>coder le cas nominal</td></tr>
+      <tr><td>Lier (symétrique)</td><td><code>link(Pid)</code> · <code>spawn_link(…)</code></td><td>la sortie se propage</td></tr>
+      <tr><td>Surveiller (à sens unique)</td><td><code>monitor(process, Pid)</code></td><td>reçoit <code>{'DOWN', …}</code></td></tr>
+      <tr><td>Piéger les sorties</td><td><code>process_flag(trap_exit, true)</code></td><td>reçoit <code>{'EXIT', …}</code> au lieu de mourir</td></tr>
+      <tr><td>Superviseur</td><td>relance ses enfants</td><td>aucun code métier</td></tr>
+      <tr><td>Stratégie OTP</td><td><code>one_for_one</code> · <code>one_for_all</code> · <code>rest_for_one</code></td><td>qui relancer</td></tr>
+      <tr><td>Limite d'intensité</td><td>max. redémarrages / période</td><td>évite la boucle de crash</td></tr>
+      <tr><td>Arbre de supervision</td><td>superviseurs de superviseurs</td><td>résilience structurée</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>«&nbsp;Let it crash&nbsp;»</dt><dd>Philosophie consistant à laisser un processus défaillant mourir et à le redémarrer proprement, plutôt qu'à blinder chaque ligne.</dd>
+  <dt>link</dt><dd>Lien <strong>symétrique</strong> entre deux processus&nbsp;; la sortie anormale de l'un se propage à l'autre, qui meurt aussi par défaut.</dd>
+  <dt>monitor</dt><dd>Surveillance <strong>unidirectionnelle</strong>&nbsp;: l'observateur reçoit un message <code>'DOWN'</code> à la mort du surveillé, sans mourir avec lui.</dd>
+  <dt>spawn_link</dt><dd>Crée un processus et le lie au processus courant en une seule opération.</dd>
+  <dt>trap_exit</dt><dd>Drapeau qui transforme les signaux de sortie reçus en messages <code>'EXIT'</code> ordinaires, permettant à un superviseur de survivre à la mort d'un enfant.</dd>
+  <dt>Superviseur</dt><dd>Processus dont le seul rôle est de surveiller des enfants et de les redémarrer selon une stratégie.</dd>
+  <dt>Arbre de supervision</dt><dd>Hiérarchie de superviseurs et de workers qui structure la tolérance aux pannes d'une application.</dd>
+  <dt>Auto-réparation</dt><dd>Capacité d'un système à retrouver seul un état sain après une panne, grâce au redémarrage supervisé.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>«&nbsp;<strong>Let it crash</strong>&nbsp;»&nbsp;: laisser mourir un processus défaillant et le redémarrer à neuf, plutôt que blinder chaque ligne.</li>
+  <li><code>link</code> lie deux processus (symétrique)&nbsp;; <code>monitor</code> surveille (unidirectionnel).</li>
+  <li>Un <strong>superviseur</strong> surveille des enfants et les redémarre&nbsp;: auto-réparation.</li>
+  <li>Les <strong>arbres de supervision</strong> structurent la résilience d'une application.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que signifie «&nbsp;let it crash&nbsp;»&nbsp;?</li><li>Quelle différence entre <code>link</code> et <code>monitor</code>&nbsp;?</li><li>Quel est le rôle d'un superviseur&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que signifie « let it crash » ?","a":["Laisser un processus planter en cas d'erreur (plutôt que de coder défensivement chaque cas) et confier à un superviseur son redémarrage dans un état propre","Ignorer toutes les erreurs","Faire planter tout le système","Désactiver la gestion d'erreurs"],"correct":0,"explain":"La philosophie « let it crash » privilégie un code centré sur le cas nominal : en cas d'anomalie, le processus s'arrête et un superviseur le relance proprement. L'isolation des processus rend ce crash local et sans danger pour le reste."},
+  {"q":"Quelle différence entre link et monitor ?","a":["link crée un lien bidirectionnel (la mort d'un processus affecte l'autre, qui meurt aussi par défaut) ; monitor est unidirectionnel (l'observateur reçoit un message DOWN à la mort du surveillé, sans en mourir)","C'est l'inverse","Les deux sont bidirectionnels","Les deux sont silencieux"],"correct":0,"explain":"Un link associe symétriquement deux processus : une sortie anormale se propage. Un monitor est asymétrique : l'observateur est simplement notifié par un message 'DOWN' lorsque le processus surveillé se termine, sans subir sa chute."},
+  {"q":"Quel est le rôle d'un superviseur ?","a":["Surveiller des processus enfants et les redémarrer selon une stratégie quand ils plantent, assurant la tolérance aux pannes (arbre de supervision OTP)","Exécuter le code métier","Compiler les modules","Gérer la mémoire vidéo"],"correct":0,"explain":"Un superviseur ne fait pas de travail métier : il démarre, surveille et relance ses enfants en cas de défaillance, selon une stratégie définie. Les superviseurs forment un arbre qui structure la résilience de l'application."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["spawn_link","spawn_link/1"],"placeholder":"la fonction qui crée un processus ET le LIE au processus courant en une fois : spawn_…","hints":["Si l'un meurt, l'autre est notifié.","Base de la supervision.","spawn_????"],"link":{"href":"lecon-06.html","label":"Revoir « spawn_link »"}},
+  null,
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quelle fonction crée un processus <em>et</em> le lie au processus courant en une fois&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">spawn_link(Module, Fonction, Args).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>En une phrase, explique pourquoi on préfère parfois <code>monitor</code> à <code>link</code>.</p><details><summary>Voir une solution</summary><p>Parce que <code>monitor</code> est <strong>unidirectionnel</strong>&nbsp;: il permet d'être <em>averti</em> de la mort d'un processus (par un message <code>'DOWN'</code>) sans mourir avec lui, là où <code>link</code> est symétrique et propage la sortie. C'est exactement ce que veut un superviseur&nbsp;: survivre à la mort de ses enfants pour pouvoir les redémarrer.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi redémarrer un processus planté est-il souvent plus sûr que tenter de «&nbsp;réparer&nbsp;» son état&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'après une erreur inattendue, l'état du processus peut être <strong>corrompu ou incohérent</strong> de façon imprévisible&nbsp;: tenter de le réparer suppose qu'on connaisse exactement ce qui a mal tourné, ce qui est rarement le cas. Redémarrer le processus le ramène à un <strong>état initial sain et connu</strong>, sans hypothèse hasardeuse. C'est plus simple, plus fiable, et cela évite de propager un état douteux dans le reste du système.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

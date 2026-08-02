@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mémoire, drapeaux et sauts — Leçon 03 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="Adressage mémoire, registre RFLAGS (ZF, SF, CF, OF), cmp et test, sauts conditionnels signés ou non : construis un if et une boucle en x86-64 NASM." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-03.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 03</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 1 · La machine — Leçon 03</p>
+              <h1 class="lesson-header__title">Mémoire, drapeaux et sauts</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~45 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 2</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>lire et écrire la mémoire avec l'adressage <code>[base + index*échelle + déplacement]</code> et déclarer des données en <code>.data</code> / <code>.bss</code>&nbsp;;</li>
+                  <li>comprendre comment <code>cmp</code> et les opérations arithmétiques positionnent les drapeaux <strong>ZF, SF, CF, OF</strong> du registre RFLAGS&nbsp;;</li>
+                  <li>traduire un <code>if</code> et une boucle du C en <code>cmp</code> + saut conditionnel, en choisissant le bon saut signé ou non signé&nbsp;;</li>
+                  <li>écrire une boucle qui parcourt un tableau en mémoire et en somme les éléments.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Jusqu'ici tu as appris à déplacer des octets entre registres. Mais un programme réel passe son temps à lire et écrire la <strong>mémoire</strong>, et surtout à <strong>décider</strong> : « si ce nombre est négatif, fais ceci ; sinon, recommence ». En C, tu écris <code>if</code>, <code>while</code>, <code>for</code> sans y penser. Le processeur, lui, ne connaît que deux mécanismes : un petit registre de <strong>drapeaux</strong> qui retient le résultat de la dernière comparaison, et des instructions de <strong>saut</strong> qui changent l'adresse de la prochaine instruction.</p>
+<p>Dans cette leçon, tu vas découvrir comment adresser la mémoire, comment le processeur « se souvient » d'une comparaison, et comment assembler ces briques pour reconstruire toi-même un <code>if</code> et une boucle. À la fin, tu sauras lire le squelette de n'importe quelle structure de contrôle.</p>
+
+<h2>Adresser la mémoire</h2>
+<p>Un registre tient une valeur. La mémoire, elle, est un immense tableau d'octets numérotés : chaque octet a une <strong>adresse</strong>. Pour lire ou écrire en mémoire, on met l'adresse entre crochets <code>[ ]</code> — c'est l'équivalent exact de l'opérateur <code>*</code> (déréférencement) en C.</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    mov rax, [rbx]      ; rax = *rbx        (lire 8 octets à l'adresse rbx)
+    mov [rbx], rax      ; *rbx = rax        (écrire 8 octets à l'adresse rbx)
+    mov rax, rbx        ; rax = rbx         (PAS de mémoire : copie de valeur)</code></pre></figure>
+<p>La forme générale d'une adresse en x86-64 est <code>[base + index*échelle + déplacement]</code>. L'échelle vaut 1, 2, 4 ou 8 (la taille d'un élément), ce qui colle exactement à l'arithmétique de pointeurs du C : <code>tableau[i]</code> en C, c'est <code>*(tableau + i)</code>, et en assembleur <code>[rbx + rcx*8]</code> si chaque élément fait 8 octets.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="L'adressage indexé en x86-64. À gauche, deux registres : rsi contient l'adresse de base du tableau, rcx contient l'indice i valant 2. Au centre, la formule crochet rsi plus rcx fois 8. En bas, un tableau de cinq quadwords en mémoire (10, 20, 30, 40, 50) d'indices 0 à 4 ; comme rcx vaut 2 et l'échelle 8, la formule désigne la case d'indice 2, qui contient 30.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">[base + index×échelle + déplacement] = arithmétique de pointeurs</text>
+    <rect class="d-box" x="30" y="40" width="150" height="28" rx="4" /><text class="d-tag" x="42" y="59" font-size="10">rsi</text><text class="d-mut" x="170" y="59" text-anchor="end" font-size="8">adresse de base</text>
+    <rect class="d-box" x="30" y="74" width="150" height="28" rx="4" /><text class="d-tag" x="42" y="93" font-size="10">rcx = 2</text><text class="d-mut" x="170" y="93" text-anchor="end" font-size="8">indice i</text>
+    <rect class="d-accent" x="360" y="52" width="230" height="34" rx="5" /><text class="d-tag" x="475" y="74" text-anchor="middle" font-size="11">[rsi + rcx*8]</text>
+    <line class="d-line" x1="180" y1="83" x2="360" y2="70" /><text class="d-mut" x="272" y="64" text-anchor="middle" font-size="8">échelle 8 = taille d'un qword</text>
+    <text class="d-mut" x="60" y="132" text-anchor="middle" font-size="9">nombres :</text>
+    <rect class="d-box" x="110" y="114" width="80" height="30" rx="3" /><text class="d-text" x="150" y="134" text-anchor="middle" font-size="10">10</text><text class="d-mut" x="150" y="158" text-anchor="middle" font-size="8">[0]</text>
+    <rect class="d-box" x="192" y="114" width="80" height="30" rx="3" /><text class="d-text" x="232" y="134" text-anchor="middle" font-size="10">20</text><text class="d-mut" x="232" y="158" text-anchor="middle" font-size="8">[1]</text>
+    <rect class="d-accent" x="274" y="114" width="80" height="30" rx="3" /><text class="d-text" x="314" y="134" text-anchor="middle" font-size="10">30</text><text class="d-mut" x="314" y="158" text-anchor="middle" font-size="8">[2] ← visé</text>
+    <rect class="d-box" x="356" y="114" width="80" height="30" rx="3" /><text class="d-text" x="396" y="134" text-anchor="middle" font-size="10">40</text><text class="d-mut" x="396" y="158" text-anchor="middle" font-size="8">[3]</text>
+    <rect class="d-box" x="438" y="114" width="80" height="30" rx="3" /><text class="d-text" x="478" y="134" text-anchor="middle" font-size="10">50</text><text class="d-mut" x="478" y="158" text-anchor="middle" font-size="8">[4]</text>
+    <line class="d-line" x1="440" y1="86" x2="316" y2="114" />
+  </svg>
+  <figcaption>Avec <code>rcx = 2</code> et une échelle de 8, <code>[rsi + rcx*8]</code> vise <code>nombres[2]</code>&nbsp;: exactement <code>*(nombres + i)</code> en C.</figcaption>
+</figure>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; rbx = adresse du tableau, rcx = indice i
+    mov rax, [rbx + rcx*8]      ; rax = tableau[i]   pour des quadwords (8 octets)
+    mov edx, [rbx + rcx*4 + 16] ; edx = *(int*)((char*)rbx + i*4 + 16)
+    ;   base = rbx, index = rcx, échelle = 4 (int), déplacement = 16</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>La taille lue dépend du registre destination : <code>rax</code> lit 8 octets, <code>eax</code> 4, <code>ax</code> 2, <code>al</code> 1. Quand la taille est ambiguë (par exemple écrire une constante en mémoire), précise-la : <code>mov qword [rbx], 5</code>, ou <code>mov byte [rbx], 5</code>.</p></div></div>
+
+<h2>Réserver des données : .data et .bss</h2>
+<p>Avant de déréférencer une adresse, il faut que quelque chose existe à cette adresse. Deux sections servent à cela. La section <code>.data</code> contient des données <strong>initialisées</strong> (leur valeur est écrite dans le fichier exécutable) ; la section <code>.bss</code> réserve de la place <strong>non initialisée</strong> (mise à zéro au démarrage, sans alourdir le fichier).</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">section .data
+    octet   db 42          ; db = 1 octet   =&gt; en C : char  octet  = 42;
+    court   dw 1000        ; dw = 2 octets  =&gt; short court  = 1000;
+    entier  dd 123456      ; dd = 4 octets  =&gt; int   entier = 123456;
+    grand   dq 9000000000  ; dq = 8 octets  =&gt; long  grand  = 9000000000;
+    nombres dq 10, 20, 30, 40, 50   ; un tableau de 5 quadwords
+
+section .bss
+    buffer  resb 256       ; réserve 256 octets   =&gt; char buffer[256];
+    total   resq 1         ; réserve 1 quadword   =&gt; long total;</code></pre></figure>
+<p>Le nom (<code>nombres</code>, <code>total</code>…) est une <strong>étiquette</strong> : l'assembleur la remplace par l'adresse de la donnée. <code>db/dw/dd/dq</code> veulent dire « define byte/word/dword/qword » ; <code>resb/resq</code> veulent dire « reserve byte/qword ».</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    mov rax, [nombres]          ; rax = nombres[0] = 10
+    mov rax, [nombres + 8]      ; rax = nombres[1] = 20  (8 octets plus loin)
+    lea rsi, [nombres]          ; rsi = &amp;nombres  (l'ADRESSE, pas le contenu)</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p><code>lea</code> (load effective address) calcule une adresse sans accéder à la mémoire : <code>lea rsi, [nombres]</code> c'est <code>rsi = &amp;nombres</code> en C. C'est aussi un calcul arithmétique malin : <code>lea rax, [rbx + rbx*4]</code> met <code>rbx*5</code> dans <code>rax</code> en une seule instruction.</p></div></div>
+
+<h2>Le registre de drapeaux (RFLAGS)</h2>
+<p>Le processeur possède un registre spécial, <code>RFLAGS</code>, dont chaque bit est un <strong>drapeau</strong> (flag) : un oui/non qui décrit le résultat de la dernière opération arithmétique. Quatre nous intéressent ici :</p>
+<ul>
+<li><strong>ZF</strong> (Zero Flag) : mis à 1 si le résultat est <strong>zéro</strong>.</li>
+<li><strong>SF</strong> (Sign Flag) : copie du bit de signe ; vaut 1 si le résultat est <strong>négatif</strong> (interprété en signé).</li>
+<li><strong>CF</strong> (Carry Flag) : retenue ou emprunt ; signale un débordement en <strong>non signé</strong>.</li>
+<li><strong>OF</strong> (Overflow Flag) : débordement en <strong>signé</strong> (le résultat ne tient plus dans le type).</li>
+</ul>
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Le registre RFLAGS et ses quatre drapeaux utiles : ZF vaut 1 si le résultat est zéro, SF vaut 1 si le résultat est négatif en signé, CF signale une retenue ou un débordement en non signé, OF signale un débordement en signé. Exemple : mov rax 5 puis sub rax 5 donne 0, donc ZF passe à 1. Les sauts conditionnels lisent ces drapeaux.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">RFLAGS : la mémoire de la dernière opération</text>
+    <rect class="d-accent" x="40" y="40" width="120" height="44" rx="5" /><text class="d-tag" x="100" y="60" text-anchor="middle" font-size="11">ZF</text><text class="d-mut" x="100" y="76" text-anchor="middle" font-size="8">résultat = 0</text>
+    <rect class="d-box" x="176" y="40" width="120" height="44" rx="5" /><text class="d-tag" x="236" y="60" text-anchor="middle" font-size="11">SF</text><text class="d-mut" x="236" y="76" text-anchor="middle" font-size="8">négatif (signé)</text>
+    <rect class="d-box" x="312" y="40" width="120" height="44" rx="5" /><text class="d-tag" x="372" y="60" text-anchor="middle" font-size="11">CF</text><text class="d-mut" x="372" y="76" text-anchor="middle" font-size="8">retenue (non signé)</text>
+    <rect class="d-box" x="448" y="40" width="120" height="44" rx="5" /><text class="d-tag" x="508" y="60" text-anchor="middle" font-size="11">OF</text><text class="d-mut" x="508" y="76" text-anchor="middle" font-size="8">débordt (signé)</text>
+    <text class="d-mut" x="320" y="112" text-anchor="middle" font-size="9">exemple : mov rax,5 ; sub rax,5 → résultat 0 → ZF passe à 1</text>
+    <text class="d-mut" x="320" y="130" text-anchor="middle" font-size="9">les sauts (je, jl, jb…) lisent ces drapeaux pour toi</text>
+  </svg>
+  <figcaption>Les instructions arithmétiques posent ces drapeaux&nbsp;; <code>cmp</code> et <code>test</code> ne servent qu'à ça, et les sauts conditionnels les consultent.</figcaption>
+</figure>
+<p>Tu ne lis presque jamais ces drapeaux directement : les instructions de saut le font pour toi. Les opérations arithmétiques (<code>add</code>, <code>sub</code>, <code>inc</code>…) positionnent ces drapeaux comme effet de bord.</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    mov rax, 5
+    sub rax, 5      ; rax = 0   =&gt; ZF = 1 (résultat nul)
+    mov rax, 3
+    sub rax, 10     ; rax = -7  =&gt; SF = 1 (négatif), ZF = 0</code></pre></figure>
+
+<h2>cmp et test : comparer sans détruire</h2>
+<p>Pour comparer, on utilise <code>cmp</code>. C'est une soustraction qui <strong>jette le résultat</strong> mais positionne les drapeaux comme si tu avais soustrait. <code>cmp rax, rbx</code> calcule <code>rax - rbx</code> sans modifier <code>rax</code> : si les deux sont égaux, le résultat est 0, donc <strong>ZF = 1</strong>.</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    cmp rax, rbx    ; calcule rax - rbx, jette le résultat, met à jour ZF/SF/CF/OF
+    ;   rax == rbx  =&gt; ZF = 1
+    ;   rax &lt; rbx   =&gt; reflété par SF/OF (signé) ou par CF (non signé)</code></pre></figure>
+<p><code>test</code> est l'équivalent pour le ET binaire : <code>test rax, rax</code> fait <code>rax &amp; rax</code> (qui vaut <code>rax</code>), jette le résultat et met à jour les drapeaux. C'est l'idiome standard pour tester si un registre vaut zéro — plus court et plus rapide que <code>cmp rax, 0</code>.</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    test rax, rax   ; ZF = 1 si rax == 0   =&gt; en C : if (rax == 0)
+    ;   équivalent à cmp rax, 0 mais sans constante, donc plus compact</code></pre></figure>
+
+<h2>Les sauts : if et boucle</h2>
+<p>Un saut change l'adresse de la prochaine instruction. <code>jmp etiquette</code> saute <strong>toujours</strong> (inconditionnel) — c'est le <code>goto</code> du C. Les sauts <strong>conditionnels</strong> (<code>jcc</code>) ne sautent que si une condition sur les drapeaux est vraie ; sinon, l'exécution continue tout droit.</p>
+<p>Voici les plus courants. Attention, il y a deux familles : les sauts <strong>signés</strong> et les <strong>non signés</strong>, c'est un piège classique qu'on détaille juste après.</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; après un cmp a, b :
+    je   etiq   ; saute si a == b   (ZF=1)        Jump if Equal
+    jne  etiq   ; saute si a != b   (ZF=0)        Jump if Not Equal
+    ; --- comparaison SIGNÉE (int, long en C) ---
+    jl   etiq   ; saute si a &lt;  b   Jump if Less
+    jg   etiq   ; saute si a &gt;  b   Jump if Greater
+    jle  etiq   ; saute si a &lt;= b
+    jge  etiq   ; saute si a &gt;= b
+    ; --- comparaison NON SIGNÉE (unsigned, pointeurs) ---
+    jb   etiq   ; saute si a &lt;  b   Jump if Below
+    ja   etiq   ; saute si a &gt;  b   Jump if Above
+    jbe  etiq   ; saute si a &lt;= b   Jump if Below or Equal
+    jae  etiq   ; saute si a &gt;= b   Jump if Above or Equal</code></pre></figure>
+<p>Construisons un <code>if</code>. On traduit le code C <code>if (rax &gt; 0) { rbx = 1; }</code> :</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; if (rax &gt; 0) { rbx = 1; }
+    cmp rax, 0
+    jle fin_if          ; si rax &lt;= 0, saute par-dessus le corps
+    mov rbx, 1          ; corps du if
+fin_if:
+    ; ... la suite</code></pre></figure>
+<p>Remarque l'inversion : en assembleur, on saute quand la condition est <strong>fausse</strong> pour passer par-dessus le corps. Le C dit « si vrai, exécute » ; l'assembleur dit « si faux, esquive ». Même logique, exprimée à l'envers.</p>
+<p>Maintenant une boucle. Le <code>for</code> suivant compte de 0 à 4 (cinq itérations) :</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">    ; for (rcx = 0; rcx &lt; 5; rcx++) { ... }
+    xor rcx, rcx        ; rcx = 0  (xor d'un registre avec lui-même = 0)
+boucle:
+    cmp rcx, 5
+    jge fin_boucle      ; si rcx &gt;= 5, on sort
+    ; ... corps de la boucle ...
+    inc rcx             ; rcx++
+    jmp boucle          ; retour en haut
+fin_boucle:</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le squelette d'une boucle for en assembleur. On initialise le compteur rcx à 0. On teste la condition avec cmp rcx, 5 : si rcx est supérieur ou égal à 5, le saut jge mène à la sortie ; sinon on exécute le corps et on incrémente rcx, puis un jmp inconditionnel revient au test. La flèche de retour forme la boucle.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Une boucle = étiquette + cmp + saut conditionnel + jmp</text>
+    <rect class="d-box" x="220" y="34" width="200" height="30" rx="4" /><text class="d-text" x="320" y="53" text-anchor="middle" font-size="10">xor rcx, rcx  (i = 0)</text>
+    <line class="d-line" x1="320" y1="64" x2="320" y2="78" />
+    <rect class="d-accent" x="220" y="78" width="200" height="30" rx="4" /><text class="d-text" x="320" y="97" text-anchor="middle" font-size="10">cmp rcx, 5 — test</text>
+    <line class="d-line" x1="420" y1="93" x2="520" y2="93" /><text class="d-mut" x="470" y="87" text-anchor="middle" font-size="8">jge → sort</text>
+    <rect class="d-box" x="520" y="78" width="96" height="30" rx="4" /><text class="d-text" x="568" y="97" text-anchor="middle" font-size="10">fin</text>
+    <line class="d-line" x1="320" y1="108" x2="320" y2="124" /><text class="d-mut" x="356" y="120" text-anchor="middle" font-size="8">sinon</text>
+    <rect class="d-box" x="220" y="124" width="200" height="30" rx="4" /><text class="d-text" x="320" y="143" text-anchor="middle" font-size="10">corps + inc rcx</text>
+    <line class="d-line" x1="220" y1="139" x2="150" y2="139" /><line class="d-line" x1="150" y1="139" x2="150" y2="93" /><line class="d-line" x1="150" y1="93" x2="220" y2="93" /><text class="d-mut" x="150" y="170" text-anchor="middle" font-size="8">jmp (retour au test)</text>
+  </svg>
+  <figcaption>On saute quand la condition est <strong>fausse</strong> (<code>jge</code> sort)&nbsp;; sinon le corps s'exécute et <code>jmp</code> reboucle sur le test.</figcaption>
+</figure>
+
+<h2>Exemple complet : sommer un tableau</h2>
+<p>Réunissons tout : adressage indexé, drapeaux et sauts pour parcourir un tableau et additionner ses éléments. Voici le programme, avec le C correspondant en commentaire :</p>
+<figure class="code-block" data-file="prog.asm"><pre><code class="language-nasm">; long nombres[5] = {10, 20, 30, 40, 50};
+; long total = 0;
+; for (long i = 0; i &lt; 5; i++) total += nombres[i];
+; // total == 150
+
+section .data
+    nombres dq 10, 20, 30, 40, 50
+    taille  equ 5                  ; constante d'assemblage (pas de mémoire)
+
+section .text
+    global _start
+_start:
+    lea rsi, [nombres]    ; rsi = &amp;nombres[0]  (adresse de base)
+    xor rcx, rcx          ; rcx = i = 0
+    xor rax, rax          ; rax = total = 0
+.boucle:
+    cmp rcx, taille
+    jge .fin              ; si i &gt;= 5, sortir
+    add rax, [rsi + rcx*8] ; total += nombres[i]  (échelle 8 = qword)
+    inc rcx               ; i++
+    jmp .boucle
+.fin:
+    ; ici rax = 150        =&gt; total
+    mov rdi, rax          ; code de sortie = total (pour le vérifier au shell)
+    mov rax, 60           ; appel système exit
+    syscall</code></pre></figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">nasm -f elf64 prog.asm -o prog.o
+ld prog.o -o prog
+./prog
+echo $?        # affiche 150  =&gt; la somme du tableau</code></pre></figure>
+<p class="code-caption">On assemble, on lie, on exécute, puis <code>echo $?</code> montre le code de sortie : 150.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les étiquettes commençant par un point (<code>.boucle</code>, <code>.fin</code>) sont <strong>locales</strong> en NASM : elles sont rattachées à la dernière étiquette globale (<code>_start</code>). Tu peux donc réutiliser <code>.boucle</code> dans une autre fonction sans collision de nom. Note aussi que le code de sortie d'un processus ne tient que sur 8 bits : pratique pour vérifier 150, mais pas une vraie valeur de retour au-delà de 255.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Confondre saut signé et non signé n'est pas qu'une subtilité d'école&nbsp;: c'est une source classique de <strong>failles de sécurité</strong>. Imagine un contrôle <code>if (longueur &lt;= max)</code> où <code>longueur</code> est un entier <em>signé</em> devenu négatif (débordement, ou valeur choisie par un attaquant). Comparé en signé, il paraît minuscule et passe le test&nbsp;; mais réutilisé ensuite comme une taille <em>non signée</em> dans un <code>memcpy</code>, il devient une valeur gigantesque et provoque un dépassement de tampon. Des CVE de ce type reviennent chaque année dans des projets majeurs (noyaux, bibliothèques réseau). Choisir <code>jl/jg</code> ou <code>jb/ja</code> selon la nature réelle des données, c'est déjà faire de la sécurité.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre sauts <strong>signés</strong> et <strong>non signés</strong>. Avec <code>cmp rax, rbx</code> où <code>rax = -1</code> et <code>rbx = 1</code> : en signé <code>-1 &lt; 1</code> donc <code>jl</code> saute ; mais en non signé, <code>-1</code> est le motif binaire <code>0xFFFF...FF</code>, la plus grande valeur, donc <code>jb</code> ne saute pas. Utilise <code>jl/jg/jle/jge</code> pour des <code>int</code>/<code>long</code> signés, et <code>jb/ja/jbe/jae</code> pour des <code>unsigned</code> ou des adresses. Choisir la mauvaise famille donne un bug silencieux.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier que <code>[etiquette]</code> lit le <strong>contenu</strong>, alors que <code>etiquette</code> seul (via <code>lea</code>) donne l'<strong>adresse</strong>. <code>lea rax, [nombres]</code> met l'adresse dans <code>rax</code> ; <code>mov rax, [nombres]</code> met la première valeur (10). C'est la différence entre <code>p</code> et <code>*p</code> en C.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les drapeaux servent aussi sans saut : les instructions <code>setcc</code> écrivent 0 ou 1 dans un octet (<code>sete al</code> met <code>al = 1</code> si ZF=1), et <code>cmovcc</code> copie conditionnellement (<code>cmovg rax, rbx</code>). Ces variantes « sans branchement » évitent les sauts, ce qui aide le processeur à anticiper le flux d'instructions et peut accélérer un code chaud. C'est exactement ce que ton compilateur C génère souvent pour un <code>x = (a &gt; b) ? a : b;</code>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — mémoire, drapeaux et sauts</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th><th scope="col">Remarque</th></tr></thead>
+    <tbody>
+      <tr><td>Lire / écrire en mémoire</td><td><code>mov r, [addr]</code> / <code>mov [addr], r</code></td><td>crochets = <code>*p</code></td></tr>
+      <tr><td>Adresse indexée</td><td><code>[base + idx*échelle + dépl]</code></td><td>échelle 1/2/4/8</td></tr>
+      <tr><td>Données initialisées</td><td><code>db dw dd dq</code> en <code>.data</code></td><td>1/2/4/8 octets</td></tr>
+      <tr><td>Données réservées</td><td><code>resb resq</code> en <code>.bss</code></td><td>mises à zéro au démarrage</td></tr>
+      <tr><td>Comparer</td><td><code>cmp a, b</code></td><td><code>a - b</code>, jette le résultat</td></tr>
+      <tr><td>Tester la nullité</td><td><code>test r, r</code></td><td>ZF=1 si <code>r == 0</code></td></tr>
+      <tr><td>Égal / différent</td><td><code>je</code> / <code>jne</code></td><td>lit ZF</td></tr>
+      <tr><td>Signé &lt; &gt; ≤ ≥</td><td><code>jl jg jle jge</code></td><td><code>int</code>, <code>long</code></td></tr>
+      <tr><td>Non signé &lt; &gt; ≤ ≥</td><td><code>jb ja jbe jae</code></td><td><code>unsigned</code>, adresses</td></tr>
+      <tr><td>Saut inconditionnel</td><td><code>jmp etiq</code></td><td>le <code>goto</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Adresse</dt><dd>Numéro d'un octet en mémoire&nbsp;; <code>[adresse]</code> lit ou écrit la donnée qui s'y trouve, comme <code>*p</code> en C.</dd>
+  <dt>Adressage indexé</dt><dd>Forme <code>[base + index×échelle + déplacement]</code> (échelle 1/2/4/8), qui calque l'arithmétique de pointeurs <code>tableau[i]</code>.</dd>
+  <dt><code>.data</code> / <code>.bss</code></dt><dd>Sections de données&nbsp;: <code>.data</code> initialise des valeurs (<code>db/dw/dd/dq</code>), <code>.bss</code> réserve de l'espace mis à zéro (<code>resb/resq</code>).</dd>
+  <dt>Étiquette</dt><dd>Nom symbolique que l'assembleur remplace par une adresse (d'une donnée ou d'une instruction)&nbsp;; celles préfixées d'un point sont locales.</dd>
+  <dt>RFLAGS</dt><dd>Registre d'état dont chaque bit est un drapeau posé par la dernière opération arithmétique.</dd>
+  <dt>ZF, SF, CF, OF</dt><dd>Zéro (résultat nul), Signe (négatif), Carry (débordement non signé), Overflow (débordement signé)&nbsp;: les quatre drapeaux clés.</dd>
+  <dt><code>cmp</code> / <code>test</code></dt><dd>Comparaisons qui posent les drapeaux sans garder le résultat&nbsp;: <code>cmp</code> soustrait, <code>test</code> fait un ET (idiome de test de nullité).</dd>
+  <dt>Saut conditionnel</dt><dd>Instruction <code>jcc</code> qui ne branche que si une condition sur les drapeaux est vraie&nbsp;; deux familles, signée (<code>jl/jg</code>) et non signée (<code>jb/ja</code>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La mémoire s'adresse avec <code>[base + index*échelle + déplacement]</code> ; les crochets sont l'opérateur <code>*</code> du C.</li>
+<li><code>.data</code> initialise (<code>db/dw/dd/dq</code>), <code>.bss</code> réserve sans initialiser (<code>resb/resq</code>).</li>
+<li><code>cmp a, b</code> et <code>test a, a</code> positionnent les drapeaux <strong>ZF, SF, CF, OF</strong> sans garder le résultat.</li>
+<li>Un <code>if</code> = <code>cmp</code> + saut « inversé » ; une boucle = étiquette + <code>cmp</code> + <code>jcc</code> + <code>jmp</code>.</li>
+<li>Sauts <strong>signés</strong> (<code>jl/jg</code>) contre <strong>non signés</strong> (<code>jb/ja</code>) : ne pas les confondre.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pour traduire <code>if (rax &gt; 0) { rbx = 1; }</code>, quel saut place-t-on après <code>cmp rax, 0</code> pour passer par-dessus le corps, et pourquoi ce saut-là ?</li><li>Après <code>cmp rax, rbx</code> avec <code>rax = 7</code> et <code>rbx = 7</code>, quel drapeau vaut 1, et lequel de <code>je</code> ou <code>jne</code> sautera ?</li><li>Tu compares deux <code>unsigned</code>. Pourquoi <code>jg</code> serait un mauvais choix, et lequel mettre à la place ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pour traduire if (rax > 0) { rbx = 1; }, avec quel saut passe-t-on par-dessus le corps, et pourquoi celui-là ?","a":["Avec jle après cmp rax, 0 : en assembleur on saute quand la condition est fausse, donc on emploie le saut opposé à « strictement supérieur » pour esquiver le corps","Avec jg, le saut qui correspond directement à la condition « > » du if","Avec jmp, un saut inconditionnel qui protège toujours le corps","Avec jne, puisqu'on vient de comparer rax à une valeur"],"correct":0,"explain":"Le C dit « si la condition est vraie, exécute le corps ». En assembleur on fait l'inverse : on teste et, si la condition est fausse, on saute par-dessus le corps avec le saut opposé. Pour if (rax > 0), on écrit donc cmp rax, 0 puis jle (le contraire de « strictement supérieur »)."},
+  {"q":"Après cmp rax, rbx avec rax = 7 et rbx = 7, quel drapeau vaut 1, et lequel de je ou jne sautera ?","a":["Le drapeau ZF (zéro) vaut 1, car rax - rbx = 0 ; je (saut si égal) saute, jne ne saute pas","Le drapeau CF vaut 1 ; jne saute","ZF vaut 0 ; je ne saute pas","Aucun drapeau ne change"],"correct":0,"explain":"cmp effectue une soustraction sans stocker le résultat, seulement les drapeaux. 7 - 7 = 0 met ZF à 1. je saute quand ZF = 1 (égalité), donc il saute ici ; jne, qui saute quand ZF = 0, ne saute pas."},
+  {"q":"Tu compares deux unsigned. Pourquoi jg serait un mauvais choix, et lequel mettre à la place ?","a":["Parce que jg interprète les valeurs comme signées (il regarde SF et OF) ; pour des non-signés il faut ja (jump if above), qui se base sur CF","jg est toujours correct","Il faut jl à la place","Il faut je à la place"],"correct":0,"explain":"Les sauts conditionnels existent en versions signée et non signée. jg/jl raisonnent sur des entiers signés. Pour comparer des valeurs non signées, on utilise ja/jb, qui s'appuient sur le drapeau de retenue (CF), évitant les erreurs de signe."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+{"type":"text","accept":["test","test rax, rax","test rax,rax"],"placeholder":"L'instruction qui teste si rax est nul sans le modifier : … rax, rax","hints":["Elle fait un ET logique et positionne les drapeaux, sans écrire de résultat.","Suivie d'un jz / je.","4 lettres."],"link":{"href":"lecon-03.html","label":"Revoir test"}},
+{"type":"text","accept":["42"],"placeholder":"Le plus grand élément de 4, 8, 15, 16, 23, 42 (un nombre)","hints":["On cherche le maximum de la liste.","Le dernier de la suite Lost.","Entre 40 et 45."],"link":{"href":"lecon-03.html","label":"Revoir la recherche de max"}},
+{"type":"text","accept":["jl","js"],"placeholder":"Le saut conditionnel SIGNÉ « strictement inférieur à 0 » après cmp val, 0 : j…","hints":["Pour des entiers signés, « plus petit que » utilise « less ».","jl = jump if less ; js = jump if sign.","Deux lettres, commence par j."],"link":{"href":"lecon-03.html","label":"Revoir les sauts signés"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un fragment qui met <code>rbx = 1</code> si <code>rax</code> vaut exactement 0, et <code>rbx = 0</code> sinon. Utilise <code>test</code> et un saut. (En C : <code>rbx = (rax == 0);</code>)</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">    xor rbx, rbx        ; rbx = 0 par défaut
+    test rax, rax       ; ZF = 1 si rax == 0
+    jne .fin            ; si rax != 0, on garde rbx = 0
+    mov rbx, 1          ; sinon rax == 0, donc rbx = 1
+.fin:
+    ; rbx vaut maintenant 1 si rax == 0, sinon 0</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Parcours le tableau <code>nombres dq 4, 8, 15, 16, 23, 42</code> (6 éléments) et place dans <code>rax</code> le <strong>plus grand</strong> élément. (En C : un <code>for</code> avec <code>if (nombres[i] &gt; max) max = nombres[i];</code> sur des <code>long</code> signés.)</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">section .data
+    nombres dq 4, 8, 15, 16, 23, 42
+    taille  equ 6
+
+section .text
+    global _start
+_start:
+    lea rsi, [nombres]
+    mov rax, [rsi]      ; max = nombres[0]
+    mov rcx, 1          ; i = 1
+.boucle:
+    cmp rcx, taille
+    jge .fin            ; i &gt;= 6  =&gt; sortir
+    mov rdx, [rsi + rcx*8]   ; rdx = nombres[i]
+    cmp rdx, rax
+    jle .suivant       ; si nombres[i] &lt;= max, on ne change rien (signé)
+    mov rax, rdx       ; sinon max = nombres[i]
+.suivant:
+    inc rcx
+    jmp .boucle
+.fin:
+    ; rax = 42</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Compte combien d'éléments <strong>strictement négatifs</strong> contient <code>valeurs dq -3, 7, -1, 0, -8, 5</code> (6 <code>long</code> signés), et mets le total dans <code>rax</code>. Quel saut conditionnel détecte « négatif » après <code>cmp val, 0</code> ?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">section .data
+    valeurs dq -3, 7, -1, 0, -8, 5
+    taille  equ 6
+
+section .text
+    global _start
+_start:
+    lea rsi, [valeurs]
+    xor rcx, rcx       ; i = 0
+    xor rax, rax       ; compteur = 0
+.boucle:
+    cmp rcx, taille
+    jge .fin
+    mov rdx, [rsi + rcx*8]
+    cmp rdx, 0
+    jge .suivant       ; si val &gt;= 0, ce n'est pas négatif (saut SIGNÉ)
+    inc rax            ; val &lt; 0  =&gt; on compte
+.suivant:
+    inc rcx
+    jmp .boucle
+.fin:
+    ; rax = 3   (-3, -1, -8)
+    ; Le saut clé : jl détecte val &lt; 0 ; ici on inverse avec jge pour esquiver.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-nasm.min.js" defer></script>
+  </body>
+</html>

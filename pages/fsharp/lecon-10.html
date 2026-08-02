@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Composition et application partielle — Leçon 10 · Cours F# — Syntaxe</title>
+    <meta name="description" content="Assembler des fonctions en F# : curryfication, application partielle, composition avec &gt;&gt; et le style point-free pour écrire des pipelines réutilisables." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="fsharp" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">F#</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin en F# — Leçon 10</p>
+              <h1 class="lesson-header__title">Composition et application partielle</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 2-3</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre que toute fonction F# est <strong>curryfiée</strong>&nbsp;;</li>
+                  <li>spécialiser une fonction par <strong>application partielle</strong>&nbsp;;</li>
+                  <li>composer des fonctions avec <code>&gt;&gt;</code>&nbsp;;</li>
+                  <li>écrire des pipelines réutilisables en style <strong>point-free</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>En F#, les fonctions sont des <strong>briques</strong> que l'on assemble. Deux mécanismes rendent cet assemblage naturel&nbsp;: l'<strong>application partielle</strong> (fixer une partie des arguments) et la <strong>composition</strong> (brancher la sortie d'une fonction sur l'entrée d'une autre). Ensemble, ils permettent d'écrire des pipelines réutilisables, souvent sans même nommer la donnée traitée&nbsp;— c'est le style «&nbsp;point-free&nbsp;».</p>
+
+<h2>Toute fonction est curryfiée</h2>
+<p>En F#, une fonction à deux arguments <em>est</em> en réalité une fonction qui prend le premier argument et <strong>renvoie une fonction</strong> attendant le second. C'est la <strong>curryfication</strong>. Son type le montre&nbsp;: <code>int -&gt; int -&gt; int</code> se lit <code>int -&gt; (int -&gt; int)</code>.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let add a b = a + b        // type : int -&gt; int -&gt; int
+let add5 = add 5           // on ne donne QU'UN argument → int -&gt; int
+add5 10                    // 15
+add5 100                   // 105</code></pre></figure>
+<p class="code-caption"><code>add 5</code> ne calcule rien&nbsp;: il renvoie une <em>nouvelle fonction</em>, <code>add5</code>, qui ajoutera 5 à ce qu'on lui donnera.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="La fonction add prend deux arguments. Lui donner un seul argument, cinq, ne produit pas de résultat mais une nouvelle fonction appelée add5 de type entier vers entier. Ce n'est qu'en donnant le second argument, dix à add5, que le calcul se fait et renvoie quinze.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Donner un seul argument sur deux renvoie une fonction</text>
+    <rect class="d-accent" x="30" y="56" width="150" height="48" rx="8" /><text class="d-tag" x="105" y="85" text-anchor="middle" font-size="12" font-family="monospace">add 5</text>
+    <path class="d-line" d="M180 80 L250 80" fill="none" /><text class="d-mut" x="215" y="72" text-anchor="middle" font-size="8.5">1 arg sur 2</text>
+    <rect class="d-box" x="250" y="56" width="170" height="48" rx="8" /><text class="d-text" x="335" y="78" text-anchor="middle" font-size="11" font-family="monospace">add5</text><text class="d-mut" x="335" y="93" text-anchor="middle" font-size="9" font-family="monospace">int -&gt; int</text>
+    <path class="d-line" d="M420 80 L490 80" fill="none" /><text class="d-mut" x="455" y="72" text-anchor="middle" font-size="8.5">add5 10</text>
+    <rect class="d-accent" x="490" y="56" width="120" height="48" rx="8" /><text class="d-tag" x="550" y="85" text-anchor="middle" font-size="12" font-family="monospace">15</text>
+    <text class="d-mut" x="320" y="132" text-anchor="middle" font-size="9">appliquer les arguments un à un est parfaitement légal — et très utile</text>
+  </svg>
+  <figcaption>La <strong>curryfication</strong> fait qu'une fonction à deux arguments se comporte comme une chaîne&nbsp;: lui donner le premier argument renvoie une fonction qui attend le second. On peut donc l'appliquer «&nbsp;par morceaux&nbsp;».</figcaption>
+</figure>
+
+<h2>L'application partielle</h2>
+<p>Fixer une partie des arguments d'une fonction générale pour en obtenir une <strong>spécialisée</strong>, voilà l'application partielle. On part d'une fonction polyvalente et on la fige progressivement.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let multiplier facteur x = facteur * x   // fonction générale
+
+let doubler = multiplier 2               // spécialisée : ×2
+let tva     = multiplier 1.20            // spécialisée : +20 %
+
+[ 1; 2; 3 ] |&gt; List.map doubler          // [2; 4; 6]
+tva 50.0                                 // 60.0</code></pre></figure>
+<p><code>List.map doubler</code> lit bien&nbsp;: on n'a pas eu à écrire <code>(fun x -&gt; multiplier 2 x)</code>. La forme partielle <em>est</em> la fonction attendue par <code>map</code>.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — l'ordre des arguments compte</p><p>Place l'argument que tu voudras <strong>fixer</strong> en premier, et la <strong>donnée</strong> à traiter en dernier. C'est exactement le choix des modules F#&nbsp;: <code>List.map</code> prend la fonction <em>puis</em> la liste. Ainsi <code>List.map doubler</code> est une application partielle directement utilisable dans un pipeline.</p></div></div>
+
+<h2>Composer des fonctions&nbsp;: <code>&gt;&gt;</code></h2>
+<p>L'opérateur <code>&gt;&gt;</code> (composition «&nbsp;vers l'avant&nbsp;») branche deux fonctions bout à bout&nbsp;: <code>(f &gt;&gt; g) x</code> vaut <code>g (f x)</code>. Il ne calcule rien tout de suite&nbsp;: il fabrique une <strong>nouvelle fonction</strong>.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let trim (s: string) = s.Trim ()
+let minuscules (s: string) = s.ToLower ()
+
+let normaliser = trim &gt;&gt; minuscules   // une fonction : trim PUIS minuscules
+normaliser "  Bonjour  "               // "bonjour"</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="La composition avec le double chevron assemble deux fonctions en une seule. La chaîne d'entrée entre à gauche dans la fonction normaliser, qui contient trim puis minuscules. trim enlève les espaces, minuscules met en bas de casse, et le résultat bonjour sort à droite. La donnée traverse les deux étapes en un seul appel.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">normaliser = trim &gt;&gt; minuscules  (une seule fonction)</text>
+    <text class="d-text" x="60" y="92" text-anchor="middle" font-size="9" font-family="monospace">"  Bonjour  "</text>
+    <path class="d-line" d="M118 88 L150 88" fill="none" />
+    <rect class="d-frame" x="150" y="48" width="360" height="72" rx="10" /><text class="d-mut" x="330" y="66" text-anchor="middle" font-size="9">normaliser</text>
+    <rect class="d-accent" x="172" y="74" width="130" height="34" rx="8" /><text class="d-tag" x="237" y="96" text-anchor="middle" font-size="10" font-family="monospace">trim</text>
+    <path class="d-line" d="M302 91 L358 91" fill="none" />
+    <rect class="d-accent" x="358" y="74" width="130" height="34" rx="8" /><text class="d-tag" x="423" y="96" text-anchor="middle" font-size="10" font-family="monospace">minuscules</text>
+    <path class="d-line" d="M510 88 L556 88" fill="none" />
+    <text class="d-text" x="588" y="92" text-anchor="middle" font-size="10" font-family="monospace">"bonjour"</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="9">on assemble une fois, on réutilise partout — sans variable intermédiaire</text>
+  </svg>
+  <figcaption>La composition <code>&gt;&gt;</code> soude <code>trim</code> et <code>minuscules</code> en une fonction <code>normaliser</code>. La donnée traverse les deux étapes dans l'ordre de lecture, de gauche à droite.</figcaption>
+</figure>
+
+<h2><code>|&gt;</code> ou <code>&gt;&gt;</code>&nbsp;? Ne pas confondre</h2>
+<p>Ces deux opérateurs se ressemblent mais n'attendent pas la même chose. <code>|&gt;</code> a besoin d'une <strong>donnée</strong> à sa gauche et l'applique <em>maintenant</em>. <code>&gt;&gt;</code> attend deux <strong>fonctions</strong> et n'applique <em>rien</em>&nbsp;: il en construit une nouvelle.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Deux opérateurs à distinguer. À gauche, x pipe f égale f de x : le pipe part d'une valeur et applique la fonction immédiatement, produisant un résultat. À droite, f double-chevron g égale une fonction : la composition part de deux fonctions et n'a pas encore de donnée à traiter.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux opérateurs à ne pas confondre</text>
+    <rect class="d-box" x="34" y="54" width="40" height="36" rx="7" /><text class="d-text" x="54" y="77" text-anchor="middle" font-size="11" font-family="monospace">x</text>
+    <text class="d-tag" x="96" y="77" text-anchor="middle" font-size="12" font-family="monospace">|&gt;</text>
+    <rect class="d-accent" x="116" y="54" width="40" height="36" rx="7" /><text class="d-tag" x="136" y="77" text-anchor="middle" font-size="11" font-family="monospace">f</text>
+    <text class="d-text" x="232" y="72" text-anchor="middle" font-size="10" font-family="monospace">= f x</text><text class="d-mut" x="232" y="88" text-anchor="middle" font-size="8.5">applique MAINTENANT</text>
+    <line class="d-line" x1="320" y1="42" x2="320" y2="118" /><text class="d-mut" x="320" y="134" text-anchor="middle" font-size="8.5">valeur à gauche  ·  fonctions à gauche</text>
+    <rect class="d-accent" x="356" y="54" width="40" height="36" rx="7" /><text class="d-tag" x="376" y="77" text-anchor="middle" font-size="11" font-family="monospace">f</text>
+    <text class="d-tag" x="418" y="77" text-anchor="middle" font-size="12" font-family="monospace">&gt;&gt;</text>
+    <rect class="d-accent" x="440" y="54" width="40" height="36" rx="7" /><text class="d-tag" x="460" y="77" text-anchor="middle" font-size="11" font-family="monospace">g</text>
+    <text class="d-text" x="556" y="72" text-anchor="middle" font-size="10" font-family="monospace">= fonction</text><text class="d-mut" x="556" y="88" text-anchor="middle" font-size="8.5">pas encore de donnée</text>
+  </svg>
+  <figcaption><code>x |&gt; f</code> applique <code>f</code> à la valeur <code>x</code> (résultat immédiat). <code>f &gt;&gt; g</code> ne touche à aucune donnée&nbsp;: il renvoie une fonction qui fera <code>f</code> puis <code>g</code> le jour où on l'appellera.</figcaption>
+</figure>
+
+<h2>Le style point-free</h2>
+<p>Grâce à la composition, on définit une fonction <strong>sans nommer son argument</strong>&nbsp;: c'est le style <em>point-free</em> (ou «&nbsp;tacite&nbsp;»). On décrit un traitement comme un enchaînement d'étapes.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let estPair n = n % 2 = 0
+
+// avec l'argument nommé (xs)
+let sommePairs xs = xs |&gt; List.filter estPair |&gt; List.sum
+
+// en point-free : plus d'argument, juste des étapes composées
+let sommePairs = List.filter estPair &gt;&gt; List.sum
+
+sommePairs [ 1; 2; 3; 4; 5; 6 ]   // 12</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le point-free est élégant sur des pipelines <strong>courts et clairs</strong>. Poussé trop loin (compositions à rallonge, opérateurs empilés), il devient illisible&nbsp;: on ne voit plus ce qui circule. Règle simple&nbsp;: si tu dois «&nbsp;dérouler&nbsp;» mentalement la composition pour la comprendre, nomme l'argument et repasse au <code>|&gt;</code>.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Chez <strong>Jet.com</strong> (place de marché rachetée par Walmart en 2016), le back-end était massivement écrit en F#. La logique métier y prenait la forme de <strong>pipelines composés</strong>&nbsp;: chaque règle (valider une commande, appliquer une remise, calculer une taxe) est une petite fonction, et l'application partielle sert à les <em>configurer</em> — par exemple <code>appliquerRemise 0.10</code> ou <code>journaliser "commandes"</code>. On lit alors le traitement comme une phrase décrivant le domaine, pas comme de la plomberie.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Il existe des variantes&nbsp;: <code>&lt;&lt;</code> compose «&nbsp;à l'envers&nbsp;» (<code>(g &lt;&lt; f) x = g (f x)</code>), <code>&lt;|</code> applique une fonction à droite (<code>f &lt;| x = f x</code>, utile pour éviter des parenthèses), et <code>id</code> est la fonction identité (renvoie son argument), pratique comme cas neutre d'une composition. L'architecture web Elmish (côté Fable) est bâtie sur ces enchaînements de fonctions.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — assembler des fonctions</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">En F#</th></tr></thead>
+    <tbody>
+      <tr><td>Fixer un argument (spécialiser)</td><td><code>let f5 = f 5</code></td></tr>
+      <tr><td>Composer f puis g</td><td><code>f &gt;&gt; g</code></td></tr>
+      <tr><td>Composer à l'envers (g après f)</td><td><code>g &lt;&lt; f</code></td></tr>
+      <tr><td>Appliquer une valeur à une fonction</td><td><code>x |&gt; f</code></td></tr>
+      <tr><td>Appliquer à droite (sans parenthèses)</td><td><code>f &lt;| x</code></td></tr>
+      <tr><td>Pipeline réutilisable (point-free)</td><td><code>List.filter p &gt;&gt; List.map g</code></td></tr>
+      <tr><td>Cas neutre / ne rien faire</td><td><code>id</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Curryfication</dt><dd>Propriété faisant qu'une fonction à plusieurs arguments équivaut à une chaîne de fonctions à un argument&nbsp;: <code>a -&gt; b -&gt; c</code> se lit <code>a -&gt; (b -&gt; c)</code>. En F#, c'est le comportement par défaut.</dd>
+  <dt>Application partielle</dt><dd>Fournir <em>moins</em> d'arguments qu'attendu&nbsp;; on obtient une fonction spécialisée qui attend le reste. Ex.&nbsp;: <code>add 5</code>.</dd>
+  <dt>Composition (<code>&gt;&gt;</code>)</dt><dd>Assemble deux fonctions bout à bout&nbsp;: <code>(f &gt;&gt; g) x = g (f x)</code>. Renvoie une nouvelle fonction, sans calculer tout de suite.</dd>
+  <dt>Point-free</dt><dd>Style où l'on définit une fonction sans nommer son argument, en composant des étapes. Aussi appelé style «&nbsp;tacite&nbsp;».</dd>
+  <dt><code>|&gt;</code> (pipe)</dt><dd>Applique une fonction à une valeur donnée maintenant&nbsp;: <code>x |&gt; f</code> vaut <code>f x</code>.</dd>
+  <dt><code>&lt;&lt;</code></dt><dd>Composition inverse&nbsp;: <code>g &lt;&lt; f</code> fait <code>f</code> puis <code>g</code> (l'ordre de lecture est inversé par rapport à <code>&gt;&gt;</code>).</dd>
+  <dt><code>id</code></dt><dd>Fonction identité&nbsp;: <code>id x = x</code>. Sert de valeur neutre dans une composition.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Toute fonction F# est <strong>curryfiée</strong>&nbsp;: on peut l'appliquer argument par argument.</li>
+  <li>L'<strong>application partielle</strong> spécialise une fonction en fixant ses premiers arguments.</li>
+  <li><code>&gt;&gt;</code> <strong>compose</strong> deux fonctions&nbsp;; <code>|&gt;</code> applique une valeur.</li>
+  <li>Le style <strong>point-free</strong> décrit un traitement comme un enchaînement d'étapes, à garder court et lisible.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que renvoie <code>add 5</code> si <code>add a b = a + b</code>&nbsp;?</li><li>Quelle différence entre <code>x |&gt; f</code> et <code>f &gt;&gt; g</code>&nbsp;?</li><li>Réécris <code>fun xs -&gt; xs |&gt; List.map f |&gt; List.sum</code> en point-free.</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"En F#, que renvoie « add 5 » si add a b = a + b ?","a":["Une nouvelle fonction (de type int -> int) qui ajoutera 5 à son argument : c'est une application partielle","La valeur 5","Une erreur, car il manque un argument","La somme des deux arguments par défaut"],"correct":0,"explain":"Comme toute fonction F# est curryfiée, add a le type int -> int -> int, soit int -> (int -> int). Lui donner un seul argument (5) renvoie donc une fonction int -> int : l'application partielle add5, qui ajoutera 5 à ce qu'on lui passera."},
+  {"q":"Quelle est la différence entre x |> f et f >> g ?","a":["|> applique une fonction à une valeur donnée maintenant (résultat immédiat) ; >> compose deux fonctions et renvoie une nouvelle fonction, sans donnée à traiter","Il n'y a aucune différence, ce sont des synonymes","|> compose et >> applique","|> ne marche que sur les listes"],"correct":0,"explain":"x |> f attend une valeur à gauche et vaut f x : le calcul se fait tout de suite. f >> g attend deux fonctions et construit la fonction « f puis g » : rien n'est calculé tant qu'on ne l'appelle pas avec une donnée."},
+  {"q":"Quel est l'intérêt principal de placer la donnée en dernier argument d'une fonction ?","a":["Cela rend l'application partielle directement utilisable dans un pipeline (ex. List.map doubler) sans écrire de lambda","Cela accélère le calcul","Cela réduit la mémoire utilisée","Cela est obligatoire, sinon le code ne compile pas"],"correct":0,"explain":"En mettant les arguments de configuration d'abord et la donnée en dernier, une application partielle (comme multiplier 2) produit exactement la fonction attendue par List.map, List.filter, etc. C'est pourquoi les modules F# sont conçus ainsi : List.map prend la fonction puis la liste."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["add 5","(add 5)","add5"],"placeholder":"si add a b = a + b, l'application partielle qui ajoute 5 : …","hints":["Donne UN seul argument à add.","Le résultat est une fonction int -> int.","add ?"],"link":{"href":"lecon-10.html","label":"Revoir « Application partielle »"}},
+  {"type":"text","accept":[">>","&gt;&gt;"],"placeholder":"l'opérateur pour composer trim PUIS minuscules : trim … minuscules","hints":["Composition « vers l'avant ».","Deux chevrons.","(f ?? g) x = g (f x)"],"link":{"href":"lecon-10.html","label":"Revoir « Composer »"}},
+  {"type":"text","accept":["id"],"placeholder":"la fonction identité (renvoie son argument), utile comme cas neutre : …","hints":["Deux lettres.","id x = x.","Valeur neutre d'une composition."],"link":{"href":"lecon-10.html","label":"Revoir « Pour aller plus loin »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>À partir de <code>let entre bas haut x = x &gt;= bas &amp;&amp; x &lt;= haut</code>, crée par application partielle un prédicat <code>estUnChiffre</code> qui teste si un entier est entre 0 et 9.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let entre bas haut x = x &gt;= bas &amp;&amp; x &lt;= haut
+let estUnChiffre = entre 0 9
+estUnChiffre 7    // true
+estUnChiffre 42   // false</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Compose <code>trim</code> et <code>minuscules</code> pour obtenir <code>normaliser</code>, puis applique-la à <code>"  OUI  "</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let trim (s: string) = s.Trim ()
+let minuscules (s: string) = s.ToLower ()
+let normaliser = trim &gt;&gt; minuscules
+normaliser "  OUI  "   // "oui"</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris en <strong>point-free</strong> une fonction <code>longueursMots</code> qui, à partir d'une phrase, renvoie la liste des longueurs de ses mots.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">// (s: string).Split ' ' → tableau de mots
+let longueursMots =
+    (fun (s: string) -&gt; s.Split ' ')
+    &gt;&gt; Array.toList
+    &gt;&gt; List.map String.length
+
+longueursMots "le chat dort"   // [2; 4; 4]</code></pre></figure></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-fsharp.min.js" defer></script>
+  </body>
+</html>

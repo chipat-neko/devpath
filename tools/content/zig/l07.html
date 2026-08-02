@@ -1,0 +1,82 @@
+<p>Comment signaler qu'une opération a échoué&nbsp;? La plupart des langages utilisent des <strong>exceptions</strong> — un mécanisme caché, au flux invisible, parfois coûteux. Fidèle à sa philosophie, Zig fait autrement&nbsp;: les erreurs sont des <strong>valeurs ordinaires</strong>, visibles dans les types, propagées explicitement. Pas d'exception, pas de surprise.</p>
+
+<h2>Définir des erreurs</h2>
+<p>On regroupe des erreurs dans un <strong>error set</strong>, comme un enum d'erreurs.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const ErreurFichier = error{
+    Introuvable,
+    AccesRefuse,
+    Corrompu,
+};</code></pre></figure>
+
+<h2>Les error unions</h2>
+<p>Une fonction qui peut échouer renvoie une <strong>error union</strong>, notée <code>!T</code> (où <code>T</code> est le type en cas de succès). Le <code>!</code> dit&nbsp;: «&nbsp;soit un <code>T</code>, soit une erreur&nbsp;». Le type le dit, impossible d'ignorer la possibilité d'échec.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">fn diviser(a: i32, b: i32) !i32 {
+    if (b == 0) return error.DivisionParZero;
+    return @divTrunc(a, b);
+}</code></pre></figure>
+<p class="code-caption">Le <code>!i32</code> (sans error set précisé) laisse Zig déduire l'ensemble des erreurs possibles.</p>
+
+<h2>try&nbsp;: propager l'erreur</h2>
+<p>Le mot-clé <code>try</code> devant un appel signifie&nbsp;: «&nbsp;si ça échoue, renvoie l'erreur tout de suite&nbsp;». C'est la façon idiomatique de faire remonter une erreur sans s'en occuper localement.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">fn calcul() !i32 {
+    const r = try diviser(10, 2);   // si erreur, calcul() renvoie l'erreur
+    return r + 1;
+}</code></pre></figure>
+<p>C'est pourquoi <code>main</code> est souvent déclaré <code>!void</code>&nbsp;: pour pouvoir utiliser <code>try</code> à l'intérieur.</p>
+
+<h2>catch&nbsp;: traiter l'erreur</h2>
+<p>Pour gérer l'erreur sur place (au lieu de la propager), on utilise <code>catch</code>. On peut fournir une valeur de repli, ou capturer l'erreur pour réagir.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">// Valeur de repli :
+const x = diviser(10, 0) catch -1;   // x = -1
+
+// Capturer et réagir :
+const y = diviser(10, 0) catch |err| {
+    std.debug.print("Erreur : {}\n", .{err});
+    return;
+};</code></pre></figure>
+
+<h2>switch sur les erreurs</h2>
+<p>Pour traiter chaque erreur différemment, on combine <code>catch</code> et <code>switch</code>.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const contenu = lireFichier("data.txt") catch |err| switch (err) {
+    error.Introuvable =&gt; "fichier absent",
+    error.AccesRefuse =&gt; "accès refusé",
+    else =&gt; "autre erreur",
+};</code></pre></figure>
+
+<h2>errdefer&nbsp;: nettoyer en cas d'échec seulement</h2>
+<p>Variante de <code>defer</code>&nbsp;: <code>errdefer</code> ne s'exécute que si la fonction <strong>sort sur une erreur</strong>. Parfait pour annuler une allocation faite avant qu'une étape ultérieure n'échoue.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">fn creer(allocator: std.mem.Allocator) ![]u8 {
+    const buf = try allocator.alloc(u8, 100);
+    errdefer allocator.free(buf);   // libère SI la suite échoue
+    try remplir(buf);               // si ça échoue, buf est libéré
+    return buf;                     // sinon, on garde buf
+}</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ignorer la valeur d'une fonction qui peut échouer&nbsp;: Zig refuse de compiler si tu n'as pas traité l'erreur (par <code>try</code> ou <code>catch</code>). C'est une force&nbsp;: impossible d'oublier un échec silencieusement, contrairement aux codes de retour qu'on néglige en C.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Comme les erreurs sont de simples valeurs (pas de pile d'exception à dérouler), la gestion d'erreur de Zig est <strong>très peu coûteuse</strong> — souvent un simple test de registre. C'est ce qui la rend adaptée au code haute performance et temps réel.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les erreurs sont des <strong>valeurs</strong> (error set)&nbsp;; une fonction faillible renvoie une error union <code>!T</code>.</li>
+  <li><code>try</code> propage l'erreur&nbsp;; <code>catch</code> la traite (repli ou capture <code>|err|</code>).</li>
+  <li><code>errdefer</code> nettoie <strong>uniquement</strong> en cas d'échec.</li>
+  <li>Le compilateur <strong>force</strong> à traiter chaque erreur&nbsp;: pas d'échec silencieux.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que signifie le type de retour <code>!i32</code>&nbsp;?</li><li>Quelle différence entre <code>try</code> et <code>catch</code>&nbsp;?</li><li>Quand s'exécute un <code>errdefer</code>&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>racine</code> qui renvoie une erreur si l'argument est négatif.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn racine(x: f64) !f64 {
+    if (x &lt; 0) return error.Negatif;
+    return @sqrt(x);
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Appelle <code>diviser(10, 0)</code> et affiche 0 en cas d'erreur grâce à <code>catch</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const r = diviser(10, 0) catch 0;
+std.debug.print("{}\n", .{r});   // 0</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Dans une fonction, alloue un tampon puis ajoute un <code>errdefer</code> qui le libère si la suite échoue.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn faire(a: std.mem.Allocator) ![]u8 {
+    const buf = try a.alloc(u8, 64);
+    errdefer a.free(buf);
+    try traiter(buf);
+    return buf;
+}</code></pre></figure></details></div>

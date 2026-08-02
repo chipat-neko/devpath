@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le RAG (récupération augmentée) — Leçon 05 · Syntaxe</title>
+    <meta name="description" content="Le RAG (Retrieval-Augmented Generation) : brancher tes documents sur un LLM. Découpage, embeddings, recherche par similarité, augmentation du prompt et citation des sources." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="llm" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Développer avec l'IA &amp; les LLM</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Construire — Leçon 05</p>
+              <h1 class="lesson-header__title">Le RAG (récupération augmentée)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 04</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer le problème que résout le <strong>RAG</strong>&nbsp;;</li>
+                  <li>décrire son <strong>pipeline</strong> : découper, indexer, rechercher, augmenter&nbsp;;</li>
+                  <li>le rôle des <strong>embeddings</strong> et d'une base vectorielle&nbsp;;</li>
+                  <li>l'importance de <strong>citer les sources</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un LLM ne connaît ni tes documents internes, ni l'actualité postérieure à son entraînement. Le <strong>RAG</strong> (génération augmentée par récupération) résout cela élégamment : on <strong>récupère</strong> les extraits pertinents et on les <strong>fournit</strong> au modèle dans le prompt, pour qu'il réponde à partir d'eux.</p>
+
+<h2>Le problème</h2>
+<p>Demander à un LLM « que dit notre politique de congés&nbsp;? » échoue : il n'a jamais vu ce document, et il risque d'<strong>halluciner</strong> une réponse plausible. On pourrait tout coller dans le prompt… mais la <strong>fenêtre de contexte</strong> est limitée et coûteuse. Le RAG ne fournit que les <strong>bons morceaux</strong>, au bon moment.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'idée en une phrase</p><p>RAG = « <strong>retrouve d'abord, réponds ensuite</strong> ». Au lieu de compter sur la mémoire du modèle, on lui donne les extraits utiles et on lui demande de s'appuyer <em>dessus</em>.</p></div></div>
+
+<h2>Le pipeline RAG</h2>
+<p>En deux temps. <strong>À l'indexation</strong> (une fois) : on prépare la base documentaire. <strong>À la requête</strong> (à chaque question) : on récupère et on génère.</p>
+<ul>
+<li><strong>Découper</strong> (chunking) : couper les documents en passages de taille raisonnable.</li>
+<li><strong>Indexer</strong> : calculer un <strong>embedding</strong> (vecteur) de chaque passage et le stocker dans une <strong>base vectorielle</strong>.</li>
+<li><strong>Rechercher</strong> : transformer la question en embedding et trouver les passages les plus <strong>similaires</strong>.</li>
+<li><strong>Augmenter &amp; générer</strong> : insérer ces passages dans le prompt et demander au modèle de répondre à partir d'eux.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Le RAG fonctionne en deux temps. À l'indexation, faite une seule fois : les documents sont découpés en passages, chaque passage est transformé en embedding (vecteur), et les vecteurs sont stockés dans une base vectorielle. À la requête, à chaque question : la question est transformée en embedding, on recherche dans la base les passages les plus similaires, on les insère dans le prompt, et le modèle génère une réponse citée. La base vectorielle construite à l'indexation alimente la recherche à la requête.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le RAG en deux temps&nbsp;: indexer une fois, récupérer à chaque question</text>
+    <text class="d-mut" x="16" y="44" font-size="8.5">① À l'indexation (une seule fois)</text>
+    <rect class="d-box" x="16" y="52" width="118" height="38" rx="6" /><text class="d-text" x="75" y="75" text-anchor="middle" font-size="9">Documents</text>
+    <line class="d-line" x1="134" y1="71" x2="166" y2="71" /><line class="d-line" x1="160" y1="67" x2="166" y2="71" /><line class="d-line" x1="160" y1="75" x2="166" y2="71" />
+    <rect class="d-box" x="168" y="52" width="118" height="38" rx="6" /><text class="d-text" x="227" y="72" text-anchor="middle" font-size="9">Découper</text><text class="d-mut" x="227" y="84" text-anchor="middle" font-size="7.5">chunks</text>
+    <line class="d-line" x1="286" y1="71" x2="318" y2="71" /><line class="d-line" x1="312" y1="67" x2="318" y2="71" /><line class="d-line" x1="312" y1="75" x2="318" y2="71" />
+    <rect class="d-box" x="320" y="52" width="118" height="38" rx="6" /><text class="d-text" x="379" y="75" text-anchor="middle" font-size="9">Embeddings</text>
+    <line class="d-line" x1="438" y1="71" x2="470" y2="71" /><line class="d-line" x1="464" y1="67" x2="470" y2="71" /><line class="d-line" x1="464" y1="75" x2="470" y2="71" />
+    <rect class="d-accent" x="472" y="52" width="140" height="38" rx="6" /><text class="d-text" x="542" y="75" text-anchor="middle" font-size="9">Base vectorielle</text>
+    <line class="d-line" x1="542" y1="90" x2="542" y2="104" /><line class="d-line" x1="542" y1="104" x2="379" y2="104" /><line class="d-line" x1="379" y1="104" x2="379" y2="126" /><line class="d-line" x1="375" y1="120" x2="379" y2="126" /><line class="d-line" x1="383" y1="120" x2="379" y2="126" /><text class="d-mut" x="452" y="100" text-anchor="middle" font-size="7.5">passages similaires</text>
+    <text class="d-mut" x="16" y="148" font-size="8.5">② À chaque question</text>
+    <rect class="d-box" x="16" y="156" width="118" height="38" rx="6" /><text class="d-text" x="75" y="179" text-anchor="middle" font-size="9">Question</text>
+    <line class="d-line" x1="134" y1="175" x2="166" y2="175" /><line class="d-line" x1="160" y1="171" x2="166" y2="175" /><line class="d-line" x1="160" y1="179" x2="166" y2="175" />
+    <rect class="d-box" x="168" y="156" width="118" height="38" rx="6" /><text class="d-text" x="227" y="179" text-anchor="middle" font-size="9">Embedding</text>
+    <line class="d-line" x1="286" y1="175" x2="318" y2="175" /><line class="d-line" x1="312" y1="171" x2="318" y2="175" /><line class="d-line" x1="312" y1="179" x2="318" y2="175" />
+    <rect class="d-box" x="320" y="156" width="118" height="38" rx="6" /><text class="d-text" x="379" y="172" text-anchor="middle" font-size="9">Rechercher</text><text class="d-mut" x="379" y="185" text-anchor="middle" font-size="7.5">top-k passages</text>
+    <line class="d-line" x1="438" y1="175" x2="470" y2="175" /><line class="d-line" x1="464" y1="171" x2="470" y2="175" /><line class="d-line" x1="464" y1="179" x2="470" y2="175" />
+    <rect class="d-accent" x="472" y="156" width="140" height="38" rx="6" /><text class="d-text" x="542" y="172" text-anchor="middle" font-size="9">Réponse citée</text><text class="d-mut" x="542" y="185" text-anchor="middle" font-size="7.5">prompt augmenté → LLM</text>
+  </svg>
+  <figcaption>À l'<strong>indexation</strong>, les documents deviennent des vecteurs stockés une fois. À la <strong>requête</strong>, la question devient un vecteur, on récupère les passages les plus proches et on les glisse dans le prompt.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="prompt-augmente.txt"><pre><code>Réponds à la question en t'appuyant UNIQUEMENT sur le contexte ci-dessous.
+Si la réponse n'y est pas, dis-le.
+
+[CONTEXTE]
+- Passage 1 : « Les congés payés sont de 25 jours par an... »
+- Passage 2 : « Les jours non pris sont reportables jusqu'au 31 mai... »
+
+[QUESTION]
+Combien de jours de congés par an ?</code></pre></figure>
+
+<h2>Les embeddings</h2>
+<p>Un <strong>embedding</strong> transforme un texte en <strong>vecteur</strong> de nombres tel que deux textes au sens proche aient des vecteurs proches. C'est ce qui permet la recherche par <strong>similarité sémantique</strong> : on retrouve les passages qui <em>parlent</em> de la question, même sans les mêmes mots.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un espace d'embeddings représenté comme un plan. Des textes de sens proche forment des groupes : d'un côté congés, vacances et jours off sont regroupés ; de l'autre, salaire, paie et prime sont regroupés ailleurs. La question, combien de jours de repos, se place tout près du groupe congés, loin du groupe salaire — c'est pourquoi la recherche par similarité ramène les bons passages, même sans mots identiques.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Des sens proches, des vecteurs proches</text>
+    <rect class="d-frame" x="28" y="34" width="584" height="158" rx="8" />
+    <circle class="d-dot" cx="150" cy="80" r="5" /><text class="d-text" x="162" y="78" font-size="8.5">congés</text>
+    <circle class="d-dot" cx="128" cy="110" r="5" /><text class="d-text" x="140" y="108" font-size="8.5">vacances</text>
+    <circle class="d-dot" cx="182" cy="122" r="5" /><text class="d-text" x="194" y="120" font-size="8.5">jours off</text>
+    <circle class="d-dot" cx="470" cy="150" r="5" /><text class="d-text" x="482" y="148" font-size="8.5">salaire</text>
+    <circle class="d-dot" cx="500" cy="118" r="5" /><text class="d-text" x="512" y="116" font-size="8.5">paie</text>
+    <circle class="d-dot" cx="448" cy="120" r="5" /><text class="d-text" x="378" y="118" font-size="8.5" text-anchor="end">prime</text>
+    <line class="d-line" x1="255" y1="150" x2="176" y2="112" stroke-dasharray="4 3" />
+    <rect class="d-accent" x="238" y="150" width="150" height="30" rx="6" /><text class="d-text" x="313" y="169" text-anchor="middle" font-size="8.5">« jours de repos&nbsp;? »</text>
+    <text class="d-mut" x="313" y="196" text-anchor="middle" font-size="8">la question tombe près des passages de même sens</text>
+  </svg>
+  <figcaption>Un embedding place chaque texte dans un espace où la <strong>distance reflète le sens</strong>. La question atterrit près des passages qui en parlent — d'où la recherche par similarité.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="embeddings.py"><pre><code class="language-python"># Idée (pseudo-code) : indexer puis chercher par similarité
+index = []
+for passage in passages:
+    index.append((embed(passage), passage))
+
+q = embed(question)
+# garder les passages dont le vecteur est le plus proche de q
+top = plus_proches(q, index, k=3)</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 178" role="img" aria-label="La recherche compare le vecteur de la question à celui de chaque passage et calcule un score de similarité. Le passage A obtient 0,91 et le passage B 0,87 : ce sont les plus proches, on les garde. Le passage C obtient 0,42 et le passage D 0,15 : trop éloignés, on les écarte. Seuls les k passages les mieux notés sont insérés dans le prompt.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Rechercher&nbsp;: garder les k passages les plus proches</text>
+    <rect class="d-accent" x="20" y="70" width="118" height="44" rx="6" /><text class="d-text" x="79" y="90" text-anchor="middle" font-size="9">Question</text><text class="d-mut" x="79" y="103" text-anchor="middle" font-size="7.5">(vecteur)</text>
+    <line class="d-line" x1="138" y1="92" x2="168" y2="92" /><line class="d-line" x1="162" y1="88" x2="168" y2="92" /><line class="d-line" x1="162" y1="96" x2="168" y2="92" /><text class="d-mut" x="153" y="82" text-anchor="middle" font-size="7">≈&nbsp;?</text>
+    <text class="d-text" x="176" y="52" font-size="8.5">Passage A</text><rect class="d-accent" x="262" y="43" width="192" height="13" rx="3" /><text class="d-tag" x="462" y="53" font-size="8.5">0.91 ✓</text>
+    <text class="d-text" x="176" y="78" font-size="8.5">Passage B</text><rect class="d-accent" x="262" y="69" width="184" height="13" rx="3" /><text class="d-tag" x="462" y="79" font-size="8.5">0.87 ✓</text>
+    <text class="d-text" x="176" y="104" font-size="8.5">Passage C</text><rect class="d-box" x="262" y="95" width="89" height="13" rx="3" /><text class="d-mut" x="462" y="105" font-size="8.5">0.42</text>
+    <text class="d-text" x="176" y="130" font-size="8.5">Passage D</text><rect class="d-box" x="262" y="121" width="32" height="13" rx="3" /><text class="d-mut" x="462" y="131" font-size="8.5">0.15</text>
+    <text class="d-mut" x="320" y="164" text-anchor="middle" font-size="8">seuls les k mieux notés (ici A et B) entrent dans le prompt</text>
+  </svg>
+  <figcaption>On mesure la <strong>similarité</strong> de la question à chaque passage&nbsp;; seuls les <strong>k</strong> plus proches sont retenus. Régler <em>k</em> et le découpage, c'est régler la qualité du RAG.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">La qualité de la récupération fait tout</p><p>Un RAG ne vaut que par ses passages récupérés : si la recherche ramène des extraits hors sujet, le modèle répondra mal. Le découpage, le choix du nombre de passages et la qualité des embeddings comptent plus que le modèle lui-même.</p></div></div>
+
+<h2>Citer les sources</h2>
+<p>Gros avantage du RAG : on peut <strong>citer</strong> d'où vient l'information. Demande au modèle d'indiquer le passage ou le document source. Cela rend la réponse <strong>vérifiable</strong> et réduit la confiance aveugle — précieux pour un assistant documentaire.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un support interne branche un assistant sur sa base de connaissances (des milliers de pages Confluence/Notion). À «&nbsp;combien de jours de télétravail par semaine&nbsp;?&nbsp;», l'assistant <strong>récupère</strong> la note RH à jour, répond «&nbsp;2 jours&nbsp;» et <strong>cite</strong> le document. Sans RAG, il inventerait une réponse plausible mais fausse. C'est aussi le principe des moteurs de réponse comme Perplexity, qui affichent leurs sources sous chaque phrase&nbsp;: la <strong>vérifiabilité</strong> est ce qui rend l'outil digne de confiance.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Mauvais découpage.</strong> Des morceaux trop gros diluent, trop petits perdent le sens. À régler selon les documents.</li>
+<li><strong>Trop ou trop peu de passages.</strong> Trop : on sature le contexte ; trop peu : on rate l'info.</li>
+<li><strong>Ne pas borner le modèle.</strong> Précise « réponds uniquement à partir du contexte ; sinon dis que tu ne sais pas ».</li>
+<li><strong>Oublier les sources.</strong> Sans citation, impossible de vérifier — l'hallucination guette encore.</li>
+</ul>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">La base fait la loi&nbsp;: «&nbsp;garbage in, garbage out&nbsp;»</p><p>Le RAG répond à partir des passages fournis&nbsp;: si la base contient un document <strong>périmé</strong> ou <strong>faux</strong>, le modèle répondra faux… avec assurance et une citation à l'appui. Récupérer les bons passages ne garantit pas qu'ils soient <strong>justes</strong>. Tiens la base à jour et fais confiance aux <em>sources</em>, pas seulement à la formulation.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<p>Le RAG est souvent préférable au <strong>fine-tuning</strong> pour donner des connaissances à un modèle : plus simple à mettre à jour (on change les documents, pas le modèle) et il permet de citer. On combine parfois recherche par mots-clés et recherche sémantique (recherche « hybride »), et on ajoute une étape de <em>reranking</em> pour trier les passages.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Mettre à jour les connaissances d'un RAG = ré-indexer les documents modifiés. Pas besoin de ré-entraîner quoi que ce soit : c'est ce qui rend le RAG si pratique pour des données qui changent.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le pipeline RAG en un coup d'œil</caption>
+    <thead><tr><th scope="col">Étape</th><th scope="col">Quand</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Découper</strong> (chunking)</td><td>indexation</td><td>couper les documents en passages de taille raisonnable</td></tr>
+      <tr><td><strong>Indexer</strong></td><td>indexation</td><td>calculer un embedding par passage, le stocker dans une base vectorielle</td></tr>
+      <tr><td><strong>Rechercher</strong></td><td>requête</td><td>embedding de la question → k passages les plus similaires</td></tr>
+      <tr><td><strong>Augmenter</strong></td><td>requête</td><td>insérer les passages dans le prompt&nbsp;; borner «&nbsp;réponds à partir du contexte&nbsp;»</td></tr>
+      <tr><td><strong>Générer</strong></td><td>requête</td><td>le modèle répond et <strong>cite</strong> ses sources</td></tr>
+      <tr><td>Mettre à jour</td><td>maintenance</td><td>ré-indexer les documents modifiés (pas de ré-entraînement)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>RAG</dt><dd><em>Retrieval-Augmented Generation</em>, génération augmentée par récupération. On <strong>retrouve</strong> les bons extraits, puis on <strong>répond</strong> à partir d'eux.</dd>
+  <dt>Embedding</dt><dd>Représentation d'un texte en <strong>vecteur</strong> de nombres, telle que deux textes de sens proche ont des vecteurs proches.</dd>
+  <dt>Base vectorielle</dt><dd>Base de données qui stocke des embeddings et retrouve rapidement les plus <strong>proches</strong> d'un vecteur donné.</dd>
+  <dt>Chunking (découpage)</dt><dd>Découper les documents en <strong>passages</strong> avant de les indexer. Trop gros&nbsp;: on dilue&nbsp;; trop petits&nbsp;: on perd le sens.</dd>
+  <dt>Similarité sémantique</dt><dd>Proximité de <strong>sens</strong> mesurée entre vecteurs&nbsp;: on retrouve les passages pertinents même sans mots identiques.</dd>
+  <dt>Fenêtre de contexte</dt><dd>Quantité de texte qu'un modèle peut traiter en une fois. Limitée et coûteuse&nbsp;: le RAG n'y met que les <strong>bons morceaux</strong>.</dd>
+  <dt>Reranking</dt><dd>Étape optionnelle qui <strong>re-trie</strong> finement les passages récupérés pour ne garder que les meilleurs avant de générer.</dd>
+  <dt>Recherche hybride</dt><dd>Combinaison de la recherche par <strong>mots-clés</strong> et de la recherche <strong>sémantique</strong>, pour tirer parti des deux.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le <strong>RAG</strong> fournit au modèle des extraits pertinents au lieu de compter sur sa mémoire.</li>
+<li>Pipeline : <strong>découper → indexer (embeddings) → rechercher → augmenter le prompt → générer</strong>.</li>
+<li>Les <strong>embeddings</strong> permettent la recherche par <strong>similarité sémantique</strong>.</li>
+<li><strong>Cite les sources</strong> et borne le modèle au contexte fourni.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quel problème le RAG résout-il ?</li><li>À quoi servent les embeddings dans le pipeline ?</li><li>Pourquoi citer les sources ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que fait le RAG (Retrieval-Augmented Generation) ?","a":["Il récupère des extraits pertinents (tes documents) et les fournit au modèle dans le prompt pour qu'il réponde à partir d'eux","Il ré-entraîne le modèle sur tes données","Il augmente la température","Il supprime la fenêtre de contexte"],"correct":0,"explain":"RAG = retrouver d'abord, répondre ensuite : on injecte les bons passages dans le prompt plutôt que de compter sur la mémoire du modèle (ou de tout coller)."},
+  {"q":"À quoi servent les embeddings dans un pipeline RAG ?","a":["À transformer textes et question en vecteurs pour retrouver les passages les plus similaires sémantiquement","À chiffrer les documents","À compter les tokens","À régler la température"],"correct":0,"explain":"Un embedding place un texte dans un espace vectoriel où la proximité reflète le sens : on retrouve ainsi les passages pertinents même sans mots identiques."},
+  {"q":"Pourquoi demander au modèle de citer ses sources dans un RAG ?","a":["Pour rendre la réponse vérifiable et réduire la confiance aveugle (et donc les hallucinations non détectées)","Pour consommer plus de tokens","Parce que c'est obligatoire techniquement","Pour augmenter la créativité"],"correct":0,"explain":"Citer le passage/document source permet de vérifier l'information. C'est un atout majeur du RAG sur une réponse « de mémoire »."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["rag","le rag"],"placeholder":"le sigle : récupérer des extraits puis générer","hints":["Trois lettres.","Retrieval-Augmented Generation.","« R… »."],"link":{"href":"lecon-05.html","label":"Revoir « Le problème »"}},
+  {"type":"text","accept":["embedding","embeddings","un embedding","plongement"],"placeholder":"la représentation vectorielle d'un texte (pour la similarité)","hints":["Un vecteur de nombres.","Sens proche → vecteurs proches.","« embed… »."],"link":{"href":"lecon-05.html","label":"Revoir « Les embeddings »"}},
+  {"type":"text","accept":["chunking","decoupage","découpage","decouper","découper","chunk"],"placeholder":"l'étape qui coupe les documents en passages","hints":["En anglais : chunking.","Avant de calculer les embeddings.","« décou… »."],"link":{"href":"lecon-05.html","label":"Revoir « Le pipeline RAG »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Remets dans l'ordre les étapes d'un pipeline RAG : générer, découper, rechercher, indexer.</p><details><summary>Voir une solution</summary><p><strong>Découper</strong> → <strong>indexer</strong> (embeddings dans une base vectorielle) → <strong>rechercher</strong> (passages similaires à la question) → <strong>générer</strong> (réponse à partir des passages). Les deux premières étapes se font une fois ; les deux dernières à chaque question.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une consigne qui force le modèle à répondre uniquement à partir du contexte fourni, et à signaler s'il ne sait pas.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="exo2.txt"><pre><code>Réponds à la question en t'appuyant UNIQUEMENT sur le contexte fourni.
+Si la réponse ne s'y trouve pas, réponds « Je ne sais pas d'après les documents. »
+Cite le passage utilisé.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pour donner à un assistant la connaissance d'une documentation interne qui change chaque semaine, vaut-il mieux du RAG ou un fine-tuning&nbsp;? Justifie.</p><details><summary>Voir une solution</summary><p>Plutôt le <strong>RAG</strong>. La documentation change souvent : avec le RAG, il suffit de <strong>ré-indexer</strong> les documents modifiés, sans toucher au modèle. Le fine-tuning demanderait un ré-entraînement à chaque mise à jour, plus coûteux et plus lent, et ne permet pas de <strong>citer les sources</strong>. Le RAG est plus simple à maintenir et plus transparent pour des connaissances qui évoluent.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

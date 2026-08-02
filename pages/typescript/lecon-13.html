@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TypeScript en production : décorateurs et outillage — Leçon 13 · TypeScript · Syntaxe</title>
+    <meta name="description" content="Décorateurs TC39, declaration merging, tsconfig strict, project references, tsc --noEmit en CI, .d.ts et perf du compilateur : intégrer TypeScript en production." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="typescript" data-lesson="lecon-13.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">TypeScript</a></li>
+            <li aria-current="page">Leçon 13</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · TypeScript en profondeur — Leçon 13</p>
+              <h1 class="lesson-header__title">TypeScript en production : décorateurs et outillage</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 12 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Savoir écrire un <strong>décorateur</strong> standard (TC39) de classe ou de méthode et le distinguer du legacy <code>experimentalDecorators</code>&nbsp;;</li>
+                  <li>Savoir enrichir un type existant par <strong>declaration merging</strong> et <strong>module augmentation</strong>&nbsp;;</li>
+                  <li>Savoir configurer un <code>tsconfig.json</code> strict (<code>noUncheckedIndexedAccess</code>, <code>exactOptionalPropertyTypes</code>) et des <strong>project references</strong>&nbsp;;</li>
+                  <li>Savoir intégrer <code>tsc --noEmit</code> en CI, publier un paquet typé et accélérer le compilateur sur un gros projet.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu sais écrire du TypeScript. Reste à le faire vivre dans un vrai projet : un compilateur qui ne ralentit pas l'équipe, une CI qui bloque les régressions de types, un paquet publié avec ses définitions, et quelques mécanismes avancés (décorateurs, augmentation de modules) que les frameworks modernes exploitent à fond.</p>
+<p>Cette leçon est volontairement orientée <em>production</em> : moins de syntaxe nouvelle, plus de décisions d'outillage. On termine sur les réglages <code>tsconfig</code> qui font la différence entre un projet sûr et un projet qui «&nbsp;compile quand même&nbsp;».</p>
+
+<h2>Les décorateurs standard (TC39, TS 5)</h2>
+<p>Un décorateur est une fonction qui reçoit l'élément décoré et un objet <em>context</em>, et qui peut le remplacer ou l'observer. Depuis TypeScript 5.0, les décorateurs <strong>standard</strong> (étape 3 du TC39) sont actifs sans aucune option : tu n'as plus besoin de <code>experimentalDecorators</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 178" role="img" aria-label="Un décorateur de méthode remplace la méthode d'origine par une version qui l'enrobe. La méthode compute passe par le décorateur log, qui reçoit la cible et le contexte, et renvoie une nouvelle méthode. Celle-ci démarre un chronomètre, appelle la méthode d'origine, puis arrête le chronomètre et journalise l'appel avant de renvoyer le résultat.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">un décorateur remplace la méthode par une version qui l'enrobe</text>
+    <rect class="d-box" x="18" y="66" width="140" height="44" rx="9" />
+    <text class="d-text" x="88" y="86" text-anchor="middle" font-size="9">compute(a, b)</text>
+    <text class="d-mut" x="88" y="101" text-anchor="middle" font-size="8">méthode d'origine</text>
+    <line class="d-line" x1="158" y1="88" x2="190" y2="88" /><polygon class="d-dot" points="196,88 186,82 186,94" />
+    <rect class="d-accent" x="198" y="62" width="120" height="52" rx="9" />
+    <text class="d-text" x="258" y="84" text-anchor="middle" font-size="10">@log</text>
+    <text class="d-mut" x="258" y="101" text-anchor="middle" font-size="7.5">(target, context)</text>
+    <line class="d-line" x1="318" y1="88" x2="342" y2="88" /><polygon class="d-dot" points="348,88 338,82 338,94" />
+    <rect class="d-frame" x="350" y="34" width="272" height="130" rx="10" />
+    <text class="d-mut" x="486" y="50" text-anchor="middle" font-size="8.5">la méthode renvoyée enrobe l'appel</text>
+    <rect class="d-box" x="366" y="58" width="240" height="26" rx="6" />
+    <text class="d-text" x="486" y="75" text-anchor="middle" font-size="8.5">console.time(name)</text>
+    <rect class="d-accent" x="366" y="90" width="240" height="26" rx="6" />
+    <text class="d-text" x="486" y="107" text-anchor="middle" font-size="8">target.call(this, …args) ← l'originale</text>
+    <rect class="d-box" x="366" y="122" width="240" height="26" rx="6" />
+    <text class="d-text" x="486" y="139" text-anchor="middle" font-size="8.5">console.timeEnd() + log</text>
+  </svg>
+  <figcaption>Le décorateur ne modifie pas <code>compute</code>&nbsp;: il renvoie une <em>nouvelle</em> fonction qui appelle l'originale entre deux mesures.</figcaption>
+</figure>
+<figure class="code-block" data-file="decorators.ts"><pre><code class="language-typescript">// Décorateur de méthode : signature standard TC39
+function log&lt;This, Args extends unknown[], Return&gt;(
+  target: (this: This, ...args: Args) =&gt; Return,
+  context: ClassMethodDecoratorContext&lt;This, (this: This, ...args: Args) =&gt; Return&gt;
+) {
+  const name = String(context.name);
+  return function (this: This, ...args: Args): Return {
+    console.time(name);
+    const result = target.call(this, ...args);
+    console.timeEnd(name); // mesure de temps : « compute: 0.42ms »
+    console.log(`appel ${name}(${args.join(", ")})`);
+    return result;
+  };
+}
+
+class MathService {
+  @log
+  compute(a: number, b: number): number {
+    return a + b;
+  }
+}
+
+new MathService().compute(2, 3); // logge la durée puis « appel compute(2, 3) »</code></pre></figure>
+<p class="code-caption">Le décorateur retourne une nouvelle méthode qui enrobe l'originale (mesure + journalisation).</p>
+<p>Le typage est précis : <code>ClassMethodDecoratorContext</code> expose <code>name</code>, <code>kind</code>, <code>private</code>, <code>static</code> et un <code>addInitializer</code>. Il existe une variante par cible : <code>ClassDecoratorContext</code>, <code>ClassGetterDecoratorContext</code>, <code>ClassFieldDecoratorContext</code>, etc.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Angular et NestJS reposent massivement sur des décorateurs (<code>@Component</code>, <code>@Injectable</code>, <code>@Controller</code>) mais utilisent encore la version <em>legacy</em> avec <code>experimentalDecorators</code> et <code>emitDecoratorMetadata</code> (pour l'injection de dépendances par réflexion). Ne mélange pas les deux dans un même projet.</p></div></div>
+
+<h2>Declaration merging et module augmentation</h2>
+<p>TypeScript fusionne plusieurs déclarations de même nom (deux <code>interface</code> identiques se complètent). On exploite ce mécanisme pour <strong>enrichir un type existant</strong> sans le posséder : ajouter une propriété globale, ou étendre les types d'une bibliothèque tierce.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Le declaration merging fusionne deux déclarations de même nom. À gauche, l'interface Window fournie par lib.dom avec ses membres location, document, fetch. À droite, l'interface Window ajoutée par ton code avec le membre __APP_VERSION__. Les deux fusionnent en une seule interface Window qui contient tous les membres.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">deux déclarations de même nom fusionnent en une seule</text>
+    <rect class="d-box" x="30" y="36" width="250" height="66" rx="9" />
+    <text class="d-tag" x="155" y="56" text-anchor="middle" font-size="9">interface Window — lib.dom</text>
+    <text class="d-mut" x="155" y="78" text-anchor="middle" font-size="8.5">location · document · fetch…</text>
+    <text class="d-text" x="310" y="76" text-anchor="middle" font-size="16">+</text>
+    <rect class="d-box" x="340" y="36" width="270" height="66" rx="9" />
+    <text class="d-tag" x="475" y="56" text-anchor="middle" font-size="9">interface Window — ton code</text>
+    <text class="d-mut" x="475" y="78" text-anchor="middle" font-size="8.5">__APP_VERSION__: string</text>
+    <line class="d-line" x1="155" y1="102" x2="270" y2="132" /><polygon class="d-dot" points="276,134 264,131 269,142" />
+    <line class="d-line" x1="475" y1="102" x2="360" y2="132" /><polygon class="d-dot" points="354,134 366,131 361,142" />
+    <rect class="d-accent" x="150" y="136" width="340" height="44" rx="9" />
+    <text class="d-tag" x="320" y="156" text-anchor="middle" font-size="9">interface Window (fusionnée)</text>
+    <text class="d-mut" x="320" y="173" text-anchor="middle" font-size="8">tous les membres, sans « as any »</text>
+  </svg>
+  <figcaption>Aucune des deux déclarations n'écrase l'autre&nbsp;: TypeScript les additionne. C'est ainsi qu'on étend <code>Window</code> ou le type <code>Request</code> d'Express.</figcaption>
+</figure>
+<figure class="code-block" data-file="augmentation.ts"><pre><code class="language-typescript">// 1) Augmenter l'objet global Window
+declare global {
+  interface Window {
+    __APP_VERSION__: string;
+  }
+}
+window.__APP_VERSION__ = "1.4.0"; // typé, plus de « as any »
+
+// 2) Augmenter un module tiers (ex. ajouter un champ à Request d'Express)
+import "express";
+declare module "express" {
+  interface Request {
+    user?: { id: string; role: "admin" | "user" };
+  }
+}
+
+export {}; // rend le fichier un module → declare global est autorisé</code></pre></figure>
+<p class="code-caption">Le <code>export {}</code> transforme le fichier en module ; sans lui, <code>declare global</code> est refusé.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>L'augmentation doit cibler <strong>exactement</strong> le bon module (le specifier d'import, pas le nom du paquet npm s'ils diffèrent) et la bonne interface. Un <code>declare module "expres"</code> mal orthographié ne lèvera pas d'erreur : TypeScript croira que tu déclares un nouveau module ambiant.</p></div></div>
+
+<h2>tsconfig en profondeur</h2>
+<p>L'option <code>"strict": true</code> est un méta-flag qui en active une famille (<code>strictNullChecks</code>, <code>noImplicitAny</code>, <code>strictFunctionTypes</code>…). Mais deux options strictes <strong>ne sont pas</strong> incluses et méritent une activation explicite.</p>
+<figure class="code-block" data-file="tsconfig.json"><pre><code class="language-typescript">{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "strict": true,
+
+    // Hors « strict » : à activer à la main
+    "noUncheckedIndexedAccess": true,   // arr[i] devient T | undefined
+    "exactOptionalPropertyTypes": true, // { a?: number } refuse a: undefined
+    "noImplicitOverride": true,         // impose le mot-clé override
+
+    // Résolution de chemins
+    "baseUrl": ".",
+    "paths": { "@app/*": ["src/*"] },   // import "@app/utils" → src/utils
+
+    "skipLibCheck": true,               // ne vérifie pas les .d.ts tiers
+    "incremental": true                 // cache .tsbuildinfo entre builds
+  }
+}</code></pre></figure>
+<p class="code-caption"><code>noUncheckedIndexedAccess</code> est l'option qui rend l'accès indexé sûr : un trou non détecté devient une erreur de type.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Ne duplique pas ta configuration&nbsp;: place les réglages communs dans un <code>tsconfig.base.json</code> et fais <code>"extends": "./tsconfig.base.json"</code> dans chaque paquet. Les presets <code>@tsconfig/strictest</code> ou <code>@tsconfig/node20</code> fournissent une base stricte et éprouvée que tu affines ensuite.</p></div></div>
+<p>Pour un <strong>monorepo</strong>, les <em>project references</em> découpent la compilation en sous-projets indépendants, compilés et mis en cache séparément. Chaque paquet pointe vers ses dépendances internes :</p>
+<figure class="code-block" data-file="tsconfig.json"><pre><code class="language-typescript">// packages/api/tsconfig.json
+{
+  "compilerOptions": { "composite": true, "outDir": "dist" },
+  "references": [{ "path": "../core" }] // dépend du paquet core
+}</code></pre></figure>
+<p>On compile alors tout le graphe avec un seul ordre de build incrémental :</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">tsc --build           # construit dans le bon ordre, en cache
+tsc --build --watch   # reconstruit seulement ce qui a changé</code></pre></figure>
+
+<h2>Compilation : tsc vs bundlers</h2>
+<p>Les bundlers modernes (esbuild, swc, Vite) transpilent TypeScript en <strong>supprimant simplement les annotations</strong>, fichier par fichier, sans aucune vérification de types. C'est rapide, mais ça veut dire qu'un bug de types peut passer en build.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Séparation des rôles entre le bundler et tsc. La source TypeScript suit deux chemins. Le bundler (esbuild, Vite) efface les types et produit le JavaScript émis, sans aucun contrôle de types. En parallèle, tsc avec l'option noEmit vérifie les types sans rien émettre : c'est le garde-fou. Un seul des deux valide réellement les types.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">le bundler émet ; tsc --noEmit vérifie — deux rôles distincts</text>
+    <rect class="d-box" x="20" y="70" width="120" height="44" rx="9" />
+    <text class="d-text" x="80" y="90" text-anchor="middle" font-size="9">source .ts</text>
+    <text class="d-mut" x="80" y="105" text-anchor="middle" font-size="8">annotations incluses</text>
+    <line class="d-line" x1="140" y1="84" x2="236" y2="60" /><polygon class="d-dot" points="242,58 230,58 235,68" />
+    <line class="d-line" x1="140" y1="100" x2="236" y2="132" /><polygon class="d-dot" points="242,134 230,134 235,124" />
+    <rect class="d-accent" x="238" y="40" width="180" height="40" rx="9" />
+    <text class="d-text" x="328" y="57" text-anchor="middle" font-size="8.5">bundler (esbuild / Vite)</text>
+    <text class="d-mut" x="328" y="72" text-anchor="middle" font-size="7.5">efface les types, ne vérifie pas</text>
+    <line class="d-line" x1="418" y1="60" x2="444" y2="60" /><polygon class="d-dot" points="450,60 440,54 440,66" />
+    <rect class="d-box" x="452" y="40" width="170" height="40" rx="9" />
+    <text class="d-text" x="537" y="57" text-anchor="middle" font-size="9">JS émis</text>
+    <text class="d-mut" x="537" y="72" text-anchor="middle" font-size="7.5">aucun contrôle de types ⚠</text>
+    <rect class="d-accent" x="238" y="112" width="180" height="40" rx="9" />
+    <text class="d-text" x="328" y="129" text-anchor="middle" font-size="9">tsc --noEmit</text>
+    <text class="d-mut" x="328" y="144" text-anchor="middle" font-size="7.5">vérifie, n'émet rien</text>
+    <line class="d-line" x1="418" y1="132" x2="444" y2="132" /><polygon class="d-dot" points="450,132 440,126 440,138" />
+    <rect class="d-box" x="452" y="112" width="170" height="40" rx="9" />
+    <text class="d-text" x="537" y="129" text-anchor="middle" font-size="9">✓ types vérifiés</text>
+    <text class="d-mut" x="537" y="144" text-anchor="middle" font-size="7.5">garde-fou de la CI</text>
+  </svg>
+  <figcaption>Un build vert ne prouve rien sur les types&nbsp;: seul <code>tsc --noEmit</code>, lancé en CI, garantit qu'ils sont corrects.</figcaption>
+</figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Le bundler produit le JS (rapide, AUCUN check de types)
+vite build
+
+# tsc sert uniquement de garde-fou : vérifie, n'émet rien
+tsc --noEmit</code></pre></figure>
+<p class="code-caption">Sépare les rôles : le bundler émet, <code>tsc --noEmit</code> vérifie.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que «&nbsp;le build passe&nbsp;» équivaut à «&nbsp;les types sont corrects&nbsp;». Un projet Vite peut builder avec des dizaines d'erreurs de types. Le filet, c'est <code>tsc --noEmit</code> exécuté en CI, jamais le bundler.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une startup migre son front sur Vite pour gagner en vitesse de build. Pendant un refactor, un développeur renomme <code>userId</code> en <code>user_id</code> dans une interface, mais oublie deux appels. <code>vite build</code> passe au vert et le déploiement part en production… où la page de profil plante, car <code>userId</code> vaut désormais <code>undefined</code>. Le post-mortem est sans appel&nbsp;: le pipeline ne lançait <em>que</em> le bundler. L'équipe ajoute <code>tsc --noEmit</code> comme étape bloquante avant tout merge&nbsp;; la même erreur, réintroduite un mois plus tard, est cette fois arrêtée en CI en quelques secondes.</p></div></div>
+
+<h2>.d.ts et publication d'un paquet typé</h2>
+<p>Pour qu'un paquet publié soit utilisable en TypeScript par tes utilisateurs, il doit fournir ses définitions. Active <code>declaration: true</code> : <code>tsc</code> génère un <code>.d.ts</code> à côté de chaque <code>.js</code>.</p>
+<figure class="code-block" data-file="package.json"><pre><code class="language-typescript">{
+  "name": "@acme/sdk",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",   // pointe vers les définitions
+  "files": ["dist"]
+}
+// tsconfig : "declaration": true, "declarationMap": true (aller au .ts source)</code></pre></figure>
+<p>Le champ <code>"types"</code> (ou <code>"typings"</code>) indique au compilateur du consommateur où trouver l'API. Avec <code>declarationMap</code>, un «&nbsp;Go to definition&nbsp;» saute directement dans ton code source plutôt que dans le <code>.d.ts</code>.</p>
+
+<h2>Performance du compilateur</h2>
+<p>Sur un gros projet, deux leviers changent tout. <code>incremental</code> stocke un fichier <code>.tsbuildinfo</code> et ne recompile que le delta. <code>skipLibCheck</code> saute la vérification interne des <code>.d.ts</code> des dépendances — qui peuvent être nombreux et contradictoires.</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Diagnostic : où passe le temps de compilation ?
+tsc --noEmit --extendedDiagnostics
+
+# Voir pourquoi un fichier est inclus dans le programme
+tsc --noEmit --explainFiles &gt; files.txt 2&gt;&amp;1</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier <code>skipLibCheck</code> sur un projet avec beaucoup de dépendances : <code>tsc</code> vérifie alors des milliers de lignes de <code>.d.ts</code> tiers, ce qui peut multiplier le temps de compilation. Active-le sauf si tu publies une bibliothèque où la cohérence des types tiers est critique.</p></div></div>
+
+<h2>Bonnes pratiques d'équipe</h2>
+<p>Le compilateur vérifie les types ; il ne dit rien des promesses oubliées, des variables inutilisées ou du style. C'est le rôle d'<strong>ESLint typé</strong> via <code>typescript-eslint</code>, qui lit le programme TypeScript pour des règles «&nbsp;type-aware&nbsp;» (par ex. <code>no-floating-promises</code>).</p>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Pipeline CI minimal, ordonné du moins au plus coûteux
+tsc --noEmit                # 1. types corrects ?
+eslint . --max-warnings 0   # 2. lint typé
+vitest run                  # 3. tests</code></pre></figure>
+<p class="code-caption">Faire échouer la CI sur la moindre erreur de types ou de lint garantit que <code>main</code> reste vert.</p>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Décorateurs legacy vs standard</strong> : la signature change (<code>(target, propertyKey, descriptor)</code> en legacy contre <code>(value, context)</code> en standard). Vérifie si <code>experimentalDecorators</code> est activé avant d'écrire.</li>
+<li><strong>Augmentation mal ciblée</strong> : mauvais nom de module ou fichier non-module (<code>declare global</code> sans <code>export {}</code>).</li>
+<li><strong>Faux sentiment de sécurité du bundler</strong> : il transpile sans vérifier, d'où <code>tsc --noEmit</code> obligatoire.</li>
+<li><strong>tsconfig trop laxiste</strong> : <code>strict</code> sans <code>noUncheckedIndexedAccess</code> laisse passer des <code>undefined</code> sur les accès indexés.</li>
+<li><strong>Compilation lente</strong> : pas de <code>skipLibCheck</code> ni d'<code>incremental</code> sur un gros graphe.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Explore les décorateurs «&nbsp;pour de vrai&nbsp;» avec NestJS et Angular ; les monorepos avec Nx ou Turborepo combinés aux <em>project references</em> ; l'exécution directe de TypeScript via <code>tsx</code> ou <code>ts-node</code> en développement ; et la généralisation du type-checking en CI comme étape bloquante avant tout merge.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — outillage TypeScript en production</caption>
+    <thead><tr><th scope="col">Réglage / commande</th><th scope="col">Rôle</th><th scope="col">Détail</th></tr></thead>
+    <tbody>
+      <tr><td><code>"strict": true</code></td><td>active la famille stricte</td><td>n'inclut PAS les deux suivantes</td></tr>
+      <tr><td><code>noUncheckedIndexedAccess</code></td><td>accès indexé honnête</td><td><code>arr[i]</code> devient <code>T | undefined</code></td></tr>
+      <tr><td><code>exactOptionalPropertyTypes</code></td><td><code>?</code> ≠ <code>| undefined</code></td><td>refuse <code>a: undefined</code> sur <code>a?: T</code></td></tr>
+      <tr><td><code>tsc --noEmit</code></td><td>vérifie sans émettre</td><td>garde-fou en CI</td></tr>
+      <tr><td><code>declaration: true</code></td><td>génère les <code>.d.ts</code></td><td>+ champ <code>"types"</code> du package.json</td></tr>
+      <tr><td><code>skipLibCheck</code></td><td>saute les <code>.d.ts</code> tiers</td><td>build plus rapide</td></tr>
+      <tr><td><code>incremental</code> · <code>tsc --build</code></td><td>cache &amp; project references</td><td>recompile le delta, bon ordre</td></tr>
+      <tr><td>décorateur standard</td><td>signature TS 5</td><td><code>(value, context)</code>, sans option</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Décorateur (standard)</dt><dd>Fonction recevant <code>(value, context)</code> qui observe ou remplace une classe/méthode&nbsp;; actif sans option depuis TS 5, distinct du décorateur <em>legacy</em>.</dd>
+  <dt>Declaration merging</dt><dd>Fusion par TypeScript de plusieurs déclarations de même nom (deux <code>interface</code>) en une seule qui cumule leurs membres.</dd>
+  <dt>Module augmentation</dt><dd>Ajout de membres au type d'un module tiers via <code>declare module "…"</code>, sans modifier son code source.</dd>
+  <dt>Project references</dt><dd>Découpage d'un monorepo en sous-projets (<code>composite: true</code>) compilés dans le bon ordre et mis en cache séparément avec <code>tsc --build</code>.</dd>
+  <dt>Fichier <code>.d.ts</code></dt><dd>Fichier de déclaration qui décrit les types d'un module sans code exécutable&nbsp;; publié pour rendre un paquet utilisable en TypeScript.</dd>
+  <dt><code>noUncheckedIndexedAccess</code></dt><dd>Option (hors <code>strict</code>) qui ajoute <code>| undefined</code> au type d'un accès indexé, forçant à gérer le cas hors limites.</dd>
+  <dt><code>tsc --noEmit</code></dt><dd>Vérification des types sans génération de fichiers&nbsp;; sert de garde-fou en CI quand un bundler assure l'émission.</dd>
+  <dt><code>skipLibCheck</code></dt><dd>Option qui saute la vérification interne des <code>.d.ts</code> des dépendances pour accélérer nettement la compilation.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Les décorateurs <strong>standard</strong> (TS 5) n'exigent plus d'option ; les frameworks utilisent souvent la version <strong>legacy</strong>.</li>
+<li>Le <strong>declaration merging</strong> et la <strong>module augmentation</strong> enrichissent des types qu'on ne possède pas.</li>
+<li><code>strict</code> n'inclut pas tout : ajoute <code>noUncheckedIndexedAccess</code> et <code>exactOptionalPropertyTypes</code>.</li>
+<li>Les bundlers transpilent sans vérifier → <code>tsc --noEmit</code> en garde-fou CI.</li>
+<li><code>declaration: true</code> + champ <code>"types"</code> pour publier un paquet typé ; <code>skipLibCheck</code> et <code>incremental</code> pour la vitesse.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la différence de signature entre un décorateur de méthode legacy et standard ?</li><li>Pourquoi un build Vite peut-il réussir alors que les types sont faux, et comment s'en prémunir ?</li><li>Quelle option <code>tsconfig</code> rend l'accès indexé <code>arr[i]</code> plus sûr, et que devient le type retourné ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence de signature entre un décorateur de méthode legacy et standard ?","a":["Le legacy (experimentalDecorators) reçoit (target, propertyKey, descriptor) ; le standard (norme récente) reçoit (value, context)","Les deux reçoivent (value, context)","Le standard reçoit trois arguments","Ils sont identiques"],"correct":0,"explain":"Les anciens décorateurs TypeScript (option experimentalDecorators) suivent la proposition historique avec descripteur. Les décorateurs standardisés ont une autre signature, centrée sur la valeur décorée et un objet de contexte."},
+  {"q":"Pourquoi un build Vite peut-il réussir alors que les types sont faux, et comment s'en prémunir ?","a":["Parce que Vite transpile sans vérifier les types (il les efface) ; on s'en prémunit en lançant tsc --noEmit (en CI ou en script de vérification)","Parce que Vite corrige les types","Parce que les types n'existent pas","En supprimant tsconfig.json"],"correct":0,"explain":"Comme les autres outils basés sur esbuild/swc, Vite privilégie la vitesse et ne fait pas de contrôle de types. La vérification doit être ajoutée à part (tsc --noEmit), sans quoi des erreurs de type passent inaperçues."},
+  {"q":"Quelle option tsconfig rend l'accès indexé arr[i] plus sûr, et que devient le type retourné ?","a":["noUncheckedIndexedAccess ; l'accès indexé renvoie alors T | undefined, ce qui oblige à gérer le cas hors limites","strictNullChecks ; le type devient never","noImplicitAny ; le type devient any","target ; le type ne change pas"],"correct":0,"explain":"Par défaut, arr[i] est typé T même si l'indice peut être hors limites. noUncheckedIndexedAccess ajoute | undefined au type retourné, reflétant qu'un accès peut ne rien renvoyer et forçant à le vérifier."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["décorateur","decorateur","@","decorator"],"placeholder":"ce qu'on écrit avant une méthode pour la journaliser (un …)","hints":["On préfixe la méthode par @trace.","C'est une fonction qui enveloppe la méthode.","On parle d'un « décorateur »."],"link":{"href":"lecon-13.html","label":"Revoir « Les décorateurs »"}},
+  {"type":"text","accept":["declare global","declare"],"placeholder":"le mécanisme pour augmenter le type global Window","hints":["On ajoute featureFlags à l'interface Window.","On ouvre l'espace global pour l'étendre.","« declare global { … } »."],"link":{"href":"lecon-13.html","label":"Revoir « Augmentation globale »"}},
+  {"type":"text","accept":["noUncheckedIndexedAccess"],"placeholder":"l'option tsconfig qui ajoute undefined aux accès par index","hints":["arr[10] vaut undefined mais est typé number.","Une option rend l'accès par index plus honnête.","« noUncheckedIndexedAccess »."],"link":{"href":"lecon-13.html","label":"Revoir « Options strictes avancées »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris un décorateur de méthode <strong>standard</strong> nommé <code>trace</code> qui journalise le nom de la méthode et ses arguments à chaque appel (sans mesurer le temps).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-typescript">function trace&lt;This, Args extends unknown[], Return&gt;(
+  target: (this: This, ...args: Args) =&gt; Return,
+  context: ClassMethodDecoratorContext&lt;This, (this: This, ...args: Args) =&gt; Return&gt;
+) {
+  return function (this: This, ...args: Args): Return {
+    console.log(`→ ${String(context.name)}(${args.join(", ")})`);
+    return target.call(this, ...args);
+  };
+}
+
+class Calc {
+  @trace
+  add(a: number, b: number) { return a + b; }
+}
+new Calc().add(1, 2); // → add(1, 2)</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Augmente l'objet global <code>Window</code> pour y ajouter une propriété <code>featureFlags</code> de type <code>Record&lt;string, boolean&gt;</code>, puis affecte-la sans <code>as any</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-typescript">// globals.d.ts (ou un fichier module)
+export {};
+
+declare global {
+  interface Window {
+    featureFlags: Record&lt;string, boolean&gt;;
+  }
+}
+
+// usage.ts
+window.featureFlags = { darkMode: true, beta: false };
+if (window.featureFlags.darkMode) {
+  // typé boolean, aucune assertion nécessaire
+}</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On lit <code>const x = arr[10]</code> sur un <code>number[]</code> qui n'a que 3 éléments : <code>x</code> est typé <code>number</code> alors qu'il vaut <code>undefined</code> à l'exécution. Quelle option <code>tsconfig</code> corrige ce trou, et quel devient le type de <code>x</code> ? Montre le code avant/après.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-typescript">// Option à activer : noUncheckedIndexedAccess (hors « strict »)
+
+const arr: number[] = [1, 2, 3];
+
+// SANS l'option : x est number (mensonge à l'exécution)
+const x1 = arr[10];      // type number, vaut undefined
+
+// AVEC noUncheckedIndexedAccess : x est number | undefined
+const x2 = arr[10];      // type number | undefined
+// x2.toFixed();         // Erreur tsc : 'x2' is possibly 'undefined'
+if (x2 !== undefined) {
+  x2.toFixed(2);         // narrowing → number, OK
+}</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-typescript.min.js" defer></script>
+  </body>
+</html>

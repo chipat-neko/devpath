@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet : un rapport analytique de bout en bout — Leçon 24 · SQL · Syntaxe</title>
+    <meta name="description" content="Capstone SQL : assembler agrégations multi-niveaux, pivots, fenêtrage temporel, vues matérialisées et réplicas pour produire un rapport analytique fiable, de la base au tableau de bord." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="sql" data-lesson="lecon-24.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">SQL</a></li>
+            <li aria-current="page">Leçon 24</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 08 · Pour aller plus loin — Leçon 24</p>
+              <h1 class="lesson-header__title">Projet&nbsp;: un rapport analytique de bout en bout</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Capstone — l'ensemble du cours recommandé</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>cadrer une question analytique et choisir le bon <strong>grain</strong> d'agrégation&nbsp;;</li>
+                  <li>assembler <code>ROLLUP</code>, pivot (<code>FILTER</code>) et fenêtrage (<code>LAG</code>) au-dessus d'un socle agrégé unique&nbsp;;</li>
+                  <li>pré-calculer le socle avec une <strong>vue matérialisée</strong> rafraîchie et le servir <strong>hors production</strong>&nbsp;;</li>
+                  <li>livrer proprement&nbsp;: dates fiables (<code>TIMESTAMPTZ</code>), migrations et fraîcheur maîtrisée.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Voici le projet qui clôt le cours&nbsp;: produire <strong>le rapport mensuel</strong> que réclame la direction — chiffre d'affaires par région et par mois, croissance période à période, tableau trimestriel et totaux généraux — puis le servir <strong>vite</strong> et <strong>sans gêner les clients qui passent commande</strong>. C'est le moment où tout le module «&nbsp;Pour aller plus loin&nbsp;» se rejoint&nbsp;: super-totaux (leçon&nbsp;20), séries temporelles (leçon&nbsp;21), concurrence (leçon&nbsp;22) et migrations (leçon&nbsp;23), posés sur les agrégations et le fenêtrage vus dans tout le cours.</p>
+
+<p>Le fil rouge reste la table <code>ventes(id, region, produit, vendu_le, montant)</code>. La différence avec un exercice&nbsp;: ici on vise un <strong>livrable réutilisable</strong>, rafraîchi tout seul, que dix personnes consultent chaque jour sans y penser.</p>
+
+<h2>La démarche&nbsp;: six étapes du besoin au tableau de bord</h2>
+
+<p>Un rapport analytique ne s'écrit pas d'un jet. On avance par étapes, de la question métier jusqu'à la restitution&nbsp;: chaque étape décide de la suivante.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 132" role="img" aria-label="La démarche d'un rapport analytique en six étapes enchaînées : 1 Cadrer la question, 2 Choisir le grain, 3 Agréger, 4 Enrichir avec le fenêtrage et le pivot, 5 Matérialiser le socle, 6 Servir hors production. Chaque étape mène à la suivante par une flèche.">
+    <rect class="d-box" x="10" y="34" width="94" height="46" rx="6" /><text class="d-label" x="57" y="54" text-anchor="middle" font-size="10">1 · Cadrer</text><text class="d-mut" x="57" y="70" text-anchor="middle" font-size="7.5">la question</text>
+    <text class="d-mut" x="112" y="60" text-anchor="middle" font-size="12">›</text>
+    <rect class="d-box" x="120" y="34" width="94" height="46" rx="6" /><text class="d-label" x="167" y="54" text-anchor="middle" font-size="10">2 · Grain</text><text class="d-mut" x="167" y="70" text-anchor="middle" font-size="7.5">région × mois</text>
+    <text class="d-mut" x="222" y="60" text-anchor="middle" font-size="12">›</text>
+    <rect class="d-box" x="230" y="34" width="94" height="46" rx="6" /><text class="d-label" x="277" y="54" text-anchor="middle" font-size="10">3 · Agréger</text><text class="d-mut" x="277" y="70" text-anchor="middle" font-size="7.5">SUM, GROUP BY</text>
+    <text class="d-mut" x="332" y="60" text-anchor="middle" font-size="12">›</text>
+    <rect class="d-box" x="340" y="34" width="94" height="46" rx="6" /><text class="d-label" x="387" y="54" text-anchor="middle" font-size="10">4 · Enrichir</text><text class="d-mut" x="387" y="70" text-anchor="middle" font-size="7.5">LAG, pivot</text>
+    <text class="d-mut" x="442" y="60" text-anchor="middle" font-size="12">›</text>
+    <rect class="d-accent" x="450" y="34" width="94" height="46" rx="6" /><text class="d-label" x="497" y="54" text-anchor="middle" font-size="10">5 · Matérialiser</text><text class="d-mut" x="497" y="70" text-anchor="middle" font-size="7.5">le socle</text>
+    <text class="d-mut" x="552" y="60" text-anchor="middle" font-size="12">›</text>
+    <rect class="d-box" x="560" y="34" width="72" height="46" rx="6" /><text class="d-label" x="596" y="54" text-anchor="middle" font-size="10">6 · Servir</text><text class="d-mut" x="596" y="70" text-anchor="middle" font-size="7.5">hors prod</text>
+    <text class="d-mut" x="320" y="108" text-anchor="middle" font-size="8.5">chaque étape décide de la suivante — on ne matérialise qu'une fois le grain fixé</text>
+  </svg>
+  <figcaption>Du besoin métier à la restitution&nbsp;: on <strong>cadre</strong>, on choisit le <strong>grain</strong>, on <strong>agrège</strong>, on <strong>enrichit</strong>, on <strong>matérialise</strong>, on <strong>sert</strong>.</figcaption>
+</figure>
+
+<h2>Étape 1 — Cadrer la question et choisir le grain</h2>
+
+<p>La direction demande&nbsp;: «&nbsp;Où en est le chiffre d'affaires, mois par mois, par région&nbsp;?&nbsp;» Cette phrase fixe le <strong>grain</strong> du rapport&nbsp;: <em>une ligne par région et par mois</em>. Le grain, c'est le niveau de détail d'une ligne agrégée&nbsp;; le choisir en premier évite de tout recalculer plus tard. Tout le reste — croissance, trimestres, totaux — se déduit de ce socle.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Choisis toujours le grain <strong>le plus fin utile</strong> (ici région × mois). On peut toujours ré-agréger un grain fin vers un plus grossier (mois → trimestre → année)&nbsp;; l'inverse est impossible sans revenir à la table source.</p></div></div>
+
+<h2>Étape 2 — Le socle agrégé&nbsp;: une seule vérité</h2>
+
+<p>On écrit d'abord la requête qui produit le grain, une bonne fois. C'est le <strong>socle</strong>&nbsp;: total et nombre de ventes par région et par mois. Filtrer par plage de dates garde l'usage de l'index (leçon&nbsp;21).</p>
+
+<figure class="code-block" data-file="socle.sql"><pre><code class="language-sql">SELECT region,
+       date_trunc('month', vendu_le) AS mois,
+       SUM(montant) AS total,
+       COUNT(*)     AS nb_ventes
+FROM ventes
+WHERE vendu_le &gt;= DATE '2026-01-01' AND vendu_le &lt; DATE '2026-04-01'
+GROUP BY region, date_trunc('month', vendu_le);</code></pre></figure>
+
+<p>Toutes les vues du rapport lisent <strong>ce socle</strong>, jamais la table brute&nbsp;: c'est ce qui rend l'ensemble cohérent et rapide.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Un socle agrégé unique alimente trois lectures analytiques. En haut, une boîte mise en évidence représente le socle ca_mensuel avec les colonnes region, mois et total. Trois flèches en descendent vers trois boîtes : à gauche la croissance mois à mois obtenue avec LAG, au centre le pivot par trimestre obtenu avec SUM FILTER, à droite les super-totaux obtenus avec GROUP BY ROLLUP. Le même socle sert les trois vues.">
+    <text class="d-mut" x="320" y="20" text-anchor="middle" font-size="9">un seul socle agrégé…</text>
+    <rect class="d-accent" x="200" y="28" width="240" height="40" rx="7" /><text class="d-text" x="320" y="46" text-anchor="middle" font-size="10" font-family="monospace">ca_mensuel</text><text class="d-text" x="320" y="60" text-anchor="middle" font-size="8" font-family="monospace">(region, mois, total)</text>
+    <line class="d-line" x1="320" y1="68" x2="320" y2="86" />
+    <line class="d-line" x1="110" y1="92" x2="530" y2="92" />
+    <line class="d-line" x1="110" y1="92" x2="110" y2="112" />
+    <line class="d-line" x1="320" y1="92" x2="320" y2="112" />
+    <line class="d-line" x1="530" y1="92" x2="530" y2="112" />
+    <text class="d-mut" x="320" y="104" text-anchor="middle" font-size="8.5">…trois lectures analytiques</text>
+    <rect class="d-box" x="30" y="114" width="160" height="46" rx="6" /><text class="d-label" x="110" y="133" text-anchor="middle" font-size="9.5">Croissance mois à mois</text><text class="d-text" x="110" y="150" text-anchor="middle" font-size="8.5" font-family="monospace">LAG() OVER (…)</text>
+    <rect class="d-box" x="240" y="114" width="160" height="46" rx="6" /><text class="d-label" x="320" y="133" text-anchor="middle" font-size="9.5">Pivot par trimestre</text><text class="d-text" x="320" y="150" text-anchor="middle" font-size="8.5" font-family="monospace">SUM(…) FILTER</text>
+    <rect class="d-box" x="450" y="114" width="160" height="46" rx="6" /><text class="d-label" x="530" y="133" text-anchor="middle" font-size="9.5">Super-totaux</text><text class="d-text" x="530" y="150" text-anchor="middle" font-size="8.5" font-family="monospace">GROUP BY ROLLUP</text>
+    <text class="d-mut" x="320" y="188" text-anchor="middle" font-size="8.5">calculer le socle une fois, le relire de trois façons&nbsp;: cohérence garantie</text>
+  </svg>
+  <figcaption>Le capstone en une image&nbsp;: <strong>un socle</strong>, <strong>trois lectures</strong>. Chaque technique du cours devient une couche au-dessus du même agrégat.</figcaption>
+</figure>
+
+<h2>Étape 3 — Enrichir&nbsp;: croissance, pivot, super-totaux</h2>
+
+<p>Sur le socle, on empile les trois vues attendues. D'abord la <strong>croissance mois à mois</strong> avec <code>LAG</code> (leçon sur le fenêtrage)&nbsp;; le <code>NULLIF</code> protège de la division par zéro et la clause est nommée avec <code>WINDOW</code> pour ne pas répéter le tri.</p>
+
+<figure class="code-block" data-file="croissance.sql"><pre><code class="language-sql">WITH ca_mensuel AS ( /* le socle ci-dessus */ )
+SELECT region, mois, total,
+       LAG(total) OVER w AS mois_precedent,
+       ROUND(100.0 * (total - LAG(total) OVER w)
+             / NULLIF(LAG(total) OVER w, 0), 1) AS croissance_pct
+FROM ca_mensuel
+WINDOW w AS (PARTITION BY region ORDER BY mois)
+ORDER BY region, mois;</code></pre></figure>
+
+<p>Ensuite le <strong>pivot trimestriel</strong> (leçon&nbsp;20)&nbsp;: une ligne par région, une colonne par trimestre, avec <code>FILTER</code>.</p>
+
+<figure class="code-block" data-file="pivot.sql"><pre><code class="language-sql">SELECT region,
+       SUM(total) FILTER (WHERE EXTRACT(QUARTER FROM mois) = 1) AS t1,
+       SUM(total) FILTER (WHERE EXTRACT(QUARTER FROM mois) = 2) AS t2
+FROM ca_mensuel
+GROUP BY region
+ORDER BY region;</code></pre></figure>
+
+<p>Enfin les <strong>super-totaux</strong> avec <code>ROLLUP</code>, étiquetés par <code>GROUPING()</code> pour distinguer une ligne de total d'un vrai <code>NULL</code>.</p>
+
+<figure class="code-block" data-file="super-totaux.sql"><pre><code class="language-sql">SELECT
+  CASE WHEN GROUPING(region) = 1 THEN 'TOUTES RÉGIONS' ELSE region END AS region,
+  SUM(total) AS total
+FROM ca_mensuel
+GROUP BY ROLLUP (region)
+ORDER BY GROUPING(region), region;</code></pre></figure>
+
+<figure class="code-block" data-file="Résultat"><table><thead><tr><th>region</th><th>total</th></tr></thead><tbody><tr><td>Est</td><td>5900</td></tr><tr><td>Ouest</td><td>4800</td></tr><tr><td>TOUTES RÉGIONS</td><td>10700</td></tr></tbody></table></figure>
+
+<h2>Étape 4 — Servir vite et sans gêner la production</h2>
+
+<p>Le socle est agrégé, mais le recalculer à chaque ouverture du tableau de bord scannerait toute la table <code>ventes</code> — et ralentirait les clients qui commandent sur la même base. Deux parades combinées&nbsp;: <strong>matérialiser</strong> le socle (on paie le calcul une fois) et le servir depuis un <strong>réplica en lecture</strong> (l'analytique ne touche jamais la production).</p>
+
+<figure class="code-block" data-file="materialiser.sql"><pre><code class="language-sql">CREATE MATERIALIZED VIEW ca_mensuel AS
+SELECT region,
+       date_trunc('month', vendu_le) AS mois,
+       SUM(montant) AS total,
+       COUNT(*)     AS nb_ventes
+FROM ventes
+GROUP BY region, date_trunc('month', vendu_le);
+
+-- Index unique requis pour un rafraichissement non bloquant :
+CREATE UNIQUE INDEX ca_mensuel_uk ON ca_mensuel (region, mois);
+REFRESH MATERIALIZED VIEW CONCURRENTLY ca_mensuel;   -- planifie ce REFRESH</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Servir le rapport hors production. À gauche, la base OLTP de production reçoit les commandes des clients. Une flèche de réplication mène à un réplica en lecture. Une flèche de requête lourde exécutée une fois par heure alimente une vue matérialisée servant de cache, mise en évidence. Une flèche de lecture en quelques millisecondes mène au tableau de bord ou à l'outil de BI. La production n'est jamais scannée par l'analytique.">
+    <rect class="d-box" x="14" y="44" width="140" height="52" rx="7" /><text class="d-label" x="84" y="66" text-anchor="middle" font-size="9.5">Base OLTP</text><text class="d-mut" x="84" y="82" text-anchor="middle" font-size="8">production · commandes</text>
+    <line class="d-line" x1="154" y1="70" x2="196" y2="70" /><text class="d-mut" x="175" y="62" text-anchor="middle" font-size="7">réplication</text>
+    <rect class="d-box" x="198" y="44" width="130" height="52" rx="7" /><text class="d-label" x="263" y="66" text-anchor="middle" font-size="9.5">Réplica</text><text class="d-mut" x="263" y="82" text-anchor="middle" font-size="8">en lecture seule</text>
+    <line class="d-line" x1="328" y1="70" x2="370" y2="70" /><text class="d-mut" x="349" y="62" text-anchor="middle" font-size="7">1×/heure</text>
+    <rect class="d-accent" x="372" y="44" width="140" height="52" rx="7" /><text class="d-label" x="442" y="66" text-anchor="middle" font-size="9.5">Vue matérialisée</text><text class="d-mut" x="442" y="82" text-anchor="middle" font-size="8">cache · ca_mensuel</text>
+    <line class="d-line" x1="512" y1="70" x2="554" y2="70" /><text class="d-mut" x="533" y="62" text-anchor="middle" font-size="7">lecture ms</text>
+    <rect class="d-box" x="556" y="44" width="74" height="52" rx="7" /><text class="d-label" x="593" y="66" text-anchor="middle" font-size="9">BI</text><text class="d-mut" x="593" y="82" text-anchor="middle" font-size="7.5">dashboard</text>
+    <rect class="d-frame" x="14" y="118" width="140" height="34" rx="6" stroke-dasharray="4 3" /><text class="d-mut" x="84" y="139" text-anchor="middle" font-size="8">jamais scannée par l'analytique</text>
+    <text class="d-mut" x="400" y="139" text-anchor="middle" font-size="8.5">le tableau de bord lit un cache, pas 40 millions de lignes</text>
+  </svg>
+  <figcaption>La charge lourde vit sur un <strong>réplica</strong> et sert un <strong>cache</strong> rafraîchi&nbsp;: la production transactionnelle reste fluide.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Une vue matérialisée est <strong>figée</strong> jusqu'au prochain <code>REFRESH</code>. Décide de la stratégie <em>dès la création</em>&nbsp;: tâche planifiée horaire, ou déclenchement après l'import nocturne. Sans refresh, le rapport affiche des chiffres périmés en toute confiance — le pire des bugs.</p></div></div>
+
+<h2>Étape 5 — Livrer proprement&nbsp;: dates, migrations, fraîcheur</h2>
+
+<p>Un rapport qui compare des mois doit reposer sur des dates fiables. Si tes ventes viennent de plusieurs fuseaux, stocke l'instant en <code>TIMESTAMPTZ</code> (leçon&nbsp;21)&nbsp;: sinon «&nbsp;janvier&nbsp;» commence à des heures différentes selon le serveur. Et quand le schéma évoluera — nouvelle colonne <code>canal</code>, découpage d'une région — fais-le en <strong>migration versionnée</strong> et rétro-compatible (leçon&nbsp;23), pour ne jamais casser le rapport en vol.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe produisait son «&nbsp;rapport du lundi&nbsp;» à la main&nbsp;: export CSV, tableur croisé, copier-coller dans une présentation — deux heures chaque semaine, et des chiffres qui variaient selon la personne. La refonte&nbsp;: un socle <code>ca_mensuel</code> <strong>matérialisé</strong>, trois vues (croissance, pivot, super-totaux) posées dessus, un <code>REFRESH</code> planifié chaque nuit sur le <strong>réplica</strong>, et un tableau de bord branché sur le cache. Résultat&nbsp;: le rapport est prêt le lundi à 6&nbsp;h, identique pour tout le monde, et la base de production n'a plus jamais ralenti le lundi matin. La leçon&nbsp;: la valeur n'était pas dans une requête géniale, mais dans l'<strong>assemblage fiable</strong> de briques simples.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Recalculer chaque vue depuis la table brute plutôt que depuis le socle&nbsp;: les chiffres finissent par diverger (filtres légèrement différents) et la base souffre. <strong>Un seul socle</strong>, relu de plusieurs façons.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Faire tourner le rapport sur la base de production en heure de pointe. Un gros balayage OLAP ralentit les écritures OLTP&nbsp;: déporte l'analytique sur un réplica ou un entrepôt.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>En production, on outille cet assemblage&nbsp;: <strong>dbt</strong> versionne et documente les modèles (le socle et ses vues deviennent du code testé)&nbsp;; les <strong>entrepôts colonnes</strong> (BigQuery, Snowflake, ClickHouse) industrialisent l'OLAP&nbsp;; l'<strong>orchestration</strong> (Airflow, cron) planifie les rafraîchissements&nbsp;; et la <strong>BI</strong> (Metabase, Looker, Power&nbsp;BI) restitue le tout. Le schéma reste le même&nbsp;: un socle propre, des lectures dessus, servies hors production.</p></div></div>
+
+<h2>Antisèche&nbsp;: assembler un rapport analytique</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>À chaque étape du rapport, la brique SQL correspondante.</caption>
+    <thead><tr><th>Étape</th><th>Brique SQL</th></tr></thead>
+    <tbody>
+      <tr><td>Fixer le niveau de détail (grain)</td><td><code>GROUP BY region, date_trunc('month', …)</code></td></tr>
+      <tr><td>Socle réutilisable</td><td><code>WITH … AS (…)</code> puis <code>MATERIALIZED VIEW</code></td></tr>
+      <tr><td>Croissance période à période</td><td><code>LAG(total) OVER w</code> + <code>WINDOW w AS (…)</code></td></tr>
+      <tr><td>Éviter la division par zéro</td><td><code>NULLIF(dénominateur, 0)</code></td></tr>
+      <tr><td>Tableau croisé (pivot)</td><td><code>SUM(x) FILTER (WHERE …)</code></td></tr>
+      <tr><td>Sous-totaux et total général</td><td><code>GROUP BY ROLLUP (…)</code> + <code>GROUPING()</code></td></tr>
+      <tr><td>Servir vite un calcul lourd</td><td><code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code></td></tr>
+      <tr><td>Ne pas gêner la production</td><td>Réplica en lecture · entrepôt colonne (OLAP)</td></tr>
+      <tr><td>Dates fiables entre fuseaux</td><td><code>TIMESTAMPTZ</code></td></tr>
+      <tr><td>Faire évoluer sans casser</td><td>Migration versionnée, rétro-compatible</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Rapport analytique</dt><dd>Livrable qui résume des données brutes en agrégats lisibles (totaux, tendances, comparaisons) pour la décision, par opposition aux écritures transactionnelles du quotidien.</dd>
+  <dt>Grain</dt><dd>Niveau de détail d'une ligne agrégée (ici région × mois). On peut ré-agréger un grain fin vers un plus grossier, jamais l'inverse&nbsp;: à choisir en premier.</dd>
+  <dt>Socle agrégé</dt><dd>Requête (souvent une CTE ou une vue matérialisée) qui produit le grain une seule fois&nbsp;; toutes les vues du rapport le relisent au lieu de rescanner la table brute.</dd>
+  <dt>Vue matérialisée</dt><dd>Résultat de requête <strong>stocké physiquement</strong>&nbsp;: rapide à lire mais figé, il faut le <code>REFRESH</code> pour éviter des chiffres périmés.</dd>
+  <dt>Réplica en lecture</dt><dd>Copie en lecture seule de la base, alimentée par réplication&nbsp;; on y déporte l'analytique lourd pour ne pas ralentir la production transactionnelle.</dd>
+  <dt>Fraîcheur (des données)</dt><dd>Écart entre l'état réel et ce que montre le rapport&nbsp;; fixée par la fréquence du <code>REFRESH</code>. «&nbsp;À l'heure&nbsp;» suffit souvent&nbsp;; le temps réel coûte cher.</dd>
+  <dt>OLTP / OLAP</dt><dd><strong>OLTP</strong>&nbsp;: transactionnel, petites écritures concurrentes (passer commande). <strong>OLAP</strong>&nbsp;: analytique, gros balayages pour des agrégats (le rapport).</dd>
+  <dt>Pipeline analytique</dt><dd>Enchaînement source → agrégation → matérialisation → restitution, planifié et automatisé, qui livre le rapport sans intervention manuelle.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>On cadre la question, puis on fixe le <strong>grain</strong> (région × mois) avant tout calcul.</li>
+<li>Un <strong>socle agrégé</strong> unique nourrit les trois lectures&nbsp;: croissance (<code>LAG</code>), pivot (<code>FILTER</code>), super-totaux (<code>ROLLUP</code>).</li>
+<li>On <strong>matérialise</strong> le socle et on le sert depuis un <strong>réplica</strong> pour ne pas gêner la production.</li>
+<li>La <strong>fraîcheur</strong> se règle par la fréquence du <code>REFRESH</code>&nbsp;; sans refresh, chiffres périmés.</li>
+<li>On livre proprement&nbsp;: dates en <code>TIMESTAMPTZ</code>, évolutions en migrations rétro-compatibles.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi choisit-on le grain du rapport <em>avant</em> d'écrire les agrégats&nbsp;?</li><li>Quel intérêt de faire lire un socle unique aux trois vues plutôt que de rescanner <code>ventes</code>&nbsp;?</li><li>Quelles deux parades combine-t-on pour servir le rapport sans ralentir la production&nbsp;?</li><li>Qu'est-ce qui détermine la fraîcheur d'un rapport basé sur une vue matérialisée&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi fixer le grain (région × mois) avant d'écrire les agrégats ?","a":["Parce qu'on peut ré-agréger un grain fin vers un plus grossier (mois → trimestre) mais jamais l'inverse : le grain conditionne tout le reste du rapport","Parce que SQL l'exige syntaxiquement","Parce que le grain accélère les INSERT","Parce que sans grain, ROLLUP ne fonctionne pas"],"correct":0,"explain":"Le grain est le niveau de détail d'une ligne agrégée. En le choisissant le plus fin utile, on garde la possibilité de ré-agréger vers un niveau plus grossier ; partir trop grossier oblige à revenir à la table source."},
+  {"q":"Quel est l'intérêt d'un socle agrégé unique lu par les trois vues ?","a":["Cohérence (mêmes filtres, mêmes chiffres) et rapidité : on calcule l'agrégat une fois au lieu de rescanner la table brute pour chaque vue","Cela évite d'écrire des JOIN","Cela supprime le besoin d'index","Cela rend les vues automatiquement à jour"],"correct":0,"explain":"Croissance, pivot et super-totaux lisent le même socle : les chiffres ne peuvent pas diverger, et la table brute n'est balayée qu'une fois (idéalement matérialisée)."},
+  {"q":"Comment servir le rapport sans ralentir la production ?","a":["Matérialiser le socle (payer le calcul une fois, lire un cache) ET déporter l'analytique sur un réplica en lecture","Ajouter un index sur chaque colonne de la table","Lancer le rapport uniquement la nuit sur la base de production","Convertir la base en NoSQL"],"correct":0,"explain":"La vue matérialisée sert un cache en quelques millisecondes ; le réplica en lecture absorbe la charge OLAP pour que les écritures OLTP (commandes) restent fluides."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["grain","granularité","granularite"],"placeholder":"le niveau de détail d'une ligne agrégée (par mois, par région…)","hints":["On le choisit AVANT d'écrire les agrégats.","On peut ré-agréger un niveau fin vers un plus grossier, pas l'inverse.","Le mot décrit la « finesse » de l'agrégation."],"link":{"href":"lecon-24.html","label":"Revoir « Cadrer la question et le grain »"}},
+  {"type":"text","accept":["vue matérialisée","MATERIALIZED VIEW","materialized view","vue materialisee"],"placeholder":"ce qu'on crée pour servir le socle en quelques millisecondes","hints":["Une vue normale recalcule à chaque lecture.","Ici, on stocke physiquement le résultat agrégé.","C'est une vue « matérialisée »."],"link":{"href":"lecon-24.html","label":"Revoir « Servir vite »"}},
+  {"type":"text","accept":["réplica","replica","réplica en lecture","replica en lecture","réplica de lecture"],"placeholder":"où déporter l'analytique lourd pour ne pas gêner la production","hints":["C'est une copie en lecture seule de la base.","Alimentée par réplication depuis la production.","On y envoie les requêtes OLAP lourdes."],"link":{"href":"lecon-24.html","label":"Revoir « Sans gêner la production »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>À partir d'un socle <code>ca_mensuel(region, mois, total)</code>, ajoute une colonne <code>croissance_pct</code> qui compare chaque mois au précédent, <strong>par région</strong>. Protège la division par zéro et nomme la fenêtre.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">SELECT region, mois, total,
+       ROUND(100.0 * (total - LAG(total) OVER w)
+             / NULLIF(LAG(total) OVER w, 0), 1) AS croissance_pct
+FROM ca_mensuel
+WINDOW w AS (PARTITION BY region ORDER BY mois)
+ORDER BY region, mois;</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Sur le même socle, produis les <strong>sous-totaux par région et le total général</strong> en une requête, avec une étiquette lisible pour la ligne de total.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">SELECT
+  CASE WHEN GROUPING(region) = 1 THEN 'TOUTES RÉGIONS' ELSE region END AS region,
+  SUM(total) AS total
+FROM ca_mensuel
+GROUP BY ROLLUP (region)
+ORDER BY GROUPING(region), region;</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Transforme le socle en <strong>vue matérialisée</strong> <code>ca_mensuel</code> avec un index unique permettant un rafraîchissement non bloquant. En commentaire, indique <strong>où</strong> exécuter le rapport et <strong>quand</strong> rafraîchir.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-sql">CREATE MATERIALIZED VIEW ca_mensuel AS
+SELECT region,
+       date_trunc('month', vendu_le) AS mois,
+       SUM(montant) AS total,
+       COUNT(*)     AS nb_ventes
+FROM ventes
+GROUP BY region, date_trunc('month', vendu_le);
+
+CREATE UNIQUE INDEX ca_mensuel_uk ON ca_mensuel (region, mois);
+
+-- Ou : sur un REPLICA en lecture (jamais sur la prod en heure de pointe).
+-- Quand : apres l'import nocturne, ou toutes les heures selon la fraicheur voulue.
+REFRESH MATERIALIZED VIEW CONCURRENTLY ca_mensuel;</code></pre></figure></details></div>
+
+<h2>Mini-projet fil rouge — une petite base de boutique</h2>
+<p>Pour clore ce cours, construisons une <strong>mini-base de boutique</strong>, du schéma jusqu'à la requête d'analyse. Elle réunit la <strong>création de tables</strong> (clés primaire et étrangère), l'<strong>insertion</strong>, le <strong>SELECT filtré et trié</strong>, la <strong>jointure</strong> et l'<strong>agrégation</strong> (<code>GROUP BY</code>, <code>SUM</code>, <code>HAVING</code>) — le cœur de SQL en un seul scénario.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Deux tables liées (<code>clients</code> et <code>commandes</code>), des données d'exemple, puis trois requêtes de lecture : un filtre trié, une jointure, et le total dépensé par client avec un seuil.</p></div></div>
+<p class="kicker kicker--gold">Étapes</p>
+<div class="steps">
+<div class="step"><h3>Créer le schéma</h3><p>Définis <code>clients</code> et <code>commandes</code> avec une <strong>clé primaire</strong> chacune, et une <strong>clé étrangère</strong> de <code>commandes.client_id</code> vers <code>clients.id</code>.</p></div>
+<div class="step"><h3>Insérer des données</h3><p>Ajoute quelques clients et plusieurs commandes rattachées, avec <code>INSERT INTO ... VALUES</code>.</p></div>
+<div class="step"><h3>Lire avec filtre et tri</h3><p>Sélectionne les clients d'une ville donnée avec <code>WHERE</code>, classés par nom avec <code>ORDER BY</code>.</p></div>
+<div class="step"><h3>Joindre les deux tables</h3><p>Associe chaque commande à son client avec un <code>JOIN ... ON</code> et des <strong>alias</strong> de table.</p></div>
+<div class="step"><h3>Agréger par client</h3><p>Calcule le total dépensé par client avec <code>GROUP BY</code> et <code>SUM</code>, puis ne garde que les gros clients avec <code>HAVING</code>.</p></div>
+</div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble les cinq étapes en un script SQL complet. Essaie d'abord par toi-même, puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary><figure class="code-block" data-file="boutique.sql"><pre><code class="language-sql">-- 1. Schéma : deux tables liées
+CREATE TABLE clients (
+  id    INTEGER PRIMARY KEY,
+  nom   TEXT NOT NULL,
+  ville TEXT
+);
+
+CREATE TABLE commandes (
+  id        INTEGER PRIMARY KEY,
+  client_id INTEGER REFERENCES clients(id),
+  montant   REAL NOT NULL,
+  date_cmd  TEXT
+);
+
+-- 2. Données d'exemple
+INSERT INTO clients (id, nom, ville) VALUES
+  (1, 'Alice', 'Lyon'),
+  (2, 'Bruno', 'Paris'),
+  (3, 'Chloé', 'Lyon');
+
+INSERT INTO commandes (id, client_id, montant, date_cmd) VALUES
+  (1, 1, 49.90, '2026-01-12'),
+  (2, 1, 19.90, '2026-02-03'),
+  (3, 2, 120.00, '2026-02-08');
+
+-- 3. Lire avec filtre et tri
+SELECT nom, ville
+FROM clients
+WHERE ville = 'Lyon'
+ORDER BY nom;
+
+-- 4. Joindre clients et commandes
+SELECT c.nom, cmd.montant
+FROM commandes AS cmd
+JOIN clients AS c ON c.id = cmd.client_id;
+
+-- 5. Total dépensé par client (gros clients seulement)
+SELECT c.nom, SUM(cmd.montant) AS total
+FROM clients AS c
+JOIN commandes AS cmd ON cmd.client_id = c.id
+GROUP BY c.id, c.nom
+HAVING SUM(cmd.montant) &gt; 50
+ORDER BY total DESC;</code></pre></figure></details></div>
+
+<script type="application/json" data-quiz-bilan>
+[
+  {"q":"Quelle clause filtre les lignes d'un SELECT ?","a":["WHERE","HAVING","FILTER","IF"],"correct":0,"explain":"HAVING filtre APRÈS un regroupement ; WHERE avant."},
+  {"q":"Quelle clause trie les résultats ?","a":["ORDER BY","SORT BY","GROUP BY","ARRANGE BY"],"correct":0,"explain":"ORDER BY col ASC|DESC."},
+  {"q":"Quelle fonction compte les lignes ?","a":["COUNT(*)","SUM(*)","NB(*)","TOTAL(*)"],"correct":0,"explain":"SUM additionne des valeurs ; COUNT dénombre."},
+  {"q":"Comment associer deux tables sur une clé commune ?","a":["JOIN … ON","MERGE … ON","LINK … ON","COMBINE … ON"],"correct":0,"explain":"SELECT … FROM a JOIN b ON a.id = b.a_id."},
+  {"q":"Quelle clause filtre APRÈS un GROUP BY ?","a":["HAVING","WHERE","FILTER","ONLY"],"correct":0,"explain":"WHERE ne peut pas porter sur un agrégat ; HAVING si."},
+  {"q":"Quelle contrainte identifie chaque ligne de façon unique ?","a":["PRIMARY KEY","FOREIGN KEY","UNIQUE KEY","MAIN KEY"],"correct":0,"explain":"La clé primaire : unique et non nulle."},
+  {"q":"Quelle commande ajoute une ligne ?","a":["INSERT INTO","ADD INTO","CREATE ROW","PUT INTO"],"correct":0,"explain":"INSERT INTO table (col…) VALUES (…)."},
+  {"q":"Quelle contrainte référence la clé d'une autre table ?","a":["FOREIGN KEY","PRIMARY KEY","LINK KEY","REF KEY"],"correct":0,"explain":"La clé étrangère garantit l'intégrité référentielle."},
+  {"q":"Quel mot-clé élimine les doublons d'un résultat ?","a":["DISTINCT","UNIQUE","DEDUP","ONLY"],"correct":0,"explain":"SELECT DISTINCT col …"},
+  {"q":"Quelle commande met à jour des lignes existantes ?","a":["UPDATE … SET","MODIFY … SET","CHANGE … SET","ALTER … SET"],"correct":0,"explain":"ALTER modifie la STRUCTURE ; UPDATE les données."}
+]
+</script>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

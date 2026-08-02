@@ -1,0 +1,94 @@
+<p>Un contrat déployé est <strong>immuable</strong>&nbsp;: c'est une garantie de confiance, mais aussi un problème. Comment corriger un bug, ou ajouter une fonctionnalité, sans abandonner l'adresse du contrat et tous les fonds qu'il détient&nbsp;? La réponse de l'industrie&nbsp;: les <strong>contrats évolutifs</strong> (<em>upgradeable</em>), bâtis sur le patron <strong>proxy</strong>. C'est une technique essentielle de la DeFi — et l'une des plus délicates à manier. Cette leçon en explique le principe et les dangers.</p>
+
+<h2>Le dilemme de l'immuabilité</h2>
+<p>L'immuabilité empêche un acteur malveillant de changer les règles, mais elle empêche aussi l'auteur de <em>réparer</em>. Pour un protocole gérant des millions, ne jamais pouvoir corriger une faille serait intenable. Il faut donc un moyen de <strong>remplacer la logique</strong> tout en conservant l'<strong>adresse</strong> et les <strong>données</strong>. Tout le défi tient dans cette séparation.</p>
+
+<h2>L'idée du proxy</h2>
+<p>Le patron <strong>proxy</strong> sépare un contrat en deux&nbsp;:</p>
+<ul>
+  <li>le <strong>proxy</strong>&nbsp;: il détient l'<strong>adresse publique</strong> et tout le <strong>stockage</strong> (les données, les fonds). Il ne contient presque aucune logique&nbsp;;</li>
+  <li>le contrat d'<strong>implémentation</strong> (la <em>logique</em>)&nbsp;: il contient le code, mais aucune donnée propre.</li>
+</ul>
+<p>Les utilisateurs parlent toujours au <strong>proxy</strong>. Celui-ci <strong>délègue</strong> l'exécution au contrat de logique. Pour mettre à jour, on déploie une <em>nouvelle</em> implémentation et on dit au proxy de pointer vers elle&nbsp;: l'adresse et les données ne bougent pas, seul le code change.</p>
+
+<h2>Le mécanisme&nbsp;: <code>delegatecall</code></h2>
+<p>La magie repose sur <code>delegatecall</code>. Un appel normal exécute le code <em>de l'autre contrat, dans le contexte de l'autre contrat</em>. <code>delegatecall</code>, lui, exécute le code de l'autre contrat <strong>dans le contexte de l'appelant</strong>&nbsp;: la logique de l'implémentation s'exécute, mais lit et écrit dans le <em>stockage du proxy</em>.</p>
+<figure class="code-block" data-file="proxy.sol"><pre><code class="language-solidity">// Version simplifiée de l'idée d'un proxy
+contract Proxy {
+    address public implementation;   // l'adresse de la logique
+
+    fallback() external payable {
+        address impl = implementation;
+        // delegatecall : exécute le code de 'impl'
+        // mais sur LE STOCKAGE de ce proxy
+        (bool ok, ) = impl.delegatecall(msg.data);
+        require(ok, "echec");
+    }
+}</code></pre></figure>
+<p>La fonction spéciale <code>fallback</code> attrape <em>tout</em> appel qui ne correspond à aucune fonction du proxy, et le redirige par <code>delegatecall</code> vers l'implémentation. Résultat&nbsp;: de l'extérieur, le proxy «&nbsp;ressemble&nbsp;» au contrat de logique, avec une adresse stable.</p>
+
+<h2>Le piège n°1&nbsp;: les collisions de slots de stockage</h2>
+<p>Comme la logique écrit dans le stockage du proxy, les <strong>variables d'état doivent s'aligner parfaitement</strong> entre les versions. Le stockage Solidity est une suite de «&nbsp;slots&nbsp;» numérotés&nbsp;; si une nouvelle implémentation déclare ses variables dans un ordre différent, elle écrira au mauvais endroit et <strong>corrompra les données</strong>.</p>
+<figure class="code-block" data-file="collision.sol"><pre><code class="language-solidity">// Implémentation V1
+contract LogiqueV1 {
+    address public proprietaire;  // slot 0
+    uint256 public solde;         // slot 1
+}
+
+// Implémentation V2 -- DANGER : on a inversé l'ordre !
+contract LogiqueV2 {
+    uint256 public solde;         // slot 0  <-- lit l'ancien 'proprietaire' !
+    address public proprietaire;  // slot 1  <-- corruption
+}</code></pre></figure>
+<p>Règle d'or des upgrades&nbsp;: <strong>on n'ajoute des variables qu'à la fin</strong>, jamais au milieu, jamais en réordonnant. Toute dérive de l'agencement du stockage est catastrophique.</p>
+
+<h2>UUPS et les standards</h2>
+<p>Écrire un proxy sûr à la main est extrêmement risqué. On utilise donc des implémentations <strong>standardisées et auditées</strong>, principalement via OpenZeppelin&nbsp;:</p>
+<ul>
+  <li><strong>Transparent Proxy</strong>&nbsp;: la logique de mise à jour vit dans le proxy&nbsp;;</li>
+  <li><strong>UUPS</strong> (Universal Upgradeable Proxy Standard)&nbsp;: la fonction de mise à jour vit dans l'<em>implémentation</em> (proxy plus léger, moins cher), protégée par un contrôle d'accès.</li>
+</ul>
+<figure class="code-block" data-file="uups.sol"><pre><code class="language-solidity">import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract MonContrat is UUPSUpgradeable, OwnableUpgradeable {
+    // initialize() remplace le constructeur (un proxy ne peut pas
+    // exécuter le constructeur de la logique)
+    function initialize() public initializer {
+        __Ownable_init(msg.sender);
+    }
+
+    // SEUL le propriétaire peut autoriser une mise à jour
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+}</code></pre></figure>
+<p>Note <code>initialize()</code> au lieu d'un <code>constructor</code>&nbsp;: le constructeur d'une implémentation ne s'exécute pas dans le contexte du proxy, donc on initialise via une fonction appelée une seule fois (modificateur <code>initializer</code>).</p>
+
+<h2>Le compromis&nbsp;: pouvoir contre confiance</h2>
+<p>Un contrat évolutif est par nature <strong>moins immuable</strong>&nbsp;: celui qui contrôle la mise à jour peut, en théorie, remplacer la logique par n'importe quoi — y compris du code qui vole les fonds. C'est un point de <strong>centralisation</strong> majeur. Les protocoles sérieux confient ce pouvoir à une <strong>gouvernance</strong> (multisig, DAO, délai de carence) pour rassurer les utilisateurs. La capacité d'évoluer se paie en confiance.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Modifier l'<strong>agencement du stockage</strong> entre deux versions (ajouter une variable au milieu, en réordonner, changer un type). Cela provoque une <strong>collision de slots</strong> qui corrompt silencieusement les données existantes — un bug dévastateur et difficile à diagnostiquer. N'ajoute des variables qu'à la <em>fin</em>, et utilise les outils d'OpenZeppelin (<code>upgrades</code>) qui vérifient automatiquement la compatibilité du stockage avant chaque mise à jour.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Tous les contrats ne <em>doivent</em> pas être évolutifs. L'évolutivité ajoute de la complexité, des risques (collisions, mauvaise initialisation) et un point de centralisation. Beaucoup de projets choisissent au contraire l'immuabilité <em>totale</em> comme argument de confiance («&nbsp;personne, pas même nous, ne peut changer ce contrat&nbsp;»). Le choix entre évolutif et immuable est une décision d'architecture et de gouvernance, pas un réflexe technique.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le patron <strong>proxy</strong> sépare l'<strong>adresse + stockage</strong> (proxy) de la <strong>logique</strong> (implémentation) pour pouvoir mettre à jour le code.</li>
+  <li><code>delegatecall</code> exécute le code de la logique <strong>sur le stockage du proxy</strong> (via <code>fallback</code>).</li>
+  <li><strong>Collisions de slots</strong>&nbsp;: l'agencement du stockage doit rester compatible (n'ajouter qu'à la fin).</li>
+  <li><strong>UUPS</strong>/Transparent (OpenZeppelin)&nbsp;; <code>initialize()</code> remplace le constructeur&nbsp;; l'évolutivité = pouvoir centralisé.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi rendre un contrat évolutif, malgré l'immuabilité&nbsp;?</li><li>Que fait <code>delegatecall</code> de particulier&nbsp;?</li><li>Pourquoi l'ordre des variables d'état est-il critique lors d'une mise à jour&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans le patron proxy, où sont stockées les données (le stockage) ?","a":["Dans le proxy (qui garde l'adresse publique)","Dans le contrat d'implémentation","Réparties au hasard entre les deux","Hors de la blockchain"],"correct":0,"explain":"Le proxy détient l'adresse et le stockage ; on remplace seulement la logique. Adresse et données ne bougent pas lors d'une mise à jour."},
+  {"q":"Qu'a de particulier delegatecall ?","a":["Il exécute le code d'un autre contrat dans le contexte (le stockage) de l'appelant","Il envoie de l'ether automatiquement","Il déploie une copie du contrat appelé","Il interdit toute écriture en stockage"],"correct":0,"explain":"C'est ce qui permet à la logique de l'implémentation de lire/écrire dans le stockage du proxy."},
+  {"q":"Pourquoi ne faut-il ajouter de nouvelles variables d'état qu'à la fin lors d'une mise à jour ?","a":["Pour éviter une collision de slots qui corromprait les données existantes","Pour réduire le coût en gas","Parce que Solidity l'impose","Pour accélérer la compilation"],"correct":0,"explain":"Le stockage est une suite de slots numérotés ; réordonner ou insérer une variable décale tout et corrompt les données déjà écrites."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>En une phrase, que conserve-t-on lors d'une mise à jour via proxy, et que remplace-t-on&nbsp;?</p><details><summary>Voir une solution</summary><p>On <strong>conserve</strong> l'adresse du proxy et tout son stockage (données et fonds)&nbsp;; on <strong>remplace</strong> uniquement le contrat de logique (l'implémentation) vers lequel le proxy pointe.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pourquoi un contrat évolutif utilise-t-il <code>initialize()</code> plutôt qu'un <code>constructor</code>&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que le <code>constructor</code> de l'implémentation ne s'exécute pas dans le contexte (le stockage) du proxy&nbsp;: l'état initial ne serait pas posé au bon endroit. On utilise donc une fonction <code>initialize()</code>, appelée une seule fois (modificateur <code>initializer</code>), exécutée via le proxy.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Quel est le principal compromis (non technique) d'un contrat évolutif&nbsp;?</p><details><summary>Voir une solution</summary><p>La <strong>centralisation et la perte de confiance</strong>&nbsp;: celui qui détient le pouvoir de mise à jour peut remplacer la logique par n'importe quoi (y compris du code malveillant). On échange l'immuabilité — un gage de confiance — contre la capacité d'évoluer. C'est pourquoi ce pouvoir est généralement confié à une gouvernance (multisig, DAO, délai de carence) plutôt qu'à une seule clé.</p></details></div>

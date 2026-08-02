@@ -1,0 +1,71 @@
+<p>Un programme critique doit faire deux choses face à l'imprévu&nbsp;: <strong>réagir proprement</strong> aux erreurs qui surviennent, et surtout <strong>empêcher</strong> les états interdits d'exister. Ada répond avec deux mécanismes complémentaires&nbsp;: les <strong>exceptions</strong> (gérer ce qui tourne mal) et la <strong>programmation par contrat</strong> (déclarer ce qui doit toujours être vrai). Ensemble, ils incarnent la promesse d'Ada&nbsp;: du code dont on peut <em>raisonner</em> sur la correction.</p>
+
+<h2>Les exceptions&nbsp;: réagir aux erreurs</h2>
+<p>Une <strong>exception</strong> signale une situation anormale. Ada en lève automatiquement certaines (division par zéro, indice hors bornes, valeur hors contrainte&nbsp;: <code>Constraint_Error</code>). On les capture dans un bloc avec une clause <code>exception</code>.</p>
+<figure class="code-block" data-file="exceptions.adb"><pre><code class="language-ada">begin
+   Resultat := A / B;
+   Put_Line (Integer'Image (Resultat));
+exception
+   when Constraint_Error =&gt;
+      Put_Line ("Erreur : division invalide");
+   when others =&gt;
+      Put_Line ("Une autre erreur est survenue");
+end;</code></pre></figure>
+<p>La clause <code>when others</code> attrape tout le reste. Plutôt que de planter brutalement, le programme garde la main et réagit&nbsp;: dans un système embarqué, c'est la différence entre une dégradation contrôlée et une panne.</p>
+
+<h2>Lever ses propres exceptions</h2>
+<p>On déclare une exception comme un objet, et on la <strong>lève</strong> avec <code>raise</code> lorsqu'une règle métier est violée.</p>
+<figure class="code-block" data-file="raise.adb"><pre><code class="language-ada">Solde_Insuffisant : exception;
+
+procedure Retirer (Solde : in out Integer; Montant : in Integer) is
+begin
+   if Montant &gt; Solde then
+      raise Solde_Insuffisant;
+   end if;
+   Solde := Solde - Montant;
+end Retirer;</code></pre></figure>
+<p>L'appelant peut alors capturer <code>Solde_Insuffisant</code> et décider quoi faire. L'exception sépare proprement la <em>détection</em> de l'erreur (dans la procédure) de son <em>traitement</em> (chez l'appelant).</p>
+
+<h2>La programmation par contrat</h2>
+<p>Voici l'apport majeur d'Ada 2012. Plutôt que de seulement <em>réagir</em> aux erreurs, on <strong>déclare</strong> les conditions qui doivent tenir. Une <strong>précondition</strong> (<code>Pre</code>) est ce que l'appelant doit garantir&nbsp;; une <strong>postcondition</strong> (<code>Post</code>) est ce que le sous-programme promet en retour.</p>
+<figure class="code-block" data-file="contrat.ads"><pre><code class="language-ada">function Racine_Entiere (X : in Integer) return Integer
+   with Pre  =&gt; X &gt;= 0,                    --  exigence d'entrée
+        Post =&gt; Racine_Entiere'Result &gt;= 0; --  promesse de sortie</code></pre></figure>
+<p>Le contrat dit&nbsp;: «&nbsp;ne m'appelle qu'avec un <code>X</code> positif ou nul, et je te garantis un résultat positif ou nul&nbsp;». <code>'Result</code> désigne la valeur renvoyée. Si une précondition est violée à l'exécution, Ada lève une exception&nbsp;: le bug est attrapé <em>au point exact</em> où le contrat est rompu, pas trois étages plus loin.</p>
+
+<h2>Les invariants de type</h2>
+<p>On peut attacher une condition à un type entier&nbsp;: un <strong>invariant</strong> que toute valeur de ce type doit toujours respecter, vérifié automatiquement aux frontières du paquet.</p>
+<figure class="code-block" data-file="invariant.ads"><pre><code class="language-ada">type Temperature is private
+   with Type_Invariant =&gt; Est_Valide (Temperature);
+--  Garantit qu'une Temperature reste toujours dans une
+--  plage physique plausible, où qu'elle circule.</code></pre></figure>
+
+<h2>Contrats et preuve&nbsp;: vers SPARK</h2>
+<p>Les contrats ne servent pas qu'à vérifier à l'exécution. Avec <strong>SPARK</strong> (un sous-ensemble d'Ada, leçon 9), un outil peut <strong>prouver mathématiquement</strong>, avant même de lancer le programme, qu'aucune précondition ne sera jamais violée et qu'aucune exception ne pourra surgir. On passe de «&nbsp;tester quelques cas&nbsp;» à «&nbsp;démontrer tous les cas&nbsp;» — le Graal du logiciel critique.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Se servir des exceptions comme d'un flot de contrôle normal (par exemple pour sortir d'une boucle). Une exception doit signaler l'<strong>exceptionnel</strong>, pas le courant&nbsp;: elle coûte cher et brouille la logique. Pour une situation prévue, préfère une précondition, une vérification explicite ou une valeur de retour. Réserve <code>raise</code> aux vraies anomalies.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La programmation par contrat a inspiré bien au-delà d'Ada&nbsp;: on la retrouve dans Eiffel (son berceau, avec Bertrand Meyer), dans les <em>assertions</em> de nombreux langages, et dans les systèmes de types les plus avancés. L'idée — rendre les hypothèses <em>explicites et vérifiables</em> plutôt qu'implicites dans la tête du programmeur — est l'une des plus fécondes du génie logiciel.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Les <strong>exceptions</strong> (<code>raise</code>, clause <code>exception … when</code>) gèrent les erreurs sans planter.</li>
+  <li><strong>Précondition</strong> (<code>Pre</code>)&nbsp;: exigence d'entrée&nbsp;; <strong>postcondition</strong> (<code>Post</code>)&nbsp;: promesse de sortie.</li>
+  <li>Un contrat violé est attrapé <strong>au point exact</strong> de la rupture.</li>
+  <li>Avec <strong>SPARK</strong>, les contrats deviennent des théorèmes <em>prouvés</em> avant exécution.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert la clause <code>exception</code> dans un bloc&nbsp;?</li><li>Quelle différence entre une précondition et une postcondition&nbsp;?</li><li>Pourquoi ne pas utiliser les exceptions pour le flot normal&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une exception nommée <code>Valeur_Invalide</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">Valeur_Invalide : exception;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute une précondition à une fonction <code>Diviser (A, B : Integer)</code> exigeant que <code>B</code> soit différent de 0.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ads"><pre><code class="language-ada">function Diviser (A, B : in Integer) return Integer
+   with Pre =&gt; B /= 0;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un bloc qui tente <code>X := 100 / Diviseur;</code> et affiche un message si une <code>Constraint_Error</code> survient.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.adb"><pre><code class="language-ada">begin
+   X := 100 / Diviseur;
+   Put_Line (Integer'Image (X));
+exception
+   when Constraint_Error =&gt;
+      Put_Line ("Division impossible (diviseur nul ?)");
+end;</code></pre></figure></details></div>

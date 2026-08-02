@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La communication entre processus (IPC) — Leçon 08 · Syntaxe</title>
+    <meta name="description" content="Comment des processus à la mémoire isolée coopèrent : les signaux, les tubes (pipes), les sockets, la mémoire partagée et son besoin de synchronisation, les files de messages." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="os" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes d'exploitation</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Aller plus loin — Leçon 08</p>
+              <h1 class="lesson-header__title">La communication entre processus (IPC)</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~31 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 02 conseillée</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre pourquoi des processus <strong>isolés</strong> ont besoin de communiquer&nbsp;;</li>
+                  <li>connaître les <strong>signaux</strong> (notifications asynchrones)&nbsp;;</li>
+                  <li>comprendre les <strong>tubes</strong> (pipes) et les <strong>sockets</strong>&nbsp;;</li>
+                  <li>saisir la <strong>mémoire partagée</strong> et son besoin de <strong>synchronisation</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Chaque processus vit dans sa <strong>bulle</strong>&nbsp;: sa mémoire lui est <strong>isolée</strong> des autres (leçon&nbsp;2). C'est une <strong>sécurité</strong> — un programme qui plante ou qui triche ne peut pas fouiller la mémoire de ton navigateur. Mais alors, comment deux programmes qui doivent <strong>coopérer</strong> (un jeu et son serveur, un shell et la commande qu'il lance) échangent-ils la moindre donnée&nbsp;? Ils ne le font pas tout seuls&nbsp;: ils passent par des mécanismes de <strong>communication inter-processus</strong> (<em>IPC</em>, pour <em>Inter-Process Communication</em>), fournis et surveillés par l'OS.</p>
+
+<p>L'idée générale&nbsp;: puisque l'isolation interdit à un processus de toucher directement la mémoire d'un autre, l'OS ouvre des <strong>canaux contrôlés</strong>. Chaque canal a ses forces et ses faiblesses. Passons-les en revue, du plus simple (un petit signal) au plus rapide mais délicat (la mémoire partagée).</p>
+
+<h2>Les signaux</h2>
+<p>Le <strong>signal</strong> est la forme la plus légère d'IPC&nbsp;: une <strong>notification asynchrone</strong> envoyée à un processus pour lui dire « il se passe quelque chose ». Il ne transporte pas de données, juste un <strong>numéro</strong> (une sorte de code). « Asynchrone » signifie qu'il peut arriver <strong>à tout moment</strong>, en interrompant ce que le processus faisait.</p>
+<p>Quelques signaux classiques&nbsp;:</p>
+<ul>
+<li><strong>SIGINT</strong> — envoyé quand tu tapes <strong>Ctrl-C</strong> dans un terminal&nbsp;: « interromps-toi ».</li>
+<li><strong>SIGTERM</strong> — « <strong>arrête-toi poliment</strong> »&nbsp;: le processus peut sauvegarder, fermer ses fichiers, puis quitter proprement.</li>
+<li><strong>SIGKILL</strong> — « <strong>meurs, tout de suite</strong> »&nbsp;: l'OS tue le processus <strong>sans condition</strong>&nbsp;; on ne peut ni l'ignorer ni y réagir.</li>
+</ul>
+<p>Pour la plupart des signaux, un processus peut installer un <strong>gestionnaire</strong> (<em>handler</em>)&nbsp;: une petite fonction appelée automatiquement à la réception du signal. C'est ainsi qu'un serveur, en recevant SIGTERM, ferme ses connexions avant de s'éteindre. SIGKILL fait exception&nbsp;: il n'est <strong>jamais</strong> transmis au programme, l'OS agit directement — c'est le dernier recours contre un processus bloqué.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Poli, puis brutal</p><p>Quand tu «&nbsp;forces&nbsp;» un logiciel à quitter, le système envoie souvent d'abord un <strong>SIGTERM</strong> (laisse-lui une chance de se ranger)&nbsp;; s'il ne réagit pas au bout de quelques secondes, il envoie <strong>SIGKILL</strong>. C'est exactement la logique de <code>kill</code> puis <code>kill -9</code> sous <a href="../linux/cours.html">Linux</a>.</p></div></div>
+
+<h2>Les tubes (pipes)</h2>
+<p>Un <strong>tube</strong> (<em>pipe</em>) est un <strong>flux d'octets</strong> à sens unique d'un processus vers un autre&nbsp;: ce que le premier <strong>écrit</strong> à un bout, le second le <strong>lit</strong> à l'autre bout, dans l'ordre. C'est exactement le rôle du symbole « <code>|</code> » du shell&nbsp;: la <strong>sortie</strong> d'une commande devient l'<strong>entrée</strong> de la suivante, sans passer par un fichier intermédiaire.</p>
+<figure class="code-block" data-file="pipe.txt"><pre><code>  ls | grep .txt | sort
+
+   ls        écrit la liste des fichiers  ─▶ (tube) ─▶  grep .txt
+   grep .txt garde les lignes « .txt »    ─▶ (tube) ─▶  sort
+   sort      trie et affiche le résultat final
+
+  → chaque « | » branche la sortie de gauche sur l'entrée de droite</code></pre></figure>
+<p>Le tube est <strong>tamponné</strong> par l'OS&nbsp;: si le producteur va plus vite que le consommateur, les octets patientent dans le tube&nbsp;; si le tube est plein, le producteur est mis en <strong>attente</strong> (bloqué) le temps que l'autre lise. Cette régulation automatique est très pratique&nbsp;: on n'a pas à synchroniser les deux vitesses à la main.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Le fonctionnement d'un tube entre deux processus. À gauche, un processus producteur écrit un flux d'octets. Au centre, une file d'attente représente le tube, tamponné par le système, où les octets avancent dans l'ordre du premier arrivé au premier sorti. À droite, un processus consommateur lit ces octets. Une flèche unique va du producteur vers le consommateur, indiquant que le tube est à sens unique.">
+    <rect class="d-box" x="24" y="46" width="140" height="58" rx="6" /><text class="d-text" x="94" y="72" text-anchor="middle" font-size="12">Producteur</text><text class="d-mut" x="94" y="90" text-anchor="middle" font-size="9">écrit des octets</text>
+    <rect class="d-accent" x="228" y="50" width="184" height="50" rx="6" /><text class="d-label" x="320" y="70" text-anchor="middle" font-size="11">tube (buffer OS)</text>
+    <rect class="d-box" x="242" y="78" width="18" height="14" rx="2" /><rect class="d-box" x="264" y="78" width="18" height="14" rx="2" /><rect class="d-box" x="286" y="78" width="18" height="14" rx="2" /><rect class="d-box" x="308" y="78" width="18" height="14" rx="2" /><text class="d-mut" x="378" y="90" text-anchor="middle" font-size="8.5">FIFO</text>
+    <rect class="d-box" x="476" y="46" width="140" height="58" rx="6" /><text class="d-text" x="546" y="72" text-anchor="middle" font-size="12">Consommateur</text><text class="d-mut" x="546" y="90" text-anchor="middle" font-size="9">lit des octets</text>
+    <path class="d-line" d="M164 75 L226 75" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="226,75 218,71 218,79" />
+    <path class="d-line" d="M412 75 L474 75" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="474,75 466,71 466,79" />
+    <text class="d-mut" x="320" y="128" text-anchor="middle" font-size="9">flux d'octets à sens unique, dans l'ordre d'écriture</text>
+  </svg>
+  <figcaption>Un tube relie la <strong>sortie</strong> d'un processus à l'<strong>entrée</strong> d'un autre. Les octets circulent dans l'<strong>ordre</strong>, à sens unique&nbsp;; l'OS régule les vitesses en <strong>bloquant</strong> celui qui va trop vite.</figcaption>
+</figure>
+
+<h2>Les sockets</h2>
+<p>La <strong>socket</strong> est un canal de communication <strong>bidirectionnel</strong>&nbsp;: les deux processus peuvent y écrire <em>et</em> y lire. Surtout, elle fonctionne aussi bien <strong>en local</strong> (deux programmes sur la même machine) qu'à travers le <strong>réseau</strong> (deux machines distantes). C'est la brique de base de toute communication <strong>client/serveur</strong> (voir le cours <a href="../reseaux/cours.html">Réseaux</a>).</p>
+<p>Comme un fichier, une socket se manipule via un <strong>descripteur</strong> (leçon&nbsp;5)&nbsp;: on la lit et on l'écrit avec les mêmes opérations que pour un fichier. C'est une illustration parfaite du principe « <strong>tout est fichier</strong> »&nbsp;: le programme n'a pas à savoir si, derrière son petit numéro, se cache un fichier sur disque ou une connexion réseau à l'autre bout du monde.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">« Tout est fichier »</p><p>Tubes et sockets se manipulent avec un simple <strong>descripteur</strong> (leçon&nbsp;5), exactement comme un fichier&nbsp;: mêmes appels pour lire et écrire. Cette uniformité rend le code plus simple et plus <strong>portable</strong>&nbsp;: la même logique lit un fichier local ou reçoit des données d'un serveur distant.</p></div></div>
+
+<h2>La mémoire partagée</h2>
+<p>La <strong>mémoire partagée</strong> (<em>shared memory</em>) est le mécanisme le plus <strong>rapide</strong>. L'idée&nbsp;: deux processus demandent à l'OS de <strong>mapper la même zone de mémoire physique</strong> dans leurs espaces d'adressage virtuels respectifs (leçon&nbsp;4). Dès lors, ce que l'un écrit dans cette zone, l'autre le voit <strong>immédiatement</strong> — sans aucune copie, sans passer par le noyau à chaque échange. C'est aussi rapide qu'accéder à sa propre mémoire.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 226" role="img" aria-label="Deux processus partageant une même page de mémoire physique. À gauche, le processus P1 possède sa mémoire virtuelle, dont l'une des régions est marquée comme partagée. À droite, le processus P2 possède aussi sa mémoire virtuelle, avec également une région partagée. Au centre, en bas, une unique page de mémoire physique. Deux flèches, l'une venant de la région partagée de P1, l'autre de celle de P2, pointent vers cette même page physique, montrant que les deux processus voient la même donnée.">
+    <rect class="d-frame" x="24" y="30" width="200" height="128" rx="6" /><text class="d-label" x="124" y="50" text-anchor="middle" font-size="11">P1 — mémoire virtuelle</text>
+    <rect class="d-box" x="40" y="60" width="168" height="20" rx="3" /><text class="d-mut" x="124" y="74" text-anchor="middle" font-size="9">code / données privées</text>
+    <rect class="d-accent" x="40" y="86" width="168" height="24" rx="3" /><text class="d-text" x="124" y="102" text-anchor="middle" font-size="9.5">région partagée</text>
+    <rect class="d-box" x="40" y="116" width="168" height="20" rx="3" /><text class="d-mut" x="124" y="130" text-anchor="middle" font-size="9">pile</text>
+    <rect class="d-frame" x="416" y="30" width="200" height="128" rx="6" /><text class="d-label" x="516" y="50" text-anchor="middle" font-size="11">P2 — mémoire virtuelle</text>
+    <rect class="d-box" x="432" y="60" width="168" height="20" rx="3" /><text class="d-mut" x="516" y="74" text-anchor="middle" font-size="9">code / données privées</text>
+    <rect class="d-accent" x="432" y="86" width="168" height="24" rx="3" /><text class="d-text" x="516" y="102" text-anchor="middle" font-size="9.5">région partagée</text>
+    <rect class="d-box" x="432" y="116" width="168" height="20" rx="3" /><text class="d-mut" x="516" y="130" text-anchor="middle" font-size="9">pile</text>
+    <rect class="d-accent" x="256" y="176" width="128" height="36" rx="6" /><text class="d-text" x="320" y="198" text-anchor="middle" font-size="10">même page physique</text>
+    <path class="d-line" d="M124 110 L300 176" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="300,176 291,175 296,183" />
+    <path class="d-line" d="M516 110 L340 176" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="340,176 344,183 349,175" />
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="8.5">deux adresses virtuelles → une seule mémoire physique</text>
+  </svg>
+  <figcaption>Chaque processus voit la zone à sa <strong>propre adresse virtuelle</strong>, mais les deux pointent vers la <strong>même page physique</strong>. Écrire d'un côté, c'est être vu <strong>instantanément</strong> de l'autre&nbsp;: aucune copie.</figcaption>
+</figure>
+
+<p>Ce gain de vitesse a une <strong>contrepartie</strong>&nbsp;: comme les deux processus touchent la <strong>même</strong> mémoire en même temps, on retombe exactement sur le problème des <strong>conditions de course</strong> (leçon&nbsp;7). Sans précaution, P1 peut lire une valeur pendant que P2 est en train de la modifier — résultat imprévisible, données corrompues. Il <strong>faut</strong> donc se <strong>synchroniser</strong> (verrous, sémaphores) pour ordonner les accès. La mémoire partagée est puissante, mais elle reporte sur le programmeur toute la responsabilité de la coordination.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Rapide, mais dangereux sans synchronisation</p><p>La mémoire partagée ne protège <strong>rien</strong> toute seule. Deux processus qui y écrivent sans coordination provoquent des <strong>conditions de course</strong> (leçon&nbsp;7)&nbsp;: valeurs corrompues, bugs aléatoires impossibles à reproduire. Il faut y ajouter des <strong>verrous</strong> ou des <strong>sémaphores</strong> pour ordonner qui accède quand.</p></div></div>
+
+<h2>Files de messages &amp; compromis</h2>
+<p>Il existe d'autres mécanismes, comme les <strong>files de messages</strong> (<em>message queues</em>)&nbsp;: au lieu d'un flux d'octets continu (le tube), on échange des <strong>messages</strong> distincts et délimités, déposés dans une file gérée par l'OS et récupérés dans l'ordre. C'est pratique quand on veut garder la notion de « message » (une requête, un ordre) plutôt qu'un simple ruisseau d'octets.</p>
+<p>Au fond, tous ces mécanismes illustrent un même <strong>compromis</strong>&nbsp;: d'un côté l'<strong>isolation</strong> (chaque processus dans sa bulle) est <strong>sûre</strong>, mais impose de passer par des mécanismes explicites pour communiquer&nbsp;; de l'autre, la <strong>mémoire partagée</strong> est <strong>rapide</strong> (rien à copier) mais <strong>dangereuse</strong> sans synchronisation. Choisir un moyen d'IPC, c'est choisir où l'on se place sur cet axe sécurité / performance.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Bonne pratique</p><p>Quand c'est possible, préfère un mécanisme de <strong>haut niveau</strong> — tube, socket, file de messages — à la <strong>mémoire partagée brute</strong>. Ces mécanismes gèrent la coordination pour toi (l'OS régule, ordonne, délimite), alors que la mémoire partagée t'oblige à écrire toi-même une synchronisation correcte, ce qui est une source classique de bugs.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: la philosophie Unix des pipelines</p><p>Les petits outils Unix (<code>grep</code>, <code>sort</code>, <code>uniq</code>, <code>wc</code>…) ne savent faire qu'<strong>une seule chose</strong>, mais très bien — et ils se <strong>combinent</strong> via des tubes. Par exemple, <code>cat access.log | grep 404 | wc -l</code> compte les erreurs 404 d'un journal serveur&nbsp;: <code>cat</code> lit le fichier, <code>grep 404</code> ne garde que les lignes concernées, <code>wc -l</code> compte les lignes restantes. Cette <strong>composition par tubes</strong> — assembler des briques simples en pipelines puissants — est l'un des piliers de la puissance de la ligne de commande (voir le cours <a href="../linux/cours.html">Linux</a>).</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M21 3l-9 9" /><path d="M15 3h6v6" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>À l'échelle du <strong>réseau</strong>, les mêmes idées se prolongent&nbsp;: l'<strong>appel de procédure à distance</strong> (RPC) donne l'illusion d'appeler une fonction sur une autre machine&nbsp;; les <strong>files de messages</strong> et les <strong>brokers</strong> (comme ceux utilisés dans les architectures distribuées) sont des évolutions de l'IPC entre machines, pour découpler des services qui ne tournent plus dans le même ordinateur (voir le cours <a href="../reseaux/cours.html">Réseaux</a>).</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Les mécanismes d'IPC — usage typique</caption>
+    <thead><tr><th scope="col">Mécanisme</th><th scope="col">Usage typique</th></tr></thead>
+    <tbody>
+      <tr><td>Signal</td><td>notifier un événement sans données (Ctrl-C, demander l'arrêt, tuer un processus)</td></tr>
+      <tr><td>Tube (pipe)</td><td>flux d'octets à sens unique entre processus liés&nbsp;: le «&nbsp;<code>|</code>&nbsp;» du shell</td></tr>
+      <tr><td>Socket</td><td>canal bidirectionnel, en local ou sur le réseau&nbsp;: base du client/serveur</td></tr>
+      <tr><td>Mémoire partagée</td><td>échanges très rapides et volumineux&nbsp;; exige une synchronisation explicite</td></tr>
+      <tr><td>File de messages</td><td>échanger des messages distincts et ordonnés, plutôt qu'un flux continu</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>IPC (<em>Inter-Process Communication</em>)</dt><dd>Ensemble des mécanismes fournis par l'OS pour que des processus, dont la mémoire est isolée, puissent échanger des données ou des signaux de façon contrôlée.</dd>
+  <dt>Signal</dt><dd>Notification asynchrone (un simple numéro, sans données) envoyée à un processus pour l'avertir d'un événement&nbsp;; il peut y réagir via un gestionnaire, sauf pour SIGKILL.</dd>
+  <dt>Tube (<em>pipe</em>)</dt><dd>Flux d'octets à sens unique reliant la sortie d'un processus à l'entrée d'un autre, tamponné par l'OS&nbsp;; c'est le «&nbsp;<code>|</code>&nbsp;» du shell.</dd>
+  <dt>Socket</dt><dd>Canal de communication bidirectionnel, en local ou à travers le réseau, manipulé via un descripteur&nbsp;; base de la communication client/serveur.</dd>
+  <dt>Mémoire partagée</dt><dd>Zone de mémoire physique mappée dans l'espace virtuel de plusieurs processus&nbsp;; le moyen d'IPC le plus rapide (pas de copie), mais qui exige une synchronisation.</dd>
+  <dt>File de messages (<em>message queue</em>)</dt><dd>Mécanisme d'IPC où l'on échange des messages distincts et délimités, déposés dans une file gérée par l'OS et récupérés dans l'ordre.</dd>
+  <dt>Descripteur (rappel)</dt><dd>Petit numéro rendu par l'OS pour manipuler une ressource ouverte (fichier, tube, socket)&nbsp;; incarnation du principe «&nbsp;tout est fichier&nbsp;» (leçon&nbsp;5).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Les processus ont une mémoire <strong>isolée</strong> (sécurité)&nbsp;; pour coopérer, ils passent par l'<strong>IPC</strong> fourni par l'OS.</li>
+<li>Les <strong>signaux</strong> notifient un événement (SIGINT, SIGTERM, SIGKILL)&nbsp;; les <strong>tubes</strong> transportent un flux d'octets à sens unique (le «&nbsp;<code>|</code>&nbsp;»).</li>
+<li>Les <strong>sockets</strong> sont bidirectionnelles, en local ou sur le réseau&nbsp;; comme les tubes, elles se manipulent via un <strong>descripteur</strong>.</li>
+<li>La <strong>mémoire partagée</strong> est la plus <strong>rapide</strong> (pas de copie), mais impose de se <strong>synchroniser</strong> (leçon&nbsp;7).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi des processus isolés ont-ils besoin de mécanismes d'IPC ?</li><li>Quelle différence entre un tube et une socket ?</li><li>Pourquoi la mémoire partagée exige-t-elle une synchronisation ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi des processus ont-ils besoin de mécanismes d'IPC pour communiquer ?","a":["Parce que leur mémoire est isolée les uns des autres (sécurité) : un processus ne peut pas toucher directement la mémoire d'un autre, il doit passer par des canaux contrôlés fournis par l'OS","Parce que les processus n'ont pas de mémoire du tout","Parce que l'OS interdit toute communication","Parce que c'est plus lent que de partager la mémoire"],"correct":0,"explain":"L'isolation de la mémoire protège les processus les uns des autres. Pour coopérer malgré cette barrière, ils utilisent l'IPC : signaux, tubes, sockets, mémoire partagée, files de messages."},
+  {"q":"Que fait un signal comme SIGINT (Ctrl-C) ou SIGTERM ?","a":["Il envoie une notification asynchrone à un processus (un numéro, sans données) pour l'avertir d'un événement ; le processus peut souvent y réagir via un gestionnaire","Il transfère un gros fichier entre deux processus","Il crée une zone de mémoire partagée","Il ouvre une connexion réseau"],"correct":0,"explain":"Un signal est une notification légère et asynchrone. SIGINT interrompt (Ctrl-C), SIGTERM demande poliment l'arrêt (on peut y réagir), tandis que SIGKILL tue sans condition et ne peut pas être intercepté."},
+  {"q":"Qu'est-ce qu'un tube (pipe), tel que le « | » du shell ?","a":["Un flux d'octets à sens unique où la sortie d'un processus devient l'entrée d'un autre, tamponné par l'OS","Une zone de mémoire partagée entre plusieurs processus","Un signal envoyé pour arrêter un programme","Un fichier stocké définitivement sur le disque"],"correct":0,"explain":"Le tube relie la sortie d'une commande à l'entrée de la suivante (ls | grep .txt | sort). L'OS le tamponne et bloque le producteur si le consommateur est trop lent."},
+  {"q":"Pourquoi la mémoire partagée, bien que très rapide, exige-t-elle une synchronisation ?","a":["Parce que deux processus accèdent à la même mémoire en même temps : sans verrous, on retombe sur des conditions de course (valeurs corrompues, résultats imprévisibles)","Parce qu'elle est plus lente que les tubes","Parce que l'OS la chiffre automatiquement","Parce qu'elle ne fonctionne que sur le réseau"],"correct":0,"explain":"La mémoire partagée évite toute copie (d'où sa vitesse), mais comme les deux processus touchent la même zone simultanément, il faut des verrous ou sémaphores pour ordonner les accès et éviter les conditions de course (leçon 7)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["ipc","communication inter-processus","communication entre processus","inter-process communication"],"placeholder":"le nom général des mécanismes qui font communiquer des processus isolés","hints":["Sigle de trois lettres, en anglais.","« Inter-Process Communication »."],"link":{"href":"lecon-08.html","label":"Revoir l'introduction"}},
+  {"type":"text","accept":["signal","un signal","signaux"],"placeholder":"la notification asynchrone envoyée par Ctrl-C (SIGINT)","hints":["SIGINT, SIGTERM, SIGKILL en sont.","Il ne transporte qu'un numéro."],"link":{"href":"lecon-08.html","label":"Revoir « Les signaux »"}},
+  {"type":"text","accept":["memoire partagee","mémoire partagée","shared memory"],"placeholder":"le moyen d'IPC le plus rapide, qui exige une synchronisation","hints":["Deux processus mappent la même page physique.","« mémoire … »."],"link":{"href":"lecon-08.html","label":"Revoir « La mémoire partagée »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans la commande <code>cat access.log | grep 404 | wc -l</code>, explique ce que fait chaque «&nbsp;<code>|</code>&nbsp;» et quel mécanisme d'IPC est à l'œuvre.</p><details><summary>Voir une solution</summary><p>Chaque «&nbsp;<code>|</code>&nbsp;» est un <strong>tube</strong> (<em>pipe</em>)&nbsp;: il branche la <strong>sortie</strong> de la commande de gauche sur l'<strong>entrée</strong> de la commande de droite, sous forme de <strong>flux d'octets</strong>. Déroulé&nbsp;: <code>cat access.log</code> lit le fichier de journal et <strong>écrit</strong> son contenu ligne par ligne&nbsp;; ces octets partent dans le premier tube. À l'autre bout, <code>grep 404</code> <strong>lit</strong> ce flux, ne garde que les lignes contenant «&nbsp;404&nbsp;», et <strong>écrit</strong> le résultat dans le second tube. Enfin, <code>wc -l</code> <strong>lit</strong> ce second flux et compte le <strong>nombre de lignes</strong>, qu'il affiche. On obtient ainsi le nombre d'erreurs 404 du journal. Le mécanisme d'IPC est donc le <strong>tube</strong>, à sens unique&nbsp;: chaque commande ne connaît que son entrée et sa sortie standard, sans savoir qui est à l'autre bout. L'OS <strong>tamponne</strong> les tubes et <strong>régule</strong> les vitesses (si <code>wc</code> est lent, <code>cat</code> et <code>grep</code> sont mis en attente). C'est la philosophie Unix&nbsp;: de petits outils simples, combinés par des tubes, forment un traitement puissant sans qu'aucun fichier intermédiaire ne soit créé.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un serveur reçoit un <strong>SIGTERM</strong>, puis, comme il n'a pas réagi, un <strong>SIGKILL</strong>. Explique la différence de traitement entre ces deux signaux et pourquoi cet ordre «&nbsp;poli puis brutal&nbsp;» est courant.</p><details><summary>Voir une solution</summary><p><strong>SIGTERM</strong> est une demande d'arrêt <strong>polie</strong>&nbsp;: c'est un signal que le processus <strong>peut intercepter</strong>. En installant un <strong>gestionnaire</strong> (une fonction appelée à sa réception), le serveur peut effectuer un <strong>arrêt propre</strong>&nbsp;: finir les requêtes en cours, fermer les connexions réseau, vider ses tampons sur le disque (<em>flush</em>, leçon&nbsp;5), libérer ses ressources, puis quitter de lui-même. Le processus garde donc la <strong>maîtrise</strong> de sa fin. <strong>SIGKILL</strong>, lui, est <strong>différent par nature</strong>&nbsp;: il ne peut être ni <strong>ignoré</strong>, ni <strong>intercepté</strong>, ni <strong>retardé</strong>. L'OS ne le transmet pas au programme&nbsp;; il agit <strong>directement</strong> et supprime le processus <strong>immédiatement</strong>, sans lui laisser la moindre chance de se ranger. Les requêtes en cours sont perdues, les tampons non écrits disparaissent&nbsp;: c'est brutal, mais imparable. <strong>Pourquoi cet ordre&nbsp;:</strong> on envoie d'abord <strong>SIGTERM</strong> pour laisser au processus <em>bien élevé</em> l'occasion de s'arrêter proprement, sans perte de données. On attend quelques secondes. Si le processus est <strong>bloqué</strong>, planté, ou ignore délibérément la demande, il ne réagit pas&nbsp;; on passe alors à <strong>SIGKILL</strong> comme <strong>dernier recours</strong> pour le forcer à disparaître et libérer ses ressources. C'est exactement la logique de <code>kill</code> puis <code>kill -9</code> sous Linux, ou du bouton «&nbsp;forcer à quitter&nbsp;» d'un système&nbsp;: on privilégie toujours l'arrêt propre, et on ne recourt à la force que si la politesse échoue.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Deux processus doivent s'échanger d'énormes volumes de données très souvent. Un collègue propose la <strong>mémoire partagée</strong> «&nbsp;parce que c'est le plus rapide&nbsp;». Que réponds-tu&nbsp;: est-ce un bon choix, et à quelle condition&nbsp;? Compare avec un tube ou une socket.</p><details><summary>Voir une solution</summary><p>Le collègue a raison sur un point&nbsp;: pour de <strong>gros volumes échangés fréquemment</strong>, la <strong>mémoire partagée</strong> est effectivement le moyen le plus <strong>rapide</strong>. La raison est fondamentale&nbsp;: avec un <strong>tube</strong> ou une <strong>socket</strong>, chaque octet transmis doit être <strong>copié</strong> depuis l'espace de l'émetteur vers un tampon du noyau, puis du noyau vers l'espace du récepteur — deux copies et des passages par le noyau à chaque échange. Sur de gros volumes, ce coût de copie devient énorme. Avec la <strong>mémoire partagée</strong>, il n'y a <strong>aucune copie</strong>&nbsp;: les deux processus mappent la <strong>même page physique</strong> (leçon&nbsp;4) dans leur espace virtuel, et écrire d'un côté est vu <strong>instantanément</strong> de l'autre. C'est aussi rapide que d'accéder à sa propre mémoire. <strong>Mais</strong> — et c'est le cœur de la réponse — ce choix n'est bon <strong>qu'à une condition impérative</strong>&nbsp;: mettre en place une <strong>synchronisation correcte</strong>. Puisque les deux processus touchent la <strong>même</strong> mémoire en même temps, on est en plein risque de <strong>conditions de course</strong> (leçon&nbsp;7)&nbsp;: si l'un lit pendant que l'autre écrit, il peut voir des données <strong>à moitié modifiées</strong>, donc corrompues, et produire des bugs <strong>aléatoires</strong> très difficiles à reproduire. Il faut donc encadrer les accès avec des <strong>verrous</strong> ou des <strong>sémaphores</strong> (par exemple&nbsp;: «&nbsp;l'écrivain prend le verrou, écrit, le relâche&nbsp;; le lecteur attend le verrou avant de lire&nbsp;»). <strong>Le compromis</strong>&nbsp;: la mémoire partagée est <strong>rapide mais dangereuse</strong>, et te laisse toute la <strong>responsabilité</strong> de la coordination — une source classique d'erreurs subtiles. Un <strong>tube</strong> ou une <strong>socket</strong>, à l'inverse, sont <strong>plus lents</strong> (à cause des copies) mais <strong>plus sûrs</strong>&nbsp;: l'OS gère lui-même la régulation et l'ordre des données, il n'y a pas de mémoire commune à protéger. <strong>Verdict&nbsp;:</strong> pour du très gros débit où la performance est critique, la mémoire partagée <em>avec synchronisation soignée</em> est justifiée. Mais si les volumes sont modestes, ou si l'on veut du code simple et robuste — surtout si les deux processus peuvent un jour se retrouver sur des <strong>machines différentes</strong> —, un tube ou une socket est souvent le <strong>meilleur choix</strong> (une socket, en prime, fonctionne aussi à travers le réseau). On ne prend la mémoire partagée que quand on en a <em>vraiment</em> besoin, et jamais sans sa synchronisation.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+  </body>
+</html>

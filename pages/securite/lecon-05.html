@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Authentification et mots de passe — Leçon 05 · Sécurité applicative · Syntaxe</title>
+    <meta name="description" content="Sécuriser l'authentification : hachage des mots de passe (bcrypt/Argon2), pourquoi jamais en clair, gestion des sessions et jetons, et l'authentification à deux facteurs." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="securite" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Sécurité applicative</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Les failles classiques — Leçon 05</p>
+              <h1 class="lesson-header__title">Authentification et mots de passe</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 04 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer pourquoi on <strong>hache</strong> les mots de passe&nbsp;;</li>
+                  <li>choisir un bon algorithme (<strong>bcrypt</strong>, <strong>Argon2</strong>)&nbsp;;</li>
+                  <li>gérer <strong>sessions</strong> et <strong>jetons</strong> sûrement&nbsp;;</li>
+                  <li>renforcer avec la <strong>2FA</strong> et la limitation de tentatives.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>L'authentification — vérifier <em>qui</em> est l'utilisateur — est une cible de choix&nbsp;: la compromettre, c'est ouvrir tous les comptes. Les défauts d'authentification figurent au Top 10 de l'OWASP. Le point le plus sensible est le stockage des <strong>mots de passe</strong>&nbsp;: une base qui fuit ne doit <em>jamais</em> révéler les mots de passe de tes utilisateurs. Cette leçon explique comment, et couvre la gestion des sessions.</p>
+
+<h2>Jamais en clair</h2>
+<p>Règle absolue&nbsp;: on ne stocke <strong>jamais</strong> un mot de passe en clair. Si la base est volée — cela arrive régulièrement — tous les comptes seraient immédiatement compromis. Pire&nbsp;: comme les gens réutilisent leurs mots de passe, la fuite menacerait aussi leurs <em>autres</em> comptes ailleurs.</p>
+<figure class="code-block" data-file="CATASTROPHIQUE — ne jamais faire ça"><pre><code class="language-javascript">// Stocker le mot de passe tel quel : faille majeure
+db.utilisateurs.insert({ email, motDePasse: "monMotDePasse123" });
+// Une fuite de la base = tous les mots de passe exposés, en clair.</code></pre></figure>
+<p>On ne chiffre pas non plus le mot de passe (le chiffrement est <em>réversible</em>&nbsp;: la clé volée révèle tout). La bonne approche est le <strong>hachage</strong>&nbsp;: une transformation <em>à sens unique</em>.</p>
+
+<h2>Le hachage</h2>
+<p>Une fonction de <strong>hachage</strong> transforme le mot de passe en une empreinte de laquelle on ne peut <em>pas</em> revenir au mot de passe. À la connexion, on hache le mot de passe saisi et on compare les empreintes&nbsp;: jamais besoin de connaître le mot de passe d'origine.</p>
+<figure class="code-block" data-file="SÛR — hacher avec bcrypt"><pre><code class="language-javascript">import bcrypt from "bcrypt";
+
+// À l'inscription : on stocke l'EMPREINTE, pas le mot de passe
+const empreinte = await bcrypt.hash(motDePasse, 12);  // 12 = coût
+db.utilisateurs.insert({ email, empreinte });
+
+// À la connexion : on compare sans jamais déchiffrer
+const ok = await bcrypt.compare(motDePasseSaisi, utilisateur.empreinte);
+if (!ok) return reponse.status(401).json({ erreur: "identifiants invalides" });</code></pre></figure>
+<p>Deux propriétés rendent ce hachage sûr&nbsp;: il intègre un <strong>sel</strong> (une valeur aléatoire unique par mot de passe, qui empêche les tables précalculées et fait que deux mots de passe identiques ont des empreintes différentes), et il est <strong>volontairement lent</strong> (le «&nbsp;coût&nbsp;»), ce qui ralentit énormément les tentatives de cassage par force brute.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="Le hachage est à sens unique. À l'inscription, le mot de passe passe dans une fonction de hachage avec un sel et un coût, qui produit une empreinte stockée en base ; on ne peut pas revenir de l'empreinte au mot de passe. À la connexion, le mot de passe saisi repasse dans la même fonction et l'on compare les deux empreintes, sans jamais stocker le mot de passe.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Le hachage&nbsp;: une transformation à sens unique</text>
+    <text class="d-mut" x="16" y="46" font-size="10">À l'inscription</text>
+    <rect class="d-box" x="16" y="54" width="150" height="42" rx="7" /><text class="d-text" x="91" y="79" text-anchor="middle" font-size="12">mot de passe</text>
+    <line class="d-line" x1="166" y1="75" x2="214" y2="75" /><polygon class="d-dot" points="214,71 222,75 214,79" />
+    <rect class="d-accent" x="222" y="50" width="180" height="50" rx="7" /><text class="d-text" x="312" y="72" text-anchor="middle" font-size="12">fonction de hachage</text><text class="d-mut" x="312" y="88" text-anchor="middle" font-size="9">+ sel + coût (lent)</text>
+    <line class="d-line" x1="402" y1="75" x2="450" y2="75" /><polygon class="d-dot" points="450,71 458,75 450,79" />
+    <rect class="d-box" x="458" y="54" width="166" height="42" rx="7" /><text class="d-text" x="541" y="73" text-anchor="middle" font-size="11">empreinte stockée</text><text class="d-mut" x="541" y="88" text-anchor="middle" font-size="9">$2b$12$Kg…</text>
+    <line class="d-line" x1="450" y1="114" x2="230" y2="114" stroke-dasharray="4 3" /><polygon class="d-dot" points="230,110 222,114 230,118" />
+    <text class="d-mut" x="336" y="129" text-anchor="middle" font-size="9">retour impossible&nbsp;: on ne retrouve pas le mot de passe ✗</text>
+    <text class="d-mut" x="16" y="158" font-size="10">À la connexion</text>
+    <rect class="d-box" x="16" y="166" width="150" height="34" rx="7" /><text class="d-text" x="91" y="187" text-anchor="middle" font-size="11">saisie</text>
+    <line class="d-line" x1="166" y1="183" x2="214" y2="183" /><polygon class="d-dot" points="214,179 222,183 214,187" />
+    <rect class="d-accent" x="222" y="166" width="180" height="34" rx="7" /><text class="d-text" x="312" y="187" text-anchor="middle" font-size="11">même fonction</text>
+    <line class="d-line" x1="402" y1="183" x2="450" y2="183" /><polygon class="d-dot" points="450,179 458,183 450,187" />
+    <rect class="d-frame" x="458" y="166" width="166" height="34" rx="7" /><text class="d-text" x="541" y="187" text-anchor="middle" font-size="10">comparer les empreintes</text>
+  </svg>
+  <figcaption>On ne stocke jamais le mot de passe&nbsp;: seulement son <strong>empreinte</strong>. À la connexion, on recompare les empreintes — le mot de passe d'origine n'est jamais nécessaire.</figcaption>
+</figure>
+
+<h2>Le bon algorithme</h2>
+<p>Tous les hachages ne se valent pas. Les fonctions rapides comme <strong>MD5</strong> ou <strong>SHA-1</strong> sont <em>inadaptées</em> aux mots de passe&nbsp;: leur rapidité aide l'attaquant (des milliards d'essais par seconde). Il faut une fonction conçue pour les mots de passe, lente et paramétrable&nbsp;:</p>
+<figure class="code-block" data-file="choix d'algorithme"><pre><code class="language-bash"># À ÉVITER pour des mots de passe (trop rapides) :
+MD5, SHA-1, SHA-256 « nu »
+
+# À UTILISER (lents, salés, éprouvés) :
+Argon2   # recommandé aujourd'hui (gagnant du concours de hachage de mots de passe)
+bcrypt   # éprouvé, très répandu, un excellent choix
+scrypt   # alternative solide</code></pre></figure>
+<p>Le réflexe&nbsp;: <strong>Argon2</strong> ou <strong>bcrypt</strong>, via une bibliothèque reconnue, jamais une implémentation maison. Et on règle le coût pour que le hachage prenne une fraction de seconde sur ton serveur — assez lent pour gêner un attaquant, assez rapide pour l'utilisateur.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 158" role="img" aria-label="Comparaison de la vitesse de cassage. Une fonction rapide comme MD5 ou SHA-1 permet à un attaquant des milliards d'essais par seconde, illustrée par une très longue barre. Une fonction lente conçue pour les mots de passe comme bcrypt ou Argon2 ne permet que quelques milliers d'essais par seconde, illustrée par une barre minuscule : le cassage devient impraticable.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">La lenteur protège&nbsp;: essais par seconde côté attaquant</text>
+    <text class="d-text" x="16" y="56" font-size="12">MD5 / SHA-1</text><text class="d-mut" x="16" y="70" font-size="9">rapide → mauvais choix</text>
+    <rect class="d-accent" x="150" y="44" width="474" height="26" rx="5" /><text class="d-label" x="387" y="61" text-anchor="middle" font-size="11">des milliards d'essais / s</text>
+    <text class="d-text" x="16" y="116" font-size="12">bcrypt / Argon2</text><text class="d-mut" x="16" y="130" font-size="9">lent → bon choix</text>
+    <rect class="d-box" x="150" y="104" width="58" height="26" rx="5" /><text class="d-mut" x="218" y="121" font-size="10">quelques milliers / s</text>
+  </svg>
+  <figcaption>Même matériel&nbsp;: une fonction <strong>volontairement lente</strong> réduit les essais de plusieurs ordres de grandeur, rendant la force brute impraticable.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la fuite LinkedIn (2012)</p><p>En 2012, LinkedIn s'est fait dérober sa base de mots de passe. Le problème n'était pas que le vol&nbsp;: les mots de passe étaient hachés en <strong>SHA-1 sans sel</strong>. Rapide et non salé, ce hachage a permis de <em>casser</em> des dizaines de millions d'empreintes en quelques jours (des mots de passe identiques donnaient des empreintes identiques, et les tables précalculées s'appliquaient). L'ampleur réelle n'a éclaté qu'en 2016&nbsp;: <strong>117 millions</strong> de couples e-mail/mot de passe se sont retrouvés en vente. Un simple sel et une fonction lente (bcrypt/Argon2) auraient rendu ce cassage de masse impraticable.</p></div></div>
+
+<h2>Sessions et jetons</h2>
+<p>Une fois connecté, l'utilisateur ne renvoie pas son mot de passe à chaque requête&nbsp;: on lui remet une <strong>session</strong> (un identifiant stocké dans un cookie) ou un <strong>jeton</strong> (comme un JWT, vu dans le cours API). Quelques règles pour les garder sûrs&nbsp;:</p>
+<ul>
+  <li>identifiant de session <strong>imprévisible</strong> et long (généré par une source cryptographique).</li>
+  <li>cookie en <strong><code>HttpOnly</code></strong>, <strong><code>Secure</code></strong>, <strong><code>SameSite</code></strong> (leçon 4).</li>
+  <li><strong>expiration</strong> raisonnable&nbsp;; régénérer l'identifiant après connexion (éviter la <em>fixation de session</em>).</li>
+  <li>permettre une <strong>déconnexion</strong> réelle qui invalide la session côté serveur.</li>
+</ul>
+<p>La session est l'équivalent d'un bracelet d'accès&nbsp;: si quelqu'un le vole, il entre. D'où l'importance de la protéger (HTTPS, <code>HttpOnly</code>) et de pouvoir la révoquer.</p>
+
+<h2>Renforcer l'authentification</h2>
+<p>Deux mesures réduisent fortement les risques&nbsp;:</p>
+<ul>
+  <li>la <strong>limitation des tentatives</strong> (<em>rate limiting</em>)&nbsp;: après plusieurs échecs, ralentir ou bloquer temporairement, pour contrer la <em>force brute</em> et le <em>bourrage d'identifiants</em> (essayer des mots de passe fuités ailleurs).</li>
+  <li>l'<strong>authentification à deux facteurs (2FA)</strong>&nbsp;: en plus du mot de passe, un second facteur (code temporaire d'une application, clé physique). Même un mot de passe volé ne suffit alors plus à entrer.</li>
+</ul>
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="L'authentification à deux facteurs combine deux preuves de nature différente : quelque chose que l'on connaît (le mot de passe) et quelque chose que l'on possède (un code temporaire ou une clé physique). Il faut les deux pour accéder au compte. Un mot de passe volé seul ne suffit pas : le second facteur bloque l'accès.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">2FA&nbsp;: deux facteurs de nature différente</text>
+    <rect class="d-box" x="40" y="46" width="220" height="52" rx="7" /><text class="d-text" x="150" y="68" text-anchor="middle" font-size="12">ce que je connais</text><text class="d-mut" x="150" y="86" text-anchor="middle" font-size="10">mot de passe</text>
+    <text class="d-label" x="320" y="78" text-anchor="middle" font-size="18">+</text>
+    <rect class="d-box" x="380" y="46" width="220" height="52" rx="7" /><text class="d-text" x="490" y="68" text-anchor="middle" font-size="12">ce que je possède</text><text class="d-mut" x="490" y="86" text-anchor="middle" font-size="10">code temporaire, clé physique</text>
+    <line class="d-line" x1="150" y1="98" x2="300" y2="124" /><line class="d-line" x1="490" y1="98" x2="340" y2="124" />
+    <rect class="d-frame" x="250" y="126" width="140" height="34" rx="7" /><text class="d-text" x="320" y="148" text-anchor="middle" font-size="12">accès autorisé</text>
+  </svg>
+  <figcaption>Un mot de passe volé ne suffit plus&nbsp;: sans le <strong>second facteur</strong>, l'accès reste bloqué. C'est la parade la plus efficace contre le bourrage d'identifiants et l'hameçonnage.</figcaption>
+</figure>
+
+<p>Encourage aussi des mots de passe <strong>longs</strong> plutôt que «&nbsp;complexes&nbsp;» et imprononçables&nbsp;: la longueur compte davantage que les symboles. Et vérifie les mots de passe choisis contre des listes de mots de passe déjà fuités.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Longueur &gt; complexité</p><p>Une phrase de passe longue («&nbsp;cheval-agrafe-batterie-correct&nbsp;») est plus solide <em>et</em> plus mémorisable qu'un <code>P@ssw0rd!</code> court et tordu. Mieux encore, encourage un <strong>gestionnaire de mots de passe</strong>&nbsp;: il génère un mot de passe long et unique par site, ce qui neutralise le bourrage d'identifiants (plus aucun mot de passe réutilisé).</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ne réinvente pas l'authentification</p><p>L'authentification est truffée de pièges subtils (timing, fixation de session, réinitialisation de mot de passe…). Sauf raison impérieuse, appuie-toi sur les <strong>solutions éprouvées</strong> de ton framework ou des fournisseurs d'identité reconnus. Du code d'authentification maison est l'une des sources de failles les plus fréquentes&nbsp;; mieux vaut un système audité par des milliers d'utilisateurs.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Authentification — les réflexes</caption>
+    <thead><tr><th scope="col">Sujet</th><th scope="col">À faire</th><th scope="col">À éviter</th></tr></thead>
+    <tbody>
+      <tr><td>Stockage</td><td>Hacher (Argon2 / bcrypt), salé, lent</td><td>Clair, chiffrement réversible, MD5/SHA «&nbsp;nus&nbsp;»</td></tr>
+      <tr><td>Vérifier</td><td><code>bcrypt.compare(saisie, empreinte)</code></td><td>Re-hacher soi-même et comparer les chaînes</td></tr>
+      <tr><td>Session</td><td>ID imprévisible, <code>HttpOnly</code>/<code>Secure</code>/<code>SameSite</code>, expiration, révocation</td><td>ID prévisible, cookie lisible en JS, jamais expiré</td></tr>
+      <tr><td>Renforcer</td><td>Limiter les tentatives, 2FA, mots de passe longs</td><td>Compter sur le seul mot de passe</td></tr>
+      <tr><td>Code</td><td>S'appuyer sur une solution éprouvée</td><td>Réinventer l'authentification</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Hachage</dt><dd>Transformation à sens unique d'un mot de passe en empreinte&nbsp;; on ne peut pas revenir au mot de passe d'origine.</dd>
+  <dt>Sel (<em>salt</em>)</dt><dd>Valeur aléatoire unique ajoutée avant le hachage&nbsp;: deux mots de passe identiques donnent des empreintes différentes, et les tables précalculées deviennent inutiles.</dd>
+  <dt>Coût (facteur de travail)</dt><dd>Paramètre qui rend le hachage volontairement lent, pour freiner la force brute.</dd>
+  <dt>bcrypt / Argon2</dt><dd>Fonctions de hachage conçues pour les mots de passe&nbsp;: lentes, salées et éprouvées.</dd>
+  <dt>Session</dt><dd>Identifiant remis après connexion (souvent dans un cookie) qui évite de renvoyer le mot de passe à chaque requête.</dd>
+  <dt>2FA</dt><dd>Authentification à deux facteurs&nbsp;: un second facteur (code, clé) s'ajoute au mot de passe.</dd>
+  <dt>Bourrage d'identifiants (<em>credential stuffing</em>)</dt><dd>Essai en masse de couples e-mail/mot de passe fuités ailleurs, en pariant sur leur réutilisation.</dd>
+  <dt>Table arc-en-ciel (<em>rainbow table</em>)</dt><dd>Table d'empreintes précalculées pour retrouver des mots de passe&nbsp;; le sel la rend inopérante.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Jamais</strong> de mot de passe en clair&nbsp;; jamais chiffré (réversible). On <strong>hache</strong> (sens unique).</li>
+  <li>Utiliser <strong>Argon2</strong> ou <strong>bcrypt</strong> (lents, salés)&nbsp;; éviter MD5/SHA «&nbsp;nus&nbsp;» (trop rapides).</li>
+  <li><strong>Sessions/jetons</strong> imprévisibles, cookies <code>HttpOnly</code>/<code>Secure</code>/<code>SameSite</code>, expiration, révocation.</li>
+  <li>Renforcer&nbsp;: <strong>limiter les tentatives</strong>, <strong>2FA</strong>, mots de passe longs&nbsp;; s'appuyer sur des solutions éprouvées.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Pourquoi hacher plutôt que chiffrer un mot de passe&nbsp;?</li>
+  <li>Pourquoi MD5/SHA-256 sont-ils de mauvais choix pour les mots de passe&nbsp;?</li>
+  <li>Que protège l'authentification à deux facteurs même si le mot de passe fuit&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi hache-t-on un mot de passe plutôt que de le chiffrer ?","a":["Le hachage est à sens unique (irréversible) : même la base volée ne permet pas de retrouver les mots de passe. Le chiffrement, lui, est réversible avec la clé","Le hachage est plus rapide à calculer","Le chiffrement est interdit par la loi","Le hachage prend moins de place"],"correct":0,"explain":"Un chiffrement peut être annulé si la clé est volée. Un hachage ne se renverse pas : à la connexion, on hache le mot de passe saisi et on compare les empreintes, sans jamais stocker ni retrouver le mot de passe d'origine."},
+  {"q":"Pourquoi MD5 ou SHA-256 « nus » sont-ils de mauvais choix pour stocker des mots de passe ?","a":["Ils sont très rapides, ce qui permet à un attaquant des milliards d'essais par seconde pour casser les empreintes par force brute","Ils sont trop lents pour être pratiques","Ils ne produisent pas d'empreinte","Ils chiffrent au lieu de hacher"],"correct":0,"explain":"La rapidité, utile ailleurs, joue contre nous ici : elle accélère le cassage par force brute. On utilise des fonctions conçues pour les mots de passe — Argon2, bcrypt, scrypt — volontairement lentes et salées."},
+  {"q":"Que protège l'authentification à deux facteurs (2FA) même si le mot de passe fuit ?","a":["Un mot de passe volé ne suffit plus : il faut aussi le second facteur (code temporaire, clé physique) pour se connecter","Elle chiffre la base de données","Elle accélère la connexion","Elle remplace le hachage des mots de passe"],"correct":0,"explain":"La 2FA exige un second facteur en plus du mot de passe. Un attaquant qui a obtenu le mot de passe (fuite, hameçonnage) reste bloqué sans ce second facteur, ce qui réduit fortement le risque de compromission de compte."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["hacher","hachage","hasher","le hacher","bcrypt","hache"],"placeholder":"ce qu'il faut faire au mot de passe avant de le stocker (jamais en clair)","hints":["Stocker en clair = fuite catastrophique en cas de vol de la base.","Opération à sens unique, avec sel (bcrypt, argon2…).","Le … du mot de passe."],"link":{"href":"lecon-05.html","label":"Revoir « Ne jamais stocker en clair »"}},
+  {"type":"text","accept":["bcrypt.compare","compare","bcrypt.compare()","compare()"],"placeholder":"la méthode de bcrypt pour comparer une saisie au hash stocké (à la connexion)","hints":["On ne re-hache pas pour comparer (le sel change).","La fonction gère la comparaison en interne.","bcrypt.???????(saisie, hash)"],"link":{"href":"lecon-05.html","label":"Revoir « Vérifier un mot de passe »"}},
+  {"type":"text","accept":["rate limiting","limitation de débit","limitation du débit","limitation de debit","2FA","double authentification","MFA","throttling","limitation des tentatives"],"placeholder":"une mesure (en plus du hachage) qui freine les essais en masse : la … de débit / les tentatives","hints":["Le bourrage essaie des milliers de couples volés.","On peut plafonner le nombre d'essais par IP/compte.","La « … de débit » (rate limiting), ou une 2FA."],"link":{"href":"lecon-05.html","label":"Revoir « Le bourrage d'identifiants »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quel est le problème de ce code, et comment le corriger en une idée&nbsp;: <code>db.insert({ email, motDePasse })</code>&nbsp;?</p><details><summary>Voir une solution</summary><p>Il stocke le mot de passe <strong>en clair</strong>&nbsp;: une fuite de la base exposerait tous les comptes. Correction&nbsp;: stocker une <strong>empreinte hachée</strong> avec bcrypt/Argon2 au lieu du mot de passe&nbsp;: <code>const empreinte = await bcrypt.hash(motDePasse, 12); db.insert({ email, empreinte });</code></p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la vérification d'un mot de passe à la connexion avec bcrypt, en renvoyant <code>401</code> si l'identifiant est invalide.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const utilisateur = await db.utilisateurs.findOne({ email });
+const ok = utilisateur && await bcrypt.compare(motDePasse, utilisateur.empreinte);
+if (!ok) {
+  return reponse.status(401).json({ erreur: "identifiants invalides" });
+}
+// connexion réussie : créer la session...</code></pre></figure><p>On renvoie le <strong>même</strong> message que l'e-mail existe ou non, pour ne pas révéler quels comptes existent.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Cite deux mesures, en plus du hachage, qui rendent une attaque par <em>bourrage d'identifiants</em> (essayer en masse des couples e-mail/mot de passe fuités) beaucoup moins efficace.</p><details><summary>Voir une solution</summary><p>1) La <strong>limitation des tentatives</strong> (rate limiting)&nbsp;: après quelques échecs depuis une même source, ralentir ou bloquer temporairement, ce qui rend les essais en masse impraticables. 2) L'<strong>authentification à deux facteurs</strong>&nbsp;: même un couple e-mail/mot de passe valide ne suffit pas sans le second facteur. (On peut ajouter&nbsp;: détecter les connexions inhabituelles, vérifier les mots de passe contre des listes de fuites connues, et utiliser un CAPTCHA après plusieurs échecs.)</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

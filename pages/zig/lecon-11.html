@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>comptime en profondeur — Leçon 11 · Cours Zig — Syntaxe</title>
+    <meta name="description" content="Le trait distinctif de Zig : comptime. Fonctions génériques par types-paramètres, génération de code à la compilation, types anonymes, comparaison aux templates C++." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="zig" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Zig</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Zig en profondeur — Leçon 11</p>
+              <h1 class="lesson-header__title">comptime en profondeur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 10</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire des fonctions <strong>génériques</strong> avec <code>comptime T: type</code>&nbsp;;</li>
+                  <li>exécuter du code <strong>à la compilation</strong>&nbsp;;</li>
+                  <li>manipuler les types comme des valeurs&nbsp;;</li>
+                  <li>comparer comptime aux templates C++ et aux macros.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Si un seul trait définit Zig, c'est <strong>comptime</strong> (<em>compile-time</em>)&nbsp;: la capacité d'exécuter du code Zig <strong>pendant la compilation</strong>. Là où d'autres langages ont des macros (un langage à part) ou des templates (une syntaxe spéciale), Zig répond&nbsp;: «&nbsp;c'est le même langage, simplement exécuté plus tôt&nbsp;». De cette idée unique découlent la généricité, la génération de code et la métaprogrammation — sans nouvelle syntaxe à apprendre. Cette leçon approfondit ce qui fait la singularité de Zig.</p>
+
+<h2>L'idée&nbsp;: du Zig exécuté à la compilation</h2>
+<p>Le mot-clé <code>comptime</code> force l'évaluation d'une expression au moment de la compilation. Le résultat est alors une constante, calculée avant même que le programme ne tourne.</p>
+<figure class="code-block" data-file="comptime.zig"><pre><code class="language-clike">const std = @import("std");
+
+comptime {
+    // Ce bloc s'exécute pendant la COMPILATION
+    const carre = 7 * 7;   // calculé une fois, à la compilation
+    _ = carre;
+}
+
+// Une valeur connue à la compilation :
+const TAILLE = comptime blk: {
+    var n: usize = 1;
+    for (0..10) |_| n *= 2;   // boucle exécutée à la compilation
+    break :blk n;             // 1024
+};</code></pre></figure>
+<p>Ici, la boucle ne s'exécute <em>pas</em> à l'exécution&nbsp;: elle est déroulée par le compilateur, et <code>TAILLE</code> arrive dans le binaire comme la constante <code>1024</code>. Tout ce qui peut être calculé tôt l'est.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="comptime déplace le calcul dans le temps. À gauche, une zone « à la compilation » : la boucle for multiplie n par 2 dix fois, ce qui produit la constante TAILLE égale à 1024. Une flèche « compilé » mène à droite, une zone « à l'exécution » qui ne contient plus que la constante 1024, déjà calculée : aucune boucle ne tourne.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">comptime : le calcul a lieu AVANT l'exécution</text>
+    <rect class="d-frame" x="24" y="40" width="272" height="122" rx="10" /><text class="d-tag" x="42" y="60" font-size="11" font-family="monospace">à la compilation</text>
+    <rect class="d-box" x="44" y="72" width="232" height="30" rx="5" /><text class="d-text" x="160" y="91" text-anchor="middle" font-size="10" font-family="monospace">for (0..10) |_| n *= 2;</text>
+    <line class="d-line" x1="160" y1="102" x2="160" y2="120" marker-end="url(#z11a)" />
+    <rect class="d-accent" x="44" y="122" width="232" height="30" rx="5" /><text class="d-text" x="160" y="141" text-anchor="middle" font-size="10" font-family="monospace">TAILLE = 1024</text>
+    <line class="d-line" x1="296" y1="101" x2="344" y2="101" marker-end="url(#z11a)" /><text class="d-mut" x="320" y="94" text-anchor="middle" font-size="9">compilé</text>
+    <rect class="d-frame" x="346" y="40" width="270" height="122" rx="10" /><text class="d-tag" x="364" y="60" font-size="11" font-family="monospace">à l'exécution</text>
+    <rect class="d-box" x="366" y="86" width="230" height="34" rx="6" /><text class="d-text" x="481" y="107" text-anchor="middle" font-size="10" font-family="monospace">const TAILLE = 1024;</text>
+    <text class="d-mut" x="481" y="138" text-anchor="middle" font-size="9">déjà calculé — aucune boucle ne tourne</text>
+    <defs><marker id="z11a" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Le compilateur déroule la boucle&nbsp;; le binaire ne contient plus que le résultat, la constante <code>1024</code>.</figcaption>
+</figure>
+
+<h2>Les types sont des valeurs</h2>
+<p>Voici la clé qui débloque tout&nbsp;: en Zig, un <strong>type est une valeur</strong> de type <code>type</code>, manipulable à la compilation. On peut donc passer un type à une fonction, comme on passe un nombre.</p>
+<figure class="code-block" data-file="type-valeur.zig"><pre><code class="language-clike">const T1 = u32;          // un type rangé dans une constante
+const T2 = []const u8;   // un autre type (tranche d'octets)
+
+fn tailleDe(comptime T: type) usize {
+    return @sizeOf(T);   // taille du type, calculée à la compilation
+}
+
+// tailleDe(u32) vaut 4, tailleDe(u64) vaut 8 — résolus à la compilation</code></pre></figure>
+<p>Le paramètre <code>comptime T: type</code> reçoit un <em>type</em> connu à la compilation. C'est la brique des fonctions génériques.</p>
+
+<h2>Les fonctions génériques</h2>
+<p>Une fonction <strong>générique</strong> en Zig n'est qu'une fonction qui prend un <code>comptime T: type</code> et l'utilise. Le compilateur génère une version spécialisée pour chaque type appelé — sans syntaxe de template dédiée.</p>
+<figure class="code-block" data-file="generique.zig"><pre><code class="language-clike">fn max(comptime T: type, a: T, b: T) T {
+    return if (a &gt; b) a else b;
+}
+
+const x = max(i32, 3, 9);      // 9, version i32
+const y = max(f64, 2.5, 1.0);  // 2.5, version f64
+const z = max(u8, 200, 50);    // 200, version u8</code></pre></figure>
+<p>Une seule définition, spécialisée à la compilation pour chaque type. C'est l'équivalent des <em>templates</em> C++ ou des <em>generics</em> Rust, mais exprimé avec le langage lui-même.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Une fonction générique produit une version compilée par type. En haut, la définition fn max avec comptime T. Trois flèches descendent vers trois versions générées par le compilateur : max_i32 de 3 et 9 donne 9, max_f64 de 2.5 et 1.0 donne 2.5, max_u8 de 200 et 50 donne 200.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">Une définition → une version compilée par type</text>
+    <rect class="d-accent" x="212" y="38" width="216" height="38" rx="8" /><text class="d-text" x="320" y="62" text-anchor="middle" font-size="10" font-family="monospace">fn max(comptime T, a, b)</text>
+    <text class="d-mut" x="320" y="96" text-anchor="middle" font-size="9">le compilateur génère ↓</text>
+    <line class="d-line" x1="320" y1="76" x2="130" y2="118" marker-end="url(#z11b)" /><line class="d-line" x1="320" y1="76" x2="320" y2="118" marker-end="url(#z11b)" /><line class="d-line" x1="320" y1="76" x2="510" y2="118" marker-end="url(#z11b)" />
+    <rect class="d-box" x="42" y="120" width="176" height="48" rx="7" /><text class="d-text" x="130" y="140" text-anchor="middle" font-size="9" font-family="monospace">max_i32(3, 9)</text><text class="d-mut" x="130" y="157" text-anchor="middle" font-size="9">→ 9</text>
+    <rect class="d-box" x="232" y="120" width="176" height="48" rx="7" /><text class="d-text" x="320" y="140" text-anchor="middle" font-size="9" font-family="monospace">max_f64(2.5, 1.0)</text><text class="d-mut" x="320" y="157" text-anchor="middle" font-size="9">→ 2.5</text>
+    <rect class="d-box" x="422" y="120" width="176" height="48" rx="7" /><text class="d-text" x="510" y="140" text-anchor="middle" font-size="9" font-family="monospace">max_u8(200, 50)</text><text class="d-mut" x="510" y="157" text-anchor="middle" font-size="9">→ 200</text>
+    <defs><marker id="z11b" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Le même code source engendre autant de versions machine qu'il y a de types appelés&nbsp;: c'est la <em>monomorphisation</em>.</figcaption>
+</figure>
+
+<h2>Générer des types</h2>
+<p>Puisqu'une fonction peut <em>renvoyer</em> un type, on génère des types à la demande&nbsp;— c'est ainsi que sont écrites les structures de données génériques de la bibliothèque standard (par ex. <code>ArrayList(T)</code>).</p>
+<figure class="code-block" data-file="generer-type.zig"><pre><code class="language-clike">fn Paire(comptime T: type) type {
+    return struct {
+        premier: T,
+        second: T,
+    };
+}
+
+const PaireInt = Paire(i32);    // un type struct { premier: i32, second: i32 }
+const p = PaireInt{ .premier = 1, .second = 2 };</code></pre></figure>
+<p><code>Paire(i32)</code> <em>est</em> un type, construit à la compilation. C'est exactement ainsi que <code>std.ArrayList(T)</code> et les conteneurs génériques fonctionnent&nbsp;: une fonction qui prend un type et renvoie un type.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la bibliothèque standard de Zig</p><p>Ouvre le code de <code>std.ArrayList</code>&nbsp;: tu y trouves littéralement <code>pub fn ArrayList(comptime T: type) type { return struct { … }; }</code>. Chaque fois que tu écris <code>std.ArrayList(u8)</code> ou <code>std.AutoHashMap(i32, []const u8)</code>, tu <strong>appelles une fonction</strong> qui fabrique un type sur mesure à la compilation. Il n'y a pas de «&nbsp;mécanisme de generics&nbsp;» séparé dans le langage&nbsp;: les conteneurs de la stdlib sont de simples fonctions <code>comptime</code>. Cette uniformité est ce qui rend la stdlib de Zig si lisible — c'est du Zig ordinaire, que tu pourrais écrire toi-même.</p></div></div>
+
+<h2>comptime vs macros vs templates</h2>
+<p>La grande élégance&nbsp;: une seule notion remplace plusieurs mécanismes des autres langages.</p>
+<ul>
+  <li>Pas de <strong>macros</strong> (C, Rust)&nbsp;: pas de langage de macros à part, pas de préprocesseur&nbsp;; on écrit du Zig normal exécuté plus tôt.</li>
+  <li>Pas de syntaxe de <strong>templates</strong> (C++)&nbsp;: la généricité passe par des paramètres <code>comptime</code> ordinaires&nbsp;;</li>
+  <li>Les erreurs sont des erreurs Zig <em>normales</em>, lisibles, pas les messages cryptiques des templates C++.</li>
+</ul>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier que ce qui dépend d'un <code>comptime</code> doit être <strong>connaissable à la compilation</strong>. Tu ne peux pas choisir un type à partir d'une valeur lue au clavier&nbsp;: le type doit être fixé avant l'exécution. Si le compilateur se plaint qu'une valeur «&nbsp;doit être comptime-known&nbsp;», c'est que tu essaies de décider à l'exécution quelque chose qui doit l'être à la compilation. Sépare clairement ce qui est connu tôt (types, tailles) de ce qui ne l'est qu'à l'exécution (données).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>comptime permet l'<strong>introspection de types</strong> via <code>@typeInfo</code>&nbsp;: on peut, à la compilation, parcourir les champs d'un struct, leurs types, et générer du code en conséquence (sérialisation automatique, par exemple). C'est de la métaprogrammation complète — écrire du code qui inspecte et fabrique du code — mais en Zig ordinaire, vérifié par le compilateur. Une poignée d'idées simples (le type est une valeur, le code s'exécute à la compilation) suffit à remplacer tout l'arsenal macro/template des autres langages.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>comptime — mémo</caption>
+    <thead><tr><th scope="col">Écriture</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>comptime { … }</code></td><td>bloc exécuté à la compilation</td></tr>
+      <tr><td><code>comptime expr</code></td><td>force l'évaluation d'une expression à la compilation</td></tr>
+      <tr><td><code>comptime T: type</code></td><td>paramètre générique&nbsp;: reçoit un type</td></tr>
+      <tr><td><code>fn F(comptime T: type) type</code></td><td>fonction qui <em>renvoie</em> un type (ex. <code>ArrayList</code>)</td></tr>
+      <tr><td><code>@sizeOf(T)</code> · <code>@TypeOf(x)</code></td><td>taille d'un type · type d'une valeur (comptime)</td></tr>
+      <tr><td><code>@typeInfo(T)</code></td><td>introspection&nbsp;: champs, variantes, tailles d'un type</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt><code>comptime</code></dt><dd>Mot-clé qui force l'exécution de code Zig <strong>pendant la compilation</strong>&nbsp;; le résultat devient une constante placée dans le binaire.</dd>
+  <dt>Type comme valeur</dt><dd>En Zig, un type est une valeur de type <code>type</code>, que l'on peut ranger dans une constante et passer à une fonction (à la compilation).</dd>
+  <dt>Fonction générique</dt><dd>Fonction qui prend un <code>comptime T: type</code> et l'utilise&nbsp;; le compilateur en génère une version spécialisée par type appelé.</dd>
+  <dt>Monomorphisation</dt><dd>Génération d'une version machine distincte par type concret (ici <code>max_i32</code>, <code>max_f64</code>…), par opposition à une seule version «&nbsp;effacée&nbsp;».</dd>
+  <dt>comptime-known</dt><dd>Se dit d'une valeur connaissable à la compilation (un type, une taille)&nbsp;; ce qui en dépend ne peut pas être décidé à l'exécution.</dd>
+  <dt>Métaprogrammation</dt><dd>Écrire du code qui inspecte ou fabrique du code&nbsp;; en Zig, elle se fait en Zig ordinaire via <code>comptime</code> et <code>@typeInfo</code>, sans macros.</dd>
+  <dt><code>@typeInfo</code></dt><dd>Fonction intégrée qui expose la structure d'un type (ses champs, variantes, tailles) pour générer du code à la compilation.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>comptime</code> exécute du code Zig <strong>à la compilation</strong>&nbsp;; le résultat devient une constante.</li>
+  <li>Un <strong>type est une valeur</strong> de type <code>type</code>&nbsp;; un paramètre <code>comptime T: type</code> reçoit un type.</li>
+  <li>Les <strong>fonctions génériques</strong> prennent un <code>comptime T: type</code>&nbsp;; une fonction peut <strong>renvoyer un type</strong> (génériques comme <code>ArrayList(T)</code>).</li>
+  <li>Une seule notion remplace <strong>macros et templates</strong>&nbsp;: du Zig normal, exécuté plus tôt.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un paramètre <code>comptime T: type</code> ne peut-il pas dépendre d'une saisie au clavier&nbsp;?</li><li>Après un bloc <code>comptime</code> qui déroule une boucle, que contient le binaire&nbsp;?</li><li>Sur quoi reposent les conteneurs génériques de la stdlib comme <code>std.ArrayList</code>&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi ne peut-on pas choisir le type passé à comptime T: type d'après une valeur saisie au clavier ?","a":["Parce qu'un paramètre comptime doit être connu à la compilation, or une saisie n'existe qu'à l'exécution","Parce que ce serait trop lent à l'exécution","Parce que la syntaxe de Zig interdit les paramètres de type","Parce qu'un type ne peut jamais être rangé dans une variable"],"correct":0,"explain":"Un paramètre comptime T: type est résolu par le compilateur, avant que le programme ne tourne : il doit être « comptime-known ». Une valeur lue au clavier n'existe qu'à l'exécution, trop tard pour fixer un type. Sépare ce qui est connu tôt (types, tailles) de ce qui ne l'est qu'à l'exécution (les données)."},
+  {"q":"const TAILLE = comptime blk: { var n = 1; for (0..10) |_| n *= 2; break :blk n; }; — que contient le binaire pour TAILLE ?","a":["La constante 1024 déjà calculée : la boucle a été déroulée à la compilation, rien ne tourne à l'exécution","La boucle elle-même, réexécutée à chaque démarrage du programme","Une fonction qui recalcule n *= 2 au premier accès à TAILLE","Rien : TAILLE reste indéfini tant qu'on ne l'utilise pas"],"correct":0,"explain":"Le bloc comptime est évalué par le compilateur : la boucle est déroulée une fois, et seul son résultat (1024) est gravé dans le binaire. À l'exécution, TAILLE est une simple constante, sans aucune boucle ni calcul. Tout ce qui peut être calculé tôt l'est, pour un coût nul au runtime."},
+  {"q":"Qu'est-ce qui alimente les conteneurs génériques de la bibliothèque standard, comme std.ArrayList ?","a":["De simples fonctions comptime qui renvoient un type : il n'y a pas de mécanisme de generics séparé dans le langage","Un moteur de templates dédié, distinct du reste du langage","Un mot-clé generic réservé aux conteneurs de la stdlib","De la réflexion à l'exécution qui fabrique le type à la volée"],"correct":0,"explain":"std.ArrayList(T) est littéralement une fonction pub fn ArrayList(comptime T: type) type { return struct { … }; }. Les conteneurs de la stdlib ne reposent sur aucune machinerie à part : ce sont des fonctions comptime ordinaires. C'est ce qui rend la bibliothèque si lisible : du Zig que tu pourrais écrire toi-même."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+{"type":"text","accept":["42"],"placeholder":"La valeur de 21 * 2 (un nombre)","hints":["Constante calculée à la compilation.","21 multiplié par 2.","La réponse à tout, paraît-il."],"link":{"href":"lecon-11.html","label":"Revoir comptime"}},
+{"type":"text","accept":["anytype"],"placeholder":"Le type de paramètre générique : any…","hints":["identite accepte n'importe quel type d'argument.","Un seul mot, sans espace.","any + type."],"link":{"href":"lecon-11.html","label":"Revoir le générique"}},
+{"type":"text","accept":["[3]T"],"placeholder":"Le type « tableau de 3 éléments de T » : [..]T","hints":["En Zig la taille précède le type d'élément.","Tableau fixe de 3 cases.","Crochets avec 3 dedans, puis T."],"link":{"href":"lecon-11.html","label":"Revoir les types tableaux"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une constante <code>DOUBLE</code> calculée à la compilation, valant <code>21 * 2</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">const DOUBLE = 21 * 2;   // 42, évalué à la compilation</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction générique <code>identite</code> qui renvoie son argument, pour n'importe quel type.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn identite(comptime T: type, valeur: T) T {
+    return valeur;
+}
+// identite(i32, 5) -> 5</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction <code>Tableau3</code> qui, pour un type <code>T</code>, renvoie le type «&nbsp;tableau de 3 éléments de T&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn Tableau3(comptime T: type) type {
+    return [3]T;
+}
+// Tableau3(u8) est le type [3]u8</code></pre></figure></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+  </body>
+</html>

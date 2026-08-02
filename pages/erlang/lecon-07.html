@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OTP : behaviours et gen_server — Leçon 07 · Cours Erlang — Syntaxe</title>
+    <meta name="description" content="OTP, le cadre qui fait la force d'Erlang : les behaviours, le gen_server, et les arbres de supervision standardisés." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="erlang" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Erlang</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Erlang en pratique — Leçon 07</p>
+              <h1 class="lesson-header__title">OTP : behaviours et gen_server</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~55 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 6</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre ce qu'est <strong>OTP</strong>&nbsp;;</li>
+                  <li>utiliser un <strong>behaviour</strong> (motif générique)&nbsp;;</li>
+                  <li>écrire un <code>gen_server</code>&nbsp;;</li>
+                  <li>structurer une application en arbre de supervision.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu as construit des serveurs et entrevu la supervision «&nbsp;à la main&nbsp;». En pratique, on n'écrit presque jamais ce code soi-même&nbsp;: on s'appuie sur <strong>OTP</strong>, le cadre applicatif qui fait la vraie force d'Erlang. OTP fournit des <strong>behaviours</strong> — des squelettes éprouvés pour les patrons récurrents (serveur, superviseur, machine à états) — dans lesquels tu n'as qu'à remplir la logique métier. Le plus emblématique est le <strong>gen_server</strong>. Cette leçon t'y initie.</p>
+
+<h2>Qu'est-ce qu'OTP&nbsp;?</h2>
+<p><strong>OTP</strong> (Open Telecom Platform) est un ensemble de bibliothèques et de conventions livré avec Erlang. Malgré son nom télécom, il sert à <em>tout</em> système concurrent et fiable. OTP capture, sous forme réutilisable, des décennies d'expérience sur «&nbsp;comment construire un système qui ne tombe pas&nbsp;». En l'utilisant, tu hérites gratuitement de cette robustesse éprouvée.</p>
+
+<h2>Les behaviours&nbsp;: séparer le générique du spécifique</h2>
+<p>Un <strong>behaviour</strong> est un patron générique qui gère la «&nbsp;plomberie&nbsp;» (la boucle <code>receive</code>, la gestion des messages, les réponses, la supervision), et te laisse remplir seulement la <strong>logique métier</strong> via des fonctions de rappel (<em>callbacks</em>). C'est exactement la séparation qu'on a vue manuellement leçon 5 — mais standardisée et durcie.</p>
+<p>Les behaviours OTP principaux&nbsp;:</p>
+<ul>
+  <li><code>gen_server</code> — un serveur générique (le plus courant)&nbsp;;</li>
+  <li><code>supervisor</code> — un superviseur configurable&nbsp;;</li>
+  <li><code>gen_statem</code> — une machine à états&nbsp;;</li>
+  <li><code>application</code> — pour empaqueter et démarrer un système complet.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="Un behaviour sépare le générique du spécifique. À gauche, un grand cadre « fourni par OTP » liste la mécanique commune : la boucle de réception, la file des messages, le protocole question-réponse, les délais d'attente, l'arrêt et le redémarrage propres. À droite, un cadre « écrit par toi » liste les trois fonctions de rappel à remplir : init pour l'état initial, handle_call pour les requêtes synchrones, handle_cast pour les messages asynchrones. Les deux assemblés forment un gen_server complet.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un gen_server = la plomberie d'OTP + ta logique métier</text>
+    <rect class="d-box" x="24" y="40" width="270" height="150" rx="10" />
+    <text class="d-text" x="159" y="62" text-anchor="middle" font-size="10">Fourni par OTP (générique)</text>
+    <text class="d-mut" x="44" y="88" font-size="9">• la boucle de réception</text>
+    <text class="d-mut" x="44" y="108" font-size="9">• la file des messages</text>
+    <text class="d-mut" x="44" y="128" font-size="9">• le protocole question → réponse</text>
+    <text class="d-mut" x="44" y="148" font-size="9">• les délais d'attente (timeouts)</text>
+    <text class="d-mut" x="44" y="168" font-size="9">• l'arrêt et le redémarrage propres</text>
+    <text class="d-text" x="320" y="122" text-anchor="middle" font-size="22">+</text>
+    <rect class="d-accent" x="346" y="40" width="270" height="150" rx="10" />
+    <text class="d-text" x="481" y="62" text-anchor="middle" font-size="10">Écrit par toi (métier)</text>
+    <text class="d-tag" x="366" y="92" font-size="9.5">init/1 → état initial</text>
+    <text class="d-tag" x="366" y="122" font-size="9.5">handle_call/3 → avec réponse</text>
+    <text class="d-tag" x="366" y="152" font-size="9.5">handle_cast/2 → sans réponse</text>
+  </svg>
+  <figcaption>Le behaviour <code>gen_server</code> fournit une fois pour toutes la mécanique commune&nbsp;; tu n'écris que les <strong>callbacks</strong> propres à ton serveur. Moins de code, et une robustesse éprouvée par des décennies d'usage.</figcaption>
+</figure>
+
+<h2>Le <code>gen_server</code></h2>
+<p>Le <strong><code>gen_server</code></strong> remplace la boucle <code>receive</code> manuelle. Tu déclares <code>-behaviour(gen_server)</code>, et tu implémentes des callbacks. OTP appelle&nbsp;:</p>
+<ul>
+  <li><code>init/1</code> — pour fournir l'état initial&nbsp;;</li>
+  <li><code>handle_call/3</code> — pour les requêtes <strong>synchrones</strong> (avec réponse)&nbsp;;</li>
+  <li><code>handle_cast/2</code> — pour les messages <strong>asynchrones</strong> (sans réponse).</li>
+</ul>
+<figure class="code-block" data-file="compteur_serv.erl"><pre><code class="language-erlang">-module(compteur_serv).
+-behaviour(gen_server).
+-export([start_link/0, incr/0, lire/0]).
+-export([init/1, handle_call/3, handle_cast/2]).
+
+%% API publique (ce que les clients appellent)
+start_link() -&gt; gen_server:start_link({local, ?MODULE}, ?MODULE, 0, []).
+incr()       -&gt; gen_server:cast(?MODULE, incr).
+lire()       -&gt; gen_server:call(?MODULE, lire).
+
+%% Callbacks (la logique, OTP gère le reste)
+init(EtatInitial) -&gt; {ok, EtatInitial}.
+
+handle_cast(incr, Valeur) -&gt;
+    {noreply, Valeur + 1}.
+
+handle_call(lire, _De, Valeur) -&gt;
+    {reply, Valeur, Valeur}.</code></pre></figure>
+<p>Compare avec la leçon 5&nbsp;: plus de <code>receive</code>, plus de boucle récursive explicite, plus de gestion manuelle des PID et des réponses. Tu écris seulement <em>comment réagir</em> à chaque message&nbsp;; OTP fait tourner la machine. <code>?MODULE</code> est une macro qui vaut le nom du module courant.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le cycle d'un gen_server. Un client, à gauche, envoie une requête, call ou cast. Au centre, le gen_server tenu par OTP détient l'état et répartit le message vers le bon callback, à droite : handle_call pour un call, handle_cast pour un cast. Le callback renvoie un tuple qui met à jour l'état ; pour un call, une réponse repart vers le client ; pour un cast, aucune réponse.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">OTP fait tourner la boucle&nbsp;; tes callbacks décident quoi répondre</text>
+    <rect class="d-box" x="24" y="70" width="120" height="60" rx="9" /><text class="d-text" x="84" y="105" text-anchor="middle" font-size="10">client</text>
+    <rect class="d-accent" x="236" y="60" width="168" height="80" rx="10" /><text class="d-text" x="320" y="90" text-anchor="middle" font-size="10">gen_server (OTP)</text><text class="d-mut" x="320" y="112" text-anchor="middle" font-size="8.5">détient l'État</text>
+    <rect class="d-box" x="496" y="52" width="120" height="42" rx="8" /><text class="d-tag" x="556" y="78" text-anchor="middle" font-size="9">handle_call/3</text>
+    <rect class="d-box" x="496" y="108" width="120" height="42" rx="8" /><text class="d-tag" x="556" y="134" text-anchor="middle" font-size="9">handle_cast/2</text>
+    <path class="d-line" d="M144 90 L236 86" fill="none" /><text class="d-mut" x="190" y="78" text-anchor="middle" font-size="8">call / cast</text>
+    <path class="d-line" d="M404 84 L496 73" fill="none" /><path class="d-line" d="M404 110 L496 126" fill="none" /><text class="d-mut" x="452" y="158" text-anchor="middle" font-size="8">répartit</text>
+    <path class="d-line" d="M236 124 L144 118" fill="none" /><text class="d-tag" x="188" y="140" text-anchor="middle" font-size="7.5">{reply, Val, État}</text>
+  </svg>
+  <figcaption>Le <code>gen_server</code> reçoit, garde l'<strong>état</strong>, et délègue au bon callback. La valeur de retour (<code>{reply,…}</code> ou <code>{noreply,…}</code>) fixe la réponse et le nouvel état&nbsp;: tu ne gères plus jamais la boucle toi-même.</figcaption>
+</figure>
+
+<h2>call et cast&nbsp;: synchrone ou non</h2>
+<p>Deux façons de parler à un <code>gen_server</code>&nbsp;:</p>
+<ul>
+  <li><code>gen_server:call</code> — <strong>synchrone</strong>&nbsp;: on envoie une requête et on <em>attend</em> la réponse (traité par <code>handle_call</code>)&nbsp;;</li>
+  <li><code>gen_server:cast</code> — <strong>asynchrone</strong>&nbsp;: on envoie un message et on continue sans attendre (traité par <code>handle_cast</code>).</li>
+</ul>
+<p>OTP gère pour toi tout le protocole question/réponse qu'on construisait à la main avec <code>self()</code> et <code>receive</code>. C'est plus sûr (gestion des délais d'attente, des erreurs) et plus concis.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="call contre cast, sur une frise de temps. En haut, call, synchrone : le client envoie sa requête puis reste bloqué à attendre pendant que le serveur travaille, et ne repart qu'à la réception de la réponse. En bas, cast, asynchrone : le client envoie son message et continue immédiatement son travail, sans attendre de réponse.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Même serveur, deux façons de lui parler</text>
+    <text class="d-text" x="34" y="58" font-size="10">call</text><text class="d-mut" x="34" y="72" font-size="8">synchrone</text>
+    <line class="d-line" x1="120" y1="60" x2="600" y2="60" /><circle class="d-dot" cx="150" cy="60" r="4" />
+    <rect class="d-box" x="150" y="50" width="250" height="20" rx="4" /><text class="d-mut" x="275" y="64" text-anchor="middle" font-size="8">le client attend (bloqué)</text>
+    <circle class="d-dot" cx="400" cy="60" r="4" /><text class="d-tag" x="150" y="44" text-anchor="middle" font-size="7.5">call</text><text class="d-tag" x="400" y="44" text-anchor="middle" font-size="7.5">réponse</text>
+    <text class="d-text" x="34" y="128" font-size="10">cast</text><text class="d-mut" x="34" y="142" font-size="8">asynchrone</text>
+    <line class="d-line" x1="120" y1="130" x2="600" y2="130" /><circle class="d-dot" cx="150" cy="130" r="4" />
+    <text class="d-tag" x="150" y="116" text-anchor="middle" font-size="7.5">cast</text>
+    <text class="d-mut" x="380" y="124" text-anchor="middle" font-size="8">le client continue aussitôt (aucune attente)</text>
+  </svg>
+  <figcaption>Choisis selon le besoin&nbsp;: <code>call</code> quand il te faut le <strong>résultat</strong> (au prix de l'attente), <code>cast</code> quand tu veux seulement <strong>déclencher</strong> une action sans réponse.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Un <code>gen_server</code> a deux autres callbacks utiles&nbsp;: <code>handle_info/2</code> reçoit les messages «&nbsp;hors protocole&nbsp;» (un <code>{'DOWN', …}</code> d'un moniteur, un message brut envoyé avec <code>!</code>), et <code>terminate/2</code> permet de faire le ménage avant l'arrêt (fermer un fichier, une connexion). Ne mets jamais un traitement <strong>long</strong> dans <code>handle_call</code>&nbsp;: tant qu'il tourne, le serveur ne répond à personne d'autre. Délègue le gros du travail à un processus dédié.</p></div></div>
+
+<h2>Les superviseurs OTP</h2>
+<p>De même, le behaviour <code>supervisor</code> remplace le superviseur manuel de la leçon 6. On déclare ses enfants et une <strong>stratégie de redémarrage</strong>, et OTP applique la logique de résilience éprouvée.</p>
+<figure class="code-block" data-file="strategie.erl"><pre><code class="language-erlang">% Stratégies de redémarrage courantes :
+% one_for_one  : redémarrer seulement l'enfant mort
+% one_for_all  : redémarrer tous les enfants si un meurt
+% rest_for_one : redémarrer le mort et ceux démarrés après lui</code></pre></figure>
+<p>On choisit la stratégie selon les dépendances entre enfants. C'est de la configuration, pas du code de bas niveau&nbsp;: OTP a déjà écrit, testé et durci la mécanique.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le serveur de messagerie <strong>ejabberd</strong> (le logiciel XMPP qui a été au cœur des débuts de WhatsApp) modélise <em>chaque session utilisateur connectée</em> comme un <code>gen_server</code> supervisé. Gérer des millions d'utilisateurs en ligne revient alors à faire tourner des millions de petits <code>gen_server</code> indépendants, chacun avec son état, chacun relançable seul en cas de pépin. Sans OTP, écrire et durcir à la main cette boucle serveur — répétée des millions de fois — serait interminable et truffé de bugs. Le behaviour transforme un problème colossal en une brique standard, réutilisée partout.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir tout écrire «&nbsp;à la main&nbsp;» avec <code>spawn</code> et <code>receive</code> pour un vrai système. C'est formateur pour comprendre (leçons 4-6), mais en production, <strong>utilise toujours OTP</strong>&nbsp;: il gère des subtilités que tu oublierais (délais d'attente, ordre d'arrêt, fuites, redémarrages en cascade). Réinventer un <code>gen_server</code> maison, c'est se priver de décennies de robustesse éprouvée — et introduire des bugs déjà résolus.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Une <strong>application OTP</strong> complète est un arbre de supervision empaqueté, avec un point de démarrage et des dépendances déclarées. C'est l'unité de déploiement standard en Erlang (et en Elixir). Des systèmes comme la base de données distribuée <strong>Riak</strong> ou le broker de messages <strong>RabbitMQ</strong> sont entièrement bâtis sur OTP&nbsp;: des arbres de supervision imbriqués de <code>gen_server</code>. Maîtriser OTP, c'est tenir la vraie clé de l'ingénierie Erlang.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — OTP &amp; gen_server</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Écriture</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td>Déclarer le behaviour</td><td><code>-behaviour(gen_server).</code></td><td>hériter de la mécanique OTP</td></tr>
+      <tr><td>Démarrer (lié)</td><td><code>gen_server:start_link(…)</code></td><td>lancer + superviser</td></tr>
+      <tr><td>État initial</td><td><code>init/1</code> → <code>{ok, État}</code></td><td>appelé une fois au départ</td></tr>
+      <tr><td>Requête synchrone</td><td><code>gen_server:call</code> → <code>handle_call/3</code></td><td>attend <code>{reply, R, État}</code></td></tr>
+      <tr><td>Message asynchrone</td><td><code>gen_server:cast</code> → <code>handle_cast/2</code></td><td>rend <code>{noreply, État}</code></td></tr>
+      <tr><td>Message hors protocole</td><td><code>handle_info/2</code></td><td><code>!</code>, <code>{'DOWN',…}</code>…</td></tr>
+      <tr><td>Superviseur</td><td><code>-behaviour(supervisor)</code></td><td>relance les enfants</td></tr>
+      <tr><td>Stratégie</td><td><code>one_for_one</code> · <code>one_for_all</code> · <code>rest_for_one</code></td><td>qui redémarrer</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>OTP</dt><dd>Ensemble de bibliothèques et de conventions livré avec Erlang pour bâtir des systèmes concurrents et fiables.</dd>
+  <dt>Behaviour</dt><dd>Patron générique (ex. <code>gen_server</code>, <code>supervisor</code>) qui fournit la mécanique commune&nbsp;; on ne remplit que les callbacks.</dd>
+  <dt>Callback</dt><dd>Fonction de rappel que <em>tu</em> écris et qu'OTP appelle au bon moment (ex. <code>init</code>, <code>handle_call</code>).</dd>
+  <dt>gen_server</dt><dd>Le behaviour de serveur générique&nbsp;: remplace la boucle <code>receive</code> manuelle par des callbacks.</dd>
+  <dt>handle_call/3</dt><dd>Callback des requêtes <strong>synchrones</strong>&nbsp;; renvoie <code>{reply, Réponse, État}</code>.</dd>
+  <dt>handle_cast/2</dt><dd>Callback des messages <strong>asynchrones</strong> (sans réponse)&nbsp;; renvoie <code>{noreply, État}</code>.</dd>
+  <dt>supervisor</dt><dd>Behaviour dont le rôle est de surveiller des enfants et de les redémarrer selon une stratégie.</dd>
+  <dt>Stratégie de redémarrage</dt><dd>Règle qui dit quels processus relancer quand un enfant meurt (<code>one_for_one</code>, <code>one_for_all</code>, <code>rest_for_one</code>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>OTP</strong> fournit des patrons éprouvés (behaviours) pour bâtir des systèmes fiables.</li>
+  <li>Un <strong>behaviour</strong> gère la plomberie&nbsp;; tu remplis la logique via des <strong>callbacks</strong>.</li>
+  <li><code>gen_server</code>&nbsp;: <code>init</code> (état), <code>handle_call</code> (synchrone), <code>handle_cast</code> (asynchrone).</li>
+  <li><code>supervisor</code> redémarre les enfants selon une <strong>stratégie</strong> (<code>one_for_one</code>…).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Qu'est-ce qu'un behaviour OTP&nbsp;?</li><li>Quelle différence entre <code>call</code> et <code>cast</code>&nbsp;?</li><li>Que choisit-on avec une stratégie de redémarrage&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un behaviour OTP ?","a":["Un patron réutilisable (ex. gen_server, supervisor) qui fournit la logique générique (boucle, gestion des messages, supervision) ; on n'écrit que les callbacks spécifiques au métier","Un type de données","Un opérateur","Un fichier de configuration"],"correct":0,"explain":"Les behaviours OTP encapsulent les schémas éprouvés de processus (serveur générique, superviseur, machine à états). Le cadre gère la mécanique commune et l'on fournit seulement les fonctions de rappel propres à son application."},
+  {"q":"Quelle différence entre call et cast ?","a":["call est synchrone (le client attend la réponse) ; cast est asynchrone (envoi sans attendre de réponse)","C'est l'inverse","Les deux attendent une réponse","Les deux sont asynchrones"],"correct":0,"explain":"Avec un gen_server, call envoie une requête et bloque jusqu'à la réponse, utile quand on a besoin du résultat. cast envoie sans attendre, pour un effet « tire et oublie » qui ne renvoie rien."},
+  {"q":"Que choisit-on avec une stratégie de redémarrage ?","a":["Comment le superviseur réagit quand un enfant plante : quels processus redémarrer (one_for_one, one_for_all, rest_for_one)","La vitesse du processus","La taille de la mémoire","Le nom du module"],"correct":0,"explain":"La stratégie définit la portée du redémarrage : one_for_one relance seulement l'enfant fautif, one_for_all relance tous les enfants, rest_for_one relance le fautif et ceux démarrés après lui. On l'adapte aux dépendances entre processus."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["handle_call","handle_call/3"],"placeholder":"le callback d'un gen_server qui traite une requête SYNCHRONE : …","hints":["Répond avec {reply, Reponse, Etat}.","Son pendant asynchrone est handle_cast.","handle_c???"],"link":{"href":"lecon-07.html","label":"Revoir « gen_server »"}},
+  {"type":"text","accept":["cast","gen_server:cast"],"placeholder":"la fonction pour envoyer un message ASYNCHRONE à un gen_server (incr/0) : gen_server:…","hints":["gen_server:????(?MODULE, incr).","Pas de réponse attendue.","Quatre lettres."],"link":{"href":"lecon-07.html","label":"Revoir « cast »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Quel callback d'un <code>gen_server</code> traite une requête synchrone&nbsp;?</p><details><summary>Voir une solution</summary><p><code>handle_call/3</code> (déclenché par <code>gen_server:call</code>).</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la fonction d'API <code>incr/0</code> qui envoie un cast <code>incr</code> au serveur enregistré sous <code>?MODULE</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.erl"><pre><code class="language-erlang">incr() -&gt; gen_server:cast(?MODULE, incr).</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En une phrase, explique l'intérêt d'un behaviour par rapport à une boucle <code>receive</code> écrite à la main.</p><details><summary>Voir une solution</summary><p>Un behaviour <strong>sépare le générique du spécifique</strong>&nbsp;: il fournit une fois pour toutes la mécanique commune (boucle de réception, protocole de réponse, gestion des délais et des arrêts), durcie par des années d'usage, et te laisse n'écrire que la logique métier propre à ton serveur (les callbacks). On gagne en concision, en sûreté et en cohérence, tout en évitant de réintroduire des bugs déjà résolus dans la version manuelle.</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-erlang.min.js" defer></script>
+  </body>
+</html>

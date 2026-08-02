@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ConfigMaps & Secrets — Leçon 05 · Syntaxe</title>
+    <meta name="description" content="Externaliser la configuration dans Kubernetes : ConfigMaps pour les réglages non sensibles, Secrets pour les données sensibles, et leur injection dans les pods (variables d'environnement ou volumes)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="kubernetes" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Kubernetes</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 02 · Réseau & configuration — Leçon 05</p>
+              <h1 class="lesson-header__title">ConfigMaps & Secrets</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~33 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 04</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>séparer la <strong>configuration</strong> du code de l'image&nbsp;;</li>
+                  <li>créer une <strong>ConfigMap</strong> pour les réglages non sensibles&nbsp;;</li>
+                  <li>créer un <strong>Secret</strong> pour les données sensibles&nbsp;;</li>
+                  <li>les <strong>injecter</strong> dans un pod (variables d'environnement ou fichiers).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une bonne image de conteneur ne contient <strong>pas</strong> sa configuration : ni l'URL de la base, ni les mots de passe. On veut la même image en test et en production, configurée différemment. Kubernetes sépare cela avec les <strong>ConfigMaps</strong> et les <strong>Secrets</strong>.</p>
+
+<h2>Pourquoi externaliser la configuration ?</h2>
+<p>Mettre la config dans l'image, c'est devoir reconstruire une image à chaque changement de réglage, et risquer d'y enfermer un mot de passe. La bonne pratique : une image <strong>générique</strong>, et la configuration <strong>injectée</strong> au lancement. On peut alors déployer la même image partout, avec des valeurs adaptées à chaque environnement.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Une seule image, configurée par environnement. Au centre à gauche, l'image générique mon-app:1.0. Deux flèches partent vers deux environnements. En haut, l'environnement de test reçoit une ConfigMap avec APP_ENV=dev et un Secret avec le mot de passe de test. En bas, l'environnement de production reçoit une ConfigMap avec APP_ENV=prod et un Secret avec le mot de passe de production. La même image tourne partout ; seule la configuration injectée au lancement change.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Même image partout, configuration injectée au lancement</text>
+    <rect class="d-accent" x="20" y="80" width="150" height="52" rx="8" />
+    <text class="d-tag" x="95" y="102" text-anchor="middle" font-size="11">mon-app:1.0</text>
+    <text class="d-mut" x="95" y="118" text-anchor="middle" font-size="8.5">image générique</text>
+    <line class="d-line" x1="170" y1="98" x2="250" y2="60" /><path class="d-line" d="M243 56 L251 60 L243 64" fill="none" />
+    <line class="d-line" x1="170" y1="114" x2="250" y2="152" /><path class="d-line" d="M243 148 L251 152 L243 156" fill="none" />
+    <rect class="d-frame" x="254" y="38" width="366" height="52" rx="8" />
+    <text class="d-label" x="272" y="58" text-anchor="start" font-size="10">test</text>
+    <rect class="d-box" x="330" y="46" width="130" height="36" rx="5" />
+    <text class="d-tag" x="395" y="62" text-anchor="middle" font-size="9">ConfigMap</text>
+    <text class="d-mut" x="395" y="75" text-anchor="middle" font-size="8">APP_ENV=dev</text>
+    <rect class="d-box" x="470" y="46" width="140" height="36" rx="5" />
+    <text class="d-tag" x="540" y="62" text-anchor="middle" font-size="9">Secret</text>
+    <text class="d-mut" x="540" y="75" text-anchor="middle" font-size="8">mot de passe test</text>
+    <rect class="d-frame" x="254" y="122" width="366" height="52" rx="8" />
+    <text class="d-label" x="272" y="142" text-anchor="start" font-size="10">prod</text>
+    <rect class="d-box" x="330" y="130" width="130" height="36" rx="5" />
+    <text class="d-tag" x="395" y="146" text-anchor="middle" font-size="9">ConfigMap</text>
+    <text class="d-mut" x="395" y="159" text-anchor="middle" font-size="8">APP_ENV=prod</text>
+    <rect class="d-box" x="470" y="130" width="140" height="36" rx="5" />
+    <text class="d-tag" x="540" y="146" text-anchor="middle" font-size="9">Secret</text>
+    <text class="d-mut" x="540" y="159" text-anchor="middle" font-size="8">mot de passe prod</text>
+  </svg>
+  <figcaption>Une seule image livrée&nbsp;: la ConfigMap et le Secret propres à chaque environnement sont injectés au démarrage.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">ConfigMap ou Secret ?</p><p><strong>ConfigMap</strong> = données <em>non sensibles</em> (URL, nom d'environnement, options). <strong>Secret</strong> = données <em>sensibles</em> (mots de passe, clés d'API, jetons). Même usage, mais le Secret est traité avec plus de précautions.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="ConfigMap ou Secret. Deux colonnes comparées. À gauche, la ConfigMap contient des données non sensibles : URL de la base, options, taille de page ; elles sont stockées en clair. À droite, le Secret contient des données sensibles : mots de passe, clés d'API, jetons ; elles sont encodées en base64 et doivent être protégées. Le choix dépend de la sensibilité de la donnée.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Selon la sensibilité de la donnée</text>
+    <rect class="d-box" x="24" y="40" width="280" height="118" rx="8" />
+    <text class="d-tag" x="164" y="64" text-anchor="middle" font-size="12">ConfigMap</text>
+    <text class="d-mut" x="164" y="84" text-anchor="middle" font-size="9">données NON sensibles</text>
+    <text class="d-mut" x="164" y="102" text-anchor="middle" font-size="9">URL · options · taille de page</text>
+    <text class="d-mut" x="164" y="120" text-anchor="middle" font-size="9">stockées en clair</text>
+    <text class="d-mut" x="164" y="140" text-anchor="middle" font-size="9">lisibles sans risque</text>
+    <rect class="d-accent" x="336" y="40" width="280" height="118" rx="8" />
+    <text class="d-tag" x="476" y="64" text-anchor="middle" font-size="12">Secret</text>
+    <text class="d-mut" x="476" y="84" text-anchor="middle" font-size="9">données sensibles</text>
+    <text class="d-mut" x="476" y="102" text-anchor="middle" font-size="9">mots de passe · clés · jetons</text>
+    <text class="d-mut" x="476" y="120" text-anchor="middle" font-size="9">encodées en base64</text>
+    <text class="d-mut" x="476" y="140" text-anchor="middle" font-size="9">à protéger absolument</text>
+  </svg>
+  <figcaption>Même mécanisme, deux objets&nbsp;: la nature de la donnée décide entre <code>ConfigMap</code> (en clair) et <code>Secret</code> (à protéger).</figcaption>
+</figure>
+
+<h2>Une ConfigMap</h2>
+<p>Une <strong>ConfigMap</strong> stocke des paires clé/valeur de configuration&nbsp;:</p>
+<figure class="code-block" data-file="configmap.yaml"><pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_ENV: "production"
+  PAGE_SIZE: "25"</code></pre></figure>
+<p>On l'injecte dans le conteneur comme <strong>variables d'environnement</strong>&nbsp;:</p>
+<figure class="code-block" data-file="pod-extrait.yaml"><pre><code class="language-yaml">    spec:
+      containers:
+        - name: app
+          image: mon-app:1.0
+          envFrom:
+            - configMapRef:
+                name: app-config   # toutes les clés deviennent des variables</code></pre></figure>
+
+<h2>Un Secret</h2>
+<p>Un <strong>Secret</strong> se définit pareillement, mais pour des valeurs sensibles. Le plus simple est de le créer en ligne de commande, qui s'occupe de l'encodage&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl create secret generic db-secret \
+  --from-literal=DB_PASSWORD=monMotDePasse</code></pre></figure>
+<p>Puis on injecte une clé précise dans le conteneur&nbsp;:</p>
+<figure class="code-block" data-file="pod-extrait.yaml"><pre><code class="language-yaml">          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un Secret n'est pas chiffré par défaut</p><p>Les Secrets sont seulement encodés en <strong>base64</strong>, pas chiffrés : quiconque peut les lire avec <code>kubectl get secret -o yaml</code> et un décodage base64. Active le chiffrement au repos côté cluster et ne commite <strong>jamais</strong> un Secret en clair dans Git.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — les bots scannent GitHub en secondes</p><p>Des développeurs poussent régulièrement par erreur une clé d'API ou un mot de passe dans un dépôt <strong>public</strong> sur GitHub. Des bots automatisés surveillent en permanence les nouveaux commits et <strong>repèrent ces secrets en quelques secondes</strong> — souvent avant même qu'on réalise l'erreur. Les clés cloud volées servent alors à lancer des serveurs (minage, spam), et la victime découvre une <strong>facture de plusieurs milliers d'euros</strong>. Retirer le commit ne suffit pas&nbsp;: le secret reste dans l'historique Git. La seule bonne réponse est de le <strong>révoquer immédiatement</strong>. D'où la règle&nbsp;: on ne commite jamais un Secret, et <code>base64</code> n'étant pas du chiffrement, un fichier «&nbsp;encodé&nbsp;» reste tout aussi dangereux.</p></div></div>
+
+<h2>Injecter comme fichiers (volume)</h2>
+<p>Au lieu de variables, on peut <strong>monter</strong> une ConfigMap ou un Secret comme des fichiers dans le conteneur — pratique pour un fichier de configuration complet (ex. <code>nginx.conf</code>) ou un certificat.</p>
+<figure class="code-block" data-file="montage.yaml"><pre><code class="language-yaml">      volumes:
+        - name: config-vol
+          configMap:
+            name: app-config
+      containers:
+        - name: app
+          image: mon-app:1.0
+          volumeMounts:
+            - name: config-vol
+              mountPath: /etc/app   # les clés apparaissent comme fichiers</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Deux façons d'injecter la config à partir d'une même ConfigMap ou Secret. À gauche, l'injection comme variables d'environnement : avec envFrom ou valueFrom, chaque clé devient une variable disponible dans le processus du conteneur, par exemple APP_ENV et PAGE_SIZE. À droite, le montage comme fichiers via un volume : chaque clé devient un fichier dans un répertoire du conteneur, par exemple /etc/app/APP_ENV et /etc/app/PAGE_SIZE, ce qui convient à un fichier de configuration complet.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux façons d'injecter la même config</text>
+    <rect class="d-accent" x="230" y="34" width="180" height="40" rx="6" />
+    <text class="d-tag" x="320" y="52" text-anchor="middle" font-size="10">ConfigMap / Secret</text>
+    <text class="d-mut" x="320" y="66" text-anchor="middle" font-size="8">APP_ENV · PAGE_SIZE</text>
+    <line class="d-line" x1="300" y1="74" x2="170" y2="104" /><path class="d-line" d="M177 99 L168 104 L179 107" fill="none" />
+    <line class="d-line" x1="340" y1="74" x2="470" y2="104" /><path class="d-line" d="M461 99 L472 104 L463 107" fill="none" />
+    <rect class="d-frame" x="24" y="108" width="272" height="90" rx="8" />
+    <text class="d-tag" x="160" y="128" text-anchor="middle" font-size="10">variables d'environnement</text>
+    <text class="d-mut" x="160" y="144" text-anchor="middle" font-size="8.5">envFrom / valueFrom</text>
+    <rect class="d-box" x="44" y="154" width="232" height="34" rx="5" />
+    <text class="d-mut" x="160" y="170" text-anchor="middle" font-size="8.5">dans le conteneur&nbsp;:</text>
+    <text class="d-tag" x="160" y="183" text-anchor="middle" font-size="8.5">APP_ENV=prod  PAGE_SIZE=25</text>
+    <rect class="d-frame" x="344" y="108" width="272" height="90" rx="8" />
+    <text class="d-tag" x="480" y="128" text-anchor="middle" font-size="10">fichiers (montage volume)</text>
+    <text class="d-mut" x="480" y="144" text-anchor="middle" font-size="8.5">volumeMounts · mountPath</text>
+    <rect class="d-box" x="364" y="154" width="232" height="34" rx="5" />
+    <text class="d-tag" x="480" y="170" text-anchor="middle" font-size="8.5">/etc/app/APP_ENV</text>
+    <text class="d-tag" x="480" y="183" text-anchor="middle" font-size="8.5">/etc/app/PAGE_SIZE</text>
+  </svg>
+  <figcaption>La même ConfigMap (ou le même Secret) peut arriver en <strong>variables</strong> lues par le processus, ou en <strong>fichiers</strong> montés — utile pour un fichier de config entier.</figcaption>
+</figure>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Mettre un secret dans une ConfigMap.</strong> Les données sensibles vont dans un Secret, jamais en clair.</li>
+<li><strong>Croire qu'un Secret est chiffré.</strong> Il est seulement encodé base64 : protège-le (RBAC, chiffrement au repos, hors de Git).</li>
+<li><strong>Oublier de redémarrer.</strong> Modifier une ConfigMap ne met pas toujours à jour les pods déjà lancés : refais un <code>rollout restart</code> si nécessaire.</li>
+<li><strong>Tout injecter en variables.</strong> Pour un fichier de config entier, le montage en volume est plus adapté.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>Pour une gestion plus robuste des secrets, on utilise souvent des outils externes (gestionnaire de secrets du cloud, ou des opérateurs dédiés) qui injectent les valeurs sans jamais les stocker en clair dans le cluster. Le principe reste le même : l'application lit sa config par variables ou fichiers.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Cette séparation config/code est l'un des principes de la méthode « Twelve-Factor App », une référence pour concevoir des applications portables et déployables sereinement.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — ConfigMaps &amp; Secrets</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>kubectl create configmap app-config --from-literal=…</code></td><td>créer une ConfigMap (données non sensibles)</td></tr>
+      <tr><td><code>kubectl create secret generic db-secret --from-literal=…</code></td><td>créer un Secret (l'encodage est automatique)</td></tr>
+      <tr><td><code>envFrom</code> + <code>configMapRef</code></td><td>injecter TOUTES les clés comme variables d'environnement</td></tr>
+      <tr><td><code>valueFrom</code> + <code>secretKeyRef</code></td><td>injecter UNE clé de Secret comme variable</td></tr>
+      <tr><td><code>volumes</code> + <code>volumeMounts</code></td><td>monter les clés comme fichiers (ex. <code>/etc/app</code>)</td></tr>
+      <tr><td><code>kubectl get secret db-secret -o yaml</code></td><td>lire un Secret (valeurs en base64, décodables)</td></tr>
+      <tr><td>base64 ≠ chiffrement</td><td>un Secret est encodé, pas chiffré&nbsp;: à protéger, jamais dans Git</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>ConfigMap</dt><dd>Objet Kubernetes stockant des paires clé/valeur de configuration <strong>non sensible</strong> (URL, options), en clair.</dd>
+  <dt>Secret</dt><dd>Objet Kubernetes pour les données <strong>sensibles</strong> (mots de passe, clés d'API, jetons)&nbsp;; même usage qu'une ConfigMap mais traité avec plus de précautions.</dd>
+  <dt>base64</dt><dd>Encodage qui représente des données binaires en texte&nbsp;; <strong>ce n'est pas un chiffrement</strong>&nbsp;: n'importe qui peut décoder la valeur.</dd>
+  <dt>Variable d'environnement</dt><dd>Valeur nommée fournie au processus du conteneur au démarrage&nbsp;; l'application la lit directement.</dd>
+  <dt>Volume / montage</dt><dd>Rattachement d'une ConfigMap ou d'un Secret dans le système de fichiers du conteneur&nbsp;: chaque clé devient un fichier (via <code>volumeMounts</code> et <code>mountPath</code>).</dd>
+  <dt>envFrom</dt><dd>Champ qui expose <strong>toutes</strong> les clés d'une ConfigMap (ou d'un Secret) comme variables d'environnement d'un coup.</dd>
+  <dt>valueFrom / secretKeyRef</dt><dd>Manière d'injecter <strong>une seule</strong> clé (souvent d'un Secret) dans une variable d'environnement précise.</dd>
+  <dt>Chiffrement au repos</dt><dd>Chiffrement des données stockées côté cluster (etcd)&nbsp;; à activer pour que les Secrets ne soient pas lisibles en clair sur le disque.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>On garde la config <strong>hors de l'image</strong> et on l'injecte au lancement.</li>
+<li><strong>ConfigMap</strong> = réglages non sensibles ; <strong>Secret</strong> = données sensibles.</li>
+<li>Injection en <strong>variables d'environnement</strong> (<code>envFrom</code>/<code>valueFrom</code>) ou en <strong>fichiers</strong> (volume).</li>
+<li>Un Secret est <strong>encodé base64</strong>, pas chiffré : protège-le.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la différence entre une ConfigMap et un Secret ?</li><li>Un Secret est-il chiffré par défaut ?</li><li>Cite deux façons d'injecter une configuration dans un pod.</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre une ConfigMap et un Secret ?","a":["La ConfigMap stocke des données non sensibles ; le Secret stocke des données sensibles (mots de passe, clés), traitées avec plus de précautions","Aucune, ce sont des synonymes","La ConfigMap est chiffrée, pas le Secret","Le Secret ne peut contenir qu'une seule clé"],"correct":0,"explain":"Même mécanisme d'injection, mais la ConfigMap est pour la config ordinaire et le Secret pour les valeurs sensibles."},
+  {"q":"Un Secret Kubernetes est-il chiffré par défaut ?","a":["Non : il est seulement encodé en base64 ; il faut activer le chiffrement au repos et le protéger (RBAC, hors de Git)","Oui, avec une clé forte automatiquement","Oui, mais seulement en production","Non, et on ne peut rien y faire"],"correct":0,"explain":"L'encodage base64 n'est pas du chiffrement : n'importe qui avec les droits de lecture peut décoder un Secret. On le protège par le contrôle d'accès et le chiffrement au repos."},
+  {"q":"Quelles sont deux façons d'injecter une configuration dans un conteneur ?","a":["Comme variables d'environnement (envFrom/valueFrom) ou comme fichiers montés via un volume","Uniquement en recompilant l'image","Par e-mail au cluster","En la codant en dur dans le Dockerfile"],"correct":0,"explain":"On peut exposer les clés en variables d'environnement, ou monter la ConfigMap/Secret comme des fichiers dans le conteneur (utile pour un fichier de config entier)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["configmap","config map","config-map"],"placeholder":"l'objet pour stocker de la configuration NON sensible","hints":["Config + Map.","Pas pour les mots de passe.","kind: ConfigMap."],"link":{"href":"lecon-05.html","label":"Revoir « Une ConfigMap »"}},
+  {"type":"text","accept":["secret","un secret","le secret"],"placeholder":"l'objet pour stocker un mot de passe ou une clé d'API","hints":["Pour les données sensibles.","kind: Secret.","Six lettres."],"link":{"href":"lecon-05.html","label":"Revoir « Un Secret »"}},
+  {"type":"text","accept":["base64","base 64"],"placeholder":"l'encodage (pas un chiffrement !) utilisé par les Secrets","hints":["Ce n'est PAS du chiffrement.","Un encodage très courant.","base__."],"link":{"href":"lecon-05.html","label":"Revoir « Un Secret n'est pas chiffré »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un Secret nommé <code>db-secret</code> contenant <code>DB_PASSWORD=secret123</code> en ligne de commande.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl create secret generic db-secret \
+  --from-literal=DB_PASSWORD=secret123</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu as une ConfigMap <code>app-config</code> avec plusieurs clés. Comment exposer toutes ses clés comme variables d'environnement d'un conteneur ?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="pod-extrait.yaml"><pre><code class="language-yaml">          envFrom:
+            - configMapRef:
+                name: app-config</code></pre></figure><p><code>envFrom</code> + <code>configMapRef</code> transforme chaque clé de la ConfigMap en variable d'environnement.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue propose de committer le fichier <code>secret.yaml</code> (avec le mot de passe en base64) dans le dépôt Git « puisque c'est encodé ». Que réponds-tu&nbsp;?</p><details><summary>Voir une solution</summary><p>Mauvaise idée : <strong>base64 n'est pas du chiffrement</strong>, n'importe qui peut décoder la valeur instantanément. Committer ce fichier expose le mot de passe à toute personne ayant accès au dépôt et à son historique. On garde les secrets hors de Git (variables d'environnement de CI, gestionnaire de secrets, fichiers ignorés), et on active le chiffrement au repos côté cluster.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

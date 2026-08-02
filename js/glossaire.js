@@ -1,0 +1,95 @@
+/* =============================================================================
+   glossaire.js — Glossaire général interactif (R5, Lot 3). Réunit tous les
+   termes des 65 glossaires (réutilise js/flashcards-data.js → window.FLASHCARDS)
+   avec recherche instantanée (insensible aux accents) et filtre par cours.
+   100 % file://. Page : pages/glossaire.html.
+   ============================================================================= */
+(function () {
+  "use strict";
+
+  var CARDS = window.FLASHCARDS || [];
+  var searchEl = document.getElementById("gl-search");
+  var courseEl = document.getElementById("gl-course");
+  var listEl = document.getElementById("gl-list");
+  var countEl = document.getElementById("gl-count");
+  if (!listEl || !CARDS.length) {
+    if (listEl) listEl.innerHTML = '<p class="gl-empty">Glossaire indisponible.</p>';
+    return;
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function norm(s) {
+    return String(s || "")
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function stripTags(s) {
+    return String(s || "").replace(/<[^>]*>/g, "");
+  }
+
+  /* Index de recherche pré-calculé (terme + définition normalisés). */
+  var ITEMS = CARDS.map(function (c) {
+    return {
+      c: c.c,
+      ct: c.ct,
+      t: c.t,
+      d: c.d,
+      key: norm(c.t) + " " + norm(stripTags(c.d)),
+    };
+  });
+  ITEMS.sort(function (a, b) {
+    return a.t.localeCompare(b.t, "fr", { sensitivity: "base" });
+  });
+
+  /* Liste des cours présents. */
+  (function buildCourseOptions() {
+    var seen = {};
+    var list = [];
+    ITEMS.forEach(function (it) {
+      if (!seen[it.c]) {
+        seen[it.c] = 1;
+        list.push({ id: it.c, title: it.ct });
+      }
+    });
+    list.sort(function (a, b) {
+      return a.title.localeCompare(b.title, "fr");
+    });
+    list.forEach(function (o) {
+      var opt = document.createElement("option");
+      opt.value = o.id;
+      opt.textContent = o.title;
+      courseEl.appendChild(opt);
+    });
+  })();
+
+  function render() {
+    var q = norm(searchEl.value.trim());
+    var cf = courseEl.value;
+    var rows = [];
+    for (var i = 0; i < ITEMS.length; i++) {
+      var it = ITEMS[i];
+      if (cf !== "all" && it.c !== cf) continue;
+      if (q && it.key.indexOf(q) === -1) continue;
+      rows.push(
+        '<div class="gl-entry">' +
+        '<dt class="gl-term">' + esc(it.t) + "</dt>" +
+        '<dd class="gl-def">' + it.d +
+        ' <a class="gl-src" href="' + esc(it.c) + '/cours.html">' + esc(it.ct) + "</a></dd>" +
+        "</div>"
+      );
+    }
+    listEl.innerHTML = rows.length
+      ? rows.join("")
+      : '<p class="gl-empty">Aucun terme ne correspond.</p>';
+    countEl.textContent =
+      rows.length + " terme" + (rows.length > 1 ? "s" : "") + " sur " + ITEMS.length;
+  }
+
+  searchEl.addEventListener("input", render);
+  courseEl.addEventListener("change", render);
+  render();
+})();

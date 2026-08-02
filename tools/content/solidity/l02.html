@@ -1,0 +1,76 @@
+<p>Pour programmer un contrat, il faut connaître ses <strong>types de données</strong> et — concept crucial en Solidity — comprendre <strong>où</strong> les données sont rangées. Car ici, le stockage n'est pas anodin&nbsp;: écrire une donnée de façon permanente sur la blockchain <strong>coûte de l'argent</strong>. La distinction entre <code>storage</code> (permanent) et <code>memory</code> (temporaire) est donc fondamentale. Cette leçon explore les types et le stockage.</p>
+
+<h2>Les types de base</h2>
+<p>Solidity est <strong>fortement typé</strong>&nbsp;: chaque variable a un type fixe. Les principaux&nbsp;:</p>
+<ul>
+  <li><code>uint</code> — entier non signé (positif), souvent <code>uint256</code> (256 bits)&nbsp;;</li>
+  <li><code>int</code> — entier signé (peut être négatif)&nbsp;;</li>
+  <li><code>bool</code> — booléen (<code>true</code>/<code>false</code>)&nbsp;;</li>
+  <li><code>address</code> — une adresse Ethereum (un compte ou un contrat)&nbsp;;</li>
+  <li><code>string</code> — du texte&nbsp;;</li>
+  <li><code>bytes</code> — des données binaires.</li>
+</ul>
+<figure class="code-block" data-file="types.sol"><pre><code class="language-solidity">uint256 age = 30;
+int256 solde = -100;
+bool actif = true;
+address proprietaire = 0x1234567890123456789012345678901234567890;
+string nom = "Solidity";</code></pre></figure>
+<p>Le type <code>address</code> est propre à la blockchain&nbsp;: il désigne un compte (utilisateur) ou un contrat. C'est avec lui qu'on identifie «&nbsp;qui&nbsp;» dans un contrat.</p>
+
+<h2>Les entiers de taille fixe</h2>
+<p>Particularité&nbsp;: les entiers ont une <strong>taille en bits</strong> précise (<code>uint8</code>, <code>uint256</code>…). <code>uint256</code> est le plus courant. Depuis la version 0.8, Solidity <strong>vérifie automatiquement les débordements</strong> (overflow)&nbsp;: une addition qui dépasserait la capacité du type provoque une erreur au lieu de «&nbsp;repartir à zéro&nbsp;» silencieusement — une protection précieuse, car des débordements ont causé des failles célèbres.</p>
+<figure class="code-block" data-file="entiers.sol"><pre><code class="language-solidity">uint8 petit = 255;        // maximum d'un uint8
+// petit + 1 provoquerait une erreur (overflow) en 0.8+
+uint256 grand = 1000000;  // beaucoup de marge</code></pre></figure>
+
+<h2>Les variables d'état</h2>
+<p>Une <strong>variable d'état</strong> est déclarée au niveau du contrat (hors des fonctions). Elle est stockée de façon <strong>permanente</strong> sur la blockchain&nbsp;: sa valeur persiste entre les appels, et fait partie de l'«&nbsp;état&nbsp;» du contrat.</p>
+<figure class="code-block" data-file="etat.sol"><pre><code class="language-solidity">contract Compteur {
+    uint256 public valeur;    // variable d'état : permanente
+
+    function incrementer() public {
+        valeur += 1;          // modifie l'état stocké
+    }
+}</code></pre></figure>
+<p>Chaque modification d'une variable d'état est une <strong>écriture sur la blockchain</strong> — donc une opération payante (en gas, leçon 6). C'est pourquoi on minimise le stockage&nbsp;: il a un coût réel.</p>
+
+<h2>Storage contre memory</h2>
+<p>Voici la distinction centrale. Solidity gère deux emplacements de données&nbsp;:</p>
+<ul>
+  <li><code>storage</code> — le stockage <strong>permanent</strong> sur la blockchain (les variables d'état). Coûteux, persistant.</li>
+  <li><code>memory</code> — la mémoire <strong>temporaire</strong>, le temps d'un appel de fonction. Moins coûteuse, effacée après.</li>
+</ul>
+<figure class="code-block" data-file="storage.sol"><pre><code class="language-solidity">function traiter(string memory texte) public pure returns (uint256) {
+    // 'texte' est en memory : temporaire, juste pour cet appel
+    return bytes(texte).length;
+}
+
+// Une variable d'état (au niveau du contrat) est en storage :
+string public titre;   // permanent</code></pre></figure>
+<p>Pour les types complexes (chaînes, tableaux, structs) passés en paramètre ou déclarés localement, on <strong>doit préciser</strong> <code>memory</code> ou <code>storage</code>. Les types simples (<code>uint</code>, <code>bool</code>, <code>address</code>) sont copiés par valeur et n'ont pas besoin de cette annotation.</p>
+
+<h2>Les valeurs par défaut</h2>
+<p>En Solidity, il n'existe pas de <code>null</code>&nbsp;: une variable non initialisée prend une <strong>valeur par défaut</strong>. Un <code>uint</code> vaut 0, un <code>bool</code> vaut <code>false</code>, une <code>address</code> vaut l'adresse zéro (<code>0x0000...0000</code>), une <code>string</code> est vide.</p>
+<figure class="code-block" data-file="defaut.sol"><pre><code class="language-solidity">uint256 public a;     // vaut 0 (jamais "indéfini")
+bool public b;        // vaut false
+address public c;     // vaut l'adresse zéro</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier que l'adresse zéro (<code>address(0)</code>) est la valeur par défaut d'une <code>address</code>, et l'accepter par mégarde. Envoyer des jetons ou des droits à <code>address(0)</code> revient souvent à les <strong>détruire définitivement</strong> (personne ne possède la clé de cette adresse). Vérifie systématiquement qu'une adresse fournie n'est pas <code>address(0)</code> avant de lui transférer quoi que ce soit — un contrôle de sécurité élémentaire mais vital.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le coût du <code>storage</code> a façonné le style Solidity&nbsp;: on cherche à <strong>minimiser les écritures</strong>, à regrouper plusieurs petites variables dans un même «&nbsp;emplacement&nbsp;» de 256 bits (le <em>packing</em>), et à privilégier les calculs en <code>memory</code>. Optimiser le gas n'est pas un détail&nbsp;: sur un contrat très utilisé, une écriture évitée représente des économies réelles pour tous ses utilisateurs. La performance, ici, se mesure en argent.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Types&nbsp;: <code>uint</code>/<code>int</code> (taille fixe, overflow vérifié en 0.8+), <code>bool</code>, <code>address</code>, <code>string</code>, <code>bytes</code>.</li>
+  <li>Une <strong>variable d'état</strong> est permanente (en <code>storage</code>)&nbsp;; chaque écriture coûte du gas.</li>
+  <li><code>storage</code> = permanent (blockchain)&nbsp;; <code>memory</code> = temporaire (le temps d'un appel).</li>
+  <li>Pas de <code>null</code>&nbsp;: valeurs par défaut (0, <code>false</code>, <code>address(0)</code>, <code>""</code>).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle différence entre <code>storage</code> et <code>memory</code>&nbsp;?</li><li>Que vaut un <code>uint</code> non initialisé&nbsp;?</li><li>Pourquoi minimiser les écritures en storage&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une variable d'état publique <code>compteur</code> de type <code>uint256</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">uint256 public compteur;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Déclare une variable d'état <code>proprietaire</code> de type <code>address</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">address public proprietaire;</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Dans une fonction prenant un <code>string</code> en paramètre, quelle annotation faut-il préciser, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">function f(string memory texte) public { /* ... */ }</code></pre></figure><p>Il faut préciser <code>memory</code> (ou <code>calldata</code>) pour un paramètre de type complexe comme <code>string</code>, car Solidity exige de savoir <strong>où la donnée est rangée</strong>. <code>memory</code> indique une copie temporaire, valable le temps de l'appel&nbsp;; on l'utilise pour les paramètres qu'on ne veut pas stocker de façon permanente. Les types simples (<code>uint</code>, <code>bool</code>...) n'ont pas besoin de cette annotation.</p></details></div>

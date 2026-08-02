@@ -1,0 +1,84 @@
+<p>Voici la fonctionnalité la plus originale de Zig&nbsp;: <strong>comptime</strong>. L'idée est aussi simple que radicale&nbsp;: une partie du code peut s'exécuter <strong>à la compilation</strong>, pas à l'exécution. Du même langage, sans macros ni système de templates séparé. C'est ce qui donne à Zig sa généricité, sa métaprogrammation et une bonne part de sa puissance.</p>
+
+<h2>Calculer à la compilation</h2>
+<p>Le mot-clé <code>comptime</code> force l'évaluation d'une expression pendant la compilation. Le résultat est gravé dans le binaire&nbsp;; aucun calcul à l'exécution.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">comptime {
+    // ce bloc s'exécute pendant la compilation
+}
+
+const table = comptime calculerTable();   // calculé une fois, à la compilation
+
+fn factorielle(comptime n: u32) u32 {
+    var r: u32 = 1;
+    comptime var i: u32 = 1;
+    inline while (i &lt;= n) : (i += 1) r *= i;
+    return r;
+}</code></pre></figure>
+
+<h2>Les types comme arguments</h2>
+<p>Rappelle-toi&nbsp;: en Zig, un type est une valeur. On peut donc passer un <strong>type en argument</strong> à une fonction — à condition que ce soit un argument <code>comptime</code> (connu à la compilation). C'est la base de la généricité.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">fn maximum(comptime T: type, a: T, b: T) T {
+    return if (a &gt; b) a else b;
+}
+
+maximum(i32, 3, 7);       // 7   (avec des i32)
+maximum(f64, 2.5, 1.5);   // 2.5 (avec des f64)</code></pre></figure>
+<p class="code-caption">La même fonction marche pour tout type&nbsp;: Zig compile une version spécialisée pour chaque <code>T</code> utilisé.</p>
+
+<h2>La généricité sans templates</h2>
+<p>Là où le C++ a un système de templates séparé et où Java a des génériques limités, Zig réutilise simplement <code>comptime</code>. Un conteneur générique est une <strong>fonction qui renvoie un type</strong>.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">fn Pile(comptime T: type) type {
+    return struct {
+        items: []T,
+        len: usize,
+
+        fn sommet(self: @This()) T {
+            return self.items[self.len - 1];
+        }
+    };
+}
+
+// Usage : Pile(i32) est un type, Pile(f64) un autre
+const PileEntiers = Pile(i32);</code></pre></figure>
+<p>C'est exactement ainsi que <code>ArrayList(i32)</code> de la stdlib fonctionne&nbsp;: une fonction <code>comptime</code> qui fabrique un type.</p>
+
+<h2>inline&nbsp;: dérouler à la compilation</h2>
+<p><code>inline for</code> et <code>inline while</code> déroulent la boucle <em>à la compilation</em>&nbsp;: chaque itération devient du code distinct, ce qui permet par exemple de parcourir les champs d'un type.</p>
+<figure class="code-block" data-file="exemple.zig"><pre><code class="language-clike">const Point = struct { x: f64, y: f64 };
+const champs = @typeInfo(Point).Struct.fields;
+inline for (champs) |champ| {
+    std.debug.print("champ : {s}\n", .{champ.name});  // x, y
+}</code></pre></figure>
+
+<h2>Pourquoi pas de macros&nbsp;?</h2>
+<p>Beaucoup de langages ont des <strong>macros</strong> — un mini-langage séparé pour générer du code (le préprocesseur C, les macros Rust…). Zig les évite&nbsp;: tout ce qu'on ferait avec une macro, on le fait avec <code>comptime</code>, dans le <em>même</em> langage. Un seul ensemble de règles à apprendre, et du code généré qu'on peut lire et déboguer normalement.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Vouloir passer un type calculé à l'exécution&nbsp;: un argument <code>comptime T: type</code> doit être connu <strong>à la compilation</strong>. Tu ne peux pas choisir un type selon une saisie utilisateur. Si tu as besoin de variabilité à l'exécution, c'est le rôle des unions étiquetées (leçon 5).</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La <strong>réflexion</strong> via <code>@typeInfo</code> permet d'inspecter n'importe quel type à la compilation (ses champs, ses méthodes) et de générer du code en conséquence&nbsp;: c'est ainsi que Zig implémente l'affichage formaté, la sérialisation, etc., sans annotations ni génération de code externe.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>comptime</code> exécute du code <strong>à la compilation</strong>&nbsp;; le résultat est gravé dans le binaire.</li>
+  <li>Un <strong>type est une valeur</strong>&nbsp;: on le passe en argument <code>comptime</code> pour la généricité.</li>
+  <li>Un conteneur générique est une <strong>fonction qui renvoie un type</strong> (comme <code>ArrayList</code>).</li>
+  <li>Zig n'a <strong>pas de macros</strong>&nbsp;: <code>comptime</code> + <code>@typeInfo</code> font tout, dans le même langage.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que fait <code>comptime</code>&nbsp;?</li><li>Comment écrit-on une fonction générique en Zig&nbsp;?</li><li>Pourquoi Zig n'a-t-il pas besoin de macros&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction générique <code>identite</code> qui renvoie son argument, pour tout type.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn identite(comptime T: type, x: T) T {
+    return x;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>minimum</code> générique sur le type.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn minimum(comptime T: type, a: T, b: T) T {
+    return if (a &lt; b) a else b;
+}
+// minimum(i32, 4, 9) -&gt; 4</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une fonction <code>Boite(T)</code> qui renvoie un struct contenant un champ <code>valeur</code> de type <code>T</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">fn Boite(comptime T: type) type {
+    return struct {
+        valeur: T,
+    };
+}
+// const b = Boite(i32){ .valeur = 42 };</code></pre></figure></details></div>

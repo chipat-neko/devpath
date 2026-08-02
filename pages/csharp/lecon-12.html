@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>L'asynchrone avec async/await — Leçon 12 · C# · Syntaxe</title>
+    <meta name="description" content="Écris du code non bloquant en C# avec async, await et Task : appels réseau, Task.WhenAll, bonnes pratiques et pièges des deadlocks." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="csharp" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">C#</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · C# moderne — Leçon 12</p>
+              <h1 class="lesson-header__title">L'asynchrone avec async/await</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~30 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 11 recommandée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre pourquoi une opération longue bloque un thread et ce que <code>async</code>/<code>await</code> résolvent&nbsp;;</li>
+                  <li>écrire une méthode <code>async</code> qui retourne <code>Task</code> ou <code>Task&lt;T&gt;</code> et l'<code>await</code> sans bloquer&nbsp;;</li>
+                  <li>paralléliser plusieurs opérations avec <code>Task.WhenAll</code> et appeler une API avec <code>HttpClient</code>&nbsp;;</li>
+                  <li>reconnaître et éviter les pièges classiques&nbsp;: <code>.Result</code>/<code>.Wait()</code>, <code>async void</code> et le <code>await</code> oublié.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une application passe une bonne partie de son temps à <strong>attendre</strong>&nbsp;: une réponse réseau, une lecture de fichier, une requête en base de données. Pendant cette attente, le code «&nbsp;classique&nbsp;» bloque le <em>thread</em> (le fil d'exécution) qui patiente sans rien faire. En interface graphique, c'est l'application qui gèle&nbsp;; sur un serveur, c'est un thread immobilisé qui ne peut plus servir d'autres requêtes. L'<strong>asynchrone</strong> résout ce gaspillage&nbsp;: au lieu d'attendre bêtement, le thread est <em>libéré</em> et reprend son travail quand le résultat arrive.</p>
+
+<p>En C# moderne, ce mécanisme tient en deux mots-clés, <code>async</code> et <code>await</code>, et un type, <code>Task</code>. Cette leçon part de tes acquis sur les méthodes et les exceptions pour t'amener à écrire du code réactif, non bloquant, et à éviter les quelques pièges qui font la réputation de l'asynchrone.</p>
+
+<h2>Le problème&nbsp;: attendre, c'est bloquer</h2>
+<p>Imagine une méthode qui télécharge une page web et qui <em>attend la réponse de façon bloquante</em>. Tant que la réponse n'est pas arrivée, la ligne suivante ne s'exécute pas&nbsp;: le thread est <strong>immobilisé</strong>. S'il s'agit du thread d'interface, l'utilisateur voit l'application figée&nbsp;; aucun clic, aucun défilement ne répond.</p>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">// Version BLOQUANTE : on attend en figeant le thread (a eviter pour de l'I/O).
+string TelechargerBloquant(string url)
+{
+    using var client = new HttpClient();
+    // .Result fige le thread ICI, immobile, le temps de toute la requete reseau.
+    // (On verra plus loin que .Result est dangereux : a ne pas reproduire.)
+    string contenu = client.GetStringAsync(url).Result;
+    return contenu;
+}
+
+Console.WriteLine("Avant l'appel");
+string page = TelechargerBloquant("https://example.com");
+Console.WriteLine($"Recu {page.Length} caracteres"); // ne s'affiche qu'apres l'attente
+</code></pre></figure>
+<p class="code-caption">Pendant l'attente réseau (parfois plusieurs secondes), le thread ne fait <em>rien d'autre</em>. C'est ce gaspillage que l'asynchrone élimine&nbsp;— et on verra que ce <code>.Result</code> est lui-même un piège à bannir.</p>
+<p>Le coût n'est pas le calcul (le processeur ne travaille pas), c'est l'<strong>attente</strong>. L'idée de l'asynchrone&nbsp;: pendant cette attente, rendre le thread à qui en a besoin.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Comparaison entre attente bloquante et asynchrone pendant une opération d'entrée-sortie. En mode bloquant, en haut, le thread exécute un peu de travail puis reste figé pendant toute l'attente réseau, sans rien faire, avant de reprendre la suite. En mode asynchrone, en bas, le thread exécute le travail puis, sur le await, il est libéré et peut servir d'autres tâches pendant l'attente ; quand le résultat arrive, il reprend la suite. Même durée d'attente, mais le thread n'est pas gaspillé.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">même attente réseau — que fait le thread ?</text>
+    <text class="d-tag" x="20" y="52" font-size="11">bloquant</text>
+    <rect class="d-box" x="100" y="36" width="70" height="28" rx="4" />
+    <text class="d-mut" x="135" y="54" text-anchor="middle" font-size="9">travail</text>
+    <rect class="d-accent" x="172" y="36" width="336" height="28" rx="4" />
+    <text class="d-mut" x="340" y="54" text-anchor="middle" font-size="10">thread FIGÉ : il attend, immobile</text>
+    <rect class="d-box" x="510" y="36" width="90" height="28" rx="4" />
+    <text class="d-mut" x="555" y="54" text-anchor="middle" font-size="9">suite</text>
+    <text class="d-mut" x="320" y="82" text-anchor="middle" font-size="10">un thread gaspillé pendant toute l'attente</text>
+    <text class="d-tag" x="20" y="128" font-size="11">async / await</text>
+    <rect class="d-box" x="100" y="112" width="70" height="28" rx="4" />
+    <text class="d-mut" x="135" y="130" text-anchor="middle" font-size="9">travail</text>
+    <rect class="d-box" x="172" y="112" width="336" height="28" rx="4" />
+    <text class="d-mut" x="340" y="130" text-anchor="middle" font-size="10">await : thread LIBÉRÉ (sert d'autres tâches)</text>
+    <rect class="d-accent" x="510" y="112" width="90" height="28" rx="4" />
+    <text class="d-mut" x="555" y="130" text-anchor="middle" font-size="9">reprise</text>
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="10">le thread reste disponible ; il reprend au retour du résultat</text>
+  </svg>
+  <figcaption>Bloquer immobilise un thread pendant l'attente&nbsp;; <code>await</code> le <strong>libère</strong> et le récupère quand le résultat est prêt.</figcaption>
+</figure>
+
+<h2><code>Task</code> et <code>Task&lt;T&gt;</code>&nbsp;: une promesse de résultat</h2>
+<p>Une <strong><code>Task</code></strong> représente une opération qui s'achèvera <em>plus tard</em>. Vois-la comme un ticket&nbsp;: tu le reçois immédiatement, et il te donnera le résultat quand ce sera prêt. Deux variantes&nbsp;:</p>
+<ul>
+<li><code>Task</code>&nbsp;: une opération qui se termine mais ne renvoie <em>aucune valeur</em> (l'équivalent asynchrone de <code>void</code>).</li>
+<li><code>Task&lt;T&gt;</code>&nbsp;: une opération qui se terminera en produisant une valeur de type <code>T</code> (un <code>Task&lt;string&gt;</code> promet une <code>string</code>).</li>
+</ul>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">// Une methode qui rend une Task&lt;int&gt; : un entier... plus tard.
+async Task&lt;int&gt; CalculerApresDelaiAsync()
+{
+    await Task.Delay(1000); // simule une attente d'une seconde (non bloquante)
+    return 42;
+}
+
+Task&lt;int&gt; tache = CalculerApresDelaiAsync(); // demarre, mais ne bloque PAS
+Console.WriteLine("La tache est lancee...");  // s'affiche tout de suite
+int resultat = await tache;                    // recupere la valeur quand prete
+Console.WriteLine(resultat);                   // 42
+</code></pre></figure>
+<p class="code-caption">Appeler la méthode <em>démarre</em> le travail et rend la <code>Task</code> immédiatement. C'est <code>await</code> qui en extrait la valeur, le moment venu.</p>
+
+<h2><code>async</code> et <code>await</code>&nbsp;: attendre sans bloquer</h2>
+<p>Le mot-clé <code>async</code> sur une méthode autorise l'emploi d'<code>await</code> à l'intérieur&nbsp;; il transforme la méthode pour qu'elle puisse se <em>suspendre</em> et reprendre plus tard. Le mot-clé <code>await</code>, lui, dit&nbsp;: «&nbsp;attends que cette <code>Task</code> finisse, mais <strong>libère le thread</strong> pendant ce temps&nbsp;». Quand le résultat arrive, l'exécution reprend juste après le <code>await</code>.</p>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">async Task PreparerCafeAsync()
+{
+    Console.WriteLine("Je lance la machine...");
+    await Task.Delay(2000);            // 2 s d'attente, thread LIBRE pendant ce temps
+    Console.WriteLine("Cafe pret !");
+}
+
+Console.WriteLine("Debut");
+await PreparerCafeAsync();
+Console.WriteLine("Fin");
+// Sortie :
+// Debut
+// Je lance la machine...
+// (2 secondes plus tard)
+// Cafe pret !
+// Fin
+</code></pre></figure>
+<p class="code-caption">La différence cruciale avec un blocage&nbsp;: pendant les 2 secondes, le thread n'est pas immobilisé&nbsp;; il peut traiter d'autres travaux. Seul le <em>flux</em> de cette méthode est mis en pause.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>En .NET 8, le fichier <code>Program.cs</code> en <em>top-level statements</em> peut utiliser <code>await</code> directement au plus haut niveau&nbsp;: le compilateur génère pour toi une méthode <code>Main</code> marquée <code>async</code>. Pratique pour écrire du code asynchrone sans cérémonie.</p></div></div>
+
+<h2>Un cas réel&nbsp;: appeler une API avec <code>HttpClient</code></h2>
+<p>L'exemple type d'opération asynchrone est l'appel réseau. La classe <code>HttpClient</code> expose des méthodes <code>...Async</code> qui rendent des <code>Task</code>. On les <code>await</code> pour récupérer la réponse sans bloquer.</p>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">// HttpClient est concu pour etre reutilise : une seule instance pour l'appli.
+var httpClient = new HttpClient();
+
+async Task&lt;int&gt; CompterCaracteresAsync(string url)
+{
+    // await libere le thread le temps de la reponse reseau.
+    string contenu = await httpClient.GetStringAsync(url);
+    return contenu.Length;
+}
+
+int taille = await CompterCaracteresAsync("https://example.com");
+Console.WriteLine($"La page fait {taille} caracteres."); // ex : La page fait 1256 caracteres.
+</code></pre></figure>
+<p class="code-caption">Compare avec la version bloquante du début&nbsp;: ici, pas de <code>.Result</code>, on <code>await</code>. Pendant l'aller-retour réseau, le thread reste disponible.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne crée pas un <code>new HttpClient()</code> à chaque appel (surtout dans un <code>using</code> répété)&nbsp;: tu risques d'épuiser les sockets du système. Réutilise une instance partagée, ou mieux, <code>IHttpClientFactory</code> dans une application ASP.NET.</p></div></div>
+
+<h2>Les bonnes pratiques&nbsp;: «&nbsp;async all the way&nbsp;»</h2>
+<p>Trois règles te mettent à l'abri de la plupart des ennuis&nbsp;:</p>
+<ul>
+<li><strong>Async jusqu'en haut</strong> (<em>async all the way</em>)&nbsp;: si une méthode <code>await</code> quelque chose, son appelante doit elle aussi être <code>async</code> et <code>await</code> le résultat. On ne mélange pas asynchrone et blocage.</li>
+<li><strong>Retourne <code>Task</code> ou <code>Task&lt;T&gt;</code></strong>, jamais <code>async void</code> (sauf pour un gestionnaire d'événement). Une <code>Task</code> peut être attendue et porte ses exceptions&nbsp;; un <code>void</code> asynchrone, non.</li>
+<li><strong>Nomme tes méthodes asynchrones avec le suffixe <code>Async</code></strong> (<code>ChargerAsync</code>, <code>EnregistrerAsync</code>). C'est une convention .NET qui signale d'un coup d'œil qu'il faut <code>await</code>.</li>
+</ul>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">// Bonne forme : async, rend une Task&lt;T&gt;, nom en ...Async.
+async Task&lt;string&gt; ChargerNomAsync(int id)
+{
+    await Task.Delay(200); // simule un acces base de donnees
+    return $"Utilisateur #{id}";
+}
+
+// L'appelante est async et await : la chaine reste asynchrone de bout en bout.
+async Task AfficherAsync()
+{
+    string nom = await ChargerNomAsync(7);
+    Console.WriteLine(nom); // Utilisateur #7
+}
+
+await AfficherAsync();
+</code></pre></figure>
+<p class="code-caption">Chaque maillon est <code>async</code> et <code>await</code> le suivant&nbsp;: la chaîne ne se «&nbsp;casse&nbsp;» jamais par un blocage. C'est ça, <em>async all the way</em>.</p>
+
+<h2>Exécuter en parallèle avec <code>Task.WhenAll</code></h2>
+<p>Quand plusieurs opérations sont <em>indépendantes</em>, les attendre l'une après l'autre est un gâchis&nbsp;: trois appels d'une seconde prennent trois secondes alors qu'ils pourraient se chevaucher. <code>Task.WhenAll</code> lance tout en même temps et attend que <em>tout</em> soit fini.</p>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">async Task&lt;string&gt; ChargerAsync(string nom)
+{
+    await Task.Delay(1000); // chaque chargement prend 1 seconde
+    return $"[{nom}]";
+}
+
+// SEQUENTIEL : on await chaque tache avant de lancer la suivante -&gt; ~3 s.
+// var a = await ChargerAsync("A");
+// var b = await ChargerAsync("B");
+// var c = await ChargerAsync("C");
+
+// PARALLELE : on demarre les trois, PUIS on attend l'ensemble -&gt; ~1 s.
+Task&lt;string&gt; t1 = ChargerAsync("A");
+Task&lt;string&gt; t2 = ChargerAsync("B");
+Task&lt;string&gt; t3 = ChargerAsync("C");
+
+string[] resultats = await Task.WhenAll(t1, t2, t3);
+Console.WriteLine(string.Join(" ", resultats)); // [A] [B] [C]
+</code></pre></figure>
+<p class="code-caption">La clé&nbsp;: on <strong>démarre</strong> les tâches avant le moindre <code>await</code> (elles tournent alors en même temps), puis un seul <code>Task.WhenAll</code> attend toute la grappe. <code>Task.WhenAll</code> sur des <code>Task&lt;T&gt;</code> renvoie un tableau de résultats.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour réagir à la <em>première</em> tâche terminée plutôt qu'à toutes, il existe <code>Task.WhenAny</code>. Utile pour un délai d'expiration&nbsp;: course entre ton opération et un <code>Task.Delay</code>.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Séquentiel contre Task point WhenAll pour trois tâches indépendantes d'une seconde. En séquentiel, en haut, on attend A puis B puis C l'une après l'autre : les trois barres se suivent et le total atteint environ trois secondes. Avec Task point WhenAll, en bas, on démarre les trois tâches en même temps : les barres se superposent et le total tombe à environ une seconde, la durée de la plus longue.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">trois tâches d'1 s, indépendantes</text>
+    <text class="d-tag" x="20" y="56" font-size="11">séquentiel</text>
+    <rect class="d-box" x="120" y="42" width="140" height="26" rx="4" />
+    <text class="d-mut" x="190" y="59" text-anchor="middle" font-size="10">A (1 s)</text>
+    <rect class="d-box" x="262" y="42" width="140" height="26" rx="4" />
+    <text class="d-mut" x="332" y="59" text-anchor="middle" font-size="10">B (1 s)</text>
+    <rect class="d-box" x="404" y="42" width="140" height="26" rx="4" />
+    <text class="d-mut" x="474" y="59" text-anchor="middle" font-size="10">C (1 s)</text>
+    <text class="d-tag" x="556" y="59" font-size="11">≈ 3 s</text>
+    <text class="d-tag" x="20" y="130" font-size="11">Task.WhenAll</text>
+    <rect class="d-accent" x="120" y="98" width="140" height="22" rx="4" />
+    <text class="d-mut" x="190" y="113" text-anchor="middle" font-size="9">A (1 s)</text>
+    <rect class="d-accent" x="120" y="122" width="140" height="22" rx="4" />
+    <text class="d-mut" x="190" y="137" text-anchor="middle" font-size="9">B (1 s)</text>
+    <rect class="d-accent" x="120" y="146" width="140" height="22" rx="4" />
+    <text class="d-mut" x="190" y="161" text-anchor="middle" font-size="9">C (1 s)</text>
+    <text class="d-tag" x="290" y="137" font-size="11">≈ 1 s</text>
+    <text class="d-mut" x="290" y="156" font-size="9">elles se chevauchent</text>
+  </svg>
+  <figcaption>Des <code>await</code> enchaînés <strong>additionnent</strong> les temps&nbsp;; <code>Task.WhenAll</code> lance tout en même temps — le total tend vers la plus longue.</figcaption>
+</figure>
+
+<h2>Pièges fréquents</h2>
+<p>Le danger numéro un est de <strong>bloquer sur de l'asynchrone</strong> avec <code>.Result</code> ou <code>.Wait()</code>. Dans certains contextes (interface graphique, ancien ASP.NET), cela provoque un <em>deadlock</em>&nbsp;: le thread attend la <code>Task</code>, mais la <code>Task</code> a besoin de ce même thread pour finir. Tout se fige. La règle est simple&nbsp;: <strong>une fois async, toujours <code>await</code></strong>, jamais <code>.Result</code> ni <code>.Wait()</code>.</p>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">// MAUVAIS : bloque le thread et peut figer l'appli (deadlock).
+string x = ChargerNomAsync(1).Result;   // a bannir
+ChargerNomAsync(1).Wait();              // a bannir aussi
+
+// BON : on await, le thread reste libre.
+string y = await ChargerNomAsync(1);
+</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong><code>async void</code></strong> ne s'utilise <em>que</em> pour un gestionnaire d'événement (bouton cliqué, par ex.). Partout ailleurs, retourne <code>Task</code>&nbsp;: un <code>async void</code> ne peut pas être <code>await</code>, et une exception qu'il lève n'est pas attrapable proprement&nbsp;— elle peut faire planter le processus.</p></div></div>
+<p>Trois autres pièges classiques&nbsp;:</p>
+<ul>
+<li><strong>Oublier <code>await</code></strong>&nbsp;: <code>ChargerNomAsync(1);</code> sans <code>await</code> démarre la tâche mais ne l'attend pas. Le code continue comme si c'était fini, et une éventuelle exception part en silence (<em>fire and forget</em> involontaire). Le compilateur t'avertit (warning CS4014)&nbsp;: écoute-le.</li>
+<li><strong>Ne pas gérer les exceptions d'une <code>Task</code></strong>&nbsp;: une opération asynchrone peut échouer. L'exception est «&nbsp;stockée&nbsp;» dans la <code>Task</code> et relancée au moment du <code>await</code>. Donc enveloppe ton <code>await</code> d'un <code>try/catch</code> si l'échec est possible.</li>
+<li><strong>Faire du séquentiel là où <code>Task.WhenAll</code> paralléliserait</strong>&nbsp;: enchaîner des <code>await</code> indépendants additionne les temps d'attente. Démarre les tâches puis attends-les ensemble.</li>
+</ul>
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">try
+{
+    string contenu = await httpClient.GetStringAsync("https://adresse-invalide.test");
+    Console.WriteLine(contenu);
+}
+catch (HttpRequestException ex)
+{
+    // L'exception levee DANS la Task ressort ici, au point d'await.
+    Console.WriteLine($"Echec reseau : {ex.Message}");
+}
+</code></pre></figure>
+<p class="code-caption">Le <code>try</code> entoure le <code>await</code>&nbsp;: c'est là que l'exception de la tâche est relancée, donc là qu'on la capture.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 175" role="img" aria-label="Pourquoi bloquer sur du code asynchrone provoque un interblocage. Le thread d'interface appelle point Result et se bloque en attendant que la Task se termine. Mais la suite de la Task, le code après le await, a besoin de ce même thread d'interface pour s'exécuter. Le thread attend la Task, la Task attend le thread : chacun attend l'autre, plus rien n'avance, l'application se fige. La solution est d'utiliser await au lieu de point Result.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">bloquer sur une Task avec .Result / .Wait()</text>
+    <rect class="d-accent" x="45" y="52" width="220" height="56" rx="8" />
+    <text class="d-tag" x="155" y="76" text-anchor="middle" font-size="11">thread d'interface</text>
+    <text class="d-mut" x="155" y="94" text-anchor="middle" font-size="10">bloqué sur .Result</text>
+    <rect class="d-accent" x="375" y="52" width="220" height="56" rx="8" />
+    <text class="d-tag" x="485" y="76" text-anchor="middle" font-size="11">la Task (suite du await)</text>
+    <text class="d-mut" x="485" y="94" text-anchor="middle" font-size="10">réclame ce même thread</text>
+    <line class="d-line" x1="265" y1="68" x2="375" y2="68" />
+    <line class="d-line" x1="375" y1="68" x2="366" y2="64" />
+    <line class="d-line" x1="375" y1="68" x2="366" y2="72" />
+    <text class="d-mut" x="320" y="62" text-anchor="middle" font-size="9">attend</text>
+    <line class="d-line" x1="375" y1="92" x2="265" y2="92" />
+    <line class="d-line" x1="265" y1="92" x2="274" y2="88" />
+    <line class="d-line" x1="265" y1="92" x2="274" y2="96" />
+    <text class="d-mut" x="320" y="105" text-anchor="middle" font-size="9">attend</text>
+    <text class="d-label" x="320" y="150" text-anchor="middle" font-size="11">chacun attend l'autre → plus rien n'avance (deadlock)</text>
+  </svg>
+  <figcaption>Le thread attend la <code>Task</code>, la <code>Task</code> attend le thread&nbsp;: <code>.Result</code>/<code>.Wait()</code> peut <strong>tout figer</strong>. Reste en <code>await</code>.</figcaption>
+</figure>
+
+<h2>Un cas réel&nbsp;: le <code>await</code> oublié</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une application de saisie enregistrait les fiches clients via <code>EnregistrerAsync(fiche)</code>… mais l'appel avait été écrit <strong>sans <code>await</code></strong>. La méthode rendait aussitôt sa <code>Task</code>, le code continuait, et l'interface affichait «&nbsp;Enregistré ✓&nbsp;» avant même que l'écriture soit finie. Tant que le réseau répondait vite, personne ne voyait rien. Mais dès que la base ralentissait ou renvoyait une erreur, l'exception partait <em>dans le vide</em> (un <em>fire and forget</em> involontaire)&nbsp;: la fiche n'était pas sauvegardée, sans le moindre message. Invisible en test, le bug provoquait des pertes de données en production. Le compilateur l'avait pourtant signalé par l'avertissement <code>CS4014</code>&nbsp;: appliquer «&nbsp;async all the way&nbsp;» et écouter les avertissements aurait suffi à l'éviter.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<p>L'asynchrone en C# va bien plus loin que <code>async</code>/<code>await</code>. Voici les directions naturelles une fois ces bases acquises&nbsp;:</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le <code>CancellationToken</code> permet d'<strong>annuler</strong> une opération en cours (un appel qui traîne, un utilisateur qui quitte). <code>IAsyncEnumerable&lt;T&gt;</code> avec <code>await foreach</code> consomme un flux asynchrone élément par élément (idéal pour de la pagination). <code>ValueTask</code> évite une allocation quand le résultat est souvent déjà disponible. Et pour du calcul intensif (pas de l'attente, du CPU), regarde la <em>programmation parallèle</em>&nbsp;: <code>Parallel.For</code>, <strong>PLINQ</strong>, ou les <em>channels</em> (<code>System.Threading.Channels</code>) pour des échanges producteur/consommateur.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — async / await</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th><th scope="col">Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>async</code></td><td>autorise <code>await</code> dans la méthode</td><td><code>async Task&lt;int&gt; F() { … }</code></td></tr>
+      <tr><td><code>await</code></td><td>attend sans bloquer le thread</td><td><code>var r = await F();</code></td></tr>
+      <tr><td><code>Task</code></td><td>opération sans valeur (async «&nbsp;void&nbsp;»)</td><td><code>async Task Enregistrer() { … }</code></td></tr>
+      <tr><td><code>Task&lt;T&gt;</code></td><td>opération produisant un <code>T</code></td><td><code>async Task&lt;string&gt; Charger()</code></td></tr>
+      <tr><td><code>Task.WhenAll</code></td><td>lancer en parallèle, tout attendre</td><td><code>await Task.WhenAll(t1, t2)</code></td></tr>
+      <tr><td><code>Task.WhenAny</code></td><td>réagir à la 1re terminée (timeout)</td><td><code>await Task.WhenAny(t, delai)</code></td></tr>
+      <tr><td>suffixe <code>Async</code></td><td>convention de nommage</td><td><code>ChargerAsync</code>, <code>EnregistrerAsync</code></td></tr>
+      <tr><td><code>.Result</code> / <code>.Wait()</code></td><td>bloque, risque de deadlock ✗</td><td>à bannir → <code>await</code></td></tr>
+      <tr><td><code>async void</code></td><td>à réserver aux gestionnaires d'événement ✗</td><td>partout ailleurs → <code>Task</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Asynchrone</dt><dd>Manière de gérer l'attente (réseau, fichier, base) sans immobiliser un thread&nbsp;; il est rendu puis repris au retour du résultat.</dd>
+  <dt>Thread</dt><dd>Fil d'exécution qui déroule le code&nbsp;; le bloquer sur une attente le gaspille et peut figer l'interface ou saturer un serveur.</dd>
+  <dt><code>Task</code> / <code>Task&lt;T&gt;</code></dt><dd>Promesse d'un travail qui s'achèvera plus tard&nbsp;: <code>Task</code> sans valeur, <code>Task&lt;T&gt;</code> produira un <code>T</code>.</dd>
+  <dt><code>async</code></dt><dd>Modificateur autorisant <code>await</code> dans une méthode&nbsp;; celle-ci peut alors se suspendre puis reprendre.</dd>
+  <dt><code>await</code></dt><dd>Attend la fin d'une <code>Task</code> en <strong>libérant</strong> le thread&nbsp;; à la reprise, l'exception éventuelle de la tâche est relancée là.</dd>
+  <dt><code>Task.WhenAll</code></dt><dd>Attend un ensemble de tâches lancées ensemble&nbsp;; le total tend vers la plus longue au lieu de la somme.</dd>
+  <dt>Deadlock (interblocage)</dt><dd>Blocage circulaire&nbsp;: le thread attend la <code>Task</code> et la <code>Task</code> attend le thread&nbsp;; provoqué par <code>.Result</code>/<code>.Wait()</code>.</dd>
+  <dt>Async all the way</dt><dd>Principe&nbsp;: rester asynchrone de bout en bout (chaque appelant <code>async</code> et <code>await</code>), sans jamais bloquer au milieu.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une opération longue d'<strong>I/O</strong> (réseau, fichier, base) gaspille un thread si on l'attend de façon bloquante&nbsp;; l'asynchrone libère ce thread.</li>
+<li><code>Task</code> = opération sans valeur de retour&nbsp;; <code>Task&lt;T&gt;</code> = opération qui produira un <code>T</code>.</li>
+<li><code>async</code> autorise <code>await</code> dans une méthode&nbsp;; <code>await</code> suspend le flux <strong>sans bloquer</strong> le thread, puis reprend avec le résultat.</li>
+<li>Bonnes pratiques&nbsp;: <em>async all the way</em>, retourner <code>Task</code> (pas <code>async void</code>), suffixe <code>Async</code>.</li>
+<li><code>Task.WhenAll</code> exécute des tâches indépendantes <strong>en parallèle</strong> et attend l'ensemble.</li>
+<li>Pièges&nbsp;: <code>.Result</code>/<code>.Wait()</code> (deadlock), <code>await</code> oublié, exceptions non gérées, séquentiel inutile.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la différence entre <code>Task</code> et <code>Task&lt;T&gt;</code>, et que renvoie une méthode <code>async</code> qui ne produit aucune valeur&nbsp;?</li><li>Que fait <code>await</code> au thread courant pendant l'attente, et en quoi est-ce différent de <code>.Result</code>&nbsp;?</li><li>Tu dois charger trois ressources indépendantes qui prennent chacune une seconde. Comment t'y prends-tu pour que le total soit d'environ une seconde et non trois&nbsp;?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre Task et Task<T>, et que renvoie une méthode async qui ne produit aucune valeur ?","a":["Task représente une opération asynchrone sans résultat ; Task<T> en porte un de type T. Une méthode async sans valeur renvoie Task (l'équivalent asynchrone de void)","C'est l'inverse","async void est obligatoire","Une telle méthode renvoie int"],"correct":0,"explain":"Task<T> encapsule un résultat futur de type T, tandis que Task signale seulement l'achèvement. Une méthode async qui ne retourne rien renvoie Task, ce qui permet à l'appelant de l'attendre (à préférer à async void, réservé aux gestionnaires d'événements)."},
+  {"q":"Que fait await au thread courant pendant l'attente, et en quoi est-ce différent de .Result ?","a":["await libère le thread pendant l'attente (non bloquant, il peut faire autre chose) ; .Result bloque le thread jusqu'au résultat, au risque d'un interblocage","await bloque, .Result libère","Les deux bloquent","Les deux libèrent"],"correct":0,"explain":"await rend le thread disponible le temps de l'opération asynchrone, qui reprend ensuite la suite. .Result attend de façon synchrone en immobilisant le thread, ce qui gaspille des ressources et peut provoquer un deadlock dans certains contextes."},
+  {"q":"Tu dois charger trois ressources indépendantes qui prennent chacune une seconde. Comment obtenir un total d'environ une seconde et non trois ?","a":["Les lancer en parallèle (démarrer les trois Task sans await immédiat) puis attendre await Task.WhenAll(t1, t2, t3) : elles s'exécutent simultanément","Les attendre l'une après l'autre","Utiliser .Result sur chacune","Mettre un Thread.Sleep"],"correct":0,"explain":"En démarrant les trois opérations avant d'attendre, elles progressent en même temps. Task.WhenAll attend qu'elles soient toutes terminées : le temps total tend vers la durée de la plus longue (environ une seconde) au lieu de la somme."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["await"],"placeholder":"le mot-clé pour ATTENDRE le résultat d'une méthode async sans bloquer le thread : …","hints":["Suspend la méthode jusqu'à la fin de la Task.","var r = ????? AttendrePuisSaluerAsync().","Cinq lettres."],"link":{"href":"lecon-12.html","label":"Revoir « async / await »"}},
+  {"type":"text","accept":["Task.WhenAll","WhenAll"],"placeholder":"la méthode pour lancer 3 travaux EN PARALLÈLE et attendre qu'ils finissent tous : Task.…","hints":["Le total ≈ le plus long, pas la somme.","await Task.??????(t1, t2, t3).","When???"],"link":{"href":"lecon-12.html","label":"Revoir « Task.WhenAll »"}},
+  {"type":"text","accept":["deadlock","interblocage","blocage","verrou mortel"],"placeholder":"le problème causé par .Result sur une Task dans une interface graphique (un … / interblocage) :","hints":[".Result bloque le thread qui doit justement reprendre la suite.","De bout en bout, il faut rester en await.","Un … (deadlock)."],"link":{"href":"lecon-12.html","label":"Revoir « Ne jamais bloquer »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une méthode <code>async</code> nommée <code>AttendrePuisSaluerAsync</code> qui attend une seconde avec <code>Task.Delay</code>, puis renvoie la chaîne <code>"Bonjour !"</code>. Appelle-la avec <code>await</code> et affiche le résultat.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">async Task&lt;string&gt; AttendrePuisSaluerAsync()
+{
+    await Task.Delay(1000); // attente non bloquante d'une seconde
+    return "Bonjour !";
+}
+
+string message = await AttendrePuisSaluerAsync();
+Console.WriteLine(message); // (apres 1 s) Bonjour !
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée une méthode <code>SimulerTravailAsync(string nom, int ms)</code> qui attend <code>ms</code> millisecondes puis renvoie <code>$"{nom} fini"</code>. Lance trois travaux en <strong>parallèle</strong> (par ex. 800, 500 et 1000 ms) avec <code>Task.WhenAll</code> et affiche tous les résultats. Le total doit avoisiner le plus long, pas la somme.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">async Task&lt;string&gt; SimulerTravailAsync(string nom, int ms)
+{
+    await Task.Delay(ms);
+    return $"{nom} fini";
+}
+
+// On demarre les trois taches AVANT d'attendre : elles tournent ensemble.
+Task&lt;string&gt; a = SimulerTravailAsync("A", 800);
+Task&lt;string&gt; b = SimulerTravailAsync("B", 500);
+Task&lt;string&gt; c = SimulerTravailAsync("C", 1000);
+
+string[] resultats = await Task.WhenAll(a, b, c);
+foreach (string r in resultats)
+{
+    Console.WriteLine(r);
+}
+// A fini
+// B fini
+// C fini
+// Total : ~1 s (le plus long), pas 2,3 s.
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On te donne le code suivant, qui <em>fige</em> l'application dans une interface graphique. Explique pourquoi, puis corrige-le pour qu'il reste asynchrone de bout en bout.</p><figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">async Task&lt;int&gt; LireValeurAsync()
+{
+    await Task.Delay(500);
+    return 10;
+}
+
+// Appel problematique :
+int v = LireValeurAsync().Result;
+Console.WriteLine(v);
+</code></pre></figure><details><summary>Voir une solution</summary><p><code>.Result</code> <strong>bloque</strong> le thread courant jusqu'à ce que la <code>Task</code> soit terminée. Mais dans certains contextes (interface graphique, ancien ASP.NET), la suite de la méthode asynchrone — le code après le <code>await</code> — doit s'exécuter sur ce <em>même</em> thread pour finir. Or ce thread est bloqué à attendre&nbsp;: la <code>Task</code> ne peut jamais se compléter, et le thread ne se débloque jamais. C'est un <strong>deadlock</strong>. La correction&nbsp;: ne jamais bloquer, <code>await</code> à la place (et rendre l'appelante <code>async</code>).</p><figure class="code-block" data-file="solution"><pre><code class="language-csharp">async Task&lt;int&gt; LireValeurAsync()
+{
+    await Task.Delay(500);
+    return 10;
+}
+
+// Correction : on await, le thread reste libre, pas de deadlock.
+int v = await LireValeurAsync();
+Console.WriteLine(v); // 10
+</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-csharp.min.js" defer></script>
+  </body>
+</html>

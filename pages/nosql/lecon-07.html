@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Indexer pour la performance — Leçon 07 · NoSQL · Syntaxe</title>
+    <meta name="description" content="Les index en NoSQL : pourquoi une requête sans index balaie toute la collection, comment créer un index, lire un plan d'exécution (explain), concevoir des index composés et couverts, et peser leur coût." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="nosql" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">NoSQL</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Aller plus loin — Leçon 07</p>
+              <h1 class="lesson-header__title">Indexer pour la performance</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Leçon 03 requise</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer pourquoi une requête sans index est <strong>lente</strong>&nbsp;;</li>
+                  <li><strong>créer un index</strong> et lire un plan d'exécution (<code>explain</code>)&nbsp;;</li>
+                  <li>concevoir des <strong>index composés</strong> et des <strong>requêtes couvertes</strong>&nbsp;;</li>
+                  <li>peser le <strong>coût</strong> des index (écritures, espace).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Une base NoSQL peut stocker des millions de documents. Sans aide, retrouver ceux qui correspondent à une requête l'oblige à <strong>tout lire</strong>. L'<strong>index</strong> est le raccourci qui change une recherche de plusieurs secondes en une fraction de milliseconde. C'est l'outil de performance le plus rentable — et il n'a rien de spécifiquement relationnel&nbsp;: le NoSQL en dépend tout autant.</p>
+
+<h2>Sans index : le balayage complet</h2>
+<p>Quand tu écris <code>db.produits.find({ categorie: "outils" })</code> sans index, la base n'a pas d'autre choix que d'ouvrir <strong>chaque document</strong>, l'un après l'autre, pour vérifier sa catégorie. C'est le <strong>balayage complet</strong> (<em>collection scan</em>)&nbsp;: son coût grandit proportionnellement au nombre de documents. Sur 10 documents c'est indolore&nbsp;; sur 10 millions, c'est une catastrophe.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Comparaison entre une recherche sans index et avec index. À gauche, sans index : la requête parcourt les six documents de la collection un par un pour trouver le bon, c'est un coût proportionnel au nombre de documents. À droite, avec index : la requête consulte un index trié qui pointe directement vers le bon document, en un accès quasi immédiat.">
+    <text class="d-label" x="160" y="24" text-anchor="middle" font-size="12">Sans index — balayage complet</text>
+    <text class="d-label" x="480" y="24" text-anchor="middle" font-size="12">Avec index — accès ciblé</text>
+    <text class="d-tag" x="40" y="52" text-anchor="middle" font-size="9">find</text>
+    <path class="d-line" d="M40 58 L40 180" stroke-dasharray="3 3" />
+    <rect class="d-box" x="64" y="44" width="196" height="20" rx="3" /><text class="d-mut" x="162" y="58" text-anchor="middle" font-size="8">doc 1 · vêtements</text>
+    <rect class="d-box" x="64" y="68" width="196" height="20" rx="3" /><text class="d-mut" x="162" y="82" text-anchor="middle" font-size="8">doc 2 · jouets</text>
+    <rect class="d-accent" x="64" y="92" width="196" height="20" rx="3" /><text class="d-text" x="162" y="106" text-anchor="middle" font-size="8">doc 3 · outils ✓</text>
+    <rect class="d-box" x="64" y="116" width="196" height="20" rx="3" /><text class="d-mut" x="162" y="130" text-anchor="middle" font-size="8">doc 4 · livres</text>
+    <rect class="d-box" x="64" y="140" width="196" height="20" rx="3" /><text class="d-mut" x="162" y="154" text-anchor="middle" font-size="8">doc 5 · outils ✓</text>
+    <rect class="d-box" x="64" y="164" width="196" height="20" rx="3" /><text class="d-mut" x="162" y="178" text-anchor="middle" font-size="8">doc 6 · vélos</text>
+    <text class="d-mut" x="160" y="202" text-anchor="middle" font-size="8.5">lit les 6 documents — coût proportionnel au total (O(n))</text>
+    <rect class="d-frame" x="360" y="44" width="120" height="112" rx="6" />
+    <text class="d-mut" x="420" y="60" text-anchor="middle" font-size="8">index { categorie }</text>
+    <text class="d-tag" x="420" y="80" text-anchor="middle" font-size="8">jouets → doc 2</text>
+    <text class="d-tag" x="420" y="98" text-anchor="middle" font-size="8">livres → doc 4</text>
+    <text class="d-text" x="420" y="116" text-anchor="middle" font-size="8.5">outils → doc 3, 5</text>
+    <text class="d-tag" x="420" y="134" text-anchor="middle" font-size="8">vélos → doc 6</text>
+    <path class="d-accent" d="M484 112 L556 112" fill="none" stroke-width="2" />
+    <path class="d-accent" d="M550 107 L558 112 L550 117" fill="none" stroke-width="2" />
+    <rect class="d-accent" x="560" y="100" width="64" height="24" rx="3" /><text class="d-text" x="592" y="116" text-anchor="middle" font-size="8">doc 3, 5</text>
+    <text class="d-mut" x="480" y="184" text-anchor="middle" font-size="8.5">l'index trié pointe droit au but</text>
+    <text class="d-mut" x="480" y="202" text-anchor="middle" font-size="8.5">coût quasi constant (O(log n))</text>
+  </svg>
+  <figcaption>Sans index, la base <strong>balaie toute la collection</strong>&nbsp;; avec un index sur <code>categorie</code>, elle consulte une structure triée et va <strong>directement</strong> aux documents concernés. L'écart se creuse énormément à grande échelle.</figcaption>
+</figure>
+
+<h2>L'index : un raccourci trié</h2>
+<p>Un index est une <strong>structure de données auxiliaire</strong>, maintenue à part, qui range les valeurs d'un champ <em>triées</em> et associe chacune à la position des documents correspondants. La plupart des bases utilisent un <strong>arbre équilibré</strong> (B-arbre)&nbsp;: y chercher une valeur ne demande que quelques sauts, même sur des milliards d'entrées. C'est exactement l'index d'un livre&nbsp;: au lieu de lire toutes les pages, tu vas au mot, qui te donne les numéros de page.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Structure d'un index en arbre trié. Une racine sépare les valeurs en plages ; deux nœuds intermédiaires affinent, et les feuilles, triées, pointent vers les positions des documents. Chercher une valeur ne traverse que quelques niveaux de haut en bas.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Un index = un arbre trié vers les documents</text>
+    <rect class="d-frame" x="270" y="38" width="100" height="30" rx="5" /><text class="d-text" x="320" y="57" text-anchor="middle" font-size="9">a – z</text>
+    <path class="d-line" d="M300 68 L190 92" /><path class="d-line" d="M340 68 L450 92" />
+    <rect class="d-box" x="130" y="92" width="120" height="28" rx="4" /><text class="d-text" x="190" y="110" text-anchor="middle" font-size="9">a – m</text>
+    <rect class="d-box" x="390" y="92" width="120" height="28" rx="4" /><text class="d-text" x="450" y="110" text-anchor="middle" font-size="9">n – z</text>
+    <path class="d-line" d="M160 120 L110 146" /><path class="d-line" d="M220 120 L250 146" />
+    <path class="d-line" d="M420 120 L390 146" /><path class="d-accent" d="M480 120 L520 146" />
+    <rect class="d-box" x="60" y="146" width="100" height="26" rx="3" /><text class="d-mut" x="110" y="163" text-anchor="middle" font-size="8">« cahier » → p.12</text>
+    <rect class="d-box" x="200" y="146" width="100" height="26" rx="3" /><text class="d-mut" x="250" y="163" text-anchor="middle" font-size="8">« montre » → p.7</text>
+    <rect class="d-box" x="340" y="146" width="100" height="26" rx="3" /><text class="d-mut" x="390" y="163" text-anchor="middle" font-size="8">« outil » → p.3</text>
+    <rect class="d-accent" x="480" y="146" width="100" height="26" rx="3" /><text class="d-text" x="530" y="163" text-anchor="middle" font-size="8">« vélo » → p.6, 9</text>
+    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="8.5">quelques sauts de la racine à la feuille, même sur des milliards d'entrées</text>
+  </svg>
+  <figcaption>L'index range les valeurs <strong>triées</strong> dans un arbre équilibré&nbsp;; chaque feuille pointe vers la position des documents. Chercher, c'est descendre de la racine à la feuille en <strong>quelques sauts</strong> — comme l'index d'un livre.</figcaption>
+</figure>
+
+<h2>Créer un index et vérifier</h2>
+<p>On crée un index sur le(s) champ(s) qu'on interroge souvent. Ensuite, le plan d'exécution (<code>explain</code>) confirme que la base l'utilise&nbsp;: on veut voir un parcours d'index (<code>IXSCAN</code>) et non un balayage (<code>COLLSCAN</code>).</p>
+<figure class="code-block" data-file="creer-index.js"><pre><code class="language-javascript">// Sans index : MongoDB lit TOUS les documents (COLLSCAN)
+db.produits.find({ categorie: "outils" })
+
+// On crée un index sur le champ interrogé (1 = ordre croissant)
+db.produits.createIndex({ categorie: 1 })
+
+// Vérifier le plan : on veut voir IXSCAN, plus COLLSCAN
+db.produits.find({ categorie: "outils" }).explain("executionStats")
+
+// Lister / supprimer les index d'une collection
+db.produits.getIndexes()
+db.produits.dropIndex({ categorie: 1 })</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Sur presque toutes les applications, la connexion cherche un compte par son adresse e-mail. Sans index, chaque connexion balaie <strong>toute</strong> la table des comptes — quelques millisecondes à mille utilisateurs, plusieurs secondes à dix millions. Un simple <code>createIndex({ email: 1 }, { unique: true })</code> rend la recherche quasi instantanée <em>et</em> garantit au passage l'unicité des adresses. C'est l'optimisation la plus courante — et la plus rentable — en production.</p></div></div>
+
+<h2>Index composés et requêtes couvertes</h2>
+<p>Un <strong>index composé</strong> porte sur plusieurs champs. Son <em>ordre</em> compte&nbsp;: on place d'abord les champs testés par égalité, puis ceux servant au tri ou aux plages. Un même index composé sert alors plusieurs requêtes qui commencent par ses premiers champs (le principe du <em>préfixe</em>).</p>
+<figure class="code-block" data-file="index-compose.js"><pre><code class="language-javascript">// L'ORDRE des champs compte : égalité d'abord, tri/plage ensuite
+db.commandes.createIndex({ client: 1, date: -1 })
+
+// Servie par l'index : filtre sur client, tri par date
+db.commandes.find({ client: "u_3" }).sort({ date: -1 })
+
+// Requête COUVERTE : l'index contient TOUT ce que la requête renvoie
+// -> la base répond sans même ouvrir les documents
+db.commandes.find(
+  { client: "u_3" },
+  { _id: 0, client: 1, date: 1 }   // projection incluse dans l'index
+)</code></pre></figure>
+<p>Une <strong>requête couverte</strong> est le Graal de la performance&nbsp;: si l'index contient déjà tous les champs demandés (filtre <em>et</em> projection), la base répond depuis l'index seul, sans jamais lire les documents. Deux fois moins de travail.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — la règle « ÉÉP »</p><p>Pour ordonner les champs d'un index composé&nbsp;: <strong>É</strong>galité, puis tri (<strong>É</strong> comme « <em>sort</em> »), puis <strong>P</strong>lage (<code>$gt</code>, <code>$lt</code>). Cet ordre maximise le nombre de requêtes qu'un seul index peut servir.</p></div></div>
+
+<h2>Le coût des index</h2>
+<p>Un index n'est pas gratuit. Il occupe de l'<strong>espace</strong> (mémoire et disque) et surtout, il doit être <strong>mis à jour à chaque écriture</strong>&nbsp;: insérer ou modifier un document oblige à retoucher tous les index concernés. Trop d'index ralentit donc les écritures. On indexe les champs vraiment interrogés, pas tout «&nbsp;au cas où&nbsp;».</p>
+<div class="callout callout--warning"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Un index inutilisé est un pur coût&nbsp;: il pèse sur chaque écriture sans accélérer aucune lecture. Surveille les index réellement utilisés et supprime les autres. Et méfie-toi des champs <strong>peu sélectifs</strong> (un booléen «&nbsp;actif&nbsp;») — indexer un champ qui ne prend que deux valeurs n'élimine presque rien.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Au-delà de l'index simple, explore les index <strong>multiclés</strong> (sur les tableaux), <strong>textuels</strong> (recherche plein texte), <strong>géospatiaux</strong> (<code>2dsphere</code>, requêtes de proximité), <strong>TTL</strong> (expiration automatique des documents, parfait pour des sessions) et <strong>partiels</strong> (n'indexer qu'un sous-ensemble). Chaque famille répond à un motif d'accès précis.</p></div></div>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Les index en NoSQL — mémo</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Commande / idée</th><th scope="col">Remarque</th></tr></thead>
+    <tbody>
+      <tr><td>créer un index</td><td><code>createIndex({ champ: 1 })</code></td><td>1 croissant, -1 décroissant</td></tr>
+      <tr><td>index composé</td><td><code>createIndex({ a: 1, b: -1 })</code></td><td>ordre = égalité, tri, plage</td></tr>
+      <tr><td>garantir l'unicité</td><td><code>createIndex({ email: 1 }, { unique: true })</code></td><td>refuse les doublons</td></tr>
+      <tr><td>vérifier l'usage</td><td><code>find(…).explain()</code></td><td>viser <code>IXSCAN</code>, fuir <code>COLLSCAN</code></td></tr>
+      <tr><td>lister / supprimer</td><td><code>getIndexes()</code> / <code>dropIndex(…)</code></td><td>retirer les index inutiles</td></tr>
+      <tr><td>requête couverte</td><td>index ⊇ filtre + projection</td><td>répond sans lire les documents</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Index</dt><dd>Structure triée auxiliaire qui associe les valeurs d'un champ aux positions des documents, pour retrouver vite sans tout lire.</dd>
+  <dt>Balayage complet (<em>collection scan</em>)</dt><dd>Lecture de tous les documents, faute d'index&nbsp;: coût proportionnel à la taille de la collection (<code>COLLSCAN</code>).</dd>
+  <dt>Parcours d'index (<code>IXSCAN</code>)</dt><dd>Accès qui passe par l'index trié plutôt que par un balayage&nbsp;: le plan qu'on veut voir dans <code>explain</code>.</dd>
+  <dt>Index composé</dt><dd>Index sur plusieurs champs&nbsp;; l'ordre des champs décide des requêtes qu'il peut servir (principe du préfixe).</dd>
+  <dt>Requête couverte</dt><dd>Requête dont tous les champs (filtre et projection) sont dans l'index&nbsp;: la base répond sans ouvrir les documents.</dd>
+  <dt>Sélectivité</dt><dd>Capacité d'un champ à distinguer les documents&nbsp;; plus un champ prend de valeurs distinctes, plus son index est utile.</dd>
+  <dt>Index unique</dt><dd>Index qui interdit les valeurs en double (ex. une adresse e-mail), garantissant l'unicité à l'écriture.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Sans index, une requête <strong>balaie toute la collection</strong> (coût proportionnel au nombre de documents).</li>
+  <li>Un index est un <strong>arbre trié</strong> qui pointe vers les documents&nbsp;: recherche en quelques sauts.</li>
+  <li>On vérifie l'usage avec <code>explain</code> (viser <code>IXSCAN</code>) et on soigne l'ordre des <strong>index composés</strong>.</li>
+  <li>Les index ont un <strong>coût</strong> (espace, écritures ralenties)&nbsp;: n'indexer que ce qu'on interroge vraiment.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Que fait une requête sans index&nbsp;?</li>
+  <li>Pourquoi l'ordre des champs d'un index composé est-il important&nbsp;?</li>
+  <li>Quel est le principal coût d'un index&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Que fait la base pour une requête sur un champ NON indexé ?","a":["Un balayage complet : elle lit tous les documents un par un pour trouver ceux qui correspondent","Elle refuse la requête","Elle ne renvoie qu'un document au hasard","Elle crée l'index automatiquement puis répond"],"correct":0,"explain":"Sans index, la base fait un collection scan (COLLSCAN) : elle parcourt toute la collection. Le coût grandit avec le nombre de documents, d'où la lenteur à grande échelle."},
+  {"q":"Pourquoi l'ordre des champs d'un index composé { a: 1, b: 1 } compte-t-il ?","a":["Parce qu'un index composé sert les requêtes qui commencent par ses premiers champs (préfixe) : on met l'égalité d'abord, le tri/la plage ensuite","Parce que l'ordre alphabétique est obligatoire","L'ordre n'a aucune importance","Parce que seul le dernier champ est indexé"],"correct":0,"explain":"Un index { a, b } sert les requêtes sur (a) et (a,b), mais pas sur (b) seul. On ordonne selon la règle égalité → tri → plage pour couvrir le plus de requêtes."},
+  {"q":"Quel est le principal coût d'un index ?","a":["Il occupe de l'espace et doit être mis à jour à chaque écriture, ce qui ralentit les insertions/modifications","Il rend les lectures plus lentes","Il supprime des documents","Il n'a aucun coût"],"correct":0,"explain":"Un index accélère les lectures mais alourdit les écritures (il faut le maintenir) et consomme de l'espace. On n'indexe donc que les champs réellement interrogés."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["createIndex","createindex","db.produits.createIndex","create index"],"placeholder":"la méthode MongoDB pour créer un index sur un champ","hints":["Elle prend un objet { champ: 1 }.","« create… »","db.collection.____({ champ: 1 })"],"link":{"href":"lecon-07.html","label":"Revoir « Créer un index »"}},
+  {"type":"text","accept":["explain","explain()",".explain","executionStats"],"placeholder":"la méthode qui montre le plan d'exécution (IXSCAN vs COLLSCAN)","hints":["On l'ajoute après find(...).","Elle « explique » ce que fait la base.","find(...).____()"],"link":{"href":"lecon-07.html","label":"Revoir « Créer un index et vérifier »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une requête <code>db.clients.find({ email: "a@b.fr" })</code> est lente sur une grosse collection. Quel index créer, et quelle option ajouter pour garantir l'unicité des adresses&nbsp;?</p><details><summary>Voir une solution</summary><p>On crée un index sur <code>email</code> avec l'option <code>unique</code>&nbsp;: <code>db.clients.createIndex({ email: 1 }, { unique: true })</code>. La recherche passe alors d'un balayage complet à un parcours d'index (accès quasi immédiat), et la base <strong>refuse</strong> désormais deux comptes avec la même adresse.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu interroges souvent <code>find({ client: X }).sort({ date: -1 })</code>. Quel index composé crées-tu, et dans quel ordre&nbsp;? Pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p><code>db.commandes.createIndex({ client: 1, date: -1 })</code>. On place <strong>d'abord</strong> le champ testé par égalité (<code>client</code>), <strong>puis</strong> le champ de tri (<code>date</code>, décroissant). Cet ordre permet à un seul index de filtrer par client <em>et</em> de renvoyer les résultats déjà triés par date&nbsp;: pas de tri supplémentaire en mémoire. L'inverse (<code>{ date: -1, client: 1 }</code>) ne servirait pas cette requête sur un client donné.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

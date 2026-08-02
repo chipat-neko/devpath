@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Parallélisme : do concurrent et coarrays — Leçon 12 · Cours Fortran — Syntaxe</title>
+    <meta name="description" content="Exploiter plusieurs cœurs en Fortran : la boucle do concurrent, les directives OpenMP (parallel do, reduction), la condition de course et les coarrays (images, mémoire distribuée)." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="fortran" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Fortran</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Fortran avancé et haute performance — Leçon 12</p>
+              <h1 class="lesson-header__title">Parallélisme : do concurrent et coarrays</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~54 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 11</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer <strong>pourquoi</strong> et <strong>quand</strong> paralléliser&nbsp;;</li>
+                  <li>exprimer des itérations indépendantes avec <code>do concurrent</code>&nbsp;;</li>
+                  <li>paralléliser une boucle avec <strong>OpenMP</strong> (et éviter la condition de course)&nbsp;;</li>
+                  <li>découvrir les <strong>coarrays</strong> (images, mémoire distribuée).</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un processeur moderne n'a pas <em>un</em> cœur, mais huit, seize, parfois des dizaines&nbsp;; un supercalculateur en aligne des centaines de milliers. Écrire une boucle qui n'occupe qu'un seul cœur, c'est laisser dormir la machine. Fortran, langage du calcul intensif, offre <strong>trois voies</strong> pour répartir le travail&nbsp;: <code>do concurrent</code> (standard et portable), <strong>OpenMP</strong> (le plus répandu à mémoire partagée) et les <strong>coarrays</strong> (parallélisme réparti intégré au langage).</p>
+
+<h2>Pourquoi paralléliser</h2>
+<p>La vitesse d'un cœur ne progresse presque plus&nbsp;: depuis ~2005, on gagne en puissance en <strong>multipliant les cœurs</strong>, pas en accélérant chacun. Pour aller plus vite, il faut donc découper le travail en morceaux traités <strong>en même temps</strong>. Beaucoup de calculs scientifiques s'y prêtent&nbsp;: quand chaque case d'un tableau se calcule <strong>indépendamment</strong> des autres, on peut les distribuer sur plusieurs cœurs.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison entre exécution séquentielle et parallèle. En séquentiel, un seul cœur traite huit éléments l'un après l'autre, ce qui prend huit pas de temps. En parallèle, quatre cœurs traitent chacun deux éléments en même temps, ce qui ne prend que deux pas de temps, soit environ quatre fois plus rapide.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le même travail : séquentiel contre parallèle</text>
+    <text class="d-mut" x="44" y="44" text-anchor="start" font-size="9">Séquentiel — 1 cœur, l'un après l'autre</text>
+    <g font-family="monospace">
+      <rect class="d-box" x="44" y="52" width="62" height="28" rx="5" /><text class="d-text" x="75" y="71" text-anchor="middle" font-size="11">1</text>
+      <rect class="d-box" x="114" y="52" width="62" height="28" rx="5" /><text class="d-text" x="145" y="71" text-anchor="middle" font-size="11">2</text>
+      <rect class="d-box" x="184" y="52" width="62" height="28" rx="5" /><text class="d-text" x="215" y="71" text-anchor="middle" font-size="11">3</text>
+      <rect class="d-box" x="254" y="52" width="62" height="28" rx="5" /><text class="d-text" x="285" y="71" text-anchor="middle" font-size="11">4</text>
+      <rect class="d-box" x="324" y="52" width="62" height="28" rx="5" /><text class="d-text" x="355" y="71" text-anchor="middle" font-size="11">5</text>
+      <rect class="d-box" x="394" y="52" width="62" height="28" rx="5" /><text class="d-text" x="425" y="71" text-anchor="middle" font-size="11">6</text>
+      <rect class="d-box" x="464" y="52" width="62" height="28" rx="5" /><text class="d-text" x="495" y="71" text-anchor="middle" font-size="11">7</text>
+      <rect class="d-box" x="534" y="52" width="62" height="28" rx="5" /><text class="d-text" x="565" y="71" text-anchor="middle" font-size="11">8</text>
+    </g>
+    <text class="d-mut" x="320" y="98" text-anchor="middle" font-size="9">→ 8 pas de temps</text>
+    <text class="d-mut" x="44" y="126" text-anchor="start" font-size="9">Parallèle — 4 cœurs, en même temps</text>
+    <g font-family="monospace">
+      <rect class="d-accent" x="44" y="134" width="130" height="34" rx="6" /><text class="d-tag" x="109" y="156" text-anchor="middle" font-size="11">1 · 2</text><text class="d-mut" x="109" y="182" text-anchor="middle" font-size="8">cœur 1</text>
+      <rect class="d-accent" x="184" y="134" width="130" height="34" rx="6" /><text class="d-tag" x="249" y="156" text-anchor="middle" font-size="11">3 · 4</text><text class="d-mut" x="249" y="182" text-anchor="middle" font-size="8">cœur 2</text>
+      <rect class="d-accent" x="324" y="134" width="130" height="34" rx="6" /><text class="d-tag" x="389" y="156" text-anchor="middle" font-size="11">5 · 6</text><text class="d-mut" x="389" y="182" text-anchor="middle" font-size="8">cœur 3</text>
+      <rect class="d-accent" x="464" y="134" width="130" height="34" rx="6" /><text class="d-tag" x="529" y="156" text-anchor="middle" font-size="11">7 · 8</text><text class="d-mut" x="529" y="182" text-anchor="middle" font-size="8">cœur 4</text>
+    </g>
+    <text class="d-mut" x="320" y="202" text-anchor="middle" font-size="9">→ 2 pas de temps (≈ 4× plus rapide)</text>
+  </svg>
+  <figcaption>Quand les calculs sont <strong>indépendants</strong>, quatre cœurs font en deux pas ce qu'un seul fait en huit. Tout l'art du parallélisme tient dans ce «&nbsp;quand&nbsp;»&nbsp;: encore faut-il que les tours de boucle ne dépendent pas les uns des autres.</figcaption>
+</figure>
+
+<h2>do concurrent : promettre l'indépendance</h2>
+<p>La façon la plus <strong>portable</strong> — car c'est du Fortran standard (2008) — est la boucle <code>do concurrent</code>. Elle ressemble à un <code>do</code> ordinaire, mais elle <strong>affirme</strong> au compilateur que les itérations sont indépendantes&nbsp;: aucune ne lit un résultat écrit par une autre, l'ordre n'a pas d'importance.</p>
+<figure class="code-block" data-file="saxpy.f90"><pre><code class="language-fortran">! y = a*x + y, chaque case indépendante des autres
+do concurrent (i = 1:n)
+    y(i) = a * x(i) + y(i)
+end do
+
+! avec un masque : ne traite que certains indices
+do concurrent (i = 1:n, x(i) > 0.0)
+    y(i) = sqrt(x(i))
+end do</code></pre></figure>
+<p>Attention&nbsp;: <code>do concurrent</code> n'est pas en soi une garantie d'exécution parallèle. C'est une <strong>promesse</strong> que <em>tu</em> fais au compilateur («&nbsp;ces tours sont indépendants&nbsp;»)&nbsp;; à lui, s'il en a les moyens (options d'optimisation, matériel), de vectoriser, de répartir sur les cœurs ou même sur un GPU. Si la promesse est fausse (une itération dépend d'une autre), le résultat devient <strong>imprévisible</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Le rôle de do concurrent. Le programmeur écrit do concurrent et promet que les itérations sont indépendantes. Le compilateur reçoit cette promesse et choisit librement comment l'exécuter : en vectorisation SIMD, en threads sur plusieurs cœurs, ou sur un GPU. do concurrent décrit l'intention, le compilateur décide du moyen.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">do concurrent : je décris l'intention, le compilateur choisit le moyen</text>
+    <rect class="d-accent" x="40" y="60" width="200" height="60" rx="9" /><text class="d-tag" x="140" y="86" text-anchor="middle" font-size="10" font-family="monospace">do concurrent (i=1:n)</text><text class="d-mut" x="140" y="104" text-anchor="middle" font-size="8.5">« ces tours sont indépendants »</text>
+    <path class="d-line" d="M240 90 L300 90" fill="none" /><text class="d-mut" x="270" y="82" text-anchor="middle" font-size="8">promesse</text>
+    <rect class="d-box" x="300" y="66" width="96" height="48" rx="8" /><text class="d-text" x="348" y="94" text-anchor="middle" font-size="10">compilateur</text>
+    <path class="d-line" d="M396 78 L452 58" fill="none" /><path class="d-line" d="M396 90 L452 90" fill="none" /><path class="d-line" d="M396 102 L452 122" fill="none" />
+    <rect class="d-box" x="452" y="42" width="150" height="30" rx="6" /><text class="d-text" x="527" y="61" text-anchor="middle" font-size="9">SIMD (vectorisation)</text>
+    <rect class="d-box" x="452" y="76" width="150" height="30" rx="6" /><text class="d-text" x="527" y="95" text-anchor="middle" font-size="9">threads (multicœur)</text>
+    <rect class="d-box" x="452" y="110" width="150" height="30" rx="6" /><text class="d-text" x="527" y="129" text-anchor="middle" font-size="9">GPU (compil. dédié)</text>
+    <text class="d-mut" x="320" y="170" text-anchor="middle" font-size="9">une seule écriture standard → plusieurs cibles possibles selon la machine</text>
+  </svg>
+  <figcaption>La force de <code>do concurrent</code> est d'être <strong>standard</strong>&nbsp;: le même code se vectorise sur un PC, s'étale sur les cœurs d'un serveur ou vise un GPU selon le compilateur et ses options — sans réécriture.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>N'utilise <code>do concurrent</code> que si les itérations sont <strong>réellement</strong> indépendantes. Une boucle comme <code>a(i) = a(i-1) + 1</code> ne l'est pas&nbsp;: chaque tour a besoin du précédent. La mettre en <code>do concurrent</code> compile sans erreur mais peut donner un résultat <strong>faux et non reproductible</strong>. Le compilateur te croit sur parole&nbsp;; à toi de tenir la promesse.</p></div></div>
+
+<h2>OpenMP : la voie la plus répandue</h2>
+<p>Sur une machine à <strong>mémoire partagée</strong> (tous les cœurs voient la même RAM), le standard le plus utilisé est <strong>OpenMP</strong>. On l'active par des <strong>directives</strong> — des commentaires spéciaux commençant par <code>!$omp</code> — que le compilateur lit si on active OpenMP, et ignore sinon (le code reste valide en séquentiel).</p>
+<figure class="code-block" data-file="somme.f90"><pre><code class="language-fortran">real :: s
+integer :: i
+s = 0.0
+
+!$omp parallel do reduction(+:s)
+do i = 1, n
+    s = s + x(i)
+end do
+!$omp end parallel do
+
+print *, s        ! somme correcte, calculée en parallèle</code></pre></figure>
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># il faut activer OpenMP à la compilation
+gfortran -fopenmp somme.f90 -o somme
+OMP_NUM_THREADS=4 ./somme        # 4 fils d'exécution</code></pre></figure>
+<p>La clause <code>reduction(+:s)</code> est cruciale. Sans elle, plusieurs fils écriraient <code>s</code> <strong>en même temps</strong>&nbsp;: c'est une <em>condition de course</em>, et le total serait faux. Avec <code>reduction</code>, chaque fil accumule dans une copie privée, puis Fortran additionne les copies à la fin — un résultat correct et déterministe.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="La condition de course et sa correction par réduction. À gauche, sans réduction, deux fils lisent la variable s à la même valeur, ajoutent chacun, et se réécrivent dessus : une addition est perdue, le total est faux. À droite, avec reduction, chaque fil possède une copie privée de s qu'il accumule seul, puis les copies sont additionnées à la fin pour donner le total correct.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Somme parallèle : le piège de la course, la parade de la réduction</text>
+    <text class="d-mut" x="160" y="44" text-anchor="middle" font-size="9.5">Sans réduction — condition de course</text>
+    <rect class="d-box" x="60" y="54" width="90" height="34" rx="6" /><text class="d-text" x="105" y="75" text-anchor="middle" font-size="9">fil A lit s=5</text>
+    <rect class="d-box" x="172" y="54" width="90" height="34" rx="6" /><text class="d-text" x="217" y="75" text-anchor="middle" font-size="9">fil B lit s=5</text>
+    <path class="d-line" d="M105 88 L105 108" fill="none" /><path class="d-line" d="M217 88 L217 108" fill="none" />
+    <rect class="d-box" x="60" y="110" width="90" height="30" rx="6" /><text class="d-text" x="105" y="129" text-anchor="middle" font-size="9">écrit s=7</text>
+    <rect class="d-box" x="172" y="110" width="90" height="30" rx="6" /><text class="d-text" x="217" y="129" text-anchor="middle" font-size="9">écrit s=8</text>
+    <text class="d-mut" x="160" y="164" text-anchor="middle" font-size="9">résultat s=8 : l'ajout de A est perdu ✗</text>
+    <path class="d-line" d="M312 44 L312 176" fill="none" />
+    <text class="d-mut" x="480" y="44" text-anchor="middle" font-size="9.5">Avec reduction(+:s) — copies privées</text>
+    <rect class="d-accent" x="372" y="54" width="94" height="34" rx="6" /><text class="d-tag" x="419" y="75" text-anchor="middle" font-size="9">A : sA = 2</text>
+    <rect class="d-accent" x="486" y="54" width="94" height="34" rx="6" /><text class="d-tag" x="533" y="75" text-anchor="middle" font-size="9">B : sB = 3</text>
+    <path class="d-line" d="M419 88 L470 108" fill="none" /><path class="d-line" d="M533 88 L482 108" fill="none" />
+    <rect class="d-box" x="404" y="110" width="144" height="32" rx="6" /><text class="d-text" x="476" y="130" text-anchor="middle" font-size="9">s = sA + sB = 5</text>
+    <text class="d-mut" x="480" y="164" text-anchor="middle" font-size="9">total correct, quel que soit l'ordre ✓</text>
+  </svg>
+  <figcaption>Deux fils qui écrivent la même variable «&nbsp;s'écrasent&nbsp;»&nbsp;: une addition disparaît. La <code>reduction</code> donne à chacun sa copie privée et ne les combine qu'à la fin — c'est le motif fondamental de toute somme parallèle.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.8 1 1.5 1 2.5h6c0-1 .3-1.7 1-2.5A6 6 0 0 0 12 3Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Les directives OpenMP étant des <strong>commentaires</strong> (<code>!$omp …</code>), un compilateur sans <code>-fopenmp</code> les ignore&nbsp;: ton programme reste correct en séquentiel. Tu peux donc paralléliser <em>progressivement</em>, une boucle à la fois, en gardant à tout moment un code qui compile et tourne partout.</p></div></div>
+
+<h2>Les coarrays : le parallélisme dans le langage</h2>
+<p>Pour la <strong>mémoire distribuée</strong> (plusieurs machines, ou plusieurs processus sans RAM commune), Fortran 2008 a intégré les <strong>coarrays</strong>. Le programme est lancé en plusieurs exemplaires appelés <strong>images</strong>&nbsp;; chacune a ses propres données, et une <em>codimension</em> <code>[*]</code> permet de lire ou écrire la variable d'une autre image avec des crochets.</p>
+<figure class="code-block" data-file="images.f90"><pre><code class="language-fortran">real :: temp[*]           ! une copie de temp par image
+integer :: moi
+
+moi = this_image()        ! numéro de l'image (1 à num_images())
+temp = moi * 10.0         ! chaque image remplit SA copie
+sync all                  ! barrière : on attend tout le monde
+
+if (moi == 1) then
+    print *, temp[2]      ! image 1 lit la copie de l'image 2 → 20.0
+    print *, num_images() ! nombre total d'images
+end if</code></pre></figure>
+<p><code>num_images()</code> donne le nombre d'images, <code>this_image()</code> le numéro de l'image courante, et <code>sync all</code> est une <strong>barrière</strong>&nbsp;: chaque image y attend que toutes les autres l'aient atteinte, pour éviter de lire une donnée pas encore écrite. C'est le modèle <em>SPMD</em>&nbsp;: un seul programme, plusieurs exemplaires qui coopèrent.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Trois images d'un programme à coarrays. Chaque image exécute le même code et possède sa propre copie de la variable temp : l'image 1 contient 10, l'image 2 contient 20, l'image 3 contient 30. L'image 1 lit la copie de l'image 2 en écrivant temp entre crochets 2, ce qui lui donne la valeur 20. La fonction num images vaut trois.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Coarrays : un programme, plusieurs images, chacune ses données</text>
+    <rect class="d-accent" x="40" y="44" width="150" height="80" rx="10" /><text class="d-tag" x="115" y="66" text-anchor="middle" font-size="10">image 1</text><rect class="d-box" x="72" y="76" width="86" height="34" rx="6" /><text class="d-text" x="115" y="98" text-anchor="middle" font-size="10" font-family="monospace">temp = 10</text>
+    <rect class="d-box" x="245" y="44" width="150" height="80" rx="10" /><text class="d-text" x="320" y="66" text-anchor="middle" font-size="10">image 2</text><rect class="d-accent" x="277" y="76" width="86" height="34" rx="6" /><text class="d-tag" x="320" y="98" text-anchor="middle" font-size="10" font-family="monospace">temp = 20</text>
+    <rect class="d-box" x="450" y="44" width="150" height="80" rx="10" /><text class="d-text" x="525" y="66" text-anchor="middle" font-size="10">image 3</text><rect class="d-box" x="482" y="76" width="86" height="34" rx="6" /><text class="d-text" x="525" y="98" text-anchor="middle" font-size="10" font-family="monospace">temp = 30</text>
+    <path class="d-line" d="M190 150 L320 150 L320 124" fill="none" /><text class="d-mut" x="205" y="166" text-anchor="middle" font-size="8.5">image 1 lit</text><text class="d-tag" x="300" y="166" text-anchor="middle" font-size="9" font-family="monospace">temp[2]</text><text class="d-mut" x="360" y="166" text-anchor="middle" font-size="8.5">→ 20</text>
+    <text class="d-mut" x="525" y="150" text-anchor="middle" font-size="9">num_images() = 3</text>
+  </svg>
+  <figcaption>Chaque image est un exemplaire autonome du programme avec sa propre mémoire&nbsp;; les crochets <code>temp[2]</code> désignent la copie d'une <em>autre</em> image. C'est le seul modèle de parallélisme <strong>écrit dans le langage lui-même</strong>, sans bibliothèque externe.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Les modèles de <strong>prévision météo</strong> et de <strong>climat</strong> (comme l'IFS du Centre européen ECMWF, ou le modèle WRF) tournent sur des supercalculateurs à des <strong>dizaines de milliers de cœurs</strong>. Le motif dominant y est <em>hybride</em>&nbsp;: <strong>MPI</strong> pour communiquer entre les nœuds (mémoire distribuée) et <strong>OpenMP</strong> pour occuper les cœurs de chaque nœud (mémoire partagée). Ces codes sont écrits en Fortran justement parce que le langage porte le calcul sur tableaux <em>et</em> le parallélisme aussi loin. Les coarrays offrent aujourd'hui une alternative standard à MPI, directement dans le langage.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p><strong>MPI</strong> (<em>Message Passing Interface</em>) reste la bibliothèque de référence pour le calcul massivement distribué&nbsp;: on l'appelle depuis Fortran (<code>use mpi</code>). Fortran 2018 a enrichi les coarrays (images groupées en <em>teams</em>, événements, réductions collectives <code>co_sum</code>). Côté <code>do concurrent</code>, les compilateurs récents savent le compiler pour <strong>GPU</strong> — la même boucle standard vise alors des milliers de fils.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — le parallélisme en Fortran</caption>
+    <thead><tr><th scope="col">Besoin</th><th scope="col">Écriture</th></tr></thead>
+    <tbody>
+      <tr><td>Itérations indépendantes (standard)</td><td><code>do concurrent (i=1:n) … end do</code></td></tr>
+      <tr><td>Boucle parallèle (OpenMP)</td><td><code>!$omp parallel do</code> … <code>!$omp end parallel do</code></td></tr>
+      <tr><td>Somme parallèle sûre</td><td>clause <code>reduction(+:s)</code></td></tr>
+      <tr><td>Compiler avec OpenMP</td><td><code>gfortran -fopenmp</code></td></tr>
+      <tr><td>Déclarer un coarray</td><td><code>real :: a[*]</code></td></tr>
+      <tr><td>Nombre / n° d'image</td><td><code>num_images()</code> / <code>this_image()</code></td></tr>
+      <tr><td>Synchroniser les images</td><td><code>sync all</code> (barrière)</td></tr>
+      <tr><td>Lire chez une autre image</td><td><code>a[2]</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Parallélisme</dt><dd>Exécution de plusieurs calculs en même temps sur plusieurs cœurs ou machines, pour aller plus vite.</dd>
+  <dt>do concurrent</dt><dd>Boucle standard (Fortran 2008) affirmant au compilateur que les itérations sont indépendantes&nbsp;: il peut alors les vectoriser ou les paralléliser.</dd>
+  <dt>Condition de course</dt><dd>Bug survenant quand plusieurs fils accèdent à la même donnée sans coordination&nbsp;: le résultat dépend de l'ordre, souvent faux.</dd>
+  <dt>Réduction</dt><dd>Combinaison sûre de résultats partiels (somme, max…)&nbsp;: chaque fil accumule en privé, puis on fusionne (clause <code>reduction</code>).</dd>
+  <dt>OpenMP</dt><dd>Standard de parallélisme à mémoire partagée piloté par des directives <code>!$omp</code>, ignorées sans l'option <code>-fopenmp</code>.</dd>
+  <dt>Coarray</dt><dd>Tableau à codimension <code>[*]</code> réparti sur plusieurs images&nbsp;; on accède à la copie d'une autre image par des crochets.</dd>
+  <dt>Image</dt><dd>Exemplaire du programme s'exécutant en parallèle avec ses propres données (modèle SPMD).</dd>
+  <dt>MPI</dt><dd><em>Message Passing Interface</em>&nbsp;: bibliothèque de référence pour le calcul distribué entre machines.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>On accélère un calcul en <strong>répartissant</strong> des tâches indépendantes sur plusieurs cœurs.</li>
+  <li><code>do concurrent</code> <strong>promet</strong> l'indépendance des itérations&nbsp;; le compilateur choisit comment les exécuter.</li>
+  <li><strong>OpenMP</strong> parallélise une boucle par directives&nbsp;; <code>reduction</code> évite la <strong>condition de course</strong>.</li>
+  <li>Les <strong>coarrays</strong> répartissent le travail sur des <strong>images</strong> à mémoire distribuée, dans le langage même.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+  <li>Que garantit exactement <code>do concurrent</code>&nbsp;?</li>
+  <li>Pourquoi une somme parallèle a-t-elle besoin de <code>reduction</code>&nbsp;?</li>
+  <li>Qu'est-ce qu'une «&nbsp;image&nbsp;» et à quoi sert <code>this_image()</code>&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Que garantit l'écriture « do concurrent (i = 1:n) » ?","a":["Rien à elle seule : elle affirme au compilateur que les itérations sont indépendantes, à lui de paralléliser ou vectoriser s'il le peut","Que la boucle s'exécute toujours sur tous les cœurs","Que la boucle est deux fois plus rapide","Que les itérations s'exécutent dans l'ordre"],"correct":0,"explain":"do concurrent est une promesse d'indépendance faite par le programmeur ; le compilateur reste libre du moyen (SIMD, threads, GPU) selon la machine et les options. Si la promesse est fausse, le résultat devient imprévisible."},
+  {"q":"Pourquoi ajouter « reduction(+:s) » à une somme parallèle en OpenMP ?","a":["Pour éviter la condition de course : chaque fil accumule dans une copie privée, puis les copies sont additionnées à la fin","Pour trier le tableau avant de sommer","Pour afficher le résultat","Pour réduire le nombre de fils à un seul"],"correct":0,"explain":"Sans reduction, plusieurs fils écriraient s en même temps (condition de course) et perdraient des ajouts. reduction donne à chacun une copie privée, combinée à la fin : résultat correct et déterministe."},
+  {"q":"Qu'est-ce qu'une « image » dans le modèle des coarrays ?","a":["Un exemplaire du programme s'exécutant en parallèle avec ses propres données ; on accède à celles d'une autre par a[i]","Un fichier PNG affiché à l'écran","Une copie de sauvegarde du code source","Un cœur physique du processeur"],"correct":0,"explain":"Les coarrays lancent le programme en plusieurs images (modèle SPMD), chacune avec sa mémoire. this_image() donne le numéro courant, num_images() le total, et les crochets a[2] désignent la copie d'une autre image."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["do concurrent"],"placeholder":"la boucle standard qui affirme au compilateur que les tours sont indépendants : __________ (i = 1:n)","hints":["Deux mots.","« concurrent » comme « simultané ».","Fortran 2008."],"link":{"href":"lecon-12.html","label":"Revoir « do concurrent »"}},
+  {"type":"text","accept":["reduction","reduction(+:s)","reduction(+:somme)"],"placeholder":"la clause OpenMP qui rend une somme parallèle correcte : !$omp parallel do __________","hints":["Elle donne une copie privée à chaque fil.","Neuf lettres pour le mot-clé.","reduction(+:s)."],"link":{"href":"lecon-12.html","label":"Revoir « OpenMP »"}},
+  {"type":"text","accept":["this_image","this_image()"],"placeholder":"la fonction qui donne le numéro de l'image courante (de 1 à num_images())","hints":["« cette image » en anglais.","Va avec num_images().","this_image()."],"link":{"href":"lecon-12.html","label":"Revoir « Les coarrays »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Réécris cette boucle en <code>do concurrent</code>, puis explique pourquoi c'est légitime ici&nbsp;: <code>do i = 1, n</code> ; <code>c(i) = a(i) + b(i)</code> ; <code>end do</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="somme.f90"><pre><code class="language-fortran">do concurrent (i = 1:n)
+    c(i) = a(i) + b(i)
+end do</code></pre></figure><p>Chaque case <code>c(i)</code> ne dépend que de <code>a(i)</code> et <code>b(i)</code>, jamais d'une autre itération&nbsp;: les tours sont indépendants, la promesse de <code>do concurrent</code> est tenue.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Parallélise avec OpenMP le calcul de la somme des carrés d'un tableau <code>x(n)</code>, sans condition de course.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="carres.f90"><pre><code class="language-fortran">real :: s
+integer :: i
+s = 0.0
+!$omp parallel do reduction(+:s)
+do i = 1, n
+    s = s + x(i)**2
+end do
+!$omp end parallel do
+print *, s</code></pre></figure><p>La clause <code>reduction(+:s)</code> donne à chaque fil une copie privée de <code>s</code>, additionnées à la fin&nbsp;: pas de course, résultat correct.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec des coarrays&nbsp;: chaque image dépose le carré de son numéro dans un coarray, puis l'image 1 lit et affiche les valeurs des images 1 et 2.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="carres_co.f90"><pre><code class="language-fortran">integer :: val[*]
+val = this_image()**2      ! image 1 → 1, image 2 → 4, …
+sync all                   ! on attend que tous aient écrit
+if (this_image() == 1) then
+    print *, val[1], val[2]    ! 1 4
+end if</code></pre></figure><p><code>sync all</code> garantit que l'image 2 a bien écrit sa copie avant que l'image 1 ne la lise avec <code>val[2]</code>.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-fortran.min.js" defer></script>
+  </body>
+</html>

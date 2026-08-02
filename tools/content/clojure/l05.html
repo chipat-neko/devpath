@@ -1,0 +1,77 @@
+<p>Voici sans doute la leçon la plus représentative du style Clojure. Plutôt que de boucler en mutant des variables, on <strong>transforme des séquences</strong> avec un petit vocabulaire d'une puissance redoutable&nbsp;: <code>map</code>, <code>filter</code>, <code>reduce</code>. Le tout repose sur une idée unificatrice — l'<strong>abstraction séquence</strong> — et sur la <strong>paresse</strong>. Une fois ce style en main, on écrit des traitements de données concis et lisibles.</p>
+
+<h2>L'abstraction séquence</h2>
+<p>Listes, vecteurs, sets, maps&nbsp;: toutes ces collections peuvent être vues comme une <strong>séquence</strong> (abréviée «&nbsp;seq&nbsp;») d'éléments. Les fonctions de séquence marchent donc <em>uniformément</em> sur n'importe laquelle. C'est ce qui donne au langage sa cohérence&nbsp;: un seul vocabulaire pour tout parcourir.</p>
+<figure class="code-block" data-file="seq.clj"><pre><code class="language-clojure">(seq [1 2 3])      ; → (1 2 3)
+(seq #{1 2 3})     ; → (1 2 3)   (ordre quelconque)
+(seq {:a 1 :b 2})  ; → ([:a 1] [:b 2])   (paires clé/valeur)
+(seq "abc")        ; → (\a \b \c)   (même une chaîne !)</code></pre></figure>
+
+<h2><code>map</code>&nbsp;: transformer chaque élément</h2>
+<p><code>map</code> applique une fonction à chaque élément et renvoie la séquence des résultats. C'est le remplaçant naturel d'une boucle de transformation.</p>
+<figure class="code-block" data-file="map.clj"><pre><code class="language-clojure">(map inc [1 2 3])              ; → (2 3 4)
+(map #(* % %) [1 2 3 4])      ; → (1 4 9 16)
+(map str [1 2 3] [:a :b :c])  ; → ("1:a" …) façon de combiner deux séquences
+(map count ["abc" "de" "f"])  ; → (3 2 1)</code></pre></figure>
+
+<h2><code>filter</code> et <code>remove</code>&nbsp;: sélectionner</h2>
+<p><code>filter</code> garde les éléments qui satisfont un <strong>prédicat</strong> (une fonction renvoyant vrai/faux). <code>remove</code> fait l'inverse.</p>
+<figure class="code-block" data-file="filter.clj"><pre><code class="language-clojure">(filter even? [1 2 3 4 5 6])   ; → (2 4 6)
+(filter #(&gt; % 2) [1 2 3 4])    ; → (3 4)
+(remove even? [1 2 3 4])       ; → (1 3)</code></pre></figure>
+
+<h2><code>reduce</code>&nbsp;: replier en une valeur</h2>
+<p><code>reduce</code> parcourt la séquence en accumulant un résultat&nbsp;: idéal pour une somme, un produit, un maximum, ou construire une nouvelle structure. On lui donne une fonction de deux arguments (accumulateur, élément) et, souvent, une valeur initiale.</p>
+<figure class="code-block" data-file="reduce.clj"><pre><code class="language-clojure">(reduce + [1 2 3 4])        ; → 10  (somme)
+(reduce + 100 [1 2 3])      ; → 106 (avec valeur initiale 100)
+(reduce max [3 7 2 9 4])    ; → 9   (maximum)
+
+;; construire une map de comptage :
+(reduce (fn [acc x] (update acc x (fnil inc 0)))
+        {}
+        [:a :b :a :a :b])    ; → {:a 3, :b 2}</code></pre></figure>
+<p><code>map</code> et <code>filter</code> produisent des séquences&nbsp;; <code>reduce</code> les <strong>condense</strong> en une seule valeur. Ensemble, ils couvrent l'immense majorité des traitements.</p>
+
+<h2>Les séquences paresseuses</h2>
+<p>La plupart des séquences Clojure sont <strong>paresseuses</strong>&nbsp;: les éléments ne sont calculés qu'au moment où on les consomme. On peut donc manipuler des séquences <strong>infinies</strong> sans tout calculer.</p>
+<figure class="code-block" data-file="lazy.clj"><pre><code class="language-clojure">(take 5 (range))            ; → (0 1 2 3 4)  (range sans borne = infini)
+(take 5 (map #(* % %) (range)))   ; → (0 1 4 9 16)
+(take 3 (filter even? (range)))   ; → (0 2 4)</code></pre></figure>
+<p><code>range</code> sans argument est une séquence infinie&nbsp;; <code>take</code> n'en réalise que les 5 premiers. La paresse permet de composer sans gaspiller&nbsp;: rien n'est calculé tant qu'on ne le demande pas.</p>
+
+<h2>Chaîner avec les macros de threading</h2>
+<p>Imbriquer <code>(reduce + (filter even? (map inc …)))</code> devient vite illisible. Les macros <strong>thread</strong> <code>-&gt;</code> et <code>-&gt;&gt;</code> remettent les étapes dans l'ordre de lecture. <code>-&gt;&gt;</code> insère la valeur en <strong>dernier</strong> argument (parfait pour les séquences)&nbsp;; <code>-&gt;</code> en premier.</p>
+<figure class="code-block" data-file="threading.clj"><pre><code class="language-clojure">;; Sans threading (lecture de l'intérieur vers l'extérieur) :
+(reduce + (filter even? (map inc [1 2 3 4 5])))   ; → 12
+
+;; Avec ->> (lecture de haut en bas, naturelle) :
+(-&gt;&gt; [1 2 3 4 5]
+     (map inc)        ; (2 3 4 5 6)
+     (filter even?)   ; (2 4 6)
+     (reduce +))      ; → 12</code></pre></figure>
+<p>Le résultat est identique, mais le <code>-&gt;&gt;</code> se lit comme un pipeline&nbsp;: «&nbsp;prends ce vecteur, incrémente, garde les pairs, somme&nbsp;». C'est l'une des constructions les plus appréciées de Clojure.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La paresse peut surprendre&nbsp;: si tu fais un <code>map</code> dont la fonction affiche quelque chose (effet de bord), rien ne s'imprime tant que la séquence n'est pas consommée. Pour forcer l'évaluation, utilise <code>doall</code> (réalise tout) ou <code>doseq</code> (parcourt pour les effets de bord). Règle d'or&nbsp;: <code>map</code>/<code>filter</code> pour transformer, <code>doseq</code> pour agir.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les <strong>transducers</strong> sont une évolution avancée&nbsp;: ils permettent de composer <code>map</code>, <code>filter</code>, etc. <em>indépendamment</em> de la source de données, sans créer de séquences intermédiaires. Pour de gros volumes, ils sont plus efficaces. On les rencontre quand la performance compte&nbsp;; le style <code>-&gt;&gt;</code> reste parfait pour le quotidien.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Séquence</strong>&nbsp;: abstraction unique pour parcourir toute collection.</li>
+  <li><code>map</code> transforme, <code>filter</code>/<code>remove</code> sélectionnent, <code>reduce</code> replie en une valeur.</li>
+  <li>Séquences <strong>paresseuses</strong>&nbsp;: éléments calculés à la demande (<code>range</code>, <code>take</code>).</li>
+  <li><code>-&gt;&gt;</code> chaîne les étapes en pipeline lisible.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle fonction pour ne garder que certains éléments&nbsp;?</li><li>Que fait <code>reduce</code> de plus que <code>map</code>&nbsp;?</li><li>Pourquoi peut-on écrire <code>(take 5 (range))</code> sur une séquence infinie&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Double chaque nombre de <code>[1 2 3 4]</code> avec <code>map</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(map #(* % 2) [1 2 3 4])   ; → (2 4 6 8)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Calcule la somme des nombres pairs de 1 à 10 avec <code>-&gt;&gt;</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(-&gt;&gt; (range 1 11)
+     (filter even?)
+     (reduce +))         ; → 30</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>À partir d'un vecteur de mots, produis la longueur totale de tous les mots de plus de 3 lettres.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(-&gt;&gt; ["chat" "de" "maison" "ok" "soleil"]
+     (filter #(&gt; (count %) 3))   ; ("chat" "maison" "soleil")
+     (map count)                 ; (4 6 6)
+     (reduce +))                 ; → 16</code></pre></figure></details></div>

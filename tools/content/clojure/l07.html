@@ -1,0 +1,76 @@
+<p>Si l'immuabilité interdit de modifier les valeurs, comment représenter ce qui <em>change vraiment</em> dans le temps&nbsp;: un compteur, un solde de compte, l'état d'un jeu&nbsp;? Clojure répond par une distinction subtile mais libératrice entre <strong>identité</strong> et <strong>valeur</strong>, et par une poignée de «&nbsp;références&nbsp;» gérées (<code>atom</code>, <code>ref</code>) conçues pour la <strong>concurrence</strong>. C'est l'un des grands apports de Rich Hickey à la programmation.</p>
+
+<h2>Identité contre valeur</h2>
+<p>Une <strong>valeur</strong> est immuable&nbsp;: le nombre <code>42</code>, la map <code>{:score 10}</code>. Une <strong>identité</strong> est une entité stable dans le temps — «&nbsp;mon compte en banque&nbsp;» — qui prend <em>successivement</em> différentes valeurs. Clojure sépare les deux&nbsp;: une identité est une <strong>référence</strong> qui pointe, à chaque instant, vers une valeur immuable. «&nbsp;Changer&nbsp;», c'est faire pointer la référence vers une <strong>nouvelle</strong> valeur, pas muter l'ancienne.</p>
+
+<h2>Les atoms&nbsp;: l'état partagé synchrone</h2>
+<p>Un <strong>atom</strong> est la référence la plus courante&nbsp;: il enveloppe une valeur et permet de la remplacer de façon atomique (sûre même entre threads). On lit avec <code>@</code> (ou <code>deref</code>), et on met à jour avec <code>swap!</code> ou <code>reset!</code>.</p>
+<figure class="code-block" data-file="atom.clj"><pre><code class="language-clojure">(def compteur (atom 0))
+
+@compteur               ; → 0   (lecture)
+(swap! compteur inc)    ; → 1   (applique inc à la valeur courante)
+(swap! compteur inc)    ; → 2
+(swap! compteur + 10)   ; → 12  (applique (+ valeur 10))
+(reset! compteur 0)     ; → 0   (remplace directement)</code></pre></figure>
+<p><code>swap!</code> prend une <strong>fonction</strong> et l'applique à la valeur actuelle. La nouvelle valeur reste immuable&nbsp;; c'est l'atom (l'identité) qui pointe désormais ailleurs. <code>swap!</code> garantit qu'aucune mise à jour concurrente ne se perd.</p>
+
+<h2>Un état plus riche dans un atom</h2>
+<p>Un atom peut envelopper n'importe quelle valeur, y compris une map complexe&nbsp;: c'est un patron répandu pour l'état d'une application.</p>
+<figure class="code-block" data-file="atom-map.clj"><pre><code class="language-clojure">(def etat (atom {:joueurs [] :score 0}))
+
+(swap! etat update :score + 5)
+(swap! etat update :joueurs conj "Ada")
+
+@etat   ; → {:joueurs ["Ada"] :score 5}</code></pre></figure>
+<p>Chaque <code>swap!</code> dérive une nouvelle map immuable et la pose dans l'atom. À tout moment, lire <code>@etat</code> donne un cliché cohérent.</p>
+
+<h2>Les refs et la mémoire transactionnelle</h2>
+<p>Quand <strong>plusieurs</strong> identités doivent changer <em>ensemble</em>, de façon coordonnée (un transfert qui débite un compte et crédite l'autre), un seul atom ne suffit pas. Clojure offre les <strong>refs</strong> et la <strong>STM</strong> (Software Transactional Memory)&nbsp;: on groupe les changements dans une transaction <code>dosync</code>, et soit tout réussit, soit rien ne s'applique — comme dans une base de données.</p>
+<figure class="code-block" data-file="refs.clj"><pre><code class="language-clojure">(def compte-a (ref 100))
+(def compte-b (ref 0))
+
+(defn transferer [montant]
+  (dosync
+    (alter compte-a - montant)
+    (alter compte-b + montant)))
+
+(transferer 30)
+[@compte-a @compte-b]   ; → [70 30]   (cohérent, atomique)</code></pre></figure>
+<p><code>dosync</code> rend les deux <code>alter</code> indivisibles&nbsp;: jamais un autre thread ne verra l'argent «&nbsp;disparu&nbsp;» d'un compte sans être apparu dans l'autre. Si un conflit survient, la transaction est rejouée automatiquement.</p>
+
+<h2>Pourquoi l'immuabilité simplifie tout</h2>
+<p>Dans les langages à état mutable, la concurrence exige des <strong>verrous</strong> manuels, sources d'interblocages et de bugs imprévisibles. En Clojure, les <em>valeurs</em> étant immuables, elles se partagent sans danger&nbsp;; seules les rares <em>identités</em> mutables sont encadrées par des mécanismes sûrs (<code>atom</code>, <code>ref</code>). On ne verrouille presque jamais à la main. La concurrence devient un sujet maîtrisable plutôt qu'un champ de mines.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mettre une <strong>fonction à effet de bord</strong> dans un <code>swap!</code> ou un <code>dosync</code>. Comme ces mises à jour peuvent être <strong>rejouées</strong> en cas de conflit, la fonction doit être <strong>pure</strong> (sans effet observable). N'envoie pas d'e-mail ni n'imprime dans un <code>swap!</code>&nbsp;: fais-le <em>après</em>, une fois la nouvelle valeur obtenue.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Clojure propose aussi <code>core.async</code>, une bibliothèque de canaux (<em>channels</em>) inspirée du modèle CSP (comme les goroutines de Go), pour orchestrer des traitements concurrents par messages plutôt que par état partagé. Avec les atoms pour l'état local et les channels pour la communication, Clojure couvre élégamment la plupart des besoins concurrents.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Identité</strong> (stable, change dans le temps) ≠ <strong>valeur</strong> (immuable, fixe).</li>
+  <li><strong>Atom</strong>&nbsp;: état partagé&nbsp;; lire <code>@a</code>, mettre à jour <code>swap!</code>/<code>reset!</code>.</li>
+  <li><strong>Ref + <code>dosync</code></strong>&nbsp;: changements coordonnés, atomiques (STM).</li>
+  <li>L'immuabilité rend le partage entre threads sûr&nbsp;; presque pas de verrous manuels.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle est la différence entre identité et valeur&nbsp;?</li><li>Comment lit-on la valeur d'un atom&nbsp;?</li><li>Pourquoi la fonction passée à <code>swap!</code> doit-elle être pure&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un atom <code>n</code> à 0, incrémente-le deux fois, puis lis sa valeur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(def n (atom 0))
+(swap! n inc)
+(swap! n inc)
+@n            ; → 2</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Avec un atom contenant une map <code>{:total 0}</code>, ajoute 7 au total.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(def panier (atom {:total 0}))
+(swap! panier update :total + 7)
+@panier   ; → {:total 7}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Avec deux refs <code>stock</code> (10) et <code>vendus</code> (0), écris une fonction <code>vendre</code> qui, dans une transaction, retire 1 du stock et ajoute 1 aux vendus.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.clj"><pre><code class="language-clojure">(def stock (ref 10))
+(def vendus (ref 0))
+
+(defn vendre []
+  (dosync
+    (alter stock dec)
+    (alter vendus inc)))
+
+(vendre)
+[@stock @vendus]   ; → [9 1]</code></pre></figure></details></div>

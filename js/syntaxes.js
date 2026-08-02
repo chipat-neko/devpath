@@ -1,0 +1,90 @@
+/* =============================================================================
+   syntaxes.js — Données du comparateur de syntaxe (P7). Pour chaque TÂCHE, le
+   bout de code équivalent dans plusieurs LANGAGES. window.SYNTAXES. Aucun fetch.
+   ============================================================================= */
+window.SYNTAXES = {
+  langs: [
+    { id: "js", label: "JavaScript" },
+    { id: "py", label: "Python" },
+    { id: "java", label: "Java" },
+    { id: "c", label: "C" },
+    { id: "go", label: "Go" },
+    { id: "rust", label: "Rust" },
+  ],
+  tasks: [
+    { id: "print", label: "Afficher du texte" },
+    { id: "var", label: "Déclarer une variable" },
+    { id: "if", label: "Condition (si / sinon)" },
+    { id: "for", label: "Boucle de 1 à 5" },
+    { id: "func", label: "Fonction (addition)" },
+    { id: "array", label: "Liste et parcours" },
+    { id: "while", label: "Boucle while" },
+    { id: "string", label: "Interpolation de chaîne" },
+  ],
+  code: {
+    print: {
+      js: 'console.log("Bonjour !");',
+      py: 'print("Bonjour !")',
+      java: 'System.out.println("Bonjour !");',
+      c: 'printf("Bonjour !\\n");',
+      go: 'fmt.Println("Bonjour !")',
+      rust: 'println!("Bonjour !");',
+    },
+    var: {
+      js: "let x = 42;",
+      py: "x = 42",
+      java: "int x = 42;",
+      c: "int x = 42;",
+      go: "x := 42",
+      rust: "let x = 42;",
+    },
+    if: {
+      js: 'if (x > 10) {\n  console.log("grand");\n} else {\n  console.log("petit");\n}',
+      py: 'if x > 10:\n    print("grand")\nelse:\n    print("petit")',
+      java: 'if (x > 10) {\n  System.out.println("grand");\n} else {\n  System.out.println("petit");\n}',
+      c: 'if (x > 10) {\n  printf("grand\\n");\n} else {\n  printf("petit\\n");\n}',
+      go: 'if x > 10 {\n  fmt.Println("grand")\n} else {\n  fmt.Println("petit")\n}',
+      rust: 'if x > 10 {\n  println!("grand");\n} else {\n  println!("petit");\n}',
+    },
+    for: {
+      js: "for (let i = 1; i <= 5; i++) {\n  console.log(i);\n}",
+      py: "for i in range(1, 6):\n    print(i)",
+      java: "for (int i = 1; i <= 5; i++) {\n  System.out.println(i);\n}",
+      c: 'for (int i = 1; i <= 5; i++) {\n  printf("%d\\n", i);\n}',
+      go: "for i := 1; i <= 5; i++ {\n  fmt.Println(i)\n}",
+      rust: 'for i in 1..=5 {\n  println!("{}", i);\n}',
+    },
+    func: {
+      js: "function somme(a, b) {\n  return a + b;\n}",
+      py: "def somme(a, b):\n    return a + b",
+      java: "int somme(int a, int b) {\n  return a + b;\n}",
+      c: "int somme(int a, int b) {\n  return a + b;\n}",
+      go: "func somme(a, b int) int {\n  return a + b\n}",
+      rust: "fn somme(a: i32, b: i32) -> i32 {\n  a + b\n}",
+    },
+    array: {
+      js: "const t = [1, 2, 3];\nt.forEach(n => console.log(n));",
+      py: "t = [1, 2, 3]\nfor n in t:\n    print(n)",
+      java: "int[] t = {1, 2, 3};\nfor (int n : t) {\n  System.out.println(n);\n}",
+      c: 'int t[] = {1, 2, 3};\nfor (int i = 0; i < 3; i++) {\n  printf("%d\\n", t[i]);\n}',
+      go: "t := []int{1, 2, 3}\nfor _, n := range t {\n  fmt.Println(n)\n}",
+      rust: 'let t = [1, 2, 3];\nfor n in t {\n  println!("{}", n);\n}',
+    },
+    while: {
+      js: "while (x < 5) {\n  x++;\n}",
+      py: "while x < 5:\n    x += 1",
+      java: "while (x < 5) {\n  x++;\n}",
+      c: "while (x < 5) {\n  x++;\n}",
+      go: "for x < 5 {\n  x++\n}",
+      rust: "while x < 5 {\n  x += 1;\n}",
+    },
+    string: {
+      js: "const msg = `Bonjour, ${nom} !`;",
+      py: 'msg = f"Bonjour, {nom} !"',
+      java: 'String msg = "Bonjour, " + nom + " !";',
+      c: 'char msg[50];\nsprintf(msg, "Bonjour, %s !", nom);',
+      go: 'msg := fmt.Sprintf("Bonjour, %s !", nom)',
+      rust: 'let msg = format!("Bonjour, {} !", nom);',
+    },
+  },
+};

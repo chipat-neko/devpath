@@ -1,0 +1,88 @@
+<p>Les <strong>fonctions</strong> sont le moyen d'interagir avec un contrat&nbsp;: lire son état, le modifier, déclencher des actions. En Solidity, elles portent des annotations cruciales — la <strong>visibilité</strong> (qui peut les appeler) et la <strong>mutabilité</strong> (modifient-elles l'état&nbsp;?). Ces annotations ne sont pas décoratives&nbsp;: elles déterminent la sécurité et le coût de ton contrat. Cette leçon les détaille.</p>
+
+<h2>Définir une fonction</h2>
+<p>Une fonction se déclare avec <code>function</code>, son nom, ses paramètres (typés), sa visibilité, son éventuelle mutabilité, et ce qu'elle renvoie.</p>
+<figure class="code-block" data-file="fonction.sol"><pre><code class="language-solidity">contract Calcul {
+    function additionner(uint256 a, uint256 b)
+        public
+        pure
+        returns (uint256)
+    {
+        return a + b;
+    }
+}</code></pre></figure>
+<p>On lit&nbsp;: <code>additionner</code> prend deux <code>uint256</code>, est <code>public</code> (appelable par tous), <code>pure</code> (ne touche pas à l'état), et <code>returns (uint256)</code> (renvoie un entier). L'ordre des annotations est&nbsp;: visibilité, puis mutabilité, puis <code>returns</code>.</p>
+
+<h2>La visibilité</h2>
+<p>La <strong>visibilité</strong> dit <em>qui</em> peut appeler la fonction. Quatre niveaux&nbsp;:</p>
+<ul>
+  <li><code>public</code> — appelable de partout (depuis l'extérieur et l'intérieur du contrat)&nbsp;;</li>
+  <li><code>external</code> — appelable seulement depuis l'extérieur (par d'autres comptes/contrats)&nbsp;;</li>
+  <li><code>internal</code> — appelable seulement depuis le contrat lui-même et ceux qui en héritent&nbsp;;</li>
+  <li><code>private</code> — appelable seulement depuis ce contrat précis.</li>
+</ul>
+<figure class="code-block" data-file="visibilite.sol"><pre><code class="language-solidity">function publique() public { }       // tous
+function externe() external { }       // depuis l'extérieur
+function interne() internal { }       // ce contrat + héritiers
+function privee() private { }         // ce contrat seulement</code></pre></figure>
+<p>La visibilité est un <strong>enjeu de sécurité majeur</strong>&nbsp;: une fonction qui modifie un état sensible (un solde, un propriétaire) ne doit <em>jamais</em> être <code>public</code> sans contrôle d'accès. Choisir la visibilité la plus restrictive possible est une règle de base.</p>
+
+<h2>La mutabilité&nbsp;: <code>view</code> et <code>pure</code></h2>
+<p>La <strong>mutabilité</strong> indique si la fonction touche à l'état du contrat&nbsp;:</p>
+<ul>
+  <li><code>view</code> — <strong>lit</strong> l'état mais ne le modifie pas&nbsp;;</li>
+  <li><code>pure</code> — ne lit <em>ni</em> ne modifie l'état (calcul pur sur ses arguments)&nbsp;;</li>
+  <li>(sans annotation) — peut <strong>modifier</strong> l'état.</li>
+</ul>
+<figure class="code-block" data-file="mutabilite.sol"><pre><code class="language-solidity">uint256 public valeur;
+
+function lire() public view returns (uint256) {
+    return valeur;          // lit l'état : view
+}
+
+function doubler(uint256 x) public pure returns (uint256) {
+    return x * 2;           // ne touche pas l'état : pure
+}
+
+function definir(uint256 x) public {
+    valeur = x;             // modifie l'état : pas d'annotation
+}</code></pre></figure>
+
+<h2>Lecture gratuite, écriture payante</h2>
+<p>Distinction économique essentielle&nbsp;: appeler une fonction <code>view</code> ou <code>pure</code> depuis l'extérieur (juste pour lire) est <strong>gratuit</strong> — aucune transaction, aucun gas. En revanche, une fonction qui <strong>modifie l'état</strong> exige une <strong>transaction</strong>, donc du gas (de l'argent) et l'attente d'une confirmation sur la blockchain. Cette asymétrie guide la conception&nbsp;: on lit librement, mais chaque écriture compte.</p>
+
+<h2>Renvoyer plusieurs valeurs</h2>
+<p>Une fonction peut renvoyer <strong>plusieurs valeurs</strong> à la fois, listées dans <code>returns</code>.</p>
+<figure class="code-block" data-file="multi.sol"><pre><code class="language-solidity">function minMax(uint256 a, uint256 b)
+    public pure returns (uint256 min, uint256 max)
+{
+    if (a &lt; b) {
+        return (a, b);
+    }
+    return (b, a);
+}</code></pre></figure>
+<p>On peut nommer les valeurs de retour (<code>min</code>, <code>max</code>), ce qui documente le résultat. L'appelant récupère plusieurs valeurs d'un coup.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier de restreindre la visibilité d'une fonction sensible. Avant la version 0.5, une fonction sans annotation était <code>public</code> par défaut&nbsp;: des contrats ont été <strong>vidés de leurs fonds</strong> parce qu'une fonction critique (comme «&nbsp;retirer tout l'argent&nbsp;») était accidentellement appelable par n'importe qui. Réflexe&nbsp;: pour chaque fonction, demande-toi «&nbsp;qui doit pouvoir l'appeler&nbsp;?&nbsp;» et choisis la visibilité <em>la plus restrictive</em> qui convient.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Quand une variable d'état est marquée <code>public</code>, Solidity génère <strong>automatiquement une fonction de lecture</strong> (un <em>getter</em>) du même nom. C'est pourquoi <code>uint256 public valeur;</code> permet d'appeler <code>valeur()</code> de l'extérieur, sans écrire de fonction. Cette commodité explique qu'on voie peu de getters explicites en Solidity&nbsp;: le compilateur les fournit pour les variables publiques.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Une <strong>fonction</strong>&nbsp;: <code>function nom(params) visibilité mutabilité returns (...)</code>.</li>
+  <li><strong>Visibilité</strong>&nbsp;: <code>public</code>, <code>external</code>, <code>internal</code>, <code>private</code> (choisir la plus restrictive).</li>
+  <li><strong>Mutabilité</strong>&nbsp;: <code>view</code> (lit), <code>pure</code> (ne touche rien), aucune (modifie l'état).</li>
+  <li>Lire (<code>view</code>/<code>pure</code>) est <strong>gratuit</strong>&nbsp;; modifier l'état exige une <strong>transaction</strong> payante (gas).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle visibilité pour une fonction appelable seulement de l'intérieur&nbsp;?</li><li>Quelle différence entre <code>view</code> et <code>pure</code>&nbsp;?</li><li>Pourquoi lire l'état est-il gratuit mais l'écrire payant&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>pure</code> publique <code>triple</code> qui renvoie le triple d'un <code>uint256</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">function triple(uint256 x) public pure returns (uint256) {
+    return x * 3;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une fonction <code>view</code> qui renvoie la variable d'état <code>compteur</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sol"><pre><code class="language-solidity">function lireCompteur() public view returns (uint256) {
+    return compteur;
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi une fonction «&nbsp;retirer les fonds&nbsp;» ne doit-elle jamais être <code>public</code> sans contrôle&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'une fonction <code>public</code> est appelable par <strong>n'importe qui</strong>. Si elle retire les fonds du contrat sans vérifier l'identité de l'appelant, alors <em>tout le monde</em> pourrait l'appeler et vider le contrat. Une telle fonction doit impérativement être protégée par un <strong>contrôle d'accès</strong> (par exemple un modificateur vérifiant que <code>msg.sender</code> est le propriétaire, leçon 5), ou avoir une visibilité restreinte. Négliger ce point a déjà causé le vol de sommes considérables.</p></details></div>

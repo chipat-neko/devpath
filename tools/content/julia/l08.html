@@ -1,0 +1,91 @@
+<p>Julia promet la vitesse du C — mais à une condition&nbsp;: écrire du code que le compilateur peut optimiser. La clé tient en deux mots&nbsp;: <strong>stabilité de type</strong>. Cette leçon t'apprend les quelques règles qui séparent un code Julia lent d'un code Julia fulgurant, et les outils pour les vérifier.</p>
+
+<h2>La règle d'or&nbsp;: tout dans des fonctions</h2>
+<p>La première règle de performance&nbsp;: ne fais pas de calcul lourd au niveau global d'un script. Mets-le dans une <strong>fonction</strong>. Julia compile et optimise les fonctions&nbsp;; le code global, lui, reste interprété et lent.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia"># Lent : boucle au niveau global
+total = 0
+for i in 1:10^7
+    global total += i
+end
+
+# Rapide : la même chose dans une fonction
+function somme(n)
+    total = 0
+    for i in 1:n
+        total += i
+    end
+    return total
+end
+somme(10^7)   # bien plus rapide</code></pre></figure>
+
+<h2>La stabilité de type</h2>
+<p>Une fonction est <strong>type-stable</strong> si le type de chaque variable ne change pas en cours de route. Le compilateur peut alors générer du code machine spécialisé. Une variable qui change de type le force à des vérifications coûteuses.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia"># Instable : x est Int puis Float64
+function instable(n)
+    x = 0          # Int
+    for i in 1:n
+        x += 0.5   # devient Float64 ! type instable
+    end
+    return x
+end
+
+# Stable : x est Float64 dès le départ
+function stable(n)
+    x = 0.0        # Float64
+    for i in 1:n
+        x += 0.5
+    end
+    return x
+end</code></pre></figure>
+<p class="code-caption">Un détail aussi minime que <code>0</code> vs <code>0.0</code> peut multiplier le temps d'exécution.</p>
+
+<h2>Éviter les variables globales</h2>
+<p>Le piège n°1 de performance&nbsp;: utiliser une variable <strong>globale</strong> non typée dans une fonction. Le compilateur ne peut rien supposer sur son type. Passe-la en argument, ou déclare-la <code>const</code> si elle ne change pas.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">const TAUX = 0.20        # constante : type connu, rapide
+
+# Mieux encore : passer en argument
+function appliquer(prix, taux)
+    return prix * (1 + taux)
+end</code></pre></figure>
+
+<h2>Mesurer&nbsp;: @time et @benchmark</h2>
+<p>On ne devine pas la performance, on la <strong>mesure</strong>. La macro <code>@time</code> donne une première idée (rappelle-toi d'ignorer le premier appel, qui compile). Le package <code>BenchmarkTools</code> et sa macro <code>@benchmark</code> donnent une mesure fiable.</p>
+<figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia">somme(10)          # appel de "chauffe" (compilation)
+@time somme(10^7)  # 0.0001 s, 0 allocations
+
+using BenchmarkTools
+@benchmark somme(10^7)   # statistiques robustes</code></pre></figure>
+
+<h2>Diagnostiquer&nbsp;: @code_warntype</h2>
+<p>Pour traquer l'instabilité de type, <code>@code_warntype</code> affiche le code analysé&nbsp;: les types incertains apparaissent en rouge (souvent sous la forme <code>Any</code> ou <code>Union</code>). C'est l'outil du chasseur de lenteurs.</p>
+<figure class="code-block" data-file="REPL"><pre><code class="language-julia">julia&gt; @code_warntype stable(100)
+# affiche les types ; cherche les Any/Union en rouge</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>N'optimise pas à l'aveugle&nbsp;! Annoter tous les types «&nbsp;pour aller plus vite&nbsp;» n'aide généralement pas&nbsp;: Julia spécialise déjà. Les vrais leviers sont&nbsp;: code dans des fonctions, stabilité de type, pas de globales. <strong>Mesure d'abord</strong>, optimise ensuite.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les <strong>allocations mémoire</strong> sont l'autre grand frein. <code>@time</code> les compte&nbsp;: vise zéro allocation dans les boucles chaudes (en réutilisant des tableaux, avec <code>@view</code> et les opérations en place <code>!</code>). C'est souvent là que se gagnent les facteurs 10.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Mets tout calcul lourd dans des <strong>fonctions</strong> (pas au niveau global).</li>
+  <li>Vise la <strong>stabilité de type</strong> (attention à <code>0</code> vs <code>0.0</code>).</li>
+  <li>Évite les globales non typées&nbsp;; passe en argument ou utilise <code>const</code>.</li>
+  <li><strong>Mesure</strong> avec <code>@time</code>/<code>@benchmark</code>, diagnostique avec <code>@code_warntype</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi mettre son code dans une fonction accélère-t-il&nbsp;?</li><li>Qu'est-ce que la stabilité de type&nbsp;?</li><li>Quel outil révèle les types incertains d'une fonction&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Réécris en fonction une somme de 1 à n, puis chronomètre-la avec <code>@time</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.jl"><pre><code class="language-julia">f(n) = sum(1:n)
+f(10)            # chauffe
+@time f(10^7)</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Corrige cette fonction instable&nbsp;: <code>s = 0</code> puis <code>s += x</code> où <code>x</code> est un flottant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.jl"><pre><code class="language-julia">function moyenne(v)
+    s = 0.0          # et non 0
+    for x in v
+        s += x
+    end
+    return s / length(v)
+end</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Inspecte avec <code>@code_warntype</code> une fonction stable et une instable, et compare.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="REPL"><pre><code class="language-julia">julia&gt; @code_warntype stable(100)    # types nets
+julia&gt; @code_warntype instable(100)  # apparition de Union/Any</code></pre></figure></details></div>

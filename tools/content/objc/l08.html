@@ -1,0 +1,78 @@
+<p>Deux outils pour compléter ta boîte à outils Objective-C&nbsp;: les <strong>collections</strong> de Foundation, pour stocker et organiser des groupes d'objets, et les <strong>blocks</strong>, des fonctions anonymes qu'on peut passer de-ci de-là — l'équivalent Objective-C des <em>closures</em>. Ces deux mécanismes sont au cœur du code moderne&nbsp;: énumération, traitement asynchrone, callbacks. Cette leçon les met en main.</p>
+
+<h2>NSArray&nbsp;: le tableau d'objets</h2>
+<p><strong>NSArray</strong> stocke une liste ordonnée d'<strong>objets</strong> (pas de types primitifs&nbsp;: d'où les <code>NSNumber</code>). Il est <strong>immuable</strong>&nbsp;: on ne le modifie pas après création. Le littéral moderne est <code>@[...]</code>.</p>
+<figure class="code-block" data-file="nsarray.m"><pre><code class="language-objectivec">NSArray *fruits = @[@"pomme", @"poire", @"kiwi"];
+
+NSUInteger n = [fruits count];           // 3
+NSString *premier = fruits[0];           // "pomme" (indice moderne)
+NSString *autre = [fruits objectAtIndex:1]; // "poire" (message)
+BOOL present = [fruits containsObject:@"kiwi"]; // YES</code></pre></figure>
+<p>La notation <code>fruits[0]</code> est un raccourci moderne pour <code>[fruits objectAtIndex:0]</code>. Pour parcourir, <code>for ... in</code> (l'énumération rapide) est le plus lisible&nbsp;:</p>
+<figure class="code-block" data-file="parcours.m"><pre><code class="language-objectivec">for (NSString *f in fruits) {
+    NSLog(@"%@", f);
+}</code></pre></figure>
+
+<h2>Versions mutables</h2>
+<p>Pour modifier une collection (ajouter, retirer), on utilise sa version <strong>mutable</strong>&nbsp;: <code>NSMutableArray</code>.</p>
+<figure class="code-block" data-file="mutable.m"><pre><code class="language-objectivec">NSMutableArray *liste = [NSMutableArray array];
+[liste addObject:@"un"];
+[liste addObject:@"deux"];
+[liste removeObjectAtIndex:0];     // retire "un"
+// liste contient maintenant : "deux"</code></pre></figure>
+<p>Règle générale de Foundation&nbsp;: la version <em>immuable</em> par défaut (sûre, partageable), la <em>mutable</em> seulement quand on doit changer le contenu.</p>
+
+<h2>NSDictionary&nbsp;: associer clé et valeur</h2>
+<p><strong>NSDictionary</strong> associe des <strong>clés</strong> à des <strong>valeurs</strong> (toutes des objets). Le littéral est <code>@{cle: valeur, ...}</code>.</p>
+<figure class="code-block" data-file="nsdictionary.m"><pre><code class="language-objectivec">NSDictionary *ages = @{@"Ada": @36, @"Bob": @25};
+
+NSNumber *a = ages[@"Ada"];          // 36 (accès par clé)
+NSUInteger c = [ages count];         // 2
+
+// Version mutable :
+NSMutableDictionary *m = [NSMutableDictionary dictionary];
+m[@"Paris"] = @75;                   // ajoute/met à jour</code></pre></figure>
+<p>L'accès <code>ages[@"Ada"]</code> est immédiat&nbsp;: pas besoin de parcourir. C'est l'outil idéal pour une table de correspondance.</p>
+
+<h2>Les blocks&nbsp;: des fonctions anonymes</h2>
+<p>Un <strong>block</strong> est un bout de code qu'on peut stocker dans une variable, passer en argument, et exécuter plus tard. C'est l'équivalent Objective-C des <em>closures</em> ou des fonctions anonymes. Sa syntaxe se reconnaît au caret <code>^</code>.</p>
+<figure class="code-block" data-file="block.m"><pre><code class="language-objectivec">// Un block qui prend deux entiers et renvoie leur somme :
+int (^somme)(int, int) = ^(int a, int b) {
+    return a + b;
+};
+
+int r = somme(3, 4);    // 7</code></pre></figure>
+<p>La déclaration se lit&nbsp;: <code>int (^somme)(int, int)</code> = «&nbsp;<code>somme</code> est un block prenant deux <code>int</code> et renvoyant un <code>int</code>&nbsp;». Le corps suit le <code>^(...)</code>. On appelle ensuite le block comme une fonction&nbsp;: <code>somme(3, 4)</code>.</p>
+
+<h2>Les blocks en action</h2>
+<p>Les blocks brillent comme <strong>callbacks</strong> (code à exécuter plus tard) et pour l'<strong>énumération</strong>. Beaucoup d'API Apple les utilisent pour le traitement asynchrone&nbsp;: «&nbsp;fais ceci, et quand c'est fini, exécute ce block&nbsp;».</p>
+<figure class="code-block" data-file="enumerate.m"><pre><code class="language-objectivec">// Énumérer un tableau avec un block :
+[fruits enumerateObjectsUsingBlock:
+    ^(id objet, NSUInteger i, BOOL *stop) {
+        NSLog(@"%lu : %@", i, objet);
+    }];</code></pre></figure>
+<p>Le block reçoit chaque objet, son indice, et un drapeau <code>stop</code> pour interrompre. Ce style — passer du comportement en argument — préfigure les <em>closures</em> de Swift, qui en sont l'héritage direct.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Quand un block capture <code>self</code> (par exemple pour accéder à une propriété), il le <strong>retient</strong> en <code>strong</code> — ce qui peut créer un cycle de rétention si l'objet retient aussi le block. La parade idiomatique&nbsp;: créer une référence faible avant le block (<code>__weak typeof(self) weakSelf = self;</code>) et utiliser <code>weakSelf</code> à l'intérieur. C'est l'un des pièges mémoire les plus fréquents avec les blocks.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les blocks sont au cœur de <strong>Grand Central Dispatch (GCD)</strong>, le système de concurrence d'Apple&nbsp;: on confie un block à une «&nbsp;file&nbsp;» (<code>dispatch_async</code>) et le système l'exécute sur un autre thread. C'est ainsi qu'on fait du travail en arrière-plan sans bloquer l'interface. Combinés aux collections, les blocks forment la base de la programmation asynchrone moderne sur les plateformes Apple.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>NSArray</strong> (<code>@[...]</code>) liste d'objets&nbsp;; <strong>NSDictionary</strong> (<code>@{...}</code>) clé→valeur&nbsp;; versions <strong>mutables</strong> pour modifier.</li>
+  <li>Accès modernes&nbsp;: <code>tableau[0]</code>, <code>dico[@"cle"]</code>&nbsp;; parcours avec <code>for ... in</code>.</li>
+  <li>Un <strong>block</strong> (<code>^</code>) est une fonction anonyme stockable et passable en argument.</li>
+  <li>Blocks utilisés pour callbacks, énumération, asynchrone (GCD)&nbsp;; attention à la capture de <code>self</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Quelle collection associe des clés à des valeurs&nbsp;?</li><li>Comment reconnaît-on un block&nbsp;?</li><li>Pourquoi un block capturant <code>self</code> peut-il poser problème&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Crée un <code>NSArray</code> contenant <code>@"a"</code>, <code>@"b"</code>, <code>@"c"</code> avec le littéral moderne.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">NSArray *t = @[@"a", @"b", @"c"];</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un <code>NSDictionary</code> associant <code>@"Paris"</code> à <code>@75</code> et lis la valeur.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">NSDictionary *d = @{@"Paris": @75};
+NSNumber *code = d[@"Paris"];   // 75</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Déclare un block <code>carre</code> qui prend un <code>int</code> et renvoie son carré, puis appelle-le sur 5.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">int (^carre)(int) = ^(int x) {
+    return x * x;
+};
+int r = carre(5);    // 25</code></pre></figure></details></div>

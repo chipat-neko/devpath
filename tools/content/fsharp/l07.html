@@ -1,0 +1,79 @@
+<p>La grande force de F#, c'est de vivre sur <strong>.NET</strong>&nbsp;: tu écris du fonctionnel élégant <em>et</em> tu accèdes à tout l'écosystème C# — bibliothèques, asynchrone moderne, web, cloud. Cette leçon couvre l'asynchrone et l'<strong>interopérabilité</strong>, là où F# révèle son avantage décisif sur les langages fonctionnels isolés.</p>
+
+<h2>L'asynchrone&nbsp;: async</h2>
+<p>Pour des opérations longues (réseau, fichiers) sans bloquer, F# a le bloc <code>async</code>. On y écrit du code séquentiel&nbsp;; <code>let!</code> attend un résultat asynchrone.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let chargerDonnees url =
+    async {
+        // simulation : let! reponse = httpClient.GetAsync(url)
+        do! Async.Sleep 1000        // attend sans bloquer
+        return "données de " + url
+    }
+
+let resultat = chargerDonnees "exemple.fr" |&gt; Async.RunSynchronously</code></pre></figure>
+<p class="code-caption"><code>let!</code> attend une valeur asynchrone&nbsp;; <code>do!</code> attend une action&nbsp;; <code>return</code> produit le résultat.</p>
+
+<h2>Paralléliser</h2>
+<p>On lance plusieurs calculs asynchrones en parallèle avec <code>Async.Parallel</code>&nbsp;: ils s'exécutent ensemble, on récupère tous les résultats.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let resultats =
+    [ chargerDonnees "a.fr"; chargerDonnees "b.fr"; chargerDonnees "c.fr" ]
+    |&gt; Async.Parallel
+    |&gt; Async.RunSynchronously     // un tableau des trois résultats</code></pre></figure>
+
+<h2>task pour l'interop</h2>
+<p>F# propose aussi le bloc <code>task</code>, qui produit un <code>Task</code> .NET&nbsp;— le type asynchrone natif de C#. À privilégier quand on interagit avec des bibliothèques .NET asynchrones (ASP.NET, bases de données…).</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">let lire () =
+    task {
+        // let! contenu = File.ReadAllTextAsync("data.txt")
+        return "contenu"
+    }</code></pre></figure>
+
+<h2>Appeler des bibliothèques .NET</h2>
+<p>Tout ce que C# peut faire, F# le peut. On utilise les classes .NET directement&nbsp;: <code>System.Math</code>, <code>System.DateTime</code>, les collections, les fichiers…</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">open System
+
+let maintenant = DateTime.Now
+let racine = Math.Sqrt(144.0)              // 12.0
+let majuscule = "bonjour".ToUpper()        // "BONJOUR"
+let guid = Guid.NewGuid()</code></pre></figure>
+<p>Le point (<code>.Méthode()</code>) et les majuscules trahissent du code «&nbsp;à la C#&nbsp;»&nbsp;: c'est l'interop, parfaitement fluide.</p>
+
+<h2>Les objets quand il le faut</h2>
+<p>F# n'est pas dogmatique&nbsp;: il sait définir des <strong>classes</strong> et implémenter des <strong>interfaces</strong> .NET, indispensable pour s'intégrer à des frameworks orientés objet. On le réserve aux frontières avec le monde C#.</p>
+<figure class="code-block" data-file="exemple.fsx"><pre><code class="language-fsharp">type Compteur(depart: int) =
+    let mutable valeur = depart
+    member this.Incrementer() = valeur &lt;- valeur + 1
+    member this.Valeur = valeur
+
+let c = Compteur(0)
+c.Incrementer()
+let v = c.Valeur                  // 1</code></pre></figure>
+
+<h2>Interop bidirectionnelle</h2>
+<p>L'interop va dans les deux sens&nbsp;: du code C# peut utiliser une bibliothèque F#, et inversement. On peut donc écrire le cœur métier en F# (sûr, concis) et l'exposer à une application C# existante&nbsp;— ou l'inverse. Beaucoup d'équipes adoptent F# ainsi, par petites touches.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier qu'une bibliothèque .NET peut renvoyer <code>null</code> ou lever une exception (conventions C#), là où le F# pur utilise <code>option</code> et <code>Result</code>. À la frontière avec .NET, convertis dès que possible (<code>Option.ofObj</code>) et encadre les appels qui peuvent lever.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour le web, <strong>Giraffe</strong> et <strong>Saturn</strong> (sur ASP.NET) permettent d'écrire des serveurs en F#&nbsp;; et <strong>Fable</strong> compile F# vers JavaScript pour le front-end. Tu peux ainsi faire du F# de bout en bout, du serveur au navigateur.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><code>async { ... }</code> (avec <code>let!</code>/<code>do!</code>) pour l'asynchrone&nbsp;; <code>Async.Parallel</code> pour paralléliser&nbsp;; <code>task</code> pour l'interop.</li>
+  <li>F# accède à <strong>toutes les bibliothèques .NET</strong> (<code>System.Math</code>, fichiers, web…).</li>
+  <li>Il sait définir <strong>classes et interfaces</strong> quand l'objet est nécessaire (frontières C#).</li>
+  <li>Interop <strong>bidirectionnelle</strong>&nbsp;: F# et C# se consomment mutuellement.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que fait <code>let!</code> dans un bloc <code>async</code>&nbsp;?</li><li>Quand préférer <code>task</code> à <code>async</code>&nbsp;?</li><li>Quel est l'avantage majeur de F# sur OCaml côté écosystème&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Utilise <code>System.Math</code> pour calculer la racine de 81.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">open System
+let r = Math.Sqrt(81.0)   // 9.0</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un bloc <code>async</code> qui attend 500 ms puis renvoie "fini".</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">let t = async {
+    do! Async.Sleep 500
+    return "fini"
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Définis une petite classe <code>Sac</code> avec une méthode <code>Ajouter</code> et une propriété <code>Total</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.fsx"><pre><code class="language-fsharp">type Sac() =
+    let mutable total = 0
+    member _.Ajouter(x) = total &lt;- total + x
+    member _.Total = total</code></pre></figure></details></div>

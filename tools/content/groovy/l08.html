@@ -1,0 +1,91 @@
+<p>Pourquoi apprendre Groovy, concrètement&nbsp;? Parce que tu le croiseras forcément si tu travailles sur la JVM&nbsp;: <strong>Gradle</strong>, l'outil de build de Java et d'Android, et <strong>Jenkins</strong>, le serveur d'intégration continue le plus répandu, utilisent tous deux Groovy comme langage de configuration. Cette leçon te montre Groovy «&nbsp;au travail&nbsp;»&nbsp;: comment lire un <code>build.gradle</code> et écrire un pipeline Jenkins. Tout ce qu'on a vu (closures, DSL, métaprogrammation) prend ici tout son sens.</p>
+
+<h2>Gradle&nbsp;: construire avec Groovy</h2>
+<p><strong>Gradle</strong> automatise la compilation, les tests et le packaging d'un projet. Sa configuration s'écrit dans un fichier <code>build.gradle</code>… qui est un <strong>script Groovy</strong>. Ce que tu y vois n'est pas une syntaxe spéciale&nbsp;: c'est du Groovy, exploitant le DSL qu'on a découvert leçon 7.</p>
+<figure class="code-block" data-file="build.gradle"><pre><code class="language-groovy">plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:32.1.3-jre'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+tasks.register('bonjour') {
+    doLast {
+        println 'Bonjour depuis Gradle !'
+    }
+}</code></pre></figure>
+<p>Décryptons&nbsp;: <code>plugins</code>, <code>repositories</code>, <code>dependencies</code> sont des <strong>méthodes</strong> recevant chacune une <strong>closure</strong>. À l'intérieur, <code>implementation '...'</code> est un appel de méthode. La tâche <code>bonjour</code> contient une closure <code>doLast</code> exécutée à la fin. Tout est du Groovy&nbsp;: closures + méthodes + DSL.</p>
+
+<h2>Définir une tâche personnalisée</h2>
+<p>Une force de Gradle&nbsp;: comme la config est un vrai langage, on peut y écrire de la <strong>logique</strong>. Une tâche peut faire des calculs, lire des fichiers, appeler du code.</p>
+<figure class="code-block" data-file="tache.gradle"><pre><code class="language-groovy">tasks.register('compter') {
+    doLast {
+        def fichiers = file('src').listFiles()
+        println "Nombre de fichiers : ${fichiers?.size() ?: 0}"
+    }
+}
+// Lancement : gradle compter</code></pre></figure>
+<p>On retrouve l'interpolation (<code>${...}</code>), la navigation sûre (<code>?.</code>) et l'Elvis (<code>?:</code>)&nbsp;: les outils Groovy des leçons précédentes, directement utiles dans un build.</p>
+
+<h2>Jenkins&nbsp;: les pipelines en Groovy</h2>
+<p><strong>Jenkins</strong> orchestre l'intégration et le déploiement continus (CI/CD). Les <strong>pipelines</strong> Jenkins se décrivent dans un fichier <code>Jenkinsfile</code>, lui aussi en Groovy (via un DSL dédié). On y définit les étapes de construction, test et livraison.</p>
+<figure class="code-block" data-file="Jenkinsfile"><pre><code class="language-groovy">pipeline {
+    agent any
+    stages {
+        stage('Construire') {
+            steps {
+                echo 'Compilation...'
+                sh './gradlew build'
+            }
+        }
+        stage('Tester') {
+            steps {
+                echo 'Tests...'
+                sh './gradlew test'
+            }
+        }
+    }
+}</code></pre></figure>
+<p>Là encore, <code>pipeline</code>, <code>stages</code>, <code>stage</code>, <code>steps</code> sont des méthodes recevant des closures. La structure imbriquée décrit le flux du pipeline. Comprendre Groovy te permet de <em>lire et écrire</em> ces fichiers que tout projet sérieux possède.</p>
+
+<h2>Le pipeline scripté</h2>
+<p>Jenkins propose aussi un mode «&nbsp;scripté&nbsp;», du Groovy plus libre où l'on peut utiliser des boucles, des conditions, des variables — toute la puissance du langage.</p>
+<figure class="code-block" data-file="scripte.groovy"><pre><code class="language-groovy">node {
+    def environnements = ['dev', 'staging', 'prod']
+    environnements.each { env -&gt;
+        stage("Déployer $env") {
+            echo "Déploiement vers $env"
+        }
+    }
+}</code></pre></figure>
+<p>Ici, une closure <code>each</code> génère dynamiquement une étape par environnement. C'est tout l'intérêt d'un DSL fondé sur un vrai langage&nbsp;: on peut y mettre de la logique réelle, pas seulement de la configuration figée.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre les deux styles de pipeline Jenkins&nbsp;: le <strong>déclaratif</strong> (avec <code>pipeline { }</code>, structuré et limité) et le <strong>scripté</strong> (avec <code>node { }</code>, du Groovy libre). Le déclaratif est plus simple et recommandé pour la plupart des cas&nbsp;; le scripté offre toute la puissance mais demande de bien connaître Groovy. Mettre du code scripté libre dans un bloc déclaratif (hors d'un <code>script { }</code>) provoque des erreurs. Sache lequel tu écris.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Gradle propose désormais une alternative en <strong>Kotlin</strong> (<code>build.gradle.kts</code>), qui apporte la complétion et la vérification de types d'un langage statique. Mais des millions de projets utilisent encore la syntaxe Groovy, plus concise et historiquement dominante. Savoir lire un <code>build.gradle</code> en Groovy reste indispensable&nbsp;: c'est l'un des fichiers que tu ouvriras le plus souvent dans la vie d'un projet JVM.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li><strong>Gradle</strong>&nbsp;: le <code>build.gradle</code> est un script Groovy (closures + DSL)&nbsp;; <code>dependencies { }</code>, tâches…</li>
+  <li>On peut mettre de la <strong>logique</strong> Groovy dans un build (interpolation, <code>?.</code>, <code>?:</code>).</li>
+  <li><strong>Jenkins</strong>&nbsp;: le <code>Jenkinsfile</code> décrit un pipeline (<code>stages</code>, <code>stage</code>, <code>steps</code>) en Groovy.</li>
+  <li>Deux styles&nbsp;: pipeline <strong>déclaratif</strong> (structuré) ou <strong>scripté</strong> (Groovy libre).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>En quel langage est écrit un fichier <code>build.gradle</code>&nbsp;?</li><li>Qu'est-ce qu'un <code>Jenkinsfile</code>&nbsp;?</li><li>Quelle différence entre pipeline déclaratif et scripté&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Dans un <code>build.gradle</code>, qu'est-ce que <code>dependencies { ... }</code> du point de vue Groovy&nbsp;?</p><details><summary>Voir une solution</summary><p>Un <strong>appel de méthode</strong> (<code>dependencies</code>) auquel on passe une <strong>closure</strong> (le bloc <code>{ ... }</code>) comme dernier argument, sorti des parenthèses.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un stage Jenkins déclaratif nommé <code>"Construire"</code> qui exécute <code>echo 'build'</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.groovy"><pre><code class="language-groovy">stage('Construire') {
+    steps {
+        echo 'build'
+    }
+}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En quoi le fait que Gradle utilise un vrai langage (Groovy) est-il un avantage par rapport à un format figé (comme du XML)&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'un vrai langage permet d'<strong>écrire de la logique</strong> dans le build&nbsp;: boucles, conditions, calculs, variables, appels de fonctions. On peut générer des tâches dynamiquement, adapter la configuration selon l'environnement, factoriser du code répétitif — toutes choses impossibles dans un format de données statique comme le XML (utilisé par l'ancien Maven), où l'on ne peut que <em>décrire</em>, sans <em>programmer</em>. Le DSL Groovy combine la lisibilité d'une configuration et la puissance d'un langage.</p></details></div>

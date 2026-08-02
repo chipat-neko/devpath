@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Du code à la machine : panorama final — Leçon 10 · Cours Assembleur — Syntaxe</title>
+    <meta name="description" content="Du source au binaire : encodage des instructions, format ELF, édition de liens, chargement mémoire, sécurité bas niveau (overflow, NX, ASLR, canaris) et la suite." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="asm" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Assembleur</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Données et lecture — Leçon 10</p>
+              <h1 class="lesson-header__title">Du code à la machine : panorama final</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~50 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçon 9</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>comprendre comment l'assembleur devient du code machine (opcodes, encodage) et ce que contient un fichier <strong>ELF</strong>&nbsp;;</li>
+                  <li>expliquer le rôle de l'éditeur de liens et la disposition mémoire d'un programme (<code>text</code>, <code>data</code>, <code>bss</code>, pile, tas)&nbsp;;</li>
+                  <li>décrire par le bas niveau les mécanismes de sécurité&nbsp;: débordement de pile, <strong>NX</strong>, <strong>ASLR</strong>, canaris&nbsp;;</li>
+                  <li>savoir où aller ensuite (ARM, RISC-V, noyau, rétro-ingénierie) et ce que l'assembleur change dans ta façon de coder.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tu as commencé ce cours en te demandant ce qu'il y avait <em>sous</em> ton code. Tu sais maintenant lire des registres, manipuler la pile, appeler des fonctions, suivre la convention d'appel System V, lire et écrire en mémoire. Il reste une dernière marche&nbsp;: comprendre comment ton fichier <code>.asm</code> devient des octets que le processeur avale, comment ces octets arrivent en mémoire, et pourquoi tout ce que tu as appris éclaire d'un coup les questions de sécurité qui font peur quand on les lit «&nbsp;par le haut&nbsp;».</p>
+
+<p>Cette leçon est un panorama. On survole, sans tout démontrer&nbsp;: l'idée est que chaque mot («&nbsp;opcode&nbsp;», «&nbsp;ELF&nbsp;», «&nbsp;buffer overflow&nbsp;», «&nbsp;ASLR&nbsp;») cesse d'être un terme magique et devienne quelque chose dont tu vois le mécanisme. À la fin, tu sauras vers où creuser ensuite.</p>
+
+<h2>De l'instruction au code machine</h2>
+
+<p>Quand tu écris <code>mov rax, 1</code>, NASM ne range pas le texte «&nbsp;mov rax, 1&nbsp;» dans le binaire. Il le traduit en octets. Une instruction x86-64 se décompose (en gros) en&nbsp;: un préfixe optionnel, un <strong>opcode</strong> (le code de l'opération), un octet ModR/M qui dit quels registres ou quelle mémoire sont impliqués, parfois un octet SIB, un déplacement et une valeur immédiate.</p>
+
+<figure class="code-block" data-file="encodage.asm"><pre><code class="language-nasm">; Ce que tu écris :
+mov rax, 1            ; charger l'immediat 1 dans rax
+
+; Ce que nasm produit (octets, en hexadecimal) :
+; 48 c7 c0 01 00 00 00
+;
+;  48        = prefixe REX.W  -&gt; «&nbsp;l'operande fait 64 bits&nbsp;» (rax et pas eax)
+;  c7        = opcode  -&gt; «&nbsp;mov registre/memoire, immediat&nbsp;»
+;  c0        = ModR/M -&gt; cible = rax
+;  01 00 00 00 = l'immediat 1, en little-endian sur 4 octets (etendu a 64 bits)</code></pre></figure>
+
+<p>Le point à retenir&nbsp;: <strong>chaque instruction occupe un nombre variable d'octets</strong> (de 1 à 15 sur x86-64). C'est pour ça qu'on ne peut pas «&nbsp;sauter au hasard&nbsp;» au milieu du code&nbsp;: il faut tomber pile sur le premier octet d'une instruction. Le préfixe REX (<code>48</code> ici) est ce qui distingue le monde 64 bits du monde 32 bits&nbsp;; c'est lui qui fait que <code>rax</code> est utilisé plutôt que <code>eax</code>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Encodage de l'instruction mov rax, 1 en code machine. NASM la traduit en sept octets hexadécimaux : 48 est le préfixe REX.W qui indique un opérande 64 bits ; c7 est l'opcode mov registre/mémoire vers immédiat ; c0 est l'octet ModR/M qui désigne le registre rax ; enfin 01 00 00 00 est l'immédiat 1 codé en little-endian sur quatre octets. La longueur d'une instruction x86-64 est donc variable.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">mov rax, 1  →  7 octets de code machine</text>
+    <rect class="d-accent" x="40" y="44" width="70" height="34" rx="3" /><text class="d-text" x="75" y="66" text-anchor="middle" font-size="12">48</text>
+    <rect class="d-box" x="112" y="44" width="70" height="34" rx="3" /><text class="d-text" x="147" y="66" text-anchor="middle" font-size="12">c7</text>
+    <rect class="d-box" x="184" y="44" width="70" height="34" rx="3" /><text class="d-text" x="219" y="66" text-anchor="middle" font-size="12">c0</text>
+    <rect class="d-frame" x="256" y="44" width="70" height="34" rx="3" /><text class="d-text" x="291" y="66" text-anchor="middle" font-size="12">01</text>
+    <rect class="d-frame" x="328" y="44" width="70" height="34" rx="3" /><text class="d-text" x="363" y="66" text-anchor="middle" font-size="12">00</text>
+    <rect class="d-frame" x="400" y="44" width="70" height="34" rx="3" /><text class="d-text" x="435" y="66" text-anchor="middle" font-size="12">00</text>
+    <rect class="d-frame" x="472" y="44" width="70" height="34" rx="3" /><text class="d-text" x="507" y="66" text-anchor="middle" font-size="12">00</text>
+    <text class="d-mut" x="75" y="97" text-anchor="middle" font-size="9">REX.W</text>
+    <text class="d-mut" x="147" y="97" text-anchor="middle" font-size="9">opcode</text>
+    <text class="d-mut" x="219" y="97" text-anchor="middle" font-size="9">ModR/M</text>
+    <line class="d-line" x1="256" y1="86" x2="542" y2="86" />
+    <text class="d-mut" x="399" y="99" text-anchor="middle" font-size="9">immédiat 1 (little-endian, 4 octets)</text>
+    <text class="d-mut" x="75" y="120" text-anchor="middle" font-size="8">opérande 64 bits</text>
+    <text class="d-mut" x="147" y="120" text-anchor="middle" font-size="8">mov r/m, imm</text>
+    <text class="d-mut" x="219" y="120" text-anchor="middle" font-size="8">cible = rax</text>
+    <text class="d-mut" x="320" y="152" text-anchor="middle" font-size="9.5">une instruction x86-64 fait de 1 à 15 octets — longueur variable</text>
+  </svg>
+  <figcaption>Chaque instruction devient une suite d'octets&nbsp;: préfixe <code>REX.W</code>, opcode, <code>ModR/M</code>, puis l'immédiat en little-endian. <code>objdump</code> fait le chemin inverse.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Tu peux voir ces octets toi-même avec <code>objdump -d -M intel ton_prog</code>&nbsp;: à gauche les octets bruts, à droite l'instruction désassemblée. C'est l'opération inverse de l'assemblage, et c'est exactement ce que fait un débogueur pour t'afficher le code.</p></div></div>
+
+<h2>Le fichier ELF&nbsp;: la boîte qui contient tout</h2>
+
+<p>Sous Linux, ton programme assemblé n'est pas juste «&nbsp;un tas d'instructions&nbsp;». C'est un fichier au format <strong>ELF</strong> (<em>Executable and Linkable Format</em>). Pense à une boîte avec des compartiments étiquetés. En tête de boîte, un <strong>en-tête ELF</strong> qui annonce&nbsp;: c'est du 64 bits, pour x86-64, et le <strong>point d'entrée</strong> (l'adresse de la première instruction à exécuter, généralement ton label <code>_start</code>).</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">readelf -h prog          # l'en-tete : type, architecture, point d'entree
+readelf -S prog          # les sections : .text, .data, .bss...
+readelf -l prog          # les segments : ce que le noyau charge en memoire</code></pre></figure>
+<p class="code-caption">Trois vues du même binaire&nbsp;: en-tête, sections (vue de l'éditeur de liens), segments (vue du chargeur).</p>
+
+<p>Deux découpages cohabitent. Les <strong>sections</strong> servent à l'outillage (l'éditeur de liens, le débogueur)&nbsp;: <code>.text</code> contient le code, <code>.data</code> les données initialisées, <code>.bss</code> les données à zéro, <code>.rodata</code> les constantes en lecture seule. Les <strong>segments</strong> servent au noyau quand il charge le programme&nbsp;: il regroupe les sections par droits d'accès (lecture, écriture, exécution). C'est exactement le découpage que tu déclarais avec <code>section .text</code> et <code>section .data</code> depuis la leçon 2.</p>
+
+<figure class="code-block" data-file="rappel.asm"><pre><code class="language-nasm">section .data            ; -&gt; finira dans un segment lecture/ecriture
+msg:    db "Salut", 10
+len:    equ $ - msg
+
+section .bss             ; -&gt; pas d'octets dans le fichier, juste reserve
+buffer: resb 64
+
+section .text            ; -&gt; segment lecture/execution, PAS ecriture
+global _start
+_start:
+    ; ... ton code ...        ; le point d'entree pointe ici</code></pre></figure>
+
+<h2>L'éditeur de liens et le chargement en mémoire</h2>
+
+<p>NASM produit un fichier objet (<code>.o</code>)&nbsp;: du code presque fini, mais où les adresses ne sont pas encore figées. L'<strong>éditeur de liens</strong> (<code>ld</code>) fait deux choses&nbsp;: il colle ensemble plusieurs <code>.o</code> si besoin, et il <em>résout les symboles</em> — c'est-à-dire qu'il remplace les noms (un appel à <code>printf</code>, ton label <code>boucle</code>) par des adresses réelles. C'est l'équivalent de ce que fait <code>ld</code> à la fin d'une compilation C, après <code>gcc -c</code>.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash">nasm -f elf64 prog.asm -o prog.o   # assemblage   : .asm -&gt; .o (code machine)
+ld prog.o -o prog                  # edition liens : .o   -&gt; executable ELF
+./prog                             # le noyau charge l'ELF et saute au point d'entree</code></pre></figure>
+
+<p>Au lancement, le noyau lit l'en-tête ELF, place chaque segment à son adresse, et donne la main au point d'entrée. La mémoire de ton processus ressemble alors à ceci&nbsp;:</p>
+
+<figure class="code-block" data-file="memoire.txt"><pre><code class="language-nasm">; Adresses HAUTES
+;   [ pile (stack) ]   -&gt; grandit vers le BAS, push/call la font descendre
+;        |
+;        v
+;       ...  (espace libre)
+;        ^
+;        |
+;   [ tas (heap)  ]    -&gt; grandit vers le HAUT, malloc/brk
+;   [ .bss        ]    -&gt; variables a zero
+;   [ .data       ]    -&gt; variables initialisees (lecture/ecriture)
+;   [ .text       ]    -&gt; ton code (lecture/execution, pas ecriture)
+; Adresses BASSES</code></pre></figure>
+
+<p>Tu reconnais tout&nbsp;: la pile que tu manipulais avec <code>push</code>/<code>pop</code> et <code>call</code> est tout en haut et <strong>descend</strong>, le tas (ce que renvoie <code>malloc</code> en C) monte à sa rencontre. <code>rsp</code> pointe toujours quelque part dans la pile.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Disposition mémoire d'un processus, des adresses hautes aux adresses basses. Tout en haut se trouve la pile, qui grandit vers le bas au fil des push et des call. En dessous, un espace libre sépare la pile du tas, qui grandit vers le haut au fil des malloc. Viennent ensuite la section bss des variables à zéro, la section data des variables initialisées en lecture-écriture, et enfin la section text qui contient le code en lecture et exécution seulement. Chaque zone a ses propres droits d'accès.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La mémoire d'un processus</text>
+    <text class="d-mut" x="512" y="46" text-anchor="start" font-size="9">adresses hautes</text>
+    <rect class="d-accent" x="140" y="40" width="360" height="40" rx="3" /><text class="d-text" x="320" y="58" text-anchor="middle" font-size="10.5">pile (stack)</text><text class="d-mut" x="320" y="72" text-anchor="middle" font-size="8.5">↓ grandit vers le bas · push / call</text>
+    <text class="d-mut" x="320" y="100" text-anchor="middle" font-size="9">espace libre</text>
+    <rect class="d-frame" x="140" y="110" width="360" height="40" rx="3" /><text class="d-text" x="320" y="128" text-anchor="middle" font-size="10.5">tas (heap)</text><text class="d-mut" x="320" y="142" text-anchor="middle" font-size="8.5">↑ grandit vers le haut · malloc</text>
+    <rect class="d-box" x="140" y="154" width="360" height="30" rx="3" /><text class="d-text" x="320" y="173" text-anchor="middle" font-size="10">.bss — variables à zéro</text>
+    <rect class="d-box" x="140" y="188" width="360" height="30" rx="3" /><text class="d-text" x="320" y="207" text-anchor="middle" font-size="10">.data — initialisées (lecture/écriture)</text>
+    <rect class="d-box" x="140" y="222" width="360" height="30" rx="3" /><text class="d-text" x="320" y="241" text-anchor="middle" font-size="10">.text — code (lecture/exécution)</text>
+    <text class="d-mut" x="512" y="250" text-anchor="start" font-size="9">adresses basses</text>
+  </svg>
+  <figcaption>La pile descend depuis les adresses hautes, le tas monte à sa rencontre&nbsp;; <code>.bss</code>, <code>.data</code> et <code>.text</code> occupent le bas, chacun avec ses droits d'accès.</figcaption>
+</figure>
+
+<h2>Le débordement de pile&nbsp;: pourquoi c'est dangereux</h2>
+
+<p>Maintenant, le moment où tout ce cours paie. Rappelle-toi&nbsp;: quand tu fais <code>call</code>, le processeur empile l'<strong>adresse de retour</strong> (où reprendre après la fonction). Puis la fonction réserve de la place pour ses variables locales en abaissant <code>rsp</code>. Un tableau local vit donc sur la pile, <em>en dessous</em> de l'adresse de retour.</p>
+
+<figure class="code-block" data-file="pile.txt"><pre><code class="language-nasm">; Disposition de la pile pendant une fonction (adresses qui montent vers le haut) :
+;
+;   [ adresse de retour ]   &lt;- posee par call, c'est ELLE qui dit ou revenir
+;   [ ancien rbp        ]   &lt;- sauvegarde par «&nbsp;push rbp&nbsp;»
+;   [ buffer[63]        ]
+;   [ ...               ]   &lt;- un tableau local de 64 octets
+;   [ buffer[0]         ]   &lt;- rsp pointe par ici
+;
+; Si on ecrit dans buffer SANS verifier la taille et qu'on depasse 64 octets,
+; on remonte... et on ecrase «&nbsp;ancien rbp&nbsp;» puis «&nbsp;adresse de retour&nbsp;».</code></pre></figure>
+
+<p>Voilà le cœur du <strong>débordement de tampon</strong> (<em>buffer overflow</em>). En C, une fonction comme <code>gets(buffer)</code> ou un <code>strcpy</code> sans contrôle écrit autant d'octets qu'on lui donne. Si l'entrée fait plus que la taille du tampon, l'écriture continue vers les adresses hautes et finit par <strong>écraser l'adresse de retour</strong>. Au <code>ret</code>, le processeur saute là où pointe cette adresse — désormais contrôlée par l'attaquant. Tu comprends pourquoi maintenant&nbsp;: <code>ret</code> ne «&nbsp;sait&nbsp;» pas où il revient, il fait juste un <code>pop</code> de l'adresse de retour dans <code>rip</code>.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le tout premier ver de l'histoire d'Internet, le <strong>ver Morris</strong> (novembre 1988), exploitait précisément ce mécanisme. Il envoyait au service réseau <code>fingerd</code> une entrée trop longue pour son tampon local&nbsp;; <code>fingerd</code> la lisait avec <code>gets</code>, sans vérifier la taille, et l'écriture débordait jusqu'à <strong>écraser l'adresse de retour</strong> — exactement le scénario décrit ici. Le ver prenait alors le contrôle et se recopiait de machine en machine, paralysant environ 10&nbsp;% de l'Internet de l'époque (quelques milliers de machines). L'incident a donné naissance au premier <em>CERT</em> (centre d'alerte de sécurité). Plus de trente ans après, le débordement de tampon reste l'une des failles les plus répandues&nbsp;: c'est pourquoi <code>gets</code> a été purement <strong>retiré</strong> du langage C en 2011.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>On croit qu'un tampon «&nbsp;déborde&nbsp;» de manière anodine. Non&nbsp;: sur la pile, ce qui suit ton tableau, ce sont des données de contrôle du programme. Un dépassement n'est pas un bug cosmétique, c'est une <strong>prise de contrôle</strong> potentielle. La démarche est purement défensive ici&nbsp;: on explique le mécanisme pour mieux s'en protéger, jamais pour l'exploiter.</p></div></div>
+
+<h2>NX, ASLR, canaris&nbsp;: les trois remparts</h2>
+
+<p>Les systèmes modernes empilent plusieurs défenses. Chacune devient limpide une fois qu'on connaît la machine.</p>
+
+<p><strong>NX (No-eXecute).</strong> Souviens-toi des droits par segment&nbsp;: la pile est lecture/écriture, pas exécution. Le bit NX marque ces pages comme non exécutables. Si un attaquant injecte du code dans son entrée, le processeur <strong>refuse de l'exécuter</strong> sur la pile. C'est exactement la séparation <code>.text</code> (exécutable) et pile (donnée) qu'on vient de voir.</p>
+
+<p><strong>ASLR (Address Space Layout Randomization).</strong> À chaque lancement, le noyau place la pile, le tas et les bibliothèques à des adresses <em>aléatoires</em>. L'attaquant qui voulait sauter à une adresse précise ne la connaît plus.</p>
+
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Chaque «&nbsp;cat&nbsp;» est un nouveau processus : l'adresse de sa pile change
+# d'une execution a l'autre, signe que l'ASLR est actif.
+cat /proc/self/maps | grep stack
+# 7ffd5a1c2000-7ffd5a1e3000 rw-p ...   [stack]
+cat /proc/self/maps | grep stack
+# 7ffe83b04000-7ffe83b25000 rw-p ...   [stack]   &lt;- adresse differente !
+#                                                   (rw-p : lecture/ecriture, pas x)</code></pre></figure>
+
+<p><strong>Canari de pile (<em>stack canary</em>).</strong> Le compilateur insère, juste avant l'ancien <code>rbp</code> et l'adresse de retour, une valeur secrète tirée au hasard&nbsp;: le canari. Avant le <code>ret</code>, il vérifie que cette valeur n'a pas changé. Un débordement qui veut atteindre l'adresse de retour doit traverser le canari et l'abîmer&nbsp;; la vérification échoue et le programme s'arrête net.</p>
+
+<figure class="code-block" data-file="canari.asm"><pre><code class="language-nasm">; Schema de ce que gcc -fstack-protector genere (simplifie) :
+;
+; en entree de fonction :
+    mov rax, [fs:0x28]      ; lire le canari secret (fourni par le systeme)
+    mov [rbp-8], rax        ; le poser juste avant ancien rbp / adresse de retour
+
+; ... corps de la fonction, qui remplit un buffer local ...
+
+; en sortie, AVANT le ret :
+    mov rax, [rbp-8]        ; relire la valeur posee
+    xor rax, [fs:0x28]      ; comparer au secret d'origine (0 si identique)
+    jne .stack_smashed      ; differente ? -&gt; debordement detecte
+    ; ... ret normal ...
+; .stack_smashed: appelle __stack_chk_fail  ("stack smashing detected", on tue le process)</code></pre></figure>
+
+<p>Ces trois défenses se complètent&nbsp;: NX empêche d'exécuter l'entrée, ASLR cache les adresses, le canari détecte l'écrasement. Aucune n'est magique, et tu vois précisément <em>contre quoi</em> chacune protège.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 236" role="img" aria-label="Le canari de pile détecte un débordement de tampon. Sur la pile, de bas en haut, on trouve le tampon local, puis une valeur secrète appelée canari, puis l'ancien rbp, puis l'adresse de retour. Une écriture qui déborde du tampon remonte vers les adresses hautes et, pour atteindre l'adresse de retour, doit d'abord écraser le canari. Avant de revenir, la fonction vérifie que le canari est intact ; s'il a changé, elle arrête le programme au lieu de sauter vers une adresse falsifiée.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le canari, sentinelle entre le tampon et l'adresse de retour</text>
+    <rect class="d-box" x="180" y="40" width="280" height="34" rx="3" /><text class="d-text" x="320" y="61" text-anchor="middle" font-size="10">adresse de retour</text><text class="d-mut" x="470" y="60" text-anchor="start" font-size="8.5">cible visée</text>
+    <rect class="d-box" x="180" y="76" width="280" height="30" rx="3" /><text class="d-text" x="320" y="95" text-anchor="middle" font-size="10">ancien rbp</text>
+    <rect class="d-accent" x="180" y="108" width="280" height="34" rx="3" /><text class="d-text" x="320" y="129" text-anchor="middle" font-size="10">canari (valeur secrète)</text><text class="d-mut" x="470" y="128" text-anchor="start" font-size="8.5">vérifié avant ret</text>
+    <rect class="d-frame" x="180" y="144" width="280" height="50" rx="3" /><text class="d-text" x="320" y="165" text-anchor="middle" font-size="10">buffer local (64 octets)</text><text class="d-mut" x="320" y="182" text-anchor="middle" font-size="8.5">rsp pointe ici</text>
+    <text class="d-mut" x="112" y="120" text-anchor="middle" font-size="8.5">débordement</text>
+    <line class="d-line" x1="112" y1="162" x2="112" y2="112" /><path class="d-dot" d="M112 104 l-5 10 h10 z" />
+    <text class="d-mut" x="320" y="216" text-anchor="middle" font-size="9">pour écraser le retour, l'attaque doit traverser le canari → détectée</text>
+  </svg>
+  <figcaption>Un débordement qui vise l'adresse de retour doit d'abord abîmer le canari&nbsp;; la vérification avant <code>ret</code> échoue et le programme s'arrête.</figcaption>
+</figure>
+
+<h2>Où aller ensuite</h2>
+
+<p>x86-64 n'est qu'une famille de processeurs. Les concepts (registres, pile, convention d'appel, encodage) sont universels&nbsp;; les détails changent.</p>
+
+<ul>
+<li><strong>ARM et RISC-V.</strong> Autres architectures, dites <em>RISC</em>&nbsp;: instructions de taille fixe, plus de registres, jeu plus régulier. ARM fait tourner ton téléphone&nbsp;; RISC-V est ouvert et monte vite. Tout ce que tu sais se transpose.</li>
+<li><strong>Le noyau.</strong> Tes <code>syscall</code> entraient dans le noyau&nbsp;: c'est tout un monde (ordonnancement, mémoire virtuelle, pilotes) à explorer par le bas.</li>
+<li><strong>La rétro-ingénierie.</strong> Désassembler un binaire dont tu n'as pas la source (avec <code>objdump</code>, Ghidra, radare2)&nbsp;: tu lis déjà l'assembleur, c'est la moitié du chemin.</li>
+<li><strong>L'optimisation.</strong> Comprendre ce que produit ton compilateur (<code>gcc -O2 -S</code>) pour écrire du C qui se traduit en bon code machine&nbsp;: vectorisation, caches, prédiction de branchement.</li>
+</ul>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le site <em>Compiler Explorer</em> (godbolt.org) met côte à côte ton C et l'assembleur produit, en temps réel. Colle-y une boucle, change <code>-O0</code> en <code>-O2</code>, et regarde le compilateur transformer ton code&nbsp;: c'est la suite naturelle de ce cours.</p></div></div>
+
+<h2>Le chemin parcouru</h2>
+
+<p>Repars de la leçon 1. Tu voyais le code comme du texte qui «&nbsp;marche&nbsp;». Aujourd'hui tu sais qu'une ligne de C devient des instructions, que ces instructions sont des octets précis, que ces octets vivent dans un fichier ELF structuré, qu'ils sont chargés en segments aux droits distincts, et que la pile qui orchestre tes appels de fonction est aussi le terrain des failles de sécurité. La machine n'est plus une boîte noire.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Ce que ça change concrètement&nbsp;: tu n'as plus besoin d'écrire de l'assembleur au quotidien pour en profiter. Quand un programme C plante avec «&nbsp;segmentation fault&nbsp;», quand un profileur parle de «&nbsp;cache miss&nbsp;», quand on évoque un CVE de débordement — tu as maintenant le modèle mental pour comprendre <em>pourquoi</em>. C'est ça, démystifier la machine.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre sections et segments. Les <strong>sections</strong> (<code>.text</code>, <code>.data</code>) sont une vue logique pour l'éditeur de liens et le débogueur&nbsp;; les <strong>segments</strong> sont la vue physique chargée par le noyau, regroupée par droits d'accès. Plusieurs sections peuvent finir dans un même segment.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire que ces protections rendent un programme «&nbsp;sûr&nbsp;». NX, ASLR et canaris <em>élèvent le coût</em> d'une attaque, ils ne la rendent pas impossible. La seule vraie correction reste de <strong>ne jamais écrire au-delà de la taille d'un tampon</strong> — vérifier les bornes, utiliser <code>fgets</code> plutôt que <code>gets</code>, etc.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Lis l'en-tête ELF d'un binaire avec <code>readelf -a</code>, puis désassemble son <code>.text</code> avec <code>objdump -d -M intel</code>. Compare avec un binaire C compilé&nbsp;: tu y retrouveras le prologue (<code>push rbp</code> puis <code>mov rbp, rsp</code>), les <code>call</code>, et — si compilé avec protection — la lecture du canari via <code>fs:0x28</code>. C'est le meilleur exercice de lecture qui soit.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — du source au binaire, et sa sécurité</caption>
+    <thead><tr><th scope="col">Étape / notion</th><th scope="col">Outil / mot-clé</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td>Assembler</td><td><code>nasm -f elf64</code></td><td>.asm → .o (code machine)</td></tr>
+      <tr><td>Éditer les liens</td><td><code>ld</code></td><td>.o → exécutable ELF, résout les symboles</td></tr>
+      <tr><td>Inspecter l'ELF</td><td><code>readelf -h/-S/-l</code></td><td>en-tête · sections · segments</td></tr>
+      <tr><td>Désassembler</td><td><code>objdump -d -M intel</code></td><td>octets → instructions</td></tr>
+      <tr><td>Section vs segment</td><td><code>.text/.data</code> vs LOAD</td><td>liaison vs chargement</td></tr>
+      <tr><td>Préfixe REX.W</td><td><code>48</code></td><td>opérande 64 bits (<code>rax</code>)</td></tr>
+      <tr><td>Débordement</td><td><em>buffer overflow</em></td><td>écrase l'adresse de retour</td></tr>
+      <tr><td>Défenses</td><td>NX · ASLR · canari</td><td>non-exécutable · aléatoire · sentinelle</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Opcode</dt><dd>Le ou les octets qui identifient l'opération d'une instruction (le <code>c7</code> de <code>mov r/m, imm</code>).</dd>
+  <dt>Préfixe REX.W</dt><dd>Octet <code>0x48</code> placé devant une instruction pour indiquer un opérande 64 bits (<code>rax</code> plutôt que <code>eax</code>).</dd>
+  <dt>ELF</dt><dd><em>Executable and Linkable Format</em>&nbsp;: le format des exécutables et objets sous Linux (en-tête, sections, segments).</dd>
+  <dt>Section vs segment</dt><dd>Une <em>section</em> (<code>.text</code>, <code>.data</code>) structure le fichier pour l'éditeur de liens&nbsp;; un <em>segment</em> regroupe des sections par droits d'accès pour le chargement en mémoire.</dd>
+  <dt>Éditeur de liens</dt><dd>Outil (<code>ld</code>) qui assemble les fichiers objets et remplace les noms de symboles par des adresses réelles.</dd>
+  <dt>Débordement de tampon (<em>buffer overflow</em>)</dt><dd>Écriture au-delà d'un tampon local qui écrase des données de contrôle de la pile, dont l'adresse de retour.</dd>
+  <dt>NX</dt><dd><em>No-eXecute</em>&nbsp;: bit marquant des pages (comme la pile) non exécutables, pour empêcher l'exécution de code injecté.</dd>
+  <dt>ASLR &amp; canari</dt><dd>ASLR place la pile, le tas et les bibliothèques à des adresses aléatoires&nbsp;; le canari est une valeur secrète vérifiée avant <code>ret</code> pour détecter un débordement.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+
+<ul>
+<li>NASM traduit chaque instruction en <strong>octets</strong> (préfixe REX, opcode, ModR/M…) de longueur variable&nbsp;; <code>objdump</code> fait l'inverse.</li>
+<li>Un exécutable Linux est un fichier <strong>ELF</strong>&nbsp;: en-tête (point d'entrée), <strong>sections</strong> (outillage) et <strong>segments</strong> (chargement par droits d'accès).</li>
+<li>L'<strong>éditeur de liens</strong> résout les symboles et fige les adresses&nbsp;; le noyau charge les segments en mémoire (text, data, bss, tas, pile).</li>
+<li>Le <strong>débordement de pile</strong> écrase l'adresse de retour&nbsp;; <strong>NX</strong>, <strong>ASLR</strong> et <strong>canaris</strong> sont trois remparts complémentaires, chacun lié à un détail machine que tu connais.</li>
+<li>La suite&nbsp;: ARM/RISC-V, le noyau, la rétro-ingénierie, l'optimisation — tes bases x86-64 se transposent.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi une instruction x86-64 n'a-t-elle pas une longueur fixe, et qu'est-ce que le préfixe REX (<code>48</code>) indique&nbsp;?</li><li>Quelle différence fais-tu entre une <em>section</em> ELF et un <em>segment</em> ELF&nbsp;? Donne un exemple de chaque.</li><li>Lors d'un débordement de tampon sur la pile, quelle donnée de contrôle finit écrasée, et quelle instruction l'utilise ensuite pour donner le contrôle à l'attaquant&nbsp;?</li><li>Associe chaque défense (NX, ASLR, canari) au détail machine qui la rend compréhensible.</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi une instruction x86-64 n'a-t-elle pas une longueur fixe, et qu'est-ce que le préfixe REX (48) indique ?","a":["Parce que l'encodage x86 est de longueur variable (de 1 à 15 octets selon l'instruction et ses opérandes) ; le préfixe REX (0x40 à 0x4F, ex. 48) signale l'usage des registres 64 bits ou étendus","Toutes les instructions font 4 octets","REX est un registre","REX indique une erreur"],"correct":0,"explain":"Le jeu x86 a un codage historique à longueur variable : préfixes, opcode, octets d'adressage et immédiats s'enchaînent. Le préfixe REX (plage 0x40-0x4F) active les fonctionnalités 64 bits ; son bit W (octet 48) indique un opérande de 64 bits."},
+  {"q":"Quelle différence fais-tu entre une section ELF et un segment ELF ? Donne un exemple de chaque.","a":["Une section sert à la liaison/compilation (ex. .text, .data, .bss) ; un segment sert au chargement en mémoire à l'exécution (ex. un segment LOAD regroupant plusieurs sections)","C'est la même chose","La section est runtime, le segment statique","Le segment contient une seule section toujours"],"correct":0,"explain":"Les sections (.text pour le code, .data pour les données initialisées, .bss pour les non initialisées) structurent le fichier pour l'éditeur de liens. Les segments, décrits par les en-têtes de programme, indiquent au chargeur quoi mettre en mémoire : un segment LOAD peut englober plusieurs sections."},
+  {"q":"Lors d'un débordement de tampon sur la pile, quelle donnée de contrôle finit écrasée, et quelle instruction l'utilise ensuite pour donner le contrôle à l'attaquant ?","a":["L'adresse de retour stockée sur la pile est écrasée ; ret l'utilise ensuite pour sauter, ce qui détourne l'exécution vers l'adresse choisie par l'attaquant","Le registre rax ; mov l'utilise","Le pointeur de pile ; push l'utilise","Aucune donnée de contrôle"],"correct":0,"explain":"Un débordement qui dépasse le tampon local écrase l'adresse de retour empilée. Quand la fonction exécute ret, elle saute à cette adresse falsifiée : l'attaquant redirige ainsi le flot d'exécution. C'est la base des attaques par écrasement de pile."}
+]
+</script>
+
+<h2>Exercices</h2>
+
+<script type="application/json" data-exos>
+[
+{"type":"text","accept":[".text"],"placeholder":"La section qui contient le CODE exécutable : .…","hints":["Les chaînes vont plutôt dans .data / .rodata.","Le code machine a sa propre section.","Point + « texte » en anglais."],"link":{"href":"lecon-10.html","label":"Revoir les sections ELF"}},
+{"type":"text","accept":["48","0x48"],"placeholder":"L'octet du préfixe REX.W (en hexadécimal) marquant l'opération 64 bits","hints":["Il précède un mov rax,... mais pas un mov eax,...","Deux chiffres hexadécimaux.","0x4 suivi de 8."],"link":{"href":"lecon-10.html","label":"Revoir REX.W"}},
+null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Assemble n'importe quel programme des leçons précédentes, puis affiche son point d'entrée et la liste de ses sections. Repère dans quelle section se trouve ton code et dans laquelle se trouvent tes chaînes de caractères.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">nasm -f elf64 prog.asm -o prog.o
+ld prog.o -o prog
+
+readelf -h prog | grep "Entry point"
+# Entry point address:  0x401000      &lt;- adresse de _start
+
+readelf -S prog | grep -E "\.text|\.data|\.rodata"
+#  [ 1] .text   PROGBITS  ... AX   &lt;- A=alloue, X=executable : ton code
+#  [ 2] .data   PROGBITS  ... WA   &lt;- W=ecriture, A=alloue   : tes donnees
+# Les chaines definies avec db dans «&nbsp;section .data&nbsp;» apparaissent en .data ;
+# si tu les avais mises en lecture seule, elles seraient en .rodata.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Désassemble le <code>.text</code> de ton binaire et retrouve les octets d'un <code>mov rax, ...</code>. Vérifie la présence du préfixe REX.W <code>48</code> en tête. Puis explique pourquoi un <code>mov eax, ...</code> (registre 32 bits) n'aurait <em>pas</em> ce préfixe.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">objdump -d -M intel prog
+
+# Exemple de sortie pour «&nbsp;mov rax, 1&nbsp;» :
+#   401000:  48 c7 c0 01 00 00 00   mov  rax, 0x1
+#            ^^                       prefixe REX.W  -&gt; operande 64 bits
+#
+# Pour «&nbsp;mov eax, 1&nbsp;» :
+#   401007:  b8 01 00 00 00         mov  eax, 0x1
+#            ^^ pas de 48          -&gt; eax fait deja 32 bits par defaut en
+#                                    mode long, REX.W est inutile (et ecrire
+#                                    sur eax met d'office a zero le haut de rax).</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sans rien exploiter (purement défensif), dessine la pile d'une fonction qui possède un tableau local de 16 octets, puis explique en commentaire&nbsp;: (a) où se trouve l'adresse de retour par rapport au tableau, (b) à partir de combien d'octets écrits un débordement commence à corrompre des données de contrôle, (c) ce qu'un canari changerait à ce scénario.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">; Pile pendant la fonction (adresses CROISSANTES vers le haut) :
+;
+;   [ adresse de retour ]   &lt;- rbp+8   : posee par call
+;   [ ancien rbp        ]   &lt;- rbp     : pose par push rbp
+;   [ buffer[15]        ]   &lt;- rbp-1
+;   [ ... 16 octets ... ]
+;   [ buffer[0]         ]   &lt;- rbp-16  : debut du tableau
+;
+; (a) L'adresse de retour est PLUS HAUT que le tableau (vers rbp+8).
+;     Comme on ecrit dans buffer du bas vers le haut, depasser le tableau
+;     fait remonter l'ecriture vers ancien rbp puis adresse de retour.
+;
+; (b) Ecrire jusqu'a 16 octets : OK. Du 17e au 24e octet on ecrase «&nbsp;ancien rbp&nbsp;»,
+;     puis a partir du 25e on atteint l'adresse de retour -&gt; corruption du flux.
+;
+; (c) Avec -fstack-protector, un canari secret est pose juste avant ancien rbp /
+;     adresse de retour. Pour ecraser le retour, le debordement doit traverser
+;     le canari et donc le modifier. Avant le ret, la fonction compare le canari
+;     au secret : difference detectee -&gt; __stack_chk_fail, le programme s'arrete
+;     au lieu de sauter vers l'adresse corrompue.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-nasm.min.js" defer></script>
+  </body>
+</html>

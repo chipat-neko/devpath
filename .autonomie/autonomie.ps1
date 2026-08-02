@@ -1,0 +1,222 @@
+# =============================================================================
+# Syntaxe - reveil autonome (lance par le Planificateur de taches Windows).
+# Fait tourner Claude Code en HEADLESS sur d:\test-claude pour avancer le
+# chantier d'enrichissement des lecons, meme en l'absence de l'utilisateur.
+# Journalise, idempotent, verrou anti-chevauchement.
+#
+#   Voir l'avancement   : d:\test-claude\.autonomie\journal.log
+#   Desactiver la tache : schtasks /Delete /TN "Syntaxe-Autonomie" /F
+#   Forcer un reveil    : schtasks /Run    /TN "Syntaxe-Autonomie"
+# =============================================================================
+$ErrorActionPreference = 'Continue'
+# Lire la sortie de claude.exe en UTF-8 (sinon les accents francais sont mojibake dans le journal).
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$proj   = 'd:\test-claude'
+$dir    = Join-Path $proj '.autonomie'
+$lock   = Join-Path $dir 'lock'
+$log    = Join-Path $dir 'journal.log'
+$claude = 'C:\Users\chipat\.local\bin\claude.exe'
+
+if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') }
+
+# Verrou anti-chevauchement : si un reveil precedent tourne encore (< 90 min), on saute.
+if (Test-Path $lock) {
+  $age = (Get-Date) - (Get-Item $lock).LastWriteTime
+  if ($age.TotalMinutes -lt 90) {
+    Add-Content $log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou)."
+    exit 0
+  }
+}
+$env:Path = 'C:\Program Files\nodejs;' + $env:Path
+
+# =============================================================================
+# Fin de chantier + passe de securite (ajout 2026-07-27, demande de Noah).
+# Le chantier est FINI quand les trois conditions sont vraies :
+#   1. plus aucun cours -avance declare dans js/data.js (phase C bouclee) ;
+#   2. le plan ENRICHISSEMENT-3.md n'a plus aucune case a cocher ;
+#   3. toutes les vraies lecons ont un glossaire (les pages de redirection,
+#      reconnaissables a leur meta refresh, sont exclues du test).
+# Alors : une PASSE DE SECURITE (verification globale du site) est lancee ; si son
+# verdict est VERT, la tache se DESACTIVE elle-meme au reveil suivant. Si le
+# verdict est ROUGE, le modele corrige et on recommence, avec un maximum de
+# 3 tentatives pour ne jamais boucler indefiniment.
+# =============================================================================
+$okFile  = Join-Path $dir 'verif-finale.ok'
+$cptFile = Join-Path $dir 'verif-finale.echecs'
+$rapport = Join-Path $proj 'VERIF-FINALE.md'
+
+function Test-ChantierFini {
+  try {
+    # Chantier V6 (depuis le 2026-08-01) : le plan CHANTIER-V6.md fait foi.
+    # Tant qu'il reste une case a cocher, il reste du travail.
+    $plan = Join-Path $proj 'CHANTIER-V6.md'
+    if (-not (Test-Path $plan)) { return $false }
+    if (Select-String -Path $plan -Pattern '^- \[ \]' -Quiet) { return $false }
+    return $true
+  } catch { return $false }
+}
+
+$modeVerif = $false
+$arretDemande = $false
+if (Test-ChantierFini) {
+  if (Test-Path $okFile) {
+    Add-Content $log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE. Tache desactivee. =====" -Encoding utf8
+    try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
+    catch { Add-Content $log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
+    exit 0
+  }
+  $echecs = 0
+  if (Test-Path $cptFile) { $echecs = [int](Get-Content $cptFile -TotalCount 1) }
+  if ($echecs -ge 3) {
+    Add-Content $log "[$(Stamp)] ===== ARRET : verification finale ROUGE 3 fois de suite. Intervention humaine requise (voir VERIF-FINALE.md). Tache desactivee. =====" -Encoding utf8
+    try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null } catch {}
+    exit 0
+  }
+  $modeVerif = $true
+}
+
+New-Item -ItemType File -Path $lock -Force | Out-Null
+if ($modeVerif) {
+  Add-Content $log "[$(Stamp)] ===== reveil autonome -- PASSE DE SECURITE (verification finale) ====="
+} else {
+  Add-Content $log "[$(Stamp)] ===== reveil autonome ====="
+}
+
+$promptTravail = @'
+Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) pour faire avancer le projet Syntaxe EN AUTONOMIE, dossier d:\test-claude. Tu es NON-INTERACTIF : ne pose AUCUNE question, ne propose AUCUN questionnaire, decide et agis seul. Tout le contenu visible et les commentaires en francais, avec accents CORRECTS (jamais d'ASCII a la place d'un accent dans le contenu).
+
+LE SITE : 76 cours, 1362 lecons, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. Le chantier V6 est EDITORIAL : les cours ayant ete ecrits par vagues successives, la meme question de QCM est parfois posee dans deux lecons differentes. Ton travail est de lire, juger et reecrire — pas de corriger un bug.
+
+1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V6.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A, puis B, puis C, puis D). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
+2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
+3) OUTILS DU PROJET, a utiliser systematiquement : node tools/verif-html.js (detecte en moins d'une seconde, sur les 1425 lecons, toute balise creee par erreur dans un bloc de code — il DOIT rester a zero probleme apres ton passage) et node tools/build-index.js (generateur rejouable des index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,antiseches). Pour mesurer un rendu, chrome est disponible en mode headless, avec --dump-dom, --allow-file-access-from-files, et --host-resolver-rules pour couper le reseau.
+4) INTERDIT ABSOLU : reintroduire une URL vers cdnjs.cloudflare.com, fonts.googleapis.com ou fonts.gstatic.com. Le site en compte zero. Apres toute modification de tools/, de starter/ ou d'un gabarit de page, REVERIFIE ce point : le piege s'est deja represente trois fois. Ne touche jamais au mojibake VOLONTAIRE des lecons qui enseignent l'encodage (pages/formats/lecon-06.html, pages/html/lecon-15.html, pages/r/lecon-06.html, pages/perl/lecon-13.html).
+5) VERIFIE AVANT DE CONCLURE : node --check sur chaque fichier js touche ; accolades equilibrees et aucune variable var(--x) inexistante pour un css ; balises equilibrees et zero BOM pour un html ; chaque bloc data-quiz, data-exos et data-quiz-bilan reste du JSON valide. Teste le rendu avec une progression semee dans localStorage (syntaxe-progress) : plusieurs comportements, dont la pastille XP, n'apparaissent qu'a cette condition, et un test avec un localStorage vide ment. Ne laisse JAMAIS un fichier casse : corrige ou reviens en arriere.
+6) EN CAS DE DOUTE REEL sur un point, ne force pas : laisse la case decochee et ecris precisement dans le plan ce qui bloque et ce qu'il faudrait decider. C'est une information utile, pas un echec.
+7) Apres ton travail, mets a jour la memoire du chantier (fichier enrichissement-cron-3.md) avec ce que tu as fait. Messages BREFS.
+'@
+
+# Prompt de la PASSE DE SECURITE : lance une seule fois, quand tout est fini.
+# Comme le prompt de travail : AUCUN guillemet droit (sinon la ligne de commande
+# passee a claude.exe est mal decoupee et l'appel echoue).
+$promptVerif = @'
+Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) sur le projet Syntaxe, dossier d:\test-claude. Le chantier est DETECTE COMME TERMINE : plus aucun cours -avance, toutes les lecons enrichies, plan entierement coche. Ta mission UNIQUE ce reveil est une PASSE DE SECURITE de fin de chantier : verifier tout le site de bout en bout, corriger ce qui est sans risque, puis rendre un verdict. Tu es NON-INTERACTIF : aucune question, aucun questionnaire. N'ajoute AUCUN contenu nouveau (pas de lecon, pas de cours) : ce reveil est un controle, pas une production.
+
+1) VERIFIE tout ce qui suit, en t'appuyant sur des scripts node jetables ranges dans scratchpad :
+   a) SYNTAXE : tous les fichiers de js/ passent node --check.
+   b) DONNEES : chaque bloc data-quiz, data-exos et data-quiz-bilan de toutes les lecons est du JSON valide.
+   c) ENCODAGE : aucun fichier du site n'a de BOM ; aucun mojibake NON volontaire (certaines lecons montrent un encodage errone EXPRES, ne pas y toucher).
+   d) LIENS : chaque fichier de lecon reference dans js/data.js existe sur le disque, et chaque fichier lecon-NN.html present dans un dossier de cours est bien reference (hors pages de redirection) ; les liens relatifs des pages de cours et des lecons pointent vers des fichiers existants.
+   e) INDEX : js/search-index.js a exactement une entree par lecon reelle, aucune entree pour un ancien dossier -avance, et le total est coherent avec le nombre de fichiers.
+   f) DUREES : pour chaque cours, l'objet durations de data.js a autant d'entrees que le cours a de lecons (rappel : la clef du cours JS est javascript alors que son dossier est js).
+   g) NIVEAUX : les 4 cours fusionnes (html, css, javascript, python) ont bien tous leurs modules porteurs d'un champ level reparti en debutant, intermediaire et expert ; plus aucun identifiant en -avance ne subsiste dans data.js, catalogue.js, cours.js, projets-data.js, flashcards-data.js, quiz-index.js, logos.js ni dans les fichiers fil-rouge.
+   h) REDIRECTIONS : chaque ancienne URL de cours -avance existe encore et pointe vers une lecon qui existe vraiment.
+   i) COMPTEURS AFFICHES : le nombre de cours et de lecons annonce sur l'accueil et le catalogue correspond a la realite.
+2) CORRIGE uniquement ce qui est simple et sur (index, durees, compteurs, liens). Si une correction est lourde ou douteuse, NE LA FAIS PAS : signale-la dans le rapport.
+3) ECRIS le rapport dans d:\test-claude\VERIF-FINALE.md. Sa toute PREMIERE ligne doit etre exactement VERDICT: VERT si tous les controles sont bons apres tes corrections, sinon exactement VERDICT: ROUGE. Ensuite le detail controle par controle avec les chiffres, puis la liste des problemes restants.
+4) Mets a jour la memoire du chantier (fichier enrichissement-cron-3.md) avec le resultat. Messages BREFS.
+'@
+
+$prompt = if ($modeVerif) { $promptVerif } else { $promptTravail }
+
+try {
+  Set-Location $proj
+  # Modele + effort EPINGLES (choix utilisateur) : Opus 4.8, effort max, pour du
+  # travail non surveille. --dangerously-skip-permissions = agir sans prompt.
+  # RETRY : les echecs sont surtout des coupures API transitoires (ex 529 Overloaded).
+  # On reessaie UNE fois apres 30s. Le reveil est idempotent (une lecon deja enrichie,
+  # reperable a son glossaire, n'est jamais refaite), donc relancer est sans risque.
+  $sortie = ''; $code = 1
+  for ($try = 1; $try -le 2 -and $code -ne 0; $try++) {
+    if ($try -gt 1) {
+      Add-Content $log "[$(Stamp)] echec (exit $code) -- nouvelle tentative ($try/2) dans 30s..." -Encoding utf8
+      Start-Sleep -Seconds 30
+    }
+    $sortie = (& $claude -p $prompt --model claude-opus-4-8 --effort max --dangerously-skip-permissions 2>&1 | Out-String)
+    $code = $LASTEXITCODE
+  }
+  # Reparation du mojibake : sous le Planificateur (aucune console), [Console]::OutputEncoding
+  # ne s'applique pas, donc PowerShell decode la sortie UTF-8 de claude en ANSI (1252). On
+  # detecte la signature (octet de tete 0xC2/0xC3 suivi d'une continuation 0x80-0xBF) et on
+  # repare en re-encodant 1252 -> octets -> UTF-8. Si la sortie est deja correcte, on n'y touche pas.
+  $estMojibake = $false
+  for ($i = 0; $i -lt $sortie.Length - 1; $i++) {
+    $a = [int]$sortie[$i]; $b = [int]$sortie[$i + 1]
+    if (($a -eq 0xC2 -or $a -eq 0xC3) -and $b -ge 0x80 -and $b -le 0xBF) { $estMojibake = $true; break }
+  }
+  if ($estMojibake) {
+    try { $sortie = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding(1252).GetBytes($sortie)) } catch {}
+  }
+  Add-Content $log $sortie -Encoding utf8
+  Add-Content $log "[$(Stamp)] ===== fin (exit $code) =====" -Encoding utf8
+
+  # --- Ligne BILAN lisible : on compte le nombre REEL de lecons enrichies = fichiers
+  # pages/<cours>/lecon-*.html contenant un glossaire (class glossary), marqueur pose par
+  # le modele sur CHAQUE lecon enrichie. Plus fiable que les cases du plan (qui sont par
+  # cours et semblent stagner alors que les lecons avancent). ---
+  $statut = if ($code -eq 0) { 'OK' } else { 'ECHEC' }
+  $faits = '?'; $total = '?'
+  try {
+    $plan = Join-Path $proj 'CHANTIER-V6.md'
+    $coches = (Select-String -Path $plan -Pattern '^- \[x\]').Count
+    $restants = (Select-String -Path $plan -Pattern '^- \[ \]').Count
+    $faits = $coches; $total = $coches + $restants
+  } catch {}
+  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points du chantier V6" -Encoding utf8
+
+  # --- Verdict de la passe de securite ---------------------------------------
+  # Le modele ecrit VERDICT: VERT ou VERDICT: ROUGE en 1re ligne de VERIF-FINALE.md.
+  if ($modeVerif) {
+    $verdict = 'ABSENT'
+    if (Test-Path $rapport) {
+      $tete = (Get-Content $rapport -TotalCount 1 -Encoding utf8)
+      if ($tete -match 'VERDICT\s*:\s*VERT') { $verdict = 'VERT' }
+      elseif ($tete -match 'VERDICT\s*:\s*ROUGE') { $verdict = 'ROUGE' }
+    }
+    if ($verdict -eq 'VERT' -and $code -eq 0) {
+      New-Item -ItemType File -Path $okFile -Force | Out-Null
+      Remove-Item $cptFile -Force -ErrorAction SilentlyContinue
+      $arretDemande = $true
+    } else {
+      $n = 0
+      if (Test-Path $cptFile) { $n = [int](Get-Content $cptFile -TotalCount 1) }
+      $n = $n + 1
+      Set-Content -Path $cptFile -Value $n -Encoding ascii
+      Add-Content $log "[$(Stamp)] VERIFICATION FINALE : $verdict (tentative $n/3) -- voir VERIF-FINALE.md, un nouveau reveil va corriger." -Encoding utf8
+    }
+  }
+} catch {
+  Add-Content $log "[$(Stamp)] ERREUR wrapper : $_"
+} finally {
+  Remove-Item $lock -Force -ErrorAction SilentlyContinue
+  if ($arretDemande) {
+    # Fin de chantier confirmee par la passe de securite : on coupe ici, sans
+    # replanifier, plutot que de gaspiller un reveil de plus.
+    Add-Content $log "[$(Stamp)] ===== CHANTIER TERMINE : verification finale VERTE. Tache desactivee, aucun reveil replanifie. =====" -Encoding utf8
+    try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
+    catch { Add-Content $log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
+  }
+  # Auto-replanification -- SAUF si la fin de chantier vient d'etre confirmee.
+  # (Pas de return ici : PowerShell interdit de sortir d'un bloc finally.)
+  # Choix Noah 2026-07-17, delai reduit a 5 min le 2026-07-23 apres
+  # passage au forfait Max X20) : le PROCHAIN reveil se lance 5 min APRES la fin de CETTE
+  # passe (au lieu d'un horaire fixe a :30). Filets de securite :
+  #   - repetition toutes les 2h sur le meme trigger : si la chaine casse (ex. crash avant
+  #     d'arriver ici), un reveil repart dans 2h max ;
+  #   - StartWhenAvailable (dans les Settings) : rattrape le declenchement manque apres un
+  #     reboot / une veille des que la machine est dispo.
+  # (Pas de trigger AtStartup : il exige l'elevation admin, indisponible en contexte non-eleve.)
+  # Le verrou anti-chevauchement empeche tout double-run. Settings (WakeToRun...) preserves.
+  if (-not $arretDemande) {
+    try {
+      $next  = (Get-Date).AddMinutes(5)
+      $tOnce = New-ScheduledTaskTrigger -Once -At $next -RepetitionInterval (New-TimeSpan -Hours 2)
+      Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tOnce -ErrorAction Stop | Out-Null
+      Add-Content $log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) (5 min apres la fin)" -Encoding utf8
+    } catch {
+      Add-Content $log "[$(Stamp)] ATTENTION replanification KO ($_) -- le filet 2h prend le relais." -Encoding utf8
+    }
+  }
+}

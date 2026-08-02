@@ -1,0 +1,69 @@
+<p>Voici le concept qui fait toute la singularité — et la puissance — de PowerShell&nbsp;: le <strong>pipeline</strong>. Comme dans les shells classiques, l'opérateur <code>|</code> relie des commandes en envoyant la sortie de l'une à l'entrée de la suivante. Mais ici, ce qui circule n'est pas du texte&nbsp;: ce sont des <strong>objets</strong>, avec toutes leurs propriétés intactes. Tu peux donc filtrer, trier et transformer des données sans jamais découper des chaînes à la main.</p>
+
+<h2>L'idée du pipeline</h2>
+<p>Chaque cmdlet à droite d'un <code>|</code> reçoit les objets produits à gauche, un par un. On enchaîne ainsi des opérations en une phrase qui se lit de gauche à droite.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-Process | Sort-Object CPU -Descending | Select-Object -First 5
+# les 5 processus qui consomment le plus de CPU</code></pre></figure>
+<p class="code-caption">Trois étapes&nbsp;: produire, trier, prélever — chacune passe des objets à la suivante.</p>
+
+<h2>Filtrer avec Where-Object</h2>
+<p><code>Where-Object</code> ne garde que les objets qui satisfont une condition. À l'intérieur du bloc <code>{ }</code>, la variable automatique <code>$_</code> (ou <code>$PSItem</code>) désigne l'objet courant.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-Process | Where-Object { $_.WorkingSet -gt 100MB }
+# uniquement les processus qui utilisent plus de 100 Mo
+
+# Syntaxe simplifiée (PowerShell 3+) :
+Get-Service | Where-Object Status -eq "Running"</code></pre></figure>
+<p>Remarque le suffixe <code>MB</code>&nbsp;: PowerShell comprend <code>KB</code>, <code>MB</code>, <code>GB</code>, <code>TB</code> nativement.</p>
+
+<h2>Trier avec Sort-Object</h2>
+<p><code>Sort-Object</code> ordonne les objets selon une ou plusieurs propriétés, croissant par défaut, décroissant avec <code>-Descending</code>.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-ChildItem | Sort-Object Length -Descending
+Get-Process | Sort-Object Name, Id        # tri sur deux clés</code></pre></figure>
+
+<h2>Sélectionner et projeter avec Select-Object</h2>
+<p><code>Select-Object</code> choisit les <strong>propriétés</strong> à garder, ou un nombre d'éléments (<code>-First</code>, <code>-Last</code>). On peut même créer des propriétés calculées avec une table de hachage.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-Process | Select-Object Name, Id, @{
+  Name = "MemoireMo"
+  Expression = { [math]::Round($_.WorkingSet / 1MB, 1) }
+} | Sort-Object MemoireMo -Descending | Select-Object -First 3</code></pre></figure>
+<p class="code-caption">La propriété calculée se définit avec <code>@{ Name = …; Expression = { … } }</code>.</p>
+
+<h2>Transformer avec ForEach-Object</h2>
+<p>Là où <code>Where-Object</code> filtre, <code>ForEach-Object</code> <strong>agit</strong> sur chaque objet. C'est l'équivalent d'une boucle, mais branchée sur le pipeline.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">1..5 | ForEach-Object { $_ * $_ }     # 1 4 9 16 25
+Get-ChildItem *.log | ForEach-Object { $_.Name.ToUpper() }</code></pre></figure>
+<p>Ici <code>1..5</code> est un <strong>opérateur de plage</strong> qui produit les entiers de 1 à 5.</p>
+
+<h2>Compter et mesurer</h2>
+<p><code>Measure-Object</code> calcule des statistiques (nombre, somme, moyenne, min, max) sur les objets reçus.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-ChildItem -File | Measure-Object Length -Sum -Average
+Get-Process | Measure-Object              # combien de processus ?</code></pre></figure>
+
+<h2>Mettre en forme la sortie</h2>
+<p>Pour l'<strong>affichage</strong> seulement, <code>Format-Table</code> (tableau) et <code>Format-List</code> (une propriété par ligne) arrangent le rendu. Attention&nbsp;: ces cmdlets produisent des objets de mise en forme&nbsp;— place-les <strong>en dernier</strong>, jamais au milieu d'un pipeline qu'on veut continuer.</p>
+<figure class="code-block" data-file="Console"><pre><code class="language-powershell">Get-Service | Format-Table Name, Status -AutoSize
+Get-Process -Id $PID | Format-List *      # toutes les propriétés</code></pre></figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Mettre un <code>Format-Table</code> au milieu d'un pipeline puis vouloir réutiliser le résultat&nbsp;: la suite ne reçoit plus tes données, mais des objets de formatage inutilisables. Règle d'or&nbsp;: <strong>les <code>Format-*</code> terminent toujours le pipeline.</strong></p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour exporter au lieu d'afficher&nbsp;: <code>Export-Csv</code>, <code>ConvertTo-Json</code>, <code>Out-File</code> se branchent en fin de pipeline. <code>Get-Process | Export-Csv procs.csv -NoTypeInformation</code> sauvegarde un vrai tableau de données réexploitable.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Le pipeline <code>|</code> transmet des <strong>objets</strong> d'une cmdlet à l'autre.</li>
+  <li><code>Where-Object</code> filtre, <code>Sort-Object</code> trie, <code>Select-Object</code> projette, <code>ForEach-Object</code> transforme.</li>
+  <li>Dans les blocs, <code>$_</code> désigne l'objet courant.</li>
+  <li>Les <code>Format-*</code> servent à l'affichage et terminent le pipeline.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Que représente <code>$_</code> dans un bloc <code>Where-Object { … }</code>&nbsp;?</li><li>Quelle cmdlet choisis-tu pour ne garder que certaines propriétés d'un objet&nbsp;?</li><li>Pourquoi ne faut-il pas placer <code>Format-Table</code> au milieu d'un pipeline&nbsp;?</li></ol></div>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Affiche les nombres de 1 à 10, mais seulement les pairs.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">1..10 | Where-Object { $_ % 2 -eq 0 }   # 2 4 6 8 10</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Liste les 5 plus gros fichiers du dossier courant, avec leur nom et leur taille en Ko.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">Get-ChildItem -File |
+  Sort-Object Length -Descending |
+  Select-Object -First 5 Name, @{N="Ko"; E={ [math]::Round($_.Length/1KB) }}</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Calcule la taille totale (en Mo) de tous les fichiers <code>.log</code> du dossier courant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.ps1"><pre><code class="language-powershell">$total = Get-ChildItem -Filter *.log -File |
+  Measure-Object Length -Sum
+[math]::Round($total.Sum / 1MB, 2)</code></pre></figure></details></div>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Namespaces, labels & organisation — Leçon 08 · Syntaxe</title>
+    <meta name="description" content="Organiser un cluster Kubernetes qui grandit : cloisonner avec les namespaces, étiqueter et retrouver les ressources avec les labels et les sélecteurs, et cadrer la consommation avec ResourceQuota et LimitRange." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+    <script src="../../js/theme.js"></script>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="kubernetes" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Kubernetes</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 04 · Pour aller plus loin — Leçon 08</p>
+              <h1 class="lesson-header__title">Namespaces, labels & organisation</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Leçon 07</span>
+              </div>
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>cloisonner un cluster avec des <strong>namespaces</strong>&nbsp;;</li>
+                  <li>étiqueter et retrouver des ressources avec les <strong>labels</strong> et les <strong>sélecteurs</strong>&nbsp;;</li>
+                  <li>distinguer un <strong>label</strong> d'une <strong>annotation</strong>&nbsp;;</li>
+                  <li>cadrer la consommation avec <strong>ResourceQuota</strong> et <strong>LimitRange</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Tant qu'on déploie une seule application, un cluster tient dans la tête. Mais dès que plusieurs équipes ou plusieurs <strong>environnements</strong> (dev, préproduction, production) cohabitent, il faut <strong>organiser</strong>. Kubernetes offre trois outils pour cela&nbsp;: les <strong>namespaces</strong> (cloisonner), les <strong>labels</strong> (étiqueter et retrouver) et les <strong>quotas</strong> (cadrer la consommation).</p>
+
+<h2>Les namespaces : cloisonner le cluster</h2>
+<p>Un <strong>namespace</strong> est un cluster virtuel <em>à l'intérieur</em> du cluster. Il délimite un <strong>espace de noms</strong>&nbsp;: un Service nommé <code>api</code> peut exister dans <code>dev</code> <em>et</em> dans <code>prod</code> sans collision, car chacun vit dans son namespace. Kubernetes en crée quelques-uns d'office&nbsp;: <code>default</code> (là où atterrit ce qu'on ne range pas), <code>kube-system</code> (les composants internes), <code>kube-public</code> et <code>kube-node-lease</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un cluster découpé en namespaces isolés. Le cluster contient quatre namespaces côte à côte : dev, staging, prod et kube-system. Les namespaces dev, staging et prod contiennent chacun un pod nommé « web » et un service nommé « api » : les mêmes noms cohabitent sans collision car chaque namespace est un espace de noms distinct. Le namespace kube-system, mis en évidence, contient les composants internes CoreDNS et kube-proxy.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un cluster, des namespaces cloisonnés (les noms ne se télescopent pas)</text>
+    <rect class="d-box" x="20" y="42" width="135" height="150" rx="8" />
+    <text class="d-tag" x="87" y="62" text-anchor="middle" font-size="10">namespace : dev</text>
+    <rect class="d-box" x="38" y="78" width="99" height="34" rx="6" />
+    <text class="d-mut" x="87" y="99" text-anchor="middle" font-size="9">pod « web »</text>
+    <rect class="d-box" x="38" y="122" width="99" height="34" rx="6" />
+    <text class="d-mut" x="87" y="143" text-anchor="middle" font-size="9">svc « api »</text>
+    <rect class="d-box" x="175" y="42" width="135" height="150" rx="8" />
+    <text class="d-tag" x="242" y="62" text-anchor="middle" font-size="10">namespace : staging</text>
+    <rect class="d-box" x="193" y="78" width="99" height="34" rx="6" />
+    <text class="d-mut" x="242" y="99" text-anchor="middle" font-size="9">pod « web »</text>
+    <rect class="d-box" x="193" y="122" width="99" height="34" rx="6" />
+    <text class="d-mut" x="242" y="143" text-anchor="middle" font-size="9">svc « api »</text>
+    <rect class="d-box" x="330" y="42" width="135" height="150" rx="8" />
+    <text class="d-tag" x="397" y="62" text-anchor="middle" font-size="10">namespace : prod</text>
+    <rect class="d-box" x="348" y="78" width="99" height="34" rx="6" />
+    <text class="d-mut" x="397" y="99" text-anchor="middle" font-size="9">pod « web »</text>
+    <rect class="d-box" x="348" y="122" width="99" height="34" rx="6" />
+    <text class="d-mut" x="397" y="143" text-anchor="middle" font-size="9">svc « api »</text>
+    <rect class="d-accent" x="485" y="42" width="135" height="150" rx="8" />
+    <text class="d-tag" x="552" y="62" text-anchor="middle" font-size="10">kube-system</text>
+    <rect class="d-box" x="503" y="78" width="99" height="34" rx="6" />
+    <text class="d-mut" x="552" y="99" text-anchor="middle" font-size="9">CoreDNS</text>
+    <rect class="d-box" x="503" y="122" width="99" height="34" rx="6" />
+    <text class="d-mut" x="552" y="143" text-anchor="middle" font-size="9">kube-proxy</text>
+    <text class="d-mut" x="320" y="182" text-anchor="middle" font-size="8.5">trois « web » distincts, un par namespace — aucune collision</text>
+  </svg>
+  <figcaption>Chaque <strong>namespace</strong> est un espace de noms&nbsp;: le même nom de ressource peut y cohabiter sans conflit.</figcaption>
+</figure>
+
+<p>On crée un namespace et on y travaille en ajoutant l'option <code>-n</code> (ou <code>--namespace</code>) aux commandes&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl get namespaces              # lister les namespaces (raccourci : ns)
+kubectl create namespace dev        # en créer un
+kubectl apply -f app.yaml -n dev    # appliquer DANS le namespace dev
+kubectl get pods -n dev             # ne voir que les pods de dev
+# fixer le namespace par défaut du contexte courant :
+kubectl config set-context --current --namespace=dev</code></pre></figure>
+<p>On peut aussi épingler le namespace directement dans le manifeste, sous <code>metadata</code>&nbsp;:</p>
+<figure class="code-block" data-file="pod.yaml"><pre><code class="language-yaml">metadata:
+  name: web
+  namespace: dev      # cette ressource vivra dans le namespace dev</code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Le namespace n'isole pas le réseau</p><p>Par défaut, un pod de <code>dev</code> peut tout à fait joindre un pod de <code>prod</code> sur le réseau&nbsp;: le namespace cloisonne les <strong>noms</strong>, les droits (<abbr title="Role-Based Access Control">RBAC</abbr>) et les quotas, <strong>pas</strong> le trafic. Pour bloquer les communications entre namespaces, il faut des <strong>NetworkPolicy</strong>.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Toutes les ressources ne sont pas « namespacées »</p><p>Les pods, services, déploiements, ConfigMaps… appartiennent à un namespace. Mais certains objets sont <strong>à l'échelle du cluster</strong> (cluster-scoped)&nbsp;: les <strong>nœuds</strong>, les <strong>PersistentVolumes</strong>, les <strong>StorageClass</strong> et les namespaces eux-mêmes. On les liste avec <code>kubectl api-resources --namespaced=false</code>.</p></div></div>
+
+<h2>Les labels et les sélecteurs : étiqueter pour retrouver</h2>
+<p>Un <strong>label</strong> est une paire clé/valeur collée sur n'importe quel objet&nbsp;: <code>app=web</code>, <code>env=prod</code>, <code>tier=frontend</code>. Les labels ne sont pas décoratifs&nbsp;: ce sont eux qui <strong>relient</strong> les ressources entre elles. Un déploiement retrouve <em>ses</em> pods par un <strong>sélecteur</strong> (<code>selector.matchLabels</code>)&nbsp;; un service route le trafic vers les pods dont les labels correspondent à son <code>selector</code> (revois la <a href="lecon-04.html">leçon&nbsp;04</a>).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Un sélecteur retrouve les pods par leurs labels. À gauche, une boîte sélecteur contient la condition app égale web. À droite, quatre pods portent des labels : deux pods ont app égale web (l'un env égale prod, l'autre env égale dev) et sont mis en évidence et retenus par le sélecteur ; deux autres pods ont app égale batch ou app égale worker et sont grisés, non retenus. Des flèches partent du sélecteur vers les deux pods retenus.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un sélecteur choisit les pods par leurs étiquettes</text>
+    <rect class="d-accent" x="20" y="80" width="150" height="60" rx="8" />
+    <text class="d-tag" x="95" y="106" text-anchor="middle" font-size="10">sélecteur</text>
+    <text class="d-mut" x="95" y="124" text-anchor="middle" font-size="10">app = web</text>
+    <rect class="d-accent" x="330" y="44" width="290" height="52" rx="8" />
+    <text class="d-tag" x="475" y="66" text-anchor="middle" font-size="10">pod — app=web, env=prod</text>
+    <text class="d-mut" x="475" y="84" text-anchor="middle" font-size="9">retenu ✓</text>
+    <rect class="d-accent" x="330" y="100" width="290" height="52" rx="8" />
+    <text class="d-tag" x="475" y="122" text-anchor="middle" font-size="10">pod — app=web, env=dev</text>
+    <text class="d-mut" x="475" y="140" text-anchor="middle" font-size="9">retenu ✓</text>
+    <rect class="d-box" x="330" y="156" width="140" height="40" rx="6" />
+    <text class="d-mut" x="400" y="180" text-anchor="middle" font-size="9">app=batch — ignoré</text>
+    <rect class="d-box" x="480" y="156" width="140" height="40" rx="6" />
+    <text class="d-mut" x="550" y="180" text-anchor="middle" font-size="9">app=worker — ignoré</text>
+    <line class="d-line" x1="170" y1="100" x2="326" y2="72" /><path class="d-line" d="M319 71 L327 71 L323 78" fill="none" />
+    <line class="d-line" x1="170" y1="120" x2="326" y2="126" /><path class="d-line" d="M319 121 L327 126 L319 131" fill="none" />
+  </svg>
+  <figcaption>Le <strong>sélecteur</strong> <code>app=web</code> retient les pods qui portent ce label&nbsp;; les autres sont ignorés.</figcaption>
+</figure>
+
+<p>Côté ligne de commande, on filtre par label avec <code>-l</code>&nbsp;:</p>
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl get pods -l app=web            # tous les pods étiquetés app=web
+kubectl get pods -l app=web,env=prod   # les deux conditions (ET)
+kubectl get pods --show-labels         # afficher les labels de chaque pod
+kubectl label pod web-abc123 tier=frontend   # ajouter/modifier un label</code></pre></figure>
+
+<h3>Label ou annotation ?</h3>
+<p>À côté des labels, les <strong>annotations</strong> stockent aussi des métadonnées clé/valeur — mais on ne peut <em>pas</em> faire de sélection dessus. Elles servent à porter de l'information pour les humains ou les outils&nbsp;: une URL, un numéro de version, une configuration d'Ingress, la cause d'un changement. Règle simple&nbsp;: <strong>label</strong> si tu veux <em>filtrer/regrouper</em> dessus, <strong>annotation</strong> si c'est une info à <em>transporter</em>.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Les labels recommandés</p><p>Kubernetes propose un jeu de labels standard préfixés <code>app.kubernetes.io/</code> (<code>name</code>, <code>instance</code>, <code>version</code>, <code>component</code>, <code>part-of</code>, <code>managed-by</code>). Les adopter rend tes ressources lisibles par les outils de l'écosystème (tableaux de bord, Helm…).</p></div></div>
+
+<h2>ResourceQuota et LimitRange : cadrer la consommation</h2>
+<p>Sans garde-fou, une équipe (ou un bug) peut réclamer tout le CPU et toute la mémoire du cluster et affamer les autres. Deux objets, posés <strong>par namespace</strong>, évitent cela&nbsp;:</p>
+<ul>
+<li>Le <strong>ResourceQuota</strong> fixe un <strong>plafond global</strong> pour le namespace&nbsp;: total de CPU/mémoire demandés, nombre d'objets (pods, services, PVC…).</li>
+<li>Le <strong>LimitRange</strong> fixe des <strong>valeurs par conteneur</strong>&nbsp;: des <em>défauts</em> de <code>requests</code>/<code>limits</code> et des bornes min/max, pour les pods qui n'en déclarent pas.</li>
+</ul>
+<figure class="code-block" data-file="quota.yaml"><pre><code class="language-yaml">apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota-dev
+  namespace: dev
+spec:
+  hard:
+    requests.cpu: "4"        # 4 cœurs demandés au total
+    requests.memory: 8Gi     # 8 Gio demandés au total
+    pods: "10"               # 10 pods maximum</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Un quota plafonne ce qu'un namespace peut consommer. À gauche, le namespace dev affiche son quota : 4 cœurs de CPU au maximum, dont 3 déjà utilisés. Deux demandes arrivent. La première demande 1 cœur : le total atteint 4, inférieur ou égal à la limite, elle est acceptée. La seconde demande 2 cœurs : le total atteindrait 5, supérieur à la limite de 4, elle est refusée par l'API server.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le quota accepte ou refuse selon le total du namespace</text>
+    <rect class="d-accent" x="20" y="60" width="200" height="110" rx="8" />
+    <text class="d-tag" x="120" y="84" text-anchor="middle" font-size="11">namespace : dev</text>
+    <text class="d-mut" x="120" y="104" text-anchor="middle" font-size="9">quota CPU : 4 cœurs max</text>
+    <rect class="d-box" x="40" y="118" width="160" height="18" rx="4" />
+    <rect class="d-accent" x="40" y="118" width="120" height="18" rx="4" />
+    <text class="d-mut" x="120" y="152" text-anchor="middle" font-size="9">utilisé : 3 / 4 cœurs</text>
+    <rect class="d-box" x="270" y="54" width="150" height="46" rx="6" />
+    <text class="d-tag" x="345" y="74" text-anchor="middle" font-size="10">demande +1 cœur</text>
+    <text class="d-mut" x="345" y="90" text-anchor="middle" font-size="8.5">total 4 ≤ 4</text>
+    <line class="d-line" x1="420" y1="77" x2="472" y2="77" /><path class="d-line" d="M465 73 L473 77 L465 81" fill="none" />
+    <rect class="d-accent" x="476" y="54" width="150" height="46" rx="6" />
+    <text class="d-tag" x="551" y="74" text-anchor="middle" font-size="10">ACCEPTÉ ✓</text>
+    <text class="d-mut" x="551" y="90" text-anchor="middle" font-size="8.5">pod créé</text>
+    <rect class="d-box" x="270" y="120" width="150" height="46" rx="6" />
+    <text class="d-tag" x="345" y="140" text-anchor="middle" font-size="10">demande +2 cœurs</text>
+    <text class="d-mut" x="345" y="156" text-anchor="middle" font-size="8.5">total 5 &gt; 4</text>
+    <line class="d-line" x1="420" y1="143" x2="472" y2="143" /><path class="d-line" d="M465 139 L473 143 L465 147" fill="none" />
+    <rect class="d-box" x="476" y="120" width="150" height="46" rx="6" />
+    <text class="d-tag" x="551" y="140" text-anchor="middle" font-size="10">REFUSÉ ✗</text>
+    <text class="d-mut" x="551" y="156" text-anchor="middle" font-size="8.5">dépasse le quota</text>
+  </svg>
+  <figcaption>Une demande qui ferait dépasser le <strong>ResourceQuota</strong> est <strong>refusée à la création</strong>&nbsp;; les autres passent.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Un quota CPU/mémoire rend les <code>requests</code> obligatoires</p><p>Dès qu'un <code>ResourceQuota</code> porte sur le CPU ou la mémoire, <strong>tout pod</strong> du namespace <em>doit</em> déclarer ses <code>requests</code>/<code>limits</code>, sinon sa création échoue. C'est là que le <strong>LimitRange</strong> devient précieux&nbsp;: il fournit des valeurs par défaut pour les pods qui oublient de les préciser.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<ul>
+<li><strong>Oublier <code>-n</code>.</strong> Une commande sans namespace agit sur le namespace <em>courant</em> (souvent <code>default</code>)&nbsp;: on croit regarder <code>prod</code> et on est ailleurs.</li>
+<li><strong>Croire que le namespace isole le réseau.</strong> Il faut des <strong>NetworkPolicy</strong> pour cela.</li>
+<li><strong>Modifier un label utilisé par un sélecteur.</strong> Changer <code>app=web</code> sur un pod le fait « disparaître » de son service ou de son déploiement, qui ne le reconnaît plus.</li>
+<li><strong>Poser un quota CPU/mémoire sans LimitRange.</strong> Les pods sans <code>requests</code> sont alors rejetés&nbsp;: prévois des défauts.</li>
+<li><strong>Chercher un objet cluster-scoped dans un namespace.</strong> <code>kubectl get pv -n dev</code> n'a pas de sens&nbsp;: les PV ne sont pas namespacés.</li>
+</ul>
+
+<h2>Pour aller plus loin</h2>
+<p>Les namespaces sont la brique de base du <strong>multi-locataire</strong> (multi-tenancy)&nbsp;: on isole les équipes par namespace, on leur attribue des droits via le RBAC (leçon&nbsp;12) et on les cadre avec des quotas. Pour aller plus loin, on combine avec des <strong>NetworkPolicy</strong> (réseau), des <strong>ResourceQuota</strong> (ressources) et des outils de gouvernance (OPA/Kyverno) qui imposent des règles à l'échelle du cluster.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le namespace n'est pas une frontière de sécurité <em>forte</em>&nbsp;: pour une isolation stricte entre clients, certaines organisations préfèrent des <strong>clusters séparés</strong>. Le namespace convient très bien pour séparer des environnements ou des équipes d'une même organisation.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — un <code>kubectl delete</code> dans le mauvais environnement</p><p>Une équipe fait tourner <strong>dev et prod dans le même cluster</strong>, sans namespaces&nbsp;: tout est dans <code>default</code>. Un développeur veut nettoyer ses tests et lance <code>kubectl delete deployment web</code> — mais c'est le <code>web</code> de <strong>production</strong> qui disparaît, car il n'y en avait qu'un. Après l'incident, l'équipe crée des namespaces <code>dev</code>, <code>staging</code>, <code>prod</code>, configure un <strong>contexte</strong> distinct par environnement (avec un namespace par défaut), restreint les droits par le <strong>RBAC</strong> (les développeurs n'ont pas d'accès en écriture à <code>prod</code>) et pose un <strong>ResourceQuota</strong> sur <code>dev</code> pour qu'un test emballé n'affame plus la production. Les erreurs de contexte deviennent bien plus difficiles à commettre.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Mémo — organiser un cluster</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>kubectl get ns</code></td><td>lister les namespaces</td></tr>
+      <tr><td><code>kubectl create namespace X</code></td><td>créer un namespace</td></tr>
+      <tr><td><code>-n X</code> / <code>--namespace X</code></td><td>cibler un namespace pour une commande</td></tr>
+      <tr><td><code>kubectl config set-context --current --namespace=X</code></td><td>fixer le namespace par défaut</td></tr>
+      <tr><td><code>metadata.labels</code></td><td>poser des étiquettes clé/valeur sur une ressource</td></tr>
+      <tr><td><code>kubectl get pods -l app=web,env=prod</code></td><td>filtrer par labels (ET)</td></tr>
+      <tr><td><code>kubectl get pods --show-labels</code></td><td>afficher les labels de chaque pod</td></tr>
+      <tr><td><code>metadata.annotations</code></td><td>métadonnées non sélectionnables (info à transporter)</td></tr>
+      <tr><td><code>ResourceQuota</code></td><td>plafond global de ressources/objets par namespace</td></tr>
+      <tr><td><code>LimitRange</code></td><td>défauts et bornes de <code>requests</code>/<code>limits</code> par conteneur</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Namespace</dt><dd>Cluster virtuel à l'intérieur du cluster&nbsp;: il délimite un espace de noms et sert de portée aux droits (RBAC) et aux quotas. Ne cloisonne pas le réseau par lui-même.</dd>
+  <dt>Label</dt><dd>Paire clé/valeur (ex. <code>app=web</code>) apposée sur une ressource&nbsp;; sert à identifier, regrouper et <strong>sélectionner</strong>.</dd>
+  <dt>Sélecteur (selector)</dt><dd>Condition sur les labels (ex. <code>app=web,env=prod</code>) qui retient un sous-ensemble de ressources&nbsp;; utilisé par les services et les déploiements.</dd>
+  <dt>Annotation</dt><dd>Métadonnée clé/valeur non sélectionnable, destinée à transporter de l'information pour les humains ou les outils.</dd>
+  <dt>ResourceQuota</dt><dd>Objet qui plafonne, par namespace, la somme des ressources demandées et le nombre d'objets.</dd>
+  <dt>LimitRange</dt><dd>Objet qui fixe, par conteneur, des valeurs par défaut et des bornes min/max de <code>requests</code>/<code>limits</code>.</dd>
+  <dt>Objet cluster-scoped</dt><dd>Ressource qui n'appartient à aucun namespace (nœuds, PersistentVolumes, StorageClass, namespaces eux-mêmes).</dd>
+  <dt>Contexte (kubectl)</dt><dd>Combinaison cluster + utilisateur + namespace par défaut, mémorisée pour basculer facilement d'un environnement à l'autre.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un <strong>namespace</strong> cloisonne les noms, les droits et les quotas — <strong>pas</strong> le réseau.</li>
+<li>Les <strong>labels</strong> + <strong>sélecteurs</strong> relient les ressources&nbsp;; les <strong>annotations</strong> transportent de l'info non sélectionnable.</li>
+<li><strong>ResourceQuota</strong> plafonne un namespace&nbsp;; <strong>LimitRange</strong> donne des défauts par conteneur.</li>
+<li>Ajoute <code>-n</code> à tes commandes… ou fixe le namespace de ton contexte.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Deux services peuvent-ils s'appeler <code>api</code> dans le même cluster ? À quelle condition ?</li><li>Quelle différence entre un label et une annotation ?</li><li>Que se passe-t-il si une nouvelle demande ferait dépasser le ResourceQuota du namespace ?</li></ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"À quoi sert principalement un namespace ?","a":["Cloisonner logiquement un cluster : espace de noms, portée du RBAC et des quotas","Chiffrer le trafic entre les pods","Accélérer le démarrage des conteneurs","Stocker des données de façon durable"],"correct":0,"explain":"Le namespace délimite un espace de noms et sert de portée aux droits et aux quotas. Il n'isole pas le réseau (cela demande des NetworkPolicy)."},
+  {"q":"Quelle est la différence entre un label et une annotation ?","a":["On peut sélectionner/filtrer sur un label, pas sur une annotation (qui transporte seulement de l'info)","Aucune, ce sont des synonymes","Un label est chiffré, pas une annotation","Une annotation relie un service à ses pods, pas un label"],"correct":0,"explain":"Les labels servent à identifier et sélectionner (services, déploiements) ; les annotations portent des métadonnées non sélectionnables."},
+  {"q":"Une demande de pod ferait dépasser le ResourceQuota CPU du namespace. Que se passe-t-il ?","a":["La création est refusée : la demande dépasse le plafond du namespace","Le pod est créé mais mis en pause","Le quota est augmenté automatiquement","Les autres pods sont supprimés pour faire de la place"],"correct":0,"explain":"Un ResourceQuota refuse à la création toute demande qui ferait dépasser le total autorisé pour le namespace."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["namespace","namespaces"],"placeholder":"l'objet qui cloisonne un cluster en espaces de noms","hints":["Un « cluster virtuel » dans le cluster.","default, kube-system en sont.","kubectl get ___."],"link":{"href":"lecon-08.html","label":"Revoir « Les namespaces »"}},
+  {"type":"text","accept":["label","labels","étiquette","etiquette"],"placeholder":"la paire clé/valeur sur laquelle un sélecteur peut filtrer","hints":["app=web en est un.","Contraire : annotation (non sélectionnable).","kubectl get pods -l ___."],"link":{"href":"lecon-08.html","label":"Revoir « Labels et sélecteurs »"}},
+  {"type":"text","accept":["resourcequota","resource quota","quota"],"placeholder":"l'objet qui plafonne les ressources d'un namespace","hints":["Resource + Quota.","Total CPU/mémoire, nombre d'objets.","Refuse la création au-delà du plafond."],"link":{"href":"lecon-08.html","label":"Revoir « ResourceQuota et LimitRange »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la commande qui crée un namespace nommé <code>staging</code>, puis celle qui liste les pods de ce namespace.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl create namespace staging
+kubectl get pods -n staging</code></pre></figure><p>Sans <code>-n staging</code>, la seconde commande listerait les pods du namespace <em>courant</em> (souvent <code>default</code>).</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu veux ne voir que les pods étiquetés à la fois <code>app=web</code> et <code>env=prod</code>. Quelle commande ?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="terminal"><pre><code class="language-bash">kubectl get pods -l app=web,env=prod</code></pre></figure><p>La virgule combine les conditions par un <strong>ET</strong>&nbsp;: un pod n'est retenu que s'il porte les deux labels. Ajoute <code>--show-labels</code> pour vérifier les étiquettes de chacun.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Tu poses un <code>ResourceQuota</code> sur le CPU du namespace <code>dev</code>. Aussitôt, plusieurs pods refusent de démarrer avec une erreur du type « must specify requests.cpu ». Pourquoi, et comment régler cela proprement&nbsp;?</p><details><summary>Voir une solution</summary><p>Dès qu'un quota porte sur le CPU (ou la mémoire), <strong>chaque pod doit déclarer ses <code>requests</code>/<code>limits</code></strong>&nbsp;; ceux qui n'en ont pas sont rejetés. Deux façons de régler&nbsp;: (1) ajouter explicitement <code>resources.requests</code>/<code>resources.limits</code> à chaque conteneur&nbsp;; (2) mieux, poser un <strong>LimitRange</strong> dans le namespace qui fournit des valeurs <em>par défaut</em>, de sorte que les pods sans déclaration héritent de ces défauts et passent le quota.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

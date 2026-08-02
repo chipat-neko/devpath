@@ -1,0 +1,85 @@
+<p>Zig fait un choix radical et assumé&nbsp;: <strong>il n'y a pas d'allocation mémoire cachée</strong>. Aucune fonction de la bibliothèque standard n'alloue dans ton dos&nbsp;; quand de la mémoire est nécessaire, tu fournis explicitement un <strong>allocateur</strong>. Ce principe, déroutant au début, donne un contrôle total et rend visible le coût de chaque allocation. Cette leçon présente le panorama des allocateurs et les patterns pour gérer la mémoire proprement — un sujet central, à peine effleuré jusqu'ici.</p>
+
+<h2>Le principe&nbsp;: l'allocateur en paramètre</h2>
+<p>En Zig, tout ce qui a besoin de mémoire dynamique reçoit un <code>std.mem.Allocator</code> en argument. Rien n'alloue sans qu'on le lui donne&nbsp;: la mémoire devient une <em>dépendance explicite</em>, visible dans chaque signature.</p>
+<figure class="code-block" data-file="principe.zig"><pre><code class="language-clike">const std = @import("std");
+
+// Une fonction qui a besoin de mémoire PREND un allocateur :
+fn faireUneListe(allocator: std.mem.Allocator) !std.ArrayList(i32) {
+    var liste = std.ArrayList(i32).init(allocator);
+    try liste.append(1);
+    try liste.append(2);
+    return liste;
+}</code></pre></figure>
+<p>Le <code>!</code> du type de retour signale que la fonction peut échouer (l'allocation peut manquer de mémoire)&nbsp;; <code>try</code> propage cette erreur. La mémoire n'est jamais «&nbsp;gratuite et invisible&nbsp;»&nbsp;: elle est demandée, et son échec possible est dans le type.</p>
+
+<h2>Le panorama des allocateurs</h2>
+<p>Zig propose plusieurs allocateurs, chacun avec un compromis. On <strong>choisit</strong> selon le besoin&nbsp;:</p>
+<ul>
+  <li><strong>GeneralPurposeAllocator</strong> (GPA)&nbsp;: l'allocateur polyvalent, qui en plus <em>détecte les fuites</em> et les doubles libérations en débogage&nbsp;;</li>
+  <li><strong>ArenaAllocator</strong>&nbsp;: alloue vite, ne libère <em>rien</em> individuellement, puis <strong>tout d'un coup</strong> à la fin&nbsp;;</li>
+  <li><strong>FixedBufferAllocator</strong>&nbsp;: distribue la mémoire depuis un tampon fixe (sur la pile), sans aucune allocation système&nbsp;;</li>
+  <li><strong>page_allocator</strong>&nbsp;: demande directement des pages au système (basique, pour les gros blocs).</li>
+</ul>
+<figure class="code-block" data-file="gpa.zig"><pre><code class="language-clike">var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+defer _ = gpa.deinit();        // signale les fuites à la fin
+const allocator = gpa.allocator();
+
+const buf = try allocator.alloc(u8, 100);  // 100 octets
+defer allocator.free(buf);                  // libération garantie</code></pre></figure>
+
+<h2>defer et errdefer&nbsp;: libérer au bon moment</h2>
+<p>Le couple <code>defer</code> / <code>errdefer</code> est la clé d'une gestion mémoire sans fuite. <code>defer</code> exécute une instruction <strong>à la sortie</strong> du bloc, quoi qu'il arrive — idéal pour libérer juste après avoir alloué.</p>
+<figure class="code-block" data-file="defer.zig"><pre><code class="language-clike">const buf = try allocator.alloc(u8, 256);
+defer allocator.free(buf);     // SERA libéré à la sortie, dans tous les cas
+
+// errdefer : ne s'exécute QUE si une erreur survient ensuite
+const a = try allocator.create(Noeud);
+errdefer allocator.destroy(a); // libère 'a' seulement en cas d'échec plus loin
+try faireQuelqueChoseQuiPeutEchouer();
+// si ça réussit, 'a' n'est pas détruit (on le garde) ;
+// si ça échoue, errdefer nettoie avant de propager l'erreur</code></pre></figure>
+<p>La distinction est subtile et précieuse&nbsp;: <code>defer</code> libère <em>toujours</em>&nbsp;; <code>errdefer</code> libère <em>seulement en cas d'erreur</em> (utile quand on construit quelque chose qu'on garde si tout va bien, mais qu'on doit nettoyer si une étape ultérieure échoue).</p>
+
+<h2>L'allocateur arena&nbsp;: un idiome puissant</h2>
+<p>L'<strong>arena</strong> change la façon de penser. Au lieu de libérer chaque objet, on alloue tout depuis l'arène, et on libère <strong>tout d'un coup</strong> à la fin. Parfait pour une requête, une phase de traitement, un calcul temporaire&nbsp;: pas de gestion individuelle, zéro fuite, et c'est rapide.</p>
+<figure class="code-block" data-file="arena.zig"><pre><code class="language-clike">var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+defer arena.deinit();          // libère TOUT en une fois, ici
+const allocator = arena.allocator();
+
+// On alloue librement, sans se soucier de libérer chaque morceau :
+const a = try allocator.alloc(u8, 10);
+const b = try allocator.alloc(u8, 20);
+_ = a; _ = b;
+// pas de free() individuel : arena.deinit() s'occupe de tout</code></pre></figure>
+<p>L'arène simplifie énormément le code quand la durée de vie des objets est <em>la même</em> (tous valides jusqu'à la fin d'une phase). C'est l'un des patterns les plus utiles de Zig.</p>
+
+<h2>Concevoir une API «&nbsp;qui prend un allocateur&nbsp;»</h2>
+<p>Conséquence de conception&nbsp;: tes propres fonctions et structures qui ont besoin de mémoire doivent <strong>accepter un allocateur</strong> plutôt que d'en choisir un. L'appelant garde ainsi le contrôle (arène pour du jetable, GPA pour du durable). C'est la convention de toute la bibliothèque standard.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier le <code>defer …free()</code> juste après une allocation. La discipline qui marche&nbsp;: <strong>écris le <code>free</code> immédiatement après le <code>alloc</code></strong>, sur la ligne suivante, avec <code>defer</code>. Ainsi, libération et allocation sont visuellement appariées et tu ne peux pas l'oublier. Et utilise le <strong>GeneralPurposeAllocator</strong> en développement&nbsp;: il signale les fuites à <code>deinit()</code>, transformant un bug invisible en message clair.</p></div></div>
+
+<h2>Pour aller plus loin</h2>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le fait que l'allocateur soit une <em>interface explicite</em> rend le code Zig remarquablement testable&nbsp;: dans un test, on peut injecter un allocateur qui <strong>échoue exprès</strong> à la N-ième allocation, pour vérifier que le code gère correctement le manque de mémoire (et que <code>errdefer</code> nettoie bien). Peu de langages rendent la gestion de l'épuisement mémoire aussi testable. C'est le revers positif de «&nbsp;pas d'allocation cachée&nbsp;»&nbsp;: tout est visible, donc tout est contrôlable.</p></div></div>
+
+<h2>Récap et vérification</h2>
+<ul>
+  <li>Zig n'a <strong>pas d'allocation cachée</strong>&nbsp;: on passe un <code>Allocator</code> explicite&nbsp;; l'échec d'allocation est dans le type (<code>!</code>, <code>try</code>).</li>
+  <li>Allocateurs&nbsp;: <strong>GPA</strong> (polyvalent, détecte les fuites), <strong>arena</strong> (libère tout d'un coup), <strong>FixedBuffer</strong> (tampon fixe).</li>
+  <li><code>defer</code> libère <strong>toujours</strong> à la sortie&nbsp;; <code>errdefer</code> libère <strong>seulement en cas d'erreur</strong>.</li>
+  <li>Concevoir ses API pour <strong>recevoir</strong> un allocateur&nbsp;: l'appelant garde le contrôle.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi passe-t-on un allocateur en paramètre en Zig&nbsp;?</li><li>Quelle différence entre <code>defer</code> et <code>errdefer</code>&nbsp;?</li><li>Quand l'allocateur arena est-il idéal&nbsp;?</li></ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi les fonctions Zig prennent-elles un allocateur en paramètre ?","a":["Parce qu'il n'y a pas d'allocation cachée : la mémoire est une dépendance explicite que l'appelant fournit et contrôle","Pour aller plus vite","Parce que Zig n'a pas de mémoire dynamique","Pour compiler plus vite"],"correct":0,"explain":"Aucune fonction n'alloue dans ton dos : l'appelant choisit l'allocateur (arena, GPA…) et garde le contrôle du coût et de la durée de vie."},
+  {"q":"Quelle différence entre defer et errdefer ?","a":["defer libère toujours à la sortie ; errdefer ne libère qu'en cas d'erreur ultérieure","Ils sont identiques","defer n'existe pas en Zig","errdefer s'exécute à la compilation"],"correct":0,"explain":"errdefer sert à nettoyer ce qu'on a construit si une étape suivante échoue, tout en le gardant si tout réussit."},
+  {"q":"Quand l'allocateur arena est-il idéal ?","a":["Quand de nombreux objets ont la même durée de vie : on libère tout d'un coup à la fin","Quand chaque objet doit être libéré séparément à un moment différent","Pour de la mémoire qui doit vivre indéfiniment","Jamais"],"correct":0,"explain":"L'arena alloue vite et libère tout en une fois (arena.deinit()) : parfait pour une requête ou une phase de calcul temporaire."}
+]
+</script>
+
+<h2>Exercices</h2>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Après <code>const buf = try allocator.alloc(u8, 64);</code>, écris la ligne qui garantit sa libération à la sortie.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.zig"><pre><code class="language-clike">defer allocator.free(buf);</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Quel allocateur choisir pour traiter une requête où tout est jetable à la fin&nbsp;? Pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>L'<strong>ArenaAllocator</strong>&nbsp;: on alloue librement pendant le traitement, sans libérer chaque morceau, puis <code>arena.deinit()</code> libère <strong>tout d'un coup</strong> à la fin. Comme tous les objets ont la même durée de vie (la requête), c'est plus simple et plus rapide qu'une gestion individuelle, et il n'y a aucun risque de fuite.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pourquoi utiliser le <code>GeneralPurposeAllocator</code> en développement&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce qu'il <strong>détecte les fuites mémoire et les doubles libérations</strong>&nbsp;: à l'appel de <code>gpa.deinit()</code>, il signale toute mémoire allouée mais jamais libérée. Cela transforme un bug normalement invisible (une fuite) en un message clair pendant les tests, ce qui aide à écrire du code mémoire correct avant de passer à un allocateur de production.</p></details></div>
