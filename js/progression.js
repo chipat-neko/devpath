@@ -427,6 +427,12 @@
           '<a class="btn btn--primary btn--lg" href="' + esc(s.dir) + "/" + esc(s.firstUndone) + '">' +
           "Continuer : " + esc(s.title) +
           '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>';
+      } else if (finished.length) {
+        /* Aucun cours en cours ET pas de « dernière leçon » valide (ex. après une
+           renumérotation, ou une progression importée), mais des cours terminés :
+           ne pas prétendre « pas encore commencé » — c'est contradictoire. (cf. C7) */
+        resumeHost.innerHTML =
+          '<p class="dash-empty">Tu as terminé tous les cours que tu avais commencés — bravo&nbsp;! <a href="catalogue.html">Explore le catalogue</a> pour en découvrir d\'autres.</p>';
       } else {
         resumeHost.innerHTML =
           '<p class="dash-empty">Tu n\'as pas encore commencé de cours. <a href="catalogue.html">Explore le catalogue</a> pour démarrer.</p>';
