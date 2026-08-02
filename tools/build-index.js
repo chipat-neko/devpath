@@ -21,11 +21,15 @@
    cours. Le seul cours ou les deux diffèrent est javascript (dossier « js »).
    On utilise donc toujours content[id].dir.
 
-   RIEN NE DOIT DISPARAITRE : quelques questions / cartes de l'ancien index ne
-   sont plus sur le disque (lecons reecrites, cours « -avance » fusionnes). Le
-   generateur relit donc l'index existant et REPREND ces entrees orphelines a la
-   fin du groupe de leur cours. C'est idempotent : au tour suivant, elles sont
-   deja dans le fichier lu, donc reprises a l'identique.
+   FILET DE REPRISE : par defaut, le generateur relit l'index existant et REPREND
+   les entrees de l'ancien index absentes du contenu actuel (lecons reecrites,
+   cours « -avance » fusionnes). C'etait concu pour ne rien perdre, mais ce filet
+   MASQUE aussi la peremption : une question supprimee/reecrite survit indefiniment.
+   Deux garde-fous ferment la famille de bugs « index perime » :
+     --fresh   ignore l'ancien index (ne reprend rien) → PURGE les orphelines.
+     --strict  sort en code 1 en listant toute entree qui DOIT etre reprise.
+   Regle : apres un changement de contenu, regenerer avec --fresh ; la verification
+   (verif-donnees I18) lance --strict pour garantir un index a jour.
 
    USAGE
      node tools/build-index.js                       # comparaison seule, n'ecrit RIEN
@@ -36,6 +40,8 @@
      node tools/build-index.js --write --only=search,searchlite   # index de recherche
    Options
      --write        autorise l'ecriture (sans elle, mode comparaison pur)
+     --fresh        ignore l'ancien index (ne reprend rien) : purge les orphelines
+     --strict       code 1 si une entree doit etre reprise (garde-fou anti-peremption)
      --only=a,b     sous-ensemble parmi quiz, flashcards, search, antiseches,
                     searchlite (defaut : quiz,flashcards)
      --out=DIR      dossier de sortie (defaut : <racine>/js)
@@ -60,6 +66,12 @@ function opt(name, def) {
 var ROOT = path.resolve(opt("root", path.join(__dirname, "..")));
 var OUT = path.resolve(opt("out", path.join(ROOT, "js")));
 var WRITE = flag("write");
+/* --fresh : ignore l'ancien index (ne REPREND rien) → purge les entrées orphelines
+   (questions/cartes réécrites ou supprimées qui n'existent plus dans le HTML).
+   --strict : sort en code 1 dès qu'une entrée DOIT être reprise, et liste laquelle.
+   C'est le garde-fou contre les index périmés (utilisé par verif-donnees, I18). */
+var FRESH = flag("fresh");
+var STRICT = flag("strict");
 var ONLY = opt("only", "quiz,flashcards").split(",").map(function (s) {
   return s.trim();
 }).filter(Boolean);
@@ -361,7 +373,7 @@ function emitObject(fileName, globalName, obj, count) {
    e = explication (champ « explain »), c = DOSSIER du cours,
    f = fichier de la lecon (nouveau : permet un lien « revoir cette lecon »). */
 function buildQuiz(problems) {
-  var old = loadGlobal("js/quiz-index.js", "QUIZ_BANK") || [];
+  var old = FRESH ? [] : (loadGlobal("js/quiz-index.js", "QUIZ_BANK") || []);
   var oldByCourse = {};
   old.forEach(function (q) {
     (oldByCourse[q.c] = oldByCourse[q.c] || []).push(q);
@@ -427,7 +439,7 @@ function buildQuiz(problems) {
    historiques, on les preserve donc au mot pres), puis les lecons dans l ordre.
    Dedoublonnage par (cours, terme replie sans casse ni accents). */
 function buildFlashcards(problems) {
-  var old = loadGlobal("js/flashcards-data.js", "FLASHCARDS") || [];
+  var old = FRESH ? [] : (loadGlobal("js/flashcards-data.js", "FLASHCARDS") || []);
   var oldByCourse = {};
   old.forEach(function (c) {
     (oldByCourse[c.c] = oldByCourse[c.c] || []).push(c);
@@ -488,7 +500,7 @@ function buildFlashcards(problems) {
    ne sont gardes qu'une fois (une legende identique sur un tableau different
    reste, elle : ce sont deux memos distincts). */
 function buildCheats(problems) {
-  var old = loadGlobal("js/antiseches-data.js", "ANTISECHES") || [];
+  var old = FRESH ? [] : (loadGlobal("js/antiseches-data.js", "ANTISECHES") || []);
   var oldByCourse = {};
   old.forEach(function (s) {
     (oldByCourse[s.c] = oldByCourse[s.c] || []).push(s);
@@ -648,16 +660,20 @@ console.log("build-index.js — racine " + ROOT + " | sortie " + OUT + " | " + (
 console.log(COURSES.length + " cours, " + COURSES.reduce(function (n, c) { return n + c.lessons.length; }, 0) + " lecons declarees dans data.js");
 
 var problems = [];
+var carriedAll = []; // entrées reprises de l'ancien index (périmées) — pour --strict
 if (wanted("quiz")) {
   var q = buildQuiz(problems);
+  q.carried.forEach(function (x) { carriedAll.push("quiz       | " + x); });
   emit("quiz-index.js", "QUIZ_BANK", q.arr, false, q.old.length);
 }
 if (wanted("flashcards")) {
   var f = buildFlashcards(problems);
+  f.carried.forEach(function (x) { carriedAll.push("flashcards | " + x); });
   emit("flashcards-data.js", "FLASHCARDS", f.arr, false, f.old.length);
 }
 if (wanted("antiseches")) {
   var a = buildCheats(problems);
+  a.carried.forEach(function (x) { carriedAll.push("antiseches | " + x); });
   emit("antiseches-data.js", "ANTISECHES", a.arr, false, a.old.length);
 }
 if (wanted("search") || wanted("searchlite")) {
@@ -672,3 +688,15 @@ if (problems.length) {
 } else {
   console.log("\nAucun avertissement.");
 }
+
+/* --strict : un index à jour ne reprend RIEN. Toute reprise = entrée périmée
+   (question/carte réécrite ou supprimée qui survit dans l'index). On la signale
+   et on sort en erreur, pour fermer la famille de bugs « index périmé ». */
+if (STRICT && carriedAll.length) {
+  console.log("\n[--strict] " + carriedAll.length + " entrée(s) REPRISE(S) de l'ancien index (périmées : absentes du contenu actuel) :");
+  carriedAll.slice(0, 60).forEach(function (x) { console.log("  ✗ " + x); });
+  if (carriedAll.length > 60) console.log("  … et " + (carriedAll.length - 60) + " autre(s).");
+  console.log("Purge : relance avec --write --fresh (ignore l'ancien index). Index périmé → échec strict.");
+  process.exit(1);
+}
+if (STRICT) console.log("\n[--strict] OK : aucune entrée périmée, l'index est aligné sur le contenu.");

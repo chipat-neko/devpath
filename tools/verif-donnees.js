@@ -41,6 +41,9 @@
  *                             réponse (ponctuation technique conservée ; bilans
  *                             exclus). ERREUR si réponse quasi identique, sinon
  *                             AVERTISSEMENT à examiner.
+ *   I18 index non périmés   : build-index.js --strict (sous-processus) — ERREUR si
+ *                             une entrée de l'ancien index doit être reprise (quiz/
+ *                             flashcards/antisèches périmées). Purge : --write --fresh.
  *
  * USAGE
  * -----
@@ -524,6 +527,27 @@ Object.keys(LESSONS).forEach((id) => {
       }
     }
   });
+})();
+
+/* ==================================== I18 index dérivés non périmés (--strict) */
+/* build-index.js --strict sort en code 1 dès qu'une entrée de l'ancien index doit
+   être REPRISE (question/carte réécrite ou supprimée qui survit dans l'index). On
+   le lance en comparaison (n'écrit rien) : c'est le garde-fou qui ferme la famille
+   de bugs « index périmé ». Purge : build-index.js --write --fresh. */
+(function () {
+  const c = check('I18', 'index dérivés non périmés (build-index --strict)');
+  const { execFileSync } = require('child_process');
+  const script = path.join(__dirname, 'build-index.js');
+  try {
+    execFileSync(process.execPath,
+      [script, '--strict', '--root=' + ROOT, '--only=quiz,flashcards,antiseches'],
+      { stdio: 'pipe' });
+  } catch (e) {
+    const out = (e.stdout ? e.stdout.toString() : '') + (e.stderr ? e.stderr.toString() : '');
+    const n = (out.match(/(\d+) entrée\(s\) REPRISE/) || [])[1] || '?';
+    c.err(n + ' entrée(s) d\'index périmée(s) reprises de l\'ancien index — purger via « build-index.js --write --fresh »');
+    out.split('\n').filter((l) => /✗/.test(l)).slice(0, 4).forEach((l) => c.err('  ' + l.trim()));
+  }
 })();
 
 /* ================================================================ sortie */
