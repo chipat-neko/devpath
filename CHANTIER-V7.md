@@ -109,7 +109,9 @@ ce qu'elle devait.
   - **Correction** : branche `else if (finished.length)` avant le message vide → « Tu as terminé tous les cours que tu avais commencés — bravo ! ». Le cas réellement vierge (ni started, ni finished) garde le message d'origine.
   - **Vérifs** : `node --check` OK ; même test headless **2/2 PASS** après correction (plus de « pas encore commencé » quand un cours est terminé) ; le cas localStorage vide reste sur le message d'accueil. diff = 1 fichier.
 
-- [ ] **C8 · Impression d'une leçon.** 22 boutons « ▶ Tester » et le bouton « Marquer comme terminée » sortent sur le papier : `css/pages.css` masque `.code-block__copy` à l'impression mais pas ceux-là.
+- [x] **C8 · Impression d'une leçon.** 22 boutons « ▶ Tester » et le bouton « Marquer comme terminée » sortent sur le papier : `css/pages.css` masque `.code-block__copy` à l'impression mais pas ceux-là.
+  - **FAIT le 2026-08-02.** Ajout de `.code-block__try` (bouton « ▶ Tester » du runner) et `[data-complete-toggle]` (« Marquer comme terminée ») à la liste `display: none !important` du bloc `@media print` de `css/pages.css` (à côté de `.code-block__copy` déjà masqué).
+  - **Vérifs** : **test headless avec media `print` émulé (`scratchpad/c8-test.mjs`)** sur `python/lecon-03` (14 boutons « Tester » + 1 « Marquer ») → **4/4** : à l'écran « Marquer » visible ; à l'impression **tous** les « Tester » et « Marquer » ont `display:none`, tandis que le contenu `.prose` reste visible. diff = 1 fichier (`css/pages.css`).
 
 - [ ] **C9 · Le champ de réponse des exercices perd sa question.** Le libellé est générique (« Ta réponse : ») et la vraie micro-question est dans le `placeholder`, **qui s'efface à la première frappe**. L'utilisateur ne sait plus ce qu'on lui demande. Mettre la question dans le libellé.
 
