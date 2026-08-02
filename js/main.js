@@ -298,7 +298,10 @@
      dérivés de l'état. Exposé via window.SyntaxeXP ; badge dans l'en-tête. */
   function readStore(k) {
     try {
-      return JSON.parse(localStorage.getItem(k) || "{}") || {};
+      var v = JSON.parse(localStorage.getItem(k) || "{}");
+      /* Garantir un OBJET : une valeur corrompue (null, tableau, chaîne…) ferait
+         planter les itérations Object.keys en aval. (cf. C6) */
+      return v && typeof v === "object" && !Array.isArray(v) ? v : {};
     } catch (e) {
       return {};
     }
@@ -393,17 +396,21 @@
     }
     var lessons = 0;
     Object.keys(prog).forEach(function (c) {
-      Object.keys(prog[c]).forEach(function (l) {
-        if (prog[c][l] && estConnue(c, l)) lessons++;
+      var m = prog[c];
+      if (!m || typeof m !== "object") return; // ex. {"html":null} — donnée corrompue
+      Object.keys(m).forEach(function (l) {
+        if (m[l] && estConnue(c, l)) lessons++;
       });
     });
     var quizXP = 0,
       quizPassed = 0,
       quizPerfect = 0;
     Object.keys(quiz).forEach(function (c) {
-      Object.keys(quiz[c]).forEach(function (l) {
+      var qc = quiz[c];
+      if (!qc || typeof qc !== "object") return; // donnée corrompue
+      Object.keys(qc).forEach(function (l) {
         if (!estConnue(c, l)) return;
-        var slots = quiz[c][l] || {};
+        var slots = qc[l] || {};
         ["quiz", "bilan"].forEach(function (k) {
           var s = slots[k];
           if (s && s.total) {
