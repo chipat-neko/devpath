@@ -58,6 +58,16 @@
       localStorage.setItem(PKEY, JSON.stringify(p));
     } catch (e) {}
   }
+  /* La progression est indexée par NOM DE FICHIER : p[courseId]["lecon-NN.html"].
+     Lors des étoffements, des leçons ont été insérées avant le capstone de certains
+     cours (a11y, docker, nosql, os, perf-web…), donc le capstone a changé de numéro
+     (ex. nosql : lecon-11 → lecon-14 ; a11y : → lecon-15). Une progression enregistrée
+     AVANT une réaffectation peut donc pointer un contenu différent. C'est ASSUMÉ, et non
+     migrable : contrairement à ANCIENS_IDS (js/projets.js), qui redirige un id SUPPRIMÉ
+     vers un id vivant, ici « lecon-11.html » n'est pas supprimé — il porte désormais un
+     contenu légitime. Rediriger l'ancien numéro casserait la progression des personnes
+     ayant vraiment fait la nouvelle leçon. La structure interne, elle, reste cohérente
+     (numérotation pleine, capstone en dernière position, 0 lien interne cassé). */
   function isDone(file) {
     var p = readProgress();
     return !!(p[courseId] && p[courseId][file]);
