@@ -46,6 +46,14 @@
 
   /* ----------------------------------------------- Progression (storage) */
   var PKEY = "syntaxe-progress";
+  /* Prévient l'utilisateur qu'une sauvegarde a échoué (surtout localStorage
+     plein) au lieu de l'avaler en silence. Repli discret si le toast global
+     n'est pas là. (cf. C5) */
+  function warnStorage() {
+    if (window.SyntaxeToast) {
+      window.SyntaxeToast("Enregistrement impossible — ton espace de stockage est peut-être plein.", true);
+    }
+  }
   function readProgress() {
     try {
       return JSON.parse(localStorage.getItem(PKEY) || "{}") || {};
@@ -56,7 +64,7 @@
   function writeProgress(p) {
     try {
       localStorage.setItem(PKEY, JSON.stringify(p));
-    } catch (e) {}
+    } catch (e) { warnStorage(); }
   }
   /* La progression est indexée par NOM DE FICHIER : p[courseId]["lecon-NN.html"].
      Lors des étoffements, des leçons ont été insérées avant le capstone de certains
@@ -142,7 +150,7 @@
       q[courseId][lessonFile][scoreKey] = { best: good, total: total };
       try {
         localStorage.setItem(QKEY, JSON.stringify(q));
-      } catch (e) {}
+      } catch (e) { warnStorage(); }
     }
   }
 
@@ -1137,7 +1145,7 @@
     }
     try {
       localStorage.setItem("syntaxe-notes", JSON.stringify(s));
-    } catch (e) {}
+    } catch (e) { warnStorage(); }
   }
 
   function highlightText(prose, text) {

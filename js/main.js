@@ -13,6 +13,39 @@
     return Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
   }
 
+  /* ---------------------------------------------------------------- Toast
+     Notification brève et accessible : prévient quand une action a échoué
+     silencieusement (surtout un localStorage plein). Un seul conteneur
+     réutilisé. Exposé en global pour les autres scripts (lecon.js…). (cf. C5) */
+  var toastHost = null;
+  function showToast(message, isError) {
+    try {
+      if (!document.body) return;
+      if (!toastHost) {
+        toastHost = document.createElement("div");
+        toastHost.className = "toast-host";
+        document.body.appendChild(toastHost);
+      }
+      /* Ne pas empiler le même message (sauvegardes répétées qui échouent). */
+      var shown = toastHost.querySelectorAll(".toast");
+      for (var i = 0; i < shown.length; i++) {
+        if (shown[i].textContent === message) return;
+      }
+      var t = document.createElement("div");
+      t.className = "toast" + (isError ? " toast--err" : "");
+      t.setAttribute("role", isError ? "alert" : "status");
+      t.setAttribute("aria-live", isError ? "assertive" : "polite");
+      t.textContent = message;
+      toastHost.appendChild(t);
+      setTimeout(function () { t.classList.add("is-visible"); }, 10);
+      setTimeout(function () {
+        t.classList.remove("is-visible");
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 320);
+      }, 5000);
+    } catch (e) {}
+  }
+  window.SyntaxeToast = showToast;
+
   var ICON_COPY =
     '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
   var ICON_CHECK =
