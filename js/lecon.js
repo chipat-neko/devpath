@@ -1255,7 +1255,7 @@
     details.className = "lesson-note";
     details.innerHTML =
       "<summary>Ma note</summary>" +
-      '<textarea class="lesson-note__ta" placeholder="Écris une note personnelle sur cette leçon… (gardée sur cet appareil)"></textarea>';
+      '<textarea class="lesson-note__ta" aria-label="Ta note personnelle sur cette leçon" placeholder="Écris une note personnelle sur cette leçon… (gardée sur cet appareil)"></textarea>';
     var ta = details.querySelector("textarea");
     ta.value = data.note || "";
     if (data.note) details.open = true;
