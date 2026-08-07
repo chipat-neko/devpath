@@ -87,15 +87,44 @@ var ECHANTILLON = [
   "pages/reseaux/lecon-11.html",
 ];
 
+/* Une lecon par cours : les 1362 lecons partagent le gabarit, mais leur CONTENU
+   varie (tableaux larges, blocs de code interminables, schemas SVG, QCM denses).
+   En prendre une par cours couvre les 76 accents de couleur et les 76 formes de
+   contenu pour 76 pages, au lieu de 1362. On prend la lecon du MILIEU du cours :
+   la premiere est souvent une introduction courte, peu representative. */
+function unePageParCours() {
+  var out = [];
+  try {
+    var code = fs.readFileSync(path.join(ROOT, "js/data.js"), "utf8");
+    var faux = { window: {} };
+    new Function("window", code)(faux.window);
+    var d = faux.window.SITE_DATA;
+    Object.keys(d.content).forEach(function (id) {
+      var c = d.content[id];
+      var fichiers = [];
+      (c.modules || []).forEach(function (m) {
+        (m.lessons || []).forEach(function (l) { if (l && l.file) fichiers.push(l.file); });
+      });
+      if (fichiers.length) out.push("pages/" + (c.dir || id) + "/" + fichiers[Math.floor(fichiers.length / 2)]);
+    });
+  } catch (e) {
+    console.error("(impossible de lister les lecons : " + e.message + ")");
+  }
+  return out;
+}
+
 function pagesAMesurer() {
   var p = opt("pages", "");
   if (p) return p.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
-  if (!TOUT) return ECHANTILLON;
-  var out = ["index.html"];
-  fs.readdirSync(path.join(ROOT, "pages")).forEach(function (f) {
-    if (f.endsWith(".html")) out.push("pages/" + f);
-  });
-  return out;
+  var out = [];
+  if (TOUT) {
+    out.push("index.html");
+    fs.readdirSync(path.join(ROOT, "pages")).forEach(function (f) {
+      if (f.endsWith(".html")) out.push("pages/" + f);
+    });
+  }
+  if (flag("lecons")) out = out.concat(unePageParCours());
+  return out.length ? out : ECHANTILLON;
 }
 
 /* --------------------------------------------------------------- Chrome ---- */
@@ -403,6 +432,13 @@ async function mesurerFocus(envoyer, maxTab) {
     var out = await envoyer("Runtime.evaluate", { expression: "(" + LIRE_ACTIF.toString() + ")()", returnByValue: true });
     var v = (out.result || {}).value;
     if (!v || !v.visible) continue;
+    /* Les <iframe> sont exclus : mesuré dans Chrome, un iframe focalise est bien
+       document.activeElement mais ne matche NI :focus NI :focus-visible — le
+       focus est delegue au document embarque. Aucune regle CSS posee sur le
+       cadre ne peut donc s'appliquer, et le signaler serait demander une
+       correction impossible. Le repere doit venir d'un ancetre en :focus-within,
+       ce que la remontee d'ancetres de LIRE_ACTIF detecte deja. */
+    if (v.ou.indexOf("iframe") === 0 && !v.repere) continue;
     var cle = v.ou + "|" + v.texte;
     if (vus[cle]) continue;
     vus[cle] = 1;

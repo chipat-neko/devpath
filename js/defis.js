@@ -104,7 +104,7 @@
       '<span class="defis-main__lvl">' + esc(d.niveau) + "</span>" +
       '<h2 class="defis-main__title">' + esc(d.titre) + "</h2>" +
       '<p class="defis-main__enonce">' + d.enonce + "</p>" +
-      '<textarea class="defis-editor" id="defis-code" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>' +
+      '<textarea class="defis-editor" id="defis-code" aria-label="Éditeur de code du défi" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>' +
       '<div class="defis-actions">' +
       '<button type="button" class="btn btn--primary" id="defis-run">Valider</button>' +
       '<button type="button" class="btn btn--ghost" id="defis-reset">Réinitialiser</button>' +
