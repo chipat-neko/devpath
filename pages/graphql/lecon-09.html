@@ -165,6 +165,20 @@ context: () =&gt; ({
   userLoader: creerUserLoader(db),
 })</code></pre></figure>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 166" role="img" aria-label="Deux requêtes HTTP indépendantes, chacune avec ses propres loaders. La première requête crée un context neuf contenant un userLoader dont le cache est vide au départ. La seconde requête, séparée, crée un autre context avec un autre userLoader et un cache indépendant. Les deux caches ne communiquent jamais : aucune donnée n'est partagée d'une requête à l'autre.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un context (et des loaders) neufs à chaque requête</text>
+    <rect class="d-box" x="40" y="46" width="130" height="34" rx="7" /><text class="d-text" x="105" y="67" text-anchor="middle" font-size="9">requête A</text>
+    <line class="d-line" x1="170" y1="63" x2="236" y2="63" /><polygon class="d-dot" points="242,63 230,57 230,69" />
+    <rect class="d-accent" x="244" y="46" width="300" height="34" rx="7" /><text class="d-text" x="394" y="62" text-anchor="middle" font-size="8.5">context A — userLoader</text><text class="d-mut" x="394" y="74" text-anchor="middle" font-size="7.5">cache propre, vide au départ</text>
+    <rect class="d-box" x="40" y="100" width="130" height="34" rx="7" /><text class="d-text" x="105" y="121" text-anchor="middle" font-size="9">requête B</text>
+    <line class="d-line" x1="170" y1="117" x2="236" y2="117" /><polygon class="d-dot" points="242,117 230,111 230,123" />
+    <rect class="d-accent" x="244" y="100" width="300" height="34" rx="7" /><text class="d-text" x="394" y="116" text-anchor="middle" font-size="8.5">context B — userLoader</text><text class="d-mut" x="394" y="128" text-anchor="middle" font-size="7.5">cache indépendant de celui de A</text>
+    <text class="d-mut" x="320" y="156" text-anchor="middle" font-size="8">caches isolés → jamais de donnée périmée ni de fuite d'un utilisateur à l'autre</text>
+  </svg>
+  <figcaption>Chaque requête reçoit un <code>context</code> frais avec des loaders neufs&nbsp;: les caches ne se mélangent jamais d'une requête à l'autre. C'est pourquoi on les crée <strong>par requête</strong>, pas au démarrage.</figcaption>
+</figure>
+
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p><strong>DataLoader</strong> a été écrit par Lee Byron chez <strong>Facebook</strong>, l'un des créateurs de GraphQL. L'entreprise servait déjà des milliards de requêtes&nbsp;: sans regroupement, une seule page de fil d'actualité aurait déclenché des milliers de lectures unitaires. L'idée — «&nbsp;accumule les demandes d'un tour, résous-les en lot&nbsp;» — est si générale qu'elle a été portée dans presque tous les langages (Java, Python, Go, Rust…). C'est aujourd'hui la première optimisation qu'on ajoute à tout serveur GraphQL de production.</p></div></div>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>La <em>batch function</em> doit renvoyer un tableau de <strong>même longueur</strong> que celui des clés, <strong>dans le même ordre</strong>. Si une clé n'a pas de valeur, mets <code>null</code> à sa place (pas «&nbsp;rien&nbsp;»)&nbsp;: DataLoader apparie résultats et clés par leur <em>position</em>. Un décalage d'ordre est le bug classique — l'auteur A se retrouve sur le post B.</p></div></div>
@@ -201,6 +215,7 @@ context: () =&gt; ({
   <dt>Cache par requête</dt><dd>Mémoïsation des clés déjà demandées, valable le temps d'une seule requête HTTP&nbsp;; évite de recharger une même clé.</dd>
   <dt>Tour d'exécution (tick)</dt><dd>Le cycle de la boucle d'événements pendant lequel DataLoader accumule les <code>.load()</code> avant de déclencher le lot.</dd>
   <dt><code>context</code></dt><dd>Objet créé à chaque requête et partagé par les résolveurs&nbsp;; l'endroit où l'on instancie des loaders neufs.</dd>
+  <dt><code>loadMany</code></dt><dd>Variante de <code>.load</code> qui prend un tableau de clés et renvoie leurs valeurs d'un coup&nbsp;; pratique pour charger plusieurs objets liés en une fois.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
