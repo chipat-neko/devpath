@@ -174,12 +174,32 @@
   <figcaption>Sans <code>u</code>, <code>"😀".length</code> vaut 2 et <code>/./</code> coupe le caractère&nbsp;; avec <code>u</code>, l'émoji compte pour une seule correspondance. C'est la source de bien des bugs d'affichage «&nbsp;carré blanc&nbsp;».</figcaption>
 </figure>
 
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège de <code>\p{Emoji}</code></p><p>Contre toute attente, <code>/\p{Emoji}/u.test("3")</code> renvoie <code>true</code>&nbsp;! Unicode marque les chiffres <code>0-9</code>, ainsi que <code>#</code> et <code>*</code>, de la propriété «&nbsp;Emoji&nbsp;», car ils servent de base aux émojis en forme de touche. Pour ne cibler que les vrais pictogrammes, préfère <code>\p{Extended_Pictographic}</code>.</p></div></div>
+
 <h2>Cas réel</h2>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un réseau social veut extraire les <em>hashtags</em> d'un message. Version naïve&nbsp;: <code>/#\w+/g</code>. Elle marche pour <code>#regex</code>… mais tronque <code>#écologie</code> en <code>#cologie</code> (l'accent casse) et rate <code>#日本</code> en entier. La correction tient en deux gestes&nbsp;: passer à <code>/#[\p{L}\p{N}_]+/gu</code>. Désormais, les hashtags accentués, cyrilliques ou japonais sont capturés correctement. Ce bug — «&nbsp;ça marche chez moi, en anglais&nbsp;» — est l'un des plus fréquents dès qu'un service s'internationalise&nbsp;; la connaissance des propriétés Unicode le fait disparaître d'un coup.</p></div></div>
 
 <h2>Pour aller plus loin</h2>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Certaines lettres accentuées existent sous deux formes&nbsp;: <code>é</code> peut être <em>un</em> point de code (U+00E9) ou <em>deux</em> (un <code>e</code> + un accent combinant U+0301). Visuellement identiques, mais différents pour une regex&nbsp;! Avant de comparer ou de matcher, on <strong>normalise</strong> le texte avec <code>"…".normalize("NFC")</code> pour tout ramener à la forme composée. Les émojis modernes (drapeaux, familles, teintes de peau) sont même des <em>séquences</em> de plusieurs points de code jointes par un liant&nbsp;: les compter correctement relève de l'API <code>Intl.Segmenter</code> plutôt que d'une simple regex.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 194" role="img" aria-label="Le caractère é a deux encodages possibles. En forme composée NFC, c'est un seul point de code U+00E9. En forme décomposée NFD, c'est deux points de code : la lettre e U+0065 suivie d'un accent aigu combinant U+0301. Les deux formes s'affichent à l'identique mais une regex les distingue ; la normalisation NFC les ramène à la forme unique.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">« é »&nbsp;: un même dessin, deux encodages possibles</text>
+    <text class="d-mut" x="140" y="58" text-anchor="middle" font-size="11">NFC (composée)</text>
+    <rect class="d-accent" x="100" y="68" width="80" height="42" rx="6" /><text class="d-text" x="140" y="90" text-anchor="middle" font-size="19">é</text><text class="d-mut" x="140" y="104" text-anchor="middle" font-size="9">U+00E9</text>
+    <text class="d-mut" x="140" y="128" text-anchor="middle" font-size="10">1 point de code</text>
+    <text class="d-text" x="320" y="94" text-anchor="middle" font-size="15">≟</text>
+    <text class="d-mut" x="460" y="58" text-anchor="middle" font-size="11">NFD (décomposée)</text>
+    <rect class="d-box" x="388" y="68" width="66" height="42" rx="6" /><text class="d-text" x="421" y="90" text-anchor="middle" font-size="19">e</text><text class="d-mut" x="421" y="104" text-anchor="middle" font-size="9">U+0065</text>
+    <text class="d-text" x="468" y="92" text-anchor="middle" font-size="16">+</text>
+    <rect class="d-box" x="482" y="68" width="78" height="42" rx="6" /><text class="d-text" x="521" y="90" text-anchor="middle" font-size="19">´</text><text class="d-mut" x="521" y="104" text-anchor="middle" font-size="9">U+0301</text>
+    <text class="d-mut" x="474" y="128" text-anchor="middle" font-size="10">2 points de code</text>
+    <text class="d-mut" x="320" y="164" text-anchor="middle" font-size="10">Identiques à l'œil, différents pour une regex.</text>
+    <text class="d-mut" x="320" y="180" text-anchor="middle" font-size="10">"…".normalize("NFC") ramène tout à la forme composée avant de matcher.</text>
+  </svg>
+  <figcaption>La même lettre peut être stockée en <strong>un</strong> point de code (NFC) ou <strong>deux</strong> (NFD, lettre&nbsp;+ accent combinant). Sans normalisation, <code>/^.$/u</code> matche la première et rate la seconde.</figcaption>
+</figure>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
@@ -205,6 +225,7 @@
   <dt>Unicode</dt><dd>Norme qui attribue un numéro unique (point de code) à chaque caractère de (presque) toutes les écritures.</dd>
   <dt>Point de code</dt><dd>Le numéro d'un caractère Unicode (ex.&nbsp;: <code>é</code> = U+00E9).</dd>
   <dt>Unité de code</dt><dd>Le morceau de stockage&nbsp;; en UTF-16, un caractère hors plan de base occupe deux unités.</dd>
+  <dt>Graphème</dt><dd>Ce qu'un lecteur perçoit comme «&nbsp;un caractère&nbsp;» (une lettre accentuée, un émoji drapeau)&nbsp;; il peut regrouper plusieurs points de code, que <code>Intl.Segmenter</code> compte correctement.</dd>
   <dt>Propriété Unicode</dt><dd>Attribut d'un caractère (lettre, chiffre, écriture…) ciblable avec <code>\p{…}</code>.</dd>
   <dt>Drapeau <code>u</code></dt><dd>Option JavaScript qui active l'interprétation Unicode d'une regex.</dd>
   <dt>Normalisation</dt><dd>Réécriture d'un texte sous une forme canonique (NFC/NFD) pour rendre comparables des accents équivalents.</dd>

@@ -125,6 +125,8 @@ grep -E "[0-9]+" fichier.txt
 grep -oE "[0-9]+" fichier.txt</code></pre></figure>
 <p>Note le <code>r"..."</code> de Python (<em>raw string</em>)&nbsp;: il évite que le <code>\</code> soit interprété par le langage avant la regex. En JavaScript, le motif s'écrit entre slashs <code>/.../</code>. Avec <code>grep</code>, l'option <code>-E</code> active les regex étendues. La grammaire, elle, ne change pas&nbsp;: <code>\d+</code> (ou <code>[0-9]+</code> en grep de base) partout.</p>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Motif figé ou motif dynamique&nbsp;?</p><p>Le littéral <code>/\d+/</code> convient quand le motif est connu à l'écriture. Quand il dépend d'une donnée (un mot saisi par l'utilisateur), on le <strong>construit</strong>&nbsp;: <code>new RegExp(mot, "gi")</code> en JavaScript, <code>re.compile(motif)</code> en Python. Deux réflexes alors&nbsp;: dans une chaîne, les antislashs se doublent (<code>"\\d+"</code>), et il faut <strong>échapper</strong> les caractères spéciaux du texte injecté pour ne pas casser le motif.</p></div></div>
+
 <figure class="diagram">
   <svg viewBox="0 0 640 176" role="img" aria-label="Une même grammaire de motif, trois interfaces. Le motif barre-d plus est identique ; seule l'enveloppe change : slash barre-d plus slash en JavaScript, r guillemet barre-d plus guillemet en Python, guillemet crochet 0-9 crochet plus guillemet avec grep tiret E.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Même grammaire, interfaces différentes</text>
@@ -163,6 +165,8 @@ s  → dotall : le point « . » matche aussi le saut de ligne</code></pre></fig
   <figcaption>Les drapeaux règlent le comportement global du moteur. On les attache selon le langage&nbsp;: <code>/chat/gi</code> en JavaScript, <code>re.IGNORECASE</code> en Python.</figcaption>
 </figure>
 
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège du drapeau <code>g</code> en JavaScript</p><p>Une regex <code>/g</code> rangée dans une variable <strong>retient sa position</strong> de lecture (<code>lastIndex</code>) d'un appel à l'autre. Appeler à répétition <code>regex.test(x)</code> sur la même instance renvoie alors <code>true</code>, <code>false</code>, <code>true</code>… en alternance, car la recherche repart d'où elle s'était arrêtée. La parade&nbsp;: réécrire le littéral à chaque fois, ou remettre <code>regex.lastIndex = 0</code> avant chaque test.</p></div></div>
+
 <h2>Les pièges à éviter</h2>
 <p>Trois erreurs reviennent constamment&nbsp;:</p>
 <ul>
@@ -175,11 +179,34 @@ s  → dotall : le point « . » matche aussi le saut de ligne</code></pre></fig
 ^\d{5}$     ✅ exactement 5 chiffres
 \d{5}       ⚠️ accepte « 75001 Paris » et même « 1234567 »</code></pre></figure>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Sur la chaîne guillemet a guillemet espace e t espace guillemet b guillemet, le motif point étoile entre guillemets est gourmand : il capture depuis le premier guillemet jusqu'au dernier, donc toute la chaîne. Le motif crochet accent-circonflexe guillemet crochet étoile entre guillemets s'arrête au premier guillemet fermant et ne capture que guillemet a guillemet.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Gourmandise&nbsp;: « ".*" » avale tout jusqu'au dernier guillemet</text>
+    <text class="d-text" x="195" y="66" text-anchor="middle" font-size="16">"</text>
+    <text class="d-text" x="222" y="66" text-anchor="middle" font-size="16">a</text>
+    <text class="d-text" x="249" y="66" text-anchor="middle" font-size="16">"</text>
+    <text class="d-text" x="303" y="66" text-anchor="middle" font-size="16">e</text>
+    <text class="d-text" x="330" y="66" text-anchor="middle" font-size="16">t</text>
+    <text class="d-text" x="384" y="66" text-anchor="middle" font-size="16">"</text>
+    <text class="d-text" x="411" y="66" text-anchor="middle" font-size="16">b</text>
+    <text class="d-text" x="438" y="66" text-anchor="middle" font-size="16">"</text>
+    <rect class="d-accent" x="184" y="82" width="268" height="16" rx="4" />
+    <text class="d-mut" x="150" y="94" text-anchor="end" font-size="11">".*"</text>
+    <text class="d-mut" x="320" y="118" text-anchor="middle" font-size="10">→ capture « "a" et "b" » en entier</text>
+    <rect class="d-accent" x="184" y="132" width="80" height="16" rx="4" />
+    <text class="d-mut" x="150" y="144" text-anchor="end" font-size="11">"[^"]*"</text>
+    <text class="d-mut" x="320" y="168" text-anchor="middle" font-size="10">→ capture « "a" » et s'arrête au guillemet fermant</text>
+  </svg>
+  <figcaption>Le point <code>.</code> accepte aussi le guillemet&nbsp;: <code>".*"</code> file jusqu'au <strong>dernier</strong> de la ligne. La classe négative <code>[^"]*</code> refuse le guillemet, donc s'arrête à la <strong>première</strong> fermeture — le comportement voulu.</figcaption>
+</figure>
+
 <h2>Le piège ReDoS</h2>
 <p>Un dernier danger, plus subtil&nbsp;: certaines regex deviennent <strong>catastrophiquement lentes</strong> sur des entrées particulières, parce que le moteur explore un nombre explosif de combinaisons (<em>backtracking</em>). C'est le <strong>ReDoS</strong> (<em>Regular expression Denial of Service</em>)&nbsp;: une faille où une entrée malveillante fait geler le serveur.</p>
 <figure class="code-block" data-file="motif dangereux"><pre><code class="language-regex">(a+)+$      ⚠️ sur « aaaaaaaaaaaaaaaaaaaa! » : temps exponentiel
 (a|a)*$     ⚠️ même problème : alternatives qui se recouvrent</code></pre></figure>
 <p>Le coupable typique&nbsp;: des quantificateurs <strong>imbriqués</strong> sur des motifs qui peuvent matcher de plusieurs façons (<code>(a+)+</code>). La parade&nbsp;: éviter d'emboîter les <code>+</code>/<code>*</code>, préférer des classes précises (<code>[^"]*</code> plutôt que <code>.*</code>), et tester ses regex sur de longues entrées. Pour valider des données venues d'utilisateurs, sois particulièrement vigilant&nbsp;: une regex est du code, et du code peut avoir des failles.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Quand renoncer à la regex</p><p>Les regex décrivent des motifs <em>plats</em>&nbsp;: elles ne savent pas compter des parenthèses imbriquées ni suivre une structure arborescente. Analyser du HTML complet, valider du JSON, apparier des balises imbriquées&nbsp;: mieux vaut un vrai <strong>analyseur</strong> (<em>parser</em>). La regex, elle, reste imbattable pour repérer un motif <em>local</em> — une date, un identifiant, un mot-clé — dans un texte.</p></div></div>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Tu as désormais de quoi lire et écrire l'immense majorité des regex du quotidien. Pour approfondir&nbsp;: les <strong>groupes nommés</strong> et le <strong>mode verbeux</strong> (<code>re.VERBOSE</code> en Python, le flag <code>x</code>) qui autorise espaces et commentaires dans un motif long&nbsp;; les <strong>classes POSIX</strong> et les propriétés Unicode (<code>\p{L}</code>) pour le texte international&nbsp;; et les moteurs sans <em>backtracking</em> (RE2) qui garantissent une vitesse linéaire. Et garde le réflexe&nbsp;: si une regex devient illisible, un peu de code ordinaire est parfois plus clair.</p></div></div>
 
@@ -206,10 +233,12 @@ s  → dotall : le point « . » matche aussi le saut de ligne</code></pre></fig
 <h2>Glossaire</h2>
 <dl class="glossary">
   <dt>Drapeau (<em>flag</em>)</dt><dd>Option qui modifie le comportement global du moteur&nbsp;: <code>i</code>, <code>g</code>, <code>m</code>, <code>s</code>.</dd>
+  <dt><code>lastIndex</code></dt><dd>Position de lecture mémorisée par une regex <code>/g</code> en JavaScript&nbsp;; source de bugs si la même instance est réutilisée sans la remettre à zéro.</dd>
   <dt>Raw string (<code>r"..."</code>)</dt><dd>En Python, chaîne où le <code>\</code> n'est pas interprété avant la regex&nbsp;; évite de doubler les antislashs.</dd>
   <dt><code>grep -E</code></dt><dd>Commande Unix qui filtre les lignes d'un fichier avec une regex étendue.</dd>
   <dt>Sur-validation</dt><dd>Vouloir un motif «&nbsp;parfait&nbsp;» (e-mail, URL) au point de le rendre illisible et souvent faux.</dd>
   <dt>Backtracking</dt><dd>Retours en arrière du moteur pour tenter d'autres combinaisons&nbsp;; explosif si le motif est ambigu.</dd>
+  <dt>Gourmand (<em>greedy</em>)</dt><dd>Un quantificateur qui prend le plus de texte possible&nbsp;: <code>.*</code> déborde jusqu'au dernier guillemet, là où <code>[^"]*</code> s'arrête au premier.</dd>
   <dt>ReDoS</dt><dd><em>Regular expression Denial of Service</em>&nbsp;: une entrée qui fait exploser le temps de calcul d'une regex mal conçue.</dd>
 </dl>
 
