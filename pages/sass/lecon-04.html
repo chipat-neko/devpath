@@ -195,11 +195,38 @@ $rayon: 8px !default;</code></pre></figure>
 .x { color: abstracts.$primaire; }</code></pre></figure>
 <p>Différence&nbsp;: <code>@use</code> sert à <em>consommer</em> un module dans le fichier courant&nbsp;; <code>@forward</code> sert à <em>republier</em> un module pour les autres, sans l'utiliser soi-même. Combinés, ils permettent une architecture en couches nette.</p>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Sans point d'entrée, un composant doit répéter trois lignes arobase use, une par partial des fondations : underscore variables, underscore couleurs, underscore mixins. Avec un point d'entrée, un fichier underscore index point scss fait arobase forward sur ces trois partials, et le composant n'écrit plus qu'un seul arobase use vers le dossier abstracts. Ajouter un partial ne touche que le fichier index.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">@forward crée un point d'entrée unique</text>
+    <text class="d-tag" x="150" y="46" text-anchor="middle" font-size="11">Sans index</text>
+    <rect class="d-box" x="24" y="56" width="252" height="120" rx="10" />
+    <text class="d-mut" x="44" y="78" font-size="10">chaque composant répète :</text>
+    <text class="d-text" x="44" y="100" font-size="11">@use "variables";</text>
+    <text class="d-text" x="44" y="122" font-size="11">@use "couleurs";</text>
+    <text class="d-text" x="44" y="144" font-size="11">@use "mixins";</text>
+    <text class="d-mut" x="44" y="166" font-size="10">un oubli = une erreur</text>
+    <text class="d-tag" x="490" y="46" text-anchor="middle" font-size="11">Avec _index.scss</text>
+    <rect class="d-accent" x="364" y="56" width="252" height="40" rx="8" />
+    <text class="d-text" x="384" y="80" font-size="11">_index.scss : @forward ×3</text>
+    <line class="d-line" x1="490" y1="96" x2="490" y2="124" stroke-width="1.5" />
+    <path class="d-line" d="M486 116 L490 124 L494 116" fill="none" stroke-width="1.5" />
+    <rect class="d-box" x="364" y="126" width="252" height="50" rx="8" />
+    <text class="d-mut" x="384" y="148" font-size="10">chaque composant écrit :</text>
+    <text class="d-text" x="384" y="168" font-size="11">@use "abstracts" as a;</text>
+    <text class="d-mut" x="490" y="196" text-anchor="middle" font-size="10">ajouter un partial ne touche que _index.scss</text>
+  </svg>
+  <figcaption>Un <strong>point d'entrée</strong> (<code>_index.scss</code>) qui <code>@forward</code> les fondations remplace une pile de <code>@use</code> par un seul&nbsp;: on ajoute un partial à un endroit, et aucun composant n'est à modifier.</figcaption>
+</figure>
+
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Et l'ancien <code>@import</code> ?</p><p>Pendant longtemps, on assemblait les partials avec <code>@import</code>. Cette règle est <strong>dépréciée</strong> et en cours de retrait. Ses défauts&nbsp;: elle déverse tout dans un <strong>espace global</strong> (collisions de noms garanties sur un gros projet), réévalue un fichier <strong>à chaque import</strong>, et rend les dépendances floues. <code>@use</code> charge chaque fichier <strong>une seule fois</strong>, sous un espace de noms explicite. <strong>Pour tout nouveau projet&nbsp;: <code>@use</code> et <code>@forward</code>, jamais <code>@import</code>.</strong></p></div></div>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — un design system à un seul point d'entrée</p><p>Dans une équipe produit, les fondations Sass (couleurs, typographie, espacements, mixins) vivent dans un dossier <code>abstracts/</code>. Plutôt que de faire écrire à chaque développeur une dizaine de <code>@use</code> — et de risquer qu'il en oublie — on crée un <code>abstracts/_index.scss</code> qui <code>@forward</code> tous ces partials. Chaque composant n'a alors qu'à faire <code>@use "../abstracts" as a;</code> pour disposer de <strong>toute</strong> la boîte à outils sous le préfixe <code>a.</code>. Le jour où l'on ajoute un fichier de fondations, on l'ajoute au seul <code>_index.scss</code>&nbsp;: aucun composant à modifier. C'est exactement pour cela que des frameworks comme Bootstrap sont passés à <code>@use</code>/<code>@forward</code>, l'ancien <code>@import</code> étant en fin de vie.</p></div></div>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10Z" /></svg><div class="callout__body"><p class="callout__title">Un <code>@use</code> par fichier qui en a besoin</p><p>Contrairement à <code>@import</code>, <code>@use</code> n'est <strong>pas transitif</strong>&nbsp;: si <code>_boutons.scss</code> a besoin des variables, il doit faire son propre <code>@use "variables"</code>, même si <code>main.scss</code> l'a déjà chargé. Ça paraît verbeux, mais c'est la force du système&nbsp;: en lisant un fichier, tu vois <strong>exactement</strong> ses dépendances, sans deviner ce qu'un autre a importé avant. Et comme chaque module n'est chargé qu'une fois, aucun coût à le déclarer partout.</p></div></div>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Les <code>@use</code> et <code>@forward</code> doivent venir en premier</p><p>Un piège fréquent&nbsp;: placer un <code>@use</code> après une règle CSS ou une variable. Le compilateur refuse et affiche <code>@use rules must be written before any other rules</code>. La règle&nbsp;: tous les <code>@use</code> (puis les <code>@forward</code>) se mettent <strong>tout en haut</strong> du fichier, avant la moindre déclaration. Seuls des commentaires et la variable <code>$…</code> d'une clause <code>with</code> peuvent les précéder.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Filtrer ce qu'un <code>@forward</code> expose</p><p><code>@forward</code> peut ne republier qu'une <strong>partie</strong> d'un partial, avec <code>show</code> (liste blanche) ou <code>hide</code> (liste noire)&nbsp;: <code>@forward "outils" show $primaire, mixin-carte;</code> n'expose que ces deux membres, gardant le reste privé au module. On peut aussi préfixer les noms ré-exportés avec <code>as</code>&nbsp;: <code>@forward "boutons" as bouton-*;</code>. C'est ainsi qu'une bibliothèque publie une <strong>API nette</strong> tout en cachant ses rouages internes.</p></div></div>
 
 <figure class="cheat-table">
   <table>
@@ -225,6 +252,7 @@ $rayon: 8px !default;</code></pre></figure>
   <dt>Espace de noms</dt><dd>Le préfixe (par défaut le nom du fichier) qui distingue les membres d'un module et évite les collisions&nbsp;: <code>couleurs.$base</code>.</dd>
   <dt><code>with</code></dt><dd>Clause de <code>@use</code> qui surcharge, au chargement, les variables déclarées <code>!default</code> par le module.</dd>
   <dt><code>@forward</code></dt><dd>Règle qui <strong>republie</strong> les membres d'un partial à travers un autre, pour créer un point d'entrée unique (<code>_index.scss</code>).</dd>
+  <dt>Point d'entrée</dt><dd>Fichier unique (souvent <code>_index.scss</code>) qui <code>@forward</code> tout un dossier de partials&nbsp;: les autres n'ont plus qu'un seul <code>@use</code> à écrire pour tout charger.</dd>
   <dt><code>@import</code></dt><dd>Ancienne règle d'assemblage, <strong>dépréciée</strong>&nbsp;: elle rend tout global, réévalue les fichiers et provoque des collisions. À remplacer par <code>@use</code>.</dd>
 </dl>
 
