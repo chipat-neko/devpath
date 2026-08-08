@@ -160,6 +160,30 @@
 
 <h2>Mise en page et peinture : le coût d'après</h2>
 <p>Le chemin critique ne s'arrête pas au premier affichage. Chaque changement de style peut déclencher un nouveau <strong>reflow</strong> (recalcul de la mise en page) puis un <strong>repaint</strong> (nouvelle peinture). Modifier <code>width</code>, <code>top</code> ou <code>font-size</code> relance la mise en page&nbsp;; animer <code>transform</code> ou <code>opacity</code>, en revanche, ne touche que la <strong>composition</strong> (sur le GPU) et reste fluide. C'est pourquoi on anime avec <code>transform</code>/<code>opacity</code>, jamais avec <code>width</code>/<code>margin</code>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Ce que déclenche l'animation d'une propriété. Animer width ou top relance la mise en page, la peinture et la composition : c'est lourd. Animer color relance seulement la peinture et la composition. Animer transform ou opacity ne touche que la composition, sur le GPU : c'est fluide.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Ce qu'une animation déclenche selon la propriété</text>
+    <text class="d-mut" x="300" y="44" text-anchor="middle" font-size="9">Mise en page</text>
+    <text class="d-mut" x="410" y="44" text-anchor="middle" font-size="9">Peinture</text>
+    <text class="d-mut" x="520" y="44" text-anchor="middle" font-size="9">Composition</text>
+    <text class="d-text" x="20" y="67" font-size="10">width, top</text>
+    <rect class="d-accent" x="256" y="54" width="88" height="18" rx="4" /><text class="d-text" x="300" y="67" text-anchor="middle" font-size="8">oui</text>
+    <rect class="d-accent" x="366" y="54" width="88" height="18" rx="4" /><text class="d-text" x="410" y="67" text-anchor="middle" font-size="8">oui</text>
+    <rect class="d-accent" x="476" y="54" width="88" height="18" rx="4" /><text class="d-text" x="520" y="67" text-anchor="middle" font-size="8">oui</text>
+    <text class="d-tag" x="598" y="67" text-anchor="middle" font-size="9">lourd</text>
+    <text class="d-text" x="20" y="99" font-size="10">color, background</text>
+    <rect class="d-box" x="256" y="86" width="88" height="18" rx="4" /><text class="d-mut" x="300" y="99" text-anchor="middle" font-size="8">—</text>
+    <rect class="d-accent" x="366" y="86" width="88" height="18" rx="4" /><text class="d-text" x="410" y="99" text-anchor="middle" font-size="8">oui</text>
+    <rect class="d-accent" x="476" y="86" width="88" height="18" rx="4" /><text class="d-text" x="520" y="99" text-anchor="middle" font-size="8">oui</text>
+    <text class="d-text" x="20" y="131" font-size="10">transform, opacity</text>
+    <rect class="d-box" x="256" y="118" width="88" height="18" rx="4" /><text class="d-mut" x="300" y="131" text-anchor="middle" font-size="8">—</text>
+    <rect class="d-box" x="366" y="118" width="88" height="18" rx="4" /><text class="d-mut" x="410" y="131" text-anchor="middle" font-size="8">—</text>
+    <rect class="d-accent" x="476" y="118" width="88" height="18" rx="4" /><text class="d-text" x="520" y="131" text-anchor="middle" font-size="8">oui</text>
+    <text class="d-tag" x="598" y="131" text-anchor="middle" font-size="9">fluide</text>
+    <text class="d-mut" x="320" y="166" text-anchor="middle" font-size="9">Moins d'étapes = animation plus fluide (transform/opacity restent sur le GPU).</text>
+  </svg>
+  <figcaption>Animer <code>width</code> ou <code>top</code> relance toute la chaîne (mise en page → peinture → composition)&nbsp;; animer <code>transform</code>/<code>opacity</code> ne touche que la <strong>composition</strong>, sur le GPU. D'où la règle&nbsp;: on anime ces deux-là.</figcaption>
+</figure>
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Deux techniques serveur raccourcissent encore le chemin&nbsp;: <code>rel="preload"</code> demande au navigateur d'aller chercher <em>tôt</em> une ressource clé (police, image LCP), et les <strong>103 Early Hints</strong> laissent le serveur souffler les ressources critiques avant même la réponse HTML. Côté rendu, <code>content-visibility: auto</code> évite de mettre en page ce qui est hors écran.</p></div></div>
 
 <figure class="cheat-table">
@@ -186,6 +210,7 @@
   <dt>CSS critique</dt><dd>Le minimum de styles nécessaires au premier écran&nbsp;; inliné dans le <code>&lt;head&gt;</code> pour peindre sans attendre un fichier externe.</dd>
   <dt>Reflow (mise en page)</dt><dd>Recalcul de la position et de la taille des éléments&nbsp;; coûteux, déclenché par les changements de géométrie (<code>width</code>, <code>top</code>…).</dd>
   <dt>Repaint / composite</dt><dd>Nouvelle peinture des pixels (repaint), puis assemblage des couches (composite, sur le GPU)&nbsp;; animer <code>transform</code>/<code>opacity</code> ne touche que la composition.</dd>
+  <dt>FOUC</dt><dd><em>Flash of Unstyled Content</em>&nbsp;: bref instant où la page s'affiche sans style (CSS appliqué trop tard)&nbsp;; on l'évite en servant tout de suite le CSS critique.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -213,7 +238,7 @@
 [
   {"type":"text","accept":["CSSOM","cssom","le cssom"],"placeholder":"l'arbre des styles que le navigateur construit à partir du CSS…","hints":["Pendant construit à partir du CSS.","Le rendu attend qu'il soit complet.","« CSS… » + « OM »."],"link":{"href":"lecon-07.html","label":"Revoir « Du code aux pixels »"}},
   {"type":"text","accept":["CSS critique","css critique","critical css","le css critique"],"placeholder":"le minimum de styles du premier écran, qu'on inline dans le head…","hints":["On l'inline pour peindre sans attendre un fichier externe.","« above the fold ».","« CSS c… »."],"link":{"href":"lecon-07.html","label":"Revoir « Raccourcir le chemin critique »"}},
-  null
+  {"type":"text","accept":["transform","opacity","transform/opacity","la propriété transform"],"placeholder":"la propriété CSS à animer pour rester en composition (GPU), sans reflow ni repaint","hints":["Animer width/left force un reflow.","Elle est traitée à l'étape de composition, sur le GPU.","« trans… » (ou opacity)."],"link":{"href":"lecon-07.html","label":"Revoir « Mise en page et peinture »"}}
 ]
 </script>
 
