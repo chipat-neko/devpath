@@ -161,6 +161,8 @@ function nomFichierSur(nom) {
 
 <p>Préfère <strong>toujours</strong> la liste blanche. La liste noire est un jeu perdu d'avance&nbsp;: il y a une infinité de façons d'écrire une entrée malveillante, mais un ensemble fini de formes <em>valides</em>. Décrire le valide est plus court, plus clair, et bien plus sûr.</p>
 
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Une regex de validation doit être ancrée</p><p>Un piège fréquent&nbsp;: <code>/[A-Z]{2}/.test(valeur)</code> renvoie <code>true</code> dès que la valeur <em>contient</em> deux majuscules — <code>"FR'; DROP"</code> passerait&nbsp;! Sans les ancres <code>^</code> et <code>$</code>, l'expression teste une sous-chaîne, pas la totalité. Écris toujours <code>/^[A-Z]{2}$/</code> pour exiger que <strong>toute</strong> la valeur corresponde&nbsp;: une liste blanche mal ancrée n'en est plus une.</p></div></div>
+
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le téléversement filtré par liste noire</p><p>Un site permet d'envoyer une image et, pour empêcher l'exécution de code sur le serveur, <em>interdit</em> les fichiers <code>.php</code>. C'est une liste noire&nbsp;: elle bloque le cas connu… mais laisse passer <code>.phtml</code>, <code>.php5</code>, <code>.phar</code>, ou même <code>photo.php.jpg</code> selon la configuration du serveur. Des attaquants ont, à maintes reprises, téléversé ainsi un fichier exécutable (un <em>web shell</em>) et pris le contrôle du serveur. La parade robuste est une <strong>liste blanche</strong>&nbsp;: n'accepter qu'une extension explicitement prévue (<code>.jpg</code>, <code>.png</code>), vérifier le type réel du fichier, et stocker le fichier hors du dossier exécutable.</p></div></div>
 
 <h2>Valider côté serveur, toujours</h2>
@@ -171,6 +173,21 @@ curl -X POST https://exemple.com/api/inscription \
   -d '{"age": -999, "role": "admin"}'
 # Ton JavaScript de validation n'est jamais exécuté ici.</code></pre></figure>
 <p>Conclusion ferme&nbsp;: la validation côté client est un <em>confort</em>&nbsp;; la validation <strong>côté serveur</strong> est la <em>sécurité</em>. Elle doit exister pour <strong>chaque</strong> entrée, indépendamment de ce que fait le client. Tout ce qui arrive au serveur est suspect, même si «&nbsp;le formulaire ne permettait pas&nbsp;» de l'envoyer.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="La validation du navigateur se contourne, celle du serveur non. L'utilisateur légitime passe par le navigateur, dont la validation JavaScript n'est qu'un confort, puis atteint le serveur. L'attaquant, lui, ignore le navigateur et appelle directement l'API avec curl. Les deux chemins arrivent au serveur, dont la validation est la seule barrière réelle.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">La validation du navigateur se contourne&nbsp;; celle du serveur, non</text>
+    <rect class="d-box" x="14" y="42" width="104" height="40" rx="7" /><text class="d-text" x="66" y="66" text-anchor="middle" font-size="11">utilisateur</text>
+    <line class="d-line" x1="118" y1="62" x2="150" y2="62" /><polygon class="d-dot" points="150,58 158,62 150,66" />
+    <rect class="d-box" x="158" y="40" width="150" height="46" rx="7" /><text class="d-text" x="233" y="60" text-anchor="middle" font-size="11">navigateur</text><text class="d-mut" x="233" y="76" text-anchor="middle" font-size="9">validation JS = confort</text>
+    <line class="d-line" x1="308" y1="64" x2="452" y2="82" /><polygon class="d-dot" points="452,78 460,82 451,87" />
+    <rect class="d-box" x="14" y="118" width="104" height="40" rx="7" /><text class="d-text" x="66" y="142" text-anchor="middle" font-size="11">attaquant</text>
+    <line class="d-line" x1="118" y1="136" x2="452" y2="118" /><polygon class="d-dot" points="452,122 460,118 451,113" />
+    <text class="d-mut" x="288" y="150" text-anchor="middle" font-size="9">curl&nbsp;: contourne le navigateur</text>
+    <rect class="d-accent" x="460" y="56" width="166" height="88" rx="8" /><text class="d-text" x="543" y="90" text-anchor="middle" font-size="12">serveur</text><text class="d-mut" x="543" y="108" text-anchor="middle" font-size="9">validation = sécurité</text><text class="d-mut" x="543" y="122" text-anchor="middle" font-size="9">seule barrière réelle</text>
+  </svg>
+  <figcaption>Un attaquant n'utilise pas ton formulaire&nbsp;: il appelle l'API directement (par exemple avec <code>curl</code>). Le JavaScript du navigateur n'est jamais exécuté&nbsp;; seule la validation <strong>côté serveur</strong> l'arrête.</figcaption>
+</figure>
 
 <h2>L'encodage à la sortie</h2>
 <p>Valider à l'entrée ne suffit pas toujours&nbsp;: une donnée parfaitement valide peut devenir dangereuse selon <em>où</em> on l'utilise. Un commentaire contenant <code>&lt;script&gt;</code> est un texte valide&nbsp;; affiché tel quel dans une page HTML, il devient du code exécuté. La parade&nbsp;: <strong>encoder la donnée pour son contexte de sortie</strong>.</p>
@@ -211,6 +228,7 @@ function echapperHTML(s) {
   <dt>Validation côté serveur</dt><dd>Contrôle exécuté sur le serveur, seul à protéger réellement car non contournable par le client.</dd>
   <dt>Encodage de sortie</dt><dd>Conversion d'une donnée pour la neutraliser selon sa destination (échapper le HTML, etc.).</dd>
   <dt>Contexte</dt><dd>Langage ou format où la donnée est utilisée (HTML, SQL, shell…)&nbsp;; il détermine l'encodage nécessaire.</dd>
+  <dt>Élévation de privilèges</dt><dd>Obtention de droits non prévus (par exemple un rôle <code>admin</code> accepté faute de liste blanche)&nbsp;; une entrée mal validée en est une cause fréquente.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

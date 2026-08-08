@@ -125,6 +125,23 @@
 <li><strong>Ne pas suivre les redirections</strong> à l'aveugle&nbsp;: une URL autorisée peut rediriger vers une cible interne.</li>
 <li><strong>Cloisonner</strong>&nbsp;: le service qui émet ces requêtes ne devrait pas avoir accès aux ressources sensibles du réseau.</li>
 </ul>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Comment défendre une requête sortante contre la SSRF. On part de l'URL fournie, on résout le nom en IP réelle, puis on teste si cette IP est privée ou interne par rapport à une liste blanche. Si oui, on refuse. Si non, la requête est autorisée. Après chaque redirection, on recommence la vérification depuis la résolution du nom.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Défendre une requête sortante&nbsp;: vérifier l'IP réelle, pas la chaîne</text>
+    <rect class="d-box" x="14" y="52" width="110" height="44" rx="7" /><text class="d-text" x="69" y="79" text-anchor="middle" font-size="11">URL fournie</text>
+    <line class="d-line" x1="124" y1="74" x2="152" y2="74" /><polygon class="d-dot" points="152,70 160,74 152,78" />
+    <rect class="d-accent" x="160" y="52" width="150" height="44" rx="7" /><text class="d-text" x="235" y="72" text-anchor="middle" font-size="10">résoudre le nom</text><text class="d-mut" x="235" y="87" text-anchor="middle" font-size="9">nom → IP réelle</text>
+    <line class="d-line" x1="310" y1="74" x2="338" y2="74" /><polygon class="d-dot" points="338,70 346,74 338,78" />
+    <rect class="d-box" x="346" y="52" width="150" height="44" rx="7" /><text class="d-text" x="421" y="72" text-anchor="middle" font-size="10">IP privée ou interne&nbsp;?</text><text class="d-mut" x="421" y="87" text-anchor="middle" font-size="9">(vs liste blanche)</text>
+    <line class="d-line" x1="496" y1="74" x2="524" y2="74" /><polygon class="d-dot" points="524,70 532,74 524,78" /><text class="d-mut" x="510" y="66" text-anchor="middle" font-size="9">non</text>
+    <rect class="d-accent" x="532" y="52" width="98" height="44" rx="7" /><text class="d-text" x="581" y="72" text-anchor="middle" font-size="10">autorisée</text><text class="d-mut" x="581" y="87" text-anchor="middle" font-size="9">✓</text>
+    <line class="d-line" x1="421" y1="96" x2="421" y2="128" /><polygon class="d-dot" points="417,128 421,136 425,128" /><text class="d-mut" x="438" y="116" text-anchor="middle" font-size="9">oui</text>
+    <rect class="d-frame" x="346" y="136" width="150" height="30" rx="6" /><text class="d-text" x="421" y="156" text-anchor="middle" font-size="10">refuser ✗</text>
+    <line class="d-line" x1="581" y1="96" x2="581" y2="186" /><line class="d-line" x1="581" y1="186" x2="235" y2="186" /><line class="d-line" x1="235" y1="186" x2="235" y2="98" /><polygon class="d-dot" points="231,106 235,98 239,106" />
+    <text class="d-mut" x="408" y="181" text-anchor="middle" font-size="9">après chaque redirection, revérifier l'IP</text>
+  </svg>
+  <figcaption>Une liste noire de mots («&nbsp;bloquer <code>localhost</code>&nbsp;») se contourne. La règle robuste&nbsp;: résoudre le nom en IP, comparer l'<strong>IP réelle</strong> à une liste blanche, refuser les plages privées, et <strong>recommencer après chaque redirection</strong>.</figcaption>
+</figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Interdire ne suffit pas, il faut vérifier l'IP finale</p><p>Une simple liste noire de mots (« bloquer <code>localhost</code> ») se contourne&nbsp;: <code>127.0.0.1</code>, <code>0.0.0.0</code>, une écriture décimale de l'IP, un nom de domaine qui <strong>résout</strong> vers une IP privée, une <strong>redirection</strong>… La règle robuste&nbsp;: résoudre l'adresse, <strong>vérifier l'IP réellement obtenue</strong> contre une liste blanche, et recommencer après chaque redirection.</p></div></div>
 
 <h2>Cas réel — Capital One (2019)</h2>
@@ -191,6 +208,7 @@ valider(objet)                   # on vérifie le schéma soi-même</code></pre>
   <dt>Désérialisation</dt><dd>Reconstruire un objet à partir d'octets&nbsp;; dangereuse sur données non fiables avec un format natif.</dd>
   <dt>Gadget (chaîne de gadgets)</dt><dd>Enchaînement de morceaux de code déjà présents, détourné pendant une désérialisation pour aboutir à une exécution.</dd>
   <dt>RCE</dt><dd><em>Remote Code Execution</em>&nbsp;: exécution de code arbitraire à distance — la conséquence la plus grave.</dd>
+  <dt>Moindre privilège</dt><dd>N'accorder à un utilisateur ou un service que les droits strictement nécessaires&nbsp;; ainsi un accès obtenu par une faille (par exemple une SSRF) ne déverrouille pas tout le système.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

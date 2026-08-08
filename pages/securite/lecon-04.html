@@ -123,6 +123,33 @@ element.innerHTML = "Commentaire : " + commentaire;
 
 <p>Les conséquences sont graves&nbsp;: vol de cookies de session (donc usurpation de compte), modification de la page, redirection vers un site piège, actions au nom de la victime. Le script s'exécute avec <em>tous les droits</em> de l'utilisateur sur le site, puisque le navigateur croit qu'il vient du site légitime.</p>
 
+<p>Le XSS prend trois formes selon le <em>trajet</em> du script, mais toutes se corrigent de la même façon. Le <strong>XSS stocké</strong> (le plus grave) enregistre le script côté serveur — un commentaire, un profil — et frappe <em>tous</em> les visiteurs&nbsp;; c'est le cas ci-dessus. Le <strong>XSS réfléchi</strong> glisse le script dans un lien piégé (un paramètre d'URL) renvoyé dans la page à la victime qui clique. Le <strong>XSS DOM</strong> se joue entièrement dans le navigateur&nbsp;: du JavaScript de la page insère lui-même une donnée non fiable dans le document.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Les trois formes de XSS. Stocké : l'attaquant poste un script, le serveur le stocke, tous les visiteurs le reçoivent. Réfléchi : un lien piégé contenant le script, la victime clique, le script est renvoyé dans la page. DOM : une donnée d'URL est injectée au document par le JavaScript de la page lui-même. Les trois finissent par exécuter du code chez la victime.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Trois formes de XSS selon le trajet du script</text>
+    <text class="d-tag" x="14" y="67" font-size="11">Stocké</text>
+    <rect class="d-box" x="80" y="46" width="132" height="34" rx="6" /><text class="d-text" x="146" y="67" text-anchor="middle" font-size="10">attaquant poste</text>
+    <line class="d-line" x1="212" y1="63" x2="242" y2="63" /><polygon class="d-dot" points="242,59 250,63 242,67" />
+    <rect class="d-accent" x="250" y="46" width="132" height="34" rx="6" /><text class="d-text" x="316" y="67" text-anchor="middle" font-size="10">serveur stocke</text>
+    <line class="d-line" x1="382" y1="63" x2="412" y2="63" /><polygon class="d-dot" points="412,59 420,63 412,67" />
+    <rect class="d-box" x="420" y="46" width="150" height="34" rx="6" /><text class="d-text" x="495" y="67" text-anchor="middle" font-size="10">tous les visiteurs</text>
+    <text class="d-tag" x="14" y="123" font-size="11">Réfléchi</text>
+    <rect class="d-box" x="80" y="102" width="132" height="34" rx="6" /><text class="d-text" x="146" y="123" text-anchor="middle" font-size="10">lien piégé (URL)</text>
+    <line class="d-line" x1="212" y1="119" x2="242" y2="119" /><polygon class="d-dot" points="242,115 250,119 242,123" />
+    <rect class="d-accent" x="250" y="102" width="132" height="34" rx="6" /><text class="d-text" x="316" y="123" text-anchor="middle" font-size="10">la victime clique</text>
+    <line class="d-line" x1="382" y1="119" x2="412" y2="119" /><polygon class="d-dot" points="412,115 420,119 412,123" />
+    <rect class="d-box" x="420" y="102" width="150" height="34" rx="6" /><text class="d-text" x="495" y="123" text-anchor="middle" font-size="10">renvoyé dans la page</text>
+    <text class="d-tag" x="14" y="179" font-size="11">DOM</text>
+    <rect class="d-box" x="80" y="158" width="132" height="34" rx="6" /><text class="d-text" x="146" y="179" text-anchor="middle" font-size="10">donnée d'URL</text>
+    <line class="d-line" x1="212" y1="175" x2="242" y2="175" /><polygon class="d-dot" points="242,171 250,175 242,179" />
+    <rect class="d-accent" x="250" y="158" width="132" height="34" rx="6" /><text class="d-text" x="316" y="179" text-anchor="middle" font-size="10">JS de la page</text>
+    <line class="d-line" x1="382" y1="175" x2="412" y2="175" /><polygon class="d-dot" points="412,171 420,175 412,179" />
+    <rect class="d-box" x="420" y="158" width="150" height="34" rx="6" /><text class="d-text" x="495" y="179" text-anchor="middle" font-size="10">injectée au DOM</text>
+  </svg>
+  <figcaption>Le XSS <strong>stocké</strong> touche tous les visiteurs, le <strong>réfléchi</strong> vise qui clique un lien piégé, le <strong>DOM</strong> se joue dans le navigateur. Dans les trois cas, une donnée non fiable finit interprétée comme du code&nbsp;: la parade unique est d'<strong>encoder à la sortie</strong>.</figcaption>
+</figure>
+
 <h2>La parade : encoder à la sortie</h2>
 <p>La défense est l'<strong>encodage HTML</strong> (assainissement contextuel de la leçon 2)&nbsp;: avant d'insérer une donnée dans la page, on convertit les caractères spéciaux pour qu'ils s'affichent comme du <em>texte</em> au lieu d'être interprétés comme des <em>balises</em>.</p>
 <figure class="code-block" data-file="SÛR — encoder ou utiliser textContent"><pre><code class="language-javascript">// Option 1 : insérer comme TEXTE, pas comme HTML
@@ -192,6 +219,8 @@ element.innerHTML = "Commentaire : " + echapperHTML(commentaire);</code></pre></
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">XSS et CSRF se renforcent</p><p>Les cookies <code>HttpOnly</code> protègent une session contre le <strong>vol par XSS</strong> (le JavaScript ne peut pas les lire). Mais un XSS reste dangereux&nbsp;: le script injecté peut agir directement dans la page. D'où l'importance de traiter les deux failles&nbsp;: encoder pour le XSS, jetons + SameSite pour le CSRF. La sécurité fonctionne par <em>couches</em>, pas par une parade unique.</p></div></div>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le point exact où le XSS revient</p><p>Les frameworks (React, Vue, Angular) encodent <strong>par défaut</strong>&nbsp;: tant que tu affiches une donnée normalement, tu es protégé. Le danger resurgit à un seul endroit — quand tu <em>forces</em> l'insertion de HTML brut&nbsp;: <code>innerHTML</code>, <code>dangerouslySetInnerHTML</code> (React), <code>v-html</code> (Vue). Réserve-les à une donnée de confiance, ou nettoie-la d'abord avec une bibliothèque dédiée (par exemple DOMPurify).</p></div></div>
+
 <h2>Antisèche</h2>
 <figure class="cheat-table">
   <table>
@@ -214,6 +243,7 @@ element.innerHTML = "Commentaire : " + echapperHTML(commentaire);</code></pre></
   <dt>Jeton anti-CSRF</dt><dd>Secret imprévisible placé dans chaque formulaire légitime et vérifié côté serveur.</dd>
   <dt><code>SameSite</code></dt><dd>Attribut de cookie qui empêche son envoi lors de requêtes venues d'un autre site.</dd>
   <dt><code>HttpOnly</code></dt><dd>Attribut rendant un cookie inaccessible au JavaScript&nbsp;: limite le vol de session par XSS.</dd>
+  <dt>XSS réfléchi</dt><dd>Variante où le script est glissé dans un lien piégé (paramètre d'URL) et renvoyé dans la page à la victime qui clique, par opposition au XSS <em>stocké</em>, enregistré côté serveur.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
