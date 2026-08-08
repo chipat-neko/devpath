@@ -138,6 +138,7 @@ fn factorielle(comptime n: u32) u32 {
 maximum(i32, 3, 7);       // 7   (avec des i32)
 maximum(f64, 2.5, 1.5);   // 2.5 (avec des f64)</code></pre></figure>
 <p class="code-caption">La même fonction marche pour tout type&nbsp;: Zig compile une version spécialisée pour chaque <code>T</code> utilisé.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Raccourci&nbsp;: <code>anytype</code></p><p>Quand tu n'as pas besoin de <em>nommer</em> le type, <code>anytype</code> laisse Zig le déduire à l'appel&nbsp;: <code>fn maximum(a: anytype, b: anytype)</code> accepte n'importe quel couple compatible, sans écrire <code>comptime T: type</code>. Plus court&nbsp;; mais tu perds le nom <code>T</code> réutilisable dans la signature, si bien que <code>comptime T: type</code> reste préférable dès que le type doit reparaître ailleurs (type de retour, autre paramètre).</p></div></div>
 
 <h2>La généricité sans templates</h2>
 <p>Là où le C++ a un système de templates séparé et où Java a des génériques limités, Zig réutilise simplement <code>comptime</code>. Un conteneur générique est une <strong>fonction qui renvoie un type</strong>.</p>
@@ -167,6 +168,7 @@ const PileEntiers = Pile(i32);</code></pre></figure>
   </svg>
   <figcaption>Comme <code>ArrayList(i32)</code>&nbsp;: chaque appel avec un type produit un <strong>nouveau type</strong>, spécialisé et vérifié à la compilation.</figcaption>
 </figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Une fonction générique n'est vérifiée qu'à l'appel</p><p>Le corps d'une fonction <code>comptime T: type</code> n'est validé que lorsqu'on l'<strong>instancie</strong> avec un type concret. <code>maximum(i32, …)</code> compile&nbsp;; mais <code>maximum</code> appelée avec un type qui ne supporte pas <code>&gt;</code> (une struct, par exemple) n'échoue qu'<em>à cet appel-là</em>, jamais à la définition. Tant qu'un type n'est pas utilisé, une incompatibilité peut passer inaperçue&nbsp;: pense à couvrir chaque instanciation prévue par un test.</p></div></div>
 
 <h2>inline&nbsp;: dérouler à la compilation</h2>
 <p><code>inline for</code> et <code>inline while</code> déroulent la boucle <em>à la compilation</em>&nbsp;: chaque itération devient du code distinct, ce qui permet par exemple de parcourir les champs d'un type.</p>
@@ -175,6 +177,22 @@ const champs = @typeInfo(Point).Struct.fields;
 inline for (champs) |champ| {
     std.debug.print("champ : {s}\n", .{champ.name});  // x, y
 }</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 172" role="img" aria-label="inline for déroule la boucle à la compilation. À gauche, une boucle inline for parcourt les deux champs x et y du struct Point. À droite, le compilateur a déroulé la boucle en deux instructions distinctes, sans boucle : une pour le champ x, une pour le champ y. Chaque itération devient du code séparé.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">inline for : une itération = un morceau de code distinct</text>
+    <rect class="d-frame" x="24" y="46" width="250" height="104" rx="10" />
+    <text class="d-tag" x="40" y="70" font-size="10" font-family="monospace">inline for (champs) |c|</text>
+    <text class="d-mut" x="40" y="90" font-size="10">champs de Point :</text>
+    <text class="d-text" x="40" y="110" font-size="10" font-family="monospace">x : f64</text>
+    <text class="d-text" x="40" y="128" font-size="10" font-family="monospace">y : f64</text>
+    <line class="d-line" x1="274" y1="98" x2="318" y2="98" marker-end="url(#z8if)" />
+    <text class="d-mut" x="296" y="90" text-anchor="middle" font-size="8">déroulé</text>
+    <rect class="d-accent" x="322" y="52" width="296" height="40" rx="8" /><text class="d-text" x="470" y="76" text-anchor="middle" font-size="10" font-family="monospace">print("champ : x")</text>
+    <rect class="d-accent" x="322" y="104" width="296" height="40" rx="8" /><text class="d-text" x="470" y="128" text-anchor="middle" font-size="10" font-family="monospace">print("champ : y")</text>
+    <defs><marker id="z8if" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Le compilateur remplace la boucle par une instruction par champ&nbsp;: c'est ce qui permet de parcourir les champs d'un type, dont le nombre est connu à la compilation.</figcaption>
+</figure>
 
 <h2>Pourquoi pas de macros&nbsp;?</h2>
 <p>Beaucoup de langages ont des <strong>macros</strong> — un mini-langage séparé pour générer du code (le préprocesseur C, les macros Rust…). Zig les évite&nbsp;: tout ce qu'on ferait avec une macro, on le fait avec <code>comptime</code>, dans le <em>même</em> langage. Un seul ensemble de règles à apprendre, et du code généré qu'on peut lire et déboguer normalement.</p>
@@ -208,6 +226,7 @@ inline for (champs) |champ| {
   <dt>Métaprogrammation</dt><dd>Écrire du code qui <em>produit</em> ou manipule du code (ou des types)&nbsp;; en Zig, elle se fait en <code>comptime</code>, dans le langage lui-même.</dd>
   <dt>Généricité</dt><dd>Écrire une fonction ou un conteneur valable pour <strong>tout type</strong>&nbsp;; obtenue en passant le type en argument <code>comptime</code>.</dd>
   <dt>Type comme valeur</dt><dd>En Zig, un <code>type</code> est une valeur ordinaire&nbsp;: on peut le stocker, le passer en argument et le renvoyer.</dd>
+  <dt><code>anytype</code></dt><dd>Type de paramètre <em>inféré à l'appel</em>&nbsp;: la fonction accepte n'importe quel argument et Zig déduit son type. Plus concis que <code>comptime T: type</code>, mais sans nom de type réutilisable dans la signature.</dd>
   <dt>inline for / while</dt><dd>Boucle <strong>déroulée</strong> à la compilation&nbsp;: chaque itération devient du code distinct (utile pour parcourir les champs d'un type).</dd>
   <dt><code>@typeInfo</code></dt><dd>Fonction intégrée qui donne accès à la structure d'un type (champs, variantes, méthodes) pour de la réflexion à la compilation.</dd>
   <dt>Macro</dt><dd>Langage séparé de génération de code (préprocesseur C, macros Rust…)&nbsp;; Zig s'en passe grâce à <code>comptime</code>.</dd>

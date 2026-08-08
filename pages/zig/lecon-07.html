@@ -106,6 +106,7 @@
     AccesRefuse,
     Corrompu,
 };</code></pre></figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Composer et regrouper les erreurs</p><p>Deux error sets se fusionnent avec l'opérateur <code>||</code>&nbsp;: <code>const Toutes = ErreurFichier || ErreurReseau;</code> réunit toutes leurs variantes en un seul ensemble. À l'opposé, <code>anyerror</code> est l'ensemble <em>universel</em> — «&nbsp;n'importe quelle erreur&nbsp;»&nbsp;: commode pour prototyper, mais un set nommé documente bien mieux ce qui peut réellement échouer.</p></div></div>
 
 <h2>Les error unions</h2>
 <p>Une fonction qui peut échouer renvoie une <strong>error union</strong>, notée <code>!T</code> (où <code>T</code> est le type en cas de succès). Le <code>!</code> dit&nbsp;: «&nbsp;soit un <code>T</code>, soit une erreur&nbsp;». Le type le dit, impossible d'ignorer la possibilité d'échec.</p>
@@ -160,6 +161,7 @@ const y = diviser(10, 0) catch |err| {
   </svg>
   <figcaption><code>try</code> délègue la responsabilité à l'appelant&nbsp;; <code>catch</code> la règle immédiatement, sans quitter la fonction.</figcaption>
 </figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">try n'est qu'un raccourci</p><p><code>try f()</code> se lit exactement comme <code>f() catch |err| return err</code>&nbsp;: en cas d'erreur, on la renvoie telle quelle à l'appelant. Vu ainsi, <code>try</code> ne «&nbsp;capte&nbsp;» rien — il ne fait que <em>déléguer vers le haut</em>. Dès que tu veux réagir sur place plutôt que propager, c'est <code>catch</code> qu'il te faut.</p></div></div>
 
 <h2>switch sur les erreurs</h2>
 <p>Pour traiter chaque erreur différemment, on combine <code>catch</code> et <code>switch</code>.</p>
@@ -177,6 +179,27 @@ const y = diviser(10, 0) catch |err| {
     try remplir(buf);               // si ça échoue, buf est libéré
     return buf;                     // sinon, on garde buf
 }</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Comportement de defer et errdefer à la sortie d'une fonction. La fonction déclare defer free(a) puis errdefer free(b), puis appelle une opération faillible try risky(). Sur le chemin de succès, seul defer free(a) s'exécute et errdefer est ignoré. Sur le chemin d'erreur, les deux s'exécutent dans l'ordre inverse de leur déclaration : d'abord errdefer free(b), puis defer free(a).">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">defer s'exécute toujours ; errdefer seulement sur le chemin d'erreur</text>
+    <rect class="d-frame" x="24" y="42" width="232" height="122" rx="10" />
+    <text class="d-tag" x="40" y="64" font-size="11" font-family="monospace">fn f() !void {</text>
+    <text class="d-text" x="54" y="88" font-size="10" font-family="monospace">defer free(a);</text>
+    <text class="d-text" x="54" y="108" font-size="10" font-family="monospace">errdefer free(b);</text>
+    <text class="d-mut" x="54" y="128" font-size="10" font-family="monospace">try risky();</text>
+    <text class="d-tag" x="40" y="152" font-size="11" font-family="monospace">}</text>
+    <line class="d-line" x1="256" y1="80" x2="300" y2="66" marker-end="url(#z7de)" />
+    <line class="d-line" x1="256" y1="126" x2="300" y2="140" marker-end="url(#z7de)" />
+    <rect class="d-accent" x="302" y="46" width="316" height="44" rx="8" />
+    <text class="d-text" x="460" y="66" text-anchor="middle" font-size="10">succès → defer free(a)</text>
+    <text class="d-mut" x="460" y="82" text-anchor="middle" font-size="9">errdefer ignoré</text>
+    <rect class="d-frame" x="302" y="114" width="316" height="50" rx="8" />
+    <text class="d-text" x="460" y="134" text-anchor="middle" font-size="10">échec → errdefer free(b) puis defer free(a)</text>
+    <text class="d-mut" x="460" y="152" text-anchor="middle" font-size="9">ordre inverse de déclaration (LIFO)</text>
+    <defs><marker id="z7de" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption><code>defer</code> libère dans tous les cas&nbsp;; <code>errdefer</code> n'intervient que si la fonction sort en erreur, pour défaire ce qui n'a pas encore été confié à l'appelant.</figcaption>
+</figure>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — ouvrir un fichier de configuration au démarrage</p><p>Un outil en ligne de commande tente de lire son fichier de réglages. S'il est absent, pas de plantage&nbsp;: <code>const cfg = lireConfig("app.toml") catch Config.defaut;</code> retombe sur des valeurs par défaut. Mais si le fichier existe et qu'une allocation échoue en plein milieu de l'analyse, l'<code>errdefer</code> libère ce qui avait déjà été réservé — l'outil ne laisse derrière lui aucune structure à moitié initialisée. C'est exactement la discipline des vrais programmes système&nbsp;: un chemin d'erreur qui <em>nettoie</em>, sans pile d'exception à dérouler.</p></div></div>
 
 <h2>Pièges fréquents</h2>
@@ -206,6 +229,7 @@ const y = diviser(10, 0) catch |err| {
 <dl class="glossary">
   <dt>Error set</dt><dd>Ensemble nommé d'erreurs possibles, déclaré avec <code>error{ … }</code>&nbsp;; s'apparente à un enum d'erreurs.</dd>
   <dt>Error union (<code>!T</code>)</dt><dd>Type «&nbsp;soit un <code>T</code>, soit une erreur&nbsp;»&nbsp;: le retour d'une fonction faillible. L'appelant doit traiter l'erreur avant d'accéder à la valeur.</dd>
+  <dt><code>anyerror</code></dt><dd>L'ensemble d'erreurs <strong>universel</strong>&nbsp;: <code>anyerror!T</code> accepte n'importe quelle erreur. Commode pour prototyper, mais moins précis qu'un error set nommé qui énumère les échecs vraiment possibles.</dd>
   <dt>try</dt><dd>Devant un appel faillible&nbsp;: en cas d'erreur, la propage immédiatement à la fonction appelante.</dd>
   <dt>catch</dt><dd>Traite l'erreur sur place&nbsp;: fournit une valeur de repli (<code>f() catch v</code>) ou capture l'erreur dans un bloc (<code>catch |e| { … }</code>).</dd>
   <dt>errdefer</dt><dd>Comme <code>defer</code>, mais l'action ne s'exécute que si la portée se termine <strong>sur une erreur</strong>&nbsp;; sert à annuler une initialisation partielle.</dd>
