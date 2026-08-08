@@ -131,6 +131,8 @@
 }</code></pre></figure>
 <p>La clé <code>key</code> range chaque state dans un «&nbsp;dossier&nbsp;» logique&nbsp;: on isole ainsi <strong>prod</strong> de <strong>dev</strong>, et le <strong>réseau</strong> de la <strong>base de données</strong>. Après avoir écrit ce bloc, <code>terraform init</code> propose de <strong>migrer</strong> le state local vers le backend.</p>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Qui crée le backend lui-même&nbsp;?</p><p>Petit casse-tête&nbsp;: le bucket S3 (et la table de verrous) qui <em>hébergent</em> le state doivent exister <strong>avant</strong> qu'on y stocke quoi que ce soit. On ne peut pas ranger le state de ce bucket… dans ce bucket qui n'existe pas encore. La solution courante&nbsp;: un petit projet «&nbsp;bootstrap&nbsp;» qui crée ces ressources avec un state <strong>local</strong> (une fois pour toutes), ou une création manuelle. Ensuite seulement, tout le reste bascule sur le backend distant.</p></div></div>
+
 <h2>Le verrouillage (locking)</h2>
 <p>Que se passe-t-il si Alice et Bob lancent <code>apply</code> <strong>en même temps</strong>&nbsp;? Sans protection, ils écriraient le state simultanément et le corrompraient. Le <strong>verrouillage</strong> l'empêche&nbsp;: avant d'écrire, Terraform <strong>pose un verrou</strong>&nbsp;; le second doit <strong>attendre</strong> que le premier ait fini.</p>
 
@@ -164,6 +166,18 @@
 resource "aws_instance" "app" {
   subnet_id = data.terraform_remote_state.reseau.outputs.subnet_id
 }</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Deux states séparés qui communiquent. À gauche, le state réseau expose une sortie subnet_id. La source de données terraform_remote_state lit cette sortie et la transmet à droite, au state application, qui l'utilise via data point terraform_remote_state point reseau point outputs point subnet_id. Aucun identifiant n'est copié à la main.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux states séparés, reliés par leurs sorties</text>
+    <rect class="d-accent" x="30" y="46" width="200" height="70" rx="9" /><text class="d-tag" x="130" y="70" text-anchor="middle" font-size="11">state « réseau »</text><text class="d-mut" x="130" y="90" text-anchor="middle" font-size="9">output subnet_id</text><text class="d-mut" x="130" y="106" text-anchor="middle" font-size="8.5">= subnet-0a1b</text>
+    <rect class="d-box" x="410" y="46" width="200" height="70" rx="9" /><text class="d-tag" x="510" y="70" text-anchor="middle" font-size="11">state « application »</text><text class="d-mut" x="510" y="90" text-anchor="middle" font-size="9">lit .outputs.subnet_id</text><text class="d-mut" x="510" y="106" text-anchor="middle" font-size="8.5">→ y attache l'instance</text>
+    <line class="d-line" x1="230" y1="81" x2="406" y2="81" fill="none" /><polygon class="d-dot" points="410,81 400,76 400,86" />
+    <text class="d-mut" x="320" y="74" text-anchor="middle" font-size="8.5">terraform_remote_state</text>
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="9">states séparés (rayon d'impact réduit) — aucun identifiant copié à la main</text>
+  </svg>
+  <figcaption>Découper l'infra en states indépendants limite le rayon d'un changement&nbsp;; <code>terraform_remote_state</code> les relie en lisant les <strong>sorties</strong> de l'un dans l'autre — jamais de copier-coller.</figcaption>
+</figure>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le state contient des secrets en clair</p><p>Un mot de passe généré, une clé d'accès, une chaîne de connexion&nbsp;: tout cela peut apparaître <strong>en clair</strong> dans le state. Deux règles absolues&nbsp;: ne <strong>jamais</strong> committer le state dans Git, et n'utiliser qu'un backend <strong>chiffré</strong> (au repos) dont l'<strong>accès est restreint</strong> aux personnes autorisées. Le state se traite comme un coffre-fort, pas comme un fichier de config anodin.</p></div></div>
 
@@ -199,6 +213,7 @@ resource "aws_instance" "app" {
   <dt><code>terraform_remote_state</code></dt><dd>Source de données qui lit les <em>sorties</em> d'un autre state, pour partager des valeurs entre configurations.</dd>
   <dt>Migration de state</dt><dd>Déplacement du state d'un backend vers un autre&nbsp;; <code>terraform init</code> copie l'existant sans recréer les ressources.</dd>
   <dt>Chiffrement au repos</dt><dd>Chiffrement des données stockées (ici le state)&nbsp;; indispensable car le state peut contenir des secrets en clair.</dd>
+  <dt>Rayon d'impact (blast radius)</dt><dd>Étendue des ressources qu'un seul changement peut affecter&nbsp;; on découpe l'infra en états séparés pour le réduire.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
