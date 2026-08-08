@@ -171,6 +171,40 @@ let () = Printf.printf "%g\n" (eval exemple)   (* 20 *)</code></pre></figure>
 <h2>Étendre le langage</h2>
 <p>La beauté de cette architecture&nbsp;: pour ajouter une fonctionnalité (des variables, des conditions, des fonctions), on ajoute un constructeur au type <code>expr</code> et un cas à <code>eval</code>. Le compilateur guide&nbsp;: il signale chaque endroit à compléter. C'est ainsi qu'on bâtit, par étapes, un vrai langage de programmation — et c'est exactement ce que font les compilateurs écrits en OCaml.</p>
 
+<h2>Concrètement&#160;: ajouter des variables</h2>
+<p>Illustrons cette extensibilité. Pour que <code>x + 1</code> ait un sens, il faut deux choses&#160;: un constructeur <code>Var</code> dans le type, et un <strong>environnement</strong> qui associe chaque nom à sa valeur. <code>eval</code> reçoit alors l'environnement en argument.</p>
+<figure class="code-block" data-file="variables.ml"><pre><code class="language-ocaml">type expr =
+  | Nombre of float
+  | Var of string          (* nouveau : une variable *)
+  | Add of expr * expr
+  (* ... *)
+
+(* l'environnement : une liste (nom, valeur) *)
+let rec eval env e =
+  match e with
+  | Nombre n -&gt; n
+  | Var nom  -&gt; List.assoc nom env   (* cherche la valeur du nom *)
+  | Add (a, b) -&gt; eval env a +. eval env b
+  (* ... *)
+
+let env = [("x", 10.); ("y", 5.)]
+let r = eval env (Add (Var "x", Nombre 1.))   (* 11 *)</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="L'évaluation d'une variable dans un environnement. L'environnement associe des noms à des valeurs : x vaut 10, y vaut 5. Pour évaluer l'expression Var x, la fonction eval cherche le nom x dans l'environnement et renvoie la valeur associée, 10. Un nom absent de l'environnement provoque une erreur de variable non liée.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">eval (Var "x") cherche «&#160;x&#160;» dans l'environnement</text>
+    <text class="d-mut" x="150" y="46" text-anchor="middle" font-size="10">environnement</text>
+    <rect class="d-box" x="40" y="54" width="220" height="80" rx="6" />
+    <text class="d-text" x="150" y="80" text-anchor="middle" font-size="11" font-family="monospace">"x" ↦ 10.</text>
+    <text class="d-text" x="150" y="104" text-anchor="middle" font-size="11" font-family="monospace">"y" ↦ 5.</text>
+    <line class="d-line" x1="260" y1="94" x2="336" y2="94" /><path class="d-line" d="M330 90 L338 94 L330 98" fill="none" /><text class="d-tag" x="298" y="86" text-anchor="middle" font-size="9" font-family="monospace">Var "x"</text>
+    <rect class="d-accent" x="340" y="76" width="140" height="36" rx="6" /><text class="d-text" x="410" y="99" text-anchor="middle" font-size="12" font-family="monospace">10.</text>
+    <text class="d-mut" x="410" y="128" text-anchor="middle" font-size="9.5">la valeur liée à «&#160;x&#160;»</text>
+    <text class="d-mut" x="320" y="156" text-anchor="middle" font-size="10">Un nom absent → erreur «&#160;variable non liée&#160;» (à gérer).</text>
+  </svg>
+  <figcaption>L'<strong>environnement</strong> relie les noms à leurs valeurs. Évaluer une <code>Var</code>, c'est y chercher son nom&#160;; l'ajouter au langage n'a demandé qu'un constructeur et un cas de plus.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><code>List.assoc</code> lève l'exception <code>Not_found</code> si le nom n'est pas dans l'environnement. Pour une variable saisie par l'utilisateur, préfère <code>List.assoc_opt</code>, qui renvoie une <code>option</code>, et traite proprement le cas «&nbsp;variable inconnue&nbsp;» — idéalement via <code>result</code>, comme pour la division par zéro.</p></div></div>
+
 <figure class="diagram">
   <svg viewBox="0 0 640 128" role="img" aria-label="La chaîne d'un interpréteur. Le texte source (2 + 3) fois 4 passe par une analyse (lexer et parser) qui le transforme en AST, l'arbre de syntaxe ; puis la fonction eval parcourt cet arbre et produit la valeur 20.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12.5">La chaîne d'un interpréteur : du texte à la valeur</text>
@@ -220,6 +254,7 @@ let () = Printf.printf "%g\n" (eval exemple)   (* 20 *)</code></pre></figure>
   <dt>Exhaustivité</dt><dd>Garantie du compilateur que <em>tous</em> les cas d'un <code>match</code> sont traités&#160;; un cas oublié devient un avertissement, pas un bug d'exécution.</dd>
   <dt><code>result</code></dt><dd>Type <code>Ok</code> / <code>Error</code> qui rend l'échec explicite dans la signature&#160;: l'appelant est forcé de le gérer, sans exception cachée.</dd>
   <dt>Lexer / Parser</dt><dd>Outils d'<strong>analyse</strong> (en OCaml&#160;: <code>ocamllex</code> et <code>menhir</code>) qui transforment le texte source en AST, en amont de l'évaluation.</dd>
+  <dt>Environnement</dt><dd>Table qui associe chaque <strong>nom de variable</strong> à sa valeur&#160;; <code>eval</code> la consulte pour évaluer une <code>Var</code>. Souvent une liste <code>(nom, valeur)</code> ou une <code>Map</code>.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -243,7 +278,7 @@ let () = Printf.printf "%g\n" (eval exemple)   (* 20 *)</code></pre></figure>
 [
   {"type":"text","accept":["Sub","Sub (Int 10, Int 4)"],"placeholder":"le constructeur du type expr pour représenter 10 - 4 (… (Int 10, Int 4)) : …","hints":["Add pour +, ??? pour la soustraction.","Sub (Int 10, Int 4).","Trois lettres."],"link":{"href":"lecon-13.html","label":"Revoir « Le type expr »"}},
   {"type":"text","accept":["AST","arbre de syntaxe","arbre syntaxique","arbre de syntaxe abstraite"],"placeholder":"le nom de la structure arborescente (type expr) représentant le programme : … (de syntaxe abstraite)","hints":["Abstract Syntax Tree.","eval le parcourt récursivement.","Trois lettres."],"link":{"href":"lecon-13.html","label":"Revoir « L'AST »"}},
-  null
+  {"type":"text","accept":["5","5.","5.0"],"placeholder":"la valeur de eval (Add (Nombre 2., Nombre 3.)) : …","hints":["Add additionne ses deux sous-expressions.","2 + 3.","Un seul chiffre."],"link":{"href":"lecon-13.html","label":"Revoir « Évaluer »"}}
 ]
 </script>
 

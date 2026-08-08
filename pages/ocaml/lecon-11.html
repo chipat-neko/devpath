@@ -143,6 +143,20 @@ let decrire c =
   <figcaption>L'accent grave (<code>`</code>) marque un tag <strong>ouvert</strong>&#160;: réutilisable et non déclaré. Un constructeur ordinaire, lui, est <strong>lié à son type</strong> — plus sûr, moins souple.</figcaption>
 </figure>
 
+<p>Le type inféré <code>[&gt; `Rouge ]</code> se lit «&nbsp;au moins le tag <code>`Rouge</code>&nbsp;». OCaml distingue en effet deux bornes&#160;: <code>[&gt; … ]</code> pour un type <strong>ouvert</strong> (extensible) et <code>[&lt; … ]</code> pour un type <strong>borné</strong> (au plus ces tags).</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 152" role="img" aria-label="Les deux bornes d'un type de variant polymorphe. En haut, la borne basse notée crochet supérieur : le type crochet-supérieur accent-grave Rouge accepte au moins le tag Rouge et peut en recevoir d'autres ; c'est un type ouvert, typiquement celui d'une valeur produite. En bas, la borne haute notée crochet inférieur : le type crochet-inférieur accent-grave A barre accent-grave B accepte au plus les tags A ou B, pas davantage ; c'est un type borné, typiquement celui qu'attend une fonction.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux bornes&#160;: «&#160;au moins&#160;» et «&#160;au plus&#160;»</text>
+    <rect class="d-accent" x="34" y="36" width="572" height="42" rx="6" />
+    <text class="d-text" x="52" y="62" font-size="11" font-family="monospace">[&gt; `Rouge ]</text>
+    <text class="d-text" x="196" y="62" font-size="11">au MOINS ce tag — ouvert (une valeur produite)</text>
+    <rect class="d-box" x="34" y="88" width="572" height="42" rx="6" />
+    <text class="d-text" x="52" y="114" font-size="11" font-family="monospace">[&lt; `A | `B ]</text>
+    <text class="d-text" x="196" y="114" font-size="11">au PLUS ces tags — borné (une fonction qui accepte)</text>
+  </svg>
+  <figcaption>Le sens du crochet donne la borne&#160;: <code>[&gt; … ]</code> = «&nbsp;au moins&nbsp;» (extensible), <code>[&lt; … ]</code> = «&nbsp;au plus&nbsp;» (restreint). Une valeur tend vers l'ouvert, une fonction vers le borné.</figcaption>
+</figure>
+
 <h2>Le problème que résolvent les GADT</h2>
 <p>Imagine un petit langage d'expressions&nbsp;: des entiers, des booléens, des additions. Avec un variant ordinaire, rien n'empêche d'écrire une expression <em>mal typée</em>, comme «&nbsp;additionner un booléen&nbsp;». L'évaluateur doit alors gérer des cas absurdes à l'exécution.</p>
 <figure class="code-block" data-file="probleme.ml"><pre><code class="language-ocaml">(* Variant ordinaire : on PEUT construire des expressions absurdes *)
@@ -182,6 +196,8 @@ let rec eval : type a. a expr -&gt; a = function
   <figcaption>Parce que <code>Add</code> exige deux <code>int expr</code>, l'expression absurde n'est pas «&nbsp;attrapée à l'exécution&nbsp;»&#160;: elle est <strong>impossible à écrire</strong>. Le type porte l'invariant.</figcaption>
 </figure>
 
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin — l'annotation <code>type a.</code></p><p>La fonction <code>eval</code> porte l'annotation <code>: type a. a expr -&gt; a</code>. Ce <code>type a.</code> introduit un type <em>localement abstrait</em>&#160;: il prévient le compilateur que <code>a</code> change de sens d'un cas à l'autre du <code>match</code> (<code>int</code> pour <code>Int</code>, <code>bool</code> pour <code>Bool</code>). Sans lui, l'inférence — d'habitude complète — échoue sur les GADT récursifs, car elle voudrait un seul <code>a</code> valable pour toute la fonction.</p></div></div>
+
 <h2>Pourquoi c'est puissant</h2>
 <p>Les GADT permettent d'<strong>encoder des règles dans les types</strong>&nbsp;: un état impossible devient inexprimable. C'est l'idéal du «&nbsp;<em>make illegal states unrepresentable</em>&nbsp;» poussé à son extrême. On les emploie pour des interpréteurs typés, des encodeurs/décodeurs sûrs, des machines à états où chaque transition est vérifiée à la compilation. C'est l'une des raisons pour lesquelles OCaml est prisé là où la <em>correction</em> compte (compilateurs, finance, vérification).</p>
 
@@ -219,6 +235,8 @@ let rec eval : type a. a expr -&gt; a = function
   <dt>Invariant</dt><dd>Propriété toujours vraie d'une valeur. Avec un GADT, on l'inscrit dans le type&#160;: le compilateur la garantit au lieu de la vérifier à l'exécution.</dd>
   <dt>«&nbsp;Make illegal states unrepresentable&nbsp;»</dt><dd>Principe de conception&#160;: façonner ses types pour qu'un état invalide soit <strong>impossible à construire</strong>, plutôt que détecté après coup.</dd>
   <dt>Inférence de type</dt><dd>Capacité du compilateur à déduire seul le type des expressions, sans annotations&#160;; les GADT récursifs demandent parfois une aide via <code>type a.</code>.</dd>
+  <dt>Type borné (<code>[&lt; … ]</code>)</dt><dd>Type de variant polymorphe qui accepte «&nbsp;au plus&nbsp;» les tags listés — typiquement ce qu'une fonction déclare recevoir, par opposition au type ouvert <code>[&gt; … ]</code>.</dd>
+  <dt>Type localement abstrait (<code>type a.</code>)</dt><dd>Annotation introduisant une variable de type propre à une fonction&#160;; indispensable sur une fonction récursive qui filtre un GADT, où le type change d'un cas à l'autre.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -242,7 +260,7 @@ let rec eval : type a. a expr -&gt; a = function
 [
   {"type":"text","accept":["`","`Ok","backtick","accent grave"],"placeholder":"le caractère qui débute un variant POLYMORPHE (… Ok 1) : …","hints":["`Ok 1 (sans déclaration de type préalable).","L'accent grave.","Un backtick."],"link":{"href":"lecon-11.html","label":"Revoir « Les variants polymorphes »"}},
   {"type":"text","accept":["sûreté de type","type safety","sécurité de type","surete de type","securite de type","sûreté","typage"],"placeholder":"ce que le GADT garantit en rejetant Add (Bool true, Int 1) à la compilation : la … de type","hints":["Add ne doit recevoir que des expressions entières.","Les types impossibles ne compilent même pas.","« … de type » (type safety)."],"link":{"href":"lecon-11.html","label":"Revoir « Les GADT »"}},
-  null
+  {"type":"text","accept":["bool"],"placeholder":"le type de « eval (Bool true) » — le GADT garantit le bon type : …","hints":["Bool : bool -> bool expr.","eval : a expr -> a, donc pour une bool expr…","Quatre lettres : b___."],"link":{"href":"lecon-11.html","label":"Revoir « Les GADT »"}}
 ]
 </script>
 

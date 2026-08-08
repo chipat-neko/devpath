@@ -151,6 +151,7 @@ let resultat_principal = autre_calcul () in
 let resultat_parallele = Domain.join d in
 (* les deux calculs ont tourné en MÊME temps, sur 2 cœurs *)</code></pre></figure>
 <p>C'est un changement majeur&nbsp;: OCaml peut désormais exploiter pleinement les processeurs modernes pour le calcul intensif, là où il était auparavant limité à un cœur.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Les domains <strong>partagent la mémoire</strong>. Deux domains qui modifient la même référence en même temps créent une «&nbsp;data race&nbsp;»&#160;: un bug non déterministe. Protège tout état partagé avec le module <code>Atomic</code> (compteurs, drapeaux) ou un <code>Mutex</code>&#160;; mieux encore, fais communiquer les domains par <strong>messages</strong> plutôt que par mémoire partagée.</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 188" role="img" aria-label="Concurrence asynchrone contre parallélisme. À gauche, Lwt ou Eio entrelace plusieurs tâches d'attente sur un seul cœur : c'est de la concurrence coopérative, idéale pour les entrées-sorties. À droite, les domains d'OCaml 5 exécutent des calculs lourds sur plusieurs cœurs en même temps : c'est du vrai parallélisme, pour le calcul.">
@@ -182,6 +183,27 @@ let resultat_parallele = Domain.join d in
 let lire_donnees () = Eio.Path.load chemin   (* a l'air synchrone... *)
 (* ...mais ne bloque pas : l'effet "attendre" est géré par le runtime *)</code></pre></figure>
 <p>Les effects handlers résolvent un vieux problème (la «&nbsp;couleur des fonctions&nbsp;»&nbsp;: devoir distinguer fonctions async et sync). La bibliothèque <strong>Eio</strong>, bâtie dessus, propose une concurrence moderne où le code asynchrone se lit naturellement. C'est l'avenir de la concurrence en OCaml.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le principe d'un effect handler. Une fonction de calcul s'exécute normalement puis déclenche un effet « attendre » au lieu de bloquer. Le handler extérieur, fourni par le runtime, intercepte cet effet : il met le calcul en pause, exécute d'autres tâches pendant l'attente, puis reprend le calcul exactement là où il s'était arrêté. Le code appelant n'a pas eu besoin d'être marqué async.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un effet est déclenché, un handler décide quoi en faire</text>
+    <rect class="d-box" x="30" y="40" width="180" height="50" rx="6" />
+    <text class="d-text" x="120" y="62" text-anchor="middle" font-size="10.5">mon calcul</text>
+    <text class="d-mut" x="120" y="80" text-anchor="middle" font-size="9.5">déclenche «&#160;attendre&#160;»</text>
+    <line class="d-line" x1="210" y1="65" x2="266" y2="65" /><path class="d-line" d="M260 61 L268 65 L260 69" fill="none" /><text class="d-tag" x="238" y="57" text-anchor="middle" font-size="9">effet</text>
+    <rect class="d-accent" x="268" y="40" width="180" height="50" rx="6" />
+    <text class="d-text" x="358" y="62" text-anchor="middle" font-size="10.5">handler (runtime)</text>
+    <text class="d-mut" x="358" y="80" text-anchor="middle" font-size="9.5">suspend, fait autre chose</text>
+    <line class="d-line" x1="448" y1="65" x2="504" y2="65" /><path class="d-line" d="M498 61 L506 65 L498 69" fill="none" />
+    <rect class="d-box" x="506" y="40" width="110" height="50" rx="6" />
+    <text class="d-text" x="561" y="62" text-anchor="middle" font-size="10">autres</text>
+    <text class="d-text" x="561" y="78" text-anchor="middle" font-size="10">tâches</text>
+    <line class="d-line" x1="358" y1="90" x2="358" y2="116" /><path class="d-line" d="M354 112 L358 118 L362 112" fill="none" />
+    <rect class="d-accent" x="188" y="120" width="340" height="42" rx="6" />
+    <text class="d-text" x="358" y="140" text-anchor="middle" font-size="10.5">le calcul REPREND là où il s'était arrêté</text>
+    <text class="d-mut" x="358" y="156" text-anchor="middle" font-size="9.5">sans que «&#160;mon calcul&#160;» soit marqué async</text>
+  </svg>
+  <figcaption>Un <strong>effet</strong> agit comme un appel au runtime&#160;: le calcul se suspend, le <strong>handler</strong> comble l'attente avec d'autres tâches, puis reprend le calcul intact. D'où le code asynchrone «&nbsp;sans couleur&nbsp;» d'Eio.</figcaption>
+</figure>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre <strong>concurrence asynchrone</strong> (Lwt, sur un cœur&nbsp;: idéale pour les entrées/sorties, gérer beaucoup d'attentes) et <strong>parallélisme</strong> (domains d'OCaml 5, sur plusieurs cœurs&nbsp;: pour accélérer du calcul). Lancer un calcul lourd dans Lwt ne le rend pas plus rapide — il bloquera la seule tâche. Pour du calcul, utilise les domains&nbsp;; pour de l'attente réseau, Lwt ou Eio. Choisir le bon outil selon «&nbsp;j'attends&nbsp;» ou «&nbsp;je calcule&nbsp;» est la clé.</p></div></div>
@@ -215,6 +237,7 @@ let lire_donnees () = Eio.Path.load chemin   (* a l'air synchrone... *)
   <dt>Domain</dt><dd>Unité de parallélisme d'OCaml 5, exécutée sur un cœur. <code>Domain.spawn</code> lance un calcul, <code>Domain.join</code> en récupère le résultat.</dd>
   <dt>Effect handler</dt><dd>Mécanisme d'OCaml 5&#160;: une fonction déclenche un <em>effet</em>, un <em>handler</em> extérieur décide quoi en faire (y compris suspendre/reprendre). Base d'<strong>Eio</strong>.</dd>
   <dt>Couleur des fonctions</dt><dd>Contrainte de devoir distinguer partout fonctions <code>async</code> et synchrones&#160;; les effets d'OCaml 5 la font disparaître.</dd>
+  <dt><code>Atomic</code></dt><dd>Module d'OCaml 5 pour lire et modifier une valeur partagée entre domains <strong>sans data race</strong> (compteur, drapeau)&#160;; alternative légère à un <code>Mutex</code> pour un état simple.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -238,7 +261,7 @@ let lire_donnees () = Eio.Path.load chemin   (* a l'air synchrone... *)
 [
   {"type":"text","accept":[">>=","bind"],"placeholder":"l'opérateur Lwt pour ENCHAÎNER deux promesses de façon lisible : …","hints":["p ??? (fun x -> ...).","L'opérateur « bind ».","Trois chevrons et un égal."],"link":{"href":"lecon-12.html","label":"Revoir « Lwt »"}},
   {"type":"text","accept":["domains","domain","les domains"],"placeholder":"pour un calcul lourd MULTI-CŒURS (Lwt sert, lui, à l'I/O), OCaml 5 fournit les … : …","hints":["Lwt est mono-cœur (concurrence coopérative).","Les ??????? exploitent les cœurs en parallélisme réel.","Sept lettres."],"link":{"href":"lecon-12.html","label":"Revoir « Les domains »"}},
-  null
+  {"type":"text","accept":["Eio","eio"],"placeholder":"la bibliothèque OCaml 5 bâtie sur les effects handlers, concurrence « sans couleur » : …","hints":["Elle rend le code async aussi lisible que du sync.","Trois lettres.","E__."],"link":{"href":"lecon-12.html","label":"Revoir « Les effects handlers »"}}
 ]
 </script>
 
