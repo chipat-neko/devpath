@@ -169,6 +169,35 @@ db.produits.dropIndex({ categorie: 1 })</code></pre></figure>
 
 <h2>Index composés et requêtes couvertes</h2>
 <p>Un <strong>index composé</strong> porte sur plusieurs champs. Son <em>ordre</em> compte&nbsp;: on place d'abord les champs testés par égalité, puis ceux servant au tri ou aux plages. Un même index composé sert alors plusieurs requêtes qui commencent par ses premiers champs (le principe du <em>préfixe</em>).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 214" role="img" aria-label="Fonctionnement d'un index composé sur les champs client puis date. Les entrées de l'index sont d'abord regroupées par client, et à l'intérieur de chaque client triées par date décroissante. Une requête qui filtre sur un client et trie par date lit une tranche contiguë de l'index, déjà dans le bon ordre, sans tri supplémentaire. En revanche, une recherche portant sur la date seule ne peut pas utiliser cet index, car la date n'est pas le premier champ : ses valeurs sont éparpillées entre tous les clients.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Index composé { client, date } — trié par client, puis par date</text>
+    <rect class="d-frame" x="40" y="40" width="300" height="150" rx="6" />
+    <text class="d-mut" x="190" y="58" text-anchor="middle" font-size="9">ordre des entrées dans l'index</text>
+    <rect class="d-accent" x="56" y="70" width="268" height="20" rx="3" />
+    <text class="d-text" x="66" y="84" font-size="9" font-family="monospace">u_3&#160;·&#160;2024-05-09</text>
+    <rect class="d-accent" x="56" y="92" width="268" height="20" rx="3" />
+    <text class="d-text" x="66" y="106" font-size="9" font-family="monospace">u_3&#160;·&#160;2024-03-02</text>
+    <rect class="d-accent" x="56" y="114" width="268" height="20" rx="3" />
+    <text class="d-text" x="66" y="128" font-size="9" font-family="monospace">u_3&#160;·&#160;2024-01-27</text>
+    <rect class="d-box" x="56" y="136" width="268" height="20" rx="3" />
+    <text class="d-mut" x="66" y="150" font-size="9" font-family="monospace">u_5&#160;·&#160;2024-04-11</text>
+    <rect class="d-box" x="56" y="158" width="268" height="20" rx="3" />
+    <text class="d-mut" x="66" y="172" font-size="9" font-family="monospace">u_7&#160;·&#160;2024-06-30</text>
+    <path class="d-accent" d="M344 112 L392 112" fill="none" stroke-width="2" />
+    <path class="d-accent" d="M386 107 L394 112 L386 117" fill="none" stroke-width="2" />
+    <rect class="d-frame" x="398" y="66" width="228" height="60" rx="6" />
+    <text class="d-text" x="412" y="86" font-size="9" font-family="monospace">find({ client: "u_3" })</text>
+    <text class="d-text" x="412" y="102" font-size="9" font-family="monospace">&#160;&#160;.sort({ date: -1 })</text>
+    <text class="d-mut" x="412" y="118" font-size="8.5">lit une tranche contiguë, déjà triée</text>
+    <rect class="d-box" x="398" y="140" width="228" height="50" rx="6" stroke-dasharray="4 3" />
+    <text class="d-mut" x="412" y="160" font-size="9" font-family="monospace">find({ date: … })&#160;&#160;seule</text>
+    <text class="d-mut" x="412" y="176" font-size="8.5">n'utilise PAS l'index (2e champ)</text>
+  </svg>
+  <figcaption>Un index <code>{ client, date }</code> range les entrées par <strong>client</strong>, puis par <strong>date</strong>. Filtrer sur un client et trier par date lit une <strong>tranche contiguë</strong> déjà ordonnée&nbsp;; mais chercher par <code>date</code> seule ne peut pas s'appuyer sur cet index — c'est le principe du <strong>préfixe</strong>.</figcaption>
+</figure>
+
 <figure class="code-block" data-file="index-compose.js"><pre><code class="language-javascript">// L'ORDRE des champs compte : égalité d'abord, tri/plage ensuite
 db.commandes.createIndex({ client: 1, date: -1 })
 
@@ -182,7 +211,8 @@ db.commandes.find(
   { _id: 0, client: 1, date: 1 }   // projection incluse dans l'index
 )</code></pre></figure>
 <p>Une <strong>requête couverte</strong> est le Graal de la performance&nbsp;: si l'index contient déjà tous les champs demandés (filtre <em>et</em> projection), la base répond depuis l'index seul, sans jamais lire les documents. Deux fois moins de travail.</p>
-<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — la règle « ÉÉP »</p><p>Pour ordonner les champs d'un index composé&nbsp;: <strong>É</strong>galité, puis tri (<strong>É</strong> comme « <em>sort</em> »), puis <strong>P</strong>lage (<code>$gt</code>, <code>$lt</code>). Cet ordre maximise le nombre de requêtes qu'un seul index peut servir.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — la règle « ÉÉP »</p><p>Pour ordonner les champs d'un index composé&nbsp;: <strong>É</strong>galité, puis tri (<strong>É</strong> comme « <em>sort</em> »), puis <strong>P</strong>lage (<code>$gt</code>, <code>$lt</code>). Cet ordre maximise le nombre de requêtes qu'un seul index peut servir. C'est la règle <strong>ESR</strong> (<em>Equality, Sort, Range</em>) en anglais.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un index composé ne sert pas un champ « du milieu »</p><p>Erreur classique&nbsp;: croire qu'un index <code>{ client:&nbsp;1, date:&nbsp;-1 }</code> accélère aussi une recherche sur <code>date</code> seule. Non&nbsp;: comme dans un annuaire trié par nom puis prénom, on ne peut pas s'en servir pour chercher un <em>prénom</em> directement. L'index n'aide que les requêtes commençant par son <strong>préfixe</strong> — ici <code>client</code>, ou <code>client&nbsp;+&nbsp;date</code>. Pour interroger <code>date</code> seule, il faut un index à part.</p></div></div>
 
 <h2>Le coût des index</h2>
 <p>Un index n'est pas gratuit. Il occupe de l'<strong>espace</strong> (mémoire et disque) et surtout, il doit être <strong>mis à jour à chaque écriture</strong>&nbsp;: insérer ou modifier un document oblige à retoucher tous les index concernés. Trop d'index ralentit donc les écritures. On indexe les champs vraiment interrogés, pas tout «&nbsp;au cas où&nbsp;».</p>
@@ -211,6 +241,7 @@ db.commandes.find(
   <dt>Balayage complet (<em>collection scan</em>)</dt><dd>Lecture de tous les documents, faute d'index&nbsp;: coût proportionnel à la taille de la collection (<code>COLLSCAN</code>).</dd>
   <dt>Parcours d'index (<code>IXSCAN</code>)</dt><dd>Accès qui passe par l'index trié plutôt que par un balayage&nbsp;: le plan qu'on veut voir dans <code>explain</code>.</dd>
   <dt>Index composé</dt><dd>Index sur plusieurs champs&nbsp;; l'ordre des champs décide des requêtes qu'il peut servir (principe du préfixe).</dd>
+  <dt>Règle ESR (<em>Equality, Sort, Range</em>)</dt><dd>Ordre recommandé des champs d'un index composé&nbsp;: d'abord l'égalité, puis le tri, enfin la plage (<code>$gt</code>, <code>$lt</code>). Il maximise le nombre de requêtes qu'un même index peut servir.</dd>
   <dt>Requête couverte</dt><dd>Requête dont tous les champs (filtre et projection) sont dans l'index&nbsp;: la base répond sans ouvrir les documents.</dd>
   <dt>Sélectivité</dt><dd>Capacité d'un champ à distinguer les documents&nbsp;; plus un champ prend de valeurs distinctes, plus son index est utile.</dd>
   <dt>Index unique</dt><dd>Index qui interdit les valeurs en double (ex. une adresse e-mail), garantissant l'unicité à l'écriture.</dd>
@@ -239,13 +270,15 @@ db.commandes.find(
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["createIndex","createindex","db.produits.createIndex","create index"],"placeholder":"la méthode MongoDB pour créer un index sur un champ","hints":["Elle prend un objet { champ: 1 }.","« create… »","db.collection.____({ champ: 1 })"],"link":{"href":"lecon-07.html","label":"Revoir « Créer un index »"}},
-  {"type":"text","accept":["explain","explain()",".explain","executionStats"],"placeholder":"la méthode qui montre le plan d'exécution (IXSCAN vs COLLSCAN)","hints":["On l'ajoute après find(...).","Elle « explique » ce que fait la base.","find(...).____()"],"link":{"href":"lecon-07.html","label":"Revoir « Créer un index et vérifier »"}}
+  {"type":"text","accept":["unique","{ unique: true }","{unique: true}","{unique:true}","unique: true","{ unique:true }"],"placeholder":"l'option de createIndex qui interdit deux comptes avec la même adresse","hints":["On la passe en SECOND argument de createIndex.","Elle garantit l'unicité des valeurs indexées.","{ ____: true }"],"link":{"href":"lecon-07.html","label":"Revoir « Le coût des index »"}},
+  {"type":"text","accept":["{ client: 1, date: -1 }","{client: 1, date: -1}","{client:1, date:-1}","{ client:1, date:-1 }","db.commandes.createIndex({ client: 1, date: -1 })","createIndex({ client: 1, date: -1 })"],"placeholder":"l'index composé : d'abord le champ d'égalité (client), puis le tri (date décroissant)","hints":["L'égalité AVANT le tri, c'est la règle ESR.","client en croissant (1), date en décroissant (-1).","{ client: 1, date: ___ }"],"link":{"href":"lecon-07.html","label":"Revoir « Index composés et requêtes couvertes »"}},
+  {"type":"text","accept":["db.users.createIndex({ email: 1 })","db.users.createIndex({email: 1})","db.users.createIndex({email:1})","db.users.createIndex({ email:1 })","createIndex({ email: 1 })","createIndex({email:1})"],"placeholder":"écris la création d'un index croissant sur le champ email de la collection users","hints":["Appelle la méthode sur db.users.","Un champ, ordre croissant : { email: 1 }.","db.users.createIndex({ ____: 1 })"],"link":{"href":"lecon-07.html","label":"Revoir « Créer un index et vérifier »"}}
 ]
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une requête <code>db.clients.find({ email: "a@b.fr" })</code> est lente sur une grosse collection. Quel index créer, et quelle option ajouter pour garantir l'unicité des adresses&nbsp;?</p><details><summary>Voir une solution</summary><p>On crée un index sur <code>email</code> avec l'option <code>unique</code>&nbsp;: <code>db.clients.createIndex({ email: 1 }, { unique: true })</code>. La recherche passe alors d'un balayage complet à un parcours d'index (accès quasi immédiat), et la base <strong>refuse</strong> désormais deux comptes avec la même adresse.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu interroges souvent <code>find({ client: X }).sort({ date: -1 })</code>. Quel index composé crées-tu, et dans quel ordre&nbsp;? Pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p><code>db.commandes.createIndex({ client: 1, date: -1 })</code>. On place <strong>d'abord</strong> le champ testé par égalité (<code>client</code>), <strong>puis</strong> le champ de tri (<code>date</code>, décroissant). Cet ordre permet à un seul index de filtrer par client <em>et</em> de renvoyer les résultats déjà triés par date&nbsp;: pas de tri supplémentaire en mémoire. L'inverse (<code>{ date: -1, client: 1 }</code>) ne servirait pas cette requête sur un client donné.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Application</span></div><p>Les connexions cherchent un compte par son adresse dans la collection <code>users</code>. Écris la commande qui crée un index <strong>croissant</strong> sur le champ <code>email</code>.</p><details><summary>Voir une solution</summary><p><code>db.users.createIndex({ email: 1 })</code>. La méthode <code>createIndex</code> prend un objet décrivant le(s) champ(s) et l'ordre&nbsp;: <code>1</code> pour croissant, <code>-1</code> pour décroissant. La recherche par e-mail passe alors d'un balayage complet à un parcours d'index. En prime, on pourrait ajouter <code>{ unique: true }</code> en second argument pour interdire deux comptes avec la même adresse.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

@@ -162,9 +162,44 @@
 
 <h2>Ordonner les étapes pour la performance</h2>
 <p>L'ordre des étapes change tout. On place <code>$match</code> (et <code>$limit</code>) <strong>le plus tôt possible</strong>&nbsp;: filtrer d'abord réduit le volume que les étapes suivantes, plus coûteuses, devront traiter. Mieux encore, un <code>$match</code> en tête de pipeline peut s'appuyer sur un <strong>index</strong> (leçon&nbsp;7) et n'entrer dans le pipeline que les documents utiles.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Le pipeline vu comme un entonnoir qui réduit le volume à chaque étape. Un million de documents entrent. L'étape $match n'en laisse passer que 40 000 (ceux de l'année filtrée). L'étape $group les réduit à 20 groupes. L'étape $sort ordonne ces 20 groupes. L'étape $limit ne garde que le top 5 en sortie. Plus le filtre est placé tôt, moins les étapes suivantes, plus coûteuses, ont de documents à traiter.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">À chaque étape, le volume fond</text>
+    <rect class="d-box" x="20" y="46" width="120" height="120" rx="6" />
+    <text class="d-text" x="80" y="100" text-anchor="middle" font-size="9">1 000 000</text>
+    <text class="d-mut" x="80" y="116" text-anchor="middle" font-size="8">documents</text>
+    <text class="d-mut" x="80" y="182" text-anchor="middle" font-size="8.5">entrée</text>
+    <rect class="d-box" x="176" y="58" width="104" height="96" rx="6" />
+    <text class="d-text" x="228" y="100" text-anchor="middle" font-size="9.5">$match</text>
+    <text class="d-mut" x="228" y="116" text-anchor="middle" font-size="8">40 000</text>
+    <text class="d-mut" x="228" y="182" text-anchor="middle" font-size="8.5">filtre (index)</text>
+    <rect class="d-box" x="316" y="74" width="88" height="64" rx="6" />
+    <text class="d-text" x="360" y="102" text-anchor="middle" font-size="9.5">$group</text>
+    <text class="d-mut" x="360" y="117" text-anchor="middle" font-size="8">20 groupes</text>
+    <text class="d-mut" x="360" y="182" text-anchor="middle" font-size="8.5">regroupe</text>
+    <rect class="d-box" x="440" y="82" width="72" height="48" rx="6" />
+    <text class="d-text" x="476" y="102" text-anchor="middle" font-size="9">$sort</text>
+    <text class="d-mut" x="476" y="116" text-anchor="middle" font-size="8">20 triés</text>
+    <text class="d-mut" x="476" y="182" text-anchor="middle" font-size="8.5">trie</text>
+    <rect class="d-accent" x="548" y="90" width="72" height="32" rx="6" />
+    <text class="d-text" x="584" y="105" text-anchor="middle" font-size="9">$limit</text>
+    <text class="d-mut" x="584" y="117" text-anchor="middle" font-size="8">top 5</text>
+    <text class="d-mut" x="584" y="182" text-anchor="middle" font-size="8.5">sortie</text>
+    <path class="d-accent" d="M143 106 L173 106" fill="none" stroke-width="2" /><path class="d-accent" d="M167 101 L175 106 L167 111" fill="none" stroke-width="2" />
+    <path class="d-accent" d="M283 106 L313 106" fill="none" stroke-width="2" /><path class="d-accent" d="M307 101 L315 106 L307 111" fill="none" stroke-width="2" />
+    <path class="d-accent" d="M407 106 L437 106" fill="none" stroke-width="2" /><path class="d-accent" d="M401 101 L409 106 L401 111" fill="none" stroke-width="2" />
+    <path class="d-accent" d="M515 106 L545 106" fill="none" stroke-width="2" /><path class="d-accent" d="M539 101 L547 106 L539 111" fill="none" stroke-width="2" />
+    <text class="d-mut" x="320" y="202" text-anchor="middle" font-size="9">filtrer tôt = moins de documents pour les étapes coûteuses qui suivent</text>
+  </svg>
+  <figcaption>Chaque étape <strong>rétrécit le flux</strong>. Placer <code>$match</code> en tête (sur un <strong>index</strong>) fait chuter le volume dès l'entrée&nbsp;; le <code>$group</code>, plus coûteux, ne travaille alors que sur une fraction des documents. Déplacer ce filtre après le <code>$group</code> obligerait à tout charger d'abord.</figcaption>
+</figure>
+
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Filtre tôt, réduis tôt&nbsp;: <code>$match</code> puis <code>$project</code> avant un gros <code>$group</code>. Chaque document écarté en amont est un document que les étapes lourdes n'auront pas à traiter. Un <code>$match</code> en première position profite en plus des index.</p></div></div>
 
 <div class="callout callout--warning"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Après un <code>$group</code>, les documents changent de forme&nbsp;: leur clé s'appelle désormais <code>_id</code> et les champs d'origine ont disparu (sauf ceux recalculés). Un <code>$match</code> placé <em>après</em> le <code>$group</code> ne peut donc plus filtrer sur les champs initiaux&nbsp;— pense à l'ordre.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">$sort suivi de $limit : le top-N gratuit</p><p>Quand un <code>$sort</code> est <strong>immédiatement suivi</strong> d'un <code>$limit</code>, le moteur ne trie pas tout pour ne garder que quelques lignes&nbsp;: il ne conserve en mémoire que les <em>N meilleures</em> au fil du parcours. «&nbsp;Top&nbsp;5 par chiffre d'affaires&nbsp;» ne mémorise donc que 5&nbsp;documents, pas la collection entière. Garde ces deux étapes <strong>collées</strong> pour profiter de cette optimisation&nbsp;: une étape intercalée la casse.</p></div></div>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le pipeline compte bien d'autres étapes&nbsp;: <code>$unwind</code> (éclater un tableau en plusieurs documents), <code>$lookup</code> (une «&nbsp;jointure&nbsp;» entre collections), <code>$bucket</code> (répartir en tranches), <code>$facet</code> (plusieurs agrégations en une passe). Historiquement, ce travail se faisait en <strong>map-reduce</strong>&nbsp;; le pipeline l'a remplacé car il est plus lisible et mieux optimisé.</p></div></div>
 
@@ -190,6 +225,7 @@
   <dt>Étape (<em>stage</em>)</dt><dd>Une opération du pipeline (<code>$match</code>, <code>$group</code>…), écrite comme un objet dans le tableau passé à <code>aggregate</code>.</dd>
   <dt><code>$match</code></dt><dd>Étape de filtrage, avec les mêmes opérateurs que <code>find</code>&nbsp;; à placer tôt pour réduire le volume.</dd>
   <dt><code>$group</code></dt><dd>Étape qui rassemble les documents par une clé <code>_id</code> et calcule une valeur par groupe.</dd>
+  <dt><code>$sort</code></dt><dd>Étape qui ordonne le flux&nbsp;: <code>1</code> = croissant, <code>-1</code> = décroissant&nbsp;; suivie d'un <code>$limit</code>, elle ne garde que les N meilleurs (top&#8209;N).</dd>
   <dt>Accumulateur</dt><dd>Opérateur de calcul par groupe&nbsp;: <code>$sum</code>, <code>$avg</code>, <code>$min</code>, <code>$max</code>, <code>$push</code>…</dd>
   <dt><code>$project</code></dt><dd>Étape qui remodèle les documents&nbsp;: choisir, renommer ou calculer des champs pour la sortie.</dd>
 </dl>
@@ -218,7 +254,8 @@
 <script type="application/json" data-exos>
 [
   {"type":"text","accept":["$group","group","$group"],"placeholder":"l'étape qui regroupe les documents et calcule une valeur par groupe","hints":["Elle utilise une clé _id.","On y met des accumulateurs comme $sum.","« $g… »"],"link":{"href":"lecon-08.html","label":"Revoir « Les étapes essentielles »"}},
-  {"type":"text","accept":["$match","match","$match tôt","au début"],"placeholder":"l'étape de filtrage à placer le plus tôt possible","hints":["Mêmes opérateurs que find.","La placer tôt réduit le volume.","« $m… »"],"link":{"href":"lecon-08.html","label":"Revoir « Ordonner les étapes »"}}
+  {"type":"text","accept":["$match","match","$match tôt","au début"],"placeholder":"l'étape de filtrage à placer le plus tôt possible","hints":["Mêmes opérateurs que find.","La placer tôt réduit le volume.","« $m… »"],"link":{"href":"lecon-08.html","label":"Revoir « Ordonner les étapes »"}},
+  {"type":"text","accept":["{ $match: { statut: \"payee\" } }","{$match:{statut:\"payee\"}}","{ $match: { statut: 'payee' } }","{$match:{statut:'payee'}}","$match: { statut: \"payee\" }","statut: \"payee\"","{ statut: \"payee\" }"],"placeholder":"écris l'étape qui ne garde que les commandes dont le statut vaut « payee »","hints":["C'est un $match, le filtre du pipeline.","Même syntaxe qu'un critère find : { champ: valeur }.","Forme attendue : { $match: { statut: \"payee\" } }."],"link":{"href":"lecon-08.html","label":"Revoir « Les étapes essentielles »"}}
 ]
 </script>
 
@@ -232,6 +269,7 @@
   { $sort: { total: -1 } },                           // du plus élevé
   { $limit: 3 }                                       // top 3
 ])</code></pre></figure><p>On filtre d'abord l'année (idéalement via un index), on regroupe par catégorie en sommant <code>prix × qte</code>, puis on trie et on tronque. Le <code>$match</code> en tête évite de faire entrer les autres années dans le calcul.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Application</span></div><p>Une collection <code>commandes</code> contient un champ <code>statut</code> (<code>"payee"</code>, <code>"en_attente"</code>, <code>"annulee"</code>). Écris <strong>l'étape de pipeline</strong> qui ne laisse passer que les commandes payées, pour la placer en tête d'une agrégation.</p><details><summary>Voir une solution</summary><p>C'est un <code>$match</code>, avec le même critère qu'un <code>find</code>&nbsp;:</p><figure class="code-block" data-file="etape-match.js"><pre><code class="language-javascript">{ $match: { statut: "payee" } }</code></pre></figure><p>Placée en <strong>première position</strong>, cette étape écarte tout de suite les commandes non payées&nbsp;: les étapes suivantes (un <code>$group</code> qui somme les montants, par exemple) ne travaillent que sur les documents utiles, et le filtre peut s'appuyer sur un <strong>index</strong> sur <code>statut</code>.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
