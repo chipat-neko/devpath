@@ -169,11 +169,15 @@ for ($i = 1; $i -le $Fois; $i++) {
   <figcaption>Chaque argument nommé alimente la variable de même nom dans <code>param()</code>. Un paramètre absent de l'appel conserve sa valeur par défaut (ici <code>"le monde"</code> et <code>1</code>).</figcaption>
 </figure>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Rendre un paramètre obligatoire ou validé</p><p>Deux attributs, posés juste avant un paramètre, fiabilisent l'appel. <code>[Parameter(Mandatory)]</code> rend le paramètre <strong>obligatoire</strong>&nbsp;: s'il manque, PowerShell le <em>demande</em> au lieu de planter. <code>[ValidateSet("dev","prod")]</code> <strong>restreint</strong> les valeurs acceptées&nbsp;: tout autre argument est rejeté avant la moindre ligne exécutée. On attrape ainsi les erreurs d'usage à la porte d'entrée.</p></div></div>
+
 <h2>Lire une entrée et l'environnement</h2>
 <p><code>Read-Host</code> demande une saisie à l'utilisateur&nbsp;; les variables d'environnement sont accessibles via le lecteur <code>$env:</code>.</p>
 <figure class="code-block" data-file="Console"><pre><code class="language-powershell">$ville = Read-Host "Ta ville"
 Write-Output "Bonjour depuis $ville, $env:USERNAME"
 $env:COMPUTERNAME      # nom de la machine</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Des chemins fiables avec <code>$PSScriptRoot</code></p><p>Un script qui lit un fichier voisin par chemin <em>relatif</em> casse dès qu'on le lance depuis un autre dossier. La variable automatique <code>$PSScriptRoot</code> donne le dossier <strong>du script lui-même</strong>&nbsp;: écris <code>"$PSScriptRoot\config.json"</code> et le script retrouve son voisin, peu importe le répertoire courant.</p></div></div>
 
 <h2>Documenter avec les commentaires d'aide</h2>
 <p>PowerShell sait générer une vraie page d'aide à partir de commentaires structurés. Place un bloc <code>&lt;# … #&gt;</code> en tête du script avec des sections <code>.SYNOPSIS</code>, <code>.DESCRIPTION</code>, <code>.PARAMETER</code>, <code>.EXAMPLE</code>.</p>
@@ -195,6 +199,19 @@ Get-CimInstance Win32_LogicalDisk | Where-Object DriveType -eq 3
 
 # Le script appelant peut alors :
 # .\disques.ps1 | Where-Object FreeSpace -lt 10GB</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Deux voies de sortie. En haut, la bonne : un script qui émet des objets alimente un pipeline où l'appelant peut enchaîner Where-Object, Sort-Object puis Export-Csv ; la sortie est réutilisable. En bas, à éviter : Write-Host envoie du texte directement à l'écran, un cul-de-sac que rien ne peut filtrer ni exporter.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Émettre des objets ouvre le pipeline ; Write-Host le ferme</text>
+    <rect class="d-accent" x="20" y="44" width="188" height="44" rx="8" /><text class="d-text" x="114" y="63" text-anchor="middle" font-size="10.5">script → objets</text><text class="d-mut" x="114" y="79" text-anchor="middle" font-size="9">sortie structurée</text>
+    <path class="d-line" d="M208 66 L250 66" fill="none" /><polygon class="d-dot" points="250,66 240,61 240,71" />
+    <rect class="d-box" x="252" y="44" width="372" height="44" rx="8" /><text class="d-text" x="438" y="63" text-anchor="middle" font-size="10">| Where-Object · Sort-Object · Export-Csv</text><text class="d-mut" x="438" y="79" text-anchor="middle" font-size="9">l'appelant filtre, trie, exporte — réutilisable ✓</text>
+    <rect class="d-frame" x="20" y="116" width="188" height="44" rx="8" /><text class="d-text" x="114" y="135" text-anchor="middle" font-size="10.5">Write-Host "texte"</text><text class="d-mut" x="114" y="151" text-anchor="middle" font-size="9">texte non structuré</text>
+    <path class="d-line" d="M208 138 L250 138" fill="none" /><polygon class="d-dot" points="250,138 240,133 240,143" />
+    <rect class="d-box" x="252" y="116" width="250" height="44" rx="8" /><text class="d-text" x="377" y="135" text-anchor="middle" font-size="10">écran — cul-de-sac ✗</text><text class="d-mut" x="377" y="151" text-anchor="middle" font-size="9">rien à filtrer ni exporter</text>
+  </svg>
+  <figcaption>Un script qui <strong>émet des objets</strong> se laisse filtrer, trier et exporter par celui qui l'appelle. <code>Write-Host</code>, lui, écrit à l'écran&nbsp;: la donnée s'y perd. D'où la règle «&nbsp;objets, pas texte&nbsp;».</figcaption>
+</figure>
 
 <h2>Un script complet, de bout en bout</h2>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: un rapport quotidien automatisé</p><p>Une administratrice veut, chaque matin, la liste des services censés tourner mais arrêtés, dans un fichier daté. Elle en fait un script paramétré puis le programme dans le Planificateur de tâches Windows&nbsp;: le paramètre <code>-Sortie</code> rend le chemin configurable, et la sortie <strong>objet</strong> se prête à un <code>Export-Csv</code> propre.</p><figure class="code-block" data-file="rapport-services.ps1"><pre><code class="language-powershell">param([string]$Sortie = "C:\rapports")
@@ -236,6 +253,7 @@ Get-Service | Where-Object {
   <dt><code>Read-Host</code></dt><dd>Cmdlet qui demande une saisie interactive à l'utilisateur.</dd>
   <dt><code>$env:</code></dt><dd>Lecteur donnant accès aux variables d'environnement (<code>$env:USERNAME</code>).</dd>
   <dt>Scope</dt><dd>Portée d'un réglage&nbsp;; <code>-Scope CurrentUser</code> limite l'effet au compte courant.</dd>
+  <dt>Pipeline</dt><dd>Chaîne d'objets passés d'une commande à la suivante par le <code>|</code>&nbsp;; cœur de PowerShell, où chaque étape reçoit des objets, pas du texte.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
