@@ -139,6 +139,8 @@ print(serialize(donnees))
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: <code>%q</code> échappe pour toi</p><p><code>string.format("%q", s)</code> entoure la chaîne de guillemets <em>et</em> échappe correctement les guillemets, retours à la ligne et antislashs qu'elle contient. C'est la bonne façon d'écrire une chaîne réinjectable en Lua&nbsp;: ne bricole pas la concaténation de guillemets à la main.</p></div></div>
 
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Attention&nbsp;: l'ordre des clés n'est pas garanti</p><p><code>pairs</code> parcourt les paires d'une table dans un ordre <strong>non spécifié</strong>&nbsp;: deux sérialisations de la même donnée peuvent produire des textes différents. Sans conséquence pour relire la table, mais gênant dès que tu <em>compares</em> des fichiers — un <code>diff</code> Git, un test — car la sauvegarde «&nbsp;change&nbsp;» sans que la donnée bouge. Pour une sortie stable, récupère les clés, trie-les, puis écris-les dans cet ordre.</p></div></div>
+
 <h2>Désérialiser avec <code>load</code></h2>
 
 <p>Comme la chaîne produite est du Lua valide, la relire est immédiat&nbsp;: on la fait précéder de <code>return</code> et on la passe à <code>load</code> (leçon 17), puis on appelle le chunk obtenu.</p>
@@ -176,7 +178,25 @@ sauver("partie.lua", { niveau = 7, vies = 3, or_ = 250 })
 local etat = charger("partie.lua")
 print(etat.niveau, etat.vies)                --&gt; 7   3</code></pre></figure>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 152" role="img" aria-label="Le protocole d'accès à un fichier. On appelle io.open avec un chemin et un mode. En cas de succès, on obtient une poignée de fichier, que l'on utilise avec write pour écrire ou read pour lire, puis on appelle close pour libérer la ressource. Si le fichier ne peut pas être ouvert, io.open renvoie non pas une poignée mais nil et un message d'erreur.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Un fichier : ouvrir → opérer → fermer</text>
+    <rect class="d-accent" x="14" y="40" width="152" height="46" rx="10" /><text class="d-text" x="90" y="60" text-anchor="middle" font-size="8.5" font-family="monospace">io.open(chemin, mode)</text><text class="d-mut" x="90" y="76" text-anchor="middle" font-size="8">"r" / "w" / "a"</text>
+    <rect class="d-frame" x="214" y="40" width="112" height="46" rx="8" /><text class="d-text" x="270" y="60" text-anchor="middle" font-size="9">poignée</text><text class="d-mut" x="270" y="76" text-anchor="middle" font-size="8">objet fichier</text>
+    <rect class="d-box" x="374" y="40" width="120" height="46" rx="8" /><text class="d-text" x="434" y="60" text-anchor="middle" font-size="9">write / read</text><text class="d-mut" x="434" y="76" text-anchor="middle" font-size="8">lire ou écrire</text>
+    <rect class="d-box" x="522" y="40" width="104" height="46" rx="8" /><text class="d-text" x="574" y="60" text-anchor="middle" font-size="9" font-family="monospace">close()</text><text class="d-mut" x="574" y="76" text-anchor="middle" font-size="8">libère</text>
+    <path class="d-line" d="M166 63 L212 63" fill="none" /><path class="d-line" d="M206 57 L213 63 L206 69" fill="none" />
+    <path class="d-line" d="M326 63 L372 63" fill="none" /><path class="d-line" d="M366 57 L373 63 L366 69" fill="none" />
+    <path class="d-line" d="M494 63 L520 63" fill="none" /><path class="d-line" d="M514 57 L521 63 L514 69" fill="none" />
+    <rect class="d-box" x="214" y="106" width="160" height="38" rx="8" /><text class="d-text" x="294" y="124" text-anchor="middle" font-size="9">nil + message</text><text class="d-mut" x="294" y="138" text-anchor="middle" font-size="8">fichier introuvable</text>
+    <path class="d-line" d="M90 86 L90 125 L212 125" fill="none" /><path class="d-line" d="M206 119 L213 125 L206 131" fill="none" /><text class="d-tag" x="150" y="103" text-anchor="middle" font-size="8">échec</text>
+  </svg>
+  <figcaption>Toujours le même protocole&nbsp;: <code>io.open</code> rend une <strong>poignée</strong> (ou <code>nil</code> + message), on <code>write</code>/<code>read</code>, puis on <code>close()</code> pour ne pas fuir de descripteur.</figcaption>
+</figure>
+
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: les sauvegardes de jeu et les configs</p><p>Ce motif est <em>partout</em>. Dans un jeu <strong>LÖVE</strong> (leçon 12), <code>love.filesystem</code> écrit exactement ce genre de fichier dans un dossier dédié à la sauvegarde. Les configurations de <strong>Neovim</strong> (<code>init.lua</code>), du gestionnaire de fenêtres <strong>awesome</strong> ou de nombreux outils sont, littéralement, des fichiers Lua chargés au démarrage&nbsp;: le fichier de données <em>est</em> du code, lu par <code>load</code> ou <code>require</code>.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: <code>load</code>, <code>dofile</code>, <code>require</code></p><p>Trois façons de charger du Lua, pour trois usages. <code>load</code> compile une <em>chaîne</em> (le plus bas niveau). <code>dofile("f.lua")</code> lit <strong>et</strong> exécute un fichier, à chaque appel. <code>require("mod")</code> cherche un module dans le <code>package.path</code>, l'exécute <strong>une seule fois</strong> puis met son résultat en cache (<code>package.loaded</code>)&nbsp;: c'est pourquoi une configuration comme l'<code>init.lua</code> de Neovim se charge avec <code>require</code>, jamais deux fois.</p></div></div>
 
 <h2>Format Lua ou JSON&nbsp;? La question de la confiance</h2>
 
@@ -227,6 +247,8 @@ print(objet.nom, objet.scores[2])   --&gt; Zoé   20</code></pre></figure>
   <dt><code>io.open</code></dt><dd>Ouvre un fichier et renvoie un objet fichier (ou <code>nil</code> + message). Modes&nbsp;: <code>"r"</code>, <code>"w"</code>, <code>"a"</code>.</dd>
   <dt><code>string.format("%q", s)</code></dt><dd>Produit une représentation de la chaîne <code>s</code> réinjectable en Lua, guillemets et échappements compris.</dd>
   <dt>JSON</dt><dd>Format de données textuel universel, lu par un analyseur qui n'exécute rien&nbsp;: sûr pour des données non fiables.</dd>
+  <dt><code>load</code></dt><dd>Compile une chaîne de texte en fonction Lua, sans l'exécuter (leçon 17). Ici, il reconstruit une table à partir de son texte.</dd>
+  <dt>Poignée de fichier</dt><dd>Objet renvoyé par <code>io.open</code> sur lequel on appelle <code>:write</code>, <code>:read</code> et <code>:close</code>&nbsp;: il représente le fichier ouvert.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

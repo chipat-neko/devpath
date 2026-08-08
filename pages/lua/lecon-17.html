@@ -201,6 +201,8 @@ print(err)   --&gt; x:1: attempt to index a nil value (global 'os')
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: pourquoi Redis a choisi Lua</p><p>La base de données <strong>Redis</strong> laisse ses clients envoyer des scripts (<code>EVAL</code>) exécutés côté serveur, au plus près des données. Ces scripts tournent dans un <strong>interpréteur Lua en bac à sable</strong>&nbsp;: pas d'accès aux fichiers, pas de fonctions globales dangereuses, une exécution déterministe. Même principe pour les mods de jeux (World of Warcraft), les règles de <strong>nginx</strong>/OpenResty, ou les extensions de <strong>Wireshark</strong>&nbsp;: Lua est le langage «&nbsp;invité&nbsp;» idéal parce qu'on maîtrise exactement ce qu'il voit.</p></div></div>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: un bac réutilisable garde l'état</p><p>Rien n'oblige à recréer l'environnement à chaque exécution. En <strong>réutilisant la même table <code>bac</code></strong> d'un appel de <code>load</code> au suivant, les variables que le code invité y définit <strong>persistent</strong> d'un appel à l'autre. C'est ainsi qu'une console de commandes de jeu ou un petit REPL se souviennent de ce que le joueur a tapé à la ligne précédente, tout en restant enfermés dans le même bac à sable.</p></div></div>
+
 <h2>Un environnement «&nbsp;presque complet&nbsp;» avec les métatables</h2>
 
 <p>Parfois, tu veux autoriser toutes les fonctions <em>de lecture</em> mais <strong>tracer</strong> ou interdire les écritures de globales. Une métatable (leçon 7) sur l'environnement le permet&nbsp;: <code>__index</code> délègue les lectures à <code>_G</code>, <code>__newindex</code> intercepte les créations de globales.</p>
@@ -216,6 +218,23 @@ local strict = setmetatable({}, {
 local chunk = load("y = 10", "test", "t", strict)
 local ok, err = pcall(chunk)
 print(ok, err)   --&gt; false   test:1: création de globale interdite : y</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Une métatable sur l'environnement traite différemment les lectures et les écritures. En haut, lire une variable comme print : la table env est vide, sa métatable __index délègue la recherche à _G, qui contient print, donc la lecture réussit. En bas, écrire une nouvelle globale comme y égale 10 : la métatable __newindex intercepte l'écriture et lève une erreur, donc la création de globale est refusée.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Lecture déléguée, écriture interceptée</text>
+    <rect class="d-box" x="16" y="42" width="122" height="42" rx="8" /><text class="d-text" x="77" y="60" text-anchor="middle" font-size="9">lire <tspan font-family="monospace">print</tspan></text><text class="d-mut" x="77" y="74" text-anchor="middle" font-size="8">dans le chunk</text>
+    <rect class="d-accent" x="198" y="42" width="150" height="42" rx="8" /><text class="d-text" x="273" y="60" text-anchor="middle" font-size="9" font-family="monospace">__index</text><text class="d-mut" x="273" y="74" text-anchor="middle" font-size="8">délègue à _G</text>
+    <rect class="d-frame" x="470" y="42" width="154" height="42" rx="8" /><text class="d-text" x="547" y="60" text-anchor="middle" font-size="9">_G : autorisé</text><text class="d-mut" x="547" y="74" text-anchor="middle" font-size="8">print est renvoyé</text>
+    <path class="d-line" d="M138 63 L196 63" fill="none" /><path class="d-line" d="M190 57 L197 63 L190 69" fill="none" />
+    <path class="d-line" d="M348 63 L468 63" fill="none" /><path class="d-line" d="M462 57 L469 63 L462 69" fill="none" />
+    <rect class="d-box" x="16" y="108" width="122" height="42" rx="8" /><text class="d-text" x="77" y="126" text-anchor="middle" font-size="9">écrire <tspan font-family="monospace">y = 10</tspan></text><text class="d-mut" x="77" y="140" text-anchor="middle" font-size="8">nouvelle globale</text>
+    <rect class="d-accent" x="198" y="108" width="150" height="42" rx="8" /><text class="d-text" x="273" y="126" text-anchor="middle" font-size="9" font-family="monospace">__newindex</text><text class="d-mut" x="273" y="140" text-anchor="middle" font-size="8">intercepte</text>
+    <rect class="d-frame" x="470" y="108" width="154" height="42" rx="8" /><text class="d-text" x="547" y="126" text-anchor="middle" font-size="9">error()</text><text class="d-mut" x="547" y="140" text-anchor="middle" font-size="8">écriture refusée</text>
+    <path class="d-line" d="M138 129 L196 129" fill="none" /><path class="d-line" d="M190 123 L197 129 L190 135" fill="none" />
+    <path class="d-line" d="M348 129 L468 129" fill="none" /><path class="d-line" d="M462 123 L469 129 L462 135" fill="none" />
+  </svg>
+  <figcaption>Une métatable rend les <strong>lectures</strong> transparentes (<code>__index</code> délègue à <code>_G</code>) tout en <strong>filtrant les écritures</strong> (<code>__newindex</code> refuse toute nouvelle globale).</figcaption>
+</figure>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
@@ -242,6 +261,8 @@ print(ok, err)   --&gt; false   test:1: création de globale interdite : y</code
   <dt><code>load</code></dt><dd>Compile du texte (ou du bytecode) en fonction, sans l'exécuter. Renvoie <code>nil</code> + message en cas d'erreur de syntaxe.</dd>
   <dt>Bac à sable (sandbox)</dt><dd>Environnement restreint dans lequel on fait tourner du code non fiable, en ne lui exposant qu'un jeu de fonctions choisi.</dd>
   <dt>Mode <code>"t"</code></dt><dd>Option de <code>load</code> qui n'accepte que du code source texte, pas du bytecode précompilé (plus sûr).</dd>
+  <dt><code>__index</code></dt><dd>Champ de métatable consulté quand on <em>lit</em> une clé absente d'une table. Pointé vers <code>_G</code>, il rend un environnement transparent en lecture.</dd>
+  <dt><code>__newindex</code></dt><dd>Champ de métatable déclenché quand on <em>écrit</em> une clé absente. Il permet de tracer ou d'interdire la création de nouvelles globales.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

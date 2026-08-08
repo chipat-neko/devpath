@@ -144,6 +144,31 @@ local function bilan()
   os.exit(echoues == 0 and 0 or 1)   -- code de sortie non nul si un test casse (utile en CI)
 end</code></pre></figure>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Pourquoi enrober chaque test dans pcall. Sans pcall, en haut, les tests s'enchaînent, mais dès que le test 2 échoue, l'erreur remonte et arrête tout le programme : les tests 3 et 4 ne sont jamais lancés, on ne voit qu'un seul échec. Avec pcall autour de chaque test, en bas, le test 2 échoue mais son erreur est attrapée, l'exécution continue, les quatre tests s'exécutent et l'on obtient un rapport complet.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">pcall isole chaque test : on voit tous les résultats</text>
+    <text class="d-text" x="14" y="44" text-anchor="start" font-size="9">Sans pcall</text>
+    <rect class="d-box" x="14" y="52" width="104" height="34" rx="6" /><text class="d-text" x="66" y="73" text-anchor="middle" font-size="8.5">test 1 : ok</text>
+    <rect class="d-accent" x="142" y="52" width="116" height="34" rx="6" /><text class="d-text" x="200" y="73" text-anchor="middle" font-size="8.5">test 2 : échoue</text>
+    <rect class="d-frame" x="282" y="52" width="128" height="34" rx="6" /><text class="d-text" x="346" y="73" text-anchor="middle" font-size="8.5">l'erreur arrête tout</text>
+    <rect class="d-box" x="434" y="52" width="180" height="34" rx="6" /><text class="d-mut" x="524" y="73" text-anchor="middle" font-size="8.5">tests 3 et 4 jamais lancés</text>
+    <path class="d-line" d="M118 69 L140 69" fill="none" /><path class="d-line" d="M134 63 L141 69 L134 75" fill="none" />
+    <path class="d-line" d="M258 69 L280 69" fill="none" /><path class="d-line" d="M274 63 L281 69 L274 75" fill="none" />
+    <path class="d-line" d="M410 69 L432 69" fill="none" stroke-dasharray="4 3" />
+    <text class="d-text" x="14" y="112" text-anchor="start" font-size="9">Avec pcall autour de chaque test</text>
+    <rect class="d-box" x="14" y="120" width="104" height="34" rx="6" /><text class="d-text" x="66" y="141" text-anchor="middle" font-size="8.5">test 1 : ok</text>
+    <rect class="d-accent" x="132" y="120" width="128" height="34" rx="6" /><text class="d-text" x="196" y="136" text-anchor="middle" font-size="8.5">test 2 : échoue</text><text class="d-mut" x="196" y="148" text-anchor="middle" font-size="7.5">attrapé, on continue</text>
+    <rect class="d-box" x="274" y="120" width="90" height="34" rx="6" /><text class="d-text" x="319" y="141" text-anchor="middle" font-size="8.5">test 3 : ok</text>
+    <rect class="d-box" x="378" y="120" width="90" height="34" rx="6" /><text class="d-text" x="423" y="141" text-anchor="middle" font-size="8.5">test 4 : ok</text>
+    <rect class="d-frame" x="482" y="120" width="132" height="34" rx="6" /><text class="d-text" x="548" y="141" text-anchor="middle" font-size="8.5">rapport complet</text>
+    <path class="d-line" d="M118 137 L130 137" fill="none" /><path class="d-line" d="M126 132 L131 137 L126 142" fill="none" />
+    <path class="d-line" d="M260 137 L272 137" fill="none" /><path class="d-line" d="M268 132 L273 137 L268 142" fill="none" />
+    <path class="d-line" d="M364 137 L376 137" fill="none" /><path class="d-line" d="M372 132 L377 137 L372 142" fill="none" />
+    <path class="d-line" d="M468 137 L480 137" fill="none" /><path class="d-line" d="M476 132 L481 137 L476 142" fill="none" />
+  </svg>
+  <figcaption>Sans <code>pcall</code>, le premier échec masque tous les tests suivants. Avec un <code>pcall</code> par test, chaque cas s'exécute et le rapport final est complet — c'est le cœur du mini-framework.</figcaption>
+</figure>
+
 <p>On l'utilise en décrivant chaque comportement attendu. Pour vérifier qu'une fonction <strong>refuse</strong> une mauvaise entrée, on teste que <code>pcall</code> renvoie <code>false</code>.</p>
 
 <figure class="code-block" data-file="mini_test.lua"><pre><code class="language-lua">local function diviser(a, b)
@@ -214,6 +239,8 @@ end)</code></pre></figure>
   <figcaption>La lecture des tests raconte le comportement attendu&nbsp;: «&nbsp;la pile&nbsp;: empile et dépile en ordre LIFO&nbsp;; signale une erreur si on dépile à vide&nbsp;». Une spécification exécutable.</figcaption>
 </figure>
 
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Attention&nbsp;: un test sans assertion ment</p><p>Un <code>it("…", function() … end)</code> qui n'appelle <strong>aucune</strong> assertion est compté comme réussi&nbsp;: il passe au vert sans rien vérifier. De même, un <code>pcall(fn)</code> dont on ignore la valeur de retour n'affirme rien. Vérifie toujours un résultat concret — <code>eq</code>, <code>assert.are.equal</code>, <code>assert.has_error</code> — sinon un test «&nbsp;vert&nbsp;» peut couvrir un code cassé.</p></div></div>
+
 <h2>luacheck&nbsp;: attraper les fautes sans exécuter</h2>
 
 <p>Avant même de lancer les tests, un <strong>linter</strong> relit ton code et signale les erreurs probables&nbsp;: variable jamais utilisée, globale créée par accident (un <code>local</code> oublié&nbsp;!), argument redéfini. <strong>luacheck</strong> est le linter standard de Lua.</p>
@@ -230,6 +257,8 @@ Total: 2 warnings / 0 errors in 2 files</code></pre></figure>
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: la globale accidentelle</p><p>Le piège nº 1 en Lua&nbsp;: oublier <code>local</code> et créer une globale sans le vouloir (leçon 4). <code>luacheck</code> la repère instantanément («&nbsp;setting non-standard global&nbsp;»). L'ajouter à ton flux de travail élimine toute une classe de bugs avant qu'ils n'existent.</p></div></div>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: l'intégration continue d'un module Lua</p><p>Un module publié sur <strong>LuaRocks</strong> décrit ses tests dans un fichier <code>.rockspec</code> et une CI type GitHub Actions enchaîne, à chaque commit&nbsp;: <code>luacheck .</code> (style et fautes), puis <code>busted</code> (comportement), parfois sur <strong>plusieurs versions</strong> de Lua (5.1 à 5.4 et LuaJIT). Si le moindre test rougit, la fusion est bloquée. C'est ainsi que des bibliothèques comme <em>Penlight</em> restent fiables sur des années.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: la couverture de code</p><p>Tes tests passent, mais <em>quelle part</em> de ton code exécutent-ils vraiment&nbsp;? La <strong>couverture</strong> mesure les lignes atteintes par la suite de tests. En Lua, <code>busted --coverage</code> s'appuie sur <strong>luacov</strong> pour un rapport ligne par ligne. Garde en tête que 100&nbsp;% de couverture prouve que chaque ligne a été <em>exécutée</em>, pas qu'elle a été <em>bien vérifiée</em>&nbsp;: c'est un indice, pas une garantie.</p></div></div>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
@@ -257,6 +286,7 @@ Total: 2 warnings / 0 errors in 2 files</code></pre></figure>
   <dt>luacheck</dt><dd>Linter&nbsp;: analyse le code sans l'exécuter pour repérer variables inutilisées, globales accidentelles, etc.</dd>
   <dt>TDD</dt><dd><em>Test-Driven Development</em>&nbsp;: écrire le test avant le code, puis coder le minimum pour le faire passer.</dd>
   <dt>Régression</dt><dd>Bug réapparu&nbsp;: un test de régression garde en mémoire un cas déjà corrigé pour qu'il ne casse plus jamais en silence.</dd>
+  <dt>Couverture de code</dt><dd>Proportion des lignes d'un programme réellement exécutées par la suite de tests. Mesurée en Lua avec <code>luacov</code> (<code>busted --coverage</code>).</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
