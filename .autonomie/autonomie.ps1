@@ -49,9 +49,9 @@ $rapport = Join-Path $proj 'VERIF-FINALE.md'
 
 function Test-ChantierFini {
   try {
-    # Chantier V7 (depuis le 2026-08-02) : le plan CHANTIER-V7.md fait foi.
+    # Chantier V8 (depuis le 2026-08-08) : le plan CHANTIER-V8.md fait foi.
     # Tant qu'il reste une case a cocher, il reste du travail.
-    $plan = Join-Path $proj 'CHANTIER-V7.md'
+    $plan = Join-Path $proj 'CHANTIER-V8.md'
     if (-not (Test-Path $plan)) { return $false }
     if (Select-String -Path $plan -Pattern '^- \[ \]' -Quiet) { return $false }
     return $true
@@ -87,9 +87,9 @@ if ($modeVerif) {
 $promptTravail = @'
 Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) pour faire avancer le projet Syntaxe EN AUTONOMIE, dossier d:\test-claude. Tu es NON-INTERACTIF : ne pose AUCUNE question, ne propose AUCUN questionnaire, decide et agis seul. Tout le contenu visible et les commentaires en francais, avec accents CORRECTS (jamais d'ASCII a la place d'un accent dans le contenu).
 
-LE SITE : 76 cours, 1362 lecons, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. Le chantier V7 traite les defauts MINEURS d'un audit de controle : finitions de la palette et des antiseches, coherence des donnees, defauts d'usage et accessibilite. LE PROJET EST DESORMAIS SOUS GIT : verifie que git status est propre avant chaque point, et fais un commit apres chaque point avec sa mesure. Tu peux enfin prouver au diff qu'une correction n'a touche que ce qu'elle devait.
+LE SITE : 76 cours, 1362 lecons, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. Le chantier V8 est EDITORIAL : remonter a la mediane du site les 56 lecons sous le standard et les 151 lecons maigres, mesurees par le nouvel outil node tools/verif-contenu.js. ATTENTION, LA REGLE QUI PRIME : une lecon COURTE MAIS JUSTE vaut mieux qu'une lecon GONFLEE. Le risque de ce chantier est le remplissage — un encadre qui ne dit rien, un schema qui repete le paragraphe d'a cote. Tu as le DROIT de ne pas atteindre la mediane sur une lecon dont le sujet est court : amene ce qui est legitime, puis ecris dans le plan pourquoi tu t'arretes la. Une case cochee avec une justification chiffree est un bon resultat ; une case cochee avec des encadres creux est un echec. LE PROJET EST SOUS GIT : un commit par cours, avec la mesure avant/apres dans le message.
 
-1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V7.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A, puis B, puis C, puis D). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
+1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V8.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A, puis B, puis C, puis D). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
 2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
 3) LES QUATRE OUTILS DU PROJET, a utiliser systematiquement — ils font en quelques secondes ce qui prendrait des heures a la main, et ils ne se trompent pas : (a) node tools/verif-html.js analyse le SOURCE des 1425 lecons et detecte toute balise creee par erreur dans un bloc de code ; il DOIT rester a zero apres ton passage. (b) node tools/verif-donnees.js verifie 17 invariants de DONNEES (courses/content/durations, fichiers cites contre fichiers disque, index, doublons de QCM). (c) node tools/verif-rendu.js mesure CE QUE LE NAVIGATEUR AFFICHE : debordement horizontal, contraste du texte sur son fond effectif, repere de focus au clavier, aria, erreurs de console, requetes reseau ; sans argument il prend un echantillon de 20 pages, avec --tout --lecons il en couvre 139, et il pilote Chrome donc il prend plusieurs minutes. Lance-le des que tu touches a du CSS ou a un gabarit. (d) node tools/build-index.js regenere les index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,searchlite,antiseches.
 4) INTERDIT ABSOLU : reintroduire une URL vers cdnjs.cloudflare.com, fonts.googleapis.com ou fonts.gstatic.com. Le site en compte zero. Apres toute modification de tools/, de starter/ ou d'un gabarit de page, REVERIFIE ce point : le piege s'est deja represente trois fois. Ne touche jamais au mojibake VOLONTAIRE des lecons qui enseignent l'encodage (pages/formats/lecon-06.html, pages/html/lecon-15.html, pages/r/lecon-06.html, pages/perl/lecon-13.html).
@@ -165,12 +165,12 @@ try {
   $statut = if ($code -eq 0) { 'OK' } else { 'ECHEC' }
   $faits = '?'; $total = '?'
   try {
-    $plan = Join-Path $proj 'CHANTIER-V7.md'
+    $plan = Join-Path $proj 'CHANTIER-V8.md'
     $coches = (Select-String -Path $plan -Pattern '^- \[x\]').Count
     $restants = (Select-String -Path $plan -Pattern '^- \[ \]').Count
     $faits = $coches; $total = $coches + $restants
   } catch {}
-  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points du chantier V7" -Encoding utf8
+  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points du chantier V8" -Encoding utf8
 
   # --- Verdict de la passe de securite ---------------------------------------
   # Le modele ecrit VERDICT: VERT ou VERDICT: ROUGE en 1re ligne de VERIF-FINALE.md.
