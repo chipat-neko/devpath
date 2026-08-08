@@ -127,6 +127,23 @@ objc_msgSend(compte, @selector(deposer:), 100);</code></pre></figure>
   <figcaption>Le C lie l'appel à la compilation&nbsp;; Objective-C ne fige que le <strong>nom</strong> du message et laisse le <strong>runtime</strong> trouver la méthode à l'exécution.</figcaption>
 </figure>
 
+<p>Mais <em>où</em> le runtime cherche-t-il&nbsp;? Il regarde d'abord dans la classe de l'objet, puis <strong>remonte</strong> la chaîne des superclasses jusqu'à <code>NSObject</code>. S'il trouve la méthode, il l'exécute&nbsp;; s'il atteint le sommet sans l'avoir trouvée, il appelle <code>doesNotRecognizeSelector:</code> et le programme s'arrête. C'est ce qui rend le motif «&nbsp;demander avant d'envoyer&nbsp;» si important.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="La recherche d'une méthode remonte la hiérarchie des classes. Le message deposer est envoyé à un objet de classe CompteEpargne. Le runtime cherche la méthode deposer d'abord dans CompteEpargne : absente, il remonte à la superclasse Compte, où il la trouve et l'exécute. La classe racine NSObject est encore au-dessus mais n'est pas atteinte. Si aucune classe de la chaîne ne définissait la méthode, le runtime appellerait doesNotRecognizeSelector, ce qui interromprait le programme.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">La recherche d'une méthode remonte la hiérarchie</text>
+    <rect class="d-frame" x="400" y="30" width="210" height="32" rx="6" /><text class="d-text" x="505" y="50" text-anchor="middle" font-size="10" font-family="monospace">NSObject</text>
+    <rect class="d-accent" x="400" y="76" width="210" height="34" rx="6" /><text class="d-text" x="505" y="92" text-anchor="middle" font-size="10" font-family="monospace">Compte</text><text class="d-mut" x="505" y="104" text-anchor="middle" font-size="8">deposer: ? OUI → exécute</text>
+    <rect class="d-box" x="400" y="124" width="210" height="34" rx="6" /><text class="d-text" x="505" y="140" text-anchor="middle" font-size="10" font-family="monospace">CompteEpargne</text><text class="d-mut" x="505" y="152" text-anchor="middle" font-size="8">deposer: ? non → remonte</text>
+    <line class="d-line" x1="505" y1="124" x2="505" y2="112" /><path class="d-dot" d="M505 110 l-4 9 h8 z" />
+    <line class="d-line" x1="505" y1="76" x2="505" y2="64" /><path class="d-dot" d="M505 62 l-4 9 h8 z" />
+    <rect class="d-box" x="20" y="124" width="150" height="34" rx="6" /><text class="d-text" x="95" y="145" text-anchor="middle" font-size="10" font-family="monospace">[c deposer:]</text>
+    <line class="d-line" x1="170" y1="141" x2="398" y2="141" /><path class="d-dot" d="M398 141 l-9 -4 v8 z" />
+    <text class="d-tag" x="230" y="172" text-anchor="middle" font-size="8.5">rien trouvé jusqu'en haut → doesNotRecognizeSelector: (plante)</text>
+  </svg>
+  <figcaption>Le runtime cherche la méthode dans la classe de l'objet puis <strong>remonte</strong> de superclasse en superclasse. S'il n'en trouve aucune, il déclenche <code>doesNotRecognizeSelector:</code>.</figcaption>
+</figure>
+
 <h2>L'introspection : interroger un objet</h2>
 <p>Puisque tout se joue à l'exécution, on peut <strong>demander</strong> à un objet ce qu'il est et ce qu'il sait faire. Quatre messages reviennent tout le temps&nbsp;:</p>
 <figure class="code-block" data-file="introspection.m"><pre><code class="language-objectivec">[obj isKindOfClass:[NSString class]];        // une NSString OU une sous-classe ?
@@ -146,6 +163,8 @@ if ([obj respondsToSelector:action]) {   // garde-fou : sait-il le faire ?
 // avec un argument :
 [obj performSelector:@selector(saluer:) withObject:@"Ada"];</code></pre></figure>
 <p>Ce couple <code>respondsToSelector:</code> + <code>performSelector:</code> — <em>demander avant d'envoyer</em> — est le motif de sécurité central du runtime.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: <code>performSelector:</code> et ARC</p><p>Le compilateur émet parfois l'avertissement «&nbsp;<em>performSelector may cause a leak</em>&nbsp;»&nbsp;: comme le sélecteur n'est connu qu'à l'exécution, ARC ne sait pas si la méthode renvoie un objet à libérer. Pour un simple déclenchement (action d'un bouton), c'est sans risque. Mais dès qu'une <strong>valeur de retour</strong> compte, préfère un appel typé — un <code>IMP</code> obtenu par <code>methodForSelector:</code>, ou <code>NSInvocation</code> — plutôt que <code>performSelector:</code>.</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 150" role="img" aria-label="Demander avant d'envoyer. On part d'un sélecteur, le nom du message obtenu par arobase selector. On demande d'abord à l'objet, avec respondsToSelector, s'il sait répondre à ce message. Si oui, on envoie le message avec performSelector et la méthode s'exécute. Si non, on s'abstient, ce qui évite un plantage.">
@@ -167,6 +186,8 @@ if ([obj respondsToSelector:action]) {   // garde-fou : sait-il le faire ?
   </svg>
   <figcaption>Le motif du runtime&nbsp;: on <strong>demande</strong> (<code>respondsToSelector:</code>) avant d'<strong>envoyer</strong> (<code>performSelector:</code>). Envoyer un message inconnu planterait&nbsp;; ce garde-fou l'évite.</figcaption>
 </figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Envoyer un message à <code>nil</code> ne plante pas</p><p>Trait déroutant venant d'autres langages&nbsp;: en Objective-C, <code>[nil faire]</code> ne provoque <strong>aucune erreur</strong>. Le runtime intercepte l'envoi à <code>nil</code> et renvoie une valeur nulle (<code>nil</code>, <code>0</code>, <code>NO</code>). Pratique — pas besoin de tester chaque objet avant de lui parler — mais piégeux&nbsp;: un message silencieusement ignoré peut masquer un bug. C'est justement ce «&nbsp;<code>nil</code> silencieux&nbsp;» que les <em>optionnels</em> de Swift rendent explicite.</p></div></div>
 
 <h2>À quoi ça sert vraiment</h2>
 <p>Ce mécanisme n'est pas théorique&nbsp;: il est <strong>partout</strong> dans Cocoa. Les méthodes <code>@optional</code> d'un protocole (leçon 6) reposent dessus&nbsp;: avant d'appeler une méthode facultative de son delegate, un framework vérifie qu'elle existe.</p>
@@ -210,6 +231,7 @@ if ([obj respondsToSelector:action]) {   // garde-fou : sait-il le faire ?
   <dt><code>respondsToSelector:</code></dt><dd>Demande si un objet sait répondre à un message&nbsp;; base des méthodes de protocole optionnelles.</dd>
   <dt><code>performSelector:</code></dt><dd>Envoie un message désigné par un <code>SEL</code>, éventuellement décidé à l'exécution.</dd>
   <dt>Method swizzling</dt><dd>Échange à l'exécution des implémentations de deux méthodes&nbsp;; puissant mais à réserver aux outils.</dd>
+  <dt><code>doesNotRecognizeSelector:</code></dt><dd>Appelé par le runtime quand aucune classe de la hiérarchie ne répond au message&nbsp;; provoque l'arrêt du programme.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -247,7 +269,7 @@ if ([obj respondsToSelector:s]) {
 }</code></pre></figure></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un framework veut appeler la méthode optionnelle <code>- (void)tacheDidFinish:(id)tache</code> de son delegate. Écris l'appel défensif idiomatique.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.m"><pre><code class="language-objectivec">if ([self.delegate respondsToSelector:@selector(tacheDidFinish:)]) {
     [self.delegate tacheDidFinish:self];
-}</code></pre><p>On vérifie avec <code>respondsToSelector:</code> avant d'envoyer&nbsp;: la méthode étant <code>@optional</code>, le delegate peut ne pas l'implémenter.</p></figure></details></div>
+}</code></pre></figure><p>On vérifie avec <code>respondsToSelector:</code> avant d'envoyer&nbsp;: la méthode étant <code>@optional</code>, le delegate peut ne pas l'implémenter.</p></details></div>
 
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
