@@ -166,6 +166,7 @@ function retirer() public {
   </svg>
   <figcaption>Le modificateur <code>nonReentrant</code> pose un verrou à l'entrée&nbsp;; un second appel avant la sortie échoue sur <code>require(!verrou)</code>. C'est le principe d'<code>OpenZeppelin ReentrancyGuard</code>.</figcaption>
 </figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le verrou en pratique&nbsp;: <code>nonReentrant</code></p><p>Concrètement, on n'écrit pas son verrou à la main&nbsp;: on hérite de <code>ReentrancyGuard</code> (OpenZeppelin) et on marque la fonction sensible du modificateur <code>nonReentrant</code>. Il pose le verrou à l'entrée et le retire à la sortie&nbsp;; un appel imbriqué échoue. C'est la mise en œuvre du schéma précédent, en une ligne.</p></div></div>
 
 <h2>D'autres pièges classiques</h2>
 <p>La réentrance n'est pas seule. Quelques autres&nbsp;:</p>
@@ -175,6 +176,24 @@ function retirer() public {
   <li>dépendre du <strong>hasard</strong> (block.timestamp…)&nbsp;: prévisible et manipulable par les mineurs&nbsp;;</li>
   <li><strong>fonctions non protégées</strong>&nbsp;: une fonction d'administration <code>public</code> sans contrôle d'accès.</li>
 </ul>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="tx.origin versus msg.sender dans une chaîne d'appels. De gauche à droite : l'Utilisateur appelle un Contrat piégé, qui appelle Ton contrat. tx.origin pointe vers l'Utilisateur (trompeur : le contrat piégé se fait passer pour lui). msg.sender pointe vers le Contrat piégé (l'appelant réel, le bon repère).">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">Chaîne d'appels : qui est qui ?</text>
+    <rect class="d-box" x="16" y="52" width="140" height="46" rx="9" /><text class="d-text" x="86" y="72" text-anchor="middle" font-size="11">Utilisateur</text><text class="d-mut" x="86" y="88" text-anchor="middle" font-size="9">compte EOA</text>
+    <line class="d-line" x1="156" y1="75" x2="196" y2="75" /><polygon class="d-dot" points="196,71 204,75 196,79" />
+    <rect class="d-frame" x="204" y="52" width="180" height="46" rx="9" /><text class="d-text" x="294" y="72" text-anchor="middle" font-size="11">Contrat piégé</text><text class="d-mut" x="294" y="88" text-anchor="middle" font-size="9">intermédiaire malveillant</text>
+    <line class="d-line" x1="384" y1="75" x2="424" y2="75" /><polygon class="d-dot" points="424,71 432,75 424,79" />
+    <rect class="d-accent" x="432" y="52" width="192" height="46" rx="9" /><text class="d-text" x="528" y="72" text-anchor="middle" font-size="11">Ton contrat</text><text class="d-mut" x="528" y="88" text-anchor="middle" font-size="9">reçoit l'appel</text>
+    <line class="d-line" x1="86" y1="98" x2="86" y2="130" /><polygon class="d-dot" points="82,130 86,142 90,130" />
+    <text class="d-tag" x="86" y="158" text-anchor="middle" font-size="10">tx.origin</text>
+    <text class="d-mut" x="86" y="172" text-anchor="middle" font-size="9">trompeur : le piégé usurpe son identité</text>
+    <line class="d-line" x1="294" y1="98" x2="294" y2="130" /><polygon class="d-dot" points="290,130 294,142 298,130" />
+    <text class="d-tag" x="294" y="158" text-anchor="middle" font-size="10">msg.sender</text>
+    <text class="d-mut" x="294" y="172" text-anchor="middle" font-size="9">l'appelant réel — le bon repère</text>
+  </svg>
+  <figcaption><code>tx.origin</code> reste l'utilisateur initial quelle que soit la longueur de la chaîne&nbsp;; <code>msg.sender</code> désigne l'appelant direct — utilise toujours <code>msg.sender</code> pour l'authentification.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le déni de service par <code>revert</code></p><p>Une fonction qui <em>pousse</em> des paiements en boucle vers plusieurs adresses (<em>push</em>) est fragile&nbsp;: un seul destinataire qui échoue (contrat sans <code>receive</code>, ou qui <code>revert</code> exprès) bloque TOUTE la distribution pour tout le monde. Parade&nbsp;: le <strong>pull payment</strong> — chacun retire SA part lui-même (leçon 17), et l'échec de l'un n'affecte pas les autres.</p></div></div>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Croire qu'un contrat «&nbsp;qui marche&nbsp;» dans les tests est sûr. Un contrat peut fonctionner parfaitement dans tous tes scénarios normaux et rester <strong>exploitable</strong> par un attaquant qui pense différemment («&nbsp;que se passe-t-il si je rappelle cette fonction&nbsp;? si je passe l'adresse zéro&nbsp;? si j'envoie zéro ether&nbsp;?&nbsp;»). La sécurité demande de raisonner en <em>adversaire</em>, pas en utilisateur. Pour tout contrat gérant des fonds importants, un <strong>audit professionnel</strong> est indispensable.</p></div></div>
@@ -208,6 +227,7 @@ function retirer() public {
   <dt><code>msg.sender</code></dt><dd>Adresse de l'appelant <em>immédiat</em> de la fonction&nbsp;: le bon repère pour le contrôle d'accès.</dd>
   <dt>Débordement (overflow)</dt><dd>Dépassement de la capacité d'un entier&nbsp;; annulé automatiquement depuis Solidity 0.8.</dd>
   <dt>Audit</dt><dd>Revue de sécurité approfondie d'un contrat par des experts, avant tout déploiement à enjeux.</dd>
+  <dt>Déni de service (DoS)</dt><dd>Blocage d'une fonction pour tous les utilisateurs à cause d'un seul élément défaillant&nbsp;: par exemple un destinataire qui fait <code>revert</code> et gèle une distribution en boucle. Parade&nbsp;: le retrait individuel (<em>pull payment</em>).</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -232,7 +252,7 @@ function retirer() public {
 [
 {"type":"text","accept":["soldes[msg.sender] = 0;","soldes[msg.sender] = 0","soldes[msg.sender]=0;","soldes[msg.sender]=0"],"placeholder":"Écris la ligne « effect » qui remet le solde de l'appelant à zéro","hints":["C'est l'« effect » du motif checks-effects-interactions, à écrire AVANT l'appel externe.","La map s'appelle soldes ; l'appelant est msg.sender.","Écris l'affectation qui met soldes[msg.sender] à 0."],"link":{"href":"lecon-07.html","label":"Revoir l'ordre sûr"}},
 {"type":"text","accept":["solde = 0","solde=0","solde = 0;","solde=0;"],"placeholder":"La ligne à exécuter en PREMIER (recopie-la)","hints":["Règle Checks-Effects-Interactions : on modifie l'état AVANT l'appel externe.","On met le solde à jour avant d'envoyer l'ether.","Recopie l'affectation qui remet le solde à zéro."],"link":{"href":"lecon-07.html","label":"Revoir l'ordre sûr"}},
-null
+{"type":"text","accept":["msg.sender"],"placeholder":"L'expression à utiliser (jamais tx.origin) pour authentifier l'appelant","hints":["C'est l'appelant DIRECT de la fonction, pas l'origine de la transaction.","tx.origin peut être détourné par un contrat intermédiaire.","Elle s'écrit msg.???? ."],"link":{"href":"lecon-07.html","label":"Revoir tx.origin vs msg.sender"}}
 ]
 </script>
 

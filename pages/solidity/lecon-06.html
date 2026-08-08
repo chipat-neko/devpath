@@ -132,6 +132,25 @@ uint256 c = 100 wei;     // 100 wei
     }
 }</code></pre></figure>
 <p><code>msg.value</code> est le montant d'ether (en wei) joint à la transaction. Sans <code>payable</code>, envoyer de l'ether à la fonction provoquerait un rejet. C'est une sécurité&nbsp;: seules les fonctions explicitement <code>payable</code> acceptent des paiements.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Diagramme : un envoi d'ether arrive au contrat, puis on teste si msg.data est vide. Si oui, receive() s'exécute. Sinon (données présentes), fallback() s'exécute. Si aucune des deux n'est présente et payable, l'envoi échoue (revert).">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="13">receive() et fallback() : par quelle porte entre l'ether ?</text>
+    <rect class="d-box" x="16" y="36" width="150" height="34" rx="7" /><text class="d-text" x="91" y="57" text-anchor="middle" font-size="10">Envoi d'ether au contrat</text>
+    <line class="d-line" x1="166" y1="53" x2="218" y2="53" /><polygon class="d-dot" points="218,49 226,53 218,57" />
+    <rect class="d-box" x="226" y="36" width="188" height="34" rx="7" /><text class="d-text" x="320" y="57" text-anchor="middle" font-size="10">msg.data est-il vide ?</text>
+    <line class="d-line" x1="320" y1="70" x2="320" y2="96" /><polygon class="d-dot" points="316,96 320,104 324,96" />
+    <text class="d-mut" x="352" y="90" font-size="9">OUI</text>
+    <rect class="d-accent" x="224" y="104" width="192" height="34" rx="7" /><text class="d-text" x="320" y="125" text-anchor="middle" font-size="10">receive() external payable</text>
+    <line class="d-line" x1="414" y1="53" x2="456" y2="53" /><polygon class="d-dot" points="456,49 464,53 456,57" />
+    <text class="d-mut" x="430" y="44" font-size="9">NON (données présentes)</text>
+    <rect class="d-box" x="464" y="36" width="160" height="34" rx="7" /><text class="d-text" x="544" y="57" text-anchor="middle" font-size="10">fallback() external payable</text>
+    <line class="d-line" x1="544" y1="70" x2="544" y2="150" /><polygon class="d-dot" points="540,150 544,158 548,150" />
+    <text class="d-mut" x="480" y="120" font-size="9">si absente ou non payable</text>
+    <rect class="d-frame" x="464" y="158" width="160" height="26" rx="7" /><text class="d-mut" x="544" y="175" text-anchor="middle" font-size="10">revert — envoi échoue</text>
+  </svg>
+  <figcaption><code>receive()</code> intercepte les virements directs (sans données)&nbsp;; <code>fallback()</code> attrape tout appel non reconnu. Si aucune des deux n'est présente et <code>payable</code>, l'ether est refusé.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title"><code>receive</code> et <code>fallback</code>&nbsp;: les portes d'entrée de l'ether</p><p>Pour qu'un contrat accepte un <strong>virement direct</strong> (sans appeler de fonction nommée), il lui faut une fonction <code>receive() external payable</code>. Sans elle (ni <code>fallback</code> payable), un simple envoi d'ether au contrat est rejeté. <code>receive</code> gère les envois sans données&nbsp;; <code>fallback</code> attrape les appels à une fonction inexistante.</p></div></div>
 
 <h2>Connaître le solde du contrat</h2>
 <p>Un contrat a sa propre adresse et son propre solde en ether. On le lit avec <code>address(this).balance</code> (<code>this</code> désigne le contrat courant).</p>
@@ -149,6 +168,7 @@ uint256 c = 100 wei;     // 100 wei
     require(succes, "Echec de l'envoi");
 }</code></pre></figure>
 <p>La syntaxe <code>msg.sender.call{value: montant}("")</code> envoie <code>montant</code> wei à l'adresse, et renvoie un booléen de succès qu'on <strong>doit</strong> vérifier. Remarque l'ordre crucial&nbsp;: on <strong>décrémente le solde AVANT d'envoyer</strong>. Cet ordre est au cœur de la sécurité (leçon 7)&nbsp;; le respecter prévient l'attaque de réentrance.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title"><code>call</code> plutôt que <code>transfer</code> ou <code>send</code></p><p><code>transfer</code> et <code>send</code> ne transmettent que 2300 gas au destinataire — une limite fixe qui casse des destinataires légitimes (portefeuilles multisig, proxys) depuis que certaines opérations de l'EVM ont renchéri. <code>call{value:&nbsp;…}("")</code> transmet tout le gas disponible&nbsp;; en contrepartie, il faut se protéger de la réentrance en appliquant le motif checks-effects-interactions (mettre l'état à jour AVANT l'envoi).</p></div></div>
 <figure class="diagram">
   <svg viewBox="0 0 640 176" role="img" aria-label="Le patron checks-effects-interactions. Dans le bon ordre, on vérifie d'abord, puis on met à jour l'état, et seulement ensuite on envoie l'ether : un rappel malveillant trouve un solde déjà à zéro. Dans le mauvais ordre, on envoie avant de mettre à jour, ce qui ouvre l'attaque de réentrance.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Mettre à jour l'état AVANT d'envoyer</text>
@@ -210,6 +230,7 @@ uint256 c = 100 wei;     // 100 wei
   <dt>Gas</dt><dd>Mesure du travail de calcul&nbsp;; l'auteur de la transaction le paie en ether.</dd>
   <dt>Réentrance</dt><dd>Attaque où le destinataire d'un envoi rappelle la fonction avant la mise à jour de l'état.</dd>
   <dt>Checks-effects-interactions</dt><dd>Ordre sûr&nbsp;: vérifier, modifier l'état, puis interagir (envoyer).</dd>
+  <dt><code>receive()</code></dt><dd>Fonction spéciale sans nom, <code>external payable</code>, exécutée quand le contrat reçoit de l'ether <strong>sans données</strong> (un simple virement).</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -234,7 +255,7 @@ uint256 c = 100 wei;     // 100 wei
 [
 {"type":"text","accept":["payable"],"placeholder":"Le mot-clé qui permet à une fonction de recevoir de l'ether","hints":["Sans lui, un envoi d'ether vers la fonction est rejeté.","On le met dans l'en-tête, à côté de public.","7 lettres : « payable » en anglais."],"link":{"href":"lecon-06.html","label":"Revoir payable"}},
 {"type":"text","accept":["msg.value"],"placeholder":"L'expression qui donne le montant d'ether envoyé","hints":["C'est la quantité d'ether jointe à l'appel courant.","Elle s'écrit msg.???? .","« value » = valeur/montant."],"link":{"href":"lecon-06.html","label":"Revoir msg.value"}},
-null
+{"type":"text","accept":["receive"],"placeholder":"La fonction spéciale appelée lors d'un virement d'ether sans données","hints":["Elle n'a pas de nom et doit être external payable.","Sa jumelle fallback gère les appels à une fonction inconnue.","7 lettres : « recevoir » en anglais."],"link":{"href":"lecon-06.html","label":"Revoir receive et fallback"}}
 ]
 </script>
 

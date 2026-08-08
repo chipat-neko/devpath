@@ -135,6 +135,8 @@
 <p>Un mapping a un comportement spécial&nbsp;: <strong>toutes les clés existent virtuellement</strong>, avec la valeur par défaut. Demander <code>soldes[uneAdresseInconnue]</code> ne provoque pas d'erreur&nbsp;: cela renvoie <code>0</code> (la valeur par défaut d'un <code>uint</code>). Conséquence&nbsp;: on ne peut pas «&nbsp;parcourir&nbsp;» un mapping ni connaître ses clés — il n'a pas de notion de taille ni de liste de clés. Pour énumérer, il faut maintenir un tableau séparé.</p>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le solde de vos jetons est un mapping</p><p>La norme <strong>ERC-20</strong>, qui régit la quasi-totalité des jetons d'Ethereum (stablecoins comme l'USDC, jetons de projets…), stocke toute la comptabilité dans une seule ligne&nbsp;: <code>mapping(address =&gt; uint256) balances</code>. Autrement dit, «&nbsp;posséder 500 USDC&nbsp;» signifie simplement que le contrat du jeton associe <em>votre adresse</em> à la valeur <code>500</code> dans ce mapping&nbsp;; un transfert n'est qu'une soustraction sur une clé et une addition sur une autre. Des centaines de milliards de dollars reposent sur cette structure&nbsp;: le mapping est vraiment la «&nbsp;structure reine&nbsp;» de Solidity.</p></div></div>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Effacer une entrée&nbsp;: <code>delete</code></p><p><code>delete soldes[adresse]</code> remet la valeur à sa valeur par défaut (<code>0</code>)&nbsp;; comme cela remet un slot de <code>storage</code> à zéro, l'EVM rembourse même un peu de gas. À noter&nbsp;: cela ne «&nbsp;supprime&nbsp;» pas la clé (un mapping n'a pas de liste de clés), cela réinitialise juste sa valeur.</p></div></div>
+
 <h2>Les structs&nbsp;: regrouper des champs</h2>
 <p>Un <strong>struct</strong> regroupe plusieurs valeurs sous un même type, pour modéliser une «&nbsp;chose&nbsp;» (un utilisateur, une proposition, un produit).</p>
 <figure class="code-block" data-file="struct.sol"><pre><code class="language-solidity">contract Registre {
@@ -150,6 +152,7 @@
         proprietaire = Personne(_nom, _age, true);
     }
 }</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Pourquoi <code>memory</code> apparaît partout</p><p>Pour un type à taille variable (<code>string</code>, tableau, <code>struct</code>) passé en argument ou déclaré en variable locale, Solidity <strong>exige</strong> de préciser l'emplacement — d'où le <code>memory</code> dans la signature <code>definir(string memory _nom, …)</code> de cette leçon. Les types simples (<code>uint</code>, <code>bool</code>, <code>address</code>) n'en ont pas besoin&nbsp;: leur emplacement est toujours <code>storage</code> pour les variables d'état, et copié sur la pile pour les paramètres.</p></div></div>
 <p>On crée une instance avec <code>Personne(nom, age, actif)</code> et on accède aux champs avec un point (<code>proprietaire.nom</code>). Les structs se combinent souvent avec les mappings&nbsp;: <code>mapping(address =&gt; Personne)</code> associe chaque adresse à une fiche complète.</p>
 
 <h2>Les tableaux</h2>
@@ -213,6 +216,31 @@
   <figcaption>On combine les trois&nbsp;: un <code>mapping</code> pour retrouver vite, un <code>struct</code> pour structurer chaque entrée, un tableau pour lister — chacun pour ce qu'il fait de mieux.</figcaption>
 </figure>
 
+<p>Chaque variable réside quelque part. Solidity distingue trois <strong>emplacements de données</strong>, aux coûts très différents.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Les trois emplacements de données en Solidity. storage : emplacement permanent sur la chaîne, le plus coûteux en gas. memory : emplacement temporaire effacé après l'appel, coût modéré. calldata : emplacement lecture seule contenant les arguments d'appel, le moins cher.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Les trois emplacements de données</text>
+
+    <rect class="d-accent" x="16" y="38" width="188" height="98" rx="9" />
+    <text class="d-text" x="110" y="66" text-anchor="middle" font-size="13">storage</text>
+    <text class="d-mut" x="110" y="88" text-anchor="middle" font-size="9">permanent, sur la chaîne</text>
+    <text class="d-mut" x="110" y="106" text-anchor="middle" font-size="9">cher</text>
+
+    <rect class="d-box" x="226" y="38" width="188" height="98" rx="9" />
+    <text class="d-text" x="320" y="66" text-anchor="middle" font-size="13">memory</text>
+    <text class="d-mut" x="320" y="88" text-anchor="middle" font-size="9">temporaire, effacé après l'appel</text>
+    <text class="d-mut" x="320" y="106" text-anchor="middle" font-size="9">coût modéré</text>
+
+    <rect class="d-box" x="436" y="38" width="188" height="98" rx="9" />
+    <text class="d-text" x="530" y="66" text-anchor="middle" font-size="13">calldata</text>
+    <text class="d-mut" x="530" y="88" text-anchor="middle" font-size="9">lecture seule, arguments d'appel</text>
+    <text class="d-mut" x="530" y="106" text-anchor="middle" font-size="9">le moins cher</text>
+
+    <text class="d-mut" x="320" y="158" text-anchor="middle" font-size="10">storage persiste entre les appels&nbsp;; memory et calldata sont détruits à la fin de la transaction</text>
+  </svg>
+  <figcaption><code>storage</code> est permanent et facturé à chaque écriture&nbsp;; <code>memory</code> et <code>calldata</code> sont temporaires et bien moins coûteux.</figcaption>
+</figure>
+
 <h2>Antisèche</h2>
 <figure class="cheat-table">
   <table>
@@ -238,6 +266,7 @@
   <dt>Non énumérable</dt><dd>Propriété d'un mapping&nbsp;: il ne connaît pas ses clés, on ne peut pas le parcourir.</dd>
   <dt><code>msg.sender</code></dt><dd>Adresse du compte ou contrat qui appelle la fonction courante.</dd>
   <dt>ERC-20</dt><dd>Norme des jetons fongibles d'Ethereum&nbsp;; les soldes y sont un <code>mapping(address =&gt; uint256)</code>.</dd>
+  <dt>Emplacement de données</dt><dd>Où réside une variable&nbsp;: <code>storage</code> (permanent, sur la chaîne), <code>memory</code> (temporaire, le temps de l'appel) ou <code>calldata</code> (lecture seule, les arguments d'appel).</dd>
 </dl>
 
 <h2>Pièges fréquents</h2>
