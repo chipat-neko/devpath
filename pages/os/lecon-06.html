@@ -150,6 +150,22 @@
 </figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: « ma compilation ne va pas plus vite »</p><p>Une équipe se plaint qu'un <em>build</em> reste lent sur une machine à 8&nbsp;cœurs. <code>htop</code> montre <strong>un seul cœur à 100&nbsp;%</strong>, les 7&nbsp;autres oisifs&nbsp;: le programme de build est <strong>mono-thread</strong>, donc CPU-bound mais non parallélisé. Le levier n'est pas d'acheter un CPU plus rapide, mais d'activer la <strong>compilation en parallèle</strong> (l'option «&nbsp;jobs&nbsp;» des outils de build), qui répartit les fichiers sur les cœurs. Diagnostic posé en 10&nbsp;secondes grâce à un simple moniteur.</p></div></div>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Arbre de décision pour diagnostiquer un programme. La question de départ : le CPU est-il saturé ? Si oui, le programme est CPU-bound, limité par le calcul ; on précise alors s'il sature un seul cœur, donc mono-thread, ou plusieurs, donc déjà parallélisé. Si le CPU n'est pas saturé mais que le programme est souvent bloqué, il est I/O-bound, limité par l'attente des entrées-sorties. Si le CPU n'est pas saturé et que la RAM est pleine avec du swap, c'est une pression mémoire.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Poser le diagnostic en une question de départ</text>
+    <rect class="d-accent" x="26" y="76" width="132" height="44" rx="8" /><text class="d-text" x="92" y="94" text-anchor="middle" font-size="9.5">CPU saturé ?</text><text class="d-mut" x="92" y="109" text-anchor="middle" font-size="8">(top / htop)</text>
+    <line class="d-line" x1="158" y1="88" x2="356" y2="52" /><polygon class="d-dot" points="360,51 348,50 353,58" /><text class="d-mut" x="252" y="58" text-anchor="middle" font-size="8">oui</text>
+    <line class="d-line" x1="158" y1="98" x2="356" y2="104" /><polygon class="d-dot" points="360,105 349,101 350,109" /><text class="d-mut" x="252" y="92" text-anchor="middle" font-size="8">non, mais bloqué</text>
+    <line class="d-line" x1="158" y1="110" x2="356" y2="156" /><polygon class="d-dot" points="360,157 350,151 349,159" /><text class="d-mut" x="252" y="150" text-anchor="middle" font-size="8">non, RAM pleine</text>
+    <rect class="d-box" x="360" y="36" width="256" height="34" rx="6" /><text class="d-text" x="488" y="52" text-anchor="middle" font-size="9">CPU-bound (calcul)</text><text class="d-mut" x="488" y="64" text-anchor="middle" font-size="7.5">1 cœur = mono-thread · N cœurs = parallèle</text>
+    <rect class="d-box" x="360" y="88" width="256" height="32" rx="6" /><text class="d-text" x="488" y="108" text-anchor="middle" font-size="9">I/O-bound (attente E/S)</text>
+    <rect class="d-box" x="360" y="140" width="256" height="32" rx="6" /><text class="d-text" x="488" y="160" text-anchor="middle" font-size="9">pression mémoire (swap)</text>
+  </svg>
+  <figcaption>Une seule question de départ — «&nbsp;le CPU est-il saturé&nbsp;?&nbsp;» — aiguille vers les trois diagnostics les plus fréquents. Le bon diagnostic désigne le bon levier&nbsp;: paralléliser, recouvrir les E/S, ou libérer de la RAM.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Lire la sortie de <code>time</code></p><p>Préfixe une commande par <code>time</code> et lis trois nombres&nbsp;: <strong>real</strong> (temps écoulé au mur), <strong>user</strong> (calcul en espace utilisateur), <strong>sys</strong> (temps passé dans le noyau). Un <em>user</em> proche du <em>real</em> trahit un programme <strong>CPU-bound</strong>&nbsp;; un <em>real</em> bien plus grand que <em>user</em>&#160;+&#160;<em>sys</em> signale que le programme a surtout <strong>attendu</strong> (I/O-bound). Le diagnostic tient en une commande.</p></div></div>
+
 <figure class="cheat-table">
   <table>
     <caption>La boîte à outils de l'analyse système</caption>
@@ -173,6 +189,8 @@
   <dt>strace</dt><dd>Outil qui trace en direct les <strong>appels système</strong> d'un processus&nbsp;: idéal pour voir ce qu'il demande vraiment au noyau (fichiers, réseau, mémoire).</dd>
   <dt>Thrashing</dt><dd>Effondrement des performances quand la RAM manque&nbsp;: l'OS passe son temps à échanger des pages entre RAM et disque (swap) au lieu de faire progresser les programmes.</dd>
   <dt>Profilage</dt><dd>Mesure du comportement réel d'un programme (temps, CPU, mémoire, appels) pour fonder l'optimisation sur des <strong>faits</strong> plutôt que sur des intuitions.</dd>
+  <dt>Swap (pagination sur disque)</dt><dd>Zone du disque où l'OS déplace des pages de mémoire quand la RAM est pleine&nbsp;; très lent, d'où l'effondrement (<em>thrashing</em>) s'il est trop sollicité.</dd>
+  <dt><code>time</code> (real / user / sys)</dt><dd>Décompose la durée d'un programme&nbsp;: temps écoulé, temps de calcul, temps passé dans le noyau&nbsp;; un <em>real</em> ≫ <em>user</em> révèle de l'attente.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
