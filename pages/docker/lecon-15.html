@@ -183,6 +183,25 @@ volumes:
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>La suite naturelle de ce cours&nbsp;: l'<strong>intégration continue</strong> (le cours CI/CD) automatise build → scan → tag → push à chaque validation&nbsp;; l'<strong>orchestration</strong> avec <strong>Kubernetes</strong> (cours dédié) gère la mise à l'échelle, l'auto-réparation et les déploiements progressifs sur des grappes de serveurs. Docker reste la <strong>brique</strong> de base&nbsp;: l'image que tu sais construire ici est exactement celle que déploieront ces outils.</p></div></div>
 
+<h2>L'image, construite en deux temps</h2>
+<p>Le <code>compose.yaml</code> orchestre, mais chaque image mérite d'être <strong>légère</strong>. Le projet final s'appuie sur un Dockerfile <strong>multi-stage</strong>&nbsp;: une première étape compile avec tous les outils, une seconde ne garde que le résultat. C'est ce qui sépare une image d'un giga-octet d'une image de cent cinquante méga-octets.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Le principe du build multi-étapes. À gauche, une première étape nommée build part d'une image Node complète avec les outils de compilation : elle installe toutes les dépendances puis compile l'application, produisant un dossier dist. Cette étape est lourde et sera jetée. Au centre, l'instruction COPY --from=build ne récupère que le dossier dist. À droite, l'image finale repart d'une base Node propre et ne contient que le dist et les dépendances de production, avec un utilisateur non-root : elle est légère et c'est elle qu'on déploie.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Multi-stage : compiler dans une étape jetable, n'embarquer que le résultat</text>
+    <rect class="d-box" x="20" y="42" width="230" height="126" rx="10" stroke-dasharray="5 4" /><text class="d-tag" x="135" y="60" text-anchor="middle" font-size="9">étape « build » (jetée)</text>
+    <text class="d-mut" x="135" y="80" text-anchor="middle" font-size="8">node:20-alpine + outils</text>
+    <text class="d-mut" x="135" y="98" text-anchor="middle" font-size="8">npm ci (toutes les deps)</text>
+    <text class="d-mut" x="135" y="116" text-anchor="middle" font-size="8">npm run build</text>
+    <rect class="d-accent" x="70" y="128" width="130" height="28" rx="6" /><text class="d-text" x="135" y="146" text-anchor="middle" font-size="9">→ /app/dist</text>
+    <path class="d-accent" d="M250 100 L330 100" fill="none" stroke-width="2" /><path class="d-accent" d="M322 95 L332 100 L322 105" fill="none" stroke-width="2" /><text class="d-mut" x="291" y="92" text-anchor="middle" font-size="7.5">COPY --from=build</text>
+    <rect class="d-box" x="360" y="60" width="260" height="92" rx="10" /><text class="d-tag" x="490" y="78" text-anchor="middle" font-size="9">image finale (déployée)</text>
+    <text class="d-mut" x="490" y="98" text-anchor="middle" font-size="8">node:20-alpine propre</text>
+    <text class="d-mut" x="490" y="114" text-anchor="middle" font-size="8">dist + deps de prod (--omit=dev)</text>
+    <text class="d-mut" x="490" y="130" text-anchor="middle" font-size="8">USER node · légère</text>
+  </svg>
+  <figcaption>Le <strong>multi-stage</strong> sépare l'atelier du produit&nbsp;: on compile dans une étape riche en outils, puis on ne copie que l'<strong>artefact</strong> dans une image finale minimale — plus petite et avec moins de surface d'attaque.</figcaption>
+</figure>
+
 <h2>Antisèche</h2>
 <figure class="cheat-table">
   <table>
@@ -210,6 +229,7 @@ volumes:
   <dt><code>depends_on</code> / <code>service_healthy</code></dt><dd>Fait attendre un service qu'une dépendance soit non seulement lancée, mais réellement <strong>saine</strong> (via son healthcheck).</dd>
   <dt>Volume nommé</dt><dd>Stockage géré par Docker, indépendant du cycle de vie des conteneurs&nbsp;: les données survivent aux recréations.</dd>
   <dt>Twelve-Factor</dt><dd>Ensemble de bonnes pratiques pour les applications&nbsp;; ici&nbsp;: la <strong>configuration</strong> vit dans l'environnement, pas dans l'image.</dd>
+  <dt>Multi-stage (build multi-étapes)</dt><dd>Dockerfile en plusieurs étapes <code>FROM</code>&nbsp;: une étape compile avec les outils, l'étape finale ne récupère (<code>COPY --from</code>) que l'artefact. Résultat&nbsp;: une image bien plus légère et sûre.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -235,9 +255,10 @@ volumes:
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["docker compose up -d","compose up -d","docker compose up","compose up"],"placeholder":"la commande qui démarre toute la pile décrite dans compose.yaml, en arrière-plan","hints":["Elle lit le compose.yaml.","-d pour « detached » (arrière-plan).","docker compose ??? -d"],"link":{"href":"lecon-15.html","label":"Revoir « Un Compose prêt pour la production »"}},
+  {"type":"text","accept":["emballer","emballer l'app","emballer l'application","construire l'image","empaqueter"],"placeholder":"la 1re des quatre étapes : ___ l'application dans une image (Dockerfile)","hints":["Elle précède composer, publier, déployer.","On enferme l'app dans une image avec le Dockerfile.","« emb____ »."],"link":{"href":"lecon-15.html","label":"Revoir « La démarche, du code à la production »"}},
   {"type":"text","accept":["service_healthy","condition: service_healthy","healthy"],"placeholder":"la condition de depends_on qui fait attendre que la base soit réellement SAINE (pas juste lancée)","hints":["Elle s'appuie sur le healthcheck de la dépendance.","depends_on … condition: ????","« en bonne santé » en anglais + service_"],"link":{"href":"lecon-15.html","label":"Revoir le healthcheck"}},
-  {"type":"text","accept":["un volume","volume","volume nommé","volume nomme"],"placeholder":"ce qu'on ajoute pour que les données de PostgreSQL survivent à la recréation du conteneur","hints":["Le système de fichiers d'un conteneur est éphémère.","On le déclare sous volumes: et on le monte.","Un ??? nommé (donnees:/var/lib/postgresql/data)."],"link":{"href":"lecon-15.html","label":"Revoir la pile"}}
+  {"type":"text","accept":["version","tag de version","un tag de version","le tag","tag","1.0.0"],"placeholder":"ce qu'on fige avec image:monapp:1.0.0 et que « latest » laisse ambigu : la ___","hints":["« latest » change dans le temps ; 1.0.0 non.","Elle rend le déploiement traçable et le retour arrière possible.","« la ___ »."],"link":{"href":"lecon-15.html","label":"Revoir « une image traçable »"}},
+  null
 ]
 </script>
 
