@@ -135,6 +135,27 @@ my $dbh = DBI-&gt;connect(
 ) or die $DBI::errstr;</code></pre></figure>
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c1 1 1 2 1 3h6c0-1 0-2 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p><code>RaiseError =&gt; 1</code> t'évite de tester la valeur de retour après chaque appel&nbsp;: une erreur lève une exception. Combine-le avec <code>eval { … }</code> (leçon suivante) pour rattraper proprement.</p></div></div>
 
+<h2>Le cycle d'une requête</h2>
+<p>Une interrogation suit toujours le même enchaînement. On <strong>prépare</strong> une fois le texte SQL (le moteur en calcule le plan), puis on <strong>exécute</strong> — éventuellement plusieurs fois avec des valeurs différentes — et on <strong>lit</strong> les lignes une à une.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Cycle d'une requête avec DBI. Depuis la poignée de base dollar d b h, on appelle prepare pour obtenir une poignée d'instruction dollar s t h, puis execute pour lancer la requête, puis fetchrow répété qui rend une ligne à chaque appel puis rien quand c'est fini. Une flèche de retour montre qu'on peut ré-exécuter la même requête préparée avec d'autres valeurs.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">prepare une fois, execute et fetch autant que voulu</text>
+    <rect class="d-accent" x="14" y="46" width="96" height="42" rx="8" /><text class="d-tag" x="62" y="66" text-anchor="middle" font-size="12" font-family="monospace">$dbh</text><text class="d-mut" x="62" y="80" text-anchor="middle" font-size="9">connexion</text>
+    <path class="d-line" d="M110 67 L140 67" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="140,67 132,63 132,71" />
+    <rect class="d-box" x="144" y="46" width="104" height="42" rx="8" /><text class="d-tag" x="196" y="66" text-anchor="middle" font-size="11" font-family="monospace">prepare</text><text class="d-mut" x="196" y="80" text-anchor="middle" font-size="9">rend $sth</text>
+    <path class="d-line" d="M248 67 L278 67" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="278,67 270,63 270,71" />
+    <rect class="d-box" x="282" y="46" width="104" height="42" rx="8" /><text class="d-tag" x="334" y="66" text-anchor="middle" font-size="11" font-family="monospace">execute</text><text class="d-mut" x="334" y="80" text-anchor="middle" font-size="9">lie les valeurs</text>
+    <path class="d-line" d="M386 67 L416 67" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="416,67 408,63 408,71" />
+    <rect class="d-box" x="420" y="46" width="120" height="42" rx="8" /><text class="d-tag" x="480" y="66" text-anchor="middle" font-size="11" font-family="monospace">fetchrow</text><text class="d-mut" x="480" y="80" text-anchor="middle" font-size="9">une ligne / appel</text>
+    <path class="d-line" d="M540 67 L570 67" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="570,67 562,63 562,71" />
+    <rect class="d-frame" x="574" y="46" width="54" height="42" rx="8" /><text class="d-mut" x="601" y="70" text-anchor="middle" font-size="9">plus de ligne</text>
+    <path class="d-line" d="M480 88 L480 116 L334 116 L334 90" fill="none" stroke-width="1.4" stroke-dasharray="4 3" /><polygon class="d-dot" points="334,90 330,99 338,99" />
+    <text class="d-mut" x="407" y="132" text-anchor="middle" font-size="9">on peut ré-exécuter avec d'autres valeurs</text>
+  </svg>
+  <figcaption>Le même <code>$sth</code> issu de <code>prepare</code> peut être <code>execute</code> plusieurs fois&nbsp;: c'est là qu'une requête préparée gagne en vitesse.</figcaption>
+</figure>
+
 <h2>Requêtes préparées et placeholders</h2>
 <p>La règle d'or&nbsp;: <strong>ne jamais</strong> insérer une variable directement dans le SQL. On écrit un <code>?</code> à sa place (un <em>placeholder</em>), et on fournit la valeur à <code>execute</code>. Le pilote se charge de l'échapper — c'est plus sûr <em>et</em> plus rapide (le plan de requête est réutilisé).</p>
 <figure class="code-block" data-file="select.pl"><pre><code class="language-perl">my $sth = $dbh-&gt;prepare(
@@ -186,6 +207,7 @@ for my $p (@$lignes) {
 
 <h2>Modifier et grouper en transaction</h2>
 <p>Pour une écriture unique sans résultat, <code>do</code> suffit. Pour plusieurs écritures qui doivent réussir <em>ensemble</em> (ou pas du tout), on ouvre une <strong>transaction</strong>.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi <code>begin_work</code>, puisque <code>AutoCommit</code> est à 1&nbsp;?</p><p>Avec <code>AutoCommit =&gt; 1</code>, chaque écriture est validée immédiatement, comme si elle formait sa propre transaction&nbsp;: pratique, mais impossible d'annuler un lot à moitié fait. <code>begin_work</code> suspend ce mode le temps de la transaction&nbsp;; <code>commit</code> ou <code>rollback</code> le réactive ensuite. C'est le bon réflexe dès que deux écritures doivent être solidaires.</p></div></div>
 <figure class="code-block" data-file="ecrire.pl"><pre><code class="language-perl"># Insertion simple avec placeholders
 $dbh-&gt;do("INSERT INTO produits (nom, prix) VALUES (?, ?)",
          undef, "Cahier", 3.20);
@@ -227,6 +249,8 @@ eval {
   <dt>DBI</dt><dd><em>Database Interface</em>&nbsp;: module standard qui offre une API unique vers toutes les bases.</dd>
   <dt>DBD</dt><dd><em>Database Driver</em>&nbsp;: pilote spécifique à un moteur (<code>DBD::SQLite</code>, <code>DBD::Pg</code>…), utilisé par DBI.</dd>
   <dt>DSN</dt><dd><em>Data Source Name</em>&nbsp;: chaîne décrivant la cible, ex. <code>dbi:SQLite:dbname=x.db</code>.</dd>
+  <dt><code>RaiseError</code></dt><dd>Option de <code>connect</code>&nbsp;: à 1, la moindre erreur SQL lève une exception au lieu de renvoyer une valeur fausse à tester.</dd>
+  <dt><code>AutoCommit</code></dt><dd>Option de <code>connect</code>&nbsp;: à 1, chaque écriture est validée aussitôt&nbsp;; on la suspend avec <code>begin_work</code> pour grouper une transaction.</dd>
   <dt>Poignée (<code>$dbh</code> / <code>$sth</code>)</dt><dd>Objet renvoyé par DBI&nbsp;: <em>database handle</em> pour la connexion, <em>statement handle</em> pour une requête préparée.</dd>
   <dt>Placeholder</dt><dd>Le <code>?</code> qui réserve la place d'une valeur&nbsp;; remplie par <code>execute</code>, elle est échappée automatiquement.</dd>
   <dt>Injection SQL</dt><dd>Faille où une saisie est interprétée comme du code SQL&nbsp;; évitée par les placeholders.</dd>

@@ -142,6 +142,8 @@ say saluer("Ada");          # Bonjour, Ada !</code></pre></figure>
   <figcaption>Perl range tous les arguments dans <code>@_</code>&nbsp;; on les «&nbsp;déballe&nbsp;» aussitôt dans des variables lisibles.</figcaption>
 </figure>
 
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège&nbsp;: <code>@_</code> est un alias, pas une copie</p><p>Les éléments de <code>@_</code> sont des <strong>alias</strong> des variables passées à l'appel&nbsp;: modifier <code>$_[0]</code> dans la fonction modifie la variable d'origine chez l'appelant. Ainsi <code>sub double { $_[0] *= 2 }</code> appelé sur <code>double($x)</code> change <code>$x</code> à l'extérieur, ce qui surprend presque toujours. La parade est l'idiome que tu emploies déjà&nbsp;: copie d'abord par <code>my ($n) = @_;</code>, puis travaille sur la copie.</p></div></div>
+
 <h2>Recevoir une liste d'arguments</h2>
 <p>Comme <code>@_</code> est un tableau, on peut récupérer un nombre variable d'arguments&nbsp;: on déballe les premiers, et le reste va dans un tableau.</p>
 <figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">sub somme {
@@ -168,6 +170,27 @@ sub premier_et_reste {
 my @liste  = valeurs();     # (10, 20, 30)
 my $combien = valeurs();    # 30 (dernière valeur en contexte scalaire)
 my ($x, $y) = valeurs();    # 10, 20</code></pre></figure>
+
+<p>Pour <strong>choisir</strong> soi-même son retour selon le contexte, on interroge <code>wantarray</code>&nbsp;: vrai en contexte de liste, faux en contexte scalaire. Une fonction peut ainsi renvoyer la liste complète d'un côté, et son nombre d'éléments de l'autre.</p>
+<figure class="code-block" data-file="exemple.pl"><pre><code class="language-perl">sub couleurs {
+    my @c = ("rouge", "vert", "bleu");
+    return wantarray ? @c : scalar @c;   # liste OU nombre
+}
+
+my @toutes = couleurs();    # ("rouge", "vert", "bleu")
+my $n      = couleurs();    # 3</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le rôle de wantarray. Un même appel à la fonction couleurs se comporte différemment selon le contexte. En contexte de liste, à gauche, wantarray vaut vrai et la fonction renvoie la liste rouge vert bleu. En contexte scalaire, à droite, wantarray vaut faux et la fonction renvoie le nombre 3.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">wantarray&nbsp;: un même appel, deux retours</text>
+    <rect class="d-box" x="220" y="38" width="200" height="40" rx="8" /><text class="d-tag" x="320" y="63" text-anchor="middle" font-size="13" font-family="monospace">couleurs()</text>
+    <path class="d-line" d="M300 78 L150 108" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="150,108 159,105 156,113" />
+    <path class="d-line" d="M340 78 L490 108" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="490,108 481,105 484,113" />
+    <rect class="d-accent" x="24" y="110" width="252" height="52" rx="8" /><text class="d-text" x="150" y="130" text-anchor="middle" font-size="11">contexte de liste</text><text class="d-mut" x="150" y="146" text-anchor="middle" font-size="9" font-family="monospace">wantarray vrai</text><text class="d-mut" x="150" y="158" text-anchor="middle" font-size="9">renvoie (rouge, vert, bleu)</text>
+    <rect class="d-box" x="364" y="110" width="252" height="52" rx="8" /><text class="d-text" x="490" y="130" text-anchor="middle" font-size="11">contexte scalaire</text><text class="d-mut" x="490" y="146" text-anchor="middle" font-size="9" font-family="monospace">wantarray faux</text><text class="d-mut" x="490" y="158" text-anchor="middle" font-size="9">renvoie 3</text>
+  </svg>
+  <figcaption><code>wantarray</code> laisse la fonction s'adapter&nbsp;: la même expression rend une liste ou un scalaire selon la façon dont on l'appelle.</figcaption>
+</figure>
 
 <h2>La portée lexicale avec my</h2>
 <p><code>my</code> crée une variable <strong>locale au bloc</strong> où elle est déclarée. Hors de ce bloc, elle n'existe pas. C'est ce qui rend les sous-programmes étanches et le code prévisible — la raison d'être de <code>use strict</code>.</p>
@@ -241,6 +264,9 @@ say $c->();   # 2  (l'état $n persiste)</code></pre></figure>
   <dt><code>my</code></dt><dd>Déclare une variable à portée lexicale&nbsp;; exigée par <code>use strict</code>.</dd>
   <dt>Contexte (d'appel)</dt><dd>Liste ou scalaire&nbsp;: il décide de la valeur renvoyée par un sous-programme ou une expression.</dd>
   <dt>Fermeture (closure)</dt><dd>Sous-programme anonyme qui capture et conserve une variable de son environnement (état privé persistant).</dd>
+  <dt><code>wantarray</code></dt><dd>Renvoie vrai si le sous-programme est appelé en contexte de liste, faux en contexte scalaire&nbsp;: permet d'adapter la valeur retournée.</dd>
+  <dt><code>shift</code></dt><dd>Dans un sous-programme, retire et renvoie le premier élément de <code>@_</code> par défaut&nbsp;; sert à récupérer un argument (souvent <code>$self</code>).</dd>
+  <dt>Alias</dt><dd>Second nom pour une même donnée&nbsp;: les éléments de <code>@_</code> sont des alias des arguments, donc modifier <code>$_[0]</code> modifie la variable d'origine.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

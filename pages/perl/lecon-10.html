@@ -130,6 +130,8 @@ sub new {
   <figcaption><code>bless</code> ne change pas les données&nbsp;: il <strong>étiquette</strong> la référence avec le nom d'un package, qui devient la classe de l'objet.</figcaption>
 </figure>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title"><code>new</code> n'a rien de magique</p><p>Contrairement à Java ou Python, <code>new</code> n'est pas un mot-clé du langage&nbsp;: c'est une simple <strong>convention de nom</strong>. Rien n'oblige un constructeur à s'appeler ainsi&nbsp;; <code>Compte-&gt;creer(...)</code> marcherait tout aussi bien. Un constructeur n'est qu'une fonction ordinaire qui crée une référence, la <code>bless</code>, puis la renvoie. Toute la «&nbsp;magie&nbsp;» tient dans ces trois gestes.</p></div></div>
+
 <h2>Des méthodes</h2>
 <p>Une méthode reçoit l'objet comme <strong>premier argument</strong> (par convention <code>$self</code>). On l'appelle avec la flèche <code>-&gt;</code>, qui passe l'objet automatiquement.</p>
 <figure class="code-block" data-file="Compte.pm"><pre><code class="language-perl">sub deposer {
@@ -147,6 +149,17 @@ my $c = Compte-&gt;new(titulaire =&gt; "Ada", solde =&gt; 100);
 $c-&gt;deposer(50);
 say $c-&gt;solde;        # 150</code></pre></figure>
 <p>Le <code>Compte-&gt;new(...)</code> appelle <code>new</code> en lui passant <code>"Compte"</code> comme premier argument&nbsp;; <code>$c-&gt;deposer(50)</code> passe <code>$c</code> puis <code>50</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 150" role="img" aria-label="La flèche n'est qu'une réécriture. L'appel de méthode « dollar c flèche deposer entre parenthèses 50 » équivaut à l'appel de fonction « Compte deux-points deux-points deposer entre parenthèses dollar c virgule 50 » : la flèche insère l'objet comme tout premier argument, que la méthode récupère dans dollar self.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">La flèche passe l'objet comme 1er argument</text>
+    <rect class="d-box" x="60" y="46" width="230" height="44" rx="8" /><text class="d-tag" x="175" y="73" text-anchor="middle" font-size="13" font-family="monospace">$c-&gt;deposer(50)</text>
+    <path class="d-line" d="M290 68 L350 68" fill="none" stroke-width="1.8" /><polygon class="d-dot" points="350,68 342,64 342,72" /><text class="d-mut" x="320" y="60" text-anchor="middle" font-size="10">devient</text>
+    <rect class="d-accent" x="350" y="46" width="270" height="44" rx="8" /><text class="d-tag" x="485" y="73" text-anchor="middle" font-size="12" font-family="monospace">Compte::deposer($c, 50)</text>
+    <text class="d-mut" x="320" y="118" text-anchor="middle" font-size="10">$c glisse en tête des arguments : la méthode le récupère par my ($self, $montant) = @_;</text>
+  </svg>
+  <figcaption>Un appel de méthode est une simple réécriture&nbsp;: <code>-&gt;</code> place l'objet (ou la classe) en <strong>premier argument</strong>, d'où le <code>$self</code> en tête de <code>@_</code>.</figcaption>
+</figure>
 
 <h2>L'héritage</h2>
 <p>L'héritage passe par le tableau spécial <code>@ISA</code> (ou, plus proprement, par <code>use parent</code>). Une classe fille hérite des méthodes de la classe mère et peut les redéfinir.</p>
@@ -199,6 +212,8 @@ sub deposer {
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Appeler une méthode avec un point ou des parenthèses à la façon d'un autre langage&nbsp;: en Perl, c'est <strong>toujours</strong> la flèche, <code>$objet-&gt;methode(...)</code>. Et <code>$self</code> n'est pas magique&nbsp;: il faut le récupérer soi-même depuis <code>@_</code> (sauf avec Moo/Moose).</p></div></div>
 
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Oublier le <code>bless</code></p><p>Si <code>new</code> renvoie la référence sans la <code>bless</code> (par exemple <code>return $self;</code> au lieu de <code>return bless $self, $classe;</code>), on récupère un hachage anonyme ordinaire, pas un objet. Le premier appel de méthode échoue alors avec <strong>«&nbsp;Can't call method "deposer" on unblessed reference&nbsp;»</strong>&nbsp;: la référence n'est rattachée à aucune classe, donc Perl ne sait pas où chercher la méthode.</p></div></div>
+
 <h2>Pour aller plus loin</h2>
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Perl 5.38 introduit une syntaxe objet native expérimentale avec <code>use feature 'class'</code> (mots-clés <code>class</code>, <code>field</code>, <code>method</code>). En attendant qu'elle se stabilise, <strong>Moo</strong> reste la référence pratique pour les nouveaux projets objet.</p></div></div>
 
@@ -225,6 +240,9 @@ sub deposer {
   <dt>Méthode</dt><dd>Sous-programme d'un package&nbsp;; reçoit l'objet (ou le nom de classe) comme premier argument.</dd>
   <dt><code>$self</code></dt><dd>Nom conventionnel de l'objet dans une méthode, récupéré par <code>my $self = shift;</code>.</dd>
   <dt>Héritage</dt><dd>Mécanisme par lequel une classe fille réutilise les méthodes d'une classe mère, déclaré via <code>@ISA</code>/<code>use parent</code>.</dd>
+  <dt><code>@ISA</code></dt><dd>Tableau du package listant ses classes mères&nbsp;; c'est la chaîne que Perl remonte pour trouver une méthode absente de la classe de l'objet.</dd>
+  <dt><code>use parent</code></dt><dd>Pragma qui renseigne <code>@ISA</code> de façon lisible (<code>use parent 'Mere';</code>), la manière propre de déclarer un héritage.</dd>
+  <dt>Constructeur</dt><dd>Méthode qui crée et renvoie un objet (par convention <code>new</code>)&nbsp;: elle bâtit une référence, la <code>bless</code>, puis la retourne.</dd>
   <dt>Moo / Moose</dt><dd>Systèmes d'objets modernes et déclaratifs (attributs <code>has</code>, accesseurs générés, rôles) qui évitent le code répétitif.</dd>
 </dl>
 

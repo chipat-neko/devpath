@@ -176,6 +176,8 @@ sub cube  { my ($n) = @_; return $n ** 3; }
 1;   # un module doit renvoyer une valeur vraie</code></pre></figure>
 <p class="code-caption">Le <code>1;</code> final est obligatoire&nbsp;: il signale que le module s'est chargé correctement.</p>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Bonne pratique&nbsp;: <code>@EXPORT_OK</code> plutôt que <code>@EXPORT</code></p><p><code>@EXPORT</code> impose ses fonctions à tout code qui écrit <code>use Maths;</code>, au risque d'écraser silencieusement un nom déjà présent chez l'appelant. <code>@EXPORT_OK</code> laisse ce dernier <strong>choisir</strong> ce qu'il importe (<code>use Maths qw(carre);</code>)&nbsp;: c'est la convention recommandée sur CPAN, car elle rend chaque dépendance visible et évite les collisions de noms.</p></div></div>
+
 <h2>Utiliser son module</h2>
 <p>On l'importe comme les autres. Le tableau <code>@EXPORT_OK</code> liste ce qu'on peut importer.</p>
 <figure class="code-block" data-file="programme.pl"><pre><code class="language-perl">use strict;
@@ -185,6 +187,26 @@ use Maths qw(carre cube);
 
 say carre(5);          # 25
 say cube(3);           # 27</code></pre></figure>
+
+<h2>Où Perl cherche un module</h2>
+<p>Comment <code>use Maths</code> retrouve-t-il le fichier&nbsp;? Perl traduit le nom du package en <strong>chemin</strong>, puis fouille une liste de dossiers appelée <code>@INC</code>. C'est exactement ce que <code>use lib '.'</code> modifie&nbsp;: il ajoute le dossier courant à cette liste.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Comment use retrouve le fichier d'un module. À partir de « use List deux-points deux-points Util », Perl remplace les deux-points par une barre oblique et ajoute point pm pour obtenir « List barre oblique Util point pm », puis il cherche ce fichier dans chaque dossier de la liste @INC, dans l'ordre, et charge le premier trouvé.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">De « use Module » au fichier sur le disque</text>
+    <rect class="d-box" x="46" y="40" width="196" height="42" rx="8" /><text class="d-tag" x="144" y="66" text-anchor="middle" font-size="13" font-family="monospace">use List::Util;</text>
+    <path class="d-line" d="M242 61 L300 61" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="300,61 291,57 291,65" />
+    <rect class="d-accent" x="304" y="40" width="216" height="42" rx="8" /><text class="d-tag" x="412" y="61" text-anchor="middle" font-size="12" font-family="monospace">List/Util.pm</text><text class="d-mut" x="412" y="76" text-anchor="middle" font-size="9">:: devient / et on ajoute .pm</text>
+    <path class="d-line" d="M412 82 L412 116" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="412,116 408,107 416,107" />
+    <text class="d-label" x="320" y="110" text-anchor="middle" font-size="11">cherché dans chaque dossier de @INC, dans l'ordre</text>
+    <rect class="d-box" x="52" y="128" width="156" height="46" rx="8" /><text class="d-text" x="130" y="152" text-anchor="middle" font-size="12" font-family="monospace">.</text><text class="d-mut" x="130" y="166" text-anchor="middle" font-size="9">ajouté par use lib</text>
+    <rect class="d-box" x="242" y="128" width="156" height="46" rx="8" /><text class="d-text" x="320" y="151" text-anchor="middle" font-size="10" font-family="monospace">/usr/lib/perl5</text><text class="d-mut" x="320" y="166" text-anchor="middle" font-size="9">bibliothèque standard</text>
+    <rect class="d-accent" x="432" y="128" width="156" height="46" rx="8" /><text class="d-text" x="510" y="151" text-anchor="middle" font-size="11">1er fichier trouvé</text><text class="d-mut" x="510" y="166" text-anchor="middle" font-size="9">chargé, on s'arrête</text>
+  </svg>
+  <figcaption>Perl transforme <code>::</code> en <code>/</code>, ajoute <code>.pm</code>, puis parcourt <code>@INC</code> dossier après dossier jusqu'au premier fichier correspondant.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le nom du package doit refléter le chemin du fichier</p><p>Puisque <code>use Foo::Bar</code> cherche <code>Foo/Bar.pm</code>, ton fichier doit être <strong>nommé et rangé</strong> d'après son package&nbsp;: un <code>package Maths;</code> vit dans <code>Maths.pm</code>, un <code>package Mon::Outil;</code> dans <code>Mon/Outil.pm</code>. Nommer le fichier autrement est l'erreur qui fait échouer le <code>use</code> avec «&nbsp;Can't locate … in @INC&nbsp;».</p></div></div>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier le <code>1;</code> à la fin d'un module&nbsp;: Perl croit que le chargement a échoué et lève une erreur «&nbsp;did not return a true value&nbsp;». C'est l'erreur la plus déroutante du débutant qui écrit son premier module.</p></div></div>
@@ -217,6 +239,8 @@ say cube(3);           # 27</code></pre></figure>
   <dt>Package</dt><dd>Espace de noms Perl&nbsp;; regroupe variables et sous-programmes sous un nom (ex. <code>List::Util</code>).</dd>
   <dt>Exporter</dt><dd>Module standard qui gère l'<strong>import</strong> des fonctions d'un package vers le code appelant (<code>@EXPORT_OK</code>).</dd>
   <dt><code>qw(...)</code></dt><dd><em>quote words</em>&nbsp;: liste de mots sans guillemets ni virgules, souvent utilisée pour lister les imports.</dd>
+  <dt><code>@INC</code></dt><dd>Tableau des répertoires où Perl cherche les modules&nbsp;; <code>use lib</code> y ajoute un dossier.</dd>
+  <dt><code>.pm</code></dt><dd>Extension d'un fichier module Perl (<em>Perl Module</em>)&nbsp;; son chemin reflète le nom du <code>package</code>.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

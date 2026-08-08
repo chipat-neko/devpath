@@ -204,7 +204,28 @@ say "$n voyelles";                   # 3
 <figure class="code-block" data-file="global.pl"><pre><code class="language-perl">my $txt = "cmd A12, B7 et C305";
 my @nombres = $txt =~ /(\d+)/g;      # (12, 7, 305)
 say for @nombres;</code></pre></figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: liste vs scalaire avec <code>/g</code></p><p>Le même <code>/(\d+)/g</code> se comporte différemment selon le contexte&nbsp;: affecté à un <strong>tableau</strong> (<code>my @tous = ...</code>) il renvoie <em>toutes</em> les captures d'un coup&nbsp;; utilisé dans un <code>while (... =~ /.../g)</code> il les rend une par une, position après position, ce qui est idéal pour traiter un gros texte au fil de l'eau sans tout charger.</p></div></div>
 <p>Reste le piège classique&nbsp;: par défaut, les quantificateurs sont <strong>gourmands</strong> (<em>greedy</em>) — ils prennent le plus possible. Ajoute <code>?</code> pour les rendre <strong>paresseux</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Sur la même chaîne chevron ouvrant b chevron fermant un chevron ouvrant slash b chevron fermant, deux motifs. En haut le motif gourmand chevron point étoile chevron capture tout d'un seul bloc, du premier chevron ouvrant jusqu'au dernier chevron fermant. En bas le motif paresseux chevron point étoile point d'interrogation chevron s'arrête au premier chevron fermant et ne capture que la première balise.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Même chaîne, deux quantificateurs</text>
+    <text class="d-mut" x="320" y="42" text-anchor="middle" font-size="12" font-family="monospace">&lt;b&gt;un&lt;/b&gt;</text>
+    <text class="d-text" x="88" y="72" font-size="11">Gourmand</text>
+    <text class="d-mut" x="88" y="88" font-size="10" font-family="monospace">/&lt;.*&gt;/</text>
+    <rect class="d-box" x="176" y="58" width="440" height="34" rx="8" />
+    <text class="d-tag" x="396" y="80" text-anchor="middle" font-size="13" font-family="monospace">&lt;b&gt;un&lt;/b&gt;</text>
+    <text class="d-mut" x="396" y="108" text-anchor="middle" font-size="10">tout, jusqu'au dernier &gt;</text>
+    <text class="d-text" x="88" y="146" font-size="11">Paresseux</text>
+    <text class="d-mut" x="88" y="162" font-size="10" font-family="monospace">/&lt;.*?&gt;/</text>
+    <rect class="d-accent" x="176" y="132" width="70" height="34" rx="8" />
+    <text class="d-tag" x="211" y="154" text-anchor="middle" font-size="13" font-family="monospace">&lt;b&gt;</text>
+    <text class="d-mut" x="330" y="153" font-size="11" font-family="monospace">un&lt;/b&gt;</text>
+    <text class="d-mut" x="330" y="182" font-size="10">s'arrête au premier &gt;</text>
+  </svg>
+  <figcaption>Sur <code>&lt;b&gt;un&lt;/b&gt;</code>, <code>&lt;.*&gt;</code> avale tout d'un bloc&nbsp;; le <code>?</code> de <code>&lt;.*?&gt;</code> coupe dès le premier <code>&gt;</code>. Un seul caractère change le résultat du tout au tout.</figcaption>
+</figure>
+
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention&nbsp;: gourmand vs paresseux</p><p>Sur <code>&lt;b&gt;gras&lt;/b&gt;</code>, le motif <code>/&lt;(.*)&gt;/</code> capture <code>b&gt;gras&lt;/b</code> (tout, jusqu'au dernier <code>&gt;</code>)&nbsp;! Le motif paresseux <code>/&lt;(.*?)&gt;/</code> s'arrête au premier <code>&gt;</code> et capture <code>b</code>. Le <code>?</code> change tout.</p></div></div>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: extraire les champs d'un log Apache</p><p>Une ligne de journal web ressemble à <code>192.168.1.10 - - [26/Jul/2026:14:03:22 +0200] "GET /index.html HTTP/1.1" 200 1024</code>. Un seul motif à groupes nommés en découpe tous les champs&nbsp;: <code>/(?&lt;ip&gt;\S+).+?"(?&lt;methode&gt;\w+) (?&lt;url&gt;\S+).+?" (?&lt;code&gt;\d{3})/</code>. On lit ensuite <code>$+{ip}</code>, <code>$+{methode}</code>, <code>$+{code}</code>… C'est exactement ce que font les outils d'analyse de logs, et la base du mini-projet à venir. Les <code>.+?</code> paresseux évitent de «&nbsp;déborder&nbsp;» sur les guillemets suivants.</p></div></div>
@@ -230,7 +251,9 @@ say for @nombres;</code></pre></figure>
 
 <h2>Glossaire</h2>
 <dl class="glossary">
+  <dt>Capture</dt><dd>Portion de la chaîne mémorisée par un groupe entre parenthèses&nbsp;; relue par <code>$1</code>, <code>$2</code>… (position) ou <code>$+{nom}</code> (nom).</dd>
   <dt>Groupe nommé</dt><dd>Capture identifiée par un nom avec <code>(?&lt;nom&gt;…)</code>&nbsp;; sa valeur se lit dans le hachage <code>%+</code> via <code>$+{nom}</code>.</dd>
+  <dt>Rétro-référence (backreference)</dt><dd>Renvoi, à l'intérieur du motif, vers une capture déjà faite&nbsp;: <code>\1</code> ou <code>\g{nom}</code> exige la même sous-chaîne (utile pour détecter un mot répété).</dd>
   <dt>Assertion (look-around)</dt><dd>Condition qui vérifie le contexte (avant ou après) sans l'inclure dans la correspondance&nbsp;: <code>(?=)</code>, <code>(?!)</code>, <code>(?&lt;=)</code>, <code>(?&lt;!)</code>.</dd>
   <dt>Look-ahead / look-behind</dt><dd>Assertion regardant respectivement <em>après</em> ou <em>avant</em> la position courante.</dd>
   <dt>Modificateur</dt><dd>Lettre après le motif qui change son comportement&nbsp;: <code>/i</code>, <code>/g</code>, <code>/m</code>, <code>/s</code>, <code>/x</code>, <code>/r</code>.</dd>

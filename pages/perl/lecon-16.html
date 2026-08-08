@@ -126,6 +126,8 @@
   <figcaption>Chaque étape a une responsabilité unique&nbsp;: c'est ce découpage qui rend le programme facile à écrire et à tester.</figcaption>
 </figure>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Bonne pratique&nbsp;: une étape, une responsabilité</p><p>Garde ces quatre phases <strong>distinctes</strong> — analyser une ligne, agréger, restituer — plutôt que de tout mêler dans une seule boucle géante. Tu peux alors tester l'analyse d'une ligne isolément, changer la source (fichier, entrée standard, réseau) sans toucher au reste, et faire évoluer le rapport sans risquer de casser le comptage. C'est le même découpage qui distingue un script jetable d'un outil qu'on maintient des années.</p></div></div>
+
 <h2>Étape par étape</h2>
 <p>Construisons-le morceau par morceau. D'abord, ouvrir le fichier de façon sûre et boucler sur ses lignes.</p>
 <figure class="code-block" data-file="1-lire.pl"><pre><code class="language-perl">use strict;
@@ -143,6 +145,8 @@ while (my $ligne = &lt;$fh&gt;) {
 }
 close $fh;</code></pre></figure>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: lire ligne à ligne, pas tout d'un coup</p><p>La boucle <code>while (my $ligne = &lt;$fh&gt;)</code> ne garde qu'<strong>une</strong> ligne en mémoire à la fois&nbsp;: elle traite sans broncher un journal de plusieurs gigaoctets. Tenté de tout charger d'un coup avec <code>my @lignes = &lt;$fh&gt;;</code>&nbsp;? Sur un gros fichier, ce tableau ferait exploser la mémoire et le script échouerait. Le flux ligne par ligne est ce qui rend l'outil utilisable sur de vrais logs de production.</p></div></div>
+
 <p>Ensuite, une <strong>regex</strong> découpe chaque ligne en quatre champs. Les parenthèses capturent l'IP, la méthode, l'URL et le code&nbsp;; <code>\d{3}</code> impose trois chiffres pour le statut.</p>
 <figure class="code-block" data-file="2-analyser.pl"><pre><code class="language-perl">if ($ligne =~ m{^(\S+)\s+(\S+)\s+(\S+)\s+(\d{3})$}) {
     my ($ip, $methode, $url, $statut) = ($1, $2, $3, $4);
@@ -151,6 +155,22 @@ close $fh;</code></pre></figure>
 else {
     warn "Ligne ignorée : $ligne\n";          # robustesse (leçon 15)
 }</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège&nbsp;: une regex trop stricte ignore des lignes en silence</p><p>Le <code>$</code> de fin et le <code>\d{3}</code> exigent un format exact. Qu'une ligne réelle porte un espace en trop, un statut sur deux chiffres ou un champ supplémentaire, et elle tombe dans le <code>else</code> sans bruit. D'où le compteur <code>$rejets</code>&nbsp;: si tu analyses 10&nbsp;000 lignes et en rejettes 4&nbsp;000, ce n'est pas le journal qui est cassé, c'est ta regex. <strong>Compte toujours les lignes non reconnues</strong> pour t'en apercevoir plutôt que de fausser tes statistiques.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Le tri de robustesse ligne par ligne. Chaque ligne lue passe par un test de la regex. Si elle correspond, ses champs sont agrégés dans les hachages compteurs et le compteur total augmente. Si elle ne correspond pas, elle part vers un avertissement et le compteur de rejets augmente. Aucune ligne n'arrête le programme.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Chaque ligne&nbsp;: reconnue ou rejetée, jamais fatale</text>
+    <rect class="d-box" x="16" y="66" width="120" height="44" rx="8" /><text class="d-text" x="76" y="88" text-anchor="middle" font-size="11">Ligne lue</text><text class="d-mut" x="76" y="103" text-anchor="middle" font-size="9">une à la fois</text>
+    <path class="d-line" d="M136 88 L176 88" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="176,88 168,84 168,92" />
+    <rect class="d-accent" x="180" y="64" width="120" height="48" rx="8" /><text class="d-text" x="240" y="86" text-anchor="middle" font-size="11">Test regex</text><text class="d-mut" x="240" y="101" text-anchor="middle" font-size="9">correspond&nbsp;?</text>
+    <path class="d-line" d="M300 78 L400 50" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="400,50 391,49 394,57" /><text class="d-mut" x="345" y="54" text-anchor="middle" font-size="9">oui</text>
+    <path class="d-line" d="M300 98 L400 126" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="400,126 391,124 394,132" /><text class="d-mut" x="345" y="126" text-anchor="middle" font-size="9">non</text>
+    <rect class="d-box" x="404" y="30" width="220" height="44" rx="8" /><text class="d-text" x="514" y="50" text-anchor="middle" font-size="11">Agréger + total++</text><text class="d-mut" x="514" y="65" text-anchor="middle" font-size="9">hachages compteurs</text>
+    <rect class="d-box" x="404" y="112" width="220" height="44" rx="8" /><text class="d-text" x="514" y="132" text-anchor="middle" font-size="11">Avertir + rejets++</text><text class="d-mut" x="514" y="147" text-anchor="middle" font-size="9">warn, on continue</text>
+  </svg>
+  <figcaption>Le <code>if</code>/<code>else</code> aiguille chaque ligne&nbsp;: les bonnes gonflent les compteurs, les mauvaises sont comptées et signalées. Le programme ne s'arrête jamais sur une seule ligne fautive.</figcaption>
+</figure>
 
 <p>On <strong>agrège</strong> dans deux hachages qui servent de compteurs&nbsp;: un incrément par clé rencontrée.</p>
 <figure class="code-block" data-file="3-agreger.pl"><pre><code class="language-perl">$par_statut{$statut}++;      # 200 => 3, 404 => 1, 500 => 1 ...
@@ -265,6 +285,9 @@ say "\nErreurs (statut >= 400) : $erreurs";</code></pre></figure></details></div
   <dt>Journal (log)</dt><dd>Fichier texte où un programme consigne son activité, une entrée par ligne.</dd>
   <dt>Pipeline</dt><dd>Enchaînement d'étapes où la sortie de l'une alimente l'entrée de la suivante (lire → analyser → agréger → rapporter).</dd>
   <dt>Analyser (<em>parser</em>)</dt><dd>Extraire d'un texte brut des champs structurés&nbsp;; ici via une regex de capture.</dd>
+  <dt>Expression régulière (<em>regex</em>)</dt><dd>Motif décrivant une forme de texte&nbsp;; ici <code>m{^(\S+)\s+…\s+(\d{3})$}</code> reconnaît une ligne et en capture les champs entre parenthèses.</dd>
+  <dt>Flux de fichier (<em>handle</em>)</dt><dd>Poignée ouverte sur un fichier (ici <code>$fh</code>), que <code>&lt;$fh&gt;</code> lit ligne par ligne sans tout charger en mémoire.</dd>
+  <dt>Rejet</dt><dd>Ligne qui ne correspond pas à la regex&nbsp;; on la <strong>compte</strong> (<code>$rejets</code>) au lieu de l'ignorer en silence, pour repérer un format inattendu.</dd>
   <dt>Agréger</dt><dd>Résumer de nombreuses lignes en quelques compteurs ou totaux.</dd>
   <dt>Hachage compteur</dt><dd>Hachage dont chaque clé compte ses occurrences via <code>$h{$cle}++</code>.</dd>
   <dt>Code de statut HTTP</dt><dd>Nombre à trois chiffres résumant une réponse&nbsp;: <code>2xx</code> succès, <code>4xx</code> erreur client, <code>5xx</code> erreur serveur.</dd>

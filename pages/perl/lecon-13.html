@@ -189,9 +189,35 @@ print $json-&gt;encode($data);</code></pre></figure>
   <figcaption>Le JSON se «&nbsp;traduit&nbsp;» directement dans les références vues en leçon 8&nbsp;: objets → hachages, listes → tableaux.</figcaption>
 </figure>
 
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Astuce&nbsp;: <code>canonical</code> pour une sortie reproductible</p><p>Sans <code>canonical</code>, l'ordre des clés d'un hachage Perl est <strong>imprévisible</strong>&nbsp;: deux exécutions peuvent produire un JSON différent pour la même donnée. Le drapeau <code>canonical</code> trie les clés par ordre alphabétique&nbsp;; la sortie devient <strong>déterministe</strong>. Précieux pour comparer deux fichiers avec <code>diff</code>, écrire un test qui vérifie une sortie exacte, ou versionner un JSON dans Git sans faux changements à chaque commit.</p></div></div>
+
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention à l'encodage</p><p><code>encode_json</code> / <code>decode_json</code> travaillent sur des <strong>octets UTF-8</strong>, pas sur des chaînes décodées. Si tu lis un fichier avec <code>:encoding(utf8)</code>, utilise plutôt la forme objet <code>JSON::PP-&gt;new-&gt;utf8(0)-&gt;decode(...)</code>, ou reste cohérent d'un bout à l'autre. Mélanger les deux produit des accents cassés (le fameux <code>Ã©</code>).</p></div></div>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: du CSV de tableur au JSON d'API</p><p>Un service marketing exporte ses contacts depuis un tableur (CSV) mais l'API du CRM n'accepte que du JSON. En quinze lignes, Perl lit le CSV avec <code>Text::CSV</code>, transforme chaque ligne en hachage (<code>getline_hr</code>), empile le tout dans un tableau, puis <code>encode_json</code> produit le corps de la requête. Ce genre de «&nbsp;pont&nbsp;» entre formats est l'un des usages les plus courants de Perl en entreprise&nbsp;: on branche deux systèmes qui ne se parlaient pas.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 186" role="img" aria-label="Pipeline de conversion CSV vers JSON. Le fichier CSV clients point csv est lu par Text deux-points deux-points CSV, qui produit une structure Perl en mémoire : un tableau de références de hachage, une par ligne. La fonction encode_json sérialise cette structure en texte JSON. Les flèches du bas montrent le chemin inverse : decode_json désérialise le JSON vers la même structure Perl. Au centre, la structure en mémoire est le pivot commun aux deux formats texte.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le pont entre deux formats texte : la structure Perl au centre</text>
+    <rect class="d-box" x="20" y="52" width="150" height="52" rx="8" />
+    <text class="d-text" x="95" y="74" text-anchor="middle" font-size="11">Fichier CSV</text>
+    <text class="d-mut" x="95" y="92" text-anchor="middle" font-size="10" font-family="monospace">clients.csv</text>
+    <rect class="d-accent" x="245" y="46" width="150" height="64" rx="8" />
+    <text class="d-text" x="320" y="70" text-anchor="middle" font-size="11">Structure Perl</text>
+    <text class="d-mut" x="320" y="88" text-anchor="middle" font-size="9">tableau de hachages</text>
+    <text class="d-mut" x="320" y="101" text-anchor="middle" font-size="9" font-family="monospace">[ {...}, {...} ]</text>
+    <rect class="d-box" x="470" y="52" width="150" height="52" rx="8" />
+    <text class="d-text" x="545" y="74" text-anchor="middle" font-size="11">Texte JSON</text>
+    <text class="d-mut" x="545" y="92" text-anchor="middle" font-size="10" font-family="monospace">[{"nom":...}]</text>
+    <path class="d-line" d="M170 70 L241 70" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="241,70 233,66 233,74" />
+    <text class="d-mut" x="205" y="62" text-anchor="middle" font-size="9" font-family="monospace">Text::CSV</text>
+    <path class="d-line" d="M395 70 L466 70" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="466,70 458,66 458,74" />
+    <text class="d-mut" x="430" y="62" text-anchor="middle" font-size="9" font-family="monospace">encode_json</text>
+    <path class="d-line" d="M466 96 L395 96" fill="none" stroke-width="1.6" /><polygon class="d-dot" points="395,96 403,92 403,100" />
+    <text class="d-mut" x="430" y="126" text-anchor="middle" font-size="9" font-family="monospace">decode_json</text>
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="10">données en mémoire (manipulables) ↕ format texte (échangeable, stockable)</text>
+  </svg>
+  <figcaption>Convertir un format en un autre, c'est deux étapes&nbsp;: <strong>désérialiser</strong> le texte d'entrée vers une structure Perl, la retoucher, puis la <strong>sérialiser</strong> vers le format de sortie. La structure en mémoire est le pivot commun.</figcaption>
+</figure>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour de gros volumes, préfère <code>Cpanel::JSON::XS</code> (bien plus rapide, écrit en C) — même interface. Pour le YAML, il y a <code>YAML::PP</code>&nbsp;; pour le XML, <code>XML::LibXML</code>. Le réflexe Perl&nbsp;: un format = un module éprouvé sur CPAN.</p></div></div>
 
@@ -219,6 +245,9 @@ print $json-&gt;encode($data);</code></pre></figure>
   <dt>JSON</dt><dd><em>JavaScript Object Notation</em>&nbsp;: format d'échange léger&nbsp;; objets, tableaux, nombres, chaînes, booléens.</dd>
   <dt><code>decode_json</code> / <code>encode_json</code></dt><dd>Fonctions de <code>JSON::PP</code> qui convertissent entre texte JSON (octets UTF-8) et structure Perl.</dd>
   <dt><code>canonical</code></dt><dd>Option qui trie les clés à la sortie&nbsp;: JSON reproductible, pratique pour comparer ou versionner.</dd>
+  <dt>Sérialisation</dt><dd>Transformation d'une structure en mémoire (hachages, tableaux) en une suite d'octets texte échangeable ou stockable&nbsp;: <code>encode_json</code>, ou l'écriture d'un CSV.</dd>
+  <dt>Désérialisation</dt><dd>Opération inverse&nbsp;: reconstruire une structure Perl manipulable à partir d'un texte&nbsp;: <code>decode_json</code>, ou la lecture d'un CSV avec <code>Text::CSV</code>.</dd>
+  <dt>Échappement</dt><dd>Mécanisme qui protège un caractère spécial pour qu'il soit pris comme donnée&nbsp;: en CSV, un champ contenant une virgule est entouré de guillemets, et un guillemet interne est doublé (<code>""</code>).</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
