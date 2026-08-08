@@ -147,6 +147,32 @@ ets:delete(cache, "session_99").   % retirer une clé</code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Un compteur atomique gratuit</p><p><code>ets:update_counter(stats, requetes, 1)</code> incrémente un entier <strong>de façon atomique</strong>, sans passer par un processus. C'est la manière idiomatique de tenir des compteurs très sollicités (nombre de requêtes, hits de cache) sans créer de goulot ni de condition de course.</p></div></div>
 
+<h2>Qui peut lire, qui peut écrire&nbsp;?</h2>
+<p>Créer la table en <code>public</code> n'était qu'une des trois <strong>visibilités</strong> possibles. À la création, un drapeau décide qui a le droit de <em>lire</em> et d'<em>écrire</em>&nbsp;: on n'ouvre pas forcément une table à tout le monde.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Tableau des trois visibilités d'une table ETS, croisant le niveau avec les droits de deux acteurs : le processus propriétaire et les autres processus. Ligne private : le propriétaire lit et écrit, les autres n'ont aucun accès. Ligne protected, marquée comme le réglage par défaut : le propriétaire lit et écrit, les autres peuvent seulement lire. Ligne public : le propriétaire comme les autres lisent et écrivent. La conclusion est qu'une table est protégée par défaut, lisible par tous mais modifiable par le seul propriétaire.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">ETS : qui peut lire, qui peut écrire ?</text>
+    <text class="d-mut" x="337" y="46" text-anchor="middle" font-size="8.5">processus propriétaire</text>
+    <text class="d-mut" x="513" y="46" text-anchor="middle" font-size="8.5">autres processus</text>
+    <rect class="d-box" x="24" y="56" width="140" height="34" rx="5" /><text class="d-text" x="94" y="77" text-anchor="middle" font-size="8.5">private</text>
+    <text class="d-text" x="337" y="77" text-anchor="middle" font-size="8">lit + écrit</text>
+    <text class="d-mut" x="513" y="77" text-anchor="middle" font-size="8">aucun accès</text>
+    <rect class="d-accent" x="24" y="98" width="140" height="34" rx="5" /><text class="d-text" x="94" y="114" text-anchor="middle" font-size="8.5">protected</text><text class="d-mut" x="94" y="126" text-anchor="middle" font-size="7">(défaut)</text>
+    <text class="d-text" x="337" y="119" text-anchor="middle" font-size="8">lit + écrit</text>
+    <text class="d-text" x="513" y="119" text-anchor="middle" font-size="8">lit seulement</text>
+    <rect class="d-box" x="24" y="140" width="140" height="34" rx="5" /><text class="d-text" x="94" y="161" text-anchor="middle" font-size="8.5">public</text>
+    <text class="d-text" x="337" y="161" text-anchor="middle" font-size="8">lit + écrit</text>
+    <text class="d-text" x="513" y="161" text-anchor="middle" font-size="8">lit + écrit</text>
+    <line class="d-line" x1="250" y1="52" x2="250" y2="178" stroke-dasharray="3 3" />
+    <line class="d-line" x1="426" y1="52" x2="426" y2="178" stroke-dasharray="3 3" />
+    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="8">Par défaut « protected » : lisible par tous, modifiable par le seul propriétaire.</text>
+  </svg>
+  <figcaption>Trois niveaux d'accès. <code>protected</code> — le défaut — laisse tout le monde lire mais réserve l'écriture au propriétaire&nbsp;; <code>public</code> ouvre l'écriture à tous (pratique pour un compteur partagé)&nbsp;; <code>private</code> ferme la table à tout autre processus.</figcaption>
+</figure>
+<p>Si tu ne précises rien, une table est <strong><code>protected</code></strong>&nbsp;: tout le monde peut la lire, mais seul son propriétaire peut y écrire — le bon réglage pour un cache qu'un seul processus alimente et que beaucoup consultent.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Lire une table, c'est copier</p><p>ETS vit <em>hors</em> du tas des processus&nbsp;: chaque <code>ets:lookup</code> <strong>recopie</strong> le tuple trouvé dans le tas du lecteur. Négligeable pour de petites entrées&nbsp;; coûteux pour de très gros termes lus en boucle. La parade&nbsp;: n'y ranger que ce qui est souvent lu, et ne récupérer qu'un champ avec <code>ets:lookup_element(Tab, Cle, Pos)</code> plutôt que de copier le tuple entier.</p></div></div>
+
 <h2>Choisir le type de table</h2>
 <p>À la création, le premier drapeau choisit la sémantique des clés&nbsp;:</p>
 <figure class="diagram">
@@ -202,6 +228,8 @@ ets:delete(cache, "session_99").   % retirer une clé</code></pre></figure>
   <dt>bag / duplicate_bag</dt><dd>Tables autorisant plusieurs tuples par clé&nbsp;; <code>duplicate_bag</code> accepte même les tuples identiques.</dd>
   <dt>named_table</dt><dd>Option qui permet de désigner la table par son nom plutôt que par l'identifiant renvoyé.</dd>
   <dt>Propriétaire (owner)</dt><dd>Processus créateur d'une table&nbsp;; à sa mort, la table est détruite (sauf <code>heir</code>).</dd>
+  <dt>Visibilité (public / protected / private)</dt><dd>Droit d'accès fixé à la création&nbsp;: <code>public</code> (tous lisent et écrivent), <code>protected</code> (défaut&nbsp;: tous lisent, seul le propriétaire écrit), <code>private</code> (le propriétaire seul).</dd>
+  <dt>DETS</dt><dd>Variante d'ETS stockée <strong>sur disque</strong> plutôt qu'en mémoire&nbsp;: survit au redémarrage, au prix de la vitesse. Brique de <code>Mnesia</code>.</dd>
   <dt>Mnesia</dt><dd>Base de données distribuée d'Erlang, bâtie sur ETS/DETS, transactionnelle et persistante.</dd>
 </dl>
 

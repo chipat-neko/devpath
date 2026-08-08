@@ -135,6 +135,27 @@ bit_size(Paquet).    %% =&gt; 24  (4 + 4 + 16)</code></pre></figure>
   <figcaption>La notation <code>&lt;&lt;Version:4, Type:4, Longueur:16, Charge/binary&gt;&gt;</code> décrit le paquet exactement comme une spécification de protocole&nbsp;: chaque champ, sa largeur, son ordre.</figcaption>
 </figure>
 
+<h2>Dans quel ordre les octets&nbsp;?</h2>
+<p>Un champ de plus d'un octet pose une question&nbsp;: quel octet vient en premier&nbsp;? C'est l'<strong>endianness</strong>. Erlang range par défaut le poids fort d'abord (<em>big-endian</em>, l'«&nbsp;ordre réseau&nbsp;»)&nbsp;; on demande l'inverse avec le spécificateur <code>little</code>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 194" role="img" aria-label="Le nombre 42, codé sur seize bits, rangé de deux façons. 42 s'écrit en hexadécimal 0x002A, soit deux octets : 00, l'octet de poids fort, et 2A, l'octet de poids faible. En big-endian, l'ordre par défaut d'Erlang et l'ordre réseau, les octets sont rangés poids fort d'abord : 00 comme premier octet, 2A comme second. En little-endian, ils sont inversés : 2A en premier, 00 en second. Les deux représentent 42, chacun dans sa convention. L'avertissement du bas indique que lire des octets little-endian en croyant qu'ils sont big-endian donne 0x2A00, soit 10752, au lieu de 42.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un nombre sur 16 bits, deux ordres d'octets</text>
+    <text class="d-mut" x="320" y="42" text-anchor="middle" font-size="8.5">42 = 0x002A → deux octets : 00 (poids fort) et 2A (poids faible)</text>
+    <text class="d-mut" x="255" y="60" text-anchor="middle" font-size="7">1er octet</text>
+    <text class="d-mut" x="327" y="60" text-anchor="middle" font-size="7">2e octet</text>
+    <text class="d-mut" x="120" y="86" text-anchor="middle" font-size="8.5">big-endian</text><text class="d-mut" x="120" y="98" text-anchor="middle" font-size="7">défaut · ordre réseau</text>
+    <rect class="d-accent" x="220" y="70" width="70" height="38" rx="4" /><text class="d-text" x="255" y="93" text-anchor="middle" font-size="9">00</text>
+    <rect class="d-box" x="292" y="70" width="70" height="38" rx="4" /><text class="d-text" x="327" y="93" text-anchor="middle" font-size="9">2A</text>
+    <text class="d-text" x="480" y="93" text-anchor="middle" font-size="9">= 42</text>
+    <text class="d-mut" x="120" y="146" text-anchor="middle" font-size="8.5">little-endian</text>
+    <rect class="d-box" x="220" y="126" width="70" height="38" rx="4" /><text class="d-text" x="255" y="149" text-anchor="middle" font-size="9">2A</text>
+    <rect class="d-accent" x="292" y="126" width="70" height="38" rx="4" /><text class="d-text" x="327" y="149" text-anchor="middle" font-size="9">00</text>
+    <text class="d-text" x="480" y="149" text-anchor="middle" font-size="9">= 42</text>
+    <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="8">Lire ces octets à l'envers : 0x2A00 = 10752 au lieu de 42 — d'où l'« ordre réseau ».</text>
+  </svg>
+  <figcaption>Le même 42, rangé poids fort d'abord (<code>big</code>, le défaut) ou poids faible d'abord (<code>little</code>). Deux machines doivent s'accorder sur l'ordre&nbsp;: c'est pourquoi les protocoles réseau imposent le big-endian.</figcaption>
+</figure>
+
 <h2>Les deux sens : construire et filtrer</h2>
 <p>La <em>même</em> notation sert à <strong>construire</strong> un binaire (à droite du <code>=</code>) et à le <strong>décomposer</strong> par pattern matching (à gauche du <code>=</code>). C'est la symétrie qui rend la bit syntax si agréable&nbsp;:</p>
 <figure class="code-block" data-file="shell"><pre><code class="language-erlang">%% CONSTRUIRE
@@ -185,6 +206,8 @@ decoder(&lt;&lt;1, 0, 7, "salut"&gt;&gt;).
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Binaire vs liste de caractères</p><p>Attention à ne pas confondre <code>&lt;&lt;"abc"&gt;&gt;</code> (un binaire de 3 octets) avec <code>"abc"</code> (une <em>liste</em> de trois entiers, leçon&nbsp;2). Les deux représentent du texte, mais n'ont ni la même performance ni les mêmes fonctions&nbsp;: pour de gros textes, préfère les binaires (d'où les <em>binary strings</em> d'Elixir). Convertir&nbsp;: <code>binary_to_list/1</code> et <code>list_to_binary/1</code>.</p></div></div>
 
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Binaire ou bitstring&nbsp;? La frontière de l'octet</p><p>Un <code>&lt;&lt;...&gt;&gt;</code> dont le total de bits est un <strong>multiple de 8</strong> est un <em>binary</em>. Sinon — <code>&lt;&lt;1:4&gt;&gt;</code> ne fait que 4 bits — c'est un <strong>bitstring</strong>, un binaire «&nbsp;non aligné&nbsp;». La nuance compte&nbsp;: <code>is_binary(&lt;&lt;1:4&gt;&gt;)</code> renvoie <code>false</code> alors que <code>is_bitstring(&lt;&lt;1:4&gt;&gt;)</code> renvoie <code>true</code>, et l'envoi réseau comme <code>binary_to_list/1</code> exigent un binaire aligné. À noter&nbsp;: <code>byte_size(&lt;&lt;1:4&gt;&gt;)</code> vaut <code>1</code>, arrondi au supérieur.</p></div></div>
+
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les segments acceptent d'autres spécificateurs&nbsp;: <code>/float</code>, <code>/utf8</code>, l'endianness (<code>big</code>/<code>little</code>), la signature (<code>signed</code>/<code>unsigned</code>). Les <strong>binary comprehensions</strong> (<code>&lt;&lt; ... || ... &gt;&gt;</code>) transforment un binaire en un autre. Enfin, la VM optimise les gros binaires par <strong>partage</strong> (comptage de références&nbsp;: un sous-binaire ne recopie pas les octets), ce qui rend le découpage bon marché.</p></div></div>
 
 <h2>Antisèche</h2>
@@ -214,6 +237,8 @@ decoder(&lt;&lt;1, 0, 7, "salut"&gt;&gt;).
   <dt><code>/binary</code></dt><dd>Capture «&nbsp;tout le reste&nbsp;» d'un binaire sous forme de binaire&nbsp;; sépare en-tête et charge utile.</dd>
   <dt><code>byte_size</code> / <code>bit_size</code></dt><dd>Taille d'un binaire, respectivement en octets et en bits.</dd>
   <dt>Charge utile (payload)</dt><dd>La partie «&nbsp;données&nbsp;» d'une trame, après l'en-tête.</dd>
+  <dt>Endianness (ordre des octets)</dt><dd>Ordre dans lequel se rangent les octets d'un nombre multi-octets&nbsp;: <code>big</code> (poids fort d'abord, l'«&nbsp;ordre réseau&nbsp;») ou <code>little</code>. Erlang écrit en <code>big</code> par défaut.</dd>
+  <dt>Bitstring</dt><dd>Binaire dont la taille en bits n'est <em>pas</em> un multiple de 8 (ex. <code>&lt;&lt;1:4&gt;&gt;</code>)&nbsp;; un <code>binary</code> en est le cas particulier aligné sur l'octet.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>

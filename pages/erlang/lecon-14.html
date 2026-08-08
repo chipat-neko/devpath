@@ -154,6 +154,20 @@ handle_call(total, _From, Stock) -&gt;
     {reply, T, Stock}.</code></pre></figure>
 <p>Le stock vit maintenant <em>dans</em> le processus. Chaque <code>ajouter</code> renvoie un nouvel état (immuabilité&nbsp;: on ne modifie pas la liste, on en préfixe une nouvelle). Le client, lui, ne voit que trois fonctions&nbsp;: <code>start_link</code>, <code>ajouter</code>, <code>total</code>.</p>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Comparaison entre l'étape 1 et l'étape 2 du projet. À gauche, l'étape 1, le script : une boîte représente la fonction main dont le stock est une liste écrite en dur dans le code ; pour le changer, il faut rééditer et recompiler. Une flèche vers la droite, légendée un processus qui se souvient, mène à l'étape 2, le gen_server : une boîte accentuée représente la boucle du serveur dont l'état est la liste des produits ; chaque ajout produit un nouvel état, et l'inventaire évolue à l'exécution sans recompiler. Le calcul du total est le même dans les deux cas ; ce qui change, c'est l'endroit où vit le stock.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Étape 1 → étape 2 : d'un stock figé à un état vivant</text>
+    <text class="d-mut" x="150" y="46" text-anchor="middle" font-size="8.5">Étape 1 — le script</text>
+    <rect class="d-box" x="40" y="58" width="220" height="70" rx="8" /><text class="d-text" x="150" y="82" text-anchor="middle" font-size="8">main() → Stock = [ … ]</text><text class="d-mut" x="150" y="100" text-anchor="middle" font-size="7.5">figé dans le code source</text><text class="d-mut" x="150" y="114" text-anchor="middle" font-size="7.5">changer = rééditer + recompiler</text>
+    <path class="d-line" d="M268 93 L372 93" fill="none" /><circle class="d-dot" cx="372" cy="93" r="2.5" /><text class="d-mut" x="320" y="86" text-anchor="middle" font-size="7">un processus qui se souvient</text>
+    <text class="d-mut" x="496" y="46" text-anchor="middle" font-size="8.5">Étape 2 — le gen_server</text>
+    <rect class="d-accent" x="386" y="58" width="220" height="70" rx="8" /><text class="d-text" x="496" y="80" text-anchor="middle" font-size="8">boucle : état = [P2, P1]</text><text class="d-mut" x="496" y="98" text-anchor="middle" font-size="7.5">ajouter → nouvel état</text><text class="d-mut" x="496" y="112" text-anchor="middle" font-size="7.5">évolue à chaud, sans recompiler</text>
+    <text class="d-mut" x="320" y="166" text-anchor="middle" font-size="8">Le calcul du total ne change pas ; ce qui change, c'est OÙ vit le stock :</text>
+    <text class="d-mut" x="320" y="182" text-anchor="middle" font-size="8">dans le code (immuable), puis dans un processus (qui se met à jour).</text>
+  </svg>
+  <figcaption>Le saut de l'étape 1 à l'étape 2&nbsp;: le stock quitte le code source pour vivre dans la boucle d'un <strong>gen_server</strong>. C'est ce qui rend l'inventaire modifiable à l'exécution.</figcaption>
+</figure>
+
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le patron de tout serveur d'état</p><p>Ce squelette — un <code>gen_server</code> qui garde une donnée et l'expose par <code>call</code>/<code>cast</code> — est exactement celui qu'on retrouve en production&nbsp;: un panier d'achat, une session utilisateur, un compteur de connexions, l'état d'une partie de jeu. <strong>WhatsApp</strong> gérait des centaines de millions d'utilisateurs avec, au fond, une multitude de processus de ce genre&nbsp;: petits, isolés, chacun responsable d'un morceau d'état. Tu viens d'écrire, en quinze lignes, la brique élémentaire d'un système concurrent à grande échelle.</p></div></div>
 
 <h2>Étape 3 — superviser : « let it crash »</h2>
@@ -185,6 +199,8 @@ init([]) -&gt;
   </svg>
   <figcaption>Le client parle au <strong>gen_server</strong> (par <code>cast</code> et <code>call</code>)&nbsp;; le <strong>superviseur</strong> veille au-dessus et relance le serveur en cas de chute. C'est l'ossature OTP standard&nbsp;: état + supervision.</figcaption>
 </figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le superviseur relance le processus, pas son état</p><p>Quand le superviseur redémarre le <code>gen_server</code> après un crash, il rappelle <code>init/1</code>&nbsp;: l'état repart de <code>{ok, []}</code>, le stock accumulé est <strong>perdu</strong>. La supervision garantit la <em>disponibilité</em> du service, pas la <em>persistance</em> des données. Pour survivre au crash, il faut sortir l'état du processus&nbsp;: une table <strong>ETS</strong> avec héritier (leçon&nbsp;10), <strong>DETS</strong>/<strong>Mnesia</strong> sur disque, ou une reconstruction depuis un journal. C'est la nuance essentielle du «&nbsp;let it crash&nbsp;».</p></div></div>
 
 <h2>Étape 4 — tester</h2>
 <p>Dernière brique&nbsp;: la leçon&nbsp;13. On vérifie le calcul du total avec un test <strong>EUnit</strong>&nbsp;; comme il faut un serveur vivant, on le démarre dans le test&nbsp;:</p>
@@ -226,6 +242,7 @@ total_test() -&gt;
   <dt>Stratégie de redémarrage</dt><dd>Règle du superviseur décidant qui relancer quand un enfant tombe (l'enfant seul, ou tous).</dd>
   <dt>API publique</dt><dd>Les fonctions exportées qui cachent les messages internes&nbsp;: le client appelle <code>total()</code>, pas <code>gen_server:call</code>.</dd>
   <dt>Immuabilité</dt><dd>On ne modifie pas l'état&nbsp;: chaque callback renvoie un <em>nouvel</em> état, ici une nouvelle liste.</dd>
+  <dt>EUnit</dt><dd>Cadre de tests unitaires standard d'Erlang&nbsp;: des fonctions <code>*_test()</code> et des macros comme <code>?assertEqual</code>, lancées par <code>rebar3 eunit</code>.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
