@@ -168,6 +168,18 @@ const c = new Compteur();     // appelle Compteur::new()
 c.incrementer();
 c.incrementer();
 console.log(c.valeur());      // 2</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 186" role="img" aria-label="Une struct exposée par wasm-bindgen. Côté JavaScript, la variable c est une poignée, un pointeur déguisé en classe. La donnée réelle, valeur égale zéro, vit dans la mémoire linéaire de Wasm. Les appels comme c point incrementer traversent la frontière pour agir sur cette donnée. Comme le ramasse-miettes de JavaScript ignore cette mémoire, il faut appeler c point free pour la libérer.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Une classe JS, mais la donnée vit côté Wasm</text>
+    <rect class="d-box" x="24" y="46" width="220" height="104" rx="10" /><text class="d-label" x="134" y="70" text-anchor="middle" font-size="11">JavaScript</text><text class="d-text" x="134" y="94" text-anchor="middle" font-size="11">const c = …</text><text class="d-mut" x="134" y="116" text-anchor="middle" font-size="9">poignée (pointeur</text><text class="d-mut" x="134" y="130" text-anchor="middle" font-size="9">déguisé en classe)</text>
+    <rect class="d-accent" x="396" y="46" width="220" height="104" rx="10" /><text class="d-label" x="506" y="70" text-anchor="middle" font-size="11">mémoire Wasm</text><text class="d-text" x="506" y="96" text-anchor="middle" font-size="12">{ valeur: 0 }</text><text class="d-mut" x="506" y="122" text-anchor="middle" font-size="9">la donnée réelle</text>
+    <line class="d-line" x1="244" y1="88" x2="394" y2="88" marker-end="url(#w8c)" /><text class="d-mut" x="319" y="80" text-anchor="middle" font-size="9">c.incrementer()</text>
+    <line class="d-line" x1="244" y1="120" x2="394" y2="120" marker-end="url(#w8c)" /><text class="d-mut" x="319" y="138" text-anchor="middle" font-size="9">c.free() libère</text>
+    <text class="d-mut" x="320" y="172" text-anchor="middle" font-size="9">Le ramasse-miettes de JS ignore cette mémoire&nbsp;: sans free(), elle fuit.</text>
+    <defs><marker id="w8c" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Côté JavaScript, <code>c</code> n'est qu'une <strong>poignée</strong> vers un objet qui vit dans la mémoire Wasm&nbsp;; ses méthodes franchissent la frontière, et <code>c.free()</code> est le seul moyen de rendre la mémoire.</figcaption>
+</figure>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'objet <em>vit</em> côté Wasm</p><p><code>new Compteur()</code> ne crée pas un objet JS classique&nbsp;: la donnée reste dans la mémoire Wasm. Côté JS, tu tiens un <strong>pointeur déguisé</strong> en classe. D'où une règle&nbsp;: quand tu n'en as plus besoin, appelle <code>c.free()</code> pour libérer la mémoire — JavaScript ne le fera pas tout seul pour toi.</p></div></div>
 
 <h2>js-sys et web-sys : toucher au navigateur</h2>
@@ -209,6 +221,7 @@ pub fn tracer() {
   <dt>wasm-bindgen</dt><dd>Bibliothèque et outil Rust qui génère la «&nbsp;colle&nbsp;» traduisant automatiquement les types entre Rust/Wasm et JavaScript.</dd>
   <dt>#[wasm_bindgen]</dt><dd>Annotation Rust posée sur une fonction, une <code>struct</code> ou un <code>impl</code> pour l'exposer au monde JavaScript.</dd>
   <dt>Colle (glue code)</dt><dd>Le code JavaScript généré qui encode/décode chaînes et objets par la mémoire linéaire, et masque les pointeurs.</dd>
+  <dt>Mémoire linéaire</dt><dd>Le grand tableau d'octets continu où vivent les données d'un module Wasm&nbsp;; accessible depuis JavaScript, c'est par lui que transitent chaînes, structs et objets.</dd>
   <dt>js-sys</dt><dd>Bibliothèque Rust donnant accès aux objets JavaScript standards (<code>Array</code>, <code>Date</code>, <code>Math</code>, <code>Promise</code>…).</dd>
   <dt>web-sys</dt><dd>Bibliothèque Rust donnant accès aux API du navigateur (<code>window</code>, <code>document</code>, <code>console</code>, <code>fetch</code>…).</dd>
   <dt>free()</dt><dd>Méthode à appeler côté JS pour libérer un objet Wasm dont la donnée vit dans la mémoire linéaire.</dd>

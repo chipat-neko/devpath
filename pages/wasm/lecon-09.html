@@ -170,6 +170,22 @@ worker.onmessage = (e) =&gt; {
 const pixels = new Uint8Array(4 * largeur * hauteur);
 worker.postMessage({ pixels: pixels.buffer }, [pixels.buffer]);
 // Ici, pixels.buffer est "neutralisé" côté principal : il a changé de propriétaire</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Copier ou transférer un tampon. En haut, la copie : le fil principal garde son tampon et le worker en reçoit un double ; deux exemplaires existent, le gros tampon a été dupliqué. En bas, le transfert : le tampon est déplacé vers le worker et le côté principal se retrouve neutralisé, vide ; un seul exemplaire, coût quasi nul.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Copier duplique&nbsp;; transférer déplace</text>
+    <text class="d-mut" x="58" y="63" text-anchor="middle" font-size="11">copie</text>
+    <rect class="d-box" x="116" y="42" width="140" height="34" rx="6" /><text class="d-text" x="186" y="63" text-anchor="middle" font-size="10">principal [buf]</text>
+    <rect class="d-box" x="392" y="42" width="160" height="34" rx="6" /><text class="d-text" x="472" y="63" text-anchor="middle" font-size="10">worker [buf copié]</text>
+    <line class="d-line" x1="256" y1="59" x2="390" y2="59" marker-end="url(#w9c)" /><text class="d-mut" x="323" y="52" text-anchor="middle" font-size="8">2 exemplaires</text>
+    <text class="d-mut" x="58" y="145" text-anchor="middle" font-size="11">transfert</text>
+    <rect class="d-frame" x="116" y="124" width="140" height="34" rx="6" /><text class="d-mut" x="186" y="145" text-anchor="middle" font-size="9">principal ✗ vide</text>
+    <rect class="d-accent" x="392" y="124" width="160" height="34" rx="6" /><text class="d-text" x="472" y="145" text-anchor="middle" font-size="10">worker [buf]</text>
+    <line class="d-line" x1="256" y1="141" x2="390" y2="141" marker-end="url(#w9c)" /><text class="d-mut" x="323" y="134" text-anchor="middle" font-size="8">1 seul, déplacé</text>
+    <text class="d-mut" x="320" y="186" text-anchor="middle" font-size="9">Le transfert coûte quasi rien, quelle que soit la taille — mais la source perd le tampon.</text>
+    <defs><marker id="w9c" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="d-dot" d="M0 0 L9 4.5 L0 9 Z" /></marker></defs>
+  </svg>
+  <figcaption>Un <code>postMessage</code> ordinaire <strong>copie</strong> la donnée (deux exemplaires)&nbsp;; en listant le tampon comme transférable, on le <strong>déplace</strong>&nbsp;: coût quasi nul, mais l'expéditeur ne l'a plus.</figcaption>
+</figure>
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Transfert = déplacement, pas partage</p><p>Après un transfert, un seul côté détient le tampon à la fois — on se le <strong>passe</strong>, on ne le partage pas. Pour un <em>vrai</em> partage simultané, il faut un <code>SharedArrayBuffer</code> (voir ci-dessous), avec ses conditions de sécurité.</p></div></div>
 
 <h2>Un aperçu des threads</h2>
@@ -202,6 +218,7 @@ Cross-Origin-Embedder-Policy: require-corp</code></pre></figure>
   <dt>postMessage</dt><dd>Méthode d'envoi d'un message d'un fil à l'autre&nbsp;; la donnée est copiée (ou transférée) au passage.</dd>
   <dt>onmessage</dt><dd>Gestionnaire déclenché à la réception d'un message&nbsp;; on y lit <code>e.data</code>.</dd>
   <dt>Transférable (transferable)</dt><dd>Objet, comme un <code>ArrayBuffer</code>, dont on peut <em>déplacer</em> la propriété au lieu de le copier.</dd>
+  <dt>Détaché (neutralisé)</dt><dd>État d'un <code>ArrayBuffer</code> après un transfert&nbsp;: il a changé de propriétaire et devient <strong>inutilisable</strong> côté expéditeur (longueur ramenée à 0).</dd>
   <dt>SharedArrayBuffer</dt><dd>Tampon mémoire réellement partagé entre plusieurs fils, base des threads Wasm&nbsp;; requiert une page isolée.</dd>
   <dt>COOP / COEP</dt><dd>En-têtes HTTP (<em>Cross-Origin-Opener/Embedder-Policy</em>) qui isolent la page et débloquent <code>SharedArrayBuffer</code>.</dd>
 </dl>
