@@ -207,6 +207,22 @@ gcc main.o somme.o -o prog          # édition de liens des deux objets
 
 <h2>Déboguer et comparer</h2>
 <p>Une fois <code>prog</code> construit, fais rouler ta fonction au ralenti pour <em>voir</em> <code>rax</code> accumuler la somme, puis confronte ton code à celui de l'optimiseur.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 208" role="img" aria-label="L'organigramme de la boucle d'accumulation de somme_tableau. On initialise le total dans rax et l'index dans rcx à zéro. Puis on teste : compare rcx à rsi ; si l'index a atteint la taille, on saute à la fin et ret renvoie le total dans rax. Sinon, on ajoute l'élément t de rcx au total, on incrémente rcx, et on reboucle vers le test.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">La boucle de somme_tableau : tester, ajouter, avancer</text>
+    <rect class="d-box" x="206" y="32" width="228" height="32" rx="7" /><text class="d-text" x="320" y="48" text-anchor="middle" font-size="8.5" font-family="monospace">xor rax,rax · xor rcx,rcx</text><text class="d-mut" x="320" y="59" text-anchor="middle" font-size="7.5">total = 0, i = 0</text>
+    <path class="d-line" d="M320 64 L320 80" fill="none" /><path class="d-line" d="M316 74 L320 82 L324 74" fill="none" />
+    <rect class="d-accent" x="236" y="82" width="168" height="32" rx="7" /><text class="d-text" x="320" y="98" text-anchor="middle" font-size="8.5" font-family="monospace">cmp rcx, rsi</text><text class="d-mut" x="320" y="109" text-anchor="middle" font-size="7.5">i &lt; n ?</text>
+    <path class="d-line" d="M404 98 L470 98" fill="none" /><path class="d-line" d="M462 94 L470 98 L462 102" fill="none" /><text class="d-mut" x="437" y="91" text-anchor="middle" font-size="7.5">jge (non)</text>
+    <rect class="d-frame" x="472" y="82" width="150" height="32" rx="7" /><text class="d-text" x="547" y="98" text-anchor="middle" font-size="8.5" font-family="monospace">ret</text><text class="d-mut" x="547" y="109" text-anchor="middle" font-size="7.5">rax = total (108)</text>
+    <path class="d-line" d="M320 114 L320 130" fill="none" /><path class="d-line" d="M316 124 L320 132 L324 124" fill="none" /><text class="d-mut" x="336" y="126" text-anchor="start" font-size="7.5">oui</text>
+    <rect class="d-box" x="206" y="132" width="228" height="30" rx="7" /><text class="d-text" x="320" y="151" text-anchor="middle" font-size="8.5" font-family="monospace">add rax, [rdi + rcx*8]</text>
+    <path class="d-line" d="M320 162 L320 174" fill="none" /><path class="d-line" d="M316 168 L320 176 L324 168" fill="none" />
+    <rect class="d-box" x="236" y="176" width="168" height="26" rx="7" /><text class="d-text" x="320" y="193" text-anchor="middle" font-size="8.5" font-family="monospace">inc rcx</text>
+    <path class="d-line" d="M206 189 L150 189 L150 98 L236 98" fill="none" /><path class="d-line" d="M228 94 L236 98 L228 102" fill="none" /><text class="d-mut" x="150" y="150" text-anchor="middle" font-size="7.5">jmp</text>
+  </svg>
+  <figcaption>Le cœur du projet en une image&nbsp;: on <strong>teste</strong> (<code>cmp</code>/<code>jge</code>), on <strong>accumule</strong> (<code>add</code> l'élément indexé), on <strong>avance</strong> (<code>inc</code>), et l'on reboucle jusqu'à <code>rax = 108</code>.</figcaption>
+</figure>
 <figure class="code-block" data-file="session GDB"><pre><code class="language-bash">gdb ./prog
 (gdb) break somme_tableau        # arrêt à l'entrée de ta fonction
 (gdb) run
@@ -243,6 +259,8 @@ gcc main.o somme.o -o prog          # édition de liens des deux objets
   <dt>Adressage indexé</dt><dd><code>[rdi + rcx*8]</code>&nbsp;: adresse de base (le pointeur) plus un index mis à l'échelle (8&nbsp;octets par <code>long</code>) — l'accès à <code>t[i]</code>.</dd>
   <dt><code>stepi</code></dt><dd>Avance d'une instruction machine sous GDB (leçon 11)&nbsp;; ici pour voir <code>rax</code> accumuler la somme tour après tour.</dd>
   <dt>Caller-saved / callee-saved</dt><dd>Registres volatils (l'appelant les sauve&nbsp;: <code>rax</code>, <code>rcx</code>…) contre préservés (l'appelé les restitue&nbsp;: <code>rbx</code>, <code>r12–r15</code>).</dd>
+  <dt>Drapeaux (<em>flags</em>)</dt><dd>Bits d'état positionnés par une instruction comme <code>cmp</code> (sans stocker de résultat)&nbsp;; les sauts conditionnels (<code>jge</code>, <code>jne</code>…) décident en les lisant.</dd>
+  <dt>Prologue / épilogue</dt><dd>Début et fin d'une fonction&nbsp;: on y sauvegarde puis restaure les registres <em>callee-saved</em>. Ici, <code>somme</code> n'en utilise aucun&nbsp;: son épilogue se réduit à <code>ret</code>.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
