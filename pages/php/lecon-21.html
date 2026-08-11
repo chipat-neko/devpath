@@ -126,6 +126,23 @@ fwrite(STDERR, "Ceci part sur la sortie d'erreur\n");
 exit(0); // 0 = tout s'est bien passé</code></pre></figure>
 <p>L'opérateur <code>??</code> est précieux ici&nbsp;: un argument peut manquer, et <code>$argv[2] ?? ''</code> évite le <em>warning</em> «&nbsp;index indéfini&nbsp;». Le <strong>code de sortie</strong> permet à un autre programme (ou un script shell) de savoir si ton outil a réussi.</p>
 
+<figure class="diagram">
+  <svg viewBox="0 0 640 188" role="img" aria-label="Les canaux d'un programme en ligne de commande. À gauche, l'entrée standard STDIN. Au centre, le script tache.php. À droite, deux sorties séparées : la sortie standard STDOUT, alimentée par echo, pour les résultats ; et la sortie d'erreur STDERR, alimentée par fwrite, pour les messages d'erreur. En dessous, le code de sortie renvoyé par exit : zéro pour un succès, une valeur non nulle pour un échec.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12.5">Un programme en ligne de commande : trois flux, un code de sortie</text>
+    <rect class="d-box" x="16" y="64" width="120" height="44" rx="7" /><text class="d-tag" x="76" y="84" text-anchor="middle" font-size="10">STDIN</text><text class="d-mut" x="76" y="99" text-anchor="middle" font-size="8.5">entrée</text>
+    <line class="d-line" x1="136" y1="86" x2="172" y2="86" /><polygon class="d-dot" points="178,86 166,80 166,92" />
+    <rect class="d-accent" x="180" y="60" width="150" height="52" rx="7" /><text class="d-tag" x="255" y="82" text-anchor="middle" font-size="10.5">tache.php</text><text class="d-mut" x="255" y="99" text-anchor="middle" font-size="8.5">ton script</text>
+    <line class="d-line" x1="330" y1="74" x2="434" y2="62" /><polygon class="d-dot" points="440,61 428,57 431,69" />
+    <line class="d-line" x1="330" y1="98" x2="434" y2="110" /><polygon class="d-dot" points="440,111 431,103 428,115" />
+    <rect class="d-box" x="440" y="42" width="184" height="38" rx="6" /><text class="d-tag" x="452" y="60" font-size="9.5">STDOUT</text><text class="d-mut" x="452" y="73" font-size="8.5">echo — les résultats</text>
+    <rect class="d-box" x="440" y="92" width="184" height="38" rx="6" /><text class="d-tag" x="452" y="110" font-size="9.5">STDERR</text><text class="d-mut" x="452" y="123" font-size="8.5">fwrite — les erreurs</text>
+    <line class="d-line" x1="255" y1="112" x2="255" y2="140" /><polygon class="d-dot" points="255,146 249,134 261,134" />
+    <rect class="d-frame" x="140" y="146" width="230" height="38" rx="6" /><text class="d-tag" x="255" y="162" text-anchor="middle" font-size="8.5">code de sortie</text><text class="d-mut" x="255" y="177" text-anchor="middle" font-size="9">exit(0) succès · exit(1) échec</text>
+  </svg>
+  <figcaption>Un outil CLI lit son entrée, écrit ses résultats sur <code>STDOUT</code> (<code>echo</code>) et ses erreurs sur <code>STDERR</code> (<code>fwrite</code>), puis signale sa réussite par un <strong>code de sortie</strong>. Ces trois canaux sont <strong>séparés</strong>&nbsp;: on peut les rediriger indépendamment.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1 1 2.5h6c0-1.5.3-1.8 1-2.5A6 6 0 0 0 12 3Z" /><path d="M9 21h6" /></svg><div class="callout__body"><p class="callout__title">Séparer les flux, c'est pouvoir les rediriger</p><p>Ce n'est pas cosmétique. <code>php tache.php lister &gt; liste.txt</code> enregistre la liste dans un fichier, mais les erreurs (sur <code>STDERR</code>) restent affichées à l'écran&nbsp;; <code>php tache.php faire 9 2&gt; erreurs.log</code> ne détourne, lui, que les erreurs. Un outil qui écrirait ses erreurs avec <code>echo</code> les mêlerait aux résultats et rendrait ces redirections impossibles — d'où <code>fwrite(STDERR, …)</code>.</p></div></div>
+
 <h2>Le cahier des charges</h2>
 <p>Notre carnet gère trois commandes&nbsp;: <code>ajouter</code> une tâche, <code>lister</code> les tâches, et <code>faire</code> (marquer terminée). Les tâches doivent <strong>survivre</strong> à la fermeture du terminal&nbsp;: on les enregistre dans un fichier <code>taches.json</code>. À chaque exécution, le script <em>charge</em> le fichier, agit, puis le <em>réécrit</em>.</p>
 
@@ -254,6 +271,7 @@ exit(0);</code></pre></figure><p>Tout le cours est là&nbsp;: des <strong>foncti
   <dt>Persistance</dt><dd>Conservation des données entre deux exécutions. Ici, un fichier <code>JSON</code> tient lieu de mémoire durable, sans base de données.</dd>
   <dt>Code de sortie</dt><dd>Entier renvoyé par <code>exit</code>&nbsp;: <code>0</code> = succès, non nul = échec. Il permet d'enchaîner les scripts et d'automatiser.</dd>
   <dt><code>STDERR</code></dt><dd>Flux de sortie réservé aux messages d'erreur, distinct de la sortie normale (<code>STDOUT</code>/<code>echo</code>).</dd>
+  <dt><code>STDOUT</code></dt><dd>Sortie standard d'un programme&nbsp;: ce qu'écrit <code>echo</code> (les résultats). Distincte de <code>STDERR</code>, elle se redirige à part (<code>&gt; fichier</code>).</dd>
   <dt>Capstone</dt><dd>Projet de synthèse&nbsp;: il réunit et met en pratique l'ensemble des notions du cours dans une réalisation concrète.</dd>
 </dl>
 
@@ -285,7 +303,8 @@ exit(0);</code></pre></figure><p>Tout le cours est là&nbsp;: des <strong>foncti
   null,
   {"type":"text","accept":["$argv","argv"],"placeholder":"le tableau qui contient les arguments de la ligne de commande : …","hints":["$____[0] est le nom du script.","Va avec $argc.","Commence par un dollar."],"link":{"href":"lecon-21.html","label":"Revoir « PHP en ligne de commande »"}},
   {"type":"text","accept":["json_encode","json_encode()"],"placeholder":"la fonction qui transforme le tableau de tâches en texte JSON pour l'écrire dans le fichier : …","hints":["L'inverse de json_decode.","Accepte JSON_PRETTY_PRINT.","json_______"],"link":{"href":"lecon-21.html","label":"Revoir « Charger et sauver »"}},
-  {"type":"text","accept":["exit(1)","exit(1);","1"],"placeholder":"l'appel qui termine le script en signalant une ERREUR : …","hints":["0 = succès.","Toute valeur non nulle = échec.","exit(?)"],"link":{"href":"lecon-21.html","label":"Revoir « La solution complète »"}}
+  {"type":"text","accept":["exit(1)","exit(1);","1"],"placeholder":"l'appel qui termine le script en signalant une ERREUR : …","hints":["0 = succès.","Toute valeur non nulle = échec.","exit(?)"],"link":{"href":"lecon-21.html","label":"Revoir « La solution complète »"}},
+  null
 ]
 </script>
 

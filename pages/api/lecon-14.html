@@ -149,6 +149,25 @@ curl -X POST https://api.exemple.fr/taches \
 # Mettre à jour (200 OK), puis supprimer (204 No Content)
 curl -X PUT    https://api.exemple.fr/taches/1 -H "Authorization: Bearer $JETON" -d '{"faite": true}'
 curl -X DELETE https://api.exemple.fr/taches/1 -H "Authorization: Bearer $JETON"</code></pre></figure>
+<p>Un <code>GET /taches</code> ne renvoie jamais la collection entière : il en renvoie <strong>une page</strong>. La réponse est une <strong>enveloppe</strong> qui, en plus des éléments, indique le total et comment atteindre les autres pages.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 196" role="img" aria-label="Une réponse paginée. La collection compte 97 tâches, découpées en 5 pages de 20 éléments. La requête GET sur taches avec page 2 et taille 20 renvoie la deuxième page, surlignée. La réponse est une enveloppe JSON en trois parties : le tableau data contenant les 20 tâches de la page, les métadonnées page 2 taille 20 total 97, et les liens de navigation vers la page précédente et la page suivante.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12.5">GET /taches?page=2 : une tranche de la collection, plus de quoi naviguer</text>
+    <rect class="d-box" x="40" y="38" width="112" height="34" rx="5" /><text class="d-text" x="96" y="59" text-anchor="middle" font-size="10">page 1</text>
+    <rect class="d-accent" x="152" y="38" width="112" height="34" rx="5" /><text class="d-tag" x="208" y="59" text-anchor="middle" font-size="10">page 2</text>
+    <rect class="d-box" x="264" y="38" width="112" height="34" rx="5" /><text class="d-text" x="320" y="59" text-anchor="middle" font-size="10">page 3</text>
+    <rect class="d-box" x="376" y="38" width="112" height="34" rx="5" /><text class="d-text" x="432" y="59" text-anchor="middle" font-size="10">page 4</text>
+    <rect class="d-box" x="488" y="38" width="112" height="34" rx="5" /><text class="d-text" x="544" y="59" text-anchor="middle" font-size="10">page 5</text>
+    <text class="d-mut" x="320" y="87" text-anchor="middle" font-size="9.5">97 tâches, 20 par page = 5 pages ; la page 2 renvoie les tâches 21 à 40</text>
+    <line class="d-line" x1="208" y1="72" x2="208" y2="100" /><polygon class="d-dot" points="208,106 202,94 214,94" />
+    <rect class="d-frame" x="96" y="108" width="448" height="78" rx="7" />
+    <text class="d-tag" x="112" y="127" font-size="9.5">la réponse : une enveloppe JSON</text>
+    <text class="d-text" x="112" y="146" font-size="9.5">"data": [ … les 20 tâches de la page … ]</text>
+    <text class="d-mut" x="112" y="162" font-size="9">"page": 2, "taille": 20, "total": 97</text>
+    <text class="d-mut" x="112" y="177" font-size="9">"links": { "prev": "?page=1", "next": "?page=3" }</text>
+  </svg>
+  <figcaption>Une liste renvoie <strong>une page</strong>, accompagnée du <strong>total</strong> et des <strong>liens</strong> pour parcourir le reste : le client sait toujours où il en est.</figcaption>
+</figure>
 <p>Côté serveur, une requête traverse plusieurs <strong>couches</strong> avant de produire une réponse. Les visualiser aide à savoir <em>où</em> placer chaque responsabilité.</p>
 <figure class="diagram">
   <svg viewBox="0 0 640 168" role="img" aria-label="Parcours d'une requête à travers les couches du serveur. De gauche à droite : la requête entrante passe d'abord par la couche authentification qui vérifie le jeton Bearer et peut renvoyer 401 ; puis par la validation des entrées qui peut renvoyer 422 ; puis par la logique métier ; puis par l'accès aux données. La réponse repart ensuite vers le client. En sortie, lorsqu'une tâche est marquée terminée, un webhook est émis vers un service abonné.">
@@ -199,6 +218,7 @@ Content-Type: application/problem+json
         "201": { description: Tâche créée }
         "422": { description: Validation échouée (problem+json) }</code></pre></figure>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — les mêmes briques dans une vraie API SaaS</p><p>Ce petit projet n'a rien d'un jouet : c'est <strong>l'ossature</strong> de la plupart des API de production. Un outil de gestion de projet (type Trello, Asana) expose exactement cela — des ressources CRUD paginées, un jeton d'accès, des erreurs standard, une spec OpenAPI publique, et des webhooks (<code>card.updated</code>, <code>task.completed</code>) pour intégrer Slack ou un CI. Change «&nbsp;tâche&nbsp;» en «&nbsp;facture&nbsp;», «&nbsp;réservation&nbsp;» ou «&nbsp;message&nbsp;» : le squelette est le même. Maîtriser ces sept briques, c'est savoir concevoir la quasi-totalité des API web.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège — n'attends pas l'accusé du webhook pour répondre</p><p>Le webhook part vers un service tiers que tu ne contrôles pas&nbsp;: s'il est lent ou injoignable, il ne doit <strong>pas</strong> bloquer la réponse à ton client. Émets l'événement dans une <strong>file d'attente</strong>, réponds tout de suite au client (le <code>200</code> du <code>PUT</code>), puis confie l'envoi — et ses <strong>réessais</strong> en cas d'échec — à un travailleur en arrière-plan. Un webhook synchrone, c'est la latence d'un inconnu greffée sur chacune de tes requêtes.</p></div></div>
 
 <h2>Étape 5 — Tester l'ensemble</h2>
 <p>On verrouille le contrat avec quelques <strong>tests d'intégration</strong> (leçon 13) : le chemin heureux et les refus.</p>
@@ -279,6 +299,7 @@ test("POST sans jeton → 401 ; texte vide → 422", async () => {
 [
   {"type":"text","accept":["204","204 no content","no content"],"placeholder":"le statut renvoyé par un DELETE /taches/1 réussi","hints":["Succès sans corps.","Famille 2xx.","« No Content »."],"link":{"href":"lecon-14.html","label":"Revoir « Le cycle CRUD »"}},
   {"type":"text","accept":["location"],"placeholder":"l'en-tête renvoyé avec un 201 pour indiquer l'URL de la ressource créée","hints":["Un seul mot.","Il pointe vers /taches/{id}.","« Loc… »."],"link":{"href":"lecon-14.html","label":"Revoir « Étape 1 »"}},
+  {"type":"text","accept":["401","401 unauthorized","unauthorized"],"placeholder":"le statut renvoyé quand la requête n'a pas de jeton Bearer valide","hints":["Famille 4xx (erreur du client).","« Non authentifié », à distinguer de 403 « interdit ».","401."],"link":{"href":"lecon-14.html","label":"Revoir « Étape 3 — Sécuriser »"}},
   null
 ]
 </script>
@@ -286,6 +307,8 @@ test("POST sans jeton → 401 ; texte vide → 422", async () => {
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un client envoie <code>DELETE /taches/1</code> et la suppression réussit. Quel code de statut HTTP renvoies-tu, sachant qu'il n'y a rien à retourner dans le corps de la réponse&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>204 No Content</strong>&nbsp;: succès de la famille 2xx, sans corps de réponse.</p></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Après un <code>POST /taches</code> qui crée une ressource (réponse <code>201 Created</code>), quel en-tête de réponse indique au client l'URL de la ressource fraîchement créée (par exemple <code>/taches/42</code>)&nbsp;?</p><details><summary>Voir une solution</summary><p>L'en-tête <strong>Location</strong>&nbsp;: il pointe vers l'URL de la nouvelle ressource.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Application</span></div><p>Un client appelle <code>GET /taches</code> <strong>sans</strong> en-tête <code>Authorization</code> (aucun jeton). Toutes les routes de l'API exigent un jeton Bearer valide. Quel code de statut renvoies-tu&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>401 Unauthorized</strong>&nbsp;: la requête n'est pas authentifiée. À ne pas confondre avec <strong>403 Forbidden</strong>, qui répond à un client bien authentifié mais <em>sans le droit</em> d'accéder à la ressource.</p></details></div>
 
 <h2>Mini-projet fil rouge — l'API de tâches complète</h2>
 <p>Rassemble les cinq étapes en un seul jeu de requêtes. Essaie d'abord par toi-même de rédiger les appels et une réponse type, puis compare avec la solution de référence.</p>
