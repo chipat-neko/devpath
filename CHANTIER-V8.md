@@ -129,11 +129,11 @@ délibérément laissé court.
 
 ## PHASE C — Contrôle final
 
-- [ ] **C1 · Mesure globale.** `node tools/verif-contenu.js` : consigner le nombre final de leçons sous le standard et de leçons maigres, et **expliquer chaque cas restant**. L'objectif n'est pas zéro à tout prix : c'est zéro cas **injustifié**.
+- [x] **C1 · Mesure globale.** ✅ 2026-08-11. `verif-contenu.js` : **0 sous le standard · 0 maigre · 0 redondance** (médianes site svg 3 · callouts 5 · gloss 8 · quiz 3 · exos 3 · mots 1987). **Aucun cas restant à expliquer** — objectif dépassé (zéro cas, pas seulement zéro injustifié). Les **56 leçons sous le standard** (phase A) et les **151 leçons maigres** (phase B) du départ sont **toutes** traitées.
 
-- [ ] **C2 · Non-régression.** `node tools/verif.js` complet (les 4 vérificateurs, rendu inclus) : tout doit être vert. Vérifier en particulier qu'aucun `&nbsp;` littéral n'a été introduit dans un bloc JSON et que les index dérivés sont à jour (`node tools/build-index.js` sans écart).
+- [x] **C2 · Non-régression.** ✅ 2026-08-11. `node tools/verif.js` **complet vert** en 117 s : source 0 · données 0 err · contenu 0 maigre/0 sous/0 redondance · **rendu 0 err** (120 mesures = 20 pages × 3 largeurs × 2 thèmes, 105 s Chrome). `build-index` (5 cibles) re-comparaison **0 écart** ; aucun `&nbsp;` littéral en JSON (contrôle dédié). Seul avert résiduel = doublon QCM `zig` 06↔14, **préexistant** et hors périmètre V8.
 
-- [ ] **C3 · Redondance.** Le chantier ajoute beaucoup de texte à des cours proches les uns des autres : `node tools/verif-contenu.js --redondance` doit rester à **0**. Si un bloc a été recopié d'une leçon à l'autre, le réécrire.
+- [x] **C3 · Redondance.** ✅ 2026-08-11. `node tools/verif-contenu.js --redondance` = **0** (0 prose recopiée ≥ 400 car. entre deux leçons d'un même cours). Malgré l'ajout de beaucoup de texte à des cours proches tout au long du chantier, chaque schéma / encadré / glossaire a été écrit sur un angle distinct.
 
 ---
 
