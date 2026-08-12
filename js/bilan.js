@@ -124,6 +124,12 @@
       ? '<p class="bilan-level">Niveau <strong>' + lvl.level + "</strong> — " + esc(lvl.title) +
         " · " + xp.xp + " XP</p>"
       : "") +
+    /* Pendant « plein » du message d'état vierge (« Aucun cours commencé… ») :
+       quand tout est terminé, le bulletin le constate en tête. */
+    (totalLessons > 0 && doneLessons === totalLessons
+      ? '<p class="bilan-complete">Parcours complet : les ' + coursesDone +
+        " cours du site sont terminés — " + doneLessons + " leçons.</p>"
+      : "") +
     '<div class="bilan-stats">' +
     stat(doneLessons + " / " + totalLessons, "leçons terminées") +
     stat(coursesDone, "cours maîtrisés") +

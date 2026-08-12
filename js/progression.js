@@ -394,6 +394,22 @@
       return b.done / b.total - a.done / a.total;
     });
 
+    /* Tout le site terminé : la donnée directe (toutes les leçons faites) plutôt
+       qu'un comptage par cours, pour rester exactement aligné sur « X / X »
+       affiché juste au-dessus. Le titre et l'accroche de la page invitent à
+       « reprendre » — faux quand il ne reste rien : on les réécrit. */
+    var allDone = totalLessons > 0 && doneLessons === totalLessons;
+    if (allDone) {
+      var heroTitle = document.querySelector("[data-dash-hero-title]");
+      var heroLead = document.querySelector("[data-dash-hero-lead]");
+      if (heroTitle) heroTitle.textContent = "Tu as tout parcouru";
+      if (heroLead) {
+        heroLead.textContent =
+          "Ton avancement est enregistré sur cet appareil (aucun compte, aucun " +
+          "serveur). Voici tout ce que tu as accompli.";
+      }
+    }
+
     /* Bandeau de stats */
     var statsHost = document.getElementById("dash-stats");
     if (statsHost) {
@@ -418,7 +434,16 @@
         DATA.content[last.course].modules.some(function (m) {
           return m.lessons.some(function (l) { return l.file === last.file; });
         });
-      if (lastValid) {
+      if (allDone) {
+        /* Tout est terminé : ne pas proposer de « reprendre » un cours fini
+           (le mensonge « Reprendre : Zig »). On constate l'accompli et on
+           propose d'entretenir ses acquis ou de construire. */
+        resumeHost.innerHTML =
+          '<p class="dash-empty">Tu as terminé l\'intégralité du site — ' +
+          finished.length + " cours, " + totalLessons + " leçons. " +
+          'Entretiens tes acquis avec <a href="revision.html">la révision</a>, ' +
+          'ou construis avec <a href="fils-rouges.html">un projet fil rouge</a>.</p>';
+      } else if (lastValid) {
         var c = DATA.content[last.course];
         resumeHost.innerHTML =
           '<a class="btn btn--primary btn--lg" href="' + esc(c.dir) + "/" + esc(last.file) + '">' +
@@ -443,7 +468,13 @@
     }
 
     /* Listes */
-    fill("dash-started", started, "Aucun cours en cours pour l'instant.");
+    fill(
+      "dash-started",
+      started,
+      allDone
+        ? "Tous les cours sont terminés — il n'y en a plus en cours."
+        : "Aucun cours en cours pour l'instant."
+    );
     fill("dash-finished", finished, "Aucun cours terminé pour l'instant.");
   }
 

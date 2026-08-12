@@ -103,6 +103,34 @@
     return n;
   }
 
+  /* État d'achèvement total : toutes les leçons de tous les cours faites. Il
+     prime sur toute reprise — on ne propose pas de « reprendre » un site déjà
+     terminé (c'était « Reprends… Zig 18/18 »). On constate l'accompli, en
+     chiffres, et on oriente vers le bilan. */
+  var totalLessons = 0, doneLessons = 0, nbCoursDone = 0;
+  Object.keys(DATA.content).forEach(function (id) {
+    var lessons = lessonsOf(DATA.content[id]);
+    if (!lessons.length) return;
+    var done = countDone(id, lessons);
+    totalLessons += lessons.length;
+    doneLessons += done;
+    if (done >= lessons.length) nbCoursDone++;
+  });
+  if (totalLessons > 0 && doneLessons === totalLessons) {
+    var set = function (sel, txt) {
+      var el = host.querySelector(sel);
+      if (el) el.textContent = txt;
+    };
+    set("[data-resume-kicker]", "Parcours terminé");
+    set("[data-resume-title]", "Tu as terminé les " + nbCoursDone + " cours du site");
+    set("[data-resume-meta]", doneLessons + " leçons");
+    set("[data-resume-cta]", "Voir mon bilan");
+    var lnk = host.querySelector("[data-resume-link]");
+    if (lnk) lnk.setAttribute("href", "pages/bilan.html");
+    host.hidden = false;
+    return;
+  }
+
   var target = null; // { mode, dir, file, title, sub, done, total }
 
   /* Étape 1 — reprendre la dernière leçon visitée, mais SEULEMENT si ce cours
