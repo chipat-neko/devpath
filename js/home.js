@@ -103,21 +103,26 @@
     return n;
   }
 
-  var target = null; // { dir, file, title, sub, done, total }
+  var target = null; // { mode, dir, file, title, sub, done, total }
 
-  /* Étape 1 — dernière leçon visitée, SI elle existe encore dans le cours : une
-     sauvegarde ancienne ou une leçon renumérotée mènerait sinon à un 404 sur le
-     bouton le plus visible du site. Sinon on retombe sur l'étape 2. */
+  /* Étape 1 — reprendre la dernière leçon visitée, mais SEULEMENT si ce cours
+     est réellement EN COURS : au moins une leçon validée (done > 0) et pas
+     terminé (done < total). Sans cette condition, « Reprends où tu t'es arrêté —
+     0 / 47 leçons » s'affiche à quelqu'un qui n'a fait qu'ouvrir une leçon : on
+     invite à reprendre ce qui n'a jamais commencé. La leçon doit aussi exister
+     encore, sinon le bouton le plus visible du site mène à un 404. */
   if (last && last.course && DATA.content[last.course]) {
     var c = DATA.content[last.course];
     var ls = lessonsOf(c);
-    if (ls.some(function (l) { return l.file === last.file; })) {
+    var d = countDone(last.course, ls);
+    if (ls.some(function (l) { return l.file === last.file; }) && d > 0 && d < ls.length) {
       target = {
+        mode: "reprendre",
         dir: c.dir,
         file: last.file,
         title: last.title || c.title,
         sub: c.title,
-        done: countDone(last.course, ls),
+        done: d,
         total: ls.length,
       };
     }
@@ -139,6 +144,7 @@
         if (!firstUndone && !p[l.file]) firstUndone = l.file;
       });
       best = {
+        mode: "reprendre",
         ratio: ratio,
         dir: co.dir,
         file: firstUndone || lessons[0].file,
@@ -151,18 +157,57 @@
     target = best;
   }
 
-  if (!target) return; // aucune progression : le bloc reste masqué
+  /* Étape 3 — INVITATION : rien n'a été validé nulle part, mais une leçon a été
+     ouverte. On propose de reprendre cette LECTURE, sans compteur trompeur. On
+     exclut le cas où le cours de « last » est déjà terminé : il n'y aurait rien
+     à continuer, et l'état « tout terminé » se dit autrement. */
+  if (!target && last && last.course && DATA.content[last.course]) {
+    var c3 = DATA.content[last.course];
+    var ls3 = lessonsOf(c3);
+    var d3 = countDone(last.course, ls3);
+    if (ls3.some(function (l) { return l.file === last.file; }) && d3 < ls3.length) {
+      target = {
+        mode: "commencer",
+        dir: c3.dir,
+        file: last.file,
+        title: last.title || c3.title,
+        sub: c3.title,
+        done: d3,
+        total: ls3.length,
+      };
+    }
+  }
 
+  if (!target) return; // aucune progression, aucune leçon ouverte : bloc masqué
+
+  var kickerEl = host.querySelector("[data-resume-kicker]");
   var titleEl = host.querySelector("[data-resume-title]");
   var metaEl = host.querySelector("[data-resume-meta]");
   var linkEl = host.querySelector("[data-resume-link]");
+  var ctaEl = host.querySelector("[data-resume-cta]");
 
   if (titleEl) titleEl.textContent = target.title;
-  if (metaEl) {
-    var lessons = target.done + " / " + target.total + " leçons";
-    metaEl.textContent =
-      target.sub && target.sub !== target.title ? target.sub + "  ·  " + lessons : lessons;
+
+  if (target.mode === "commencer") {
+    /* Leçon ouverte mais rien de validé : on ne parle pas de « reprendre où tu
+       t'es arrêté », on invite à poursuivre la lecture — sans « 0 / N » qui
+       ferait passer une simple exploration pour un échec. */
+    if (kickerEl) kickerEl.textContent = "Reprends ta lecture";
+    if (metaEl) {
+      metaEl.textContent =
+        target.sub && target.sub !== target.title ? target.sub : target.total + " leçons";
+    }
+    if (ctaEl) ctaEl.textContent = "Continuer";
+  } else {
+    if (kickerEl) kickerEl.textContent = "Reprends où tu t'es arrêté";
+    if (metaEl) {
+      var compteur = target.done + " / " + target.total + " leçons";
+      metaEl.textContent =
+        target.sub && target.sub !== target.title ? target.sub + "  ·  " + compteur : compteur;
+    }
+    if (ctaEl) ctaEl.textContent = "Reprendre";
   }
+
   if (linkEl) linkEl.setAttribute("href", "pages/" + target.dir + "/" + target.file);
 
   host.hidden = false;
