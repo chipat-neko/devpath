@@ -270,26 +270,17 @@
     });
   }
 
+  /* Le bouton « EN » a été retiré (V9 / C1). Mesuré : présent sur 1505 pages, il
+     ne traduisait que ~13 libellés de navigation sur un contenu resté français —
+     une seule page (l'accueil) portait 8 éléments instrumentés, tout le reste de
+     son propre contenu compris. Il promettait un bilinguisme inexistant, alors
+     que traduire les 1362 leçons n'est pas à l'ordre du jour. On assume donc le
+     site comme francophone et on force l'affichage FR, même si une ancienne
+     préférence « en » traîne encore dans localStorage. La fondation i18n
+     (getLang, applyI18n, tables) est conservée, dormante, pour une éventuelle
+     traduction future — mais plus aucun bouton ne l'active. */
   function initI18n() {
-    var lang = getLang();
-    var actions = $(".header-actions");
-    if (actions) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "lang-toggle";
-      btn.setAttribute("aria-label", "Changer de langue / Switch language");
-      btn.textContent = lang.toUpperCase();
-      btn.addEventListener("click", function () {
-        lang = lang === "fr" ? "en" : "fr";
-        try {
-          localStorage.setItem(LANG_KEY, lang);
-        } catch (e) {}
-        btn.textContent = lang.toUpperCase();
-        applyI18n(lang);
-      });
-      actions.insertBefore(btn, actions.firstChild);
-    }
-    applyI18n(lang);
+    applyI18n("fr");
   }
 
   /* --------------------------------------------------- Gamification (XP, P1)

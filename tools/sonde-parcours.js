@@ -106,6 +106,8 @@ var ETATS = {
   montee: { progress: progressEnCours(), last: { course: "javascript", file: "lecon-05.html", title: "JavaScript" }, xpLevel: 3 },
   /* Même progression, niveau déjà annoncé = niveau courant → AUCUN toast. */
   "sans-montee": { progress: progressEnCours(), last: { course: "javascript", file: "lecon-05.html", title: "JavaScript" }, xpLevel: 99 },
+  /* Langue EN forcée (C1) : pour relever l'effet réel sur <html lang>. */
+  en: { progress: {}, last: null, lang: "en" },
 };
 
 /* ---- Chrome + CDP (repris de verif-rendu.js) ------------------------------ */
@@ -171,6 +173,11 @@ var SONDE = function () {
     toasts.push((t.textContent || "").trim());
   });
   if (toasts.length) out.toasts = toasts;
+  out.htmlLang = document.documentElement.getAttribute("lang");
+  out.hasI18n = !!document.querySelector("[data-i18n]");
+  out.langToggle = !!document.querySelector(".lang-toggle");
+  var navA = document.querySelector(".primary-nav a");
+  out.premierNav = navA ? navA.textContent.trim() : null;
   out.text = (document.body.innerText || "").replace(/\n{2,}/g, "\n").trim();
   /* Débordement horizontal (utile après un ajout CSS) : largeur du document vs
      zone visible, et les premiers éléments qui dépassent le bord droit. */
@@ -258,6 +265,7 @@ var SONDE = function () {
           (seed.progress && Object.keys(seed.progress).length ? "localStorage.setItem('syntaxe-progress'," + JSON.stringify(seedJson) + ");" : "") +
           (seed.last ? "localStorage.setItem('syntaxe-last'," + JSON.stringify(lastJson) + ");" : "") +
           (seed.xpLevel != null ? "localStorage.setItem('syntaxe-xp-level'," + JSON.stringify(String(seed.xpLevel)) + ");" : "") +
+          (seed.lang ? "localStorage.setItem('syntaxe-lang'," + JSON.stringify(String(seed.lang)) + ");" : "") +
           "}catch(e){}",
       });
       await envoyer("Page.navigate", { url: url });
@@ -266,6 +274,8 @@ var SONDE = function () {
       var v = (res2.result || {}).value || {};
 
       console.log("\n-- " + rel + (largeur ? " @" + largeur + "px" : "") + " --");
+      console.log("  <html lang> = " + JSON.stringify(v.htmlLang) + " · data-i18n : " + v.hasI18n +
+        " · bouton EN : " + v.langToggle + " · 1er lien nav : " + JSON.stringify(v.premierNav));
       if (v.toasts) console.log("  🔔 toast(s) : " + JSON.stringify(v.toasts));
       if (v.overflow) {
         console.log("  ⚠ DÉBORDEMENT +" + v.overflow + "px : " + (v.overflowCoupables || []).join(" · "));
