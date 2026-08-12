@@ -75,11 +75,13 @@
     DATA.tracks.forEach(function (t) {
       var tTotal = 0;
       var tDone = 0;
+      var nCourses = 0;
       var steps = "";
 
       t.courses.forEach(function (id, idx) {
         var c = DATA.content[id];
         if (!c) return;
+        nCourses++;
         var cnt = courseCount(id, prog);
         tTotal += cnt.total;
         tDone += cnt.done;
@@ -104,6 +106,21 @@
 
       var pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
 
+      /* Fin de parcours : tous les cours terminés. On CONSTATE (nombre de cours
+         et de leçons) et on propose une SUITE à l'échelle du parcours — un projet
+         fil rouge, qui enchaîne justement plusieurs cours. Même esprit qu'A2,
+         mais un cran au-dessus (le parcours, pas le cours). */
+      var doneBlock = "";
+      if (tTotal > 0 && tDone === tTotal) {
+        doneBlock =
+          '<p class="track-done">' +
+          '<svg class="track-done__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>' +
+          "<span>Parcours terminé : " + nCourses + " cours, " + tTotal +
+          " leçons. Passe à la pratique avec " +
+          '<a href="fils-rouges.html">un projet fil rouge</a>.</span>' +
+          "</p>";
+      }
+
       html +=
         '<article class="track-card" id="' + esc(t.id) + '">' +
         '<div class="track-card__head">' +
@@ -118,6 +135,7 @@
         '<span class="progress__value">' + tDone + " / " + tTotal + "</span></div>" +
         '<div class="progress__track"><div class="progress__bar" style="width:' + pct + '%"></div></div></div>' +
         '<ol class="track-steps">' + steps + "</ol>" +
+        doneBlock +
         "</article>";
     });
 

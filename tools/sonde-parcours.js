@@ -152,6 +152,22 @@ var SONDE = function () {
     };
   }
   out.text = (document.body.innerText || "").replace(/\n{2,}/g, "\n").trim();
+  /* Débordement horizontal (utile après un ajout CSS) : largeur du document vs
+     zone visible, et les premiers éléments qui dépassent le bord droit. */
+  var de = document.documentElement;
+  out.overflow = Math.max(0, de.scrollWidth - de.clientWidth);
+  if (out.overflow > 0) {
+    var coup = [];
+    Array.prototype.forEach.call(document.querySelectorAll("*"), function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.width > 0 && r.right > de.clientWidth + 1) {
+        var n = el.className && typeof el.className === "string"
+          ? "." + el.className.trim().split(/\s+/)[0] : el.tagName.toLowerCase();
+        if (coup.indexOf(n) === -1) coup.push(n);
+      }
+    });
+    out.overflowCoupables = coup.slice(0, 8);
+  }
   return out;
 };
 
@@ -163,6 +179,7 @@ var SONDE = function () {
   var etats = (opt("etats", "vierge,visite,encours,fini-1cours,tout")).split(",");
   var pages = (opt("pages", "index.html,pages/progression.html,pages/parcours.html,pages/bilan.html,pages/certificat.html")).split(",");
   var grep = opt("grep", "");
+  var largeur = parseInt(opt("largeur", "0"), 10) || 0;
 
   var profil = path.join(os.tmpdir(), "sonde-parcours-" + process.pid);
   var port = 9300 + (process.pid % 400);
@@ -208,6 +225,11 @@ var SONDE = function () {
       };
       await envoyer("Page.enable");
       await envoyer("Runtime.enable");
+      if (largeur > 0) {
+        await envoyer("Emulation.setDeviceMetricsOverride", {
+          width: largeur, height: 900, deviceScaleFactor: 1, mobile: false,
+        });
+      }
       var seedJson = JSON.stringify(seed.progress);
       var lastJson = JSON.stringify(seed.last);
       await envoyer("Page.addScriptToEvaluateOnNewDocument", {
@@ -222,7 +244,12 @@ var SONDE = function () {
       var res2 = await envoyer("Runtime.evaluate", { expression: "(" + SONDE.toString() + ")()", returnByValue: true });
       var v = (res2.result || {}).value || {};
 
-      console.log("\n-- " + rel + " --");
+      console.log("\n-- " + rel + (largeur ? " @" + largeur + "px" : "") + " --");
+      if (v.overflow) {
+        console.log("  ⚠ DÉBORDEMENT +" + v.overflow + "px : " + (v.overflowCoupables || []).join(" · "));
+      } else if (largeur) {
+        console.log("  débordement : aucun");
+      }
       if (v.resume) {
         console.log("  [bandeau resume] visible=" + v.resume.visible + " hidden-attr=" + v.resume.hidden);
         console.log("     kicker : " + JSON.stringify(v.resume.kicker.trim()));
