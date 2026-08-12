@@ -77,6 +77,11 @@ if (Test-ChantierFini) {
   $modeVerif = $true
 }
 
+# Horodatage du debut de la passe : sert a verifier que le rapport de la passe
+# de securite a bien ete ECRIT PENDANT celle-ci, et non relu d'un chantier
+# precedent (voir le controle de fraicheur plus bas).
+$debutPasse = Get-Date
+
 New-Item -ItemType File -Path $lock -Force | Out-Null
 if ($modeVerif) {
   Add-Content $log "[$(Stamp)] ===== reveil autonome -- PASSE DE SECURITE (verification finale) ====="
@@ -177,9 +182,22 @@ try {
   if ($modeVerif) {
     $verdict = 'ABSENT'
     if (Test-Path $rapport) {
-      $tete = (Get-Content $rapport -TotalCount 1 -Encoding utf8)
-      if ($tete -match 'VERDICT\s*:\s*VERT') { $verdict = 'VERT' }
-      elseif ($tete -match 'VERDICT\s*:\s*ROUGE') { $verdict = 'ROUGE' }
+      # FRAICHEUR D'ABORD (correctif 2026-08-12) : sans ce controle, le wrapper
+      # lisait la 1re ligne du rapport SANS verifier qu'il venait d'etre ecrit.
+      # Constate sur le chantier V8 : la passe n'avait pas reecrit le rapport, le
+      # wrapper a relu un VERDICT: VERT vieux de NEUF JOURS et s'est eteint en
+      # croyant avoir verifie. Un verdict perime est pire que pas de verdict :
+      # il eteint le seul garde-fou. On exige donc que le fichier ait ete ecrit
+      # APRES le debut de cette passe.
+      $ecritPendantLaPasse = (Get-Item $rapport).LastWriteTime -ge $debutPasse
+      if (-not $ecritPendantLaPasse) {
+        $verdict = 'PERIME'
+        Add-Content $log "[$(Stamp)] VERIFICATION FINALE : rapport PERIME (ecrit le $((Get-Item $rapport).LastWriteTime.ToString('yyyy-MM-dd HH:mm')), passe demarree a $($debutPasse.ToString('HH:mm'))) -- verdict ignore." -Encoding utf8
+      } else {
+        $tete = (Get-Content $rapport -TotalCount 1 -Encoding utf8)
+        if ($tete -match 'VERDICT\s*:\s*VERT') { $verdict = 'VERT' }
+        elseif ($tete -match 'VERDICT\s*:\s*ROUGE') { $verdict = 'ROUGE' }
+      }
     }
     if ($verdict -eq 'VERT' -and $code -eq 0) {
       New-Item -ItemType File -Path $okFile -Force | Out-Null
