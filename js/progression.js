@@ -399,16 +399,29 @@
        affiché juste au-dessus. Le titre et l'accroche de la page invitent à
        « reprendre » — faux quand il ne reste rien : on les réécrit. */
     var allDone = totalLessons > 0 && doneLessons === totalLessons;
+    var heroTitle = document.querySelector("[data-dash-hero-title]");
+    var heroLead = document.querySelector("[data-dash-hero-lead]");
     if (allDone) {
-      var heroTitle = document.querySelector("[data-dash-hero-title]");
-      var heroLead = document.querySelector("[data-dash-hero-lead]");
       if (heroTitle) heroTitle.textContent = "Tu as tout parcouru";
       if (heroLead) {
         heroLead.textContent =
           "Ton avancement est enregistré sur cet appareil (aucun compte, aucun " +
           "serveur). Voici tout ce que tu as accompli.";
       }
+    } else if (doneLessons === 0) {
+      /* Rien commencé : « Reprends là où tu t'es arrêté » et « le bouton pour
+         repartir aussitôt » sont faux (le corps dit « Tu n'as pas encore
+         commencé »). On invite à démarrer. */
+      if (heroTitle) heroTitle.textContent = "Commence ton apprentissage";
+      if (heroLead) {
+        heroLead.textContent =
+          "Ta progression s'enregistrera sur cet appareil (aucun compte, aucun " +
+          "serveur). Ouvre un cours : tes leçons terminées et tes acquis " +
+          "s'afficheront ici.";
+      }
     }
+    /* En cours : le titre et l'accroche du HTML (« Reprends là où tu t'es
+       arrêté ») décrivent déjà la situation, on n'y touche pas. */
 
     /* Bandeau de stats */
     var statsHost = document.getElementById("dash-stats");
