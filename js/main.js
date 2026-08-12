@@ -449,12 +449,43 @@
     };
   }
 
+  /* Signal de palier : le badge montre le niveau courant en permanence, mais
+     rien ne marque le MOMENT où on en gagne un. On mémorise le dernier niveau
+     annoncé et, s'il a augmenté depuis, on l'annonce une seule fois — sobrement,
+     via le toast déjà en place. Le badge et ce toast étant rendus au même
+     chargement, ils restent cohérents (pas de « Niv. 4 » sous un « Niveau 5
+     atteint »). Premier passage : on note le niveau sans rien annoncer, faute
+     d'historique. */
+  function signalerMonteeNiveau(lv) {
+    /* Seulement là où l'XP est fiable : sans data.js (27 pages d'outils),
+       computeXP compte des clés orphelines et le niveau peut diverger — on ne
+       veut ni faux toast ni écraser le niveau mémorisé avec une valeur fausse. */
+    if (!window.SITE_DATA) return;
+    var KEY = "syntaxe-xp-level";
+    var prev = null;
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw != null) prev = parseInt(raw, 10);
+    } catch (e) {}
+    if (prev == null || isNaN(prev)) {
+      try { localStorage.setItem(KEY, String(lv.level)); } catch (e) {}
+      return;
+    }
+    if (lv.level > prev) {
+      showToast("Niveau " + lv.level + " atteint — " + lv.title + ".");
+    }
+    if (lv.level !== prev) {
+      try { localStorage.setItem(KEY, String(lv.level)); } catch (e) {}
+    }
+  }
+
   function initXP() {
     var actions = $(".header-actions");
     if (!actions) return;
     var s = computeXP();
     if (s.xp <= 0) return; // rien à afficher pour un nouveau visiteur
     var lv = levelInfo(s.xp);
+    signalerMonteeNiveau(lv);
     var progLink = $('.primary-nav a[href$="progression.html"]');
     var href = progLink ? progLink.getAttribute("href") : null;
     var el = document.createElement(href ? "a" : "span");

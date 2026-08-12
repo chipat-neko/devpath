@@ -101,6 +101,11 @@ var ETATS = {
   "fini-1cours": { progress: progressUnCours("html"), last: lastOf("html") },
   presque: { progress: progressPresque(), last: lastOf("html") },
   tout: { progress: progressTout(), last: lastOf("zig") },
+  /* Montée de palier (B3) : progression « en cours » (niveau > 3) mais dernier
+     niveau annoncé = 3 → un toast « Niveau N atteint » doit apparaître. */
+  montee: { progress: progressEnCours(), last: { course: "javascript", file: "lecon-05.html", title: "JavaScript" }, xpLevel: 3 },
+  /* Même progression, niveau déjà annoncé = niveau courant → AUCUN toast. */
+  "sans-montee": { progress: progressEnCours(), last: { course: "javascript", file: "lecon-05.html", title: "JavaScript" }, xpLevel: 99 },
 };
 
 /* ---- Chrome + CDP (repris de verif-rendu.js) ------------------------------ */
@@ -160,6 +165,12 @@ var SONDE = function () {
       linkText: link ? (link.textContent || "").replace(/\s+/g, " ").trim() : null,
     };
   }
+  /* Toasts présents (signal de palier B3) : leur texte. */
+  var toasts = [];
+  Array.prototype.forEach.call(document.querySelectorAll(".toast-host .toast"), function (t) {
+    toasts.push((t.textContent || "").trim());
+  });
+  if (toasts.length) out.toasts = toasts;
   out.text = (document.body.innerText || "").replace(/\n{2,}/g, "\n").trim();
   /* Débordement horizontal (utile après un ajout CSS) : largeur du document vs
      zone visible, et les premiers éléments qui dépassent le bord droit. */
@@ -246,6 +257,7 @@ var SONDE = function () {
           "try{localStorage.clear();" +
           (seed.progress && Object.keys(seed.progress).length ? "localStorage.setItem('syntaxe-progress'," + JSON.stringify(seedJson) + ");" : "") +
           (seed.last ? "localStorage.setItem('syntaxe-last'," + JSON.stringify(lastJson) + ");" : "") +
+          (seed.xpLevel != null ? "localStorage.setItem('syntaxe-xp-level'," + JSON.stringify(String(seed.xpLevel)) + ");" : "") +
           "}catch(e){}",
       });
       await envoyer("Page.navigate", { url: url });
@@ -254,6 +266,7 @@ var SONDE = function () {
       var v = (res2.result || {}).value || {};
 
       console.log("\n-- " + rel + (largeur ? " @" + largeur + "px" : "") + " --");
+      if (v.toasts) console.log("  🔔 toast(s) : " + JSON.stringify(v.toasts));
       if (v.overflow) {
         console.log("  ⚠ DÉBORDEMENT +" + v.overflow + "px : " + (v.overflowCoupables || []).join(" · "));
       } else if (largeur) {
