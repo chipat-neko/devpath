@@ -1,115 +1,94 @@
 VERDICT: VERT
 
-# Passe de sécurité de fin de chantier — Syntaxe
+# Passe de sécurité de fin de chantier — 2026-08-12
 
-**Date** : 2026-08-02 (tâche planifiée, non-interactive)
-**Racine** : `D:\test-claude`
-**Réalité mesurée** : **76 cours · 1362 leçons · 73 langages · 11 parcours guidés**
-**Corrections appliquées** : 2 (compteurs d'accueil) — voir §i.
-**Problèmes bloquants restants** : **0**.
+Site **Syntaxe** (`d:\test-claude`). Contrôle de bout en bout, non interactif, sans ajout de
+contenu. Un seul défaut trouvé (débordement mobile d'une leçon), corrigé à la cause et
+re-vérifié. Tous les contrôles sont verts après correction.
 
-Tous les contrôles a→i sont bons après corrections. Aucune modification lourde ou
-douteuse n'a été faite ; les rares points non bloquants sont listés en fin de rapport.
-Scripts jetables de cette passe : `scratchpad/vf8-*.js` (+ outils du dépôt
-`tools/verif-donnees.js`, `tools/verif-html.js`).
-
-> Écart avec la passe du 2026-08-01 (« aucune correction nécessaire ») : celle-ci
-> n'avait vérifié que les compteurs **globaux** (76/1362/73). Cette passe a aussi
-> inspecté les **sous-compteurs des cartes de parcours** de l'accueil et en a trouvé
-> deux périmés — corrigés (§i).
+Chiffres de référence : **76 cours · 1362 leçons · 73 langages**.
 
 ---
 
-## a) SYNTAXE — `node --check` sur tout le JS ✅
-- **81 / 81** fichiers `js/*.js` passent `node --check` sans erreur.
-- Les scripts racine (`*.js`) et `tools/*.js` passent aussi (0 échec).
+## 1. Outils du projet (les trois en sortie 0)
 
-## b) DONNÉES — JSON des blocs `data-*` ✅
-- `tools/verif-donnees.js` **I15** : chaque `data-quiz`, `data-exos` et
-  `data-quiz-bilan` de toutes les leçons est du JSON parsable → **OK**.
-- Rappel global `verif-donnees` : **17 contrôles, 0 ERREUR, 1 avertissement**
-  (I17 zig, non bloquant — voir plus bas).
+| Outil | Résultat |
+|---|---|
+| `node tools/verif-html.js` | 1451 fichiers analysés, **0 grave / 0 attention**, exit 0 |
+| `node tools/verif-donnees.js` | 76 cours, 1362 leçons, 17 invariants, **0 erreur / 1 avertissement**, exit 0 |
+| `node tools/verif-rendu.js --tout --lecons` | 139 pages × 834 mesures, **0 erreur / 0 avertissement**, exit 0 *(après correction)* |
 
-## c) ENCODAGE — BOM & mojibake ✅
-- **BOM** : parcours de tous les `.html/.js/.css/.webmanifest/.json/.md` →
-  **0 fichier** avec BOM UTF-8.
-- **Mojibake** : dans les fichiers **réellement servis**, les seules séquences
-  (`Ã©`, `Ã¨`…) sont **volontaires et pédagogiques** :
-  - `pages/formats/lecon-06.html` (leçon sur l'encodage : « Café → CafÃ© », « GenÃ¨ve »),
-  - `pages/r/lecon-06.html`, `pages/html/lecon-15.html`, `pages/perl/lecon-13.html`
-    (tous dans des `<code>` expliquant le charabia d'accents),
-  - `js/quiz-index.js` (reprend ces QCM dans l'index de recherche).
-  Aucune faute d'encodage introduite. Les `.md` (rapports de chantier, **non servis**)
-  contiennent du mojibake résiduel — hors périmètre du site.
+- **verif-donnees** : l'unique avertissement est `[I17]` déjà connu — `zig` lecon-06#2 ↔ lecon-14#1
+  (énoncé 0.33 / réponse 0.33). Non bloquant, sous le seuil d'erreur (0.50), documenté depuis le
+  chantier V6 comme « deux faces d'une même notion, à juger ». Rien à corriger.
+- **verif-rendu** : au premier passage, **2 erreurs** de débordement horizontal sur
+  `pages/reseaux/lecon-06.html` (+42 px à 320 px, thèmes clair et sombre). Isolé, corrigé,
+  re-mesuré → 0 erreur. Détail au §3.
 
-## d) LIENS ✅
-- `verif-donnees` **I6** : chaque fichier cité dans `js/data.js` existe sous
-  `pages/<dir>/`, et `cours.html` idem → **OK**.
-- `verif-donnees` **I16** : aucune leçon `lecon-*.html` orpheline (non déclarée &
-  non redirection) → **OK**.
-- **Liens relatifs** (`scratchpad/vf8-d-liens2.js`, périmètre `index.html` + `pages/`) :
-  **26 966** liens locaux vérifiés, **0 vrai lien cassé**. Les 3 « cassés » bruts
-  sont des **exemples de code** dans les leçons qui enseignent précisément le sujet
-  (`html/lecon-03` = liens `<a href>` ; `vue/lecon-02` = directive `:src`), confirmés
-  par grep comme non présents en attribut réel.
+## 2. Contrôles complémentaires (scripts jetables dans `scratchpad/`)
 
-## e) INDEX — `js/search-index.js` ✅
-- **1362 docs** indexés = **1362** leçons réelles sur disque = **1362** déclarées.
-- **0** doc référençant un dossier `-avance` ; **0** doc pointant un fichier absent ;
-  **0** doc dont le `file` n'est pas `lecon-NN.html`.
-- Chaque cours a **exactement** autant de docs que de leçons (0 mismatch). Le piège
-  id≠dir est respecté : le cours `javascript` est indexé sous son **dir** `js`
-  (65 docs = 65 leçons).
+| # | Contrôle | Mesure | Verdict |
+|---|---|---|---|
+| a | Syntaxe JS | 81 fichiers `js/*.js`, `node --check` | **0 erreur** |
+| b | JSON des blocs data-* | 2804 blocs (1362 quiz + 1362 exos + 80 bilan) sur 1362 leçons | **0 invalide** |
+| c | Encodage — BOM | 1782 HTML + js/css/json/webmanifest | **0 BOM** |
+| c | Encodage — mojibake | 11 fichiers touchés, tous **volontaires** (leçons encodage : `formats/06`, `r/06`, `html/15`, `perl/13`) ou **faux positif** « Âge » (Â = U+00C2 légitime, ex. « Âge invalide ») | **0 accidentel** |
+| d | Liens relatifs | 26 982 liens hors-code vérifiés | **0 lien réel cassé** (8 faux positifs = exemples pédagogiques dans des `<text>` SVG / titres) |
+| e | Index de recherche | `search-index.js` = **1362 docs = 1362 leçons**, 0 entrée `-avance`, cohérent par cours | **OK** |
+| f | Durées | 76 cours, `durations` ⇄ nb de leçons | **0 incohérence** |
+| g | Niveaux (cours fusionnés) | html 16 / css 15 / javascript 20 / python 17 modules, tous porteurs d'un `level` ∈ {debutant, intermediaire, expert} | **0 module sans level** |
+| g | Plus aucun `-avance` | 0 identifiant de cours actif dans les JS de données | **OK** |
+| h | Redirections | 93 pages `pages/*-avance/**` | **93/93 cibles existent** |
+| i | Compteurs affichés | 76 / 1362 / 73 sur accueil (FR + EN), catalogue, à-propos | **cohérents** |
 
-## f) DURÉES — `durations` de `data.js` ✅
-- `verif-donnees` **I2** : bijection `content ⇄ durations`, chaque leçon a une durée > 0.
-- Contre-vérification par cours (`scratchpad`) : **0 / 76** cours en écart entre le
-  nombre d'entrées `durations` et le nombre de leçons. Piège id≠dir confirmé : la clé
-  du cours JS est bien `javascript` (65 entrées = 65 leçons).
+Notes :
+- (e) Le seul écart apparent (65 docs sous la clé `js`) est le piège id/dossier connu : le cours
+  d'`id` **javascript** a pour dossier **js**, et l'index utilise le nom de dossier. 65 docs `js`
+  = exactement les 65 leçons de javascript. `[I18]` (build-index --strict) confirme l'index non périmé.
+- (g) Les occurrences résiduelles de `-avance` (dans `js/main.js` et `js/projets.js`) sont des
+  **tables de redirection / compatibilité** (reprise localStorage des cours fusionnés, mapping des
+  anciennes ancres) et une classe CSS `pill--avance`. Aucun cours actif. Conforme à la réserve assumée.
+- La ligne « 1336 leçons » de `js/main.js:313` est un **commentaire** décrivant un bug historique,
+  pas un compteur affiché — laissée telle quelle.
 
-## g) NIVEAUX — 4 cours fusionnés & absence de `-avance` ✅
-- Modules porteurs d'un `level` réparti en `debutant / intermediaire / expert`,
-  **0 module sans level** :
-  - `html` : 16 modules (3 / 5 / 8)
-  - `css` : 15 modules (3 / 5 / 7)
-  - `javascript` : 20 modules (5 / 8 / 7)
-  - `python` : 17 modules (3 / 6 / 8)
-- **Aucun identifiant `-avance`** dans `data.js`, `catalogue.js`, `cours.js`,
-  `projets-data.js`, `flashcards-data.js`, `quiz-index.js`, `logos.js`, ni les
-  `fil-rouge-*-data.js` (grep élargi = 0 occurrence).
+## 3. Correction appliquée (unique)
 
-## h) REDIRECTIONS ✅
-- 4 dossiers de compatibilité présents : `js-avance` (24), `html-avance` (23),
-  `css-avance` (23), `python-avance` (23) = **93 redirections**.
-- **0 cible cassée** : chaque page de redirection pointe vers une leçon
-  `../<dir>/lecon-NN.html` qui existe réellement.
+**Fichier : `css/pages.css`** — ajout après le bloc `.prose p, .prose ul, .prose ol` :
 
-## i) COMPTEURS AFFICHÉS ✅ (2 corrections)
-- **Totaux corrects** partout : accueil (`index.html`) et catalogue affichent
-  **76 cours / 1362 leçons / 73 langages** ; l'i18n **EN** (`js/main.js`) affiche
-  « 76 complete courses / 1362 written lessons / 73 languages ». Le catalogue calcule
-  aussi un compteur dynamique (`result-count`).
-- **Corrigé (sûr)** — deux sous-compteurs de la section « parcours » de l'accueil
-  étaient périmés :
-  1. carte « Développeur Web Front-end » : **« 8 cours » → « 5 cours »** (le track réel
-     = `html, css, javascript, react, typescript` = 5).
-  2. bouton bas de section : **« Voir les 8 parcours guidés » → « … 11 … »**
-     (`SITE_DATA.tracks` = 11, tous rendus par `parcours.js`).
-- Seul `index.html` a été modifié (`git status` = `M index.html`).
+```css
+.prose p,
+.prose li,
+.prose dd {
+  overflow-wrap: break-word;
+}
+```
 
-## Contrôle bonus — HTML « type navigateur »
-- `tools/verif-html.js` : **1451 fichiers analysés, 0 problème grave, 0 remarque**.
+- **Symptôme** : `pages/reseaux/lecon-06.html` débordait de +42 px à 320 px (les deux thèmes).
+- **Cause isolée** (CDP, bisection par masquage puis descente par scrollWidth) : un `<p>` du bloc
+  `.steps` contenant la chaîne insécable **« application/transport/Internet/lien »** (mots séparés
+  par `/`, sans point de césure). Ni la table `.cheat-table` ni les `<pre>` n'étaient en cause
+  (leur défilement est déjà géré) : masquer table/pre/svg ne changeait rien ; masquer `.steps` → 0.
+- **Choix de la correction** : le site utilise déjà `overflow-wrap: break-word` pour le même motif
+  sur `.course-hero__title` (commentaire pages.css:499). On applique la même règle aux conteneurs de
+  texte courant de la prose. `overflow-wrap: break-word` **ne coupe un mot que s'il déborderait
+  sinon** → aucun effet sur les textes normaux, aucun risque de régression.
+- **Portée** : un scan des 1362 leçons révèle **39 leçons** au motif identique (chaînes de 26–40
+  car. type « teinte/saturation/luminosité », « insertions/suppressions/substitutions »). verif-rendu
+  ne teste qu'une leçon par cours ; la correction CSS les protège **toutes**, pas seulement l'échantillon.
+- **Vérification** : re-mesure ciblée = 0 erreur ; re-passage **complet** `--tout --lecons` = 139
+  pages, 834 mesures, **0 erreur / 0 avertissement**. Aucune régression.
+
+## 4. Problèmes restants
+
+Aucun problème bloquant.
+
+- **1 avertissement non bloquant** (verif-donnees `[I17]`) : doublon de QCM faible (R = 0.33) entre
+  `zig` lecon-06#2 et lecon-14#1. Sous le seuil d'erreur, déjà tracé (chantier V6, phase E). À juger
+  hors passe de sécurité — pas une régression.
+- Faux positifs documentés (n'exigent aucune action) : mojibake « Âge » (caractère correct),
+  8 « liens » d'exemples pédagogiques dans des diagrammes SVG, clé `js` du cours javascript.
 
 ---
 
-## Problèmes restants (tous NON bloquants — n'affectent pas le verdict)
-1. **I17 zig** (avertissement, non ERREUR) : `zig/lecon-06#2 ↔ lecon-14#1`
-   (Jaccard énoncé/réponse 0.33). Déjà tracé comme « deux faces d'une même notion, ou
-   vrai doublon ? » — à trancher dans le cadre du **chantier V6 phase E**, hors du
-   périmètre de cette passe de contrôle (aucune production ce réveil).
-2. **Mojibake dans les `.md` de rapport** (`ENRICHISSEMENT*.md`, `PROGRESSION.md`,
-   `NOUVEAUX-COURS.md`, etc.) : fichiers de documentation **non servis** sur le site.
-   Sans impact utilisateur ; laissés tels quels.
-3. **`js/main.js:322`** : le nombre `1336` apparaît dans un **commentaire historique**
-   décrivant un ancien bug d'affichage (« 0 / 1336 leçons »). Ce n'est pas un compteur
-   rendu à l'écran ; laissé tel quel pour ne pas dénaturer l'explication.
+*Contrôle mené sans ajout de contenu. Seule modification : `css/pages.css` (une règle CSS).
+Scripts de vérification jetables conservés dans `scratchpad/`.*
