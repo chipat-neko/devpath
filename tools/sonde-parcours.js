@@ -86,11 +86,20 @@ function lastOf(id) {
   return { course: id, file: f, title: DATA.content[id].title };
 }
 
+/* Tout terminé sauf deux cours (pour tester « il te reste X et Y »). */
+function progressPresque() {
+  var p = progressTout();
+  delete p.zig;
+  delete p.asm;
+  return p;
+}
+
 var ETATS = {
   vierge: { progress: {}, last: null },
   visite: { progress: {}, last: lastOf("html") },
   encours: { progress: progressEnCours(), last: { course: "javascript", file: "lecon-05.html", title: "JavaScript" } },
   "fini-1cours": { progress: progressUnCours("html"), last: lastOf("html") },
+  presque: { progress: progressPresque(), last: lastOf("html") },
   tout: { progress: progressTout(), last: lastOf("zig") },
 };
 

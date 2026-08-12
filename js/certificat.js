@@ -115,6 +115,48 @@
     return null;
   }
 
+  /* Énumération française : « A », « A et B », « A, B et C ». */
+  function joinFr(noms) {
+    if (noms.length === 1) return noms[0];
+    return noms.slice(0, -1).join(", ") + " et " + noms[noms.length - 1];
+  }
+
+  /* Texte d'introduction, conditionnel à la progression réelle : rien de
+     débloqué, quelques-uns, ou tous. Sans ça, « Termine un cours pour débloquer
+     son certificat » s'affiche même avec 76 certificats déjà disponibles.
+     Ne touche qu'au TEXTE — le sélecteur et le rendu restent inchangés. */
+  function updateLead(finished) {
+    var lead = document.querySelector("[data-cert-lead]");
+    if (!lead) return;
+    var certifiables = [];
+    Object.keys(DATA.content).forEach(function (id) {
+      var c = computeCourse(id);
+      if (c && c.total > 0) certifiables.push(c);
+    });
+    var total = certifiables.length;
+    var k = finished.length;
+    if (k === 0) {
+      lead.textContent =
+        "Termine un cours (toutes ses leçons) pour débloquer son certificat.";
+    } else if (k >= total) {
+      lead.textContent =
+        "Tes " + total + " certificats sont débloqués, un par cours terminé. " +
+        "Choisis-en un ci-dessous, puis imprime-le ou enregistre-le en PDF.";
+    } else {
+      var reste = certifiables.filter(function (c) { return !c.complete; });
+      var manque = "";
+      /* Nommer les manquants seulement quand il en reste peu : sinon la liste
+         serait interminable et illisible. */
+      if (reste.length <= 3) {
+        manque = " Il te reste " + joinFr(reste.map(function (c) { return c.title; })) + ".";
+      }
+      lead.textContent =
+        k + (k > 1 ? " certificats débloqués" : " certificat débloqué") +
+        " sur " + total + "." + manque +
+        " Choisis un cours ci-dessous, puis imprime-le ou enregistre-le en PDF.";
+    }
+  }
+
   /* Rendu du certificat lui-même. */
   function renderCertificate(c) {
     var meta = courseMeta(c.id);
@@ -194,6 +236,8 @@
     var printBtn = document.getElementById("cert-print");
     var finished = finishedCourses();
     var requested = getParam("course");
+
+    updateLead(finished);
 
     if (select) {
       if (!finished.length) {
