@@ -92,9 +92,19 @@ qu'on peut en faire maintenant. Pas d'emphase, pas de familiarité forcée.
 
 ## PHASE D — Contrôle
 
-- [ ] **D1 · Les trois états, revérifiés.** Reprendre la mesure d'ouverture (vierge / en cours / tout terminé) sur les six pages clés et consigner ce que le site dit désormais à chacun. Aucun message ne doit se contredire.
+- [x] **D1 · Les trois états, revérifiés.** — FAIT (sonde, 6 pages × 3 états). **Aucun message ne se contredit.** Synthèse :
+  | Page | Vierge | En cours | Tout terminé |
+  |---|---|---|---|
+  | Accueil | bandeau **masqué** | « Reprends où tu t'es arrêté · JavaScript 32/65 · Reprendre » | « **Parcours terminé** · Tu as terminé les 76 cours · Voir mon bilan » |
+  | Progression | « **Commence ton apprentissage** » + « Tu n'as pas encore commencé » | « Reprends là où tu t'es arrêté · Reprendre : JavaScript » | « **Tu as tout parcouru** · intégralité du site 76/1362 · plus en cours » |
+  | Parcours | intro seule (étapes 0/N) | étapes partielles | « **Parcours terminé : X cours, Y leçons** » (×11) |
+  | Bilan | « Aucun cours commencé — c'est le moment de te lancer ! » | stats | « **Parcours complet : les 76 cours … — 1362 leçons.** » |
+  | Certificat | « Termine un cours … pour débloquer » | idem (0 terminé) | « **Tes 76 certificats sont débloqués** » |
+  | Cours | « Commencer la leçon 1 » | (nav) | « **Cours terminé** » + certificat |
+  
+  `<html lang>` = **`fr`** et **bouton EN absent** sur les 6 pages aux 3 états. **Deux observations mineures, hors périmètre des cases V9** (libellés éditoriaux **constants**, donc non contradictoires, à décider un jour) : l'encart fil rouge de `cours.html` (« Reprends ton portfolio full-stack ici. ») et le CTA de bas d'accueil (« Le meilleur moment pour commencer, c'est maintenant. ») ne s'adaptent pas à l'état — même défaut d'esprit qu'A1 mais côté **fils rouges**, non listé dans ce chantier ; corriger proprement suppose d'analyser `fil-rouge.js`.
 
-- [ ] **D2 · Non-régression.** `node tools/verif.js` complet, les quatre vérificateurs verts. Vérifier en particulier qu'aucun texte ajouté n'a introduit de `&nbsp;` littéral dans un bloc JSON, et que les compteurs affichés restent exacts.
+- [x] **D2 · Non-régression.** — FAIT. `node tools/verif.js` **complet, les 4 vérificateurs verts** : source (0), données (0 erreur d'invariant), contenu (0 maigre / 0 redondance), **rendu 0/0** (débordement / contraste / focus / aria / console / réseau ; Chrome, 106 s). **`&nbsp;` en bloc JSON** : `0` bloc `type="application/json"` dans les HTML touchés (index / progression / certificat) → aucun risque ; les `&nbsp;` présents y sont **préexistants** et hors JSON. **Compteurs** : aucun `76` / `1362` / `205` codé en dur dans le code (seule occurrence = un commentaire de `certificat.js`) — tous calculés dynamiquement (`finished.length`, `totalLessons`, `doneLessons`, `tTotal`, `nCourses`) et confirmés exacts par la sonde (76 cours, 1362 leçons, 205/205, etc.).
 
 ---
 
