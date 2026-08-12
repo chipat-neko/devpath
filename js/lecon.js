@@ -307,7 +307,9 @@
         p.innerHTML =
           '<span aria-hidden="true">🎓</span> Tu as terminé ce cours&nbsp;! ' +
           '<a href="../certificat.html?course=' + encodeURIComponent(courseId) +
-          '">Génère ton certificat de réussite</a>.';
+          '">Génère ton certificat de réussite</a>, ou passe à la pratique avec ' +
+          '<a href="../projets.html#course=' + encodeURIComponent(courseId) +
+          '">le projet du cours</a>.';
         btn.parentNode.insertBefore(p, btn.nextSibling);
       } else if (!complete && existing) {
         existing.remove();
