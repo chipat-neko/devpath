@@ -27,7 +27,7 @@
      (L + 0,05) / (L_foncé + 0,05) avec l'encre foncée. Les deux ratios sont
      égaux quand L = √((L_clair + 0,05)(L_foncé + 0,05)) − 0,05 : c'est le seuil
      optimal, calculé ici à partir des deux encres plutôt que codé en dur.
-     Avec #ffffff et #0a0908 il vaut 0,1854, et les 76 accents du site montent
+     Avec #ffffff et #0a0908 il vaut 0,1854, et les 83 accents du site montent
      alors tous à 4,52:1 au minimum (36 étaient sous 4,5:1, dont 6 sous 3:1).
      L'encre foncée doit rester très sombre : avec un #16140f, six accents de
      luminance moyenne (sass, python, docker, formats, graphql, archi) plafonnent

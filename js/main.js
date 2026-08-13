@@ -274,7 +274,7 @@
      ne traduisait que ~13 libellés de navigation sur un contenu resté français —
      une seule page (l'accueil) portait 8 éléments instrumentés, tout le reste de
      son propre contenu compris. Il promettait un bilinguisme inexistant, alors
-     que traduire les 1376 leçons n'est pas à l'ordre du jour. On assume donc le
+     que traduire les 1463 leçons n'est pas à l'ordre du jour. On assume donc le
      site comme francophone et on force l'affichage FR, même si une ancienne
      préférence « en » traîne encore dans localStorage. La fondation i18n
      (getLang, applyI18n, tables) est conservée, dormante, pour une éventuelle
@@ -658,10 +658,10 @@
      Une leçon n'avait qu'un lien de pied (« ← Retour au programme »), et une
      dizaine de hubs transverses (entraînement, outils, références, espace
      perso) n'étaient atteignables que depuis l'accueil. On construit ici, sur
-     les seules pages de leçon (repère : body[data-lesson], présent sur les 1376
+     les seules pages de leçon (repère : body[data-lesson], présent sur les 1463
      leçons et absent des pages de cours/outils), une grille de liens réutilisant
      le gabarit `.site-footer__grid` déjà stylé pour l'accueil (aucune édition des
-     1376 fichiers, aucun CSS nouveau). Profondeur déduite du favicon, comme
+     1463 fichiers, aucun CSS nouveau). Profondeur déduite du favicon, comme
      initPWA ; les hubs vivent tous dans pages/. */
   var LESSON_FOOTER_COLS = [
     { titre: "S'entraîner", liens: [

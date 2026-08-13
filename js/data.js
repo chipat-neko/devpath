@@ -647,6 +647,7 @@ window.SITE_DATA = (function () {
         { course: "sql", note: "Les données d'entraînement viennent souvent d'une base de données." },
         { course: "r", note: "Une autre voie pour les statistiques et la visualisation." },
         { course: "stats", note: "Régression, sur-ajustement, échantillon d'entraînement et de test : le ML repose sur les statistiques du cours dédié." },
+        { course: "pandas", note: "Nettoyer et préparer les données tabulaires : le premier vrai chantier avant tout modèle." },
       ],
       modules: [
         {
@@ -1742,6 +1743,7 @@ window.SITE_DATA = (function () {
         { course: "sql", note: "Fais parler tes données en combinant Python et SQL." },
         { course: "git", note: "Versionne tes scripts dès le premier jour." },
         { course: "javascript", note: "Compare les deux langages : beaucoup de concepts se recoupent." },
+        { course: "pandas", note: "La bibliothèque reine pour manipuler des données tabulaires en Python." },
       ],
       modules: [
         {
@@ -4030,7 +4032,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Prendre pandas en main", sub: "Series, DataFrame, charger, types, valeurs manquantes", level: "debutant",
+          num: "01", title: "Prendre pandas en main", sub: "Series, DataFrame, charger, types, valeurs manquantes", level: "intermediaire",
           lessons: [
             { num: "01", title: "Series et DataFrame : les deux structures", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "Charger et inspecter un jeu de données", file: "lecon-02.html", status: "complet" },
@@ -4078,7 +4080,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Voir pour comprendre", sub: "pourquoi visualiser, la grammaire, choisir la forme", level: "debutant",
+          num: "01", title: "Voir pour comprendre", sub: "pourquoi visualiser, la grammaire, choisir la forme", level: "intermediaire",
           lessons: [
             { num: "01", title: "Pourquoi visualiser des données", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "La grammaire d'un graphique", file: "lecon-02.html", status: "complet" },
@@ -4174,7 +4176,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Penser en pipeline", sub: "données brutes, sources et puits, ETL/ELT, formats", level: "debutant",
+          num: "01", title: "Penser en pipeline", sub: "données brutes, sources et puits, ETL/ELT, formats", level: "intermediaire",
           lessons: [
             { num: "01", title: "Qu'est-ce que l'ingénierie de données ?", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "Le trajet d'une donnée : sources, puits, batch et flux", file: "lecon-02.html", status: "complet" },
@@ -4221,7 +4223,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Du besoin au modèle", sub: "entités, attributs, relations, modèle entité-association", level: "debutant",
+          num: "01", title: "Du besoin au modèle", sub: "entités, attributs, relations, modèle entité-association", level: "intermediaire",
           lessons: [
             { num: "01", title: "Concevoir une base avant de la coder", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "Repérer les entités et leurs attributs", file: "lecon-02.html", status: "complet" },
@@ -4269,7 +4271,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Le terrain du mobile", sub: "ce qui change, natif ou multiplateforme, cycle de vie, architecture", level: "debutant",
+          num: "01", title: "Le terrain du mobile", sub: "ce qui change, natif ou multiplateforme, cycle de vie, architecture", level: "intermediaire",
           lessons: [
             { num: "01", title: "Développer pour mobile : ce qui change vraiment", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "Natif ou multiplateforme : choisir son approche", file: "lecon-02.html", status: "complet" },
@@ -4317,7 +4319,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Entrer dans le code des autres", sub: "lire, comprendre, être intégré", level: "debutant",
+          num: "01", title: "Entrer dans le code des autres", sub: "lire, comprendre, être intégré", level: "intermediaire",
           lessons: [
             { num: "01", title: "Coder à plusieurs change tout", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "Lire le code des autres", file: "lecon-02.html", status: "complet" },
