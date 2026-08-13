@@ -138,8 +138,8 @@
 <p>La façon la plus naturelle — et la plus dangereuse — de charger les données du jour est de les <strong>ajouter</strong> à la table&nbsp;: un simple <code>INSERT</code>. Tant que chaque journée n'arrive qu'une fois, tout va bien. Mais rappelle-toi&nbsp;: rejouer est la normale. Le jour où ce même chargement est relancé (retry, re-livraison), il <strong>empile</strong> une seconde copie des mêmes lignes. C'est exactement le mécanisme du <strong>+40&nbsp;%</strong> de la <a href="lecon-01.html">leçon 1</a>.</p>
 
 <figure class="code-block" data-file="append_aveugle.sql"><pre><code class="language-sql">-- Chargement NAÏF de la journée : on ajoute, sans se soucier de ce qui existe déjà.
-INSERT INTO bronze_trajets (trip_id, start, end, station_start, station_end, bike, type)
-SELECT trip_id, start, end, station_start, station_end, bike, type
+INSERT INTO bronze_trajets (trip_id, start, "end", station_start, station_end, bike, type)
+SELECT trip_id, start, "end", station_start, station_end, bike, type
 FROM   fichier_du_jour;   -- trajets_2026-05-01.csv
 
 -- 1er run : 150 000 lignes insérées.  Table = 150 000 lignes.  OK.
@@ -162,8 +162,8 @@ FROM   fichier_du_jour;   -- trajets_2026-05-01.csv
 DELETE FROM bronze_trajets
 WHERE date_trajet = DATE '2026-05-01';        -- on vide d'abord CETTE journée
 
-INSERT INTO bronze_trajets (trip_id, start, end, station_start, station_end, bike, type, date_trajet)
-SELECT trip_id, start, end, station_start, station_end, bike, type, DATE '2026-05-01'
+INSERT INTO bronze_trajets (trip_id, start, "end", station_start, station_end, bike, type, date_trajet)
+SELECT trip_id, start, "end", station_start, station_end, bike, type, DATE '2026-05-01'
 FROM   fichier_du_jour;                        -- puis on la (ré)écrit intégralement
 </code></pre></figure>
 <p>Beaucoup d'entrepôts offrent une variante atomique&nbsp;: <code>INSERT OVERWRITE</code> ou une écriture en mode <em>write-truncate</em> ciblant la partition, qui fait le delete-insert en une seule opération, sans fenêtre où la table serait à moitié vide. Le principe reste le même&nbsp;: <strong>on remplace une partition, on n'y ajoute jamais</strong>.</p>
@@ -196,11 +196,11 @@ MERGE INTO bronze_trajets AS cible
 USING fichier_du_jour   AS source
    ON cible.trip_id = source.trip_id              -- la clé qui identifie une ligne
 WHEN MATCHED THEN
-    UPDATE SET end = source.end,                  -- on rafraîchit si la source a corrigé
+    UPDATE SET "end" = source."end",              -- on rafraîchit si la source a corrigé
                station_end = source.station_end
 WHEN NOT MATCHED THEN
-    INSERT (trip_id, start, end, station_start, station_end, bike, type)
-    VALUES (source.trip_id, source.start, source.end,
+    INSERT (trip_id, start, "end", station_start, station_end, bike, type)
+    VALUES (source.trip_id, source.start, source."end",
             source.station_start, source.station_end, source.bike, source.type);
 </code></pre></figure>
 <p>Le <code>MERGE</code> est idéal pour les sources où une ligne peut arriver plusieurs fois <em>et</em> être corrigée entre deux livraisons (un trajet dont la fin manquait, complétée le lendemain). Sa condition de survie&nbsp;: une <strong>clé vraiment unique</strong>. Si <code>trip_id</code> pouvait se répéter légitimement, le <code>MERGE</code> ferait n'importe quoi — on y revient dans les pièges.</p>
@@ -235,19 +235,23 @@ WHEN NOT MATCHED THEN
 <h3>c) Clé déterministe et déduplication</h3>
 <p>Parfois la source ne fournit pas de clé, ou en fournit une peu fiable. On peut alors <strong>calculer une clé déterministe</strong> à partir des données elles-mêmes&nbsp;: la même ligne produit toujours le même identifiant, donc les doublons deviennent détectables. En pratique on hache les colonnes qui définissent l'unicité (par exemple <code>trip_id</code> et <code>start</code>), et on ne garde qu'une occurrence par clé — le <strong>dédoublonnage</strong> déjà croisé en silver à la <a href="lecon-06.html">leçon 6</a>.</p>
 
-<figure class="code-block" data-file="dedup_deterministe.sql"><pre><code class="language-sql">-- Déduplication déterministe : une clé stable + on ne garde qu'UNE ligne par clé.
+<figure class="code-block" data-file="dedup_deterministe.sql"><pre><code class="language-sql">-- Déduplication déterministe : on FABRIQUE une clé à partir des colonnes
+-- d'unicité (trip_id + start), puis on ne garde qu'UNE ligne PAR CLÉ.
 -- Même après plusieurs rejeux, le SELECT ne renvoie jamais de doublon.
 SELECT *
 FROM (
     SELECT *,
-           MD5(trip_id || '|' || CAST(start AS VARCHAR)) AS cle_stable,  -- id reproductible
            ROW_NUMBER() OVER (
-               PARTITION BY trip_id           -- pour chaque trajet
-               ORDER BY start                 -- on choisit une occurrence de façon déterministe
+               PARTITION BY cle_stable        -- on dédoublonne SUR la clé fabriquée...
+               ORDER BY start                 -- ...deux lignes de même clé sont identiques : on en garde une
            ) AS rang
-    FROM bronze_trajets
-) t
-WHERE rang = 1;                                -- on ne garde que la 1re ligne de chaque clé
+    FROM (
+        SELECT *,
+               MD5(trip_id || '|' || CAST(start AS VARCHAR)) AS cle_stable  -- id reproductible
+        FROM bronze_trajets
+    ) avec_cle
+) numerote
+WHERE rang = 1;                                -- une seule ligne par clé stable
 </code></pre></figure>
 <p>Le mot-clé est <strong>déterministe</strong>&nbsp;: la clé doit dépendre <em>uniquement</em> des données, jamais de l'instant ou d'un compteur. Une clé calculée à partir de <code>NOW()</code> ou d'un numéro auto-incrémenté changerait à chaque rejeu, et le dédoublonnage échouerait&nbsp;: le même trajet recevrait deux clés différentes et compterait double.</p>
 

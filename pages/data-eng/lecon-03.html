@@ -264,18 +264,20 @@ CREATE TABLE trajets_nettoyes AS
 SELECT
     trip_id,
     CAST(start AS TIMESTAMP)                         AS debut,
-    CAST(end   AS TIMESTAMP)                         AS fin,
+    CAST("end" AS TIMESTAMP)                         AS fin,
     station_start,
     station_end,
     bike,
     type
 FROM bronze_trajets
-WHERE end &gt; start                 -- on écarte les durées négatives (fin avant début)
+WHERE "end" &gt; start               -- on écarte les durées négatives (fin avant début)
   AND start IS NOT NULL
-  AND end   IS NOT NULL           -- et les trajets incomplets
+  AND "end" IS NOT NULL           -- et les trajets incomplets
 QUALIFY ROW_NUMBER() OVER (       -- on ne garde qu'UNE ligne par trip_id (dédoublonnage)
     PARTITION BY trip_id ORDER BY start
 ) = 1;</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Un mot réservé dans la source</p><p>Dans le CSV brut, la colonne de fin s'appelle <code>end</code> — fidèle à la source, mais <code>end</code> est un <strong>mot réservé</strong> du SQL (il ferme un <code>CASE … END</code>)&nbsp;: écrite nue, <code>CAST(end AS …)</code> déclenche une erreur de syntaxe. On la protège par des guillemets doubles, <code>"end"</code> — un <strong>identifiant délimité</strong> du SQL standard (PostgreSQL, DuckDB, Snowflake, Redshift)&nbsp;; BigQuery, lui, emploie des accents graves&nbsp;: <code>`end`</code>. C'est déjà l'esprit du <a href="lecon-11.html">contrat de données</a>&nbsp;: une source livre parfois des noms hostiles, et le pipeline les gère au lieu de les subir.</p></div></div>
 <p>Tout le nettoyage vit dans une requête que n'importe quel analyste sait lire. Et si demain la règle change — par exemple, garder les trajets de zéro minute plutôt que les rejeter — on modifie ce SQL et on le rejoue sur <code>bronze_trajets</code>, <strong>sans jamais retourner au fichier d'origine</strong>. C'est l'ELT en action. On détaillera les couches bronze, silver et gold à la <a href="lecon-06.html">leçon 6</a>, et les formats de fichiers (CSV, JSON, Parquet) à la <a href="lecon-04.html">leçon 4</a>.</p>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'ELT a fait naître une famille d'outils dédiés à la transformation <em>dans</em> l'entrepôt, dont <strong>dbt</strong> est le plus connu&nbsp;: on y écrit ses transformations en SQL, versionnées et testées comme du code. Le langage de toutes ces transformations reste le SQL&nbsp;: si tu veux consolider cette base, le <a href="../sql/cours.html">cours SQL</a> est le compagnon direct de cette leçon. Pour les sources semi-structurées (JSON des capteurs, réponses d'API), le <a href="../nosql/cours.html">cours NoSQL</a> éclaire l'autre bout de la chaîne.</p></div></div>
