@@ -167,9 +167,15 @@ data class Meteo(
     val humidite: Int,
 )
 
+// Le serveur peut renvoyer PLUS de champs que le modèle (ici vent_kmh,
+// releve_a). Par défaut, kotlinx.serialization REFUSE toute clé inconnue et
+// lève une exception : on l'autorise à les ignorer, comme le font déjà
+// JSONDecoder (Swift) et le fromJson manuel (Dart).
+private val json = Json { ignoreUnknownKeys = true }
+
 // Décoder la chaîne JSON reçue en un objet Meteo.
 fun decoderMeteo(texte: String): Meteo =
-    Json.decodeFromString&lt;Meteo&gt;(texte)</code></pre></figure>
+    json.decodeFromString&lt;Meteo&gt;(texte)</code></pre></figure>
 
 <p>Enfin <strong>Flutter</strong> (Dart), où l'on écrit à la main un constructeur <code>fromJson</code> à partir de la <code>Map</code> décodée&nbsp;:</p>
 <figure class="code-block" data-file="meteo.dart"><pre><code class="language-dart">class Meteo {
@@ -195,6 +201,8 @@ fun decoderMeteo(texte: String): Meteo =
     );
   }
 }</code></pre></figure>
+
+<p>Un détail qui compte&nbsp;: la réponse d'exemple plus haut porte <strong>six</strong> clés (<code>vent_kmh</code> et <code>releve_a</code> en plus), mais chaque modèle n'en déclare que <strong>quatre</strong>. Swift (<code>JSONDecoder</code>) et le <code>fromJson</code> manuel de Dart <em>ignorent</em> d'eux-mêmes les clés en trop&nbsp;; kotlinx.serialization, lui, les <strong>refuse</strong> par défaut et lève une exception. D'où l'instance <code>Json { ignoreUnknownKeys = true }</code> côté Kotlin&nbsp;: sans elle, décoder cette réponse planterait. C'est une saine habitude — un serveur ajoute souvent des champs au fil des versions, et l'app ne doit pas casser pour autant (la robustesse qu'on approfondit plus bas).</p>
 
 <div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">JSON, le langage commun</p><p>Le JSON n'est pas propre au mobile&nbsp;: c'est le format d'échange dominant du web, et les deux bouts de la ligne — l'app et le serveur — s'accordent dessus. Côté serveur, on définit un <strong>contrat</strong> (quels champs, quels types)&nbsp;; côté app, on écrit un modèle qui colle à ce contrat. Si tu veux comprendre l'autre extrémité — comment une API est conçue, ses routes et ses réponses — le <a href="../api/cours.html">cours API</a> et le <a href="../http/cours.html">cours HTTP</a> sont les compagnons directs de cette leçon.</p></div></div>
 
@@ -253,7 +261,7 @@ suspend fun chargerMeteo(lat: Double, lon: Double): Meteo =
     withContext(Dispatchers.IO) {
         val url = "https://api.carnet.example/meteo?lat=$lat&amp;lon=$lon"
         val texte = httpGet(url)          // requête via Ktor/Retrofit, hors UI
-        Json.decodeFromString&lt;Meteo&gt;(texte)
+        decoderMeteo(texte)               // décodeur tolérant (voir Meteo.kt)
     }</code></pre></figure>
 
 <p>En <strong>Flutter</strong> (Dart), c'est une <code>Future</code> avec <code>async</code>/<code>await</code> et le paquet <code>http</code>&nbsp;:</p>
