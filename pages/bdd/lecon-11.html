@@ -197,17 +197,17 @@ ORDER BY debut;                       -- tri : déjà rangé par l'index
 -- Inutile d'ajouter un index dessus, la contrainte l'a fait.
 -- CREATE TABLE client (..., email TEXT NOT NULL UNIQUE, ...);</code></pre></figure>
 
-<p>Une jointure très fréquente dans Rideau&nbsp;: «&nbsp;pour cette représentation, la liste de ses billets&nbsp;». On joint <code>billet</code> à <code>representation</code>, et on filtre sur <code>representation_id</code>. Sans index sur <code>billet(representation_id)</code>, la base doit balayer toute la table <code>billet</code> pour retrouver ceux qui pointent vers la séance visée. Avec l'index, elle va directement au bloc concerné. C'est le cas d'école de la clé étrangère qui gagne à être indexée&nbsp;— on y revient à la section suivante.</p>
+<p>Une jointure très fréquente dans Rideau&nbsp;: «&nbsp;pour cette commande, la liste de ses billets&nbsp;». On joint <code>billet</code> à <code>commande</code>, et on filtre sur <code>commande_id</code>. Sans index sur <code>billet(commande_id)</code>, la base doit balayer toute la table <code>billet</code> pour retrouver ceux qui pointent vers la commande visée. Avec l'index, elle va directement au bloc concerné. C'est le cas d'école de la clé étrangère qui gagne à être indexée&nbsp;— on y revient à la section suivante.</p>
 
-<figure class="code-block" data-file="index_billet_fk.sql"><pre><code class="language-sql">-- « Les billets de la représentation 42 » et « combien vendus ? »
--- sont des requêtes de tous les instants (contrôle d'accès, jauge).
--- Elles filtrent billet sur representation_id : on l'indexe.
-CREATE INDEX idx_billet_representation
-    ON billet (representation_id);
+<figure class="code-block" data-file="index_billet_fk.sql"><pre><code class="language-sql">-- « Les billets de la commande 500 » (page « ma commande », e-mail, SAV)
+-- est une requête de tous les instants. Elle filtre billet sur
+-- commande_id, une FK que rien n'indexe encore : on l'indexe.
+CREATE INDEX idx_billet_commande
+    ON billet (commande_id);
 
 SELECT b.billet_id, b.place_id, b.prix_paye
 FROM billet AS b
-WHERE b.representation_id = 42;       -- va droit au bloc, sans tout lire</code></pre></figure>
+WHERE b.commande_id = 500;            -- va droit au bloc, sans tout lire</code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Pour deviner quels index seront utiles, ouvre le code de ton application et repère les colonnes qui reviennent dans les <code>WHERE</code>, les <code>JOIN … ON</code> et les <code>ORDER BY</code> des requêtes <strong>fréquentes</strong>. Ce sont tes candidates. À l'inverse, une colonne qu'on ne filtre jamais — un champ de notes libres, par exemple — n'a aucune raison d'être indexée&nbsp;: personne ne cherche par elle.</p></div></div>
 
@@ -302,7 +302,7 @@ WHERE b.representation_id = 42;       -- va droit au bloc, sans tout lire</code>
   <figcaption>Figure mémo à garder&nbsp;: un index <code>(a, b)</code> couvre <code>a</code> et <code>a AND b</code>, jamais <code>b</code> seul. L'<strong>ordre</strong> des colonnes se choisit donc selon les requêtes&nbsp;: mets en tête la colonne par laquelle on filtre <em>toujours</em>.</figcaption>
 </figure>
 
-<p>Dans Rideau, un index composite a du sens sur <code>billet(representation_id, place_id)</code>. Cette contrainte d'unicité — «&nbsp;une place vendue une seule fois par représentation&nbsp;» — crée déjà l'index composite qui va bien&nbsp;: il sert à la fois «&nbsp;tous les billets de la représentation 42&nbsp;» (préfixe <code>representation_id</code> seul) et «&nbsp;la place 12 est-elle vendue pour la représentation 42&nbsp;?&nbsp;» (les deux ensemble). En revanche, il ne servirait <em>pas</em> «&nbsp;où la place 12 a-t-elle été vendue, toutes représentations confondues&nbsp;?&nbsp;» (<code>place_id</code> seul) — cas rare, qui ne justifie sans doute pas un index de plus.</p>
+<p>Dans Rideau, un index composite a du sens sur <code>billet(representation_id, place_id)</code>. Cette contrainte d'unicité — «&nbsp;une place vendue une seule fois par représentation&nbsp;» — crée déjà l'index composite qui va bien&nbsp;: il sert à la fois «&nbsp;tous les billets de la représentation 42&nbsp;» (préfixe <code>representation_id</code> seul) et «&nbsp;la place 12 est-elle vendue pour la représentation 42&nbsp;?&nbsp;» (les deux ensemble). Mieux&nbsp;: comme cet index contient à lui seul <code>representation_id</code> <em>et</em> <code>place_id</code>, cette vérification d'existence trouve sa réponse dans l'index <strong>sans même lire la table</strong> — on parle alors d'<strong>index couvrant</strong>. En revanche, il ne servirait <em>pas</em> «&nbsp;où la place 12 a-t-elle été vendue, toutes représentations confondues&nbsp;?&nbsp;» (<code>place_id</code> seul) — cas rare, qui ne justifie sans doute pas un index de plus.</p>
 
 <figure class="code-block" data-file="index_composite.sql"><pre><code class="language-sql">-- La contrainte d'unicité de Rideau EST un index composite :
 --   UNIQUE (representation_id, place_id)
@@ -331,9 +331,10 @@ CREATE INDEX idx_tarif_zone_prix
 <p>Rassemblons les décisions d'indexation pour notre billetterie, en partant des requêtes que l'application exécute vraiment. C'est toujours le bon point de départ&nbsp;: on n'indexe pas le schéma dans l'abstrait, on indexe pour des requêtes nommées.</p>
 <ul>
 <li><strong>Lister les séances à venir</strong> (page d'accueil)&nbsp;: filtre et tri sur <code>representation.debut</code> → index <code>idx_representation_debut ON representation(debut)</code>. Il sert le <code>WHERE debut &gt;= …</code> (plage) et le <code>ORDER BY debut</code> (tri) d'un coup.</li>
-<li><strong>Les billets d'une séance</strong> (contrôle d'accès, jauge)&nbsp;: filtre sur <code>billet.representation_id</code> → index <code>idx_billet_representation ON billet(representation_id)</code>. C'est une FK très jointe&nbsp;; l'indexer est presque obligatoire.</li>
+<li><strong>Les billets d'une séance</strong> (contrôle d'accès, jauge)&nbsp;: filtre sur <code>billet.representation_id</code> → <strong>déjà servi</strong> par le préfixe gauche de <code>UNIQUE(representation_id, place_id)</code>. Rien à ajouter.</li>
 <li><strong>Retrouver un client par e-mail</strong> (connexion, service client)&nbsp;: filtre sur <code>client.email</code> → <strong>déjà indexé</strong> par la contrainte <code>UNIQUE(email)</code>. Rien à ajouter.</li>
 <li><strong>Vendre une place</strong> (le cœur de Rideau)&nbsp;: vérifier «&nbsp;place libre pour cette séance&nbsp;?&nbsp;» → servi par l'index composite de <code>UNIQUE(representation_id, place_id)</code>.</li>
+<li><strong>Les billets d'une commande</strong> (page «&nbsp;ma commande&nbsp;», service après-vente)&nbsp;: filtre sur <code>billet.commande_id</code> → cette FK ne préfixe <em>aucun</em> index existant&nbsp;: <strong>elle n'est couverte par rien</strong> → index <code>idx_billet_commande ON billet(commande_id)</code>. C'est la FK très jointe qu'il faut vraiment indexer.</li>
 </ul>
 
 <figure class="code-block" data-file="rideau_plan_index.sql"><pre><code class="language-sql">-- Plan d'indexation de Rideau, motivé par de VRAIES requêtes.
@@ -343,9 +344,10 @@ CREATE INDEX idx_tarif_zone_prix
 CREATE INDEX idx_representation_debut
     ON representation (debut);
 
--- Contrôle d'accès / jauge : les billets d'une représentation.
-CREATE INDEX idx_billet_representation
-    ON billet (representation_id);
+-- Page « ma commande » / SAV : les billets d'une commande.
+-- FK billet.commande_id, couverte par AUCUN index existant -> on l'ajoute.
+CREATE INDEX idx_billet_commande
+    ON billet (commande_id);
 
 -- Historique d'un client : ses commandes, de la plus récente.
 -- FK client_id + tri sur passee_le -> index composite.
@@ -357,9 +359,9 @@ CREATE INDEX idx_commande_client_date
 --   billet(representation_id, place_id) &lt;- UNIQUE(...) : sert aussi
 --                                          representation_id seul (préfixe)</code></pre></figure>
 
-<p>Remarque la dernière ligne&nbsp;: l'index composite d'unicité <code>(representation_id, place_id)</code> rend <em>redondant</em> un index simple sur <code>representation_id</code> — le préfixe gauche s'en charge. On pourrait donc se demander si <code>idx_billet_representation</code> est vraiment nécessaire. Réponse honnête&nbsp;: si l'unicité couvre déjà <code>(representation_id, place_id)</code>, alors un index séparé sur <code>representation_id</code> seul fait <strong>doublon</strong> et devrait être supprimé. Repérer ces doublons — deux index dont l'un est le préfixe de l'autre — est un réflexe de nettoyage utile. On garde donc l'index d'unicité, et on retire le simple.</p>
+<p>Remarque les deux dernières lignes&nbsp;: l'index composite d'unicité <code>(representation_id, place_id)</code> rend <em>inutile</em> un index simple sur <code>representation_id</code> — le préfixe gauche s'en charge déjà. C'est pourquoi le plan ci-dessus <strong>n'en crée pas</strong>&nbsp;: ce serait un <strong>doublon</strong> (deux index dont l'un est le préfixe de l'autre). En revanche, la FK <code>billet.commande_id</code>, elle, ne préfixe aucun index existant&nbsp;: c'est la seule des FK de <code>billet</code> à réclamer un index à part. Distinguer une FK <em>vraiment</em> non couverte d'une FK <em>déjà servie</em> par un préfixe — et repérer les doublons de préfixe — est un réflexe de nettoyage utile.</p>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier d'indexer une FK très jointe.</strong> À l'inverse de la sur-indexation, l'omission la plus coûteuse est de laisser sans index une clé étrangère sur laquelle on joint et filtre en permanence — <code>billet.representation_id</code> en est l'exemple type. La base fait alors un parcours séquentiel de <code>billet</code> à chaque affichage de séance. Comme les moteurs n'indexent pas les FK d'office, cette omission est fréquente&nbsp;: pense toujours à la question «&nbsp;cette FK, est-elle souvent jointe ou filtrée&nbsp;?&nbsp;».</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier d'indexer une FK très jointe.</strong> À l'inverse de la sur-indexation, l'omission la plus coûteuse est de laisser sans index une clé étrangère sur laquelle on joint et filtre en permanence — <code>billet.commande_id</code> en est l'exemple type (<code>representation_id</code>, lui, est déjà couvert par le préfixe de l'unicité). La base ferait sinon un parcours séquentiel de <code>billet</code> à chaque affichage d'une commande. Comme les moteurs n'indexent pas les FK d'office, cette omission est fréquente&nbsp;: pense toujours à la question «&nbsp;cette FK, est-elle souvent jointe ou filtrée&nbsp;?&nbsp;».</p></div></div>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'un index accélère TOUT.</strong> Un index ne sert que les requêtes qui l'exploitent&nbsp;: le bon <code>WHERE</code>, le bon <code>ORDER BY</code>, le bon préfixe. Il n'accélère pas un <code>SELECT *</code> sans filtre (qui lit tout de toute façon), ni un filtre sur une colonne non indexée, ni — souvent — une condition qui applique une fonction à la colonne (<code>WHERE UPPER(email) = …</code> peut empêcher l'usage de l'index sur <code>email</code>). Et il <em>ralentit</em> toujours les écritures. «&nbsp;Ajouter un index&nbsp;» n'est jamais une réponse universelle à «&nbsp;c'est lent&nbsp;».</p></div></div>
@@ -411,7 +413,7 @@ CREATE INDEX idx_commande_client_date
 <li>Un <strong>index</strong> est l'index d'un livre appliqué à une table&nbsp;: il évite le <strong>parcours séquentiel</strong> (lire toute la table). Il est en général un <strong>B-tree</strong> trié, d'où une recherche <strong>logarithmique</strong>.</li>
 <li>Il accélère les recherches d'<strong>égalité</strong> et de <strong>plage</strong> (<code>WHERE</code>), les <strong>tris</strong> (<code>ORDER BY</code>), les <strong>jointures</strong>, et sous-tend l'<strong>unicité</strong> (PK et <code>UNIQUE</code> créent un index).</li>
 <li>Il n'est <strong>pas gratuit</strong>&nbsp;: il <strong>ralentit les écritures</strong> (INSERT/UPDATE/DELETE le maintiennent) et <strong>occupe de l'espace</strong>. On indexe donc les colonnes <strong>souvent filtrées/jointes/triées</strong> sur de <strong>grosses tables</strong> et à bonne <strong>sélectivité</strong>.</li>
-<li>Un <strong>index composite</strong> obéit au <strong>préfixe gauche</strong>&nbsp;: <code>(a, b)</code> sert <code>a</code> et <code>a AND b</code>, jamais <code>b</code> seul. Dans Rideau&nbsp;: index sur <code>representation(debut)</code>, sur la FK <code>billet(representation_id)</code>&nbsp;; <code>client(email)</code> déjà indexé par <code>UNIQUE</code>.</li>
+<li>Un <strong>index composite</strong> obéit au <strong>préfixe gauche</strong>&nbsp;: <code>(a, b)</code> sert <code>a</code> et <code>a AND b</code>, jamais <code>b</code> seul. Dans Rideau&nbsp;: index sur <code>representation(debut)</code> et sur la FK <code>billet(commande_id)</code>&nbsp;; <code>billet(representation_id)</code> est déjà couvert par le préfixe de <code>UNIQUE(representation_id, place_id)</code>, et <code>client(email)</code> par <code>UNIQUE</code>.</li>
 </ul>
 <div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
 <li>En une phrase, quel <strong>double coût</strong> paie-t-on pour chaque index ajouté à une table&nbsp;?</li>

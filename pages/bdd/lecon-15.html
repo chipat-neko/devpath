@@ -411,8 +411,9 @@ applicatif), sinon elle ment.
   - avec un mécanisme fiable qui garde le compteur juste ;
   - en gardant les billets comme SOURCE DE VÉRITÉ (le compteur n'est
     qu'un cache : on doit pouvoir le recalculer depuis eux).
-Sinon : rester normalisé et compter les billets (au besoin, indexer
-billet(representation_id) pour accélérer ce COUNT — leçon 11).</code></pre></figure></details></div>
+Sinon : rester normalisé et compter les billets — ce COUNT filtre sur
+representation_id, déjà servi par le préfixe de UNIQUE(representation_id,
+place_id), donc rien à indexer en plus (leçon 11).</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Rideau veut ouvrir une <strong>boutique</strong> (programmes, affiches, produits dérivés) où chaque produit a des dizaines de caractéristiques très variables selon le type d'article. Un collègue propose de tout stocker en <strong>documents NoSQL</strong> plutôt que dans des tables. Donne deux arguments <em>pour</em> et deux arguments <em>contre</em>, puis tranche pour ce cas précis.</p>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">POUR le documentaire (NoSQL) pour la boutique :
@@ -446,7 +447,7 @@ Tranche pour ce cas :
 <div class="step"><h3>Relations et diagramme E-A</h3><p>Détermine la <strong>cardinalité</strong> de chaque relation (1-N, N-N) et dessine le <strong>diagramme entité-association</strong>. Identifie le N-N (client ↔ representation) et sa <strong>table d'association</strong>, <code>billet</code>.</p></div>
 <div class="step"><h3>Normaliser</h3><p>Pars de la table à plat <code>reservations</code> et déroule la <strong>normalisation</strong> jusqu'à la 3NF&nbsp;: sors <code>spectacle</code>, <code>salle</code>, <code>client</code> dans leurs tables (dépendances transitives). Vérifie qu'aucun fait n'est écrit deux fois.</p></div>
 <div class="step"><h3>Clés et contraintes</h3><p>Pose les <strong>clés primaires</strong> (artificielles + <code>email UNIQUE</code>), les <strong>clés étrangères</strong> avec leur <code>ON DELETE</code> réfléchi, et les <strong>contraintes</strong> — dont la reine&nbsp;: <code>UNIQUE(representation_id, place_id)</code>. Ajoute les <code>CHECK</code> utiles (prix positif, statut dans une liste).</p></div>
-<div class="step"><h3>Index et requêtes chaudes</h3><p>Choisis deux ou trois <strong>index</strong> justifiés par de vraies requêtes (les séances à venir&nbsp;: <code>representation(debut)</code>&nbsp;; les billets d'une séance&nbsp;: <code>billet(representation_id)</code>). Pour chacun, indique le <strong>bénéfice en lecture</strong> ET le <strong>coût en écriture</strong>.</p></div>
+<div class="step"><h3>Index et requêtes chaudes</h3><p>Choisis deux ou trois <strong>index</strong> justifiés par de vraies requêtes (les séances à venir&nbsp;: <code>representation(debut)</code>&nbsp;; les billets d'une commande&nbsp;: <code>billet(commande_id)</code> — la FK <code>representation_id</code>, elle, est déjà couverte par le préfixe de l'unique). Pour chacun, indique le <strong>bénéfice en lecture</strong> ET le <strong>coût en écriture</strong>.</p></div>
 <div class="step"><h3>Transaction du dernier billet</h3><p>Décris la <strong>transaction</strong> d'achat qui réserve la place et enregistre le paiement en tout-ou-rien, et explique comment la contrainte d'unicité (plus un verrou ou un niveau d'isolation) empêche deux clients d'acheter le <strong>même siège</strong> au même instant.</p></div>
 <div class="step"><h3>Une migration d'évolution</h3><p>Rideau ajoute les <strong>abonnements</strong>. Écris la <strong>migration versionnée</strong> qui crée la table <code>abonnement</code> et la relie&nbsp;; si tu ajoutes une colonne <code>NOT NULL</code> à une table pleine, fais-le proprement (<code>DEFAULT</code> ou en plusieurs étapes).</p></div>
 </div>
@@ -456,9 +457,10 @@ Tranche pour ce cas :
 -- Sans index, parcours complet de representation à chaque visite.
 CREATE INDEX idx_representation_debut ON representation(debut);
 
--- Requête chaude 2 : « les billets d'une séance » (plan de salle, contrôle).
--- La FK vers representation gagne à être indexée (L6, L11).
-CREATE INDEX idx_billet_representation ON billet(representation_id);
+-- Requête chaude 2 : « les billets d'une commande » (page « ma commande », SAV).
+-- La FK billet.commande_id n'est couverte par aucun index ; representation_id,
+-- lui, l'est déjà par le préfixe de UNIQUE(representation_id, place_id) (L6, L11).
+CREATE INDEX idx_billet_commande ON billet(commande_id);
 
 -- client(email) est DÉJÀ indexé : la contrainte UNIQUE crée son index.
 -- Coût assumé : ces 2 index ralentissent un peu les INSERT de billets,
@@ -531,7 +533,7 @@ ALTER TABLE commande
   {"q":"Que garantit la première forme normale (1NF) ?","a":["Des valeurs atomiques : pas de liste ni de groupe répété dans une cellule (pas de places = 'A1,A2,A3'), chaque ligne identifiable","Que la table a exactement trois colonnes","Que toutes les colonnes sont des nombres","Que la table n'a aucune clé étrangère"],"correct":0,"explain":"La 1NF exige des valeurs atomiques et interdit les colonnes-listes et groupes répétés. Tant qu'une cellule contient une liste, on ne peut ni contraindre, ni indexer, ni joindre correctement."},
   {"q":"Dans une table billet contenant spectacle_titre et spectacle_genre, genre dépend de titre (via le spectacle). Comment s'appelle ce défaut, et quelle forme normale le corrige ?","a":["Une dépendance transitive, corrigée par la 3NF : on sort spectacle(titre, genre) dans sa propre table, référencée par une clé étrangère","Une dépendance partielle, corrigée par la 1NF","Ce n'est pas un défaut","Une clé composite, corrigée par un index"],"correct":0,"explain":"Un attribut non-clé (genre) qui dépend d'un autre attribut non-clé (titre) est une dépendance transitive. La 3NF l'élimine : « rien que la clé ». On extrait le spectacle dans sa table."},
   {"q":"Pourquoi prix_paye est-il conservé sur le billet, alors que le prix figure déjà dans tarif ?","a":["Parce que prix_paye est un instantané (snapshot) du prix AU MOMENT de l'achat : si le tarif change ensuite, le billet vendu ne doit pas changer — c'est un fait historique, pas une redondance à synchroniser","Parce que c'est une erreur de conception à corriger","Parce que tarif n'existe pas","Pour accélérer les écritures"],"correct":0,"explain":"prix_paye n'est pas une copie à garder synchronisée avec tarif.prix : c'est une valeur figée, légitime et nécessaire. Le prix payé est un fait daté qui ne suit pas les évolutions du tarif."},
-  {"q":"Un index sur billet(representation_id) accélère les lectures. Quel est son coût, et comment vérifie-t-on qu'il sert vraiment ?","a":["Il ralentit les écritures (INSERT/UPDATE le maintiennent) et prend de l'espace ; on vérifie qu'il sert en lisant le plan d'exécution (EXPLAIN), qui doit montrer un parcours d'index plutôt qu'un parcours séquentiel","Il n'a aucun coût, on peut en mettre partout","Il chiffre les données de la colonne","On ne peut pas savoir s'il sert"],"correct":0,"explain":"Un index s'échange contre des écritures plus lentes et de l'espace. EXPLAIN révèle si le moteur l'utilise (Index Scan) ou l'ignore (Seq Scan) : on ne devine pas la performance, on la lit."}
+  {"q":"Un index sur billet(commande_id) accélère les lectures. Quel est son coût, et comment vérifie-t-on qu'il sert vraiment ?","a":["Il ralentit les écritures (INSERT/UPDATE le maintiennent) et prend de l'espace ; on vérifie qu'il sert en lisant le plan d'exécution (EXPLAIN), qui doit montrer un parcours d'index plutôt qu'un parcours séquentiel","Il n'a aucun coût, on peut en mettre partout","Il chiffre les données de la colonne","On ne peut pas savoir s'il sert"],"correct":0,"explain":"Un index s'échange contre des écritures plus lentes et de l'espace. EXPLAIN révèle si le moteur l'utilise (Index Scan) ou l'ignore (Seq Scan) : on ne devine pas la performance, on la lit."}
 ]
 </script>
 
