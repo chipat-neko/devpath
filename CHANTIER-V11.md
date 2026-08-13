@@ -196,7 +196,23 @@ Regroupés par cours. Ils ne font échouer personne mais ternissent des cours ne
   **Bonus — débordement préexistant `lecon-10`.** `verif-rendu` a relevé un débordement horizontal (+147 px à 1280 px, light+dark) **présent sur HEAD** (git diff : mes 3 lignes crosstab sont de longueur identique) : un `<code>` inline de **111 car.** (`df.pivot_table(index='ville', columns='categorie', values='montant', aggfunc='sum', fill_value=0, margins=True)`) dans le callout « Cas réel » l.379, non sécable. Scindé en fragments courts (`df.pivot_table(...)` puis chaque argument dans son propre `<code>`) — l'appel complet reste montré dans le QCM l.433. Après correction : **0 débordement**.
 
   **Vérifs :** `verif.js --rapide` **VERT** (source 0 · données 0 erreur · contenu 0 maigre/0 redondance) ; `verif-rendu` **lecon-08/10/14 × 3 largeurs × 2 thèmes = 18 mesures → 0 err / 0 avert** (après correction du débordement) ; `search-index.js` régénéré (`build-index --write --only=search`, **stable au re-run** ; quiz **5627** / flashcards **10678** / antisèches **1487** / search-lite **identiques**) ; **0 URL interdite**, **0 BOM** (`3c2144`), `<li>` équilibrés (20/20), JSON `data-quiz`/`data-exos` valides.
-- [ ] **C6 · `equipe` (3) et `data-eng` (2)**
+- [x] **C6 · `equipe` (3) et `data-eng` (2)**
+
+  ✓ **Fait (2026-08-14), vérifié par exécution** (`scratchpad/c6_dataeng.py`). Périmètre réel = **equipe** B16+B17 (2) et **data-eng** B14+B15+C5-audit+C6-audit (4). Décompte du titre imprécis (comme B3/B4/C4).
+
+  **EQUIPE — B16 `lecon-13:101` (durée de la panne).** L'ouverture disait « bloquées **quarante-quatre** minutes ». Recalculé : 17h50 (1res erreurs) → 18h29 (rétabli) = **39 min**. ⚠️ **L'audit se trompe sur la propagation** : il annonçait « 44 min répété six fois (aria 146, étiquette 158, chrono 176, l.219/288/291) » — or **ces six endroits disent DÉJÀ « 39 »** ; « quarante-quatre » n'apparaissait qu'**une fois** (l.101), en contradiction avec la chronologie détaillée de la même leçon. Corrigé la seule occurrence fautive → « trente-neuf minutes » (0 résidu vérifié).
+
+  **EQUIPE — B17 `lecon-11` (axes de Fowler).** L'axe *inadvertent* était étiqueté « **par imprudence** », en collision avec « **imprudent** » (axe *reckless*) → cadran bas-droite « par imprudence + imprudent », indiscernable. Le reste de la leçon dit « accidentelle » (l.87/139/181/373). Remplacé « par imprudence » → « accidentel(le) » aux **5 endroits** : prose l.140 (« accidentelle », féminin accordé à « la dette »), aria l.143 (×3) et étiquette SVG l.150 (« accidentel », masculin — cohérent avec les autres étiquettes d'axe « délibéré/prudent/imprudent »). L'axe vertical devient « délibéré / accidentel », distinct de l'horizontal « prudent / imprudent » (0 résidu vérifié).
+
+  **DATA-ENG — B14 `lecon-07` (échelle de partition).** (a) l.160 (commentaire SQL) : « ~99 autres journées **de mai** » — mai n'a que 31 jours ; le 99 vient de 15 000 000 / 150 000 = **~100 partitions**. Corrigé « de mai » → « **déjà stockées** » (garde 99, style ASCII du commentaire respecté). (b) l.166 : « **cent fois** plus… » (×3) contredisait « une table d'un an — **365 dossiers** » + « 0,3 % » (=1/365) de la même phrase ; rapport réel 365. Corrigé « cent fois » → « **des centaines de fois** » (×3).
+
+  **DATA-ENG — B15 `lecon-13:213` (ratio capteurs/trajets).** « **deux ordres de grandeur** au-dessus » = ×100. Recalculé (`c6_dataeng.py`) : (5 000 000×120)/(150 000×80) = 600 000 000/12 000 000 = **exactement ×50** (le ×365 s'annule ; trajets 4,1 Go/an, capteurs 204,0 Go/an, le code l.211 affiche `x50`). Corrigé → « les capteurs **une cinquantaine de fois** au-dessus ».
+
+  **DATA-ENG — C5-audit `lecon-08:109 + 420` (« canon Vélociti »).** Expression fantôme (résidu du `_CANON.md` supprimé), présente **uniquement** ici (grep sur les 14 leçons confirmé). Remplacée par un vrai renvoi à la fiche des sources de la `leçon 1` (l.198 « événements bruts, parfois en double : besoin d'IDEMPOTENCE ») aux 2 endroits (prose + énoncé exo 2).
+
+  **DATA-ENG — C6-audit `lecon-14:343` (renvoi d'alerte).** Le « Cas réel » disait « une **alerte de fraîcheur** (L12) part à **6 h** » quand `ing_meteo` échoue. Or le SLA de fraîcheur est **8 h** (l.188/209/270/284) → à 6 h elle est silencieuse par construction. Ce qui part à 6 h = l'**alerte d'échec de tâche** de la `leçon 9` (`email_on_failure: True`, l.275, vérifié). Corrigé « alerte de fraîcheur (L12) » → « **alerte d'échec de tâche (L9)** ».
+
+  **Vérifs :** `verif.js --rapide` **VERT** (source 0 · données 0 erreur · contenu 0/0) ; `verif-rendu` **6 pages × 3 largeurs × 2 thèmes = 36 mesures → 0 err / 0 avert** ; `search-index` + `search-lite` régénérés (`build-index --write`, **stables au re-run** ; quiz 5627 / flashcards 10678 / antisèches 1487 identiques) ; liens `lecon-01`/`lecon-09` existants ; **0 URL interdite**, **0 BOM** (`3c2144`). ✅ **Phase C terminée** (C1→C6).
 
 ---
 
