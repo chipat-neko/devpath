@@ -143,16 +143,17 @@ latence = [88, 92, 95, 101, 104, 110, 118, 132, 640, 910]
 # Découpage en classes de 100 ms, de 0 à 1000
 classes = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 effectifs, bords = np.histogram(latence, bins=classes)
-print(effectifs)   # [2 6 0 0 0 0 1 0 0 1]
-#                     0-100 : 88,92,95        -> 2 ? non : 88,92,95 = 3
-#                     (numpy range = [0,100) donc 88,92,95 tombent en 0-100)
+print(effectifs)   # [3 5 0 0 0 0 1 0 0 1]
+#                     [0,100)   : 88, 92, 95              -> 3
+#                     [100,200) : 101, 104, 110, 118, 132 -> 5
+#                     (numpy exclut la borne droite ; dernier bin [900,1000] inclus)
 
 # Version manuelle, sans bibliotheque : un compteur par tranche de 100
 compte = {}
 for x in latence:
     tranche = (int(x) // 100) * 100      # 88 -> 0, 132 -> 100, 640 -> 600
     compte[tranche] = compte.get(tranche, 0) + 1
-print(compte)      # {0: 3, 100: 4, 600: 1, 900: 1}</code></pre></figure>
+print(compte)      # {0: 3, 100: 5, 600: 1, 900: 1}</code></pre></figure>
 <p>Le <strong>choix du nombre de classes</strong> n'est pas neutre&nbsp;: il change la lecture. Trop <strong>peu</strong> de classes agrège tout en quelques grosses barres et <em>lisse</em> la forme (un second pic disparaît)&nbsp;; trop de classes ne met que quelques valeurs par barre et rend l'histogramme <strong>bruité</strong>, hérissé de pics dus au hasard. Il n'y a pas de nombre magique&nbsp;: on teste plusieurs largeurs et on garde celle qui montre la forme <em>sans</em> inventer de détails.</p>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Fixe une <strong>largeur de classe ronde et interprétable</strong> (ici 100&nbsp;ms) plutôt qu'un nombre de bins arbitraire&nbsp;: le lecteur comprend d'emblée «&nbsp;par tranche de 100&nbsp;ms&nbsp;». Et essaie toujours <em>au moins deux</em> largeurs&nbsp;: si la forme change du tout au tout, c'est que tu manques de données ou que tu sur-découpes.</p></div></div>
@@ -233,18 +234,18 @@ print(compte)      # {0: 3, 100: 4, 600: 1, 900: 1}</code></pre></figure>
 latence = [88, 92, 95, 101, 104, 110, 118, 132, 640, 910]
 
 p50 = np.percentile(latence, 50)    # 107.0  -> la mediane
-p95 = np.percentile(latence, 95)    # ~782.5 -> le pire cas courant
-p99 = np.percentile(latence, 99)    # ~887.4 -> presque le maximum
+p95 = np.percentile(latence, 95)    # 788.5  -> le pire cas courant
+p99 = np.percentile(latence, 99)    # 885.7  -> presque le maximum
 
 print(p50, p95, p99)
 # Idee cle : sur cet echantillon, la moitie des requetes tiennent
-# sous 107 ms, mais 5 % depassent ~780 ms. C'est CA que vit
+# sous 107 ms, mais 5 % depassent ~790 ms. C'est CA que vit
 # l'utilisateur malchanceux -- et que la moyenne (239) noyait.</code></pre></figure>
 <p>Pourquoi le <strong>p95</strong> (et souvent le <strong>p99</strong>) est-il <em>la</em> métrique de latence, préférée à la moyenne&nbsp;? Parce qu'un système ne se juge pas sur son cas moyen mais sur son <strong>pire cas courant</strong>. Un utilisateur ne vit pas «&nbsp;la moyenne de ses requêtes&nbsp;»&nbsp;: il vit chaque requête, et ce sont les <strong>lentes</strong> qui l'exaspèrent. Le p95 dit&nbsp;: «&nbsp;19 requêtes sur 20 sont au moins aussi rapides que ça&nbsp;». Le p99 traque le 1&nbsp;% le plus lent&nbsp;; sur des millions de requêtes, ce 1&nbsp;% représente des dizaines de milliers d'utilisateurs mécontents.</p>
 <p>Un axe vaut mieux qu'un paragraphe. Voici où se placent p50, p95 et p99 sur la distribution de latence&nbsp;: le p50 dans le pic, les p95 et p99 loin dans la traîne — précisément là où la moyenne refuse de regarder.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 220" role="img" aria-label="Un axe horizontal de latence en millisecondes, de 0 à 1000. La densité des requêtes est figurée par des points serrés à gauche, sous 200 millisecondes, qui se raréfient vers la droite. Trois repères verticaux sont posés : le p50 vers 110 millisecondes au cœur du groupe dense, le p95 vers 640 millisecondes loin dans la zone clairsemée, et le p99 vers 900 millisecondes tout à droite, presque au maximum. Une accolade sous l'axe indique que 95 pour cent des requêtes se trouvent à gauche du p95.">
+  <svg viewBox="0 0 640 220" role="img" aria-label="Un axe horizontal de latence en millisecondes, de 0 à 1000. La densité des requêtes est figurée par des points serrés à gauche, sous 200 millisecondes, qui se raréfient vers la droite. Trois repères verticaux sont posés : le p50 vers 110 millisecondes au cœur du groupe dense, le p95 vers 789 millisecondes loin dans la zone clairsemée, et le p99 vers 886 millisecondes tout à droite, presque au maximum. Une accolade sous l'axe indique que 95 pour cent des requêtes se trouvent à gauche du p95.">
     <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">p50, p95, p99 sur la latence Orbit</text>
     <line class="d-line" x1="60" y1="120" x2="612" y2="120" stroke-width="1.4" />
     <text class="d-mut" x="60" y="140" text-anchor="middle" font-size="9">0</text>
@@ -254,15 +255,15 @@ print(p50, p95, p99)
     <!-- p50 ~110ms -> x~121 -->
     <line x1="121" y1="70" x2="121" y2="120" stroke="var(--accent)" stroke-width="1.6" />
     <text class="d-tag" x="121" y="62" text-anchor="middle" font-size="10">p50 ≈ 107</text>
-    <!-- p95 ~640ms -> x~413 -->
-    <line x1="413" y1="86" x2="413" y2="120" stroke="var(--accent-strong)" stroke-width="1.8" />
-    <text class="d-tag" x="413" y="78" text-anchor="middle" font-size="10">p95 ≈ 640</text>
-    <!-- p99 ~900ms -> x~557 -->
-    <line x1="557" y1="70" x2="557" y2="120" stroke="#c2410c" stroke-width="1.6" stroke-dasharray="4 3" />
-    <text class="d-tag" x="557" y="62" text-anchor="middle" font-size="10">p99 ≈ 890</text>
+    <!-- p95 788.5ms -> x~486 -->
+    <line x1="486" y1="86" x2="486" y2="120" stroke="var(--accent-strong)" stroke-width="1.8" />
+    <text class="d-tag" x="486" y="78" text-anchor="middle" font-size="10">p95 ≈ 789</text>
+    <!-- p99 885.7ms -> x~538 -->
+    <line x1="538" y1="70" x2="538" y2="120" stroke="#c2410c" stroke-width="1.6" stroke-dasharray="4 3" />
+    <text class="d-tag" x="538" y="62" text-anchor="middle" font-size="10">p99 ≈ 886</text>
     <!-- accolade 95% a gauche du p95 -->
-    <path class="d-line" d="M62 150 L62 158 L413 158 L413 150" fill="none" stroke-width="1.2" />
-    <text class="d-mut" x="237" y="174" text-anchor="middle" font-size="9">95 % des requêtes sont à gauche du p95</text>
+    <path class="d-line" d="M62 150 L62 158 L486 158 L486 150" fill="none" stroke-width="1.2" />
+    <text class="d-mut" x="274" y="174" text-anchor="middle" font-size="9">95 % des requêtes sont à gauche du p95</text>
   </svg>
   <figcaption>Le <strong>p50</strong> vit dans le pic (la moitié des requêtes sont plus rapides)&nbsp;; le <strong>p95</strong> et le <strong>p99</strong> sont loin dans la traîne. Suivre le p95 revient à surveiller le <strong>pire cas courant</strong>&nbsp;: exactement l'expérience de l'utilisateur malchanceux, invisible dans la moyenne.</figcaption>
 </figure>
@@ -372,14 +373,15 @@ valeurs = [88, 92, 95, 101, 104, 110, 118, 132, 640, 910]
 # (b) La 9e valeur sur 10 : 8 valeurs sont en dessous, soit 80 %
 #     -> 640 se situe autour du p80-p90 de cet echantillon.
 #     (Le calcul exact depend de la convention d'interpolation ;
-#      np.percentile(valeurs, 80) donne d'ailleurs ~132.)
+#      np.percentile(valeurs, 80) donne ~233.6 -- une valeur INTERPOLEE
+#      entre 132 et 640, pas une observation brute.)
 
 # (c) On afficherait le p95 (voire le p99, ou le max) : le probleme
 #     vit dans la QUEUE de la distribution. Ni la moyenne (239, aspiree
 #     dans un trou vide) ni la mediane (107, au centre) ne montrent
 #     l'utilisateur malchanceux ; le p95, si.
 import numpy as np
-print(np.percentile(valeurs, 95))   # ~782.5 ms</code></pre></figure></details></div>
+print(np.percentile(valeurs, 95))   # 788.5 ms</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue affirme, moyenne à l'appui&nbsp;: «&nbsp;notre API répond en 180&nbsp;ms en moyenne, c'est bon&nbsp;». Les utilisateurs se plaignent pourtant. En t'appuyant sur cette leçon, (a) explique pourquoi la moyenne peut le tromper ici, (b) écris le code qui trace le graphique <strong>décisif</strong> et calcule les percentiles utiles, et (c) précise ce que tu t'attends à y voir.</p>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.py"><pre><code class="language-python">import numpy as np
