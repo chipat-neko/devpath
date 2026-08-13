@@ -321,6 +321,13 @@ window.SITE_DATA = (function () {
       tags: ["Data", "Graphiques", "Visualisation"],
     },
     {
+      id: "stats", dir: "stats", title: "Statistiques appliquées pour développeurs",
+      glyph: "st", language: "Python", level: "intermediaire", status: "complet",
+      accent: "#3949ab", lessons: 15, hours: 11,
+      tagline: "La statistique dont un développeur a réellement besoin : décrire une distribution (moyenne, médiane, dispersion), passer d'un échantillon à la population, lire un intervalle de confiance, mener un test d'hypothèse et comprendre la valeur p, distinguer corrélation et causalité, ajuster une régression — et déjouer les pièges (p-hacking, biais de survie, paradoxe de Simpson).",
+      tags: ["Data", "Statistiques", "Analyse"],
+    },
+    {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", language: "Dart", level: "intermediaire", status: "complet",
       accent: "#2fa3b8", lessons: 16, hours: 13,
@@ -611,6 +618,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "Le ML s'écrit en Python : assure-toi des bases du langage." },
         { course: "sql", note: "Les données d'entraînement viennent souvent d'une base de données." },
         { course: "r", note: "Une autre voie pour les statistiques et la visualisation." },
+        { course: "stats", note: "Régression, sur-ajustement, échantillon d'entraînement et de test : le ML repose sur les statistiques du cours dédié." },
       ],
       modules: [
         {
@@ -3915,6 +3923,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "L'autre grand langage de la data science : comparer les deux est éclairant." },
         { course: "sql", note: "Interroge des bases pour alimenter tes analyses R." },
         { course: "dataviz", note: "La grammaire des graphiques de ggplot2 se retrouve, côté Python, dans le cours de data visualisation." },
+        { course: "stats", note: "R est né pour la statistique : le cours de statistiques appliquées en donne les concepts, indépendamment du langage." },
       ],
       modules: [
         {
@@ -3976,6 +3985,7 @@ window.SITE_DATA = (function () {
         { course: "dataviz", note: "Une fois les données prêtes et agrégées, il faut les donner à voir : la suite naturelle de pandas." },
         { course: "r", note: "L'autre grand langage de l'analyse de données : data frames et dplyr côté R." },
         { course: "ml", note: "pandas prépare et nettoie les données que scikit-learn va apprendre." },
+        { course: "stats", note: ".describe(), .corr() et les percentiles calculés par pandas prennent tout leur sens avec les statistiques du cours dédié." },
       ],
       modules: [
         {
@@ -4023,6 +4033,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "matplotlib, la bibliothèque de tracé des exemples, est du Python : le langage sous les graphiques." },
         { course: "r", note: "L'autre grand atelier de dataviz : ggplot2 applique la même grammaire des graphiques, côté R." },
         { course: "ux", note: "Lisibilité, hiérarchie visuelle, couleur et daltonisme : une bonne dataviz, c'est de l'UX appliquée aux données." },
+        { course: "stats", note: "Histogramme, boîte à moustaches, nuage de corrélation : on visualise surtout des objets statistiques. Le cours de statistiques en donne le sens." },
       ],
       modules: [
         {
@@ -4057,6 +4068,54 @@ window.SITE_DATA = (function () {
           lessons: [
             { num: "13", title: "Annoter et raconter une histoire", file: "lecon-13.html", status: "complet" },
             { num: "14", title: "Projet — les graphiques qui mentent, et le tableau de bord refait", file: "lecon-14.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
+    stats: {
+      id: "stats", dir: "stats", title: "Statistiques appliquées pour développeurs",
+      glyph: "st", accent: "#3949ab", overview: "cours.html",
+      related: [
+        { course: "pandas", note: "pandas calcule ces statistiques sur de vraies données : .mean(), .median(), .std(), .describe() et .corr() sont l'application directe de ce cours." },
+        { course: "dataviz", note: "Une distribution, une corrélation, un intervalle : la statistique se lit surtout en images. La dataviz est son bras visuel." },
+        { course: "python", note: "Les exemples s'écrivent en Python (module statistics, un peu de numpy) : le langage sous les calculs." },
+        { course: "ml", note: "Régression, sur-ajustement, échantillon d'entraînement et de test : le machine learning est de la statistique appliquée à grande échelle." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Décrire des données", sub: "centre, dispersion, forme d'une distribution", level: "debutant",
+          lessons: [
+            { num: "01", title: "Pourquoi les statistiques, quand on code", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Le centre : moyenne, médiane, mode", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "La dispersion : étendue, écart-type, quartiles", file: "lecon-03.html", status: "complet" },
+            { num: "04", title: "La forme d'une distribution", file: "lecon-04.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "De l'échantillon à la population", sub: "échantillonner, hasard, intervalle de confiance, valeur p", level: "intermediaire",
+          lessons: [
+            { num: "05", title: "Échantillonner sans se tromper", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Hasard, probabilités et loi normale", file: "lecon-06.html", status: "complet" },
+            { num: "07", title: "L'incertitude d'une mesure : l'intervalle de confiance", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "Comparer deux groupes : test d'hypothèse et valeur p", file: "lecon-08.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "Relations entre variables", sub: "corrélation, causalité, régression, prédiction", level: "intermediaire",
+          lessons: [
+            { num: "09", title: "La corrélation, et ce qu'elle rate", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "Corrélation n'est pas causalité", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "La régression linéaire simple", file: "lecon-11.html", status: "complet" },
+            { num: "12", title: "Prédire, et connaître ses limites", file: "lecon-12.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "Ne pas se faire avoir", sub: "p-hacking, biais de survie, paradoxe de Simpson, projet", level: "avance",
+          lessons: [
+            { num: "13", title: "Les pièges qui faussent tout", file: "lecon-13.html", status: "complet" },
+            { num: "14", title: "Le paradoxe de Simpson et les moyennes trompeuses", file: "lecon-14.html", status: "complet" },
+            { num: "15", title: "Projet — une analyse honnête de bout en bout", file: "lecon-15.html", status: "complet" },
           ],
         },
       ],
@@ -5343,7 +5402,7 @@ window.SITE_DATA = (function () {
       title: "Données & analyse",
       glyph: "Σ",
       tagline: "Interroger, manipuler, analyser et visualiser des données.",
-      courses: ["sql", "python", "pandas", "dataviz", "r"],
+      courses: ["sql", "python", "pandas", "stats", "dataviz", "r"],
     },
     {
       id: "systeme",
@@ -5419,7 +5478,7 @@ window.SITE_DATA = (function () {
       title: "Intelligence artificielle",
       glyph: "AI",
       tagline: "De Python à l'apprentissage automatique et aux LLM.",
-      courses: ["python", "pandas", "ml", "llm"],
+      courses: ["python", "pandas", "stats", "ml", "llm"],
     },
     {
       id: "mobile-dev",
@@ -5549,6 +5608,7 @@ window.SITE_DATA = (function () {
     "r": {"lecon-01.html":40,"lecon-02.html":50,"lecon-03.html":45,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":52,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
     "pandas": {"lecon-01.html":34,"lecon-02.html":35,"lecon-03.html":36,"lecon-04.html":37,"lecon-05.html":35,"lecon-06.html":36,"lecon-07.html":34,"lecon-08.html":37,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":38,"lecon-14.html":42},
     "dataviz": {"lecon-01.html":32,"lecon-02.html":34,"lecon-03.html":34,"lecon-04.html":36,"lecon-05.html":36,"lecon-06.html":38,"lecon-07.html":37,"lecon-08.html":37,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":38,"lecon-14.html":42},
+    "stats": {"lecon-01.html":32,"lecon-02.html":36,"lecon-03.html":38,"lecon-04.html":38,"lecon-05.html":36,"lecon-06.html":40,"lecon-07.html":40,"lecon-08.html":42,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40,"lecon-12.html":38,"lecon-13.html":40,"lecon-14.html":38,"lecon-15.html":44},
     "react": {"lecon-01.html":35,"lecon-02.html":33,"lecon-03.html":33,"lecon-04.html":31,"lecon-05.html":31,"lecon-06.html":36,"lecon-07.html":33,"lecon-08.html":35,"lecon-09.html":36,"lecon-10.html":35,"lecon-11.html":35,"lecon-12.html":35,"lecon-13.html":35,"lecon-14.html":35,"lecon-15.html":35,"lecon-16.html":35,"lecon-17.html":35,"lecon-18.html":37,"lecon-19.html":37,"lecon-20.html":35,"lecon-21.html":40,"lecon-22.html":37,"lecon-23.html":36,"lecon-24.html":35,"lecon-25.html":36,"lecon-26.html":40},
     "regex": {"lecon-01.html":30,"lecon-02.html":33,"lecon-03.html":36,"lecon-04.html":36,"lecon-05.html":39,"lecon-06.html":39,"lecon-07.html":42,"lecon-08.html":38,"lecon-09.html":41,"lecon-10.html":37,"lecon-11.html":45},
     "ruby": {"lecon-01.html":40,"lecon-02.html":44,"lecon-03.html":44,"lecon-04.html":45,"lecon-05.html":45,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":45,"lecon-09.html":48,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":44,"lecon-13.html":45,"lecon-14.html":50,"lecon-15.html":50,"lecon-16.html":44,"lecon-17.html":44,"lecon-18.html":44,"lecon-19.html":45,"lecon-20.html":40,"lecon-21.html":42,"lecon-22.html":40},

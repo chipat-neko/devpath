@@ -2631,6 +2631,56 @@ window.PROJETS = [
       "avant de tracer, et relis chaque graphique avec la <strong>checklist du lecteur critique</strong> de la dernière leçon.</p>",
   },
   {
+    id: "stats-orbit",
+    course: "stats",
+    courseTitle: "Statistiques appliquées",
+    dir: "stats",
+    accent: "stats",
+    type: "Projet d'analyse",
+    niveau: "Intermédiaire",
+    titre: "L'analyse honnête d'un test A/B pour l'application Orbit",
+    contexte:
+      "<p>Tu es l'analyste de <strong>Orbit</strong>, une petite application web SaaS. L'équipe produit a testé un " +
+      "nouveau bouton d'inscription et te remet plusieurs jeux de données&nbsp;: les <strong>temps de réponse</strong> " +
+      "de l'API (des milliers de mesures en millisecondes, à longue traîne), le résultat d'un <strong>test A/B</strong> " +
+      "(variante A&nbsp;: 1&nbsp;000 visiteurs, 80 inscriptions&nbsp;; variante B&nbsp;: 1&nbsp;000 visiteurs, " +
+      "104 inscriptions), les <strong>temps de chargement</strong> des pages et le <strong>taux de rebond</strong> " +
+      "associé, et les <strong>notes de satisfaction</strong> par appareil. Le directeur veut une phrase&nbsp;: " +
+      "«&nbsp;le nouveau bouton est-il vraiment meilleur&nbsp;?&nbsp;» — sans se faire piéger par le hasard.</p>",
+    objectif:
+      "<p>Produire une <strong>analyse statistique honnête</strong>&nbsp;: décrire chaque distribution avec le bon " +
+      "indicateur (médiane et percentiles plutôt que moyenne pour une latence à longue traîne), <strong>comparer les " +
+      "deux variantes</strong> du test A/B avec un test d'hypothèse et un <strong>intervalle de confiance</strong>, " +
+      "mesurer une <strong>corrélation</strong> sans la confondre avec une cause, et conclure en énonçant clairement " +
+      "l'<strong>incertitude</strong>. L'objectif est la <strong>justesse</strong> et la prudence, pas un résultat " +
+      "spectaculaire.</p>",
+    livrable: "Un rapport d'analyse (script Python + module statistics/numpy, ou notebook) qui répond à la question posée en quantifiant l'incertitude, graphiques à l'appui.",
+    fonctionnalites: [
+      "Un <strong>résumé de la distribution</strong> des temps de réponse&nbsp;: moyenne, médiane, écart-type et percentiles p50/p95/p99, avec un commentaire sur l'asymétrie.",
+      "La <strong>comparaison du test A/B</strong>&nbsp;: taux de conversion de chaque variante, différence observée, et un <strong>test d'hypothèse</strong> avec sa valeur p correctement interprétée.",
+      "L'<strong>intervalle de confiance</strong> à 95&nbsp;% de la différence de taux entre A et B, avec sa lecture en clair.",
+      "Un <strong>nuage</strong> temps de chargement × taux de rebond et son coefficient de <strong>corrélation</strong>, accompagné d'une phrase sur la causalité.",
+      "Une <strong>régression simple</strong> (par exemple rebond en fonction du temps de chargement) avec l'interprétation de la pente et du R².",
+      "Un <strong>encadré «&nbsp;pièges évités&nbsp;»</strong>&nbsp;: comparaisons multiples, biais de survie des avis, vérification d'un éventuel paradoxe de Simpson par appareil.",
+    ],
+    criteres: [
+      "Le bon <strong>indicateur de centre</strong> est choisi selon la forme de la distribution&nbsp;; une latence à longue traîne est décrite par la <strong>médiane et les percentiles</strong>, pas par la seule moyenne.",
+      "La conclusion du test A/B <strong>quantifie l'incertitude</strong> (valeur p et/ou intervalle de confiance)&nbsp;; elle ne dit jamais «&nbsp;c'est prouvé&nbsp;» sur un simple écart de pourcentages.",
+      "La <strong>valeur p</strong> est interprétée correctement&nbsp;: elle n'est pas «&nbsp;la probabilité que B soit meilleur&nbsp;», et un résultat non significatif n'est pas «&nbsp;une preuve d'égalité&nbsp;».",
+      "Toute <strong>corrélation</strong> est présentée comme telle&nbsp;: aucun raccourci vers la causalité sans justification.",
+      "Les <strong>pièges</strong> (comparaisons multiples, biais de sélection/survie, agrégation trompeuse) sont explicitement cherchés et commentés.",
+      "Le rapport reste <strong>lisible par un non-statisticien</strong>&nbsp;: chaque chiffre est traduit en une phrase de décision.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur la <strong>description d'une distribution</strong>, l'<strong>échantillonnage</strong>, " +
+      "l'<strong>intervalle de confiance</strong>, le <strong>test d'hypothèse</strong>, la <strong>corrélation</strong> " +
+      "et la <strong>régression</strong>, puis le module sur les <strong>pièges</strong>.</p>" +
+      "<p>Commence par <strong>tracer</strong> chaque jeu de données avant de le résumer (le réflexe d'Anscombe), " +
+      "calcule les statistiques avec <a href=\"../pandas/cours.html\">pandas</a> et visualise-les avec " +
+      "<a href=\"../dataviz/cours.html\">matplotlib</a>. Termine par une phrase unique, prudente et chiffrée, adressée " +
+      "au directeur produit.</p>",
+  },
+  {
     id: "ml-churn",
     course: "ml",
     courseTitle: "Machine Learning",
