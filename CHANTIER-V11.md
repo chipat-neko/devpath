@@ -232,7 +232,19 @@ Regroupés par cours. Ils ne font échouer personne mais ternissent des cours ne
 
   **Vérifs :** `verif.js --rapide` **VERT** (source 0 · données 0 erreur · contenu 0 maigre/0 redondance) ; `verif-rendu` **2 pages (bdd/09, equipe/12) × 3 largeurs × 2 thèmes = 12 mesures → 0 err / 0 avert** (aucun débordement malgré la note ajoutée dans le bloc de code et l'incise de prose) ; **0 URL interdite**, **0 BOM** (`3c2144`=`<!D`) ; `search-index.js` régénéré (`build-index --write --only=search`, **stable au re-run** — seule la prose indexée a changé ; quiz **5627** / flashcards **10678** / antisèches **1487** / search-lite **identiques**, aucun QCM/antisèche/flashcard touché). `mobile/lecon-03` non modifié (page a raison).
 
-- [ ] **D2 · Contrôle final.** `node tools/verif.js` complet, les quatre vérificateurs verts. Puis **rejouer les calculs des trois erreurs graves** pour prouver qu'ils tombent désormais juste, en citant les valeurs obtenues.
+- [x] **D2 · Contrôle final — les quatre vérificateurs verts + les trois erreurs graves rejouées.**
+
+  ✓ **Fait (2026-08-14).**
+
+  **Les quatre vérificateurs — `node tools/verif.js` complet : TOUT VERT (117,3 s).** source OK (aucune balise créée par erreur dans un bloc de code) · données OK (**0 erreur** d'invariant) · contenu OK (**0 leçon maigre / 0 redondance**) · **rendu OK (0 erreur, 120 mesures = 20 pages × 3 largeurs × 2 thèmes, 104 s)**. Rendu ciblé complémentaire sur les 3 pages des erreurs graves (hors échantillon par défaut) : **18 mesures → 0 err / 0 avert**.
+
+  **Les trois erreurs graves rejouées par EXÉCUTION (scripts `scratchpad/` + vérif croisée dans les pages) :**
+
+  - **A1 — `pandas/lecon-09` (transform Lyon).** `a1_pandas.py` recalcule : Lyon **sum = 28,80**, **mean = 9,60**, parts **0,260417 / 0,430556 / 0,309028** (somme de contrôle = **1,000000** par ville). Page : ancien faux **48,30 ABSENT**, **28,80 présent (22 occurrences)**, les 3 parts présentes. ✓
+  - **A2 — `stats/lecon-08` (test A/B).** `a2_stats.py` : bloc « effet dérisoire » retenu (**n = 10 000 000**, 8,00 % vs 8,05 %) → **z = 4,11526 → 4,12**, **p = 3,87e-05 ≈ 3,9e-05** ; pour mémoire l'ancien n = 1 M donnait z = 1,301 / **p = 0,1931** (l'ancien « ~0,0000 » était bien faux). Test A/B principal (n=1000, 80 vs 104) : **z = 1,857 → 1,86**, **p = 0,0633 → 0,063**. Page : **10 000 000 / dix millions**, **4.12**, **3.9e-05 / 0,00004**, **1.86**, **0,063** tous présents ; le seul « ~0.000000 » restant (exo 3, n=10000, 800 vs 1040) est **juste** (z = 5,87, p ≈ 0, vrai écart de 2,4 pts). ✓
+  - **A3 — `stats/lecon-03` (quartiles).** `a3_stats.py` : `method="inclusive"` → Q1 = **96,5**, Q2 = 107,0, Q3 = **128,5**, **IQR = 32,0**, borne 1,5×IQR = **176,5** (640 et 910 restent atypiques) ; l'`exclusive` cassait la démo (Q3 = 259, IQR = 164,75). Page : ancien faux **« 95.0 107.0 132.0 » et « IQR 37 » ABSENTS**, **96,5 / 128,5 / IQR 32,0 présents** ; le « 259 » restant (l.152) est le **commentaire pédagogique** qui explique pourquoi on force `inclusive`. ✓
+
+  **Conclusion : le chantier V11 est bouclé.** Les 3 erreurs graves, les majeurs et les mineurs de l'audit V10 sont traités et **prouvés par l'exécution**, pas par affirmation. Les 4 vérificateurs de forme sont verts ; la vérité numérique est rétablie et vérifiée. ✅ **Phase D terminée (D1 + D2). Toutes les cases du plan sont cochées.**
 
 ---
 
