@@ -466,19 +466,24 @@ CREATE INDEX idx_billet_representation ON billet(representation_id);
 <p>Ensuite la <strong>transaction du dernier billet</strong>&nbsp;: réserver la place et payer forment un tout-ou-rien, et la contrainte d'unicité tranche les conflits&nbsp;:</p>
 <figure class="code-block" data-file="rideau_achat.sql"><pre><code class="language-sql">BEGIN;                                   -- tout-ou-rien (L13)
 
--- On verrouille la place visée pour cette représentation le temps de
--- décider (évite que deux acheteurs la lisent « libre » en même temps).
-SELECT 1
-FROM billet
-WHERE representation_id = 88 AND place_id = 512
+-- On verrouille la LIGNE de la place (elle existe toujours) le temps de
+-- décider : le second acheteur attend ce verrou (L13). Verrouiller le
+-- billet ne servirait à rien -- il n'existe pas encore, FOR UPDATE n'aurait
+-- aucune ligne à verrouiller.
+SELECT place_id
+FROM place
+WHERE place_id = 512
 FOR UPDATE;                              -- verrou : l'autre acheteur attend
+
+-- La place est-elle déjà prise pour CETTE représentation ?
+SELECT 1 FROM billet WHERE representation_id = 88 AND place_id = 512;
 
 -- Si aucune ligne : la place est libre -> on l'attribue.
 INSERT INTO billet (billet_id, commande_id, representation_id, place_id, prix_paye)
 VALUES (90123, 7402, 88, 512, 34.00);
--- Si l'autre transaction avait déjà inséré cette place, la contrainte
--- UNIQUE(representation_id, place_id) REJETTE cet INSERT : achat refusé,
--- message « place déjà vendue ». Aucune double vente possible (L7 + L13).
+-- Filet ultime : si une transaction concurrente a malgré tout inséré cette
+-- place, la contrainte UNIQUE(representation_id, place_id) REJETTE cet INSERT :
+-- achat refusé, « place déjà vendue ». Aucune double vente possible (L7 + L13).
 
 INSERT INTO paiement (paiement_id, commande_id, montant, moyen, effectue_le)
 VALUES (5501, 7402, 34.00, 'carte', CURRENT_TIMESTAMP);
