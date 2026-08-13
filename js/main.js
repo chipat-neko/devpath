@@ -229,11 +229,11 @@
     "home.kicker": "The school of code",
     "home.title": "Learn to code <em>in depth</em>, not on the surface.",
     "home.lead":
-      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>76 fully written courses</strong>, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
+      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>77 fully written courses</strong>, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
-    "home.meta.courses": "<strong>76</strong> complete courses",
-    "home.meta.lessons": "<strong>1362</strong> written lessons",
+    "home.meta.courses": "<strong>77</strong> complete courses",
+    "home.meta.lessons": "<strong>1376</strong> written lessons",
     "home.meta.langs": "<strong>73</strong> languages &amp; tech",
   };
 
@@ -274,7 +274,7 @@
      ne traduisait que ~13 libellés de navigation sur un contenu resté français —
      une seule page (l'accueil) portait 8 éléments instrumentés, tout le reste de
      son propre contenu compris. Il promettait un bilinguisme inexistant, alors
-     que traduire les 1362 leçons n'est pas à l'ordre du jour. On assume donc le
+     que traduire les 1376 leçons n'est pas à l'ordre du jour. On assume donc le
      site comme francophone et on force l'affichage FR, même si une ancienne
      préférence « en » traîne encore dans localStorage. La fondation i18n
      (getLang, applyI18n, tables) est conservée, dormante, pour une éventuelle
@@ -658,10 +658,10 @@
      Une leçon n'avait qu'un lien de pied (« ← Retour au programme »), et une
      dizaine de hubs transverses (entraînement, outils, références, espace
      perso) n'étaient atteignables que depuis l'accueil. On construit ici, sur
-     les seules pages de leçon (repère : body[data-lesson], présent sur les 1362
+     les seules pages de leçon (repère : body[data-lesson], présent sur les 1376
      leçons et absent des pages de cours/outils), une grille de liens réutilisant
      le gabarit `.site-footer__grid` déjà stylé pour l'accueil (aucune édition des
-     1362 fichiers, aucun CSS nouveau). Profondeur déduite du favicon, comme
+     1376 fichiers, aucun CSS nouveau). Profondeur déduite du favicon, comme
      initPWA ; les hubs vivent tous dans pages/. */
   var LESSON_FOOTER_COLS = [
     { titre: "S'entraîner", liens: [
@@ -900,7 +900,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1362 leçons.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1376 leçons.</li>';
         return;
       }
       items = doSearch(tk);

@@ -94,6 +94,7 @@
     kotlin: badge("Kt", 8.5),
     swift: badge("Sw", 8.5),
     r: badge("R", 11),
+    pandas: badge("pd", 9.5),
     dart: badge("Da", 8.5),
     /* Lua : croissant de lune (« lua » = lune) */
     lua: stroke('<path d="M19.5 14.2A8.2 8.2 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z"/>'),
@@ -208,7 +209,7 @@
     cobol: "cobol", fortran: "fortran", julia: "julia", zig: "zig", lisp: "lisp", ocaml: "ocaml",
     fsharp: "fsharp", clojure: "clojure", prolog: "prolog", ada: "ada", pascal: "pascal", vb: "vb",
     objc: "objc", erlang: "erlang", groovy: "groovy", solidity: "solidity",
-    ml: "ml", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
+    ml: "ml", pandas: "pandas", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
     "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os",
   };
 

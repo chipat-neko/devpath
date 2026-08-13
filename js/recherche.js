@@ -1,5 +1,5 @@
 /* =============================================================================
-   recherche.js — Recherche plein-texte dans le contenu des 1362 leçons.
+   recherche.js — Recherche plein-texte dans le contenu des 1376 leçons.
    Lit window.SEARCH_INDEX (js/search-index.js, index INVERSE compact généré par
    tools/build-index.js) et window.SITE_DATA (titres de cours). Aucun fetch.
    Page : pages/recherche.html.

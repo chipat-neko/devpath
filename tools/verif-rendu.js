@@ -87,10 +87,10 @@ var ECHANTILLON = [
   "pages/reseaux/lecon-11.html",
 ];
 
-/* Une lecon par cours : les 1362 lecons partagent le gabarit, mais leur CONTENU
+/* Une lecon par cours : les 1376 lecons partagent le gabarit, mais leur CONTENU
    varie (tableaux larges, blocs de code interminables, schemas SVG, QCM denses).
    En prendre une par cours couvre les 76 accents de couleur et les 76 formes de
-   contenu pour 76 pages, au lieu de 1362. On prend la lecon du MILIEU du cours :
+   contenu pour 77 pages, au lieu de 1376. On prend la lecon du MILIEU du cours :
    la premiere est souvent une introduction courte, peu representative. */
 function unePageParCours() {
   var out = [];

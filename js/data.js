@@ -307,6 +307,13 @@ window.SITE_DATA = (function () {
       tags: ["Données", "Statistiques", "Science"],
     },
     {
+      id: "pandas", dir: "pandas", title: "pandas : analyser des données avec Python",
+      glyph: "pd", language: "Python", level: "intermediaire", status: "complet",
+      accent: "#5a4fcf", lessons: 14, hours: 9,
+      tagline: "La bibliothèque reine de l'analyse de données en Python : charger et inspecter un jeu de données, nettoyer les valeurs manquantes, sélectionner et filtrer, créer des colonnes, regrouper et croiser, joindre des tables, traiter des séries temporelles et exporter — sur un vrai jeu de ventes.",
+      tags: ["Data", "Python", "Analyse"],
+    },
+    {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", language: "Dart", level: "intermediaire", status: "complet",
       accent: "#2fa3b8", lessons: 16, hours: 13,
@@ -3952,6 +3959,53 @@ window.SITE_DATA = (function () {
       ],
     },
 
+    pandas: {
+      id: "pandas", dir: "pandas", title: "pandas : analyser des données avec Python",
+      glyph: "pd", accent: "#5a4fcf", overview: "cours.html",
+      related: [
+        { course: "python", note: "pandas est une bibliothèque Python : le cours Python pose les bases du langage." },
+        { course: "sql", note: "groupby, jointures et filtres de pandas sont les cousins directs de GROUP BY, JOIN et WHERE." },
+        { course: "r", note: "L'autre grand langage de l'analyse de données : data frames et dplyr côté R." },
+        { course: "ml", note: "pandas prépare et nettoie les données que scikit-learn va apprendre." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Prendre pandas en main", sub: "Series, DataFrame, charger, types, valeurs manquantes", level: "debutant",
+          lessons: [
+            { num: "01", title: "Series et DataFrame : les deux structures", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Charger et inspecter un jeu de données", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Types de colonnes et conversions", file: "lecon-03.html", status: "complet" },
+            { num: "04", title: "Les valeurs manquantes", file: "lecon-04.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Sélectionner et transformer", sub: "loc/iloc, filtres booléens, tri, colonnes calculées", level: "intermediaire",
+          lessons: [
+            { num: "05", title: "Sélectionner lignes et colonnes", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Filtrer avec des conditions", file: "lecon-06.html", status: "complet" },
+            { num: "07", title: "Trier et classer", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "Colonnes calculées et texte", file: "lecon-08.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "Regrouper et relier", sub: "groupby, tableaux croisés, jointures", level: "avance",
+          lessons: [
+            { num: "09", title: "Regrouper et agréger", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "Croiser et pivoter", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Combiner des tables", file: "lecon-11.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "Aller au bout", sub: "séries temporelles, export, projet complet", level: "avance",
+          lessons: [
+            { num: "12", title: "Séries temporelles", file: "lecon-12.html", status: "complet" },
+            { num: "13", title: "Exporter et présenter", file: "lecon-13.html", status: "complet" },
+            { num: "14", title: "Projet — une analyse de ventes de bout en bout", file: "lecon-14.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
     dart: {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", accent: "#2fa3b8", overview: "cours.html",
@@ -5233,7 +5287,7 @@ window.SITE_DATA = (function () {
       title: "Données & analyse",
       glyph: "Σ",
       tagline: "Interroger, manipuler et analyser des données.",
-      courses: ["sql", "python", "r"],
+      courses: ["sql", "python", "pandas", "r"],
     },
     {
       id: "systeme",
@@ -5309,7 +5363,7 @@ window.SITE_DATA = (function () {
       title: "Intelligence artificielle",
       glyph: "AI",
       tagline: "De Python à l'apprentissage automatique et aux LLM.",
-      courses: ["python", "ml", "llm"],
+      courses: ["python", "pandas", "ml", "llm"],
     },
     {
       id: "mobile-dev",
@@ -5437,6 +5491,7 @@ window.SITE_DATA = (function () {
     "prolog": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":40,"lecon-10.html":45,"lecon-11.html":50,"lecon-12.html":52,"lecon-13.html":55,"lecon-14.html":48},
     "python": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":31,"lecon-04.html":33,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":32,"lecon-10.html":32,"lecon-11.html":32,"lecon-12.html":34,"lecon-13.html":36,"lecon-14.html":35,"lecon-15.html":33,"lecon-16.html":34,"lecon-17.html":33,"lecon-18.html":33,"lecon-19.html":34,"lecon-20.html":34,"lecon-21.html":40,"lecon-22.html":44,"lecon-23.html":40,"lecon-24.html":36,"lecon-25.html":36,"lecon-26.html":38,"lecon-27.html":37,"lecon-28.html":40,"lecon-29.html":34,"lecon-30.html":36,"lecon-31.html":35,"lecon-32.html":35,"lecon-33.html":33,"lecon-34.html":33,"lecon-35.html":37,"lecon-36.html":35,"lecon-37.html":33,"lecon-38.html":35,"lecon-39.html":35,"lecon-40.html":37,"lecon-41.html":35,"lecon-42.html":35,"lecon-43.html":35,"lecon-44.html":37,"lecon-45.html":34,"lecon-46.html":35,"lecon-47.html":34,"lecon-48.html":36,"lecon-49.html":40,"lecon-50.html":42},
     "r": {"lecon-01.html":40,"lecon-02.html":50,"lecon-03.html":45,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":52,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
+    "pandas": {"lecon-01.html":34,"lecon-02.html":35,"lecon-03.html":36,"lecon-04.html":37,"lecon-05.html":35,"lecon-06.html":36,"lecon-07.html":34,"lecon-08.html":37,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":38,"lecon-14.html":42},
     "react": {"lecon-01.html":35,"lecon-02.html":33,"lecon-03.html":33,"lecon-04.html":31,"lecon-05.html":31,"lecon-06.html":36,"lecon-07.html":33,"lecon-08.html":35,"lecon-09.html":36,"lecon-10.html":35,"lecon-11.html":35,"lecon-12.html":35,"lecon-13.html":35,"lecon-14.html":35,"lecon-15.html":35,"lecon-16.html":35,"lecon-17.html":35,"lecon-18.html":37,"lecon-19.html":37,"lecon-20.html":35,"lecon-21.html":40,"lecon-22.html":37,"lecon-23.html":36,"lecon-24.html":35,"lecon-25.html":36,"lecon-26.html":40},
     "regex": {"lecon-01.html":30,"lecon-02.html":33,"lecon-03.html":36,"lecon-04.html":36,"lecon-05.html":39,"lecon-06.html":39,"lecon-07.html":42,"lecon-08.html":38,"lecon-09.html":41,"lecon-10.html":37,"lecon-11.html":45},
     "ruby": {"lecon-01.html":40,"lecon-02.html":44,"lecon-03.html":44,"lecon-04.html":45,"lecon-05.html":45,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":45,"lecon-09.html":48,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":44,"lecon-13.html":45,"lecon-14.html":50,"lecon-15.html":50,"lecon-16.html":44,"lecon-17.html":44,"lecon-18.html":44,"lecon-19.html":45,"lecon-20.html":40,"lecon-21.html":42,"lecon-22.html":40},

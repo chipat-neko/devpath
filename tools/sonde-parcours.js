@@ -10,7 +10,7 @@
      - visite      : une lecon ouverte (syntaxe-last pose) mais 0 completion
      - encours     : quelques cours partiellement faits
      - fini-1cours : un cours a 100 %, le reste vierge
-     - tout        : les 1362 lecons de tous les cours a 100 %
+     - tout        : les 1376 lecons de tous les cours a 100 %
 
    Pour chaque (etat, page) on releve :
      - accueil : visibilite du bandeau resume, href du bouton, kicker/title/meta

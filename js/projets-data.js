@@ -2537,6 +2537,51 @@ window.PROJETS = [
       "l'état (protection contre la réentrance).</p>",
   },
   {
+    id: "pandas-ventes",
+    course: "pandas",
+    courseTitle: "pandas",
+    dir: "pandas",
+    accent: "pandas",
+    type: "Projet d'analyse de données",
+    niveau: "Intermédiaire",
+    titre: "Le tableau de bord des ventes d'une librairie",
+    contexte:
+      "<p>Une petite librairie en ligne t'ouvre ses données. On te remet deux fichiers&nbsp;: " +
+      "<code>ventes.csv</code> (une ligne par produit commandé&nbsp;: date, commande, client, ville, catégorie, " +
+      "produit, quantité, prix unitaire) et <code>clients.csv</code> (client, ville, segment). Le fichier de " +
+      "ventes n'est pas parfait&nbsp;: quelques villes et prix <strong>manquent</strong>, et la colonne des dates " +
+      "est lue comme du texte. On te demande d'en tirer un <strong>petit tableau de bord</strong>.</p>",
+    objectif:
+      "<p>Mener une <strong>analyse de bout en bout</strong> avec pandas&nbsp;: charger et inspecter, corriger les " +
+      "types, traiter les valeurs manquantes, calculer le chiffre d'affaires, le résumer par ville et par catégorie, " +
+      "le relier au segment de clientèle, suivre son évolution dans le temps, puis <strong>exporter</strong> un " +
+      "résultat propre. L'objectif est la <strong>chaîne correcte</strong>, pas un chiffre spectaculaire.</p>",
+    livrable: "Un script (ou notebook) Python utilisant pandas, qui lit les CSV et écrit un fichier de synthèse.",
+    fonctionnalites: [
+      "Le <strong>chargement</strong> et l'inspection des données (<code>read_csv</code>, <code>info</code>, <code>describe</code>, repérage des manquants).",
+      "Le <strong>nettoyage</strong>&nbsp;: conversion des dates (<code>to_datetime</code>), traitement explicite des <code>NaN</code> (supprimer ou remplir, en le justifiant).",
+      "Une <strong>colonne calculée</strong> <code>montant = quantite * prix_unitaire</code> (vectorisée).",
+      "Le <strong>chiffre d'affaires par ville et par catégorie</strong> avec <code>groupby</code> et un <code>pivot_table</code>.",
+      "Une <strong>jointure</strong> avec <code>clients.csv</code> (<code>merge</code>) pour un CA par <strong>segment</strong>.",
+      "Le <strong>CA par mois</strong> via un index temporel et <code>resample</code>, puis l'<strong>export</strong> en CSV (<code>index=False</code>).",
+    ],
+    criteres: [
+      "Les <strong>types</strong> sont corrects (dates en <code>datetime</code>, montants numériques) avant toute analyse.",
+      "Les <strong>valeurs manquantes</strong> sont traitées explicitement, avec un choix justifié (supprimer vs remplir).",
+      "Les <strong>filtres</strong> combinés utilisent des parenthèses (<code>(a) &amp; (b)</code>), sans erreur de priorité.",
+      "Les agrégats (<code>groupby</code>, <code>pivot_table</code>) sont corrects et lisibles (colonnes nommées).",
+      "La <strong>jointure</strong> est un <code>merge</code> maîtrisé (le bon <code>how</code>, pas de lignes perdues par accident).",
+      "L'export est propre&nbsp;: <code>to_csv(index=False)</code>, encodage et séparateur adaptés, fichier rechargé pour vérifier.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur le <strong>chargement</strong>, les <strong>types</strong> et les " +
+      "<strong>valeurs manquantes</strong>, puis <strong>groupby</strong>, <strong>pivot_table</strong>, " +
+      "<strong>merge</strong> et les <strong>séries temporelles</strong>.</p>" +
+      "<p>Avance par étapes&nbsp;: charge et regarde d'abord (<code>head</code>, <code>info</code>), nettoie ensuite, " +
+      "et n'agrège qu'une fois les types sûrs. Préfère le calcul <strong>vectorisé</strong> à <code>apply</code>, et " +
+      "vérifie chaque résultat sur quelques lignes connues avant de faire confiance au total.</p>",
+  },
+  {
     id: "ml-churn",
     course: "ml",
     courseTitle: "Machine Learning",

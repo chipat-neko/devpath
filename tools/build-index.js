@@ -12,7 +12,7 @@
    les blocs <figure class="cheat-table"> deja ecrits dans les lecons. La
    page pages/antiseches.html n'en presentait que 4, ecrites a la main.
 
-   SOURCE DE VERITE : js/data.js (window.SITE_DATA.content) donne les 76 cours,
+   SOURCE DE VERITE : js/data.js (window.SITE_DATA.content) donne les 77 cours,
    leur dossier, leur titre et la liste ordonnee de leurs lecons. On ne
    balaye JAMAIS le disque a l'aveugle : les 89 pages de redirection et les 4
    dossiers « -avance » historiques doivent rester hors index.
