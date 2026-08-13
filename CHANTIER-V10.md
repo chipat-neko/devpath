@@ -109,6 +109,8 @@ outils ; la pratique collective n'a pas de cours.
 
 - [ ] **F3 · Contrôle final.** `node tools/verif.js` complet : les quatre vérificateurs verts, **0 leçon sous le standard, 0 maigre, 0 redondance**. Les nouveaux cours ne doivent pas recopier la prose des anciens (`--redondance` à 0).
 
+  ⏳ **À traiter en F3** (effet de bord attendu, à faire une fois TOUS les cours ajoutés car chaque cours riche rebouge les médianes) : après B1 (pandas), la médiane **mots** du site est montée à **1996**, ce qui fait basculer **`os/lecon-02`** en *maigre* (4/6 sous : svg 2<3 · callouts 3<5 · glossaire 7<8 · **mots 1994<1996**, soit 2 mots !). Cas-limite déjà repéré en V8. Ne PAS corriger à chaque cours (retravail) ; l'enrichir légèrement (1 SVG + 2 callouts + 1 terme + ~30 mots) lors de la passe F3, en re-mesurant la médiane finale. Surveiller d'autres bascules du même type au fil de B2→E1.
+
 ---
 
 ## Fin de chantier
