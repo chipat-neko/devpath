@@ -5270,6 +5270,110 @@ window.SITE_DATA = (function () {
       tagline: "Démarrer de zéro et construire pour de vrai.",
       courses: ["python", "git", "projets-js"],
     },
+
+    /* ---- Parcours ajoutés (chantier V10 — élargir le catalogue) ---------------
+       But : rendre visibles les cours qui n'appartenaient à aucun itinéraire.
+       Un cours peut figurer dans plusieurs parcours (comme python ou git) quand
+       il y a sa place légitimement. Seul « solidity » (contrats intelligents,
+       très spécialisé) reste volontairement hors parcours. */
+    {
+      id: "front-avance",
+      title: "Front-end : au-delà des bases",
+      glyph: "UI",
+      tagline: "Aller plus loin côté client : Sass et Vue.js.",
+      courses: ["css", "sass", "vue"],
+    },
+    {
+      id: "api-web",
+      title: "Concevoir et exposer une API",
+      glyph: "API",
+      tagline: "Du protocole HTTP aux API REST et GraphQL.",
+      courses: ["http", "api", "graphql"],
+    },
+    {
+      id: "web-serveur",
+      title: "Le web côté serveur",
+      glyph: "srv",
+      tagline: "Le serveur qui répond au navigateur : PHP, Ruby, Go.",
+      courses: ["http", "php", "ruby", "go"],
+    },
+    {
+      id: "bases-donnees",
+      title: "Bases de données",
+      glyph: "db",
+      tagline: "Stocker et interroger : du relationnel au NoSQL.",
+      courses: ["sql", "nosql"],
+    },
+    {
+      id: "ia",
+      title: "Intelligence artificielle",
+      glyph: "AI",
+      tagline: "De Python à l'apprentissage automatique et aux LLM.",
+      courses: ["python", "ml", "llm"],
+    },
+    {
+      id: "mobile-dev",
+      title: "Développement mobile",
+      glyph: "app",
+      tagline: "Des applications natives et multiplateformes.",
+      courses: ["swift", "objc", "dart"],
+    },
+    {
+      id: "devops",
+      title: "DevOps & livraison continue",
+      glyph: "∞",
+      tagline: "Construire, tester et livrer en continu, jusqu'au cluster.",
+      courses: ["docker", "cicd", "iac", "kubernetes"],
+    },
+    {
+      id: "conception",
+      title: "Concevoir un logiciel robuste",
+      glyph: "◇",
+      tagline: "Structurer, tester et sécuriser un code qui dure.",
+      courses: ["patterns", "archi", "tests", "securite"],
+    },
+    {
+      id: "outils",
+      title: "La boîte à outils du développeur",
+      glyph: "kit",
+      tagline: "L'éditeur, le terminal et les formats du quotidien.",
+      courses: ["vscode", "bash", "git", "regex", "markdown", "formats"],
+    },
+    {
+      id: "scripting",
+      title: "Scripting & automatisation",
+      glyph: "sh",
+      tagline: "Des langages légers pour automatiser et outiller.",
+      courses: ["bash", "perl", "lua"],
+    },
+    {
+      id: "concurrence",
+      title: "Concurrence & résilience",
+      glyph: "∥",
+      tagline: "Faire beaucoup de choses à la fois, sans tomber.",
+      courses: ["go", "elixir", "erlang"],
+    },
+    {
+      id: "calcul-scientifique",
+      title: "Calcul scientifique",
+      glyph: "∫",
+      tagline: "Le code au service des nombres et de la science.",
+      courses: ["python", "r", "julia", "fortran"],
+    },
+    {
+      id: "performance-web",
+      title: "Performance web",
+      glyph: "0ms",
+      tagline: "Rendre le web rapide, jusqu'au calcul natif.",
+      courses: ["perf-web", "wasm"],
+    },
+    {
+      id: "patrimoine",
+      title: "Langages historiques & patrimoine",
+      glyph: "'70",
+      tagline: "Le code qui fait encore tourner banques et industrie.",
+      courses: ["fortran", "cobol", "pascal", "ada"],
+    },
   ];
 
   var lessonDurations = {
