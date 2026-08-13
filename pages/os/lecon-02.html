@@ -184,6 +184,32 @@
 </figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Des bugs sournois</p><p>Les conditions de course sont parmi les bugs les plus <strong>difficiles</strong> à traquer&nbsp;: ils n'apparaissent que <em>parfois</em>, selon le minutage exact des threads. Pour les éviter, on <strong>protège</strong> les données partagées (verrous, sections critiques) — un sujet délicat, à manier avec soin.</p></div></div>
 
+<h2>Protéger une donnée partagée : le verrou</h2>
+<p>La parade à la condition de course est simple à énoncer&nbsp;: empêcher deux threads de toucher la même donnée <em>au même instant</em>. On isole la manipulation sensible dans une <strong>section critique</strong> et on la garde par un <strong>verrou</strong> (<em>mutex</em>)&nbsp;: avant d'entrer, un thread doit «&nbsp;prendre&nbsp;» le verrou&nbsp;; s'il est déjà pris par un autre, il <strong>attend</strong> son tour, puis le relâche en sortant. Ainsi, un seul thread à la fois lit puis écrit le compteur&nbsp;: la séquence «&nbsp;lire, calculer, écrire&nbsp;» n'est plus entrecoupée, et plus aucune mise à jour ne se perd. Le partage redevient sûr, au prix d'un peu d'attente.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Un verrou protège une section critique. Au centre, une section critique contient le compteur partagé, dont l'entrée est fermée par un verrou. À gauche, le thread 1 détient le verrou et se trouve à l'intérieur de la section critique en train de modifier le compteur. À droite, le thread 2 attend devant le verrou fermé, bloqué tant que le thread 1 n'a pas relâché le verrou. Une mention indique qu'un seul thread à la fois entre, ce qui empêche la condition de course.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Un seul thread à la fois entre dans la section critique</text>
+    <rect class="d-frame" x="238" y="52" width="164" height="96" rx="6" />
+    <text class="d-mut" x="320" y="72" text-anchor="middle" font-size="9">section critique</text>
+    <rect class="d-accent" x="262" y="86" width="116" height="40" rx="4" />
+    <text class="d-text" x="320" y="110" text-anchor="middle" font-size="9.5">compteur partagé</text>
+    <rect class="d-box" x="228" y="92" width="20" height="18" rx="3" /><path class="d-line" d="M232 92 v-4 a6 6 0 0 1 12 0 v4" fill="none" />
+    <rect class="d-accent" x="40" y="82" width="120" height="34" rx="5" />
+    <text class="d-text" x="100" y="103" text-anchor="middle" font-size="10">thread 1</text>
+    <text class="d-mut" x="100" y="132" text-anchor="middle" font-size="8.5">détient le verrou · entre</text>
+    <path class="d-line" d="M160 99 L226 99" fill="none" /><path class="d-line" d="M220 95 L226 99 L220 103" fill="none" />
+    <rect class="d-box" x="480" y="82" width="120" height="34" rx="5" />
+    <text class="d-text" x="540" y="103" text-anchor="middle" font-size="10">thread 2</text>
+    <text class="d-mut" x="540" y="132" text-anchor="middle" font-size="8.5">attend le verrou</text>
+    <path class="d-line" d="M478 99 L414 99" fill="none" stroke-dasharray="3 3" />
+    <text class="d-tag" x="446" y="90" text-anchor="middle" font-size="12">&#10005;</text>
+    <text class="d-mut" x="320" y="176" text-anchor="middle" font-size="8.5">le thread 2 n'entrera qu'une fois le verrou relâché — la séquence « lire, calculer, écrire » n'est plus entrecoupée</text>
+  </svg>
+  <figcaption>Le verrou <strong>sérialise</strong> l'accès&nbsp;: il transforme «&nbsp;deux threads en même temps&nbsp;» en «&nbsp;l'un après l'autre&nbsp;». C'est ce qui rend l'incrémentation fiable — au prix d'un peu d'attente pour celui qui n'a pas (encore) le verrou.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Garde tes sections critiques courtes</p><p>Un verrou fait attendre les autres threads&nbsp;: plus la section critique est <strong>longue</strong>, plus ils patientent, et plus le gain du parallélisme s'évapore. La règle&nbsp;: ne mets <em>que</em> l'accès à la donnée partagée sous verrou, jamais un long calcul qu'on pourrait faire <em>avant</em> ou <em>après</em>. Verrou pris tard, relâché tôt.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège de l'interblocage</p><p>Les verrous introduisent leur propre danger&nbsp;: l'<strong>interblocage</strong> (<em>deadlock</em>). Si le thread 1 tient le verrou A et attend le verrou B, pendant que le thread 2 tient B et attend A, aucun des deux n'avance&nbsp;: ils s'attendent <em>mutuellement</em>, pour toujours. On l'évite notamment en prenant toujours les verrous dans le <strong>même ordre</strong>. Protéger le partage est nécessaire&nbsp;; mal le protéger crée d'autres bugs.</p></div></div>
+
 <h2>Plus de threads ≠ plus rapide</h2>
 <p>Un piège courant&nbsp;: croire qu'ajouter des threads accélère <strong>toujours</strong>. Faux&nbsp;! Si le travail est un <strong>calcul pur</strong> et que la machine n'a que 4 cœurs, lancer 100 threads ne crée pas 100 calculs simultanés&nbsp;: ils se <strong>partagent</strong> les mêmes cœurs (ordonnancement, leçon&nbsp;3), avec en plus le coût de coordination. Les threads brillent surtout quand il y a de l'<strong>attente</strong> (entrées/sorties) à recouvrir, ou de vrais cœurs disponibles pour du calcul parallèle.</p>
 
@@ -213,6 +239,7 @@
   <dt>Condition de course (<em>race condition</em>)</dt><dd>Bug survenant quand plusieurs threads accèdent à la même donnée partagée sans coordination&nbsp;; le résultat dépend du minutage et devient imprévisible.</dd>
   <dt>Verrou (<em>mutex</em>)</dt><dd>Mécanisme qui garantit qu'un seul thread à la fois entre dans une section critique, pour protéger une donnée partagée.</dd>
   <dt>Section critique</dt><dd>Portion de code qui manipule une ressource partagée et ne doit pas être exécutée par deux threads en même temps.</dd>
+  <dt>Interblocage (<em>deadlock</em>)</dt><dd>Situation où plusieurs threads s'attendent mutuellement pour toujours, chacun tenant un verrou que l'autre réclame&nbsp;; on l'évite en prenant les verrous dans un ordre cohérent.</dd>
   <dt>IPC (communication inter-processus)</dt><dd>Ensemble des mécanismes de l'OS (tubes, sockets, mémoire partagée, messages) permettant à des processus isolés de communiquer.</dd>
   <dt>Cœur (<em>core</em>)</dt><dd>Unité de calcul physique d'un processeur&nbsp;; le parallélisme réel est limité par le nombre de cœurs disponibles.</dd>
 </dl>
