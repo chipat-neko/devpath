@@ -349,6 +349,13 @@ window.SITE_DATA = (function () {
       tags: ["Mobile", "Multiplateforme", "Transversal"],
     },
     {
+      id: "equipe", dir: "equipe", title: "Travailler à plusieurs sur du code",
+      glyph: "eq", language: "Collaboration", level: "intermediaire", status: "complet",
+      accent: "#6d28d9", lessons: 14, hours: 10,
+      tagline: "Ce qu'on n'apprend pas en apprenant un langage : lire le code des autres, faire une revue utile et en recevoir une, automatiser le style pour ne plus en débattre, écrire un message de commit et une demande de fusion, estimer sans se mentir, nommer et traiter la dette technique, documenter ce qui compte, intégrer un nouveau venu, gérer un incident et en faire l'après sans chercher de coupable.",
+      tags: ["Collaboration", "Travail d'équipe", "Transversal"],
+    },
+    {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", language: "Dart", level: "intermediaire", status: "complet",
       accent: "#2fa3b8", lessons: 16, hours: 13,
@@ -1044,6 +1051,7 @@ window.SITE_DATA = (function () {
         { course: "tests", note: "Une bonne architecture se teste plus facilement." },
         { course: "nosql", note: "Le choix de la persistance fait partie des décisions d'architecture." },
         { course: "bdd", note: "Le schéma d'une base est une décision d'architecture à part entière : entités, normalisation, index, transactions engagent tout le système." },
+        { course: "equipe", note: "Les décisions d'architecture se prennent et se documentent à plusieurs ; ce cours en traite la face humaine : tracer un choix, nommer et traiter la dette technique, se mettre d'accord." },
       ],
       modules: [
         {
@@ -2153,6 +2161,7 @@ window.SITE_DATA = (function () {
       related: [
         { course: "javascript", note: "Versionne tes projets JavaScript dès le départ." },
         { course: "python", note: "Suis l'historique de tes scripts Python." },
+        { course: "equipe", note: "Git en solo est un outil ; en équipe, il devient un langage commun. Ce cours enseigne les usages autour : commits qui racontent, demandes de fusion relisibles, historique propre à plusieurs." },
       ],
       modules: [
         {
@@ -2785,6 +2794,7 @@ window.SITE_DATA = (function () {
         { course: "java", note: "Le cours Java applique ces principes avec JUnit 5 (module « Tester son code »)." },
         { course: "rust", note: "Rust intègre les tests au langage : cargo test, #[test], assertions." },
         { course: "git", note: "L'intégration continue rejoue tes tests à chaque push : Git en est la base." },
+        { course: "equipe", note: "Des tests solides sont ce qui rend une revue rapide et une fusion sereine : ce cours montre leur rôle dans le travail collectif — relire, livrer, gérer un incident sans tout casser." },
       ],
       modules: [
         {
@@ -2932,6 +2942,7 @@ window.SITE_DATA = (function () {
         { course: "git", note: "La CI/CD se déclenche sur les pushs et pull requests : Git en est la base." },
         { course: "tests", note: "Le pipeline rejoue automatiquement la chaîne qualité à chaque changement." },
         { course: "docker", note: "On emballe l'application en image pour un déploiement reproductible." },
+        { course: "equipe", note: "La CI automatise le style, les tests et le déploiement dont ce cours parle côté équipe : brancher le formatage sur la CI, relire vite, gérer les incidents que la mise en production révèle." },
       ],
       modules: [
         {
@@ -4290,6 +4301,53 @@ window.SITE_DATA = (function () {
           lessons: [
             { num: "14", title: "Tester sur un appareil réel", file: "lecon-14.html", status: "complet" },
             { num: "15", title: "Publier Carnet : des magasins à la première version", file: "lecon-15.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
+    equipe: {
+      id: "equipe", dir: "equipe", title: "Travailler à plusieurs sur du code",
+      glyph: "eq", accent: "#6d28d9", overview: "cours.html",
+      related: [
+        { course: "git", note: "Git fournit les branches, les commits et les fusions ; ce cours enseigne les usages humains autour — écrire un message de commit qui raconte, ouvrir une demande de fusion qu'on a envie de relire, garder un historique lisible." },
+        { course: "tests", note: "Les tests donnent la confiance qui rend une revue rapide et une fusion sereine. Ce cours les suppose acquis et montre leur rôle dans le processus collectif : relire, livrer, gérer un incident sans tout casser." },
+        { course: "archi", note: "L'architecture décide des structures qui durent ; ce cours en traite la face humaine : documenter les décisions, nommer et traiter la dette technique, se mettre d'accord à plusieurs sur ce qui compte." },
+        { course: "cicd", note: "L'intégration continue automatise le style, les tests et le déploiement dont ce cours parle côté équipe : brancher le formatage sur la CI, relire vite, et gérer les incidents que la mise en production révèle." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Entrer dans le code des autres", sub: "lire, comprendre, être intégré", level: "debutant",
+          lessons: [
+            { num: "01", title: "Coder à plusieurs change tout", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Lire le code des autres", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Rejoindre un projet : être intégré, et intégrer", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "La revue de code", sub: "faire et recevoir une relecture, automatiser le style", level: "intermediaire",
+          lessons: [
+            { num: "04", title: "Faire une revue utile", file: "lecon-04.html", status: "complet" },
+            { num: "05", title: "Recevoir une revue sans la prendre mal", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Ne plus débattre du style : conventions et automatisation", file: "lecon-06.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "Communiquer autour du code", sub: "commits, demandes de fusion, documentation, estimation", level: "intermediaire",
+          lessons: [
+            { num: "07", title: "Écrire un bon message de commit", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "Une demande de fusion qu'on a envie de relire", file: "lecon-08.html", status: "complet" },
+            { num: "09", title: "Documenter ce qui compte", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "Estimer sans se mentir", file: "lecon-10.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "Vivre le projet dans la durée", sub: "dette technique, incidents, post-mortem, projet", level: "avance",
+          lessons: [
+            { num: "11", title: "La dette technique : la nommer, la rendre visible, la traiter", file: "lecon-11.html", status: "complet" },
+            { num: "12", title: "Quand ça casse : gérer un incident", file: "lecon-12.html", status: "complet" },
+            { num: "13", title: "L'après-incident sans chercher de coupable", file: "lecon-13.html", status: "complet" },
+            { num: "14", title: "Projet — un cycle d'équipe de bout en bout", file: "lecon-14.html", status: "complet" },
           ],
         },
       ],
@@ -5673,8 +5731,8 @@ window.SITE_DATA = (function () {
       id: "conception",
       title: "Concevoir un logiciel robuste",
       glyph: "◇",
-      tagline: "Structurer, tester et sécuriser un code qui dure.",
-      courses: ["patterns", "archi", "tests", "securite"],
+      tagline: "Structurer, tester, sécuriser un code qui dure — et le porter à plusieurs.",
+      courses: ["patterns", "archi", "tests", "securite", "equipe"],
     },
     {
       id: "outils",
@@ -5752,6 +5810,7 @@ window.SITE_DATA = (function () {
     "data-eng": {"lecon-01.html":30,"lecon-02.html":34,"lecon-03.html":35,"lecon-04.html":36,"lecon-05.html":37,"lecon-06.html":38,"lecon-07.html":36,"lecon-08.html":37,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":37,"lecon-12.html":36,"lecon-13.html":38,"lecon-14.html":44},
     "bdd": {"lecon-01.html":32,"lecon-02.html":34,"lecon-03.html":36,"lecon-04.html":38,"lecon-05.html":34,"lecon-06.html":38,"lecon-07.html":36,"lecon-08.html":38,"lecon-09.html":40,"lecon-10.html":36,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":44,"lecon-14.html":38,"lecon-15.html":46},
     "mobile": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":33,"lecon-04.html":34,"lecon-05.html":35,"lecon-06.html":37,"lecon-07.html":37,"lecon-08.html":35,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":38,"lecon-12.html":35,"lecon-13.html":34,"lecon-14.html":35,"lecon-15.html":45},
+    "equipe": {"lecon-01.html":28,"lecon-02.html":33,"lecon-03.html":34,"lecon-04.html":35,"lecon-05.html":34,"lecon-06.html":34,"lecon-07.html":32,"lecon-08.html":35,"lecon-09.html":35,"lecon-10.html":36,"lecon-11.html":38,"lecon-12.html":38,"lecon-13.html":37,"lecon-14.html":46},
     "docker": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":40,"lecon-04.html":40,"lecon-05.html":40,"lecon-06.html":40,"lecon-07.html":35,"lecon-08.html":40,"lecon-09.html":40,"lecon-10.html":38,"lecon-11.html":40,"lecon-12.html":42,"lecon-13.html":40,"lecon-14.html":38,"lecon-15.html":42},
     "elixir": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":50,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":55,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":48,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
     "erlang": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":52,"lecon-11.html":52,"lecon-12.html":55,"lecon-13.html":50,"lecon-14.html":55},

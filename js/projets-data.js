@@ -2846,6 +2846,62 @@ window.PROJETS = [
       "hors-ligne, chacun de son côté&nbsp;» — montre ce que ton app fait à la reconnexion.</p>",
   },
   {
+    id: "equipe-cartotroc",
+    course: "equipe",
+    courseTitle: "Travailler à plusieurs sur du code",
+    dir: "equipe",
+    accent: "equipe",
+    type: "Projet d'organisation d'équipe",
+    niveau: "Intermédiaire",
+    titre: "Le kit de collaboration d'une équipe qui grandit",
+    contexte:
+      "<p><strong>Cartotroc</strong>, une plateforme de troc d'objets entre voisins, vient de passer de <strong>deux à cinq " +
+      "développeurs</strong>. Tant qu'ils étaient deux, tout marchait à l'instinct&nbsp;: on poussait directement sur la branche " +
+      "principale, personne ne relisait, la documentation tenait dans la tête d'une seule personne, et les rares pannes se " +
+      "réglaient en s'accusant à voix haute. Depuis l'arrivée des trois nouveaux, c'est la friction permanente&nbsp;: des " +
+      "changements qui s'écrasent, du code que personne d'autre n'ose toucher, les <strong>mêmes bugs qui reviennent</strong> " +
+      "faute d'en tirer les leçons, et des recrues qui mettent des semaines à devenir utiles. L'équipe ne veut pas de " +
+      "bureaucratie&nbsp;; elle veut un <strong>cadre léger</strong> qui rende le travail à plusieurs fluide.</p>",
+    objectif:
+      "<p>Ce projet ne consiste pas à coder une fonctionnalité, mais à <strong>outiller la collaboration</strong> de Cartotroc " +
+      "avec les pratiques du cours. Tu dois produire le <strong>cadre</strong> qui manque&nbsp;: comment on propose un " +
+      "changement, comment on le relit, comment on trace le <em>pourquoi</em>, comment on intègre un nouveau venu, et comment " +
+      "on apprend d'un incident sans chercher de coupable. L'objectif est qu'un développeur qui rejoint l'équipe puisse, avec " +
+      "ce seul kit, <strong>contribuer sereinement dès la première semaine</strong> — et que les frictions d'aujourd'hui " +
+      "(écrasements, bugs qui reviennent, code opaque) deviennent l'exception.</p>",
+    livrable:
+      "Un « kit de collaboration » réutilisable&nbsp;: un jeu de documents et de conventions courts (guide de contribution, " +
+      "modèles de demande de fusion et de message de commit, check-list de revue, guide d'intégration, modèle de post-mortem " +
+      "et suivi de la dette), accompagné d'une note brève qui justifie chaque choix au regard des leçons du cours.",
+    fonctionnalites: [
+      "Un <strong>guide de contribution</strong> qui rend le cycle explicite&nbsp;: le chemin d'un changement (branche → demande de fusion → revue → fusion) et la <strong>taille attendue</strong> d'une demande (petite, ciblée, une seule chose).",
+      "Un <strong>modèle de demande de fusion</strong> (quoi, pourquoi, comment tester, ce qu'elle ne fait pas volontairement) et un <strong>modèle de message de commit</strong> qui pousse à écrire l'intention, pas «&nbsp;maj&nbsp;».",
+      "Une <strong>convention de style automatisée</strong>&nbsp;: le principe qu'un formateur tranche la mise en forme une fois pour toutes, et ce qui est délégué à l'outil plutôt que débattu en revue.",
+      "Une <strong>check-list de revue</strong> qui aide à hiérarchiser les retours (bloquant / suggestion / question), rappelle de les formuler en questions et de relire le <strong>code</strong>, pas la personne.",
+      "Un <strong>guide d'intégration</strong> pour un nouveau venu&nbsp;: par où commencer, qui solliciter, à quoi ressemble un bon «&nbsp;premier changement&nbsp;», comment aller chercher le contexte.",
+      "Un <strong>modèle de post-mortem sans blâme</strong> (chronologie factuelle, causes multiples, actions concrètes) et un <strong>suivi de la dette technique</strong> visible, où atterrissent les actions.",
+    ],
+    criteres: [
+      "Le <strong>cycle</strong> d'un changement est explicite&nbsp;: n'importe qui sait comment proposer, faire relire et fusionner, sans avoir à demander à chaque fois.",
+      "Les <strong>modèles</strong> (demande de fusion, commit) poussent à dire le <strong>pourquoi</strong>, pas seulement le quoi&nbsp;: un lecteur dans six mois comprendrait la décision.",
+      "Le <strong>style</strong> est traité comme <strong>automatisé</strong>&nbsp;: rien, dans la check-list de revue, n'invite à débattre d'indentation ou de virgules.",
+      "La <strong>check-list de revue</strong> distingue la <strong>force</strong> des retours (bloquant vs suggestion vs question) et vise le code, jamais la personne.",
+      "Le <strong>modèle de post-mortem</strong> est réellement <strong>sans blâme</strong>&nbsp;: il interroge le système et produit des actions <strong>assignées, datées et vérifiables</strong>.",
+      "Un nouveau venu pourrait, avec ce <strong>kit seul</strong>, réussir sa première contribution sans déranger toute l'équipe&nbsp;: c'est le test ultime de sa clarté.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur la <strong>revue</strong>, l'<strong>automatisation du style</strong>, les <strong>messages " +
+      "de commit</strong> et <strong>demandes de fusion</strong>, la <strong>documentation</strong>, l'<strong>intégration</strong>, " +
+      "la <strong>dette technique</strong> et le <strong>post-mortem</strong>.</p>" +
+      "<p>Commence par dessiner le <strong>cycle</strong> (le chemin d'un changement, du début à la fusion)&nbsp;: tout le reste " +
+      "en découle. Écris ensuite les <strong>modèles</strong> qui rendent ce cycle facile à suivre, et garde tout <strong>court</strong> " +
+      "— un kit qu'on lit d'une traite est un kit qu'on applique, un pavé finit ignoré. Appuie-toi sur " +
+      "<a href=\"../git/cours.html\">Git</a> pour les branches et l'historique, sur <a href=\"../tests/cours.html\">les tests</a> " +
+      "pour la confiance qui rend la revue rapide, et sur <a href=\"../cicd/cours.html\">la CI/CD</a> pour brancher le formatage, " +
+      "les tests et le rollback. Termine par un test grandeur nature&nbsp;: fais relire ton kit par quelqu'un qui ne connaît pas " +
+      "Cartotroc et demande-lui s'il saurait contribuer avec.</p>",
+  },
+  {
     id: "ml-churn",
     course: "ml",
     courseTitle: "Machine Learning",

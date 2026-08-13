@@ -109,6 +109,13 @@
       '<rect x="6.5" y="2.5" width="11" height="19" rx="2.4"/>' +
       '<path d="M10.5 5h3"/><path d="M10 18.5h4"/>'
     ),
+    /* Équipe : deux personnes côte à côte (travail collectif) */
+    equipe: stroke(
+      '<circle cx="9" cy="8" r="3.1"/>' +
+      '<path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/>' +
+      '<path d="M16 5.2a3.1 3.1 0 0 1 0 5.7"/>' +
+      '<path d="M17.4 13.6a5.5 5.5 0 0 1 3.1 5.9"/>'
+    ),
     dart: badge("Da", 8.5),
     /* Lua : croissant de lune (« lua » = lune) */
     lua: stroke('<path d="M19.5 14.2A8.2 8.2 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z"/>'),
@@ -223,7 +230,7 @@
     cobol: "cobol", fortran: "fortran", julia: "julia", zig: "zig", lisp: "lisp", ocaml: "ocaml",
     fsharp: "fsharp", clojure: "clojure", prolog: "prolog", ada: "ada", pascal: "pascal", vb: "vb",
     objc: "objc", erlang: "erlang", groovy: "groovy", solidity: "solidity",
-    ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", bdd: "bdd", mobile: "mobile", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
+    ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", bdd: "bdd", mobile: "mobile", equipe: "equipe", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
     "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os",
   };
 
