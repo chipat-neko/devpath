@@ -234,7 +234,7 @@
     "home.cta.catalog": "Choose a path",
     "home.meta.courses": "<strong>83</strong> complete courses",
     "home.meta.lessons": "<strong>1463</strong> written lessons",
-    "home.meta.langs": "<strong>73</strong> languages &amp; tech",
+    "home.meta.langs": "<strong>75</strong> languages &amp; tech",
   };
 
   function getLang() {

@@ -5718,7 +5718,7 @@ window.SITE_DATA = (function () {
       title: "Développement mobile",
       glyph: "app",
       tagline: "De l'application elle-même aux langages natifs et multiplateformes.",
-      courses: ["mobile", "swift", "objc", "dart"],
+      courses: ["mobile", "swift", "kotlin", "dart", "objc"],
     },
     {
       id: "devops",
@@ -5746,7 +5746,7 @@ window.SITE_DATA = (function () {
       title: "Scripting & automatisation",
       glyph: "sh",
       tagline: "Des langages légers pour automatiser et outiller.",
-      courses: ["bash", "perl", "lua"],
+      courses: ["bash", "powershell", "perl", "lua"],
     },
     {
       id: "concurrence",
