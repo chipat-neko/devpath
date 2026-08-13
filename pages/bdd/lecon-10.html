@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dénormaliser à bon escient — Leçon 10 · Cours Concevoir une base de données — Syntaxe</title>
+    <meta name="description" content="Quand et comment réintroduire volontairement de la redondance pour la performance : le compromis lecture/écriture, la règle « normaliser d'abord, dénormaliser en dernier recours », les formes courantes (agrégat stocké, colonne recopiée), le risque de divergence, et la distinction essentielle entre une copie à synchroniser et un snapshot historique légitime comme prix_paye dans Rideau." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="bdd" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Concevoir une base de données</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · La juste normalisation — Leçon 10</p>
+              <h1 class="lesson-header__title">Dénormaliser à bon escient</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : la normalisation jusqu'à la 3NF (leçons 8-9)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>nommer le <strong>compromis</strong> que la normalisation optimise (l'écriture, la cohérence) et ce qu'elle peut coûter (des jointures à la lecture)&nbsp;;</li>
+                  <li>appliquer la règle d'or&nbsp;: <strong>normaliser d'abord, dénormaliser en dernier recours</strong>, sur un problème <em>mesuré</em>&nbsp;;</li>
+                  <li>reconnaître les <strong>formes courantes</strong> de dénormalisation — agrégat stocké, colonne recopiée — et le devoir de les maintenir&nbsp;;</li>
+                  <li>distinguer une <strong>copie à synchroniser</strong> (dangereuse) d'un <strong>snapshot historique</strong> légitime comme <code>prix_paye</code>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Les deux leçons précédentes t'ont appris à <strong>ranger</strong>&nbsp;: chaque fait à un seul endroit, plus de redondance, plus d'anomalies. Le schéma de Rideau est maintenant en <a href="lecon-09.html">troisième forme normale</a>, propre comme un sou neuf. Cette leçon fait le mouvement inverse — mais pas un retour en arrière. Elle t'apprend à <strong>déranger volontairement</strong>, en connaissance de cause, dans les rares situations où la propreté coûte trop cher à la lecture. C'est ce qu'on appelle la <strong>dénormalisation</strong>&nbsp;: réintroduire de la redondance <em>choisie</em>, pour la performance, en assumant son prix.</p>
+<p>Le mot fait peur, et c'est tant mieux&nbsp;: mal comprise, la dénormalisation n'est qu'un retour aux anomalies de la <a href="lecon-01.html">leçon&nbsp;1</a>. Bien comprise, c'est un outil chirurgical, sorti en dernier, sur un problème qu'on a <em>mesuré</em>. Toute la leçon tient dans cette nuance&nbsp;: une redondance subie est un défaut&nbsp;; une redondance décidée, documentée et maintenue est un compromis d'ingénieur.</p>
+
+<h2>Le compromis fondamental : écrire vite ou lire vite</h2>
+<p>La normalisation n'est pas gratuite. Elle optimise deux choses et en sacrifie une troisième. Ce qu'elle optimise&nbsp;: l'<strong>écriture</strong> et la <strong>cohérence</strong>. Comme chaque fait n'existe qu'à un seul endroit, une modification touche une seule ligne, et rien ne peut se contredire. Ce qu'elle peut coûter&nbsp;: la <strong>lecture</strong>. Pour reconstituer une information éparpillée dans huit tables, il faut huit <code>JOIN</code>, et parfois recompter des choses à chaque affichage.</p>
+<p>Prends un besoin très concret de Rideau&nbsp;: afficher, sur la page d'une représentation, le nombre de <strong>places restantes</strong>. Dans un schéma normalisé, cette information n'est écrite <em>nulle part</em> — elle se <em>déduit</em>&nbsp;: c'est le nombre de places de la salle moins le nombre de billets déjà vendus pour cette représentation. À chaque visite de la page, la base recompte.</p>
+
+<figure class="code-block" data-file="places_restantes_calcul.sql"><pre><code class="language-sql">-- Schéma NORMALISÉ : « places restantes » n'est pas stockée, on la calcule.
+-- Il faut compter les places de la salle, puis retrancher les billets vendus.
+SELECT s.nom,
+       COUNT(p.place_id)                       AS capacite,
+       COUNT(p.place_id) - COUNT(b.billet_id)  AS places_restantes
+FROM   representation r
+JOIN   salle s  ON s.salle_id = r.salle_id
+JOIN   place p  ON p.salle_id = s.salle_id
+LEFT   JOIN billet b
+       ON  b.place_id = p.place_id
+       AND b.representation_id = r.representation_id
+WHERE  r.representation_id = 42
+GROUP  BY s.nom;</code></pre></figure>
+
+<p>Cette requête est <em>juste</em> et <em>toujours à jour</em> — c'est sa grande vertu. Mais si la page de billetterie est consultée mille fois par minute la veille d'un concert de «&nbsp;Nocturne&nbsp;», le moteur recompte mille fois par minute la même valeur qui bouge à peine. À un certain volume, ce recomptage devient le point chaud de l'application. C'est <em>là</em>, et seulement là, que la dénormalisation entre en scène.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Comparaison entre lire une information normalisée et dénormalisée. À gauche, la version normalisée : pour obtenir les places restantes, on lit la table place et la table billet, puis on compte et on soustrait à chaque affichage ; l'écriture d'un billet est simple mais chaque lecture coûte un calcul. À droite, la version dénormalisée : une colonne places_restantes est stockée directement sur la représentation et se lit sans calcul ; la lecture est instantanée mais chaque vente de billet doit désormais décrémenter ce compteur, donc l'écriture est plus lourde et doit être maintenue. Une balance au centre illustre l'échange : on gagne en vitesse de lecture ce qu'on perd en simplicité d'écriture.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Le même besoin — deux compromis opposés</text>
+
+    <rect class="d-box" x="26" y="46" width="250" height="216" rx="10" />
+    <text class="d-tag" x="151" y="70" text-anchor="middle" font-size="11">Normalisé — on calcule</text>
+    <rect class="d-frame" x="52" y="86" width="90" height="30" rx="5" /><text class="d-text" x="97" y="105" text-anchor="middle" font-size="9">place</text>
+    <rect class="d-frame" x="160" y="86" width="90" height="30" rx="5" /><text class="d-text" x="205" y="105" text-anchor="middle" font-size="9">billet</text>
+    <path class="d-line" d="M151 116 L151 138" fill="none" /><path class="d-line" d="M146 130 L151 140 L156 130" fill="none" />
+    <rect class="d-accent" x="66" y="142" width="170" height="30" rx="5" /><text class="d-tag" x="151" y="161" text-anchor="middle" font-size="9">COUNT − COUNT</text>
+    <text class="d-mut" x="151" y="196" text-anchor="middle" font-size="8.5">écrire un billet = 1 INSERT simple</text>
+    <text class="d-mut" x="151" y="212" text-anchor="middle" font-size="8.5">LIRE = un calcul à chaque affichage</text>
+    <text class="d-mut" x="151" y="240" text-anchor="middle" font-size="8.5">toujours juste, jamais à maintenir</text>
+
+    <rect class="d-accent" x="364" y="46" width="250" height="216" rx="10" />
+    <text class="d-tag" x="489" y="70" text-anchor="middle" font-size="11">Dénormalisé — on stocke</text>
+    <rect class="d-frame" x="404" y="94" width="170" height="46" rx="6" /><text class="d-text" x="489" y="114" text-anchor="middle" font-size="9">representation</text><text class="d-tag" x="489" y="130" text-anchor="middle" font-size="8.5">places_restantes = 37</text>
+    <text class="d-mut" x="489" y="170" text-anchor="middle" font-size="8.5">LIRE = une seule colonne, zéro calcul</text>
+    <text class="d-mut" x="489" y="188" text-anchor="middle" font-size="8.5">écrire un billet = INSERT + décrément</text>
+    <text class="d-mut" x="489" y="212" text-anchor="middle" font-size="8.5">rapide à lire — mais À MAINTENIR</text>
+    <text class="d-mut" x="489" y="240" text-anchor="middle" font-size="8.5">peut devenir faux si on l'oublie</text>
+
+    <text class="d-label" x="320" y="150" text-anchor="middle" font-size="10">⇄</text>
+    <text class="d-mut" x="320" y="284" text-anchor="middle" font-size="9">On échange de la simplicité d'écriture contre de la rapidité de lecture.</text>
+  </svg>
+  <figcaption>La dénormalisation ne crée pas de la performance à partir de rien&nbsp;: elle <strong>déplace</strong> le coût. Ce que la lecture ne paie plus, l'écriture le paie — sous la forme d'un compteur à tenir à jour à chaque vente. Le marché n'est intéressant que si tu lis beaucoup plus souvent que tu n'écris.</figcaption>
+</figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Normalisation et dénormalisation ne s'opposent pas</p><p>Elles répondent à des questions différentes. La normalisation demande&nbsp;: <em>«&nbsp;où ce fait doit-il vivre pour ne jamais se contredire&nbsp;?&nbsp;»</em>. La dénormalisation demande&nbsp;: <em>«&nbsp;cette lecture précise est-elle assez fréquente et assez lente pour mériter une copie&nbsp;?&nbsp;»</em>. On répond d'abord à la première pour <strong>tout</strong> le schéma, et à la seconde pour <strong>quelques</strong> points chauds, une fois qu'on les a mesurés.</p></div></div>
+
+<h2>La règle d'or : en dernier recours, et sur mesure</h2>
+<p>Il existe une règle simple, et elle est presque toujours dans cet ordre&nbsp;: <strong>normaliser d'abord, dénormaliser en dernier</strong>. Concrètement, cela veut dire trois choses.</p>
+<ul>
+<li><strong>Par défaut, on normalise.</strong> Un schéma propre est le point de départ, pas un objectif optionnel. Tant qu'aucun problème n'est prouvé, il n'y a rien à dénormaliser.</li>
+<li><strong>On ne dénormalise que sur un problème mesuré</strong>, jamais supposé. «&nbsp;Ça <em>risque</em> d'être lent&nbsp;» n'est pas une raison&nbsp;; «&nbsp;cette requête met 900&nbsp;ms et s'exécute mille fois par minute, je l'ai chronométrée&nbsp;» en est une. Le <a href="lecon-11.html">chapitre suivant</a> montrera d'ailleurs qu'un simple <strong>index</strong> résout souvent le problème <em>sans</em> dénormaliser du tout — c'est le premier réflexe à essayer.</li>
+<li><strong>On assume le coût de maintenance.</strong> Dénormaliser, c'est signer un contrat&nbsp;: «&nbsp;je m'engage à garder cette copie synchronisée à chaque écriture&nbsp;». Ce contrat ne se rompt jamais tout seul&nbsp;; l'oublier une fois suffit à corrompre la donnée.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Un arbre de décision en quatre étapes avant de dénormaliser. Étape une : le schéma est-il normalisé ? Si non, on normalise d'abord. Étape deux : y a-t-il un problème de performance réellement mesuré, chronomètre à l'appui ? Si non, on ne touche à rien. Étape trois : un index ou une réécriture de requête suffit-il ? Si oui, on le fait, c'est moins risqué que dénormaliser. Étape quatre seulement, si les trois réponses précédentes échouent : on dénormalise, et on s'engage à maintenir la copie. La flèche générale descend de haut en bas, la dénormalisation est la toute dernière boîte.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Avant de dénormaliser, franchir trois portes</text>
+
+    <rect class="d-frame" x="150" y="38" width="340" height="34" rx="7" /><text class="d-text" x="320" y="59" text-anchor="middle" font-size="9.5">1 · Le schéma est-il normalisé&nbsp;?  → sinon, normaliser</text>
+    <path class="d-line" d="M320 72 L320 86" fill="none" /><path class="d-line" d="M315 79 L320 88 L325 79" fill="none" />
+    <rect class="d-frame" x="150" y="90" width="340" height="34" rx="7" /><text class="d-text" x="320" y="111" text-anchor="middle" font-size="9.5">2 · Un problème est-il MESURÉ&nbsp;?  → sinon, ne rien faire</text>
+    <path class="d-line" d="M320 124 L320 138" fill="none" /><path class="d-line" d="M315 131 L320 140 L325 131" fill="none" />
+    <rect class="d-frame" x="150" y="142" width="340" height="34" rx="7" /><text class="d-text" x="320" y="163" text-anchor="middle" font-size="9.5">3 · Un index suffirait-il&nbsp;?  → si oui, préférer l'index</text>
+    <path class="d-line" d="M320 176 L320 190" fill="none" /><path class="d-line" d="M315 183 L320 192 L325 183" fill="none" />
+    <rect class="d-accent" x="150" y="194" width="340" height="36" rx="7" /><text class="d-tag" x="320" y="212" text-anchor="middle" font-size="9.5">4 · Alors dénormaliser — et s'engager à maintenir</text>
+    <text class="d-mut" x="320" y="225" text-anchor="middle" font-size="8">dernier recours, jamais premier réflexe</text>
+  </svg>
+  <figcaption>La dénormalisation est la <strong>dernière</strong> porte, pas la première. Trois filtres se dressent avant elle&nbsp;: est-ce normalisé, est-ce mesuré, un index suffirait-il&nbsp;? La plupart des «&nbsp;besoins de dénormaliser&nbsp;» meurent à la deuxième ou à la troisième porte.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Dénormaliser «&nbsp;au cas où&nbsp;».</strong> C'est l'optimisation prématurée classique&nbsp;: on ajoute un compteur, un total recopié, une colonne dupliquée «&nbsp;parce que ça ira plus vite&nbsp;», <em>avant</em> d'avoir la moindre mesure. Résultat&nbsp;: on paie tout de suite le coût de maintenance (et le risque d'incohérence) pour un gain de lecture souvent nul, sur des tables qui tiennent en mémoire. On complique la base pour un problème qui n'existe pas. La discipline&nbsp;: pas de dénormalisation sans chronomètre.</p></div></div>
+
+<h2>Les formes courantes de dénormalisation</h2>
+<p>Dénormaliser n'est pas un geste unique&nbsp;; c'est une famille de techniques. Deux reviennent tout le temps.</p>
+
+<h3>1. L'attribut calculé ou agrégat stocké</h3>
+<p>On stocke le résultat d'un calcul plutôt que de le refaire à chaque lecture. C'est exactement le cas de <code>places_restantes</code> ci-dessus, ou du <strong>total d'une commande</strong>&nbsp;: au lieu de resommer le <code>prix_paye</code> de tous les billets à chaque affichage du panier, on maintient une colonne <code>commande.total</code>. On appelle aussi cela un <strong>attribut dérivé matérialisé</strong>&nbsp;: dérivé, parce qu'il se déduit d'autres données&nbsp;; matérialisé, parce qu'on le fige au lieu de le recalculer.</p>
+
+<figure class="code-block" data-file="agregats_stockes.sql"><pre><code class="language-sql">-- Deux agrégats stockés, ajoutés APRÈS avoir mesuré un problème de lecture.
+ALTER TABLE representation ADD COLUMN places_restantes INTEGER;  -- compteur
+ALTER TABLE commande      ADD COLUMN total            NUMERIC;   -- somme figée
+
+-- La lecture devient triviale : plus aucun COUNT, plus aucune somme.
+SELECT titre, places_restantes FROM representation WHERE representation_id = 42;
+SELECT commande_id, total      FROM commande        WHERE commande_id = 7;</code></pre></figure>
+
+<p>Le prix de ce confort, c'est qu'il faut désormais <strong>maintenir</strong> ces colonnes à chaque écriture. Vendre un billet doit décrémenter <code>places_restantes</code> <em>et</em> augmenter <code>commande.total</code>&nbsp;; annuler un billet doit faire l'inverse. Deux stratégies existent&nbsp;: le faire dans le <strong>code applicatif</strong> (chaque endroit qui insère un billet pense à mettre à jour le compteur), ou le faire dans un <strong>trigger</strong> de la base (la base s'en charge automatiquement à chaque <code>INSERT</code>/<code>DELETE</code> sur <code>billet</code>). Le trigger est plus sûr, car il est impossible à oublier&nbsp;; il vit au plus près de la donnée.</p>
+
+<figure class="code-block" data-file="maintenir_compteur.sql"><pre><code class="language-sql">-- Maintenir le compteur EN CODE : à chaque vente, dans la même transaction.
+INSERT INTO billet (commande_id, representation_id, place_id, prix_paye)
+VALUES (7, 42, 512, 32.00);
+
+UPDATE representation
+SET    places_restantes = places_restantes - 1
+WHERE  representation_id = 42;
+-- Danger : si un chemin d'écriture oublie ce second UPDATE, le compteur ment.
+
+-- Maintenir le compteur PAR TRIGGER : la base le fait, impossible à oublier.
+CREATE TRIGGER maj_places_apres_vente
+AFTER INSERT ON billet
+FOR EACH ROW
+BEGIN
+    UPDATE representation
+    SET    places_restantes = places_restantes - 1
+    WHERE  representation_id = NEW.representation_id;
+END;</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Un agrégat stocké se maintient <strong>dans la même transaction</strong> que l'écriture qui le rend faux. Insérer le billet et décrémenter le compteur doivent réussir ou échouer <em>ensemble</em> — sinon un incident au milieu laisse le compteur désynchronisé pour toujours. Les <a href="lecon-13.html">transactions</a> (leçon&nbsp;13) sont ce qui rend cette solidarité possible&nbsp;; sans elles, la dénormalisation est bien plus fragile.</p></div></div>
+
+<h3>2. La colonne recopiée pour éviter une jointure</h3>
+<p>Deuxième forme&nbsp;: recopier une colonne d'une table dans une autre pour s'épargner une jointure très fréquente. Imagine qu'un tableau de bord affiche sans cesse la liste des billets avec, à côté de chacun, le <em>titre du spectacle</em>. Ce titre vit dans <code>spectacle</code>, à deux jointures de <code>billet</code> (via <code>representation</code>). La tentation&nbsp;: ajouter une colonne <code>billet.spectacle_titre</code> qui recopie le titre, pour lire le billet sans joindre.</p>
+<p>Cette technique <strong>fonctionne</strong>, mais c'est la plus dangereuse&nbsp;: elle recrée exactement la redondance que la <a href="lecon-08.html">leçon&nbsp;8</a> a combattue. Le titre du spectacle vit maintenant en deux endroits — dans <code>spectacle.titre</code> et recopié sur <em>chaque</em> billet — et ces deux endroits <strong>doivent rester d'accord</strong>. Le jour où l'on corrige une faute de frappe dans le titre côté <code>spectacle</code>, il faut propager la correction sur tous les billets, sous peine de <strong>divergence</strong>.</p>
+
+<figure class="code-block" data-file="colonne_recopiee.sql"><pre><code class="language-sql">-- Colonne recopiée : billet porte une copie du titre, pour éviter 2 JOIN.
+ALTER TABLE billet ADD COLUMN spectacle_titre TEXT;  -- redondance ASSUMÉE
+
+-- Lecture rapide : plus besoin de joindre representation ni spectacle.
+SELECT billet_id, spectacle_titre, prix_paye FROM billet WHERE commande_id = 7;
+
+-- MAIS : corriger le titre à la source oblige à propager PARTOUT, sinon divergence.
+UPDATE spectacle SET titre = 'Cyrano de Bergerac' WHERE spectacle_id = 3;
+UPDATE billet    SET spectacle_titre = 'Cyrano de Bergerac'   -- à NE PAS oublier
+WHERE  representation_id IN (SELECT representation_id FROM representation
+                            WHERE spectacle_id = 3);</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Recopier une colonne… puis oublier qu'on l'a fait.</strong> La colonne recopiée est piégeuse parce qu'elle marche parfaitement <em>au début</em>&nbsp;: les valeurs coïncident, tout va bien. Le défaut n'apparaît qu'à la première mise à jour de la source oubliée, des mois plus tard, quand deux titres divergent en silence. Si tu recopies une colonne, écris <em>immédiatement</em> le mécanisme qui la resynchronise (trigger ou code), et documente-le. Une copie sans gardien est une bombe à retardement.</p></div></div>
+
+<h2>Le grand malentendu : snapshot n'est pas dénormalisation</h2>
+<p>Voici le cœur de la leçon, et le point que la plupart des débutants confondent. Regarde à nouveau la table <code>billet</code> de Rideau&nbsp;: elle contient une colonne <code>prix_paye</code>. On pourrait croire que c'est une colonne recopiée dangereuse — une copie de <code>tarif.prix</code> qu'il faudrait garder synchronisée. <strong>C'est faux, et c'est important.</strong></p>
+<p><code>prix_paye</code> n'est <em>pas</em> une copie de <code>tarif.prix</code>. C'est le prix <strong>au moment de l'achat</strong> — une valeur figée, un <strong>snapshot</strong> historique. Ce n'est pas la même donnée que le tarif courant&nbsp;: c'est un <strong>fait métier distinct</strong>. Et la différence est tout sauf théorique.</p>
+<p>Suppose que Chloé Meyer achète un billet pour «&nbsp;Nocturne&nbsp;» à 32&nbsp;€. Trois semaines plus tard, la salle relève le tarif de la zone Orchestre à 38&nbsp;€ pour les dernières places. Que doit valoir le prix du billet <em>déjà acheté</em> par Chloé&nbsp;? <strong>32&nbsp;€</strong>, évidemment&nbsp;: elle a payé 32&nbsp;€, sa facture dit 32&nbsp;€, la comptabilité de la salle enregistre 32&nbsp;€. Si <code>prix_paye</code> «&nbsp;suivait&nbsp;» le tarif courant, son billet passerait magiquement à 38&nbsp;€ et toute la comptabilité serait fausse. Ici, la valeur figée <strong>doit</strong> diverger du tarif courant&nbsp;: c'est précisément son rôle.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Deux frises temporelles superposées montrant un tarif qui augmente et un prix payé qui reste figé. En haut, la ligne tarif point prix de la zone Orchestre : au jour de l'achat elle vaut 32 euros, puis trois semaines plus tard la salle la relève à 38 euros ; la valeur courante monte. En bas, la ligne prix payé du billet de Chloé, figé au moment de l'achat : elle vaut 32 euros au départ et reste à 32 euros pour toujours, y compris après la hausse. Un trait vertical marque l'instant de l'achat où les deux valeurs coïncidaient à 32 euros ; après cet instant, elles s'écartent volontairement. Le message : ce ne sont pas deux copies de la même donnée qui auraient dérivé par erreur, mais deux faits différents, le tarif actuel et le prix historiquement payé, qui doivent différer.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux valeurs qui DOIVENT différer — et c'est normal</text>
+
+    <line class="d-line" x1="270" y1="60" x2="270" y2="250" stroke-dasharray="3 4" />
+    <text class="d-mut" x="270" y="272" text-anchor="middle" font-size="8.5">instant de l'achat</text>
+    <text class="d-mut" x="270" y="286" text-anchor="middle" font-size="8.5">(les deux valent 32&nbsp;€)</text>
+
+    <text class="d-tag" x="60" y="86" font-size="9.5">tarif.prix</text>
+    <text class="d-mut" x="60" y="100" font-size="8">(zone Orchestre, courant)</text>
+    <line class="d-line" x1="150" y1="120" x2="270" y2="120" fill="none" /><circle cx="270" cy="120" r="4" class="d-accent" />
+    <text class="d-text" x="205" y="112" text-anchor="middle" font-size="8.5">32&nbsp;€</text>
+    <line class="d-line" x1="270" y1="120" x2="360" y2="120" fill="none" />
+    <line class="d-line" x1="360" y1="120" x2="360" y2="84" fill="none" stroke-dasharray="2 3" />
+    <line class="d-line" x1="360" y1="84" x2="590" y2="84" fill="none" stroke="var(--warn)" /><circle cx="360" cy="84" r="4" fill="var(--warn)" />
+    <text class="d-text" x="470" y="76" text-anchor="middle" font-size="8.5" fill="var(--warn)">38&nbsp;€ — hausse du tarif</text>
+
+    <text class="d-tag" x="60" y="196" font-size="9.5">billet.prix_paye</text>
+    <text class="d-mut" x="60" y="210" font-size="8">(figé à l'achat)</text>
+    <line class="d-line" x1="150" y1="180" x2="270" y2="180" fill="none" stroke="var(--ok)" /><circle cx="270" cy="180" r="4" fill="var(--ok)" />
+    <text class="d-text" x="205" y="172" text-anchor="middle" font-size="8.5" fill="var(--ok)">32&nbsp;€</text>
+    <line class="d-line" x1="270" y1="180" x2="590" y2="180" fill="none" stroke="var(--ok)" /><circle cx="590" cy="180" r="4" fill="var(--ok)" />
+    <text class="d-text" x="470" y="172" text-anchor="middle" font-size="8.5" fill="var(--ok)">32&nbsp;€ — inchangé, à jamais</text>
+
+    <text class="d-mut" x="320" y="240" text-anchor="middle" font-size="9">Ce ne sont pas deux copies qui ont dérivé&nbsp;: ce sont deux faits distincts.</text>
+  </svg>
+  <figcaption>Un <strong>snapshot</strong> capture une valeur à un instant et la fige. Après la hausse, le tarif courant vaut 38&nbsp;€ mais le prix payé reste 32&nbsp;€&nbsp;: l'écart n'est pas un bug, c'est le sens même de la colonne. On ne <em>synchronise jamais</em> un snapshot — le synchroniser détruirait l'information qu'il est censé garder.</figcaption>
+</figure>
+
+<p>La distinction se résume en une phrase&nbsp;: <strong>copier une donnée qui doit rester synchronisée</strong> (comme <code>billet.spectacle_titre</code>) est dangereux et exige un gardien&nbsp;; <strong>figer une valeur historique qui ne doit pas bouger</strong> (comme <code>billet.prix_paye</code>) est légitime, nécessaire, et n'a <em>aucun</em> gardien à écrire — au contraire, la re-synchroniser serait une faute. Les deux se ressemblent — une valeur «&nbsp;en double&nbsp;» — mais leur intention est opposée.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Deux colonnes opposent une copie à synchroniser et une valeur figée. À gauche, la copie à synchroniser, illustrée par billet point spectacle_titre : elle doit suivre la source spectacle point titre en permanence ; si la source change, la copie doit changer aussi, sinon les deux divergent ; verdict, redondance dangereuse qui exige un gardien, trigger ou code. À droite, la valeur figée, illustrée par billet point prix_paye : elle capture le tarif au moment de l'achat et ne doit plus jamais bouger ; si le tarif change ensuite, la valeur figée reste délibérément différente ; verdict, fait métier légitime, aucun gardien, la synchroniser serait une erreur. La question qui les départage, écrite au centre : cette valeur doit-elle rester égale à sa source, ou représente-t-elle un instant passé ?">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La question qui départage&nbsp;: doit-elle suivre la source, ou fige-t-elle un instant&nbsp;?</text>
+
+    <rect class="d-box" x="26" y="46" width="270" height="176" rx="10" />
+    <text class="d-tag" x="161" y="70" text-anchor="middle" font-size="10.5" fill="var(--danger)">Copie à synchroniser</text>
+    <text class="d-text" x="161" y="90" text-anchor="middle" font-size="9">billet.spectacle_titre</text>
+    <text class="d-mut" x="161" y="116" text-anchor="middle" font-size="8.5">doit suivre spectacle.titre</text>
+    <text class="d-mut" x="161" y="132" text-anchor="middle" font-size="8.5">la source change → la copie AUSSI</text>
+    <text class="d-mut" x="161" y="148" text-anchor="middle" font-size="8.5">sinon&nbsp;: divergence, incohérence</text>
+    <rect class="d-frame" x="56" y="166" width="210" height="40" rx="6" stroke="var(--danger)" /><text class="d-text" x="161" y="184" text-anchor="middle" font-size="8.5" fill="var(--danger)">dangereux — exige un gardien</text><text class="d-mut" x="161" y="198" text-anchor="middle" font-size="8">(trigger ou code, à ne jamais oublier)</text>
+
+    <rect class="d-box" x="344" y="46" width="270" height="176" rx="10" />
+    <text class="d-tag" x="479" y="70" text-anchor="middle" font-size="10.5" fill="var(--ok)">Valeur figée (snapshot)</text>
+    <text class="d-text" x="479" y="90" text-anchor="middle" font-size="9">billet.prix_paye</text>
+    <text class="d-mut" x="479" y="116" text-anchor="middle" font-size="8.5">capture le tarif à l'achat</text>
+    <text class="d-mut" x="479" y="132" text-anchor="middle" font-size="8.5">le tarif change → elle NE bouge PAS</text>
+    <text class="d-mut" x="479" y="148" text-anchor="middle" font-size="8.5">l'écart est voulu, c'est un fait</text>
+    <rect class="d-frame" x="374" y="166" width="210" height="40" rx="6" stroke="var(--ok)" /><text class="d-text" x="479" y="184" text-anchor="middle" font-size="8.5" fill="var(--ok)">légitime — aucun gardien</text><text class="d-mut" x="479" y="198" text-anchor="middle" font-size="8">(la synchroniser serait une faute)</text>
+  </svg>
+  <figcaption>Même apparence — une valeur qui semble «&nbsp;dupliquée&nbsp;» — mais deux intentions opposées. Le test décisif&nbsp;: <em>si la source change plus tard, cette valeur devrait-elle changer aussi&nbsp;?</em> Oui&nbsp;→ copie à synchroniser (à éviter, ou à garder sous surveillance). Non&nbsp;→ snapshot légitime, on le fige exprès.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le snapshot est partout dès qu'il y a de l'argent ou du droit&nbsp;: le prix sur une facture, l'adresse de livraison au jour de l'envoi, le taux de TVA appliqué à une vente, les conditions générales acceptées à l'inscription. Toutes ces valeurs <em>ressemblent</em> à des copies, mais aucune ne doit être mise à jour quand la «&nbsp;source&nbsp;» évolue&nbsp;: on veut justement conserver <strong>ce qui était vrai à ce moment-là</strong>. Un snapshot n'est pas de la redondance&nbsp;: c'est de la <strong>mémoire</strong>.</p></div></div>
+
+<h2>Le risque à assumer : la divergence</h2>
+<p>Qu'est-ce qui peut mal tourner avec une <em>vraie</em> dénormalisation (un compteur, un total, une colonne recopiée)&nbsp;? Un seul mot, mais il fait très mal&nbsp;: la <strong>divergence</strong>. La donnée dupliquée cesse de correspondre à la réalité qu'elle est censée résumer. Le compteur <code>places_restantes</code> affiche 12 alors que 15 places sont réellement libres&nbsp;; le <code>total</code> de la commande indique 96&nbsp;€ alors que la somme des billets fait 128&nbsp;€. La base se contredit — exactement l'anomalie de mise à jour de la <a href="lecon-01.html">leçon&nbsp;1</a>, sauf qu'ici on l'a <em>invitée</em> en connaissance de cause.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Illustration d'une divergence d'un compteur dénormalisé. En haut, la vérité : la table billet contient 15 lignes de billets vendus pour la représentation numéro 42, donc 15 places occupées. En dessous, deux scénarios. Scénario du haut, tout va bien : à chaque vente le compteur places_restantes a été décrémenté, si bien qu'il vaut exactement ce qu'il devrait, le compteur et le décompte réel coïncident, coche verte. Scénario du bas, la divergence : lors d'une annulation de billet, on a bien supprimé la ligne de billet mais on a oublié de ré-incrémenter le compteur ; du coup le compteur affiche 12 places restantes alors qu'il devrait en afficher 15 ; le compteur ment, croix rouge. Message : une seule écriture qui oublie de maintenir la copie suffit à rendre le compteur faux, et rien ne lève d'erreur.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un compteur oublié une seule fois — et il ment</text>
+
+    <rect class="d-frame" x="220" y="38" width="200" height="34" rx="6" /><text class="d-text" x="320" y="56" text-anchor="middle" font-size="9">VÉRITÉ&nbsp;: 15 billets en base</text><text class="d-mut" x="320" y="68" text-anchor="middle" font-size="8">(COUNT sur billet pour la repr. 42)</text>
+
+    <rect class="d-box" x="26" y="96" width="290" height="140" rx="10" />
+    <text class="d-tag" x="171" y="120" text-anchor="middle" font-size="10" fill="var(--ok)">Compteur maintenu — OK</text>
+    <text class="d-mut" x="171" y="142" text-anchor="middle" font-size="8.5">chaque vente a décrémenté le compteur</text>
+    <rect class="d-accent" x="66" y="156" width="210" height="34" rx="6" /><text class="d-tag" x="171" y="177" text-anchor="middle" font-size="9.5">places_restantes cohérent</text>
+    <text class="d-text" x="171" y="212" text-anchor="middle" font-size="12" fill="var(--ok)">✓</text>
+    <text class="d-mut" x="171" y="226" text-anchor="middle" font-size="8">compteur = décompte réel</text>
+
+    <rect class="d-box" x="344" y="96" width="290" height="140" rx="10" />
+    <text class="d-tag" x="489" y="120" text-anchor="middle" font-size="10" fill="var(--danger)">Une annulation non maintenue</text>
+    <text class="d-mut" x="489" y="142" text-anchor="middle" font-size="8.5">billet supprimé, compteur PAS ré-incrémenté</text>
+    <rect class="d-frame" x="384" y="156" width="210" height="34" rx="6" stroke="var(--danger)" /><text class="d-tag" x="489" y="177" text-anchor="middle" font-size="9.5" fill="var(--danger)">affiche 12 ≠ 15 réel</text>
+    <text class="d-text" x="489" y="212" text-anchor="middle" font-size="12" fill="var(--danger)">✗</text>
+    <text class="d-mut" x="489" y="226" text-anchor="middle" font-size="8">le compteur ment — aucune erreur levée</text>
+  </svg>
+  <figcaption>La divergence est silencieuse&nbsp;: aucune requête n'échoue, la colonne contient bien un nombre — juste le mauvais. C'est ce qui la rend redoutable. Le seul rempart&nbsp;: un mécanisme de maintenance <strong>sans faille</strong> (idéalement un trigger), et un moyen de <strong>recalculer</strong> la vérité pour vérifier de temps en temps.</figcaption>
+</figure>
+
+<p>Comment vit-on avec ce risque&nbsp;? En se donnant, dès le départ, un moyen de <strong>reconstruire</strong> la valeur dénormalisée à partir des données de référence — puisque, par définition, elle s'en déduit. On peut alors, périodiquement, comparer le compteur à la vérité recalculée et le corriger. C'est le filet de sécurité indispensable de toute dénormalisation&nbsp;: la copie peut mentir, mais la source, elle, ne ment jamais.</p>
+
+<figure class="code-block" data-file="reconcilier.sql"><pre><code class="language-sql">-- Filet de sécurité : recalculer la vérité et resynchroniser le compteur.
+-- À lancer périodiquement (ou après un incident) pour effacer toute divergence.
+UPDATE representation AS r
+SET    places_restantes = (
+         SELECT COUNT(p.place_id) - COUNT(b.billet_id)
+         FROM   place p
+         LEFT   JOIN billet b
+                ON  b.place_id = p.place_id
+                AND b.representation_id = r.representation_id
+         WHERE  p.salle_id = r.salle_id
+       );
+-- La copie a pu diverger ; la source (place + billet) reste la référence.</code></pre></figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Règle de survie de toute donnée dénormalisée</p><p>Ne dénormalise jamais une valeur que tu ne saurais pas <strong>recalculer</strong> depuis la source. Si tu peux la reconstruire, une divergence n'est qu'un désagrément temporaire&nbsp;: tu recalcules, tu corriges, la vérité revient. Si tu <em>ne peux pas</em> la reconstruire, alors ce n'était pas une donnée dérivée mais une donnée <strong>originale</strong> — et une donnée originale n'a rien à faire en double.</p></div></div>
+
+<h2>Où la dénormalisation est chez elle</h2>
+<p>Il existe des mondes entiers où la dénormalisation n'est pas l'exception mais la règle, parce que le rapport lecture/écriture y est extrême. Chaque fois qu'on lit énormément et qu'on écrit peu (ou qu'on peut tolérer un léger retard), elle devient naturelle&nbsp;:</p>
+<ul>
+<li>l'<strong>analytique</strong> et les entrepôts de données (data warehouse)&nbsp;: on y range les faits dans de grandes tables volontairement plates pour que les requêtes d'analyse évitent des dizaines de jointures&nbsp;;</li>
+<li>les <strong>agrégats de tableau de bord</strong>&nbsp;: le chiffre d'affaires du mois, le nombre de billets vendus par spectacle, précalculés une fois par nuit plutôt que recomptés à chaque ouverture du tableau de bord&nbsp;;</li>
+<li>les <strong>caches</strong> de lecture&nbsp;: une copie dénormalisée et prête à l'emploi d'une donnée coûteuse à assembler, qu'on rafraîchit selon une politique choisie.</li>
+</ul>
+<p>Ces usages relèvent d'un métier voisin, l'ingénierie de données, qui construit justement des pipelines pour alimenter et rafraîchir ces copies dénormalisées&nbsp;; le <a href="../data-eng/cours.html">cours d'ingénierie de données</a> y consacre ses tables de faits et ses agrégats. Retiens simplement le principe&nbsp;: <strong>dans un système de lecture massive, la dénormalisation cesse d'être un pis-aller et devient une architecture assumée</strong> — toujours avec, quelque part, la source normalisée qui reste la référence.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Beaucoup de moteurs offrent une <strong>vue matérialisée</strong>&nbsp;: une requête dont le résultat est stocké physiquement et rafraîchi à la demande. C'est une dénormalisation «&nbsp;officielle&nbsp;», gérée par la base elle-même — tu déclares le calcul une fois, le moteur s'occupe de matérialiser et de rafraîchir. Le principe reste identique à ce que tu viens d'apprendre&nbsp;: une copie dérivée, rapide à lire, qu'il faut savoir rafraîchir. La <a href="lecon-12.html">leçon&nbsp;12</a> (plan d'exécution) t'aidera à décider quand ce coût de lecture justifie une telle copie.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre le snapshot légitime et la copie à synchroniser.</strong> C'est l'erreur symétrique du «&nbsp;au cas où&nbsp;». Certains, par zèle de normalisation, veulent <em>supprimer</em> <code>prix_paye</code> «&nbsp;parce que c'est de la redondance&nbsp;» et rejoindre <code>tarif</code> pour retrouver le prix. C'est un contresens grave&nbsp;: le tarif a pu changer, la jointure rendrait un <em>autre</em> prix que celui payé, et la comptabilité deviendrait fausse. Un snapshot n'est pas une redondance à éliminer&nbsp;: c'est une information qui n'existe nulle part ailleurs.</p></div></div>
+<ul>
+<li><strong>Dénormaliser sans mesurer</strong> — ajouter des compteurs et des colonnes recopiées par anticipation, avant qu'un chronomètre n'ait prouvé le besoin. On paie le coût, rarement le bénéfice.</li>
+<li><strong>Oublier de maintenir la copie</strong> — recopier une colonne ou créer un agrégat, puis négliger le mécanisme qui les garde justes. La divergence s'installe en silence.</li>
+<li><strong>Maintenir hors transaction</strong> — décrémenter un compteur dans une transaction séparée de l'écriture qui le rend faux&nbsp;: un incident au milieu, et la copie reste désynchronisée pour toujours.</li>
+<li><strong>Dénormaliser au lieu d'indexer</strong> — sauter par-dessus la solution la plus simple. Bien souvent, un index (leçon&nbsp;11) rend la requête assez rapide sans introduire la moindre redondance.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une plateforme de billetterie affichait sur chaque page de spectacle un compteur «&nbsp;plus que N places&nbsp;!&nbsp;», maintenu par le code applicatif à chaque vente. Tout allait bien jusqu'au jour où une nouvelle fonctionnalité — l'annulation en un clic — fut ajoutée par une autre équipe, qui supprima bien le billet mais <strong>oublia de ré-incrémenter le compteur</strong>. Pendant des semaines, des représentations affichèrent «&nbsp;complet&nbsp;» alors que des dizaines de places étaient libres&nbsp;: des ventes perdues, invisibles, sans la moindre erreur dans les journaux. Deux leçons en sont sorties&nbsp;: on migra la maintenance du compteur <em>dans un trigger</em> de la base (impossible à contourner par un nouveau chemin d'écriture), et on ajouta un job nocturne de <strong>réconciliation</strong> comparant le compteur au décompte réel. La copie pouvait encore mentir&nbsp;; mais plus pour longtemps, et jamais dans le dos de personne.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Dénormaliser à bon escient — l'essentiel</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Compromis de fond</td><td>Normaliser optimise l'écriture et la cohérence&nbsp;; dénormaliser achète de la lecture rapide en échange d'un coût de maintenance</td></tr>
+      <tr><td>Règle d'or</td><td>Normaliser d'abord&nbsp;; dénormaliser en dernier recours, sur un problème <em>mesuré</em>, et assumer la maintenance</td></tr>
+      <tr><td>Agrégat stocké</td><td>Colonne qui fige un calcul (<code>places_restantes</code>, <code>commande.total</code>)&nbsp;; à maintenir à chaque écriture</td></tr>
+      <tr><td>Colonne recopiée</td><td>Copie d'une colonne pour éviter une jointure&nbsp;; recrée de la redondance à surveiller (risque de divergence)</td></tr>
+      <tr><td>Snapshot / valeur figée</td><td><code>prix_paye</code>&nbsp;: capture un instant, ne suit PAS la source, ne se synchronise jamais — un fait, pas une copie</td></tr>
+      <tr><td>Copie vs snapshot</td><td>Test&nbsp;: si la source change, la valeur devrait-elle changer&nbsp;? Oui = copie (danger)&nbsp;; non = snapshot (légitime)</td></tr>
+      <tr><td>Divergence</td><td>La copie ne correspond plus à la réalité&nbsp;; silencieuse (aucune erreur). Rempart&nbsp;: trigger + réconciliation</td></tr>
+      <tr><td>Maintien</td><td>Idéalement par trigger (impossible à oublier), dans la même transaction que l'écriture concernée</td></tr>
+      <tr><td>Terrains naturels</td><td>Analytique, data warehouse, agrégats de tableau de bord, caches&nbsp;: lecture massive, copie assumée</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Dénormalisation</dt><dd>Réintroduction volontaire de redondance dans un schéma normalisé, pour accélérer la lecture&nbsp;; s'accompagne toujours d'un devoir de maintenance de la donnée dupliquée.</dd>
+  <dt>Redondance contrôlée</dt><dd>Duplication décidée, documentée et surveillée d'une donnée — par opposition à la redondance subie d'un schéma mal conçu. C'est un compromis, pas un défaut.</dd>
+  <dt>Attribut dérivé (calculé)</dt><dd>Valeur qui se déduit d'autres données (un total, un compteur). Non stockée, on la recalcule&nbsp;; stockée («&nbsp;matérialisée&nbsp;»), on la fige et on doit la maintenir.</dd>
+  <dt>Agrégat stocké</dt><dd>Résultat d'un calcul d'agrégation (COUNT, SUM) enregistré dans une colonne au lieu d'être recalculé à chaque lecture&nbsp;; forme la plus courante de dénormalisation.</dd>
+  <dt>Snapshot (valeur figée)</dt><dd>Copie d'une valeur prise à un instant précis et volontairement gelée&nbsp;; elle ne suit pas les évolutions ultérieures de sa source, car elle représente ce qui était vrai à ce moment. Ce n'est pas de la redondance mais de la mémoire.</dd>
+  <dt>Compromis lecture-écriture</dt><dd>Arbitrage central&nbsp;: la normalisation favorise l'écriture et la cohérence, la dénormalisation favorise la lecture. On choisit selon la fréquence relative des deux.</dd>
+  <dt>Cohérence</dt><dd>Propriété d'une base dont les données ne se contredisent pas. La normalisation la garantit «&nbsp;par construction&nbsp;»&nbsp;; la dénormalisation oblige à la défendre activement.</dd>
+  <dt>Divergence</dt><dd>État où une donnée dupliquée ne correspond plus à la réalité qu'elle résume (un compteur faux, un total incohérent). Elle est silencieuse&nbsp;: aucune erreur n'est levée.</dd>
+  <dt>Réconciliation</dt><dd>Recalcul périodique d'une valeur dénormalisée à partir de sa source de référence, afin de détecter et corriger une éventuelle divergence.</dd>
+  <dt>Cache</dt><dd>Copie prête à l'emploi d'une donnée coûteuse à assembler, conservée pour être lue vite&nbsp;; à rafraîchir selon une politique choisie. Une forme de dénormalisation orientée lecture.</dd>
+  <dt>Vue matérialisée</dt><dd>Requête dont le résultat est stocké physiquement par le moteur et rafraîchi à la demande&nbsp;: une dénormalisation gérée par la base elle-même.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>La normalisation optimise l'<strong>écriture</strong> et la <strong>cohérence</strong> mais peut coûter en <strong>lecture</strong>&nbsp;; la dénormalisation échange ce coût de lecture contre un coût de maintenance. Elle <strong>déplace</strong> le prix, elle ne le supprime pas.</li>
+<li>Règle d'or&nbsp;: <strong>normaliser d'abord, dénormaliser en dernier recours</strong>, uniquement sur un problème <em>mesuré</em>, et souvent après avoir constaté qu'un simple <strong>index</strong> ne suffit pas.</li>
+<li>Formes courantes&nbsp;: l'<strong>agrégat stocké</strong> (<code>places_restantes</code>, <code>commande.total</code>) et la <strong>colonne recopiée</strong> — toutes deux à <strong>maintenir</strong>, idéalement par trigger et dans la même transaction que l'écriture.</li>
+<li>Le <strong>snapshot</strong> (<code>prix_paye</code>) n'est <em>pas</em> de la dénormalisation abusive&nbsp;: c'est un fait métier figé qui doit diverger de la source. Test décisif&nbsp;: si la source change, la valeur devrait-elle changer&nbsp;? Non&nbsp;→ snapshot légitime.</li>
+<li>Le risque de toute vraie dénormalisation est la <strong>divergence</strong>, silencieuse&nbsp;; on l'assume avec un <strong>mécanisme de maintenance sans faille</strong> et une <strong>réconciliation</strong> possible depuis la source, qui reste la référence.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>En une phrase, qu'est-ce que la dénormalisation <em>déplace</em> plutôt qu'elle ne supprime, et dans quel sens&nbsp;?</li>
+<li>Le tarif d'une zone passe de 32&nbsp;€ à 38&nbsp;€ après l'achat d'un billet. Que doit valoir <code>billet.prix_paye</code>, et pourquoi ce n'est pas une divergence à corriger&nbsp;?</li>
+<li>Cite les deux gardes-fous qui rendent un compteur dénormalisé (comme <code>places_restantes</code>) vivable dans la durée.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quel compromis la dénormalisation accepte-t-elle ?","a":["Elle achète de la lecture plus rapide en échange d'un coût de maintenance (garder la donnée dupliquée à jour) ; elle déplace le coût, elle ne le supprime pas","Elle rend à la fois la lecture et l'écriture plus rapides, sans contrepartie","Elle réduit la taille de la base sans aucun risque","Elle supprime le besoin d'écrire des requêtes"],"correct":0,"explain":"La normalisation optimise l'écriture et la cohérence mais peut coûter en lecture ; la dénormalisation inverse le curseur. Le gain de lecture se paie en maintenance et en risque de divergence : le coût est déplacé, jamais annulé."},
+  {"q":"Quelle est la règle d'or de la dénormalisation ?","a":["Normaliser d'abord, dénormaliser en dernier recours, seulement sur un problème de performance mesuré, et en assumant la maintenance","Dénormaliser dès le début pour éviter les jointures futures","Toujours dénormaliser les tables de plus de mille lignes","Ne jamais dénormaliser, quelle que soit la situation"],"correct":0,"explain":"On part toujours d'un schéma normalisé et l'on ne dénormalise qu'en dernier recours, sur un problème prouvé au chronomètre — souvent après avoir vérifié qu'un simple index ne suffit pas. Dénormaliser « au cas où » est une optimisation prématurée."},
+  {"q":"Pourquoi billet.prix_paye n'est-il PAS une dénormalisation abusive (une simple copie de tarif.prix) ?","a":["Parce qu'il fige le prix au moment de l'achat : c'est un fait métier distinct qui ne doit pas changer si le tarif évolue ensuite ; le synchroniser serait une faute","Parce qu'il est calculé automatiquement par la base à chaque lecture","Parce que c'est exactement la même valeur que tarif.prix à tout instant","Parce qu'il n'est jamais lu par l'application"],"correct":0,"explain":"prix_paye est un snapshot : il capture ce qui était vrai à l'achat. Si le tarif passe de 32 à 38 €, le prix payé doit rester 32 € — sinon la comptabilité serait fausse. L'écart avec le tarif courant n'est pas une divergence, c'est le sens même de la colonne."},
+  {"q":"Quel est le principal risque d'un agrégat stocké comme places_restantes, et comment le rend-on vivable ?","a":["La divergence (le compteur cesse de correspondre à la réalité, sans lever d'erreur) ; on la maîtrise en le maintenant par trigger dans la même transaction et en pouvant le recalculer depuis la source","La lenteur de lecture, qu'on corrige en ajoutant des jointures","Le manque de place disque, qu'on corrige en supprimant la colonne","Aucun risque : un agrégat stocké est toujours exact"],"correct":0,"explain":"Une copie peut diverger silencieusement si une écriture oublie de la maintenir. Les deux gardes-fous : un mécanisme sans faille (trigger, dans la même transaction que l'écriture) et la capacité de reconstruire la valeur depuis la source pour réconcilier."},
+  {"q":"Face à une requête de lecture jugée trop lente sur un schéma normalisé, quel est le premier réflexe, avant de dénormaliser ?","a":["Mesurer le problème puis essayer un index (ou réécrire la requête) : cela suffit souvent à accélérer la lecture sans introduire la moindre redondance","Recopier immédiatement les colonnes concernées dans la table lue","Ajouter un compteur maintenu par le code applicatif","Supprimer les clés étrangères pour éviter les vérifications"],"correct":0,"explain":"La dénormalisation est le dernier recours. On mesure d'abord, puis on tente un index ou une réécriture — moins risqués, sans redondance. Beaucoup de « besoins de dénormaliser » disparaissent dès qu'un index bien placé accélère la requête."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["denormalisation","la denormalisation","denormaliser"],"placeholder":"réintroduire volontairement de la redondance pour accélérer la lecture, c'est de la d______________","hints":["C'est le mouvement inverse de la normalisation.","On le fait en dernier recours, sur un problème mesuré.","Le mot commence par « dé » et finit par « ...isation »."],"link":{"href":"lecon-10.html","label":"Revoir « Le compromis fondamental »"}},
+  {"type":"text","accept":["snapshot","un snapshot","valeur figee","une valeur figee","instantane"],"placeholder":"prix_paye garde le prix au moment de l'achat : c'est un s________ historique, pas une copie à synchroniser","hints":["Terme anglais pour « instantané », une valeur figée à un moment.","Elle ne doit PAS changer si le tarif évolue ensuite.","On peut aussi dire « valeur figée »."],"link":{"href":"lecon-10.html","label":"Revoir « snapshot n'est pas dénormalisation »"}},
+  {"type":"text","accept":["divergence","la divergence","diverger"],"placeholder":"un compteur dénormalisé qu'on a oublié de maintenir finit par mentir : c'est une d________","hints":["La copie ne correspond plus à la réalité qu'elle résume.","Elle est silencieuse : aucune erreur SQL n'est levée.","Même racine que « diverger » : les deux valeurs s'écartent."],"link":{"href":"lecon-10.html","label":"Revoir « Le risque à assumer »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune de ces valeurs «&nbsp;en double&nbsp;» dans Rideau, dis si c'est une <strong>copie à synchroniser</strong> (dangereuse, à garder alignée sur la source) ou un <strong>snapshot légitime</strong> (figé exprès, à ne jamais synchroniser)&nbsp;: (a) <code>billet.prix_paye</code>, le prix au moment de l'achat&nbsp;; (b) <code>billet.spectacle_titre</code> recopié depuis <code>spectacle.titre</code> pour éviter une jointure&nbsp;; (c) <code>commande.total</code>, la somme des <code>prix_paye</code> de ses billets.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Le test : « si la source change plus tard, cette valeur
+devrait-elle changer aussi ? »
+
+(a) billet.prix_paye  -> SNAPSHOT LÉGITIME.
+    Si le tarif de la zone augmente après l'achat, le prix payé
+    ne doit PAS bouger. C'est un fait métier figé, pas une copie.
+    Aucun gardien à écrire ; le synchroniser serait une faute.
+
+(b) billet.spectacle_titre -> COPIE À SYNCHRONISER (dangereuse).
+    Si le titre est corrigé dans spectacle.titre, la copie DOIT
+    suivre, sinon divergence. Exige un gardien (trigger/code).
+
+(c) commande.total -> AGRÉGAT STOCKÉ, donc une COPIE (dérivée)
+    à maintenir. Si un billet est ajouté ou annulé, le total
+    doit être recalculé. À garder juste (trigger + réconciliation)
+    OU, plus simple, à ne pas stocker et resommer à la lecture.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>On décide de stocker <code>commande.total</code> (agrégat) parce que le panier est affiché très souvent. Écris (a) l'instruction qui ajoute la colonne, et (b) le <strong>trigger</strong> qui augmente le total à chaque billet inséré dans une commande. Explique en une phrase pourquoi le trigger est préférable au maintien «&nbsp;en code&nbsp;».</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- (a) Ajouter l'agrégat stocké.
+ALTER TABLE commande ADD COLUMN total NUMERIC NOT NULL DEFAULT 0;
+
+-- (b) Le maintenir automatiquement à chaque billet inséré.
+CREATE TRIGGER maj_total_apres_billet
+AFTER INSERT ON billet
+FOR EACH ROW
+BEGIN
+    UPDATE commande
+    SET    total = total + NEW.prix_paye
+    WHERE  commande_id = NEW.commande_id;
+END;
+-- (Un trigger symétrique AFTER DELETE retrancherait OLD.prix_paye.)
+
+-- Pourquoi le trigger plutôt que le code applicatif ?
+-- Parce qu'il est IMPOSSIBLE à oublier : tout nouveau chemin
+-- d'écriture (une autre équipe, un import, un script) déclenche
+-- le trigger, alors qu'un maintien « en code » suppose que
+-- CHAQUE endroit qui insère un billet pense à mettre à jour le
+-- total -- une seule omission suffit à faire diverger la colonne.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue veut ajouter une colonne <code>representation.nb_billets_vendus</code>, maintenue par le code applicatif, «&nbsp;pour aller plus vite&nbsp;», alors qu'aucune lenteur n'a été mesurée et que la table <code>billet</code> est modeste. Rédige une réponse courte&nbsp;: (1) pourquoi c'est prématuré, (2) quelle alternative essayer avant, (3) si on la garde malgré tout, les deux conditions non négociables.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(1) C'EST PRÉMATURÉ. « Pour aller plus vite » sans mesure est une
+    optimisation prématurée : on paie tout de suite le coût de
+    maintenance (et le risque de divergence) pour un gain de lecture
+    non prouvé, sur une table qui tient en mémoire. Pas de chronomètre,
+    pas de dénormalisation. On mesure d'abord : combien de fois par
+    seconde, et en combien de millisecondes ?
+
+(2) ALTERNATIVE À ESSAYER AVANT : un INDEX. Un COUNT des billets d'une
+    représentation, avec un index sur billet(representation_id), est
+    presque toujours instantané sur une table modeste -- sans ajouter
+    la moindre redondance. C'est le premier réflexe (voir leçon 11).
+
+(3) SI ON LA GARDE MALGRÉ TOUT, deux conditions non négociables :
+    - maintien PAR TRIGGER (jamais « en code » seul), dans la même
+      transaction que l'INSERT/DELETE du billet -> impossible à oublier ;
+    - un moyen de RÉCONCILIER : recalculer nb_billets_vendus depuis
+      COUNT(billet) périodiquement, pour effacer toute divergence.
+    Et on documente que c'est une donnée DÉRIVÉE, reconstructible.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

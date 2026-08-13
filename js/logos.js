@@ -98,6 +98,12 @@
     dataviz: badge("dv", 9.5),
     stats: badge("st", 9.5),
     "data-eng": badge("de", 9.5),
+    /* Concevoir une BDD : deux tables reliées (schéma entité-association) */
+    bdd: stroke(
+      '<rect x="2.5" y="3" width="9" height="8.5" rx="1.2"/><path d="M2.5 5.6h9"/><path d="M4.4 7.7h5M4.4 9.4h5"/>' +
+      '<rect x="12.5" y="12.5" width="9" height="8.5" rx="1.2"/><path d="M12.5 15.1h9"/><path d="M14.4 17.2h5M14.4 18.9h5"/>' +
+      '<path d="M11.5 9.4c3.2 0 2 5.4 5 5.4"/>'
+    ),
     /* Mobile : smartphone stylisé (écouteur, corps, barre d'accueil) */
     mobile: stroke(
       '<rect x="6.5" y="2.5" width="11" height="19" rx="2.4"/>' +
@@ -217,7 +223,7 @@
     cobol: "cobol", fortran: "fortran", julia: "julia", zig: "zig", lisp: "lisp", ocaml: "ocaml",
     fsharp: "fsharp", clojure: "clojure", prolog: "prolog", ada: "ada", pascal: "pascal", vb: "vb",
     objc: "objc", erlang: "erlang", groovy: "groovy", solidity: "solidity",
-    ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", mobile: "mobile", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
+    ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", bdd: "bdd", mobile: "mobile", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
     "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os",
   };
 

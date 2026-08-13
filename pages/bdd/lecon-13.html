@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transactions et isolation : le cas du dernier billet — Leçon 13 · Cours Concevoir une base de données — Syntaxe</title>
+    <meta name="description" content="Transactions et niveaux d'isolation expliqués par le scénario du dernier billet : la transaction en tout-ou-rien (BEGIN, COMMIT, ROLLBACK), les propriétés ACID, la double vente en concurrence, les anomalies (lecture sale, non répétable, fantôme), les niveaux Read Uncommitted à Serializable, et la parade complète — contrainte d'unicité, verrou SELECT FOR UPDATE et gestion propre de l'échec — dans la billetterie Rideau." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="bdd" data-lesson="lecon-13.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Concevoir une base de données</a></li>
+            <li aria-current="page">Leçon 13</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Performance, concurrence et vie du schéma — Leçon 13</p>
+              <h1 class="lesson-header__title">Transactions et isolation : le cas du dernier billet</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~44 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: les contraintes (leçon 7), un schéma avec clés (leçons 5-6)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>encadrer plusieurs écritures dans une <strong>transaction</strong> en tout-ou-rien avec <code>BEGIN</code>, <code>COMMIT</code> et <code>ROLLBACK</code>&nbsp;;</li>
+                  <li>expliquer les quatre lettres d'<strong>ACID</strong> — atomicité, cohérence, isolation, durabilité — sur un exemple concret&nbsp;;</li>
+                  <li>dérouler la chronologie de la <strong>double vente</strong> du dernier billet, et nommer les <strong>anomalies</strong> de concurrence&nbsp;;</li>
+                  <li>choisir la parade&nbsp;: <strong>contrainte d'unicité</strong>, <strong>verrou</strong> <code>SELECT … FOR UPDATE</code> ou <strong>niveau d'isolation</strong> — et gérer proprement l'acheteur perdant.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Il reste <strong>une</strong> place pour «&nbsp;Nocturne&nbsp;»&nbsp;: Orchestre, rang 4, numéro 12. À 20&nbsp;h&nbsp;03, deux clients ouvrent la fiche du spectacle à la seconde près. Tous deux voient «&nbsp;place libre&nbsp;», tous deux cliquent «&nbsp;Acheter&nbsp;». Que se passe-t-il&nbsp;? Si Rideau est bien construit, l'un obtient son billet, l'autre reçoit un message clair&nbsp;: «&nbsp;place déjà vendue&nbsp;». S'il est mal construit, <em>les deux</em> repartent avec un billet pour le même siège — et le soir venu, deux personnes se disputent le fauteuil. Ce désastre porte un nom&nbsp;: la <strong>double vente</strong>, et l'éviter est l'affaire de cette leçon.</p>
+<p>Deux notions s'en chargent, complémentaires. La <strong>transaction</strong> garantit qu'un ensemble d'opérations réussit <em>ensemble</em> ou pas du tout&nbsp;: réserver la place et encaisser le paiement forment un bloc indivisible. Les <strong>niveaux d'isolation</strong>, eux, décident de ce que voient des transactions qui s'exécutent <em>en même temps</em> — et donc de ce qu'elles peuvent se faire subir. On assemble ces deux idées, plus la <a href="lecon-07.html">contrainte d'unicité</a> de la leçon 7, pour rendre la double vente tout simplement <strong>impossible</strong>.</p>
+
+<h2>La transaction : tout, ou rien</h2>
+<p>Une <strong>transaction</strong> est un groupe d'opérations que la base traite comme <em>une seule</em>&nbsp;: soit toutes s'appliquent, soit aucune. On l'ouvre avec <code>BEGIN</code>, on la scelle avec <code>COMMIT</code> (valider&nbsp;: tout devient définitif), ou on l'abandonne avec <code>ROLLBACK</code> (annuler&nbsp;: la base revient exactement à l'état d'avant <code>BEGIN</code>, comme si rien ne s'était passé).</p>
+<p>Pourquoi c'est vital pour Rideau&nbsp;? Vendre un billet, ce n'est pas une écriture, c'est <em>plusieurs</em>&nbsp;: insérer la ligne <code>billet</code>, enregistrer le <code>paiement</code>, passer la <code>commande</code> au statut «&nbsp;payee&nbsp;». Ces trois gestes doivent tenir ou tomber ensemble. Imagine une panne juste après l'insertion du billet, avant le paiement&nbsp;: la place est bloquée sur un billet <em>jamais payé</em>. Ou l'inverse&nbsp;: le paiement passe, mais l'insertion du billet échoue — le client est débité sans siège. La transaction interdit ces demi-états.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Schéma de l'atomicité d'une transaction. Un bloc central encadré par BEGIN en haut et deux issues possibles en bas contient trois opérations : insérer le billet, enregistrer le paiement, passer la commande au statut payée. Depuis ce bloc partent deux flèches. La flèche de gauche mène à COMMIT : les trois écritures deviennent définitives ensemble, la vente est enregistrée. La flèche de droite mène à ROLLBACK : si une seule opération échoue, les trois sont annulées et la base revient à l'état d'avant BEGIN, comme si rien ne s'était produit. Une légende insiste : jamais de demi-état, ni billet sans paiement, ni paiement sans billet.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Réserver + payer : un bloc tout-ou-rien</text>
+
+    <rect class="d-accent" x="230" y="40" width="180" height="26" rx="6" />
+    <text class="d-tag" x="320" y="58" text-anchor="middle" font-size="11">BEGIN</text>
+
+    <rect class="d-frame" x="200" y="78" width="240" height="104" rx="10" fill="none" stroke-dasharray="5 4" />
+    <rect class="d-box" x="216" y="90" width="208" height="24" rx="4" /><text class="d-text" x="320" y="106" text-anchor="middle" font-size="9">1 · INSERT billet (place 12, rang 4)</text>
+    <rect class="d-box" x="216" y="118" width="208" height="24" rx="4" /><text class="d-text" x="320" y="134" text-anchor="middle" font-size="9">2 · INSERT paiement (montant, carte)</text>
+    <rect class="d-box" x="216" y="146" width="208" height="24" rx="4" /><text class="d-text" x="320" y="162" text-anchor="middle" font-size="9">3 · UPDATE commande → « payee »</text>
+
+    <path class="d-line" d="M250 182 L150 214" fill="none" /><path class="d-line" d="M162 208 L150 214 L157 202" fill="none" />
+    <path class="d-line" d="M390 182 L490 214" fill="none" /><path class="d-line" d="M478 202 L490 214 L483 208" fill="none" />
+
+    <rect class="d-accent" x="60" y="216" width="180" height="26" rx="6" />
+    <text class="d-tag" x="150" y="234" text-anchor="middle" font-size="11">COMMIT</text>
+    <text class="d-mut" x="150" y="260" text-anchor="middle" font-size="8.5">les 3 écritures deviennent</text>
+    <text class="d-mut" x="150" y="272" text-anchor="middle" font-size="8.5">définitives ENSEMBLE — vente OK</text>
+
+    <rect class="d-box" x="400" y="216" width="180" height="26" rx="6" />
+    <text class="d-tag" x="490" y="234" text-anchor="middle" font-size="11">ROLLBACK</text>
+    <text class="d-mut" x="490" y="260" text-anchor="middle" font-size="8.5">une seule échoue → les 3</text>
+    <text class="d-mut" x="490" y="272" text-anchor="middle" font-size="8.5">annulées — retour à l'état d'avant</text>
+
+    <text class="d-mut" x="320" y="296" text-anchor="middle" font-size="8.5">jamais de demi-état&nbsp;: ni billet sans paiement, ni paiement sans billet</text>
+  </svg>
+  <figcaption>L'atomicité rend la vente <strong>indivisible</strong>. Les trois écritures forment un bloc&nbsp;: <code>COMMIT</code> les grave d'un coup, <code>ROLLBACK</code> les efface toutes. Aucun chemin ne laisse la base à moitié modifiée.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="vente_transaction.sql"><pre><code class="language-sql">-- Vendre un billet, c'est trois écritures qui tiennent ENSEMBLE.
+BEGIN;                                    -- ouverture de la transaction
+
+INSERT INTO billet (commande_id, representation_id, place_id, prix_paye)
+VALUES (5001, 42, 812, 39.00);            -- la place 812 = Orchestre rang 4 n°12
+
+INSERT INTO paiement (commande_id, montant, moyen, effectue_le)
+VALUES (5001, 39.00, 'carte', NOW());
+
+UPDATE commande SET statut = 'payee'
+WHERE commande_id = 5001;
+
+COMMIT;                                   -- tout est validé d'un seul coup
+-- Si une erreur survient entre BEGIN et COMMIT, on lance ROLLBACK
+-- et la base oublie TOUT : ni billet, ni paiement, ni changement de statut.</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Hors transaction explicite, la plupart des moteurs travaillent en <em>autocommit</em>&nbsp;: chaque instruction est sa propre mini-transaction, validée aussitôt. C'est pratique pour une requête isolée, mais dangereux dès qu'un <strong>résultat correct exige plusieurs écritures cohérentes</strong>. Le <code>BEGIN … COMMIT</code> sert exactement à cela&nbsp;: souder plusieurs instructions en une unité qui réussit ou échoue d'un bloc.</p></div></div>
+
+<h2>ACID, en quatre mots</h2>
+<p>On résume les garanties d'une transaction par l'acronyme <strong>ACID</strong>. Chaque lettre répond à une peur précise&nbsp;; les voici sur Rideau.</p>
+<ul>
+<li><strong>A — Atomicité.</strong> Tout ou rien. Les trois écritures de la vente s'appliquent ensemble ou pas du tout. C'est ce que la section précédente vient de montrer&nbsp;: pas de billet payé à moitié.</li>
+<li><strong>C — Cohérence.</strong> Une transaction fait passer la base d'un état <em>valide</em> à un autre état <em>valide</em>. Toutes les contraintes restent vraies avant <em>et</em> après&nbsp;: si <code>UNIQUE(representation_id, place_id)</code> interdit de vendre deux fois la place 12, aucune transaction validée ne pourra laisser deux billets sur cette place.</li>
+<li><strong>I — Isolation.</strong> Deux transactions qui tournent en même temps ne doivent pas se marcher dessus&nbsp;: chacune doit se dérouler <em>comme si</em> elle était seule. C'est la lettre qui gouverne notre dernier billet, et le reste de la leçon la creuse.</li>
+<li><strong>D — Durabilité.</strong> Une fois le <code>COMMIT</code> passé, c'est gravé. Même une coupure de courant à la seconde suivante ne peut pas «&nbsp;déverser&nbsp;» la vente&nbsp;: au redémarrage, le billet est toujours là.</li>
+</ul>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Cohérence : la base, pas seulement la transaction</p><p>Le «&nbsp;C&nbsp;» d'ACID s'appuie sur tout ce que tu as posé aux leçons précédentes&nbsp;: clés, <code>NOT NULL</code>, <code>CHECK</code>, <code>UNIQUE</code>. La transaction ne <em>remplace</em> pas ces règles&nbsp;; elle promet qu'à chaque <code>COMMIT</code>, elles tiennent toujours. Un schéma sans contraintes ne devient pas cohérent parce qu'on l'enveloppe dans un <code>BEGIN</code>&nbsp;: l'atomicité protège le déroulé, la cohérence dépend d'abord d'un bon schéma.</p></div></div>
+
+<h2>Le problème : deux clients, une place</h2>
+<p>Passons au cœur du sujet&nbsp;: la <strong>concurrence</strong>. Une transaction seule est simple&nbsp;; le vrai monde en exécute des milliers <em>en même temps</em>. Reprenons nos deux clients, appelons-les A et B. Sans précaution, une application naïve fait, pour chacun&nbsp;: d'abord un <code>SELECT</code> pour vérifier que la place est libre, puis, si oui, un <code>INSERT</code> du billet. Séparément, chaque scénario est correct. Entrelacés à la milliseconde près, ils produisent la catastrophe.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 330" role="img" aria-label="Chronologie de la double vente sur deux couloirs parallèles, client A à gauche et client B à droite, le temps s'écoulant vers le bas. À l'instant 1, A lit la place 12 et la base répond libre. À l'instant 2, B lit la même place 12 et la base répond aussi libre, car A n'a encore rien écrit. À l'instant 3, A insère son billet pour la place 12 : succès. À l'instant 4, B insère à son tour un billet pour la place 12. Deux issues sont montrées : sans contrainte d'unicité, l'insertion de B réussit aussi et la place est vendue deux fois, c'est la double vente ; avec la contrainte UNIQUE representation place, l'insertion de B est rejetée par la base, sa transaction échoue proprement et un seul billet subsiste. La fenêtre de course est mise en évidence entre l'instant 1 et l'instant 3, quand les deux ont lu libre mais aucun n'a encore validé.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le dernier billet en concurrence — chronologie</text>
+
+    <text class="d-tag" x="160" y="46" text-anchor="middle" font-size="11">Client A</text>
+    <text class="d-tag" x="480" y="46" text-anchor="middle" font-size="11">Client B</text>
+    <line class="d-line" x1="160" y1="54" x2="160" y2="286" stroke-dasharray="2 3" />
+    <line class="d-line" x1="480" y1="54" x2="480" y2="286" stroke-dasharray="2 3" />
+    <text class="d-mut" x="26" y="170" text-anchor="middle" font-size="8" transform="rotate(-90 26 170)">le temps ↓</text>
+
+    <rect class="d-box" x="52" y="64" width="216" height="26" rx="5" /><text class="d-text" x="160" y="81" text-anchor="middle" font-size="8.5">t1 · SELECT place 12 → « libre »</text>
+    <rect class="d-box" x="372" y="96" width="216" height="26" rx="5" /><text class="d-text" x="480" y="113" text-anchor="middle" font-size="8.5">t2 · SELECT place 12 → « libre »</text>
+    <text class="d-mut" x="480" y="132" text-anchor="middle" font-size="7.5">A n'a encore rien écrit&nbsp;!</text>
+
+    <rect class="d-accent" x="52" y="140" width="216" height="26" rx="5" /><text class="d-text" x="160" y="157" text-anchor="middle" font-size="8.5">t3 · INSERT billet place 12 → OK</text>
+    <rect class="d-box" x="372" y="176" width="216" height="26" rx="5" /><text class="d-text" x="480" y="193" text-anchor="middle" font-size="8.5">t4 · INSERT billet place 12 → ?</text>
+
+    <rect class="d-frame" x="40" y="60" width="240" height="112" rx="8" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="160" y="222" text-anchor="middle" font-size="7.5">fenêtre de course&nbsp;: les deux ont lu « libre »,</text>
+    <text class="d-mut" x="160" y="233" text-anchor="middle" font-size="7.5">aucun n'a encore validé</text>
+
+    <rect class="d-box" x="330" y="232" width="130" height="46" rx="6" /><text class="d-warn-text" x="395" y="252" text-anchor="middle" font-size="8" fill="var(--accent-strong)">SANS contrainte&nbsp;:</text><text class="d-warn-text" x="395" y="266" text-anchor="middle" font-size="8" fill="var(--accent-strong)">2 billets → double vente</text>
+    <rect class="d-accent" x="474" y="232" width="130" height="46" rx="6" /><text class="d-text" x="539" y="252" text-anchor="middle" font-size="8">AVEC UNIQUE&nbsp;:</text><text class="d-text" x="539" y="266" text-anchor="middle" font-size="8">t4 REJETÉ → 1 seul billet</text>
+
+    <text class="d-mut" x="320" y="304" text-anchor="middle" font-size="8.5">le bug ne vient pas d'une faute de SQL&nbsp;: chaque client, seul, fait tout juste — c'est l'entrelacement qui trahit</text>
+  </svg>
+  <figcaption>Entre le moment où l'on <em>lit</em> «&nbsp;libre&nbsp;» et celui où l'on <em>écrit</em> le billet s'ouvre une fenêtre&nbsp;: si l'autre s'y glisse, les deux croient avoir la place. C'est une <strong>course</strong>, et aucune relecture attentive du code de A ou de B, pris isolément, ne la révèle.</figcaption>
+</figure>
+
+<p>Le nœud est là&nbsp;: <em>lire puis écrire</em> sans protection laisse un intervalle où l'état a changé sous nos pieds. A a lu «&nbsp;libre&nbsp;» à t1&nbsp;; à t3 il écrit sur la foi de cette lecture, mais entre-temps B a lu la même chose. Rien dans le code de A ne le prévient que B existe. C'est pourquoi la concurrence est <strong>traître</strong>&nbsp;: le bug n'apparaît ni en relisant le code, ni en testant un client à la fois. Il ne surgit que quand deux transactions se croisent au mauvais instant — souvent en production, un soir de forte affluence.</p>
+
+<h2>Les anomalies de concurrence</h2>
+<p>Ce que des transactions concurrentes peuvent se faire subir se range en trois <strong>anomalies</strong> classiques. Les nommer aide à raisonner sur les protections qui viennent ensuite. Chacune décrit une <em>lecture</em> qui tourne mal.</p>
+<ul>
+<li><strong>Lecture sale</strong> (<em>dirty read</em>)&nbsp;: lire une écriture <em>non encore validée</em> d'une autre transaction. Sur Rideau&nbsp;: B voit le billet que A est en train d'insérer, croit la place vendue… mais A fait <code>ROLLBACK</code>. B a lu une donnée qui n'a <em>jamais existé</em> officiellement.</li>
+<li><strong>Lecture non répétable</strong> (<em>non-repeatable read</em>)&nbsp;: relire la <em>même ligne</em> dans une transaction et obtenir une valeur différente, parce qu'une autre l'a modifiée et validée entre-temps. B lit le prix de la place à 39&nbsp;€&nbsp;; A applique une promotion et valide&nbsp;; B relit&nbsp;: 29&nbsp;€. Deux lectures, deux réponses, dans la même transaction.</li>
+<li><strong>Lecture fantôme</strong> (<em>phantom read</em>)&nbsp;: relancer la <em>même requête d'ensemble</em> et voir apparaître (ou disparaître) des lignes, parce qu'une autre transaction en a inséré ou supprimé. B compte «&nbsp;3 places libres&nbsp;» pour «&nbsp;Nocturne&nbsp;»&nbsp;; A vend un billet et valide&nbsp;; B recompte&nbsp;: 2. Une ligne <em>fantôme</em> a modifié le résultat entre les deux comptes.</li>
+</ul>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Comment les distinguer</p><p>Un truc simple&nbsp;: la <strong>lecture sale</strong> lit du <em>non validé</em>&nbsp;; la <strong>non répétable</strong> concerne <em>une ligne</em> qui change de valeur&nbsp;; la <strong>fantôme</strong> concerne un <em>ensemble</em> de lignes qui change de taille. Sale → pas encore commit. Non répétable → une valeur bouge. Fantôme → des lignes apparaissent ou disparaissent. Ces trois-là servent d'échelle pour comparer les niveaux d'isolation.</p></div></div>
+
+<h2>Les niveaux d'isolation</h2>
+<p>La lettre «&nbsp;I&nbsp;» d'ACID n'est pas tout ou rien&nbsp;: elle se règle. La norme SQL définit quatre <strong>niveaux d'isolation</strong>, du plus permissif au plus strict. Chaque niveau supérieur interdit une anomalie de plus — au prix d'une concurrence plus faible (les transactions s'attendent davantage, et peuvent échouer et devoir être rejouées).</p>
+<ul>
+<li><strong>Read Uncommitted</strong> — le plus permissif&nbsp;: autorise même la lecture sale. On lit ce que les autres n'ont pas validé. Rarement souhaitable&nbsp;; certains moteurs ne le proposent même pas.</li>
+<li><strong>Read Committed</strong> — on ne lit que du <em>validé</em>&nbsp;: fini la lecture sale. C'est le <strong>défaut</strong> de beaucoup de moteurs (PostgreSQL, Oracle, SQL&nbsp;Server). Les lectures non répétables et fantômes restent possibles.</li>
+<li><strong>Repeatable Read</strong> — dans une même transaction, relire une ligne redonne la même valeur&nbsp;: fini la lecture non répétable. Selon les moteurs, les fantômes peuvent subsister ou non.</li>
+<li><strong>Serializable</strong> — le plus strict&nbsp;: le résultat est <em>garanti identique</em> à une exécution des transactions <strong>l'une après l'autre</strong>, en série. Plus aucune des trois anomalies. En contrepartie, davantage de blocages et de transactions annulées à rejouer.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Tableau des niveaux d'isolation croisés avec les anomalies qu'ils empêchent. Quatre lignes de niveaux et trois colonnes d'anomalies : lecture sale, lecture non répétable, lecture fantôme. Read Uncommitted n'empêche aucune des trois. Read Committed empêche la lecture sale seulement. Repeatable Read empêche la lecture sale et la lecture non répétable. Serializable empêche les trois. Une flèche verticale indique que descendre dans le tableau augmente l'isolation et diminue la concurrence disponible.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Niveaux d'isolation × anomalies empêchées</text>
+
+    <text class="d-mut" x="150" y="52" text-anchor="middle" font-size="8">niveau ↓</text>
+    <text class="d-tag" x="300" y="52" text-anchor="middle" font-size="8.5">lecture sale</text>
+    <text class="d-tag" x="410" y="52" text-anchor="middle" font-size="8.5">non répétable</text>
+    <text class="d-tag" x="530" y="52" text-anchor="middle" font-size="8.5">fantôme</text>
+    <line class="d-line" x1="30" y1="60" x2="610" y2="60" />
+
+    <text class="d-text" x="40" y="82" font-size="9">Read Uncommitted</text>
+    <text class="d-warn-text" x="300" y="82" text-anchor="middle" font-size="10" fill="var(--accent-strong)">✕</text>
+    <text class="d-warn-text" x="410" y="82" text-anchor="middle" font-size="10" fill="var(--accent-strong)">✕</text>
+    <text class="d-warn-text" x="530" y="82" text-anchor="middle" font-size="10" fill="var(--accent-strong)">✕</text>
+
+    <text class="d-text" x="40" y="112" font-size="9">Read Committed</text>
+    <text class="d-mut" x="300" y="112" text-anchor="middle" font-size="10">✓</text>
+    <text class="d-warn-text" x="410" y="112" text-anchor="middle" font-size="10" fill="var(--accent-strong)">✕</text>
+    <text class="d-warn-text" x="530" y="112" text-anchor="middle" font-size="10" fill="var(--accent-strong)">✕</text>
+    <text class="d-mut" x="595" y="112" text-anchor="end" font-size="7">défaut fréquent</text>
+
+    <text class="d-text" x="40" y="142" font-size="9">Repeatable Read</text>
+    <text class="d-mut" x="300" y="142" text-anchor="middle" font-size="10">✓</text>
+    <text class="d-mut" x="410" y="142" text-anchor="middle" font-size="10">✓</text>
+    <text class="d-warn-text" x="530" y="142" text-anchor="middle" font-size="10" fill="var(--accent-strong)">± </text>
+
+    <text class="d-text" x="40" y="172" font-size="9">Serializable</text>
+    <text class="d-mut" x="300" y="172" text-anchor="middle" font-size="10">✓</text>
+    <text class="d-mut" x="410" y="172" text-anchor="middle" font-size="10">✓</text>
+    <text class="d-mut" x="530" y="172" text-anchor="middle" font-size="10">✓</text>
+    <text class="d-mut" x="595" y="172" text-anchor="end" font-size="7">le plus strict</text>
+
+    <line class="d-line" x1="30" y1="186" x2="610" y2="186" />
+    <text class="d-mut" x="300" y="204" text-anchor="middle" font-size="8">✓ = anomalie empêchée</text>
+    <text class="d-warn-text" x="470" y="204" text-anchor="middle" font-size="8" fill="var(--accent-strong)">✕ = anomalie possible</text>
+    <text class="d-mut" x="595" y="204" text-anchor="end" font-size="7.5">± selon le moteur</text>
+
+    <path class="d-line" d="M18 74 L18 168" fill="none" /><path class="d-line" d="M13 158 L18 170 L23 158" fill="none" />
+    <text class="d-mut" x="10" y="122" text-anchor="middle" font-size="7.5" transform="rotate(-90 10 122)">+ d'isolation, − de concurrence</text>
+
+    <text class="d-mut" x="320" y="230" text-anchor="middle" font-size="8.5">plus on descend, moins il reste d'anomalies — mais plus les transactions s'attendent (et peuvent être rejouées)</text>
+  </svg>
+  <figcaption>Chaque cran d'isolation coche une anomalie de plus. <strong>Read Committed</strong> suffit à bien des applications&nbsp;; <strong>Serializable</strong> supprime tout, en échange de blocages et de rejeux à gérer. Le bon niveau se choisit&nbsp;: ce n'est pas «&nbsp;le plus haut gagne&nbsp;».</figcaption>
+</figure>
+
+<figure class="code-block" data-file="niveau_isolation.sql"><pre><code class="language-sql">-- On règle l'isolation pour la transaction qui suit.
+-- Ici, on veut le maximum de garanties pour un comptage sensible.
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+BEGIN;
+  -- combien de places encore libres pour « Nocturne » (representation 42) ?
+  SELECT COUNT(*) FROM place p
+  WHERE p.salle_id = 7
+    AND p.place_id NOT IN (
+      SELECT b.place_id FROM billet b WHERE b.representation_id = 42
+    );
+  -- ... décision métier sur ce compte ...
+COMMIT;
+-- En SERIALIZABLE, si une vente concurrente rend ce compte faux,
+-- le moteur peut annuler l'une des transactions : il faut alors la REJOUER.</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Mettre <code>SERIALIZABLE</code> partout «&nbsp;pour être tranquille&nbsp;».</strong> Le niveau le plus strict n'est pas gratuit&nbsp;: il multiplie les blocages entre transactions, les <em>interblocages</em> (deux transactions qui s'attendent mutuellement), et les annulations que ton application doit rattraper en <strong>rejouant</strong> la transaction. Choisir un niveau, c'est arbitrer sécurité contre débit&nbsp;: on monte l'isolation <em>là où l'anomalie ferait mal</em>, pas partout par réflexe.</p></div></div>
+
+<h2>La parade complète pour le dernier billet</h2>
+<p>Assemblons tout. Contre la double vente, on dispose de trois protections qui se <em>complètent</em> — la meilleure architecture les combine plutôt que d'en choisir une seule.</p>
+<ol>
+<li><strong>La contrainte d'unicité</strong> — <code>UNIQUE(representation_id, place_id)</code>, posée à la <a href="lecon-07.html">leçon 7</a>. C'est le <em>filet ultime</em>&nbsp;: même si deux transactions passent toutes les vérifications, la seconde à faire <code>COMMIT</code> est <strong>rejetée par la base</strong>. Peu importe la subtilité de la course&nbsp;: physiquement, deux billets sur la même place n'existeront jamais.</li>
+<li><strong>Le verrou sur la ligne</strong> — <code>SELECT … FOR UPDATE</code>. On lit la place <em>en la verrouillant</em>&nbsp;: la deuxième transaction qui tente le même <code>SELECT … FOR UPDATE</code> <strong>attend</strong> que la première ait fini. Fini l'entrelacement&nbsp;: A et B ne sont plus «&nbsp;en même temps&nbsp;» sur cette ligne, ils passent l'un après l'autre.</li>
+<li><strong>Le niveau d'isolation suffisant</strong> — au lieu d'un verrou explicite, on peut demander <code>SERIALIZABLE</code> et laisser le moteur détecter le conflit et annuler l'un des deux. À charge pour l'application de <strong>rejouer</strong> la transaction annulée.</li>
+</ol>
+
+<figure class="code-block" data-file="dernier_billet.sql"><pre><code class="language-sql">-- Approche par verrou : on VERROUILLE la place avant d'écrire.
+BEGIN;
+
+-- FOR UPDATE : la ligne de la place est verrouillée jusqu'au COMMIT.
+-- La transaction concurrente qui veut la même place ATTEND ici.
+SELECT place_id
+FROM place
+WHERE place_id = 812
+FOR UPDATE;
+
+-- La place est-elle déjà vendue pour CETTE représentation ?
+-- (aucune autre transaction ne peut s'intercaler : on tient le verrou)
+SELECT 1
+FROM billet
+WHERE representation_id = 42 AND place_id = 812;
+-- ... si une ligne existe -> ROLLBACK et message « place déjà vendue » ...
+
+-- sinon, on vend :
+INSERT INTO billet (commande_id, representation_id, place_id, prix_paye)
+VALUES (5001, 42, 812, 39.00);   -- protégé AUSSI par UNIQUE(representation_id, place_id)
+
+COMMIT;   -- le verrou est relâché ici ; l'autre transaction peut reprendre</code></pre></figure>
+
+<p>Que devient l'acheteur perdant&nbsp;? C'est le point qu'on oublie le plus souvent. Quand la contrainte rejette l'<code>INSERT</code>, ou quand le moteur annule la transaction <code>SERIALIZABLE</code>, l'application <strong>reçoit une erreur</strong>&nbsp;: elle doit l'<em>attraper</em>, faire <code>ROLLBACK</code>, et afficher à B un message honnête — «&nbsp;désolé, cette place vient d'être vendue&nbsp;» — plutôt que planter ou, pire, faire comme si de rien n'était. Une transaction qui échoue n'est un problème que si personne ne la rattrape.</p>
+
+<figure class="code-block" data-file="perdant_gere.sql"><pre><code class="language-plaintext">Côté application (pseudo-code), l'échec est PRÉVU, pas subi :
+
+  try:
+      BEGIN
+      SELECT ... FOR UPDATE          -- verrouille la place
+      si déjà vendue: ROLLBACK ; afficher « place déjà vendue » ; STOP
+      INSERT billet ...              -- peut encore lever une erreur UNIQUE
+      INSERT paiement ...
+      COMMIT                         -- succès : billet confirmé
+  catch ERREUR_UNICITE:              -- l'autre a validé avant nous
+      ROLLBACK
+      afficher « désolé, place déjà vendue — choisissez-en une autre »
+  catch ERREUR_SERIALISATION:        -- conflit détecté par le moteur
+      ROLLBACK
+      REJOUER la transaction (une ou deux fois), sinon message à l'usager
+
+Règle d'or : après tout ROLLBACK, l'utilisateur voit un message clair,
+jamais un écran blanc ni un débit sans billet.</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — ceinture et bretelles</p><p>Garde <strong>toujours</strong> la contrainte <code>UNIQUE</code>, même quand tu poses un verrou ou montes l'isolation. Le verrou et l'isolation évitent la <em>plupart</em> des collisions et offrent une meilleure expérience (l'un attend au lieu d'échouer)&nbsp;; la contrainte, elle, est la garantie de <strong>dernier recours</strong> qui tient quoi qu'il arrive — y compris face à un bug applicatif, à un script d'import ou à une deuxième instance du serveur. Les protections applicatives préviennent&nbsp;; la contrainte, elle, <em>interdit</em>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'un <code>SELECT</code> puis un <code>INSERT</code> «&nbsp;vérifie&nbsp;» qu'une place est libre.</strong> Hors transaction et sans verrou, l'écart entre la lecture et l'écriture est une <em>fenêtre de course</em> ouverte&nbsp;: entre le «&nbsp;c'est libre&nbsp;» et le «&nbsp;je l'écris&nbsp;», un autre a pu écrire. La vérification applicative <strong>ne remplace pas</strong> la contrainte ni le verrou&nbsp;; au mieux, elle offre un message d'erreur plus tôt.</p></div></div>
+<ul>
+<li><strong>Compter sur la contrainte seule pour l'expérience.</strong> La contrainte <em>empêche</em> la double vente, c'est vrai — mais elle le fait en <em>rejetant</em> une transaction. Sans verrou ni gestion d'erreur, un des clients reçoit une exception brute. La contrainte protège les <em>données</em>&nbsp;; le verrou et la gestion d'échec protègent l'<em>utilisateur</em>.</li>
+<li><strong>Oublier le <code>ROLLBACK</code> dans le chemin d'erreur.</strong> Une transaction ouverte et jamais close (ni <code>COMMIT</code> ni <code>ROLLBACK</code>) garde ses verrous&nbsp;: elle peut <em>bloquer</em> les autres, parfois jusqu'à un interblocage. Toute branche d'erreur doit terminer la transaction.</li>
+<li><strong>Confondre transaction et isolation.</strong> La transaction règle le <em>tout-ou-rien</em> (atomicité)&nbsp;; l'isolation règle ce que voient les <em>autres</em> pendant ce temps. Un <code>BEGIN … COMMIT</code> impeccable en <em>Read Committed</em> peut toujours subir une lecture non répétable&nbsp;: ce sont deux réglages distincts.</li>
+<li><strong>Poser <code>SERIALIZABLE</code> sans prévoir le rejeu.</strong> Ce niveau <em>annule</em> des transactions en cas de conflit&nbsp;: si l'application ne les rejoue pas, l'utilisateur voit un échec là où un simple «&nbsp;réessayez&nbsp;» aurait suffi.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une petite billetterie associative avait tout misé sur une vérification côté site&nbsp;: un <code>SELECT</code> «&nbsp;place libre&nbsp;?&nbsp;» avant l'achat, sans transaction ni contrainte d'unicité. Pendant onze mois, personne n'a rien vu&nbsp;: le trafic était trop faible pour que deux achats tombent dans la même milliseconde. Puis un artiste connu a rempli la salle en une soirée&nbsp;; sous l'affluence, <strong>quatorze places se sont vendues deux fois</strong>. Le lendemain, il a fallu rembourser, réattribuer, s'excuser. La correction a tenu en deux lignes de schéma&nbsp;: une contrainte <code>UNIQUE(representation_id, place_id)</code> et un <code>SELECT … FOR UPDATE</code> dans la transaction d'achat. Le bug n'était pas dans le code visible&nbsp;; il vivait dans l'<em>intervalle</em> entre lire et écrire, invisible tant que la charge restait faible.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>On a opposé <em>verrouillage pessimiste</em> (<code>FOR UPDATE</code>&nbsp;: je verrouille d'avance, au cas où) et détection de conflit <em>optimiste</em> (<code>SERIALIZABLE</code> ou un jeton de version&nbsp;: je tente, et je rejoue si ça a bougé). Le premier convient quand les collisions sont <strong>fréquentes</strong> (le dernier billet d'un concert prisé)&nbsp;; le second, quand elles sont <strong>rares</strong> et qu'on préfère ne pas faire attendre tout le monde. Ce couple pessimiste/optimiste, et la notion d'interblocage, se retrouvent dans presque tous les systèmes concurrents, bien au-delà des bases de données.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Transactions, isolation et concurrence — l'essentiel</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Transaction</td><td>Groupe d'opérations en tout-ou-rien&nbsp;: <code>BEGIN</code> … <code>COMMIT</code> (valider) ou <code>ROLLBACK</code> (annuler)</td></tr>
+      <tr><td>ACID</td><td>Atomicité (tout ou rien), Cohérence (contraintes tenues), Isolation (pas de collision), Durabilité (gravé après commit)</td></tr>
+      <tr><td>Double vente</td><td>Deux transactions lisent «&nbsp;libre&nbsp;» puis écrivent&nbsp;: sans parade, deux billets sur la même place</td></tr>
+      <tr><td>Lecture sale</td><td>Lire une écriture non validée d'une autre transaction (qui peut faire <code>ROLLBACK</code>)</td></tr>
+      <tr><td>Lecture non répétable</td><td>Relire une même ligne et obtenir une autre valeur (modifiée et validée entre-temps)</td></tr>
+      <tr><td>Lecture fantôme</td><td>Relancer une requête d'ensemble et voir des lignes apparaître ou disparaître</td></tr>
+      <tr><td>Read Committed</td><td>Défaut fréquent&nbsp;: ne lit que du validé (pas de lecture sale)&nbsp;; le reste peut arriver</td></tr>
+      <tr><td>Serializable</td><td>Le plus strict&nbsp;: comme si les transactions passaient l'une après l'autre&nbsp;; prévoir le rejeu</td></tr>
+      <tr><td><code>SELECT … FOR UPDATE</code></td><td>Verrouille la ligne lue jusqu'au <code>COMMIT</code>&nbsp;: la concurrente attend son tour</td></tr>
+      <tr><td>Parade « dernier billet »</td><td><code>UNIQUE</code> (filet) + verrou ou isolation (fluidité) + gestion de l'échec (message à l'usager)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Transaction</dt><dd>Groupe d'opérations que la base traite comme une seule unité&nbsp;: toutes s'appliquent, ou aucune. Délimitée par <code>BEGIN</code> et un <code>COMMIT</code> ou un <code>ROLLBACK</code>.</dd>
+  <dt>Atomicité (le A d'ACID)</dt><dd>Propriété du «&nbsp;tout ou rien&nbsp;»&nbsp;: les opérations d'une transaction s'appliquent ensemble ou pas du tout, jamais à moitié. Première des quatre garanties <strong>ACID</strong> (atomicité, cohérence, isolation, durabilité).</dd>
+  <dt>Cohérence</dt><dd>Une transaction mène la base d'un état valide à un autre état valide&nbsp;: toutes les contraintes restent vraies avant et après le <code>COMMIT</code>.</dd>
+  <dt>Isolation</dt><dd>Degré auquel des transactions concurrentes s'ignorent&nbsp;: idéalement, chacune se déroule comme si elle était seule. Réglable par niveaux.</dd>
+  <dt>Durabilité</dt><dd>Une fois une transaction validée (<code>COMMIT</code>), ses effets survivent à toute panne&nbsp;: ils sont écrits de façon permanente.</dd>
+  <dt>COMMIT</dt><dd>Instruction qui valide une transaction&nbsp;: ses écritures deviennent définitives et visibles des autres.</dd>
+  <dt>ROLLBACK</dt><dd>Instruction qui annule une transaction&nbsp;: la base revient à l'état exact d'avant le <code>BEGIN</code>, comme si rien n'avait eu lieu.</dd>
+  <dt>Verrou</dt><dd>Mécanisme qui réserve une donnée à une transaction le temps qu'elle travaille&nbsp;; les autres attendent. <code>SELECT … FOR UPDATE</code> pose un verrou sur les lignes lues.</dd>
+  <dt>Lecture sale</dt><dd>Anomalie où l'on lit une écriture non encore validée d'une autre transaction, laquelle peut ensuite être annulée.</dd>
+  <dt>Lecture non répétable</dt><dd>Anomalie où relire la même ligne dans une transaction donne une valeur différente, car une autre l'a modifiée et validée entre-temps.</dd>
+  <dt>Lecture fantôme</dt><dd>Anomalie où relancer une requête d'ensemble fait apparaître ou disparaître des lignes, à cause d'insertions ou suppressions concurrentes.</dd>
+  <dt>Niveau d'isolation</dt><dd>Réglage qui fixe quelles anomalies de concurrence sont empêchées, du plus permissif (<em>Read Uncommitted</em>) au plus strict (<em>Serializable</em>, où le résultat est garanti identique à une exécution des transactions l'une après l'autre, en série).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une <strong>transaction</strong> exécute plusieurs opérations en <strong>tout-ou-rien</strong> — <code>BEGIN … COMMIT</code> pour valider, <code>ROLLBACK</code> pour tout annuler&nbsp;: sur Rideau, réserver le billet <em>et</em> encaisser le paiement forment un bloc indivisible.</li>
+<li><strong>ACID</strong> résume les garanties&nbsp;: atomicité (tout ou rien), cohérence (contraintes tenues), isolation (pas de collision), durabilité (gravé après <code>COMMIT</code>).</li>
+<li>La <strong>concurrence</strong> ouvre une fenêtre de course entre <em>lire</em> et <em>écrire</em>&nbsp;: deux clients lisent «&nbsp;place libre&nbsp;» et provoquent une <strong>double vente</strong>. Les anomalies (lecture sale, non répétable, fantôme) décrivent ce que des transactions se font subir.</li>
+<li>Les <strong>niveaux d'isolation</strong> arbitrent sécurité contre débit&nbsp;; la parade complète du dernier billet combine <strong>contrainte d'unicité</strong> (filet ultime), <strong>verrou</strong> ou isolation suffisante, et <strong>gestion propre de l'échec</strong> (message «&nbsp;place déjà vendue&nbsp;»).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une panne survient juste après l'<code>INSERT</code> du billet, avant celui du paiement. Sans transaction, dans quel état se retrouve la base — et que garantit la transaction à la place&nbsp;?</li>
+<li>Deux clients achètent la dernière place à la même seconde et il n'y a <em>ni</em> verrou <em>ni</em> contrainte d'unicité. Décris l'entrelacement qui aboutit à la double vente.</li>
+<li>Cite les quatre niveaux d'isolation du plus permissif au plus strict, et dis lequel supprime <em>toutes</em> les anomalies de concurrence.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que garantit une transaction encadrée par BEGIN … COMMIT / ROLLBACK ?","a":["Que l'ensemble des opérations s'applique en tout-ou-rien : toutes validées d'un coup au COMMIT, ou toutes annulées au ROLLBACK","Que les requêtes s'exécutent plus vite","Qu'aucune autre transaction ne peut jamais lire la base","Que les données sont automatiquement sauvegardées sur un autre serveur"],"correct":0,"explain":"L'atomicité est le cœur de la transaction : les opérations forment un bloc indivisible. COMMIT les grave toutes ensemble ; ROLLBACK les efface toutes, ramenant la base à l'état d'avant BEGIN."},
+  {"q":"Sur Rideau, pourquoi réserver le billet et enregistrer le paiement doivent-ils tenir dans une même transaction ?","a":["Pour éviter les demi-états : sinon une panne pourrait laisser un billet sans paiement (place bloquée non payée) ou un paiement sans billet (client débité sans siège)","Pour que le paiement soit plus rapide que la réservation","Parce que le SQL interdit deux INSERT sans BEGIN","Pour chiffrer le paiement"],"correct":0,"explain":"Ces deux écritures doivent réussir ou échouer ENSEMBLE. La transaction interdit qu'une seule des deux s'applique, ce qui laisserait la base dans un état incohérent (place réservée non payée, ou paiement sans billet)."},
+  {"q":"Deux clients A et B veulent la dernière place à la même seconde, sans verrou ni contrainte. Comment survient la double vente ?","a":["Les deux exécutent SELECT et lisent « libre » avant que l'un ait écrit ; puis chacun fait son INSERT sur la foi de sa lecture, et deux billets se retrouvent sur la même place","B pirate la transaction de A","Le COMMIT de A échoue toujours en premier","La base duplique automatiquement la ligne"],"correct":0,"explain":"C'est une fenêtre de course : entre lire « libre » et écrire le billet, l'état a changé sous leurs pieds. Chaque client, pris seul, fait tout juste ; c'est l'entrelacement des deux qui trahit."},
+  {"q":"Qu'est-ce qu'une lecture non répétable (non-repeatable read) ?","a":["Relire la même ligne dans une transaction et obtenir une valeur différente, parce qu'une autre transaction l'a modifiée et validée entre les deux lectures","Lire une donnée qu'une autre transaction n'a pas encore validée","Voir de nouvelles lignes apparaître dans un résultat d'ensemble","Une requête qui échoue au second essai"],"correct":0,"explain":"La lecture non répétable concerne UNE ligne dont la valeur change entre deux lectures d'une même transaction. À distinguer de la lecture sale (donnée non validée) et de la fantôme (des lignes apparaissent ou disparaissent)."},
+  {"q":"Quelle est la parade la plus robuste contre la double vente du dernier billet ?","a":["Combiner la contrainte UNIQUE(representation_id, place_id) comme filet ultime, un verrou SELECT … FOR UPDATE (ou un niveau d'isolation suffisant), et une gestion propre de l'échec de l'acheteur perdant","Se fier à un SELECT applicatif « place libre ? » juste avant l'INSERT","Mettre SERIALIZABLE sur toute la base et ne rien changer d'autre","Interdire aux clients d'acheter en même temps"],"correct":0,"explain":"Les trois protections se complètent : la contrainte interdit physiquement deux billets sur la place, le verrou/l'isolation évite l'entrelacement, et la gestion d'erreur affiche « place déjà vendue » au lieu de planter. Un SELECT applicatif seul laisse une fenêtre de course ouverte."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["rollback","le rollback","annuler"],"placeholder":"pour annuler une transaction et revenir à l'état d'avant BEGIN, on lance R________","hints":["Son contraire valide la transaction (COMMIT).","La base oublie tout ce qui a été fait depuis BEGIN.","Huit lettres : R________."],"link":{"href":"lecon-13.html","label":"Revoir « La transaction : tout, ou rien »"}},
+  {"type":"text","accept":["isolation","l isolation","i","isolement"],"placeholder":"le I d'ACID, qui règle ce que voient des transactions concurrentes, s'appelle l'i________","hints":["C'est la lettre qui gouverne le dernier billet.","Elle se règle par niveaux, de Read Uncommitted à Serializable.","Neuf lettres : i________."],"link":{"href":"lecon-13.html","label":"Revoir « ACID, en quatre mots »"}},
+  {"type":"text","accept":["serializable","serialisable","le serializable"],"placeholder":"le niveau d'isolation le plus strict, comme si les transactions passaient l'une après l'autre, est S___________","hints":["Il supprime les trois anomalies de concurrence.","Son nom évoque une exécution « en série ».","On doit prévoir de rejouer les transactions qu'il annule."],"link":{"href":"lecon-13.html","label":"Revoir « Les niveaux d'isolation »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune des trois situations sur Rideau, dis de quelle <strong>anomalie</strong> de concurrence il s'agit (lecture sale, lecture non répétable ou lecture fantôme)&nbsp;: (a) B lit le billet que A est en train d'insérer, puis A fait <code>ROLLBACK</code>&nbsp;; (b) B compte 3 places libres pour «&nbsp;Nocturne&nbsp;», A vend un billet et valide, B recompte&nbsp;: 2&nbsp;; (c) B lit le prix d'une place à 39&nbsp;€, A applique une promo et valide, B relit la même ligne&nbsp;: 29&nbsp;€.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) LECTURE SALE (dirty read) : B a lu une écriture NON VALIDÉE de A.
+    Comme A fait ROLLBACK, B a lu une donnée qui n'a jamais existé
+    officiellement. Empêchée dès le niveau Read Committed.
+
+(b) LECTURE FANTÔME (phantom) : la MÊME requête d'ensemble (compter les
+    places libres) renvoie un nombre différent, car une ligne de billet
+    est apparue entre les deux comptes. Empêchée au niveau Serializable.
+
+(c) LECTURE NON RÉPÉTABLE (non-repeatable read) : la MÊME ligne relue
+    donne une autre valeur, car A l'a modifiée et validée entre les deux
+    lectures de B. Empêchée dès Repeatable Read.
+
+Repère : sale = non validé ; non répétable = une valeur change ;
+fantôme = le nombre de lignes change.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la transaction d'achat du dernier billet (place <code>812</code>, représentation <code>42</code>, commande <code>5001</code>, prix <code>39.00</code>) en <strong>verrouillant</strong> d'abord la place, de façon qu'un second acheteur concurrent <em>attende</em> son tour. Indique aussi ce qui protège encore l'insertion si, malgré tout, deux transactions arrivaient au même <code>INSERT</code>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">BEGIN;
+
+-- 1) On VERROUILLE la ligne de la place : la concurrente attendra ici.
+SELECT place_id
+FROM place
+WHERE place_id = 812
+FOR UPDATE;
+
+-- 2) Cette place est-elle déjà vendue pour la représentation 42 ?
+--    (on tient le verrou : personne ne peut s'intercaler)
+SELECT 1 FROM billet
+WHERE representation_id = 42 AND place_id = 812;
+-- si une ligne existe -&gt; ROLLBACK ; message « place déjà vendue » ; stop
+
+-- 3) Sinon on vend :
+INSERT INTO billet (commande_id, representation_id, place_id, prix_paye)
+VALUES (5001, 42, 812, 39.00);
+
+COMMIT;   -- le verrou est relâché ici
+
+-- Filet de sécurité : même sans verrou, la contrainte
+-- UNIQUE(representation_id, place_id) REJETTERAIT le second INSERT.
+-- Le verrou apporte la fluidité ; la contrainte, la garantie ultime.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue affirme&nbsp;: «&nbsp;J'ai mis la contrainte <code>UNIQUE(representation_id, place_id)</code>, donc le problème du dernier billet est réglé, je n'ai besoin ni de transaction, ni de verrou, ni de gestion d'erreur.&nbsp;» En trois arguments, explique ce qui manque à ce raisonnement et ce que chaque protection apporte réellement.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Trois arguments (la contrainte est nécessaire, pas suffisante) :
+
+1. La contrainte protège les DONNÉES, pas l'UTILISATEUR. Elle empêche
+   bien deux billets sur la même place, mais en REJETANT une transaction.
+   Sans gestion d'erreur, l'acheteur perdant reçoit une exception brute
+   au lieu d'un message clair « place déjà vendue ».
+
+2. Vendre, c'est PLUSIEURS écritures (billet + paiement + statut). Sans
+   transaction, une panne au milieu laisse un demi-état : billet sans
+   paiement, ou paiement sans billet. Seul le BEGIN … COMMIT rend le
+   tout atomique. La contrainte ne dit rien de ce cas.
+
+3. Le verrou (ou une isolation suffisante) apporte la FLUIDITÉ : au lieu
+   que les deux tentent et qu'un échoue, l'un ATTEND que l'autre finisse,
+   puis constate simplement que la place est prise. Meilleure expérience,
+   moins d'erreurs à rattraper.
+
+Conclusion : UNIQUE = filet ultime ; transaction = tout-ou-rien ;
+verrou/isolation = éviter la collision ; gestion d'erreur = message
+honnête. On les combine, on n'en choisit pas UN seul.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

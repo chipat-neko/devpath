@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Faire évoluer un schéma : les migrations — Leçon 14 · Cours Concevoir une base de données — Syntaxe</title>
+    <meta name="description" content="Faire évoluer une base déjà en production sans perdre de données ni casser l'application : la migration comme changement versionné, rejouable et réversible, les opérations ALTER TABLE, le piège du NOT NULL sans DEFAULT sur une table pleine, le motif expand/contract pour migrer sans interruption, la compatibilité ascendante pendant le déploiement, et l'application à Rideau — ajouter une table abonnement, un statut de représentation, scinder un champ." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="bdd" data-lesson="lecon-14.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Concevoir une base de données</a></li>
+            <li aria-current="page">Leçon 14</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Performance, concurrence et vie du schéma — Leçon 14</p>
+              <h1 class="lesson-header__title">Faire évoluer un schéma : les migrations</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: un schéma en place (tout le cours)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>définir une <strong>migration</strong> comme un changement de schéma <strong>versionné</strong>, <strong>rejouable</strong> et idéalement <strong>réversible</strong>&nbsp;;</li>
+                  <li>écrire les opérations <code>ALTER TABLE</code> du quotidien&nbsp;: ajouter une colonne, une table, une contrainte, un index&nbsp;;</li>
+                  <li>éviter le piège central&nbsp;: ajouter une colonne <strong>NOT NULL sans DEFAULT</strong> sur une table pleine, et le contourner en trois temps&nbsp;;</li>
+                  <li>appliquer le motif <strong>expand / contract</strong> pour migrer <em>sans interruption</em>, en gardant l'ancienne et la nouvelle version du code compatibles le temps de la bascule.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Depuis la <a href="lecon-01.html">première leçon</a>, on a dessiné le schéma de Rideau comme s'il était gravé une fois pour toutes&nbsp;: des tables, des clés, des contraintes, posées sur une feuille blanche. Mais une base qui vit ne reste jamais sur sa feuille blanche. Six mois après l'ouverture, la salle veut vendre des <strong>abonnements</strong>&nbsp;; l'année suivante, une <strong>carte de fidélité</strong>&nbsp;; un soir de tempête, il faut un statut de représentation «&nbsp;annulée&nbsp;» qui n'existait pas. À chaque fois, le schéma doit changer. Et là est tout l'enjeu de cette leçon&nbsp;: modifier une base <strong>vide</strong> est trivial — on efface, on réécrit&nbsp;; modifier une base <strong>pleine, en service</strong>, avec des dizaines de milliers de billets déjà vendus et une application qui tourne, ne l'est pas du tout.</p>
+<p>La réponse professionnelle à ce problème porte un nom&nbsp;: la <strong>migration</strong>. Ce n'est pas «&nbsp;se connecter à la prod et taper un <code>ALTER TABLE</code> à la main un vendredi soir&nbsp;». C'est un changement <em>décrit par un script</em>, <em>versionné</em>, <em>rejouable</em> à l'identique sur toutes les copies de la base, et pensé pour ne <strong>ni perdre de données ni casser l'application</strong>. On va voir ce qu'est une migration, comment on la rédige, le piège qui fait échouer les débutants, et surtout la technique qui permet de faire évoluer un schéma <em>pendant que l'application sert des clients</em>, sans coupure.</p>
+
+<h2>Un schéma n'est jamais figé</h2>
+<p>Reprenons le schéma propre de Rideau, celui qu'on a construit tout au long du cours&nbsp;: <code>client</code>, <code>commande</code>, <code>billet</code>, <code>representation</code>, <code>tarif</code>… Il est correct. Il est normalisé. Et pourtant, il est déjà <em>en retard</em> sur le besoin, parce que le besoin, lui, avance. Voici trois demandes réelles qui vont tomber sur la table&nbsp;:</p>
+<ul>
+<li>la salle lance des <strong>abonnements</strong> (un client paie une formule annuelle qui donne droit à N spectacles)&nbsp;: il faut une nouvelle table <code>abonnement</code> et un lien vers <code>client</code>&nbsp;;</li>
+<li>une représentation peut être <strong>annulée</strong> (intempéries, artiste malade)&nbsp;: il faut une colonne <code>statut</code> sur <code>representation</code>, qui n'était pas prévue&nbsp;;</li>
+<li>on s'aperçoit que <code>client.nom</code> mélange nom et prénom dans un seul champ&nbsp;: il faut le <strong>scinder</strong> en <code>nom</code> + <code>prenom</code>.</li>
+</ul>
+<p>Chacune de ces demandes est un <strong>changement de schéma</strong>. Sur une base vide, tu réécrirais le <code>CREATE TABLE</code> et ce serait fini. Mais la base de Rideau n'est pas vide&nbsp;: elle contient l'historique de deux saisons. On ne peut pas «&nbsp;réécrire le <code>CREATE TABLE</code>&nbsp;» sans jeter ces données. Il faut <em>transformer</em> ce qui existe, en douceur.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Contraste entre modifier une base vide et une base pleine. À gauche, une base vide représentée par une table sans lignes : on peut effacer et réécrire le schéma librement, le coût est nul. À droite, une base pleine représentée par une table remplie de nombreuses lignes de billets déjà vendus, avec une application branchée dessus qui sert des clients en continu : on ne peut pas effacer, il faut transformer l'existant sans perdre de données ni interrompre le service. Une flèche indique que le cours a jusqu'ici travaillé sur la base vide, et que cette leçon aborde la base pleine.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Le même changement, deux mondes</text>
+
+    <rect class="d-box" x="34" y="46" width="250" height="158" rx="10" />
+    <text class="d-tag" x="159" y="70" text-anchor="middle" font-size="11">base vide</text>
+    <rect class="d-frame" x="70" y="86" width="178" height="16" rx="3" />
+    <rect class="d-frame" x="70" y="106" width="178" height="16" rx="3" />
+    <text class="d-mut" x="159" y="140" text-anchor="middle" font-size="8.5">aucune donnée à préserver</text>
+    <text class="d-text" x="159" y="160" text-anchor="middle" font-size="9">on efface, on réécrit</text>
+    <text class="d-mut" x="159" y="184" text-anchor="middle" font-size="8.5">coût du changement&nbsp;: quasi nul</text>
+
+    <rect class="d-accent" x="356" y="46" width="250" height="158" rx="10" />
+    <text class="d-tag" x="481" y="70" text-anchor="middle" font-size="11">base pleine, en service</text>
+    <rect class="d-frame" x="392" y="84" width="178" height="11" rx="2" />
+    <rect class="d-frame" x="392" y="97" width="178" height="11" rx="2" />
+    <rect class="d-frame" x="392" y="110" width="178" height="11" rx="2" />
+    <rect class="d-frame" x="392" y="123" width="178" height="11" rx="2" />
+    <text class="d-mut" x="481" y="150" text-anchor="middle" font-size="8.5">50 000 billets · appli qui tourne</text>
+    <text class="d-text" x="481" y="170" text-anchor="middle" font-size="9">on transforme sans rien casser</text>
+    <text class="d-mut" x="481" y="192" text-anchor="middle" font-size="8.5">coût du changement&nbsp;: réel, à maîtriser</text>
+
+    <path class="d-line" d="M300 232 L340 232" fill="none" /><path class="d-line" d="M332 228 L340 232 L332 236" fill="none" />
+    <text class="d-mut" x="150" y="236" text-anchor="middle" font-size="8.5">tout le cours jusqu'ici</text>
+    <text class="d-mut" x="490" y="236" text-anchor="middle" font-size="8.5">cette leçon</text>
+  </svg>
+  <figcaption>Modifier le schéma d'une base vide est une réécriture&nbsp;; modifier celui d'une base pleine et en service est une <strong>transformation</strong>. C'est cette transformation prudente, versionnée et sans coupure, que l'on appelle une migration.</figcaption>
+</figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">La conception ne s'arrête pas au lancement</p><p>On a beaucoup insisté&nbsp;: le schéma est un <em>mur porteur</em>. Vrai — mais un mur porteur, on le renforce, on perce une ouverture, on ajoute un étage, au fil de la vie du bâtiment. La conception ne se termine pas le jour de la mise en production&nbsp;; elle continue, à chaque évolution. Bien concevoir, c'est aussi <strong>bien faire évoluer</strong>.</p></div></div>
+
+<h2>La migration : un changement versionné</h2>
+<p>Une <strong>migration</strong> est un changement de schéma décrit par un <strong>script</strong> — le plus souvent un fichier de SQL — et rangé dans le dépôt de code avec un <strong>numéro</strong>&nbsp;: <code>001_creer_schema.sql</code>, <code>002_ajouter_statut_representation.sql</code>, <code>003_creer_table_abonnement.sql</code>… Ce numéro n'est pas décoratif. Il fixe un <strong>ordre</strong>&nbsp;: les migrations se rejouent toujours dans la même séquence, de la première à la dernière. Une petite table technique (souvent nommée <code>schema_migrations</code>) mémorise, dans chaque base, celles qui y ont déjà été appliquées&nbsp;; on ne rejoue jamais deux fois la même.</p>
+<p>Pourquoi tant de rigueur&nbsp;? Parce qu'une application vit sur <strong>plusieurs bases</strong>&nbsp;: celle du développeur sur son portable, celle de test (l'intégration continue), celle de production. Si le schéma se construit par des <code>ALTER TABLE</code> tapés à la main, ces trois bases <em>divergent</em> aussitôt&nbsp;: un oubli ici, une faute de frappe là, et «&nbsp;ça marche sur ma machine&nbsp;» devient «&nbsp;ça plante en prod&nbsp;». Rejouer <em>exactement la même suite</em> de migrations sur les trois garantit qu'elles aboutissent au <strong>même schéma</strong>, au caractère près.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 270" role="img" aria-label="Une suite de migrations versionnées rejouée sur trois environnements. En haut, une frise de trois scripts numérotés reliés par des flèches : migration 001 créer le schéma, migration 002 ajouter un statut, migration 003 créer la table abonnement. En dessous, trois environnements représentés chacun par une boîte : la base du développeur, la base de test et la base de production. La même suite ordonnée 001 puis 002 puis 003 s'applique sur chacune des trois bases. Une accolade à droite indique que le résultat est un schéma identique partout, car c'est la même séquence rejouée.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une suite ordonnée, rejouée à l'identique partout</text>
+
+    <rect class="d-accent" x="40" y="40" width="150" height="40" rx="7" />
+    <text class="d-tag" x="115" y="58" text-anchor="middle" font-size="9">001</text>
+    <text class="d-mut" x="115" y="72" text-anchor="middle" font-size="7.5">créer le schéma</text>
+    <rect class="d-accent" x="245" y="40" width="150" height="40" rx="7" />
+    <text class="d-tag" x="320" y="58" text-anchor="middle" font-size="9">002</text>
+    <text class="d-mut" x="320" y="72" text-anchor="middle" font-size="7.5">ajouter un statut</text>
+    <rect class="d-accent" x="450" y="40" width="150" height="40" rx="7" />
+    <text class="d-tag" x="525" y="58" text-anchor="middle" font-size="9">003</text>
+    <text class="d-mut" x="525" y="72" text-anchor="middle" font-size="7.5">table abonnement</text>
+    <path class="d-line" d="M190 60 L245 60" fill="none" /><path class="d-line" d="M237 56 L245 60 L237 64" fill="none" />
+    <path class="d-line" d="M395 60 L450 60" fill="none" /><path class="d-line" d="M442 56 L450 60 L442 64" fill="none" />
+
+    <rect class="d-box" x="40" y="128" width="170" height="94" rx="9" />
+    <text class="d-tag" x="125" y="150" text-anchor="middle" font-size="9.5">base du développeur</text>
+    <text class="d-mut" x="125" y="172" text-anchor="middle" font-size="8">001 → 002 → 003</text>
+    <text class="d-mut" x="125" y="196" text-anchor="middle" font-size="8">sur son portable</text>
+
+    <rect class="d-box" x="235" y="128" width="170" height="94" rx="9" />
+    <text class="d-tag" x="320" y="150" text-anchor="middle" font-size="9.5">base de test</text>
+    <text class="d-mut" x="320" y="172" text-anchor="middle" font-size="8">001 → 002 → 003</text>
+    <text class="d-mut" x="320" y="196" text-anchor="middle" font-size="8">intégration continue</text>
+
+    <rect class="d-box" x="430" y="128" width="170" height="94" rx="9" />
+    <text class="d-tag" x="515" y="150" text-anchor="middle" font-size="9.5">base de production</text>
+    <text class="d-mut" x="515" y="172" text-anchor="middle" font-size="8">001 → 002 → 003</text>
+    <text class="d-mut" x="515" y="196" text-anchor="middle" font-size="8">les vrais clients</text>
+
+    <path class="d-line" d="M115 80 L125 128" fill="none" stroke-dasharray="3 3" />
+    <path class="d-line" d="M320 80 L320 128" fill="none" stroke-dasharray="3 3" />
+    <path class="d-line" d="M525 80 L515 128" fill="none" stroke-dasharray="3 3" />
+
+    <text class="d-mut" x="320" y="248" text-anchor="middle" font-size="9">Même séquence, même point de départ&nbsp;→ même schéma final, au caractère près.</text>
+    <text class="d-mut" x="320" y="264" text-anchor="middle" font-size="8.5">La table schema_migrations note, dans chaque base, ce qui a déjà été appliqué.</text>
+  </svg>
+  <figcaption>Une migration est <strong>reproductible</strong>&nbsp;: la même liste numérotée, rejouée dans l'ordre, produit partout le même schéma. C'est ce qui met fin au «&nbsp;ça marche sur ma machine&nbsp;»&nbsp;: la structure de la prod n'est plus un mystère, c'est le résultat d'une suite de scripts qu'on peut lire, rejouer et vérifier.</figcaption>
+</figure>
+
+<p>Un corollaire important&nbsp;: puisqu'une migration est un fichier numéroté dans le dépôt, c'est du <strong>code</strong>. Elle est versionnée avec <a href="../git/cours.html">git</a>, relue en <em>revue de code</em>, testée avant d'atteindre la prod, et son historique raconte l'évolution du schéma comme les commits racontent celle du code. Le schéma cesse d'être un objet vivant et opaque sur un serveur&nbsp;: il devient une conséquence traçable de fichiers que toute l'équipe partage.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Une migration ne se contente pas de dire <em>comment</em> aller en avant (la partie <strong>up</strong>&nbsp;: appliquer le changement)&nbsp;; on lui associe idéalement le chemin <em>retour</em> (<strong>down</strong>&nbsp;: le défaire). Prendre l'habitude d'écrire les deux <em>au moment où l'on rédige la migration</em> — pendant qu'on a le contexte en tête — vaut bien mieux que de chercher à improviser un retour arrière en catastrophe, la prod à l'arrêt.</p></div></div>
+
+<h2>Les opérations ALTER TABLE</h2>
+<p>L'outil de base d'une migration relationnelle, c'est <code>ALTER TABLE</code>&nbsp;: la commande qui modifie une table <em>existante</em> sans la détruire. À côté de <code>CREATE TABLE</code> (créer une table neuve) et de <code>DROP TABLE</code> (la supprimer), <code>ALTER</code> couvre presque tous les changements du quotidien. En voici le répertoire, appliqué à Rideau.</p>
+
+<figure class="code-block" data-file="alter_table_panorama.sql"><pre><code class="language-sql">-- Ajouter une colonne (voir plus bas le piège du NOT NULL sur table pleine)
+ALTER TABLE representation ADD COLUMN statut TEXT;
+
+-- Ajouter une contrainte à une table qui existe déjà
+ALTER TABLE representation
+    ADD CONSTRAINT chk_statut
+    CHECK (statut IN ('prevue', 'jouee', 'annulee'));
+
+-- Ajouter un index (accélérer une recherche — voir la leçon 11)
+CREATE INDEX idx_repr_statut ON representation (statut);
+
+-- Renommer une colonne
+ALTER TABLE client RENAME COLUMN nom TO nom_complet;
+
+-- Supprimer une colonne (DESTRUCTIF : les données de la colonne sont perdues)
+ALTER TABLE client DROP COLUMN nom_complet;</code></pre></figure>
+
+<p>Créer une <em>table</em> entière est un simple <code>CREATE TABLE</code> dans une migration&nbsp;: c'est ainsi qu'on ajoutera <code>abonnement</code> plus loin. Retiens surtout la dernière ligne, en commentaire&nbsp;: <code>DROP COLUMN</code> est <strong>destructif</strong>. Il ne réorganise pas les données, il les <em>efface</em>. Ce détail va nous occuper au moment de parler de réversibilité.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>La syntaxe exacte d'<code>ALTER TABLE</code> varie légèrement d'un moteur à l'autre — SQLite, par exemple, ne sait pas tout faire d'un seul coup et oblige parfois à recréer la table. On reste ici sur les formes les plus répandues (celles de PostgreSQL, largement standard)&nbsp;; l'important n'est pas la ponctuation d'un dialecte, c'est de <strong>reconnaître les cinq opérations</strong>&nbsp;: ajouter/renommer/supprimer une colonne, ajouter une contrainte, ajouter un index.</p></div></div>
+
+<h2>Le piège central : NOT NULL sans DEFAULT</h2>
+<p>Voici l'erreur qui coûte le plus de nuits blanches, et elle tient en une ligne apparemment anodine. On veut rendre <code>representation.statut</code> obligatoire. Réflexe naturel&nbsp;: l'ajouter en <code>NOT NULL</code>. Sur une base vide, ça passe. Sur la base de Rideau, pleine de représentations déjà enregistrées, ça <strong>échoue</strong>&nbsp;:</p>
+
+<figure class="code-block" data-file="migration_naive_ko.sql"><pre><code class="language-sql">-- La table representation contient déjà 400 lignes (deux saisons).
+-- Ajouter une colonne NOT NULL SANS valeur par défaut...
+ALTER TABLE representation ADD COLUMN statut TEXT NOT NULL;
+-- ERREUR : les 400 lignes existantes n'ont PAS de valeur pour statut.
+-- « NOT NULL » exige une valeur pour CHAQUE ligne, y compris les anciennes.
+-- La base ne sait pas quoi y mettre -> elle refuse toute la migration.</code></pre></figure>
+
+<p>La logique est implacable. <code>NOT NULL</code> promet&nbsp;: «&nbsp;<em>aucune</em> ligne de cette colonne n'est vide&nbsp;». Or les 400 lignes déjà là n'ont, par définition, aucune valeur pour une colonne qui vient de naître. La base se retrouve devant une promesse qu'elle ne peut pas tenir, et — c'est une bonne chose — elle refuse plutôt que de mentir. Il y a deux façons propres de s'en sortir.</p>
+
+<h3>Solution A — ajouter avec un DEFAULT</h3>
+<p>Si un <em>bon</em> défaut existe, on le fournit&nbsp;: la base l'applique aux lignes existantes <em>et</em> le réutilisera pour les futures. Une représentation déjà passée était forcément «&nbsp;prévue&nbsp;» à l'origine&nbsp;; ce défaut a du sens&nbsp;:</p>
+
+<figure class="code-block" data-file="migration_default_ok.sql"><pre><code class="language-sql">-- Un défaut sensé règle tout d'un coup :
+ALTER TABLE representation
+    ADD COLUMN statut TEXT NOT NULL DEFAULT 'prevue';
+-- Les 400 lignes existantes reçoivent 'prevue'.
+-- Les futures aussi, si l'INSERT ne précise rien.
+-- La promesse NOT NULL est tenue : aucune ligne vide. La migration passe.</code></pre></figure>
+
+<h3>Solution B — en trois temps</h3>
+<p>Quand aucun défaut universel n'a de sens (la valeur dépend de chaque ligne, ou doit être calculée), on procède en <strong>trois étapes</strong>, dans trois instructions — voire trois migrations distinctes&nbsp;:</p>
+
+<figure class="code-block" data-file="migration_trois_temps.sql"><pre><code class="language-sql">-- Temps 1 : ajouter la colonne NULLABLE (autorisée à être vide).
+--            Elle naît vide sur les 400 lignes -> aucune erreur.
+ALTER TABLE representation ADD COLUMN statut TEXT;
+
+-- Temps 2 : REMPLIR les lignes existantes (ici, une règle simple ;
+--           en vrai, on peut calculer selon la date, etc.).
+UPDATE representation SET statut = 'prevue' WHERE statut IS NULL;
+
+-- Temps 3 : maintenant que PLUS AUCUNE ligne n'est vide,
+--           on peut resserrer en NOT NULL sans rien casser.
+ALTER TABLE representation ALTER COLUMN statut SET NOT NULL;</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 290" role="img" aria-label="Comparaison de deux migrations pour rendre une colonne obligatoire sur une table pleine. En haut, la voie naïve : une seule étape ajoute la colonne en NOT NULL directement ; comme les lignes existantes n'ont pas de valeur, la migration échoue et est marquée en rejet. En bas, la voie en trois temps qui réussit : étape 1 ajouter la colonne nullable, les lignes existantes acceptent une valeur vide ; étape 2 remplir toutes les lignes existantes avec une valeur ; étape 3 resserrer la colonne en NOT NULL, désormais possible car plus aucune ligne n'est vide. Une coche verte marque la réussite de la voie en trois temps.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Rendre une colonne obligatoire sur une table pleine</text>
+
+    <text class="d-tag" x="60" y="52" text-anchor="start" font-size="10">voie naïve</text>
+    <rect class="d-box" x="150" y="38" width="340" height="42" rx="8" stroke="var(--accent-strong)" />
+    <text class="d-text" x="170" y="58" font-size="8.5">ADD COLUMN statut TEXT NOT NULL</text>
+    <text class="d-mut" x="170" y="72" font-size="8">les anciennes lignes n'ont pas de valeur</text>
+    <text x="600" y="62" text-anchor="end" font-size="9" fill="var(--accent-strong)">✗ échoue</text>
+
+    <line class="d-line" x1="40" y1="98" x2="600" y2="98" stroke-dasharray="3 4" />
+
+    <text class="d-tag" x="60" y="122" text-anchor="start" font-size="10">voie en 3 temps</text>
+
+    <rect class="d-accent" x="150" y="112" width="340" height="34" rx="7" />
+    <text class="d-text" x="170" y="128" font-size="8.5">1 · ADD COLUMN statut TEXT  (nullable)</text>
+    <text class="d-mut" x="170" y="140" font-size="7.5">naît vide partout — accepté</text>
+
+    <rect class="d-accent" x="150" y="154" width="340" height="34" rx="7" />
+    <text class="d-text" x="170" y="170" font-size="8.5">2 · UPDATE ... SET statut = 'prevue'</text>
+    <text class="d-mut" x="170" y="182" font-size="7.5">on remplit toutes les lignes existantes</text>
+
+    <rect class="d-accent" x="150" y="196" width="340" height="34" rx="7" />
+    <text class="d-text" x="170" y="212" font-size="8.5">3 · ALTER COLUMN statut SET NOT NULL</text>
+    <text class="d-mut" x="170" y="224" font-size="7.5">plus aucune ligne vide — accepté</text>
+
+    <path class="d-line" d="M320 146 L320 154" fill="none" /><path class="d-line" d="M316 150 L320 154 L324 150" fill="none" />
+    <path class="d-line" d="M320 188 L320 196" fill="none" /><path class="d-line" d="M316 192 L320 196 L324 192" fill="none" />
+    <text x="600" y="216" text-anchor="end" font-size="9" fill="var(--accent)">✓ réussit</text>
+
+    <text class="d-mut" x="320" y="256" text-anchor="middle" font-size="9">On n'exige NOT NULL qu'APRÈS avoir garanti qu'aucune ligne n'est vide.</text>
+    <text class="d-mut" x="320" y="274" text-anchor="middle" font-size="8.5">Solution A (un DEFAULT sensé) fait la même chose en une ligne, quand un tel défaut existe.</text>
+  </svg>
+  <figcaption>La contrainte <code>NOT NULL</code> (revue à la <a href="lecon-07.html">leçon 7</a>) ne pardonne pas sur une table pleine&nbsp;: elle exige une valeur pour <em>chaque</em> ligne, y compris les anciennes. On la satisfait soit par un <code>DEFAULT</code> immédiat, soit en trois temps&nbsp;: ajouter vide, remplir, puis seulement resserrer.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>«&nbsp;Ça a marché en développement.&nbsp;»</strong> Sur la base du développeur, souvent quasi vide, <code>ADD COLUMN ... NOT NULL</code> passe sans broncher — il n'y a aucune ligne existante à remplir. Puis la même migration atteint la prod et ses centaines de milliers de lignes, et elle <em>plante</em>. Une migration ne doit jamais être validée sur une base vide&nbsp;: teste-la sur une <strong>copie réaliste</strong> de la prod, avec de vraies données, sinon le piège ne se révèle qu'au pire moment.</p></div></div>
+
+<h2>Migrer sans coupure : expand / contract</h2>
+<p>Jusqu'ici, on a supposé qu'on pouvait appliquer la migration «&nbsp;tranquillement&nbsp;». Mais Rideau vend des billets <em>en continu</em>&nbsp;: on ne veut pas éteindre le site pendant la migration, et surtout, pendant un déploiement, <strong>deux versions du code coexistent quelques minutes</strong> — l'ancienne encore en train de servir des requêtes, la nouvelle qui démarre. Si la migration casse ce que lit l'ancienne version, on provoque des erreurs en plein service. La parade porte un nom imagé&nbsp;: <strong>expand / contract</strong>, «&nbsp;élargir puis resserrer&nbsp;».</p>
+<p>L'idée&nbsp;: ne jamais passer <em>directement</em> de l'ancien schéma au nouveau. On élargit d'abord (les deux formes cohabitent), on bascule tranquillement, puis on resserre. En trois temps&nbsp;:</p>
+<ol>
+<li><strong>Expand (élargir)</strong> — ajouter le <em>nouveau</em> (colonne, table) <em>sans toucher</em> à l'ancien. Le schéma sait maintenant faire les deux. L'ancienne version du code, qui ignore le nouveau, continue de fonctionner&nbsp;: on n'a <em>rien retiré</em>.</li>
+<li><strong>Migrer + double écriture</strong> — recopier les données de l'ancien vers le nouveau, et faire écrire la nouvelle version du code <em>dans les deux</em> le temps de la transition. Pendant cette phase, ancien et nouveau restent cohérents, quelle que soit la version qui écrit.</li>
+<li><strong>Contract (resserrer)</strong> — une fois que <em>plus personne</em> ne lit ni n'écrit l'ancien (toutes les instances tournent en nouvelle version), le supprimer. Le schéma est enfin dans sa forme cible.</li>
+</ol>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Le motif expand contract en trois étapes pour scinder la colonne nom en nom et prenom sans coupure. Étape 1, expand : la table possède l'ancienne colonne nom, et on ajoute les nouvelles colonnes nom et prenom vides à côté ; l'ancien est intact donc l'ancienne version du code marche encore. Étape 2, migrer et double écriture : on recopie les données de l'ancien nom vers les nouvelles colonnes, et le nouveau code écrit à la fois dans l'ancien et dans le nouveau ; les deux restent cohérents. Étape 3, contract : plus personne n'utilise l'ancienne colonne, on la supprime, il ne reste que nom et prenom. Une flèche traverse les trois étapes en indiquant aucune coupure de service.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">expand / contract — scinder un champ sans coupure</text>
+
+    <rect class="d-box" x="24" y="44" width="188" height="150" rx="9" />
+    <text class="d-tag" x="118" y="66" text-anchor="middle" font-size="10">1 · expand</text>
+    <rect class="d-frame" x="44" y="80" width="148" height="18" rx="3" /><text class="d-mut" x="52" y="93" font-size="8">nom_complet (ancien)</text>
+    <rect class="d-accent" x="44" y="104" width="148" height="18" rx="3" /><text class="d-text" x="52" y="117" font-size="8">nom (nouveau, vide)</text>
+    <rect class="d-accent" x="44" y="126" width="148" height="18" rx="3" /><text class="d-text" x="52" y="139" font-size="8">prenom (nouveau, vide)</text>
+    <text class="d-mut" x="118" y="166" text-anchor="middle" font-size="7.5">on AJOUTE, on ne retire rien</text>
+    <text class="d-mut" x="118" y="182" text-anchor="middle" font-size="7.5">ancien code : marche encore</text>
+
+    <rect class="d-box" x="226" y="44" width="188" height="150" rx="9" />
+    <text class="d-tag" x="320" y="66" text-anchor="middle" font-size="10">2 · migrer + double écriture</text>
+    <rect class="d-frame" x="246" y="80" width="148" height="18" rx="3" /><text class="d-mut" x="254" y="93" font-size="8">nom_complet (ancien)</text>
+    <rect class="d-accent" x="246" y="104" width="148" height="18" rx="3" /><text class="d-text" x="254" y="117" font-size="8">nom (rempli)</text>
+    <rect class="d-accent" x="246" y="126" width="148" height="18" rx="3" /><text class="d-text" x="254" y="139" font-size="8">prenom (rempli)</text>
+    <text class="d-mut" x="320" y="166" text-anchor="middle" font-size="7.5">copie ancien → nouveau</text>
+    <text class="d-mut" x="320" y="182" text-anchor="middle" font-size="7.5">le code écrit DANS LES DEUX</text>
+
+    <rect class="d-box" x="428" y="44" width="188" height="150" rx="9" />
+    <text class="d-tag" x="522" y="66" text-anchor="middle" font-size="10">3 · contract</text>
+    <rect class="d-accent" x="448" y="92" width="148" height="18" rx="3" /><text class="d-text" x="456" y="105" font-size="8">nom (rempli)</text>
+    <rect class="d-accent" x="448" y="114" width="148" height="18" rx="3" /><text class="d-text" x="456" y="127" font-size="8">prenom (rempli)</text>
+    <text class="d-mut" x="522" y="152" text-anchor="middle" font-size="7.5">l'ancien n'est plus lu par personne</text>
+    <text class="d-mut" x="522" y="168" text-anchor="middle" font-size="7.5">→ DROP COLUMN nom_complet</text>
+    <text class="d-mut" x="522" y="184" text-anchor="middle" font-size="7.5">forme cible atteinte</text>
+
+    <path class="d-line" d="M212 119 L226 119" fill="none" /><path class="d-line" d="M218 115 L226 119 L218 123" fill="none" />
+    <path class="d-line" d="M414 119 L428 119" fill="none" /><path class="d-line" d="M420 115 L428 119 L420 123" fill="none" />
+
+    <path class="d-line" d="M40 230 L600 230" fill="none" /><path class="d-line" d="M592 226 L600 230 L592 234" fill="none" />
+    <text class="d-mut" x="320" y="222" text-anchor="middle" font-size="8.5">à AUCUN instant l'ancien et le nouveau ne manquent en même temps</text>
+    <text class="d-mut" x="320" y="250" text-anchor="middle" font-size="9">aucune coupure de service — l'application sert des clients tout du long</text>
+  </svg>
+  <figcaption>Le motif <strong>expand / contract</strong>&nbsp;: on élargit (ajouter le nouveau sans retirer l'ancien), on migre en écrivant dans les deux, puis on resserre (retirer l'ancien une fois qu'il n'est plus utilisé). À aucun moment le schéma ne casse l'une des deux versions du code&nbsp;: la bascule se fait sans coupure.</figcaption>
+</figure>
+
+<p>Le même motif s'applique pour <strong>remplacer</strong> une colonne par une autre, changer un type, ou scinder un champ comme ici. La discipline commune&nbsp;: <em>ajouter d'abord, migrer ensuite, supprimer en dernier</em>, avec une phase intermédiaire où les deux formes coexistent. C'est plus long qu'un <code>ALTER TABLE</code> brutal — mais c'est le prix d'un service qui ne s'arrête jamais.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Compatibilité ascendante et descendante</p><p>Pendant la bascule, la base doit accepter <em>à la fois</em> l'ancienne et la nouvelle version du code. On dit qu'un changement est <strong>compatible ascendant</strong> (<em>backward compatible</em>) quand le code déjà en place continue de fonctionner après la migration. C'est exactement ce que garantit la phase <em>expand</em>&nbsp;: comme on n'a <em>rien retiré</em>, l'ancien code ne trouve jamais un mur à la place de ce qu'il attendait. La règle d'or&nbsp;: <strong>on déploie d'abord un schéma élargi, on retire l'ancien seulement quand plus aucun code ne s'en sert.</strong></p></div></div>
+
+<h2>Réversibilité, et ses limites</h2>
+<p>On l'a dit&nbsp;: une bonne migration prévoit son chemin <strong>retour</strong> (le <em>rollback</em>). Si <code>002</code> ajoute une colonne, son retour la supprime&nbsp;; si <code>003</code> crée une table, son retour la <em>drop</em>. Pouvoir revenir en arrière est précieux quand une migration se révèle mauvaise juste après la mise en production.</p>
+<p>Mais toutes les migrations ne sont pas réversibles «&nbsp;pour de vrai&nbsp;». <strong>Supprimer une colonne détruit ses données</strong>&nbsp;: le rollback peut bien <em>recréer</em> la colonne, il ne ressuscite pas ce qu'elle contenait. Le chemin retour existe sur le papier (la structure revient), mais l'information, elle, est perdue. C'est la nuance essentielle&nbsp;: <em>réversible en structure</em> n'est pas <em>réversible en données</em>. Une migration destructrice est, en pratique, un aller simple.</p>
+
+<figure class="code-block" data-file="migration_up_down.sql"><pre><code class="language-sql">-- 002_ajouter_statut.sql
+
+-- up : appliquer le changement
+ALTER TABLE representation
+    ADD COLUMN statut TEXT NOT NULL DEFAULT 'prevue';
+
+-- down : le défaire (ici PROPREMENT réversible : la colonne était nouvelle,
+--        aucune donnée d'origine n'est perdue en la retirant).
+ALTER TABLE representation DROP COLUMN statut;
+
+-- ATTENTION : si 'down' supprimait une colonne PRÉEXISTANTE et pleine,
+-- il rendrait la structure mais PAS les données : ce serait irréversible
+-- de fait. Le rollback n'est un vrai filet que pour les ajouts récents.</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire que le rollback est un filet de sécurité universel.</strong> Il l'est pour les ajouts récents. Il ne l'est <em>pas</em> pour les suppressions&nbsp;: une fois la colonne <em>droppée</em>, ses données ont disparu, rollback ou pas. La vraie sécurité contre une migration destructrice n'est pas le chemin retour&nbsp;: c'est la <strong>sauvegarde</strong> prise <em>avant</em>, et le fait d'avoir <em>testé</em> la migration sur une copie. Le rollback range les meubles&nbsp;; il ne rembobine pas le temps.</p></div></div>
+
+<h2>Trois évolutions de Rideau, de bout en bout</h2>
+<p>Rassemblons tout sur nos trois demandes réelles. Chacune illustre un cas de figure différent.</p>
+
+<h3>Ajouter la table abonnement (+ une clé étrangère)</h3>
+<p>Le plus simple&nbsp;: on <em>crée</em> une table neuve, reliée à <code>client</code> par une <a href="lecon-06.html">clé étrangère</a>. Rien d'existant n'est touché, donc aucun risque pour le service&nbsp;: c'est une pure phase <em>expand</em>.</p>
+
+<figure class="code-block" data-file="003_creer_abonnement.sql"><pre><code class="language-sql">-- 003_creer_abonnement.sql  (up)
+CREATE TABLE abonnement (
+    abonnement_id INTEGER PRIMARY KEY,
+    client_id     INTEGER NOT NULL REFERENCES client(client_id),  -- le lien
+    formule       TEXT NOT NULL CHECK (formule IN ('decouverte', 'saison')),
+    debut         DATE NOT NULL,
+    fin           DATE NOT NULL,
+    CHECK (fin &gt; debut)                    -- une période cohérente
+);
+-- down : DROP TABLE abonnement;  (réversible : la table est toute neuve)</code></pre></figure>
+
+<h3>Ajouter representation.statut (avec DEFAULT)</h3>
+<p>Une colonne obligatoire sur une table pleine&nbsp;: on a vu le piège&nbsp;: un <code>DEFAULT</code> sensé le désamorce en une ligne, et l'on scelle les valeurs permises par un <code>CHECK</code>.</p>
+
+<figure class="code-block" data-file="002_statut_representation.sql"><pre><code class="language-sql">-- 002_statut_representation.sql  (up)
+ALTER TABLE representation
+    ADD COLUMN statut TEXT NOT NULL DEFAULT 'prevue';
+ALTER TABLE representation
+    ADD CONSTRAINT chk_repr_statut
+    CHECK (statut IN ('prevue', 'jouee', 'annulee'));
+-- Les représentations déjà en base héritent de 'prevue' ; on ajustera
+-- au cas par cas ensuite. down : DROP COLUMN statut; (colonne nouvelle)</code></pre></figure>
+
+<h3>Scinder client.nom en nom + prenom (expand/contract)</h3>
+<p>Le cas délicat, car il <em>transforme</em> une donnée préexistante et lue par le code en production. On applique le motif <em>expand/contract</em> au fil de plusieurs migrations&nbsp;:</p>
+
+<figure class="code-block" data-file="scinder_nom.sql"><pre><code class="language-sql">-- 004_expand_prenom.sql : on AJOUTE, sans retirer nom_complet.
+ALTER TABLE client ADD COLUMN prenom TEXT;
+-- (la colonne 'nom' existe déjà ; ici 'nom_complet' est l'ancien champ fourre-tout)
+
+-- 005_migrer_noms.sql : remplir le nouveau depuis l'ancien.
+--   règle simple d'exemple : tout avant le dernier espace = prénom.
+UPDATE client
+   SET prenom = trim(substr(nom_complet, 1, length(nom_complet) - length(nom))),
+       nom    = /* la partie nom, calculée */ nom
+ WHERE prenom IS NULL;
+-- Pendant cette phase, le NOUVEAU code écrit dans nom + prenom ET nom_complet.
+
+-- 006_contract_nom.sql : quand plus AUCUNE instance ne lit nom_complet,
+--   et seulement là, on retire l'ancien.
+ALTER TABLE client DROP COLUMN nom_complet;   -- destructif : irréversible de fait</code></pre></figure>
+
+<p>Remarque l'échelonnement&nbsp;: la suppression (<code>006</code>) n'arrive qu'<em>après</em> que tout le parc a basculé sur le nouveau code. Entre <code>004</code> et <code>006</code>, ancien et nouveau champs coexistent&nbsp;; à aucun instant l'application ne se retrouve sans le champ qu'elle attend. C'est exactement la compatibilité ascendante en action.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Sur de <em>très</em> grosses tables, même un <code>ALTER TABLE</code> anodin peut poser un verrou et ralentir le service le temps de réécrire des millions de lignes&nbsp;; les moteurs et les outils modernes savent le faire «&nbsp;en ligne&nbsp;», sans blocage, mais c'est un métier en soi. De même, remplir des millions de lignes (le <em>backfill</em> du temps 2) se fait par <strong>lots</strong>, pas d'un seul <code>UPDATE</code> massif. On touche là aux frontières entre conception et exploitation&nbsp;: le motif reste le même (expand → migrer → contract), seule l'échelle change les précautions.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>La migration «&nbsp;à la main&nbsp;» en production.</strong> Se connecter à la prod, taper quelques <code>ALTER TABLE</code>, refermer&nbsp;: c'est <em>rapide</em>… et irreproductible. Le changement n'existe dans aucun fichier, la base de test ne l'a pas, le prochain déploiement le contredit, et personne ne sait plus dans quel état est réellement la prod. Une évolution de schéma qui n'est pas un <strong>script versionné</strong> et rejoué partout est une dette qu'on paiera au pire moment.</p></div></div>
+<ul>
+<li><strong>Migration destructrice non testée</strong> — lancer directement en prod un <code>DROP</code> ou un <code>UPDATE</code> massif sans l'avoir <em>essayé sur une copie</em> ni pris de sauvegarde. Le SQL réussit… et efface plus que prévu. Toujours&nbsp;: sauvegarde d'abord, essai sur une copie réaliste, puis prod.</li>
+<li><strong><code>NOT NULL</code> sans <code>DEFAULT</code> sur table pleine</strong> — le grand classique&nbsp;: la migration échoue au contact des lignes existantes. Fournir un <code>DEFAULT</code> sensé, ou procéder en trois temps (ajouter vide → remplir → resserrer).</li>
+<li><strong>Renommer ou supprimer d'un coup une colonne encore lue par le code en prod</strong> — casse net l'ancienne version pendant le déploiement. Passer par <em>expand/contract</em>&nbsp;: on ne retire l'ancien qu'une fois que plus rien ne s'en sert.</li>
+<li><strong>Oublier le chemin retour</strong> — écrire seulement le <em>up</em> et découvrir, migration ratée, qu'on n'a aucun <em>down</em> préparé. Rédiger les deux au même moment (en sachant qu'un <em>down</em> après suppression ne rend pas les données).</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une boutique en ligne voulait rendre obligatoire un nouveau champ <code>pays</code> sur la table des adresses. Un développeur ajoute, un mercredi midi, <code>ADD COLUMN pays TEXT NOT NULL</code>&nbsp;: parfait sur sa machine (base de dev quasi vide), la revue passe. Le soir, le déploiement en production heurte les 800 000 adresses déjà enregistrées, sans valeur pour <code>pays</code>&nbsp;: la migration échoue, le déploiement s'interrompt à moitié, et le site tombe une quinzaine de minutes le temps de comprendre. Le correctif tenait en deux mots&nbsp;: soit un <code>DEFAULT 'FR'</code>, soit la version en trois temps. Personne n'avait fait de faute de SQL&nbsp;: la migration n'avait simplement jamais rencontré de <em>vraies</em> données avant la prod. Depuis, chez eux, toute migration passe par une copie récente de la production avant d'être validée.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Faire évoluer un schéma — les réflexes</caption>
+    <thead><tr><th scope="col">Situation</th><th scope="col">Le bon geste</th></tr></thead>
+    <tbody>
+      <tr><td>Changer un schéma en prod</td><td>Un <strong>script versionné</strong> (numéroté), rejoué à l'identique dev → test → prod</td></tr>
+      <tr><td>Ajouter une colonne / table / contrainte / index</td><td><code>ALTER TABLE ... ADD ...</code> / <code>CREATE TABLE</code> / <code>CREATE INDEX</code></td></tr>
+      <tr><td>Colonne obligatoire sur table pleine</td><td><code>ADD COLUMN ... NOT NULL DEFAULT ...</code>, ou en 3 temps (ajouter vide → remplir → <code>SET NOT NULL</code>)</td></tr>
+      <tr><td>Migrer sans coupure</td><td><strong>expand / contract</strong>&nbsp;: ajouter le nouveau → migrer + double écriture → retirer l'ancien</td></tr>
+      <tr><td>Renommer / remplacer une colonne lue en prod</td><td>Jamais d'un coup&nbsp;: expand/contract, retirer l'ancien seulement quand plus rien ne le lit</td></tr>
+      <tr><td>Revenir en arrière</td><td>Prévoir un <em>down</em>&nbsp;; mais <code>DROP COLUMN</code> perd les données&nbsp;: irréversible de fait</td></tr>
+      <tr><td>Avant toute migration risquée</td><td><strong>Sauvegarde</strong> + essai sur une <strong>copie réaliste</strong> de la prod</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Migration</dt><dd>Changement de schéma décrit par un script, versionné et rejouable, appliqué à une base existante sans perdre de données&nbsp;; idéalement réversible.</dd>
+  <dt><code>ALTER TABLE</code></dt><dd>Commande SQL qui modifie une table existante&nbsp;: ajouter, renommer ou supprimer une colonne, ajouter une contrainte, etc., sans recréer la table.</dd>
+  <dt>Migration versionnée</dt><dd>Migration rangée dans le dépôt avec un numéro fixant son ordre&nbsp;; rejouée dans la même séquence, elle produit partout le même schéma.</dd>
+  <dt>Rollback (chemin retour)</dt><dd>Opération qui défait une migration (partie <em>down</em>)&nbsp;; ramène la structure précédente, mais ne restitue pas les données déjà supprimées.</dd>
+  <dt>Réversibilité</dt><dd>Capacité d'une migration à être annulée. Réversible en <em>structure</em> n'implique pas réversible en <em>données</em>&nbsp;: une suppression est de fait irréversible.</dd>
+  <dt>Expand / contract</dt><dd>Motif de migration sans coupure&nbsp;: élargir (ajouter le nouveau sans retirer l'ancien), migrer les données, puis resserrer (retirer l'ancien une fois inutilisé).</dd>
+  <dt>Compatibilité ascendante</dt><dd>Propriété d'un changement qui n'empêche pas le code déjà en place de fonctionner&nbsp;; garantie par la phase <em>expand</em>, qui ne retire rien.</dd>
+  <dt>Double écriture</dt><dd>Pendant une transition, faire écrire l'application <em>à la fois</em> dans l'ancien et le nouveau champ, pour les garder cohérents quelle que soit la version.</dd>
+  <dt><code>DEFAULT</code></dt><dd>Valeur appliquée automatiquement à une colonne quand rien n'est fourni&nbsp;; à l'ajout d'une colonne, elle remplit aussi les lignes existantes.</dd>
+  <dt>Schéma évolutif</dt><dd>Schéma pensé pour changer dans le temps, par migrations successives, plutôt que figé une fois pour toutes au lancement.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un schéma <strong>vit</strong>&nbsp;: modifier une base vide est trivial, modifier une base pleine et en service ne l'est pas. La réponse est la <strong>migration</strong> — un changement <em>versionné</em>, <em>rejouable</em>, idéalement <em>réversible</em>, rangé dans le dépôt comme du code.</li>
+<li>Rejouer la <em>même</em> suite numérotée sur dev, test et prod donne partout le <strong>même schéma</strong>&nbsp;: fin du «&nbsp;ça marche sur ma machine&nbsp;». L'outil de base est <code>ALTER TABLE</code> (ajouter/renommer/supprimer une colonne, une contrainte, un index).</li>
+<li>Le piège central&nbsp;: <code>ADD COLUMN ... NOT NULL</code> <strong>sans DEFAULT</strong> échoue sur une table pleine. On le règle par un <code>DEFAULT</code> sensé, ou en <strong>trois temps</strong> (ajouter vide → remplir → <code>SET NOT NULL</code>).</li>
+<li>Pour migrer <strong>sans coupure</strong>&nbsp;: <strong>expand / contract</strong> — ajouter le nouveau sans retirer l'ancien, migrer en écrivant dans les deux, puis retirer l'ancien quand plus rien ne s'en sert. C'est la <strong>compatibilité ascendante</strong> qui protège les deux versions du code pendant la bascule.</li>
+<li>La <strong>réversibilité</strong> a des limites&nbsp;: un <code>DROP COLUMN</code> rend la structure mais pas les données. Le vrai filet est la <strong>sauvegarde</strong> et l'essai sur une <strong>copie réaliste</strong>, jamais le seul rollback.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>On ajoute <code>ALTER TABLE representation ADD COLUMN statut TEXT NOT NULL;</code> sur une table qui contient déjà 400 lignes, et la migration échoue. Pourquoi&nbsp;? Donne deux façons de corriger.</li>
+<li>En quoi le motif <em>expand / contract</em> permet-il de scinder <code>client.nom</code> en <code>nom</code>+<code>prenom</code> sans jamais casser l'application en production&nbsp;? Cite les trois étapes.</li>
+<li>Une migration a supprimé une colonne pleine par erreur. Son <em>rollback</em> recrée la colonne. Les données sont-elles récupérées&nbsp;? Explique, et dis ce qui aurait vraiment protégé.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'une migration de schéma, au sens professionnel du terme ?","a":["Un changement de schéma décrit par un script versionné (numéroté), rejouable à l'identique sur dev/test/prod et pensé pour ne pas perdre de données ni casser l'application","Un simple ALTER TABLE tapé à la main sur la base de production quand le besoin arrive","La sauvegarde complète de la base avant un déploiement","Le passage d'une base relationnelle à une base NoSQL"],"correct":0,"explain":"Une migration est un script versionné et rejouable, rangé dans le dépôt comme du code. Rejouer la même suite partout garantit le même schéma ; taper des ALTER à la main en prod est justement l'anti-pattern à éviter."},
+  {"q":"Pourquoi ADD COLUMN statut TEXT NOT NULL échoue-t-il sur une table qui contient déjà des lignes ?","a":["Parce que les lignes existantes n'ont aucune valeur pour cette nouvelle colonne, or NOT NULL exige une valeur pour CHAQUE ligne, y compris les anciennes : la base refuse plutôt que de laisser des trous","Parce qu'on ne peut jamais ajouter de colonne à une table non vide","Parce que TEXT n'accepte pas la contrainte NOT NULL","Parce qu'il manque un index sur la colonne"],"correct":0,"explain":"NOT NULL promet qu'aucune ligne n'est vide. Les lignes déjà présentes n'ont pas de valeur pour une colonne qui vient de naître : la promesse ne peut être tenue, la migration est rejetée. On corrige avec un DEFAULT ou en trois temps."},
+  {"q":"Aucun défaut universel n'a de sens pour la nouvelle colonne obligatoire. Quelle est la bonne marche à suivre ?","a":["En trois temps : 1) ajouter la colonne NULLABLE, 2) remplir les lignes existantes par UPDATE, 3) resserrer avec ALTER COLUMN ... SET NOT NULL","Forcer la migration avec NOT NULL et ignorer l'erreur","Vider la table puis la recréer avec la colonne NOT NULL","Ajouter la colonne uniquement en production, à la main"],"correct":0,"explain":"Quand aucun DEFAULT ne convient, on découpe : ajouter vide (accepté car nullable), remplir toutes les lignes, puis seulement passer NOT NULL — ce qui est désormais possible puisque plus aucune ligne n'est vide."},
+  {"q":"En quoi consiste le motif expand / contract, et à quoi sert-il ?","a":["À migrer sans coupure : (1) expand, ajouter le nouveau sans retirer l'ancien ; (2) migrer les données et écrire dans les deux ; (3) contract, retirer l'ancien quand plus personne ne l'utilise","À agrandir puis réduire la taille du disque de la base","À dupliquer la base sur un second serveur avant migration","À exécuter la migration deux fois pour être sûr"],"correct":0,"explain":"expand/contract évite de passer directement de l'ancien au nouveau schéma. En gardant les deux formes coexistantes le temps de la bascule, aucune des deux versions du code (ancienne encore active, nouvelle qui démarre) ne se retrouve cassée : pas de coupure."},
+  {"q":"Une migration a supprimé une colonne pleine (DROP COLUMN) par erreur. Son rollback recrée la colonne. Les données d'origine reviennent-elles ?","a":["Non : le rollback rend la STRUCTURE (la colonne réapparaît) mais pas les DONNÉES, qui ont été détruites par le DROP. Une suppression est irréversible de fait ; seule une sauvegarde prise avant aurait protégé","Oui : le rollback restaure toujours l'intégralité des données","Oui, à condition de relancer la migration up ensuite","Non, mais les données reviennent automatiquement au prochain redémarrage"],"correct":0,"explain":"Réversible en structure n'est pas réversible en données. DROP COLUMN efface le contenu ; recréer la colonne ne le ressuscite pas. Le vrai filet contre une migration destructrice est la sauvegarde préalable et l'essai sur une copie, pas le rollback."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["default","un default","default sense","une valeur par defaut","valeur par defaut","ajouter un default"],"placeholder":"pour ajouter representation.statut NOT NULL sur une table pleine en une ligne, on fournit un D_____ (ex. 'prevue')","hints":["Il remplit aussi les lignes déjà présentes.","Même mot-clé que la contrainte vue à la leçon 7.","Sept lettres : D...... (une valeur de départ)."],"link":{"href":"lecon-14.html","label":"Revoir « Le piège central : NOT NULL sans DEFAULT »"}},
+  {"type":"text","accept":["expand contract","expand/contract","expand-contract","le motif expand contract","expand puis contract","elargir puis resserrer"],"placeholder":"le motif qui migre SANS coupure en gardant l'ancien et le nouveau côte à côte s'appelle e_____ / c_______","hints":["Élargir, puis resserrer.","Ajouter le nouveau → migrer + double écriture → retirer l'ancien.","Deux mots anglais : e...... / c......."],"link":{"href":"lecon-14.html","label":"Revoir « Migrer sans coupure : expand / contract »"}},
+  {"type":"text","accept":["ascendante","compatibilite ascendante","la compatibilite ascendante","backward compatible","backward compatibility","retrocompatible"],"placeholder":"un changement qui laisse fonctionner le code DÉJÀ en place est dit compatible a_________ (garanti par la phase expand)","hints":["C'est ce que garantit la phase expand, qui ne retire rien.","En anglais : backward compatible.","Dix lettres : a......... (l'ancien code continue de marcher)."],"link":{"href":"lecon-14.html","label":"Revoir « Compatibilité ascendante et descendante »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacun de ces changements de schéma de Rideau, dis s'il est <strong>sans risque immédiat</strong> pour l'application en service (pur ajout) ou s'il <strong>demande des précautions</strong> (transformation d'existant / suppression), et pourquoi&nbsp;: (a) <code>CREATE TABLE abonnement (...)</code>&nbsp;; (b) <code>ALTER TABLE representation ADD COLUMN statut TEXT NOT NULL;</code> sur une table pleine&nbsp;; (c) <code>ALTER TABLE client DROP COLUMN nom_complet;</code> alors que le code lit encore cette colonne.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) CREATE TABLE abonnement -> SANS RISQUE (pur ajout / expand).
+    On crée une table neuve reliée à client par une clé étrangère.
+    Rien d'existant n'est touché, aucune version du code ne dépend
+    encore de cette table : le service continue sans souci.
+
+(b) ADD COLUMN statut TEXT NOT NULL (table pleine) -> PRÉCAUTIONS.
+    Les lignes existantes n'ont pas de valeur -> la migration ÉCHOUE.
+    Corriger avec un DEFAULT ('prevue'), ou en trois temps
+    (ajouter nullable -> remplir -> SET NOT NULL).
+
+(c) DROP COLUMN nom_complet encore lue -> PRÉCAUTIONS (danger).
+    Deux problèmes : on CASSE le code qui lit encore la colonne,
+    et on DÉTRUIT les données (irréversible de fait). Il faut passer
+    par expand/contract et ne supprimer qu'une fois que plus AUCUNE
+    instance ne lit nom_complet -- après sauvegarde.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>La salle veut un champ <code>client.telephone</code> <strong>obligatoire</strong>. La table <code>client</code> contient déjà 12 000 clients sans téléphone connu, et il n'existe <em>aucune</em> valeur par défaut sensée (un faux numéro serait pire que rien). Écris la migration <strong>en trois temps</strong> qui aboutit à une colonne <code>NOT NULL</code> sans faire échouer la migration ni inventer de données absurdes. Explique en une phrase le temps 2.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Temps 1 : ajouter la colonne NULLABLE (naît vide -> aucune erreur).
+ALTER TABLE client ADD COLUMN telephone TEXT;
+
+-- Temps 2 : remplir les lignes existantes. Comme aucun défaut sensé
+--   n'existe, on ne peut PAS passer NOT NULL tant que des lignes sont
+--   vides : il faut d'abord obtenir les vrais numéros (relance des
+--   clients, import d'une autre source...) puis les écrire.
+UPDATE client SET telephone = /* le vrai numéro obtenu */ telephone
+ WHERE telephone IS NULL;   -- à faire AVANT le temps 3
+
+-- Temps 3 : une fois qu'AUCUNE ligne n'est plus vide, resserrer.
+ALTER TABLE client ALTER COLUMN telephone SET NOT NULL;
+
+-- Le temps 2 est le vrai travail : on ne « resserre » (temps 3)
+-- qu'une fois toutes les lignes réellement remplies -- sinon échec.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue propose, pour renommer <code>client.nom</code> en <code>client.nom_famille</code> sur la prod en service, une migration unique&nbsp;: <code>ALTER TABLE client RENAME COLUMN nom TO nom_famille;</code>, déployée en même temps que le nouveau code. Explique pourquoi ce «&nbsp;renommage d'un coup&nbsp;» est risqué pendant un déploiement, puis décris la version <strong>expand / contract</strong> qui évite toute coupure.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">POURQUOI le renommage d'un coup est risqué :
+Pendant un déploiement, l'ancienne et la nouvelle version du code
+tournent quelques minutes EN MÊME TEMPS. Dès que la colonne est
+renommée, l'ancienne version, qui lit encore « nom », trouve une
+colonne disparue -> erreurs en plein service. Un RENAME immédiat
+n'est PAS compatible ascendant : il casse le code déjà en place.
+
+LA VERSION expand / contract (sans coupure) :
+
+1. EXPAND — ajouter la nouvelle colonne SANS retirer l'ancienne :
+     ALTER TABLE client ADD COLUMN nom_famille TEXT;
+   (l'ancien code, qui lit « nom », marche toujours : rien retiré.)
+
+2. MIGRER + DOUBLE ÉCRITURE — recopier l'existant et faire écrire
+   le nouveau code dans les DEUX colonnes le temps de la bascule :
+     UPDATE client SET nom_famille = nom WHERE nom_famille IS NULL;
+   (ancien et nouveau restent cohérents quelle que soit la version.)
+
+3. CONTRACT — quand plus AUCUNE instance ne lit « nom »
+   (tout le parc est en nouveau code), et seulement là :
+     ALTER TABLE client DROP COLUMN nom;
+
+À aucun instant la colonne attendue par une version active ne
+manque -> zéro coupure. On échelonne : ajouter, migrer, supprimer.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

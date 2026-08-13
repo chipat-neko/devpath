@@ -2681,6 +2681,62 @@ window.PROJETS = [
       "au directeur produit.</p>",
   },
   {
+    id: "bdd-patoune",
+    course: "bdd",
+    courseTitle: "Concevoir une base de données",
+    dir: "bdd",
+    accent: "bdd",
+    type: "Projet de modélisation",
+    niveau: "Intermédiaire",
+    titre: "La base de données de la clinique vétérinaire Patoune",
+    contexte:
+      "<p>La clinique vétérinaire <strong>Patoune</strong> gère aujourd'hui ses rendez-vous et sa facturation dans une " +
+      "grande feuille de calcul&nbsp;: une ligne par acte facturé, avec, recopiés à chaque fois, le nom du " +
+      "<strong>propriétaire</strong>, son téléphone, le nom et l'espèce de l'<strong>animal</strong>, le vétérinaire, la " +
+      "date, l'acte pratiqué et son prix. Résultat&nbsp;: un propriétaire qui déménage a deux adresses selon les lignes, " +
+      "un tarif d'acte changé la semaine dernière cohabite avec l'ancien, et personne n'ose supprimer une vieille ligne " +
+      "de peur d'effacer le seul endroit où figure un animal. La clinique veut passer à une <strong>vraie base " +
+      "relationnelle</strong>, saine, sur laquelle bâtir un petit logiciel de gestion.</p>",
+    objectif:
+      "<p>Concevoir <strong>de zéro</strong> le schéma de la base de Patoune, du besoin au SQL. Il faut " +
+      "<strong>identifier les entités</strong> (propriétaires, animaux, vétérinaires, consultations, actes, factures) et " +
+      "leurs <strong>relations</strong>, choisir des <strong>clés</strong>, <strong>normaliser</strong> jusqu'à la 3e " +
+      "forme pour supprimer les redondances, poser les <strong>contraintes</strong> qui garantissent l'intégrité, puis " +
+      "réfléchir aux <strong>index</strong> utiles et à une première <strong>migration</strong> d'évolution. L'objectif " +
+      "est un schéma dont les incohérences d'aujourd'hui deviennent <strong>impossibles à écrire</strong>.</p>",
+    livrable:
+      "Un schéma complet&nbsp;: un diagramme entité-association, le SQL des <code>CREATE TABLE</code> avec clés primaires, " +
+      "clés étrangères et contraintes, une note justifiant le niveau de normalisation atteint, deux ou trois index " +
+      "argumentés, et le script d'une migration d'évolution (par exemple l'ajout des rappels de vaccination).",
+    fonctionnalites: [
+      "Un <strong>modèle entité-association</strong> qui distingue clairement les entités (propriétaire, animal, vétérinaire, consultation, acte, facture) et le type de chaque relation (un propriétaire a plusieurs animaux, une consultation porte sur plusieurs actes).",
+      "Un jeu de <strong>tables normalisées</strong>&nbsp;: le nom d'un propriétaire, l'espèce d'un animal ou le tarif d'un acte ne sont écrits qu'à un seul endroit, jamais recopiés à chaque facture.",
+      "Des <strong>clés étrangères</strong> qui relient les tables et une politique claire de suppression (que devient l'historique d'un animal si son propriétaire quitte la clinique&nbsp;?).",
+      "Des <strong>contraintes d'intégrité</strong>&nbsp;: un prix positif, une espèce prise dans une liste, un e-mail unique par propriétaire, une date de consultation obligatoire.",
+      "La table d'association <strong>consultation ↔ acte</strong> (une consultation regroupe plusieurs actes, un même acte se pratique en de nombreuses consultations) avec le prix facturé conservé au moment de l'acte.",
+      "Deux ou trois <strong>index</strong> justifiés (retrouver les consultations d'un animal, les factures d'un mois) et une <strong>migration</strong> d'évolution du schéma sans casser l'existant.",
+    ],
+    criteres: [
+      "Chaque <strong>fait est écrit une seule fois</strong>&nbsp;: aucune information (coordonnées, espèce, tarif) n'est recopiée d'une ligne à l'autre. La 3e forme normale est atteinte, ou l'écart est justifié.",
+      "Les <strong>relations</strong> sont correctement typées (1-N, N-N) et chaque N-N passe par une table d'association dédiée.",
+      "Les <strong>contraintes</strong> rendent les incohérences du départ impossibles&nbsp;: on ne peut pas saisir deux adresses contradictoires pour un même propriétaire.",
+      "Les <strong>clés étrangères</strong> sont posées avec une action de suppression réfléchie, et l'intégrité référentielle est garantie (pas d'animal orphelin sans propriétaire).",
+      "Les <strong>index</strong> proposés répondent à des requêtes réelles de la clinique, et leur coût en écriture est mentionné, pas seulement leur bénéfice en lecture.",
+      "La <strong>migration</strong> fournie fait évoluer le schéma (ajout d'une fonctionnalité) sans perdre de données et sans bloquer l'application existante.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur les <strong>entités et relations</strong>, les <strong>clés primaires et " +
+      "étrangères</strong>, la <strong>normalisation</strong>, les <strong>contraintes</strong>, les <strong>index</strong> " +
+      "et les <strong>migrations</strong>.</p>" +
+      "<p>Commence par <strong>raconter le domaine à voix haute</strong> — «&nbsp;un propriétaire a des animaux&nbsp;», " +
+      "«&nbsp;un animal a des consultations&nbsp;», «&nbsp;une consultation regroupe des actes&nbsp;» — les noms deviennent " +
+      "tes tables, les verbes tes relations. Écris ensuite les <a href=\"../sql/cours.html\">CREATE TABLE</a> en t'appuyant " +
+      "sur le <a href=\"../sql/cours.html\">cours SQL</a>, et demande-toi, à la toute fin, si une partie du domaine (les " +
+      "rappels, l'historique) gagnerait à être pensée en <a href=\"../nosql/cours.html\">NoSQL</a>. Termine par un scénario " +
+      "d'incohérence du tableur de départ — «&nbsp;deux adresses pour le même propriétaire&nbsp;» — et montre que ton " +
+      "schéma le rend tout simplement impossible.</p>",
+  },
+  {
     id: "data-eng-velociti",
     course: "data-eng",
     courseTitle: "Ingénierie de données",

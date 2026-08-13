@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lire un plan d'exécution — Leçon 12 · Cours Concevoir une base de données — Syntaxe</title>
+    <meta name="description" content="Comprendre pourquoi une requête est lente en lisant son plan d'exécution : l'optimiseur qui choisit un plan, EXPLAIN et EXPLAIN ANALYZE, le parcours séquentiel contre le parcours d'index, les jointures par boucle et par hachage, le coût estimé et les statistiques, et la boucle observer → agir → vérifier appliquée à Rideau pour confirmer qu'un index sert vraiment." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="bdd" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Concevoir une base de données</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Performance, concurrence et vie du schéma — Leçon 12</p>
+              <h1 class="lesson-header__title">Lire un plan d'exécution</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~40 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : les index (leçon 11)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer qu'un <strong>optimiseur</strong> choisit un <strong>plan d'exécution</strong> plutôt que d'exécuter ta requête «&nbsp;au pied de la lettre&nbsp;»&nbsp;;</li>
+                  <li>lire les opérations d'un plan simple&nbsp;: <strong>parcours séquentiel</strong>, <strong>parcours d'index</strong>, et les grandes <strong>jointures</strong>&nbsp;;</li>
+                  <li>interpréter le <strong>coût estimé</strong> et le <strong>nombre de lignes</strong>, et distinguer <code>EXPLAIN</code> (estimé) de <code>EXPLAIN ANALYZE</code> (mesuré)&nbsp;;</li>
+                  <li>appliquer la boucle <strong>observer → agir → vérifier</strong> pour confirmer qu'un index sert vraiment, sur une requête de Rideau.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>À la <a href="lecon-11.html">leçon précédente</a>, tu as posé un index et vu la requête accélérer. Mais une question reste en suspens&nbsp;: <em>comment savoir</em> que l'index sert&nbsp;? La requête est peut-être devenue rapide pour une autre raison — le cache, une table plus petite, la chance. Deviner la performance ne suffit pas&nbsp;: il faut la <strong>lire</strong>. C'est exactement ce que fait le <strong>plan d'exécution</strong>, la feuille de route que le moteur suit pour répondre à ta requête. Apprendre à la lire, c'est passer du «&nbsp;j'espère que c'est plus rapide&nbsp;» au «&nbsp;je vois que l'index est utilisé&nbsp;».</p>
+<p>Cette leçon ne cherche pas l'exhaustivité — les plans réels de PostgreSQL ou d'autres moteurs sont touffus. On vise l'essentiel&nbsp;: reconnaître les deux ou trois opérations qui reviennent tout le temps, comprendre les nombres qui les accompagnent, et surtout maîtriser une <strong>boucle</strong> — observer le plan, agir sur le schéma, vérifier que le plan a changé. Avec ça, tu ne subis plus la lenteur&nbsp;: tu la diagnostiques.</p>
+
+<h2>Le moteur n'exécute pas ta requête « au pied de la lettre »</h2>
+<p>Quand tu écris <code>SELECT * FROM billet WHERE representation_id = 42</code>, tu décris un <em>résultat</em> voulu, pas une <em>marche à suivre</em>. Tu ne dis pas «&nbsp;parcours les lignes une par une&nbsp;» ni «&nbsp;utilise l'index&nbsp;». SQL est un langage <strong>déclaratif</strong>&nbsp;: tu déclares le <em>quoi</em>, et le moteur décide du <em>comment</em>. Ce «&nbsp;comment&nbsp;» est confié à un composant précis&nbsp;: l'<strong>optimiseur</strong> (ou <em>planificateur</em>).</p>
+<p>L'optimiseur regarde ta requête, connaît les tables et leurs index, consulte des <strong>statistiques</strong> sur les données (combien de lignes, quelles valeurs), et parmi plusieurs façons possibles d'obtenir le résultat, il en choisit une&nbsp;: c'est le <strong>plan d'exécution</strong>. Dans quel ordre lire les tables, avec ou sans index, comment assembler les jointures — tout cela, c'est lui qui tranche, à chaque exécution.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Le trajet d'une requête vers son plan. À gauche, la requête SQL écrite par le développeur décrit un résultat voulu sans dire comment l'obtenir. Une flèche mène à un bloc central, l'optimiseur, qui reçoit trois entrées : la requête, la liste des index disponibles et les statistiques sur les données. L'optimiseur compare plusieurs plans candidats et en choisit un. Une flèche sort vers la droite, le plan d'exécution retenu, une suite d'opérations que le moteur exécutera. En bas, la commande EXPLAIN est présentée comme la fenêtre qui laisse voir ce plan sans forcément l'exécuter.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Du SQL déclaratif au plan choisi</text>
+
+    <rect class="d-box" x="24" y="56" width="150" height="70" rx="10" />
+    <text class="d-tag" x="99" y="80" text-anchor="middle" font-size="10">ta requête SQL</text>
+    <text class="d-mut" x="99" y="98" text-anchor="middle" font-size="8">le « quoi »</text>
+    <text class="d-mut" x="99" y="112" text-anchor="middle" font-size="8">un résultat voulu</text>
+
+    <rect class="d-accent" x="238" y="44" width="164" height="94" rx="10" />
+    <text class="d-tag" x="320" y="68" text-anchor="middle" font-size="11">l'optimiseur</text>
+    <text class="d-text" x="320" y="86" text-anchor="middle" font-size="8.5">reçoit : requête + index</text>
+    <text class="d-text" x="320" y="100" text-anchor="middle" font-size="8.5">+ statistiques des tables</text>
+    <text class="d-mut" x="320" y="122" text-anchor="middle" font-size="8">compare des plans candidats</text>
+
+    <rect class="d-box" x="466" y="56" width="150" height="70" rx="10" />
+    <text class="d-tag" x="541" y="80" text-anchor="middle" font-size="10">le plan retenu</text>
+    <text class="d-mut" x="541" y="98" text-anchor="middle" font-size="8">le « comment »</text>
+    <text class="d-mut" x="541" y="112" text-anchor="middle" font-size="8">une suite d'opérations</text>
+
+    <path class="d-line" d="M174 91 L236 91" fill="none" /><path class="d-line" d="M228 87 L236 91 L228 95" fill="none" />
+    <path class="d-line" d="M402 91 L464 91" fill="none" /><path class="d-line" d="M456 87 L464 91 L456 95" fill="none" />
+
+    <rect class="d-frame" x="200" y="176" width="240" height="46" rx="8" />
+    <text class="d-tag" x="320" y="198" text-anchor="middle" font-size="10">EXPLAIN</text>
+    <text class="d-mut" x="320" y="214" text-anchor="middle" font-size="8">la fenêtre qui montre ce plan</text>
+    <path class="d-line" d="M320 138 L320 174" fill="none" stroke-dasharray="3 3" /><path class="d-line" d="M316 166 L320 174 L324 166" fill="none" />
+  </svg>
+  <figcaption>Tu écris le résultat voulu&nbsp;; l'optimiseur, armé des index et des statistiques, choisit <em>comment</em> l'obtenir. <code>EXPLAIN</code> ne change rien à ce mécanisme&nbsp;: il ouvre simplement une fenêtre pour lire le plan que le moteur a décidé.</figcaption>
+</figure>
+
+<p>La commande qui révèle ce plan s'appelle <code>EXPLAIN</code>. On la place devant la requête. Le moteur ne renvoie <em>pas</em> les lignes du résultat&nbsp;: il renvoie sa feuille de route.</p>
+
+<figure class="code-block" data-file="explain_intro.sql"><pre><code class="language-sql">-- On ne demande PAS les billets : on demande le PLAN pour les trouver.
+EXPLAIN
+SELECT * FROM billet
+WHERE representation_id = 42;</code></pre></figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Un langage qui décrit, pas qui ordonne</p><p>C'est la grande différence entre SQL et un langage impératif. En Python, tu écris la boucle&nbsp;; en SQL, tu décris l'ensemble voulu et le moteur invente la boucle. Cette liberté a un prix&nbsp;: tu ne contrôles pas directement <em>comment</em> la requête s'exécute. <code>EXPLAIN</code> est le seul moyen de voir ce que l'optimiseur a décidé à ta place.</p></div></div>
+
+<h2>Les opérations d'un plan simple</h2>
+<p>Un plan est un empilement d'<strong>opérations</strong>&nbsp;: chacune produit des lignes qu'elle passe à celle du dessus. Sur des requêtes simples, deux d'entre elles suffisent à comprendre 90&nbsp;% des cas.</p>
+
+<h3>Le parcours séquentiel (Seq Scan)</h3>
+<p>Un <strong>parcours séquentiel</strong> — <em>Seq Scan</em> en PostgreSQL, <em>full table scan</em> ailleurs — signifie&nbsp;: <em>lire la table en entier, ligne par ligne</em>, et garder celles qui satisfont le <code>WHERE</code>. C'est le comportement par défaut quand aucun index n'aide. Sur une petite table de dix lignes, c'est parfaitement normal&nbsp;: aussi vite lu que trouvé. Sur une grosse table filtrée par un critère très sélectif — «&nbsp;les billets de <em>cette</em> représentation&nbsp;» parmi cent mille — c'est un signal d'alarme&nbsp;: le moteur lit tout pour n'en garder qu'une poignée.</p>
+
+<h3>Le parcours d'index (Index Scan)</h3>
+<p>Un <strong>parcours d'index</strong> — <em>Index Scan</em>, <em>Index Seek</em> — signifie&nbsp;: <em>utiliser un index pour aller droit aux lignes</em> qui correspondent, sans lire le reste. C'est le signe visible qu'un index <strong>sert</strong>. Là où le parcours séquentiel lisait cent mille lignes, l'index en désigne directement les quelques dizaines utiles. Voir <em>Index Scan</em> sur une requête filtrée, c'est voir l'index faire son travail.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Comparaison de deux opérations de lecture sur la table billet. À gauche, le parcours séquentiel : une pile de nombreuses lignes est lue de haut en bas, toutes examinées, et seules trois sont retenues ; le coût affiché est élevé. À droite, le parcours d'index : une petite structure d'index pointe directement vers les trois mêmes lignes utiles sans toucher aux autres ; le coût affiché est faible. Une légende souligne que le parcours séquentiel lit toute la table alors que le parcours d'index va droit au but.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux façons de trouver les mêmes lignes</text>
+
+    <text class="d-tag" x="150" y="48" text-anchor="middle" font-size="10">Parcours séquentiel — lit tout</text>
+    <rect class="d-box" x="60" y="58" width="180" height="16" rx="3" /><text class="d-mut" x="70" y="70" font-size="7.5">ligne 1</text>
+    <rect class="d-box" x="60" y="76" width="180" height="16" rx="3" /><text class="d-warn-text" x="70" y="88" font-size="7.5" fill="var(--accent-strong)">ligne 2 ✓ representation_id = 42</text>
+    <rect class="d-box" x="60" y="94" width="180" height="16" rx="3" /><text class="d-mut" x="70" y="106" font-size="7.5">ligne 3</text>
+    <rect class="d-box" x="60" y="112" width="180" height="16" rx="3" /><text class="d-warn-text" x="70" y="124" font-size="7.5" fill="var(--accent-strong)">ligne 4 ✓ representation_id = 42</text>
+    <rect class="d-box" x="60" y="130" width="180" height="16" rx="3" /><text class="d-mut" x="70" y="142" font-size="7.5">ligne 5 … (des milliers)</text>
+    <rect class="d-box" x="60" y="148" width="180" height="16" rx="3" /><text class="d-warn-text" x="70" y="160" font-size="7.5" fill="var(--accent-strong)">ligne n ✓ representation_id = 42</text>
+    <text class="d-mut" x="150" y="186" text-anchor="middle" font-size="8.5">toutes examinées → coût élevé (≈ 1780)</text>
+
+    <text class="d-tag" x="480" y="48" text-anchor="middle" font-size="10">Parcours d'index — va droit au but</text>
+    <rect class="d-accent" x="392" y="66" width="176" height="30" rx="6" /><text class="d-text" x="480" y="85" text-anchor="middle" font-size="8.5">index (representation_id)</text>
+    <rect class="d-box" x="410" y="112" width="140" height="16" rx="3" /><text class="d-text" x="420" y="124" font-size="7.5">ligne 2</text>
+    <rect class="d-box" x="410" y="132" width="140" height="16" rx="3" /><text class="d-text" x="420" y="144" font-size="7.5">ligne 4</text>
+    <rect class="d-box" x="410" y="152" width="140" height="16" rx="3" /><text class="d-text" x="420" y="164" font-size="7.5">ligne n</text>
+    <path class="d-line" d="M450 96 L440 110" fill="none" /><path class="d-line" d="M443 104 L440 111 L447 108" fill="none" />
+    <path class="d-line" d="M490 96 L495 130" fill="none" /><path class="d-line" d="M492 123 L496 131 L498 122" fill="none" />
+    <path class="d-line" d="M510 96 L515 150" fill="none" /><path class="d-line" d="M512 143 L516 151 L518 142" fill="none" />
+    <text class="d-mut" x="480" y="186" text-anchor="middle" font-size="8.5">seules les 3 utiles touchées → coût faible (≈ 8,4)</text>
+
+    <line class="d-line" x1="320" y1="42" x2="320" y2="196" stroke-dasharray="3 4" />
+    <text class="d-mut" x="320" y="220" text-anchor="middle" font-size="9">Même résultat, même WHERE. À gauche le moteur lit toute la table&nbsp;;</text>
+    <text class="d-mut" x="320" y="238" text-anchor="middle" font-size="9">à droite l'index désigne les lignes utiles — le coût s'effondre.</text>
+  </svg>
+  <figcaption>Le parcours séquentiel <strong>lit tout</strong> et jette l'inutile&nbsp;; le parcours d'index <strong>vise</strong> les lignes voulues. Sur une grosse table avec un filtre sélectif, l'écart de coût entre les deux peut atteindre plusieurs ordres de grandeur.</figcaption>
+</figure>
+
+<h3>Les jointures, en survol</h3>
+<p>Dès que la requête relie deux tables, le plan montre une <strong>jointure</strong>, et l'optimiseur choisit <em>comment</em> l'exécuter. Trois grandes méthodes reviennent&nbsp;; il n'est pas nécessaire de les maîtriser à fond, juste de reconnaître leurs noms&nbsp;:</p>
+<ul>
+<li><strong>Jointure par boucle imbriquée</strong> (<em>nested loop</em>)&nbsp;: pour chaque ligne de la première table, chercher les lignes correspondantes de la seconde — idéalement via un index. Excellente quand la première table renvoie peu de lignes.</li>
+<li><strong>Jointure par hachage</strong> (<em>hash join</em>)&nbsp;: construire une table de hachage sur la plus petite des deux tables, puis la sonder pour chaque ligne de l'autre. Efficace pour joindre deux grands ensembles sans index utile.</li>
+<li><strong>Jointure par fusion</strong> (<em>merge join</em>)&nbsp;: trier les deux côtés puis les parcourir en parallèle comme une fermeture éclair. Adaptée quand les données sont déjà triées sur la clé de jointure.</li>
+</ul>
+<p>Retiens surtout ceci&nbsp;: le <em>nom</em> de la jointure n'est presque jamais le problème. L'optimiseur choisit en général la bonne&nbsp;; ce qui est lent, c'est presque toujours un <strong>parcours séquentiel</strong> caché <em>dans</em> la jointure, sur une table qui aurait mérité un index.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ne mémorise pas tout le vocabulaire</p><p>Chaque moteur a ses noms&nbsp;: PostgreSQL dit <em>Seq Scan</em> et <em>Index Scan</em>, SQL Server dit <em>Table Scan</em> et <em>Index Seek</em>, MySQL affiche une colonne <code>type</code> avec <code>ALL</code> (tout lire) ou <code>ref</code> (via index). Les mots changent, l'idée non&nbsp;: <strong>lit-on toute la table, ou vise-t-on les lignes utiles&nbsp;?</strong> C'est la seule question qui compte au début.</p></div></div>
+
+<h2>Lire les nombres : coût estimé et lignes estimées</h2>
+<p>Chaque opération du plan porte deux nombres qu'il faut savoir interpréter. Voici à quoi ressemble le plan de notre requête, <strong>avant</strong> tout index, en version pédagogique simplifiée&nbsp;:</p>
+
+<figure class="code-block" data-file="plan_avant.txt"><pre><code class="language-plaintext">Seq Scan on billet   (cost=0.00..1780.00 rows=47 width=32)
+   Filter: (representation_id = 42)
+   -- lecture de TOUTE la table billet (≈ 90 000 lignes)
+   -- pour n'en retenir que 47 : le filtre jette 99,9 % du travail</code></pre></figure>
+
+<p>Décryptons&nbsp;:</p>
+<ul>
+<li><code>cost=0.00..1780.00</code> — le <strong>coût estimé</strong>. Deux nombres&nbsp;: le coût pour renvoyer la <em>première</em> ligne (0.00) et le coût <em>total</em> (1780.00). C'est une <strong>unité abstraite</strong>, pas des millisecondes&nbsp;: elle mélange lectures de disque et travail processeur selon une formule interne. Elle ne sert qu'à <em>comparer</em> deux plans entre eux — «&nbsp;1780, c'est beaucoup plus que 8&nbsp;» — jamais à prédire une durée en secondes.</li>
+<li><code>rows=47</code> — le <strong>nombre de lignes estimé</strong> que l'opération va produire. Ici, l'optimiseur <em>parie</em> que 47 billets correspondent à la représentation&nbsp;42.</li>
+<li><code>width=32</code> — la taille moyenne d'une ligne en octets. On l'ignore le plus souvent.</li>
+</ul>
+<p>Le mot important est <strong>estimé</strong>. L'optimiseur n'a pas compté les lignes&nbsp;: il les a <em>devinées</em> à partir des <strong>statistiques</strong> de la table — des résumés (nombre total de lignes, valeurs les plus fréquentes, dispersion) que le moteur tient à jour et rafraîchit périodiquement. Un plan repose sur ces estimations&nbsp;; si elles sont fausses (statistiques périmées), l'optimiseur peut choisir un mauvais plan.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Lire le coût comme des millisecondes.</strong> Voir <code>cost=1780</code> ne veut pas dire «&nbsp;1780&nbsp;ms&nbsp;». Le coût est une unité <em>sans dimension</em>, propre au moteur, faite pour <strong>classer</strong> les plans, pas pour chronométrer. Si tu veux un vrai temps, il te faut <code>EXPLAIN ANALYZE</code> (ci-dessous), qui <em>exécute</em> réellement la requête et rapporte des millisecondes mesurées.</p></div></div>
+
+<h3>EXPLAIN (estimé) contre EXPLAIN ANALYZE (mesuré)</h3>
+<p>Il y a une différence capitale entre les deux commandes&nbsp;:</p>
+<ul>
+<li><code>EXPLAIN</code> <strong>n'exécute pas</strong> la requête. Il montre le plan <em>prévu</em> et les nombres <em>estimés</em>. Instantané, sans effet de bord — parfait pour inspecter une requête sans la lancer.</li>
+<li><code>EXPLAIN ANALYZE</code> <strong>exécute</strong> vraiment la requête, puis compare le prévu au réalisé&nbsp;: à côté de <code>cost</code> (estimé) apparaissent le <code>actual time</code> (temps réel en ms) et le nombre de lignes <em>réellement</em> produites. C'est l'outil pour mesurer, et pour repérer les <strong>écarts</strong> entre estimation et réalité.</li>
+</ul>
+<p>Quand <code>rows=47</code> (estimé) mais <code>actual rows=52 000</code> (mesuré), l'optimiseur s'est lourdement trompé&nbsp;: ses statistiques sont à revoir. Ce genre d'écart est l'une des causes les plus fréquentes de plans catastrophiques.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p><code>EXPLAIN ANALYZE</code> <strong>exécute</strong> la requête pour de vrai. Sur un <code>SELECT</code>, c'est sans danger&nbsp;; mais sur un <code>UPDATE</code> ou un <code>DELETE</code>, <em>il modifie les données</em>. Pour analyser une écriture sans l'appliquer, entoure-la d'une transaction que tu annules&nbsp;: <code>BEGIN; EXPLAIN ANALYZE UPDATE …; ROLLBACK;</code>. Le plan est mesuré, mais rien n'est écrit.</p></div></div>
+
+<h2>La boucle : observer → agir → vérifier</h2>
+<p>Voici la démarche qui transforme <code>EXPLAIN</code> en outil de travail. Elle tient en trois temps, et elle se répète.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Une boucle en trois étapes reliées en cercle. Première étape, observer : lancer EXPLAIN et repérer un parcours séquentiel sur une grosse table filtrée par un WHERE sélectif. Une flèche mène à la deuxième étape, agir : créer l'index sur la colonne du filtre. Une flèche mène à la troisième étape, vérifier : relancer EXPLAIN et confirmer le passage en parcours d'index et la baisse du coût. Une flèche de retour relie vérifier à observer, indiquant que le cycle recommence pour la requête suivante ou si le gain est insuffisant.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">La boucle de diagnostic</text>
+
+    <rect class="d-accent" x="40" y="70" width="170" height="96" rx="12" />
+    <text class="d-tag" x="125" y="94" text-anchor="middle" font-size="11">1 · Observer</text>
+    <text class="d-text" x="125" y="114" text-anchor="middle" font-size="8.5">lancer EXPLAIN</text>
+    <text class="d-mut" x="125" y="130" text-anchor="middle" font-size="8">repérer un Seq Scan</text>
+    <text class="d-mut" x="125" y="144" text-anchor="middle" font-size="8">sur grosse table + WHERE</text>
+    <text class="d-mut" x="125" y="158" text-anchor="middle" font-size="8">sélectif</text>
+
+    <rect class="d-accent" x="235" y="70" width="170" height="96" rx="12" />
+    <text class="d-tag" x="320" y="94" text-anchor="middle" font-size="11">2 · Agir</text>
+    <text class="d-text" x="320" y="118" text-anchor="middle" font-size="8.5">CREATE INDEX</text>
+    <text class="d-mut" x="320" y="134" text-anchor="middle" font-size="8">sur la colonne</text>
+    <text class="d-mut" x="320" y="148" text-anchor="middle" font-size="8">du filtre</text>
+
+    <rect class="d-accent" x="430" y="70" width="170" height="96" rx="12" />
+    <text class="d-tag" x="515" y="94" text-anchor="middle" font-size="11">3 · Vérifier</text>
+    <text class="d-text" x="515" y="114" text-anchor="middle" font-size="8.5">re-EXPLAIN</text>
+    <text class="d-mut" x="515" y="130" text-anchor="middle" font-size="8">Index Scan ? coût baissé ?</text>
+    <text class="d-mut" x="515" y="144" text-anchor="middle" font-size="8">sinon : l'index ne sert pas</text>
+
+    <path class="d-line" d="M210 118 L233 118" fill="none" /><path class="d-line" d="M225 114 L233 118 L225 122" fill="none" />
+    <path class="d-line" d="M405 118 L428 118" fill="none" /><path class="d-line" d="M420 114 L428 118 L420 122" fill="none" />
+
+    <path class="d-line" d="M515 166 C515 210 125 210 125 168" fill="none" stroke-dasharray="4 3" />
+    <path class="d-line" d="M133 176 L125 168 L118 177" fill="none" />
+    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="8.5">on recommence : requête suivante, ou gain insuffisant</text>
+  </svg>
+  <figcaption>On n'ajoute jamais un index «&nbsp;au hasard&nbsp;». On <strong>observe</strong> le plan pour trouver le vrai coupable, on <strong>agit</strong> précisément, puis on <strong>vérifie</strong> que le plan a changé. Sans la troisième étape, on ne sait pas si l'index sert&nbsp;: on l'espère seulement.</figcaption>
+</figure>
+
+<h3>Rideau : le plan des « billets d'une représentation », avant et après</h3>
+<p>Appliquons la boucle à une requête très banale de Rideau — afficher tous les billets vendus pour une représentation donnée, par exemple pour préparer le plan de salle du soir&nbsp;:</p>
+
+<figure class="code-block" data-file="rideau_requete.sql"><pre><code class="language-sql">-- La requête à diagnostiquer : les billets de la représentation 42.
+-- billet est une GROSSE table (des dizaines de milliers de lignes)
+-- et le filtre est très sélectif (une représentation parmi des centaines).
+EXPLAIN
+SELECT billet_id, place_id, prix_paye
+FROM billet
+WHERE representation_id = 42;</code></pre></figure>
+
+<p><strong>Étape 1 — observer.</strong> Sans index sur <code>representation_id</code>, le plan est un parcours séquentiel&nbsp;: le moteur lit toute la table pour ne garder qu'une quarantaine de lignes.</p>
+
+<figure class="code-block" data-file="plan_avant_index.txt"><pre><code class="language-plaintext">-- AVANT l'index : le drapeau rouge, un Seq Scan sur une grosse table filtrée
+Seq Scan on billet   (cost=0.00..1780.00 rows=47 width=20)
+   Filter: (representation_id = 42)
+   -- lit ≈ 90 000 lignes, en jette ≈ 89 953. Gâchis pur.</code></pre></figure>
+
+<p><strong>Étape 2 — agir.</strong> Le filtre porte sur <code>representation_id</code>&nbsp;: on pose exactement l'index qui manque (voir la <a href="lecon-11.html">leçon sur les index</a> pour le choix de la colonne).</p>
+
+<figure class="code-block" data-file="rideau_index.sql"><pre><code class="language-sql">-- On cible la colonne du WHERE, ni plus ni moins.
+CREATE INDEX idx_billet_representation
+    ON billet (representation_id);</code></pre></figure>
+
+<p><strong>Étape 3 — vérifier.</strong> On relance exactement le même <code>EXPLAIN</code>. Le plan a changé de nature&nbsp;: <em>Index Scan</em> a remplacé <em>Seq Scan</em>, et le coût total s'est effondré.</p>
+
+<figure class="code-block" data-file="plan_apres_index.txt"><pre><code class="language-plaintext">-- APRÈS l'index : le moteur va droit aux lignes utiles
+Index Scan using idx_billet_representation on billet
+   (cost=0.42..8.44 rows=47 width=20)
+   Index Cond: (representation_id = 42)
+   -- ne touche QUE les ≈ 47 lignes voulues. Coût 1780 → 8,4.</code></pre></figure>
+
+<p>La preuve est faite, et elle est <em>lue</em>, pas devinée&nbsp;: l'opération est passée de <em>Seq Scan</em> à <em>Index Scan</em>, la condition apparaît en <code>Index Cond</code> (le moteur l'applique <em>via</em> l'index, pas après coup en <code>Filter</code>), et le coût total chute de 1780 à 8,4. C'est ça, confirmer qu'un index sert&nbsp;: le plan le montre noir sur blanc.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — <code>Filter</code> ou <code>Index Cond</code>&nbsp;?</p><p>Un détail qui distingue le débutant du praticien&nbsp;: quand la condition apparaît sous <code>Filter</code>, le moteur a <em>d'abord</em> lu des lignes puis les a triées&nbsp;; sous <code>Index Cond</code>, il a utilisé l'index pour ne lire <em>que</em> les bonnes. Voir sa condition passer de <code>Filter</code> à <code>Index Cond</code> après un <code>CREATE INDEX</code>, c'est la signature d'un index qui a pris le relais.</p></div></div>
+
+<h2>Lire un plan avec jointure, de bas en haut</h2>
+<p>Les plans à plusieurs opérations se lisent <strong>du plus profond vers le plus haut</strong>&nbsp;: chaque opération produit des lignes que sa parente au-dessus consomme. C'est un arbre, dessiné à l'envers. Prenons une requête qui relie billets et clients&nbsp;: «&nbsp;qui a acheté des billets pour la représentation&nbsp;42&nbsp;?&nbsp;»</p>
+
+<figure class="code-block" data-file="rideau_jointure.sql"><pre><code class="language-sql">-- Deux tables reliées : les clients ayant un billet pour la repr. 42.
+EXPLAIN
+SELECT c.nom, c.email, b.place_id
+FROM billet b
+JOIN client c ON c.client_id = b.client_id
+WHERE b.representation_id = 42;</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 280" role="img" aria-label="Un arbre de plan d'exécution à lire de bas en haut. Tout en bas, deux feuilles côte à côte. La feuille de gauche est un parcours d'index sur la table billet, qui filtre la représentation 42 et produit environ 47 lignes. La feuille de droite est un parcours d'index sur la table client, qui retrouve une ligne par identifiant client. Au-dessus, un nœud jointure par boucle imbriquée reçoit ces deux flux et les assemble. Tout en haut, le résultat final d'environ 47 lignes. Des flèches montent de chaque feuille vers la jointure, puis de la jointure vers le résultat, illustrant que l'exécution se lit du bas vers le haut.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un plan est un arbre — on le lit du bas vers le haut</text>
+
+    <rect class="d-frame" x="230" y="42" width="180" height="40" rx="8" />
+    <text class="d-tag" x="320" y="60" text-anchor="middle" font-size="10">Résultat final</text>
+    <text class="d-mut" x="320" y="75" text-anchor="middle" font-size="8">≈ 47 lignes (nom, email, place)</text>
+
+    <rect class="d-accent" x="215" y="120" width="210" height="46" rx="8" />
+    <text class="d-tag" x="320" y="140" text-anchor="middle" font-size="10">Nested Loop (jointure)</text>
+    <text class="d-mut" x="320" y="156" text-anchor="middle" font-size="8">assemble les deux flux du dessous</text>
+
+    <rect class="d-box" x="50" y="206" width="230" height="52" rx="8" />
+    <text class="d-tag" x="165" y="226" text-anchor="middle" font-size="9.5">Index Scan sur billet</text>
+    <text class="d-mut" x="165" y="241" text-anchor="middle" font-size="8">Index Cond: representation_id = 42</text>
+    <text class="d-mut" x="165" y="253" text-anchor="middle" font-size="8">→ ≈ 47 lignes (le côté « pilote »)</text>
+
+    <rect class="d-box" x="360" y="206" width="230" height="52" rx="8" />
+    <text class="d-tag" x="475" y="226" text-anchor="middle" font-size="9.5">Index Scan sur client</text>
+    <text class="d-mut" x="475" y="241" text-anchor="middle" font-size="8">Index Cond: client_id = b.client_id</text>
+    <text class="d-mut" x="475" y="253" text-anchor="middle" font-size="8">→ 1 ligne par billet (clé primaire)</text>
+
+    <path class="d-line" d="M165 206 L300 168" fill="none" /><path class="d-line" d="M293 165 L301 167 L296 173" fill="none" />
+    <path class="d-line" d="M475 206 L340 168" fill="none" /><path class="d-line" d="M364 173 L339 167 L347 165" fill="none" />
+    <path class="d-line" d="M320 120 L320 84" fill="none" /><path class="d-line" d="M316 92 L320 84 L324 92" fill="none" />
+  </svg>
+  <figcaption>La lecture part des <strong>feuilles</strong>&nbsp;: en bas à gauche, l'index sur <code>billet</code> sélectionne ≈&nbsp;47 lignes pour la représentation&nbsp;42&nbsp;; pour chacune, l'index sur <code>client</code> retrouve la fiche par clé primaire&nbsp;; la <em>Nested Loop</em> assemble le tout et remonte le résultat. Peu de lignes à gauche → la boucle imbriquée est un excellent choix ici.</figcaption>
+</figure>
+
+<p>Remarque comme le plan <em>raconte</em> l'exécution&nbsp;: le côté qui renvoie peu de lignes (les 47 billets) sert de «&nbsp;pilote&nbsp;», et pour chacune de ces lignes, le moteur va chercher <em>un</em> client par sa clé primaire — d'où le choix de la boucle imbriquée. Si l'index sur <code>billet</code> manquait, cette feuille redeviendrait un <em>Seq Scan</em> lisant 90&nbsp;000 lignes, et toute la jointure ralentirait&nbsp;: le coupable serait la feuille, pas la jointure.</p>
+
+<h2>Pourquoi c'est décisif : on lit la performance, on ne la devine pas</h2>
+<p>Tout l'intérêt tient dans une phrase&nbsp;: <strong>un index créé mais non utilisé par le plan ne sert à rien.</strong> On peut poser un index parfaitement, et le voir <em>ignoré</em> par l'optimiseur. Sans <code>EXPLAIN</code>, on croirait la requête optimisée alors qu'elle continue de tout lire. Les raisons d'un index ignoré sont classiques&nbsp;:</p>
+<ul>
+<li><strong>La mauvaise colonne.</strong> L'index est sur <code>representation_id</code>, mais la requête filtre sur <code>place_id</code>. L'index ne peut pas aider un filtre qui ne le concerne pas.</li>
+<li><strong>Une fonction appliquée à la colonne.</strong> <code>WHERE lower(email) = 'chloe@…'</code> demande de calculer <code>lower(email)</code> sur chaque ligne&nbsp;: l'index sur <code>email</code> devient inutilisable. On dit que la condition n'est pas <strong>sargable</strong>.</li>
+<li><strong>Une faible sélectivité.</strong> Si la requête ramène la moitié de la table, l'optimiseur juge — souvent à raison — qu'un parcours séquentiel est <em>plus rapide</em> qu'un aller-retour par l'index pour la moitié des lignes. Il ignore alors l'index <em>volontairement</em>. Ce n'est pas un bug.</li>
+</ul>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège — la condition non sargable</p><p><strong>Sargable</strong> (de l'anglais <em>Search ARGument ABLE</em>) qualifie une condition qu'un index peut exploiter directement. Envelopper la colonne dans une fonction la rend non sargable&nbsp;: <code>WHERE lower(email) = 'x'</code>, <code>WHERE annee(debut) = 2026</code> ou <code>WHERE prix_paye + 2 = 30</code> forcent un calcul par ligne et neutralisent l'index. La règle&nbsp;: <strong>garde la colonne nue d'un côté du signe</strong> (<code>WHERE debut &gt;= '2026-01-01'</code> plutôt que <code>WHERE annee(debut) = 2026</code>), et l'index redevient utilisable.</p></div></div>
+
+<figure class="code-block" data-file="sargable.sql"><pre><code class="language-sql">-- NON sargable : la fonction sur la colonne neutralise l'index sur email.
+SELECT * FROM client WHERE lower(email) = 'chloe.meyer@exemple.fr';
+--   -> le plan retombe en Seq Scan malgré l'index sur email.
+
+-- Sargable : la colonne reste nue -> l'index peut servir.
+SELECT * FROM client WHERE email = 'chloe.meyer@exemple.fr';
+--   -> Index Scan, si les e-mails sont déjà stockés en minuscules.</code></pre></figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Certains moteurs offrent un <strong>index fonctionnel</strong> qui indexe le <em>résultat</em> d'une expression&nbsp;: <code>CREATE INDEX ON client (lower(email))</code> rend alors <code>WHERE lower(email) = …</code> à nouveau sargable. C'est la réponse propre quand on doit filtrer sur une transformation. On l'aborde dans la <a href="lecon-11.html">leçon sur les index</a> et on le pratiquera au <a href="lecon-15.html">projet capstone</a>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Optimiser une requête rare.</strong> On tombe sur un gros <em>Seq Scan</em>, on s'excite, on pose un index… pour une requête lancée une fois par mois par un rapport de nuit. Pendant ce temps, la requête jouée <em>mille fois par heure</em> reste lente. On optimise ce qui <strong>coûte</strong>, c'est-à-dire ce qui est <em>lent</em> <strong>et</strong> <em>fréquent</em> — jamais un plan effrayant sur une requête sans importance.</p></div></div>
+<ul>
+<li><strong>Croire qu'un Seq Scan est toujours mauvais.</strong> Sur une petite table, ou quand la requête ramène une grande part des lignes, lire toute la table est le <em>meilleur</em> plan. Le Seq Scan n'est un problème que sur une grosse table avec un filtre sélectif.</li>
+<li><strong>Se fier au coût estimé comme à une vérité.</strong> C'est une <em>estimation</em> fondée sur des statistiques qui peuvent être périmées. En cas de doute, passe à <code>EXPLAIN ANALYZE</code> pour comparer l'estimé au mesuré&nbsp;: un grand écart trahit des statistiques à rafraîchir.</li>
+<li><strong>Ajouter un index sans re-EXPLAIN.</strong> Poser l'index et supposer que le problème est réglé, c'est sauter l'étape la plus importante. Tant que le plan n'a pas montré le passage en <em>Index Scan</em>, tu ne sais rien.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une petite billetterie se plaint que la page «&nbsp;plan de salle&nbsp;» met plusieurs secondes à charger le soir d'un concert complet. Le développeur avait pourtant créé un index — sur <code>place_id</code>. Un <code>EXPLAIN</code> de la vraie requête révèle un <em>Seq Scan</em> franc&nbsp;: la page filtrait par <code>representation_id</code>, pas par <code>place_id</code>. L'index existait, il était sain, mais il portait sur la <strong>mauvaise colonne</strong>&nbsp;: l'optimiseur ne pouvait pas s'en servir. Un index sur <code>representation_id</code>, un re-<code>EXPLAIN</code> pour confirmer le passage en <em>Index Scan</em>, et la page repasse sous les 50&nbsp;ms. Le correctif a pris deux minutes&nbsp;; le <em>diagnostic</em>, lui, aurait été impossible sans lire le plan.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Lire un plan d'exécution — le mémo</caption>
+    <thead><tr><th scope="col">Ce que tu vois</th><th scope="col">Ce que ça veut dire</th></tr></thead>
+    <tbody>
+      <tr><td><code>EXPLAIN</code></td><td>Montre le plan <em>prévu</em>, nombres <em>estimés</em>&nbsp;; n'exécute pas la requête</td></tr>
+      <tr><td><code>EXPLAIN ANALYZE</code></td><td>Exécute vraiment&nbsp;: ajoute le temps réel (ms) et les lignes mesurées</td></tr>
+      <tr><td>Seq Scan / full scan</td><td>Lit toute la table&nbsp;: normal si petite, alarmant sur grosse table filtrée</td></tr>
+      <tr><td>Index Scan / Index Seek</td><td>Va droit aux lignes via un index&nbsp;: le signe qu'un index sert</td></tr>
+      <tr><td><code>cost=0.42..8.44</code></td><td>Coût estimé (1re ligne .. total)&nbsp;: unité abstraite, sert à comparer, pas des ms</td></tr>
+      <tr><td><code>rows=47</code></td><td>Lignes <em>estimées</em>, devinées à partir des statistiques de la table</td></tr>
+      <tr><td><code>Index Cond</code> vs <code>Filter</code></td><td><code>Index Cond</code> = trié par l'index&nbsp;; <code>Filter</code> = trié après lecture</td></tr>
+      <tr><td>Nested / Hash / Merge join</td><td>Les 3 façons de joindre&nbsp;; l'optimiseur choisit — rarement le vrai souci</td></tr>
+      <tr><td>Non sargable</td><td>Fonction sur la colonne (<code>lower(email)</code>)&nbsp;: neutralise l'index</td></tr>
+      <tr><td>La boucle</td><td>observer (EXPLAIN) → agir (index) → vérifier (re-EXPLAIN)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Plan d'exécution</dt><dd>La suite d'opérations que le moteur décide de suivre pour répondre à une requête&nbsp;: quelles tables lire, dans quel ordre, avec ou sans index, comment joindre.</dd>
+  <dt>Optimiseur (planificateur)</dt><dd>Le composant du moteur qui, à partir de la requête, des index et des statistiques, choisit le plan d'exécution parmi plusieurs candidats.</dd>
+  <dt>EXPLAIN</dt><dd>Commande placée devant une requête pour afficher son plan <em>prévu</em> et ses nombres <em>estimés</em>, sans exécuter la requête.</dd>
+  <dt>EXPLAIN ANALYZE</dt><dd>Variante qui <em>exécute</em> réellement la requête et rapporte, en plus de l'estimé, le temps mesuré et le nombre de lignes réellement produites.</dd>
+  <dt>Parcours séquentiel</dt><dd>Opération (<em>Seq Scan</em>, <em>full table scan</em>) qui lit la table entière ligne par ligne&nbsp;; normale sans filtre sélectif, coûteuse sur une grosse table filtrée.</dd>
+  <dt>Parcours d'index</dt><dd>Opération (<em>Index Scan</em>, <em>Index Seek</em>) qui utilise un index pour atteindre directement les lignes voulues&nbsp;; le signe visible qu'un index sert.</dd>
+  <dt>Coût estimé</dt><dd>Nombre sans dimension attaché à chaque opération, servant à <em>comparer</em> les plans entre eux&nbsp;; ce ne sont pas des millisecondes.</dd>
+  <dt>Statistiques</dt><dd>Résumés que le moteur tient à jour sur les données d'une table (nombre de lignes, valeurs fréquentes, dispersion)&nbsp;; l'optimiseur s'en sert pour estimer et choisir un plan.</dd>
+  <dt>Sargable</dt><dd>Se dit d'une condition <code>WHERE</code> qu'un index peut exploiter directement&nbsp;; appliquer une fonction à la colonne la rend non sargable et neutralise l'index.</dd>
+  <dt>Jointure par boucle imbriquée</dt><dd>Méthode de jointure (<em>nested loop</em>) qui, pour chaque ligne d'un côté, cherche les lignes correspondantes de l'autre — idéale quand un côté renvoie peu de lignes.</dd>
+  <dt>Jointure par hachage</dt><dd>Méthode de jointure (<em>hash join</em>) qui construit une table de hachage sur le plus petit ensemble puis la sonde&nbsp;; efficace pour joindre deux grands ensembles sans index utile.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>SQL est <strong>déclaratif</strong>&nbsp;: tu décris le résultat, l'<strong>optimiseur</strong> choisit le <strong>plan d'exécution</strong>. <code>EXPLAIN</code> ouvre une fenêtre sur ce plan sans l'exécuter&nbsp;; <code>EXPLAIN ANALYZE</code> l'exécute et le mesure.</li>
+<li>Deux opérations suffisent au début&nbsp;: le <strong>parcours séquentiel</strong> (lit tout — alarmant sur grosse table filtrée) et le <strong>parcours d'index</strong> (vise les lignes utiles — la preuve qu'un index sert). Les jointures se lisent de bas en haut.</li>
+<li>Le <strong>coût</strong> est une unité abstraite pour comparer les plans, pas des millisecondes&nbsp;; les <strong>lignes</strong> sont <em>estimées</em> à partir des <strong>statistiques</strong>, qui peuvent être périmées.</li>
+<li>La méthode, c'est la boucle <strong>observer → agir → vérifier</strong>&nbsp;: repérer un Seq Scan sur un <code>WHERE</code> sélectif, poser l'index, re-<code>EXPLAIN</code> pour confirmer l'<em>Index Scan</em>. Un index non utilisé par le plan (mauvaise colonne, condition non sargable, faible sélectivité) ne sert à rien.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Quelle est la différence entre <code>EXPLAIN</code> et <code>EXPLAIN ANALYZE</code>&nbsp;?</li>
+<li>Tu vois un <em>Seq Scan</em> sur la table <code>billet</code> (90&nbsp;000 lignes) pour un <code>WHERE representation_id = 42</code> qui ne ramène que 47 lignes. Que fais-tu, et comment confirmes-tu que ça a marché&nbsp;?</li>
+<li>Un index existe sur <code>email</code>, mais la requête <code>WHERE lower(email) = '…'</code> reste en <em>Seq Scan</em>. Pourquoi l'index est-il ignoré&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi dit-on que le moteur n'exécute pas ta requête « au pied de la lettre » ?","a":["Parce que SQL est déclaratif : tu décris le résultat voulu, et un optimiseur choisit lui-même le plan d'exécution (ordre des tables, index, type de jointure)","Parce que le moteur ignore la moitié des requêtes pour aller plus vite","Parce que EXPLAIN réécrit ta requête avant de la lancer","Parce que le SQL est traduit en un autre langage avant exécution"],"correct":0,"explain":"SQL décrit le « quoi », pas le « comment ». L'optimiseur, à partir des index et des statistiques, choisit le plan concret. EXPLAIN sert justement à lire ce plan choisi."},
+  {"q":"Sur une grosse table filtrée par un WHERE très sélectif, que signale un « Seq Scan » (parcours séquentiel) dans le plan ?","a":["Un signal d'alarme : le moteur lit toute la table pour n'en garder qu'une poignée de lignes, souvent faute d'index utile","Que la requête est parfaitement optimisée","Que la table possède déjà un index sur la colonne filtrée","Qu'il faut passer la table en NoSQL"],"correct":0,"explain":"Un Seq Scan lit la table entière. C'est normal sur une petite table ou sans filtre, mais alarmant sur une grosse table avec un filtre sélectif : c'est le signe qu'un index manque."},
+  {"q":"Dans un plan, que représente le nombre « cost=0.42..8.44 » ?","a":["Un coût estimé (coût de la première ligne .. coût total), dans une unité abstraite qui sert à comparer les plans entre eux — ce ne sont pas des millisecondes","Le temps d'exécution mesuré, en millisecondes","Le nombre de lignes que la requête va renvoyer","La quantité de mémoire utilisée, en Mo"],"correct":0,"explain":"Le coût est une unité sans dimension, propre au moteur, faite pour classer les plans. Pour un vrai temps en millisecondes, il faut EXPLAIN ANALYZE, qui exécute la requête."},
+  {"q":"Quelle est la différence essentielle entre EXPLAIN et EXPLAIN ANALYZE ?","a":["EXPLAIN montre le plan prévu avec des nombres estimés sans exécuter la requête ; EXPLAIN ANALYZE l'exécute vraiment et rapporte le temps réel et les lignes mesurées","EXPLAIN ANALYZE est simplement une version plus courte de EXPLAIN","EXPLAIN fonctionne sur les SELECT, EXPLAIN ANALYZE sur les INSERT uniquement","Il n'y a aucune différence, ce sont des synonymes"],"correct":0,"explain":"EXPLAIN n'exécute pas : tout est estimé. EXPLAIN ANALYZE exécute réellement (attention aux UPDATE/DELETE) et compare l'estimé au mesuré, ce qui révèle les statistiques périmées."},
+  {"q":"Un index existe sur la colonne email, mais la requête « WHERE lower(email) = 'x' » reste en Seq Scan. Pourquoi ?","a":["Parce que la fonction lower() appliquée à la colonne rend la condition non sargable : le moteur doit calculer lower(email) sur chaque ligne, ce qui neutralise l'index","Parce que l'index sur email est corrompu","Parce que EXPLAIN désactive temporairement les index","Parce qu'un index ne fonctionne jamais sur une colonne de type texte"],"correct":0,"explain":"Envelopper la colonne dans une fonction la rend non sargable : l'index sur email ne peut plus servir. Il faut garder la colonne nue (WHERE email = …) ou créer un index fonctionnel sur lower(email)."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["seq scan","parcours sequentiel","full table scan","full scan","table scan"],"placeholder":"l'opération qui lit TOUTE la table ligne par ligne s'appelle un p________ s__________ (Seq Scan)","hints":["C'est l'opposé du parcours d'index.","Alarmant sur une grosse table avec un WHERE sélectif.","En PostgreSQL, on l'écrit « Seq Scan »."],"link":{"href":"lecon-12.html","label":"Revoir « Les opérations d'un plan simple »"}},
+  {"type":"text","accept":["explain analyze","explain analyse","analyze","explain-analyze"],"placeholder":"pour obtenir un temps RÉEL en millisecondes, il faut la commande EXPLAIN A______ (qui exécute la requête)","hints":["EXPLAIN seul n'exécute pas : tout est estimé.","Cette variante exécute vraiment et mesure.","Deux mots : EXPLAIN puis A______."],"link":{"href":"lecon-12.html","label":"Revoir « EXPLAIN contre EXPLAIN ANALYZE »"}},
+  {"type":"text","accept":["sargable","non sargable","sargeable"],"placeholder":"une condition qu'un index peut exploiter directement est dite s________ ; lower(email) la rend NON s________","hints":["De l'anglais Search ARGument ABLE.","Appliquer une fonction à la colonne la détruit.","Huit lettres : s________."],"link":{"href":"lecon-12.html","label":"Revoir « Pourquoi c'est décisif »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>On te montre le plan ci-dessous, obtenu sur la table <code>billet</code> (≈&nbsp;90&nbsp;000 lignes) pour <code>WHERE representation_id = 42</code>. Réponds à trois questions&nbsp;: (a) quelle <strong>opération</strong> le moteur utilise-t-il&nbsp;? (b) est-ce un bon ou un mauvais signe ici, et pourquoi&nbsp;? (c) quel <strong>geste</strong> proposerais-tu&nbsp;?</p>
+<figure class="code-block" data-file="plan_exo1.txt"><pre><code class="language-plaintext">Seq Scan on billet   (cost=0.00..1780.00 rows=47 width=20)
+   Filter: (representation_id = 42)</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) Un PARCOURS SÉQUENTIEL (Seq Scan) : le moteur lit la table billet
+    en entier, ligne par ligne.
+
+(b) MAUVAIS signe ici. La table est grosse (≈ 90 000 lignes) et le
+    filtre est très sélectif (rows=47 attendues). Le moteur lit donc
+    ≈ 90 000 lignes pour n'en garder que 47 : du gâchis. Le filtre
+    apparaît sous « Filter », donc appliqué APRÈS lecture, pas via un
+    index.
+
+(c) Créer un index sur la colonne du filtre :
+        CREATE INDEX idx_billet_representation
+            ON billet (representation_id);
+    puis RELANCER le même EXPLAIN pour vérifier le passage en
+    Index Scan et la baisse du coût.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Après avoir créé l'index, tu relances <code>EXPLAIN</code> et tu obtiens le plan ci-dessous. Compare-le au précédent&nbsp;: qu'est-ce qui a changé, et qu'est-ce que ça <strong>prouve</strong>&nbsp;? Cite au moins trois différences observables.</p>
+<figure class="code-block" data-file="plan_exo2.txt"><pre><code class="language-plaintext">Index Scan using idx_billet_representation on billet
+   (cost=0.42..8.44 rows=47 width=20)
+   Index Cond: (representation_id = 42)</code></pre></figure>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Trois différences observables :
+
+1. L'OPÉRATION change : « Seq Scan » -> « Index Scan using
+   idx_billet_representation ». Le moteur passe par l'index au lieu
+   de lire toute la table.
+
+2. La CONDITION migre de « Filter » vers « Index Cond ». Elle est
+   désormais appliquée PAR l'index (on ne lit que les bonnes lignes),
+   et non plus après coup sur des lignes déjà lues.
+
+3. Le COÛT total s'effondre : 1780.00 -> 8.44. Le nombre de lignes
+   estimé (rows=47) est le même : c'est bien la MÊME requête, obtenue
+   beaucoup moins cher.
+
+Ce que ça prouve : l'index est RÉELLEMENT utilisé. On ne le devine
+pas, on le LIT dans le plan. C'est l'étape « vérifier » de la boucle.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue a créé un index sur <code>client(email)</code>, mais se plaint que la recherche par e-mail reste lente. Sa requête est <code>SELECT * FROM client WHERE lower(email) = 'chloe.meyer@exemple.fr';</code>. Explique <strong>pourquoi</strong> l'index est ignoré, et propose <strong>deux</strong> corrections possibles.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Pourquoi l'index est ignoré :
+
+La condition n'est pas SARGABLE. En écrivant lower(email), on demande
+au moteur de CALCULER lower() sur la valeur de CHAQUE ligne avant de
+comparer. L'index, lui, contient les valeurs BRUTES de email, pas
+leur version en minuscules : il ne peut donc pas servir. Le plan
+retombe en Seq Scan.
+
+Correction 1 — garder la colonne NUE (rendre la condition sargable) :
+    SELECT * FROM client WHERE email = 'chloe.meyer@exemple.fr';
+  Fonctionne si les e-mails sont déjà stockés en minuscules (ce qu'on
+  peut garantir par une contrainte ou à l'insertion). L'index sur
+  email redevient utilisable -> Index Scan.
+
+Correction 2 — créer un INDEX FONCTIONNEL sur l'expression :
+    CREATE INDEX idx_client_email_lower ON client (lower(email));
+  Le moteur indexe alors le RÉSULTAT de lower(email), et la requête
+  d'origine « WHERE lower(email) = … » redevient sargable telle quelle.
+
+Dans les deux cas : RE-EXPLAIN pour confirmer le passage en Index Scan.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+  </body>
+</html>

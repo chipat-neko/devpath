@@ -335,6 +335,13 @@ window.SITE_DATA = (function () {
       tags: ["Data", "Pipelines", "Ingénierie"],
     },
     {
+      id: "bdd", dir: "bdd", title: "Concevoir une base de données",
+      glyph: "bd", language: "SQL", level: "intermediaire", status: "complet",
+      accent: "#8a3d62", lessons: 15, hours: 11,
+      tagline: "Passer de l'usage de SQL à la conception : aller du besoin au modèle, poser entités et relations, choisir les clés primaires et étrangères, normaliser jusqu'à la 3e forme (et savoir dénormaliser), garantir l'intégrité par les contraintes, doser les index, lire un plan d'exécution, maîtriser transactions et niveaux d'isolation, faire évoluer un schéma par des migrations — et savoir quand modéliser pour du NoSQL.",
+      tags: ["Data", "Bases de données", "Modélisation"],
+    },
+    {
       id: "mobile", dir: "mobile", title: "Développer une application mobile",
       glyph: "mo", language: "Mobile", level: "intermediaire", status: "complet",
       accent: "#2563eb", lessons: 15, hours: 11,
@@ -1036,6 +1043,7 @@ window.SITE_DATA = (function () {
         { course: "api", note: "Concevoir une API propre est un cas d'architecture très concret." },
         { course: "tests", note: "Une bonne architecture se teste plus facilement." },
         { course: "nosql", note: "Le choix de la persistance fait partie des décisions d'architecture." },
+        { course: "bdd", note: "Le schéma d'une base est une décision d'architecture à part entière : entités, normalisation, index, transactions engagent tout le système." },
       ],
       modules: [
         {
@@ -2217,6 +2225,7 @@ window.SITE_DATA = (function () {
         { course: "git", note: "Versionne tes requêtes et tes migrations." },
         { course: "algo", note: "Comprends ce que font les index et la complexité des requêtes." },
         { course: "data-eng", note: "Les transformations d'un pipeline de données sont, très souvent, des requêtes SQL : l'ingénierie de données industrialise ce que ce cours apprend à écrire." },
+        { course: "bdd", note: "Écrire des requêtes est une chose ; concevoir les tables qu'elles interrogent en est une autre. Ce cours enseigne la modélisation, la normalisation et les clés — l'amont de tout ce SQL." },
       ],
       modules: [
         {
@@ -2967,6 +2976,7 @@ window.SITE_DATA = (function () {
         { course: "formats", note: "Les documents NoSQL sont du JSON : ce format est la brique de base." },
         { course: "api", note: "Une API sert souvent des données issues d'une base NoSQL document." },
         { course: "data-eng", note: "Files d'événements, documents JSON, stockage objet : un pipeline de données puise et déverse dans des bases non relationnelles autant que dans un entrepôt." },
+        { course: "bdd", note: "Avant de choisir le NoSQL, il faut savoir concevoir en relationnel : entités, relations, normalisation. Ce cours pose ces fondations et compare les deux modèles." },
       ],
       modules: [
         {
@@ -4149,6 +4159,7 @@ window.SITE_DATA = (function () {
         { course: "nosql", note: "Files d'événements, documents, stockage objet : un pipeline puise et déverse dans des bases non relationnelles autant que dans un entrepôt. Deux mondes que l'ingénieur data relie." },
         { course: "iac", note: "Un pipeline vit sur une infrastructure — entrepôt, orchestrateur, stockage — qu'on décrit en code pour la rendre reproductible. L'IaC est le socle sur lequel tourne le pipeline." },
         { course: "observabilite", note: "Un pipeline se surveille comme un service : fraîcheur, volumétrie, taux d'échec, lignage. Les métriques, logs et alertes du cours observabilité s'appliquent directement aux données." },
+        { course: "bdd", note: "Un pipeline alimente des tables ; encore faut-il qu'elles soient bien conçues. Ce cours enseigne la modélisation et la normalisation en amont de l'ingénierie." },
       ],
       modules: [
         {
@@ -4183,6 +4194,54 @@ window.SITE_DATA = (function () {
           lessons: [
             { num: "13", title: "Coût et volumétrie : quand la donnée devient chère", file: "lecon-13.html", status: "complet" },
             { num: "14", title: "Projet — le pipeline de Vélociti de bout en bout", file: "lecon-14.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
+    bdd: {
+      id: "bdd", dir: "bdd", title: "Concevoir une base de données",
+      glyph: "bd", accent: "#8a3d62", overview: "cours.html",
+      related: [
+        { course: "sql", note: "SQL apprend à interroger une base ; ce cours apprend à la dessiner. L'un écrit les requêtes, l'autre décide des tables qu'elles interrogent — les deux faces d'une même compétence." },
+        { course: "nosql", note: "Toutes les bases ne sont pas relationnelles. Le NoSQL modélise par documents et par agrégats ; la dernière leçon montre comment Rideau se penserait de ce côté, et quand le choisir." },
+        { course: "archi", note: "Le schéma d'une base engage tout le système : ses choix se paient longtemps. Concevoir une base, c'est déjà faire de l'architecture — celle des données." },
+        { course: "data-eng", note: "Les pipelines déplacent et transforment les données à grande échelle ; encore leur faut-il des schémas sains au départ. Ce cours conçoit les tables que l'ingénierie de données alimente." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Du besoin au modèle", sub: "entités, attributs, relations, modèle entité-association", level: "debutant",
+          lessons: [
+            { num: "01", title: "Concevoir une base avant de la coder", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Repérer les entités et leurs attributs", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Relier les entités : les cardinalités", file: "lecon-03.html", status: "complet" },
+            { num: "04", title: "Le modèle entité-association : du diagramme aux tables", file: "lecon-04.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Clés et intégrité", sub: "clés primaires, clés étrangères, contraintes", level: "intermediaire",
+          lessons: [
+            { num: "05", title: "Les clés primaires : identifier chaque ligne", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Les clés étrangères et l'intégrité référentielle", file: "lecon-06.html", status: "complet" },
+            { num: "07", title: "Les contraintes : laisser la base dire non", file: "lecon-07.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "La juste normalisation", sub: "1re, 2e et 3e formes normales, dénormalisation", level: "intermediaire",
+          lessons: [
+            { num: "08", title: "La redondance et la première forme normale", file: "lecon-08.html", status: "complet" },
+            { num: "09", title: "Deuxième et troisième formes normales", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "Dénormaliser à bon escient", file: "lecon-10.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "Performance, concurrence et vie du schéma", sub: "index, plan d'exécution, transactions, migrations, projet", level: "avance",
+          lessons: [
+            { num: "11", title: "Les index : ce qu'ils coûtent, ce qu'ils rapportent", file: "lecon-11.html", status: "complet" },
+            { num: "12", title: "Lire un plan d'exécution", file: "lecon-12.html", status: "complet" },
+            { num: "13", title: "Transactions et isolation : le cas du dernier billet", file: "lecon-13.html", status: "complet" },
+            { num: "14", title: "Faire évoluer un schéma : les migrations", file: "lecon-14.html", status: "complet" },
+            { num: "15", title: "Projet — concevoir la base de Rideau de bout en bout", file: "lecon-15.html", status: "complet" },
           ],
         },
       ],
@@ -5518,7 +5577,7 @@ window.SITE_DATA = (function () {
       title: "Données & analyse",
       glyph: "Σ",
       tagline: "Interroger, manipuler, industrialiser, analyser et visualiser des données.",
-      courses: ["sql", "python", "pandas", "data-eng", "stats", "dataviz", "r"],
+      courses: ["sql", "bdd", "python", "pandas", "data-eng", "stats", "dataviz", "r"],
     },
     {
       id: "systeme",
@@ -5586,8 +5645,8 @@ window.SITE_DATA = (function () {
       id: "bases-donnees",
       title: "Bases de données",
       glyph: "db",
-      tagline: "Stocker et interroger : du relationnel au NoSQL.",
-      courses: ["sql", "nosql"],
+      tagline: "Concevoir, stocker et interroger : du relationnel au NoSQL.",
+      courses: ["sql", "bdd", "nosql"],
     },
     {
       id: "ia",
@@ -5691,6 +5750,7 @@ window.SITE_DATA = (function () {
     "css": {"lecon-01.html":30,"lecon-02.html":32,"lecon-03.html":32,"lecon-04.html":30,"lecon-05.html":34,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":34,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":32,"lecon-14.html":32,"lecon-15.html":32,"lecon-16.html":30,"lecon-17.html":32,"lecon-18.html":36,"lecon-19.html":36,"lecon-20.html":34,"lecon-21.html":34,"lecon-22.html":35,"lecon-23.html":36,"lecon-24.html":34,"lecon-25.html":35,"lecon-26.html":33,"lecon-27.html":33,"lecon-28.html":33,"lecon-29.html":35,"lecon-30.html":32,"lecon-31.html":34,"lecon-32.html":32,"lecon-33.html":34,"lecon-34.html":33,"lecon-35.html":33,"lecon-36.html":33,"lecon-37.html":30,"lecon-38.html":34,"lecon-39.html":34,"lecon-40.html":34,"lecon-41.html":34,"lecon-42.html":34,"lecon-43.html":34,"lecon-44.html":34,"lecon-45.html":35,"lecon-46.html":35,"lecon-47.html":38},
     "dart": {"lecon-01.html":40,"lecon-02.html":50,"lecon-03.html":45,"lecon-04.html":45,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":50,"lecon-10.html":50,"lecon-11.html":55,"lecon-12.html":48,"lecon-13.html":50,"lecon-14.html":46,"lecon-15.html":52,"lecon-16.html":55},
     "data-eng": {"lecon-01.html":30,"lecon-02.html":34,"lecon-03.html":35,"lecon-04.html":36,"lecon-05.html":37,"lecon-06.html":38,"lecon-07.html":36,"lecon-08.html":37,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":37,"lecon-12.html":36,"lecon-13.html":38,"lecon-14.html":44},
+    "bdd": {"lecon-01.html":32,"lecon-02.html":34,"lecon-03.html":36,"lecon-04.html":38,"lecon-05.html":34,"lecon-06.html":38,"lecon-07.html":36,"lecon-08.html":38,"lecon-09.html":40,"lecon-10.html":36,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":44,"lecon-14.html":38,"lecon-15.html":46},
     "mobile": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":33,"lecon-04.html":34,"lecon-05.html":35,"lecon-06.html":37,"lecon-07.html":37,"lecon-08.html":35,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":38,"lecon-12.html":35,"lecon-13.html":34,"lecon-14.html":35,"lecon-15.html":45},
     "docker": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":40,"lecon-04.html":40,"lecon-05.html":40,"lecon-06.html":40,"lecon-07.html":35,"lecon-08.html":40,"lecon-09.html":40,"lecon-10.html":38,"lecon-11.html":40,"lecon-12.html":42,"lecon-13.html":40,"lecon-14.html":38,"lecon-15.html":42},
     "elixir": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":50,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":55,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":48,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
