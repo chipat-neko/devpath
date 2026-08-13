@@ -314,6 +314,13 @@ window.SITE_DATA = (function () {
       tags: ["Data", "Python", "Analyse"],
     },
     {
+      id: "dataviz", dir: "dataviz", title: "Data visualisation : donner à voir les données",
+      glyph: "dv", language: "Python", level: "intermediaire", status: "complet",
+      accent: "#c2410c", lessons: 14, hours: 9,
+      tagline: "Transformer des chiffres en graphiques qui disent vrai : choisir la forme selon la question, maîtriser les barres, courbes, distributions, nuages et compositions, régler l'échelle, la couleur (et le daltonisme) et la densité, cartographier, annoter pour raconter — et repérer les graphiques qui mentent.",
+      tags: ["Data", "Graphiques", "Visualisation"],
+    },
+    {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", language: "Dart", level: "intermediaire", status: "complet",
       accent: "#2fa3b8", lessons: 16, hours: 13,
@@ -3907,6 +3914,7 @@ window.SITE_DATA = (function () {
       related: [
         { course: "python", note: "L'autre grand langage de la data science : comparer les deux est éclairant." },
         { course: "sql", note: "Interroge des bases pour alimenter tes analyses R." },
+        { course: "dataviz", note: "La grammaire des graphiques de ggplot2 se retrouve, côté Python, dans le cours de data visualisation." },
       ],
       modules: [
         {
@@ -3965,6 +3973,7 @@ window.SITE_DATA = (function () {
       related: [
         { course: "python", note: "pandas est une bibliothèque Python : le cours Python pose les bases du langage." },
         { course: "sql", note: "groupby, jointures et filtres de pandas sont les cousins directs de GROUP BY, JOIN et WHERE." },
+        { course: "dataviz", note: "Une fois les données prêtes et agrégées, il faut les donner à voir : la suite naturelle de pandas." },
         { course: "r", note: "L'autre grand langage de l'analyse de données : data frames et dplyr côté R." },
         { course: "ml", note: "pandas prépare et nettoie les données que scikit-learn va apprendre." },
       ],
@@ -4001,6 +4010,53 @@ window.SITE_DATA = (function () {
             { num: "12", title: "Séries temporelles", file: "lecon-12.html", status: "complet" },
             { num: "13", title: "Exporter et présenter", file: "lecon-13.html", status: "complet" },
             { num: "14", title: "Projet — une analyse de ventes de bout en bout", file: "lecon-14.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
+    dataviz: {
+      id: "dataviz", dir: "dataviz", title: "Data visualisation : donner à voir les données",
+      glyph: "dv", accent: "#c2410c", overview: "cours.html",
+      related: [
+        { course: "pandas", note: "pandas prépare et agrège les tableaux que l'on trace ; sa méthode .plot() est le pont direct vers un graphique." },
+        { course: "python", note: "matplotlib, la bibliothèque de tracé des exemples, est du Python : le langage sous les graphiques." },
+        { course: "r", note: "L'autre grand atelier de dataviz : ggplot2 applique la même grammaire des graphiques, côté R." },
+        { course: "ux", note: "Lisibilité, hiérarchie visuelle, couleur et daltonisme : une bonne dataviz, c'est de l'UX appliquée aux données." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Voir pour comprendre", sub: "pourquoi visualiser, la grammaire, choisir la forme", level: "debutant",
+          lessons: [
+            { num: "01", title: "Pourquoi visualiser des données", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "La grammaire d'un graphique", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Choisir la forme selon la question", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "La boîte à outils", sub: "barres, courbes, distributions, nuages, compositions", level: "intermediaire",
+          lessons: [
+            { num: "04", title: "Comparer des catégories : les barres", file: "lecon-04.html", status: "complet" },
+            { num: "05", title: "Suivre une évolution : courbes et aires", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Décrire une distribution", file: "lecon-06.html", status: "complet" },
+            { num: "07", title: "Relier deux variables : le nuage de points", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "Montrer une composition", file: "lecon-08.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "Bien encoder", sub: "échelle, couleur, densité, cartes", level: "avance",
+          lessons: [
+            { num: "09", title: "L'échelle qui ment", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "La couleur qui parle", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Quand il y a trop de points", file: "lecon-11.html", status: "complet" },
+            { num: "12", title: "Cartographier des données", file: "lecon-12.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "Communiquer", sub: "annoter, raconter, démasquer les graphiques trompeurs", level: "avance",
+          lessons: [
+            { num: "13", title: "Annoter et raconter une histoire", file: "lecon-13.html", status: "complet" },
+            { num: "14", title: "Projet — les graphiques qui mentent, et le tableau de bord refait", file: "lecon-14.html", status: "complet" },
           ],
         },
       ],
@@ -5286,8 +5342,8 @@ window.SITE_DATA = (function () {
       id: "data",
       title: "Données & analyse",
       glyph: "Σ",
-      tagline: "Interroger, manipuler et analyser des données.",
-      courses: ["sql", "python", "pandas", "r"],
+      tagline: "Interroger, manipuler, analyser et visualiser des données.",
+      courses: ["sql", "python", "pandas", "dataviz", "r"],
     },
     {
       id: "systeme",
@@ -5492,6 +5548,7 @@ window.SITE_DATA = (function () {
     "python": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":31,"lecon-04.html":33,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":32,"lecon-10.html":32,"lecon-11.html":32,"lecon-12.html":34,"lecon-13.html":36,"lecon-14.html":35,"lecon-15.html":33,"lecon-16.html":34,"lecon-17.html":33,"lecon-18.html":33,"lecon-19.html":34,"lecon-20.html":34,"lecon-21.html":40,"lecon-22.html":44,"lecon-23.html":40,"lecon-24.html":36,"lecon-25.html":36,"lecon-26.html":38,"lecon-27.html":37,"lecon-28.html":40,"lecon-29.html":34,"lecon-30.html":36,"lecon-31.html":35,"lecon-32.html":35,"lecon-33.html":33,"lecon-34.html":33,"lecon-35.html":37,"lecon-36.html":35,"lecon-37.html":33,"lecon-38.html":35,"lecon-39.html":35,"lecon-40.html":37,"lecon-41.html":35,"lecon-42.html":35,"lecon-43.html":35,"lecon-44.html":37,"lecon-45.html":34,"lecon-46.html":35,"lecon-47.html":34,"lecon-48.html":36,"lecon-49.html":40,"lecon-50.html":42},
     "r": {"lecon-01.html":40,"lecon-02.html":50,"lecon-03.html":45,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":52,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
     "pandas": {"lecon-01.html":34,"lecon-02.html":35,"lecon-03.html":36,"lecon-04.html":37,"lecon-05.html":35,"lecon-06.html":36,"lecon-07.html":34,"lecon-08.html":37,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":38,"lecon-14.html":42},
+    "dataviz": {"lecon-01.html":32,"lecon-02.html":34,"lecon-03.html":34,"lecon-04.html":36,"lecon-05.html":36,"lecon-06.html":38,"lecon-07.html":37,"lecon-08.html":37,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":38,"lecon-12.html":40,"lecon-13.html":38,"lecon-14.html":42},
     "react": {"lecon-01.html":35,"lecon-02.html":33,"lecon-03.html":33,"lecon-04.html":31,"lecon-05.html":31,"lecon-06.html":36,"lecon-07.html":33,"lecon-08.html":35,"lecon-09.html":36,"lecon-10.html":35,"lecon-11.html":35,"lecon-12.html":35,"lecon-13.html":35,"lecon-14.html":35,"lecon-15.html":35,"lecon-16.html":35,"lecon-17.html":35,"lecon-18.html":37,"lecon-19.html":37,"lecon-20.html":35,"lecon-21.html":40,"lecon-22.html":37,"lecon-23.html":36,"lecon-24.html":35,"lecon-25.html":36,"lecon-26.html":40},
     "regex": {"lecon-01.html":30,"lecon-02.html":33,"lecon-03.html":36,"lecon-04.html":36,"lecon-05.html":39,"lecon-06.html":39,"lecon-07.html":42,"lecon-08.html":38,"lecon-09.html":41,"lecon-10.html":37,"lecon-11.html":45},
     "ruby": {"lecon-01.html":40,"lecon-02.html":44,"lecon-03.html":44,"lecon-04.html":45,"lecon-05.html":45,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":45,"lecon-09.html":48,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":44,"lecon-13.html":45,"lecon-14.html":50,"lecon-15.html":50,"lecon-16.html":44,"lecon-17.html":44,"lecon-18.html":44,"lecon-19.html":45,"lecon-20.html":40,"lecon-21.html":42,"lecon-22.html":40},

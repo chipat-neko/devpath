@@ -41,7 +41,7 @@
      retombe dans « Autres » (filet de sécurité : aucun cours ne disparaît). */
   var SECTIONS = [
     { title: "Web & front-end", ids: ["html", "css", "javascript", "typescript", "react", "vue", "sass", "a11y", "ux", "perf-web", "wasm", "projets-js"] },
-    { title: "Back-end, données & API", ids: ["python", "nodejs", "php", "sql", "pandas", "nosql", "api", "graphql", "http", "ml", "llm"] },
+    { title: "Back-end, données & API", ids: ["python", "nodejs", "php", "sql", "pandas", "dataviz", "nosql", "api", "graphql", "http", "ml", "llm"] },
     { title: "Langages de programmation", ids: ["java", "c", "cpp", "csharp", "go", "rust", "ruby", "kotlin", "swift", "r", "dart", "lua", "asm", "haskell", "elixir", "scala", "perl", "cobol", "fortran", "julia", "zig", "lisp", "ocaml", "fsharp", "clojure", "prolog", "ada", "pascal", "vb", "objc", "erlang", "groovy", "solidity"] },
     { title: "Outils, pratiques & transversaux", ids: ["git", "bash", "linux", "reseaux", "os", "regex", "docker", "kubernetes", "cloud", "iac", "observabilite", "securite", "tests", "patterns", "archi", "formats", "cicd", "markdown", "vscode", "powershell", "algo"] },
   ];

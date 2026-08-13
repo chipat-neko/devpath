@@ -2582,6 +2582,55 @@ window.PROJETS = [
       "vérifie chaque résultat sur quelques lignes connues avant de faire confiance au total.</p>",
   },
   {
+    id: "dataviz-belleville",
+    course: "dataviz",
+    courseTitle: "Data visualisation",
+    dir: "dataviz",
+    accent: "dataviz",
+    type: "Projet de visualisation",
+    niveau: "Intermédiaire",
+    titre: "Le tableau de bord ouvert de la ville de Belleville",
+    contexte:
+      "<p>La ville de <strong>Belleville</strong> ouvre ses données au public et te confie la réalisation de son " +
+      "<strong>tableau de bord</strong>. On te remet plusieurs fichiers&nbsp;: la <strong>fréquentation</strong> " +
+      "mensuelle de cinq équipements (médiathèque, piscine, stade, théâtre, musée), le <strong>climat</strong> " +
+      "(température et précipitations par mois), les <strong>temps de trajet</strong> domicile-travail de 2&nbsp;000 " +
+      "habitants, la <strong>surface et le loyer</strong> de logements, la <strong>répartition modale</strong> des " +
+      "déplacements, et la <strong>population par quartier</strong>. Le service communication a déjà produit une " +
+      "version… avec un axe tronqué et un camembert à douze parts. À toi de faire honnête.</p>",
+    objectif:
+      "<p>Produire une série de graphiques qui <strong>disent vrai et se lisent vite</strong>. Pour chaque question, " +
+      "<strong>choisir la forme</strong> adaptée (comparer, évoluer, distribuer, corréler, composer, cartographier), " +
+      "régler correctement l'<strong>échelle</strong> et la <strong>couleur</strong>, gérer la <strong>densité</strong>, " +
+      "puis <strong>annoter</strong> chaque graphique d'un titre qui porte le message. L'objectif est la " +
+      "<strong>justesse</strong> et la lisibilité, pas l'effet spectaculaire.</p>",
+    livrable: "Une planche de graphiques (script Python + matplotlib, ou notebook) accompagnée d'une courte note de lecture par graphique.",
+    fonctionnalites: [
+      "Un <strong>diagramme en barres</strong> trié de la fréquentation des équipements (barres horizontales si les noms sont longs, axe démarrant à zéro).",
+      "Une <strong>courbe multi-séries</strong> de l'évolution mensuelle, et une lecture du climat (température vs précipitations) sans double axe trompeur.",
+      "Une <strong>distribution</strong> des temps de trajet&nbsp;: histogramme (choix des classes justifié) et boîte à moustaches (médiane, quartiles, valeurs extrêmes).",
+      "Un <strong>nuage de points</strong> surface × loyer avec droite de tendance, en gérant la surcharge (transparence ou agrégation) si les points se chevauchent.",
+      "Une <strong>composition</strong> de la répartition modale (barre empilée 100&nbsp;% plutôt qu'un camembert surchargé).",
+      "Une <strong>carte choroplèthe</strong> des quartiers exprimée en <strong>taux</strong> (et non en effectifs bruts), avec une palette lisible pour les daltoniens.",
+    ],
+    criteres: [
+      "La <strong>forme</strong> est choisie en fonction de la question&nbsp;; aucun camembert à plus de cinq parts.",
+      "Les <strong>barres</strong> partent toujours de <strong>zéro</strong>&nbsp;; aucun axe tronqué qui exagère un écart.",
+      "La <strong>couleur</strong> encode une variable (pas de décor)&nbsp;: palette séquentielle/divergente/qualitative adaptée, testée pour le <strong>daltonisme</strong>.",
+      "La <strong>densité</strong> est maîtrisée&nbsp;: pas de nuage illisible, recours à la transparence, à l'agrégation ou aux petits multiples.",
+      "La <strong>carte</strong> montre un <strong>taux</strong> normalisé, pas une simple carte de population.",
+      "Chaque graphique a un <strong>titre porteur du message</strong> (« La piscine fait le plein en été » plutôt que « Fréquentation ») et se lit sans la légende.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur le <strong>choix de la forme</strong>, les <strong>barres</strong>, les " +
+      "<strong>courbes</strong>, les <strong>distributions</strong>, le <strong>nuage de points</strong> et la " +
+      "<strong>composition</strong>, puis celles sur l'<strong>échelle</strong>, la <strong>couleur</strong>, la " +
+      "<strong>densité</strong> et les <strong>cartes</strong>.</p>" +
+      "<p>Commence par écrire, pour chaque fichier, la <strong>question</strong> à laquelle le graphique répond&nbsp;: " +
+      "la forme en découle presque toujours. Prépare et agrège les données avec <a href=\"../pandas/cours.html\">pandas</a> " +
+      "avant de tracer, et relis chaque graphique avec la <strong>checklist du lecteur critique</strong> de la dernière leçon.</p>",
+  },
+  {
     id: "ml-churn",
     course: "ml",
     courseTitle: "Machine Learning",
