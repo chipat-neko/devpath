@@ -2734,6 +2734,62 @@ window.PROJETS = [
       "pipeline s'en remet sans intervention manuelle.</p>",
   },
   {
+    id: "mobile-poche",
+    course: "mobile",
+    courseTitle: "Application mobile",
+    dir: "mobile",
+    accent: "mobile",
+    type: "Projet d'application mobile",
+    niveau: "Intermédiaire",
+    titre: "« Poche » — une liste de courses partagée qui marche dans le magasin",
+    contexte:
+      "<p>Un foyer partage une liste de courses. Le problème&nbsp;: c'est <strong>au fond du magasin</strong>, là où le " +
+      "réseau ne passe pas, qu'on a besoin de cocher un article — et que deux personnes peuvent modifier la liste " +
+      "<strong>en même temps</strong>, chacune de son côté. Les applications qui exigent une connexion permanente sont " +
+      "inutilisables dans ce moment précis. On veut une app <strong>« hors-ligne d'abord »</strong>&nbsp;: elle répond " +
+      "instantanément sans réseau, mémorise ce qui a changé, puis se <strong>synchronise</strong> dès que la connexion " +
+      "revient — sans écraser le travail de l'autre.</p>",
+    objectif:
+      "<p>Concevoir une application mobile <strong>utilisable sans réseau</strong> qui met en œuvre les briques du cours&nbsp;: " +
+      "un <strong>stockage local</strong> comme source de vérité, une <strong>file de synchronisation</strong> qui rejoue les " +
+      "changements quand le réseau revient, une <strong>résolution de conflits</strong> simple mais explicite, des " +
+      "<strong>listes performantes</strong>, quelques <strong>notifications</strong> utiles (« un membre a ajouté un " +
+      "article ») et des <strong>permissions</strong> réduites au strict nécessaire. L'objectif est la " +
+      "<strong>fiabilité perçue</strong> — l'app ne « ment » jamais sur son état —, pas la richesse fonctionnelle.</p>",
+    livrable:
+      "Une conception d'application documentée (maquette d'écrans + schéma de l'état et de la synchronisation) et, au choix, " +
+      "un prototype dans l'un des trois écosystèmes (SwiftUI, Jetpack Compose ou Flutter) qui fonctionne hors-ligne et " +
+      "synchronise à la reconnexion.",
+    fonctionnalites: [
+      "Un <strong>écran liste</strong> performant (articles à cocher/décocher) et un <strong>écran détail</strong> pour ajouter une quantité ou une note, avec une navigation claire entre les deux.",
+      "Un <strong>stockage local</strong> qui fait autorité&nbsp;: l'app lit et écrit d'abord sur l'appareil, l'affichage ne dépend jamais du réseau.",
+      "Un <strong>indicateur d'état de synchronisation</strong> honnête&nbsp;: « à jour », « modifications en attente », « hors ligne » — l'utilisateur sait toujours où en est sa liste.",
+      "Une <strong>file de changements</strong> qui mémorise les actions faites hors-ligne et les <strong>rejoue</strong> (de façon idempotente) quand la connexion revient.",
+      "Une <strong>règle de résolution de conflits</strong> décrite noir sur blanc (par exemple « le dernier qui coche gagne », ou fusion des ajouts) et son comportement quand deux membres modifient le même article.",
+      "Des <strong>notifications</strong> parcimonieuses et pertinentes (un membre a ajouté un article), avec demande de permission <strong>au bon moment</strong> et un refus géré proprement.",
+      "Une <strong>adaptation aux écrans</strong> (téléphone/tablette, orientation) et le respect du <strong>cycle de vie</strong>&nbsp;: fermer puis rouvrir l'app retrouve la liste exactement dans l'état laissé.",
+    ],
+    criteres: [
+      "L'application est <strong>utilisable entièrement hors-ligne</strong>&nbsp;: ajouter, cocher et modifier un article ne nécessite aucune connexion.",
+      "La <strong>synchronisation</strong> est décrite et <strong>idempotente</strong>&nbsp;: rejouer la file après une coupure ne duplique ni ne perd de changement.",
+      "Le <strong>conflit</strong> entre deux modifications concurrentes a une règle <strong>explicite</strong> et un comportement prévisible, pas un « ça dépend ».",
+      "L'<strong>état de synchronisation</strong> est visible et exact&nbsp;: l'app n'affiche jamais « à jour » alors que des changements sont en attente.",
+      "Les <strong>permissions</strong> demandées sont <strong>minimales et justifiées</strong>, et l'app fonctionne (en mode dégradé) si l'utilisateur les refuse.",
+      "L'app respecte le <strong>cycle de vie</strong>&nbsp;: passage en arrière-plan, fermeture et réouverture ne perdent aucune donnée saisie.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur le <strong>stockage local</strong>, le <strong>réseau</strong>, le <strong>mode " +
+      "hors ligne</strong>, l'<strong>état et sa remontée</strong>, les <strong>listes performantes</strong>, les " +
+      "<strong>permissions</strong> et les <strong>notifications</strong>.</p>" +
+      "<p>Commence par le plus important&nbsp;: décide que le <strong>stockage local est la source de vérité</strong> et que " +
+      "le réseau n'est qu'un <em>miroir</em> qu'on rattrape plus tard. Dessine ensuite la <strong>file de synchronisation</strong> " +
+      "et choisis ta <strong>règle de conflit</strong> avant d'écrire une ligne — c'est là que tout se joue. Illustre avec " +
+      "l'écosystème que tu préfères (<a href=\"../swift/cours.html\">SwiftUI</a>, <a href=\"../kotlin/cours.html\">Compose</a> " +
+      "ou <a href=\"../dart/cours.html\">Flutter</a>) et soigne l'<strong>ergonomie tactile</strong> avec les réflexes du " +
+      "cours <a href=\"../ux/cours.html\">UX</a>. Termine par un scénario&nbsp;: «&nbsp;deux membres cochent le même article " +
+      "hors-ligne, chacun de son côté&nbsp;» — montre ce que ton app fait à la reconnexion.</p>",
+  },
+  {
     id: "ml-churn",
     course: "ml",
     courseTitle: "Machine Learning",

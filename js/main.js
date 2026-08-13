@@ -232,8 +232,8 @@
       "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>77 fully written courses</strong>, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
-    "home.meta.courses": "<strong>80</strong> complete courses",
-    "home.meta.lessons": "<strong>1419</strong> written lessons",
+    "home.meta.courses": "<strong>81</strong> complete courses",
+    "home.meta.lessons": "<strong>1434</strong> written lessons",
     "home.meta.langs": "<strong>73</strong> languages &amp; tech",
   };
 
@@ -900,7 +900,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1419 leçons.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1434 leçons.</li>';
         return;
       }
       items = doSearch(tk);

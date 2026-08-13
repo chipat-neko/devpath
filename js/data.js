@@ -335,6 +335,13 @@ window.SITE_DATA = (function () {
       tags: ["Data", "Pipelines", "Ingénierie"],
     },
     {
+      id: "mobile", dir: "mobile", title: "Développer une application mobile",
+      glyph: "mo", language: "Mobile", level: "intermediaire", status: "complet",
+      accent: "#2563eb", lessons: 15, hours: 11,
+      tagline: "Ce qui fait une vraie application mobile, par-delà le langage : le cycle de vie et les interruptions, la navigation entre écrans, l'état et sa remontée, les listes performantes, le stockage local, le réseau et le mode hors ligne, les permissions et la vie privée, les notifications, l'adaptation à tous les écrans, les tests sur appareil et la publication sur les magasins — illustré avec SwiftUI, Kotlin/Compose et Flutter.",
+      tags: ["Mobile", "Multiplateforme", "Transversal"],
+    },
+    {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", language: "Dart", level: "intermediaire", status: "complet",
       accent: "#2fa3b8", lessons: 16, hours: 13,
@@ -3804,6 +3811,7 @@ window.SITE_DATA = (function () {
       glyph: "Kt", accent: "#7a5cc6", overview: "cours.html",
       related: [
         { course: "java", note: "Kotlin tourne sur la JVM et dialogue avec Java : connaître l'un éclaire l'autre." },
+        { course: "mobile", note: "Kotlin est le langage d'Android ; le cours « application mobile » couvre ce qui fait une vraie app — état, listes performantes, notifications, magasins." },
         { course: "typescript", note: "Même esprit : un typage moderne qui attrape les erreurs avant l'exécution." },
         { course: "git", note: "Versionne tes projets Kotlin et Android dès le départ." },
       ],
@@ -3871,6 +3879,7 @@ window.SITE_DATA = (function () {
       id: "swift", dir: "swift", title: "Swift : développer pour l'écosystème Apple",
       glyph: "Sw", accent: "#d97842", overview: "cours.html",
       related: [
+        { course: "mobile", note: "Swift écrit le code ; le cours « application mobile » explique tout ce qui l'entoure — cycle de vie, navigation, hors-ligne, permissions, publication sur l'App Store." },
         { course: "kotlin", note: "L'équivalent côté Android : optionnels, value types et concurrence moderne." },
         { course: "typescript", note: "Même goût du typage sûr et de l'inférence." },
         { course: "git", note: "Versionne tes projets Xcode et Swift Package Manager." },
@@ -4179,10 +4188,59 @@ window.SITE_DATA = (function () {
       ],
     },
 
+    mobile: {
+      id: "mobile", dir: "mobile", title: "Développer une application mobile",
+      glyph: "mo", accent: "#2563eb", overview: "cours.html",
+      related: [
+        { course: "swift", note: "Le natif Apple : SwiftUI met en œuvre concrètement le cycle de vie, la navigation et les listes de ce cours sur iOS." },
+        { course: "kotlin", note: "Le natif Android : Jetpack Compose applique les mêmes notions — état, navigation, listes performantes — côté Google." },
+        { course: "dart", note: "Flutter, la voie multiplateforme : un seul code pour iOS et Android, et tous les concepts de ce cours réunis dans un même projet." },
+        { course: "ux", note: "Une application se juge à son ergonomie tactile : cibles, gestes, états, hiérarchie visuelle — le cours UX en donne les règles." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Le terrain du mobile", sub: "ce qui change, natif ou multiplateforme, cycle de vie, architecture", level: "debutant",
+          lessons: [
+            { num: "01", title: "Développer pour mobile : ce qui change vraiment", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Natif ou multiplateforme : choisir son approche", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Le cycle de vie d'une application", file: "lecon-03.html", status: "complet" },
+            { num: "04", title: "L'architecture d'une app : écrans, composants, état", file: "lecon-04.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Construire l'interface", sub: "navigation, état, listes performantes, adaptation aux écrans", level: "intermediaire",
+          lessons: [
+            { num: "05", title: "Naviguer entre les écrans", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "L'état et la remontée d'événements", file: "lecon-06.html", status: "complet" },
+            { num: "07", title: "Les listes performantes", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "S'adapter à tous les écrans", file: "lecon-08.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "L'app dans le monde réel", sub: "stockage local, réseau, hors ligne, permissions, notifications", level: "intermediaire",
+          lessons: [
+            { num: "09", title: "Stocker des données sur l'appareil", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "Parler au réseau", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Fonctionner hors ligne", file: "lecon-11.html", status: "complet" },
+            { num: "12", title: "Permissions et vie privée", file: "lecon-12.html", status: "complet" },
+            { num: "13", title: "Les notifications, à bon escient", file: "lecon-13.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "Livrer et tenir dans la durée", sub: "tester sur appareil, publier sur les magasins, projet complet", level: "avance",
+          lessons: [
+            { num: "14", title: "Tester sur un appareil réel", file: "lecon-14.html", status: "complet" },
+            { num: "15", title: "Publier Carnet : des magasins à la première version", file: "lecon-15.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
     dart: {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", accent: "#2fa3b8", overview: "cours.html",
       related: [
+        { course: "mobile", note: "Flutter est un moyen ; le cours « application mobile » donne la fin — cycle de vie, hors-ligne, permissions, publication — quel que soit l'outil." },
         { course: "swift", note: "L'autre voie vers le mobile : compare l'approche Flutter et SwiftUI." },
         { course: "kotlin", note: "Côté Android natif : deux philosophies pour la même plateforme." },
         { course: "javascript", note: "Dart compile aussi en JavaScript : un cousin du web." },
@@ -5542,8 +5600,8 @@ window.SITE_DATA = (function () {
       id: "mobile-dev",
       title: "Développement mobile",
       glyph: "app",
-      tagline: "Des applications natives et multiplateformes.",
-      courses: ["swift", "objc", "dart"],
+      tagline: "De l'application elle-même aux langages natifs et multiplateformes.",
+      courses: ["mobile", "swift", "objc", "dart"],
     },
     {
       id: "devops",
@@ -5633,6 +5691,7 @@ window.SITE_DATA = (function () {
     "css": {"lecon-01.html":30,"lecon-02.html":32,"lecon-03.html":32,"lecon-04.html":30,"lecon-05.html":34,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":34,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":32,"lecon-14.html":32,"lecon-15.html":32,"lecon-16.html":30,"lecon-17.html":32,"lecon-18.html":36,"lecon-19.html":36,"lecon-20.html":34,"lecon-21.html":34,"lecon-22.html":35,"lecon-23.html":36,"lecon-24.html":34,"lecon-25.html":35,"lecon-26.html":33,"lecon-27.html":33,"lecon-28.html":33,"lecon-29.html":35,"lecon-30.html":32,"lecon-31.html":34,"lecon-32.html":32,"lecon-33.html":34,"lecon-34.html":33,"lecon-35.html":33,"lecon-36.html":33,"lecon-37.html":30,"lecon-38.html":34,"lecon-39.html":34,"lecon-40.html":34,"lecon-41.html":34,"lecon-42.html":34,"lecon-43.html":34,"lecon-44.html":34,"lecon-45.html":35,"lecon-46.html":35,"lecon-47.html":38},
     "dart": {"lecon-01.html":40,"lecon-02.html":50,"lecon-03.html":45,"lecon-04.html":45,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":50,"lecon-10.html":50,"lecon-11.html":55,"lecon-12.html":48,"lecon-13.html":50,"lecon-14.html":46,"lecon-15.html":52,"lecon-16.html":55},
     "data-eng": {"lecon-01.html":30,"lecon-02.html":34,"lecon-03.html":35,"lecon-04.html":36,"lecon-05.html":37,"lecon-06.html":38,"lecon-07.html":36,"lecon-08.html":37,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":37,"lecon-12.html":36,"lecon-13.html":38,"lecon-14.html":44},
+    "mobile": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":33,"lecon-04.html":34,"lecon-05.html":35,"lecon-06.html":37,"lecon-07.html":37,"lecon-08.html":35,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":38,"lecon-12.html":35,"lecon-13.html":34,"lecon-14.html":35,"lecon-15.html":45},
     "docker": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":40,"lecon-04.html":40,"lecon-05.html":40,"lecon-06.html":40,"lecon-07.html":35,"lecon-08.html":40,"lecon-09.html":40,"lecon-10.html":38,"lecon-11.html":40,"lecon-12.html":42,"lecon-13.html":40,"lecon-14.html":38,"lecon-15.html":42},
     "elixir": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":50,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":55,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":48,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
     "erlang": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":52,"lecon-11.html":52,"lecon-12.html":55,"lecon-13.html":50,"lecon-14.html":55},

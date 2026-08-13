@@ -98,6 +98,11 @@
     dataviz: badge("dv", 9.5),
     stats: badge("st", 9.5),
     "data-eng": badge("de", 9.5),
+    /* Mobile : smartphone stylisé (écouteur, corps, barre d'accueil) */
+    mobile: stroke(
+      '<rect x="6.5" y="2.5" width="11" height="19" rx="2.4"/>' +
+      '<path d="M10.5 5h3"/><path d="M10 18.5h4"/>'
+    ),
     dart: badge("Da", 8.5),
     /* Lua : croissant de lune (« lua » = lune) */
     lua: stroke('<path d="M19.5 14.2A8.2 8.2 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z"/>'),
@@ -212,7 +217,7 @@
     cobol: "cobol", fortran: "fortran", julia: "julia", zig: "zig", lisp: "lisp", ocaml: "ocaml",
     fsharp: "fsharp", clojure: "clojure", prolog: "prolog", ada: "ada", pascal: "pascal", vb: "vb",
     objc: "objc", erlang: "erlang", groovy: "groovy", solidity: "solidity",
-    ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
+    ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", mobile: "mobile", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
     "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os",
   };
 
