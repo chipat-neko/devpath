@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet : le pipeline de Vélociti de bout en bout — Leçon 14 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="Le projet final du cours : assembler les treize leçons en un seul pipeline fiable pour Vélociti, du fichier de trajets de la nuit au tableau de bord de 8 h. Ingestion des quatre sources, couches bronze, silver et gold, idempotence et partition par date, tests de qualité bloquants, orchestration et observabilité — et le plan de reprise quand une étape casse." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-14.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 14</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · À l'échelle et en production — Leçon 14</p>
+              <h1 class="lesson-header__title">Projet : le pipeline de Vélociti de bout en bout</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~44 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : tout le cours (leçons 1 à 13)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>assembler les briques du cours en un <strong>pipeline de bout en bout</strong> pour Vélociti&nbsp;: des quatre sources aux deux tables d'analyse&nbsp;;</li>
+                  <li>dérouler une <strong>exécution nocturne orchestrée</strong> et savoir ce qui se passe, tâche par tâche, entre 2 h et 8 h&nbsp;;</li>
+                  <li>justifier les <strong>grandes décisions</strong> d'architecture (ELT, batch, incrémental, Parquet, idempotence, tests bloquants, SLA)&nbsp;;</li>
+                  <li>appliquer un <strong>plan de reprise</strong> quand une étape casse&nbsp;: reprendre à l'étape échouée, backfill idempotent, ne jamais publier un chiffre faux.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>C'est le grand assemblage. Pendant treize leçons, chaque brique est venue seule&nbsp;: l'<a href="lecon-05.html">ingestion incrémentale</a> ici, les <a href="lecon-06.html">couches bronze, silver et gold</a> là, l'<a href="lecon-08.html">idempotence</a> plus loin, l'<a href="lecon-12.html">observabilité</a> ailleurs. Un vrai pipeline, lui, les mobilise <strong>toutes à la fois</strong>, dans le bon ordre, sur les mêmes données. Cette dernière leçon ne présente aucune notion neuve&nbsp;: elle les <strong>monte</strong> en un système fiable, du fichier de trajets déposé pendant la nuit jusqu'au tableau de bord que le service municipal ouvre à 8 h.</p>
+<p>Le terrain, c'est le fil rouge du cours&nbsp;: <strong>Vélociti</strong>, le service de vélos en libre-service. Chaque nuit, quatre sources se déversent&nbsp;: <strong>~150 000 trajets</strong> dans un fichier CSV, un référentiel de <strong>~1 500 stations</strong>, <strong>~5 millions d'événements</strong> de capteurs, et <strong>24 lignes</strong> de météo. À 8 h, deux tables doivent être prêtes&nbsp;: la fréquentation par station et par jour, et la rotation des vélos. Entre les deux, un pipeline qui <em>ne peut pas</em> se permettre de publier un chiffre faux. Voyons comment tout le cours se met au service de cette promesse.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le cœur de cette leçon</p><p>L'objectif n'est pas d'apprendre une technique de plus, mais de <strong>voir comment les pièces s'emboîtent</strong>. Un pipeline fiable n'est pas une pile de calculs&nbsp;: c'est une chaîne où chaque maillon — ingestion, transformation, test, orchestration, surveillance — tient une <strong>promesse</strong> précise (fraîcheur, complétude, exactitude). Le grand danger de la donnée, ce n'est pas un mauvais calcul&nbsp;: c'est de <strong>publier un chiffre faux</strong> qu'une décision suivra.</p></div></div>
+
+<h2>L'architecture complète en un coup d'œil</h2>
+<p>Avant de dérouler une exécution, prenons de la hauteur. Voici le <strong>DAG complet</strong> de Vélociti&nbsp;: les quatre sources en entrée, les couches <a href="lecon-06.html">bronze, silver et gold</a>, la quarantaine des lignes rejetées, et les deux tables d'analyse en sortie. À chaque étape, une brique du cours est mobilisée&nbsp;— c'est le fil qui relie les treize leçons.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 400" role="img" aria-label="Le graphe complet du pipeline de Vélociti, de gauche à droite. Colonne de gauche : quatre sources empilées, trajets en CSV incrémental par date, stations en JSON chargées en plein, capteurs en JSON qui exigent l'idempotence, et météo par une API externe sous contrat. Deuxième colonne : une couche bronze qui reçoit le brut des quatre sources. Troisième colonne : une table silver nommée trajets nettoyés, typée et dédoublonnée ; sur le côté part une flèche vers une boîte quarantaine qui recueille les lignes rejetées. Quatrième colonne : une table trajets enrichis, qui combine la silver et la météo. Cinquième colonne : deux tables gold, fréquentation station jour et rotation vélos. Des étiquettes sous les flèches nomment les briques du cours mobilisées : ingestion pour l'entrée en bronze, tests de qualité et partition par date pour le passage en silver, jointure météo pour l'enrichissement, agrégation pour les golds, et observabilité sur l'ensemble.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le DAG complet de Vélociti — chaque flèche mobilise une brique du cours</text>
+
+    <!-- sources -->
+    <text class="d-tag" x="70" y="48" text-anchor="middle" font-size="9.5">4 sources</text>
+    <rect class="d-box" x="16" y="56" width="110" height="30" rx="6" /><text class="d-text" x="71" y="70" text-anchor="middle" font-size="8.5">trajets · CSV</text><text class="d-mut" x="71" y="80" text-anchor="middle" font-size="7">incrémental (L5)</text>
+    <rect class="d-box" x="16" y="94" width="110" height="30" rx="6" /><text class="d-text" x="71" y="108" text-anchor="middle" font-size="8.5">stations · JSON</text><text class="d-mut" x="71" y="118" text-anchor="middle" font-size="7">plein / full (L5)</text>
+    <rect class="d-box" x="16" y="132" width="110" height="30" rx="6" /><text class="d-text" x="71" y="146" text-anchor="middle" font-size="8.5">capteurs · JSON</text><text class="d-mut" x="71" y="156" text-anchor="middle" font-size="7">idempotence (L8)</text>
+    <rect class="d-box" x="16" y="170" width="110" height="30" rx="6" /><text class="d-text" x="71" y="184" text-anchor="middle" font-size="8.5">météo · API</text><text class="d-mut" x="71" y="194" text-anchor="middle" font-size="7">contrat (L11)</text>
+
+    <!-- bronze -->
+    <rect class="d-frame" x="176" y="66" width="96" height="128" rx="8" /><text class="d-tag" x="224" y="84" text-anchor="middle" font-size="10">bronze</text><text class="d-mut" x="224" y="132" text-anchor="middle" font-size="8">brut</text><text class="d-mut" x="224" y="146" text-anchor="middle" font-size="8">conservé</text>
+    <path class="d-line" d="M126 71 L174 100" fill="none" /><path class="d-line" d="M166 96 L174 100 L165 103" fill="none" />
+    <path class="d-line" d="M126 109 L174 118" fill="none" /><path class="d-line" d="M166 114 L174 118 L166 122" fill="none" />
+    <path class="d-line" d="M126 147 L174 140" fill="none" /><path class="d-line" d="M166 136 L174 140 L166 144" fill="none" />
+    <path class="d-line" d="M126 185 L174 160" fill="none" /><path class="d-line" d="M166 158 L174 160 L167 165" fill="none" />
+    <text class="d-mut" x="150" y="210" text-anchor="middle" font-size="7.5">ingestion (L5)</text>
+
+    <!-- silver -->
+    <rect class="d-accent" x="300" y="100" width="104" height="46" rx="7" /><text class="d-text" x="352" y="120" text-anchor="middle" font-size="8.5">trajets_nettoyes</text><text class="d-mut" x="352" y="133" text-anchor="middle" font-size="7">silver (L6)</text>
+    <path class="d-line" d="M272 125 L298 123" fill="none" /><path class="d-line" d="M290 119 L298 123 L290 127" fill="none" />
+    <text class="d-mut" x="286" y="97" text-anchor="middle" font-size="7">tests (L10) · partition (L7)</text>
+    <!-- quarantaine -->
+    <rect class="d-box" x="300" y="168" width="104" height="30" rx="6" /><text class="d-text" x="352" y="182" text-anchor="middle" font-size="8">quarantaine</text><text class="d-mut" x="352" y="192" text-anchor="middle" font-size="7">lignes rejetées</text>
+    <path class="d-line" d="M352 146 L352 166" fill="none" stroke-dasharray="3 3" /><path class="d-line" d="M348 158 L352 166 L356 158" fill="none" />
+
+    <!-- enrichis -->
+    <rect class="d-accent" x="432" y="100" width="96" height="46" rx="7" /><text class="d-text" x="480" y="120" text-anchor="middle" font-size="8.5">trajets_enrichis</text><text class="d-mut" x="480" y="133" text-anchor="middle" font-size="7">+ météo</text>
+    <path class="d-line" d="M404 123 L430 123" fill="none" /><path class="d-line" d="M422 119 L430 123 L422 127" fill="none" />
+    <path class="d-line" d="M126 189 C300 260 360 200 466 146" fill="none" stroke-dasharray="4 3" /><path class="d-line" d="M462 152 L466 146 L468 154" fill="none" />
+    <text class="d-mut" x="418" y="97" text-anchor="middle" font-size="7">jointure météo</text>
+
+    <!-- golds -->
+    <text class="d-tag" x="586" y="84" text-anchor="middle" font-size="9.5">gold</text>
+    <rect class="d-box" x="548" y="92" width="80" height="34" rx="6" /><text class="d-text" x="588" y="106" text-anchor="middle" font-size="7.5">frequentation</text><text class="d-text" x="588" y="116" text-anchor="middle" font-size="7.5">station_jour</text>
+    <rect class="d-box" x="548" y="134" width="80" height="34" rx="6" /><text class="d-text" x="588" y="148" text-anchor="middle" font-size="7.5">rotation</text><text class="d-text" x="588" y="158" text-anchor="middle" font-size="7.5">velos</text>
+    <path class="d-line" d="M528 118 L546 111" fill="none" /><path class="d-line" d="M538 108 L546 111 L539 115" fill="none" />
+    <path class="d-line" d="M528 130 L546 148" fill="none" /><path class="d-line" d="M539 144 L546 148 L539 152" fill="none" />
+    <text class="d-mut" x="588" y="182" text-anchor="middle" font-size="7">agrégation (L6)</text>
+
+    <!-- observabilite bandeau -->
+    <rect class="d-frame" x="16" y="330" width="612" height="46" rx="8" /><text class="d-label" x="322" y="350" text-anchor="middle" font-size="10">Observabilité (L12) — fraîcheur, lignage, volumétrie, alertes — sur TOUTE la chaîne</text><text class="d-mut" x="322" y="366" text-anchor="middle" font-size="8">et par-dessus tout : idempotence (L8) + coût maîtrisé par le scan (L7, L13)</text>
+    <path class="d-line" d="M322 300 L322 328" fill="none" stroke-dasharray="2 3" /><path class="d-line" d="M318 320 L322 328 L326 320" fill="none" />
+  </svg>
+  <figcaption>Le pipeline complet&nbsp;: quatre sources → <strong>bronze</strong> (brut conservé) → <strong>silver</strong> (<code>trajets_nettoyes</code>, avec une <strong>quarantaine</strong> pour les rejets) → <strong>enrichis</strong> (jointure météo) → deux tables <strong>gold</strong>. À chaque flèche, une leçon&nbsp;: ingestion (L5), tests (L10) et partition (L7) au passage en silver, contrat (L11) sur la météo, idempotence (L8) partout, et l'observabilité (L12) qui surveille l'ensemble.</figcaption>
+</figure>
+
+<p>Ce schéma est la carte du reste de la leçon. On va le <strong>parcourir dans le temps</strong> (une nuit d'exécution), puis justifier ses <strong>grands choix</strong>, enfin prévoir ce qui se passe <strong>quand il casse</strong>. Trois façons de regarder le même pipeline&nbsp;: dans l'espace, dans le temps, et sous la contrainte.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Chaque table du DAG a un <strong>propriétaire</strong> logique&nbsp;: une tâche qui la produit, et une seule. C'est ce que posait la <a href="lecon-09.html">leçon 9</a>&nbsp;: une tâche fait une chose et produit une table. Cette discipline paie ici&nbsp;: on sait exactement <em>où</em> chaque chiffre naît, donc où reprendre si un chiffre est faux. La granularité du DAG est aussi la granularité de la reprise.</p></div></div>
+
+<h2>Dérouler une nuit de Vélociti</h2>
+<p>Le pipeline est en <a href="lecon-02.html">batch nocturne</a>&nbsp;: il tourne une fois par nuit, à froid, pendant que la ville dort. À <strong>2 h du matin</strong>, l'orchestrateur se réveille et déclenche le DAG. À <strong>8 h</strong>, tout doit être prêt. Voici la chronologie de cette nuit&nbsp;— six actes, dans l'ordre imposé par les dépendances.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="La frise chronologique d'une nuit d'exécution de Vélociti, sur un axe de temps horizontal allant de 2 heures à 8 heures. Six segments successifs. De 2 heures à 2 heures 20 : ingestion des quatre sources en parallèle vers la couche bronze. De 2 heures 20 à 2 heures 40 : nettoyage vers la couche silver, trajets nettoyés. De 2 heures 40 à 2 heures 50 : enrichissement par la météo. De 2 heures 50 à 3 heures 10 : agrégats gold, les deux tables. De 3 heures 10 à 3 heures 25 : tests de qualité bloquants, qui décident si l'on publie. Puis publication avant 8 heures et émission des métriques. Une pastille marque la barrière des tests : si un test est rouge, on ne publie pas. Une seconde pastille marque l'échéance de 8 heures, l'accord de niveau de service.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une nuit de Vélociti — de 2 h à 8 h</text>
+
+    <!-- axe temps -->
+    <line class="d-line" x1="40" y1="120" x2="600" y2="120" stroke-width="1.4" />
+    <text class="d-mut" x="40" y="140" text-anchor="middle" font-size="8">02:00</text>
+    <text class="d-mut" x="600" y="140" text-anchor="middle" font-size="8">08:00</text>
+
+    <!-- actes -->
+    <rect class="d-box" x="44" y="88" width="86" height="26" rx="5" /><text class="d-text" x="87" y="104" text-anchor="middle" font-size="8">1. ingestion</text>
+    <rect class="d-accent" x="134" y="88" width="80" height="26" rx="5" /><text class="d-text" x="174" y="104" text-anchor="middle" font-size="8">2. silver</text>
+    <rect class="d-box" x="218" y="88" width="72" height="26" rx="5" /><text class="d-text" x="254" y="104" text-anchor="middle" font-size="7.5">3. météo</text>
+    <rect class="d-accent" x="294" y="88" width="76" height="26" rx="5" /><text class="d-text" x="332" y="104" text-anchor="middle" font-size="8">4. gold</text>
+    <rect class="d-frame" x="374" y="88" width="90" height="26" rx="5" /><text class="d-text" x="419" y="104" text-anchor="middle" font-size="7.5">5. tests</text>
+    <rect class="d-box" x="468" y="88" width="98" height="26" rx="5" /><text class="d-text" x="517" y="101" text-anchor="middle" font-size="7.5">6. publier</text><text class="d-mut" x="517" y="110" text-anchor="middle" font-size="6.5">+ métriques</text>
+
+    <!-- reperes sous l'axe -->
+    <text class="d-mut" x="87" y="72" text-anchor="middle" font-size="7">4 sources → bronze</text>
+    <text class="d-mut" x="174" y="72" text-anchor="middle" font-size="7">typage · dédoublon</text>
+    <text class="d-mut" x="332" y="72" text-anchor="middle" font-size="7">2 tables d'analyse</text>
+
+    <!-- barriere tests -->
+    <circle class="d-dot" cx="419" cy="120" r="5" fill="var(--accent-strong)" /><text class="d-tag" x="419" y="164" text-anchor="middle" font-size="8">test rouge</text><text class="d-mut" x="419" y="176" text-anchor="middle" font-size="7.5">→ on NE publie PAS</text>
+    <!-- SLA 8h -->
+    <line x1="600" y1="80" x2="600" y2="150" stroke="var(--accent-strong)" stroke-width="1.6" /><text class="d-tag" x="576" y="164" text-anchor="middle" font-size="8">SLA 8 h</text><text class="d-mut" x="574" y="176" text-anchor="middle" font-size="7.5">fraîcheur due</text>
+
+    <text class="d-mut" x="320" y="210" text-anchor="middle" font-size="8.5">l'orchestrateur déduit l'ordre des dépendances — les tests sont une BARRIÈRE avant la publication</text>
+  </svg>
+  <figcaption>La nuit tient en six actes&nbsp;: ingérer les quatre sources en parallèle, nettoyer en <strong>silver</strong>, enrichir de la <strong>météo</strong>, produire les <strong>agrégats gold</strong>, passer les <strong>tests de qualité</strong> — qui sont une <em>barrière</em>&nbsp;: un test rouge bloque la suite — puis <strong>publier</strong> avant 8 h et émettre les métriques. L'orchestrateur ne code pas cet ordre&nbsp;: il le déduit du graphe (<a href="lecon-09.html">leçon 9</a>).</figcaption>
+</figure>
+
+<p>Détaillons les six actes, chacun rattaché à sa leçon&nbsp;:</p>
+<ul>
+<li><strong>Ingestion</strong> (<a href="lecon-05.html">L5</a>) — les quatre sources tombent dans <strong>bronze</strong> en parallèle&nbsp;: les trajets en <em>incrémental</em> (le seul fichier du jour), les stations en <em>plein</em>, les capteurs et la météo bruts. Aucune ne dépend des autres&nbsp;: elles courent ensemble.</li>
+<li><strong>Silver</strong> (<a href="lecon-06.html">L6</a>) — <code>trajets_nettoyes</code>&nbsp;: on type les dates, on écarte les durées négatives, on <a href="lecon-08.html">dédoublonne</a> sur <code>trip_id</code>, et l'on range les lignes fautives en <strong>quarantaine</strong>.</li>
+<li><strong>Enrichissement</strong> — <code>trajets_enrichis</code> joint la silver à la <strong>météo</strong> de l'heure, pour savoir s'il pleuvait au départ de chaque trajet.</li>
+<li><strong>Gold</strong> (<a href="lecon-06.html">L6</a>) — on agrège les deux tables d'analyse&nbsp;: <code>frequentation_station_jour</code> et <code>rotation_velos</code>.</li>
+<li><strong>Tests</strong> (<a href="lecon-10.html">L10</a>) — <em>avant</em> de publier, on vérifie&nbsp;: unicité des clés, fraîcheur, volumétrie plausible. Un test rouge <strong>bloque</strong> la publication.</li>
+<li><strong>Publication et métriques</strong> (<a href="lecon-12.html">L12</a>) — les golds deviennent visibles, et le pipeline <strong>émet ses métriques</strong> (durée, lignes, taux de rejet, horodatage de fraîcheur).</li>
+</ul>
+
+<p>Voici ce DAG écrit pour un orchestrateur, en YAML déclaratif&nbsp;: des tâches, leurs dépendances, une planification et une politique de relance. C'est la traduction fidèle de la frise ci-dessus.</p>
+
+<figure class="code-block" data-file="velociti_nuit.yml"><pre><code class="language-yaml">dag: velociti_nuit
+schedule: "0 2 * * *"            # chaque nuit a 02 h 00 (batch nocturne)
+sla: "06:00:00"                  # les golds doivent etre prets 6 h apres le depart -&gt; 08 h
+defaults:
+  retries: 2                     # relance auto en cas d'echec transitoire
+  retry_delay: "5m"              # ... en espacant de 5 minutes
+  idempotent: true               # rejouer une tache ne doit rien doublonner (L8)
+
+taches:
+  # --- 1. ingestion des 4 sources, en parallele (aucune dependance) ---
+  - id: ing_trajets              # CSV du jour, incremental par date (L5)
+    depend: []
+  - id: ing_stations             # referentiel JSON, charge en plein / full (L5)
+    depend: []
+  - id: ing_capteurs             # 5 M events JSON, souvent en double -&gt; idempotence (L8)
+    depend: []
+  - id: ing_meteo                # API externe, 24 lignes/jour, sous contrat (L11)
+    depend: []
+
+  # --- 2. silver : nettoyer (attend les 3 sources internes) ---
+  - id: trajets_nettoyes
+    depend: [ing_trajets, ing_stations, ing_capteurs]
+
+  # --- 3. enrichissement : silver + meteo ---
+  - id: trajets_enrichis
+    depend: [trajets_nettoyes, ing_meteo]
+
+  # --- 4. gold : les 2 tables d'analyse ---
+  - id: frequentation_station_jour
+    depend: [trajets_enrichis]
+  - id: rotation_velos
+    depend: [trajets_enrichis]
+
+  # --- 5. tests de qualite BLOQUANTS (barriere avant publication) ---
+  - id: tests_qualite
+    depend: [frequentation_station_jour, rotation_velos]
+    bloquant: true               # un test rouge stoppe le DAG : on ne publie pas (L10)
+
+  # --- 6. publication + emission des metriques (L12) ---
+  - id: publier
+    depend: [tests_qualite]
+</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Remarque la place de <code>tests_qualite</code>&nbsp;: <em>entre</em> les golds et la publication. Les tables sont calculées, mais <strong>pas encore visibles</strong>&nbsp;; on ne les publie qu'après le feu vert des tests. C'est le motif le plus important d'un pipeline sérieux&nbsp;: <strong>tester avant de publier</strong>, jamais après. Publier puis découvrir un bug, c'est déjà avoir menti au tableau de bord.</p></div></div>
+
+<h2>Les décisions clés, récapitulées</h2>
+<p>Chaque leçon a tranché un arbitrage. Assemblés, ces choix <em>sont</em> l'architecture de Vélociti. Les voici réunis sur une carte, puis justifiés un par un.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="La carte des grandes décisions du pipeline de Vélociti, présentée comme huit choix encadrés, chacun opposant l'option retenue à l'option écartée. Un : ELT plutôt qu'ETL, on charge le brut puis on transforme dans l'entrepôt. Deux : batch nocturne plutôt que flux continu, car un tableau de bord quotidien suffit. Trois : ingestion incrémentale par date pour les trajets, mais pleine pour les stations. Quatre : format Parquet partitionné par date plutôt que CSV, pour ne lire que le nécessaire. Cinq : idempotence par écrasement de la partition du jour plutôt qu'insertion aveugle. Six : tests bloquants avant publication plutôt qu'après. Sept : contrat de schéma sur la météo externe, source hors de notre contrôle. Huit : accord de niveau de service, les golds frais avant 8 heures.">
+    <rect class="d-frame" x="20" y="38" width="600" height="252" rx="10" />
+    <text class="d-label" x="320" y="60" text-anchor="middle" font-size="12">Carte des décisions — l'option retenue, et pourquoi</text>
+
+    <rect class="d-accent" x="40" y="74" width="270" height="46" rx="7" /><text class="d-text" x="52" y="92" font-size="9">1. ELT (pas ETL)</text><text class="d-mut" x="52" y="106" font-size="7.5">charger le brut, transformer en SQL (L3)</text>
+    <rect class="d-accent" x="330" y="74" width="270" height="46" rx="7" /><text class="d-text" x="342" y="92" font-size="9">2. Batch nocturne (pas flux)</text><text class="d-mut" x="342" y="106" font-size="7.5">un tableau de bord quotidien suffit (L2)</text>
+
+    <rect class="d-accent" x="40" y="126" width="270" height="46" rx="7" /><text class="d-text" x="52" y="144" font-size="9">3. Incrémental trajets, plein stations</text><text class="d-mut" x="52" y="158" font-size="7.5">un fichier/jour vs. petit référentiel (L5)</text>
+    <rect class="d-accent" x="330" y="126" width="270" height="46" rx="7" /><text class="d-text" x="342" y="144" font-size="9">4. Parquet + partition date</text><text class="d-mut" x="342" y="158" font-size="7.5">ne lire que le nécessaire (L4, L7)</text>
+
+    <rect class="d-accent" x="40" y="178" width="270" height="46" rx="7" /><text class="d-text" x="52" y="196" font-size="9">5. Idempotence = écraser la partition</text><text class="d-mut" x="52" y="210" font-size="7.5">rejouer sans doublonner (L8)</text>
+    <rect class="d-accent" x="330" y="178" width="270" height="46" rx="7" /><text class="d-text" x="342" y="196" font-size="9">6. Tests bloquants avant publication</text><text class="d-mut" x="342" y="210" font-size="7.5">ne jamais publier un chiffre faux (L10)</text>
+
+    <rect class="d-accent" x="40" y="230" width="270" height="46" rx="7" /><text class="d-text" x="52" y="248" font-size="9">7. Contrat sur la météo externe</text><text class="d-mut" x="52" y="262" font-size="7.5">source hors de notre contrôle (L11)</text>
+    <rect class="d-accent" x="330" y="230" width="270" height="46" rx="7" /><text class="d-text" x="342" y="248" font-size="9">8. SLA de fraîcheur : avant 8 h</text><text class="d-mut" x="342" y="262" font-size="7.5">promesse tenue au tableau de bord (L12)</text>
+  </svg>
+  <figcaption>Huit décisions qui, ensemble, <em>font</em> le pipeline. Aucune n'est absolue&nbsp;: chacune répond au <strong>contexte</strong> de Vélociti (volume, fréquence de rafraîchissement, sources sous ou hors contrôle). Un autre service, d'autres réponses — mais la <em>grille</em> de questions, elle, est universelle.</figcaption>
+</figure>
+
+<p>Le détail de chaque arbitrage, avec sa justification&nbsp;:</p>
+<ul>
+<li><strong>ELT plutôt qu'ETL</strong> (<a href="lecon-03.html">L3</a>) — on charge le brut dans <strong>bronze</strong>, puis on transforme en SQL dans l'entrepôt. Le brut conservé est le filet de sécurité&nbsp;: on rejoue toute transformation corrigée sans ré-extraire.</li>
+<li><strong>Batch nocturne plutôt que flux</strong> (<a href="lecon-02.html">L2</a>) — le tableau de bord municipal est <em>quotidien</em>&nbsp;; une fraîcheur à la journée suffit. Le flux temps réel serait un coût et une complexité injustifiés.</li>
+<li><strong>Incrémental pour les trajets, plein pour les stations</strong> (<a href="lecon-05.html">L5</a>) — les trajets arrivent en un fichier par jour&nbsp;: on n'ingère que le nouveau. Les stations forment un petit référentiel qui change lentement&nbsp;: le recharger en entier chaque nuit est plus simple et sans risque de curseur bancal.</li>
+<li><strong>Parquet partitionné par date</strong> (<a href="lecon-04.html">L4</a>, <a href="lecon-07.html">L7</a>) — le format colonnes et le découpage par date permettent au moteur de ne lire que les partitions utiles (le <em>pruning</em>). C'est ce qui rend une requête sur un jour bon marché malgré des mois d'historique.</li>
+<li><strong>Idempotence par écrasement de partition</strong> (<a href="lecon-08.html">L8</a>) — rejouer une journée <em>remplace</em> sa partition au lieu d'y ajouter&nbsp;: aucune ligne en double, même après trois relances. C'est ce qui rend le backfill sûr.</li>
+<li><strong>Tests bloquants avant publication</strong> (<a href="lecon-10.html">L10</a>) — la barrière de qualité stoppe la publication si un chiffre est suspect. Mieux vaut un tableau de bord <em>en retard</em> qu'un tableau de bord <em>faux</em>.</li>
+<li><strong>Contrat sur la météo</strong> (<a href="lecon-11.html">L11</a>) — la météo vient d'une API externe qu'on ne maîtrise pas&nbsp;: on fige un <strong>contrat</strong> (les colonnes et types attendus) et l'on détecte toute dérive de schéma avant qu'elle ne casse l'enrichissement.</li>
+<li><strong>SLA de fraîcheur avant 8 h</strong> (<a href="lecon-12.html">L12</a>) — la promesse explicite&nbsp;: les golds sont frais avant l'ouverture. C'est ce que la métrique de fraîcheur surveille, et ce qu'une alerte défend.</li>
+</ul>
+
+<h2>Quand ça casse : le plan de reprise</h2>
+<p>Un pipeline qui n'échoue jamais n'existe pas. Une source arrive en retard, un test passe au rouge, un bug se glisse dans une transformation&nbsp;: la question n'est pas <em>si</em> ça casse, mais <strong>comment on s'en relève</strong>. Trois principes, hérités de tout le cours&nbsp;:</p>
+<ul>
+<li><strong>Reprendre à l'étape échouée</strong>, pas depuis le début. Grâce au découpage en tâches (<a href="lecon-09.html">L9</a>), l'orchestrateur relance <em>uniquement</em> ce qui a raté et ce qui en dépend. Les golds recalculent, mais on ne ré-ingère pas quatre sources pour rien.</li>
+<li><strong>Backfill idempotent</strong> d'une plage de dates. Un bug corrigé dans une transfo&nbsp;? On <a href="lecon-08.html">rejoue</a> les journées touchées&nbsp;; comme chaque exécution <em>écrase</em> sa partition, rejouer dix jours ne crée jamais de doublon (<a href="lecon-07.html">L7</a>, <a href="lecon-08.html">L8</a>).</li>
+<li><strong>Ne jamais publier un chiffre faux.</strong> Tant qu'un test est rouge, la publication reste bloquée (<a href="lecon-10.html">L10</a>). Un retard se rattrape&nbsp;; un chiffre faux, une fois affiché et cité en réunion, ne se rattrape plus.</li>
+</ul>
+
+<p>Voici un rejeu idempotent d'une plage de journées, en Python&nbsp;: pour chaque date, on <strong>efface d'abord</strong> la partition existante, puis on la recalcule. Relancer la même plage dix fois donne exactement le même résultat.</p>
+
+<figure class="code-block" data-file="backfill_idempotent.py"><pre><code class="language-python">from datetime import date, timedelta
+
+def dates(du: date, au: date):
+    """Toutes les dates de 'du' a 'au' inclus."""
+    n = (au - du).days
+    return [du + timedelta(days=i) for i in range(n + 1)]
+
+def rejouer_journee(entrepot, jour: date) -&gt; None:
+    """Recalcule UNE journee de facon idempotente : effacer la
+    partition du jour AVANT de la reecrire. Rejouable a volonte."""
+    j = jour.isoformat()
+    # 1) on efface la partition du jour (idempotence : L8)
+    entrepot.execute(
+        "DELETE FROM trajets_nettoyes WHERE jour = :j", {"j": j}
+    )
+    # 2) on la recalcule depuis le brut deja present (ELT : L3)
+    entrepot.execute(
+        """INSERT INTO trajets_nettoyes
+           SELECT * FROM transfo_silver(:j)""", {"j": j}
+    )
+    print(f"journee {j} : partition ecrasee puis recalculee")
+
+def backfill(entrepot, du: date, au: date) -&gt; None:
+    """Rejoue une PLAGE de dates. Meme lance plusieurs fois,
+    le resultat final est identique : aucun doublon."""
+    for jour in dates(du, au):
+        rejouer_journee(entrepot, jour)
+    print(f"backfill {du} -&gt; {au} termine ({(au-du).days + 1} jours)")
+
+# Un bug de transfo a fausse 3 jours : on les rejoue, sans crainte.
+# backfill(entrepot, date(2026, 5, 1), date(2026, 5, 3))
+</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Backfiller avec un <code>INSERT</code> <strong>sans effacer d'abord</strong> la partition. Le rejeu s'exécute «&nbsp;sans erreur&nbsp;», mais chaque relance <em>ajoute</em> une copie des lignes&nbsp;: après trois passages, la fréquentation d'une station est triplée. Un backfill n'est sûr que s'il est <strong>idempotent</strong>&nbsp;: écraser la partition (ou <code>MERGE</code>), jamais empiler. Le <code>DELETE</code> avant l'<code>INSERT</code> n'est pas un détail&nbsp;: c'est <em>toute</em> la sûreté de la reprise.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Publier avant de tester.</strong> On calcule les golds, on les rend visibles, <em>puis</em> on lance les tests «&nbsp;pour info&nbsp;». Trop tard&nbsp;: le tableau de bord affiche déjà le chiffre faux. Les tests doivent être une <strong>barrière</strong> franchie <em>avant</em> la publication, pas un contrôle a posteriori. Dans le DAG, <code>tests_qualite</code> précède toujours <code>publier</code>.</p></div></div>
+<ul>
+<li><strong>Un backfill non idempotent</strong> — rejouer en empilant au lieu d'écraser&nbsp;: chaque relance double les lignes. La reprise n'est sûre que si elle est idempotente (<a href="lecon-08.html">L8</a>).</li>
+<li><strong>Tout ré-ingérer à chaque incident</strong> — relancer les quatre sources depuis zéro quand seule l'agrégation a raté. On reprend à l'<em>étape échouée</em>, grâce au découpage en tâches (<a href="lecon-09.html">L9</a>).</li>
+<li><strong>Oublier la quarantaine</strong> — jeter <em>silencieusement</em> les lignes fautives&nbsp;: on ne voit plus le taux de rejet monter, un signal de qualité précieux (<a href="lecon-10.html">L10</a>, <a href="lecon-12.html">L12</a>).</li>
+<li><strong>Faire confiance à la météo sans contrat</strong> — une API externe change une colonne, l'enrichissement casse en silence. Un <a href="lecon-11.html">contrat</a> détecte la dérive avant qu'elle ne se propage.</li>
+<li><strong>Scanner tout l'historique pour un jour</strong> — écrire une requête sans filtre de partition&nbsp;: le coût explose. La partition par date n'aide que si les requêtes s'appuient dessus (<a href="lecon-07.html">L7</a>, <a href="lecon-13.html">L13</a>).</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une nuit, le fournisseur de <strong>météo</strong> de Vélociti déploie une mise à jour&nbsp;: la colonne <code>pluie_mm</code> devient <code>precipitation_mm</code>. Sans garde-fou, l'enrichissement aurait produit une colonne pleine de valeurs nulles, et le tableau de bord aurait affiché «&nbsp;0 mm de pluie&nbsp;» un jour d'orage. Mais le <strong>contrat de schéma</strong> (<a href="lecon-11.html">L11</a>) détecte la colonne manquante dès l'ingestion&nbsp;: la tâche <code>ing_meteo</code> échoue <em>proprement</em>. Comme la tâche est <strong>bloquante en amont de la publication</strong>, les golds ne sortent pas avec une météo fausse&nbsp;; une <strong>alerte de fraîcheur</strong> (<a href="lecon-12.html">L12</a>) part à 6 h. L'équipe corrige le mapping (<code>precipitation_mm → pluie_mm</code>), <strong>rejoue la journée</strong> par un backfill idempotent (<a href="lecon-08.html">L8</a>), et publie à 7 h 30 — dans les temps. Sans contrat, sans barrière de tests, sans reprise idempotente, ce simple renommage aurait produit un chiffre faux, affiché, et cité. Trois briques du cours l'ont empêché.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>La checklist d'un pipeline fiable — mémo transversal du cours</caption>
+    <thead><tr><th scope="col">Question à se poser</th><th scope="col">La règle, et la leçon</th></tr></thead>
+    <tbody>
+      <tr><td>Où transformer&nbsp;?</td><td><strong>ELT</strong>&nbsp;: charger le brut (bronze), transformer en SQL dans l'entrepôt (L3)</td></tr>
+      <tr><td>Batch ou flux&nbsp;?</td><td>Selon la <strong>fraîcheur due</strong>&nbsp;: batch nocturne si un rafraîchissement quotidien suffit (L2)</td></tr>
+      <tr><td>Tout ou nouveau&nbsp;?</td><td><strong>Incrémental</strong> (curseur/date) pour les gros flux, <strong>plein</strong> pour les petits référentiels (L5)</td></tr>
+      <tr><td>Quel format&nbsp;?</td><td><strong>Parquet</strong> colonnes, <strong>partitionné par date</strong>&nbsp;: on ne lit que l'utile (L4, L7)</td></tr>
+      <tr><td>Rejouable&nbsp;?</td><td><strong>Idempotence</strong>&nbsp;: écraser la partition (ou <code>MERGE</code>), jamais empiler (L8)</td></tr>
+      <tr><td>Bon ordre&nbsp;?</td><td><strong>DAG</strong> de tâches&nbsp;: dépendances déclarées, orchestrateur qui déduit l'ordre et relance (L9)</td></tr>
+      <tr><td>Fiable&nbsp;?</td><td><strong>Tests bloquants</strong> (unicité, fraîcheur, volumétrie) <em>avant</em> de publier (L10)</td></tr>
+      <tr><td>Source externe&nbsp;?</td><td><strong>Contrat</strong> de schéma&nbsp;: détecter la dérive avant qu'elle ne casse l'aval (L11)</td></tr>
+      <tr><td>Sait-on si tout va bien&nbsp;?</td><td><strong>Observabilité</strong>&nbsp;: fraîcheur, volumétrie, lignage, alertes — sans ouvrir les fichiers (L12)</td></tr>
+      <tr><td>Combien ça coûte&nbsp;?</td><td>Le <strong>scan</strong> décide&nbsp;: partition + colonnes utiles maîtrisent le volume lu (L13)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Pipeline de bout en bout</dt><dd>La chaîne complète qui mène les données des sources brutes jusqu'aux tables d'analyse, en assemblant ingestion, transformation, tests, orchestration et surveillance.</dd>
+  <dt>DAG</dt><dd>Graphe orienté sans cycle des tâches d'un pipeline&nbsp;: chaque tâche produit une table et déclare ses dépendances, dont l'orchestrateur déduit l'ordre d'exécution.</dd>
+  <dt>Architecture médaillon</dt><dd>Organisation en couches successives&nbsp;: <strong>bronze</strong> (brut conservé), <strong>silver</strong> (nettoyé, typé, dédoublonné), <strong>gold</strong> (agrégats prêts pour l'analyse).</dd>
+  <dt>Quarantaine</dt><dd>Table où l'on isole les lignes rejetées par le nettoyage (durée négative, champ manquant) au lieu de les jeter, afin de les compter et de les inspecter.</dd>
+  <dt>Idempotence</dt><dd>Propriété d'un traitement qu'on peut rejouer sans changer le résultat&nbsp;: relancer une journée écrase sa partition plutôt que d'ajouter des doublons.</dd>
+  <dt>Backfill</dt><dd>Rejeu d'une plage de dates passées, par exemple après un bug corrigé&nbsp;: sûr uniquement s'il est idempotent, sinon chaque relance double les lignes.</dd>
+  <dt>Orchestration</dt><dd>Coordination des tâches d'un pipeline&nbsp;: planification, ordre des dépendances, relances en cas d'échec — le rôle de l'ordonnanceur.</dd>
+  <dt>Test bloquant</dt><dd>Contrôle de qualité placé avant la publication&nbsp;: s'il échoue, il stoppe le DAG et empêche de publier des données fausses.</dd>
+  <dt>Contrat de données</dt><dd>Accord explicite sur le schéma et le sens d'un jeu de données entre celui qui le produit et ceux qui le consomment&nbsp;; toute dérive doit être détectée, pas subie.</dd>
+  <dt>SLA de fraîcheur</dt><dd>Promesse chiffrée sur l'âge maximal des données publiées (ici&nbsp;: golds frais avant 8 h), surveillée par une métrique et défendue par une alerte.</dd>
+  <dt>Lignage</dt><dd>Traçabilité du chemin d'une donnée&nbsp;: de quelles sources et par quelles étapes une table a été produite, utile pour diagnostiquer un chiffre suspect.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un pipeline fiable <strong>assemble</strong> les briques du cours&nbsp;: ingestion (L5) → bronze/silver/gold (L6) → enrichissement → agrégats, le tout orchestré (L9), testé (L10) et surveillé (L12).</li>
+<li>Une <strong>nuit de Vélociti</strong> déroule six actes entre 2 h et 8 h&nbsp;: ingérer les 4 sources, nettoyer en silver, enrichir de la météo, agréger en gold, <strong>tester (barrière)</strong>, puis publier et émettre les métriques.</li>
+<li>Les <strong>décisions clés</strong> répondent au contexte&nbsp;: ELT, batch nocturne, incrémental pour les trajets et plein pour les stations, Parquet partitionné, idempotence par écrasement de partition, tests bloquants, contrat météo, SLA avant 8 h.</li>
+<li>Le <strong>plan de reprise</strong> tient en trois règles&nbsp;: reprendre à l'étape échouée, backfiller de façon idempotente, et <strong>ne jamais publier un chiffre faux</strong> — mieux vaut un retard qu'une erreur.</li>
+<li>La brique <strong>reine</strong> de la reprise est l'<strong>idempotence</strong>&nbsp;: sans elle, aucun rejeu ni backfill n'est sûr.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Dans le DAG de la nuit, pourquoi la tâche <code>tests_qualite</code> est-elle placée <em>avant</em> <code>publier</code> et non après&nbsp;?</li>
+<li>Un bug de transformation a faussé trois journées déjà publiées. Décris en une phrase la reprise, et dis quelle propriété la rend sûre.</li>
+<li>Pourquoi ingère-t-on les <strong>trajets</strong> en incrémental mais les <strong>stations</strong> en plein&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Dans le pipeline de Vélociti, la tâche tests_qualite dépend des deux tables gold et précède la tâche publier. Pourquoi cet ordre ?","a":["Pour tester AVANT de publier : un test rouge bloque la publication, on n'affiche jamais un chiffre faux au tableau de bord","Parce que les tests sont plus rapides que la publication","Parce qu'il faut publier d'abord pour pouvoir tester ensuite","L'ordre n'a aucune importance dans un DAG"],"correct":0,"explain":"Les tests sont une barrière : ils s'exécutent entre les golds et la publication. Publier puis tester, c'est afficher le chiffre faux avant de le détecter. On teste toujours avant de publier."},
+  {"q":"Un bug de transformation a faussé trois journées de trajets déjà calculées. Quelle reprise est SÛRE ?","a":["Un backfill idempotent des trois dates : pour chaque jour, on écrase la partition puis on la recalcule depuis le brut — rejouable sans doublon","Un INSERT des trois jours par-dessus l'existant, sans rien effacer","Tout ré-ingérer depuis les quatre sources, sur tout l'historique","Supprimer la table et espérer qu'elle se reconstruise seule"],"correct":0,"explain":"Le backfill n'est sûr que s'il est idempotent : effacer la partition du jour avant de la réécrire. Un INSERT sans effacement empile les doublons ; rejouer trois fois triplerait les lignes."},
+  {"q":"Pourquoi Vélociti ingère-t-il les trajets en incrémental mais les stations en plein (full) ?","a":["Les trajets arrivent en un gros fichier par jour (on n'ajoute que le nouveau) ; les stations forment un petit référentiel qui change lentement, plus simple à recharger en entier","Parce que le CSV s'ingère toujours en incrémental et le JSON toujours en plein","Parce que les stations sont plus volumineuses que les trajets","C'est un choix arbitraire, sans justification"],"correct":0,"explain":"L'incrémental évite de relire des mois de trajets ; le plein convient à un petit référentiel de ~1 500 stations, sans curseur à gérer. Le volume et la fréquence de changement décident."},
+  {"q":"Quelle brique du cours rend possibles la reprise à l'étape échouée ET le backfill d'une plage de dates ?","a":["L'idempotence : rejouer une exécution (écrasement de partition) ne doublonne ni ne fausse, donc on peut relancer sans crainte","Le format Parquet, qui empêche tout échec","Le batch nocturne, qui rend les erreurs impossibles","Le contrat de schéma, qui recalcule les tables automatiquement"],"correct":0,"explain":"L'idempotence est la propriété reine : sans elle, chaque relance risquerait de doublonner. Avec elle, reprendre une étape ou backfiller dix jours donne toujours le même résultat correct."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["idempotence","l'idempotence","idempotent","idempotente"],"placeholder":"la propriété qui permet de rejouer une exécution sans doublonner ni fausser s'appelle l'i__________","hints":["Elle rend la reprise et le backfill sûrs.","Rejouer une journée écrase sa partition au lieu d'ajouter.","Onze lettres : i__________."],"link":{"href":"lecon-14.html","label":"Revoir « Quand ça casse : le plan de reprise »"}},
+  {"type":"text","accept":["bronze","la couche bronze","couche bronze","le bronze"],"placeholder":"la couche où le brut des 4 sources est chargé et conservé intact s'appelle b_____","hints":["C'est la première couche de l'architecture médaillon.","Le filet de sécurité de l'ELT : on peut tout recalculer depuis elle.","Six lettres : b_____ (avant silver et gold)."],"link":{"href":"lecon-14.html","label":"Revoir « L'architecture complète en un coup d'œil »"}},
+  {"type":"text","accept":["avant","avant de publier","avant la publication","avant publication"],"placeholder":"les tests de qualité bloquants doivent tourner … de publier les tables gold : a____","hints":["Sinon on affiche le chiffre faux puis on le détecte.","Les tests sont une barrière, pas un contrôle a posteriori.","Cinq lettres : a____ (le contraire d'après)."],"link":{"href":"lecon-14.html","label":"Revoir « Dérouler une nuit de Vélociti »"}},
+  null
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Remets dans l'ordre les six actes d'une nuit de Vélociti, à partir de cette liste mélangée&nbsp;: <code>tests de qualité</code>, <code>ingestion des sources</code>, <code>agrégats gold</code>, <code>publication</code>, <code>nettoyage silver</code>, <code>enrichissement météo</code>. Puis explique en une phrase pourquoi les tests ne peuvent pas être placés en tout dernier.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Ordre correct (imposé par les dépendances du DAG) :
+  1. ingestion des sources   -&gt; remplit la couche bronze
+  2. nettoyage silver        -&gt; trajets_nettoyes (typage, dédoublon)
+  3. enrichissement météo    -&gt; trajets_enrichis
+  4. agrégats gold           -&gt; frequentation_station_jour, rotation_velos
+  5. tests de qualité        -&gt; BARRIÈRE : unicité, fraîcheur, volumétrie
+  6. publication             -&gt; les golds deviennent visibles
+
+Pourquoi pas les tests en dernier (après publication) :
+  publier PUIS tester, c'est afficher le chiffre au tableau de bord
+  AVANT de savoir s'il est juste. Si un test échoue, le faux chiffre
+  est déjà visible et peut-être déjà cité. Les tests doivent être une
+  barrière franchie AVANT la publication, jamais un contrôle après.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour chacune de ces quatre sources de Vélociti, dis si on l'ingère en <strong>incrémental</strong> ou en <strong>plein (full)</strong>, et justifie en une ligne&nbsp;: (a) les <strong>trajets</strong> (~150 000/jour, un fichier par jour)&nbsp;; (b) les <strong>stations</strong> (~1 500, référentiel qui change lentement)&nbsp;; (c) les <strong>capteurs</strong> (~5 M events/jour, parfois en double)&nbsp;; (d) la <strong>météo</strong> (24 lignes/jour, API externe).</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) trajets  -&gt; INCRÉMENTAL par date : un gros fichier arrive chaque
+    jour ; on n'ingère que le nouveau, inutile de relire l'historique.
+
+(b) stations -&gt; PLEIN (full) : petit référentiel (~1 500 lignes) qui
+    change lentement ; le recharger en entier chaque nuit est simple
+    et évite tout curseur bancal.
+
+(c) capteurs -&gt; INCRÉMENTAL (par jour/fenêtre), MAIS avec idempotence :
+    ~5 M events/jour, parfois émis en double -&gt; il faut dédoublonner
+    (sur event_id) pour que rejouer ne compte pas deux fois.
+
+(d) météo    -&gt; PLEIN sur la fenêtre du jour (24 lignes), sous CONTRAT :
+    volume minuscule, mais source externe hors de notre contrôle -&gt;
+    on fige le schéma attendu pour détecter toute dérive.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Il est 6 h. La tâche <code>ing_meteo</code> a échoué&nbsp;: le fournisseur a renommé une colonne, et le <strong>contrat</strong> l'a détecté. Décris la <strong>réaction complète</strong> du pipeline&nbsp;: que doivent faire (ou ne pas faire) les tâches en aval, quelle alerte part, et comment on répare puis on rattrape la journée avant 8 h.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Réaction en chaîne (ce que le pipeline fait correctement) :
+
+1. ing_meteo échoue PROPREMENT : le contrat de schéma (L11) voit la
+   colonne attendue manquante et arrête la tâche au lieu de charger
+   une colonne pleine de valeurs nulles.
+
+2. trajets_enrichis dépend de ing_meteo : il NE tourne PAS. Donc les
+   golds ne sortent pas avec une météo fausse, et tests_qualite +
+   publier restent bloqués en amont. Aucun chiffre faux n'est publié.
+
+3. Une alerte de FRAÎCHEUR part (L12) : à 6 h, les golds ne sont pas
+   encore frais alors que le SLA est 8 h -&gt; l'équipe est prévenue tôt.
+
+Réparation puis rattrapage avant 8 h :
+
+4. On corrige le mapping (precipitation_mm -&gt; pluie_mm) dans
+   l'ingestion météo, conformément au contrat.
+
+5. On REJOUE la journée par un backfill IDEMPOTENT (L8) : ing_meteo,
+   puis trajets_enrichis, les 2 golds, les tests, la publication.
+   Comme chaque étape écrase sa partition, rejouer ne doublonne rien.
+
+6. Les tests passent au vert -&gt; publication à 7 h 30, dans les temps.
+
+Principe : le contrat détecte, la dépendance bloque, l'alerte prévient,
+l'idempotence permet de rejouer. Un simple renommage n'a produit AUCUN
+chiffre faux.</code></pre></figure></details></div>
+
+<h2>Mini-projet fil rouge — le pipeline de Vélociti de bout en bout</h2>
+<p>Le grand final&nbsp;: reprends Vélociti et construis le <strong>pipeline complet</strong>, de la stratégie d'ingestion des quatre sources jusqu'aux deux tables d'analyse publiées avant 8 h. Ce projet mobilise tout le cours&nbsp;: <a href="lecon-05.html">ingérer</a> chaque source selon sa nature, empiler les <a href="lecon-06.html">couches bronze, silver et gold</a>, <a href="lecon-07.html">partitionner</a> par date, garantir l'<a href="lecon-08.html">idempotence</a> pour la reprise, <a href="lecon-09.html">orchestrer</a> les tâches, <a href="lecon-10.html">tester</a> la qualité avant de publier, et tout <a href="lecon-12.html">surveiller</a>.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Un ensemble cohérent qui <em>est</em> le pipeline de Vélociti&nbsp;: le <strong>DAG orchestré</strong> (YAML) qui déclare les tâches et leurs dépendances&nbsp;; le <strong>SQL des couches</strong> silver (typage, dédoublonnage, quarantaine) et gold (les deux agrégats)&nbsp;; le <strong>Python d'idempotence</strong> (écraser la partition avant de recalculer) et un <strong>test de qualité bloquant</strong> (unicité de la clé). À la fin, tu peux dérouler une nuit entière, la rejouer sans doublon, et refuser de publier un chiffre faux.</p></div></div>
+<p class="kicker kicker--gold">Étapes</p>
+<div class="steps">
+<div class="step"><h3>Dessiner le DAG et les stratégies d'ingestion</h3><p>Trace le graphe des tâches (4 sources → silver → enrichis → 2 golds → tests → publier) et fixe, pour chaque source, sa <strong>stratégie d'ingestion</strong>&nbsp;: trajets en incrémental par date, stations en plein, capteurs en incrémental avec idempotence, météo sous contrat.</p></div>
+<div class="step"><h3>Couche bronze</h3><p>Charge le <strong>brut</strong> des quatre sources dans des tables bronze, dans une <strong>zone d'atterrissage datée</strong> (une partition par jour). Incrémental pour les trajets et les capteurs, plein pour les stations. Rien n'est nettoyé ici&nbsp;: on conserve le brut fidèlement, c'est le filet de sécurité de l'ELT.</p></div>
+<div class="step"><h3>Couche silver</h3><p>Dérive <code>trajets_nettoyes</code>&nbsp;: <strong>type</strong> les dates, écarte les <strong>durées négatives</strong>, <strong>dédoublonne</strong> sur <code>trip_id</code>, et range les lignes fautives en <strong>quarantaine</strong> (au lieu de les jeter, pour pouvoir compter le taux de rejet).</p></div>
+<div class="step"><h3>Couche gold</h3><p>Produis les <strong>deux tables d'analyse</strong> à partir de <code>trajets_enrichis</code>&nbsp;: <code>frequentation_station_jour</code> (nombre de trajets par station et par jour) et <code>rotation_velos</code> (nombre de trajets par vélo). Ce sont les chiffres que le tableau de bord affiche.</p></div>
+<div class="step"><h3>Idempotence + partition + backfill</h3><p>Partitionne les tables par <strong>date</strong> et rends chaque recalcul <strong>idempotent</strong>&nbsp;: rejouer une journée <em>écrase</em> sa partition avant de la réécrire. Écris le <strong>backfill</strong> d'une plage de dates&nbsp;: relancer dix jours doit donner exactement le même résultat, sans doublon.</p></div>
+<div class="step"><h3>Tests de qualité + contrat météo</h3><p>Ajoute des <strong>tests bloquants</strong> avant la publication&nbsp;: unicité de <code>trip_id</code> en silver, volumétrie plausible (~150 000 trajets), fraîcheur du jour. Fige un <strong>contrat</strong> sur la météo externe (colonnes et types attendus) pour détecter toute dérive de schéma.</p></div>
+<div class="step"><h3>Orchestration + observabilité</h3><p>Orchestre le tout&nbsp;: <strong>planification</strong> à 2 h, dépendances déclarées, <strong>relances</strong> automatiques, <code>tests_qualite</code> en barrière avant <code>publier</code>. Émets les <strong>métriques</strong> (durée, lignes, taux de rejet, fraîcheur) et pose une <strong>alerte</strong> si les golds ne sont pas frais avant 8 h.</p></div>
+</div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble les sept étapes en un ensemble cohérent&nbsp;: le DAG orchestré, le SQL des couches silver et gold, le Python d'idempotence et un test de qualité. Fais-le d'abord par toi-même — c'est le meilleur moyen de vérifier que tout le cours est en place — puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary>
+<p>D'abord le <strong>DAG orchestré</strong> qui déclare les tâches, leurs dépendances, la planification et les relances&nbsp;:</p>
+<figure class="code-block" data-file="velociti_nuit.yml"><pre><code class="language-yaml">dag: velociti_nuit
+schedule: "0 2 * * *"            # chaque nuit a 02 h 00 (batch nocturne, L2)
+sla: "06:00:00"                  # golds prets 6 h apres -&gt; avant 08 h (L12)
+defaults:
+  retries: 2                     # relance auto si echec transitoire (L9)
+  retry_delay: "5m"
+  idempotent: true               # rejouer une tache ne doublonne pas (L8)
+
+taches:
+  # 1) ingestion des 4 sources, en parallele
+  - id: ing_trajets              # CSV du jour, incremental par date (L5)
+    depend: []
+  - id: ing_stations             # referentiel JSON, plein / full (L5)
+    depend: []
+  - id: ing_capteurs             # 5 M events, dedoublonnes -&gt; idempotence (L8)
+    depend: []
+  - id: ing_meteo                # API externe, 24 lignes, sous contrat (L11)
+    depend: []
+  # 2) silver
+  - id: trajets_nettoyes
+    depend: [ing_trajets, ing_stations, ing_capteurs]
+  # 3) enrichissement
+  - id: trajets_enrichis
+    depend: [trajets_nettoyes, ing_meteo]
+  # 4) gold (les 2 tables d'analyse)
+  - id: frequentation_station_jour
+    depend: [trajets_enrichis]
+  - id: rotation_velos
+    depend: [trajets_enrichis]
+  # 5) tests bloquants (barriere avant publication, L10)
+  - id: tests_qualite
+    depend: [frequentation_station_jour, rotation_velos]
+    bloquant: true
+  # 6) publication + metriques (L12)
+  - id: publier
+    depend: [tests_qualite]
+</code></pre></figure>
+<p>Ensuite le <strong>SQL de la couche silver</strong> — typage, durées positives, dédoublonnage sur <code>trip_id</code>, avec une requête jumelle pour la <strong>quarantaine</strong>&nbsp;:</p>
+<figure class="code-block" data-file="silver_trajets.sql"><pre><code class="language-sql">-- SILVER : depuis le brut deja charge (bronze_trajets), on ne garde
+-- que les lignes valides, typees et dedoublonnees. Partition par jour.
+CREATE OR REPLACE TABLE trajets_nettoyes AS
+SELECT
+    trip_id,
+    CAST(start AS TIMESTAMP)              AS debut,
+    CAST(end   AS TIMESTAMP)              AS fin,
+    station_start,
+    station_end,
+    bike,
+    type,
+    CAST(start AS DATE)                   AS jour     -- cle de partition (L7)
+FROM bronze_trajets
+WHERE end &gt; start                                     -- durees positives (fin apres debut)
+  AND start IS NOT NULL
+  AND end   IS NOT NULL                               -- trajets complets
+QUALIFY ROW_NUMBER() OVER (                           -- 1 seule ligne par trip_id
+    PARTITION BY trip_id ORDER BY start
+) = 1;
+
+-- QUARANTAINE : on ISOLE les lignes rejetees au lieu de les jeter,
+-- pour pouvoir compter le taux de rejet (signal de qualite, L10/L12).
+CREATE OR REPLACE TABLE trajets_quarantaine AS
+SELECT *, CASE
+           WHEN start IS NULL OR end IS NULL THEN 'champ_manquant'
+           WHEN end &lt;= start                 THEN 'duree_negative'
+         END AS motif_rejet
+FROM bronze_trajets
+WHERE start IS NULL OR end IS NULL OR end &lt;= start;</code></pre></figure>
+<p>Puis le <strong>SQL de la couche gold</strong> — les deux tables d'analyse, à partir de <code>trajets_enrichis</code>&nbsp;:</p>
+<figure class="code-block" data-file="gold_agregats.sql"><pre><code class="language-sql">-- GOLD 1 : frequentation par station et par jour.
+CREATE OR REPLACE TABLE frequentation_station_jour AS
+SELECT
+    station_start          AS station,
+    jour,
+    COUNT(*)               AS nb_trajets,
+    SUM(CASE WHEN pluie_mm &gt; 0 THEN 1 ELSE 0 END) AS nb_trajets_pluie
+FROM trajets_enrichis
+GROUP BY station_start, jour;
+
+-- GOLD 2 : rotation des velos (combien de trajets par velo, par jour).
+CREATE OR REPLACE TABLE rotation_velos AS
+SELECT
+    bike                   AS velo,
+    jour,
+    COUNT(*)               AS nb_trajets,
+    COUNT(DISTINCT station_start) AS nb_stations_visitees
+FROM trajets_enrichis
+GROUP BY bike, jour;</code></pre></figure>
+<p>Le <strong>Python d'idempotence</strong> — recalculer une journée en écrasant sa partition, et le backfill d'une plage&nbsp;:</p>
+<figure class="code-block" data-file="idempotence.py"><pre><code class="language-python">from datetime import date, timedelta
+
+def rejouer_journee(entrepot, table: str, jour: date) -&gt; None:
+    """Recalcule UNE journee de facon idempotente : on efface la
+    partition du jour AVANT de la reecrire. Rejouable a volonte (L8)."""
+    j = jour.isoformat()
+    entrepot.execute(
+        f"DELETE FROM {table} WHERE jour = :j", {"j": j}   # 1) effacer
+    )
+    entrepot.execute(
+        f"INSERT INTO {table} SELECT * FROM calcul_{table}(:j)", {"j": j}
+    )                                                       # 2) recalculer
+
+def backfill(entrepot, table: str, du: date, au: date) -&gt; None:
+    """Rejoue une PLAGE de dates. Meme lance 10 fois, resultat identique."""
+    jour = du
+    while jour &lt;= au:
+        rejouer_journee(entrepot, table, jour)
+        jour += timedelta(days=1)
+    print(f"backfill {table} : {du} -&gt; {au} termine, sans doublon")
+</code></pre></figure>
+<p>Enfin un <strong>test de qualité bloquant</strong> — l'unicité de <code>trip_id</code> en silver&nbsp;; il lève une erreur qui stoppe le DAG avant la publication&nbsp;:</p>
+<figure class="code-block" data-file="test_qualite.py"><pre><code class="language-python">def test_unicite_trip_id(entrepot, jour: str) -&gt; None:
+    """Test BLOQUANT (L10) : aucun trip_id ne doit apparaitre 2 fois
+    en silver. S'il echoue, il leve -&gt; le DAG s'arrete AVANT publier."""
+    lignes = entrepot.query(
+        """SELECT trip_id, COUNT(*) AS n
+           FROM trajets_nettoyes
+           WHERE jour = :j
+           GROUP BY trip_id
+           HAVING COUNT(*) &gt; 1""", {"j": jour}
+    )
+    if lignes:
+        exemples = ", ".join(str(l["trip_id"]) for l in lignes[:3])
+        raise ValueError(
+            f"QUALITE KO : {len(lignes)} trip_id en double le {jour} "
+            f"(ex. {exemples}). Publication BLOQUEE."
+        )
+    print(f"qualite OK : trip_id uniques le {jour}")
+
+# Volumetrie plausible : on attend ~150 000 trajets/jour ; un ecart
+# brutal (0, ou 10x) est aussi un test bloquant a ajouter (L10, L13).
+</code></pre></figure>
+<p>Ces cinq morceaux, mis bout à bout, <em>sont</em> le pipeline de Vélociti&nbsp;: le YAML orchestre, le SQL construit les couches, le Python garantit la reprise idempotente et refuse de publier un chiffre faux. C'est tout le cours en un système.</p>
+</details></div>
+
+<h2>Et après&nbsp;?</h2>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Continuer l'aventure</p><p>Bravo&nbsp;: tu sais désormais penser un pipeline de bout en bout — la compétence qui distingue un ingénieur de données de quelqu'un qui écrit des scripts isolés. Pour aller plus loin&nbsp;: consolide le langage des transformations avec le <a href="../sql/cours.html">cours SQL</a> (le SQL est le cœur de l'ELT), explore l'autre bout de la chaîne — files d'événements, documents, stockage objet — avec le <a href="../nosql/cours.html">cours NoSQL</a>, décris l'infrastructure du pipeline (entrepôt, orchestrateur, stockage) de façon reproductible avec le <a href="../iac/cours.html">cours infrastructure as code</a>, puis surveille-le comme un vrai service de production avec le <a href="../observabilite/cours.html">cours observabilité</a>. Et pour affûter l'analyse des données que ton pipeline produit, le <a href="../pandas/cours.html">cours pandas</a> est le compagnon naturel. Les outils changeront&nbsp;; la discipline que ce cours t'a enseignée — garder le brut, tester avant de publier, rendre tout rejouable — non. Bravo d'être allé au bout&nbsp;!</p></div></div>
+
+<script type="application/json" data-quiz-bilan>
+[
+  {"q":"Quelle est la différence entre une donnée brute et une donnée exploitable ?","a":["La donnée brute est fidèle à la source (doublons, dates mal formées comprises) ; la donnée exploitable a été nettoyée, typée et structurée pour l'analyse","La donnée brute est chiffrée, l'exploitable est en clair","Ce sont deux mots pour la même chose","La donnée exploitable est toujours plus volumineuse que la brute"],"correct":0,"explain":"Un pipeline mène le brut jusqu'à l'exploitable par étapes. On garde le brut (bronze) intact comme filet de sécurité, et on en dérive des tables propres (silver, gold)."},
+  {"q":"En quoi l'ELT diffère-t-il de l'ETL, et pourquoi domine-t-il l'analytique moderne ?","a":["ELT charge le brut d'abord puis transforme DANS l'entrepôt : le brut conservé permet de rejouer toute transformation corrigée sans ré-extraire la source","ELT chiffre les données, ETL non","ELT ne fonctionne que sur de petits volumes","ELT supprime le besoin de tests de qualité"],"correct":0,"explain":"Seule la place du T change. En ELT le brut vit dans l'entrepôt (bronze) : corriger un bug = modifier le SQL et le rejouer, sans retourner à la source. C'est l'avantage décisif de la reprise."},
+  {"q":"Pourquoi le format Parquet est-il préféré au CSV pour l'analytique de Vélociti ?","a":["Parquet range les données par colonne : forte compression et lecture des seules colonnes utiles, donc des requêtes plus rapides et moins coûteuses","Parquet est lisible dans un éditeur de texte, contrairement au CSV","Parquet accepte plus de lignes que le CSV","Parquet n'a aucun avantage, c'est une question de mode"],"correct":0,"explain":"Le stockage colonne compresse mieux et permet de ne lire que les colonnes nécessaires à une requête. Sur des tables analytiques, c'est un gain de coût et de vitesse majeur face au CSV ligne à ligne."},
+  {"q":"Les trajets de Vélociti sont ingérés en incrémental. Qu'est-ce qu'un curseur dans ce contexte ?","a":["Un repère (souvent la date ou un identifiant maximal) qui mémorise jusqu'où on a déjà ingéré, pour n'extraire que les données nouvelles à la prochaine exécution","Un pointeur de souris dans le tableau de bord","Une colonne obligatoire de tout fichier CSV","Un test de qualité sur la fraîcheur"],"correct":0,"explain":"L'ingestion incrémentale n'extrait que le nouveau depuis la dernière fois. Le curseur (ici la date du jour) marque la frontière, évitant de relire tout l'historique à chaque exécution."},
+  {"q":"À quoi servent les trois couches bronze, silver et gold ?","a":["Bronze conserve le brut ; silver contient les données nettoyées, typées et dédoublonnées ; gold contient les agrégats prêts pour l'analyse","Ce sont trois niveaux de chiffrement","Ce sont trois copies identiques pour la sauvegarde","Bronze est la plus récente, gold la plus ancienne"],"correct":0,"explain":"L'architecture médaillon sépare les responsabilités : brut conservé (bronze), propre (silver), agrégé (gold). Chaque couche dérive de la précédente, ce qui rend le pipeline lisible et rejouable."},
+  {"q":"Une requête filtre sur une seule journée d'une table partitionnée par date. Qu'est-ce que le pruning de partitions ?","a":["Le moteur ne lit QUE les partitions concernées par le filtre (ici, un jour) et ignore le reste : moins de données scannées, donc requête plus rapide et moins chère","La suppression définitive des vieilles partitions","Le tri des partitions par ordre alphabétique","La compression des partitions en Parquet"],"correct":0,"explain":"Partitionner par date n'aide que si les requêtes filtrent sur cette clé : le moteur élague (prune) les partitions hors du filtre et ne scanne que le jour demandé. C'est le levier de coût principal."},
+  {"q":"Les capteurs de Vélociti émettent parfois deux fois le même événement. Pourquoi l'idempotence est-elle nécessaire ?","a":["Pour que rejouer une ingestion ne compte pas deux fois le même event : on dédoublonne (sur event_id) et on écrase la partition au lieu d'empiler, donc le résultat reste correct","Pour chiffrer les événements des capteurs","Pour accélérer l'ingestion des trajets","Pour supprimer le besoin d'orchestration"],"correct":0,"explain":"Sans idempotence, un doublon d'événement ou un rejeu gonflerait les compteurs. On dédoublonne et on rend chaque exécution rejouable (écrasement de partition), garantissant un résultat stable."},
+  {"q":"Dans un pipeline orchestré, qu'est-ce qu'un DAG et que fait l'orchestrateur ?","a":["Un graphe orienté sans cycle des tâches ; l'orchestrateur déduit l'ordre d'exécution des dépendances déclarées, lance en parallèle ce qui est indépendant et relance en cas d'échec","Une base de données relationnelle spéciale","Un format de fichier comme Parquet","Un algorithme de compression des données"],"correct":0,"explain":"Le DAG déclare les tâches et leurs dépendances ; personne ne code l'ordre à la main. L'orchestrateur planifie, parallélise les tâches indépendantes, et gère les relances (retries) automatiquement."},
+  {"q":"Pourquoi les tests de qualité de Vélociti sont-ils placés AVANT la publication des tables gold ?","a":["Parce qu'un test bloquant doit stopper le DAG si un chiffre est suspect : on ne publie jamais des données fausses au tableau de bord ; mieux vaut un retard qu'une erreur","Parce que les tests sont plus lents s'ils tournent après","Parce qu'on ne peut techniquement pas tester une table publiée","L'ordre est indifférent, c'est une convention"],"correct":0,"explain":"Les tests sont une barrière. Publier puis tester revient à afficher le chiffre faux avant de le détecter. Un test bloquant (unicité, fraîcheur, volumétrie) précède toujours la publication."},
+  {"q":"La météo vient d'une API externe. Qu'est-ce qu'un contrat de données et pourquoi protège-t-il d'un schema drift ?","a":["Un accord explicite sur le schéma attendu (colonnes, types) : si la source renomme ou supprime une colonne, la dérive est détectée dès l'ingestion, avant de casser l'aval en silence","Un document juridique sans effet technique","Une copie de sauvegarde de la source","Un test qui mesure la vitesse de l'API"],"correct":0,"explain":"Le contrat fige ce qu'on attend de la source. Une dérive de schéma (colonne renommée) est alors détectée tout de suite, ce qui évite qu'un enrichissement produise des valeurs nulles silencieuses."},
+  {"q":"Qu'observe-t-on d'un pipeline en production, et que révèle le lignage ?","a":["On surveille fraîcheur, durée, volumétrie et taux de rejet ; le lignage retrace de quelles sources et par quelles étapes une table a été produite, utile pour diagnostiquer un chiffre suspect","Uniquement l'espace disque restant","Seulement le nombre d'utilisateurs du tableau de bord","Rien : un pipeline correct n'a pas besoin d'être surveillé"],"correct":0,"explain":"Un pipeline se surveille comme un service. Les métriques (fraîcheur, volumétrie, rejets) disent si tout va bien sans ouvrir les fichiers ; le lignage montre le chemin d'une donnée, essentiel pour remonter à la cause d'un problème."},
+  {"q":"Chez Vélociti, qu'est-ce qui décide surtout du coût d'une requête analytique ?","a":["Le volume de données scanné : partitionner par date et ne lire que les colonnes utiles (Parquet) réduit fortement ce qui est lu, donc le coût","Le nombre de couleurs du tableau de bord","La longueur des noms de colonnes","Le nombre de tests de qualité écrits"],"correct":0,"explain":"Sur un entrepôt analytique, on paie surtout le scan. Un filtre de partition (pruning) et le format colonnes limitent les données lues : c'est le levier principal pour maîtriser le coût et la volumétrie."}
+]
+</script>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

@@ -2681,6 +2681,59 @@ window.PROJETS = [
       "au directeur produit.</p>",
   },
   {
+    id: "data-eng-velociti",
+    course: "data-eng",
+    courseTitle: "Ingénierie de données",
+    dir: "data-eng",
+    accent: "data-eng",
+    type: "Projet de pipeline",
+    niveau: "Intermédiaire",
+    titre: "Le pipeline de données de Vélociti, le vélo en libre-service",
+    contexte:
+      "<p>Tu rejoins l'équipe data de <strong>Vélociti</strong>, un service de vélos en libre-service présent dans " +
+      "une grande ville. Chaque nuit, plusieurs sources doivent converger vers un entrepôt exploitable&nbsp;: un export " +
+      "quotidien des <strong>trajets</strong> (CSV volumineux, un fichier par jour), un référentiel des " +
+      "<strong>stations</strong> (JSON tiré d'une API, qui change lentement), les relevés des <strong>capteurs</strong> " +
+      "de bornes (événements bruts, parfois en double), et la <strong>météo</strong> (API externe, une ligne par heure). " +
+      "Aujourd'hui, des scripts éparpillés recopient des fichiers à la main&nbsp;: rien n'est rejouable, personne ne sait " +
+      "si les chiffres du matin sont à jour, et un doublon de capteur fausse déjà le taux de rotation affiché aux élus.</p>",
+    objectif:
+      "<p>Concevoir un <strong>pipeline reproductible</strong> qui transforme ces sources brutes en tables fiables pour " +
+      "les tableaux de bord. Il faut <strong>ingérer</strong> chaque source avec la bonne stratégie (pleine ou " +
+      "incrémentale), <strong>transformer</strong> par couches (brut → nettoyé → agrégé), <strong>partitionner</strong> " +
+      "le stockage par date, garantir l'<strong>idempotence</strong> (un jour rejoué ne crée pas de doublon), " +
+      "<strong>orchestrer</strong> les dépendances, <strong>tester la qualité</strong> et <strong>surveiller</strong> la " +
+      "fraîcheur. L'objectif est la <strong>fiabilité</strong> et la reprise sur incident, pas la sophistication.</p>",
+    livrable: "Un pipeline documenté (schéma du DAG + scripts SQL/Python ou pseudo-code d'orchestration) qui produit des tables « gold » partitionnées, idempotentes, testées et observées, avec une procédure de backfill.",
+    fonctionnalites: [
+      "Un <strong>schéma du pipeline</strong> (le DAG)&nbsp;: sources, étapes de transformation, tables produites et dépendances entre elles.",
+      "Une <strong>stratégie d'ingestion</strong> par source&nbsp;: pleine pour les stations (petit référentiel), incrémentale par date pour les trajets et la météo (gros volumes).",
+      "Des <strong>couches</strong> explicites (bronze/silver/gold)&nbsp;: données brutes conservées, table nettoyée typée et dédoublonnée, agrégats métier (trajets et taux de rotation par station et par jour).",
+      "Un <strong>stockage partitionné</strong> par date de trajet, au format colonnes (Parquet) pour les grandes tables, avec une justification du choix.",
+      "Une étape <strong>idempotente</strong>&nbsp;: relancer le pipeline sur une journée déjà traitée remplace la partition au lieu d'empiler des doublons (write-truncate ou <code>MERGE</code> sur une clé).",
+      "Un jeu de <strong>tests de qualité</strong>&nbsp;: unicité de la clé de trajet, absence de station inconnue, fraîcheur (le dernier jour est bien là), volumétrie plausible — avec mise en quarantaine des lignes fautives.",
+      "Un <strong>contrat de données</strong> minimal (schéma attendu de la table gold) et une règle d'évolution, plus quelques <strong>métriques d'observabilité</strong> (durée, lignes écrites, taux de rejet) et une <strong>procédure de backfill</strong>.",
+    ],
+    criteres: [
+      "Chaque source a une <strong>stratégie d'ingestion justifiée</strong> (pleine vs incrémentale) cohérente avec son volume et sa fréquence de changement.",
+      "Le pipeline est <strong>idempotent</strong>&nbsp;: la solution montre explicitement qu'un jour rejoué ne duplique aucune donnée.",
+      "Les données sont <strong>partitionnées</strong> par date et le choix du <strong>format</strong> (colonnes pour l'analytique) est argumenté en termes de coût et de volumétrie.",
+      "Au moins <strong>quatre contrôles de qualité</strong> sont définis, avec ce qui se passe quand ils échouent (bloquer, alerter, mettre en quarantaine).",
+      "Les <strong>dépendances</strong> entre étapes sont explicites (un DAG), et la reprise après échec d'une étape est pensée (retry, backfill ciblé).",
+      "Le pipeline est <strong>observable</strong>&nbsp;: on sait dire, sans ouvrir les fichiers, si les données du jour sont fraîches, complètes et dans les volumes attendus.",
+    ],
+    pistes:
+      "<p>Mobilise les leçons sur le <strong>trajet d'une donnée</strong>, le choix <strong>ETL/ELT</strong>, les " +
+      "<strong>formats</strong>, le <strong>partitionnement</strong>, l'<strong>idempotence</strong>, " +
+      "l'<strong>orchestration</strong>, la <strong>qualité</strong> et l'<strong>observabilité</strong>.</p>" +
+      "<p>Commence par <strong>dessiner le DAG</strong> avant d'écrire la moindre ligne&nbsp;: les dépendances révèlent " +
+      "l'ordre des étapes. Écris les transformations en <a href=\"../sql/cours.html\">SQL</a>, réfléchis au stockage avec " +
+      "les idées de <a href=\"../nosql/cours.html\">NoSQL</a> et de <a href=\"../iac/cours.html\">l'infrastructure comme " +
+      "code</a>, et surveille le tout avec les réflexes du cours <a href=\"../observabilite/cours.html\">observabilité</a>. " +
+      "Termine par un scénario d'incident&nbsp;: «&nbsp;le fichier d'hier est arrivé en double&nbsp;» — montre que ton " +
+      "pipeline s'en remet sans intervention manuelle.</p>",
+  },
+  {
     id: "ml-churn",
     course: "ml",
     courseTitle: "Machine Learning",

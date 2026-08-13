@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ingérer une source : pleine ou incrémentale — Leçon 05 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="Les deux grandes stratégies pour faire entrer une source dans un pipeline : l'ingestion pleine (full load) qui recharge tout, et l'ingestion incrémentale qui ne prend que le nouveau. Le curseur (high-water mark), la fenêtre de sécurité pour les données en retard, append contre upsert, un mot sur le CDC, et le choix source par source pour Vélociti." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Construire un pipeline robuste — Leçon 05</p>
+              <h1 class="lesson-header__title">Ingérer une source : pleine ou incrémentale</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~37 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Prérequis : le trajet d'une donnée et batch/flux (leçon 2)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer l'ingestion <strong>pleine</strong> (full load) de l'ingestion <strong>incrémentale</strong>, et dire ce que chacune coûte&nbsp;;</li>
+                  <li>expliquer le rôle d'un <strong>curseur</strong> (high-water mark) et pourquoi il faut une <strong>fenêtre de sécurité</strong> pour les retardataires&nbsp;;</li>
+                  <li>choisir entre <strong>append</strong> et <strong>upsert</strong>, et situer le <strong>CDC</strong> en une phrase&nbsp;;</li>
+                  <li>décider, source par source, la bonne stratégie d'ingestion pour <strong>Vélociti</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Un pipeline ne s'exécute pas une fois pour toutes&nbsp;: il tourne <strong>chaque jour</strong>, chaque heure, parfois chaque minute. <strong>Ingérer</strong> une source, c'est la faire entrer dans le pipeline de façon <em>répétée</em> et <em>fiable</em> — le même geste, hier, aujourd'hui, demain. La question de cette leçon est simple à poser et lourde à trancher&nbsp;: à chaque exécution, <em>que</em> fait-on entrer&nbsp;? <strong>Tout</strong>&nbsp;? Ou <strong>seulement le nouveau</strong>&nbsp;?</p>
+<p>Deux grandes stratégies répondent&nbsp;: l'ingestion <strong>pleine</strong> et l'ingestion <strong>incrémentale</strong>. Le bon choix ne relève pas du goût&nbsp;: il dépend de deux mesures de la source — son <strong>volume</strong> et sa <strong>vitesse de changement</strong>. À la <a href="lecon-02.html">leçon 2</a>, on a appris à situer une source dans le temps (batch ou flux, fraîcheur exigée)&nbsp;; ici, on décide comment la <em>rejouer</em> proprement, jour après jour. Le fil rouge <strong>Vélociti</strong>, avec ses quatre sources très différentes, va nous forcer à quatre décisions distinctes.</p>
+
+<h2>Ingestion pleine (full load)</h2>
+<p>La stratégie la plus simple est aussi la plus brutale&nbsp;: à chaque exécution, on <strong>recharg­e tout</strong>. On vide la table de destination, on la remplit entièrement à partir de la source. C'est un <em>full load</em>&nbsp;: rien n'est mémorisé d'une fois sur l'autre, chaque run repart de zéro.</p>
+<p>Ses qualités sont précieuses&nbsp;:</p>
+<ul>
+<li><strong>Simplicité.</strong> Aucun état à conserver, aucun «&nbsp;où en étais-je&nbsp;?&nbsp;»&nbsp;: on lit la source, on remplace la table. Le code tient en quelques lignes et se raisonne d'un coup d'œil.</li>
+<li><strong>Idempotence naturelle.</strong> Comme on remplace <em>tout</em>, rejouer l'exécution deux fois donne exactement le même résultat. Pas de doublon possible&nbsp;: la seconde exécution écrase la première. (L'idempotence est le sujet complet de la <a href="lecon-08.html">leçon 8</a>.)</li>
+<li><strong>Robustesse.</strong> La table reflète toujours l'<em>état actuel</em> de la source, suppressions comprises&nbsp;: une ligne disparue à la source disparaît de la table au prochain run. Rien à réconcilier.</li>
+</ul>
+<p>Son défaut est unique mais rédhibitoire au-delà d'une certaine taille&nbsp;: c'est <strong>coûteux et lent</strong>. Recharger un million de lignes chaque nuit alors que dix ont changé est un gâchis de temps, de réseau et d'argent. Le full load est donc <strong>idéal pour un petit référentiel qui change lentement</strong>&nbsp;: peu de lignes, on peut se permettre de tout relire, et l'on gagne la simplicité sans rien payer de sensible. Chez Vélociti, ce profil décrit exactement les <strong>stations</strong> — environ 1&nbsp;500 lignes, dont le contenu évolue au rythme des travaux de voirie.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 220" role="img" aria-label="Schéma de l'ingestion pleine. À gauche, une boîte source contenant toutes les lignes actuelles. Une flèche mène à une opération qui vide entièrement la table de destination, symbolisée par une croix sur l'ancien contenu, puis la remplit avec la totalité des lignes de la source. Trois exécutions successives sont montrées : à chaque run, la table entière est remplacée par le contenu complet de la source, ce qui la rend naturellement idempotente.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Full load : on remplace TOUTE la table à chaque run</text>
+
+    <rect class="d-box" x="40" y="70" width="120" height="86" rx="8" /><text class="d-tag" x="100" y="92" text-anchor="middle" font-size="10.5">source</text>
+    <text class="d-text" x="100" y="114" text-anchor="middle" font-size="9">toutes les</text><text class="d-text" x="100" y="126" text-anchor="middle" font-size="9">lignes actuelles</text>
+    <text class="d-mut" x="100" y="146" text-anchor="middle" font-size="8">~1 500 stations</text>
+
+    <path class="d-line" d="M160 113 L216 113" fill="none" /><path class="d-line" d="M208 109 L216 113 L208 117" fill="none" />
+
+    <rect class="d-accent" x="220" y="82" width="150" height="62" rx="8" /><text class="d-text" x="295" y="106" text-anchor="middle" font-size="9.5">TRUNCATE</text><text class="d-text" x="295" y="120" text-anchor="middle" font-size="9.5">puis INSERT tout</text><text class="d-mut" x="295" y="135" text-anchor="middle" font-size="8">on vide, on remplit</text>
+
+    <path class="d-line" d="M370 113 L426 113" fill="none" /><path class="d-line" d="M418 109 L426 113 L418 117" fill="none" />
+
+    <rect class="d-frame" x="430" y="70" width="170" height="86" rx="8" /><text class="d-mut" x="515" y="90" text-anchor="middle" font-size="8.5">table stations</text>
+    <text class="d-text" x="515" y="114" text-anchor="middle" font-size="9">copie fidèle</text><text class="d-text" x="515" y="126" text-anchor="middle" font-size="9">de la source</text>
+    <text class="d-mut" x="515" y="146" text-anchor="middle" font-size="8">run 1 = run 2 = run 3</text>
+
+    <text class="d-mut" x="320" y="182" text-anchor="middle" font-size="9">rejouer deux fois donne le même résultat : idempotent par nature</text>
+    <text class="d-mut" x="320" y="200" text-anchor="middle" font-size="8.5">simple et robuste, mais coûteux si la table est énorme</text>
+  </svg>
+  <figcaption>Le full load ne mémorise rien&nbsp;: chaque exécution reconstruit la table entière depuis la source. C'est la simplicité même, et c'est <strong>naturellement idempotent</strong>. Le prix à payer grandit avec le volume, d'où sa réserve aux <strong>petits référentiels</strong>.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le full load gère <strong>gratuitement</strong> un cas que l'incrémental complique&nbsp;: les <strong>suppressions</strong>. Si une station ferme et disparaît de l'API, le prochain full load la fait naturellement disparaître de la table, puisqu'on repart de la source vivante. En incrémental, «&nbsp;ce qui a disparu&nbsp;» ne remonte pas tout seul&nbsp;: il faut un mécanisme dédié. C'est un argument de plus en faveur du full pour les référentiels.</p></div></div>
+
+<h2>Ingestion incrémentale</h2>
+<p>Dès que le volume grossit, tout relire devient absurde. L'ingestion <strong>incrémentale</strong> ne charge que les données <strong>nouvelles ou modifiées</strong> depuis la dernière exécution. On ne touche plus à ce qui est déjà là&nbsp;: on ajoute la fine tranche qui manque.</p>
+<p>C'est <strong>indispensable pour les gros volumes</strong>. Chez Vélociti, les <strong>trajets</strong> arrivent au rythme d'environ 150&nbsp;000 lignes par jour, un fichier par jour&nbsp;: <code>trajets_2026-05-01.csv</code>. Recharger l'historique entier chaque nuit serait ruineux et de plus en plus lent à mesure que les mois s'accumulent. En incrémental, on ne charge <strong>que le fichier du jour</strong>&nbsp;: le coût d'un run reste constant, quelle que soit la taille de l'historique déjà présent.</p>
+<p>Le gain est énorme, mais il a une contrepartie&nbsp;: pour ne prendre «&nbsp;que le nouveau&nbsp;», il faut <strong>savoir où l'on s'est arrêté</strong>. C'est tout le sujet du curseur.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le critère de choix tient en deux mesures</p><p>Full ou incrémental&nbsp;? Regarde le <strong>volume</strong> et la <strong>vitesse de changement</strong>. Petit et lent → <strong>full</strong> (la simplicité ne coûte rien). Gros, ou changeant vite → <strong>incrémental</strong> (le coût du full deviendrait intenable). Ce sont deux curseurs à lire sur la source, pas une préférence personnelle&nbsp;; le reste de la leçon découle de cette lecture.</p></div></div>
+
+<h2>Le curseur (high-water mark)</h2>
+<p>Le <strong>curseur</strong>, ou <em>high-water mark</em> (littéralement «&nbsp;marque des hautes eaux&nbsp;»), est une valeur qui <strong>ne fait que croître</strong> et que l'on <strong>mémorise d'un run à l'autre</strong>. Elle marque la frontière «&nbsp;jusqu'où j'ai déjà ingéré&nbsp;». À l'exécution suivante, on lit <strong>tout ce qui est strictement supérieur au curseur</strong>, puis on fait avancer le curseur jusqu'à la nouvelle valeur maximale rencontrée.</p>
+<p>Une bonne colonne-curseur est <strong>monotone</strong> — elle ne recule jamais&nbsp;:</p>
+<ul>
+<li>une <strong>date</strong> ou un <strong>timestamp</strong> de création (la date du trajet, l'heure d'un relevé)&nbsp;;</li>
+<li>un <strong>identifiant auto-incrémenté</strong> attribué par la base source, toujours croissant&nbsp;;</li>
+<li>un <strong>numéro de version</strong> ou de séquence qui n'est jamais réutilisé.</li>
+</ul>
+<p>Où <strong>stocker</strong> le curseur&nbsp;? Dans un endroit qui survit à l'exécution&nbsp;: une petite table d'état, un fichier, une entrée de l'orchestrateur. Peu importe le support&nbsp;; ce qui compte, c'est qu'au prochain run le pipeline puisse relire «&nbsp;dernier point atteint&nbsp;: 2026-05-01&nbsp;» et repartir de là.</p>
+<p>Reste un piège subtil, et fréquent&nbsp;: les <strong>données en retard</strong> (<em>late-arriving data</em>). Une donnée datée d'hier peut n'arriver qu'aujourd'hui — réseau capricieux, export retardé, correction tardive à la source. Si le curseur a déjà dépassé sa date, on ne la relira <strong>jamais</strong>&nbsp;: elle est perdue. La parade est une <strong>fenêtre de sécurité</strong> (ou <em>chevauchement</em>)&nbsp;: on ne repart pas pile au curseur, mais on <strong>re-traite les N derniers jours</strong> pour rattraper les retardataires. On relit donc un peu de déjà-vu — ce qui n'est sans danger que si l'ingestion est <strong>idempotente</strong> (sinon, on doublonne&nbsp;; d'où le lien étroit avec la <a href="lecon-08.html">leçon 8</a>).</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Schéma d'un curseur high-water mark qui avance sur une frise chronologique. Une ligne de temps horizontale porte des jours successifs. Un premier run a ingéré jusqu'à une position marquée curseur au 1er mai. Le run suivant ne relit pas pile après le curseur mais recule de trois jours pour former une fenêtre de sécurité qui chevauche la zone déjà ingérée, afin de rattraper une donnée en retard datée du 30 avril mais arrivée plus tard. Le curseur avance ensuite jusqu'au 4 mai, nouvelle position des hautes eaux.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le high-water mark avance, avec un chevauchement de sécurité</text>
+
+    <line class="d-line" x1="40" y1="118" x2="600" y2="118" />
+    <path class="d-line" d="M592 114 L600 118 L592 122" fill="none" />
+    <text class="d-mut" x="600" y="138" text-anchor="end" font-size="8.5">temps →</text>
+
+    <line class="d-line" x1="120" y1="112" x2="120" y2="124" /><text class="d-mut" x="120" y="150" text-anchor="middle" font-size="8">29/04</text>
+    <line class="d-line" x1="220" y1="112" x2="220" y2="124" /><text class="d-mut" x="220" y="150" text-anchor="middle" font-size="8">30/04</text>
+    <line class="d-line" x1="320" y1="112" x2="320" y2="124" /><text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8">01/05</text>
+    <line class="d-line" x1="420" y1="112" x2="420" y2="124" /><text class="d-mut" x="420" y="150" text-anchor="middle" font-size="8">02/05</text>
+    <line class="d-line" x1="520" y1="112" x2="520" y2="124" /><text class="d-mut" x="520" y="150" text-anchor="middle" font-size="8">03/05</text>
+
+    <rect class="d-frame" x="60" y="70" width="264" height="28" rx="5" /><text class="d-mut" x="192" y="88" text-anchor="middle" font-size="8.5">déjà ingéré (run 1)</text>
+    <line class="d-line" x1="320" y1="60" x2="320" y2="108" stroke-dasharray="3 3" /><text class="d-tag" x="320" y="52" text-anchor="middle" font-size="9.5">curseur run 1</text>
+
+    <rect class="d-accent" x="220" y="160" width="360" height="26" rx="5" /><text class="d-text" x="400" y="177" text-anchor="middle" font-size="9">fenêtre lue au run 2 : curseur − 3 jours</text>
+    <path class="d-line" d="M320 108 L250 158" fill="none" stroke-dasharray="2 3" />
+
+    <circle class="d-dot" cx="230" cy="118" r="4" /><text class="d-mut" x="230" y="206" text-anchor="middle" font-size="8">donnée du 30/04</text><text class="d-mut" x="230" y="218" text-anchor="middle" font-size="8">arrivée en retard</text>
+
+    <line class="d-line" x1="560" y1="60" x2="560" y2="158" stroke-dasharray="3 3" /><text class="d-tag" x="560" y="52" text-anchor="middle" font-size="9.5">curseur run 2</text>
+    <text class="d-mut" x="400" y="238" text-anchor="middle" font-size="8.5">le chevauchement rattrape le retardataire — sûr SI l'ingestion est idempotente</text>
+  </svg>
+  <figcaption>Le curseur mémorise «&nbsp;jusqu'où j'ai lu&nbsp;». Pour ne pas oublier les <strong>retardataires</strong>, on recule de quelques jours avant de relire&nbsp;: la <strong>fenêtre de sécurité</strong> chevauche le déjà-vu. Ce chevauchement n'est sûr que si rejouer ne crée pas de doublon.</figcaption>
+</figure>
+
+<p>Voici une boucle d'ingestion incrémentale typique&nbsp;: elle lit le curseur mémorisé, applique la fenêtre de sécurité, ingère chaque fichier journalier concerné, puis fait avancer le curseur.</p>
+
+<figure class="code-block" data-file="ingestion_incrementale.py"><pre><code class="language-python">from datetime import date, timedelta
+
+FENETRE_SECURITE = 3  # jours re-traités pour rattraper les retardataires
+
+def lire_curseur() -&gt; date:
+    """Relit le dernier jour ingéré, mémorisé d'un run à l'autre."""
+    # ... lecture d'une petite table d'état / d'un fichier ...
+    return date(2026, 5, 1)
+
+def ecrire_curseur(jour: date) -&gt; None:
+    """Mémorise le nouveau high-water mark pour le prochain run."""
+    ...
+
+def ingerer_un_jour(jour: date) -&gt; None:
+    """Charge trajets_AAAA-MM-JJ.csv dans bronze (idempotent : voir leçon 8)."""
+    chemin = f"trajets_{jour.isoformat()}.csv"
+    ...
+
+curseur = lire_curseur()
+debut = curseur - timedelta(days=FENETRE_SECURITE)  # on RECULE avant de relire
+fin = date.today() - timedelta(days=1)              # jusqu'à la veille (jour clos)
+
+jour = debut
+while jour &lt;= fin:
+    ingerer_un_jour(jour)   # on relit un peu de déjà-vu : sûr SI c'est idempotent
+    jour = jour + timedelta(days=1)
+
+ecrire_curseur(fin)         # le curseur avance jusqu'au dernier jour traité
+</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Choisis un curseur <strong>strictement croissant</strong> et lié à la donnée, pas à ton horloge. La <em>date du trajet</em> est un bon curseur&nbsp;; «&nbsp;l'heure où mon script a tourné&nbsp;» en est un mauvais, car un retardataire arrivé plus tard porte une date <em>passée</em> et passera sous le radar. Règle simple&nbsp;: le curseur doit décrire <strong>la donnée</strong>, jamais l'exécution.</p></div></div>
+
+<h2>Append contre upsert</h2>
+<p>Une fois qu'on sait <em>quelles</em> lignes charger, reste à savoir <em>comment</em> les écrire dans la table. Deux gestes, selon que les lignes déjà présentes peuvent changer ou non&nbsp;:</p>
+<ul>
+<li><strong>Append</strong> (ajout) — si les lignes ne changent <strong>jamais</strong> une fois créées, on se contente de les <strong>ajouter</strong> à la suite. Un trajet terminé est immuable&nbsp;: il ne sera pas «&nbsp;modifié&nbsp;» demain. L'append est le geste le plus simple, et il va comme un gant aux journaux d'événements.</li>
+<li><strong>Upsert</strong> (ou <em>merge</em>) — si une ligne déjà chargée peut être <strong>mise à jour</strong> à la source, l'ajout aveugle créerait un doublon. Il faut alors <strong>fusionner sur une clé</strong>&nbsp;: si la clé existe, on met à jour&nbsp;; sinon, on insère. C'est le <code>MERGE</code> du SQL (parfois appelé <em>upsert</em>&nbsp;: <em>update or insert</em>).</li>
+</ul>
+<p>Comment savoir qu'une ligne a changé à la source&nbsp;? Le <strong>CDC</strong> (<em>Change Data Capture</em>) est la technique qui capte les <strong>insertions, modifications et suppressions</strong> d'une base source — souvent en lisant son journal de transactions — pour les rejouer à l'identique côté pipeline. On mentionne aussi les <strong>dimensions à évolution lente</strong> (<em>SCD</em>)&nbsp;: la façon de gérer un attribut qui change rarement (le quartier d'une station renommée), en écrasant l'ancienne valeur ou en gardant l'historique. Ces deux notions sont vastes&nbsp;; on se contente ici de savoir <em>qu'elles existent</em> et à quoi elles répondent.</p>
+<p>Deux façons d'écrire une journée de trajets côté entrepôt&nbsp;: le <code>MERGE</code> (upsert sur la clé), ou le plus radical <em>delete + insert</em> d'une journée entière — souvent le plus simple quand on ingère par date.</p>
+
+<figure class="code-block" data-file="charger_une_journee.sql"><pre><code class="language-sql">-- Option A : UPSERT (MERGE) sur la clé trip_id.
+-- Si la ligne existe déjà, on la met à jour ; sinon on l'insère.
+MERGE INTO bronze_trajets AS cible
+USING trajets_du_jour       AS source
+   ON cible.trip_id = source.trip_id
+WHEN MATCHED THEN
+  UPDATE SET fin = source.fin, station_end = source.station_end
+WHEN NOT MATCHED THEN
+  INSERT (trip_id, start, fin, station_start, station_end, bike, type)
+  VALUES (source.trip_id, source.start, source.fin,
+          source.station_start, source.station_end, source.bike, source.type);
+
+-- Option B : DELETE + INSERT d'une journée entière (idempotent par partition).
+-- On efface le jour, puis on le recharge : rejouable sans doublon.
+DELETE FROM bronze_trajets WHERE jour = DATE '2026-05-01';
+INSERT INTO bronze_trajets
+SELECT * FROM trajets_du_jour WHERE jour = DATE '2026-05-01';
+</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Le <em>delete + insert</em> par journée (option B) est souvent la façon la plus simple de rendre une ingestion incrémentale <strong>rejouable</strong>&nbsp;: comme on efface le jour avant de le réécrire, rejouer le même jour n'ajoute rien de neuf. C'est de l'incrémental (un jour à la fois) qui hérite d'une partie de la robustesse du full (on remplace une <em>tranche</em> entière). On y revient à la <a href="lecon-07.html">leçon 7</a> avec le partitionnement par date.</p></div></div>
+
+<h2>Choisir pour Vélociti</h2>
+<p>Appliquons la grille «&nbsp;volume × vitesse de changement&nbsp;» aux quatre sources du fil rouge. Chacune tombe dans une case différente&nbsp;:</p>
+<ul>
+<li><strong>stations</strong> — petit référentiel (~1&nbsp;500 lignes) qui change lentement → <strong>full</strong>. On relit tout&nbsp;; c'est simple, idempotent, et les fermetures de stations se propagent gratuitement.</li>
+<li><strong>trajets</strong> — gros volume (~150&nbsp;000/jour), un fichier par jour → <strong>incrémental par date</strong>. Le curseur est <em>la date</em>&nbsp;: on charge le fichier du jour (plus la fenêtre de sécurité).</li>
+<li><strong>meteo</strong> — API externe, 24 lignes/jour (une par heure de la veille) → <strong>incrémental par date</strong>. Minuscule en volume, mais on garde l'historique en ajoutant chaque journée&nbsp;; inutile de tout redemander.</li>
+<li><strong>capteurs</strong> — flux énorme (~5&nbsp;000&nbsp;000 events/jour), parfois émis en double → <strong>incrémental continu</strong>. On ingère le flux au fil de l'eau&nbsp;; le volume interdit tout full, et les doublons imposent l'idempotence (<a href="lecon-08.html">leçon 8</a>).</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Tableau des stratégies d'ingestion par source de Vélociti, à quatre lignes. Ligne stations : environ 1500 lignes, changement lent, stratégie pleine, curseur aucun. Ligne trajets : environ 150000 par jour, un fichier par jour, stratégie incrémentale, curseur la date. Ligne météo : 24 lignes par jour depuis une API externe, stratégie incrémentale, curseur la date. Ligne capteurs : environ 5 millions d'événements par jour avec doublons, stratégie incrémentale continue, curseur le timestamp, avec la mention idempotence requise. Les cases de stratégie pleine et incrémentale sont mises en évidence par des couleurs distinctes.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Stratégie d'ingestion par source — Vélociti</text>
+
+    <text class="d-mut" x="110" y="52" text-anchor="middle" font-size="8.5">source</text>
+    <text class="d-mut" x="300" y="52" text-anchor="middle" font-size="8.5">volume / rythme</text>
+    <text class="d-mut" x="470" y="52" text-anchor="middle" font-size="8.5">stratégie</text>
+    <text class="d-mut" x="575" y="52" text-anchor="middle" font-size="8.5">curseur</text>
+    <line class="d-line" x1="40" y1="60" x2="600" y2="60" stroke-dasharray="2 3" />
+
+    <text class="d-tag" x="110" y="86" text-anchor="middle" font-size="10">stations</text>
+    <text class="d-text" x="300" y="86" text-anchor="middle" font-size="9">~1 500, change lentement</text>
+    <rect class="d-accent" x="418" y="72" width="104" height="22" rx="5" /><text class="d-text" x="470" y="87" text-anchor="middle" font-size="9">pleine (full)</text>
+    <text class="d-mut" x="575" y="86" text-anchor="middle" font-size="8.5">aucun</text>
+
+    <text class="d-tag" x="110" y="122" text-anchor="middle" font-size="10">trajets</text>
+    <text class="d-text" x="300" y="122" text-anchor="middle" font-size="9">~150 000/jour, 1 fichier/jour</text>
+    <rect class="d-box" x="418" y="108" width="104" height="22" rx="5" /><text class="d-text" x="470" y="123" text-anchor="middle" font-size="9">incrémentale</text>
+    <text class="d-mut" x="575" y="122" text-anchor="middle" font-size="8.5">la date</text>
+
+    <text class="d-tag" x="110" y="158" text-anchor="middle" font-size="10">meteo</text>
+    <text class="d-text" x="300" y="158" text-anchor="middle" font-size="9">24/jour, API externe</text>
+    <rect class="d-box" x="418" y="144" width="104" height="22" rx="5" /><text class="d-text" x="470" y="159" text-anchor="middle" font-size="9">incrémentale</text>
+    <text class="d-mut" x="575" y="158" text-anchor="middle" font-size="8.5">la date</text>
+
+    <text class="d-tag" x="110" y="194" text-anchor="middle" font-size="10">capteurs</text>
+    <text class="d-text" x="300" y="194" text-anchor="middle" font-size="9">~5 M/jour, doublons</text>
+    <rect class="d-box" x="418" y="180" width="104" height="22" rx="5" /><text class="d-text" x="470" y="195" text-anchor="middle" font-size="8.5">incrém. continu</text>
+    <text class="d-mut" x="575" y="194" text-anchor="middle" font-size="8.5">le ts</text>
+
+    <line class="d-line" x1="40" y1="212" x2="600" y2="212" stroke-dasharray="2 3" />
+    <text class="d-mut" x="320" y="234" text-anchor="middle" font-size="8.5">petit et lent → full ; gros ou continu → incrémental (capteurs : idempotence requise)</text>
+  </svg>
+  <figcaption>Une seule source «&nbsp;full&nbsp;» (le petit référentiel des stations)&nbsp;; les trois autres sont incrémentales, par date ou en continu. La grille <strong>volume × vitesse de changement</strong> a suffi à décider chaque cas. C'est cette table qu'on garde sous la main pour le pipeline entier.</figcaption>
+</figure>
+
+<p>La stratégie d'ingestion n'a pas besoin de vivre dans le code&nbsp;: on gagne à la <strong>déclarer</strong>, une ligne par source, dans un fichier de configuration lisible. Le pipeline lit cette déclaration et adapte son geste. Voici la config d'ingestion de Vélociti&nbsp;:</p>
+
+<figure class="code-block" data-file="ingestion.yaml"><pre><code class="language-yaml">sources:
+  stations:
+    strategie: full            # petit référentiel, on recharge tout
+    cle_curseur: null
+
+  trajets:
+    strategie: incremental
+    cle_curseur: date          # un fichier par jour : le curseur est la date
+    fenetre_securite_jours: 3  # on relit 3 jours pour les retardataires
+
+  meteo:
+    strategie: incremental
+    cle_curseur: date          # 24 lignes/jour, on ajoute la veille
+    fenetre_securite_jours: 1
+
+  capteurs:
+    strategie: incremental
+    cle_curseur: ts            # flux continu, curseur = timestamp
+    idempotent: true           # ~5 M/jour, doublons possibles (leçon 8)
+</code></pre></figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Déclarer la stratégie plutôt que la coder est le principe des outils d'ingestion modernes (Airbyte, Fivetran, dlt)&nbsp;: on décrit chaque source — <em>full</em> ou <em>incremental</em>, colonne-curseur, mode d'écriture — et le moteur exécute. Le <code>MERGE</code> et le <em>delete + insert</em> qu'on a écrits en SQL restent le <a href="../sql/cours.html">cours SQL</a>&nbsp;: si tu veux affermir cette base, c'est le compagnon direct de cette leçon.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Faire de l'incrémental sans idempotence.</strong> C'est le piège le plus coûteux&nbsp;: au premier rejeu — reprise après incident, fenêtre de sécurité qui relit trois jours, exécution lancée deux fois — les lignes déjà présentes sont ré-ajoutées, et la table se remplit de <strong>doublons</strong>. L'incrémental et l'idempotence vont ensemble&nbsp;: si tu ne peux pas rejouer sans doublonner, ton ingestion n'est pas finie. Rendez-vous à la <a href="lecon-08.html">leçon 8</a>.</p></div></div>
+<ul>
+<li><strong>Un curseur mal choisi ou non monotone</strong> — se baser sur une valeur qui peut reculer (l'heure du script, une date modifiable) fait <em>sauter</em> des lignes&nbsp;: le curseur croit avoir tout vu alors qu'un retardataire est passé dessous.</li>
+<li><strong>Oublier les retardataires</strong> — repartir pile au curseur, sans fenêtre de sécurité&nbsp;; toute donnée en retard datée d'avant le curseur est perdue à jamais, silencieusement.</li>
+<li><strong>Le full «&nbsp;parce que c'est plus simple&nbsp;»</strong> — recharger une source énorme à chaque run par confort&nbsp;: ça marche… jusqu'à ce que le volume rende chaque exécution trop lente et trop chère. Le confort d'aujourd'hui est la panne de demain.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe mobilité ingérait ses trajets en incrémental, curseur sur la <strong>date du fichier</strong>, sans fenêtre de sécurité. Tout allait bien jusqu'au jour où un opérateur partenaire a livré son fichier du <strong>lundi</strong> avec 48&nbsp;h de retard, le <strong>mercredi</strong>. Entre-temps, le curseur avait déjà avancé au mardi puis au mercredi&nbsp;: le fichier du lundi, daté d'avant le curseur, <strong>n'a jamais été relu</strong>. Personne ne s'en est aperçu — aucune erreur, juste une journée <em>manquante</em> dans les statistiques, découverte trois semaines plus tard par un analyste intrigué par un «&nbsp;creux&nbsp;» inexplicable. Le correctif a tenu en deux lignes&nbsp;: une <strong>fenêtre de sécurité de 3 jours</strong> et un <em>delete + insert</em> par journée pour rester idempotent. Depuis, un retardataire est simplement rattrapé au run suivant, sans doublon et sans trou.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Ingestion pleine et incrémentale — mémo</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Ingestion pleine (full)</td><td>Tout recharger à chaque run&nbsp;: simple, idempotent, robuste (gère les suppressions)&nbsp;; coûteux si gros volume → petits référentiels</td></tr>
+      <tr><td>Ingestion incrémentale</td><td>Charger seulement le nouveau/modifié depuis le dernier run&nbsp;: indispensable aux gros volumes&nbsp;; demande de savoir où l'on s'est arrêté</td></tr>
+      <tr><td>Curseur (high-water mark)</td><td>Valeur monotone (date, timestamp, id auto-inc.) mémorisée d'un run à l'autre&nbsp;; on lit tout ce qui est &gt; curseur</td></tr>
+      <tr><td>Fenêtre de sécurité</td><td>Re-traiter les N derniers jours pour rattraper les données en retard (late-arriving)&nbsp;; sûr uniquement si idempotent</td></tr>
+      <tr><td>Append</td><td>Lignes immuables → simple ajout à la suite (journaux d'événements, trajets terminés)</td></tr>
+      <tr><td>Upsert / MERGE</td><td>Lignes qui peuvent changer → fusion sur une clé (update si la clé existe, sinon insert)</td></tr>
+      <tr><td>CDC / SCD</td><td>Capter insertions/modif./suppressions d'une base source (CDC)&nbsp;; gérer un attribut qui change rarement (SCD)</td></tr>
+      <tr><td>Vélociti</td><td>stations → full&nbsp;; trajets &amp; meteo → incrémental par date&nbsp;; capteurs → incrémental continu (idempotent)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Ingestion</dt><dd>Faire entrer une source dans le pipeline de façon répétée et fiable, exécution après exécution.</dd>
+  <dt>Ingestion pleine (full load)</dt><dd>Stratégie qui recharge la totalité de la source à chaque exécution, en remplaçant la table de destination.</dd>
+  <dt>Ingestion incrémentale</dt><dd>Stratégie qui ne charge que les données nouvelles ou modifiées depuis la dernière exécution.</dd>
+  <dt>Curseur (high-water mark)</dt><dd>Valeur croissante (date, timestamp, identifiant) mémorisée d'un run à l'autre, marquant «&nbsp;jusqu'où j'ai déjà ingéré&nbsp;».</dd>
+  <dt>Fenêtre de sécurité</dt><dd>Chevauchement qui re-traite les N derniers jours avant le curseur pour rattraper les données en retard.</dd>
+  <dt>Données en retard (late-arriving data)</dt><dd>Donnée dont la date est passée mais qui n'arrive qu'après coup&nbsp;; elle est perdue si le curseur l'a dépassée sans fenêtre de sécurité.</dd>
+  <dt>Append</dt><dd>Mode d'écriture qui ajoute les nouvelles lignes à la suite, adapté aux données immuables.</dd>
+  <dt>Upsert (merge)</dt><dd>Mode d'écriture qui fusionne sur une clé&nbsp;: met à jour la ligne si la clé existe, sinon l'insère (le <code>MERGE</code> du SQL).</dd>
+  <dt>CDC (Change Data Capture)</dt><dd>Technique qui capte les insertions, modifications et suppressions d'une base source pour les rejouer côté pipeline.</dd>
+  <dt>Idempotence</dt><dd>Propriété d'une opération qu'on peut rejouer sans changer le résultat&nbsp;: ni doublon, ni valeur faussée (leçon 8).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>L'ingestion <strong>pleine</strong> recharge tout&nbsp;: simple, idempotente, robuste, mais coûteuse&nbsp;→ réservée aux <strong>petits référentiels</strong> qui changent lentement.</li>
+<li>L'ingestion <strong>incrémentale</strong> ne prend que le nouveau&nbsp;: indispensable aux <strong>gros volumes</strong>, mais elle exige de savoir où l'on s'est arrêté.</li>
+<li>Le <strong>curseur</strong> (high-water mark) est une valeur monotone mémorisée d'un run à l'autre&nbsp;; une <strong>fenêtre de sécurité</strong> rattrape les <strong>retardataires</strong>, à condition d'être idempotent.</li>
+<li><strong>Append</strong> pour des lignes immuables&nbsp;; <strong>upsert / MERGE</strong> pour des lignes qui changent. Le <strong>CDC</strong> capte les changements d'une base source.</li>
+<li><strong>Vélociti</strong>&nbsp;: stations → <strong>full</strong>&nbsp;; trajets &amp; meteo → <strong>incrémental par date</strong>&nbsp;; capteurs → <strong>incrémental continu</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>En une phrase, qu'est-ce qui distingue une ingestion pleine d'une ingestion incrémentale&nbsp;?</li>
+<li>À quoi sert la fenêtre de sécurité, et pourquoi n'est-elle sûre que si l'ingestion est idempotente&nbsp;?</li>
+<li>Pour les <strong>stations</strong> de Vélociti, quelle stratégie choisis-tu et pourquoi&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre une ingestion pleine (full load) et une ingestion incrémentale ?","a":["La pleine recharge toute la source à chaque exécution ; l'incrémentale ne charge que les données nouvelles ou modifiées depuis la dernière exécution","La pleine est chiffrée, l'incrémentale est en clair","La pleine sert aux flux temps réel, l'incrémentale aux fichiers uniquement","Ce sont deux mots pour la même chose"],"correct":0,"explain":"Le full recharge tout (simple, idempotent, mais coûteux au volume) ; l'incrémental ne prend que le nouveau, ce qui est indispensable pour les gros volumes mais demande de savoir ou l'on s'est arrete."},
+  {"q":"Qu'est-ce qu'un curseur (high-water mark) en ingestion incrémentale ?","a":["Une valeur qui ne fait que croître (date, timestamp, id auto-incrémenté), mémorisée d'un run à l'autre, qui marque jusqu'où on a déjà ingéré","Un index de base de données qui accélère les jointures","Le nombre maximal de lignes qu'un run peut charger","Un cache en mémoire vidé à chaque exécution"],"correct":0,"explain":"Le curseur mémorise la frontière du déjà-ingéré. Au run suivant on lit tout ce qui est strictement supérieur au curseur, puis on le fait avancer. Il doit être monotone pour ne pas sauter de lignes."},
+  {"q":"Pourquoi ajoute-t-on une fenêtre de sécurité (re-traiter les N derniers jours) à une ingestion incrémentale ?","a":["Pour rattraper les données en retard (late-arriving) datées d'avant le curseur ; c'est sûr seulement si l'ingestion est idempotente, sinon on crée des doublons","Pour accélérer les requêtes de l'entrepôt","Pour chiffrer les données sensibles avant chargement","Pour supprimer automatiquement les lignes trop anciennes"],"correct":0,"explain":"Une donnée peut arriver en retard avec une date déjà dépassée par le curseur : sans chevauchement, elle est perdue. Comme on relit du déjà-vu, il faut que rejouer ne doublonne pas (idempotence)."},
+  {"q":"Chez Vélociti, quelle association source / stratégie est correcte ?","a":["stations en pleine (petit référentiel), trajets en incrémental par date (un fichier par jour), capteurs en incrémental continu (gros flux)","stations en incrémental continu, trajets en pleine chaque nuit, capteurs en pleine","tout en pleine parce que c'est plus simple","tout en incrémental sans jamais garder de curseur"],"correct":0,"explain":"Le petit référentiel des stations se recharge en full ; les trajets (150 000/jour, un fichier/jour) et la meteo s'ingèrent en incrémental par date ; les capteurs (5 M/jour, doublons) en incrémental continu et idempotent."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["full","pleine","full load","ingestion pleine","le full","la pleine"],"placeholder":"la stratégie qui recharge TOUTE la source à chaque exécution s'appelle l'ingestion p____ (ou full)","hints":["C'est la plus simple et naturellement idempotente.","On vide la table puis on la remplit entièrement.","Idéale pour un petit référentiel comme les stations."],"link":{"href":"lecon-05.html","label":"Revoir « Ingestion pleine (full load) »"}},
+  {"type":"text","accept":["curseur","le curseur","high-water mark","high water mark","highwatermark","un curseur"],"placeholder":"la valeur croissante mémorisée d'un run à l'autre qui marque jusqu'où on a ingéré s'appelle le c______ (high-water mark)","hints":["Il ne fait que croître : date, timestamp, id auto-incrémenté.","On lit tout ce qui est supérieur à lui.","En anglais : high-water mark."],"link":{"href":"lecon-05.html","label":"Revoir « Le curseur (high-water mark) »"}},
+  {"type":"text","accept":["upsert","merge","le merge","l'upsert","upsert/merge","un upsert"],"placeholder":"quand une ligne déjà chargée peut être mise à jour, on fusionne sur une clé : c'est l'u_____ (le MERGE du SQL)","hints":["Contraire de l'append (simple ajout).","Update si la clé existe, sinon insert.","Le mot-clé SQL correspondant est MERGE."],"link":{"href":"lecon-05.html","label":"Revoir « Append contre upsert »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune de ces sources, dis si tu l'ingérerais en <strong>pleine</strong> ou en <strong>incrémentale</strong>, et justifie en une ligne&nbsp;: (a) une liste de 300 codes postaux mise à jour deux fois par an&nbsp;; (b) un journal de 20&nbsp;millions de clics par jour&nbsp;; (c) un référentiel de 40 tarifs qui change rarement.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) Pleine : 300 lignes, quasi immobile. Tout relire ne coûte
+    rien et reste simple et idempotent.
+
+(b) Incrémentale : 20 M/jour, le full serait ruineux et de plus
+    en plus lent. On ne charge que le nouveau (curseur = date/ts).
+
+(c) Pleine : 40 tarifs, changement rare. Petit référentiel :
+    on recharge tout, les modifications se propagent gratuitement.
+
+Regle : petit et lent -&gt; full ; gros ou continu -&gt; incrémental.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un pipeline ingère des trajets en incrémental, curseur sur la date, <strong>sans fenêtre de sécurité</strong>. Un fichier daté du 1er mai arrive le 3 mai, alors que le curseur est déjà au 2 mai. Explique ce qui se passe, puis décris le correctif complet.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Ce qui se passe :
+  le curseur (2 mai) a déjà dépassé la date du fichier (1er mai).
+  Au run suivant, on ne lit que ce qui est &gt; 2 mai : le fichier
+  du 1er mai n'est JAMAIS relu. Résultat : une journée manquante,
+  sans aucune erreur -&gt; un trou silencieux dans les données.
+
+Correctif :
+  1. fenêtre de sécurité : repartir de (curseur - 3 jours) au lieu
+     de pile au curseur, pour rattraper les retardataires ;
+  2. rendre l'ingestion idempotente (ex. delete + insert par jour),
+     puisqu'on va relire des journées déjà chargées ;
+  3. ainsi le fichier du 1er mai est rattrapé au run du 3 mai,
+     sans doublon et sans trou.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Vélociti ajoute une source&nbsp;: un référentiel de <strong>vélos</strong> (~8&nbsp;000 lignes) où chaque vélo a un <strong>état</strong> (<code>en_service</code>, <code>maintenance</code>, <code>retiré</code>) qui <strong>change au fil du temps</strong>. Full ou incrémental&nbsp;? Append ou upsert&nbsp;? Rédige la ligne de config YAML correspondante et justifie.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Analyse :
+  ~8 000 lignes = petit référentiel -&gt; full envisageable, et le
+  full gère nativement les changements d'état (on relit l'état
+  courant de chaque vélo à chaque run). Pas besoin de curseur.
+  Si on voulait l'HISTORIQUE des états, il faudrait de l'upsert
+  (SCD) ; ici on veut juste l'état COURANT -&gt; full suffit.
+
+Config :
+  velos:
+    strategie: full        # petit référentiel, état courant
+    cle_curseur: null
+
+Si état courant ET incrémental étaient imposés (gros volume),
+alors : strategie incremental + écriture en UPSERT sur velo_id
+(update de l'état si la clé existe, sinon insert), car l'état
+d'une ligne existante peut changer -&gt; l'append seul doublonnerait.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

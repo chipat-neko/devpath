@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observer un pipeline : fraîcheur, lignage, alertes — Leçon 12 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="L'observabilité d'un pipeline de données : répondre sans ouvrir un fichier si les données du jour sont là, à l'heure, complètes et justes. Les métriques clés (fraîcheur, durée, volumétrie, rejets), le lignage pour l'analyse d'impact, alerter juste sans fatigue d'alerte, instrumenter chaque étape, et Vélociti observé chaque matin avant 8 h." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Faire tourner et faire confiance — Leçon 12</p>
+              <h1 class="lesson-header__title">Observer un pipeline : fraîcheur, lignage, alertes</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Prérequis : l'orchestration (leçon 9) et la qualité (leçon 10)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>nommer les <strong>métriques de santé</strong> d'un pipeline — fraîcheur, durée d'exécution, volumétrie, taux de rejet&nbsp;;</li>
+                  <li>lire un <strong>lignage</strong> (data lineage) pour mener une <strong>analyse d'impact</strong> et remonter d'un chiffre faux à sa cause&nbsp;;</li>
+                  <li><strong>alerter juste</strong> — poser un SLA de fraîcheur, des seuils utiles, et éviter la <strong>fatigue d'alerte</strong>&nbsp;;</li>
+                  <li><strong>instrumenter</strong> chaque étape avec des métriques et des logs structurés dans une table de suivi des exécutions.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Chaque matin, le tableau de bord municipal de <strong>Vélociti</strong> doit afficher les trajets de la veille <strong>avant 8&nbsp;h</strong>. À 7&nbsp;h&nbsp;40, une question simple se pose&nbsp;: est-ce que tout va bien&nbsp;? Les données d'aujourd'hui sont-elles là, à l'heure, complètes, justes&nbsp;? La pire façon d'y répondre est d'ouvrir les fichiers un par un et de compter à la main. La bonne façon&nbsp;: regarder un écran qui te le dit d'un coup d'œil. C'est cela, l'<strong>observabilité</strong> d'un pipeline — la visibilité sur son propre état.</p>
+<p>Un pipeline de données se surveille comme un <strong>service en production</strong>. On ne se contente pas de le lancer&nbsp;: on l'instrumente pour qu'il raconte, en permanence, comment il se porte. Cette leçon montre les <strong>métriques</strong> qui comptent, le <strong>lignage</strong> qui relie chaque table à ses sources, la manière d'<strong>alerter juste</strong> sans se noyer, et comment poser tout cela concrètement autour de Vélociti. On prolonge ainsi l'<a href="lecon-09.html">orchestration</a> (qui <em>lance</em> les tâches) et la <a href="lecon-10.html">qualité</a> (qui <em>teste</em> les données) par une troisième pièce&nbsp;: <em>savoir, sans ouvrir un seul fichier, si le pipeline est en bonne santé</em>.</p>
+
+<h2>Les métriques d'un pipeline</h2>
+<p>Surveiller un pipeline, c'est d'abord suivre quelques nombres qui, ensemble, disent s'il va bien. Quatre reviennent partout.</p>
+<ul>
+<li><strong>La fraîcheur.</strong> L'<em>âge</em> de la donnée la plus récente, ou l'heure de la dernière mise à jour. C'est la première des <a href="lecon-01.html">trois promesses</a> (fraîcheur, complétude, exactitude) rendue <em>mesurable</em>&nbsp;: «&nbsp;les données d'hier sont-elles arrivées, et à quelle heure&nbsp;?&nbsp;» Une table à jour hier mais pas ce matin est <strong>rassise</strong> (<em>stale</em>).</li>
+<li><strong>La durée d'exécution.</strong> Le temps qu'a pris le pipeline. Une nuit de traitement qui <em>rallonge</em> — 40&nbsp;min hier, 70&nbsp;min ce matin — annonce souvent un incident&nbsp;: un volume anormal, une source lente, une jointure qui dérape. La durée est un signal d'alerte <strong>précoce</strong>.</li>
+<li><strong>La volumétrie.</strong> Le nombre de lignes lues et écrites à chaque étape. Vélociti attend <strong>~150&nbsp;000 trajets par jour</strong>. En recevoir 400 ou 3&nbsp;000&nbsp;000 est tout aussi suspect&nbsp;: une chute signale une source cassée, une explosion signale un doublon massif ou un rechargement accidentel.</li>
+<li><strong>Le taux de rejet / quarantaine.</strong> La part de lignes écartées par les tests de qualité (<a href="lecon-10.html">leçon 10</a>). Un taux qui passe de 0,3&nbsp;% à 12&nbsp;% du jour au lendemain trahit un changement à la source, même si le pipeline n'a pas planté.</li>
+</ul>
+<p>Aucune de ces métriques ne demande d'ouvrir un fichier&nbsp;: elles se calculent sur les tables elles-mêmes. Voici la requête qui donne, en une passe, la <strong>fraîcheur</strong> et la <strong>volumétrie</strong> du dernier jour chargé de <code>trajets_nettoyes</code>.</p>
+
+<figure class="code-block" data-file="sante_trajets.sql"><pre><code class="language-sql">-- Fraîcheur + volumétrie du dernier jour, sans ouvrir un seul fichier.
+SELECT
+    MAX(CAST(debut AS DATE))                                  AS dernier_jour,
+    DATE_DIFF(CURRENT_DATE, MAX(CAST(debut AS DATE)), DAY)    AS age_en_jours,
+    COUNT(*) FILTER (
+        WHERE CAST(debut AS DATE) = MAX(CAST(debut AS DATE)) OVER ()
+    )                                                        AS lignes_dernier_jour
+FROM trajets_nettoyes;
+-- age_en_jours = 0            -&gt; frais (les trajets d'hier sont là)
+-- lignes_dernier_jour ~ 150000 -&gt; volumétrie attendue
+-- age_en_jours &gt;= 1           -&gt; RASSIS : la donnée d'hier manque</code></pre></figure>
+<p>La lecture est immédiate&nbsp;: si <code>age_en_jours</code> vaut 0 et que <code>lignes_dernier_jour</code> tourne autour de 150&nbsp;000, la journée est saine. Un âge d'un jour ou plus, ou un compte hors norme, et l'on sait qu'il faut regarder — <em>avant</em> que le tableau de bord municipal ne l'affiche.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Le tableau de bord de santé d'un run affiché comme quatre cartouches côte à côte. Premier cartouche, fraîcheur : au vert, âge zéro jour, données d'hier présentes. Deuxième cartouche, durée : au vert, 42 minutes, dans la norme. Troisième cartouche, volumétrie : au vert, environ 150 000 lignes, dans la plage attendue. Quatrième cartouche, rejets : mis en évidence en alerte, 4 pour cent, au-dessus du seuil habituel. Une bande verte indique run sain sauf sur la carte rejets qui vire à l'alerte.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Le tableau de bord de santé d'un run</text>
+
+    <rect class="d-box" x="34" y="52" width="132" height="132" rx="10" /><text class="d-tag" x="100" y="76" text-anchor="middle" font-size="10">fraîcheur</text>
+    <text class="d-text" x="100" y="112" text-anchor="middle" font-size="15">0 j</text>
+    <text class="d-mut" x="100" y="138" text-anchor="middle" font-size="8.5">hier présent</text>
+    <circle class="d-dot" cx="100" cy="162" r="6" />
+
+    <rect class="d-box" x="182" y="52" width="132" height="132" rx="10" /><text class="d-tag" x="248" y="76" text-anchor="middle" font-size="10">durée</text>
+    <text class="d-text" x="248" y="112" text-anchor="middle" font-size="15">42 min</text>
+    <text class="d-mut" x="248" y="138" text-anchor="middle" font-size="8.5">dans la norme</text>
+    <circle class="d-dot" cx="248" cy="162" r="6" />
+
+    <rect class="d-box" x="330" y="52" width="132" height="132" rx="10" /><text class="d-tag" x="396" y="76" text-anchor="middle" font-size="10">volumétrie</text>
+    <text class="d-text" x="396" y="112" text-anchor="middle" font-size="14">~150 k</text>
+    <text class="d-mut" x="396" y="138" text-anchor="middle" font-size="8.5">plage attendue</text>
+    <circle class="d-dot" cx="396" cy="162" r="6" />
+
+    <rect class="d-accent" x="478" y="52" width="132" height="132" rx="10" /><text class="d-tag" x="544" y="76" text-anchor="middle" font-size="10">rejets</text>
+    <text class="d-text" x="544" y="112" text-anchor="middle" font-size="15">4 %</text>
+    <text class="d-text" x="544" y="138" text-anchor="middle" font-size="8.5">au-dessus du seuil</text>
+    <path class="d-line" d="M544 154 l0 12 M538 160 l6 -6 6 6" fill="none" />
+
+    <text class="d-mut" x="320" y="212" text-anchor="middle" font-size="9">quatre nombres, un coup d'œil : trois au vert, un à surveiller</text>
+  </svg>
+  <figcaption>Un <strong>run</strong> (une exécution) se résume à quelques nombres. Ici, fraîcheur, durée et volumétrie sont saines&nbsp;; le taux de rejet a grimpé et mérite un regard. On n'a ouvert aucun fichier&nbsp;: le tableau de bord suffit à trier «&nbsp;tout va bien&nbsp;» de «&nbsp;quelque chose bouge&nbsp;».</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Ces métriques ne remplacent pas les <strong>tests</strong> de la <a href="lecon-10.html">leçon 10</a>&nbsp;: elles les complètent. Un test répond «&nbsp;vrai ou faux&nbsp;» (les <code>trip_id</code> sont-ils uniques&nbsp;?)&nbsp;; une métrique <em>mesure une tendance</em> (combien de lignes, depuis combien de temps, en combien de minutes&nbsp;?). L'observabilité relie les deux&nbsp;: elle rend visibles à la fois les résultats des tests et l'évolution des chiffres dans le temps.</p></div></div>
+
+<h2>Le lignage : d'où vient une table</h2>
+<p>La deuxième pièce de l'observabilité répond à une question différente&nbsp;: non plus «&nbsp;comment va cette table&nbsp;?&nbsp;» mais «&nbsp;<strong>d'où vient</strong> cette table&nbsp;?&nbsp;». Le <strong>lignage</strong> (<em>data lineage</em>) est la carte des dépendances&nbsp;: pour chaque table, il dit de quelles sources elle dérive et par quelles étapes elle est passée. C'est le DAG du pipeline, vu du côté des <em>données</em> plutôt que des tâches.</p>
+<p>Le lignage sert deux usages précieux, dans les deux sens de la flèche.</p>
+<ul>
+<li><strong>L'analyse d'impact</strong> (vers l'aval). Une source casse&nbsp;: <em>quelles tables en dépendent&nbsp;?</em> Si l'API <code>meteo</code> — hors de notre contrôle, dont le <a href="lecon-11.html">contrat</a> vient d'être rompu — tombe, le lignage montre d'un coup que <code>trajets_enrichis</code> et tout ce qui en découle sont touchés, mais que <code>frequentation_station_jour</code>, si elle ne dépend pas de la météo, reste saine. On sait <em>immédiatement</em> qui prévenir et quoi geler.</li>
+<li><strong>Le débogage</strong> (vers l'amont). Un chiffre du tableau de bord semble faux&nbsp;: le lignage permet de <em>remonter</em> de la table gold jusqu'à la source fautive, étape par étape, au lieu de fouiller au hasard. On suit la flèche à l'envers jusqu'à trouver où le chiffre a dérapé.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 280" role="img" aria-label="Graphe de lignage de Vélociti orienté de gauche à droite. À gauche, trois sources empilées : trajets, stations, capteurs. Elles convergent par des flèches vers une boîte trajets nettoyés. Une source météo, placée à part, rejoint aussi le flux : trajets nettoyés plus météo alimentent une boîte trajets enrichis. Depuis trajets enrichis, deux flèches partent vers deux tables gold : fréquentation station jour et rotation vélos, cette dernière mise en évidence. Une annotation indique que remonter les flèches à l'envers mène d'un chiffre faux à sa source.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Lignage Vélociti : de la source au tableau de bord</text>
+
+    <rect class="d-box" x="24" y="52" width="94" height="26" rx="6" /><text class="d-text" x="71" y="69" text-anchor="middle" font-size="9">trajets</text>
+    <rect class="d-box" x="24" y="90" width="94" height="26" rx="6" /><text class="d-text" x="71" y="107" text-anchor="middle" font-size="9">stations</text>
+    <rect class="d-box" x="24" y="128" width="94" height="26" rx="6" /><text class="d-text" x="71" y="145" text-anchor="middle" font-size="9">capteurs</text>
+
+    <rect class="d-frame" x="196" y="82" width="120" height="42" rx="7" /><text class="d-text" x="256" y="100" text-anchor="middle" font-size="9">trajets</text><text class="d-text" x="256" y="113" text-anchor="middle" font-size="9">nettoyés</text>
+
+    <rect class="d-box" x="196" y="188" width="94" height="26" rx="6" /><text class="d-text" x="243" y="205" text-anchor="middle" font-size="9">meteo</text>
+
+    <rect class="d-frame" x="360" y="120" width="120" height="42" rx="7" /><text class="d-text" x="420" y="138" text-anchor="middle" font-size="9">trajets</text><text class="d-text" x="420" y="151" text-anchor="middle" font-size="9">enrichis</text>
+
+    <rect class="d-box" x="520" y="82" width="104" height="42" rx="7" /><text class="d-text" x="572" y="100" text-anchor="middle" font-size="8">fréquentation</text><text class="d-text" x="572" y="113" text-anchor="middle" font-size="8">station·jour</text>
+    <rect class="d-accent" x="520" y="158" width="104" height="42" rx="7" /><text class="d-text" x="572" y="176" text-anchor="middle" font-size="8.5">rotation</text><text class="d-text" x="572" y="189" text-anchor="middle" font-size="8.5">vélos</text>
+
+    <path class="d-line" d="M118 65 L194 96" fill="none" /><path class="d-line" d="M186 90 L194 96 L184 99" fill="none" />
+    <path class="d-line" d="M118 103 L194 103" fill="none" /><path class="d-line" d="M186 99 L194 103 L186 107" fill="none" />
+    <path class="d-line" d="M118 141 L194 110" fill="none" /><path class="d-line" d="M184 107 L194 110 L186 116" fill="none" />
+
+    <path class="d-line" d="M316 106 L358 132" fill="none" /><path class="d-line" d="M350 126 L358 132 L348 135" fill="none" />
+    <path class="d-line" d="M290 199 L344 156" fill="none" /><path class="d-line" d="M340 162 L344 156 L348 164" fill="none" />
+
+    <path class="d-line" d="M480 130 L518 110" fill="none" /><path class="d-line" d="M510 106 L518 110 L512 117" fill="none" />
+    <path class="d-line" d="M480 148 L518 172" fill="none" /><path class="d-line" d="M510 166 L518 172 L508 175" fill="none" />
+
+    <text class="d-mut" x="256" y="140" text-anchor="middle" font-size="8">+ meteo</text>
+    <text class="d-mut" x="320" y="248" text-anchor="middle" font-size="8.5">analyse d'impact : suivre les flèches vers l'aval — débogage : les remonter vers l'amont</text>
+  </svg>
+  <figcaption>Le lignage de Vélociti&nbsp;: <code>rotation_velos</code> ← <code>trajets_enrichis</code> ← <code>trajets_nettoyes</code> ← {<code>trajets</code>, <code>stations</code>, <code>capteurs</code>}, avec <code>meteo</code> qui rejoint le flux à l'enrichissement. Si la météo casse, on voit d'un regard ce qui est touché en aval&nbsp;; si un chiffre gold est faux, on remonte les flèches jusqu'à la cause.</figcaption>
+</figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le lignage, c'est le DAG vu côté données</p><p>Tu connais déjà le <strong>DAG</strong> d'orchestration de la <a href="lecon-09.html">leçon 9</a>&nbsp;: quelles <em>tâches</em> s'enchaînent. Le lignage est la même idée, mais entre <em>tables</em>&nbsp;: quelle donnée nourrit quelle donnée. Beaucoup d'outils le <strong>déduisent tout seuls</strong> en lisant les <code>FROM</code> et <code>JOIN</code> de tes requêtes SQL — le lignage n'est alors pas à maintenir à la main, il tombe du code lui-même.</p></div></div>
+
+<h2>Alerter juste</h2>
+<p>Mesurer ne sert à rien si personne ne réagit au bon moment. Il faut donc <strong>alerter</strong> — mais alerter <em>juste</em>, ce qui est plus difficile qu'il n'y paraît. Trois principes.</p>
+<p><strong>Définir un objectif de fraîcheur.</strong> On formalise la promesse du matin en un <strong>SLA</strong> (l'engagement pris) ou un <strong>SLO</strong> (l'objectif interne visé)&nbsp;: «&nbsp;les trajets d'hier sont disponibles <strong>avant 8&nbsp;h</strong>&nbsp;». C'est un seuil clair, vérifiable, qui déclenche une alerte s'il est manqué — pas un vague «&nbsp;dès que possible&nbsp;».</p>
+<p><strong>Poser des seuils utiles.</strong> Une alerte se déclenche quand une métrique sort de sa plage attendue&nbsp;: volumétrie hors de [100&nbsp;000&nbsp;; 200&nbsp;000], durée au-delà de 60&nbsp;min, fraîcheur au-delà de 8&nbsp;h. Le seuil traduit «&nbsp;anormal&nbsp;» en une règle que la machine sait évaluer.</p>
+<p><strong>Éviter la fatigue d'alerte.</strong> C'est le piège le plus sournois. Trop d'alertes — ou des alertes pour des broutilles — et l'équipe finit par <em>toutes</em> les ignorer&nbsp;; le jour où l'une compte vraiment, elle passe inaperçue. On alerte donc sur les <strong>symptômes qui touchent l'utilisateur</strong> (le tableau de bord sera en retard, les chiffres sont faux), pas sur chaque hoquet interne sans conséquence. Une bonne alerte est <strong>rare, actionnable et lisible</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Une frise horaire de la nuit jusqu'à huit heures illustrant le SLA de fraîcheur. Une ligne de temps va de minuit à huit heures, avec une échéance marquée à huit heures. Deux scénarios sont empilés. En haut, cas vert : la publication du tableau de bord tombe à sept heures quarante, avant l'échéance, marqué publié à temps. En bas, cas alerte mis en évidence : la publication glisse à huit heures vingt, après l'échéance, ce qui déclenche une alerte de fraîcheur manquée.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">SLA de fraîcheur : publié avant 8 h, sinon alerte</text>
+
+    <line class="d-line" x1="60" y1="70" x2="560" y2="70" fill="none" />
+    <line class="d-line" x1="520" y1="46" x2="520" y2="150" stroke-dasharray="4 4" />
+    <text class="d-tag" x="520" y="40" text-anchor="middle" font-size="10">8 h</text>
+    <text class="d-mut" x="60" y="60" text-anchor="middle" font-size="8">0 h</text>
+    <text class="d-mut" x="548" y="60" text-anchor="middle" font-size="8">échéance</text>
+
+    <circle class="d-dot" cx="470" cy="70" r="6" />
+    <text class="d-text" x="470" y="98" text-anchor="middle" font-size="9">7 h 40</text>
+    <text class="d-mut" x="440" y="112" text-anchor="middle" font-size="8.5">publié à temps — vert</text>
+
+    <line class="d-line" x1="60" y1="150" x2="560" y2="150" fill="none" />
+    <circle class="d-accent" cx="548" cy="150" r="7" />
+    <text class="d-text" x="560" y="178" text-anchor="end" font-size="9">8 h 20</text>
+    <text class="d-text" x="470" y="192" text-anchor="middle" font-size="8.5">après l'échéance — ALERTE fraîcheur manquée</text>
+    <path class="d-line" d="M548 140 l0 -8 M542 135 l6 -6 6 6" fill="none" />
+  </svg>
+  <figcaption>Le SLA transforme la promesse «&nbsp;disponible le matin&nbsp;» en une règle datée. Publier à 7&nbsp;h&nbsp;40&nbsp;: vert, personne n'est dérangé. Franchir 8&nbsp;h&nbsp;: une alerte part, parce que c'est le <em>seul</em> moment où quelqu'un doit vraiment agir avant que la ville ne voie un tableau vide.</figcaption>
+</figure>
+
+<p>On <em>déclare</em> ces engagements dans un fichier, au lieu de les cacher dans du code. Voici une déclaration lisible des alertes et du SLA de Vélociti&nbsp;: fraîcheur maximale, volumétrie minimale et maximale, durée limite.</p>
+
+<figure class="code-block" data-file="alertes_velociti.yaml"><pre><code class="language-yaml"># Ce que le pipeline doit tenir, et quand alerter.
+table: trajets_nettoyes
+sla:
+  fraicheur:
+    trajets_de_la_veille_avant: "08:00"   # heure locale
+    alerte_si_age_depasse_h: 8            # au-delà -&gt; alerte fraicheur
+  volumetrie:
+    min_lignes: 100000                    # sous ce seuil -&gt; source suspecte
+    max_lignes: 200000                    # au-dessus -&gt; doublon ou rechargement
+  duree:
+    max_minutes: 60                       # run plus long -&gt; incident probable
+alertes:
+  canal: "#velociti-donnees"              # une seule alerte, actionnable
+  reveiller_l_astreinte_si: fraicheur_manquee   # symptome qui compte pour l'usager
+  seulement_avertir_si: volumetrie_hors_plage   # a regarder, sans reveiller la nuit</code></pre></figure>
+<p>Deux niveaux apparaissent, volontairement&nbsp;: une <strong>fraîcheur manquée</strong> réveille l'astreinte (l'utilisateur va être touché), tandis qu'une volumétrie hors plage se contente d'un <strong>avertissement</strong> à regarder le matin. Ce tri est exactement ce qui évite la fatigue d'alerte&nbsp;: tout n'a pas la même urgence.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Alerter sur tout.</strong> Par prudence, on met une alerte sur chaque métrique, chaque étape, chaque écart minuscule. Résultat&nbsp;: dix notifications par nuit, toutes bénignes. Au bout d'une semaine, l'équipe les met en sourdine — et rate la seule qui annonçait un vrai incident. Une alerte qu'on ignore ne vaut rien&nbsp;; <strong>moins d'alertes, mieux ciblées</strong>, valent bien mieux qu'un déluge.</p></div></div>
+
+<h2>Instrumenter le pipeline</h2>
+<p>Pour que ces métriques existent, encore faut-il que le pipeline les <strong>émette</strong>. Un pipeline qui ne dit rien de lui-même est <em>aveugle</em>&nbsp;: on ne peut mesurer que ce qu'il rapporte. Instrumenter, c'est ajouter à chaque étape deux gestes.</p>
+<ul>
+<li><strong>Émettre des métriques</strong>&nbsp;: à la fin d'une étape, enregistrer combien de lignes ont été lues et écrites, et en combien de temps.</li>
+<li><strong>Écrire des logs structurés</strong>&nbsp;: plutôt qu'un texte libre («&nbsp;fini le nettoyage&nbsp;»), une ligne <em>structurée</em> (étape, statut, lignes, durée) qu'une machine sait relire, filtrer et agréger — pas seulement un humain qui lit à l'œil.</li>
+</ul>
+<p>Le plus simple est de tout consigner dans une petite <strong>table de métadonnées d'exécution</strong>&nbsp;: un enregistrement par étape, portant un <code>run_id</code> commun à toute l'exécution. Elle devient la mémoire du pipeline&nbsp;: son historique de durées, de volumes, de statuts.</p>
+
+<figure class="code-block" data-file="journal_execution.py"><pre><code class="language-python">import time, datetime as dt
+
+def enregistrer_metrique(conn, run_id, etape, statut, lignes, debut_ts):
+    """Consigne une etape dans la table de suivi des executions (log structure)."""
+    duree_s = round(time.monotonic() - debut_ts, 1)
+    conn.execute(
+        "INSERT INTO suivi_runs "
+        "(run_id, etape, statut, lignes, duree_s, fini_a) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (run_id, etape, statut, lignes, duree_s, dt.datetime.now().isoformat()),
+    )
+
+# A chaque etape : on note le depart, on travaille, on enregistre la metrique.
+depart = time.monotonic()
+lignes_ecrites = charger_trajets_nettoyes()          # l'etape reelle
+enregistrer_metrique(conn, run_id="2026-05-02T02:00",
+                     etape="silver_trajets_nettoyes",
+                     statut="ok", lignes=lignes_ecrites, debut_ts=depart)
+# -&gt; une ligne de plus dans suivi_runs : le pipeline raconte ce qu'il fait.</code></pre></figure>
+<p>Une fois cette table remplie nuit après nuit, le tableau de bord de santé n'est plus qu'une poignée de requêtes par-dessus <code>suivi_runs</code>&nbsp;: dernière durée, dernière volumétrie, dernier statut, tendance sur sept jours. Le pipeline <strong>se raconte lui-même</strong>, et l'observabilité devient une simple lecture de sa propre mémoire.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Trois étapes d'un pipeline empilées à gauche : ingestion, nettoyage silver, agrégation gold. Chacune émet une flèche vers la droite, marquée émet, qui aboutit à une table centrale nommée suivi runs. La table affiche un en-tête à cinq colonnes : run id, étape, statut, lignes, durée, puis trois lignes de données, une par étape, avec un statut ok. Une annotation indique que toutes les lignes partagent le même run id, formant la mémoire du pipeline lisible par le tableau de bord.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Chaque étape écrit une ligne dans suivi_runs</text>
+
+    <rect class="d-box" x="24" y="60" width="118" height="30" rx="6" /><text class="d-text" x="83" y="79" text-anchor="middle" font-size="9">ingestion</text>
+    <rect class="d-box" x="24" y="105" width="118" height="30" rx="6" /><text class="d-text" x="83" y="124" text-anchor="middle" font-size="9">nettoyage (silver)</text>
+    <rect class="d-box" x="24" y="150" width="118" height="30" rx="6" /><text class="d-text" x="83" y="169" text-anchor="middle" font-size="9">agrégation (gold)</text>
+
+    <path class="d-line" d="M142 75 L212 118" fill="none" /><path class="d-line" d="M204 112 L212 118 L202 121" fill="none" />
+    <path class="d-line" d="M142 120 L212 128" fill="none" /><path class="d-line" d="M204 123 L212 128 L204 132" fill="none" />
+    <path class="d-line" d="M142 165 L212 138" fill="none" /><path class="d-line" d="M202 135 L212 138 L204 144" fill="none" />
+    <text class="d-mut" x="176" y="104" text-anchor="middle" font-size="8">émet</text>
+
+    <rect class="d-frame" x="216" y="70" width="408" height="112" rx="8" /><text class="d-tag" x="420" y="88" text-anchor="middle" font-size="10">suivi_runs</text>
+    <line class="d-line" x1="228" y1="98" x2="612" y2="98" stroke-dasharray="2 3" />
+    <text class="d-mut" x="268" y="112" text-anchor="middle" font-size="8">run_id</text>
+    <text class="d-mut" x="372" y="112" text-anchor="middle" font-size="8">étape</text>
+    <text class="d-mut" x="470" y="112" text-anchor="middle" font-size="8">statut</text>
+    <text class="d-mut" x="536" y="112" text-anchor="middle" font-size="8">lignes</text>
+    <text class="d-mut" x="592" y="112" text-anchor="middle" font-size="8">durée</text>
+
+    <text class="d-text" x="268" y="132" text-anchor="middle" font-size="7.5">02:00</text>
+    <text class="d-text" x="372" y="132" text-anchor="middle" font-size="7.5">ingestion</text>
+    <text class="d-text" x="470" y="132" text-anchor="middle" font-size="7.5">ok</text>
+    <text class="d-text" x="536" y="132" text-anchor="middle" font-size="7.5">150 012</text>
+    <text class="d-text" x="592" y="132" text-anchor="middle" font-size="7.5">6 min</text>
+
+    <text class="d-text" x="268" y="150" text-anchor="middle" font-size="7.5">02:00</text>
+    <text class="d-text" x="372" y="150" text-anchor="middle" font-size="7.5">silver</text>
+    <text class="d-text" x="470" y="150" text-anchor="middle" font-size="7.5">ok</text>
+    <text class="d-text" x="536" y="150" text-anchor="middle" font-size="7.5">148 903</text>
+    <text class="d-text" x="592" y="150" text-anchor="middle" font-size="7.5">31 min</text>
+
+    <text class="d-text" x="268" y="168" text-anchor="middle" font-size="7.5">02:00</text>
+    <text class="d-text" x="372" y="168" text-anchor="middle" font-size="7.5">gold</text>
+    <text class="d-text" x="470" y="168" text-anchor="middle" font-size="7.5">ok</text>
+    <text class="d-text" x="536" y="168" text-anchor="middle" font-size="7.5">1 500</text>
+    <text class="d-text" x="592" y="168" text-anchor="middle" font-size="7.5">5 min</text>
+
+    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="8.5">même run_id partout : la mémoire du pipeline, lue ensuite par le tableau de bord</text>
+  </svg>
+  <figcaption>Instrumenter, c'est faire écrire à chaque étape une <strong>ligne structurée</strong> dans <code>suivi_runs</code>&nbsp;: mêmes colonnes, même <code>run_id</code>. Cette table devient la mémoire du pipeline&nbsp;; le tableau de bord de santé n'est plus qu'une lecture de son contenu, et un run qui aurait écrit <strong>zéro ligne</strong> s'y verrait au premier coup d'œil.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Donne à chaque exécution un <strong><code>run_id</code></strong> unique (souvent la date-heure du déclenchement) et propage-le à <em>toutes</em> les étapes. C'est le fil qui relie, dans <code>suivi_runs</code> comme dans les logs, tout ce qui s'est passé pendant une même nuit. Quand un incident survient, filtrer sur un seul <code>run_id</code> reconstitue l'histoire complète du run en une requête.</p></div></div>
+
+<h2>Vélociti observé</h2>
+<p>Assemblons le tout autour du fil rouge. Chaque matin, avant 8&nbsp;h, l'observabilité de Vélociti répond à trois questions sans qu'on ouvre le moindre fichier&nbsp;:</p>
+<ul>
+<li><strong>Les trajets d'hier sont-ils là&nbsp;?</strong> — la fraîcheur&nbsp;: <code>age_en_jours = 0</code> sur <code>trajets_nettoyes</code>.</li>
+<li><strong>La volumétrie est-elle normale&nbsp;?</strong> — autour de <strong>~150&nbsp;000</strong> lignes, dans la plage [100&nbsp;000&nbsp;; 200&nbsp;000] déclarée.</li>
+<li><strong>Est-ce publié avant 8&nbsp;h&nbsp;?</strong> — le SLA de fraîcheur&nbsp;; sinon, l'astreinte est prévenue <em>avant</em> la ville.</li>
+</ul>
+<p>Derrière ces réponses&nbsp;: la table <code>suivi_runs</code> qui garde l'historique des exécutions, et le <strong>lignage</strong> qui permet l'analyse d'impact — si l'API <code>meteo</code> tombe pendant la nuit, on sait aussitôt que <code>trajets_enrichis</code> est touchée sans paniquer sur <code>frequentation_station_jour</code>. Vélociti n'est plus une boîte noire qu'on découvre en panne&nbsp;: c'est un service qu'on observe.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Ces idées — métriques, seuils, SLO, alertes qui ne réveillent que sur ce qui compte — ne sont pas propres aux données&nbsp;: elles viennent de l'exploitation des services en production. Le <a href="../observabilite/cours.html">cours Observabilité</a> les développe pour tout système (traces, journaux, tableaux de bord). Et comme la plupart des métriques de fraîcheur et de volumétrie se calculent en SQL, le <a href="../sql/cours.html">cours SQL</a> reste l'outil de base pour interroger <code>trajets_nettoyes</code> et <code>suivi_runs</code>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Surveiller la machine, mais pas la donnée.</strong> On branche des alertes sur le processeur, la mémoire, l'espace disque du serveur — et l'on croit surveiller le pipeline. Mais le serveur peut se porter à merveille pendant que la source n'a rien livré&nbsp;: le run «&nbsp;réussit&nbsp;» en écrivant <strong>zéro ligne</strong>. Les métriques qui comptent sont celles de la <em>donnée</em> (fraîcheur, volumétrie, rejets), pas seulement celles de la <em>machine</em>.</p></div></div>
+<ul>
+<li><strong>Aucune observabilité</strong> — on apprend l'incident par l'utilisateur («&nbsp;le tableau de bord est vide ce matin&nbsp;»)&nbsp;; c'est toujours trop tard, et cela use la confiance.</li>
+<li><strong>Pas de lignage</strong> — quand un chiffre est faux, on débogue à l'aveugle, table par table, sans savoir d'où il vient ni ce qui l'a produit.</li>
+<li><strong>Un run vert qui ment</strong> — le pipeline se termine sans erreur mais n'a rien produit&nbsp;; sans métrique de volumétrie, le «&nbsp;succès&nbsp;» masque un échec silencieux.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service de mobilité surveillait ses serveurs à la perfection&nbsp;: processeur, mémoire, disque, tout au vert, tableaux de bord techniques impeccables. Un lundi, le fournisseur des trajets change silencieusement le nom d'un fichier&nbsp;; l'ingestion ne trouve plus rien et écrit <strong>0 ligne</strong>, sans erreur — le run se termine «&nbsp;avec succès&nbsp;». Aucune alerte ne part&nbsp;: rien ne surveillait la <em>volumétrie</em>. L'incident est découvert à <strong>9&nbsp;h&nbsp;10</strong> par un élu qui ouvre un tableau de bord municipal <strong>vide</strong>. L'équipe ajoute alors une alerte de <strong>fraîcheur</strong> («&nbsp;âge des trajets &gt; 8&nbsp;h&nbsp;») et de <strong>volumétrie</strong> («&nbsp;moins de 100&nbsp;000 lignes&nbsp;»). La panne suivante, un mois plus tard, déclenche une alerte à <strong>2&nbsp;h&nbsp;15</strong>&nbsp;; l'astreinte corrige le nom du fichier, et le tableau de bord est à jour bien avant 8&nbsp;h. Le coût de l'observabilité&nbsp;: deux règles. La valeur&nbsp;: ne plus jamais apprendre une panne par la mairie.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Métriques et outils d'observabilité — mémo</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">À quoi ça sert</th></tr></thead>
+    <tbody>
+      <tr><td>Fraîcheur</td><td>Âge de la donnée la plus récente&nbsp;: «&nbsp;les données d'hier sont-elles là&nbsp;?&nbsp;»&nbsp;; base du SLA</td></tr>
+      <tr><td>Durée d'exécution</td><td>Une nuit qui rallonge = signal d'incident précoce (volume, source lente, jointure)</td></tr>
+      <tr><td>Volumétrie</td><td>Lignes lues/écrites&nbsp;; ~150&nbsp;000 attendues&nbsp;: chute ou explosion = anomalie</td></tr>
+      <tr><td>Taux de rejet</td><td>Part de lignes en quarantaine&nbsp;; une hausse trahit un changement à la source</td></tr>
+      <tr><td>Lignage</td><td>D'où vient une table&nbsp;: analyse d'impact (aval) et débogage (amont)</td></tr>
+      <tr><td>SLA / SLO de fraîcheur</td><td>Règle datée («&nbsp;avant 8&nbsp;h&nbsp;») qui déclenche une alerte si manquée</td></tr>
+      <tr><td>Seuil</td><td>Plage attendue d'une métrique&nbsp;; en sortir = alerte</td></tr>
+      <tr><td>Fatigue d'alerte</td><td>Trop d'alertes = plus aucune lue&nbsp;; alerter sur les symptômes qui touchent l'usager</td></tr>
+      <tr><td>Log structuré / <code>suivi_runs</code></td><td>Chaque étape émet (run_id, étape, statut, lignes, durée)&nbsp;: la mémoire du pipeline</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Observabilité</dt><dd>Capacité à savoir, sans ouvrir les fichiers, si un pipeline va bien&nbsp;: ses données sont-elles là, à l'heure, complètes, justes&nbsp;?</dd>
+  <dt>Fraîcheur</dt><dd>Âge de la donnée la plus récente d'une table, ou heure de sa dernière mise à jour&nbsp;; une table non rafraîchie est dite <em>rassise</em> (<em>stale</em>).</dd>
+  <dt>Volumétrie</dt><dd>Nombre de lignes lues ou écrites à une étape&nbsp;; comparée à une plage attendue (~150&nbsp;000 trajets/jour) pour repérer chute ou explosion.</dd>
+  <dt>Lignage (lineage)</dt><dd>Carte des dépendances entre tables et sources&nbsp;: d'où vient une table et par quelles étapes elle est passée&nbsp;; le DAG vu côté données.</dd>
+  <dt>Analyse d'impact</dt><dd>Usage aval du lignage&nbsp;: si une source casse, déterminer quelles tables en dépendent et sont donc touchées.</dd>
+  <dt>SLA / SLO</dt><dd>Engagement (SLA) ou objectif interne (SLO) chiffré sur une métrique — par exemple «&nbsp;trajets de la veille disponibles avant 8&nbsp;h&nbsp;».</dd>
+  <dt>Seuil / alerte</dt><dd>Valeur limite d'une métrique&nbsp;; la franchir déclenche une alerte, un message signalant qu'une intervention peut être nécessaire.</dd>
+  <dt>Fatigue d'alerte</dt><dd>Épuisement causé par un excès d'alertes&nbsp;: à force d'en recevoir trop, on les ignore toutes, y compris les importantes.</dd>
+  <dt>Métrique</dt><dd>Nombre mesuré à propos du pipeline (fraîcheur, durée, volumétrie, rejets) suivi dans le temps pour juger sa santé.</dd>
+  <dt>Log structuré</dt><dd>Enregistrement d'un événement sous forme de champs relisables par une machine (étape, statut, lignes, durée), non de texte libre.</dd>
+  <dt>Run (exécution)</dt><dd>Une passe complète du pipeline, identifiée par un <code>run_id</code> propagé à toutes les étapes pour relier ses métriques et ses logs.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un pipeline se surveille comme un <strong>service</strong>&nbsp;: les métriques clés sont la <strong>fraîcheur</strong>, la <strong>durée</strong>, la <strong>volumétrie</strong> et le <strong>taux de rejet</strong> — toutes calculables sans ouvrir un fichier.</li>
+<li>Le <strong>lignage</strong> dit d'où vient une table&nbsp;: il sert à l'<strong>analyse d'impact</strong> (une source casse → qui est touché&nbsp;?) et au <strong>débogage</strong> (remonter d'un chiffre faux à sa cause).</li>
+<li>On <strong>alerte juste</strong>&nbsp;: un SLA de fraîcheur («&nbsp;avant 8&nbsp;h&nbsp;»), des seuils utiles, et surtout on évite la <strong>fatigue d'alerte</strong> en n'alertant que sur ce qui touche l'usager.</li>
+<li><strong>Instrumenter</strong>, c'est émettre métriques et logs structurés à chaque étape dans une table <code>suivi_runs</code> (run_id, étape, statut, lignes, durée)&nbsp;: le pipeline se raconte lui-même.</li>
+<li>Surveiller la <strong>machine</strong> ne suffit pas&nbsp;: un run vert peut écrire <strong>zéro ligne</strong>. Ce sont les métriques de la <strong>donnée</strong> qui protègent le tableau de bord de Vélociti.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Cite deux métriques de santé d'un pipeline et, pour chacune, ce qu'une valeur anormale peut révéler.</li>
+<li>L'API <code>meteo</code> tombe en pleine nuit. Comment le lignage t'aide-t-il à savoir ce qui est touché&nbsp;?</li>
+<li>Qu'est-ce que la fatigue d'alerte, et quel principe permet de l'éviter&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que mesure la fraîcheur d'une table dans un pipeline ?","a":["L'âge de la donnée la plus récente (ou l'heure de la dernière mise à jour) : sert à répondre « les données d'hier sont-elles là ? »","Le nombre total de colonnes de la table","La vitesse du processeur du serveur pendant le run","Le nombre d'analystes qui ont ouvert la table"],"correct":0,"explain":"La fraîcheur mesure depuis combien de temps la donnée n'a pas été mise à jour. Pour un pipeline quotidien, elle répond à la question centrale du matin : les données de la veille sont-elles bien arrivées, et à l'heure ?"},
+  {"q":"À quoi sert principalement le lignage (data lineage) ?","a":["Savoir d'où vient une table (ses sources et étapes) : analyse d'impact quand une source casse, et débogage en remontant d'un chiffre faux à sa cause","Chiffrer les données personnelles avant chargement","Accélérer les requêtes SQL de l'entrepôt","Remplacer les tests de qualité des données"],"correct":0,"explain":"Le lignage est la carte des dépendances entre tables et sources. Vers l'aval : si la météo casse, quelles tables sont touchées. Vers l'amont : d'un chiffre gold faux, on remonte à la source fautive."},
+  {"q":"Qu'est-ce que la fatigue d'alerte, et comment l'éviter ?","a":["Trop d'alertes (ou des alertes pour des broutilles) finissent toutes ignorées ; on l'évite en alertant seulement sur les symptômes qui touchent l'utilisateur","C'est la lenteur du pipeline la nuit ; on l'évite en ajoutant des serveurs","C'est un test de qualité qui échoue trop souvent ; on l'évite en le supprimant","C'est l'âge élevé d'une donnée ; on l'évite en rechargeant plus souvent"],"correct":0,"explain":"Un déluge d'alertes bénignes pousse l'équipe à toutes les mettre en sourdine, et la vraie alerte passe inaperçue. La parade : moins d'alertes, ciblées sur ce qui a un impact réel (fraîcheur manquée, chiffres faux)."},
+  {"q":"Pourquoi surveiller uniquement le serveur (processeur, mémoire, disque) est-il insuffisant ?","a":["Le serveur peut être au vert alors que la source n'a rien livré : le run « réussit » en écrivant zéro ligne ; il faut des métriques sur la donnée (fraîcheur, volumétrie)","Le serveur ne tombe jamais en panne, c'est donc inutile","Les métriques machine sont interdites par le RGPD","La volumétrie se déduit automatiquement de l'usage du processeur"],"correct":0,"explain":"Un run peut se terminer sans erreur tout en n'ayant rien produit (fichier source disparu, renommé). Sans métrique de volumétrie ou de fraîcheur, ce succès trompeur masque un échec silencieux découvert par l'utilisateur."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["fraicheur","la fraicheur","fraîcheur","la fraîcheur"],"placeholder":"la métrique qui mesure l'âge de la donnée la plus récente (les données d'hier sont-elles là ?) s'appelle la f________","hints":["Elle répond à « les données d'hier sont-elles arrivées, et à l'heure ? ».","Une table non rafraîchie est dite rassise (stale).","Neuf lettres : f________ ."],"link":{"href":"lecon-12.html","label":"Revoir « Les métriques d'un pipeline »"}},
+  {"type":"text","accept":["lignage","le lignage","lineage","le lineage","data lineage"],"placeholder":"la carte qui dit d'où vient une table (ses sources et étapes), utile à l'analyse d'impact, s'appelle le l______","hints":["En anglais : data lineage.","C'est le DAG vu côté données.","Sept lettres : l______ ."],"link":{"href":"lecon-12.html","label":"Revoir « Le lignage : d'où vient une table »"}},
+  {"type":"text","accept":["volumetrie","la volumetrie","volumétrie","la volumétrie"],"placeholder":"la métrique qui compte les lignes lues/écrites (~150 000 attendues) s'appelle la v_________","hints":["Une chute ou une explosion de ce nombre trahit une anomalie.","Chez Vélociti, on en attend environ 150 000 par jour.","Dix lettres : v_________ ."],"link":{"href":"lecon-12.html","label":"Revoir « Les métriques d'un pipeline »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune des observations du matin, dis quelle <strong>métrique</strong> est en cause et ce que tu en conclus&nbsp;: (a) <code>trajets_nettoyes</code> a pour dernier jour avant-hier, pas hier&nbsp;; (b) le run a duré 75&nbsp;min au lieu de 42&nbsp;min habituelles&nbsp;; (c) 2&nbsp;900&nbsp;000 lignes ont été écrites au lieu de ~150&nbsp;000.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) FRAÎCHEUR : la donnée d'hier manque (age_en_jours &gt;= 1),
+    la table est rassise. Le tableau de bord serait en retard
+    -&gt; alerte de fraîcheur, on regarde avant 8 h.
+
+(b) DURÉE : le run a nettement rallongé. Signal d'incident
+    précoce : volume anormal, source lente ou jointure qui
+    dérape. À investiguer même si le run a fini "ok".
+
+(c) VOLUMÉTRIE : ~2,9 M au lieu de ~150 000, très au-dessus
+    du max attendu (200 000). Probable doublon massif ou
+    rechargement accidentel -&gt; ne pas publier tel quel.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris (en pseudo-YAML ou en phrases) une déclaration d'alertes pour <code>trajets_nettoyes</code> qui&nbsp;: publie les trajets de la veille avant 8&nbsp;h&nbsp;; attend entre 100&nbsp;000 et 200&nbsp;000 lignes&nbsp;; limite la durée à 60&nbsp;min. Précise <strong>laquelle</strong> de ces règles doit réveiller l'astreinte la nuit, et pourquoi.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">sla:
+  fraicheur: trajets de la veille avant 08:00 (alerte si age &gt; 8 h)
+  volumetrie: min 100000, max 200000 lignes
+  duree: max 60 minutes
+
+Qui réveille l'astreinte la nuit : la FRAÎCHEUR MANQUÉE.
+Pourquoi : c'est le symptôme qui touche l'utilisateur -- si les
+trajets d'hier ne sont pas publiés avant 8 h, la ville verra un
+tableau de bord vide. Il faut corriger AVANT l'échéance.
+
+Volumétrie hors plage et durée trop longue : plutôt un
+AVERTISSEMENT à regarder le matin (à moins qu'ils ne mettent
+en péril le SLA de 8 h). Éviter la fatigue d'alerte : tout
+n'a pas la même urgence.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un chiffre du tableau de bord est manifestement faux&nbsp;: <code>rotation_velos</code> affiche une rotation deux fois trop élevée pour hier. En t'appuyant sur le <strong>lignage</strong> de Vélociti, décris ta démarche pour trouver la cause, et dis quelle <strong>métrique</strong> aurait pu t'alerter plus tôt.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Démarche (remonter le lignage vers l'amont) :
+  rotation_velos &lt;- trajets_enrichis &lt;- trajets_nettoyes
+                 &lt;- { trajets, stations, capteurs } (+ meteo)
+
+  1. rotation_velos : la formule est-elle bonne ? sinon, monter.
+  2. trajets_enrichis : l'enrichissement double-t-il des lignes
+     (jointure météo qui multiplie les correspondances) ?
+  3. trajets_nettoyes : le dédoublonnage sur trip_id a-t-il
+     bien tenu ? un doublon non retiré double la rotation.
+  4. sources : le fichier trajets a-t-il été chargé deux fois ?
+
+Métrique qui aurait alerté plus tôt :
+  la VOLUMÉTRIE de trajets_nettoyes. Un doublon massif ou un
+  double chargement gonfle le nombre de lignes bien au-delà de
+  ~150 000 ; une alerte "volumétrie &gt; 200 000" l'aurait signalé
+  AVANT que le chiffre faux n'atteigne le tableau de bord.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

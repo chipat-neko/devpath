@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transformer proprement : bronze, silver, gold — Leçon 06 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="L'architecture médaillon d'un pipeline ELT : bronze (le brut fidèle, append-only, point de reprise), silver (le propre : typage, dédoublonnage sur trip_id, quarantaine des lignes invalides, jointures de conformité) et gold (une table par usage : frequentation_station_jour, rotation_velos). Les règles d'une bonne transformation, pourquoi trois couches et pas une, et le DAG de Vélociti par couches." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Construire un pipeline robuste — Leçon 06</p>
+              <h1 class="lesson-header__title">Transformer proprement : bronze, silver, gold</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Prérequis : garder le brut et l'ELT (leçons 2 et 3)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>nommer les <strong>trois couches</strong> de l'architecture médaillon — bronze, silver, gold — et la responsabilité propre de chacune&nbsp;;</li>
+                  <li>écrire un <strong>silver</strong> qui type, dédoublonne sur <code>trip_id</code> et met en <strong>quarantaine</strong> les lignes invalides&nbsp;;</li>
+                  <li>dériver <strong>plusieurs tables gold</strong> d'un même silver, une par question métier&nbsp;;</li>
+                  <li>appliquer les <strong>règles d'une bonne transformation</strong> — idempotence, une responsabilité par étape, ne jamais écraser le brut.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>À la <a href="lecon-03.html">leçon 3</a>, on a tranché l'ordre&nbsp;: en <strong>ELT</strong>, on charge le brut d'abord, puis on transforme <em>dans</em> l'entrepôt. On a même montré un premier SQL de nettoyage. Mais «&nbsp;transformer&nbsp;» n'est pas un seul geste&nbsp;: c'est une <strong>suite d'étapes</strong>, chacune avec un rôle net. La façon standard d'organiser cette suite porte un nom&nbsp;: l'<strong>architecture médaillon</strong>, trois couches empilées appelées <strong>bronze</strong>, <strong>silver</strong> et <strong>gold</strong>.</p>
+<p>On l'a effleurée dès la <a href="lecon-01.html">leçon 1</a> et nommée à la 3&nbsp;; ici on la construit vraiment. Tu vas voir ce que chaque couche <em>doit</em> faire — et ce qu'elle ne doit <em>surtout pas</em> faire —, comment un silver riche va plus loin qu'un simple <code>WHERE</code>, comment un même silver alimente <strong>plusieurs</strong> tables gold, et pourquoi trois couches valent mieux qu'une seule grosse requête. Le fil rouge reste <strong>Vélociti</strong>&nbsp;: ses ~150&nbsp;000 trajets par jour vont traverser les trois couches sous nos yeux.</p>
+
+<h2>Trois couches, trois responsabilités</h2>
+<p>L'idée tient en une image&nbsp;: on ne passe pas du brut au tableau de bord d'un bond, mais par des <strong>paliers</strong>. À chaque palier, la donnée gagne en propreté et en valeur, et l'on garde le résultat comme une table à part entière. Les métaux disent l'affinage&nbsp;: le <strong>bronze</strong> est brut, le <strong>silver</strong> est raffiné, le <strong>gold</strong> est prêt à servir.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 262" role="img" aria-label="Les trois couches de l'architecture médaillon en cascade, de haut en bas. En haut, la couche bronze : reçoit la source, mention le brut fidèle, conservé, aucune logique. Une flèche descend vers la couche silver : mention typé, dédoublonné, lignes invalides écartées, une ligne par entité. Une flèche descend vers la couche gold : mention agrégats métier, une table par usage, alimente les tableaux de bord. À droite de chaque couche, une étiquette indique ce qui s'y passe.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">La donnée s'affine palier par palier</text>
+
+    <rect class="d-box" x="120" y="40" width="300" height="44" rx="8" /><text class="d-tag" x="150" y="60" text-anchor="start" font-size="11">bronze</text><text class="d-text" x="150" y="76" text-anchor="start" font-size="9">le brut fidèle, conservé tel quel</text>
+    <text class="d-mut" x="440" y="58" text-anchor="start" font-size="8.5">on ne jette rien,</text><text class="d-mut" x="440" y="70" text-anchor="start" font-size="8.5">aucune logique métier</text>
+
+    <path class="d-line" d="M270 84 L270 106" fill="none" /><path class="d-line" d="M266 98 L270 106 L274 98" fill="none" />
+
+    <rect class="d-accent" x="120" y="108" width="300" height="44" rx="8" /><text class="d-tag" x="150" y="128" text-anchor="start" font-size="11">silver</text><text class="d-text" x="150" y="144" text-anchor="start" font-size="9">typé, dédoublonné, invalides écartés</text>
+    <text class="d-mut" x="440" y="126" text-anchor="start" font-size="8.5">une ligne = une entité,</text><text class="d-mut" x="440" y="138" text-anchor="start" font-size="8.5">le gros du nettoyage</text>
+
+    <path class="d-line" d="M270 152 L270 174" fill="none" /><path class="d-line" d="M266 166 L270 174 L274 166" fill="none" />
+
+    <rect class="d-frame" x="120" y="176" width="300" height="44" rx="8" /><text class="d-tag" x="150" y="196" text-anchor="start" font-size="11">gold</text><text class="d-text" x="150" y="212" text-anchor="start" font-size="9">agrégats métier, une table par usage</text>
+    <text class="d-mut" x="440" y="194" text-anchor="start" font-size="8.5">prêt à consommer,</text><text class="d-mut" x="440" y="206" text-anchor="start" font-size="8.5">alimente les dashboards</text>
+
+    <text class="d-mut" x="270" y="244" text-anchor="middle" font-size="9">plus on descend, plus la donnée est propre et proche de la question métier</text>
+  </svg>
+  <figcaption>Trois couches en cascade. Le <strong>bronze</strong> conserve le brut, le <strong>silver</strong> nettoie, le <strong>gold</strong> résume pour un usage précis. Chaque couche est une (ou plusieurs) table(s) réelle(s) qu'on peut interroger, pas une simple étape éphémère.</figcaption>
+</figure>
+
+<p>La règle d'or est que chaque couche a <strong>une</strong> responsabilité, et qu'elle ne déborde pas sur celle des autres. Le bronze ne nettoie pas. Le silver n'agrège pas. Le gold ne re-nettoie pas. C'est cette discipline qui rend un pipeline lisible et réparable — on y revient plus bas.</p>
+
+<h2>Bronze — le brut fidèle</h2>
+<p>Le <strong>bronze</strong> est une <strong>copie conforme</strong> de ce que la source a envoyé. On le charge tel quel, sans rien corriger&nbsp;: dates au mauvais format, valeurs manquantes, doublons, durées négatives — <em>tout</em> reste. On y ajoute seulement de quoi se repérer&nbsp;: la <strong>date d'ingestion</strong> et la partition du jour (le <code>2026-05-01</code> du fichier). Deux propriétés le définissent&nbsp;:</p>
+<ul>
+<li><strong>Append-only</strong> — on <em>ajoute</em> les nouvelles données, on n'écrase jamais les anciennes. Chaque exécution empile la journée qu'elle ingère&nbsp;; l'historique brut s'accumule intact.</li>
+<li><strong>Aucune logique métier</strong> — pas de filtre, pas de calcul, pas de jointure. Le bronze ne <em>décide</em> rien&nbsp;; il <em>enregistre</em>. Toute règle («&nbsp;un trajet valide dure plus de zéro minute&nbsp;») appartient au silver, jamais ici.</li>
+</ul>
+<p>Pourquoi s'imposer cette fidélité, quitte à stocker des lignes fautives&nbsp;? Pour trois raisons qui prolongent la règle «&nbsp;garder le brut&nbsp;» de la <a href="lecon-03.html">leçon 3</a>&nbsp;:</p>
+<ul>
+<li><strong>Rejouabilité</strong> — le jour où une règle du silver change, on la recalcule sur le bronze déjà présent, sans jamais ré-extraire à la source.</li>
+<li><strong>Audit</strong> — on peut prouver, ligne à ligne, ce que le pipeline a reçu et à quelle date. Indispensable en cas de litige ou de contrôle.</li>
+<li><strong>Preuve de la source</strong> — si un chiffre paraît faux, on remonte au bronze pour trancher&nbsp;: le bug vient-il de la source, ou de notre transformation&nbsp;? Sans le brut, la question reste sans réponse.</li>
+</ul>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le bronze est un journal, pas un brouillon</p><p>On est parfois tenté de «&nbsp;corriger juste une date&nbsp;» en chargeant le bronze. Résiste&nbsp;: dès qu'une correction s'y glisse, le bronze cesse d'être une preuve fidèle de la source, et l'on ne peut plus distinguer une erreur de la source d'une erreur du pipeline. Le bronze est un <strong>journal en lecture seule</strong>&nbsp;: on y écrit une fois, on ne le retouche jamais.</p></div></div>
+
+<h2>Silver — le propre</h2>
+<p>Le <strong>silver</strong> est là où vit le gros du nettoyage. Il lit le bronze et en produit une table de confiance où <strong>une ligne = une entité claire</strong> — chez Vélociti, un trajet réel, bien typé, unique. Quatre gestes le composent&nbsp;:</p>
+<ul>
+<li><strong>Typer</strong> — les dates deviennent de vrais <code>TIMESTAMP</code>, les nombres de vrais nombres. On calcule aussi les colonnes dérivées utiles, comme la <strong>durée en minutes</strong>.</li>
+<li><strong>Normaliser</strong> — on uniformise les valeurs&nbsp;: <code>type</code> ramené à <code>electrique</code> / <code>mecanique</code> même si la source a écrit «&nbsp;Électrique&nbsp;» ou «&nbsp;ELEC&nbsp;».</li>
+<li><strong>Dédoublonner</strong> — on ne garde qu'<strong>une</strong> ligne par <code>trip_id</code>, car la source émet parfois le même trajet deux fois.</li>
+<li><strong>Écarter l'invalide</strong> — les lignes à durée négative ou à champ manquant ne sont pas simplement effacées&nbsp;: on les envoie en <strong>quarantaine</strong> (voir plus bas).</li>
+</ul>
+<p>On ajoute souvent une <strong>jointure de conformité</strong>&nbsp;: rattacher chaque trajet à sa station de départ pour récupérer son <code>quartier</code> depuis le référentiel. «&nbsp;Conformité&nbsp;» au sens d'aligner les données sur un référentiel commun, pas encore d'agréger. Voici un silver plus riche que celui de la leçon 3&nbsp;: il normalise <code>type</code>, calcule la durée, et <strong>marque</strong> les lignes rejetées plutôt que de les jeter en silence.</p>
+
+<figure class="code-block" data-file="silver_trajets_nettoyes.sql"><pre><code class="language-sql">-- SILVER : lit le bronze, produit une table propre « une ligne = un trajet ».
+-- Plus riche que le nettoyage de la leçon 3 : normalisation + durée + rejets tracés.
+CREATE TABLE trajets_nettoyes AS
+WITH type_calc AS (
+  SELECT
+    trip_id,
+    CAST(start AS TIMESTAMP)                              AS debut,
+    CAST(end   AS TIMESTAMP)                              AS fin,
+    station_start,
+    station_end,
+    bike,
+    -- normaliser le type malgré les variantes de casse / libellés de la source
+    CASE
+      WHEN LOWER(type) LIKE 'elec%' THEN 'electrique'
+      WHEN LOWER(type) LIKE 'meca%' THEN 'mecanique'
+      ELSE 'inconnu'
+    END                                                  AS type_velo
+  FROM bronze_trajets
+),
+avec_duree AS (
+  SELECT
+    *,
+    -- durée en minutes, colonne dérivée utile pour tout l'aval
+    DATE_DIFF('minute', debut, fin)                      AS duree_min,
+    -- on MARQUE la validité au lieu de filtrer en silence
+    CASE
+      WHEN debut IS NULL OR fin IS NULL THEN 'champ_manquant'
+      WHEN fin &lt;= debut                THEN 'duree_negative'
+      ELSE 'ok'
+    END                                                  AS statut
+  FROM type_calc
+)
+SELECT trip_id, debut, fin, duree_min, station_start, station_end, bike, type_velo
+FROM avec_duree
+WHERE statut = 'ok'                    -- seules les lignes valides entrent en silver
+QUALIFY ROW_NUMBER() OVER (            -- et une seule ligne par trip_id (dédoublonnage)
+    PARTITION BY trip_id ORDER BY debut
+) = 1;</code></pre></figure>
+
+<p>Le détail qui compte&nbsp;: les lignes <code>statut &lt;&gt; 'ok'</code> ne disparaissent pas dans le néant. On les écrit dans une table de <strong>quarantaine</strong>, pour pouvoir compter, expliquer et surveiller ce qu'on rejette. Une donnée écartée en silence est une donnée qu'on ne saura jamais expliquer.</p>
+
+<figure class="code-block" data-file="silver_quarantaine.sql"><pre><code class="language-sql">-- QUARANTAINE : on GARDE les lignes rejetées, avec la raison du rejet.
+-- Elles ne polluent pas le silver, mais restent visibles et dénombrables.
+CREATE TABLE trajets_quarantaine AS
+SELECT
+    trip_id,
+    start, end, station_start, station_end,
+    CASE
+      WHEN start IS NULL OR end IS NULL THEN 'champ_manquant'
+      WHEN CAST(end AS TIMESTAMP) &lt;= CAST(start AS TIMESTAMP) THEN 'duree_negative'
+    END AS raison_rejet
+FROM bronze_trajets
+WHERE start IS NULL
+   OR end   IS NULL
+   OR CAST(end AS TIMESTAMP) &lt;= CAST(start AS TIMESTAMP);</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Surveille le <strong>taux de quarantaine</strong> comme un signal de santé. Si Vélociti rejette d'habitude 0,3&nbsp;% de ses trajets et qu'un matin le chiffre grimpe à 12&nbsp;%, ce n'est pas ton silver qui a un bug&nbsp;: c'est la <em>source</em> qui a changé (nouveau format de date, colonne renommée). La quarantaine transforme un problème invisible en un chiffre qu'une alerte peut attraper. On en reparle en <a href="lecon-10.html">leçon 10</a>.</p></div></div>
+
+<h2>Gold — prêt à consommer</h2>
+<p>Le <strong>gold</strong> répond à des <strong>questions métier</strong> précises. Ce ne sont plus des trajets ligne à ligne, mais des <strong>agrégats</strong> — des comptages, des moyennes, des rotations — calculés à la <strong>granularité</strong> exacte dont un tableau de bord a besoin. La règle&nbsp;: <strong>une table par question</strong>. On ne fabrique pas une table fourre-tout&nbsp;; on fabrique autant de tables gold qu'on a d'usages, toutes dérivées du <em>même</em> silver.</p>
+<p>Chez Vélociti, deux golds nourrissent le tableau de bord municipal&nbsp;:</p>
+<ul>
+<li><code>frequentation_station_jour</code> — le nombre de trajets <strong>par station et par jour</strong>. Granularité&nbsp;: une ligne = (station, jour). Répond à «&nbsp;quelles stations sont les plus fréquentées&nbsp;?&nbsp;».</li>
+<li><code>rotation_velos</code> — la <strong>rotation</strong> de chaque vélo&nbsp;: combien de trajets il enchaîne, quelle distance dans le temps. Granularité&nbsp;: une ligne = un vélo (sur une période). Répond à «&nbsp;quels vélos tournent le plus&nbsp;? lesquels dorment&nbsp;?&nbsp;».</li>
+</ul>
+<p>Deux questions différentes, deux granularités différentes, donc <strong>deux tables</strong> — pas une seule qu'on tordrait dans tous les sens.</p>
+
+<figure class="code-block" data-file="gold_agregats.sql"><pre><code class="language-sql">-- GOLD n°1 : fréquentation par station et par jour (une ligne = station + jour).
+CREATE TABLE frequentation_station_jour AS
+SELECT
+    station_start                      AS station,
+    CAST(debut AS DATE)                AS jour,
+    COUNT(*)                           AS nb_trajets,
+    ROUND(AVG(duree_min), 1)           AS duree_moyenne_min
+FROM trajets_nettoyes                  -- on part du SILVER, jamais du bronze
+GROUP BY station_start, CAST(debut AS DATE);
+
+-- GOLD n°2 : rotation des vélos (une ligne = un vélo).
+CREATE TABLE rotation_velos AS
+SELECT
+    bike                               AS velo,
+    COUNT(*)                           AS nb_trajets,
+    ROUND(COUNT(*) * 1.0
+          / COUNT(DISTINCT CAST(debut AS DATE)), 2) AS trajets_par_jour,
+    MAX(debut)                         AS dernier_trajet
+FROM trajets_nettoyes
+GROUP BY bike;</code></pre></figure>
+
+<p>Note que les deux requêtes partent de <code>trajets_nettoyes</code> — <strong>jamais</strong> du bronze. Le gold fait <em>confiance</em> au silver&nbsp;: il n'a pas à re-typer ni à re-dédoublonner, ce travail est déjà fait une bonne fois. C'est tout l'intérêt d'un silver propre&nbsp;: il devient le socle commun de tous les golds. Voici le DAG complet de Vélociti, vu par couches.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Le DAG de Vélociti organisé par couches, de haut en bas. Couche bronze en haut : trois boîtes, trajets bruts, stations, capteurs. Des flèches descendent vers la couche silver : une boîte trajets_nettoyes, alimentée par les trois sources bronze, avec une boîte latérale quarantaine reliée. Une flèche descend de trajets_nettoyes, rejointe par une boîte meteo, vers une boîte trajets_enrichis. De trajets_enrichis, deux flèches descendent vers la couche gold : deux boîtes, frequentation_station_jour et rotation_velos.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le DAG de Vélociti, couche par couche</text>
+
+    <text class="d-tag" x="30" y="56" text-anchor="start" font-size="10">bronze</text>
+    <rect class="d-box" x="96" y="42" width="110" height="30" rx="6" /><text class="d-text" x="151" y="61" text-anchor="middle" font-size="9">trajets bruts</text>
+    <rect class="d-box" x="264" y="42" width="96" height="30" rx="6" /><text class="d-text" x="312" y="61" text-anchor="middle" font-size="9">stations</text>
+    <rect class="d-box" x="420" y="42" width="96" height="30" rx="6" /><text class="d-text" x="468" y="61" text-anchor="middle" font-size="9">capteurs</text>
+
+    <line class="d-line" x1="24" y1="88" x2="616" y2="88" stroke-dasharray="2 3" />
+
+    <text class="d-tag" x="30" y="126" text-anchor="start" font-size="10">silver</text>
+    <rect class="d-accent" x="200" y="108" width="150" height="32" rx="6" /><text class="d-text" x="275" y="128" text-anchor="middle" font-size="9">trajets_nettoyes</text>
+    <rect class="d-frame" x="404" y="108" width="120" height="32" rx="6" /><text class="d-mut" x="464" y="128" text-anchor="middle" font-size="8.5">quarantaine</text>
+    <path class="d-line" d="M151 72 L262 106" fill="none" /><path class="d-line" d="M252 100 L262 106 L253 108" fill="none" />
+    <path class="d-line" d="M312 72 L290 106" fill="none" /><path class="d-line" d="M291 99 L290 106 L296 102" fill="none" />
+    <path class="d-line" d="M468 72 L360 106" fill="none" /><path class="d-line" d="M369 103 L360 106 L367 111" fill="none" />
+    <path class="d-line" d="M350 124 L402 124" fill="none" stroke-dasharray="3 3" /><path class="d-line" d="M394 120 L402 124 L394 128" fill="none" />
+
+    <rect class="d-box" x="96" y="164" width="90" height="30" rx="6" /><text class="d-text" x="141" y="183" text-anchor="middle" font-size="9">meteo</text>
+    <rect class="d-box" x="230" y="164" width="150" height="30" rx="6" /><text class="d-text" x="305" y="183" text-anchor="middle" font-size="9">trajets_enrichis</text>
+    <path class="d-line" d="M275 140 L295 162" fill="none" /><path class="d-line" d="M287 156 L295 162 L293 154" fill="none" />
+    <path class="d-line" d="M186 179 L228 179" fill="none" /><path class="d-line" d="M220 175 L228 179 L220 183" fill="none" />
+
+    <line class="d-line" x1="24" y1="212" x2="616" y2="212" stroke-dasharray="2 3" />
+
+    <text class="d-tag" x="30" y="252" text-anchor="start" font-size="10">gold</text>
+    <rect class="d-frame" x="150" y="234" width="180" height="34" rx="6" /><text class="d-text" x="240" y="255" text-anchor="middle" font-size="9">frequentation_station_jour</text>
+    <rect class="d-frame" x="356" y="234" width="150" height="34" rx="6" /><text class="d-text" x="431" y="255" text-anchor="middle" font-size="9">rotation_velos</text>
+    <path class="d-line" d="M290 194 L250 232" fill="none" /><path class="d-line" d="M251 225 L250 232 L256 227" fill="none" />
+    <path class="d-line" d="M320 194 L420 232" fill="none" /><path class="d-line" d="M411 228 L420 232 L413 236" fill="none" />
+    <text class="d-mut" x="320" y="288" text-anchor="middle" font-size="8.5">un même silver → plusieurs golds</text>
+  </svg>
+  <figcaption>Le pipeline entier, rangé par couches. Trois sources <strong>bronze</strong> convergent vers un unique <strong>silver</strong> (<code>trajets_nettoyes</code>, la quarantaine sur le côté), enrichi de la météo en <code>trajets_enrichis</code>, d'où partent <strong>deux</strong> tables <strong>gold</strong>. Le DAG descend&nbsp;: chaque table dépend uniquement de la couche au-dessus.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Les noms des couches (bronze / silver / gold) sont une <strong>convention</strong>, popularisée par les lakehouses, pas une norme figée. D'autres équipes disent <em>raw / clean / mart</em>, ou <em>staging / core / serving</em>. Les mots changent&nbsp;; les <strong>trois responsabilités</strong> — conserver le brut, nettoyer, agréger par usage — sont, elles, universelles. Retiens les rôles avant les étiquettes.</p></div></div>
+
+<h2>Les règles d'une bonne transformation</h2>
+<p>Au-delà du découpage en trois, quelques principes gardent un pipeline sain quelle que soit sa taille&nbsp;:</p>
+<ul>
+<li><strong>Chaque couche est idempotente</strong> — la rejouer sur les mêmes données donne <em>exactement</em> le même résultat, sans doublonner ni empiler. On peut relancer une transformation sans crainte&nbsp;; c'est le sujet entier de la <a href="lecon-08.html">leçon 8</a>.</li>
+<li><strong>Aucune logique métier en bronze</strong> — le bronze enregistre, il ne juge pas. La moindre règle («&nbsp;valide si &gt; 0 min&nbsp;») descend au silver.</li>
+<li><strong>Une transformation = une responsabilité</strong> — ne pas typer <em>et</em> agréger <em>et</em> joindre dans une seule requête illisible. Une étape fait une chose, et la fait bien.</li>
+<li><strong>Tester entre les couches</strong> — vérifier à la frontière bronze→silver (le silver a-t-il moins de doublons&nbsp;?) et silver→gold (les totaux se recoupent-ils&nbsp;?). Les tests sont le filet du pipeline&nbsp;; la <a href="lecon-10.html">leçon 10</a> y est consacrée.</li>
+<li><strong>Ne jamais écraser le brut</strong> — le bronze est append-only&nbsp;; toutes les autres couches se <em>recalculent</em> à partir de lui, jamais l'inverse.</li>
+</ul>
+<p>«&nbsp;Tester entre les couches&nbsp;» est le principe le plus vite oublié. Un test simple, décisif, tient en une soustraction&nbsp;: le nombre de lignes du <strong>bronze</strong> doit se <strong>répartir</strong> exactement entre le silver (les valides gardées) et la quarantaine (les rejetées) — aucune ligne ne doit s'évaporer en silence. Voici ce contrôle de conservation, en quelques lignes de Python que l'orchestrateur peut lancer après chaque construction du silver.</p>
+
+<figure class="code-block" data-file="controle_entre_couches.py"><pre><code class="language-python">"""Contrôle de conservation bronze -&gt; silver : rien ne disparaît sans trace.
+Renvoie un rapport ; lève une alerte si le compte ne tombe pas juste."""
+
+def controler_conservation(n_bronze: int, n_silver: int, n_quarantaine: int) -&gt; dict:
+    # après dédoublonnage, silver + quarantaine peut être INFÉRIEUR au bronze
+    # (les doublons retirés), mais JAMAIS supérieur : on ne crée pas de lignes.
+    fuite = n_bronze - (n_silver + n_quarantaine)   # doublons retirés attendus &gt;= 0
+    taux_rejet = n_quarantaine / n_bronze if n_bronze else 0.0
+    rapport = {
+        "bronze": n_bronze,
+        "silver": n_silver,
+        "quarantaine": n_quarantaine,
+        "doublons_retires": fuite,
+        "taux_rejet": round(taux_rejet, 4),
+    }
+    # garde-fous : on n'invente pas de lignes, et le rejet reste sous un seuil
+    if fuite &lt; 0:
+        raise ValueError("silver + quarantaine &gt; bronze : des lignes ont été inventées !")
+    if taux_rejet &gt; 0.05:
+        raise ValueError(f"taux de rejet anormal : {taux_rejet:.1%} (source cassée ?)")
+    return rapport
+
+# Exemple d'un jour sain chez Vélociti (~150 000 trajets bruts) :
+print(controler_conservation(n_bronze=150000, n_silver=149100, n_quarantaine=450))
+# -&gt; doublons_retires = 450, taux_rejet = 0.003 : tout est expliqué.
+</code></pre></figure>
+<p>Ce test attrape deux pannes d'un coup&nbsp;: une transformation boguée qui <em>duplique</em> des lignes (le compte dépasse le bronze), et une source qui se dégrade (le taux de rejet explose). On développera cette idée de vérification systématique en <a href="lecon-10.html">leçon 10</a>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 232" role="img" aria-label="Une même ligne de trajet suivie à travers les trois couches, de gauche à droite. À gauche, en bronze : une ligne brute, trip T-91, start 08:15, end vide, type ELEC. Au milieu, en silver : la même ligne rejetée en quarantaine car la fin est manquante, tandis qu'une autre ligne T-90 valide passe, typée et avec durée 12 minutes. À droite, en gold : la ligne valide T-90 est comptée dans un agrégat, station A, jour, nb_trajets plus un. Des flèches relient les étapes.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Une donnée qui traverse les trois couches</text>
+
+    <text class="d-tag" x="98" y="46" text-anchor="middle" font-size="10">bronze (brut)</text>
+    <rect class="d-box" x="24" y="56" width="148" height="70" rx="7" />
+    <text class="d-text" x="98" y="76" text-anchor="middle" font-size="8.5">T-90 · 08:02 → 08:14</text>
+    <text class="d-text" x="98" y="90" text-anchor="middle" font-size="8.5">type « ELEC »</text>
+    <text class="d-mut" x="98" y="108" text-anchor="middle" font-size="8">T-91 · 08:15 → (vide)</text>
+    <text class="d-mut" x="98" y="120" text-anchor="middle" font-size="8">fin manquante</text>
+
+    <path class="d-line" d="M172 90 L214 90" fill="none" /><path class="d-line" d="M206 86 L214 90 L206 94" fill="none" />
+
+    <text class="d-tag" x="320" y="46" text-anchor="middle" font-size="10">silver (propre)</text>
+    <rect class="d-accent" x="216" y="56" width="208" height="42" rx="7" />
+    <text class="d-text" x="320" y="73" text-anchor="middle" font-size="8.5">T-90 · type=electrique</text>
+    <text class="d-text" x="320" y="86" text-anchor="middle" font-size="8.5">duree_min = 12 · statut ok</text>
+    <rect class="d-frame" x="216" y="104" width="208" height="26" rx="7" />
+    <text class="d-mut" x="320" y="121" text-anchor="middle" font-size="8">T-91 → quarantaine (champ_manquant)</text>
+
+    <path class="d-line" d="M424 77 L466 77" fill="none" /><path class="d-line" d="M458 73 L466 77 L458 81" fill="none" />
+
+    <text class="d-tag" x="556" y="46" text-anchor="middle" font-size="10">gold (agrégé)</text>
+    <rect class="d-frame" x="468" y="56" width="148" height="70" rx="7" />
+    <text class="d-text" x="542" y="78" text-anchor="middle" font-size="8.5">station A · ce jour</text>
+    <text class="d-text" x="542" y="94" text-anchor="middle" font-size="8.5">nb_trajets += 1</text>
+    <text class="d-mut" x="542" y="112" text-anchor="middle" font-size="8">T-90 compté ici</text>
+
+    <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="9">brut fidèle  →  nettoyé &amp; validé (ou mis de côté)  →  compté dans un total</text>
+    <text class="d-mut" x="320" y="178" text-anchor="middle" font-size="8.5">la ligne fautive T-91 n'est jamais perdue : elle est visible en quarantaine, pas dans le total</text>
+  </svg>
+  <figcaption>La même donnée, étape par étape. En <strong>bronze</strong>, tout arrive brut. En <strong>silver</strong>, la ligne valide est typée et sa durée calculée, la ligne fautive part en quarantaine. En <strong>gold</strong>, seule la ligne valide gonfle un agrégat. Rien n'est perdu&nbsp;: l'invalide reste traçable.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Casser l'idempotence d'une couche.</strong> Un silver écrit avec <code>INSERT</code> qui <em>ajoute</em> à chaque exécution va <strong>doublonner</strong> les trajets dès la deuxième passe. La parade&nbsp;: recréer la table (<code>CREATE OR REPLACE</code>) ou remplacer la partition du jour, jamais empiler à l'aveugle. Une couche qu'on ne peut pas rejouer sans dégât n'est pas une couche&nbsp;: c'est une bombe à retardement. Détails en <a href="lecon-08.html">leçon 8</a>.</p></div></div>
+
+<h2>Pourquoi trois couches et pas une&nbsp;?</h2>
+<p>On pourrait tout faire d'un coup&nbsp;: une seule énorme requête qui lit le fichier brut et sort directement <code>frequentation_station_jour</code>. Tentant, mais on le paie cher. Découper en trois apporte quatre bénéfices concrets&nbsp;:</p>
+<ul>
+<li><strong>Lisibilité</strong> — chaque couche tient dans une requête qu'on comprend d'un coup d'œil. Une transformation monolithique qui type, dédoublonne, joint <em>et</em> agrège devient vite illisible et impossible à faire évoluer.</li>
+<li><strong>Réutilisation</strong> — un silver propre alimente <em>plusieurs</em> golds (fréquentation, rotation, et demain la durée moyenne par quartier) sans jamais refaire le nettoyage. Le travail est mutualisé.</li>
+<li><strong>Débogage</strong> — quand un chiffre est faux, on sait <em>où</em> regarder. Le total est bon en silver mais faux en gold&nbsp;? Le bug est dans l'agrégation. On isole la panne à une couche.</li>
+<li><strong>Reprise ciblée</strong> — si seule la logique gold change, on recalcule le gold à partir du silver intact, sans retoucher au bronze ni au silver. On ne rejoue que ce qui a bougé.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 236" role="img" aria-label="Comparaison de deux approches. À gauche, une seule grosse requête monolithique : une boîte qui lit le bronze et sort directement un agrégat, étiquetée type + dédoublonne + joint + agrège d'un bloc ; en dessous, mentions illisible, un seul gold possible, bug difficile à localiser. À droite, la même chose découpée en trois couches empilées bronze, silver, gold, avec depuis le silver deux flèches vers deux golds différents ; en dessous, mentions lisible, plusieurs golds, bug localisé.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un seul bloc, ou trois couches&nbsp;?</text>
+
+    <text class="d-tag" x="150" y="48" text-anchor="middle" font-size="10">tout d'un bloc</text>
+    <rect class="d-box" x="40" y="58" width="220" height="60" rx="8" />
+    <text class="d-text" x="150" y="82" text-anchor="middle" font-size="8.5">bronze → 1 requête géante →</text>
+    <text class="d-text" x="150" y="96" text-anchor="middle" font-size="8.5">type + dédoublonne + joint</text>
+    <text class="d-text" x="150" y="108" text-anchor="middle" font-size="8.5">+ agrège, d'un seul coup</text>
+    <text class="d-mut" x="150" y="140" text-anchor="middle" font-size="8">illisible · un seul gold</text>
+    <text class="d-mut" x="150" y="154" text-anchor="middle" font-size="8">bug difficile à localiser</text>
+
+    <line class="d-line" x1="320" y1="40" x2="320" y2="180" stroke-dasharray="3 4" />
+
+    <text class="d-tag" x="490" y="48" text-anchor="middle" font-size="10">trois couches</text>
+    <rect class="d-box" x="410" y="56" width="160" height="20" rx="5" /><text class="d-text" x="490" y="70" text-anchor="middle" font-size="8">bronze</text>
+    <rect class="d-accent" x="410" y="82" width="160" height="20" rx="5" /><text class="d-text" x="490" y="96" text-anchor="middle" font-size="8">silver</text>
+    <path class="d-line" d="M490 76 L490 82" fill="none" /><path class="d-line" d="M487 80 L490 82 L493 80" fill="none" />
+    <rect class="d-frame" x="392" y="112" width="90" height="20" rx="5" /><text class="d-text" x="437" y="126" text-anchor="middle" font-size="7.5">gold fréquent.</text>
+    <rect class="d-frame" x="498" y="112" width="90" height="20" rx="5" /><text class="d-text" x="543" y="126" text-anchor="middle" font-size="7.5">gold rotation</text>
+    <path class="d-line" d="M470 102 L445 112" fill="none" /><path class="d-line" d="M448 106 L445 112 L451 111" fill="none" />
+    <path class="d-line" d="M512 102 L535 112" fill="none" /><path class="d-line" d="M529 111 L535 112 L532 106" fill="none" />
+    <text class="d-mut" x="490" y="150" text-anchor="middle" font-size="8">lisible · 1 silver → N golds</text>
+    <text class="d-mut" x="490" y="164" text-anchor="middle" font-size="8">bug localisé à une couche</text>
+
+    <text class="d-mut" x="320" y="204" text-anchor="middle" font-size="9">le même travail, mais rangé : on gagne en lisibilité, réutilisation, débogage et reprise</text>
+  </svg>
+  <figcaption>À gauche, une requête monolithique&nbsp;: tout marche… jusqu'au premier bug, noyé dans un bloc illisible, et impossible à réutiliser. À droite, les trois couches&nbsp;: le <strong>silver</strong> nettoie une fois, et <strong>plusieurs golds</strong> en partent. Même calcul total, mais rangé.</figcaption>
+</figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Toutes ces transformations restent du <strong>SQL</strong>&nbsp;: le <a href="../sql/cours.html">cours SQL</a> est le compagnon direct de cette leçon (fenêtres, <code>GROUP BY</code>, jointures — la matière première du silver et du gold). Dans l'industrie, l'outil <strong>dbt</strong> matérialise justement ces couches comme des modèles versionnés et testés&nbsp;; on retrouvera l'esprit «&nbsp;tester entre les couches&nbsp;» en <a href="lecon-10.html">leçon 10</a>, et le rejeu sans doublon en <a href="lecon-08.html">leçon 8</a>.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Sauter le silver et agréger direct depuis le bronze.</strong> On croit gagner une étape&nbsp;: en réalité, on agrège des données non typées, pleines de doublons et de durées négatives — le gold est <em>faux</em> sans qu'on le voie. Le silver n'est pas une formalité&nbsp;: c'est le palier qui rend les golds dignes de confiance. Agréger sur du sale produit des chiffres propres… et mensongers.</p></div></div>
+<ul>
+<li><strong>Mettre de la logique métier en bronze</strong> — filtrer ou corriger au chargement&nbsp;: le bronze cesse d'être une preuve fidèle de la source, et la reprise devient impossible.</li>
+<li><strong>Une seule table gold fourre-tout</strong> — vouloir répondre à toutes les questions avec une table à trente colonnes et une granularité floue&nbsp;: personne ne sait ce qu'une ligne représente. Une table par usage.</li>
+<li><strong>Re-nettoyer en gold</strong> — refaire au niveau gold le typage ou le dédoublonnage&nbsp;: signe que le silver n'a pas fait son travail. Le gold doit pouvoir <em>faire confiance</em> au silver.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>L'équipe data de Vélociti calculait au départ <code>frequentation_station_jour</code> d'un seul jet, <strong>directement depuis le bronze</strong> — une grosse requête qui typait, filtrait et agrégeait en même temps. Ça marchait… jusqu'au jour où un doublon exact de trajets s'est glissé dans un export&nbsp;: la fréquentation de trois stations a bondi de <strong>+8&nbsp;%</strong> du jour au lendemain, et le tableau de bord municipal a affiché des chiffres faux pendant une semaine avant qu'on ne trouve la cause — noyée dans une requête de 90 lignes. La refonte en trois couches a réglé le fond&nbsp;: on a introduit <code>trajets_nettoyes</code> (silver) qui dédoublonne sur <code>trip_id</code>, puis on a fait partir <em>tous</em> les golds de ce silver. Bénéfice immédiat&nbsp;: le dédoublonnage n'existe plus qu'à <strong>un</strong> endroit, testé une fois&nbsp;; et le jour où l'équipe a voulu ajouter <code>rotation_velos</code>, elle l'a branchée sur le même silver en une demi-journée, sans retoucher au nettoyage.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les trois couches et les règles — mémo</caption>
+    <thead><tr><th scope="col">Couche / règle</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Bronze</td><td>Copie conforme de la source, <strong>append-only</strong>, horodatée&nbsp;; aucune logique métier&nbsp;; le point de reprise</td></tr>
+      <tr><td>Silver</td><td>Typage, normalisation, dédoublonnage sur <code>trip_id</code>, quarantaine des invalides, jointures de conformité&nbsp;; <strong>une ligne = une entité</strong></td></tr>
+      <tr><td>Gold</td><td>Agrégats métier, <strong>une table par question</strong> (<code>frequentation_station_jour</code>, <code>rotation_velos</code>)&nbsp;; alimente les dashboards</td></tr>
+      <tr><td>Idempotence</td><td>Rejouer une couche donne le même résultat&nbsp;: <code>CREATE OR REPLACE</code> ou remplacer la partition, jamais <code>INSERT</code> à l'aveugle</td></tr>
+      <tr><td>Une responsabilité</td><td>Une transformation fait une chose&nbsp;; pas de requête qui type + joint + agrège d'un bloc</td></tr>
+      <tr><td>Ne pas écraser le brut</td><td>Le bronze ne se retouche jamais&nbsp;; tout le reste se recalcule à partir de lui</td></tr>
+      <tr><td>Pourquoi 3 couches</td><td>Lisibilité, réutilisation (1 silver → N golds), débogage ciblé, reprise partielle</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Architecture médaillon</dt><dd>Façon standard d'organiser les transformations d'un pipeline en trois couches empilées&nbsp;: bronze, silver, gold, de plus en plus raffinées.</dd>
+  <dt>Bronze</dt><dd>Couche du brut&nbsp;: copie conforme de la source, conservée intacte et append-only&nbsp;; le point de reprise du pipeline.</dd>
+  <dt>Silver</dt><dd>Couche du propre&nbsp;: données typées, normalisées, dédoublonnées et validées, où une ligne représente une entité claire.</dd>
+  <dt>Gold</dt><dd>Couche prête à consommer&nbsp;: agrégats métier, une table par question, qui alimentent directement les tableaux de bord.</dd>
+  <dt>Append-only</dt><dd>Mode d'écriture où l'on ajoute les nouvelles données sans jamais modifier ni supprimer les anciennes&nbsp;; propriété clé du bronze.</dd>
+  <dt>Conformité (jointure de)</dt><dd>Jointure qui rattache une donnée à un référentiel commun (par exemple un trajet à sa station) pour aligner les valeurs, sans encore agréger.</dd>
+  <dt>Agrégat</dt><dd>Résultat d'un regroupement (comptage, moyenne, somme) qui résume plusieurs lignes en une&nbsp;; la matière de la couche gold.</dd>
+  <dt>Granularité</dt><dd>Niveau de détail d'une table&nbsp;: ce que représente une ligne (un trajet, ou une station-jour, ou un vélo). Chaque gold a sa propre granularité.</dd>
+  <dt>Idempotence de couche</dt><dd>Propriété d'une transformation qu'on peut rejouer sur les mêmes données sans changer le résultat ni créer de doublon.</dd>
+  <dt>Quarantaine</dt><dd>Table où l'on met de côté, avec leur motif de rejet, les lignes invalides écartées du silver&nbsp;; elles restent visibles et dénombrables plutôt que perdues.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>L'<strong>architecture médaillon</strong> range les transformations en trois couches&nbsp;: <strong>bronze</strong> (brut fidèle), <strong>silver</strong> (propre), <strong>gold</strong> (agrégé), chacune avec une responsabilité nette.</li>
+<li>Le <strong>bronze</strong> est append-only, sans logique métier&nbsp;: c'est le point de reprise (rejouabilité, audit, preuve de la source).</li>
+<li>Le <strong>silver</strong> type, normalise, dédoublonne sur <code>trip_id</code> et met les lignes invalides en <strong>quarantaine</strong>&nbsp;; une ligne = une entité claire.</li>
+<li>Le <strong>gold</strong> agrège <strong>par usage</strong>&nbsp;: un même silver nourrit plusieurs tables (<code>frequentation_station_jour</code>, <code>rotation_velos</code>).</li>
+<li>Règles d'or&nbsp;: chaque couche <strong>idempotente</strong>, une <strong>responsabilité</strong> par transformation, <strong>tester entre les couches</strong>, ne <strong>jamais écraser le brut</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>En une phrase, quel est le rôle propre de chacune des trois couches bronze, silver et gold&nbsp;?</li>
+<li>Pourquoi met-on les lignes invalides en <em>quarantaine</em> plutôt que de simplement les supprimer&nbsp;?</li>
+<li>On veut ajouter un tableau «&nbsp;durée moyenne des trajets par quartier&nbsp;». À partir de quelle couche construis-tu cette nouvelle table, et pourquoi pas depuis le bronze&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle couche conserve une copie conforme de la source, append-only et sans aucune logique métier ?","a":["Le bronze : il enregistre le brut tel quel (doublons et erreurs compris) et sert de point de reprise","Le silver : c'est là qu'on type et qu'on dédoublonne","Le gold : il stocke les agrégats prêts pour les tableaux de bord","La quarantaine : elle garde les lignes rejetées"],"correct":0,"explain":"Le bronze est une copie fidèle de la source, append-only, sans filtre ni calcul. C'est ce qui permet de rejouer, d'auditer et de prouver ce que la source a envoyé."},
+  {"q":"Dans la couche silver, que fait-on des trajets à durée négative ou à champ manquant ?","a":["On les écarte du silver mais on les garde en quarantaine, avec leur motif de rejet, pour pouvoir les compter et les expliquer","On les corrige automatiquement en devinant les valeurs manquantes","On les laisse dans le silver mais on les marque d'un drapeau rouge","On les renvoie dans le bronze pour ré-ingestion"],"correct":0,"explain":"Les lignes invalides ne polluent pas le silver, mais ne disparaissent pas non plus : elles vont en quarantaine avec la raison du rejet, ce qui rend le taux de rejet surveillable."},
+  {"q":"Pourquoi Vélociti a-t-il DEUX tables gold (frequentation_station_jour et rotation_velos) plutôt qu'une seule ?","a":["Parce qu'elles répondent à deux questions à des granularités différentes (station-jour vs vélo) : une table par usage, toutes dérivées du même silver","Parce qu'une table SQL ne peut pas dépasser un certain nombre de colonnes","Parce que le gold interdit les agrégats dans une même table","Parce que le bronze impose de dupliquer chaque table"],"correct":0,"explain":"Le principe du gold est « une table par question ». Deux questions, deux granularités, donc deux tables — toutes construites à partir du même silver propre, sans refaire le nettoyage."},
+  {"q":"Quel est le risque si on agrège directement depuis le bronze en sautant le silver ?","a":["On agrège des données non typées, avec doublons et durées négatives : le gold est faux sans qu'on le voie","Rien : sauter le silver rend juste le pipeline plus rapide sans inconvénient","Le bronze est effacé au passage","Le gold devient impossible à interroger en SQL"],"correct":0,"explain":"Le silver est le palier qui rend les golds fiables. Agréger sur du bronze non nettoyé (doublons, mauvais types) produit des chiffres qui semblent propres mais sont faux."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["bronze","le bronze","la couche bronze","couche bronze"],"placeholder":"la couche qui conserve le brut tel quel, append-only et sans logique métier, s'appelle la couche b_____","hints":["C'est le premier métal de la cascade.","C'est le point de reprise du pipeline.","Six lettres : b_____ (brut fidèle)."],"link":{"href":"lecon-06.html","label":"Revoir « Bronze — le brut fidèle »"}},
+  {"type":"text","accept":["quarantaine","la quarantaine","en quarantaine","table de quarantaine"],"placeholder":"les lignes invalides écartées du silver ne sont pas supprimées : on les met en q_________","hints":["On les garde avec leur motif de rejet.","Cela permet de surveiller le taux de rejet.","Onze lettres : q_________ (comme pour un malade qu'on isole)."],"link":{"href":"lecon-06.html","label":"Revoir « Silver — le propre »"}},
+  {"type":"text","accept":["gold","le gold","la couche gold","couche gold"],"placeholder":"la couche des agrégats métier, une table par usage, qui alimente les tableaux de bord, est la couche g___","hints":["C'est le dernier métal, le plus précieux.","frequentation_station_jour et rotation_velos y vivent.","Quatre lettres : g___ (prêt à consommer)."],"link":{"href":"lecon-06.html","label":"Revoir « Gold — prêt à consommer »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune de ces opérations, dis dans quelle couche elle a sa place — <strong>bronze</strong>, <strong>silver</strong> ou <strong>gold</strong> — et justifie en une ligne&nbsp;: (a) charger le fichier <code>trajets_2026-05-01.csv</code> exactement tel qu'il est&nbsp;; (b) compter le nombre de trajets par station et par jour&nbsp;; (c) dédoublonner les trajets sur <code>trip_id</code> et typer les dates.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) BRONZE : copie conforme de la source, chargée telle quelle,
+    append-only, sans aucune correction ni logique métier.
+
+(b) GOLD : c'est un agrégat métier (comptage par station et par
+    jour) prêt pour le tableau de bord -&gt; frequentation_station_jour.
+
+(c) SILVER : le dédoublonnage sur trip_id et le typage des dates
+    sont le coeur du nettoyage ; une ligne = un trajet propre.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Vélociti veut une nouvelle table pour le tableau de bord&nbsp;: la <strong>durée moyenne des trajets par quartier</strong> (une ligne = un quartier, une valeur = la moyenne des durées). À partir de quelle couche la construis-tu&nbsp;? Écris le SQL <code>gold</code> correspondant (le silver <code>trajets_nettoyes</code> contient déjà <code>duree_min</code> et <code>station_start</code>&nbsp;; le référentiel des stations donne le <code>quartier</code>).</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="gold_duree_quartier.sql"><pre><code class="language-sql">-- On part du SILVER (déjà typé, dédoublonné) : jamais du bronze.
+-- Jointure de conformité vers les stations pour récupérer le quartier.
+CREATE TABLE duree_moyenne_quartier AS
+SELECT
+    s.quartier                         AS quartier,
+    ROUND(AVG(t.duree_min), 1)         AS duree_moyenne_min,
+    COUNT(*)                           AS nb_trajets
+FROM trajets_nettoyes AS t
+JOIN stations         AS s
+  ON t.station_start = s.station_id
+GROUP BY s.quartier;
+
+-- Pourquoi le silver et pas le bronze : duree_min est déjà calculée
+-- et fiable, les doublons et durées négatives sont déjà écartés.
+-- On ne refait AUCUN nettoyage ici : le gold fait confiance au silver.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue écrit le silver ainsi&nbsp;: <code>INSERT INTO trajets_nettoyes SELECT ... FROM bronze_trajets WHERE ...</code>, et lance le pipeline deux fois dans la journée pour «&nbsp;rattraper&nbsp;» un retard. Le lendemain, tous les compteurs gold ont doublé. Explique la cause, puis corrige la couche silver pour qu'elle soit <strong>idempotente</strong>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Cause : INSERT AJOUTE des lignes à chaque exécution. Lancé deux
+fois, le silver contient chaque trajet EN DOUBLE ; les golds, qui
+comptent (COUNT) à partir du silver, doublent mécaniquement.
+La couche a perdu son idempotence.
+
+Corriger = rendre le silver rejouable sans effet cumulatif :</code></pre></figure>
+<figure class="code-block" data-file="silver_idempotent.sql"><pre><code class="language-sql">-- Au lieu d'INSERT (qui empile), on RECRÉE la table à chaque passe.
+-- Rejouer donne alors EXACTEMENT le même résultat, sans doublon.
+CREATE OR REPLACE TABLE trajets_nettoyes AS
+SELECT
+    trip_id,
+    CAST(start AS TIMESTAMP) AS debut,
+    CAST(end   AS TIMESTAMP) AS fin,
+    station_start, station_end, bike, type
+FROM bronze_trajets
+WHERE end &gt; start AND start IS NOT NULL AND end IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY start) = 1;
+-- Variante à l'échelle : ne remplacer que la partition du jour
+-- concerné, pas toute la table. (Idempotence : voir leçon 8.)</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

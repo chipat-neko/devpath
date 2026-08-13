@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les formats de données : CSV, JSON, Parquet — Leçon 04 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="Texte contre binaire, ligne contre colonne : pourquoi le format d'un fichier décide de son coût, de sa vitesse de lecture et de sa commodité. Les pièges réels du CSV, la souplesse du JSON et du NDJSON, la puissance analytique de Parquet (colonnes, compression, schéma embarqué), et quel format placer où dans le pipeline Vélociti." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 1 · Penser en pipeline — Leçon 04</p>
+              <h1 class="lesson-header__title">Les formats de données : CSV, JSON, Parquet</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--debutant">Débutant</span></span>
+                <span class="dot-sep">Prérequis : les leçons 1 à 3 (pipeline, sources, ELT)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer un format <strong>texte</strong> d'un format <strong>binaire</strong>, et une orientation <strong>ligne</strong> d'une orientation <strong>colonne</strong>&nbsp;;</li>
+                  <li>reconnaître les <strong>pièges réels du CSV</strong> (pas de types, séparateur et encodage ambigus, virgules dans les valeurs) et lire un CSV proprement&nbsp;;</li>
+                  <li>expliquer quand préférer le <strong>JSON</strong> (semi-structuré, imbriqué) et pourquoi le <strong>NDJSON</strong> sert aux journaux&nbsp;;</li>
+                  <li>dire ce que <strong>Parquet</strong> apporte (colonnes, compression, schéma embarqué) et placer chaque format le long du pipeline Vélociti.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le brut n'arrive jamais dans un seul moule. À la <a href="lecon-02.html">leçon 2</a>, on a inventorié les quatre sources de <strong>Vélociti</strong>&nbsp;: les trajets tombent en <strong>CSV</strong>, un fichier par jour&nbsp;; les stations, les capteurs et la météo arrivent en <strong>JSON</strong>. Trois sources, deux formats déjà — et l'on n'a pas encore parlé de ce qu'on écrira <em>nous</em>, en sortie de transformation. À la <a href="lecon-03.html">leçon 3</a>, on a chargé ce brut tel quel&nbsp;: reste à comprendre <em>dans quoi</em> il est encodé, et dans quoi on va le ranger ensuite.</p>
+<p>Le format d'un fichier n'est pas un détail cosmétique. Il décide de trois choses très concrètes&nbsp;: le <strong>coût de stockage</strong> (un même jeu de données peut peser dix fois plus dans un format que dans un autre), la <strong>vitesse de lecture</strong> (lire une colonne sur sept, ou tout relire à chaque requête), et la <strong>commodité</strong> (un humain peut-il l'ouvrir dans un éditeur, une machine peut-elle le typer sans deviner&nbsp;?). Cette leçon compare les trois formats que tu croiseras partout — CSV, JSON, Parquet — et te donne la règle simple qui dit lequel utiliser, et où. Pour l'analytique, on stockera Vélociti en <strong>Parquet</strong>&nbsp;; tu vas voir pourquoi.</p>
+
+<h2>Texte contre binaire, ligne contre colonne</h2>
+<p>Avant de nommer les formats, deux axes suffisent à tout comprendre. Un format se juge d'abord sur son <strong>encodage</strong>, puis sur son <strong>orientation</strong>.</p>
+<p>L'axe <strong>texte contre binaire</strong> répond à&nbsp;: «&nbsp;puis-je l'ouvrir dans un éditeur et le lire&nbsp;?&nbsp;». Un format <strong>texte</strong> (CSV, JSON) est fait de caractères lisibles par un humain&nbsp;: pratique pour inspecter, versionner, échanger, mais volumineux et sans types (tout est du texte, y compris les nombres). Un format <strong>binaire</strong> (Parquet) est une suite d'octets structurés que seule une bibliothèque sait décoder&nbsp;: illisible tel quel dans un éditeur, mais compact, typé et rapide.</p>
+<p>L'axe <strong>ligne contre colonne</strong> répond à&nbsp;: «&nbsp;comment les valeurs sont-elles rangées sur le disque&nbsp;?&nbsp;». En orientation <strong>ligne</strong>, un enregistrement entier est écrit d'un bloc, champ après champ, avant de passer au suivant (CSV, JSON, NDJSON). En orientation <strong>colonne</strong>, ce sont toutes les valeurs d'une <em>même</em> colonne qui sont rangées ensemble, colonne après colonne (Parquet). Cette distinction, en apparence anodine, explique presque tout le reste&nbsp;: coût, compression, vitesse des requêtes analytiques.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 270" role="img" aria-label="Les mêmes données rangées de deux façons. À gauche, stockage en lignes : trois blocs empilés, chaque bloc contient l'enregistrement complet d'un trajet (identifiant, station, type) écrit d'affilée. À droite, stockage en colonnes : trois blocs, mais cette fois chaque bloc regroupe toutes les valeurs d'une même colonne — tous les identifiants ensemble, toutes les stations ensemble, tous les types ensemble. La flèche montre que ce sont exactement les mêmes données, seulement rangées autrement.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Mêmes données, deux rangements</text>
+
+    <text class="d-tag" x="152" y="52" text-anchor="middle" font-size="11">en LIGNES</text>
+    <text class="d-mut" x="152" y="66" text-anchor="middle" font-size="8">un enregistrement entier d'un bloc</text>
+    <rect class="d-box" x="34" y="78" width="236" height="30" rx="5" /><text class="d-text" x="152" y="97" text-anchor="middle" font-size="8.5">T-01 · Gare · electrique</text>
+    <rect class="d-box" x="34" y="114" width="236" height="30" rx="5" /><text class="d-text" x="152" y="133" text-anchor="middle" font-size="8.5">T-02 · Halles · mecanique</text>
+    <rect class="d-box" x="34" y="150" width="236" height="30" rx="5" /><text class="d-text" x="152" y="169" text-anchor="middle" font-size="8.5">T-03 · Gare · electrique</text>
+    <text class="d-mut" x="152" y="202" text-anchor="middle" font-size="8.5">CSV · JSON · NDJSON</text>
+
+    <line class="d-line" x1="320" y1="60" x2="320" y2="212" stroke-dasharray="3 4" />
+
+    <text class="d-tag" x="488" y="52" text-anchor="middle" font-size="11">en COLONNES</text>
+    <text class="d-mut" x="488" y="66" text-anchor="middle" font-size="8">chaque colonne regroupée</text>
+    <rect class="d-accent" x="370" y="78" width="236" height="30" rx="5" /><text class="d-text" x="488" y="97" text-anchor="middle" font-size="8.5">T-01 · T-02 · T-03</text>
+    <rect class="d-accent" x="370" y="114" width="236" height="30" rx="5" /><text class="d-text" x="488" y="133" text-anchor="middle" font-size="8.5">Gare · Halles · Gare</text>
+    <rect class="d-accent" x="370" y="150" width="236" height="30" rx="5" /><text class="d-text" x="488" y="169" text-anchor="middle" font-size="8.5">electrique · mecanique · electrique</text>
+    <text class="d-mut" x="488" y="202" text-anchor="middle" font-size="8.5">Parquet</text>
+
+    <path class="d-line" d="M276 240 L364 240" fill="none" /><path class="d-line" d="M356 236 L364 240 L356 244" fill="none" />
+    <text class="d-mut" x="320" y="236" text-anchor="middle" font-size="8">exactement les mêmes valeurs</text>
+    <text class="d-mut" x="320" y="258" text-anchor="middle" font-size="8.5">seul l'ordre d'écriture sur le disque diffère</text>
+  </svg>
+  <figcaption>À gauche, chaque ligne est un trajet complet écrit d'un bloc&nbsp;: idéal pour ajouter ou lire un enregistrement entier. À droite, chaque colonne est rangée ensemble&nbsp;: idéal pour lire une seule colonne sur toutes les lignes, et pour compresser (des valeurs voisines se ressemblent). <strong>Retiens cet axe&nbsp;: il commande tout le reste.</strong></figcaption>
+</figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi la colonne compresse mieux</p><p>Quand toutes les valeurs d'une colonne sont côte à côte, elles se ressemblent&nbsp;: la colonne <code>type</code> n'a que deux valeurs (<code>electrique</code>, <code>mecanique</code>), la colonne <code>station_start</code> se répète des milliers de fois. Un algorithme de compression adore ces répétitions&nbsp;: il les code une fois. En lignes, ces mêmes valeurs sont dispersées entre des identifiants et des dates tous différents&nbsp;: bien plus dur à compresser. La colonne n'est pas «&nbsp;magique&nbsp;», elle <em>range ensemble ce qui se ressemble</em>.</p></div></div>
+
+<h2>CSV : simple, universel, piégeux</h2>
+<p>Le <strong>CSV</strong> (<em>Comma-Separated Values</em>) est le format tabulaire le plus répandu au monde&nbsp;: une ligne d'en-tête, puis une ligne par enregistrement, les champs séparés par des virgules. Tout tableur l'ouvre, tout langage le lit, il est lisible à l'œil nu. C'est le format des trajets Vélociti&nbsp;: un fichier par jour, comme <code>trajets_2026-05-01.csv</code>.</p>
+
+<figure class="code-block" data-file="trajets_2026-05-01.csv"><pre><code class="language-plaintext">trip_id,start,end,station_start,station_end,bike,type
+T-000001,2026-05-01 07:12:03,2026-05-01 07:19:41,Gare,Halles,B-4471,electrique
+T-000002,2026-05-01 07:12:55,2026-05-01 07:31:10,Marché,Parc,B-1180,mecanique
+T-000003,2026-05-01 07:13:20,2026-05-01 07:20:02,Gare,Gare,B-4471,electrique</code></pre></figure>
+
+<p>Cette simplicité a un prix, et c'est une longue liste de pièges bien réels&nbsp;:</p>
+<ul>
+<li><strong>Aucun type.</strong> Tout est du texte. <code>2026-05-01 07:12:03</code> n'est pas une date pour le fichier&nbsp;: c'est une chaîne de caractères. C'est <em>au lecteur</em> de deviner et de convertir — d'où les erreurs de dates et de nombres.</li>
+<li><strong>Aucun schéma.</strong> Rien dans le fichier ne dit quelles colonnes existent ni leur type&nbsp;; l'en-tête est une convention, pas une garantie. Une colonne peut apparaître, disparaître ou changer d'ordre sans prévenir.</li>
+<li><strong>Séparateur ambigu.</strong> «&nbsp;CSV&nbsp;» ne veut pas toujours dire virgule&nbsp;: beaucoup d'outils européens utilisent le <strong>point-virgule</strong> (parce que la virgule sert de séparateur décimal). Se tromper de séparateur, et tout tombe dans une seule colonne.</li>
+<li><strong>Encodage.</strong> Le fichier est-il en <strong>UTF-8</strong> ou dans un autre encodage&nbsp;? Un accent mal décodé transforme <code>Marché</code> en charabia. Rien dans le CSV ne l'indique de façon fiable.</li>
+<li><strong>Guillemets et virgules dans les valeurs.</strong> Que se passe-t-il si un nom de station contient une virgule&nbsp;? Il faut l'entourer de guillemets — et alors, que faire d'un guillemet <em>dans</em> la valeur&nbsp;? Et d'un <strong>retour à la ligne</strong> à l'intérieur d'un champ&nbsp;? Ces cas cassent les lecteurs naïfs.</li>
+</ul>
+
+<p>Voici le piège concret&nbsp;: une station nommée <code>Place Jean-Jaurès, angle nord</code> contient une virgule. Écrite sans précaution, elle décale toute la ligne d'une colonne.</p>
+
+<figure class="code-block" data-file="piege_virgule.csv"><pre><code class="language-plaintext"># FAUX : la virgule dans le nom décale les colonnes suivantes
+T-000009,2026-05-01 08:03:00,2026-05-01 08:12:00,Place Jean-Jaurès, angle nord,Parc,B-2210,mecanique
+#                                                  ^--- lu comme DEUX champs, tout glisse
+
+# CORRECT : la valeur est entourée de guillemets, la virgule est protégée
+T-000009,2026-05-01 08:03:00,2026-05-01 08:12:00,"Place Jean-Jaurès, angle nord",Parc,B-2210,mecanique</code></pre></figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Découper un CSV soi-même avec un simple «&nbsp;couper à chaque virgule&nbsp;».</strong> C'est la faute classique&nbsp;: elle marche sur les trois premières lignes puis explose sur la première valeur contenant une virgule, un guillemet ou un retour à la ligne. Utilise <strong>toujours</strong> une vraie bibliothèque CSV (le module <code>csv</code> de Python, <code>pandas</code>…). Elle gère les guillemets, l'échappement et les cas tordus que tu oublieras.</p></div></div>
+
+<p>La bonne façon de lire le CSV des trajets&nbsp;: on précise l'encodage, on laisse la bibliothèque gérer les guillemets, et on <strong>type explicitement</strong> ce qui doit l'être (les dates, ici).</p>
+
+<figure class="code-block" data-file="lire_trajets.py"><pre><code class="language-python">import csv
+from datetime import datetime
+
+# 1) Lecture robuste avec le module csv : les guillemets et virgules
+#    dans les valeurs sont gérés pour nous.
+with open("trajets_2026-05-01.csv", newline="", encoding="utf-8") as f:
+    lecteur = csv.DictReader(f)          # la 1re ligne devient les clés
+    trajets = list(lecteur)
+
+# 2) Rien n'est typé : tout est du texte. On convertit ce qui doit l'être.
+fmt = "%Y-%m-%d %H:%M:%S"
+for t in trajets:
+    t["start"] = datetime.strptime(t["start"], fmt)   # texte -&gt; date
+    t["end"]   = datetime.strptime(t["end"], fmt)
+
+print(trajets[0]["type"], trajets[0]["end"] - trajets[0]["start"])
+# -&gt; electrique  0:07:38   (une durée, calculable car on a typé les dates)
+
+# Avec pandas, plus court, mais on précise QUAND MÊME le type des dates :
+# import pandas as pd
+# df = pd.read_csv("trajets_2026-05-01.csv", parse_dates=["start", "end"])</code></pre></figure>
+
+<h2>JSON : structuré, imbriqué, auto-descriptif</h2>
+<p>Le <strong>JSON</strong> (<em>JavaScript Object Notation</em>) est l'autre grand format texte. Là où le CSV est plat et tabulaire, le JSON est <strong>structuré et imbriqué</strong>&nbsp;: des objets (paires clé–valeur), des tableaux, emboîtés à volonté. Surtout, il est <strong>auto-descriptif</strong>&nbsp;: chaque valeur est accompagnée de sa clé, qui porte le sens. C'est le format idéal pour du <strong>semi-structuré</strong> — exactement les stations et les capteurs de Vélociti, qui viennent d'API en JSON.</p>
+
+<figure class="code-block" data-file="station_exemple.json"><pre><code class="language-json">{
+  "station_id": "S-014",
+  "nom": "Gare",
+  "capacite": 30,
+  "lat": 47.2184,
+  "lon": -1.5536,
+  "quartier": "Centre",
+  "velos": [
+    { "bike": "B-4471", "type": "electrique", "batterie": 82 },
+    { "bike": "B-1180", "type": "mecanique" }
+  ]
+}</code></pre></figure>
+
+<p>Deux choses sautent aux yeux face au CSV. D'abord, le JSON <strong>porte des types</strong>&nbsp;: <code>30</code> est un nombre, <code>"Gare"</code> une chaîne, la liste <code>velos</code> un tableau — pas besoin de deviner. Ensuite, il gère l'<strong>imbrication</strong>&nbsp;: une station <em>contient</em> ses vélos, dont certains ont une <code>batterie</code> et d'autres non. Un CSV plat ne saurait pas représenter ça sans se contorsionner.</p>
+<p>Mais le JSON a deux défauts. Il est <strong>verbeux</strong>&nbsp;: les clés (<code>"station_id"</code>, <code>"type"</code>…) sont réécrites <em>à chaque</em> objet&nbsp;; sur cinq millions d'événements de capteurs par jour, ces clés répétées pèsent lourd. Et un <strong>gros tableau JSON n'est pas «&nbsp;streamable&nbsp;»</strong>&nbsp;: si tout le fichier est un unique <code>[ … ]</code> géant, il faut le charger en entier avant de pouvoir en lire le premier élément — impossible de traiter au fil de l'eau.</p>
+<p>La réponse à ce dernier problème s'appelle <strong>NDJSON</strong> (<em>Newline-Delimited JSON</em>), aussi dit <strong>JSON Lines</strong>&nbsp;: <strong>un objet JSON complet par ligne</strong>, sans tableau englobant. On lit le fichier ligne par ligne, on traite chaque objet indépendamment, on s'arrête quand on veut. C'est la forme reine des <strong>journaux et flux d'événements</strong> — donc des capteurs Vélociti.</p>
+
+<figure class="code-block" data-file="capteurs_events.ndjson"><pre><code class="language-json">{"event_id": "E-900001", "station_id": "S-014", "ts": "2026-05-01T07:12:00Z", "velos_dispo": 8, "bornes_libres": 22}
+{"event_id": "E-900002", "station_id": "S-007", "ts": "2026-05-01T07:12:01Z", "velos_dispo": 3, "bornes_libres": 12}
+{"event_id": "E-900002", "station_id": "S-007", "ts": "2026-05-01T07:12:01Z", "velos_dispo": 3, "bornes_libres": 12}</code></pre></figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>NDJSON n'est <em>pas</em> du JSON valide pris comme un tout&nbsp;: le fichier entier ne se parse pas d'un coup avec <code>json.loads</code>, car ce n'est pas un unique document mais une <strong>suite</strong> de documents. C'est voulu&nbsp;: on lit <code>for ligne in f: obj = json.loads(ligne)</code>. Chaque ligne, elle, est du JSON parfaitement valide. Remarque aussi le <code>event_id</code> <strong>E-900002</strong> présent <strong>deux fois</strong> ci-dessus&nbsp;: les capteurs émettent parfois en double&nbsp;— on traitera cette idempotence plus loin dans le cours.</p></div></div>
+
+<h2>Parquet : binaire, colonnes, typé</h2>
+<p>Voici le format qui change de nature. <strong>Parquet</strong> est <strong>binaire</strong> (illisible dans un éditeur), <strong>orienté colonnes</strong>, <strong>compressé</strong>, <strong>typé</strong>, et il <strong>embarque son schéma</strong>. Il n'est pas fait pour être ouvert à la main&nbsp;: il est fait pour être <em>lu vite et stocké petit</em> par des moteurs analytiques. C'est le format qu'on utilisera pour les grandes tables de Vélociti.</p>
+<p>Chacune de ces propriétés a une conséquence directe et mesurable&nbsp;:</p>
+<ul>
+<li><strong>Orienté colonnes → moins d'I/O.</strong> Une requête qui ne veut que 2 colonnes sur 7 ne lit que ces 2 colonnes sur le disque&nbsp;; les 5 autres ne sont jamais touchées. En CSV ou JSON (lignes), il faut au contraire relire chaque ligne entière pour n'en extraire que deux champs.</li>
+<li><strong>Compressé → moins d'octets.</strong> Comme les valeurs semblables sont côte à côte (même colonne), la compression est très efficace&nbsp;; une table Parquet pèse couramment <strong>4 à 10 fois moins</strong> que le même CSV.</li>
+<li><strong>Typé + schéma embarqué → aucune devinette.</strong> Le fichier <em>sait</em> que <code>capacite</code> est un entier et <code>lat</code> un flottant. Plus de dates lues comme du texte, plus de colonnes fantômes&nbsp;: le schéma voyage <em>avec</em> les données.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Une requête qui ne lit que deux colonnes sur sept dans un fichier Parquet. En haut, une requête SQL demande deux colonnes, station_start et type. Au milieu, le fichier Parquet est représenté par sept blocs verticaux, un par colonne : trip_id, start, end, station_start, station_end, bike, type. Seuls les deux blocs demandés, station_start et type, sont mis en évidence et marqués lus. Les cinq autres blocs sont grisés et marqués ignorés, jamais lus sur le disque. En bas, la mention : on ne paie que les colonnes utiles.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Parquet : lire 2 colonnes sur 7</text>
+    <rect class="d-frame" x="200" y="34" width="240" height="30" rx="6" /><text class="d-text" x="320" y="53" text-anchor="middle" font-size="9">SELECT station_start, type FROM ...</text>
+    <path class="d-line" d="M320 64 L320 84" fill="none" /><path class="d-line" d="M316 76 L320 84 L324 76" fill="none" />
+
+    <rect class="d-box" x="34" y="92" width="76" height="96" rx="5" /><text class="d-mut" x="72" y="144" text-anchor="middle" font-size="8">trip_id</text><text class="d-mut" x="72" y="204" text-anchor="middle" font-size="7.5">ignorée</text>
+    <rect class="d-box" x="118" y="92" width="76" height="96" rx="5" /><text class="d-mut" x="156" y="144" text-anchor="middle" font-size="8">start</text><text class="d-mut" x="156" y="204" text-anchor="middle" font-size="7.5">ignorée</text>
+    <rect class="d-box" x="202" y="92" width="76" height="96" rx="5" /><text class="d-mut" x="240" y="144" text-anchor="middle" font-size="8">end</text><text class="d-mut" x="240" y="204" text-anchor="middle" font-size="7.5">ignorée</text>
+    <rect class="d-accent" x="286" y="92" width="76" height="96" rx="5" /><text class="d-text" x="324" y="140" text-anchor="middle" font-size="8">station</text><text class="d-text" x="324" y="151" text-anchor="middle" font-size="8">_start</text><text class="d-text" x="324" y="204" text-anchor="middle" font-size="7.5">LUE</text>
+    <rect class="d-box" x="370" y="92" width="76" height="96" rx="5" /><text class="d-mut" x="408" y="140" text-anchor="middle" font-size="8">station</text><text class="d-mut" x="408" y="151" text-anchor="middle" font-size="8">_end</text><text class="d-mut" x="408" y="204" text-anchor="middle" font-size="7.5">ignorée</text>
+    <rect class="d-box" x="454" y="92" width="76" height="96" rx="5" /><text class="d-mut" x="492" y="144" text-anchor="middle" font-size="8">bike</text><text class="d-mut" x="492" y="204" text-anchor="middle" font-size="7.5">ignorée</text>
+    <rect class="d-accent" x="538" y="92" width="68" height="96" rx="5" /><text class="d-text" x="572" y="144" text-anchor="middle" font-size="8">type</text><text class="d-text" x="572" y="204" text-anchor="middle" font-size="7.5">LUE</text>
+
+    <text class="d-mut" x="320" y="234" text-anchor="middle" font-size="9">on ne lit — et on ne paie — que les colonnes utiles</text>
+  </svg>
+  <figcaption>Parce que Parquet range chaque colonne à part, le moteur saute directement aux deux colonnes demandées et ne lit jamais les cinq autres. Sur une table large, c'est l'écart entre lire 100&nbsp;% du fichier (CSV) et 20&nbsp;% (Parquet) — d'où des requêtes plus rapides et une facture de scan plus basse.</figcaption>
+</figure>
+
+<figure class="code-block" data-file="ecrire_lire_parquet.py"><pre><code class="language-python">import pandas as pd
+
+# On part d'un CSV (texte, lignes, sans types) déjà nettoyé...
+df = pd.read_csv("trajets_2026-05-01.csv", parse_dates=["start", "end"])
+
+# ... et on l'écrit en Parquet (binaire, colonnes, compressé, typé).
+df.to_parquet("trajets_2026-05-01.parquet", compression="snappy")
+# pandas s'appuie sur pyarrow ; le SCHÉMA (types des colonnes) part AVEC le fichier.
+
+# Relecture : on ne demande QUE 2 colonnes -&gt; seules ces 2 colonnes sont lues.
+petit = pd.read_parquet(
+    "trajets_2026-05-01.parquet",
+    columns=["station_start", "type"],   # les 5 autres colonnes ne sont pas touchées
+)
+print(petit["type"].dtype)   # -&gt; category / object : le type est GARANTI, pas deviné
+
+# Inspecter le schéma embarqué sans charger les données :
+import pyarrow.parquet as pq
+print(pq.read_schema("trajets_2026-05-01.parquet"))
+# -&gt; trip_id: string, start: timestamp[ns], end: timestamp[ns], ...</code></pre></figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Retiens Parquet par cette image&nbsp;: c'est un <strong>CSV qui aurait grandi</strong> — il a gardé l'idée du tableau, mais il a appris ses <em>types</em>, il s'est <em>compressé</em>, et il s'est retourné en <em>colonnes</em> pour qu'on n'en lise que ce qu'on demande. Tout ce que le CSV te fait deviner ou relire, Parquet le sait déjà. En contrepartie, tu perds la lisibilité «&nbsp;au bloc-notes&nbsp;»&nbsp;: on n'inspecte un Parquet qu'avec un outil (pandas, DuckDB…).</p></div></div>
+
+<h2>Lequel choisir, et où, dans le pipeline</h2>
+<p>La règle est simple et tient en une phrase&nbsp;: <strong>texte pour l'échange et l'entrée, Parquet pour le stockage analytique</strong>. Détaillons.</p>
+<p>Le <strong>CSV et le JSON</strong> sont d'excellents formats d'<strong>échange</strong> et d'<strong>entrée</strong>&nbsp;: universels, lisibles, faciles à produire pour n'importe quelle source. C'est pour cela que les sources de Vélociti les emploient, et c'est très bien ainsi. La couche <strong>bronze</strong> reçoit ce brut <em>tel quel</em> (règle de la <a href="lecon-03.html">leçon 3</a>)&nbsp;: on ne réencode pas le brut à l'entrée, on le garde fidèle à la source.</p>
+<p>Le <strong>Parquet</strong>, lui, est le format du <strong>stockage analytique</strong>&nbsp;: dès qu'on passe en <strong>silver</strong> et <strong>gold</strong>, sur des tables grandes et souvent requêtées, on écrit en Parquet pour profiter des colonnes, de la compression et des types. C'est là qu'il déploie tout son intérêt.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Le format le long du pipeline Vélociti, de gauche à droite. À gauche, les sources émettent en CSV et en JSON. Une flèche mène à la couche bronze, qui reçoit le brut tel quel en CSV et JSON. Une flèche mène à la couche silver, puis à la couche gold, toutes deux mises en évidence et étiquetées Parquet. Une accolade regroupe silver et gold sous la mention stockage analytique en Parquet. En bas, la règle : texte pour entrer, Parquet pour analyser.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le format le long du pipeline Vélociti</text>
+
+    <rect class="d-box" x="24" y="66" width="96" height="60" rx="7" /><text class="d-text" x="72" y="90" text-anchor="middle" font-size="9">sources</text><text class="d-mut" x="72" y="106" text-anchor="middle" font-size="8">CSV · JSON</text>
+
+    <path class="d-line" d="M120 96 L156 96" fill="none" /><path class="d-line" d="M148 92 L156 96 L148 100" fill="none" />
+    <rect class="d-frame" x="158" y="66" width="120" height="60" rx="7" /><text class="d-text" x="218" y="88" text-anchor="middle" font-size="9">bronze</text><text class="d-mut" x="218" y="103" text-anchor="middle" font-size="8">brut tel quel</text><text class="d-mut" x="218" y="115" text-anchor="middle" font-size="8">CSV · JSON</text>
+
+    <path class="d-line" d="M278 96 L314 96" fill="none" /><path class="d-line" d="M306 92 L314 96 L306 100" fill="none" />
+    <rect class="d-accent" x="316" y="66" width="120" height="60" rx="7" /><text class="d-text" x="376" y="90" text-anchor="middle" font-size="9">silver</text><text class="d-text" x="376" y="105" text-anchor="middle" font-size="8.5">Parquet</text>
+
+    <path class="d-line" d="M436 96 L472 96" fill="none" /><path class="d-line" d="M464 92 L472 96 L464 100" fill="none" />
+    <rect class="d-accent" x="474" y="66" width="120" height="60" rx="7" /><text class="d-text" x="534" y="90" text-anchor="middle" font-size="9">gold</text><text class="d-text" x="534" y="105" text-anchor="middle" font-size="8.5">Parquet</text>
+
+    <path class="d-line" d="M316 138 L316 150 L594 150 L594 138" fill="none" />
+    <text class="d-mut" x="455" y="170" text-anchor="middle" font-size="8.5">stockage analytique en Parquet</text>
+    <text class="d-mut" x="320" y="196" text-anchor="middle" font-size="9">règle : texte pour ENTRER, Parquet pour ANALYSER</text>
+  </svg>
+  <figcaption>Les sources parlent CSV et JSON&nbsp;: bronze les accueille sans les réencoder. À partir de silver, on bascule en Parquet pour toutes les grandes tables analytiques (silver, gold). Un même pipeline utilise donc <strong>plusieurs formats</strong>, chacun là où il excelle.</figcaption>
+</figure>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Comparatif des trois formats</caption>
+    <thead><tr><th scope="col">Critère</th><th scope="col">CSV</th><th scope="col">JSON / NDJSON</th><th scope="col">Parquet</th></tr></thead>
+    <tbody>
+      <tr><td>Encodage</td><td>Texte</td><td>Texte</td><td>Binaire</td></tr>
+      <tr><td>Orientation</td><td>Ligne</td><td>Ligne</td><td><strong>Colonne</strong></td></tr>
+      <tr><td>Lisible à l'œil</td><td>Oui</td><td>Oui</td><td>Non</td></tr>
+      <tr><td>Types</td><td>Aucun (tout texte)</td><td>Basiques (nombre, texte, booléen)</td><td><strong>Riches, garantis</strong></td></tr>
+      <tr><td>Schéma</td><td>Aucun</td><td>Implicite (les clés)</td><td><strong>Embarqué</strong></td></tr>
+      <tr><td>Imbrication</td><td>Non (plat)</td><td>Oui</td><td>Oui</td></tr>
+      <tr><td>Taille</td><td>Moyenne</td><td>Grande (clés répétées)</td><td><strong>Petite (compressé)</strong></td></tr>
+      <tr><td>Bon pour</td><td>Échange tabulaire</td><td>Semi-structuré, journaux (NDJSON)</td><td>Analytique, grandes tables</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Il existe un quatrième larron utile à connaître&nbsp;: <strong>Avro</strong>. C'est un format binaire <em>orienté ligne</em> (et non colonne), avec un schéma explicite, très employé pour l'<strong>échange</strong> de messages entre systèmes et les flux d'événements — là où l'on écrit et lit des enregistrements entiers, un à un, plutôt que d'analyser des colonnes. Règle de pouce&nbsp;: <strong>Parquet pour analyser</strong> (colonnes), <strong>Avro pour transporter</strong> (lignes). Parquet va souvent de pair avec le <a href="lecon-07.html">partitionnement</a> (leçon 7)&nbsp;: on découpe la table en fichiers par date, et l'on ne lit que les partitions utiles.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Stocker des téraoctets analytiques en CSV «&nbsp;parce que c'est simple&nbsp;».</strong> Simple à écrire, oui&nbsp;; ruineux à requêter&nbsp;: chaque requête relit tout le fichier, toutes les colonnes, tout le texte à re-parser et re-typer. Sur de grandes tables souvent interrogées, c'est le mauvais choix par défaut. Le CSV est parfait pour <em>entrer</em> et <em>échanger</em>&nbsp;; passe en <strong>Parquet</strong> dès le stockage analytique (silver, gold).</p></div></div>
+<ul>
+<li><strong>Croire que «&nbsp;.csv&nbsp;» garantit la virgule.</strong> Beaucoup de fichiers «&nbsp;CSV&nbsp;» utilisent le point-virgule&nbsp;; toujours vérifier le séparateur (et l'encodage) avant de lire.</li>
+<li><strong>Charger un énorme tableau JSON d'un seul bloc.</strong> Si la source produit un flux d'événements, exige du <strong>NDJSON</strong> (un objet par ligne) plutôt qu'un unique <code>[ … ]</code> ingérable en mémoire.</li>
+<li><strong>Attendre de la lisibilité d'un Parquet.</strong> C'est du binaire&nbsp;: on ne l'ouvre pas au bloc-notes. Pour l'inspecter, on passe par un outil (pandas, DuckDB), ce qui est normal et voulu.</li>
+<li><strong>Oublier de typer en sortie de CSV.</strong> Lire un CSV ne type rien&nbsp;: si tu ne convertis pas les dates et les nombres toi-même, tu manipules du texte sans t'en rendre compte.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe analytique conservait ses gros exports de trajets en <strong>CSV compressé</strong> sur un stockage objet, et les requêtait via un moteur facturé <strong>au volume de données scannées</strong>. Une table typique pesait <strong>~120&nbsp;Go</strong> en CSV, et chaque tableau de bord la relisait <em>entièrement</em>, même pour n'utiliser que deux ou trois colonnes. La migration vers <strong>Parquet</strong> (colonnes + compression) a fait tomber la table à <strong>~14&nbsp;Go</strong> — un facteur proche de <strong>8×</strong>. Mieux&nbsp;: comme les requêtes ne lisaient plus que les colonnes demandées, le volume réellement scanné par requête a chuté d'environ <strong>90&nbsp;%</strong>. Résultat concret&nbsp;: des requêtes analytiques nettement plus rapides et une <strong>facture de scan divisée par près de dix</strong>, pour un seul changement — le format de stockage. Le CSV brut, lui, est resté en entrée (bronze)&nbsp;; seul l'analytique a basculé en Parquet.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Formats de données — mémo express</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Texte vs binaire</td><td>Texte (CSV, JSON) = lisible mais gros et sans types&nbsp;; binaire (Parquet) = compact, typé, illisible tel quel</td></tr>
+      <tr><td>Ligne vs colonne</td><td>Ligne = un enregistrement d'un bloc&nbsp;; colonne = valeurs d'une même colonne ensemble → moins d'I/O + meilleure compression</td></tr>
+      <tr><td>CSV</td><td>Simple, universel, tabulaire&nbsp;; pièges&nbsp;: pas de types, séparateur/encodage ambigus, virgules et guillemets dans les valeurs</td></tr>
+      <tr><td>JSON</td><td>Structuré, imbriqué, auto-descriptif (les clés portent le sens)&nbsp;; défaut&nbsp;: verbeux, gros tableau non streamable</td></tr>
+      <tr><td>NDJSON</td><td>Un objet JSON par ligne&nbsp;: streamable, forme reine des journaux et flux d'événements</td></tr>
+      <tr><td>Parquet</td><td>Binaire, colonnes, compressé, typé, schéma embarqué&nbsp;: on lit peu de colonnes, on stocke petit → l'analytique</td></tr>
+      <tr><td>Avro</td><td>Binaire orienté ligne&nbsp;: pour transporter des messages, pas pour analyser des colonnes</td></tr>
+      <tr><td>Où, dans le pipeline</td><td>CSV/JSON pour entrer et échanger (bronze reçoit le brut)&nbsp;; Parquet pour stocker et analyser (silver, gold)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Format ligne</dt><dd>Rangement où un enregistrement entier est écrit d'un bloc, champ après champ (CSV, JSON, NDJSON)&nbsp;: pratique pour lire ou ajouter une ligne complète.</dd>
+  <dt>Format colonne</dt><dd>Rangement où toutes les valeurs d'une même colonne sont écrites ensemble (Parquet)&nbsp;: on ne lit que les colonnes utiles, et la compression est meilleure.</dd>
+  <dt>CSV</dt><dd><em>Comma-Separated Values</em>&nbsp;: format texte tabulaire, une ligne par enregistrement, champs séparés par une virgule (ou un point-virgule). Sans types ni schéma.</dd>
+  <dt>JSON</dt><dd><em>JavaScript Object Notation</em>&nbsp;: format texte structuré et imbriqué, auto-descriptif (chaque valeur porte sa clé)&nbsp;; idéal pour le semi-structuré.</dd>
+  <dt>NDJSON</dt><dd><em>Newline-Delimited JSON</em> (JSON Lines)&nbsp;: un objet JSON complet par ligne, sans tableau englobant&nbsp;; streamable, adapté aux journaux et aux flux.</dd>
+  <dt>Parquet</dt><dd>Format binaire orienté colonnes, compressé et typé, avec schéma embarqué&nbsp;: le standard du stockage analytique des grandes tables.</dd>
+  <dt>Schéma embarqué</dt><dd>Description des colonnes et de leurs types stockée <em>dans</em> le fichier lui-même (Parquet)&nbsp;: les types voyagent avec les données, plus rien à deviner.</dd>
+  <dt>Compression</dt><dd>Réduction de la taille des données en codant les répétitions&nbsp;; d'autant plus efficace que les valeurs semblables sont côte à côte, comme dans un format colonne.</dd>
+  <dt>Sérialisation</dt><dd>Transformation de données en mémoire en une suite d'octets écrivable dans un fichier (et l'inverse, la désérialisation, à la lecture). CSV, JSON et Parquet sont trois formats de sérialisation.</dd>
+  <dt>Orienté colonnes</dt><dd>Se dit d'un format ou d'un moteur qui range et lit les données par colonne plutôt que par ligne, pour accélérer les requêtes analytiques.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Deux axes résument tout&nbsp;: <strong>texte vs binaire</strong> (lisible mais gros / compact et typé) et <strong>ligne vs colonne</strong> (enregistrement entier / valeurs d'une colonne ensemble).</li>
+<li>Le <strong>CSV</strong> est simple et universel mais piégeux&nbsp;: pas de types, séparateur et encodage ambigus, virgules et guillemets dans les valeurs — lis-le avec une vraie bibliothèque.</li>
+<li>Le <strong>JSON</strong> gère le semi-structuré et l'imbrication&nbsp;; le <strong>NDJSON</strong> (un objet par ligne) rend les journaux et flux streamables.</li>
+<li><strong>Parquet</strong> (binaire, colonnes, compressé, typé, schéma embarqué) lit peu de colonnes et stocke petit&nbsp;: c'est le format de l'analytique.</li>
+<li>Dans le pipeline&nbsp;: <strong>CSV/JSON pour entrer et échanger</strong> (bronze reçoit le brut), <strong>Parquet pour stocker et analyser</strong> (silver, gold).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Qu'est-ce qui distingue un format orienté <strong>ligne</strong> d'un format orienté <strong>colonne</strong>, et pourquoi la colonne accélère-t-elle une requête qui ne lit que 2 colonnes sur 7&nbsp;?</li>
+<li>Cite deux pièges concrets du CSV et dis comment on les évite.</li>
+<li>Chez Vélociti, dans quel format arrivent les trajets en entrée, et dans quel format stocke-t-on les tables silver et gold&nbsp;? Pourquoi ce choix&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle est la différence entre un format orienté ligne et un format orienté colonne ?","a":["En ligne, un enregistrement entier est écrit d'un bloc (CSV, JSON) ; en colonne, toutes les valeurs d'une même colonne sont rangées ensemble (Parquet)","En ligne les données sont chiffrées, en colonne elles sont en clair","La ligne sert aux nombres, la colonne sert au texte","Ce sont deux mots pour exactement la même chose"],"correct":0,"explain":"L'orientation décrit l'ordre d'écriture sur le disque : par enregistrement complet (ligne) ou par colonne. Cette distinction commande le coût, la compression et la vitesse des requêtes analytiques."},
+  {"q":"Pourquoi Parquet accélère-t-il une requête qui ne veut que 2 colonnes sur 7 ?","a":["Parce qu'il est orienté colonnes : le moteur ne lit que les 2 colonnes demandées et ne touche jamais les 5 autres, donc moins d'I/O","Parce qu'il garde tout le fichier en mémoire vive en permanence","Parce qu'il est en texte, plus rapide à lire que le binaire","Parce qu'il supprime automatiquement les colonnes inutiles du fichier"],"correct":0,"explain":"Comme chaque colonne est rangée à part, Parquet lit seulement les colonnes utiles. En CSV ou JSON (lignes), il faudrait relire chaque ligne entière pour n'en extraire que deux champs."},
+  {"q":"Quel est un piège RÉEL du format CSV ?","a":["Il n'a pas de types (tout est du texte) et son séparateur ou son encodage peuvent être ambigus ; une virgule dans une valeur décale les colonnes si elle n'est pas entre guillemets","Il est impossible à ouvrir sans une bibliothèque spécialisée","Il compresse trop les données, ce qui les rend illisibles","Il impose un schéma strict qui empêche d'ajouter des colonnes"],"correct":0,"explain":"Le CSV ne porte ni types ni schéma, le séparateur (virgule/point-virgule) et l'encodage sont ambigus, et les virgules, guillemets ou retours à la ligne dans les valeurs cassent les lecteurs naïfs. D'où l'usage d'une vraie bibliothèque CSV."},
+  {"q":"Chez Vélociti, où place-t-on chaque format dans le pipeline ?","a":["CSV et JSON pour l'entrée et l'échange (bronze reçoit le brut tel quel) ; Parquet pour le stockage analytique des grandes tables (silver, gold)","Tout en CSV, du début à la fin, pour rester simple","Tout en Parquet, y compris le brut reçu des sources","JSON pour tout, car il porte des types"],"correct":0,"explain":"Les sources parlent CSV/JSON, donc bronze les accueille sans réencoder. Dès silver et gold, on bascule en Parquet pour profiter des colonnes, de la compression et des types : texte pour entrer, Parquet pour analyser."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["parquet","le parquet","du parquet","en parquet"],"placeholder":"le format binaire, orienté colonnes, compressé et typé, idéal pour l'analytique s'appelle P_______","hints":["Il embarque son schéma et ne lit que les colonnes utiles.","On l'écrit avec pandas via pyarrow.","Sept lettres : P_______."],"link":{"href":"lecon-04.html","label":"Revoir « Parquet : binaire, colonnes, typé »"}},
+  {"type":"text","accept":["ndjson","le ndjson","json lines","jsonl","json line"],"placeholder":"la forme JSON avec un objet complet par ligne, utilisée pour les journaux et les flux, se note N_____","hints":["Newline-Delimited JSON, aussi dit JSON Lines.","Elle est streamable : on lit ligne par ligne.","Six lettres : N_____."],"link":{"href":"lecon-04.html","label":"Revoir « JSON : structuré, imbriqué, auto-descriptif »"}},
+  {"type":"text","accept":["colonne","colonnes","en colonnes","orientation colonne","orientee colonne","oriente colonnes","par colonne"],"placeholder":"pour ne lire que 2 colonnes sur 7 et bien compresser, il faut un format orienté c______","hints":["C'est l'orientation de Parquet.","Les valeurs d'une même colonne sont rangées ensemble.","Sept lettres, le contraire de « ligne » : c______."],"link":{"href":"lecon-04.html","label":"Revoir « Texte contre binaire, ligne contre colonne »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune des situations Vélociti, dis quel format est le plus adapté (<strong>CSV</strong>, <strong>JSON/NDJSON</strong> ou <strong>Parquet</strong>) et justifie en une ligne&nbsp;: (a) un fichier de trajets exporté chaque jour, ouvert parfois à la main pour vérification&nbsp;; (b) un flux de 5 millions d'événements de capteurs à traiter au fil de l'eau&nbsp;; (c) la grande table <code>trajets_nettoyes</code> requêtée par de nombreux tableaux de bord.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) CSV : tabulaire, universel, lisible à l'œil pour une
+    vérification manuelle. C'est bien le format d'entrée des
+    trajets Vélociti (un fichier par jour).
+
+(b) NDJSON : un objet JSON par ligne -&gt; streamable, on lit et
+    on traite les événements un à un sans tout charger en mémoire.
+    Forme reine des journaux et flux d'événements (les capteurs).
+
+(c) Parquet : grande table souvent requêtée -&gt; colonnes (on ne
+    lit que les colonnes utiles), compression (stockage petit),
+    types garantis. C'est du stockage analytique (silver).</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Une station s'appelle <code>Halles, marché couvert</code> — son nom contient une virgule. On l'écrit naïvement dans le CSV des trajets. Explique ce qui casse, puis montre la ligne corrigée. Enfin, dis pourquoi lire ce CSV avec le module <code>csv</code> de Python plutôt qu'en «&nbsp;coupant à chaque virgule&nbsp;» règle le problème.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Ce qui casse :
+  la virgule dans « Halles, marché couvert » est prise pour un
+  séparateur de champ. La ligne se retrouve avec UNE colonne de
+  trop, et toutes les valeurs suivantes glissent d'un cran
+  (station_end, bike, type ne tombent plus au bon endroit).
+
+Ligne corrigée (valeur entre guillemets) :
+  T-000042,2026-05-01 09:00:00,2026-05-01 09:11:00,"Halles, marché couvert",Parc,B-3300,mecanique
+
+Pourquoi le module csv règle ça :
+  une vraie bibliothèque CSV comprend les guillemets : elle sait
+  qu'une virgule ENTRE guillemets fait partie de la valeur et
+  n'est pas un séparateur. Un simple « split sur la virgule »
+  ignore cette règle et se trompe dès la première valeur piégée.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>L'équipe stocke aujourd'hui la table analytique des trajets en <strong>CSV</strong> (~120&nbsp;Go) et la requête via un moteur facturé au volume scanné&nbsp;; la plupart des requêtes ne lisent que 2 à 3 colonnes. Propose une migration vers <strong>Parquet</strong>&nbsp;: décris ce qui change côté taille, côté volume scanné par requête, et ce qu'on <em>garde</em> quand même en CSV.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Migration : écrire la table analytique en Parquet au lieu de CSV
+(par ex. df.to_parquet(..., compression="snappy") en sortie de
+transformation, couche silver/gold).
+
+Côté taille :
+  Parquet compresse fort (valeurs semblables côte à côte, en
+  colonnes) -&gt; la table passe d'environ 120 Go à un ordre de
+  grandeur de ~15 Go (facteur ~8x, typique).
+
+Côté volume scanné par requête :
+  orienté colonnes -&gt; une requête qui lit 2-3 colonnes sur N ne
+  scanne QUE ces colonnes. Le volume lu par requête chute
+  fortement (souvent ~90 % de moins) -&gt; requêtes plus rapides et
+  facture de scan divisée d'autant.
+
+Ce qu'on garde en CSV :
+  le BRUT reçu des sources reste en CSV/JSON dans bronze (on ne
+  réencode pas le brut à l'entrée). Seul le stockage ANALYTIQUE
+  (silver, gold) bascule en Parquet.
+
+Bonus : Parquet va souvent de pair avec le partitionnement par
+date -&gt; on ne lit alors que les partitions concernées (leçon 7),
+et la maîtrise du coût se traite en leçon 13.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-json.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orchestrer : DAG, dépendances et planification — Leçon 09 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="Qui fait tourner les étapes d'un pipeline, dans quel ordre et à quel moment : du cron aveugle à l'orchestrateur qui respecte le DAG, le DAG comme code, le déclenchement planifié ou événementiel (sensor), les runs datés, les retries, timeouts, alertes et la reprise à l'étape échouée. Vélociti orchestré chaque nuit." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-09.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 09</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Faire tourner et faire confiance — Leçon 09</p>
+              <h1 class="lesson-header__title">Orchestrer : DAG, dépendances et planification</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~36 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--intermediaire">Intermédiaire</span></span>
+                <span class="dot-sep">Prérequis : la notion de DAG (leçon 1) et l'idempotence (leçon 8)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>expliquer ce qu'un <strong>orchestrateur</strong> apporte de plus qu'un simple <code>cron</code>&nbsp;: dépendances, ordre, relances, historique&nbsp;;</li>
+                  <li>déclarer un pipeline comme un <strong>DAG de tâches</strong> et lire ses dépendances (<code>nettoyer &gt;&gt; enrichir &gt;&gt; agreger</code>)&nbsp;;</li>
+                  <li>choisir entre un déclenchement <strong>planifié</strong> (chaque nuit) et <strong>événementiel</strong> (un <em>sensor</em> qui attend un fichier), et comprendre le <strong>run daté</strong>&nbsp;;</li>
+                  <li>configurer <strong>retry</strong>, <strong>timeout</strong> et <strong>alerte</strong>, et reprendre <em>seulement</em> à l'étape échouée plutôt que tout recommencer.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>À la <a href="lecon-01.html">leçon 1</a>, on a dessiné le pipeline de Vélociti comme un <strong>DAG</strong> — un graphe orienté sans cycle où chaque table dépend d'une ou plusieurs autres. Ce graphe dit dans quel <em>ordre</em> tout doit se produire. Mais un graphe sur le papier ne se met pas à tourner tout seul&nbsp;: il faut quelqu'un pour lancer chaque étape, <strong>dans le bon ordre, au bon moment, et pour la relancer proprement si elle échoue</strong>. Ce «&nbsp;quelqu'un&nbsp;», c'est l'<strong>orchestrateur</strong> — le chef d'orchestre du pipeline.</p>
+<p>Cette leçon est celle de la <em>mise en marche</em>. On va voir pourquoi un simple <code>cron</code> suffit au début puis montre vite ses limites, comment déclarer le DAG <strong>comme du code</strong>, comment déclencher un pipeline par l'horloge ou par un événement, et surtout comment gérer les échecs&nbsp;: relancer, temporiser, alerter, et <strong>reprendre à l'étape qui a planté</strong> au lieu de tout refaire. La leçon voisine sur l'<a href="lecon-08.html">idempotence</a> est le socle&nbsp;: c'est elle qui rend ces relances sûres.</p>
+
+<h2>Du cron à l'orchestrateur</h2>
+<p>Au tout début, un pipeline se lance souvent avec l'outil le plus simple qui soit&nbsp;: <strong><code>cron</code></strong>. On écrit une ligne qui dit «&nbsp;chaque nuit à 2&nbsp;h, exécute ce script&nbsp;», et c'est parti. C'est suffisant pour <em>une</em> étape isolée. Le problème apparaît dès qu'il y en a plusieurs qui dépendent les unes des autres.</p>
+<p>Imagine trois lignes de <code>cron</code>&nbsp;: nettoyer à 2&nbsp;h, enrichir à 2&nbsp;h&nbsp;30, agréger à 3&nbsp;h. Chaque ligne part <strong>à l'heure dite, quoi qu'il arrive</strong>. Si le nettoyage échoue ou traîne, l'enrichissement démarre quand même à 2&nbsp;h&nbsp;30 — sur des données absentes ou à moitié écrites. <code>cron</code> ne connaît pas les <strong>dépendances</strong>&nbsp;: il regarde l'horloge, pas l'état des autres étapes. Et s'il échoue, il ne sait ni relancer, ni te prévenir, ni reprendre où ça s'est arrêté.</p>
+<p>Un <strong>orchestrateur</strong> résout exactement cela. Il connaît le DAG entier&nbsp;: il ne lance une étape que <em>lorsque ses dépendances ont réussi</em>, garde un <strong>historique</strong> de chaque exécution, relance en cas d'échec et alerte quand il faut. Plusieurs outils jouent ce rôle — <strong>Airflow</strong>, <strong>Dagster</strong>, <strong>Prefect</strong> — mais l'idée est la même partout, et c'est elle qui compte ici, pas l'outil.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Comparaison entre un cron aveugle et un orchestrateur. En haut, trois tâches nettoyer, enrichir, agréger, chacune déclenchée par une horloge à heure fixe indépendamment des autres. La tâche nettoyer a échoué, marquée d'une croix, mais enrichir et agréger partent quand même à leur heure, sur des données absentes. En bas, les trois mêmes tâches reliées par des flèches de dépendance : l'orchestrateur voit que nettoyer a échoué, et bloque enrichir et agréger qui restent en attente au lieu de tourner à vide.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux façons de lancer trois étapes qui dépendent l'une de l'autre</text>
+
+    <text class="d-tag" x="40" y="58" text-anchor="start" font-size="11">cron</text>
+    <rect class="d-box" x="96" y="44" width="96" height="30" rx="6" /><text class="d-text" x="144" y="63" text-anchor="middle" font-size="9">nettoyer ✕</text>
+    <rect class="d-box" x="248" y="44" width="96" height="30" rx="6" /><text class="d-text" x="296" y="63" text-anchor="middle" font-size="9">enrichir</text>
+    <rect class="d-box" x="400" y="44" width="96" height="30" rx="6" /><text class="d-text" x="448" y="63" text-anchor="middle" font-size="9">agréger</text>
+    <text class="d-mut" x="144" y="92" text-anchor="middle" font-size="8">2 h</text>
+    <text class="d-mut" x="296" y="92" text-anchor="middle" font-size="8">2 h 30</text>
+    <text class="d-mut" x="448" y="92" text-anchor="middle" font-size="8">3 h</text>
+    <path class="d-line" d="M144 30 L144 42" fill="none" /><path class="d-line" d="M296 30 L296 42" fill="none" /><path class="d-line" d="M448 30 L448 42" fill="none" />
+    <text class="d-mut" x="560" y="63" text-anchor="middle" font-size="8.5">chacune part</text><text class="d-mut" x="560" y="75" text-anchor="middle" font-size="8.5">à l'heure, aveugle</text>
+
+    <line class="d-line" x1="40" y1="118" x2="600" y2="118" stroke-dasharray="3 4" />
+
+    <text class="d-tag" x="40" y="176" text-anchor="start" font-size="11">orchestrateur</text>
+    <rect class="d-box" x="96" y="162" width="96" height="30" rx="6" /><text class="d-text" x="144" y="181" text-anchor="middle" font-size="9">nettoyer ✕</text>
+    <rect class="d-frame" x="248" y="162" width="96" height="30" rx="6" /><text class="d-mut" x="296" y="181" text-anchor="middle" font-size="9">enrichir (attend)</text>
+    <rect class="d-frame" x="400" y="162" width="96" height="30" rx="6" /><text class="d-mut" x="448" y="181" text-anchor="middle" font-size="9">agréger (attend)</text>
+    <path class="d-line" d="M192 177 L246 177" fill="none" /><path class="d-line" d="M238 173 L246 177 L238 181" fill="none" />
+    <path class="d-line" d="M344 177 L398 177" fill="none" /><path class="d-line" d="M390 173 L398 177 L390 181" fill="none" />
+    <text class="d-mut" x="296" y="212" text-anchor="middle" font-size="8.5">la dépendance a échoué → on ne lance pas la suite</text>
+  </svg>
+  <figcaption>Le <code>cron</code> lit l'horloge et rien d'autre&nbsp;: il lance l'agrégat même si le nettoyage a planté. L'orchestrateur lit le <strong>DAG</strong>&nbsp;: une étape n'est lancée que si ses dépendances ont <em>réussi</em>. C'est toute la différence entre «&nbsp;lancer&nbsp;» et «&nbsp;orchestrer&nbsp;».</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p><code>cron</code> n'est pas «&nbsp;mauvais&nbsp;»&nbsp;: pour <strong>une</strong> tâche unique, sans dépendance et sans besoin de reprise, il fait très bien l'affaire — le <a href="../cicd/cours.html">cours d'intégration continue</a> et le monde Linux s'en servent tous les jours. L'orchestrateur devient utile quand plusieurs étapes s'enchaînent et qu'il faut <em>garantir</em> l'ordre, l'historique et les relances. Passer à l'orchestrateur, c'est répondre à un besoin, pas suivre une mode.</p></div></div>
+
+<h2>Le DAG comme code</h2>
+<p>Dans un orchestrateur, on ne clique pas pour relier des étapes&nbsp;: on <strong>écrit</strong> le DAG. Chaque <strong>tâche</strong> (<em>task</em>) est une étape du pipeline — nettoyer, enrichir, agréger — et l'on déclare ses <strong>dépendances</strong>&nbsp;: qui doit tourner avant qui. Écrire le graphe comme du code, c'est pouvoir le versionner, le relire et le tester comme n'importe quel programme.</p>
+<p>Voici le DAG de Vélociti écrit façon Airflow, en Python. L'opérateur <code>&gt;&gt;</code> se lit «&nbsp;puis&nbsp;»&nbsp;: <code>nettoyer &gt;&gt; enrichir</code> signifie «&nbsp;nettoyer, <em>puis</em> enrichir&nbsp;». Une même tâche peut avoir plusieurs dépendances (l'enrichissement a besoin du nettoyage <em>et</em> de la météo).</p>
+
+<figure class="code-block" data-file="dag_velociti.py"><pre><code class="language-python">from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+# Un DAG = un pipeline. Le planning est déclaré ici, une fois pour toutes.
+with DAG(
+    dag_id="velociti_nuit",
+    schedule="0 2 * * *",              # chaque nuit à 02 h 00 (expression cron)
+    start_date=datetime(2026, 5, 1),
+    catchup=False,                      # ne pas rejouer tout l'historique au 1er lancement
+) as dag:
+
+    # Chaque tâche = UNE étape du pipeline. On ne met pas le code ici,
+    # juste QUOI lancer ; le comment vit dans les fonctions importees.
+    nettoyer = PythonOperator(task_id="nettoyer",  python_callable=run_nettoyer)
+    meteo    = PythonOperator(task_id="meteo",     python_callable=run_meteo)
+    enrichir = PythonOperator(task_id="enrichir",  python_callable=run_enrichir)
+    agreger  = PythonOperator(task_id="agreger",   python_callable=run_agreger)
+
+    # Les DÉPENDANCES : qui doit réussir avant qui. On lit le graphe ici.
+    nettoyer &gt;&gt; enrichir            # nettoyer, PUIS enrichir
+    meteo    &gt;&gt; enrichir            # la météo aussi alimente l'enrichissement
+    enrichir &gt;&gt; agreger            # enfin, agréger sur les données enrichies
+</code></pre></figure>
+
+<p>La même intention peut s'exprimer de façon purement <strong>déclarative</strong>, sans code, dans un fichier de configuration. Beaucoup d'orchestrateurs acceptent un format proche de celui-ci en <strong>YAML</strong>&nbsp;: on liste les tâches et, pour chacune, ce dont elle <code>depend</code>. Le graphe est le même&nbsp;; seule la façon de l'écrire change.</p>
+
+<figure class="code-block" data-file="velociti.yml"><pre><code class="language-yaml">dag: velociti_nuit
+schedule: "0 2 * * *"          # chaque nuit a 02 h 00
+taches:
+  - id: nettoyer
+    depend: []                 # aucune dependance : c'est un point de depart
+  - id: meteo
+    depend: []
+  - id: enrichir
+    depend: [nettoyer, meteo]  # attend que les DEUX aient reussi
+  - id: agreger
+    depend: [enrichir]         # attend l'enrichissement
+</code></pre></figure>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Le DAG orchestré de Vélociti avec un ordre d'exécution numéroté. À gauche, deux tâches sans dépendance : nettoyer et météo, marquées niveau 1, peuvent démarrer en parallèle. Une flèche part de chacune vers la tâche enrichir au centre, marquée niveau 2, qui attend les deux. Une flèche part d'enrichir vers agréger à droite, marquée niveau 3. Sous le graphe, une flèche de temps indique que le niveau 1 tourne d'abord, puis le niveau 2, puis le niveau 3.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le DAG orchestré de Vélociti et son ordre d'exécution</text>
+
+    <rect class="d-box" x="40" y="60" width="120" height="34" rx="7" /><text class="d-text" x="100" y="81" text-anchor="middle" font-size="10">nettoyer</text>
+    <rect class="d-box" x="40" y="128" width="120" height="34" rx="7" /><text class="d-text" x="100" y="149" text-anchor="middle" font-size="10">météo</text>
+    <rect class="d-accent" x="270" y="94" width="120" height="34" rx="7" /><text class="d-text" x="330" y="115" text-anchor="middle" font-size="10">enrichir</text>
+    <rect class="d-box" x="500" y="94" width="120" height="34" rx="7" /><text class="d-text" x="560" y="115" text-anchor="middle" font-size="10">agréger</text>
+
+    <path class="d-line" d="M160 77 C210 80 220 106 268 110" fill="none" /><path class="d-line" d="M260 106 L268 110 L260 114" fill="none" />
+    <path class="d-line" d="M160 145 C210 142 220 118 268 114" fill="none" /><path class="d-line" d="M260 110 L268 114 L261 118" fill="none" />
+    <path class="d-line" d="M390 111 L498 111" fill="none" /><path class="d-line" d="M490 107 L498 111 L490 115" fill="none" />
+
+    <text class="d-tag" x="100" y="184" text-anchor="middle" font-size="9">niveau 1</text>
+    <text class="d-tag" x="330" y="150" text-anchor="middle" font-size="9">niveau 2</text>
+    <text class="d-tag" x="560" y="150" text-anchor="middle" font-size="9">niveau 3</text>
+
+    <line class="d-line" x1="40" y1="206" x2="620" y2="206" />
+    <path class="d-line" d="M612 202 L620 206 L612 210" fill="none" />
+    <text class="d-mut" x="100" y="224" text-anchor="middle" font-size="8.5">d'abord (parallèle)</text>
+    <text class="d-mut" x="330" y="224" text-anchor="middle" font-size="8.5">quand 1 est fini</text>
+    <text class="d-mut" x="560" y="224" text-anchor="middle" font-size="8.5">en dernier</text>
+  </svg>
+  <figcaption>L'orchestrateur déduit l'ordre du graphe. <strong>nettoyer</strong> et <strong>météo</strong> n'ont aucune dépendance&nbsp;: ils peuvent tourner <em>en parallèle</em>. <strong>enrichir</strong> attend les deux&nbsp;; <strong>agréger</strong> attend l'enrichissement. Personne ne code cet ordre à la main&nbsp;: il tombe des dépendances déclarées.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Une bonne <strong>tâche</strong> fait <em>une</em> chose et produit <em>une</em> table. Découper le pipeline en étapes fines (une par table du DAG) donne trois cadeaux&nbsp;: on voit d'un coup d'œil <em>où</em> ça a planté, on <strong>reprend</strong> à cette étape précise, et les étapes indépendantes tournent en parallèle. La granularité du DAG, c'est aussi la granularité de la reprise.</p></div></div>
+
+<h2>Déclenchement : planifié ou événementiel</h2>
+<p>Une fois le DAG écrit, reste à décider <em>quand</em> il part. Deux grandes façons&nbsp;:</p>
+<ul>
+<li>Par <strong>planning</strong> (<em>schedule</em>)&nbsp;: à intervalle régulier, sur l'horloge. «&nbsp;Chaque nuit à 2&nbsp;h&nbsp;» s'écrit avec une <strong>expression cron</strong> (<code>0 2 * * *</code>). C'est le mode par défaut d'un pipeline <em>batch</em>&nbsp;: on traite hier, cette nuit.</li>
+<li>Par <strong>événement</strong> (<em>sensor</em>)&nbsp;: une tâche spéciale <strong>attend</strong> qu'une condition devienne vraie — le plus souvent l'<strong>arrivée d'un fichier</strong> — et ne débloque la suite qu'à ce moment-là. Utile quand la donnée n'arrive pas à heure fixe.</li>
+</ul>
+<p>Ces deux modes se combinent&nbsp;: le DAG de Vélociti part <em>par planning</em> chaque nuit, mais sa première tâche est un <strong>sensor</strong> qui attend le fichier <code>trajets_2026-05-01.csv</code>. Si l'export du jour a du retard, le pipeline patiente au lieu de tourner sur un fichier absent.</p>
+
+<figure class="code-block" data-file="sensor_fichier.py"><pre><code class="language-python">from airflow.sensors.filesystem import FileSensor
+
+# Un SENSOR : il ne fait rien, il ATTEND qu'une condition soit vraie.
+# Ici : que le fichier des trajets du jour soit arrivé.
+attendre_fichier = FileSensor(
+    task_id="attendre_trajets",
+    filepath="/data/entrant/trajets_{{ ds }}.csv",  # {{ ds }} = la date du run (AAAA-MM-JJ)
+    poke_interval=300,     # revérifier toutes les 5 minutes
+    timeout=6 * 3600,      # abandonner (et alerter) après 6 heures d'attente
+)
+
+# La suite du DAG ne démarre qu'une fois le fichier détecté.
+attendre_fichier &gt;&gt; nettoyer
+</code></pre></figure>
+
+<p>Note le <code>{{ ds }}</code>&nbsp;: chaque exécution du DAG «&nbsp;appartient&nbsp;» à une <strong>date logique</strong>. C'est le <strong>run daté</strong>. Le run de cette nuit traite la journée du 1<sup>er</sup>&nbsp;mai&nbsp;; celui de demain, le 2&nbsp;mai. Cette date n'est pas «&nbsp;maintenant&nbsp;»&nbsp;: c'est la <em>fenêtre de données</em> que le run doit couvrir. C'est exactement ce qui rend le <a href="lecon-08.html">backfill</a> possible&nbsp;: relancer le run du 12&nbsp;avril, des semaines plus tard, retraite <em>ce</em> jour-là, car la date fait partie de l'identité du run.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le run daté, clé du rejeu</p><p>Retiens la nuance&nbsp;: la date d'un run n'est pas l'heure à laquelle il tourne, mais la <strong>période qu'il couvre</strong>. Toutes les étapes reçoivent cette date et ne touchent que la partition correspondante (<a href="lecon-05.html">leçon 5</a>). Résultat&nbsp;: relancer un run passé recalcule <em>sa</em> journée à l'identique, sans déborder sur les autres. Un pipeline dont les tâches ignorent leur date logique est un pipeline qu'on ne sait pas rejouer proprement.</p></div></div>
+
+<h2>Échecs, relances, reprise</h2>
+<p>Un pipeline qui tourne longtemps <em>va</em> échouer un jour&nbsp;: une source en retard, une API météo qui renvoie une erreur passagère, une machine saturée. L'orchestrateur ne l'empêche pas&nbsp;; il le rend <strong>gérable</strong>. Quatre leviers&nbsp;:</p>
+<ul>
+<li><strong>Retry</strong> — réessayer automatiquement une tâche qui échoue, quelques fois, avec un <em>délai</em> entre chaque tentative. Beaucoup d'échecs sont passagers (un réseau qui bafouille)&nbsp;; réessayer trois minutes plus tard suffit souvent.</li>
+<li><strong>Timeout</strong> — fixer une durée maximale&nbsp;: si une tâche dépasse, on la coupe. Mieux vaut un échec net qu'une tâche bloquée qui retient tout le pipeline pendant des heures.</li>
+<li><strong>Alerte</strong> — prévenir un humain (courriel, message) quand une tâche a définitivement échoué après ses <em>retries</em>. On détaillera l'observabilité et les alertes à la <a href="lecon-12.html">leçon 12</a>.</li>
+<li><strong>Reprise</strong> — après correction, relancer <em>seulement</em> la tâche échouée et ce qui en dépend, pas tout le DAG depuis le début.</li>
+</ul>
+<p>La <strong>reprise</strong> mérite qu'on s'y arrête. Si l'agrégation a planté alors que le nettoyage et l'enrichissement ont réussi, il serait absurde de tout refaire&nbsp;: leurs résultats sont déjà là. L'orchestrateur garde l'<strong>état</strong> de chaque tâche du run, on repart donc de l'agrégation. Seules l'étape échouée et sa <strong>descendance</strong> re-tournent.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="La reprise dans un DAG. Une ligne de quatre tâches : nettoyer, enrichir, agréger, publier. Les deux premières, nettoyer et enrichir, sont marquées comme réussies avec une coche. La tâche agréger est marquée comme échouée avec une croix. La tâche publier, en aval, n'a pas tourné. À la reprise, seules agréger et publier, entourées, re-tournent ; nettoyer et enrichir restent tels quels et ne sont pas recalculés.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Reprise : seule l'étape échouée et sa descendance re-tournent</text>
+
+    <rect class="d-box" x="24" y="70" width="120" height="40" rx="7" /><text class="d-text" x="84" y="88" text-anchor="middle" font-size="10">nettoyer</text><text class="d-mut" x="84" y="102" text-anchor="middle" font-size="8">réussi ✓</text>
+    <rect class="d-box" x="184" y="70" width="120" height="40" rx="7" /><text class="d-text" x="244" y="88" text-anchor="middle" font-size="10">enrichir</text><text class="d-mut" x="244" y="102" text-anchor="middle" font-size="8">réussi ✓</text>
+    <rect class="d-accent" x="344" y="66" width="120" height="48" rx="7" /><text class="d-text" x="404" y="86" text-anchor="middle" font-size="10">agréger</text><text class="d-mut" x="404" y="100" text-anchor="middle" font-size="8">échoué ✕ → rejoué</text>
+    <rect class="d-accent" x="504" y="66" width="120" height="48" rx="7" /><text class="d-text" x="564" y="86" text-anchor="middle" font-size="10">publier</text><text class="d-mut" x="564" y="100" text-anchor="middle" font-size="8">en aval → rejoué</text>
+
+    <path class="d-line" d="M144 90 L182 90" fill="none" /><path class="d-line" d="M174 86 L182 90 L174 94" fill="none" />
+    <path class="d-line" d="M304 90 L342 90" fill="none" /><path class="d-line" d="M334 86 L342 90 L334 94" fill="none" />
+    <path class="d-line" d="M464 90 L502 90" fill="none" /><path class="d-line" d="M494 86 L502 90 L494 94" fill="none" />
+
+    <text class="d-mut" x="164" y="150" text-anchor="middle" font-size="9">on NE recalcule pas</text>
+    <text class="d-mut" x="164" y="164" text-anchor="middle" font-size="9">ce qui a déjà réussi</text>
+    <text class="d-tag" x="484" y="150" text-anchor="middle" font-size="9">on repart d'ici</text>
+  </svg>
+  <figcaption>L'orchestrateur mémorise l'état de chaque tâche. Après correction, la reprise ne relance que <strong>agréger</strong> (l'étape échouée) et <strong>publier</strong> (sa descendance). <strong>nettoyer</strong> et <strong>enrichir</strong> restent acquis&nbsp;: on ne repaie pas leur calcul.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Retry sans idempotence = doublons</p><p>Le <strong>retry</strong> n'est sûr que si la tâche est <strong>idempotente</strong> (<a href="lecon-08.html">leçon 8</a>). Sinon, une tâche qui insère des lignes puis échoue <em>après</em> l'insertion va, en réessayant, les insérer une <strong>seconde fois</strong> — et te voilà avec des doublons nés du filet de sécurité lui-même. La règle&nbsp;: une tâche relançable doit soit remplacer sa partition en entier, soit écrire de façon idempotente. L'orchestration <em>suppose</em> l'idempotence&nbsp;; elle ne la fournit pas.</p></div></div>
+
+<figure class="code-block" data-file="reglages_taches.py"><pre><code class="language-python">from datetime import timedelta
+
+# Réglages par défaut de TOUTES les tâches du DAG : relances, délai, alerte.
+default_args = {
+    "retries": 3,                              # jusqu'à 3 nouvelles tentatives
+    "retry_delay": timedelta(minutes=5),       # 5 min entre chaque essai
+    "execution_timeout": timedelta(hours=2),   # au-dela de 2 h, on coupe la tache
+    "email_on_failure": True,                  # alerter apres le dernier echec
+    "email": ["data-oncall@velociti.example"],
+}
+# Une tache idempotente + 3 retries : un incident reseau passager se resout seul,
+# sans reveiller personne. L'alerte ne part que si les 3 essais echouent.
+</code></pre></figure>
+
+<h2>Vélociti orchestré</h2>
+<p>Rassemblons tout. Le pipeline de nuit de Vélociti, orchestré, ressemble à ceci&nbsp;: un DAG déclenché <strong>chaque nuit à 2&nbsp;h</strong>, dont la première tâche est un <strong>sensor</strong> attendant le fichier des trajets&nbsp;; puis l'ingestion des quatre sources, le nettoyage, l'enrichissement par la météo, les deux agrégats <em>gold</em>, une étape de tests, et enfin la publication. Le tout avec <strong>retries</strong> et <strong>alerte</strong> sur chaque tâche.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 320" role="img" aria-label="Le pipeline de nuit complet de Vélociti orchestré. En haut, un sensor attend le fichier des trajets ; il déclenche l'ingestion de quatre sources en parallèle : trajets, stations, capteurs, météo. Trajets, stations et capteurs convergent vers l'étape nettoyer, qui produit trajets nettoyés. Nettoyer et la source météo alimentent l'étape enrichir. Enrichir alimente deux agrégats gold en parallèle : fréquentation par station et par jour, et rotation des vélos. Les deux agrégats convergent vers une étape tests, qui précède l'étape finale publier. Une note indique que chaque tâche a des retries et une alerte, et que le tout part chaque nuit à deux heures.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le DAG de nuit de Vélociti, orchestré de bout en bout</text>
+
+    <rect class="d-frame" x="200" y="38" width="240" height="30" rx="7" /><text class="d-mut" x="320" y="57" text-anchor="middle" font-size="9">sensor : attendre trajets_AAAA-MM-JJ.csv</text>
+
+    <rect class="d-box" x="24" y="92" width="120" height="28" rx="6" /><text class="d-text" x="84" y="110" text-anchor="middle" font-size="9">ingérer trajets</text>
+    <rect class="d-box" x="176" y="92" width="120" height="28" rx="6" /><text class="d-text" x="236" y="110" text-anchor="middle" font-size="9">ingérer stations</text>
+    <rect class="d-box" x="328" y="92" width="120" height="28" rx="6" /><text class="d-text" x="388" y="110" text-anchor="middle" font-size="9">ingérer capteurs</text>
+    <rect class="d-box" x="480" y="92" width="132" height="28" rx="6" /><text class="d-text" x="546" y="110" text-anchor="middle" font-size="9">ingérer météo</text>
+
+    <rect class="d-accent" x="150" y="152" width="150" height="30" rx="7" /><text class="d-text" x="225" y="171" text-anchor="middle" font-size="9.5">nettoyer → silver</text>
+    <rect class="d-accent" x="360" y="152" width="150" height="30" rx="7" /><text class="d-text" x="435" y="171" text-anchor="middle" font-size="9.5">enrichir (+ météo)</text>
+
+    <rect class="d-box" x="120" y="214" width="170" height="30" rx="7" /><text class="d-text" x="205" y="230" text-anchor="middle" font-size="9">fréquentation station × jour</text>
+    <rect class="d-box" x="330" y="214" width="150" height="30" rx="7" /><text class="d-text" x="405" y="233" text-anchor="middle" font-size="9">rotation des vélos</text>
+
+    <rect class="d-box" x="230" y="266" width="90" height="28" rx="7" /><text class="d-text" x="275" y="284" text-anchor="middle" font-size="9">tests</text>
+    <rect class="d-accent" x="356" y="266" width="110" height="28" rx="7" /><text class="d-text" x="411" y="284" text-anchor="middle" font-size="9">publier</text>
+
+    <path class="d-line" d="M320 68 L84 90" fill="none" /><path class="d-line" d="M320 68 L236 90" fill="none" /><path class="d-line" d="M320 68 L388 90" fill="none" /><path class="d-line" d="M320 68 L546 90" fill="none" />
+    <path class="d-line" d="M84 120 C84 138 180 140 190 150" fill="none" /><path class="d-line" d="M236 120 L228 150" fill="none" /><path class="d-line" d="M388 120 C388 136 280 140 265 150" fill="none" />
+    <path class="d-line" d="M300 167 L358 167" fill="none" /><path class="d-line" d="M350 163 L358 167 L350 171" fill="none" />
+    <path class="d-line" d="M546 120 C546 140 470 150 460 152" fill="none" />
+    <path class="d-line" d="M420 182 C400 196 240 200 220 212" fill="none" /><path class="d-line" d="M435 182 L410 212" fill="none" />
+    <path class="d-line" d="M205 244 C205 256 250 260 262 264" fill="none" /><path class="d-line" d="M405 244 L300 266" fill="none" />
+    <path class="d-line" d="M320 280 L354 280" fill="none" /><path class="d-line" d="M346 276 L354 280 L346 284" fill="none" />
+
+    <text class="d-tag" x="96" y="312" text-anchor="middle" font-size="8.5">chaque nuit · 2 h</text>
+    <text class="d-mut" x="470" y="312" text-anchor="middle" font-size="8.5">chaque tâche : retries + alerte</text>
+  </svg>
+  <figcaption>Le pipeline complet vu par l'orchestrateur&nbsp;: un <strong>sensor</strong> ouvre la marche, quatre ingestions en parallèle, le nettoyage puis l'enrichissement par la météo, deux agrégats <em>gold</em>, des <strong>tests</strong> (<a href="lecon-10.html">leçon 10</a>) qui gardent la porte, et la <strong>publication</strong>. Chaque tâche porte ses <em>retries</em> et son alerte&nbsp;; l'ordre entier tombe des dépendances.</figcaption>
+</figure>
+
+<p>Écrire les dépendances de ce DAG tient en quelques lignes lisibles. On y voit d'un coup l'ordre complet, du fichier attendu jusqu'à la publication&nbsp;:</p>
+
+<figure class="code-block" data-file="dag_nuit_complet.py"><pre><code class="language-python"># Ingestions en parallèle, déclenchées par le sensor.
+attendre_trajets &gt;&gt; [ing_trajets, ing_stations, ing_capteurs, ing_meteo]
+
+# Le nettoyage a besoin des trois sources « trajets » ; la météo part à part.
+[ing_trajets, ing_stations, ing_capteurs] &gt;&gt; nettoyer
+
+# L'enrichissement croise le nettoyé et la météo.
+[nettoyer, ing_meteo] &gt;&gt; enrichir
+
+# Deux agrégats gold en parallèle, puis les tests, puis la publication.
+enrichir &gt;&gt; [freq_station_jour, rotation_velos] &gt;&gt; tests &gt;&gt; publier
+</code></pre></figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Placer les <strong>tests</strong> <em>dans</em> le DAG, juste avant la publication, en fait une <strong>barrière de qualité</strong>&nbsp;: si un test échoue, <code>publier</code> ne tourne pas, et les tableaux de bord gardent les données de la veille plutôt que d'afficher du faux. C'est le sujet de la <a href="lecon-10.html">leçon 10</a>. Quant aux alertes et à la surveillance de la fraîcheur et des durées, elles font l'objet de la <a href="lecon-12.html">leçon 12</a>. L'orchestrateur est la colonne vertébrale où viennent se greffer qualité et observabilité.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Orchestrer avec un <code>cron</code> qui ignore les dépendances.</strong> Enchaîner plusieurs lignes de <code>cron</code> à des heures «&nbsp;qui devraient laisser le temps&nbsp;» (2&nbsp;h, 2&nbsp;h&nbsp;30, 3&nbsp;h) revient à parier sur la durée de chaque étape. Le jour où le nettoyage déborde, l'agrégat part sur des données absentes — sans erreur visible, juste des chiffres faux. Une dépendance doit être <em>déclarée</em>, pas devinée à coups d'horaires.</p></div></div>
+<ul>
+<li><strong>Des tâches non idempotentes + un retry</strong> — la relance réinsère ce qui avait déjà été écrit&nbsp;: le filet de sécurité fabrique les doublons. Rends la tâche rejouable <em>avant</em> d'activer les retries.</li>
+<li><strong>Tout re-tourner au lieu de reprendre</strong> — relancer le DAG entier alors que seule l'agrégation a planté&nbsp;: on repaie des heures de calcul déjà réussi. Reprends à l'étape échouée et à sa descendance.</li>
+<li><strong>Un DAG géant d'une seule tâche</strong> — mettre tout le pipeline dans un seul gros script «&nbsp;fais-tout&nbsp;»&nbsp;: on ne sait plus <em>où</em> ça casse, on ne peut ni reprendre à mi-chemin, ni paralléliser. Une tâche = une étape = une table.</li>
+<li><strong>Ignorer la date logique du run</strong> — coder les tâches avec «&nbsp;aujourd'hui&nbsp;» au lieu de la date du run&nbsp;: le backfill devient impossible, car un run passé retraiterait la mauvaise journée.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une régie de transport lançait ses traitements par <strong>trois lignes de <code>cron</code></strong>&nbsp;: nettoyage à 2&nbsp;h, agrégats à 2&nbsp;h&nbsp;45, envoi du rapport municipal à 3&nbsp;h&nbsp;30. Le montage a tenu des mois — jusqu'à une nuit où l'export des trajets est arrivé avec 50&nbsp;minutes de retard. Le nettoyage a démarré en retard et tournait encore à 2&nbsp;h&nbsp;45&nbsp;; les agrégats sont partis <em>sur la table de la veille</em>, et à 3&nbsp;h&nbsp;30 le rapport est parti à la mairie avec les chiffres du mauvais jour, sans le moindre message d'erreur. Personne ne s'en est aperçu avant midi. Le passage à un <strong>orchestrateur</strong> a supprimé la classe entière de ce bug&nbsp;: un <strong>sensor</strong> attend désormais le fichier, les agrégats <em>dépendent</em> du nettoyage (ils ne peuvent plus partir avant lui), un <strong>timeout</strong> alerte si l'attente dépasse 6&nbsp;h, et la publication est une tâche <em>en aval des tests</em>. Le rapport ne peut plus partir faux&nbsp;: au pire, il part en retard, avec une alerte.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Orchestration — mémo</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>cron vs orchestrateur</td><td><code>cron</code> lance à l'heure, aveugle aux dépendances&nbsp;; l'orchestrateur respecte le DAG, relance, garde l'historique</td></tr>
+      <tr><td>Tâche (task)</td><td>Une étape du pipeline&nbsp;: fait <em>une</em> chose, produit <em>une</em> table&nbsp;; unité de reprise</td></tr>
+      <tr><td>Dépendance</td><td><code>a &gt;&gt; b</code> = «&nbsp;a puis b&nbsp;»&nbsp;; b n'est lancé que si a a <em>réussi</em></td></tr>
+      <tr><td>Schedule (planning)</td><td>Déclenchement à intervalle régulier, souvent via une expression cron (<code>0 2 * * *</code>)</td></tr>
+      <tr><td>Sensor (événementiel)</td><td>Tâche qui <em>attend</em> une condition (fichier arrivé) avant de débloquer la suite</td></tr>
+      <tr><td>Run daté</td><td>Chaque exécution couvre une <strong>date logique</strong> (la fenêtre de données), pas «&nbsp;maintenant&nbsp;»&nbsp;: la clé du backfill</td></tr>
+      <tr><td>Retry / timeout / alerte</td><td>Réessayer avec délai&nbsp;; couper au-delà d'une durée&nbsp;; prévenir un humain après le dernier échec</td></tr>
+      <tr><td>Reprise</td><td>Relancer <em>seulement</em> l'étape échouée et sa descendance&nbsp;; s'appuie sur l'idempotence (leçon 8)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Orchestrateur</dt><dd>Outil qui fait tourner un pipeline&nbsp;: il connaît le DAG, lance chaque tâche dans l'ordre des dépendances, relance en cas d'échec et conserve l'historique des exécutions (Airflow, Dagster, Prefect).</dd>
+  <dt>DAG</dt><dd>Graphe orienté sans cycle (<em>Directed Acyclic Graph</em>)&nbsp;: la structure d'un pipeline, où chaque tâche dépend d'une ou plusieurs autres, sans jamais boucler sur elle-même (voir <a href="lecon-01.html">leçon 1</a>).</dd>
+  <dt>Tâche (task)</dt><dd>Une étape unitaire du pipeline, exécutée par l'orchestrateur&nbsp;: idéalement, elle fait une seule chose et produit une seule table.</dd>
+  <dt>Dépendance</dt><dd>Relation «&nbsp;doit tourner avant&nbsp;» entre deux tâches. Écrite <code>a &gt;&gt; b</code>, elle impose que <code>b</code> ne démarre qu'après la réussite de <code>a</code>.</dd>
+  <dt>Schedule (planning)</dt><dd>Règle de déclenchement d'un DAG à intervalle régulier, souvent exprimée par une expression cron (par exemple <code>0 2 * * *</code> pour chaque nuit à 2&nbsp;h).</dd>
+  <dt>Sensor (événementiel)</dt><dd>Tâche particulière qui attend qu'une condition devienne vraie — le plus souvent l'arrivée d'un fichier — avant de débloquer la suite du DAG.</dd>
+  <dt>Run daté</dt><dd>Exécution d'un DAG rattachée à une <strong>date logique</strong> (la période de données qu'elle couvre), distincte de l'heure réelle du lancement&nbsp;: c'est ce qui permet de rejouer un jour passé.</dd>
+  <dt>Retry</dt><dd>Nouvelle tentative automatique d'une tâche qui a échoué, généralement avec un délai entre les essais, pour absorber les pannes passagères.</dd>
+  <dt>Backfill</dt><dd>Fait de (re)lancer les runs de dates passées pour combler un trou ou recalculer l'historique&nbsp;; rendu possible par les runs datés et l'idempotence (voir <a href="lecon-08.html">leçon 8</a>).</dd>
+  <dt>Idempotence</dt><dd>Propriété d'une tâche qu'on peut relancer sans changer le résultat ni créer de doublon&nbsp;: la condition pour que retry et reprise soient sûrs (voir <a href="lecon-08.html">leçon 8</a>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un <strong>orchestrateur</strong> fait ce que <code>cron</code> ne sait pas&nbsp;: respecter les <strong>dépendances</strong> du DAG, garder l'historique, relancer et reprendre. <code>cron</code> lit l'horloge&nbsp;; l'orchestrateur lit le graphe.</li>
+<li>Le DAG s'écrit <strong>comme du code</strong>&nbsp;: des <strong>tâches</strong> (une par table) et leurs dépendances (<code>nettoyer &gt;&gt; enrichir &gt;&gt; agreger</code>), en Python ou en YAML déclaratif.</li>
+<li>Un DAG se déclenche par <strong>planning</strong> (chaque nuit) ou par <strong>événement</strong> (un <em>sensor</em> qui attend un fichier)&nbsp;; chaque exécution est un <strong>run daté</strong>, clé du backfill.</li>
+<li>Face aux échecs&nbsp;: <strong>retry</strong> avec délai, <strong>timeout</strong>, <strong>alerte</strong>, et surtout <strong>reprise</strong> à l'étape échouée — sûre uniquement si les tâches sont <strong>idempotentes</strong>.</li>
+<li>Le DAG de <strong>Vélociti</strong> part chaque nuit&nbsp;: sensor sur le fichier des trajets, ingestions parallèles, nettoyage, enrichissement météo, deux agrégats <em>gold</em>, tests, publication — retries et alerte partout.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Cite <strong>deux</strong> choses qu'un orchestrateur apporte et qu'un simple <code>cron</code> ne sait pas faire.</li>
+<li>Dans <code>nettoyer &gt;&gt; enrichir</code>, laquelle des deux tâches tourne en premier, et sous quelle condition la seconde démarre-t-elle&nbsp;?</li>
+<li>L'agrégation a échoué mais le nettoyage et l'enrichissement ont réussi. Que relance-t-on à la reprise, et pourquoi surtout pas le reste&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un orchestrateur apporte qu'un simple cron n'a pas ?","a":["Il respecte les dépendances du DAG (ne lance une étape que si ses dépendances ont réussi), garde l'historique des exécutions, relance et reprend en cas d'échec","Il rend les requêtes SQL plus rapides","Il remplace le besoin d'écrire des transformations","Il chiffre automatiquement les données du pipeline"],"correct":0,"explain":"cron lance à heure fixe sans connaître l'état des autres étapes. L'orchestrateur lit le DAG : il attend que les dépendances aient réussi, conserve l'historique, relance et permet la reprise."},
+  {"q":"Dans un DAG écrit avec l'opérateur >>, que signifie « nettoyer >> enrichir » ?","a":["Enrichir ne démarre qu'après la RÉUSSITE de nettoyer : nettoyer est une dépendance d'enrichir","Les deux tâches tournent exactement en même temps","Enrichir tourne en premier, puis nettoyer","nettoyer et enrichir sont deux noms de la même tâche"],"correct":0,"explain":"L'opérateur >> déclare une dépendance : « a >> b » se lit « a puis b ». enrichir attend que nettoyer ait réussi avant de démarrer. C'est l'orchestrateur qui fait respecter cet ordre."},
+  {"q":"Quelle est la différence entre un déclenchement par schedule (planning) et par sensor (événementiel) ?","a":["Le schedule part à intervalle régulier sur l'horloge (ex. chaque nuit à 2 h) ; le sensor attend qu'une condition devienne vraie (ex. l'arrivée d'un fichier) avant de débloquer la suite","Le schedule est plus rapide, le sensor plus lent, mais ils font la même chose","Le sensor s'utilise uniquement pour les bases SQL, le schedule pour les fichiers","Il n'y a aucune différence : ce sont deux mots pour la même chose"],"correct":0,"explain":"Le planning déclenche sur l'horloge (expression cron). Le sensor déclenche sur un événement : il attend, par exemple, que le fichier trajets_AAAA-MM-JJ.csv soit arrivé. Les deux se combinent souvent."},
+  {"q":"L'agrégation a échoué alors que le nettoyage et l'enrichissement ont réussi. Que faut-il relancer, et à quelle condition est-ce sûr ?","a":["Seulement l'étape échouée (agrégation) et sa descendance ; c'est sûr si les tâches sont idempotentes, sinon un retry peut créer des doublons","Tout le DAG depuis le début, systématiquement, pour être certain du résultat","Uniquement le nettoyage, car c'est la première étape du pipeline","Rien : une étape échouée doit rester échouée jusqu'au lendemain"],"correct":0,"explain":"La reprise ne relance que l'étape échouée et ce qui en dépend : inutile de refaire ce qui a déjà réussi. Mais retry et reprise ne sont sûrs que si les tâches sont idempotentes (leçon 8), sinon la relance duplique."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["un orchestrateur","orchestrateur","l'orchestrateur"],"placeholder":"l'outil qui respecte les dépendances du DAG, relance et garde l'historique s'appelle un o____________","hints":["Ce n'est pas cron : lui est aveugle aux dépendances.","Airflow, Dagster et Prefect en sont des exemples.","Douze lettres : o____________ (le chef d'orchestre du pipeline)."],"link":{"href":"lecon-09.html","label":"Revoir « Du cron à l'orchestrateur »"}},
+  {"type":"text","accept":["un sensor","sensor","le sensor","capteur"],"placeholder":"la tâche qui ATTEND l'arrivée d'un fichier avant de débloquer la suite du DAG est un s_____","hints":["Déclenchement événementiel, pas sur l'horloge.","Il attend qu'une condition devienne vraie.","Six lettres : s_____ (le fichier trajets du jour)."],"link":{"href":"lecon-09.html","label":"Revoir « Déclenchement : planifié ou événementiel »"}},
+  {"type":"text","accept":["l'idempotence","idempotence","idempotent","idempotente"],"placeholder":"ce qui rend un retry sûr (relancer sans créer de doublon) est la propriété d'i__________","hints":["C'est le sujet de la leçon 8.","Sans elle, un retry réinsère ce qui avait déjà été écrit.","Onze lettres : i__________ (relancer sans changer le résultat)."],"link":{"href":"lecon-08.html","label":"Revoir l'idempotence (leçon 8)"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>On dispose de quatre tâches&nbsp;: <code>ingerer</code>, <code>nettoyer</code>, <code>enrichir</code>, <code>agreger</code>. Chacune a besoin de la précédente. Écris les dépendances de ce DAG avec l'opérateur <code>&gt;&gt;</code>, puis dis quelle tâche tourne en dernier et laquelle pourrait démarrer en premier.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.py"><pre><code class="language-python"># Une chaîne linéaire : chaque étape dépend de la précédente.
+ingerer &gt;&gt; nettoyer &gt;&gt; enrichir &gt;&gt; agreger
+
+# En premier : ingerer (aucune dépendance en amont).
+# En dernier : agreger (dépend de tout le reste, en bout de chaîne).
+# L'orchestrateur ne lancera nettoyer que si ingerer a RÉUSSI, etc.
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Une équipe orchestre son pipeline avec deux lignes de <code>cron</code>&nbsp;: nettoyage à 2&nbsp;h, agrégats à 2&nbsp;h&nbsp;30. Une nuit, l'export arrive en retard&nbsp;; le nettoyage tourne encore à 2&nbsp;h&nbsp;30. Décris ce qui se passe, pourquoi c'est dangereux, et comment un orchestrateur l'évite.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Ce qui se passe :
+  la ligne cron « agrégats » part à 2 h 30 QUOI QU'IL ARRIVE.
+  Le nettoyage n'a pas fini : les agrégats se calculent sur une
+  table incomplète (ou celle de la veille). Résultat : des chiffres
+  FAUX, et aucune erreur — cron n'a rien à signaler, il a « réussi »
+  à lancer le script à l'heure.
+
+Pourquoi c'est dangereux :
+  l'échec est SILENCIEUX. Le tableau de bord affiche des données
+  fausses que personne ne remarque avant longtemps.
+
+Comment l'orchestrateur l'évite :
+  on déclare la dépendance « nettoyer &gt;&gt; agreger » dans le DAG.
+  Les agrégats
+  ne peuvent PLUS démarrer avant la réussite du nettoyage ; s'il
+  déborde, ils attendent. Au pire, le résultat sort en retard —
+  jamais faux. Un sensor sur le fichier peut même retarder tout
+  le DAG jusqu'à l'arrivée de l'export.
+</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le DAG de nuit de Vélociti a planté&nbsp;: l'étape <code>agreger</code> a échoué à cause d'un bug, mais <code>ingerer</code>, <code>nettoyer</code> et <code>enrichir</code> ont réussi. Après avoir corrigé le bug, tu veux relancer. Que relances-tu exactement, quelle propriété doit être garantie, et pourquoi ne pas simplement tout rejouer&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Ce qu'on relance :
+  UNIQUEMENT l'étape échouée (agreger) et sa descendance
+  (par ex. tests, publier). ingerer, nettoyer et enrichir ont
+  réussi : leurs tables sont déjà là, on ne les recalcule pas.
+  L'orchestrateur garde l'état de chaque tâche du run daté, donc
+  on repart précisément d'agreger.
+
+Propriété à garantir :
+  l'IDEMPOTENCE (leçon 8). Rejouer agreger doit REMPLACER la
+  partition du jour, pas s'ajouter à un résultat existant.
+  Sans idempotence, relancer créerait des doublons.
+
+Pourquoi pas tout rejouer :
+  ré-ingérer + re-nettoyer + ré-enrichir gaspille des heures de
+  calcul déjà réussi (et de l'argent). La reprise ciblée est
+  plus rapide, moins chère, et suffit puisque l'amont est intact.
+</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-yaml.min.js" defer></script>
+  </body>
+</html>

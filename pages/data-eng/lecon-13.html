@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Coût et volumétrie : quand la donnée devient chère — Leçon 13 · Cours Ingénierie de données — Syntaxe</title>
+    <meta name="description" content="Le coût d'un pipeline se décompose en stockage, calcul et transfert, mais le poste qui surprend le plus est le volume scanné par les requêtes. Comment réduire le scan (pruning + colonnes + prédicats), estimer la croissance, gérer rétention et archivage chaud/froid, débusquer les coûts cachés, et chiffrer le stockage de Vélociti." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="data-eng" data-lesson="lecon-13.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Ingénierie de données</a></li>
+            <li aria-current="page">Leçon 13</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · À l'échelle et en production — Leçon 13</p>
+              <h1 class="lesson-header__title">Coût et volumétrie : quand la donnée devient chère</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~38 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : les formats (leçon 4) et le partitionnement (leçon 7)</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>décomposer le coût d'un pipeline en <strong>stockage</strong>, <strong>calcul</strong> et <strong>transfert</strong>, et repérer le poste qui surprend le plus&nbsp;;</li>
+                  <li>réduire le <strong>volume scanné</strong> par une requête grâce au trio pruning + colonnes + prédicats sélectifs&nbsp;;</li>
+                  <li>estimer la <strong>croissance</strong> d'un jeu de données et poser une politique de <strong>rétention</strong> et d'<strong>archivage</strong> chaud/froid&nbsp;;</li>
+                  <li>débusquer les <strong>coûts cachés</strong> (petits fichiers, SELECT * de dashboards, re-scans) et les nommer pour les arbitrer.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>À petite échelle, la donnée est presque gratuite. Quelques milliers de lignes tiennent dans un fichier, une requête s'exécute en un clin d'œil, et personne ne reçoit de facture. Mais un pipeline qui grandit change de nature&nbsp;: chaque choix — un format, un filtre oublié, une politique de conservation — finit par avoir un <strong>prix</strong>. À l'échelle, l'ingénierie de données devient aussi une affaire d'argent.</p>
+<p>Cette leçon met le coût au centre. On va décomposer la facture d'un pipeline en <strong>stockage + calcul + transfert</strong>, puis découvrir le poste qui surprend le plus les débutants&nbsp;: le <strong>volume scanné</strong> par les requêtes. On verra comment le réduire, comment estimer la croissance d'un jeu de données dans le temps, où couper (rétention, archivage), et quels coûts restent invisibles jusqu'à la première facture salée. Le fil rouge <strong>Vélociti</strong> — ses ~150&nbsp;000 trajets et ses 5&nbsp;millions d'événements de capteurs par jour — nous donnera des ordres de grandeur concrets.</p>
+
+<h2>Ce qui coûte vraiment</h2>
+<p>La facture d'un pipeline analytique se décompose en quatre postes. Les connaître, c'est déjà savoir où regarder quand le budget dérape.</p>
+<ul>
+<li><strong>Le scan</strong> — le volume de données <em>lu</em> par chaque requête. Beaucoup d'entrepôts modernes (BigQuery en tête) facturent au <strong>nombre d'octets scannés</strong>, pas au résultat renvoyé. Une requête qui lit toute une table géante pour ne renvoyer qu'un chiffre coûte cher malgré son résultat minuscule. C'est le poste le plus <em>invisible</em> et souvent le plus lourd.</li>
+<li><strong>Le stockage</strong> — l'espace occupé, facturé au <strong>Go-mois</strong>. C'est presque toujours le poste le <em>moins</em> cher&nbsp;: garder des données au repos coûte quelques centimes par gigaoctet et par mois. Ce n'est donc <em>pas</em> là qu'on économise en priorité.</li>
+<li><strong>Le calcul</strong> — le temps de CPU ou de cluster mobilisé pour transformer, agréger, joindre. On paie à la seconde-machine ou au <em>slot</em>. Un pipeline qui recalcule tout chaque nuit sur des volumes énormes brûle du calcul.</li>
+<li><strong>Le transfert sortant</strong> (<em>egress</em>) — faire <strong>sortir</strong> des octets d'une région ou d'un cloud vers un autre. L'entrée est presque toujours gratuite&nbsp;; la sortie, non. Déplacer un gros jeu de données entre deux régions, ou l'exporter vers un autre fournisseur, se facture au gigaoctet transféré.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Décomposition du coût d'un pipeline en quatre barres horizontales de largeur proportionnelle. La première barre, la plus longue et mise en évidence, représente le scan (volume lu par les requêtes), le poste le plus lourd et le plus surprenant. La deuxième barre, moyenne, représente le calcul (temps CPU et cluster). La troisième barre, courte, représente le transfert sortant ou egress (octets qui sortent d'une région). La quatrième barre, la plus courte, représente le stockage au Go-mois, souvent le moins cher.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Les quatre postes d'une facture de données</text>
+
+    <text class="d-tag" x="30" y="62" text-anchor="start" font-size="10.5">scan</text>
+    <rect class="d-accent" x="120" y="48" width="440" height="26" rx="5" /><text class="d-text" x="340" y="65" text-anchor="middle" font-size="9">volume LU par les requêtes — le plus surprenant</text>
+
+    <text class="d-tag" x="30" y="106" text-anchor="start" font-size="10.5">calcul</text>
+    <rect class="d-box" x="120" y="92" width="270" height="26" rx="5" /><text class="d-text" x="255" y="109" text-anchor="middle" font-size="9">temps CPU / cluster</text>
+
+    <text class="d-tag" x="30" y="150" text-anchor="start" font-size="10.5">egress</text>
+    <rect class="d-box" x="120" y="136" width="150" height="26" rx="5" /><text class="d-text" x="195" y="153" text-anchor="middle" font-size="9">octets qui sortent</text>
+
+    <text class="d-tag" x="30" y="194" text-anchor="start" font-size="10.5">stockage</text>
+    <rect class="d-box" x="120" y="180" width="90" height="26" rx="5" /><text class="d-text" x="165" y="197" text-anchor="middle" font-size="9">Go-mois</text>
+    <text class="d-mut" x="222" y="197" text-anchor="start" font-size="8.5">souvent le moins cher</text>
+
+    <line class="d-line" x1="120" y1="218" x2="120" y2="40" stroke-dasharray="2 3" />
+    <text class="d-mut" x="340" y="236" text-anchor="middle" font-size="8.5">largeur = part du coût (schématique)</text>
+  </svg>
+  <figcaption>Le stockage est rarement le problème&nbsp;: c'est le <strong>scan</strong> qui pèse, parce qu'il est facturé à chaque requête et qu'on ne le <em>voit</em> pas. Réduire les octets lus est presque toujours le premier levier d'économie.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Le mot qui trompe est «&nbsp;résultat&nbsp;». On croit intuitivement payer pour ce qu'une requête <em>renvoie</em> — trois lignes, un total. Mais beaucoup d'entrepôts facturent pour ce qu'elle <strong>lit</strong> pour produire ce résultat. Un <code>SELECT COUNT(*)</code> sur un téraoctet renvoie un seul nombre&nbsp;: s'il a fallu lire tout le téraoctet, c'est un téraoctet facturé. Toujours penser en <em>octets lus</em>, pas en lignes rendues.</p></div></div>
+
+<h2>Réduire le scan : le levier n° 1</h2>
+<p>Puisque le scan domine, la première optimisation n'est ni le calcul ni le stockage&nbsp;: c'est <strong>lire moins</strong>. Trois techniques, vues aux leçons précédentes, se combinent pour qu'une requête ne touche qu'une fraction de la table.</p>
+<ul>
+<li>Le <strong>partition pruning</strong> (<a href="lecon-07.html">leçon 7</a>)&nbsp;: un filtre sur la colonne de partition (ici la date) fait sauter des <em>dossiers</em> entiers. La requête ne lit que les partitions concernées.</li>
+<li>Le <strong>stockage colonne</strong> (Parquet, <a href="lecon-04.html">leçon 4</a>)&nbsp;: sélectionner deux colonnes ne lit que ces deux colonnes sur le disque, pas les vingt autres. On paie les colonnes demandées, pas la table.</li>
+<li>Les <strong>prédicats sélectifs</strong>&nbsp;: une clause <code>WHERE</code> précise, alignée sur le partitionnement, restreint encore ce qui est réellement ouvert et lu.</li>
+</ul>
+<p>Comparons deux requêtes qui répondent à la <em>même</em> question métier — «&nbsp;combien de trajets électriques le 1<sup>er</sup> mai&nbsp;?&nbsp;» — sur une table <code>trajets</code> partitionnée par date et stockée en Parquet. La première est écrite naïvement&nbsp;; la seconde est «&nbsp;bien rangée&nbsp;».</p>
+
+<figure class="code-block" data-file="scan_naif_vs_range.sql"><pre><code class="language-sql">-- (1) NAÏVE : lit TOUTE la table, TOUTES les colonnes.
+-- SELECT * force la lecture des 7 colonnes ; sans filtre de date,
+-- toutes les partitions sont ouvertes. On scanne des mois de données
+-- pour ne renvoyer qu'un seul nombre.
+SELECT COUNT(*)
+FROM trajets
+WHERE type = 'electrique';        -- aucun filtre sur la date : rien n'est élagué
+
+-- (2) BIEN RANGÉE : ne lit qu'UNE partition et QUE les colonnes utiles.
+-- Le WHERE date = ... déclenche le partition pruning (une seule journée).
+-- On ne cite que les colonnes nécessaires : Parquet ne lit qu'elles.
+SELECT COUNT(*)
+FROM trajets
+WHERE date = '2026-05-01'         -- pruning : 1 partition au lieu de toutes
+  AND type = 'electrique';        -- prédicat sélectif sur une colonne déjà lue</code></pre></figure>
+<p>Chiffrons l'écart. Supposons 180 jours de données déjà accumulés, soit ~180 partitions d'environ 150&nbsp;000 lignes chacune, et une table à 7 colonnes. La requête (1) ouvre les <strong>180 partitions</strong> et lit les <strong>7 colonnes</strong> — mettons ~2,7&nbsp;Go scannés. La requête (2) ouvre <strong>1 partition</strong> et ne lit que les colonnes <code>date</code> et <code>type</code> — de l'ordre de quelques mégaoctets. Même résultat, mais un rapport de <strong>plusieurs centaines</strong> sur les octets lus… donc sur la facture de scan.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Comparaison de ce qui est réellement lu par deux requêtes sur une grille de partitions et de colonnes. À gauche, le scan complet : une grille de nombreuses cases toutes remplies et mises en évidence, représentant toutes les partitions et toutes les colonnes lues, avec la mention environ 2,7 gigaoctets. À droite, pruning plus colonnes : la même grille mais une seule colonne de cases dans une seule ligne est remplie, le reste est vide, avec la mention quelques mégaoctets. Une flèche indique un rapport de plusieurs centaines entre les deux.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Ce qui est réellement lu sur le disque</text>
+
+    <text class="d-tag" x="150" y="52" text-anchor="middle" font-size="10.5">SELECT * (aucun filtre)</text>
+    <rect class="d-accent" x="60" y="64" width="24" height="16" /><rect class="d-accent" x="86" y="64" width="24" height="16" /><rect class="d-accent" x="112" y="64" width="24" height="16" /><rect class="d-accent" x="138" y="64" width="24" height="16" /><rect class="d-accent" x="164" y="64" width="24" height="16" /><rect class="d-accent" x="190" y="64" width="24" height="16" /><rect class="d-accent" x="216" y="64" width="24" height="16" />
+    <rect class="d-accent" x="60" y="82" width="24" height="16" /><rect class="d-accent" x="86" y="82" width="24" height="16" /><rect class="d-accent" x="112" y="82" width="24" height="16" /><rect class="d-accent" x="138" y="82" width="24" height="16" /><rect class="d-accent" x="164" y="82" width="24" height="16" /><rect class="d-accent" x="190" y="82" width="24" height="16" /><rect class="d-accent" x="216" y="82" width="24" height="16" />
+    <rect class="d-accent" x="60" y="100" width="24" height="16" /><rect class="d-accent" x="86" y="100" width="24" height="16" /><rect class="d-accent" x="112" y="100" width="24" height="16" /><rect class="d-accent" x="138" y="100" width="24" height="16" /><rect class="d-accent" x="164" y="100" width="24" height="16" /><rect class="d-accent" x="190" y="100" width="24" height="16" /><rect class="d-accent" x="216" y="100" width="24" height="16" />
+    <rect class="d-accent" x="60" y="118" width="24" height="16" /><rect class="d-accent" x="86" y="118" width="24" height="16" /><rect class="d-accent" x="112" y="118" width="24" height="16" /><rect class="d-accent" x="138" y="118" width="24" height="16" /><rect class="d-accent" x="164" y="118" width="24" height="16" /><rect class="d-accent" x="190" y="118" width="24" height="16" /><rect class="d-accent" x="216" y="118" width="24" height="16" />
+    <text class="d-mut" x="150" y="150" text-anchor="middle" font-size="9.5">toutes partitions × 7 colonnes</text>
+    <text class="d-text" x="150" y="168" text-anchor="middle" font-size="10">≈ 2,7 Go lus</text>
+
+    <text class="d-tag" x="470" y="52" text-anchor="middle" font-size="10.5">pruning + colonnes</text>
+    <rect class="d-line" x="380" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="64" width="24" height="16" fill="none" /><rect class="d-accent" x="432" y="64" width="24" height="16" /><rect class="d-line" x="458" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="64" width="24" height="16" fill="none" />
+    <rect class="d-line" x="380" y="82" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="82" width="24" height="16" fill="none" /><rect class="d-line" x="432" y="82" width="24" height="16" fill="none" /><rect class="d-line" x="458" y="82" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="82" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="82" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="82" width="24" height="16" fill="none" />
+    <rect class="d-line" x="380" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="432" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="458" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="100" width="24" height="16" fill="none" />
+    <rect class="d-line" x="380" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="432" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="458" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="118" width="24" height="16" fill="none" />
+    <text class="d-mut" x="470" y="150" text-anchor="middle" font-size="9.5">1 partition × 2 colonnes</text>
+    <text class="d-text" x="470" y="168" text-anchor="middle" font-size="10">≈ quelques Mo lus</text>
+
+    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="9">même résultat</text>
+    <text class="d-text" x="320" y="224" text-anchor="middle" font-size="10.5">rapport ≈ ×centaines sur les octets lus</text>
+  </svg>
+  <figcaption>Une requête «&nbsp;bien rangée&nbsp;» ne lit qu'une case de la grille&nbsp;: une partition, quelques colonnes. Le partitionnement élague les lignes&nbsp;; Parquet élague les colonnes. Ensemble, ils divisent la facture de scan par plusieurs centaines pour un résultat identique.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Deux réflexes suppriment l'essentiel du gaspillage de scan&nbsp;: <strong>bannir <code>SELECT *</code></strong> (nommer les colonnes utiles) et <strong>toujours filtrer sur la colonne de partition</strong> quand elle existe. La plupart des entrepôts affichent, avant exécution, une estimation des octets qui <em>seront</em> scannés. Prends l'habitude de la lire&nbsp;: c'est ta facture, en clair, avant même de valider.</p></div></div>
+
+<h2>La volumétrie dans le temps</h2>
+<p>Le coût n'est pas figé&nbsp;: il <strong>croît</strong>. Un jeu de données qui grossit de la même quantité chaque jour finit par peser lourd, et le stockage, même bon marché, s'additionne. Estimer cette croissance à l'avance évite les mauvaises surprises et guide les décisions de conservation.</p>
+<p>Faisons le calcul pour Vélociti. Les <strong>trajets</strong> sont modestes&nbsp;: ~150&nbsp;000 lignes par jour. Les <strong>capteurs</strong> sont le vrai monstre&nbsp;: ~5&nbsp;000&nbsp;000 d'événements par jour, soit plus de trente fois plus de lignes. Voici une estimation rapide en Python.</p>
+
+<figure class="code-block" data-file="estimer_volumetrie.py"><pre><code class="language-python"># Ordre de grandeur du volume ANNUEL brut, avant compression.
+# Le but n'est pas la précision au Ko près, mais de voir QUI domine.
+
+JOURS = 365
+
+# Trajets : ~150 000 lignes/jour, une ligne CSV pèse ~80 octets.
+trajets_jour = 150_000 * 80                 # octets/jour
+trajets_an   = trajets_jour * JOURS
+
+# Capteurs : ~5 000 000 events/jour, un event JSON pèse ~120 octets.
+capteurs_jour = 5_000_000 * 120             # octets/jour
+capteurs_an   = capteurs_jour * JOURS
+
+go = 1024 ** 3                              # 1 Go en octets
+print(f"trajets  : {trajets_an / go:6.1f} Go/an")   # ~4 Go/an
+print(f"capteurs : {capteurs_an / go:6.1f} Go/an")  # ~200 Go/an
+print(f"ratio    : x{capteurs_an / trajets_an:.0f}")  # capteurs bien plus gros
+</code></pre></figure>
+<p>Le verdict est net&nbsp;: les trajets pèsent quelques gigaoctets par an, les capteurs deux <em>ordres de grandeur</em> au-dessus. C'est là — sur les capteurs — que tout effort de maîtrise du volume aura le plus d'effet. Trois leviers permettent de contenir la croissance dans le temps.</p>
+<ul>
+<li>La <strong>rétention et la purge</strong>&nbsp;: décider combien de temps on garde le brut <em>fin</em>. Faut-il conserver chaque événement de capteur à la seconde pendant dix ans&nbsp;? Rarement. On fixe une durée (par exemple 90 jours de brut fin) au-delà de laquelle on purge ou on agrège.</li>
+<li>L'<strong>archivage chaud/froid</strong> (<em>hot/cold</em>)&nbsp;: les données récentes, souvent interrogées, restent sur un stockage <strong>chaud</strong> — rapide et plus cher. Les anciennes, rarement lues, basculent vers un stockage <strong>froid</strong> — lent (parfois plusieurs heures pour relire) mais bien moins cher au Go-mois.</li>
+<li>Les <strong>agrégats pré-calculés</strong>&nbsp;: plutôt que de rescanner le brut à chaque lecture, on paie <em>une fois</em> l'agrégation (par jour, par station) et l'on interroge ensuite une table minuscule. On échange du calcul ponctuel contre des scans répétés évités.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 220" role="img" aria-label="Cycle de vie de la donnée représenté comme une frise de gauche à droite en quatre étapes. Étape chaud : données récentes, stockage rapide et cher, mise en évidence. Une flèche vers étape tiède : données de quelques semaines, stockage moins cher. Une flèche vers étape froid : données anciennes, stockage lent et très bon marché, archive. Une flèche vers étape purge : suppression ou remplacement par un agrégat. Sous la frise, une échelle indique que le coût par gigaoctet baisse de gauche à droite et que la vitesse d'accès baisse aussi.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Le cycle de vie de la donnée</text>
+
+    <rect class="d-accent" x="40" y="52" width="120" height="54" rx="7" /><text class="d-text" x="100" y="76" text-anchor="middle" font-size="10">chaud</text><text class="d-mut" x="100" y="92" text-anchor="middle" font-size="8">récent · rapide · cher</text>
+    <rect class="d-box" x="192" y="52" width="120" height="54" rx="7" /><text class="d-text" x="252" y="76" text-anchor="middle" font-size="10">tiède</text><text class="d-mut" x="252" y="92" text-anchor="middle" font-size="8">quelques semaines</text>
+    <rect class="d-box" x="344" y="52" width="120" height="54" rx="7" /><text class="d-text" x="404" y="76" text-anchor="middle" font-size="10">froid</text><text class="d-mut" x="404" y="92" text-anchor="middle" font-size="8">ancien · lent · bon marché</text>
+    <rect class="d-frame" x="496" y="52" width="120" height="54" rx="7" /><text class="d-text" x="556" y="76" text-anchor="middle" font-size="10">purge</text><text class="d-mut" x="556" y="92" text-anchor="middle" font-size="8">supprimé ou agrégé</text>
+
+    <path class="d-line" d="M160 79 L190 79" fill="none" /><path class="d-line" d="M182 75 L190 79 L182 83" fill="none" />
+    <path class="d-line" d="M312 79 L342 79" fill="none" /><path class="d-line" d="M334 75 L342 79 L334 83" fill="none" />
+    <path class="d-line" d="M464 79 L494 79" fill="none" /><path class="d-line" d="M486 75 L494 79 L486 83" fill="none" />
+
+    <line class="d-line" x1="40" y1="140" x2="616" y2="140" />
+    <path class="d-line" d="M608 136 L616 140 L608 144" fill="none" />
+    <text class="d-mut" x="40" y="162" text-anchor="start" font-size="8.5">coût/Go élevé, accès immédiat</text>
+    <text class="d-mut" x="616" y="162" text-anchor="end" font-size="8.5">coût/Go faible, accès lent</text>
+    <text class="d-text" x="320" y="192" text-anchor="middle" font-size="9.5">on descend la frise à mesure que la donnée vieillit et se lit moins</text>
+  </svg>
+  <figcaption>La donnée n'a pas besoin de rester au même endroit toute sa vie. Elle démarre <strong>chaude</strong> (récente, chère, rapide), refroidit, s'<strong>archive</strong> à froid quand on la lit rarement, puis finit <strong>purgée</strong> ou remplacée par un agrégat. Chaque descente d'un cran fait baisser le coût.</figcaption>
+</figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Garder le brut, oui — pour toujours, non</p><p>La <a href="lecon-01.html">leçon 1</a> insistait&nbsp;: garde le brut, il rend la reprise possible. Cela ne veut pas dire le garder <em>éternellement</em> au format le plus fin et sur le stockage le plus cher. Une politique saine combine les deux principes&nbsp;: on conserve le brut fin sur du chaud pendant une <strong>fenêtre de reprise</strong> raisonnable (assez pour rejouer un pipeline, corriger un bug), puis on l'<strong>archive à froid</strong> ou on ne garde qu'un agrégat. «&nbsp;Garder le brut&nbsp;» et «&nbsp;maîtriser le volume&nbsp;» ne s'opposent pas&nbsp;: ils se règlent par la durée.</p></div></div>
+
+<h2>Les coûts cachés</h2>
+<p>Certains coûts n'apparaissent pas dans une ligne de budget étiquetée. Ils se dissimulent dans des habitudes anodines et ne se révèlent qu'à la facture. Les nommer, c'est déjà pouvoir les arbitrer.</p>
+<ul>
+<li>Le <strong>problème des petits fichiers</strong> (<em>small files</em>, <a href="lecon-07.html">leçon 7</a>)&nbsp;: des milliers de fichiers minuscules forcent le moteur à ouvrir, lister et déchiffrer chacun. Le surcoût est en <em>ouvertures</em>, pas en octets utiles. Un flux de 5&nbsp;millions d'événements/jour écrit sans compactage produit exactement ce piège.</li>
+<li>Les <strong><code>SELECT *</code> répétés dans les tableaux de bord</strong>&nbsp;: un tableau de bord qui se rafraîchit toutes les cinq minutes et scanne une grosse table à chaque fois multiplie le coût par la fréquence. La même requête gaspilleuse, rejouée 288 fois par jour, devient une ligne de facture à part entière.</li>
+<li>Les <strong>re-scans faute d'agrégat</strong>&nbsp;: recalculer une statistique à partir du brut à chaque consultation, alors qu'un agrégat matérialisé la servirait pour une fraction du coût. On paie mille fois ce qu'on aurait pu payer une fois.</li>
+<li>Les <strong>tables intermédiaires jamais nettoyées</strong>&nbsp;: des tables de travail, des exports temporaires, des copies «&nbsp;pour tester&nbsp;» qui restent au stockage des mois durant. Elles ne coûtent pas cher <em>chacune</em>, mais s'accumulent en silence.</li>
+<li>Le <strong>flux «&nbsp;au cas où&nbsp;»</strong> (<a href="lecon-02.html">leçon 2</a>)&nbsp;: mettre une source en <em>streaming</em> temps réel alors qu'un batch quotidien suffirait. Le temps réel exige une infrastructure allumée en permanence — donc du calcul facturé 24 h/24 pour un besoin qui pourrait s'exécuter en dix minutes par nuit.</li>
+</ul>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Optimiser le calcul en ignorant le scan.</strong> On passe des heures à accélérer une transformation — un meilleur algorithme, un cluster plus gros — alors que le vrai gouffre est une poignée de dashboards qui rescannent la table entière toutes les cinq minutes. Avant de toucher au calcul, regarde <em>combien d'octets</em> tes requêtes lisent et à quelle fréquence. Le levier est presque toujours là, pas dans la vitesse du moteur.</p></div></div>
+
+<h2>Vélociti chiffré</h2>
+<p>Appliquons tout ceci au fil rouge, avec des ordres de grandeur. On l'a estimé plus haut&nbsp;: en brut non compressé, les <strong>trajets</strong> pèsent ~4&nbsp;Go/an et les <strong>capteurs</strong> ~200&nbsp;Go/an. Trois décisions découlent directement de ces chiffres.</p>
+<ul>
+<li><strong>Les trajets sont bon marché à garder.</strong> Quelques gigaoctets par an&nbsp;: on les conserve en Parquet, partitionnés par date, sans état d'âme. La vraie valeur ici n'est pas d'économiser le stockage (dérisoire) mais de rendre les requêtes gratuites — voir ci-dessous.</li>
+<li><strong>Une requête «&nbsp;fréquentation de mai&nbsp;» devient quasi gratuite.</strong> Grâce à Parquet + partition par date, elle ne scanne que les <strong>31 partitions</strong> du mois de mai, et seulement les colonnes utiles (<code>date</code>, <code>station_start</code>). Sur une table qui couvre plusieurs années, c'est une infime fraction des octets&nbsp;: le pruning transforme une question récurrente en une dépense négligeable.</li>
+<li><strong>Les capteurs exigent une purge et un agrégat.</strong> 200&nbsp;Go/an de brut fin, dont on ne consulte presque jamais le détail seconde par seconde au-delà de quelques semaines&nbsp;: c'est le candidat idéal pour une politique de rétention. On garde le brut fin ~90 jours sur du chaud (fenêtre de reprise et d'analyse récente), on pré-agrège en une table par station et par heure (des milliers de lignes/jour au lieu de millions), puis on archive à froid ou on purge le brut au-delà.</li>
+</ul>
+<p>Voici l'agrégat qui désamorce le coût des capteurs&nbsp;: on paie <em>une fois par jour</em> le résumé horaire par station, et tous les tableaux de bord lisent ensuite cette table minuscule au lieu de rescanner les 5&nbsp;millions d'événements bruts.</p>
+
+<figure class="code-block" data-file="gold_capteurs_horaire.sql"><pre><code class="language-sql">-- Agrégat matérialisé : payé UNE fois par jour, lu mille fois.
+-- On passe de ~5 000 000 events/jour à quelques milliers de lignes.
+CREATE TABLE gold_capteurs_horaire AS
+SELECT
+    station_id,
+    DATE_TRUNC('hour', ts)          AS heure,
+    AVG(velos_dispo)                AS velos_dispo_moyen,
+    AVG(bornes_libres)              AS bornes_libres_moyen,
+    COUNT(*)                        AS nb_events
+FROM bronze_capteurs
+WHERE ts &gt;= '2026-05-01'           -- pruning : on n'agrège que la fenêtre récente
+  AND ts &lt;  '2026-05-02'
+GROUP BY station_id, DATE_TRUNC('hour', ts);
+
+-- Les dashboards interrogent DÉSORMAIS gold_capteurs_horaire (petit),
+-- jamais bronze_capteurs (énorme). Le re-scan du brut disparaît.</code></pre></figure>
+<p>Le brut reste disponible pour une reprise pendant sa fenêtre de rétention, mais il n'est plus <em>lu</em> au quotidien&nbsp;: c'est l'agrégat qui porte la charge des lectures. On a échangé un calcul quotidien borné contre des milliers de scans du monstre évités.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Beaucoup de ces politiques (rétention, bascule chaud/froid, alertes de budget) se déclarent en <strong>infrastructure as code</strong> plutôt qu'à la main&nbsp;: on versionne la durée de vie d'un jeu de données comme du code. Le <a href="../iac/cours.html">cours IaC</a> montre comment. Et comme les leviers d'économie sont d'abord des requêtes bien écrites, le <a href="../sql/cours.html">cours SQL</a> reste le compagnon direct de cette leçon&nbsp;: sélectionner les bonnes colonnes et filtrer sur la partition, c'est déjà maîtriser la facture.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Garder tout le brut fin pour toujours.</strong> Le réflexe «&nbsp;on ne sait jamais&nbsp;» pousse à conserver chaque événement à la seconde, indéfiniment, sur du stockage chaud. Sur un flux comme les capteurs, cela empile des centaines de gigaoctets qu'on ne relira jamais au détail. Garder le brut est une bonne règle&nbsp;; la <em>durée</em> de conservation et le <em>niveau de détail</em> sont des décisions à prendre, pas un «&nbsp;pour toujours&nbsp;» par défaut.</p></div></div>
+<ul>
+<li><strong>Mettre <code>SELECT *</code> dans les dashboards</strong> — chaque rafraîchissement relit toutes les colonnes&nbsp;; multiplié par la fréquence, c'est une facture invisible. Nomme les colonnes, filtre sur la partition.</li>
+<li><strong>Tout passer en flux «&nbsp;au cas où&nbsp;»</strong> — le temps réel garde une infrastructure allumée en permanence&nbsp;; réserve-le aux besoins qui l'exigent vraiment (<a href="lecon-02.html">leçon 2</a>), sinon un batch coûte bien moins.</li>
+<li><strong>Ignorer l'egress inter-régions</strong> — déplacer un gros jeu de données d'une région à une autre se facture à la sortie&nbsp;; garde le calcul près de la donnée, ne fais pas voyager les octets sans raison.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe analytique voit sa <strong>facture d'entrepôt tripler</strong> en un mois, sans nouveau projet. L'enquête remonte à un tableau de bord «&nbsp;temps réel&nbsp;» monté à la va-vite&nbsp;: une vingtaine de tuiles, chacune bâtie sur un <code>SELECT *</code> <em>sans filtre de partition</em>, rafraîchies toutes les minutes sur la grosse table des capteurs. Résultat&nbsp;: la table entière rescannée des centaines de fois par jour, pour afficher des moyennes horaires. Le correctif n'a pas touché l'infrastructure&nbsp;: on a <strong>resserré les requêtes</strong> — ne lire que les colonnes affichées, filtrer sur la <em>date du jour</em> pour n'ouvrir qu'une partition, et surtout brancher les tuiles sur un <strong>agrégat horaire</strong> pré-calculé plutôt que sur le brut. Le rafraîchissement est passé à cinq minutes. La facture est retombée <strong>sous son niveau initial</strong>, et les tuiles se chargent plus vite qu'avant. Aucune donnée perdue&nbsp;: juste des requêtes qui ont cessé de lire ce dont elles n'avaient pas besoin.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Postes de coût et leviers — mémo</caption>
+    <thead><tr><th scope="col">Poste / notion</th><th scope="col">Levier pour maîtriser</th></tr></thead>
+    <tbody>
+      <tr><td>Scan (octets lus)</td><td>Le plus lourd&nbsp;: pruning + colonnes (Parquet) + prédicats sélectifs&nbsp;; bannir <code>SELECT *</code></td></tr>
+      <tr><td>Stockage (Go-mois)</td><td>Souvent le moins cher&nbsp;: compresser (Parquet), archiver à froid, purger le brut ancien</td></tr>
+      <tr><td>Calcul (CPU/cluster)</td><td>Agréger une fois plutôt que rescanner&nbsp;; éviter le temps réel inutile</td></tr>
+      <tr><td>Egress (transfert)</td><td>Garder le calcul près de la donnée&nbsp;; ne pas faire voyager les octets entre régions</td></tr>
+      <tr><td>Croissance</td><td>Estimer volume/jour × jours&nbsp;; repérer le monstre (capteurs) avant qu'il ne coûte</td></tr>
+      <tr><td>Rétention / purge</td><td>Fixer une durée de conservation du brut fin&nbsp;; au-delà, agréger ou supprimer</td></tr>
+      <tr><td>Chaud / froid</td><td>Récent = rapide et cher&nbsp;; ancien = lent et bon marché&nbsp;; faire descendre la donnée</td></tr>
+      <tr><td>Agrégat matérialisé</td><td>Payer l'agrégation une fois, lire une petite table&nbsp;; tue les re-scans des dashboards</td></tr>
+      <tr><td>Vélociti</td><td>Trajets ~4 Go/an (garder)&nbsp;; capteurs ~200 Go/an (purger + agréger horaire)</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Coût de scan</dt><dd>Prix facturé pour le volume de données <strong>lu</strong> par une requête (souvent au nombre d'octets), indépendamment de la taille du résultat renvoyé.</dd>
+  <dt>Coût de stockage</dt><dd>Prix de l'espace occupé par les données au repos, facturé au <strong>Go-mois</strong>&nbsp;; en général le poste le moins cher d'un pipeline.</dd>
+  <dt>Coût de calcul</dt><dd>Prix du temps de CPU ou de cluster mobilisé pour transformer, joindre ou agréger les données.</dd>
+  <dt>Egress</dt><dd>Transfert <strong>sortant</strong> de données hors d'une région ou d'un cloud&nbsp;; facturé au gigaoctet, alors que l'entrée est souvent gratuite.</dd>
+  <dt>Partition pruning</dt><dd>Fait de sauter des partitions entières lorsqu'un filtre porte sur la colonne de partition (voir <a href="lecon-07.html">leçon 7</a>)&nbsp;: la requête ne lit que les partitions utiles.</dd>
+  <dt>Rétention</dt><dd>Politique fixant combien de temps une donnée est conservée avant d'être purgée ou remplacée par un agrégat.</dd>
+  <dt>Archivage chaud/froid</dt><dd>Répartition des données selon leur usage&nbsp;: le <em>chaud</em> (récent, rapide, cher) et le <em>froid</em> (ancien, lent, bon marché).</dd>
+  <dt>Agrégat matérialisé</dt><dd>Table de résultats pré-calculés, écrite une fois puis relue à bas coût, pour éviter de rescanner le brut à chaque lecture.</dd>
+  <dt>Volumétrie</dt><dd>Estimation de la quantité de données produite et accumulée dans le temps (par jour, par an), pour anticiper le coût et la croissance.</dd>
+  <dt>Small files</dt><dd>Multitude de fichiers minuscules qui alourdit chaque requête par le coût d'ouverture et de listage, sans octets utiles (voir <a href="lecon-07.html">leçon 7</a>).</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le coût d'un pipeline se décompose en <strong>stockage + calcul + transfert (egress)</strong>&nbsp;; le poste qui surprend le plus est le <strong>volume scanné</strong>, facturé à chaque requête.</li>
+<li>Le levier n° 1 est de <strong>lire moins</strong>&nbsp;: partition pruning + colonnes (Parquet) + prédicats sélectifs peuvent diviser le scan par plusieurs centaines pour un résultat identique.</li>
+<li>La volumétrie <strong>croît</strong>&nbsp;: on l'estime (volume/jour × jours), on repère le monstre (les capteurs chez Vélociti), et on la contient par <strong>rétention</strong>, <strong>archivage chaud/froid</strong> et <strong>agrégats</strong>.</li>
+<li>Des coûts restent <strong>cachés</strong>&nbsp;: small files, <code>SELECT *</code> de dashboards, re-scans, tables oubliées, flux temps réel «&nbsp;au cas où&nbsp;». Les nommer permet de les arbitrer.</li>
+<li>Chez <strong>Vélociti</strong>, on garde les trajets (~4 Go/an, requêtes rendues quasi gratuites par le pruning) et on purge/agrège les capteurs (~200 Go/an).</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une requête renvoie un seul nombre mais coûte cher. En une phrase, pourquoi est-ce possible&nbsp;?</li>
+<li>Cite les trois techniques qui, combinées, réduisent le volume scanné par une requête.</li>
+<li>Pour les 5&nbsp;millions d'événements/jour de capteurs, quelle décision de volumétrie prends-tu, et où places-tu un agrégat&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Beaucoup d'entrepôts (comme BigQuery) facturent une requête principalement sur quel critère ?","a":["Le volume de données LU (scanné) par la requête, indépendamment de la taille du résultat renvoyé","Le nombre de lignes renvoyées dans le résultat final","Le nombre de colonnes affichées à l'écran","La durée d'affichage du résultat par l'utilisateur"],"correct":0,"explain":"Le poste qui surprend le plus est le scan : on paie pour les octets LUS afin de produire le résultat. Un COUNT(*) sur un téraoctet renvoie un nombre mais peut lire tout le téraoctet, donc le facturer."},
+  {"q":"Quel trio de techniques réduit le mieux le volume scanné par une requête ?","a":["Partition pruning (filtrer sur la date) + stockage colonne Parquet (ne lire que les colonnes utiles) + prédicats sélectifs","Ajouter plus de CPU + un cluster plus gros + un cache mémoire","Chiffrer les données + les compresser deux fois + les répliquer","Passer toutes les sources en streaming temps réel"],"correct":0,"explain":"Le levier n°1 est de LIRE MOINS. Le pruning élague les partitions (lignes), Parquet élague les colonnes, et un WHERE sélectif restreint encore. Combinés, ils divisent le scan par plusieurs centaines pour le même résultat."},
+  {"q":"Parmi ces postes, lequel est en général le MOINS cher dans un pipeline ?","a":["Le stockage au Go-mois (garder les données au repos)","Le scan répété par des dashboards","Le calcul d'un pipeline qui recalcule tout chaque nuit","Le transfert sortant entre deux régions (egress)"],"correct":0,"explain":"Le stockage coûte quelques centimes par Go-mois : c'est rarement là qu'on économise en priorité. Le scan, le calcul récurrent et l'egress pèsent bien plus lourd."},
+  {"q":"Chez Vélociti, quelle décision de volumétrie est la plus justifiée pour les ~5 000 000 d'événements de capteurs par jour ?","a":["Garder le brut fin sur une fenêtre limitée, pré-agréger par station et par heure, puis archiver à froid ou purger au-delà","Garder chaque événement à la seconde, pour toujours, sur du stockage chaud","Supprimer immédiatement tous les événements dès qu'ils arrivent","Passer les trajets en temps réel pour compenser le volume des capteurs"],"correct":0,"explain":"Les capteurs sont le monstre (~200 Go/an brut). On garde le brut fin le temps de la reprise, on paie une fois l'agrégat horaire (des milliers de lignes au lieu de millions), puis on archive ou purge. Le tout-garder-pour-toujours empile un volume qu'on ne relit jamais au détail."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["scan","le scan","le volume scanne","volume scanne","octets lus","les octets lus"],"placeholder":"le poste de coût qui surprend le plus, car facturé au volume LU par requête, s'appelle le s___","hints":["Ce n'est ni le stockage ni le calcul.","On le mesure en octets lus, pas en lignes renvoyées.","Quatre lettres : s___."],"link":{"href":"lecon-13.html","label":"Revoir « Ce qui coûte vraiment »"}},
+  {"type":"text","accept":["parquet","le parquet","stockage colonne","colonne","format colonne"],"placeholder":"le format colonne qui permet de ne lire QUE les colonnes demandées (et non toute la table) s'appelle P______","hints":["C'est le format vu à la leçon 4.","Il stocke les données par colonnes, pas par lignes.","Sept lettres : P______."],"link":{"href":"lecon-04.html","label":"Revoir « Réduire le scan »"}},
+  {"type":"text","accept":["egress","l'egress","transfert sortant","le transfert sortant","sortie","la sortie"],"placeholder":"le coût de faire SORTIR des octets d'une région ou d'un cloud vers un autre s'appelle l'e_____","hints":["L'entrée est souvent gratuite, pas la sortie.","On le facture au gigaoctet transféré vers l'extérieur.","Six lettres : e_____."],"link":{"href":"lecon-13.html","label":"Revoir « Ce qui coûte vraiment »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacun de ces postes de coût, dis en une ligne s'il est plutôt <strong>faible</strong> ou plutôt <strong>lourd</strong>, et pourquoi&nbsp;: (a) garder 4&nbsp;Go de trajets au repos pendant un an&nbsp;; (b) un tableau de bord qui fait <code>SELECT *</code> sans filtre de date sur une grosse table toutes les minutes&nbsp;; (c) exporter chaque nuit 200&nbsp;Go vers un autre cloud.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) FAIBLE : le stockage au Go-mois est le poste le moins cher.
+    4 Go au repos coûtent quelques centimes par mois.
+
+(b) LOURD : c'est du SCAN répété. SELECT * lit toutes les colonnes,
+    l'absence de filtre de date lit toutes les partitions, et la
+    fréquence (une fois par minute) multiplie le coût. Poste caché
+    typique.
+
+(c) LOURD : c'est de l'EGRESS. Faire SORTIR 200 Go vers un autre
+    cloud se facture au gigaoctet transféré, chaque nuit. Garder
+    le calcul près de la donnée éviterait ce voyage.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>On veut «&nbsp;le nombre de trajets électriques du 1<sup>er</sup> mai&nbsp;» sur la table <code>trajets</code>, partitionnée par <code>date</code> et stockée en Parquet (7 colonnes). Écris la requête <strong>bien rangée</strong> qui minimise le scan, puis explique en deux points ce qu'elle élague par rapport à un <code>SELECT * FROM trajets WHERE type = 'electrique'</code>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">SELECT COUNT(*)
+FROM trajets
+WHERE date = '2026-05-01'      -- pruning : une seule partition
+  AND type = 'electrique';     -- prédicat sélectif
+
+-- Ce qu'elle élague par rapport au SELECT * sans filtre de date :
+-- 1) Les PARTITIONS : le WHERE date = ... n'ouvre qu'une journée
+--    au lieu de toutes ; le partition pruning saute le reste.
+-- 2) Les COLONNES : on ne cite pas *, donc Parquet ne lit que les
+--    colonnes nécessaires (date, type) au lieu des 7. Résultat
+--    identique, mais un rapport de plusieurs centaines sur les
+--    octets scannés.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Les capteurs de Vélociti produisent ~5&nbsp;M d'événements/jour (~200&nbsp;Go/an brut). Les dashboards n'affichent que des <strong>moyennes horaires par station</strong>, et l'analyse rétrospective au-delà de trois mois est rarissime. Propose une <strong>politique de coût complète</strong>&nbsp;: rétention, agrégat, chaud/froid — et dis où chaque décision fait baisser la facture.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">Politique de coût pour les capteurs :
+
+1) AGRÉGAT (baisse le SCAN et le CALCUL répété)
+   Table gold_capteurs_horaire : moyenne de velos_dispo et
+   bornes_libres par station et par heure, calculée UNE fois
+   par jour. Les dashboards lisent cette table (milliers de
+   lignes) au lieu de rescanner 5 M d'events. Les re-scans
+   du brut disparaissent.
+
+2) RÉTENTION (baisse le STOCKAGE chaud)
+   Garder le brut fin ~90 jours (fenêtre de reprise + analyse
+   récente). Au-delà, il n'est plus lu au détail : on n'a plus
+   besoin de le garder sur du chaud.
+
+3) CHAUD / FROID + PURGE (baisse le STOCKAGE au Go-mois)
+   Au-delà de 90 jours : archiver le brut à froid (accès lent,
+   très bon marché) ou le purger, l'agrégat horaire suffisant
+   à l'historique. L'agrégat, lui, reste chaud car petit et
+   souvent lu.
+
+Bilan : on paie un calcul quotidien borné (l'agrégat) et
+quelques Go d'archive, et l'on supprime des milliers de scans
+du monstre + des centaines de Go de brut chaud inutile.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>

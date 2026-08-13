@@ -328,6 +328,13 @@ window.SITE_DATA = (function () {
       tags: ["Data", "Statistiques", "Analyse"],
     },
     {
+      id: "data-eng", dir: "data-eng", title: "Ingénierie de données : construire des pipelines",
+      glyph: "de", language: "Python", level: "intermediaire", status: "complet",
+      accent: "#0f766e", lessons: 14, hours: 10,
+      tagline: "De la donnée brute au jeu de données fiable : penser un pipeline, choisir entre ETL et ELT, maîtriser les formats (CSV, JSON, Parquet), partitionner le stockage, rendre un traitement idempotent et rejouable, orchestrer les dépendances, garantir la qualité et les contrats de données, puis surveiller la fraîcheur, le coût et la santé d'un pipeline.",
+      tags: ["Data", "Pipelines", "Ingénierie"],
+    },
+    {
       id: "dart", dir: "dart", title: "Dart & Flutter : applications multiplateformes",
       glyph: "Da", language: "Dart", level: "intermediaire", status: "complet",
       accent: "#2fa3b8", lessons: 16, hours: 13,
@@ -973,6 +980,7 @@ window.SITE_DATA = (function () {
         { course: "docker", note: "On déploie souvent des images conteneurisées via l'IaC." },
         { course: "kubernetes", note: "Terraform provisionne aussi des clusters Kubernetes." },
         { course: "cicd", note: "L'IaC s'intègre au pipeline pour automatiser l'infrastructure." },
+        { course: "data-eng", note: "Un pipeline de données vit sur une infrastructure — entrepôt, orchestrateur, stockage — qu'on décrit en code pour la rendre reproductible." },
       ],
       modules: [
         {
@@ -1257,6 +1265,7 @@ window.SITE_DATA = (function () {
         { course: "kubernetes", note: "Surveiller des conteneurs orchestrés demande de bons outils d'observabilité." },
         { course: "cicd", note: "Métriques et alertes complètent un pipeline de livraison continue." },
         { course: "securite", note: "Les journaux sont aussi essentiels pour détecter les incidents de sécurité." },
+        { course: "data-eng", note: "Un pipeline de données se surveille comme un service : fraîcheur, volumétrie, taux d'échec, lignage. Les mêmes métriques et alertes s'y appliquent." },
       ],
       modules: [
         {
@@ -2200,6 +2209,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "Interroge tes bases directement depuis Python." },
         { course: "git", note: "Versionne tes requêtes et tes migrations." },
         { course: "algo", note: "Comprends ce que font les index et la complexité des requêtes." },
+        { course: "data-eng", note: "Les transformations d'un pipeline de données sont, très souvent, des requêtes SQL : l'ingénierie de données industrialise ce que ce cours apprend à écrire." },
       ],
       modules: [
         {
@@ -2949,6 +2959,7 @@ window.SITE_DATA = (function () {
         { course: "sql", note: "Le NoSQL se comprend par contraste avec le relationnel : le cours SQL d'abord." },
         { course: "formats", note: "Les documents NoSQL sont du JSON : ce format est la brique de base." },
         { course: "api", note: "Une API sert souvent des données issues d'une base NoSQL document." },
+        { course: "data-eng", note: "Files d'événements, documents JSON, stockage objet : un pipeline de données puise et déverse dans des bases non relationnelles autant que dans un entrepôt." },
       ],
       modules: [
         {
@@ -4116,6 +4127,53 @@ window.SITE_DATA = (function () {
             { num: "13", title: "Les pièges qui faussent tout", file: "lecon-13.html", status: "complet" },
             { num: "14", title: "Le paradoxe de Simpson et les moyennes trompeuses", file: "lecon-14.html", status: "complet" },
             { num: "15", title: "Projet — une analyse honnête de bout en bout", file: "lecon-15.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+
+    "data-eng": {
+      id: "data-eng", dir: "data-eng", title: "Ingénierie de données : construire des pipelines",
+      glyph: "de", accent: "#0f766e", overview: "cours.html",
+      related: [
+        { course: "sql", note: "L'ingénierie de données orchestre du SQL à grande échelle : les transformations d'un pipeline sont, très souvent, des requêtes. SQL enseigne le langage ; ce cours, comment l'industrialiser." },
+        { course: "nosql", note: "Files d'événements, documents, stockage objet : un pipeline puise et déverse dans des bases non relationnelles autant que dans un entrepôt. Deux mondes que l'ingénieur data relie." },
+        { course: "iac", note: "Un pipeline vit sur une infrastructure — entrepôt, orchestrateur, stockage — qu'on décrit en code pour la rendre reproductible. L'IaC est le socle sur lequel tourne le pipeline." },
+        { course: "observabilite", note: "Un pipeline se surveille comme un service : fraîcheur, volumétrie, taux d'échec, lignage. Les métriques, logs et alertes du cours observabilité s'appliquent directement aux données." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Penser en pipeline", sub: "données brutes, sources et puits, ETL/ELT, formats", level: "debutant",
+          lessons: [
+            { num: "01", title: "Qu'est-ce que l'ingénierie de données ?", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Le trajet d'une donnée : sources, puits, batch et flux", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "ETL ou ELT : transformer avant ou après ?", file: "lecon-03.html", status: "complet" },
+            { num: "04", title: "Les formats de données : CSV, JSON, Parquet", file: "lecon-04.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Construire un pipeline robuste", sub: "ingestion, transformation, partitionnement, idempotence", level: "intermediaire",
+          lessons: [
+            { num: "05", title: "Ingérer une source : pleine ou incrémentale", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Transformer proprement : bronze, silver, gold", file: "lecon-06.html", status: "complet" },
+            { num: "07", title: "Partitionner et organiser le stockage", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "Idempotence et reprise : rejouer sans doublonner", file: "lecon-08.html", status: "complet" },
+          ],
+        },
+        {
+          num: "03", title: "Faire tourner et faire confiance", sub: "orchestration, qualité, contrats, observabilité", level: "intermediaire",
+          lessons: [
+            { num: "09", title: "Orchestrer : DAG, dépendances et planification", file: "lecon-09.html", status: "complet" },
+            { num: "10", title: "La qualité des données : tester ce qui coule", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Les contrats de données et l'évolution de schéma", file: "lecon-11.html", status: "complet" },
+            { num: "12", title: "Observer un pipeline : fraîcheur, lignage, alertes", file: "lecon-12.html", status: "complet" },
+          ],
+        },
+        {
+          num: "04", title: "À l'échelle et en production", sub: "coût, volumétrie, projet de bout en bout", level: "avance",
+          lessons: [
+            { num: "13", title: "Coût et volumétrie : quand la donnée devient chère", file: "lecon-13.html", status: "complet" },
+            { num: "14", title: "Projet — le pipeline de Vélociti de bout en bout", file: "lecon-14.html", status: "complet" },
           ],
         },
       ],
@@ -5401,8 +5459,8 @@ window.SITE_DATA = (function () {
       id: "data",
       title: "Données & analyse",
       glyph: "Σ",
-      tagline: "Interroger, manipuler, analyser et visualiser des données.",
-      courses: ["sql", "python", "pandas", "stats", "dataviz", "r"],
+      tagline: "Interroger, manipuler, industrialiser, analyser et visualiser des données.",
+      courses: ["sql", "python", "pandas", "data-eng", "stats", "dataviz", "r"],
     },
     {
       id: "systeme",
@@ -5574,6 +5632,7 @@ window.SITE_DATA = (function () {
     "csharp": {"lecon-01.html":30,"lecon-02.html":32,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":34,"lecon-06.html":34,"lecon-07.html":32,"lecon-08.html":32,"lecon-09.html":33,"lecon-10.html":35,"lecon-11.html":37,"lecon-12.html":35,"lecon-13.html":32,"lecon-14.html":36,"lecon-15.html":35,"lecon-16.html":35,"lecon-17.html":44,"lecon-18.html":40,"lecon-19.html":34,"lecon-20.html":34,"lecon-21.html":32,"lecon-22.html":34,"lecon-23.html":40},
     "css": {"lecon-01.html":30,"lecon-02.html":32,"lecon-03.html":32,"lecon-04.html":30,"lecon-05.html":34,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":34,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":32,"lecon-14.html":32,"lecon-15.html":32,"lecon-16.html":30,"lecon-17.html":32,"lecon-18.html":36,"lecon-19.html":36,"lecon-20.html":34,"lecon-21.html":34,"lecon-22.html":35,"lecon-23.html":36,"lecon-24.html":34,"lecon-25.html":35,"lecon-26.html":33,"lecon-27.html":33,"lecon-28.html":33,"lecon-29.html":35,"lecon-30.html":32,"lecon-31.html":34,"lecon-32.html":32,"lecon-33.html":34,"lecon-34.html":33,"lecon-35.html":33,"lecon-36.html":33,"lecon-37.html":30,"lecon-38.html":34,"lecon-39.html":34,"lecon-40.html":34,"lecon-41.html":34,"lecon-42.html":34,"lecon-43.html":34,"lecon-44.html":34,"lecon-45.html":35,"lecon-46.html":35,"lecon-47.html":38},
     "dart": {"lecon-01.html":40,"lecon-02.html":50,"lecon-03.html":45,"lecon-04.html":45,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":50,"lecon-10.html":50,"lecon-11.html":55,"lecon-12.html":48,"lecon-13.html":50,"lecon-14.html":46,"lecon-15.html":52,"lecon-16.html":55},
+    "data-eng": {"lecon-01.html":30,"lecon-02.html":34,"lecon-03.html":35,"lecon-04.html":36,"lecon-05.html":37,"lecon-06.html":38,"lecon-07.html":36,"lecon-08.html":37,"lecon-09.html":36,"lecon-10.html":36,"lecon-11.html":37,"lecon-12.html":36,"lecon-13.html":38,"lecon-14.html":44},
     "docker": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":40,"lecon-04.html":40,"lecon-05.html":40,"lecon-06.html":40,"lecon-07.html":35,"lecon-08.html":40,"lecon-09.html":40,"lecon-10.html":38,"lecon-11.html":40,"lecon-12.html":42,"lecon-13.html":40,"lecon-14.html":38,"lecon-15.html":42},
     "elixir": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":50,"lecon-05.html":50,"lecon-06.html":50,"lecon-07.html":50,"lecon-08.html":55,"lecon-09.html":55,"lecon-10.html":55,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":48,"lecon-14.html":50,"lecon-15.html":52,"lecon-16.html":50,"lecon-17.html":55},
     "erlang": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":52,"lecon-11.html":52,"lecon-12.html":55,"lecon-13.html":50,"lecon-14.html":55},
