@@ -47,15 +47,24 @@ $okFile  = Join-Path $dir 'verif-finale.ok'
 $cptFile = Join-Path $dir 'verif-finale.echecs'
 $rapport = Join-Path $proj 'VERIF-FINALE.md'
 
+# CHAINE DE CHANTIERS (2026-08-21) : l'autonomie enchaine les plans dans l'ordre,
+# sans intervention. Chaque plan est traite jusqu'a sa derniere case, puis on passe
+# au suivant. Ajouter un chantier = ajouter son fichier a cette liste.
+$CHAINE = @('CHANTIER-V12.md', 'CHANTIER-V13.md', 'CHANTIER-V14.md')
+
+# Renvoie le premier plan de la chaine qui a encore une case a cocher, ou $null
+# si tout est fini.
+function Get-PlanCourant {
+  foreach ($nom in $CHAINE) {
+    $chemin = Join-Path $proj $nom
+    if (-not (Test-Path $chemin)) { continue }
+    if (Select-String -Path $chemin -Pattern '^- \[ \]' -Quiet) { return $nom }
+  }
+  return $null
+}
+
 function Test-ChantierFini {
-  try {
-    # Chantier V12 (depuis le 2026-08-21) : le plan CHANTIER-V12.md fait foi.
-    # Tant qu'il reste une case a cocher, il reste du travail.
-    $plan = Join-Path $proj 'CHANTIER-V12.md'
-    if (-not (Test-Path $plan)) { return $false }
-    if (Select-String -Path $plan -Pattern '^- \[ \]' -Quiet) { return $false }
-    return $true
-  } catch { return $false }
+  try { return ($null -eq (Get-PlanCourant)) } catch { return $false }
 }
 
 $modeVerif = $false
@@ -92,7 +101,9 @@ if ($modeVerif) {
 $promptTravail = @'
 Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) pour faire avancer le projet Syntaxe EN AUTONOMIE, dossier d:\test-claude. Tu es NON-INTERACTIF : ne pose AUCUNE question, ne propose AUCUN questionnaire, decide et agis seul. Tout le contenu visible et les commentaires en francais, avec accents CORRECTS (jamais d'ASCII a la place d'un accent dans le contenu).
 
-LE SITE : 83 cours, 1463 lecons, 25 parcours, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. Le chantier V12 traite les 42 points d'un INVENTAIRE independant (11 agents) de ce qui manque encore au site. CE QUE CET INVENTAIRE A PROUVE, et qui doit guider tout le chantier : les quatre verificateurs etaient VERTS quand il a trouve CINQ exemples dont la sortie annoncee etait fausse, dont une lecon sur les expressions regulieres qui affichait un commentaire true sous un test renvoyant false — visible par l'apprenant, puisque runner.js pose un bouton Tester sur ces blocs. Ces cinq erreurs sont deja corrigees, mais LA CAUSE RESTE : aucun outil n'execute jamais un exemple. 1862 valeurs attendues sont ecrites en commentaire et 4241 reponses d'exercices sont declarees, personne ne les confronte au reel. C'est pourquoi LA PHASE A EST L'OUTILLAGE : elle sert a tout le reste et attrape ce que les yeux ne voient pas. REGLE ABSOLUE, heritee du chantier precedent : NE JAMAIS CORRIGER UN CALCUL DE TETE, LE FAIRE TOURNER — c'est elle qui a permis de trouver ces cinq erreurs. Deuxieme regle : UN MOTIF DE REMPLACEMENT TROP LARGE CASSE CE QUI ETAIT JUSTE, un meme chiffre apparait souvent plusieurs fois dans une page pour des raisons differentes, donc rejoue le scenario complet apres correction. Troisieme regle : CERTAINS POINTS DE LA PHASE G SONT DE VRAIS CHANTIERS — evalue avant de commencer, et si l'un depasse manifestement ce qu'une passe peut faire, laisse la case decochee en ecrivant ce qui bloque. Mieux vaut un point clos que trois ebauches. LE PROJET EST SOUS GIT et sauvegarde sur un depot prive : un commit par point, avec la mesure dans le message.
+LE SITE : 83 cours, 1463 lecons, 25 parcours, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. TU TRAVAILLES SUR UNE CHAINE DE TROIS CHANTIERS, traites dans l'ordre : CHANTIER-V12.md (les 42 points d'un inventaire independant : outillage, donnees de l'apprenant, cahier d'erreurs, pieges indexes, navigation), puis CHANTIER-V13.md (le contenu qui manque : compilation, reseaux de neurones, systemes distribues, securite offensive, cryptographie — un MODULE par case, jamais un cours entier), puis CHANTIER-V14.md (faire ecrire du code et le corriger : moteurs d'execution locaux, exercices vraiment auto-corriges, decodeur d'erreurs, bac a sable Git). Le wrapper te donne automatiquement le premier plan qui a encore une case a cocher : tu n'as pas a choisir. CHAQUE PLAN PORTE SON PROPRE CADRAGE en tete — lis-le, il explique pourquoi ce chantier existe et quelles erreurs eviter.
+
+CE QUI A FONDE CETTE CHAINE, et qui vaut pour les trois : les quatre verificateurs du site etaient VERTS quand un inventaire a trouve CINQ exemples dont la sortie annoncee etait fausse — dont une lecon sur les expressions regulieres qui affichait un commentaire true sous un test renvoyant false, visible par l'apprenant puisque runner.js pose un bouton Tester sur ces blocs. Ces cinq erreurs sont corrigees, mais LA CAUSE RESTE : aucun outil n'execute jamais un exemple. REGLE ABSOLUE : NE JAMAIS CORRIGER NI ECRIRE UN CALCUL DE TETE, LE FAIRE TOURNER. Le compte rendu de chaque case cite le chiffre obtenu par l'execution. Deuxieme regle : UN MOTIF DE REMPLACEMENT TROP LARGE CASSE CE QUI ETAIT JUSTE — un meme chiffre apparait souvent plusieurs fois dans une page pour des raisons differentes, donc rejoue le scenario complet apres correction. Troisieme regle : CERTAINS POINTS SONT DE VRAIS CHANTIERS — evalue avant de commencer, et si l'un depasse manifestement ce qu'une passe peut faire, laisse la case decochee en ecrivant ce qui bloque. Mieux vaut un point clos que trois ebauches. LE PROJET EST SOUS GIT et sauvegarde sur un depot prive : un commit par point, avec la mesure dans le message.
 
 1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V12.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A a H, dans l'ordre). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
 2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
@@ -130,6 +141,11 @@ Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) sur le projet Syntaxe, dos
 4) Mets a jour la memoire du chantier (fichier enrichissement-cron-3.md) avec le resultat. Messages BREFS.
 '@
 
+# Le prompt de travail nomme CHANTIER-V12.md ; on y substitue le plan courant de
+# la chaine, pour que le meme wrapper serve aux trois chantiers.
+$planCourant = Get-PlanCourant
+if (-not $planCourant) { $planCourant = 'CHANTIER-V12.md' }
+$promptTravail = $promptTravail.Replace('CHANTIER-V12.md', $planCourant)
 $prompt = if ($modeVerif) { $promptVerif } else { $promptTravail }
 
 try {

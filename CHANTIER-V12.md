@@ -121,38 +121,16 @@ les yeux ne voient pas.
 
 ---
 
-## PHASE F — Le catalogue
+## PHASES F et G — déplacées vers les chantiers V13 et V14
 
-- [ ] **F1 · Un fil rouge promet un cours qui n'existe pas.** Vérifier, puis soit écrire le cours **Compilation** (~12-14 leçons : analyse lexicale, syntaxique, arbre, génération, machine virtuelle), soit corriger le fil rouge. Ne pas laisser une promesse en l'air.
+Le catalogue et les gros morceaux pédagogiques ont été sortis de ce plan le 2026-08-21 : une case
+« écrire 13 leçons de réseaux de neurones » ou « construire un moteur SQL » n'est pas un point de
+chantier, c'est un chantier. Les traiter ici les aurait condamnés à être expédiés.
 
-- [ ] **F2 · Le parcours « ia » est cassé en deux endroits** — il se termine sur GraphQL. Le recomposer.
+- Le **contenu neuf** (cours manquants, fils rouges incomplets) → **`CHANTIER-V13.md`**
+- **L'exécution et la pratique** (moteurs locaux, exercices vérifiables, décodeur d'erreurs) → **`CHANTIER-V14.md`**
 
-- [ ] **F3 · 14 cours sur 83 ne figurent dans aucun fil rouge**, dont les 5 cours « données » tout juste créés et 4 des 6 cours « exploitation ». Les fils rouges sont la forme la plus aboutie du site : les y intégrer.
-
-- [ ] **F4 · Réseaux de neurones et apprentissage profond** — le chaînon manquant du parcours « ia » (~11-13 leçons, au standard dès l'écriture).
-
-- [ ] **F5 · La banque de défis est le point le plus maigre du site.** L'étoffer.
-
-- [ ] **F6 · Systèmes distribués** — les conséquences sont enseignées (cloud, observabilité, `data-eng`), jamais les fondations. ~11-12 leçons. **Point d'intérêt faible : à ne traiter qu'après tout le reste, et à abandonner si le temps manque.**
-
----
-
-## PHASE G — Les gros morceaux pédagogiques
-
-Chacun est un chantier en soi. **Les traiter dans l'ordre, et s'arrêter dès que l'un d'eux dépasse
-manifestement ce qu'une passe peut faire** — mieux vaut un point clos que trois ébauches.
-
-- [ ] **G1 · Un décodeur de messages d'erreur.** Un fichier de données des erreurs les plus fréquentes par langage, avec leur cause et leur remède. C'est ce qu'un débutant cherche en premier, et le site n'en dit rien.
-
-- [ ] **G2 · Un moteur SQL local.** Les 354 blocs SQL ne sont pas exécutables. Route recommandée par le filtre, **dix fois moins chère** que d'écrire un moteur : embarquer le `.wasm` de sql.js en base64 dans un fichier du dépôt. **Vérifier d'abord** que cela reste compatible `file://` et acceptable en poids — si ce n'est pas le cas, le dire et passer.
-
-- [ ] **G3 · Un bac à sable Git.** La référence la plus utilisée du domaine, et le site a un cours Git de 24 leçons sans aucune pratique interactive.
-
-- [ ] **G4 · « Plusieurs façons de le faire ».** Des approches comparées plutôt qu'une solution unique. Chantier de contenu, à borner : quelques leçons emblématiques, pas les 1 463.
-
-- [ ] **G5 · Un déroulé d'exécution pas à pas** avec l'état des variables. Chantier lourd — à évaluer sérieusement avant de commencer, et à abandonner si la complexité dépasse l'apport.
-
-- [ ] **G6 · Écrire du code et être corrigé.** Aujourd'hui **2,5 % des exercices sont auto-corrigés**, et 4 389 solutions sont fournies sans vérification de ce que l'apprenant écrit. Chantier entier — le borner à une famille d'exercices.
+L'autonomie enchaîne les trois plans dans l'ordre, sans intervention.
 
 ---
 
