@@ -21,11 +21,30 @@ $claude = 'C:\Users\chipat\.local\bin\claude.exe'
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') }
 
-# Verrou anti-chevauchement : si un reveil precedent tourne encore (< 90 min), on saute.
+# Verrou anti-chevauchement. ANCIENNE VERSION : on sautait si le fichier lock avait
+# moins de 90 minutes. Defaut constate le 2026-08-21 : une passe reelle a depasse
+# 92 minutes, donc son verrou etait deja perime alors qu'elle tournait toujours --
+# un reveil suivant aurait pu demarrer PAR-DESSUS, et deux claude.exe qui ecrivent
+# dans le meme depot s'ecrasent mutuellement et cassent l'index git. Le mode
+# ultracode rend le cas courant : un fan-out multi-agents dure longtemps.
+# NOUVELLE VERSION : le verrou porte le PID du wrapper. On saute tant que CE
+# processus vit vraiment, quelle que soit sa duree. Plafond de 6 h malgre tout,
+# au cas ou un PID serait recycle par Windows sur un autre processus.
 if (Test-Path $lock) {
   $age = (Get-Date) - (Get-Item $lock).LastWriteTime
-  if ($age.TotalMinutes -lt 90) {
-    Add-Content $log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou)."
+  $vivant = $false
+  try {
+    $pidLock = (Get-Content $lock -Raw -ErrorAction Stop).Trim()
+    if ($pidLock -match '^\d+$') {
+      $proc = Get-Process -Id ([int]$pidLock) -ErrorAction SilentlyContinue
+      if ($proc -and $proc.ProcessName -like 'powershell*') { $vivant = $true }
+    } else {
+      # Verrou de l'ancien format (fichier vide) : on retombe sur le delai.
+      if ($age.TotalMinutes -lt 90) { $vivant = $true }
+    }
+  } catch {}
+  if ($vivant -and $age.TotalHours -lt 6) {
+    Add-Content $log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou, $([int]$age.TotalMinutes) min)."
     exit 0
   }
 }
@@ -92,6 +111,7 @@ if (Test-ChantierFini) {
 $debutPasse = Get-Date
 
 New-Item -ItemType File -Path $lock -Force | Out-Null
+Set-Content -Path $lock -Value $PID -Encoding ascii   # le verrou porte le PID : voir plus haut
 if ($modeVerif) {
   Add-Content $log "[$(Stamp)] ===== reveil autonome -- PASSE DE SECURITE (verification finale) ====="
 } else {
