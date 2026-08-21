@@ -228,9 +228,7 @@
     }
   }
   function remember(dir) {
-    try {
-      localStorage.setItem(KEY, dir);
-    } catch (e) {}
+    window.SyntaxeStore.set(KEY, dir);
   }
 
   /* Priorité : ancre (antiseches.html#js, pour un lien depuis un cours),

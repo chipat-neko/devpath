@@ -182,15 +182,20 @@
         )
       )
         return;
+      /* Ne recharger QUE si l'effacement a réellement eu lieu : un
+         location.reload() immédiat détruirait le bandeau d'alerte avant qu'il
+         soit affiché (showToast ne le rend visible qu'au bout de 10 ms), et
+         l'apprenant verrait sa progression intacte sans un mot d'explication. */
+      var ecrit = false;
       try {
         var prog = JSON.parse(localStorage.getItem("syntaxe-progress") || "{}");
         delete prog[courseId];
-        localStorage.setItem("syntaxe-progress", JSON.stringify(prog));
+        ecrit = window.SyntaxeStore.setJSON("syntaxe-progress", prog);
         var sc = JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}");
         delete sc[courseId];
-        localStorage.setItem("syntaxe-quiz", JSON.stringify(sc));
+        window.SyntaxeStore.setJSON("syntaxe-quiz", sc);
       } catch (e) {}
-      location.reload();
+      if (ecrit) location.reload();
     });
     host.appendChild(btn);
   }

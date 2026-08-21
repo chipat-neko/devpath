@@ -43,9 +43,7 @@
     }
   }
   function writeStore(s) {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch (e) {}
+    window.SyntaxeStore.setJSON(KEY, s);
   }
   function byId(id) {
     for (var i = 0; i < PROJETS.length; i++) {

@@ -175,9 +175,7 @@
     }
   }
   function setGoal(n) {
-    try {
-      localStorage.setItem("syntaxe-goal", JSON.stringify({ daily: n }));
-    } catch (e) {}
+    window.SyntaxeStore.setJSON("syntaxe-goal", { daily: n });
   }
   function todayCount() {
     /* Compte les leçons DISTINCTES terminées aujourd'hui (journal « syntaxe-done-log »
@@ -557,12 +555,18 @@
       /* Collecte AVANT suppression : retirer une clé pendant le parcours de
          localStorage décalerait les index et en sauterait une sur deux. */
       var ks = clesProgression();
+      var rates = 0;
       ks.forEach(function (k) {
-        try {
-          localStorage.removeItem(k);
-        } catch (e) {}
+        if (!window.SyntaxeStore.remove(k)) rates++;
       });
       render();
+      if (rates && window.SyntaxeToast) {
+        window.SyntaxeToast(
+          "Effacement impossible : " + rates + " élément(s) sur " + ks.length +
+            " n'ont pas pu être supprimés — ce navigateur refuse le stockage local.",
+          true
+        );
+      }
     });
   }
 

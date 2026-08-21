@@ -56,12 +56,11 @@
     return DEFAULT;
   }
   function save() {
-    try {
-      localStorage.setItem(
-        KEY,
-        JSON.stringify({ html: html.value, css: css.value, js: js.value })
-      );
-    } catch (e) {}
+    window.SyntaxeStore.setJSON(KEY, {
+      html: html.value,
+      css: css.value,
+      js: js.value,
+    });
   }
 
   /* Deux onglets ouverts : se resynchroniser avec le dernier brouillon écrit

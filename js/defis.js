@@ -30,9 +30,7 @@
   function markSolved(id) {
     var s = solvedMap();
     s[id] = true;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch (e) {}
+    window.SyntaxeStore.setJSON(KEY, s);
   }
   function valStr(v) {
     try {

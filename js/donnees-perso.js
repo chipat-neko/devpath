@@ -132,11 +132,9 @@
       b.addEventListener("click", function () {
         var k = b.getAttribute("data-k");
         if (window.confirm("Effacer « " + labelFor(k) + " » ? Cette action est définitive.")) {
-          try {
-            localStorage.removeItem(k);
-          } catch (e) {}
+          var efface = window.SyntaxeStore.remove(k);
           render();
-          msg("Entrée effacée.", true);
+          msg(efface ? "Entrée effacée." : "Effacement impossible : ce navigateur refuse le stockage local.", efface);
         }
       });
     });
@@ -197,13 +195,13 @@
       var ks = keys();
       if (!ks.length) return msg("Rien à effacer.", false);
       if (window.confirm("Effacer TOUTES les données du site (" + ks.length + " entrées) ? Cette action est définitive.")) {
+        var rates = 0;
         ks.forEach(function (k) {
-          try {
-            localStorage.removeItem(k);
-          } catch (e) {}
+          if (!window.SyntaxeStore.remove(k)) rates++;
         });
         render();
-        msg("Toutes les données ont été effacées.", true);
+        if (rates) msg("Effacement impossible : " + rates + " entrée(s) sur " + ks.length + " n'ont pas pu être supprimées.", false);
+        else msg("Toutes les données ont été effacées.", true);
       }
     });
   }

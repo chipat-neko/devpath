@@ -299,9 +299,7 @@
   }
 
   function writeStore(k, v) {
-    try {
-      localStorage.setItem(k, JSON.stringify(v));
-    } catch (e) {}
+    window.SyntaxeStore.setJSON(k, v);
   }
 
   /* ------------------------------ Reprise des cours « -avance » fusionnés
@@ -459,14 +457,14 @@
       if (raw != null) prev = parseInt(raw, 10);
     } catch (e) {}
     if (prev == null || isNaN(prev)) {
-      try { localStorage.setItem(KEY, String(lv.level)); } catch (e) {}
+      window.SyntaxeStore.set(KEY, String(lv.level));
       return;
     }
     if (lv.level > prev) {
       showToast("Niveau " + lv.level + " atteint — " + lv.title + ".");
     }
     if (lv.level !== prev) {
-      try { localStorage.setItem(KEY, String(lv.level)); } catch (e) {}
+      window.SyntaxeStore.set(KEY, String(lv.level));
     }
   }
 

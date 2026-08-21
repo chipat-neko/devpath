@@ -46,14 +46,6 @@
 
   /* ----------------------------------------------- Progression (storage) */
   var PKEY = "syntaxe-progress";
-  /* Prévient l'utilisateur qu'une sauvegarde a échoué (surtout localStorage
-     plein) au lieu de l'avaler en silence. Repli discret si le toast global
-     n'est pas là. (cf. C5) */
-  function warnStorage() {
-    if (window.SyntaxeToast) {
-      window.SyntaxeToast("Enregistrement impossible — ton espace de stockage est peut-être plein.", true);
-    }
-  }
   function readProgress() {
     try {
       return JSON.parse(localStorage.getItem(PKEY) || "{}") || {};
@@ -62,9 +54,7 @@
     }
   }
   function writeProgress(p) {
-    try {
-      localStorage.setItem(PKEY, JSON.stringify(p));
-    } catch (e) { warnStorage(); }
+    window.SyntaxeStore.setJSON(PKEY, p);
   }
   /* La progression est indexée par NOM DE FICHIER : p[courseId]["lecon-NN.html"].
      Lors des étoffements, des leçons ont été insérées avant le capstone de certains
@@ -104,7 +94,7 @@
       if (done && i === -1) arr.push(key);
       else if (!done && i !== -1) arr.splice(i, 1);
       log[day] = arr;
-      localStorage.setItem("syntaxe-done-log", JSON.stringify(log));
+      window.SyntaxeStore.setJSON("syntaxe-done-log", log);
     } catch (e) {}
   }
   function countDone() {
@@ -148,9 +138,7 @@
     var newRatio = total > 0 ? good / total : 0;
     if (!prev || newRatio > prevRatio) {
       q[courseId][lessonFile][scoreKey] = { best: good, total: total };
-      try {
-        localStorage.setItem(QKEY, JSON.stringify(q));
-      } catch (e) { warnStorage(); }
+      window.SyntaxeStore.setJSON(QKEY, q);
     }
   }
 
@@ -947,14 +935,11 @@
   function recordLast() {
     if (currentIndex === -1) return;
     try {
-      localStorage.setItem(
-        "syntaxe-last",
-        JSON.stringify({
-          course: courseId,
-          file: lessonFile,
-          title: flat[currentIndex].lesson.title,
-        })
-      );
+      window.SyntaxeStore.setJSON("syntaxe-last", {
+        course: courseId,
+        file: lessonFile,
+        title: flat[currentIndex].lesson.title,
+      });
     } catch (e) {}
     /* Journal d'activité par jour (heatmap & séries — P3) */
     try {
@@ -964,7 +949,7 @@
       var dd = d.getDate();
       var day = d.getFullYear() + "-" + (mm < 10 ? "0" + mm : mm) + "-" + (dd < 10 ? "0" + dd : dd);
       act[day] = (act[day] || 0) + 1;
-      localStorage.setItem("syntaxe-activity", JSON.stringify(act));
+      window.SyntaxeStore.setJSON("syntaxe-activity", act);
     } catch (e) {}
   }
 
@@ -1151,9 +1136,7 @@
       s[courseId] = s[courseId] || {};
       s[courseId][lessonFile] = obj;
     }
-    try {
-      localStorage.setItem("syntaxe-notes", JSON.stringify(s));
-    } catch (e) { warnStorage(); }
+    window.SyntaxeStore.setJSON("syntaxe-notes", s);
   }
 
   function highlightText(prose, text) {

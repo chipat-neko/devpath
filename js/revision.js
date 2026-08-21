@@ -42,7 +42,7 @@
         if (Object.prototype.hasOwnProperty.call(state, k)) fresh[k] = state[k];
       }
       state = fresh;
-      localStorage.setItem(KEY, JSON.stringify(state));
+      window.SyntaxeStore.setJSON(KEY, state);
     } catch (e) {}
   }
   function cardId(c) {

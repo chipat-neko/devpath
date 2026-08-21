@@ -39,9 +39,7 @@
     }
   }
   function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(questions));
-    } catch (e) {}
+    window.SyntaxeStore.setJSON(KEY, questions);
   }
   function msg(t, ok) {
     if (!msgEl) return;

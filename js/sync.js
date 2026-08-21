@@ -31,11 +31,21 @@
       return null;
     }
   }
-  function writeJSON(k, v) {
+  /* Écriture passant par le helper global `SyntaxeStore` (theme.js) quand il
+     est là ; sync.js étant une couche dormante, chargée par aucune page, on
+     garde un repli local pour qu'il reste utilisable seul. */
+  function ecrire(k, v) {
+    if (window.SyntaxeStore) return window.SyntaxeStore.set(k, v);
     try {
-      if (v === null || v === undefined) return;
-      localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
-    } catch (e) {}
+      localStorage.setItem(k, v);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  function writeJSON(k, v) {
+    if (v === null || v === undefined) return false;
+    return ecrire(k, typeof v === "string" ? v : JSON.stringify(v));
   }
 
   /* Instantané complet de la progression locale. */
@@ -106,9 +116,7 @@
     writeJSON("syntaxe-quiz", snap.quiz || {});
     if (snap.last) writeJSON("syntaxe-last", snap.last);
     if (snap.lang) {
-      try {
-        localStorage.setItem("syntaxe-lang", snap.lang);
-      } catch (e) {}
+      ecrire("syntaxe-lang", snap.lang);
     }
   }
 

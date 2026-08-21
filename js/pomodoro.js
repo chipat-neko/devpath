@@ -46,7 +46,7 @@
     try {
       var a = JSON.parse(localStorage.getItem(KEY) || "{}") || {};
       a[ymd()] = (a[ymd()] || 0) + 1;
-      localStorage.setItem(KEY, JSON.stringify(a));
+      window.SyntaxeStore.setJSON(KEY, a);
     } catch (e) {}
   }
 

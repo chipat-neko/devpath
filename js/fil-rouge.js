@@ -40,9 +40,7 @@
     }
   }
   function writeStore(s) {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch (e) {}
+    window.SyntaxeStore.setJSON(KEY, s);
   }
   function byN(n) {
     for (var i = 0; i < FR.etapes.length; i++) {

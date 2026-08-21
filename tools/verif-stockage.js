@@ -1,0 +1,360 @@
+#!/usr/bin/env node
+"use strict";
+
+/**
+ * tools/verif-stockage.js — Prouve que le site PRÉVIENT quand localStorage refuse.
+ *
+ * POURQUOI CE SCRIPT
+ * ------------------
+ * Point V12-B1 : sur 29 points d'écriture `localStorage.setItem`, 21 avalaient
+ * l'échec dans un `catch (e) {}` vide. En navigation privée stricte, sur un
+ * profil aux cookies bloqués ou avec un quota plein, l'apprenant travaillait
+ * une heure sans qu'un mot ne lui dise que rien n'était gardé — y compris les
+ * questions qu'il avait rédigées (mes-qcm) et le code qu'il avait écrit
+ * (playground). Un helper `window.SyntaxeStore` (défini en tête de js/theme.js)
+ * porte désormais toutes ces écritures et affiche un bandeau.
+ *
+ * Aucun vérificateur statique ne peut prouver ça : il faut un vrai navigateur,
+ * un vrai clic, et un localStorage qui refuse pour de bon. C'est ce que fait
+ * ce script, en pilotant Chrome par CDP comme verif-rendu.js.
+ *
+ * CE QU'IL FAIT
+ * -------------
+ *  1. Lance Chrome headless, réseau coupé, sur une page en file://.
+ *  2. AVANT tout script de page, remplace `Storage.prototype.setItem` par une
+ *     fonction qui jette — ou rend `window.localStorage` inaccessible.
+ *  3. Rejoue un geste réel de l'apprenant (clic « Marquer comme terminée »,
+ *     frappe dans l'éditeur du bac à sable, bascule de thème…).
+ *  4. Vérifie qu'un bandeau `.toast--err` apparaît AVEC LE BON MESSAGE,
+ *     que le quota plein se distingue du refus, et — non-régression — que sur
+ *     un stockage sain il n'y a AUCUN bandeau et que la donnée est bien écrite.
+ *
+ * USAGE
+ *   node tools/verif-stockage.js            # les 10 scénarios
+ *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
+ *   CHROME_PATH=... node tools/verif-stockage.js
+ *
+ * Sort en 1 si un seul scénario n'est pas conforme.
+ */
+
+var fs = require("fs");
+var path = require("path");
+var os = require("os");
+var cp = require("child_process");
+
+var args = process.argv.slice(2);
+var DETAIL = args.indexOf("--detail") !== -1;
+var ROOT = path.resolve(__dirname, "..");
+
+function attendre(ms) {
+  return new Promise(function (r) { setTimeout(r, ms); });
+}
+
+function trouverChrome() {
+  var candidats = [
+    process.env.CHROME_PATH,
+    "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+    path.join(os.homedir(), "AppData/Local/Google/Chrome/Application/chrome.exe"),
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  ].filter(Boolean);
+  for (var i = 0; i < candidats.length; i++) {
+    try { if (fs.existsSync(candidats[i])) return candidats[i]; } catch (e) {}
+  }
+  return null;
+}
+
+/* Client CDP minimal : Node >= 22 expose WebSocket globalement. */
+function Client(url) {
+  this.ws = new WebSocket(url);
+  this.id = 0;
+  this.encours = {};
+  var self = this;
+  this.pret = new Promise(function (r) { self.ws.onopen = r; });
+  this.ws.onmessage = function (ev) {
+    var m = JSON.parse(ev.data);
+    if (m.id && self.encours[m.id]) {
+      var h = self.encours[m.id];
+      delete self.encours[m.id];
+      if (m.error) h.rej(new Error(m.error.message));
+      else h.res(m.result);
+    }
+  };
+}
+Client.prototype.envoyer = function (methode, params, sess) {
+  var self = this, id = ++this.id;
+  return new Promise(function (res, rej) {
+    self.encours[id] = { res: res, rej: rej };
+    var o = { id: id, method: methode, params: params || {} };
+    if (sess) o.sessionId = sess;
+    self.ws.send(JSON.stringify(o));
+    setTimeout(function () {
+      if (self.encours[id]) { delete self.encours[id]; rej(new Error("délai : " + methode)); }
+    }, 30000);
+  });
+};
+
+/* ------------------------------------------- le mouchard et les pannes simulées */
+/* Posé par Page.addScriptToEvaluateOnNewDocument : il s'exécute AVANT theme.js,
+   donc avant toute écriture du site.
+
+   Il fait DEUX choses :
+     1. il simule la panne demandée (refus, quota, ou rien) ;
+     2. il RELÈVE L'APPELANT de chaque écriture. Toute écriture passant par le
+        helper a `theme.js` en premier cadre de pile, puisque `SyntaxeStore` y
+        est défini ; une écriture qui vient directement de lecon.js, main.js…
+        est une écriture SANS FILET, et le scénario échoue même si un bandeau
+        apparaît par ailleurs. Sans ce relevé, un geste qui déclenche plusieurs
+        écritures masquerait celle qui est restée nue. */
+var MOUCHARD = function (MODE) {
+  /* Les gestes d'effacement passent par window.confirm : en headless la boite
+     modale fige la page et Runtime.evaluate expire. On repond « oui » d'office,
+     ce qui est justement le chemin a tester. */
+  window.confirm = function () { return true; };
+  var vrai = Storage.prototype.setItem;
+  var vraiRetrait = Storage.prototype.removeItem;
+  window.__directes = [];
+  /* L'effacement souffre du meme mal que l'ecriture : « Entree effacee » ne
+     doit pas s'afficher quand rien n'a ete efface. */
+  Storage.prototype.removeItem = function (k) {
+    if (MODE === "sain") return vraiRetrait.call(this, k);
+    var er = new Error("acces refuse");
+    er.name = "SecurityError";
+    throw er;
+  };
+  Storage.prototype.setItem = function (k, v) {
+    var pile = (new Error().stack || "").split(String.fromCharCode(10)).slice(1);
+    var appelant = "";
+    for (var i = 0; i < pile.length; i++) {
+      if (/\.js:\d+/.test(pile[i])) { appelant = pile[i]; break; }
+    }
+    if (appelant && appelant.indexOf("theme.js") === -1) {
+      window.__directes.push(appelant.replace(/^\s*at\s*/, "").slice(-90));
+    }
+    if (MODE === "sain") return vrai.call(this, k, v);
+    var e;
+    if (MODE === "quota") { e = new Error("quota"); e.name = "QuotaExceededError"; e.code = 22; }
+    else { e = new Error("acces refuse"); e.name = "SecurityError"; }
+    throw e;
+  };
+};
+
+/* Cookies bloqués : l'ACCÈS à window.localStorage jette, pas seulement
+   l'écriture. Un try posé autour du seul setItem ne suffirait pas. */
+var BLOCAGE =
+  "(function(){window.__directes=[];window.confirm=function(){return true};try{Object.defineProperty(window,'localStorage',{configurable:true," +
+  "get:function(){var e=new Error('cookies bloques');e.name='SecurityError';throw e}})}catch(e){}})()";
+
+function source(panne) {
+  if (panne === "bloque") return BLOCAGE;
+  return "(" + MOUCHARD.toString() + ")(" + JSON.stringify(panne || "sain") + ")";
+}
+
+var REFUS = /refuse le stockage local/;
+var PLEIN = /stockage plein/;
+
+var SCENARIOS = [
+  {
+    nom: "leçon : clic « Marquer comme terminée », écriture REFUSÉE",
+    page: "pages/js/lecon-01.html", panne: "refus",
+    geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
+    bandeau: REFUS,
+  },
+  {
+    nom: "leçon : clic « Marquer comme terminée », QUOTA plein",
+    page: "pages/js/lecon-01.html", panne: "quota",
+    geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
+    bandeau: PLEIN,
+  },
+  {
+    nom: "leçon : clic « Marquer comme terminée », localStorage INACCESSIBLE",
+    page: "pages/js/lecon-01.html", panne: "bloque",
+    geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
+    bandeau: REFUS,
+  },
+  {
+    nom: "leçon : stockage SAIN — aucun bandeau, progression écrite (non-régression)",
+    page: "pages/js/lecon-01.html", panne: null,
+    geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
+    bandeau: null, ecrit: /lecon-01/,
+  },
+  {
+    nom: "bac à sable : frappe dans l'éditeur, écriture REFUSÉE",
+    page: "pages/playground.html", panne: "refus",
+    geste: "var e=document.querySelector('textarea');" +
+      "if(e){e.value+='<p>x</p>';e.dispatchEvent(new Event('input',{bubbles:true}))}",
+    bandeau: REFUS,
+  },
+  {
+    nom: "mes QCM : enregistrement d'une question, écriture REFUSÉE",
+    page: "pages/mes-qcm.html", panne: "refus",
+    geste: "if(window.SyntaxeStore)window.SyntaxeStore.setJSON('syntaxe-mes-qcm',[{q:'x'}]);",
+    bandeau: REFUS,
+  },
+  {
+    nom: "thème : bascule sombre/clair, écriture REFUSÉE",
+    page: "index.html", panne: "refus",
+    geste: "window.SyntaxeTheme.set('dark');",
+    bandeau: REFUS,
+  },
+  {
+    nom: "progression : objectif quotidien, écriture REFUSÉE",
+    page: "pages/progression.html", panne: "refus",
+    geste: "if(window.SyntaxeStore)window.SyntaxeStore.setJSON('syntaxe-goal',{daily:3});",
+    bandeau: REFUS,
+  },
+  {
+    nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
+    page: "pages/donnees-perso.html", panne: "refus",
+    semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
+    geste: "var b=document.querySelector('.dp-del');b&&b.click();",
+    bandeau: null, message: /[Ee]ffacement impossible/, messageOk: false,
+  },
+  {
+    nom: "cours : « Réinitialiser ma progression » refusée — bandeau lu, pas de rechargement",
+    page: "pages/html/cours.html", panne: "refus",
+    semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
+    geste: "var b=document.querySelector('.course-reset');b&&b.click();",
+    bandeau: REFUS, resteLa: true,
+  },
+];
+
+/* Sonde exécutée dans la page après le geste. */
+var SONDE = function () {
+  var t = document.querySelectorAll(".toast--err");
+  var textes = [];
+  for (var i = 0; i < t.length; i++) textes.push(t[i].textContent);
+  var prog = "";
+  try { prog = localStorage.getItem("syntaxe-progress") || ""; } catch (e) { prog = "?"; }
+  return {
+    directes: (window.__directes || []).slice(0, 6),
+    nbDirectes: (window.__directes || []).length,
+    bandeaux: t.length,
+    textes: textes,
+    echecs: (window.SyntaxeStore || {}).echecs,
+    helper: typeof (window.SyntaxeStore || {}).set === "function",
+    progression: prog,
+    message: (document.querySelector(".dp-msg") || {}).textContent || "",
+    messageOk: !!document.querySelector(".dp-msg.is-ok"),
+    boutonReset: !!document.querySelector(".course-reset"),
+  };
+};
+
+(async function () {
+  var chrome = trouverChrome();
+  if (!chrome) {
+    console.error("ERREUR : Chrome introuvable. Renseigne CHROME_PATH.");
+    process.exit(2);
+  }
+  if (typeof WebSocket === "undefined") {
+    console.error("ERREUR : ce script demande Node >= 22 (WebSocket natif). Version : " + process.version);
+    process.exit(2);
+  }
+
+  var profil = path.join(os.tmpdir(), "verif-stockage-" + process.pid);
+  var port = 9700 + (process.pid % 200);
+  var proc = cp.spawn(chrome, [
+    "--headless=new",
+    "--disable-gpu",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--allow-file-access-from-files",
+    "--host-resolver-rules=MAP * ~NOTFOUND",
+    "--remote-debugging-port=" + port,
+    "--user-data-dir=" + profil,
+    "about:blank",
+  ], { stdio: "ignore" });
+
+  var cible = null;
+  for (var essai = 0; essai < 40 && !cible; essai++) {
+    await attendre(250);
+    try {
+      var r = await fetch("http://127.0.0.1:" + port + "/json/version");
+      if (r.ok) cible = (await r.json()).webSocketDebuggerUrl;
+    } catch (e) {}
+  }
+  if (!cible) {
+    proc.kill();
+    console.error("ERREUR : Chrome n'a pas répondu sur le port " + port + ".");
+    process.exit(2);
+  }
+
+  console.log("verif-stockage.js — " + SCENARIOS.length + " scénario(s), Chrome headless, réseau coupé\n");
+
+  var nav = new Client(cible);
+  await nav.pret;
+  var ko = 0;
+
+  for (var i = 0; i < SCENARIOS.length; i++) {
+    var sc = SCENARIOS[i];
+    var abs = path.join(ROOT, sc.page);
+    if (!fs.existsSync(abs)) {
+      console.log("  KO   " + sc.nom + "\n         page introuvable : " + sc.page);
+      ko++;
+      continue;
+    }
+    var url = "file:///" + abs.split(path.sep).join("/");
+
+    var cid = (await nav.envoyer("Target.createTarget", { url: "about:blank" })).targetId;
+    var sess = (await nav.envoyer("Target.attachToTarget", { targetId: cid, flatten: true })).sessionId;
+    await nav.envoyer("Runtime.enable", {}, sess);
+    await nav.envoyer("Page.enable", {}, sess);
+    if (sc.semer) {
+      /* Certains elements n'existent pas sans progression (le bouton
+         « Reinitialiser ma progression » d'un cours). Seme AVANT le mouchard,
+         sinon l'ecriture du semis echouerait elle aussi. */
+      await nav.envoyer("Page.addScriptToEvaluateOnNewDocument", { source: sc.semer }, sess);
+    }
+    await nav.envoyer("Page.addScriptToEvaluateOnNewDocument", { source: source(sc.panne) }, sess);
+    await nav.envoyer("Page.navigate", { url: url }, sess);
+    await attendre(1100);
+    await nav.envoyer("Runtime.evaluate", { expression: "(function(){" + sc.geste + "})()" }, sess);
+    await attendre(500);
+
+    var out = await nav.envoyer(
+      "Runtime.evaluate",
+      { expression: "(" + SONDE.toString() + ")()", returnByValue: true },
+      sess
+    );
+    var v = (out.result || {}).value || {};
+
+    var motifs = (v.textes || []).join(" ");
+    var okHelper = v.helper === true;
+    var okBandeau = sc.bandeau ? (v.bandeaux > 0 && sc.bandeau.test(motifs))
+                               : v.bandeaux === 0;
+    var okEcrit = sc.ecrit ? sc.ecrit.test(v.progression || "") : true;
+    /* Le mode « bloque » ne peut pas relever les appelants : localStorage y est
+       inaccessible, aucun setItem n'est jamais atteint. */
+    var okDirectes = sc.panne === "bloque" ? true : v.nbDirectes === 0;
+    /* « Entrée effacée » en vert alors que rien ne l'a été : le faux succès. */
+    var okMessage = sc.message ? (sc.message.test(v.message || "") && v.messageOk === sc.messageOk) : true;
+    /* Le bouton doit encore être là : la page n'a PAS rechargé, donc le bandeau
+       a eu le temps d'être lu et la progression est intacte. */
+    var okResteLa = sc.resteLa ? v.boutonReset === true : true;
+    var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage && okResteLa;
+    if (!bon) ko++;
+
+    console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
+    if (DETAIL || !bon) {
+      console.log("         helper=" + v.helper + " bandeaux=" + v.bandeaux + " échecs=" + v.echecs +
+        " écritures sans filet=" + v.nbDirectes);
+      (v.directes || []).forEach(function (d) { console.log("         SANS FILET : " + d); });
+      if (v.textes && v.textes.length) console.log("         message : " + v.textes[0]);
+      if (sc.ecrit) console.log("         écrit : " + String(v.progression).slice(0, 70));
+      if (sc.message) console.log("         message de la page : « " + v.message + " » (vert=" + v.messageOk + ")");
+      if (sc.resteLa) console.log("         bouton encore présent (pas de rechargement) : " + v.boutonReset);
+    }
+    await nav.envoyer("Target.closeTarget", { targetId: cid });
+  }
+
+  proc.kill();
+  console.log("\n=== RÉSULTAT ===");
+  console.log("  scénarios ........ " + SCENARIOS.length);
+  console.log("  conformes ........ " + (SCENARIOS.length - ko));
+  console.log("  NON conformes .... " + ko);
+  console.log(ko ? "\nUne écriture échoue sans prévenir l'apprenant, ou contourne le helper." :
+                   "\nToute écriture passe par le helper et prévient quand elle échoue.");
+  process.exit(ko ? 1 : 0);
+})();

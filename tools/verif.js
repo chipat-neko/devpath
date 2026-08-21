@@ -2,7 +2,7 @@
    verif.js — point d'entree unique des verificateurs du site Syntaxe.
    Node pur, ZERO dependance.
 
-   POURQUOI : il y a cinq outils, chacun avec ses options. Se souvenir des cinq
+   POURQUOI : il y a six outils, chacun avec ses options. Se souvenir des six
    commandes a chaque fois est une charge inutile — et une occasion d'en oublier
    un. Celui-ci les enchaine et rend UN verdict.
 
@@ -11,9 +11,10 @@
      contenu  node tools/verif-contenu.js    standard editorial, maigreur, redondance
      exemples node tools/verif-exemples.js   sortie annoncee confrontee au reel (execution)
      rendu    node tools/verif-rendu.js      ce que le navigateur affiche
+     stockage node tools/verif-stockage.js  l'echec d'ecriture previent l'apprenant
 
    USAGE
-     node tools/verif.js            # les cinq (le rendu prend plusieurs minutes)
+     node tools/verif.js            # les six (le rendu prend plusieurs minutes)
      node tools/verif.js --rapide   # les quatre premiers, exemples JS seul : ~20 secondes
      node tools/verif.js --complet  # idem, mais le rendu balaie 139 pages
      node tools/verif.js --strict   # code 1 des qu'un outil signale quoi que ce soit
@@ -56,6 +57,14 @@ if (!RAPIDE) {
     // cours.html + une lecon par cours (~229 pages, plusieurs minutes).
     args: COMPLET ? ["--tout", "--cours", "--lecons"] : ["--echantillon"],
     quoi: "debordement, contraste, focus, aria, console, reseau",
+    lent: true,
+  });
+  /* Pilote Chrome lui aussi (~40 s) : hors du mode rapide, comme le rendu. */
+  ETAPES.push({
+    nom: "stockag",
+    fichier: "verif-stockage.js",
+    args: [],
+    quoi: "l'echec d'ecriture previent l'apprenant (8 scenarios)",
     lent: true,
   });
 }

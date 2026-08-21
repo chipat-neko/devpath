@@ -6,7 +6,7 @@
    ⚠️ Un service worker ne s'enregistre qu'en HTTPS ou http://localhost — JAMAIS
    en file://. L'enregistrement (js/main.js) ne tente donc rien en local.
    ============================================================================= */
-var CACHE = "syntaxe-v1";
+var CACHE = "syntaxe-v2"; /* incrémenté quand un fichier de SHELL change (V12-B1 : theme.js) */
 
 /* Coquille minimale pré-chargée à l'installation (chemins relatifs à la racine
    où vit ce service worker). */
