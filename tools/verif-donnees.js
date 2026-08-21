@@ -49,6 +49,9 @@
  *                             (commentaires retirés d'abord). Trois pannes historiques.
  *   I20 titre ⇄ <h1>        : le title de data.js (catalogue, recherche, nav) ==
  *                             le <h1 class="lesson-header__title"> écrit en dur.
+ *   I21 étiquette ⇄ contenu : AVERTISSEMENT — un bloc language-X sans marqueur de X
+ *                             mais avec ≥2 marqueurs d'un autre (js/python/sql,
+ *                             commentaires+chaînes retirés). Garde-fou, 0 aujourd'hui.
  *
  * USAGE
  * -----
@@ -641,6 +644,62 @@ Object.keys(LESSONS).forEach((id) => {
       const h1 = norm(mm[1].replace(/<[^>]+>/g, ''));
       const titre = norm(l.title);
       if (h1 !== titre) c.err(id + '/' + l.file + ' : data.js « ' + titre + ' » ≠ <h1> « ' + h1 + ' »');
+    }));
+  });
+})();
+
+/* ============================= I21 étiquette de langage ⇄ contenu du bloc */
+/* I14 vérifie que la grammaire Prism est chargée, jamais qu'elle CORRESPOND au
+   contenu. Détecteur en AVERTISSEMENT (non bloquant) : un bloc language-X sans aucun
+   marqueur EXCLUSIF de X mais avec ≥ 2 marqueurs exclusifs d'un autre langage. Les
+   commentaires et les chaînes sont retirés d'abord (sinon « SELECT en commentaire »
+   ou « import » partagé JS/Python déclenchent à tort). Ne juge que js/python/sql.
+   NB : la mesure « 1 bloc sur 5 » de l'inventaire NE se reproduit pas (0 ici sur
+   3071 blocs) — elle comptait HTML polyglotte, imports partagés, sorties, exemples
+   en commentaire. C'est un garde-fou pour l'avenir, pas une dette existante. */
+(function () {
+  const c = check('I21', 'étiquette de langage ⇄ contenu (garde-fou)');
+  function dec(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, '&'); }
+  function strip(code) {
+    let out = '', s = null;
+    for (let i = 0; i < code.length; i++) {
+      const ch = code[i];
+      if (s) { if (ch === '\\') { i++; continue; } if (ch === s) s = null; continue; }
+      if (ch === '"' || ch === "'" || ch === '`') { s = ch; continue; }
+      if (ch === '/' && code[i + 1] === '/') { const n = code.indexOf('\n', i); i = n < 0 ? code.length : n; continue; }
+      if (ch === '#') { const n = code.indexOf('\n', i); i = n < 0 ? code.length : n; continue; }
+      if (ch === '-' && code[i + 1] === '-') { const n = code.indexOf('\n', i); i = n < 0 ? code.length : n; continue; }
+      if (ch === '/' && code[i + 1] === '*') { const e = code.indexOf('*/', i + 2); i = e < 0 ? code.length : e + 1; continue; }
+      out += ch;
+    }
+    return out;
+  }
+  const EXCL = {
+    javascript: [/\bconsole\s*\.\s*log\b/, /=>/, /\bdocument\s*\./, /\b(let|var)\s+\w+\s*=/, /\bfunction\s*\w*\s*\(/],
+    python: [/\bdef\s+\w+\s*\(/, /\belif\b/, /\bprint\s*\(/, /\b__\w+__\b/, /\bself\b/],
+    sql: [/\bSELECT\b[\s\S]*\bFROM\b/i, /\bINSERT\s+INTO\b/i, /\bCREATE\s+TABLE\b/i, /\bGROUP\s+BY\b/i],
+  };
+  const sc = (code, S) => S.reduce((n, re) => n + (re.test(code) ? 1 : 0), 0);
+  Object.keys(CONTENT).forEach((id) => {
+    const cc = CONTENT[id];
+    const dir = cc.dir || id;
+    (cc.modules || []).forEach((m) => (m.lessons || []).forEach((l) => {
+      if (!l || !l.file || l.file === '#') return;
+      const html = readPage(dir, l.file);
+      if (html == null || isRedirect(html)) return;
+      const re = /<code class="language-([a-z0-9+#-]+)">([\s\S]*?)<\/code>/gi;
+      let mm;
+      while ((mm = re.exec(html))) {
+        const lang = mm[1].toLowerCase();
+        if (!EXCL[lang]) continue;
+        const code = strip(dec(mm[2]));
+        if (code.replace(/\s/g, '').length < 12) continue;
+        const own = sc(code, EXCL[lang]);
+        if (own > 0) continue;
+        let best = null, bs = 0;
+        for (const o of Object.keys(EXCL)) { if (o === lang) continue; const s = sc(code, EXCL[o]); if (s > bs) { bs = s; best = o; } }
+        if (bs >= 2) c.warn(id + '/' + l.file + ' : bloc language-' + lang + ' sans marqueur ' + lang + ', ressemble à ' + best + ' (' + bs + ' marqueurs)');
+      }
     }));
   });
 })();
