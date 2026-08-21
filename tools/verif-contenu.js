@@ -61,6 +61,26 @@ var STANDARD = {
   exos: { min: 2, libelle: "exercice" },
 };
 
+/* ------------------------------------------------- A3 : biais de longueur QCM */
+/* Mesure de l'inventaire : dans les QCM, la bonne reponse est la plus longue ~93 %
+   du temps. Un apprenant qui repond "la plus longue" a donc ~93 % sans rien savoir.
+   Ce detecteur mesure l'ampleur et signale les cas les plus flagrants — cible du
+   chantier editorial (etoffer les distracteurs, PAS raccourcir la bonne reponse).
+   Non bloquant : le biais est structurel et preexiste massivement. */
+var BIAIS_RATIO = 1.8;   // bonne reponse >= 1,8x le plus long distracteur
+var BIAIS_DIFF = 25;     // ET au moins 25 caracteres de plus : "nettement" plus longue
+var BIAIS = { total: 0, plusLongue: 0, net: 0, pires: [] };
+
+function biaisQuestion(item) {
+  if (!item || !Array.isArray(item.a) || item.a.length < 2) return null;
+  var ci = item.correct || 0;
+  var lc = String(item.a[ci] == null ? "" : item.a[ci]).length;
+  var autres = item.a.filter(function (_, i) { return i !== ci; })
+    .map(function (s) { return String(s == null ? "" : s).length; });
+  var maxA = Math.max.apply(null, autres);
+  return { lc: lc, maxA: maxA, plusLongue: lc > maxA, ratio: lc / Math.max(1, maxA), diff: lc - maxA };
+}
+
 /* ------------------------------------------------------------ chargement data */
 function loadGlobal(file, nom) {
   var abs = path.join(ROOT, file);
@@ -110,11 +130,25 @@ function mesurerLecon(abs) {
   jsonBlocs.forEach(function (b) {
     var type = /data-quiz-bilan/.test(b) ? "bilan" : /data-exos/.test(b) ? "exos" : "quiz";
     var corps = b.replace(/<script[^>]*>/, "").replace(/<\/script>/, "");
-    var n = 0;
-    try { var v = JSON.parse(corps); n = Array.isArray(v) ? v.filter(Boolean).length : 0; } catch (e) {}
+    var v = null;
+    try { v = JSON.parse(corps); } catch (e) {}
+    var n = Array.isArray(v) ? v.filter(Boolean).length : 0;
     if (type === "quiz") quiz += n;
     else if (type === "exos") exos += n;
     else bilan += n;
+    // A3 — biais de longueur : la bonne reponse est-elle devinable a sa taille ?
+    if ((type === "quiz" || type === "bilan") && Array.isArray(v)) {
+      v.forEach(function (item) {
+        var r = biaisQuestion(item);
+        if (!r) return;
+        BIAIS.total++;
+        if (r.plusLongue) BIAIS.plusLongue++;
+        if (r.plusLongue && r.ratio >= BIAIS_RATIO && r.diff >= BIAIS_DIFF) {
+          BIAIS.net++;
+          BIAIS.pires.push({ abs: abs, q: String(item.q == null ? "" : item.q).slice(0, 66), lc: r.lc, maxA: r.maxA, ratio: r.ratio });
+        }
+      });
+    }
   });
   var dts = (t.match(/<dl class="glossary"[\s\S]*?<\/dl>/i) || [""])[0];
   var callouts = t.match(/class="callout callout--([a-z]+)"/g) || [];
@@ -249,6 +283,7 @@ if (JSON_OUT) {
     incompletes: incompletes.map(function (x) { return { cours: x.l.cours, file: x.l.file, titre: x.l.titre, manques: x.manques }; }),
     maigres: maigres.map(function (x) { return { cours: x.l.cours, file: x.l.file, titre: x.l.titre, sous: x.sous, detail: x.detail }; }),
     redondances: redondances,
+    biaisQcm: { total: BIAIS.total, plusLongue: BIAIS.plusLongue, net: BIAIS.net, seuil: { ratio: BIAIS_RATIO, diff: BIAIS_DIFF } },
   }, null, 1));
   process.exit(incompletes.length && STRICT ? 1 : 0);
 }
@@ -286,6 +321,22 @@ if (!flag("maigres")) {
     console.log("  " + r.cours.padEnd(14) + " " + r.a + " <-> " + r.b + "   " + r.n + " caracteres");
   });
   if (redondances.length > 15) console.log("  … et " + (redondances.length - 15) + " autre(s)");
+}
+
+if (!flag("maigres") && !flag("redondance") && BIAIS.total) {
+  var pct = (100 * BIAIS.plusLongue / BIAIS.total).toFixed(1);
+  var pctNet = (100 * BIAIS.net / BIAIS.total).toFixed(1);
+  console.log("\n=== BIAIS DE LONGUEUR DES QCM (avertissement, non bloquant) ===");
+  console.log("  " + BIAIS.total + " questions · bonne reponse STRICTEMENT la plus longue : " + BIAIS.plusLongue + " (" + pct + " %)");
+  console.log("  \"nettement\" la plus longue (>= " + BIAIS_RATIO + "x ET +" + BIAIS_DIFF + " car. sur le meilleur distracteur) : " + BIAIS.net + " (" + pctNet + " %)");
+  console.log("  -> chantier editorial (b) = etoffer les distracteurs de ces " + BIAIS.net + " questions (ne PAS raccourcir la bonne reponse).");
+  BIAIS.pires.sort(function (a, b) { return b.ratio - a.ratio; });
+  console.log("  Les 10 plus flagrantes :");
+  BIAIS.pires.slice(0, 10).forEach(function (p) {
+    console.log("    " + path.relative(ROOT, p.abs).replace(/\\/g, "/").replace("pages/", "").padEnd(26) +
+      " bonne " + p.lc + "c / distracteur max " + p.maxA + "c (x" + p.ratio.toFixed(1) + ")");
+  });
+  console.log("  Rappel : les options SONT melangees a l'affichage (shuffle Fisher-Yates, lecon.js) — la position ne trahit pas la reponse.");
 }
 
 console.log("\n" + (incompletes.length ? incompletes.length + " lecon(s) sous le standard" : "Toutes les lecons tiennent le standard") +
