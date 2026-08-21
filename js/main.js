@@ -900,18 +900,18 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1463 leçons.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1463 leçons et 63 pages du site.</li>';
         return;
       }
       items = doSearch(tk);
       if (!items.length) {
         active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Aucune leçon trouvée. Essaie la <a href="' + esc(footLink.getAttribute("href")) + '">recherche plein-texte</a>.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Aucun résultat. Essaie la <a href="' + esc(footLink.getAttribute("href")) + '">recherche plein-texte</a>.</li>';
         return;
       }
       list.innerHTML = items.map(function (it, idx) {
-        return '<li class="cmdk__item" role="option" id="cmdk-opt-' + idx + '" data-i="' + idx + '" data-href="' + esc(root + "pages/" + it.d + "/" + it.f) + '">' +
+        return '<li class="cmdk__item" role="option" id="cmdk-opt-' + idx + '" data-i="' + idx + '" data-href="' + esc(root + "pages/" + (it.d ? it.d + "/" : "") + it.f) + '">' +
           '<span class="cmdk__item-title">' + highlight(it.t, tk) + '</span>' +
           '<span class="cmdk__item-course">' + esc(it.ct) + '</span>' +
           '<span class="cmdk__item-snippet">' + highlight(it.s, tk) + '</span>' +

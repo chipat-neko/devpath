@@ -257,7 +257,9 @@
         var e = DOCS[h.i]; // [d, f, t, s]
         return (
           '<li class="fts-result">' +
-          '<a class="fts-result__link" href="' + esc(e[0]) + "/" + esc(e[1]) + '">' +
+          /* V12-E1 : un dossier vide = page transverse (pages/<f>), sinon
+             lecon (pages/<cours>/<f>). */
+          '<a class="fts-result__link" href="' + (e[0] ? esc(e[0]) + "/" : "") + esc(e[1]) + '">' +
           '<span class="fts-result__course">' + esc(courseTitle(e[0])) + "</span>" +
           '<span class="fts-result__title">' + highlight(e[2], tokens) + "</span>" +
           '<span class="fts-result__snippet">' + highlight(e[3], tokens) + "</span>" +

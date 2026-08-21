@@ -249,6 +249,36 @@ function readSearch(html) {
   return { t: t, x: plainSpaced(body) };
 }
 
+/* Les pages TRANSVERSES (outils, hubs, espace perso) n'etaient indexees nulle
+   part : la palette clavier et la recherche ne connaissaient que les 1 463
+   lecons, si bien que « bac a sable », « antiseches » ou « mes donnees » ne se
+   trouvaient pas au clavier (V12-E1). Elles n'ont ni <h1 class="lesson-header__
+   title"> ni <article class="prose"> : il leur faut leur propre lecteur.
+   Le bloc <noscript> ajoute en B5 est retire, sinon « JavaScript est desactive »
+   polluerait chaque extrait. */
+function readSearchPage(html) {
+  var t = "";
+  var mt = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
+  if (mt) t = plainSpaced(mt[1]);
+  /* Le <h1> d'une page transverse est une phrase d'accroche (« Ecris du code,
+     vois le resultat ») ; le NOM que l'apprenant tape est dans le kicker
+     (« Bac a sable »). On indexe les deux, kicker d'abord, sinon la page reste
+     introuvable au clavier — ce qui est exactement le defaut a corriger. */
+  var mk = html.match(/<p class="kicker">([\s\S]*?)<\/p>/);
+  if (mk) {
+    var k = plainSpaced(mk[1]);
+    if (k && k !== t) t = t ? k + " — " + t : k;
+  }
+  var ma = html.match(/<main[^>]*>([\s\S]*?)<\/main>/);
+  var body = ma ? ma[1] : "";
+  body = body
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ");
+  return { t: t, x: plainSpaced(body) };
+}
+
 /* Blocs <figure class="cheat-table"> des lecons : la matiere des antiseches.
    Forme constatee sur les 1358 blocs du site, sans aucune exception :
      <figure class="cheat-table"><table>
@@ -779,8 +809,29 @@ function buildSearch(problems) {
       texts.push(g.x);
     });
   });
+  /* Pages transverses : dossier vide dans le doc, ce qui vaut « pages/<f> »
+     cote affichage (une lecon vaut « pages/<cours>/<f> »). Les redirections
+     sont ecartees : elles n'ont pas de contenu. */
+  var transverses = 0;
+  var DOSSIER_PAGES = path.join(ROOT, "pages");
+  fs.readdirSync(DOSSIER_PAGES).filter(function (f) { return /\.html$/.test(f); }).sort()
+    .forEach(function (f) {
+      var abs = path.join(DOSSIER_PAGES, f);
+      var html;
+      try { html = fs.readFileSync(abs, "utf8"); } catch (e) { return; }
+      /* Une redirection n'a pas de contenu a indexer. */
+      if (/<meta[^>]+http-equiv=["']?refresh/i.test(html)) return;
+      var g = readSearchPage(html);
+      if (!g.t) { problems.push("search : titre h1 introuvable dans pages/" + f); return; }
+      docs.push(["", f, g.t, searchSnippet(g.x)]);
+      texts.push(g.x);
+      transverses++;
+    });
+  courses[""] = "Page du site";
+
   var inv = buildInverted(texts);
-  console.log("SEARCH_INDEX : " + docs.length + " lecons, " + Object.keys(inv).length + " mots indexes");
+  console.log("SEARCH_INDEX : " + (docs.length - transverses) + " lecons + " + transverses +
+    " pages transverses, " + Object.keys(inv).length + " mots indexes");
   /* full = index inversé complet (recherche plein-texte de recherche.html).
      lite = docs + titres de cours seulement (palette clavier A1, chargée sur
      toutes les pages : ~300 Ko, pas de « inv »). */
