@@ -122,6 +122,16 @@
       " · " + remaining + " à revoir";
   }
 
+  /* V12-D3 : la carte connaît désormais sa leçon d'origine. Le lien n'apparaît
+     QUE sur la face révélée : sur la face question, il donnerait un indice. */
+  function sourceHTML(card) {
+    if (!card.f || card.f === "cours.html") {
+      return '<a class="rev-card__src" href="' + esc(card.c) + '/cours.html">Ouvrir le cours</a>';
+    }
+    return '<a class="rev-card__src" href="' + esc(card.c) + "/" + esc(card.f) + '">' +
+      (card.n ? "Leçon " + esc(card.n) + " — " : "") + esc(card.lt || "revoir la leçon") + "</a>";
+  }
+
   function showCard() {
     renderStats();
     if (!queue.length) buildQueue();
@@ -145,6 +155,7 @@
       '<span class="rev-card__course">' + esc(card.ct) + "</span>" +
       '<span class="rev-card__term">' + esc(card.t) + "</span>" +
       '<div class="rev-card__def">' + card.d + "</div>" +
+      sourceHTML(card) +
       '<div class="rev-card__actions">' +
       '<button type="button" class="btn btn--ghost" id="rev-again">À revoir</button>' +
       '<button type="button" class="btn btn--primary" id="rev-knew">Je savais ✓</button>' +

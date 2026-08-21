@@ -518,11 +518,20 @@ function buildFlashcards(problems) {
         if (file !== "cours.html") problems.push("page absente : pages/" + co.dir + "/" + file);
         return;
       }
+      /* V12-D3 : le generateur CONNAIT le fichier d'origine et le jetait. Une
+         carte de revision et une entree de glossaire ne renvoyaient donc que
+         vers le cours entier, alors que la definition vient d'une lecon
+         precise. On garde f (et le numero + titre de la lecon quand ils
+         existent : « cours.html » n'en a pas). */
+      var meta = co.meta[file] || { num: "", title: "" };
       readGlossary(html).forEach(function (e) {
         var key = fold(e.t);
         if (seen[key]) { dropped++; return; }
         seen[key] = 1;
-        group.push({ c: co.dir, ct: co.title, t: e.t, d: e.d });
+        var carte = { c: co.dir, ct: co.title, t: e.t, d: e.d, f: file };
+        if (meta.num) carte.n = meta.num;
+        if (meta.title) carte.lt = meta.title;
+        group.push(carte);
       });
     });
     /* Reprise des cartes de l ancien index absentes du contenu actuel. */
@@ -531,7 +540,13 @@ function buildFlashcards(problems) {
       if (seen[key]) return;
       seen[key] = 1;
       carried.push(co.dir + " | " + card.t);
-      group.push({ c: co.dir, ct: co.title, t: card.t, d: card.d });
+      /* Une carte reprise d'un ancien index peut ne pas avoir de source : on
+         n'en invente pas. */
+      var repris = { c: co.dir, ct: co.title, t: card.t, d: card.d };
+      if (card.f) repris.f = card.f;
+      if (card.n) repris.n = card.n;
+      if (card.lt) repris.lt = card.lt;
+      group.push(repris);
     });
     out = out.concat(group);
   });

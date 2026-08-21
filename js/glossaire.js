@@ -38,6 +38,10 @@
       ct: c.ct,
       t: c.t,
       d: c.d,
+      /* V12-D3 : la leçon d'origine, désormais portée par l'index. */
+      f: c.f,
+      n: c.n,
+      lt: c.lt,
       key: norm(c.t) + " " + norm(stripTags(c.d)),
     };
   });
@@ -71,7 +75,12 @@
       '<div class="gl-entry">' +
       '<dt class="gl-term">' + esc(it.t) + "</dt>" +
       '<dd class="gl-def">' + it.d +
-      ' <a class="gl-src" href="' + esc(it.c) + '/cours.html">' + esc(it.ct) + "</a></dd>" +
+      /* Le terme vient d'une leçon précise : on y renvoie, en gardant le titre
+         du cours comme contexte. Repli sur la page du cours si la source n'est
+         pas connue (vieille entrée reprise d'un ancien index). */
+      ' <a class="gl-src" href="' + esc(it.c) + "/" + esc(it.f || "cours.html") + '">' +
+      esc(it.ct) + (it.f && it.f !== "cours.html" && it.n ? " · leçon " + esc(it.n) : "") +
+      "</a></dd>" +
       "</div>"
     );
   }

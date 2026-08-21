@@ -69,6 +69,11 @@
  *                             pages/pieges.html charge bien l'index et son script.
  *                             AVERTISSEMENT : les cours sans aucun encadré d'erreur
  *                             (trou d'index, cf. V12-D1/D2).
+ *   I26 source des cartes   : chaque carte de js/flashcards-data.js (révision ET
+ *                             glossaire) porte la leçon d'où vient sa définition,
+ *                             et ce fichier existe. Le générateur la connaissait
+ *                             et la jetait : les deux pages ne renvoyaient que
+ *                             vers le cours entier (V12-D3).
  *
  * USAGE
  * -----
@@ -914,6 +919,39 @@ Object.keys(LESSONS).forEach((id) => {
   const sans = COURSES.map((co) => (CONTENT[co.id] || {}).dir).filter((d) => d && !couverts[d]);
   if (sans.length) {
     c.warn(sans.length + ' cours sans aucun encadré d\'erreur (trou dans l\'index) : ' + sans.join(', '));
+  }
+})();
+
+/* ============================ I26 source des cartes de révision (V12-D3) === */
+/* 10 678 cartes servent DEUX pages (révision et glossaire) et ne renvoyaient
+   qu'au cours. Le champ « f » a été rétabli : on vérifie qu'il est là et qu'il
+   pointe un fichier réel — « cours.html » est une source légitime (le glossaire
+   de la page de cours). */
+(function () {
+  const c = check('I26', 'source des cartes de révision ⇄ fichiers réels');
+  const arr = loadGlobal(path.join(JS, 'flashcards-data.js'), 'FLASHCARDS');
+  if (!arr || !arr.length) { c.err('js/flashcards-data.js illisible ou vide'); return; }
+
+  let sansSource = 0, introuvables = 0;
+  const vus = new Set();
+  arr.forEach((k) => {
+    if (!k || !k.c) return;
+    if (!k.f) { sansSource++; return; }
+    const rel = k.c + '/' + k.f;
+    if (vus.has(rel)) return;
+    vus.add(rel);
+    if (!fs.existsSync(path.join(PAGES, k.c, k.f))) {
+      if (introuvables < 5) c.err('carte → pages/' + rel + ' est absent du disque');
+      introuvables++;
+    }
+  });
+  if (introuvables > 5) c.err('… et ' + (introuvables - 5) + ' autre(s) fichier(s) introuvable(s)');
+  /* Une carte reprise d'un très vieil index peut ne pas avoir de source : on
+     avertit tant que ça reste marginal, on bloque si l'information a disparu. */
+  if (sansSource) {
+    const part = sansSource / arr.length;
+    if (part > 0.05) c.err(sansSource + ' carte(s) sur ' + arr.length + ' sans leçon d\'origine (> 5 %)');
+    else c.warn(sansSource + ' carte(s) sans leçon d\'origine (reprises d\'un ancien index)');
   }
 })();
 
