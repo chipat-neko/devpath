@@ -44,6 +44,9 @@
  *   I18 index non périmés   : build-index.js --strict (sous-processus) — ERREUR si
  *                             une entrée de l'ancien index doit être reprise (quiz/
  *                             flashcards/antisèches périmées). Purge : --write --fresh.
+ *   I19 compteurs affichés  : « N cours/leçons/langages/parcours » de l'accueil, du
+ *                             catalogue et d'« À propos » == décompte réel de data.js
+ *                             (commentaires retirés d'abord). Trois pannes historiques.
  *
  * USAGE
  * -----
@@ -548,6 +551,67 @@ Object.keys(LESSONS).forEach((id) => {
     c.err(n + ' entrée(s) d\'index périmée(s) reprises de l\'ancien index — purger via « build-index.js --write --fresh »');
     out.split('\n').filter((l) => /✗/.test(l)).slice(0, 4).forEach((l) => c.err('  ' + l.trim()));
   }
+})();
+
+/* ================================ I19 compteurs affichés ⇄ décompte réel */
+/* Les chiffres de l'accueil, du catalogue et d'« À propos » sont écrits en dur : ils
+   ont été FAUX trois fois (79/938, puis 1341, puis 13 pages de cours). On confronte
+   chaque « N cours/leçons/langages/parcours » AFFICHÉ au décompte réel de data.js.
+   On retire d'abord les COMMENTAIRES (le récit historique « 1336 leçons » d'un
+   commentaire de main.js n'est pas un compteur affiché) pour ne pas crier à tort. */
+(function () {
+  const c = check('I19', 'compteurs affichés ⇄ décompte réel');
+  const REEL = {
+    cours: COURSES.length,
+    lecons: totalLessons,
+    langages: new Set(COURSES.map((x) => x.language).filter(Boolean)).size,
+    parcours: TRACKS.length,
+  };
+  const LABEL = { cours: 'cours', lecons: 'leçons', langages: 'langages', parcours: 'parcours' };
+  function sansComJs(code) {
+    let out = '', str = null;
+    for (let i = 0; i < code.length; i++) {
+      const ch = code[i];
+      if (str) { out += ch; if (ch === '\\') { out += (code[++i] || ''); continue; } if (ch === str) str = null; continue; }
+      if (ch === '"' || ch === "'" || ch === '`') { str = ch; out += ch; continue; }
+      if (ch === '/' && code[i + 1] === '/') { const nl = code.indexOf('\n', i); i = nl < 0 ? code.length : nl; out += '\n'; continue; }
+      if (ch === '/' && code[i + 1] === '*') { const e = code.indexOf('*/', i + 2); i = e < 0 ? code.length : e + 1; continue; }
+      out += ch;
+    }
+    return out;
+  }
+  function typeDe(mot) {
+    mot = mot.toLowerCase();
+    if (/^cours/.test(mot)) return 'cours';
+    if (/^(leçon|lesson)/.test(mot)) return 'lecons';
+    if (/^(langage|language)/.test(mot)) return 'langages';
+    if (/^(parcours|path)/.test(mot)) return 'parcours';
+    return null;
+  }
+  const re = /(\d{2,4})\s*(cours|leçons?|lessons?|langages?|languages?|parcours|paths?)\b/gi;
+  const cibles = [
+    { p: path.join(ROOT, 'index.html'), js: false, nom: 'index.html' },
+    { p: path.join(PAGES, 'catalogue.html'), js: false, nom: 'pages/catalogue.html' },
+    { p: path.join(PAGES, 'a-propos.html'), js: false, nom: 'pages/a-propos.html' },
+    { p: path.join(JS, 'main.js'), js: true, nom: 'js/main.js' },
+  ];
+  const vus = {};
+  cibles.forEach((cible) => {
+    let src;
+    try { src = fs.readFileSync(cible.p, 'utf8'); } catch (e) { return; }
+    const clean = cible.js ? sansComJs(src) : src.replace(/<!--[\s\S]*?-->/g, ' ');
+    let m; re.lastIndex = 0;
+    while ((m = re.exec(clean))) {
+      const type = typeDe(m[2]);
+      if (!type) continue;
+      const n = parseInt(m[1], 10);
+      if (n !== REEL[type]) c.err(cible.nom + ' : « ' + n + ' ' + m[2] + ' » affiché mais ' + REEL[type] + ' ' + LABEL[type] + ' réel(le)s');
+      else vus[type] = true;
+    }
+  });
+  Object.keys(REEL).forEach((type) => {
+    if (!vus[type]) c.warn('aucun compteur « ' + LABEL[type] + ' » (= ' + REEL[type] + ') trouvé dans les pages de stats — surveillance impossible');
+  });
 })();
 
 /* ================================================================ sortie */
