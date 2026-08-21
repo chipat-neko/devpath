@@ -649,6 +649,39 @@
     for (var k = 0; k < neufs.length; k++) nav.appendChild(neufs[k]);
   }
 
+  /* ------------------------------------------ Depuis quand ? (V12-E3)
+     La reprise proposait « Reprendre : Zig » sans dire que la dernière visite
+     remontait à trois semaines. Exposé en global : la page Progression et
+     l'accueil en ont besoin toutes les deux. */
+  window.SyntaxeDate = {
+    /* « aujourd'hui », « hier », « il y a 5 jours », « il y a 3 semaines »… */
+    relatif: function (iso) {
+      if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+      var p = iso.split("-");
+      var alors = new Date(+p[0], +p[1] - 1, +p[2]);
+      var today = new Date();
+      var aujourdhui = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      var jours = Math.round((aujourdhui - alors) / 86400000);
+      if (isNaN(jours) || jours < 0) return "";
+      if (jours === 0) return "aujourd'hui";
+      if (jours === 1) return "hier";
+      if (jours < 7) return "il y a " + jours + " jours";
+      if (jours < 14) return "il y a une semaine";
+      if (jours < 31) return "il y a " + Math.round(jours / 7) + " semaines";
+      if (jours < 60) return "il y a un mois";
+      if (jours < 365) return "il y a " + Math.round(jours / 30) + " mois";
+      return jours < 730 ? "il y a un an" : "il y a " + Math.floor(jours / 365) + " ans";
+    },
+    /* Nombre de jours écoulés, pour décider s'il faut le dire du tout. */
+    jours: function (iso) {
+      if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return -1;
+      var p = iso.split("-");
+      var alors = new Date(+p[0], +p[1] - 1, +p[2]);
+      var t = new Date();
+      return Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - alors) / 86400000);
+    },
+  };
+
   /* -------------------------------------- Pied de page enrichi des leçons
      Une leçon n'avait qu'un lien de pied (« ← Retour au programme »), et une
      dizaine de hubs transverses (entraînement, outils, références, espace

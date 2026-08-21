@@ -21,6 +21,35 @@
   function lastVisited() {
     return window.SyntaxeStore.getJSON("syntaxe-last", null);
   }
+
+  /* ------------------------------------ Depuis quand ? (V12-E3)
+     La date vient de « syntaxe-last » depuis E3 ; pour une progression plus
+     ancienne, on la déduit du DERNIER jour du journal d'activité, qui est écrit
+     au même instant par lecon.js. */
+  function dateDerniereVisite() {
+    var l = lastVisited();
+    if (l && l.at) return l.at;
+    var act = window.SyntaxeStore.getJSON("syntaxe-activity", {});
+    var jours = Object.keys(act).filter(function (j) { return /^\d{4}-\d{2}-\d{2}$/.test(j); });
+    if (!jours.length) return "";
+    jours.sort();
+    return jours[jours.length - 1];
+  }
+
+  /* Ne se dit qu'au-delà d'un jour : rappeler « aujourd'hui » à quelqu'un qui
+     vient de fermer l'onglet n'apporte rien. */
+  function phraseReprise() {
+    var iso = dateDerniereVisite();
+    if (!iso || !window.SyntaxeDate) return "";
+    var n = window.SyntaxeDate.jours(iso);
+    if (n < 1) return "";
+    var quand = window.SyntaxeDate.relatif(iso);
+    if (!quand) return "";
+    return n >= 21
+      ? '<p class="dash-reprise-quand">Tu t\'es arrêté ' + esc(quand) +
+        ". Voici où tu en étais&nbsp;:</p>"
+      : '<p class="dash-reprise-quand">Dernière leçon ouverte ' + esc(quand) + ".</p>";
+  }
   function quizScores() {
     return window.SyntaxeStore.getJSON("syntaxe-quiz", {});
   }
@@ -545,12 +574,14 @@
       } else if (lastValid) {
         var c = DATA.content[last.course];
         resumeHost.innerHTML =
+          phraseReprise() +
           '<a class="btn btn--primary btn--lg" href="' + esc(c.dir) + "/" + esc(last.file) + '">' +
           "Reprendre : " + esc(last.title || c.title) +
           '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>';
       } else if (started.length) {
         var s = started[0];
         resumeHost.innerHTML =
+          phraseReprise() +
           '<a class="btn btn--primary btn--lg" href="' + esc(s.dir) + "/" + esc(s.firstUndone) + '">' +
           "Continuer : " + esc(s.title) +
           '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>';

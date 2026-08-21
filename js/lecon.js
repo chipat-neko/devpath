@@ -935,10 +935,17 @@
   function recordLast() {
     if (currentIndex === -1) return;
     try {
+      var maintenant = new Date();
+      var mois = maintenant.getMonth() + 1, jour = maintenant.getDate();
       window.SyntaxeStore.setJSON("syntaxe-last", {
         course: courseId,
         file: lessonFile,
         title: flat[currentIndex].lesson.title,
+        /* V12-E3 : la reprise était aveugle à la date. On la note ici, à la
+           source ; pour les progressions plus anciennes, elle se déduit du
+           dernier jour de « syntaxe-activity ». */
+        at: maintenant.getFullYear() + "-" + (mois < 10 ? "0" + mois : mois) +
+          "-" + (jour < 10 ? "0" + jour : jour),
       });
     } catch (e) {}
     /* Journal d'activité par jour (heatmap & séries — P3) */

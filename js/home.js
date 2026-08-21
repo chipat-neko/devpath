@@ -237,6 +237,25 @@
     if (ctaEl) ctaEl.textContent = "Reprendre";
   }
 
+  /* V12-E3 : dire depuis quand. La date vient de « syntaxe-last » ; pour une
+     progression plus ancienne, du dernier jour du journal d'activite, ecrit au
+     meme instant par lecon.js. On se tait en deca d'un jour. */
+  (function ajouterQuand() {
+    if (!kickerEl || !window.SyntaxeDate) return;
+    var iso = (last && last.at) || "";
+    if (!iso) {
+      var act = read("syntaxe-activity", "{}") || {};
+      var jours = Object.keys(act).filter(function (j) { return /^\d{4}-\d{2}-\d{2}$/.test(j); });
+      if (jours.length) { jours.sort(); iso = jours[jours.length - 1]; }
+    }
+    if (!iso) return;
+    var n = window.SyntaxeDate.jours(iso);
+    if (n < 1) return;
+    var quand = window.SyntaxeDate.relatif(iso);
+    if (!quand) return;
+    kickerEl.textContent = kickerEl.textContent + "  ·  " + quand;
+  })();
+
   if (linkEl) linkEl.setAttribute("href", "pages/" + target.dir + "/" + target.file);
 
   host.hidden = false;
