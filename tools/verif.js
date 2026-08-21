@@ -2,20 +2,24 @@
    verif.js — point d'entree unique des verificateurs du site Syntaxe.
    Node pur, ZERO dependance.
 
-   POURQUOI : il y a quatre outils, chacun avec ses options. Se souvenir des
-   quatre commandes a chaque fois est une charge inutile — et une occasion d'en
-   oublier un. Celui-ci les enchaine et rend UN verdict.
+   POURQUOI : il y a cinq outils, chacun avec ses options. Se souvenir des cinq
+   commandes a chaque fois est une charge inutile — et une occasion d'en oublier
+   un. Celui-ci les enchaine et rend UN verdict.
 
      source   node tools/verif-html.js       balise creee par erreur dans du code
      donnees  node tools/verif-donnees.js    17 invariants (data.js, index, liens)
      contenu  node tools/verif-contenu.js    standard editorial, maigreur, redondance
+     exemples node tools/verif-exemples.js   sortie annoncee confrontee au reel (execution)
      rendu    node tools/verif-rendu.js      ce que le navigateur affiche
 
    USAGE
-     node tools/verif.js            # les quatre (le rendu prend plusieurs minutes)
-     node tools/verif.js --rapide   # les trois premiers : moins de 20 secondes
+     node tools/verif.js            # les cinq (le rendu prend plusieurs minutes)
+     node tools/verif.js --rapide   # les quatre premiers, exemples JS seul : ~20 secondes
      node tools/verif.js --complet  # idem, mais le rendu balaie 139 pages
      node tools/verif.js --strict   # code 1 des qu'un outil signale quoi que ce soit
+
+   Note : en mode rapide, « exemples » n'execute que JavaScript (pur Node, ~1 s) ;
+   Python (via l'interpreteur, ~35 s) n'est joue qu'en mode complet.
 
    CODE DE SORTIE : 0 si tout va bien, 1 si un outil a signale un probleme.
    Pense a l'appeler avant un commit, et systematiquement en fin de chantier.
@@ -36,6 +40,13 @@ var ETAPES = [
   { nom: "source ", fichier: "verif-html.js", args: [], quoi: "balise creee par erreur dans un bloc de code" },
   { nom: "donnees", fichier: "verif-donnees.js", args: [], quoi: "invariants de data.js, index, liens" },
   { nom: "contenu", fichier: "verif-contenu.js", args: STRICT ? ["--strict"] : [], quoi: "standard editorial, maigreur, redondance" },
+  {
+    nom: "exemple",
+    fichier: "verif-exemples.js",
+    args: RAPIDE ? ["--lang", "js"] : [],
+    quoi: "sortie annoncee confrontee au reel (execution)",
+    lent: !RAPIDE,
+  },
 ];
 if (!RAPIDE) {
   ETAPES.push({
@@ -72,7 +83,7 @@ console.log("=".repeat(70));
 resultats.forEach(function (r) {
   /* on remonte la ou les lignes de bilan de chaque outil, pas tout son rapport */
   var lignes = r.sortie.split("\n").filter(function (l) {
-    return /ERREURS|erreur\(s\)|sous le standard|Aucun probl|aucune erreur|probleme|maigre|redondance/i.test(l) && l.trim();
+    return /ERREURS|erreur\(s\)|sous le standard|Aucun probl|aucune erreur|probleme|maigre|redondance|divergen|Aucune divergence/i.test(l) && l.trim();
   });
   console.log("  " + r.e.nom + "  " + (r.code === 0 ? "OK" : "SIGNALE") + "   (" + r.duree + " s)");
   lignes.slice(-2).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });

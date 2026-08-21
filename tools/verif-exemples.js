@@ -57,6 +57,12 @@ const os = require('os');
 const vm = require('vm');
 const cp = require('child_process');
 
+// Un exemple asynchrone peut créer une Promise rejetée : elle remonterait en
+// « unhandledRejection » APRÈS le retour synchrone de vm et ferait planter l'outil.
+// On la neutralise — ces blocs donnent de toute façon un compte incomplet, donc
+// « non vérifié », jamais un faux « divergent ».
+process.on('unhandledRejection', function () {});
+
 /* ------------------------------------------------------------------ */
 /* Collecte des fichiers de leçon                                       */
 /* ------------------------------------------------------------------ */
@@ -173,6 +179,27 @@ function equilibre(s) {
   return p === 0 && b === 0 && c === 0 && !dans;
 }
 
+// L'appel d'affichage n'a-t-il qu'UN seul argument ? « console.log(x) » oui,
+// « console.log("label :", x) » non. Détermine si un commentaire-valeur nu documente
+// bien toute la sortie (mono-arg) ou seulement un morceau (multi-args).
+function afficheMonoArg(s, li) {
+  const re = li.comment === '//'
+    ? /console\s*\.\s*(?:log|info|debug|warn|error)\s*\(/
+    : /(?:^|[^.\w])print\s*\(/;
+  const m = re.exec(s);
+  if (!m) return false;
+  let depth = 1, virgules = 0, dans = null;
+  for (let i = m.index + m[0].length; i < s.length && depth > 0; i++) {
+    const ch = s[i];
+    if (dans) { if (ch === '\\') { i++; continue; } if (ch === dans) dans = null; continue; }
+    if (ch === '"' || ch === "'" || ch === '`') { dans = ch; continue; }
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') depth--;
+    else if (ch === ',' && depth === 1) virgules++;
+  }
+  return virgules === 0;
+}
+
 function estExpressionPure(code) {
   const t = code.replace(/;\s*$/, '').trim();
   if (!t) return false;
@@ -211,7 +238,11 @@ function instrumente(code, li) {
     const valNette = nettoieAttendu(comment);
     if (estValeurMachine(valNette)) {
       if (li.estAffichage(codeAvant)) {                 // console.log(x); // true
-        attendus.push(comment.trim()); sortie.push(ligne); continue;
+        // … mais SEULEMENT si l'affichage a un seul argument. Sinon (« console.log(
+        // "Au début :", n); // 3 ») le commentaire documente un argument, pas la
+        // ligne entière « Au début : 3 » : ce serait un faux positif.
+        if (afficheMonoArg(codeAvant, li)) { attendus.push(comment.trim()); sortie.push(ligne); continue; }
+        sortie.push(ligne); continue;
       }
       if (codeAvant && estExpressionPure(codeAvant)) {  // expr // 42  → on l'affiche
         const indent = (avant.match(/^\s*/) || [''])[0];
@@ -254,6 +285,7 @@ function fmtJs(v) {
   if (typeof v === 'string') return v;
   if (v === undefined) return 'undefined';
   if (v === null) return 'null';
+  if (typeof v === 'number' && !isFinite(v)) return String(v);   // NaN, Infinity — JSON les écrit « null »
   if (typeof v === 'bigint') return String(v) + 'n';   // 1099511627776n, comme un vrai console.log
   if (typeof v === 'function') return v.toString();
   try { return JSON.stringify(v); } catch (e) { return String(v); }
@@ -270,7 +302,7 @@ const BROWSER_ONLY = /\b(document|window|localStorage|sessionStorage|alert|promp
 // Une sortie qui change à chaque exécution ne peut pas être confrontée à une valeur
 // figée : l'annonce est alors un EXEMPLE de sortie, pas une prédiction. On ne crie
 // jamais « divergent » là-dessus.
-const NON_DETERMINISTE = /Date\.now|Math\.random|new\s+Date|performance\.now|Date\.parse|(?:^|[^.\w])Date\s*\(|crypto\./;
+const NON_DETERMINISTE = /Date\.now|Math\.random|new\s+Date|performance\.now|Date\.parse|(?:^|[^.\w])Date\s*\(|crypto\.|console\.(?:time|timeEnd)/;
 
 // Intl et les méthodes toLocale* dépendent des données CLDR/ICU de l'environnement
 // (Node embarque des locales que tel navigateur n'a pas, et inversement). Le résultat
@@ -283,12 +315,18 @@ function executeJs(code) {
   if (DEPEND_ENV.test(code)) return { etat: 'skip', motif: 'dépend de la locale/ICU (Intl, toLocale*)' };
   const sortie = [];
   const push = (args) => sortie.push(Array.prototype.slice.call(args).map(fmtJs).join(' '));
+  const noop = function () {};
   const consoleFake = {
     log: function () { push(arguments); },
     info: function () { push(arguments); },
     debug: function () { push(arguments); },
     warn: function () { push(arguments); },
-    error: function () { push(arguments); }
+    error: function () { push(arguments); },
+    // méthodes présentes dans un vrai console, sans sortie confrontable : no-op
+    // (leur seule présence évite un TypeError qui masquerait un bloc vérifiable)
+    table: noop, group: noop, groupEnd: noop, groupCollapsed: noop,
+    dir: noop, assert: noop, count: noop, countReset: noop, trace: noop,
+    time: noop, timeEnd: noop, timeLog: noop, clear: noop
   };
   const sandbox = { console: consoleFake };
   sandbox.globalThis = sandbox;
@@ -307,6 +345,7 @@ function executeJs(code) {
 /* ------------------------------------------------------------------ */
 
 let PYTHON = undefined;   // résolu paresseusement : chemin de l'interpréteur ou null
+let compteurTmp = 0;      // suffixe unique des fichiers temporaires Python
 function trouvePython() {
   if (PYTHON !== undefined) return PYTHON;
   for (const cand of ['python', 'python3', 'py']) {
@@ -319,11 +358,17 @@ function trouvePython() {
   return PYTHON;
 }
 
+// Comme pour JavaScript : un bloc qui lit le système de fichiers, l'entrée, l'heure
+// ou le hasard n'est pas confrontable à une valeur figée. L'annonce y est un EXEMPLE
+// de sortie (« # Dossier contenant a.txt, b.txt »), pas une prédiction. On skippe.
+const PY_NON_VERIFIABLE = /\b(open|input|Path|glob|listdir|scandir|walk|getcwd|mkdir|makedirs|remove|rmdir|rename|urandom|system|popen|getenv|randint|randrange|choice|shuffle|sample|uniform)\s*\(|\bos\.path\b|\bos\.environ\b|\bpathlib\b|\brandom\b|\.is_dir\b|\.is_file\b|\.exists\b|\.now\s*\(|\.today\s*\(|time\.(?:time|perf_counter|process_time|monotonic)\b|\buuid\b|\bsecrets\b|\bsocket\b|\brequests\b|\burllib\b|\bsubprocess\b|\bsys\.argv\b|\bthreading\b|\basyncio\b|\binput\b/;
+
 function executePython(code) {
   const py = trouvePython();
   if (!py) return { etat: 'skip', motif: 'interpréteur Python absent' };
   if (code.indexOf('>>>') !== -1) return { etat: 'skip', motif: 'session REPL (>>>)' };
-  const tmp = path.join(os.tmpdir(), 'verif-ex-' + process.pid + '-' + Math.floor(process.hrtime.bigint() % 1000000n) + '.py');
+  if (PY_NON_VERIFIABLE.test(code)) return { etat: 'skip', motif: 'dépend du système/entrée/hasard' };
+  const tmp = path.join(os.tmpdir(), 'verif-ex-' + process.pid + '-' + (compteurTmp++) + '.py');
   try {
     fs.writeFileSync(tmp, code, 'utf8');
     const r = cp.spawnSync(py, [tmp], {
@@ -349,10 +394,13 @@ function executePython(code) {
 /* Normalisation pour comparaison                                       */
 /* ------------------------------------------------------------------ */
 
-// Comparaison tolérante : on ignore les espaces (l'humain écrit « [2, 4, 6] »,
-// JSON.stringify écrit « [2,4,6] »), et on tolère guillemets simples/doubles.
+// Comparaison tolérante : on déséchappe (« a\nb » annoncé == vrai saut de ligne),
+// on ignore les espaces (l'humain écrit « [2, 4, 6] », JSON.stringify « [2,4,6] »)
+// et on aligne les guillemets simples sur les doubles.
 function normalise(s) {
-  return String(s).replace(/\s+/g, '').replace(/'/g, '"');
+  return String(s)
+    .replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r')
+    .replace(/\s+/g, '').replace(/'/g, '"');
 }
 
 // Forme canonique d'un objet/tableau : l'humain écrit « { x: 4, y: 5 } » (littéral
@@ -400,19 +448,26 @@ function retireGuillemets(s) {
   return t;
 }
 
+// Un annoncé de forme tableau/objet n'est une VRAIE valeur que s'il parse : « [1, 2,
+// 3] » oui, « [poids, sommet de départ] » non (c'est une glose entre crochets). On
+// tolère les guillemets simples et les clés d'objet non citées.
+function parseValeurLache(t) {
+  let s = t.replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":');
+  try { JSON.parse(s); return true; } catch (e) { return false; }
+}
+
 // Une valeur « machine » reconnaissable : c'est la SEULE forme d'annoncé pour
-// laquelle on ose crier « divergent ». Une phrase française (« les six parties »,
-// « trois nombres proches de 10000 ») est une GLOSE : on la classe « non vérifié »,
+// laquelle on ose crier « divergent ». Un token nu (« calcule », « big-endian ») ou
+// une phrase (« les six parties ») est une GLOSE : on la classe « non vérifié »,
 // jamais « divergent ». Prudence maximale contre les faux positifs.
 function estValeurMachine(s) {
   const t = s.trim();
   if (t === '') return false;
-  if (/^-?\d+(?:[.,]\d+)?(?:e[+-]?\d+)?$/i.test(t)) return true;      // nombre
+  if (/^-?\d+(?:[.,]\d+)?(?:e[+-]?\d+)?n?$/i.test(t)) return true;    // nombre (n = BigInt)
   if (/^(true|false|null|undefined|NaN|-?Infinity)$/.test(t)) return true;
-  if (/^[[{][\s\S]*[\]}]$/.test(t)) return true;                      // tableau / objet
+  if (/^[[{][\s\S]*[\]}]$/.test(t)) return parseValeurLache(t);       // tableau/objet : doit parser
   if (/^".*"$/.test(t) || /^'.*'$/.test(t) || /^`.*`$/.test(t)) return true; // chaîne citée
-  if (/^\S+$/.test(t)) return true;                                   // token unique (sans espace)
-  return false;                                                       // sinon : glose
+  return false;                                                       // token nu, phrase → glose
 }
 
 // L'humain tronque souvent une sortie longue par une ellipse : « // => ...reçoit 3
@@ -438,8 +493,10 @@ function matchEllipse(attendu, produit) {
 function comparePaire(attendu, produit) {
   const a = nettoieAttendu(attendu);
   const p = String(produit).trim();
+  const sansG = (x) => x.replace(/["'`]/g, '');
   if (normalise(a) === normalise(p)) return 'conforme';
   if (normalise(retireGuillemets(a)) === normalise(p)) return 'conforme';
+  if (normalise(sansG(a)) === normalise(sansG(p))) return 'conforme'; // console.log("a","b") → a b
   if (normObj(a) === normObj(p)) return 'conforme';                 // objets : fond, pas forme
   if (memeAuFlottantPres(normObj(a), normObj(p))) return 'conforme'; // 23.1 vs 23.0999…
   if (matchEllipse(a, p)) return 'conforme';                        // troncature volontaire
