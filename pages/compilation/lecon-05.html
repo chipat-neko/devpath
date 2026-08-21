@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Expressions régulières et automates — Leçon 05 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="Déclarer le lexique d'un langage sous forme de table de motifs au lieu de l'écrire en cascade de if : expressions régulières collantes (drapeau y), les trois comportements de lastIndex, l'identité entre une expression régulière et un automate fini, et ce que cette identité permet et interdit définitivement à l'analyse lexicale." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Analyse lexicale — Leçon 05</p>
+              <h1 class="lesson-header__title">Expressions régulières et automates</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~62 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : la leçon 4 (les jetons) ; savoir lire une expression régulière simple</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>déclarer le lexique d'un langage comme une <strong>table de motifs</strong>, appliquée par une seule boucle générique&nbsp;;</li>
+                  <li>distinguer une expression régulière <strong>libre</strong> d'une expression régulière <strong>collante</strong> (drapeau <code>y</code>), et manier <code>lastIndex</code> sans te faire piéger&nbsp;;</li>
+                  <li>reconnaître, dans une expression régulière, l'<strong>automate fini</strong> qu'elle est — et le réécrire état par état&nbsp;;</li>
+                  <li>dire ce que cette identité <strong>rapporte</strong> (un seul passage, une mémoire constante) et ce qu'elle <strong>interdit</strong> pour toujours à l'analyse lexicale.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-04.html">leçon précédente</a> a écrit l'analyseur lexical de <strong>Brindille</strong> à la main, caractère par caractère. Le résultat fonctionne&nbsp;: la ligne <code>soit prix = 12 + 3 * quantite</code> lui rend huit jetons, chacun avec son type et sa position. Mais regarde la <em>forme</em> de ce code plutôt que son résultat&nbsp;: c'est une cascade. Un <code>if</code> pour l'espace, un <code>if</code> pour les chiffres avec sa petite boucle interne, un <code>if</code> pour les identifiants avec sa petite boucle interne, un <code>if</code> pour les symboles, et une exception pour tout ce qui reste. Chaque catégorie de jeton a réclamé sa branche, et chaque branche a réclamé sa boucle.</p>
+<p>Ajoute maintenant les chaînes entre guillemets&nbsp;: une branche de plus. Les nombres à virgule&nbsp;: une branche de plus, ou une complication de celle qui existe. Les commentaires&nbsp;: une branche de plus. Les opérateurs à deux caractères comme <code>&lt;=</code>&nbsp;: encore une. Le lexique d'un vrai langage compte des dizaines de catégories&nbsp;; à ce rythme, l'analyseur devient une page de branches qui se ressemblent toutes sans jamais être identiques — la pire matière à relire qui soit. Or toutes ces branches disent la même chose, répétée&nbsp;: «&nbsp;à la position courante, essaie tel motif&nbsp;; s'il accroche, produis tel type de jeton et avance d'autant&nbsp;». On aimerait l'écrire une bonne fois, sous forme de <strong>table</strong>, et laisser une <em>seule</em> boucle générique l'appliquer.</p>
+<p>C'est précisément le métier des <strong>expressions régulières</strong>&nbsp;: décrire un motif au lieu de le programmer. Mais pas n'importe comment. Telles qu'on les emploie d'ordinaire — trouver une adresse dans un texte, remplacer toutes les occurrences d'un mot —, elles cherchent <em>partout</em>. Un analyseur lexical ne pose jamais cette question-là. Il en pose une autre, toujours la même&nbsp;: «&nbsp;qu'y a-t-il <strong>ICI</strong>, à cette position exacte&nbsp;?&nbsp;» La première moitié de cette leçon tient dans cet écart, et dans une lettre&nbsp;: le drapeau <code>y</code>. La seconde va plus loin&nbsp;: elle montre qu'une expression régulière n'est pas un outil de recherche qu'on détourne, mais très exactement un <strong>automate fini</strong> écrit en abrégé — et que cette identité décide, une fois pour toutes, de ce que l'analyse lexicale saura faire et de ce qu'elle ne saura jamais faire.</p>
+
+<h2>Chercher partout ou décider ici</h2>
+<p>Prends la ligne <code>soit x = 42</code> et place-toi au tout début, à la position 0. L'analyseur lexical se pose sa question habituelle, catégorie par catégorie&nbsp;: «&nbsp;y a-t-il un <em>nombre</em> ici&nbsp;?&nbsp;» La bonne réponse est évidemment <strong>non</strong>&nbsp;: à la position 0, il y a la lettre <code>s</code>. Le premier chiffre du texte se trouve neuf caractères plus loin, ce qui, du point de vue de l'analyseur, ne le regarde pas encore — il y arrivera en son temps, après avoir produit les jetons qui précèdent.</p>
+<p>Pose maintenant la même question à une expression régulière ordinaire. <code>/[0-9]+/</code> décrit bien «&nbsp;un ou plusieurs chiffres&nbsp;», et sa méthode <code>.exec</code> rend bien une correspondance. Seulement <code>.exec</code> ne répond pas à «&nbsp;y a-t-il un nombre ici&nbsp;?&nbsp;»&nbsp;: elle répond à «&nbsp;y a-t-il un nombre <em>quelque part</em>&nbsp;?&nbsp;», et elle rend la première correspondance rencontrée, aussi loin soit-elle. Sur notre ligne, elle rend <code>"42"</code> — trouvé en position 9.</p>
+<p>Ce n'est pas un détail d'ergonomie, c'est une <strong>faute</strong>. Imagine un analyseur bâti sur cette réponse. Il enregistrerait un jeton <code>NOMBRE</code> alors que le texte commence par un mot-clé&nbsp;; il sauterait sans les voir le <code>soit</code>, le <code>x</code> et le <code>=</code> qui séparent le curseur du chiffre&nbsp;; et surtout, il ne pourrait plus jamais détecter un caractère illégal — car un caractère illégal ne se signale que d'une seule façon&nbsp;: <em>aucun</em> motif n'accroche à sa position. Une recherche qui part fouiller plus loin ne dit jamais «&nbsp;rien ici&nbsp;». Elle dit «&nbsp;j'ai fini par trouver&nbsp;», ce qui n'est pas la même information.</p>
+<p>Il faut donc une expression régulière qui refuse de se déplacer. JavaScript en fournit une&nbsp;: le drapeau <code>y</code>, dit <strong>collant</strong> (<em>sticky</em>). Une regex collante n'essaie qu'à <em>une seule</em> position — celle qu'indique sa propriété <code>lastIndex</code> — et échoue si la correspondance ne commence pas exactement là. Comparons les deux comportements sur la même ligne&nbsp;:</p>
+
+<figure class="code-block" data-file="ici-ou-ailleurs.js"><pre><code class="language-javascript">// Un analyseur lexical a besoin de regex ANCREES : elles doivent decider a la
+// position courante, pas chercher plus loin. C'est le drapeau y ("sticky").
+const nombre = /[0-9]+/;      // libre : cherche partout
+const ancre  = /[0-9]+/y;     // collante : n'essaie qu'a lastIndex
+
+const src = "soit x = 42";
+
+console.log("regex libre    .exec :", JSON.stringify(nombre.exec(src)[0]), "trouve en", nombre.exec(src).index);
+
+ancre.lastIndex = 0;
+console.log("regex collante en 0  :", ancre.exec(src));
+ancre.lastIndex = 9;
+console.log("regex collante en 9  :", JSON.stringify(ancre.exec(src)[0]));
+console.log("lastIndex apres      :", ancre.lastIndex);
+// affiche : regex libre    .exec : "42" trouve en 9
+// affiche : regex collante en 0  : null
+// affiche : regex collante en 9  : "42"
+// affiche : lastIndex apres      : 11</code></pre></figure>
+
+<p>Quatre lignes de sortie, et chacune mérite un mot.</p>
+<p>La <strong>première</strong> est le problème tout entier. On a interrogé le texte sans préciser d'endroit, et la regex libre a répondu <code>"42"</code>, <em>trouvé en 9</em>. Elle a raison au sens de la recherche&nbsp;: il y a bel et bien un nombre dans cette ligne. Elle a tort au sens de l'analyse lexicale&nbsp;: à la position où l'on travaillait, il n'y en avait pas.</p>
+<p>La <strong>deuxième</strong> est la bonne réponse, et c'est la plus instructive&nbsp;: <code>null</code>. On a placé <code>lastIndex</code> à 0, on a demandé «&nbsp;un nombre ici&nbsp;?&nbsp;», et la regex collante a répondu «&nbsp;non&nbsp;». Elle n'est pas allée voir ailleurs. Ce <code>null</code> est exactement ce dont l'analyseur a besoin&nbsp;: c'est lui qui lui permettra d'essayer la règle suivante de sa table, puis, si aucune n'accroche, de lever une erreur en désignant le caractère fautif.</p>
+<p>La <strong>troisième</strong> montre que la collante n'est pas plus faible que l'autre&nbsp;: placée en 9, sur le premier chiffre, elle rend bien <code>"42"</code>. Elle sait tout ce que sait la regex libre&nbsp;; simplement, elle ne prend pas d'initiative.</p>
+<p>La <strong>quatrième</strong> est un cadeau qu'on n'avait pas demandé. Après le succès, <code>lastIndex</code> ne vaut plus 9 mais <strong>11</strong>&nbsp;: la regex l'a avancé jusqu'à la fin de ce qu'elle a reconnu. Autrement dit, le déplacement du curseur — ce que la leçon 4 réécrivait à la main dans chacune de ses branches, tantôt <code>i++</code>, tantôt <code>i = j</code> — est déjà fait. Une regex collante ne répond pas seulement «&nbsp;oui, voici le jeton&nbsp;»&nbsp;; elle répond «&nbsp;oui, voici le jeton, et voilà où reprendre&nbsp;». C'est cette propriété-là qui va rendre la boucle générique possible.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Trois mots pour la même chose</p><p>Tu rencontreras ce drapeau sous plusieurs noms. La spécification du langage l'appelle <em>sticky</em>&nbsp;; on traduit couramment par <strong>collante</strong>, parce qu'elle reste collée à la position qu'on lui a donnée. La littérature sur les compilateurs, elle, parle plutôt de motif <strong>ancré</strong> — ancré au curseur. Les trois désignent la même propriété&nbsp;: <em>la correspondance doit commencer exactement à</em> <code>lastIndex</code>. Retiens le mot que tu veux, mais retiens la propriété&nbsp;: c'est elle qui transforme un outil de recherche en outil de décision.</p></div></div>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Et si le langage n'a pas de drapeau collant&nbsp;?</p><p>Tous les langages n'offrent pas l'équivalent du <code>y</code> de JavaScript. La solution de repli classique consiste à ancrer le motif au début avec <code>^</code> et à l'appliquer sur <code>texte.slice(i)</code>, la tranche qui commence au curseur. Cela marche, mais deux choses changent&nbsp;: il faut fabriquer une chaîne nouvelle à chaque jeton, et surtout, l'indice rendu par la correspondance est relatif à la <em>tranche</em>, pas au texte d'origine — il faut donc lui rajouter <code>i</code> avant de le ranger dans le jeton. C'est une source classique de positions d'erreur décalées, et le genre de bogue qu'on ne voit qu'au moment d'afficher un message à l'apprenant. Quand le langage propose une méthode qui prend directement l'indice de départ et ancre la correspondance à cet endroit, c'est elle qu'il faut employer.</p></div></div>
+
+<h2>Les trois comportements de <code>lastIndex</code></h2>
+<p><code>lastIndex</code> est une propriété <em>modifiable</em> portée par l'objet regex lui-même. C'est un point qui surprend&nbsp;: on croit manipuler une valeur constante — un motif, quelque chose d'aussi figé qu'un nombre — alors qu'on manipule un objet qui garde un curseur entre deux appels. Et ce curseur ne se comporte pas de la même façon selon le drapeau posé. Il y a exactement trois régimes, et les confondre coûte des heures.</p>
+<p>Le plus simple est de poser la même question aux trois. Même texte, même motif, même valeur de <code>lastIndex</code>&nbsp;: seule la lettre du drapeau change.</p>
+
+<figure class="code-block" data-file="trois-drapeaux.js"><pre><code class="language-javascript">// Le MEME texte, le MEME motif, le MEME lastIndex : trois drapeaux, trois reponses.
+const texte = "a1 b22 c3";     // positions : a=0 1=1 espace=2 b=3 2=4 2=5 espace=6 c=7 3=8
+
+const sans = /[0-9]+/;
+const glob = /[0-9]+/g;
+const coll = /[0-9]+/y;
+
+for (const re of [sans, glob, coll]) {
+  re.lastIndex = 3;
+  const m = re.exec(texte);
+  console.log(
+    "drapeau", JSON.stringify(re.flags).padEnd(4),
+    "| trouve", JSON.stringify(m &amp;&amp; m[0]).padEnd(6),
+    "| en", String(m ? m.index : -1).padEnd(2),
+    "| lastIndex apres", re.lastIndex
+  );
+}
+// affiche : drapeau ""   | trouve "1"    | en 1  | lastIndex apres 3
+// affiche : drapeau "g"  | trouve "22"   | en 4  | lastIndex apres 6
+// affiche : drapeau "y"  | trouve null   | en -1 | lastIndex apres 0</code></pre></figure>
+
+<p>Trois lignes, trois réponses différentes à une question identique. Détaillons.</p>
+<p><strong>Sans drapeau</strong>, la regex <em>ignore</em> <code>lastIndex</code>. On lui avait dit 3&nbsp;; elle a cherché depuis le début et rendu le <code>"1"</code> qui se trouve en position 1, c'est-à-dire <em>avant</em> le point qu'on lui indiquait. Et après l'appel, <code>lastIndex</code> vaut toujours 3&nbsp;: elle ne l'a ni lu ni écrit. La propriété existe sur l'objet, mais elle est inerte. C'est le régime le plus trompeur, parce qu'écrire <code>re.lastIndex = 3</code> donne l'illusion d'avoir donné un ordre.</p>
+<p>Avec <strong><code>g</code></strong> (<em>global</em>), la regex <em>lit</em> <code>lastIndex</code> et commence sa recherche à cet endroit — mais elle continue plus loin si rien n'accroche tout de suite. Partie de 3, elle a sauté le <code>b</code> et rendu le <code>"22"</code> qui commence en 4&nbsp;; puis elle a <em>écrit</em> <code>lastIndex</code> à 6, la fin de la correspondance. C'est le régime des balayages&nbsp;: appelée en boucle, elle parcourt toutes les occurrences du texte. Sur ce même texte, quatre appels successifs partis de zéro donnent <code>"1"</code> (<code>lastIndex</code> à 2), puis <code>"22"</code> (6), puis <code>"3"</code> (9), puis <code>null</code> — et à cet échec, <code>lastIndex</code> retombe à <strong>0</strong>.</p>
+<p>Avec <strong><code>y</code></strong> (collant), la regex lit <code>lastIndex</code> et n'essaie que là. En position 3, il y a un <code>b</code>&nbsp;; le motif demande un chiffre&nbsp;; c'est <code>null</code>, sans discussion et sans exploration. Comme la regex <code>g</code>, elle remet <code>lastIndex</code> à 0 en cas d'échec.</p>
+<p>Cette remise à zéro est le détail qui piège tout le monde, parce qu'elle rend le résultat d'un appel dépendant de l'appel précédent. Le cas le plus célèbre est <code>test()</code> sur une regex <code>g</code>&nbsp;: appelée deux fois de suite sur le même texte, elle peut répondre <code>true</code> puis <code>false</code>, alors que le texte n'a pas bougé d'un caractère. Mettons les deux phénomènes à l'épreuve, avec un texte qui ne contient qu'une seule correspondance&nbsp;:</p>
+
+<figure class="code-block" data-file="lastindex.js"><pre><code class="language-javascript">// Contre-epreuve 1 : une regex SANS drapeau tient-elle compte de lastIndex ?
+// On choisit un texte dont la premiere correspondance est AVANT lastIndex.
+const libre = /[0-9]+/;
+libre.lastIndex = 5;
+const m = libre.exec("a1 b22 c3");
+console.log("sans drapeau, depuis lastIndex = 5 :", JSON.stringify(m[0]), "en", m.index);
+console.log("sans drapeau, lastIndex apres      :", libre.lastIndex);
+
+// Contre-epreuve 2 : test() repete sur un texte qui n'a QU'UNE correspondance.
+const g = /[0-9]+/g;
+console.log("g.test  1 :", g.test("a1"), "| lastIndex", g.lastIndex);
+console.log("g.test  2 :", g.test("a1"), "| lastIndex", g.lastIndex);
+console.log("g.test  3 :", g.test("a1"), "| lastIndex", g.lastIndex);
+
+// Une regex COLLANTE echoue si la correspondance ne commence pas EXACTEMENT la.
+const y = /[0-9]+/y;
+y.lastIndex = 0;
+console.log("y.test en 0 :", y.test("a1"), "| lastIndex", y.lastIndex);
+y.lastIndex = 1;
+console.log("y.test en 1 :", y.test("a1"), "| lastIndex", y.lastIndex);
+// affiche : sans drapeau, depuis lastIndex = 5 : "1" en 1
+// affiche : sans drapeau, lastIndex apres      : 5
+// affiche : g.test  1 : true | lastIndex 2
+// affiche : g.test  2 : false | lastIndex 0
+// affiche : g.test  3 : true | lastIndex 2
+// affiche : y.test en 0 : false | lastIndex 0
+// affiche : y.test en 1 : true | lastIndex 2</code></pre></figure>
+
+<p>Les deux premières lignes ferment la discussion sur le premier régime&nbsp;: on avait écrit <code>lastIndex = 5</code>, et la regex sans drapeau a rendu la correspondance de la position 1 — quatre caractères <em>avant</em> l'endroit demandé. Elle n'a pas commencé où on le lui disait, et elle n'a pas touché à la propriété non plus, restée à 5. Il n'y a donc aucune façon de rendre collante une regex sans drapeau&nbsp;: ce n'est pas une affaire de réglage, c'est une affaire de nature.</p>
+<p>Les trois lignes suivantes sont le fameux piège de <code>test()</code>. Le texte <code>"a1"</code> ne change jamais. Le premier appel trouve le <code>1</code> et laisse <code>lastIndex</code> à 2. Le deuxième repart de 2, c'est-à-dire de la fin du texte, ne trouve rien, répond <code>false</code> — et remet <code>lastIndex</code> à 0. Le troisième repart donc de zéro et répond <code>true</code> à nouveau. Une fonction qui répond alternativement oui et non à la même question&nbsp;: c'est l'une des sources de bogues les plus déroutantes du langage, et elle n'a plus rien de mystérieux une fois qu'on sait que le curseur vit <em>dans</em> la regex.</p>
+<p>Les deux dernières lignes vérifient la collante sur ce même texte. Placée en 0, sur le <code>a</code>, elle échoue&nbsp;: le motif exige un chiffre à cet endroit précis, il n'y en a pas. Placée en 1, elle réussit et pousse <code>lastIndex</code> à 2. Voilà exactement le comportement qu'un analyseur lexical demande&nbsp;: une réponse locale, et un curseur qui avance quand — et seulement quand — quelque chose a été consommé.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Une regex <code>g</code> partagée est un état mutable déguisé</p><p>Le vrai danger n'est pas <code>lastIndex</code> lui-même&nbsp;: c'est le <strong>partage</strong>. Range une regex <code>g</code> ou <code>y</code> dans une constante de module, en tête de fichier, puis appelle-la depuis deux fonctions différentes&nbsp;: les deux se passent le curseur sans le savoir. Le résultat de la seconde dépend de ce que la première a fait, l'ordre des appels devient significatif, et le bogue ne se reproduit qu'une fois sur deux — le pire des symptômes. Le mot <code>const</code> n'y change rien&nbsp;: il gèle la <em>référence</em> à l'objet, pas l'état que cet objet porte. Deux parades&nbsp;: écrire <code>motif.lastIndex = i</code> juste avant chaque <code>exec</code>, comme le fera notre boucle générique — le curseur est alors imposé à chaque tour, jamais hérité —, ou construire la regex à l'intérieur de la fonction, ce qui donne un objet neuf à chaque appel. La première parade est celle des analyseurs lexicaux&nbsp;; la seconde suffit partout ailleurs.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Comparaison des trois régimes d'une expression régulière JavaScript interrogée avec le même motif « un ou plusieurs chiffres », le même texte « a1 b22 c3 » et le même lastIndex valant 3. Le texte est dessiné en haut, une case par caractère, avec les positions numérotées de 0 à 8 : a en 0, 1 en 1, un espace en 2, b en 3, 2 en 4, 2 en 5, un espace en 6, c en 7, 3 en 8. Un repère vertical en pointillés marque la position 3, où se trouve la lettre b, et porte l'étiquette lastIndex égale 3. Trois bandes horizontales suivent, une par drapeau. Première bande, sans drapeau : la case surlignée est celle de la position 1, la regex ignore lastIndex et cherche depuis le début, elle rend « 1 » trouvé en 1 et lastIndex reste à 3. Deuxième bande, drapeau g : les cases surlignées sont celles des positions 4 et 5, la regex part de lastIndex puis continue plus loin, elle rend « 22 » trouvé en 4 et lastIndex passe à 6. Troisième bande, drapeau y : la case de la position 3 est barrée d'une croix, la regex n'essaie qu'à lastIndex et nulle part ailleurs, elle rend null et lastIndex retombe à 0. Une note finale rappelle que seule la collante répond à la question de l'analyseur lexical, qu'y a-t-il ici.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Même texte, même motif /[0-9]+/, même lastIndex = 3 : trois réponses</text>
+
+    <text class="d-mut" x="96" y="62" text-anchor="end" font-size="9.5">le texte</text>
+    <rect class="d-box" x="104" y="46" width="22" height="24" rx="4" /><text class="d-text" x="115" y="63" text-anchor="middle" font-size="10">a</text><text class="d-mut" x="115" y="84" text-anchor="middle" font-size="8">0</text>
+    <rect class="d-box" x="126" y="46" width="22" height="24" rx="4" /><text class="d-text" x="137" y="63" text-anchor="middle" font-size="10">1</text><text class="d-mut" x="137" y="84" text-anchor="middle" font-size="8">1</text>
+    <rect class="d-box" x="148" y="46" width="22" height="24" rx="4" /><text class="d-mut" x="159" y="63" text-anchor="middle" font-size="8">esp</text><text class="d-mut" x="159" y="84" text-anchor="middle" font-size="8">2</text>
+    <rect class="d-box" x="170" y="46" width="22" height="24" rx="4" /><text class="d-text" x="181" y="63" text-anchor="middle" font-size="10">b</text><text class="d-mut" x="181" y="84" text-anchor="middle" font-size="8">3</text>
+    <rect class="d-box" x="192" y="46" width="22" height="24" rx="4" /><text class="d-text" x="203" y="63" text-anchor="middle" font-size="10">2</text><text class="d-mut" x="203" y="84" text-anchor="middle" font-size="8">4</text>
+    <rect class="d-box" x="214" y="46" width="22" height="24" rx="4" /><text class="d-text" x="225" y="63" text-anchor="middle" font-size="10">2</text><text class="d-mut" x="225" y="84" text-anchor="middle" font-size="8">5</text>
+    <rect class="d-box" x="236" y="46" width="22" height="24" rx="4" /><text class="d-mut" x="247" y="63" text-anchor="middle" font-size="8">esp</text><text class="d-mut" x="247" y="84" text-anchor="middle" font-size="8">6</text>
+    <rect class="d-box" x="258" y="46" width="22" height="24" rx="4" /><text class="d-text" x="269" y="63" text-anchor="middle" font-size="10">c</text><text class="d-mut" x="269" y="84" text-anchor="middle" font-size="8">7</text>
+    <rect class="d-box" x="280" y="46" width="22" height="24" rx="4" /><text class="d-text" x="291" y="63" text-anchor="middle" font-size="10">3</text><text class="d-mut" x="291" y="84" text-anchor="middle" font-size="8">8</text>
+
+    <path class="d-line" d="M170 40 L170 268" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="176" y="36" font-size="9.5">lastIndex = 3</text>
+
+    <rect class="d-box" x="12" y="108" width="80" height="26" rx="6" /><text class="d-text" x="52" y="125" text-anchor="middle" font-size="9.5">(aucun)</text>
+    <rect class="d-accent" x="126" y="106" width="22" height="30" rx="4" /><text class="d-text" x="137" y="126" text-anchor="middle" font-size="10">1</text>
+    <text class="d-mut" x="318" y="117" font-size="9">ignore lastIndex, cherche depuis le début</text>
+    <text class="d-text" x="318" y="131" font-size="9.5">rend « 1 » en 1 · lastIndex reste 3</text>
+
+    <rect class="d-box" x="12" y="164" width="80" height="26" rx="6" /><text class="d-text" x="52" y="181" text-anchor="middle" font-size="9.5">g</text>
+    <rect class="d-accent" x="192" y="162" width="44" height="30" rx="4" /><text class="d-text" x="214" y="182" text-anchor="middle" font-size="10">22</text>
+    <text class="d-mut" x="318" y="173" font-size="9">part de lastIndex, puis continue plus loin</text>
+    <text class="d-text" x="318" y="187" font-size="9.5">rend « 22 » en 4 · lastIndex → 6</text>
+
+    <rect class="d-box" x="12" y="220" width="80" height="26" rx="6" /><text class="d-text" x="52" y="237" text-anchor="middle" font-size="9.5">y</text>
+    <rect class="d-box" x="170" y="218" width="22" height="30" rx="4" /><path class="d-line" d="M174 222 L188 244 M188 222 L174 244" fill="none" />
+    <text class="d-mut" x="318" y="229" font-size="9">n'essaie qu'à lastIndex, et nulle part ailleurs</text>
+    <text class="d-text" x="318" y="243" font-size="9.5">rend null · lastIndex → 0</text>
+
+    <text class="d-mut" x="320" y="284" text-anchor="middle" font-size="9">Seule la collante répond à la question de l'analyseur lexical : « qu'y a-t-il ICI ? »</text>
+  </svg>
+  <figcaption>Les trois régimes, mis côte à côte sur la même interrogation. La regex <strong>sans drapeau</strong> ne lit même pas <code>lastIndex</code>&nbsp;: elle répond sur une autre position que celle qu'on visait. La regex <strong><code>g</code></strong> le lit, mais s'autorise à avancer&nbsp;: elle saute ce qui la gêne. Seule la regex <strong><code>y</code></strong> répond «&nbsp;non&nbsp;» quand il n'y a rien à l'endroit demandé — et c'est ce «&nbsp;non&nbsp;» qui fait tout le travail dans un analyseur lexical.</figcaption>
+</figure>
+
+<h2>Le lexique devient une table</h2>
+<p>Nous avons maintenant les deux pièces qui manquaient&nbsp;: un motif capable de <em>décider sur place</em>, et un curseur qui <em>avance tout seul</em> quand la décision est positive. Cela suffit pour renverser l'écriture de l'analyseur. Au lieu d'une cascade de branches, on écrit une <strong>table</strong>&nbsp;: une ligne par catégorie de jeton, chaque ligne associant un <em>type</em> à un <em>motif collant</em>. Et une seule boucle, qui ne connaît aucune catégorie en particulier, applique la table.</p>
+<p>Voici l'analyseur de Brindille réécrit de cette façon. Compare-le mentalement à celui de la leçon 4 pendant que tu le lis&nbsp;: le travail n'a pas disparu, il a changé d'endroit. Ce qui était du <em>code</em> est devenu de la <em>donnée</em>.</p>
+
+<figure class="code-block" data-file="table.js"><pre><code class="language-javascript">// La TABLE DES MOTIFS : chaque regle associe un type de jeton a un motif COLLANT.
+// L'ordre de la table encode les priorites : le premier motif qui accroche gagne.
+const MOTS_CLES = ["soit", "affiche"];
+const REGLES = [
+  { type: "ESPACE",  motif: /[ \t]+/y },
+  { type: "NOMBRE",  motif: /[0-9]+/y },
+  { type: "IDENT",   motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE", motif: /[-+*\/()=]/y },
+];
+
+function jetons(txt) {
+  const sortie = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (regle.type !== "ESPACE") {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex;
+      avance = true;
+      break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+
+for (const j of jetons("soit prix = 12 + 3 * quantite")) {
+  console.log(String(j.pos).padStart(2), j.type.padEnd(8), j.valeur);
+}
+// affiche :  0 MOT_CLE  soit
+// affiche :  5 IDENT    prix
+// affiche : 10 SYMBOLE  =
+// affiche : 12 NOMBRE   12
+// affiche : 15 SYMBOLE  +
+// affiche : 17 NOMBRE   3
+// affiche : 19 SYMBOLE  *
+// affiche : 21 IDENT    quantite</code></pre></figure>
+
+<p>Huit lignes. <strong>Exactement</strong> les huit dernières lignes de la sortie de la leçon 4 — même ordre, même position, même type, même valeur, au caractère près. Deux programmes qui ne se ressemblent en rien produisent la même sortie, et c'est tout l'intérêt de la manœuvre&nbsp;: le travail n'a pas changé de nature, seulement d'écriture.</p>
+<p>Mais il faut se garder d'en conclure que les deux analyseurs sont <em>interchangeables</em>, car ils ne le sont pas — et le vérifier est un excellent exercice de méfiance. En les exécutant tous les deux sur une quinzaine de textes au lieu d'un seul, on trouve <strong>trois</strong> écarts, tous involontaires, et tous instructifs. <strong>Un&nbsp;:</strong> la leçon 4 écrivait <code>/[a-z_]/i</code>, avec le drapeau <code>i</code> qui ignore la casse, alors que notre table écrit <code>/[a-z_][a-z0-9_]*/y</code> sans lui&nbsp;; <code>Prix</code> est donc un identifiant valide pour l'une et une erreur lexicale pour l'autre. <strong>Deux&nbsp;:</strong> la leçon 4 ne sautait que l'espace (<code>c === " "</code>), notre motif <code>/[ \t]+/y</code> saute aussi la tabulation&nbsp;; un fichier indenté avec des tabulations passe ici et échouait là. <strong>Trois&nbsp;:</strong> la leçon 4 rangeait <code>Number(txt.slice(i, j))</code> dans le jeton, nous rangeons le texte tel quel. Sur <code>12</code> l'affichage est identique, mais sur <code>012</code> l'une stocke le nombre <code>12</code> et l'autre la chaîne <code>"012"</code> — c'est très exactement le piège que la leçon 4 signalait en dernier point de ses «&nbsp;pièges fréquents&nbsp;». Retiens le procédé plus que les trois cas&nbsp;: <em>deux implémentations qui coïncident sur l'exemple du cours peuvent diverger partout ailleurs</em>, et un seul texte de test ne prouve jamais une équivalence.</p>
+<p>Regarde comment la boucle est bâtie, car elle est plus courte que ce qu'elle remplace. Elle ne contient <strong>aucun motif</strong>&nbsp;: elle parcourt <code>REGLES</code>, positionne <code>lastIndex</code> sur le curseur, tente le motif. Elle ne nomme que trois catégories, et seulement pour décider du <em>sort</em> de ce qui a été reconnu&nbsp;: <code>ESPACE</code> qu'elle jette, <code>IDENT</code> qu'elle peut promouvoir en <code>MOT_CLE</code>. Les autres lui sont parfaitement indifférentes — elle ne sait même pas combien il y en a. Si <code>exec</code> rend <code>null</code>, elle passe à la règle suivante&nbsp;; si elle arrive au bout de la table sans que rien n'ait accroché, aucun motif ne décrit ce qui se trouve ici, donc le caractère est illégal, et elle lève une erreur en citant sa position. Si un motif accroche, elle enregistre le jeton, saute le curseur à <code>motif.lastIndex</code> — la fin de ce qui vient d'être consommé — et recommence. Ajouter les chaînes de caractères au langage, ce n'est plus écrire une branche&nbsp;: c'est ajouter une ligne à la table.</p>
+<p>Deux choix de conception méritent d'être commentés, parce qu'ils reviennent dans tous les analyseurs lexicaux du monde.</p>
+<p>Le premier est le traitement de l'<strong>espace</strong>. Il figure dans la table comme les autres, avec son motif <code>/[ \t]+/y</code> et son type <code>ESPACE</code>&nbsp;; simplement, la boucle le reconnaît puis ne le range pas. C'est plus subtil qu'il n'y paraît. On aurait pu écrire un <code>if</code> avant la boucle pour sauter les espaces&nbsp;: cela aurait fait un cas particulier, c'est-à-dire un endroit du code qui obéit à une autre logique que le reste. En le traitant comme une règle ordinaire dont le résultat est jeté, on garde <em>une seule</em> mécanique. Le bénéfice apparaît quand le langage change d'avis&nbsp;: dans un langage où l'indentation compte, comme Python, ne plus jeter ce jeton est le premier pas — et il ne coûte rien, puisqu'il suffit de retirer le <code>if</code>. Le reste du travail, lui, est réel&nbsp;: un analyseur de Python tient une pile des indentations en cours pour émettre, en début de ligne, des jetons «&nbsp;on entre d'un cran&nbsp;» et «&nbsp;on ressort d'un cran&nbsp;». La table de motifs n'a pas à être réécrite pour cela&nbsp;; c'est la boucle qui gagne une responsabilité.</p>
+<p>Le second est le traitement des <strong>mots-clés</strong>. Remarque qu'il n'y a pas de règle <code>MOT_CLE</code> dans la table. Un mot-clé y entre comme un identifiant ordinaire, et c'est <em>après</em> la correspondance qu'on le promeut, en regardant si le texte reconnu figure dans <code>MOTS_CLES</code>. Pourquoi ne pas mettre un motif <code>/soit|affiche/y</code> en tête de table&nbsp;? Parce qu'il accrocherait le préfixe. Sur <code>soitx</code>, il rendrait le mot-clé <code>soit</code>, et le <code>x</code> restant deviendrait un second jeton — alors que <code>soitx</code> est un nom de variable parfaitement légitime, en un seul morceau. La leçon 4 en a fait un schéma&nbsp;: deux découpages possibles, un seul correct. La promotion après coup évite complètement le problème&nbsp;: on lit d'abord l'identifiant le plus long possible, <em>puis</em> on regarde ce que c'est. Retiens la formule&nbsp;: un mot-clé n'est pas un motif particulier, c'est un identifiant qui se trouve figurer dans une liste.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">L'ordre des règles encode les priorités — mais pas dans cette table-ci</p><p>Soyons précis, car c'est le genre d'affirmation qu'on répète sans la vérifier. Dans la table ci-dessus, les quatre motifs décrivent des ensembles de caractères <strong>disjoints</strong>&nbsp;: un chiffre ne peut pas commencer un identifiant, une lettre ne peut pas commencer un nombre, ni l'un ni l'autre ne peut être un symbole ou un espace. À une position donnée, <em>au plus une</em> règle peut accrocher. Permuter <code>SYMBOLE</code> et <code>NOMBRE</code> ne changerait donc strictement rien à la sortie&nbsp;: ne va pas raconter le contraire.</p><p>Mais cette tranquillité disparaît au premier motif qui en chevauche un autre. Ajoute <code>&lt;</code> et <code>&lt;=</code> au langage&nbsp;: sur le texte <code>a &lt;= b</code>, les deux règles accrochent à la même position, l'une sur un caractère, l'autre sur deux. La première de la table gagne. Si c'est la plus courte, l'analyseur produit <code>&lt;</code> puis <code>=</code>, et l'étape suivante recevra deux jetons là où le programmeur en avait écrit un seul — un message d'erreur incompréhensible, sur une ligne parfaitement correcte. C'est la règle de la <strong>plus longue correspondance</strong> de la leçon 4, revenue sous une autre forme&nbsp;: quand des motifs se chevauchent, place le plus long d'abord, ou fais explicitement porter le choix à la boucle en essayant toutes les règles et en gardant la correspondance la plus longue.</p></div></div>
+
+<h2>Une expression régulière est un automate</h2>
+<p>La table fonctionne, mais elle repose sur une boîte noire. Quand <code>/[0-9]+/y</code> répond «&nbsp;oui, deux chiffres&nbsp;», que s'est-il passé exactement&nbsp;? Tant qu'on ne le sait pas, on ne peut rien dire de sérieux ni sur ce que l'analyse lexicale coûte, ni sur ce qu'elle sait faire. Il faut donc ouvrir la boîte. Ce qu'on y trouve porte un nom, et c'est le cœur de cette leçon.</p>
+<p>Un <strong>automate fini</strong> est un objet mathématique d'une simplicité désarmante. Il se compose de quatre choses. Un <strong>ensemble fini d'états</strong> — «&nbsp;fini&nbsp;» est le mot important, et il coûtera cher plus loin. Un <strong>état de départ</strong>, celui dans lequel on se trouve avant d'avoir lu quoi que ce soit. Un ensemble de <strong>transitions</strong>, chacune étiquetée par un caractère&nbsp;: elle dit «&nbsp;si tu es dans cet état-là et que tu lis ce caractère-ci, va dans cet état-là&nbsp;». Et enfin un ensemble d'<strong>états acceptants</strong>, ceux dans lesquels on a le droit de s'arrêter.</p>
+<p>Le fonctionnement se décrit en trois phrases. On part de l'état de départ&nbsp;; on lit le texte caractère par caractère, et chaque caractère fait suivre une transition&nbsp;; à la fin du texte, on accepte si — et seulement si — l'état où l'on se trouve est acceptant. Si, en cours de route, aucune transition ne correspond au caractère lu, la machine se bloque et refuse tout de suite. Il n'y a pas de mémoire, pas de compteur, pas de retour en arrière&nbsp;: la seule chose que la machine sait d'elle-même, à tout instant, c'est <em>dans quel état elle est</em>.</p>
+<p>Écrivons-en un à la main. Celui-ci reconnaît un nombre décimal — <code>12</code>, <code>3.75</code> —, ce que l'expression régulière <code>/[0-9]+(\.[0-9]+)?/</code> décrit en dix-neuf caractères, barres obliques comprises. La table <code>TRANSITIONS</code> est la définition complète de la machine&nbsp;; <code>ACCEPTANTS</code> dit où l'on a le droit de s'arrêter. Le programme affiche d'abord la trace du parcours pour <code>"3.75"</code>, puis compare, sur six textes, son verdict à celui de l'expression régulière équivalente.</p>
+
+<figure class="code-block" data-file="automate.js"><pre><code class="language-javascript">// Une expression reguliere est une autre facon d'ecrire un AUTOMATE FINI.
+// Voici le meme motif — un nombre decimal comme 12 ou 3.75 — ecrit a la main,
+// etat par etat. La regex equivalente est /[0-9]+(\.[0-9]+)?/ — ANCREE ci-dessous
+// par ^ et $, sans quoi elle repondrait "oui" des qu'un nombre traine quelque part.
+const TRANSITIONS = {
+  debut:    (c) =&gt; (/[0-9]/.test(c) ? "entier" : null),
+  entier:   (c) =&gt; (/[0-9]/.test(c) ? "entier" : c === "." ? "point" : null),
+  point:    (c) =&gt; (/[0-9]/.test(c) ? "decimale" : null),
+  decimale: (c) =&gt; (/[0-9]/.test(c) ? "decimale" : null),
+};
+const ACCEPTANTS = ["entier", "decimale"];
+
+function reconnait(txt, trace) {
+  let etat = "debut";
+  for (const c of txt) {
+    const suivant = TRANSITIONS[etat](c);
+    if (trace) console.log("   " + etat.padEnd(8) + " --" + c + "--&gt; " + (suivant || "(bloque)"));
+    if (!suivant) return false;
+    etat = suivant;
+  }
+  return ACCEPTANTS.includes(etat);
+}
+
+console.log('trace pour "3.75" :');
+reconnait("3.75", true);
+console.log("");
+const regex = /^[0-9]+(\.[0-9]+)?$/;
+for (const t of ["12", "3.75", "3.", ".5", "12a", ""]) {
+  console.log(JSON.stringify(t).padEnd(7), "automate:", reconnait(t, false), " regex:", regex.test(t));
+}
+// affiche : trace pour "3.75" :
+// affiche :    debut    --3--&gt; entier
+// affiche :    entier   --.--&gt; point
+// affiche :    point    --7--&gt; decimale
+// affiche :    decimale --5--&gt; decimale
+//=&gt;
+// affiche : "12"    automate: true  regex: true
+// affiche : "3.75"  automate: true  regex: true
+// affiche : "3."    automate: false  regex: false
+// affiche : ".5"    automate: false  regex: false
+// affiche : "12a"   automate: false  regex: false
+// affiche : ""      automate: false  regex: false</code></pre></figure>
+
+<p>Douze lignes de sortie — dont la sixième, qui est <strong>vide</strong>&nbsp;: elle vient du <code>console.log("")</code> qui sépare la trace des verdicts, et c'est le <code>//=&gt;</code> sans rien après qui l'annonce dans le bloc. Prends-les en deux temps.</p>
+<p>La <strong>trace</strong>, d'abord. Quatre lignes pour quatre caractères, et le chemin se lit d'un coup&nbsp;: <code>debut</code> reçoit le <code>3</code> et passe à <code>entier</code>&nbsp;; <code>entier</code> reçoit le point et passe à <code>point</code>&nbsp;; <code>point</code> reçoit le <code>7</code> et passe à <code>decimale</code>&nbsp;; <code>decimale</code> reçoit le <code>5</code> et reste dans <code>decimale</code>. À la fin du texte, l'état est <code>decimale</code>, qui figure dans <code>ACCEPTANTS</code>&nbsp;: c'est un nombre. Remarque la boucle sur <code>decimale</code>&nbsp;: c'est elle, et rien d'autre, qui autorise une partie décimale de longueur quelconque. Un automate n'a pas besoin de compter les chiffres pour en accepter autant qu'on veut&nbsp;; il lui suffit de revenir dans le même état. Retiens ce détail, il resservira dans la section suivante&nbsp;: <em>répéter</em> ne coûte rien à un automate, <em>compter</em> lui est impossible.</p>
+<p>Les <strong>six verdicts</strong>, ensuite. Sur chacun des six textes, l'automate écrit à la main et l'expression régulière <code>/^[0-9]+(\.[0-9]+)?$/</code> répondent la même chose&nbsp;: vrai, vrai, faux, faux, faux, faux. Pas une divergence. Et les quatre refus ne se ressemblent pas, ce qui vaut la peine d'être détaillé, car on y voit les <em>deux</em> façons distinctes qu'a un automate de dire non.</p>
+<ul>
+<li><code>"12"</code> et <code>"3.75"</code> sont acceptés&nbsp;: la lecture va au bout et s'achève dans un état acceptant.</li>
+<li><code>"3."</code> est refusé <em>sans blocage</em>. Chaque caractère a bien trouvé sa transition — <code>debut</code> vers <code>entier</code>, puis <code>entier</code> vers <code>point</code> —, mais le texte s'arrête dans l'état <code>point</code>, qui n'est pas acceptant. La machine a lu tout ce qu'on lui a donné et a répondu «&nbsp;ce n'est pas fini&nbsp;».</li>
+<li><code>".5"</code> est refusé <em>par blocage immédiat</em>&nbsp;: depuis <code>debut</code>, le point n'a aucune transition. Rien à faire, dès le premier caractère.</li>
+<li><code>"12a"</code> est refusé par blocage <em>en cours de route</em>&nbsp;: le <code>a</code> n'a pas de transition depuis <code>entier</code>. Les deux premiers caractères étaient pourtant valides.</li>
+<li><code>""</code> est refusé parce que la boucle ne tourne pas une seule fois&nbsp;: l'état reste <code>debut</code>, qui n'est pas acceptant. Un automate refuse le texte vide sauf si son état de départ est lui-même acceptant.</li>
+</ul>
+<p>Voilà l'idée à emporter, et elle est plus forte qu'une analogie. Ce ne sont pas deux outils qui, par chance, donnent le même résultat. C'est le <strong>même objet</strong> sous deux notations. La table <code>TRANSITIONS</code> est une manière longue et explicite d'écrire ce que le motif écrit en abrégé&nbsp;; le motif est une manière compacte d'écrire ce que la table détaille. Quand tu poses <code>/[a-z_][a-z0-9_]*/y</code> dans la table de la section précédente, tu ne fais pas appel à un moteur de recherche&nbsp;: tu <em>déclares une machine</em>, que le moteur construira pour toi. Et il y a un théorème derrière cette phrase — la construction qui transforme n'importe quel motif en automate est mécanique, et elle marche dans les deux sens.</p>
+<p>Ce théorème porte un nom — c'est le <strong>théorème de Kleene</strong>, du nom du logicien qui l'a établi en 1951, bien avant qu'aucun compilateur n'existe. Il dit ceci&nbsp;: la famille des langages décrits par une expression régulière et la famille des langages reconnus par un automate fini sont <em>la même famille</em>. Pas «&nbsp;presque la même&nbsp;», pas «&nbsp;équivalentes en pratique&nbsp;»&nbsp;: la même. À toute expression régulière correspond un automate qui accepte exactement les mêmes textes, et réciproquement. Mieux&nbsp;: les deux traductions sont <strong>mécaniques</strong>, c'est-à-dire qu'un programme les fait, sans intelligence ni intuition. C'est la raison profonde pour laquelle il existe des outils qui fabriquent un analyseur lexical à partir d'une simple liste de motifs — ceux dont parlait l'encadré «&nbsp;pour aller plus loin&nbsp;» de la <a href="lecon-04.html">leçon 4</a>&nbsp;: ils appliquent cette traduction.</p>
+<p>Voici notre machine dessinée, telle que la table <code>TRANSITIONS</code> la définit. Quatre états, cinq transitions, deux états acceptants. C'est toute la définition&nbsp;: rien d'autre n'existe dans cet automate, ni compteur, ni pile, ni souvenir de ce qui a été lu.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 232" role="img" aria-label="L'automate qui reconnaît un nombre décimal, dessiné avec quatre états alignés de gauche à droite et cinq transitions. Une flèche venue de la gauche entre dans le premier état, nommé debut, qui est dessiné d'un simple trait. Une transition étiquetée chiffre mène de debut au deuxième état, nommé entier, qui est dessiné d'un double cercle parce qu'il est acceptant. Une boucle repart de entier et y revient, étiquetée chiffre elle aussi. Une transition étiquetée par le caractère point mène de entier au troisième état, nommé point, dessiné d'un simple trait car il n'est pas acceptant. Une transition étiquetée chiffre mène de point au quatrième état, nommé decimale, dessiné d'un double cercle car il est acceptant. Une boucle repart de decimale et y revient, étiquetée chiffre. Trois lignes de légende closent le dessin : les deux états doublés, entier et decimale, sont ceux où la lecture a le droit de s'arrêter ; les deux boucles sont ce qui autorise une suite de chiffres de longueur quelconque, car revenir dans le même état ne coûte aucun état supplémentaire ; et l'état point, traversé mais jamais acceptant, est la raison pour laquelle un trois suivi d'un point est refusé.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">L'automate du motif « un ou plusieurs chiffres, puis un point et des chiffres en option » : 4 états, 5 transitions</text>
+
+    <path class="d-line" d="M20 120 L44 120" fill="none" /><path class="d-line" d="M38 116 L44 120 L38 124" fill="none" />
+    <circle class="d-box" cx="80" cy="120" r="34" /><text class="d-text" x="80" y="124" text-anchor="middle" font-size="10">debut</text>
+
+    <circle class="d-accent" cx="232" cy="120" r="34" /><circle class="d-accent" cx="232" cy="120" r="28" fill="none" /><text class="d-text" x="232" y="124" text-anchor="middle" font-size="10">entier</text>
+
+    <circle class="d-box" cx="390" cy="120" r="34" /><text class="d-text" x="390" y="124" text-anchor="middle" font-size="10">point</text>
+
+    <circle class="d-accent" cx="548" cy="120" r="34" /><circle class="d-accent" cx="548" cy="120" r="28" fill="none" /><text class="d-text" x="548" y="124" text-anchor="middle" font-size="9.5">decimale</text>
+
+    <path class="d-line" d="M114 120 L192 120" fill="none" /><path class="d-line" d="M186 116 L192 120 L186 124" fill="none" />
+    <text class="d-tag" x="153" y="111" text-anchor="middle" font-size="9.5">chiffre</text>
+
+    <path class="d-line" d="M266 120 L350 120" fill="none" /><path class="d-line" d="M344 116 L350 120 L344 124" fill="none" />
+    <text class="d-tag" x="308" y="111" text-anchor="middle" font-size="11">.</text>
+
+    <path class="d-line" d="M424 120 L508 120" fill="none" /><path class="d-line" d="M502 116 L508 120 L502 124" fill="none" />
+    <text class="d-tag" x="466" y="111" text-anchor="middle" font-size="9.5">chiffre</text>
+
+    <path class="d-line" d="M212 96 C 198 44, 266 44, 252 96" fill="none" />
+    <path class="d-line" d="M246 88 L252 96 L256 87" fill="none" />
+    <text class="d-tag" x="232" y="40" text-anchor="middle" font-size="9.5">chiffre</text>
+
+    <path class="d-line" d="M528 96 C 514 44, 582 44, 568 96" fill="none" />
+    <path class="d-line" d="M562 88 L568 96 L572 87" fill="none" />
+    <text class="d-tag" x="548" y="40" text-anchor="middle" font-size="9.5">chiffre</text>
+
+    <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="9">Les deux états doublés — entier et decimale — sont ceux où la lecture a le droit de s'arrêter.</text>
+    <text class="d-mut" x="320" y="200" text-anchor="middle" font-size="9">Les deux boucles autorisent une suite de chiffres de longueur quelconque : revenir dans le même état ne coûte aucun état de plus.</text>
+    <text class="d-mut" x="320" y="216" text-anchor="middle" font-size="9">L'état « point » est traversé mais jamais acceptant : c'est pour cela que « 3. » est refusé.</text>
+  </svg>
+  <figcaption>La machine entière tient dans ce dessin&nbsp;: quatre ronds et cinq flèches. Compare-le à la table <code>TRANSITIONS</code> du programme — c'est ligne pour ligne la même chose, et c'est aussi, ligne pour ligne, ce que décrit le motif. Les deux <strong>boucles</strong> sont le point à retenir&nbsp;: elles absorbent un nombre quelconque de chiffres sans qu'aucun état s'ajoute.</figcaption>
+</figure>
+
+<h2>Ce que l'automate coûte&nbsp;: un passage, un état</h2>
+<p>Cette identité entre motif et machine n'est pas une curiosité de théoricien&nbsp;: elle a une conséquence directe et mesurable sur ce que l'analyse lexicale coûte. Un automate lit chaque caractère <strong>une fois</strong>, ne revient jamais en arrière, et ne retient à aucun moment qu'une seule chose&nbsp;: l'état où il se trouve. Vérifions-le plutôt que de le croire. Le programme ci-dessous reprend l'automate précédent et l'instrumente&nbsp;: il compte les transitions effectuées et le nombre d'états <em>différents</em> traversés, sur des textes de plus en plus longs.</p>
+
+<figure class="code-block" data-file="cout.js"><pre><code class="language-javascript">// Ce que l'automate coute vraiment : UN SEUL PASSAGE et une MEMOIRE CONSTANTE.
+// On reprend l'automate de la section precedente et on compte ce qu'il fait.
+const TRANSITIONS = {
+  debut:    (c) =&gt; (/[0-9]/.test(c) ? "entier" : null),
+  entier:   (c) =&gt; (/[0-9]/.test(c) ? "entier" : c === "." ? "point" : null),
+  point:    (c) =&gt; (/[0-9]/.test(c) ? "decimale" : null),
+  decimale: (c) =&gt; (/[0-9]/.test(c) ? "decimale" : null),
+};
+const ACCEPTANTS = ["entier", "decimale"];
+
+function mesure(txt) {
+  let etat = "debut";                  // LA seule variable qui survit d'un caractere a l'autre
+  let pas = 0;
+  const vus = new Set([etat]);         // uniquement pour la mesure : l'automate ne s'en sert pas
+  for (const c of txt) {
+    pas++;
+    etat = TRANSITIONS[etat](c);
+    if (!etat) return { pas, vus: vus.size, ok: false };
+    vus.add(etat);
+  }
+  return { pas, vus: vus.size, ok: ACCEPTANTS.includes(etat) };
+}
+
+const essais = ["1".repeat(10), "1".repeat(1000), "1".repeat(100000), "3." + "7".repeat(99998)];
+for (const t of essais) {
+  const r = mesure(t);
+  console.log(
+    "longueur", String(t.length).padStart(6),
+    "| transitions", String(r.pas).padStart(6),
+    "| etats retenus", r.vus,
+    "| accepte", r.ok
+  );
+}
+// affiche : longueur     10 | transitions     10 | etats retenus 2 | accepte true
+// affiche : longueur   1000 | transitions   1000 | etats retenus 2 | accepte true
+// affiche : longueur 100000 | transitions 100000 | etats retenus 2 | accepte true
+// affiche : longueur 100000 | transitions 100000 | etats retenus 4 | accepte true</code></pre></figure>
+
+<p>Quatre lignes, et deux colonnes à lire ensemble. La colonne <strong>transitions</strong> recopie exactement la colonne <strong>longueur</strong>&nbsp;: dix caractères, dix transitions&nbsp;; cent mille caractères, cent mille transitions. Pas une de plus, jamais. C'est la définition du «&nbsp;un seul passage&nbsp;»&nbsp;: aucun caractère n'est relu, aucun n'est examiné deux fois sous un angle différent.</p>
+<p>La colonne <strong>états retenus</strong>, elle, ne suit pas du tout. Elle vaut <code>2</code> pour un texte de dix caractères comme pour un texte de cent mille&nbsp;: la machine n'a traversé que <code>debut</code> et <code>entier</code>, quelle que soit la longueur. Compare maintenant les deux dernières lignes, qui portent sur des textes de la <em>même</em> taille&nbsp;: la troisième donne 2 états, la quatrième en donne 4. Ce qui a changé n'est pas la longueur, c'est la <em>forme</em> — le quatrième texte contient un point décimal, donc il traverse aussi <code>point</code> et <code>decimale</code>. Autrement dit&nbsp;: le nombre d'états dépend de la machine, jamais de la taille du texte. C'est ce que veut dire «&nbsp;mémoire constante&nbsp;», et c'est ce que <code>let etat</code> montre à l'œil nu&nbsp;: une variable, une seule, qui contient un nom d'état et rien d'autre. Le <code>Set</code> du programme ne fait pas partie de l'automate&nbsp;; il est là pour la mesure, et le commentaire le dit.</p>
+<p>Ces deux propriétés, mises bout à bout, expliquent une chose que tu as constatée sans y penser&nbsp;: un compilateur ne met jamais longtemps à découper ton fichier. Un source de cent mille caractères demande cent mille transitions, chacune valant quelques instructions machine&nbsp;; l'analyse lexicale d'un gros fichier se compte en millisecondes. Et parce que la mémoire ne dépend pas de la taille, rien n'oblige à charger le fichier entier&nbsp;: un analyseur peut lire un flux, produire ses jetons au fil de l'eau, et travailler sur un texte plus grand que la mémoire disponible. Quand une compilation est lente — et elle l'est parfois beaucoup —, ce n'est jamais ici que le temps se perd.</p>
+<p>Il faut nommer la contrepartie, mais sans la redémontrer&nbsp;: la <a href="lecon-03.html">leçon 3</a> l'a déjà mesurée. Ce nombre d'états <em>fini</em> est précisément ce qui interdit à un automate de compter, donc d'équilibrer des parenthèses à profondeur libre. Une machine qui ne retient qu'un état parmi quatre ne peut pas se souvenir qu'elle a vu dix-sept parenthèses ouvrantes. Le marché est donc explicite, et c'est lui qui organise toute la chaîne&nbsp;: l'analyse lexicale accepte de ne rien savoir compter, et reçoit en échange un passage unique et une mémoire constante&nbsp;; l'analyse syntaxique paiera une pile pour obtenir le droit de compter. Chacune paie ce que son travail exige, ni plus ni moins.</p>
+
+<h2>Quand le moteur n'est pas l'automate</h2>
+<p>Il faut maintenant apporter une nuance, et elle est de taille&nbsp;: le moteur d'expressions régulières de JavaScript <strong>n'est pas</strong> un automate fini. Ce que la section précédente a démontré reste vrai — le motif <em>décrit</em> bien un automate —, mais le programme qui l'exécute, lui, ne fonctionne pas ainsi. Il procède par essais et retours en arrière. La raison est simple&nbsp;: le langage offre des choses qu'un automate ne sait pas faire, au premier rang desquelles les <strong>groupes capturants</strong>, ces parenthèses qui retiennent le texte qu'elles ont reconnu pour te le rendre après coup. Un automate ne retient rien&nbsp;; il ne peut donc pas capturer.</p>
+<p>Ce choix se paie, et il se paie très cher sur une famille précise de motifs. Prends <code>(a+)+b</code>&nbsp;: «&nbsp;un ou plusieurs groupes d'au moins un <code>a</code>, puis un <code>b</code>&nbsp;». Donne-lui un texte fait uniquement de <code>a</code>, sans <code>b</code>. La réponse est évidemment «&nbsp;non&nbsp;», et un automate la donnerait après avoir lu le texte une fois. Un moteur à retour arrière, lui, ne peut conclure «&nbsp;non&nbsp;» qu'après avoir épuisé <em>toutes</em> les façons de répartir ces <code>a</code> entre les groupes. Et ce nombre de façons, lui, n'est pas linéaire du tout. Comptons-le&nbsp;: le programme ci-dessous imite le retour arrière — chaque tentative de découpage est un appel — et le compare à l'automate qui reconnaît exactement le même langage.</p>
+
+<figure class="code-block" data-file="retour-arriere.js"><pre><code class="language-javascript">// Un moteur a RETOUR ARRIERE n'est pas un automate : il essaie des decoupages,
+// et il les essaie TOUS avant d'oser conclure "non". On compte ces essais.
+// Motif : (a+)+b — un ou plusieurs groupes de "a", puis un "b".
+let essais = 0;
+
+function groupes(txt, i) {          // "reste-t-il un decoupage en groupes de a, suivi d'un b ?"
+  essais++;
+  if (txt[i] === "b") return true;  // le b attendu : c'est gagne
+  let fin = i;
+  while (fin &lt; txt.length &amp;&amp; txt[fin] === "a") {
+    fin++;                                // le groupe courant prend un "a" de plus...
+    if (groupes(txt, fin)) return true;   // ...et on tente la suite a partir de la
+  }
+  return false;                     // aucun decoupage n'a marche : on revient en arriere
+}
+
+// L'automate equivalent : un seul passage, aucun retour en arriere.
+function automate(txt) {
+  let etat = "debut", pas = 0;
+  for (const c of txt) {
+    pas++;
+    if (etat === "debut") etat = c === "a" ? "dansA" : null;
+    else if (etat === "dansA") etat = c === "a" ? "dansA" : c === "b" ? "fini" : null;
+    else etat = null;
+    if (!etat) return { pas, ok: false };
+  }
+  return { pas, ok: etat === "fini" };
+}
+
+for (const n of [4, 8, 16, 20, 22]) {
+  const txt = "a".repeat(n);        // que des "a" : le "b" attendu ne viendra jamais
+  essais = 0;
+  const trouve = groupes(txt, 0);
+  const a = automate(txt);
+  console.log(
+    n + " fois \"a\" |",
+    "retour arriere :", String(essais).padStart(9), "essais |",
+    "automate :", String(a.pas).padStart(2), "transitions |",
+    "meme verdict :", trouve === a.ok
+  );
+}
+// affiche : 4 fois "a" | retour arriere :        16 essais | automate :  4 transitions | meme verdict : true
+// affiche : 8 fois "a" | retour arriere :       256 essais | automate :  8 transitions | meme verdict : true
+// affiche : 16 fois "a" | retour arriere :     65536 essais | automate : 16 transitions | meme verdict : true
+// affiche : 20 fois "a" | retour arriere :   1048576 essais | automate : 20 transitions | meme verdict : true
+// affiche : 22 fois "a" | retour arriere :   4194304 essais | automate : 22 transitions | meme verdict : true</code></pre></figure>
+
+<p>Lis la colonne des essais de haut en bas&nbsp;: <strong>16</strong>, <strong>256</strong>, <strong>65 536</strong>, <strong>1 048 576</strong>, <strong>4 194 304</strong>. Ce sont exactement les puissances de deux&nbsp;: 2<sup>4</sup>, 2<sup>8</sup>, 2<sup>16</sup>, 2<sup>20</sup>, 2<sup>22</sup>. Autrement dit, <em>chaque <code>a</code> ajouté au texte double le travail</em>. Pendant ce temps, la colonne de l'automate recopie sagement la longueur&nbsp;: 4, 8, 16, 20, 22 transitions. Et la dernière colonne est la contre-épreuve qui donne son sens à la comparaison&nbsp;: les deux méthodes rendent <strong>le même verdict</strong>, à chaque fois. Elles ne diffèrent pas d'un iota sur le résultat&nbsp;; elles diffèrent d'un facteur cent quatre-vingt-dix mille sur la dernière ligne.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="L'arbre des essais d'un moteur à retour arrière, dessiné sur quatre niveaux, de haut en bas. Au sommet, un seul nœud représente l'état de départ, avant d'avoir lu le moindre caractère. Chaque caractère lu ouvre deux possibilités, dessinées comme deux branches partant de chaque nœud : refermer ici le groupe courant, ou le continuer d'un caractère de plus. Le premier niveau compte donc deux nœuds, le deuxième quatre, le troisième huit. Une colonne de gauche rappelle ces comptes, niveau par niveau : un au départ, deux après le premier caractère, quatre après le deuxième, huit après le troisième, et ainsi de suite. Deux lignes de légende closent le dessin : sur vingt-deux caractères, ce doublement conduit à quatre millions cent quatre-vingt-quatorze mille trois cent quatre essais, mesurés par le programme de cette section ; l'automate équivalent, lui, effectue vingt-deux transitions et rend exactement le même verdict.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Pourquoi le travail double : l'arbre des découpages de (a+)+</text>
+
+    <text class="d-mut" x="10" y="48" font-size="9">départ : 1</text>
+    <circle class="d-accent" cx="376" cy="44" r="9" />
+
+    <path class="d-line" d="M376 53 L248 85" fill="none" /><path class="d-line" d="M376 53 L504 85" fill="none" />
+    <text class="d-tag" x="296" y="62" text-anchor="middle" font-size="8">refermer ici</text>
+    <text class="d-tag" x="456" y="62" text-anchor="middle" font-size="8">continuer</text>
+
+    <text class="d-mut" x="10" y="98" font-size="9">après le 1<tspan font-size="7" dy="-3">er</tspan><tspan dy="3"> « a » : 2</tspan></text>
+    <circle class="d-box" cx="248" cy="94" r="9" /><circle class="d-box" cx="504" cy="94" r="9" />
+
+    <path class="d-line" d="M248 103 L184 136" fill="none" /><path class="d-line" d="M248 103 L312 136" fill="none" />
+    <path class="d-line" d="M504 103 L440 136" fill="none" /><path class="d-line" d="M504 103 L568 136" fill="none" />
+
+    <text class="d-mut" x="10" y="148" font-size="9">après le 2<tspan font-size="7" dy="-3">e</tspan><tspan dy="3"> « a » : 4</tspan></text>
+    <circle class="d-box" cx="184" cy="144" r="8" /><circle class="d-box" cx="312" cy="144" r="8" />
+    <circle class="d-box" cx="440" cy="144" r="8" /><circle class="d-box" cx="568" cy="144" r="8" />
+
+    <path class="d-line" d="M184 152 L152 187" fill="none" /><path class="d-line" d="M184 152 L216 187" fill="none" />
+    <path class="d-line" d="M312 152 L280 187" fill="none" /><path class="d-line" d="M312 152 L344 187" fill="none" />
+    <path class="d-line" d="M440 152 L408 187" fill="none" /><path class="d-line" d="M440 152 L472 187" fill="none" />
+    <path class="d-line" d="M568 152 L536 187" fill="none" /><path class="d-line" d="M568 152 L600 187" fill="none" />
+
+    <text class="d-mut" x="10" y="198" font-size="9">après le 3<tspan font-size="7" dy="-3">e</tspan><tspan dy="3"> « a » : 8</tspan></text>
+    <circle class="d-box" cx="152" cy="194" r="7" /><circle class="d-box" cx="216" cy="194" r="7" />
+    <circle class="d-box" cx="280" cy="194" r="7" /><circle class="d-box" cx="344" cy="194" r="7" />
+    <circle class="d-box" cx="408" cy="194" r="7" /><circle class="d-box" cx="472" cy="194" r="7" />
+    <circle class="d-box" cx="536" cy="194" r="7" /><circle class="d-box" cx="600" cy="194" r="7" />
+    <text class="d-mut" x="10" y="212" font-size="9">et ainsi de suite</text>
+
+    <text class="d-mut" x="320" y="230" text-anchor="middle" font-size="9">Sur 22 caractères, ce doublement fait 4 194 304 essais — mesurés par le programme ci-dessus.</text>
+    <text class="d-mut" x="320" y="244" text-anchor="middle" font-size="9">L'automate équivalent en fait 22, et rend exactement le même verdict.</text>
+  </svg>
+  <figcaption>À chaque caractère lu, le moteur a <strong>deux</strong> options&nbsp;: refermer le groupe courant, ou le prolonger. Il doit explorer les deux avant d'oser conclure «&nbsp;non&nbsp;», et ce choix se repose à chaque caractère — d'où le doublement. L'automate, lui, ne choisit jamais&nbsp;: il change d'état et avance, une fois par caractère.</figcaption>
+</figure>
+
+<p>Ce phénomène porte un nom&nbsp;: le <strong>retour arrière catastrophique</strong>. Il ne se déclenche pas au hasard. Il lui faut une condition précise, qu'il faut savoir reconnaître à l'œil&nbsp;: <em>une répétition à l'intérieur d'une autre répétition, portant sur des textes que les deux peuvent se disputer</em>. Dans <code>(a+)+</code>, le <code>+</code> intérieur et le <code>+</code> extérieur veulent tous deux les mêmes <code>a</code>, et le moteur doit essayer chaque partage. Les motifs de notre table lexicale, eux, en sont totalement exempts&nbsp;: <code>/[0-9]+/y</code>, <code>/[a-z_][a-z0-9_]*/y</code> n'ont aucune répétition imbriquée, et leur temps d'exécution est bel et bien proportionnel à la longueur du jeton. C'est une propriété qu'il faut <em>préserver</em> quand on ajoute une règle, pas une chance qui durerait toute seule.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le compteur ci-dessus n'est pas une simulation approximative</p><p>Le vrai moteur de JavaScript se comporte de la même façon, et on peut le chronométrer&nbsp;: <code>/^(a+)+b$/.test("a".repeat(n))</code> a demandé, sur la machine où cette leçon a été écrite, <strong>43 ms</strong> pour <code>n</code>&nbsp;= 20, <strong>127 ms</strong> pour 24, <strong>446 ms</strong> pour 26 et <strong>1581 ms</strong> pour 28 — un quadruplement à chaque fois qu'on ajoute deux caractères, ce qui est bien un doublement par caractère. Ces durées-là dépendent de la machine, c'est pourquoi elles ne figurent pas dans un bloc exécutable de cette page&nbsp;: le compteur d'essais, lui, donne le même nombre partout, et c'est ce nombre qui explique la durée. Retiens l'ordre de grandeur&nbsp;: quelques dizaines de caractères suffisent à faire passer une réponse de l'instantané à l'interminable. Un serveur qui applique un tel motif à une donnée envoyée par un inconnu lui offre le moyen de l'immobiliser avec une chaîne de trente caractères.</p></div></div>
+
+<p>Il reste à relier tout cela au sujet de la leçon, car ce détour n'en est pas un. Si l'on veut la garantie du temps proportionnel — celle que la section précédente a mesurée —, il ne suffit pas d'écrire des expressions régulières&nbsp;: il faut que le programme qui les exécute soit vraiment un automate. C'est exactement ce que font les <strong>générateurs d'analyseurs lexicaux</strong> évoqués à la leçon 4. Ils ne se contentent pas de ranger tes motifs dans une liste&nbsp;: ils les convertissent, par le théorème de Kleene, en <em>un seul</em> automate qui reconnaît toutes les catégories à la fois, puis l'écrivent sous forme de table d'états. Le résultat ne fait aucun retour en arrière, par construction, et le temps d'analyse est garanti proportionnel à la taille du fichier — pour n'importe quel fichier, y compris le pire.</p>
+<p>Notre table de motifs collants, elle, n'offre pas cette garantie théorique&nbsp;; elle offre quelque chose d'autre, qui vaut à cette échelle&nbsp;: une lisibilité immédiate et la possibilité d'ajouter une catégorie en écrivant une ligne. C'est le bon compromis pour Brindille, et il faut savoir que c'en est un — pas un idéal.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier de poser <code>lastIndex</code> avant chaque essai.</strong> C'est le bogue numéro un de la boucle générique, et il est particulièrement méchant parce qu'il ne casse rien tout de suite. Sans la ligne <code>regle.motif.lastIndex = i;</code>, chaque motif repart de là où il s'était arrêté <em>la fois précédente</em> — c'est-à-dire d'une position qui n'a aucun rapport avec le curseur courant. L'analyseur produit alors des jetons pris à côté, ou saute des morceaux de texte, et le tout dépend de l'ordre dans lequel les règles ont accroché avant. Le symptôme classique&nbsp;: ça marche sur les exemples courts et ça déraille sur les longs. Le réflexe qui protège&nbsp;: le curseur doit être <strong>imposé</strong> à chaque tentative, jamais hérité.</p></div></div>
+<ul>
+<li><strong>Croire que <code>lastIndex</code> agit sur une regex sans drapeau</strong> — écrire <code>re.lastIndex = 5</code> sur une regex sans <code>g</code> ni <code>y</code> donne l'illusion d'un ordre&nbsp;; la propriété est simplement ignorée, et la recherche repart du début. C'est mesuré plus haut&nbsp;: la correspondance rendue est celle de la position 1.</li>
+<li><strong>Partager une regex <code>g</code> ou <code>y</code> entre plusieurs fonctions</strong> — l'objet porte un curseur, donc un état. <code>const</code> gèle la référence, pas l'état. Deux appelants se transmettent alors le curseur sans le savoir, et le bogue ne se reproduit qu'une fois sur deux.</li>
+<li><strong>Mettre les mots-clés en tête de table</strong> — un motif <code>/soit|affiche/y</code> accroche le préfixe de <code>soitx</code> et le coupe en deux. Un mot-clé n'est pas un motif&nbsp;: c'est un identifiant qu'on promeut après l'avoir lu en entier.</li>
+<li><strong>Ranger un motif court avant le motif long qui le contient</strong> — <code>&lt;</code> placé avant <code>&lt;=</code> produit deux jetons là où le programmeur en avait écrit un, sans lever la moindre erreur. Quand deux motifs peuvent accrocher à la même position, le plus long passe d'abord.</li>
+<li><strong>Écrire une répétition dans une répétition</strong> — <code>(a+)+</code>, <code>(\s*,)*</code> et leurs cousins ouvrent la porte au retour arrière catastrophique. Dans un analyseur lexical, chaque motif doit décrire une catégorie <em>simple</em>&nbsp;: une classe de caractères répétée, éventuellement précédée d'un premier caractère à part. Si un motif de lexique te demande une imbrication, c'est presque toujours que la règle relève de l'analyse syntaxique.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service reçoit des fichiers de configuration écrits par ses clients et les analyse avec une table de motifs. Tout va bien pendant un an. Puis quelqu'un ajoute une catégorie&nbsp;: les listes de valeurs séparées par des virgules, avec des espaces facultatifs autour — écrites d'un trait, en un seul motif, avec une répétition à l'intérieur d'une répétition. Le lundi suivant, un client envoie un fichier d'une centaine de caractères mal fermé, et le service cesse de répondre&nbsp;: un cœur du processeur à cent pour cent, aucune erreur dans les journaux, aucune trace d'exception — le programme n'est pas planté, il <em>calcule</em>. L'équipe cherche d'abord une boucle infinie dans son propre code, puis un blocage sur la base de données. Il faudra un enregistrement de la pile d'appels pour voir que tout le temps est passé dans le moteur d'expressions régulières, sur une seule ligne du fichier. Trois enseignements. Le premier&nbsp;: une expression régulière qui « marche » sur tous les exemples n'a rien prouvé sur son <em>pire</em> cas, qui est le seul qui compte quand l'entrée vient de l'extérieur. Le deuxième&nbsp;: une catégorie de lexique qui demande une répétition imbriquée est presque toujours une règle de grammaire déguisée — une liste séparée par des virgules relève de l'analyse syntaxique, qui la traitera en boucle, sans jamais revenir en arrière. Le troisième, plus général&nbsp;: quand un programme ne répond plus <em>sans</em> lever d'erreur, ne cherche pas ce qui a cassé, cherche ce qui compte encore.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les trois régimes d'une expression régulière, et ce que chacun fait de <code>lastIndex</code></caption>
+    <thead><tr><th scope="col">Drapeau</th><th scope="col">Lit <code>lastIndex</code>&nbsp;?</th><th scope="col">Cherche plus loin&nbsp;?</th><th scope="col">Écrit <code>lastIndex</code>&nbsp;?</th><th scope="col">Après un échec</th><th scope="col">Usage</th></tr></thead>
+    <tbody>
+      <tr><td>aucun</td><td>non</td><td>oui, depuis le début</td><td>non</td><td>inchangé</td><td>tester, extraire une fois</td></tr>
+      <tr><td><code>g</code></td><td>oui</td><td>oui, vers l'avant</td><td>oui</td><td>remis à <code>0</code></td><td>balayer toutes les occurrences</td></tr>
+      <tr><td><code>y</code></td><td>oui</td><td><strong>non</strong></td><td>oui</td><td>remis à <code>0</code></td><td><strong>analyse lexicale</strong></td></tr>
+    </tbody>
+  </table>
+</figure>
+<figure class="cheat-table">
+  <table>
+    <caption>Écrire une table de motifs sans se piéger</caption>
+    <thead><tr><th scope="col">Question</th><th scope="col">Réponse</th><th scope="col">Pourquoi</th></tr></thead>
+    <tbody>
+      <tr><td>Quel drapeau&nbsp;?</td><td><code>y</code>, toujours</td><td>l'analyseur demande «&nbsp;qu'y a-t-il ici&nbsp;», pas «&nbsp;où est-ce&nbsp;»</td></tr>
+      <tr><td>Où poser le curseur&nbsp;?</td><td><code>motif.lastIndex = i</code> avant <em>chaque</em> essai</td><td>un curseur hérité rend le résultat dépendant du tour précédent</td></tr>
+      <tr><td>Où reprendre après un jeton&nbsp;?</td><td><code>i = motif.lastIndex</code></td><td>la regex a déjà avancé le curseur jusqu'à la fin du jeton</td></tr>
+      <tr><td>Deux motifs qui se chevauchent&nbsp;?</td><td>le plus long en premier</td><td>la boucle garde la première règle qui accroche</td></tr>
+      <tr><td>Les mots-clés&nbsp;?</td><td>aucune règle&nbsp;: promotion après coup</td><td>sinon le motif accroche le préfixe de <code>soitx</code></td></tr>
+      <tr><td>Les espaces&nbsp;?</td><td>une règle ordinaire dont on jette le résultat</td><td>une seule mécanique&nbsp;; il suffira de ne plus jeter pour les rendre significatifs</td></tr>
+      <tr><td>Une répétition dans une répétition&nbsp;?</td><td>jamais</td><td>retour arrière catastrophique&nbsp;: le temps double à chaque caractère</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Drapeau collant (<code>y</code>, <em>sticky</em>)</dt><dd>Drapeau qui force la correspondance à commencer <em>exactement</em> à <code>lastIndex</code>&nbsp;: elle réussit là ou elle échoue, mais elle ne va jamais chercher plus loin. C'est ce qui transforme un outil de recherche en outil de décision.</dd>
+  <dt><code>lastIndex</code></dt><dd>Propriété modifiable portée par l'objet regex, qui sert de curseur. Ignorée sans drapeau, lue et écrite avec <code>g</code> ou <code>y</code>, et remise à <code>0</code> après un échec.</dd>
+  <dt>Table de motifs</dt><dd>Écriture d'un lexique sous forme de données&nbsp;: une ligne par catégorie de jeton, chacune associant un type à un motif collant. Une seule boucle générique l'applique&nbsp;; ajouter une catégorie devient ajouter une ligne.</dd>
+  <dt>Automate fini</dt><dd>Machine définie par quatre choses&nbsp;: un ensemble <em>fini</em> d'états, un état de départ, des transitions étiquetées par un caractère, et des états acceptants. Elle ne retient rien d'autre que l'état où elle se trouve.</dd>
+  <dt>État acceptant</dt><dd>État dans lequel la lecture a le droit de s'achever. Un texte est accepté si — et seulement si — la lecture va jusqu'au bout <em>et</em> s'arrête dans un tel état&nbsp;; d'où le refus de <code>3.</code>, qui finit dans un état traversé mais non acceptant.</dd>
+  <dt>Théorème de Kleene</dt><dd>Résultat de 1951&nbsp;: les langages décrits par une expression régulière sont exactement ceux reconnus par un automate fini, et la traduction entre les deux notations est mécanique. C'est ce qui rend possibles les générateurs d'analyseurs lexicaux.</dd>
+  <dt>Retour arrière (<em>backtracking</em>)</dt><dd>Méthode d'exécution qui essaie une possibilité, et revient en arrière pour en essayer une autre quand elle échoue. C'est ainsi que fonctionne le moteur de JavaScript — ce qui lui permet les groupes capturants, qu'un automate ne peut pas offrir.</dd>
+  <dt>Retour arrière catastrophique</dt><dd>Explosion du nombre d'essais quand un motif contient une répétition dans une répétition portant sur les mêmes caractères&nbsp;: le temps double à chaque caractère ajouté. Mesuré ici&nbsp;: 4 194 304 essais pour 22 caractères, contre 22 transitions pour l'automate équivalent.</dd>
+  <dt>Générateur d'analyseur lexical</dt><dd>Outil qui reçoit une liste de motifs et rend le code d'un analyseur&nbsp;: il fusionne tous les motifs en <em>un seul</em> automate, sous forme de table d'états, ce qui garantit un temps proportionnel à la taille du fichier même dans le pire cas.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un analyseur lexical ne demande jamais «&nbsp;où est-ce&nbsp;?&nbsp;» mais «&nbsp;<strong>qu'y a-t-il ici&nbsp;?</strong>&nbsp;». D'où le drapeau <strong><code>y</code></strong>&nbsp;: une regex collante répond <code>null</code> plutôt que d'aller chercher ailleurs, et ce <code>null</code> est exactement ce qui permet de détecter un caractère illégal.</li>
+<li><code>lastIndex</code> obéit à <strong>trois régimes</strong> mesurés&nbsp;: ignoré sans drapeau, lu-puis-avancé avec <code>g</code>, lu-et-seulement-là avec <code>y</code>. Après un succès, il pointe la fin du jeton&nbsp;: le déplacement du curseur est offert.</li>
+<li>Le lexique s'écrit alors comme une <strong>table</strong> — une ligne par catégorie — appliquée par une boucle qui ne connaît aucune catégorie. Les huit jetons produits sont identiques à ceux de la <a href="lecon-04.html">leçon 4</a>&nbsp;: même résultat, autre écriture.</li>
+<li>Une expression régulière <strong>est</strong> un automate fini, écrit en abrégé&nbsp;: c'est le <strong>théorème de Kleene</strong>, et la traduction est mécanique dans les deux sens. L'automate du nombre décimal tient en 4 états et 5 transitions.</li>
+<li>Ce que l'automate rapporte est mesuré&nbsp;: <strong>autant de transitions que de caractères</strong> (100 000 pour 100 000) et un nombre d'états qui ne dépend <em>que de la machine</em> — 2 ou 4 sur des textes de même taille.</li>
+<li>Le moteur de JavaScript, lui, fait du <strong>retour arrière</strong>&nbsp;: sur <code>(a+)+b</code>, 22 caractères demandent <strong>4 194 304</strong> essais là où l'automate en fait 22, pour le <em>même</em> verdict. D'où la règle&nbsp;: jamais de répétition dans une répétition dans un motif de lexique.</li>
+<li>La contrepartie du nombre fini d'états reste celle de la <a href="lecon-03.html">leçon 3</a>&nbsp;: un automate ne sait pas compter. L'analyse lexicale y renonce et gagne un passage unique&nbsp;; l'analyse syntaxique paiera une pile pour ce droit.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une regex sans drapeau, une regex <code>g</code> et une regex <code>y</code> reçoivent le même motif, le même texte et le même <code>lastIndex</code>. Donne les trois réponses possibles et dis, pour chacune, ce que la propriété <code>lastIndex</code> vaut après l'appel.</li>
+<li>Dans la boucle générique, deux lignes touchent à <code>lastIndex</code>&nbsp;: l'une avant l'essai, l'autre après le succès. Explique à quoi sert chacune, et ce qui casse exactement si l'on supprime la première.</li>
+<li>Un collègue veut ajouter au lexique une règle qui reconnaît d'un seul motif une liste de nombres séparés par des virgules, avec des espaces facultatifs. Donne-lui deux raisons de refuser, dont une chiffrée.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un analyseur lexical a-t-il besoin du drapeau « y » (collant) plutôt que d'une expression régulière ordinaire ?","a":["Parce qu'il doit savoir si un motif accroche à la position courante, et recevoir null sinon — une recherche libre irait trouver plus loin","Parce qu'une regex collante est compilée en code machine, alors qu'une regex ordinaire reste interprétée à chaque appel","Parce que seule une regex collante sait reconnaître des motifs de plusieurs caractères, les autres s'arrêtant au premier","Parce que le drapeau y autorise les groupes capturants, indispensables pour retenir la valeur d'un jeton pendant l'analyse"],"correct":0,"explain":"La question de l'analyseur est « qu'y a-t-il ICI ? ». Une regex libre répond « j'ai fini par trouver », ce qui n'est pas la même information : elle sauterait des jetons et ne pourrait plus jamais signaler un caractère illégal, qui se reconnaît précisément à ce qu'aucun motif n'accroche à sa position."},
+  {"q":"Une regex SANS drapeau reçoit re.lastIndex = 5, puis on appelle exec sur un texte dont la première correspondance est en position 1. Que se passe-t-il ?","a":["Elle rend la correspondance de la position 1, et lastIndex vaut toujours 5 après l'appel : la propriété est simplement ignorée","Elle rend null, car aucune correspondance ne commence exactement à la position 5 qu'on lui a indiquée avant l'appel","Elle rend la correspondance de la position 1 et remet lastIndex à 0, comme le font les regex g et y après un échec","Elle lève une erreur, car lastIndex ne peut être écrit que sur une regex portant le drapeau g ou le drapeau y"],"correct":0,"explain":"Sans drapeau, lastIndex n'est ni lu ni écrit : la propriété existe sur l'objet mais elle est inerte. C'est le régime le plus trompeur, parce qu'écrire re.lastIndex = 5 donne l'illusion d'avoir donné un ordre."},
+  {"q":"Dans une table de motifs, pourquoi ne met-on pas une règle MOT_CLE avec le motif /soit|affiche/y ?","a":["Parce qu'elle accrocherait le préfixe : sur « soitx » elle rendrait le mot-clé soit, et le x deviendrait un second jeton","Parce qu'une alternative avec une barre verticale n'est pas autorisée dans une expression régulière portant le drapeau y","Parce que les mots-clés doivent être reconnus par l'analyseur syntaxique, seule étape qui connaisse la grammaire du langage","Parce que deux motifs ne peuvent jamais accrocher à la même position, ce qui rendrait la table impossible à ordonner"],"correct":0,"explain":"« soitx » est un nom de variable parfaitement légitime, en un seul morceau. On lit donc l'identifiant le plus long possible, PUIS on regarde s'il figure dans la liste des mots-clés : un mot-clé n'est pas un motif particulier, c'est un identifiant réservé."},
+  {"q":"Sur un texte fait de 22 « a », le motif (a+)+b demande 4 194 304 essais à un moteur à retour arrière, contre 22 transitions à l'automate équivalent. Qu'est-ce qui déclenche cette explosion ?","a":["Une répétition à l'intérieur d'une autre répétition, les deux se disputant les mêmes caractères : chaque caractère ajouté double le nombre de partages à essayer","La longueur du texte : au-delà d'une vingtaine de caractères, tout moteur d'expressions régulières bascule dans un mode de recherche plus lent","L'absence du drapeau y sur le motif, qui oblige le moteur à recommencer sa recherche depuis le début à chaque position du texte","La présence de la lettre b en fin de motif, un caractère littéral obligeant le moteur à relire le texte entier une fois par tentative"],"correct":0,"explain":"C'est le retour arrière catastrophique. Le + intérieur et le + extérieur veulent les mêmes « a » : avant de conclure « non », le moteur doit essayer tous les partages, et leur nombre double à chaque caractère. Les motifs d'un lexique — une classe de caractères répétée — n'ont jamais cette forme, et il faut veiller à ce que cela reste vrai."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"6"},"placeholder":"reprends la table REGLES puis affiche jetons(\"soit total2 = 40 + 2\").length","hints":["Recopie la table REGLES et la fonction jetons de la section « Le lexique devient une table ».","Chaque motif porte le drapeau y ; pose motif.lastIndex = i avant chaque exec, et reprends i à motif.lastIndex après un succès.","Les jetons attendus sont soit, total2, =, 40, + et 2 : les espaces ne comptent pas."],"link":{"href":"lecon-05.html","label":"Revoir « Le lexique devient une table »"}},
+  {"type":"text","accept":["lastindex","lastIndex","re.lastIndex","motif.lastIndex","last index"],"placeholder":"la propriété qui sert de curseur à une expression régulière s'appelle l________","hints":["Elle est portée par l'objet regex lui-même, et elle est modifiable.","Sans drapeau elle est ignorée ; avec g ou y elle est lue puis réécrite.","Un seul mot, en anglais, sans espace : l___I____."],"link":{"href":"lecon-05.html","label":"Revoir « Les trois comportements de lastIndex »"}},
+  {"type":"text","accept":["y","/y","drapeau y","le drapeau y","collant","collante","sticky","le y"],"placeholder":"le drapeau qui force la correspondance à commencer exactement à lastIndex est le drapeau _","hints":["C'est celui que porte chaque motif de la table de la leçon.","On le dit « collant » en français, sticky en anglais.","Une seule lettre."],"link":{"href":"lecon-05.html","label":"Revoir « Chercher partout ou décider ici »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Reprends la table <code>REGLES</code> et la fonction <code>jetons</code> de la section «&nbsp;Le lexique devient une table&nbsp;», puis affiche <code>jetons("soit total2 = 40 + 2").length</code>. Avant de lancer&nbsp;: combien de jetons attends-tu, et lequel des six est un <code>MOT_CLE</code>&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// La table et la boucle de la lecon, telles quelles.
+const MOTS_CLES = ["soit", "affiche"];
+const REGLES = [
+  { type: "ESPACE",  motif: /[ \t]+/y },
+  { type: "NOMBRE",  motif: /[0-9]+/y },
+  { type: "IDENT",   motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE", motif: /[-+*\/()=]/y },
+];
+
+function jetons(txt) {
+  const sortie = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (regle.type !== "ESPACE") {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex;
+      avance = true;
+      break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+
+console.log(jetons("soit total2 = 40 + 2").length);
+// affiche : 6</code></pre></figure>
+<p>Six jetons&nbsp;: <code>MOT_CLE:soit</code>, <code>IDENT:total2</code>, <code>SYMBOLE:=</code>, <code>NOMBRE:40</code>, <code>SYMBOLE:+</code>, <code>NOMBRE:2</code>. Un seul est un <code>MOT_CLE</code>. Le point à surveiller est <code>total2</code>&nbsp;: son motif exige une lettre ou <code>_</code> en <em>premier</em>, puis autorise les chiffres — c'est ce qui lui permet de finir par un <code>2</code> sans se couper en deux jetons. Remplace la dernière ligne par une boucle qui affiche chaque type&nbsp;: tu verras que les trois espaces n'ont produit aucune ligne.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Sans rien exécuter, prédis ce qu'affichent ces trois lignes, puis vérifie&nbsp;: <code>const g = /[0-9]+/g;</code> suivi de trois <code>console.log(g.test("a1"), g.lastIndex)</code> à la file. Écris les trois couples attendus, puis explique en une phrase pourquoi le résultat change alors que le texte, lui, ne bouge pas.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">const g = /[0-9]+/g;
+console.log(g.test("a1"), g.lastIndex);
+console.log(g.test("a1"), g.lastIndex);
+console.log(g.test("a1"), g.lastIndex);
+// affiche : true 2
+// affiche : false 0
+// affiche : true 2</code></pre></figure>
+<p>Le premier appel part de <code>lastIndex</code>&nbsp;= 0, trouve le <code>1</code> en position 1 et laisse le curseur à <strong>2</strong>, c'est-à-dire à la fin du texte. Le deuxième repart donc de la fin, ne trouve rien, répond <code>false</code> — <em>et</em> remet <code>lastIndex</code> à <strong>0</strong>, comme le fait toute regex <code>g</code> ou <code>y</code> après un échec. Le troisième repart de zéro et réussit à nouveau. La réponse alterne parce que le curseur vit <strong>dans</strong> l'objet regex&nbsp;: ce n'est pas la question qui change, c'est l'état de celui à qui on la pose. Avec <code>y</code> à la place de <code>g</code>, la première réponse serait déjà <code>false</code>&nbsp;: en position 0 il y a un <code>a</code>, et une collante n'ira pas voir plus loin.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Brindille gagne la comparaison <code>&lt;=</code>. Deux règles se chevauchent désormais&nbsp;: <code>&lt;</code> accroche un caractère, <code>&lt;=</code> en accroche deux, à la même position. Écris une boucle générique et démontre <strong>par une exécution</strong> que l'ordre de la table décide du résultat&nbsp;: le motif long placé en premier doit rendre un seul jeton, placé en second il doit en rendre deux. Ajoute la contre-épreuve qui prouve que les textes sans <code>&lt;=</code> ne sont pas abîmés.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Deux regles se CHEVAUCHENT : "&lt;" accroche un caractere, "&lt;=" en accroche deux,
+// A LA MEME POSITION. La boucle garde la PREMIERE qui accroche : l'ordre decide.
+function table(longDabord) {
+  const inf = { type: "INFERIEUR", motif: /&lt;/y };
+  const infEgal = { type: "INF_EGAL", motif: /&lt;=/y };
+  return [
+    longDabord ? infEgal : inf,
+    longDabord ? inf : infEgal,
+    { type: "EGAL",   motif: /=/y },
+    { type: "IDENT",  motif: /[a-z_][a-z0-9_]*/y },
+    { type: "ESPACE", motif: /[ \t]+/y },
+  ];
+}
+
+function jetons(txt, regles) {
+  const out = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const r of regles) {
+      r.motif.lastIndex = i;
+      const m = r.motif.exec(txt);
+      if (!m) continue;
+      if (r.type !== "ESPACE") out.push(r.type + ":" + m[0]);
+      i = r.motif.lastIndex;
+      avance = true;
+      break;
+    }
+    if (!avance) throw new Error("caractere inattendu en " + i);
+  }
+  return out;
+}
+
+for (const src of ["a &lt;= b", "a &lt; b", "a = b"]) {
+  console.log(JSON.stringify(src).padEnd(9), "| long d'abord  :", jetons(src, table(true)).join(" "));
+  console.log(JSON.stringify(src).padEnd(9), "| court d'abord :", jetons(src, table(false)).join(" "));
+}
+// affiche : "a &lt;= b"  | long d'abord  : IDENT:a INF_EGAL:&lt;= IDENT:b
+// affiche : "a &lt;= b"  | court d'abord : IDENT:a INFERIEUR:&lt; EGAL:= IDENT:b
+// affiche : "a &lt; b"   | long d'abord  : IDENT:a INFERIEUR:&lt; IDENT:b
+// affiche : "a &lt; b"   | court d'abord : IDENT:a INFERIEUR:&lt; IDENT:b
+// affiche : "a = b"   | long d'abord  : IDENT:a EGAL:= IDENT:b
+// affiche : "a = b"   | court d'abord : IDENT:a EGAL:= IDENT:b</code></pre></figure>
+<p>Les deux premières lignes sont la démonstration&nbsp;: sur <code>a &lt;= b</code>, la table qui essaie le motif long d'abord rend <strong>trois</strong> jetons, dont un seul <code>INF_EGAL</code>&nbsp;; celle qui essaie le court d'abord en rend <strong>quatre</strong>, avec un <code>&lt;</code> et un <code>=</code> séparés. Et remarque bien ce qui ne se produit pas&nbsp;: aucune erreur n'est levée. Les quatre jetons sont parfaitement valides, ils sont simplement faux, et c'est l'analyseur syntaxique qui se plaindra — d'une chose que le programmeur n'a pas écrite. Les quatre dernières lignes sont la contre-épreuve indispensable&nbsp;: sur <code>a &lt; b</code> et <code>a = b</code>, les deux ordres donnent exactement le même résultat, car le motif long échoue proprement quand les deux caractères n'y sont pas. La règle générale est donc&nbsp;: <strong>quand deux motifs peuvent accrocher à la même position, place le plus long en premier</strong>. C'est la plus longue correspondance de la <a href="lecon-04.html">leçon 4</a>, revenue sous la forme d'un ordre de lignes dans une table.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

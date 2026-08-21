@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Du texte aux jetons — Leçon 04 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="L'analyse lexicale, première étape réelle de la chaîne : ce qu'est un jeton (type, valeur, position), le lexique du langage Brindille, l'analyseur lexical écrit à la main et exécutable dans la page, la règle de la plus longue correspondance (maximal munch) démontrée sur trois cas, et pourquoi le découpage en jetons mérite une étape à lui seul." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Analyse lexicale — Leçon 04</p>
+              <h1 class="lesson-header__title">Du texte aux jetons</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~62 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : les leçons 1 à 3 de ce cours — la chaîne de compilation, et la grammaire</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>définir un <strong>jeton</strong> comme un triplet <strong>type / valeur / position</strong>, et dire à quoi sert chacun des trois&nbsp;;</li>
+                  <li>lire et écrire un <strong>analyseur lexical</strong> à la main, sans bibliothèque, et le faire tourner dans cette page&nbsp;;</li>
+                  <li>énoncer et appliquer la règle de la <strong>plus longue correspondance</strong>, et reconnaître la faute classique qui la contourne&nbsp;;</li>
+                  <li>justifier pourquoi le découpage en jetons mérite une <strong>étape séparée</strong>, et ce que cette étape ne décide pas.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-03.html">leçon 3</a> a écrit une grammaire. Relis ses règles&nbsp;: elles parlent de <code>nombre</code>, de <code>terme</code>, de <code>facteur</code>, de parenthèses et d'opérateurs. Elles ne parlent jamais de caractères. Une grammaire dit «&nbsp;un facteur est un nombre&nbsp;»&nbsp;; elle ne dit pas, et ne dira jamais, «&nbsp;un facteur est un <code>1</code> suivi d'un <code>2</code>&nbsp;». C'est une règle sur des <strong>catégories</strong>, pas sur des signes. Et c'est heureux&nbsp;: si la grammaire d'un langage devait descendre jusqu'au caractère, elle serait dix fois plus longue et parfaitement illisible.</p>
+<p>Mais alors quelqu'un doit faire le travail intermédiaire. Quelqu'un doit lire la suite de caractères que tu as tapée et la transformer en suite de catégories&nbsp;: ici un mot-clé, là un identificateur, là un nombre, là un opérateur. Ce quelqu'un s'appelle l'<strong>analyse lexicale</strong>, et c'est la première étape réelle de la chaîne dessinée par la <a href="lecon-02.html">leçon 2</a> — la toute première boîte, celle qui reçoit ton texte tel quel et n'a personne avant elle pour lui mâcher le travail.</p>
+<p>Cette leçon la construit. Pas en théorie&nbsp;: en code, à la main, en une trentaine de lignes, pour <strong>Brindille</strong> — le langage minuscule que ce cours fabrique de bout en bout. À la fin de la leçon, tu auras un analyseur lexical complet, exécutable d'un clic dans cette page, dont chaque ligne t'aura été expliquée. Tu sauras aussi pourquoi une règle d'une seule phrase — «&nbsp;prends le jeton le plus long&nbsp;» — décide à elle seule du sort de la moitié des textes qu'il rencontrera.</p>
+
+<h2>Ce qu'est un jeton</h2>
+<p>Commençons par la seule définition qui compte. Un <strong>jeton</strong> (<em>token</em> en anglais, le mot que tu croiseras dans tous les messages d'erreur) est un triplet&nbsp;: un <strong>type</strong>, une <strong>valeur</strong>, une <strong>position</strong>. Trois champs, trois usages complètement différents. Confondre les deux premiers est l'erreur de débutant la plus répandue&nbsp;; ignorer le troisième est l'erreur de conception la plus coûteuse.</p>
+<p>Le <strong>type</strong> est la catégorie grammaticale du morceau lu&nbsp;: <code>NOMBRE</code>, <code>IDENT</code>, <code>MOT_CLE</code>, <code>SYMBOLE</code>. C'est une étiquette prise dans un ensemble fini, décidé une fois pour toutes quand on conçoit le langage. C'est aussi, et c'est le point capital, <strong>la seule chose dont la grammaire a besoin</strong>. Quand la règle de la leçon 3 dit «&nbsp;un facteur est un nombre&nbsp;», elle demande&nbsp;: «&nbsp;le jeton courant a-t-il le type <code>NOMBRE</code>&nbsp;?&nbsp;» Elle ne demande jamais <em>quel</em> nombre.</p>
+<p>La <strong>valeur</strong>, elle, est le texte effectivement lu — ou sa conversion. Pour le jeton de type <code>NOMBRE</code> découpé dans <code>12</code>, le type est <code>NOMBRE</code> et la valeur est <code>12</code>. Le type ne changerait pas d'un iota si tu écrivais <code>4096</code> à la place&nbsp;; la valeur, si. On dit que le type sert à <em>décider</em> et la valeur à <em>calculer</em>&nbsp;: l'analyseur syntaxique regarde les types pour savoir si la phrase est bien formée, et l'évaluateur, bien plus loin dans la chaîne, regardera les valeurs pour produire un résultat.</p>
+<p>Un mot de vocabulaire, parce qu'il évite beaucoup de confusion&nbsp;: le morceau de texte brut s'appelle un <strong>lexème</strong>. Les quatre caractères <code>s</code>, <code>o</code>, <code>i</code>, <code>t</code> pris ensemble forment un lexème. Le <strong>jeton</strong>, c'est ce lexème une fois <em>classé</em>&nbsp;: le lexème plus son étiquette, plus l'endroit où il a été trouvé. Le lexème est de la matière brute&nbsp;; le jeton est de la matière étiquetée. Toute la leçon consiste à passer de l'un à l'autre.</p>
+<p>Reste la <strong>position</strong>&nbsp;: l'indice, dans le texte source, du premier caractère du lexème. Et là, une question honnête se pose. Si la grammaire ne regarde que les types, et si l'évaluateur ne regarde que les valeurs, à quoi sert la position&nbsp;? Personne ne la lira jamais pour décider quoi que ce soit. On pourrait la jeter et tout continuerait à fonctionner.</p>
+<p>On ne la jette pas, et pour une raison qui n'a rien à voir avec le fonctionnement du compilateur&nbsp;: c'est elle, et elle seule, qui permet de <strong>parler à un humain</strong>. Un compilateur qui ne conserve aucune position peut refuser ton programme, mais il ne peut te dire que ceci&nbsp;: «&nbsp;erreur&nbsp;». Pas «&nbsp;ligne 2, colonne 19&nbsp;». Pas «&nbsp;ici&nbsp;». Or l'écrasante majorité du temps que tu passes avec un compilateur, tu le passes à lire ses messages. La position est la seule information de la chaîne dont l'unique client soit l'être humain assis devant l'écran — et c'est probablement, à ce titre, l'information la plus rentable de tout l'édifice. La <strong>leçon 6 de ce module</strong> en fera la démonstration&nbsp;: elle transformera ces indices bruts en «&nbsp;ligne&nbsp;X, colonne&nbsp;Y&nbsp;» et montrera ce qu'un analyseur peut dire quand il sait <em>où</em> il a buté.</p>
+<p>Notons enfin ce que le jeton <em>perd</em>. Le texte d'origine contenait des espaces&nbsp;; le ruban de jetons n'en contient plus. Les espaces ont joué leur rôle — séparer — puis ils ont disparu. C'est le premier exemple d'un mouvement que toute la chaîne répète&nbsp;: chaque étape jette ce dont la suivante n'a pas besoin. Après l'analyse lexicale, plus personne dans le compilateur ne saura si tu avais mis un espace ou trois autour du <code>=</code>. Personne n'en aura besoin. Le dessin ci-dessous montre exactement ce qui survit et ce qui disparaît.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 258" role="img" aria-label="Le passage du texte au ruban de jetons pour la ligne « soit prix égale 12 plus 3 ». En haut, le texte est présenté case par case : dix-huit cases se suivent, dont treize portent un caractère visible, et sous chaque case figure sa position, numérotée de 0 à 17. Cinq de ces cases, aux positions 4, 9, 11, 14 et 16, contiennent une espace ; elles sont dessinées en pointillés et marquées d'une croix, et aucun trait n'en descend. Des autres cases descendent six traits qui aboutissent, en bas, à six boîtes : un jeton de type MOT_CLE portant le mot soit, à la position 0 ; un jeton de type IDENT portant le mot prix, à la position 5 ; un jeton de type SYMBOLE portant le signe égal, à la position 10 ; un jeton de type NOMBRE portant le nombre douze, à la position 12 ; un jeton de type SYMBOLE portant le signe plus, à la position 15 ; et un jeton de type NOMBRE portant le nombre trois, à la position 17. Deux légendes closent le dessin : chaque boîte du bas porte son type, sa valeur et la position de son premier caractère ; et les cinq espaces marqués d'une croix ne produisent aucun jeton.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">« soit prix = 12 + 3 » : du texte au ruban de jetons</text>
+    <text class="d-mut" x="320" y="38" text-anchor="middle" font-size="9">en haut, le texte : une case par caractère, sa position en dessous</text>
+
+    <rect class="d-box" x="40" y="48" width="30" height="30" rx="4" /><text class="d-text" x="55" y="68" text-anchor="middle" font-size="12">s</text><text class="d-mut" x="55" y="90" text-anchor="middle" font-size="7.5">0</text>
+    <rect class="d-box" x="70" y="48" width="30" height="30" rx="4" /><text class="d-text" x="85" y="68" text-anchor="middle" font-size="12">o</text><text class="d-mut" x="85" y="90" text-anchor="middle" font-size="7.5">1</text>
+    <rect class="d-box" x="100" y="48" width="30" height="30" rx="4" /><text class="d-text" x="115" y="68" text-anchor="middle" font-size="12">i</text><text class="d-mut" x="115" y="90" text-anchor="middle" font-size="7.5">2</text>
+    <rect class="d-box" x="130" y="48" width="30" height="30" rx="4" /><text class="d-text" x="145" y="68" text-anchor="middle" font-size="12">t</text><text class="d-mut" x="145" y="90" text-anchor="middle" font-size="7.5">3</text>
+    <rect class="d-box" x="160" y="48" width="30" height="30" rx="4" stroke-dasharray="3 3" /><text class="d-mut" x="175" y="90" text-anchor="middle" font-size="7.5">4</text>
+    <rect class="d-box" x="190" y="48" width="30" height="30" rx="4" /><text class="d-text" x="205" y="68" text-anchor="middle" font-size="12">p</text><text class="d-mut" x="205" y="90" text-anchor="middle" font-size="7.5">5</text>
+    <rect class="d-box" x="220" y="48" width="30" height="30" rx="4" /><text class="d-text" x="235" y="68" text-anchor="middle" font-size="12">r</text><text class="d-mut" x="235" y="90" text-anchor="middle" font-size="7.5">6</text>
+    <rect class="d-box" x="250" y="48" width="30" height="30" rx="4" /><text class="d-text" x="265" y="68" text-anchor="middle" font-size="12">i</text><text class="d-mut" x="265" y="90" text-anchor="middle" font-size="7.5">7</text>
+    <rect class="d-box" x="280" y="48" width="30" height="30" rx="4" /><text class="d-text" x="295" y="68" text-anchor="middle" font-size="12">x</text><text class="d-mut" x="295" y="90" text-anchor="middle" font-size="7.5">8</text>
+    <rect class="d-box" x="310" y="48" width="30" height="30" rx="4" stroke-dasharray="3 3" /><text class="d-mut" x="325" y="90" text-anchor="middle" font-size="7.5">9</text>
+    <rect class="d-box" x="340" y="48" width="30" height="30" rx="4" /><text class="d-text" x="355" y="68" text-anchor="middle" font-size="12">=</text><text class="d-mut" x="355" y="90" text-anchor="middle" font-size="7.5">10</text>
+    <rect class="d-box" x="370" y="48" width="30" height="30" rx="4" stroke-dasharray="3 3" /><text class="d-mut" x="385" y="90" text-anchor="middle" font-size="7.5">11</text>
+    <rect class="d-box" x="400" y="48" width="30" height="30" rx="4" /><text class="d-text" x="415" y="68" text-anchor="middle" font-size="12">1</text><text class="d-mut" x="415" y="90" text-anchor="middle" font-size="7.5">12</text>
+    <rect class="d-box" x="430" y="48" width="30" height="30" rx="4" /><text class="d-text" x="445" y="68" text-anchor="middle" font-size="12">2</text><text class="d-mut" x="445" y="90" text-anchor="middle" font-size="7.5">13</text>
+    <rect class="d-box" x="460" y="48" width="30" height="30" rx="4" stroke-dasharray="3 3" /><text class="d-mut" x="475" y="90" text-anchor="middle" font-size="7.5">14</text>
+    <rect class="d-box" x="490" y="48" width="30" height="30" rx="4" /><text class="d-text" x="505" y="68" text-anchor="middle" font-size="12">+</text><text class="d-mut" x="505" y="90" text-anchor="middle" font-size="7.5">15</text>
+    <rect class="d-box" x="520" y="48" width="30" height="30" rx="4" stroke-dasharray="3 3" /><text class="d-mut" x="535" y="90" text-anchor="middle" font-size="7.5">16</text>
+    <rect class="d-box" x="550" y="48" width="30" height="30" rx="4" /><text class="d-text" x="565" y="68" text-anchor="middle" font-size="12">3</text><text class="d-mut" x="565" y="90" text-anchor="middle" font-size="7.5">17</text>
+
+    <path class="d-line" d="M170 106 L180 116" fill="none" /><path class="d-line" d="M180 106 L170 116" fill="none" />
+    <path class="d-line" d="M320 106 L330 116" fill="none" /><path class="d-line" d="M330 106 L320 116" fill="none" />
+    <path class="d-line" d="M380 106 L390 116" fill="none" /><path class="d-line" d="M390 106 L380 116" fill="none" />
+    <path class="d-line" d="M470 106 L480 116" fill="none" /><path class="d-line" d="M480 106 L470 116" fill="none" />
+    <path class="d-line" d="M530 106 L540 116" fill="none" /><path class="d-line" d="M540 106 L530 116" fill="none" />
+
+    <path class="d-line" d="M100 98 L65 156" fill="none" />
+    <path class="d-line" d="M250 98 L167 156" fill="none" />
+    <path class="d-line" d="M355 98 L269 156" fill="none" />
+    <path class="d-line" d="M430 98 L371 156" fill="none" />
+    <path class="d-line" d="M505 98 L473 156" fill="none" />
+    <path class="d-line" d="M565 98 L575 156" fill="none" />
+
+    <rect class="d-accent" x="18" y="156" width="94" height="56" rx="8" /><text class="d-tag" x="65" y="173" text-anchor="middle" font-size="8.5">MOT_CLE</text><text class="d-text" x="65" y="190" text-anchor="middle" font-size="11">soit</text><text class="d-mut" x="65" y="205" text-anchor="middle" font-size="8">pos 0</text>
+    <rect class="d-box" x="120" y="156" width="94" height="56" rx="8" /><text class="d-tag" x="167" y="173" text-anchor="middle" font-size="8.5">IDENT</text><text class="d-text" x="167" y="190" text-anchor="middle" font-size="11">prix</text><text class="d-mut" x="167" y="205" text-anchor="middle" font-size="8">pos 5</text>
+    <rect class="d-box" x="222" y="156" width="94" height="56" rx="8" /><text class="d-tag" x="269" y="173" text-anchor="middle" font-size="8.5">SYMBOLE</text><text class="d-text" x="269" y="190" text-anchor="middle" font-size="11">=</text><text class="d-mut" x="269" y="205" text-anchor="middle" font-size="8">pos 10</text>
+    <rect class="d-accent" x="324" y="156" width="94" height="56" rx="8" /><text class="d-tag" x="371" y="173" text-anchor="middle" font-size="8.5">NOMBRE</text><text class="d-text" x="371" y="190" text-anchor="middle" font-size="11">12</text><text class="d-mut" x="371" y="205" text-anchor="middle" font-size="8">pos 12</text>
+    <rect class="d-box" x="426" y="156" width="94" height="56" rx="8" /><text class="d-tag" x="473" y="173" text-anchor="middle" font-size="8.5">SYMBOLE</text><text class="d-text" x="473" y="190" text-anchor="middle" font-size="11">+</text><text class="d-mut" x="473" y="205" text-anchor="middle" font-size="8">pos 15</text>
+    <rect class="d-accent" x="528" y="156" width="94" height="56" rx="8" /><text class="d-tag" x="575" y="173" text-anchor="middle" font-size="8.5">NOMBRE</text><text class="d-text" x="575" y="190" text-anchor="middle" font-size="11">3</text><text class="d-mut" x="575" y="205" text-anchor="middle" font-size="8">pos 17</text>
+
+    <text class="d-mut" x="320" y="232" text-anchor="middle" font-size="9">en bas, un jeton par boîte : son TYPE, sa valeur, et la position de son premier caractère</text>
+    <text class="d-mut" x="320" y="248" text-anchor="middle" font-size="9">les 5 espaces, marqués d'une croix, ne produisent aucun jeton : rien ne descend d'eux</text>
+  </svg>
+  <figcaption>Dix-huit caractères entrent, <strong>six jetons</strong> sortent. Regarde surtout les cases en pointillés&nbsp;: les cinq espaces n'ont <em>aucune</em> boîte sous eux. Ils ont servi à séparer <code>soit</code> de <code>prix</code>, puis ils ont disparu — et rien, plus loin dans la chaîne, ne pourra jamais savoir qu'ils ont existé. Remarque aussi que la position notée est celle du <strong>premier</strong> caractère du lexème&nbsp;: le jeton <code>12</code> est en position 12, pas en 13.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Type, valeur, position&nbsp;: trois champs, trois lecteurs</p><p>Chacun des trois champs d'un jeton a son client attitré, et un seul. Le <strong>type</strong> est lu par l'analyseur syntaxique, qui décide si la phrase est bien formée. La <strong>valeur</strong> est lue bien plus tard, par ce qui évalue ou génère du code. La <strong>position</strong> n'est lue par aucune des deux&nbsp;: elle ne sert qu'aux messages d'erreur, donc à toi. Si tu retiens cette répartition, tu comprendras sans effort pourquoi certains analyseurs stockent la valeur sous forme de texte et d'autres sous forme de nombre déjà converti&nbsp;: cela ne regarde que le troisième lecteur, jamais le premier.</p></div></div>
+
+<h2>Le lexique de Brindille</h2>
+<p>Un langage n'a pas seulement une grammaire&nbsp;: il a aussi un <strong>lexique</strong>, c'est-à-dire la liste de ses catégories de jetons, avec le motif qui déclenche chacune. Le lexique de Brindille tient en quatre types, plus un cas qui n'en produit aucun&nbsp;:</p>
+
+<figure class="code-block" data-file="lexique.txt"><pre><code class="language-plaintext">TYPE       DECLENCHE PAR            S'ETEND TANT QUE        EXEMPLES
+--------   ----------------------   ---------------------   -----------------------
+MOT_CLE    une lettre ou _          lettre, chiffre ou _    soit  affiche
+IDENT      une lettre ou _          lettre, chiffre ou _    prix  quantite  total2
+NOMBRE     un chiffre               chiffre                 12  3  40
+SYMBOLE    l'un de  + - * / ( ) =   (un seul caractere)     +  =  (
+(aucun)    une espace               --                      l'espace ne produit rien</code></pre></figure>
+
+<p>Deux lignes de ce tableau sont identiques dans leurs deux colonnes du milieu&nbsp;: <code>MOT_CLE</code> et <code>IDENT</code> se déclenchent sur les mêmes caractères et s'étendent sur les mêmes caractères. Ce n'est pas une maladresse de rédaction, c'est <em>exactement</em> la réalité, et c'est la clé de toute la section suivante&nbsp;: un mot-clé n'est pas reconnu par un motif à lui. Il est reconnu comme un identificateur ordinaire, puis <strong>promu</strong> mot-clé parce qu'il figure dans une liste de deux entrées. Retiens cette phrase&nbsp;; nous la ferons travailler dans dix minutes.</p>
+<p>Le point qui mérite qu'on s'y arrête, c'est le type <code>SYMBOLE</code>. Sept caractères y sont rangés ensemble&nbsp;: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>(</code>, <code>)</code> et <code>=</code>. Ce regroupement n'a rien d'évident et n'est certainement pas la seule option. On pourrait très bien donner à chacun son type propre&nbsp;: <code>PLUS</code>, <code>MOINS</code>, <code>FOIS</code>, <code>DIVISE</code>, <code>PAR_OUVRANTE</code>, <code>PAR_FERMANTE</code>, <code>EGAL</code>. Et c'est même ce que la grammaire de la leçon 3 suggérait&nbsp;: relis-la, elle écrit ses terminaux un par un, <code>"+"</code>, <code>"-"</code>, <code>"*"</code>, <code>"/"</code> — elle nomme chaque symbole individuellement.</p>
+<p>Alors pourquoi regrouper ici&nbsp;? Pour trois raisons, toutes de commodité, aucune de principe. D'abord parce qu'un symbole de Brindille fait <strong>toujours un seul caractère</strong>&nbsp;: la valeur du jeton suffit à le distinguer, sans qu'on ait besoin d'un type. Ensuite parce que quatre types se retiennent et se dessinent&nbsp;; dix types feraient un tableau moins lisible pour un gain nul à ce stade du cours. Enfin parce que le code de découpage devient une seule ligne — un test d'appartenance à une chaîne de sept caractères — au lieu de sept branches.</p>
+<p>Cette décision a un prix, et il est honnête de le nommer&nbsp;: l'analyseur syntaxique du module 3 devra écrire <code>jeton.valeur === "+"</code> là où il aurait écrit <code>jeton.type === "PLUS"</code>. C'est un test sur la valeur au lieu d'un test sur le type&nbsp;; c'est légèrement moins propre, et cela se paierait si Brindille grandissait beaucoup. Le jour où un opérateur de deux caractères apparaîtra — nous en fabriquerons un dans le dernier exercice — la question se reposera pour de bon. Ce qu'il faut retenir n'est pas «&nbsp;regrouper est bien&nbsp;» ou «&nbsp;séparer est bien&nbsp;», mais que <strong>le lexique se décide</strong>, comme la grammaire, et qu'il n'existe pas de découpage naturel imposé par le texte.</p>
+<p>Une dernière remarque, qui a l'air d'un détail et qui n'en est pas un&nbsp;: un jeton n'est pas un mot au sens du langage naturel, et sa taille n'a aucune importance. <code>12</code> est <strong>un</strong> jeton et fait deux caractères. <code>quantite</code> est <strong>un</strong> jeton et en fait huit. <code>+</code> est un jeton et n'en fait qu'un. Ce qui définit un jeton, ce n'est ni sa longueur, ni le fait qu'il soit entouré d'espaces — <code>12+3</code> donne trois jetons sans le moindre espace —, c'est uniquement le <strong>motif</strong> qui l'a reconnu. L'espace n'est pas un séparateur obligatoire&nbsp;: c'est juste un caractère qui ne peut faire partie d'aucun motif, donc qui interrompt celui en cours.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Combien de types faut-il&nbsp;?</p><p>Il n'y a pas de bonne réponse universelle, mais une règle pratique&nbsp;: donne un type distinct à tout ce sur quoi la <strong>grammaire</strong> aura besoin de décider, et regroupe le reste. Si ta grammaire écrit une règle qui commence par «&nbsp;une parenthèse ouvrante&nbsp;», un type <code>PAR_OUVRANTE</code> se justifie. Si elle traite <code>+</code> et <code>-</code> exactement de la même façon dans la même règle, un type commun leur suffit, la valeur départageant au moment du calcul. Le lexique n'est pas une description du texte&nbsp;: c'est une <em>interface</em> offerte à l'étape suivante, et une interface se conçoit en fonction de qui va s'en servir.</p></div></div>
+
+<h2>Écrire l'analyseur, à la main</h2>
+<p>Assez de définitions. Voici l'analyseur lexical complet de Brindille. Il n'utilise aucune bibliothèque, tient en une trentaine de lignes, et fait exactement ce que la figure du début a dessiné. Lis-le une première fois sans t'arrêter, puis reviens&nbsp;: nous allons le démonter branche par branche.</p>
+
+<figure class="code-block" data-file="lexer.js"><pre><code class="language-javascript">// Brindille — analyseur lexical minimal : le texte devient une liste de jetons.
+const source = "soit prix = 12 + 3 * quantite";
+
+const MOTS_CLES = ["soit", "affiche"];
+
+function jetons(txt) {
+  const sortie = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    const c = txt[i];
+    if (c === " ") { i++; continue; }
+    if (/[0-9]/.test(c)) {
+      let j = i;
+      while (j &lt; txt.length &amp;&amp; /[0-9]/.test(txt[j])) j++;
+      sortie.push({ type: "NOMBRE", valeur: Number(txt.slice(i, j)), pos: i });
+      i = j; continue;
+    }
+    if (/[a-z_]/i.test(c)) {
+      let j = i;
+      while (j &lt; txt.length &amp;&amp; /[a-z0-9_]/i.test(txt[j])) j++;
+      const mot = txt.slice(i, j);
+      sortie.push({ type: MOTS_CLES.includes(mot) ? "MOT_CLE" : "IDENT", valeur: mot, pos: i });
+      i = j; continue;
+    }
+    if ("+-*/()=".includes(c)) { sortie.push({ type: "SYMBOLE", valeur: c, pos: i }); i++; continue; }
+    throw new Error("caractere inattendu " + JSON.stringify(c) + " en position " + i);
+  }
+  return sortie;
+}
+
+const js = jetons(source);
+console.log("nombre de jetons :", js.length);
+for (const j of js) console.log(String(j.pos).padStart(2), j.type.padEnd(8), j.valeur);</code></pre></figure>
+
+<p>Ce bloc porte un bouton «&nbsp;Tester&nbsp;»&nbsp;: clique dessus, le code s'exécute dans ta page et affiche ceci, neuf lignes exactement.</p>
+
+<figure class="code-block" data-file="sortie.txt"><pre><code class="language-plaintext">nombre de jetons : 8
+ 0 MOT_CLE  soit
+ 5 IDENT    prix
+10 SYMBOLE  =
+12 NOMBRE   12
+15 SYMBOLE  +
+17 NOMBRE   3
+19 SYMBOLE  *
+21 IDENT    quantite</code></pre></figure>
+
+<p>Vingt-neuf caractères entrent, huit jetons sortent. Avant d'expliquer le code, un mot sur la <strong>mise en forme</strong> de ces huit lignes, parce qu'elle n'a rien d'accidentel. La dernière ligne du programme écrit <code>String(j.pos).padStart(2)</code>&nbsp;: la position est convertie en texte puis complétée à gauche jusqu'à deux caractères. C'est pour cela que les positions à un seul chiffre — <code>0</code> et <code>5</code> — sont précédées d'une espace, tandis que <code>10</code>, <code>12</code>, <code>15</code>, <code>17</code>, <code>19</code> et <code>21</code> commencent en colonne&nbsp;1. Les nombres sont ainsi alignés à droite, comme dans un tableau. Juste après, <code>j.type.padEnd(8)</code> complète le type à droite jusqu'à huit caractères&nbsp;: <code>MOT_CLE</code> en fait sept, il reçoit une espace de plus&nbsp;; <code>SYMBOLE</code> en fait sept aussi&nbsp;; <code>IDENT</code> en fait cinq, il en reçoit trois. Résultat&nbsp;: les valeurs commencent toutes à la même colonne. Deux appels de méthode, et une sortie qu'on lit d'un coup d'œil au lieu de la déchiffrer.</p>
+<p>Venons-en au cœur. Toute la fonction tourne autour d'un seul entier&nbsp;: <code>i</code>, la position de lecture. La boucle <code>while (i &lt; txt.length)</code> se lit ainsi&nbsp;: «&nbsp;tant qu'il reste du texte, produis un jeton de plus&nbsp;». Chaque tour de boucle doit faire <strong>avancer <code>i</code></strong>, sans quoi le programme tournerait indéfiniment — c'est la seule vraie contrainte que s'impose un analyseur lexical écrit à la main, et c'est aussi le bogue le plus fréquent quand on en écrit un pour la première fois.</p>
+<p>À l'intérieur, quatre branches, testées dans l'ordre. Elles couvrent les cinq lignes du lexique&nbsp;: celle de la lettre en produit deux, <code>MOT_CLE</code> et <code>IDENT</code>, pour la raison qu'on vient de voir.</p>
+<p><strong>Première branche&nbsp;: l'espace.</strong> <code>if (c === " ") { i++; continue; }</code>. Une seule ligne, et c'est la plus instructive du lot, parce qu'elle est la seule qui <em>ne pousse rien</em> dans la sortie. Elle avance d'un caractère et recommence. C'est là, précisément, que les espaces disparaissent de la chaîne de compilation&nbsp;: pas dans une passe de nettoyage préalable, pas dans un filtre séparé — dans une branche qui les lit et ne les enregistre pas. La <a href="lecon-02.html">leçon 2</a> annonçait que l'analyse lexicale «&nbsp;jette ce que le langage juge sans portée&nbsp;»&nbsp;; voici la ligne qui le fait.</p>
+<p><strong>Deuxième branche&nbsp;: le nombre.</strong> Si le caractère courant est un chiffre, on ouvre un second indice <code>j</code>, initialisé à <code>i</code>, et on le pousse vers l'avant <em>tant que</em> le caractère lu est encore un chiffre. Quand la boucle s'arrête, <code>txt.slice(i, j)</code> contient tous les chiffres consécutifs, d'un seul bloc. C'est ce mécanisme à deux indices — <code>i</code> qui marque le début du lexème, <code>j</code> qui explore vers la droite — qui fait que <code>12</code> donne un jeton et non deux. On note au passage la conversion&nbsp;: <code>Number(txt.slice(i, j))</code>. La valeur stockée n'est pas le texte <code>"12"</code> mais le nombre <code>12</code>. C'est un choix, celui de convertir tôt&nbsp;; il évite d'y penser plus tard, et surtout il évite qu'un évaluateur distrait ne calcule <code>"12" + "3"</code> et n'obtienne <code>"123"</code>. Attention&nbsp;: cette conversion ne se voit <em>pas</em> dans la sortie affichée — retire le <code>Number</code>, relance, et tu obtiendras exactement les mêmes neuf lignes. La différence est dans ce qui est <em>rangé</em>, pas dans ce qui est montré.</p>
+<p><strong>Troisième branche&nbsp;: la lettre.</strong> Même mécanisme à deux indices, avec deux motifs différents et c'est important&nbsp;: le <em>premier</em> caractère doit être une lettre ou un tiret bas (<code>/[a-z_]/i</code>), les <em>suivants</em> peuvent en plus être des chiffres (<code>/[a-z0-9_]/i</code>). C'est ce qui autorise <code>total2</code> tout en interdisant qu'un identificateur commence par un chiffre — un texte comme <code>2total</code> serait vu comme le nombre <code>2</code> suivi de l'identificateur <code>total</code>, ce que l'analyseur syntaxique refusera plus tard, et c'est très bien ainsi. Puis vient la ligne qui décide du type&nbsp;: <code>MOTS_CLES.includes(mot) ? "MOT_CLE" : "IDENT"</code>. Le mot entier est lu <em>d'abord</em>, la liste des mots-clés est consultée <em>ensuite</em>. Nous allons voir que l'ordre de ces deux opérations n'est pas négociable.</p>
+<p><strong>Quatrième branche&nbsp;: le symbole.</strong> <code>"+-*/()=".includes(c)</code> — un test d'appartenance à une chaîne de sept caractères, qui remplace sept comparaisons. Pas de second indice ici&nbsp;: un symbole de Brindille fait un caractère, on avance de un et on continue.</p>
+<p>Reste la dernière ligne du corps de boucle, celle qu'on atteint quand aucune branche n'a mordu&nbsp;: <code>throw new Error(...)</code>. C'est le filet. Si tu écris <code>soit prix = 12 @ 3</code>, aucun des quatre motifs ne reconnaît <code>@</code>&nbsp;: l'analyseur s'arrête et le dit, en donnant le caractère fautif <em>et sa position</em>. Voilà la première utilité concrète du champ <code>pos</code> — et remarque que ce message ressemble déjà beaucoup à celui que la leçon 2 attribuait à l'analyse lexicale dans son tableau des erreurs. Ce <code>throw</code> n'est pas un ornement&nbsp;: sans lui, la boucle rencontrerait un caractère qu'aucune branche ne consomme, <code>i</code> n'avancerait plus, et le programme se figerait. Un analyseur lexical doit toujours se terminer sur l'un des deux états&nbsp;: «&nbsp;j'ai tout lu&nbsp;» ou «&nbsp;je bute ici&nbsp;».</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Modifie le code, relance&nbsp;: c'est le meilleur usage de cette page</p><p>Le bloc ci-dessus est éditable une fois lancé. Trois expériences valent chacune deux minutes. <strong>Une&nbsp;:</strong> remplace la source par <code>"soit x=1"</code> — sans aucune espace autour du <code>=</code> — et vérifie que tu obtiens toujours quatre jetons&nbsp;; l'espace n'est pas ce qui sépare. <strong>Deux&nbsp;:</strong> mets <code>"12 @ 3"</code> et regarde le message d'erreur, sa position comprise. <strong>Trois&nbsp;:</strong> supprime la ligne <code>if (c === " ")</code> et observe&nbsp;: l'espace ne tombe plus dans aucune branche, il atteint le <code>throw</code>, et le programme refuse un texte parfaitement valide. Cette dernière expérience montre mieux qu'un paragraphe que «&nbsp;ignorer les espaces&nbsp;» est une décision explicite, écrite quelque part.</p></div></div>
+
+<h2>La règle qui tient tout&nbsp;: la plus longue correspondance</h2>
+<p>Nous arrivons au cœur de la leçon. Tout ce qui précède peut se résumer à «&nbsp;on classe des morceaux de texte&nbsp;»&nbsp;; ce qui suit est la règle qui décide <strong>où s'arrêtent</strong> ces morceaux — et elle n'a rien d'évident.</p>
+<p>Pose-toi la question comme se la pose l'analyseur. Il est en position 12, le texte est <code>soit prix = 12 + 3</code>, il voit un <code>1</code>. Il pourrait produire ici un jeton <code>NOMBRE</code> de valeur <code>1</code>&nbsp;: ce serait parfaitement légitime, <code>1</code> est un nombre. Il pourrait aussi continuer et produire <code>12</code>. Les deux découpages respectent le lexique. Rien, dans la table des types, ne dit lequel choisir.</p>
+<p>La règle qui tranche s'appelle la <strong>plus longue correspondance</strong> — en anglais <em>maximal munch</em>, littéralement «&nbsp;la plus grosse bouchée&nbsp;», et l'image est bonne. Elle tient en une phrase&nbsp;: <em>à chaque position, l'analyseur produit le jeton le plus long qu'il puisse produire à partir de là.</em> Ce n'est pas une astuce d'implémentation&nbsp;: c'est une <strong>convention de conception du langage</strong>, adoptée par la quasi-totalité des langages à syntaxe textuelle, et elle est si bien intégrée que personne ne pense plus à la formuler. Dans notre code, elle est écrite dans les deux boucles internes&nbsp;: <code>while (j &lt; txt.length &amp;&amp; …) j++;</code>. Chacune veut dire «&nbsp;avance tant que tu peux&nbsp;».</p>
+<p>Pour mesurer ce qu'elle apporte, le plus simple est de la débrancher. Le programme ci-dessous découpe le même texte de deux façons&nbsp;: avec la règle, puis sans — c'est-à-dire en s'arrêtant systématiquement après un seul caractère. Le paramètre <code>plusLong</code> fait toute la différence, et il ne commande qu'une seule boucle.</p>
+
+<figure class="code-block" data-file="munch.js"><pre><code class="language-javascript">// LA PLUS LONGUE CORRESPONDANCE ("maximal munch") : a chaque position, l'analyseur
+// prend le plus long jeton possible. Sans cette regle, tout se casse.
+const MOTS_CLES = ["soit", "affiche"];
+
+function decoupe(txt, plusLong) {
+  const out = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    const c = txt[i];
+    if (c === " ") { i++; continue; }
+    if ("+-*/()=".includes(c)) { out.push("SYMBOLE:" + c); i++; continue; }
+    const classe = /[0-9]/.test(c) ? /[0-9]/ : /[a-z0-9_]/i;
+    let j = i + 1;
+    if (plusLong) while (j &lt; txt.length &amp;&amp; classe.test(txt[j])) j++;
+    const texte = txt.slice(i, j);
+    if (/[0-9]/.test(c)) out.push("NOMBRE:" + texte);
+    else out.push((MOTS_CLES.includes(texte) ? "MOT_CLE:" : "IDENT:") + texte);
+    i = j;
+  }
+  return out;
+}
+
+for (const src of ["12 + 3", "soitx", "soit x"]) {
+  console.log(JSON.stringify(src).padEnd(9), "| plus longue :", decoupe(src, true).join(" "));
+  console.log(JSON.stringify(src).padEnd(9), "| un caractere:", decoupe(src, false).join(" "));
+}</code></pre></figure>
+
+<p>Lance-le. Six lignes tombent, trois textes examinés deux fois chacun&nbsp;:</p>
+
+<figure class="code-block" data-file="sortie-munch.txt"><pre><code class="language-plaintext">"12 + 3"  | plus longue : NOMBRE:12 SYMBOLE:+ NOMBRE:3
+"12 + 3"  | un caractere: NOMBRE:1 NOMBRE:2 SYMBOLE:+ NOMBRE:3
+"soitx"   | plus longue : IDENT:soitx
+"soitx"   | un caractere: IDENT:s IDENT:o IDENT:i IDENT:t IDENT:x
+"soit x"  | plus longue : MOT_CLE:soit IDENT:x
+"soit x"  | un caractere: IDENT:s IDENT:o IDENT:i IDENT:t IDENT:x</code></pre></figure>
+
+<p>Prenons les trois cas dans l'ordre, parce que chacun démontre une chose différente.</p>
+<p><strong>Cas (a)&nbsp;: <code>12 + 3</code>.</strong> Avec la règle, trois jetons&nbsp;: <code>NOMBRE:12</code>, <code>SYMBOLE:+</code>, <code>NOMBRE:3</code>. Sans elle, <em>quatre</em>&nbsp;: <code>NOMBRE:1</code>, <code>NOMBRE:2</code>, <code>SYMBOLE:+</code>, <code>NOMBRE:3</code>. Le nombre douze a été coupé en deux nombres, un et deux. Aucun message d'erreur n'a été produit&nbsp;: le découpage sans règle est parfaitement cohérent avec le lexique, il est simplement <em>faux</em>. Et il est faux d'une manière particulièrement vicieuse&nbsp;: l'analyseur syntaxique recevra deux nombres collés, ce qui ne correspond à aucune règle de la grammaire de la leçon 3, et il se plaindra d'une «&nbsp;syntaxe incorrecte&nbsp;» sur un texte que tu as écrit correctement. La faute est en amont&nbsp;; le message viendra de l'aval.</p>
+<p><strong>Cas (b)&nbsp;: <code>soitx</code>.</strong> Avec la règle, un seul jeton&nbsp;: <code>IDENT:soitx</code>. C'est la bonne réponse, et il faut voir pourquoi elle n'est pas évidente. Le texte <code>soitx</code> <em>commence</em> par les quatre lettres du mot-clé <code>soit</code>. Une lecture pressée y verrait <code>soit</code> suivi de <code>x</code> — c'est-à-dire une déclaration de variable. Or ce n'est pas ce que l'auteur a écrit&nbsp;: il a écrit un seul nom, <code>soitx</code>, qui se trouve commencer comme un mot-clé. Le seul découpage acceptable est celui d'un identificateur unique. Note que la sortie «&nbsp;un caractère&nbsp;» donne ici cinq identificateurs d'une lettre&nbsp;: sans la règle, la notion même de nom composé de plusieurs lettres n'existe plus.</p>
+<p><strong>Cas (c)&nbsp;: <code>soit x</code>.</strong> Avec la règle, deux jetons&nbsp;: <code>MOT_CLE:soit</code> puis <code>IDENT:x</code>. La lecture du mot s'est arrêtée à l'espace — non pas parce que l'espace est un séparateur privilégié, mais parce qu'il n'appartient pas à la classe <code>/[a-z0-9_]/i</code>&nbsp;: la boucle «&nbsp;avance tant que tu peux&nbsp;» ne peut plus avancer. Le mot ainsi obtenu, <code>soit</code>, figure dans la liste&nbsp;: il devient <code>MOT_CLE</code>. Le mot suivant, <code>x</code>, n'y figure pas&nbsp;: il reste <code>IDENT</code>.</p>
+<p>Voilà ce qu'il faut absolument voir&nbsp;: les cas (b) et (c) sont assurés par <strong>la même</strong> règle et par le <strong>même</strong> code. Il n'y a pas, dans <code>decoupe</code>, un traitement spécial pour «&nbsp;quand un identificateur ressemble à un mot-clé&nbsp;». Il y a une boucle qui prend le plus long, et une consultation de liste après coup. <code>soitx</code> et <code>soit x</code> tombent tous les deux dans cette mécanique unique et en sortent correctement classés. Une règle, deux comportements justes&nbsp;: c'est la marque d'une bonne règle.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Deux découpages superposés du texte soitx. En haut du dessin, le texte est montré case par case : cinq cases contenant les lettres s, o, i, t et x, numérotées de 0 à 4. Au-dessous, un premier découpage est intitulé découpage naïf, obtenu en testant d'abord si le texte commence par le mot soit ; il est marqué d'une croix et donne deux boîtes, un jeton de type MOT_CLE et de valeur soit, puis un jeton de type IDENT et de valeur x, avec ce verdict : deux jetons, le mot soitx a été coupé alors que ce n'est pas ce qui a été écrit. Au-dessous encore, un second découpage est intitulé plus longue correspondance, où l'on lit le mot entier avant de consulter la liste des mots-clés ; il est marqué d'une coche et donne une seule boîte, un jeton de type IDENT et de valeur soitx, avec ce verdict : un seul jeton, le plus long possible à partir de la position 0. Une dernière ligne rappelle que la même règle donne, pour soit espace x, un jeton MOT_CLE suivi d'un jeton IDENT, parce que l'espace arrête le mot.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">« soitx » : deux découpages possibles, un seul est le bon</text>
+
+    <rect class="d-box" x="245" y="38" width="30" height="30" rx="4" /><text class="d-text" x="260" y="58" text-anchor="middle" font-size="12">s</text><text class="d-mut" x="260" y="80" text-anchor="middle" font-size="7.5">0</text>
+    <rect class="d-box" x="275" y="38" width="30" height="30" rx="4" /><text class="d-text" x="290" y="58" text-anchor="middle" font-size="12">o</text><text class="d-mut" x="290" y="80" text-anchor="middle" font-size="7.5">1</text>
+    <rect class="d-box" x="305" y="38" width="30" height="30" rx="4" /><text class="d-text" x="320" y="58" text-anchor="middle" font-size="12">i</text><text class="d-mut" x="320" y="80" text-anchor="middle" font-size="7.5">2</text>
+    <rect class="d-box" x="335" y="38" width="30" height="30" rx="4" /><text class="d-text" x="350" y="58" text-anchor="middle" font-size="12">t</text><text class="d-mut" x="350" y="80" text-anchor="middle" font-size="7.5">3</text>
+    <rect class="d-box" x="365" y="38" width="30" height="30" rx="4" /><text class="d-text" x="380" y="58" text-anchor="middle" font-size="12">x</text><text class="d-mut" x="380" y="80" text-anchor="middle" font-size="7.5">4</text>
+
+    <text class="d-tag" x="320" y="104" text-anchor="middle" font-size="9.5">DÉCOUPAGE NAÏF — on teste d'abord « le texte commence-t-il par soit ? »</text>
+    <path class="d-line" d="M62 127 L78 143" fill="none" /><path class="d-line" d="M78 127 L62 143" fill="none" />
+    <rect class="d-box" x="110" y="112" width="260" height="46" rx="8" /><text class="d-tag" x="240" y="130" text-anchor="middle" font-size="8.5">MOT_CLE</text><text class="d-text" x="240" y="148" text-anchor="middle" font-size="12">soit</text>
+    <rect class="d-box" x="386" y="112" width="136" height="46" rx="8" /><text class="d-tag" x="454" y="130" text-anchor="middle" font-size="8.5">IDENT</text><text class="d-text" x="454" y="148" text-anchor="middle" font-size="12">x</text>
+    <text class="d-mut" x="316" y="176" text-anchor="middle" font-size="9">deux jetons : « soitx » a été coupé — ce n'est pas ce que l'auteur a écrit</text>
+
+    <text class="d-tag" x="320" y="200" text-anchor="middle" font-size="9.5">PLUS LONGUE CORRESPONDANCE — on lit le mot ENTIER, puis on consulte la liste</text>
+    <path class="d-line" d="M62 231 L69 238 L82 222" fill="none" />
+    <rect class="d-accent" x="110" y="208" width="412" height="46" rx="8" /><text class="d-tag" x="316" y="226" text-anchor="middle" font-size="8.5">IDENT</text><text class="d-text" x="316" y="244" text-anchor="middle" font-size="12">soitx</text>
+    <text class="d-mut" x="316" y="272" text-anchor="middle" font-size="9">un seul jeton : le plus long possible à partir de la position 0</text>
+
+    <text class="d-mut" x="320" y="292" text-anchor="middle" font-size="9">La même règle donne, pour « soit x » : MOT_CLE soit + IDENT x — là, l'espace arrête le mot.</text>
+  </svg>
+  <figcaption>Les deux découpages sont cohérents avec le lexique&nbsp;; un seul est correct. Ce n'est pas la liste des mots-clés qui tranche, c'est <strong>l'ordre des opérations</strong>&nbsp;: lire le mot le plus long <em>puis</em> consulter la liste, jamais l'inverse. Le même mécanisme, appliqué à <code>soit x</code>, s'arrête sur l'espace et rend bien deux jetons.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège&nbsp;: reconnaître les mots-clés en premier</p><p>C'est la faute classique, et elle paraît si naturelle qu'on l'écrit sans y penser&nbsp;: en haut de la boucle, on teste <code>txt.startsWith("soit", i)</code>, et si c'est vrai on produit un <code>MOT_CLE</code> et on avance de quatre. Le code est plus court, il marche sur tous les exemples du manuel… et il casse silencieusement sur <code>soitx</code>, qu'il découpe en <code>soit</code> + <code>x</code>. Il casserait pareillement sur <code>soit_total</code>, sur <code>affichette</code>, sur <code>affiche2</code> — bref, sur tout identificateur qui commence comme un mot-clé. Et il ne préviendra pas&nbsp;: il produira des jetons valides, que la grammaire refusera plus loin avec un message qui ne pointera pas la vraie cause.</p><p>La bonne méthode est celle du code de cette leçon, et elle tient en deux temps&nbsp;: <strong>lire l'identificateur complet</strong> avec la règle du plus long, <strong>puis</strong> regarder s'il figure dans la liste des mots-clés. Dans cet ordre, jamais dans l'autre. Un mot-clé n'est pas un motif à part&nbsp;: c'est un identificateur que le langage s'est réservé.</p></div></div>
+
+<h2>Pourquoi une étape séparée</h2>
+<p>Une objection légitime, maintenant que le mécanisme est clair&nbsp;: pourquoi ne pas laisser l'analyseur syntaxique lire les caractères directement&nbsp;? Après tout, il devra bien parcourir le texte&nbsp;; pourquoi construire d'abord une liste intermédiaire, la stocker, puis la reparcourir&nbsp;? Trois raisons, et la première est la plus profonde.</p>
+<p><strong>Première raison&nbsp;: la classe du langage.</strong> La <a href="lecon-03.html">leçon 3</a> a établi une frontière avec une expérience mesurée&nbsp;: une expression régulière ne sait pas compter, parce qu'un automate fini n'a qu'un nombre borné d'états&nbsp;; équilibrer des parenthèses à profondeur libre lui est impossible. Regarde maintenant notre lexique avec cette frontière en tête. <code>NOMBRE</code>, c'est «&nbsp;un ou plusieurs chiffres&nbsp;». <code>IDENT</code>, c'est «&nbsp;une lettre, puis des lettres ou des chiffres&nbsp;». <code>SYMBOLE</code>, c'est «&nbsp;un caractère pris dans une liste&nbsp;». Pas la moindre imbrication&nbsp;: aucun jeton de Brindille ne contient un autre jeton, aucun ne demande de se souvenir d'une profondeur. Le lexique est donc <strong>régulier</strong>, au sens exact de la leçon 3. La syntaxe, elle — les expressions parenthésées, les sous-expressions dans les sous-expressions —, est <strong>hors-contexte</strong>&nbsp;: elle réclame une pile. Deux classes de langages, deux outils. Séparer les deux étapes n'est pas une commodité d'ingénieur&nbsp;: c'est suivre une frontière mathématique que quelqu'un a démontrée bien avant que nous n'écrivions ce code.</p>
+<p><strong>Deuxième raison&nbsp;: le volume.</strong> Compare les deux entrées de notre exemple. L'analyseur lexical a lu <strong>29 caractères</strong>&nbsp;; l'analyseur syntaxique recevra <strong>8 jetons</strong>. Le facteur est déjà de plus de trois et demi sur une seule ligne, et il ne fait que croître avec la taille du fichier&nbsp;: un source de dix mille caractères donne quelques milliers de jetons au plus. Mais l'économie de volume n'est pas le vrai gain — le vrai gain est ailleurs, et il est qualitatif. L'analyseur syntaxique n'a <em>plus jamais</em> à se soucier des espaces. Aucune de ses règles n'a besoin de dire «&nbsp;éventuellement des espaces ici&nbsp;». Écris une seule fois une grammaire qui doit tolérer des espaces entre chacun de ses terminaux, et tu comprendras l'ampleur du service rendu&nbsp;: chaque règle doublerait de longueur, et la moitié des bogues viendraient d'un endroit où l'on aurait oublié de les autoriser. Cette nuisance est réglée une fois, dans une ligne, à l'étape 1.</p>
+<p><strong>Troisième raison&nbsp;: la clarté des erreurs.</strong> Une faute de frappe dans un caractère isolé — un <code>@</code> égaré, un guillemet exotique venu d'un traitement de texte — est une erreur <em>lexicale</em>. Elle veut dire&nbsp;: «&nbsp;ce caractère ne peut commencer aucun jeton&nbsp;». Une faute d'enchaînement — un <code>+</code> suivi d'un <code>)</code> — est une erreur <em>syntaxique</em>. Elle veut dire&nbsp;: «&nbsp;ces jetons sont valides, mais pas dans cet ordre&nbsp;». Les deux messages n'ont rien à voir, ni dans leur formulation, ni dans le geste qu'ils appellent&nbsp;: la première se corrige à l'endroit exact du curseur, la seconde demande souvent de remonter en arrière. Si une seule et même fonction lisait les caractères et vérifiait la grammaire, elle ne pourrait plus distinguer les deux, et tu recevrais un message unique, vague, du genre «&nbsp;entrée invalide&nbsp;». La leçon 2 le disait déjà en présentant le tableau des erreurs&nbsp;; ici on en voit la cause architecturale.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="La chaîne qui va des caractères à l'arbre, en cinq boîtes reliées de gauche à droite par des flèches. La première boîte contient les caractères, avec la mention 18 caractères, espaces compris. Une flèche mène à la deuxième boîte, l'analyse lexicale, sous laquelle figurent les mentions expressions régulières et mémoire bornée ; au-dessus d'elle, une accolade en pointillés porte l'étiquette RÉGULIER. Une flèche mène à la troisième boîte, les jetons, sous laquelle figurent les mentions 6 jetons et plus aucun espace. Une flèche mène à la quatrième boîte, l'analyse syntaxique, sous laquelle figurent les mentions descente récursive et une pile ; au-dessus d'elle, une seconde accolade en pointillés porte l'étiquette HORS-CONTEXTE. Une dernière flèche mène à la cinquième boîte, l'arbre, sous laquelle figurent les mentions structure emboîtée et priorités inscrites. Quatre lignes de légende closent le dessin : le lexique n'a aucune imbrication, un automate fini y suffit, c'est du régulier ; la syntaxe imbrique sans limite, il faut une pile, c'est du hors-contexte ; la coupure entre les deux étapes tombe exactement sur la frontière des deux classes, établie à la leçon 3. Une dernière mention indique que l'analyseur syntaxique ne voit jamais un caractère et que l'analyseur lexical ne voit jamais un arbre.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Des caractères à l'arbre : deux étapes, deux classes de langages</text>
+
+    <text class="d-tag" x="190" y="56" text-anchor="middle" font-size="9.5">RÉGULIER</text>
+    <path class="d-line" d="M138 76 L138 64 L242 64 L242 76" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="450" y="56" text-anchor="middle" font-size="9.5">HORS-CONTEXTE</text>
+    <path class="d-line" d="M398 76 L398 64 L502 64 L502 76" fill="none" stroke-dasharray="4 3" />
+
+    <rect class="d-accent" x="8" y="76" width="104" height="48" rx="8" /><text class="d-text" x="60" y="105" text-anchor="middle" font-size="10.5">caractères</text>
+    <rect class="d-box" x="138" y="76" width="104" height="48" rx="8" /><text class="d-text" x="190" y="98" text-anchor="middle" font-size="10.5">analyse</text><text class="d-text" x="190" y="112" text-anchor="middle" font-size="10.5">lexicale</text>
+    <rect class="d-box" x="268" y="76" width="104" height="48" rx="8" /><text class="d-text" x="320" y="105" text-anchor="middle" font-size="10.5">jetons</text>
+    <rect class="d-box" x="398" y="76" width="104" height="48" rx="8" /><text class="d-text" x="450" y="98" text-anchor="middle" font-size="10.5">analyse</text><text class="d-text" x="450" y="112" text-anchor="middle" font-size="10.5">syntaxique</text>
+    <rect class="d-accent" x="528" y="76" width="104" height="48" rx="8" /><text class="d-text" x="580" y="105" text-anchor="middle" font-size="10.5">arbre</text>
+
+    <path class="d-line" d="M112 100 L134 100" fill="none" /><path class="d-line" d="M128 96 L134 100 L128 104" fill="none" />
+    <path class="d-line" d="M242 100 L264 100" fill="none" /><path class="d-line" d="M258 96 L264 100 L258 104" fill="none" />
+    <path class="d-line" d="M372 100 L394 100" fill="none" /><path class="d-line" d="M388 96 L394 100 L388 104" fill="none" />
+    <path class="d-line" d="M502 100 L524 100" fill="none" /><path class="d-line" d="M518 96 L524 100 L518 104" fill="none" />
+
+    <text class="d-mut" x="60" y="140" text-anchor="middle" font-size="8.5">18 caractères</text><text class="d-mut" x="60" y="152" text-anchor="middle" font-size="8.5">espaces compris</text>
+    <text class="d-mut" x="190" y="140" text-anchor="middle" font-size="8.5">expressions régulières</text><text class="d-mut" x="190" y="152" text-anchor="middle" font-size="8.5">mémoire bornée</text>
+    <text class="d-mut" x="320" y="140" text-anchor="middle" font-size="8.5">6 jetons</text><text class="d-mut" x="320" y="152" text-anchor="middle" font-size="8.5">plus aucun espace</text>
+    <text class="d-mut" x="450" y="140" text-anchor="middle" font-size="8.5">descente récursive</text><text class="d-mut" x="450" y="152" text-anchor="middle" font-size="8.5">une pile</text>
+    <text class="d-mut" x="580" y="140" text-anchor="middle" font-size="8.5">structure emboîtée</text><text class="d-mut" x="580" y="152" text-anchor="middle" font-size="8.5">priorités inscrites</text>
+
+    <text class="d-mut" x="320" y="186" text-anchor="middle" font-size="9">Le lexique n'a aucune imbrication : un automate fini y suffit — c'est du RÉGULIER.</text>
+    <text class="d-mut" x="320" y="202" text-anchor="middle" font-size="9">La syntaxe imbrique sans limite : il faut une pile — c'est du HORS-CONTEXTE.</text>
+    <text class="d-mut" x="320" y="218" text-anchor="middle" font-size="9">La coupure entre les deux étapes tombe exactement sur la frontière des deux classes (leçon 3).</text>
+    <text class="d-mut" x="320" y="240" text-anchor="middle" font-size="9">L'analyseur syntaxique ne voit jamais un caractère ; l'analyseur lexical ne voit jamais un arbre.</text>
+  </svg>
+  <figcaption>La même chaîne que celle de la <a href="lecon-02.html">leçon 2</a>, resserrée sur ses deux premiers postes. Les chiffres sont ceux de notre exemple&nbsp;: <strong>18 caractères</strong> pour <code>soit prix = 12 + 3</code>, <strong>6 jetons</strong>. Chaque étape reçoit exactement ce dont elle a besoin et rien d'autre — et les deux étiquettes du haut disent pourquoi la coupure tombe là et pas ailleurs.</figcaption>
+</figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: écrire l'analyseur, ou le faire écrire</p><p>Un analyseur lexical est si régulier — au sens propre — qu'on peut le <strong>fabriquer automatiquement</strong> à partir de la seule liste des motifs. C'est le métier d'une famille d'outils appelés générateurs d'analyseurs lexicaux&nbsp;: tu leur donnes un fichier de motifs et l'action associée à chacun, ils te rendent le code d'une fonction équivalente à notre <code>jetons</code>, souvent sous forme d'une table d'états compacte. La leçon 5 de ce module — la suivante — expliquera d'où vient cette table d'états et pourquoi elle est possible ici et pas à l'étape d'après. Écrire l'analyseur à la main, comme nous venons de le faire, reste le meilleur moyen de comprendre ce qu'un tel outil fabrique&nbsp;; et pour un langage de la taille de Brindille, c'est aussi la solution la plus simple.</p></div></div>
+
+<h2>Ce que l'analyseur lexical ne décide pas</h2>
+<p>Terminons par une délimitation, parce qu'on prête souvent à cette étape des pouvoirs qu'elle n'a pas. Donne à notre analyseur le texte <code>soit prix prix prix</code>. Il produira quatre jetons&nbsp;: un <code>MOT_CLE</code> et trois <code>IDENT</code>. Sans broncher. Sans le moindre avertissement. Pourtant ce texte n'a manifestement aucun sens&nbsp;: on ne déclare pas une variable en répétant son nom trois fois.</p>
+<p>Il ne bronchera pas davantage sur <code>= = = +</code>, qui lui donnera quatre <code>SYMBOLE</code> parfaitement valides, ni sur <code>affiche affiche affiche</code>, ni sur <code>12 34 56</code>. Tous ces textes passent l'analyse lexicale sans une plainte, et tous seront refusés plus loin. L'analyseur lexical ne connaît <strong>ni la grammaire, ni les types, ni la portée des noms</strong>. Il ignore qu'une déclaration commence par <code>soit</code>&nbsp;; il ignore qu'un <code>+</code> attend quelque chose à sa gauche&nbsp;; il ignore qu'une variable doit être déclarée avant d'être lue. Ces trois savoirs appartiennent respectivement à l'analyse syntaxique, à l'analyse syntaxique encore, et à l'analyse sémantique — une et deux boîtes plus loin sur la carte de la leçon 2, qui en compte neuf.</p>
+<p>Sa question, la seule qu'il se pose, tient en cinq mots&nbsp;: <em>quelle catégorie, à partir d'ici&nbsp;?</em> Il la repose à chaque tour de boucle, en ayant tout oublié du tour précédent. Il ne se souvient de rien, ne prévoit rien, ne juge rien. C'est une machine à étiqueter, et rien d'autre.</p>
+<p>Il serait facile d'y voir une faiblesse. C'est l'inverse. Une étape qui ne sait presque rien est une étape qu'on peut <strong>tester seule</strong>&nbsp;: on lui donne un texte, on regarde la liste de jetons, on sait immédiatement si elle a raison — et c'est exactement ce que fait le programme de cette leçon. C'est une étape qu'on peut <strong>remplacer</strong> sans toucher au reste, du moment qu'elle rend la même liste. Et surtout, c'est une étape dont les <strong>messages d'erreur sont précis</strong>, parce qu'elle n'a qu'un type de reproche à formuler&nbsp;: «&nbsp;ce caractère ne commence aucun jeton&nbsp;». La leçon 2 disait la même chose en parlant du <em>vocabulaire d'erreurs</em> propre à chaque étape. Ce n'est pas une limitation subie, c'est la contrepartie voulue du découpage — et le prix de cette ignorance, ce sont des messages d'erreur qui désignent la bonne cause.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le test qui tranche&nbsp;: «&nbsp;est-ce mon problème&nbsp;?&nbsp;»</p><p>Devant une question de conception, demande-toi si l'analyseur lexical peut y répondre <strong>en regardant les caractères à partir de sa position courante, et rien d'autre</strong>. «&nbsp;Ce mot est-il un mot-clé&nbsp;?&nbsp;» — oui, une consultation de liste suffit. «&nbsp;Ce nombre est-il trop grand&nbsp;?&nbsp;» — oui, la valeur est là, sous la main. «&nbsp;Cette variable a-t-elle été déclarée&nbsp;?&nbsp;» — non&nbsp;: il faudrait se souvenir de tout ce qui précède. «&nbsp;Ce <code>+</code> a-t-il un opérande à gauche&nbsp;?&nbsp;» — non&nbsp;: il faudrait comprendre la structure de la phrase. Les deux premières questions sont lexicales, les deux suivantes ne le sont pas. Ce test simple évite le défaut le plus courant des analyseurs écrits à la main&nbsp;: y entasser peu à peu des vérifications qui appartiennent à l'étape d'après, jusqu'à ce que la frontière disparaisse et que plus personne ne sache quelle étape a produit quel message.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier de faire avancer l'indice de lecture.</strong> Chaque branche de la boucle doit consommer au moins un caractère. Une branche qui produit un jeton sans mettre <code>i</code> à jour transforme l'analyseur en boucle infinie, et le symptôme n'a rien d'évident&nbsp;: la page se fige, sans message, sans pile d'appels. Le réflexe qui protège de tout&nbsp;: relis ta boucle en te demandant, branche par branche, «&nbsp;celle-ci fait-elle avancer <code>i</code>&nbsp;?&nbsp;» — y compris la branche d'erreur, qui doit ou bien lever une exception, ou bien avancer. Il ne doit exister aucun chemin qui revienne au sommet de la boucle avec le même <code>i</code>.</p></div></div>
+<ul>
+<li><strong>Croire que l'espace est ce qui sépare les jetons</strong> — <code>12+3</code> donne trois jetons sans aucune espace, et <code>soit x</code> en donne deux parce que l'espace n'appartient à aucun motif, pas parce qu'il serait un séparateur privilégié. Ce qui délimite un jeton, c'est le motif&nbsp;; l'espace ne fait qu'interrompre celui en cours.</li>
+<li><strong>Reconnaître les mots-clés avant les identificateurs</strong> — un test <code>startsWith("soit")</code> placé en tête de boucle casse <code>soitx</code>, <code>soit_total</code> et tout nom commençant comme un mot-clé, silencieusement. Lis l'identificateur en entier, puis consulte la liste.</li>
+<li><strong>Jeter la position parce qu'elle « ne sert à rien »</strong> — elle ne sert à rien <em>au compilateur</em>. Elle sert à l'humain, et c'est le seul champ dont la disparition ne casse aucun test automatique tout en ruinant l'expérience d'utilisation. Une fois jetée, elle est irrécupérable&nbsp;: aucune étape suivante ne peut la reconstituer.</li>
+<li><strong>Faire vérifier la grammaire par l'analyseur lexical</strong> — «&nbsp;puisque je vois passer <code>soit</code>, autant vérifier tout de suite qu'un nom suit&nbsp;». C'est ainsi que les deux étapes fusionnent et que les messages d'erreur deviennent flous. Chaque étape ne doit voir que ses propres fautes.</li>
+<li><strong>Convertir la valeur trop tôt, ou jamais</strong> — notre analyseur convertit <code>"12"</code> en <code>12</code> dès la lecture. C'est commode ici&nbsp;; ce ne l'est plus si tu veux réafficher le source exactement tel qu'il était écrit, car <code>012</code> et <code>12</code> deviennent alors indiscernables. Le choix se fait en pensant à qui lira la valeur.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe ajoute un petit langage de filtres à son outil interne&nbsp;: quelques mots-clés, des noms de champs, des nombres. L'analyseur lexical est écrit en une heure, et il commence — c'est plus court — par tester les mots-clés&nbsp;: si le texte débute par <code>et</code>, produire <code>MOT_CLE(et)</code> et avancer de deux. Tout fonctionne pendant des semaines. Puis un utilisateur crée un champ nommé <code>etat</code>, et son filtre cesse d'être compris&nbsp;: le rapport de bogue dit «&nbsp;le filtre sur <em>etat</em> renvoie une erreur de syntaxe incompréhensible&nbsp;». L'équipe cherche du côté de la grammaire, puisque c'est elle qui produit le message. Elle n'y trouve rien&nbsp;: la règle qui accepte un nom de champ est correcte. Le vrai coupable est deux étapes en amont&nbsp;: <code>etat</code> avait été découpé en <code>MOT_CLE(et)</code> suivi de <code>IDENT(at)</code>, et l'analyseur syntaxique, recevant un connecteur logique là où il attendait un nom, se plaignait très exactement de ce qu'il voyait. Le message n'était pas faux&nbsp;; il décrivait fidèlement une entrée déjà abîmée. Le correctif a tenu en quatre lignes&nbsp;: lire l'identificateur complet, puis tester son appartenance à la liste des mots-clés. Deux leçons à en tirer, et la seconde vaut au-delà des compilateurs. La première&nbsp;: un mot-clé est un identificateur réservé, jamais un motif à part. La seconde&nbsp;: quand un message d'erreur décrit quelque chose que tu n'as pas écrit, ne cherche pas d'abord la faute dans l'étape qui parle — cherche <strong>qui lui a donné cette entrée</strong>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le lexique de Brindille, et ce que chaque branche de l'analyseur produit</caption>
+    <thead><tr><th scope="col">Type</th><th scope="col">Déclenché par</th><th scope="col">S'étend tant que</th><th scope="col">Exemples</th><th scope="col">Valeur portée</th></tr></thead>
+    <tbody>
+      <tr><td><code>MOT_CLE</code></td><td>une lettre ou <code>_</code></td><td>lettre, chiffre ou <code>_</code></td><td><code>soit</code>, <code>affiche</code></td><td>le mot lui-même</td></tr>
+      <tr><td><code>IDENT</code></td><td>une lettre ou <code>_</code></td><td>lettre, chiffre ou <code>_</code></td><td><code>prix</code>, <code>quantite</code>, <code>soitx</code></td><td>le nom lu</td></tr>
+      <tr><td><code>NOMBRE</code></td><td>un chiffre</td><td>chiffre</td><td><code>12</code>, <code>3</code>, <code>40</code></td><td>l'entier, converti par <code>Number</code></td></tr>
+      <tr><td><code>SYMBOLE</code></td><td>l'un de <code>+ - * / ( ) =</code></td><td>un seul caractère</td><td><code>+</code>, <code>=</code>, <code>(</code></td><td>le caractère lu</td></tr>
+      <tr><td>aucun jeton</td><td>une espace</td><td>—</td><td><code>" "</code></td><td>l'espace est lu, puis oublié</td></tr>
+      <tr><td>erreur lexicale</td><td>tout autre caractère</td><td>—</td><td><code>@</code>, <code>%</code></td><td><code>throw</code> : caractère et position</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Analyse lexicale</dt><dd>Première étape réelle de la chaîne&nbsp;: elle lit le texte caractère par caractère et produit une liste de jetons, en écartant ce que le langage juge sans portée — ici, les espaces.</dd>
+  <dt>Jeton (<em>token</em>)</dt><dd>Un lexème classé&nbsp;: le triplet <strong>type</strong> / <strong>valeur</strong> / <strong>position</strong>. C'est l'unité que manipulera l'analyseur syntaxique, qui ne verra plus jamais un caractère.</dd>
+  <dt>Lexème</dt><dd>Le morceau de texte lui-même, avant tout classement&nbsp;: les quatre caractères <code>soit</code>, les deux caractères <code>12</code>. Le jeton, c'est le lexème plus son étiquette et sa position.</dd>
+  <dt>Type de jeton</dt><dd>La catégorie grammaticale du lexème (<code>MOT_CLE</code>, <code>IDENT</code>, <code>NOMBRE</code>, <code>SYMBOLE</code>), prise dans un ensemble fini. C'est la seule information dont la grammaire a besoin pour décider.</dd>
+  <dt>Position</dt><dd>L'indice, dans le texte source, du <em>premier</em> caractère du lexème. Inutile à la grammaire et à l'évaluateur, indispensable aux messages d'erreur destinés à l'humain.</dd>
+  <dt>Lexique</dt><dd>L'ensemble des catégories de jetons d'un langage, avec le motif qui déclenche chacune. Il se décide, comme la grammaire&nbsp;: aucun découpage n'est imposé par le texte.</dd>
+  <dt>Plus longue correspondance (<em>maximal munch</em>)</dt><dd>Règle qui fait produire, à chaque position, le jeton le plus long possible. Sans elle, <code>12</code> donne deux nombres et <code>soitx</code> cinq identificateurs d'une lettre.</dd>
+  <dt>Mot-clé réservé</dt><dd>Identificateur que le langage s'est approprié (<code>soit</code>, <code>affiche</code>). On le reconnaît en lisant l'identificateur en entier, <em>puis</em> en le cherchant dans une liste — jamais l'inverse.</dd>
+  <dt>Identificateur</dt><dd>Nom choisi par l'auteur du programme (<code>prix</code>, <code>quantite</code>, <code>total2</code>)&nbsp;: il commence par une lettre ou <code>_</code>, et se poursuit par des lettres, des chiffres ou <code>_</code>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une grammaire raisonne sur des <strong>catégories</strong>, jamais sur des caractères. L'<strong>analyse lexicale</strong> est l'étape qui fabrique ces catégories à partir du texte brut.</li>
+<li>Un <strong>jeton</strong> est un triplet <strong>type / valeur / position</strong>&nbsp;: le type sert à décider, la valeur à calculer, la position à écrire des messages d'erreur lisibles.</li>
+<li>Le <strong>lexique</strong> se décide. Brindille regroupe ses sept symboles sous un type unique&nbsp;; on aurait tout aussi bien pu en faire sept types distincts, et la grammaire de la leçon 3 le suggérait.</li>
+<li>La règle de la <strong>plus longue correspondance</strong> tranche à chaque position&nbsp;: sans elle, <code>12</code> devient <strong>deux</strong> nombres et <code>soitx</code> <strong>cinq</strong> identificateurs — c'est mesuré, six lignes de sortie.</li>
+<li>Un <strong>mot-clé</strong> se reconnaît en lisant l'identificateur entier <em>puis</em> en consultant une liste. Le tester avec <code>startsWith</code> casse <code>soitx</code>, silencieusement.</li>
+<li>L'étape est séparée parce que le lexique est <strong>régulier</strong> et la syntaxe <strong>hors-contexte</strong> (<a href="lecon-03.html">leçon 3</a>), parce que 29 caractères deviennent 8 jetons sans espaces, et parce que les deux familles d'erreurs ne se ressemblent pas.</li>
+<li>L'analyseur lexical ne connaît <strong>ni la grammaire, ni les types, ni la portée</strong>. Cette ignorance est ce qui rend l'étape testable seule et ses messages précis.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Donne les trois champs d'un jeton et, pour chacun, l'étape de la chaîne qui le lira. Lequel n'est lu par aucune étape, et pourquoi le garde-t-on quand même&nbsp;?</li>
+<li>Explique, sans regarder le code, pourquoi <code>soitx</code> doit produire un seul jeton alors que <code>soit x</code> en produit deux. Quelle unique règle assure les deux&nbsp;?</li>
+<li>Un collègue propose de supprimer l'analyse lexicale et de faire lire les caractères directement par l'analyseur syntaxique. Donne-lui trois arguments contre, dont un qui ne parle ni de vitesse ni de confort d'écriture.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qu'un jeton produit par l'analyse lexicale ?","a":["Un triplet : un type (la catégorie), une valeur (le lexème lu, éventuellement converti) et une position dans le texte","Un caractère du texte source, rangé dans un tableau avec l'indice exact auquel il a été lu par l'analyseur","Une règle de la grammaire du langage, accompagnée de la liste des symboles terminaux qu'elle autorise","Un noeud de l'arbre de syntaxe, muni de ses deux opérandes et de l'opérateur qui les relie l'un à l'autre"],"correct":0,"explain":"Le type sert à décider (l'analyse syntaxique ne regarde que lui), la valeur sert à calculer plus loin dans la chaîne, la position sert aux messages d'erreur. Le jeton est le lexème une fois classé, pas un caractère et pas un noeud d'arbre."},
+  {"q":"Pourquoi conserver la position d'un jeton, alors que la grammaire ne s'en sert jamais ?","a":["Parce qu'elle est la seule information qui permettra ensuite de situer une erreur dans le texte que l'humain a écrit","Parce que l'analyseur syntaxique relit les jetons dans l'ordre de leurs positions, et non dans l'ordre du tableau produit","Parce que la position sert à départager le type lorsque deux catégories du lexique reconnaissent le même texte","Parce qu'un jeton privé de sa position occuperait davantage de mémoire une fois le tableau complet construit"],"correct":0,"explain":"Ni la grammaire ni l'évaluateur ne lisent la position : son unique client est l'être humain qui lira le message d'erreur. C'est pour cela qu'on ne la jette pas — une fois perdue, aucune étape suivante ne peut la reconstituer."},
+  {"q":"Que doit produire un analyseur lexical correct sur le texte « soitx », sachant que « soit » est un mot-clé ?","a":["Un seul jeton IDENT de valeur soitx : à chaque position, l'analyseur prend le plus long jeton possible","Le mot-clé MOT_CLE soit suivi de l'identificateur IDENT x, puisque le texte commence par les lettres de soit","Une erreur lexicale, car un identificateur n'a pas le droit de commencer par les lettres d'un mot-clé réservé","Cinq jetons IDENT d'une seule lettre chacun, l'analyseur ne regroupant les lettres qu'à l'étape suivante"],"correct":0,"explain":"C'est la règle de la plus longue correspondance : on lit l'identificateur entier, puis on consulte la liste des mots-clés. « soitx » n'y figure pas, il reste IDENT. La même règle donne bien MOT_CLE + IDENT sur « soit x »."},
+  {"q":"Quelle est la raison la plus profonde de séparer l'analyse lexicale de l'analyse syntaxique ?","a":["Le lexique est régulier, sans imbrication, alors que la syntaxe est hors-contexte : deux classes de langages, deux outils","Une expression régulière est toujours plus rapide qu'une fonction récursive, quels que soient le texte analysé et sa taille","L'analyseur syntaxique ne sait pas lire un fichier de texte : il lui faut un tableau déjà entièrement construit en mémoire","La définition d'un langage impose de produire un fichier de jetons intermédiaire avant de lancer la moindre analyse"],"correct":0,"explain":"La leçon 3 a mesuré la frontière : un automate fini ne sait pas compter une profondeur, une pile le sait. Aucun jeton n'en contient un autre, donc le lexique est régulier ; les expressions parenthésées ne le sont pas. La coupure suit cette frontière."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"4"},"placeholder":"écris jetons(txt) puis affiche jetons(\"soit a = 1\").length","hints":["Une boucle while sur un indice i : si le caractère courant est une espace, avance de un et ne produis rien.","Pour un chiffre ou une lettre, ouvre un second indice j et pousse-le tant que la catégorie tient, puis empile txt.slice(i, j) : c'est la plus longue correspondance.","Tout autre caractère fait un jeton d'un seul caractère. Sur « soit a = 1 » tu dois obtenir soit, a, = et 1."],"link":{"href":"lecon-04.html","label":"Revoir « Écrire l'analyseur, à la main »"}},
+  {"type":"text","accept":["jeton","jetons","un jeton","le jeton","token","tokens","un token"],"placeholder":"un lexème une fois classé — type, valeur, position — s'appelle un j____","hints":["C'est ce que l'analyse lexicale produit, et la seule chose que l'analyse syntaxique verra.","Le mot anglais, celui des messages d'erreur, est « token ».","Cinq lettres en français : j_t_n."],"link":{"href":"lecon-04.html","label":"Revoir « Ce qu'est un jeton »"}},
+  {"type":"text","accept":["plus longue correspondance","la plus longue correspondance","plus longue correspondance possible","maximal munch","le maximal munch","regle du plus long jeton","règle du plus long jeton","plus long jeton","le plus long jeton","longest match"],"placeholder":"la règle qui fait prendre, à chaque position, le jeton le plus long possible s'appelle la p___ l_____ c_____________","hints":["Sans elle, « 12 » donne deux nombres et « soitx » cinq identificateurs d'une lettre.","Dans le code, elle est écrite dans la boucle « avance tant que tu peux » qui pousse le second indice j vers la droite.","Trois mots en français, deux en anglais : maximal munch."],"link":{"href":"lecon-04.html","label":"Revoir « La règle qui tient tout : la plus longue correspondance »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une fonction <code>jetons(txt)</code> — version simplifiée&nbsp;: les espaces sont ignorés, les nombres et les identificateurs sont pris <strong>aussi longs que possible</strong>, et tout autre caractère fait un jeton d'un seul caractère. Elle rend un tableau de textes, sans type ni position. Affiche ensuite <code>jetons("soit a = 1").length</code>. Avant de lancer&nbsp;: combien de jetons attends-tu&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// jetons(txt) : version simplifiee de l'analyseur — les espaces sont ignores,
+// les nombres et les identifiants sont pris AUSSI LONGS QUE POSSIBLE, et tout
+// autre caractere fait un jeton d'un seul caractere.
+function jetons(txt) {
+  const sortie = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    const c = txt[i];
+    if (c === " ") { i++; continue; }            // l'espace separe, il ne produit rien
+    if (/[0-9]/.test(c)) {                       // un NOMBRE : on avance tant qu'il y a des chiffres
+      let j = i;
+      while (j &lt; txt.length &amp;&amp; /[0-9]/.test(txt[j])) j++;
+      sortie.push(txt.slice(i, j)); i = j; continue;
+    }
+    if (/[a-z_]/i.test(c)) {                     // un IDENTIFIANT : lettre, puis lettres/chiffres/_
+      let j = i;
+      while (j &lt; txt.length &amp;&amp; /[a-z0-9_]/i.test(txt[j])) j++;
+      sortie.push(txt.slice(i, j)); i = j; continue;
+    }
+    sortie.push(c); i++;                         // un SYMBOLE : un seul caractere
+  }
+  return sortie;
+}
+
+console.log(jetons("soit a = 1").length); // affiche : 4</code></pre></figure>
+<p>Les quatre jetons sont <code>soit</code>, <code>a</code>, <code>=</code> et <code>1</code>&nbsp;: en remplaçant la dernière ligne par <code>console.log(jetons("soit a = 1"))</code>, tu obtiens le tableau <code>["soit","a","=","1"]</code>. Le point à retenir est le rôle des <strong>deux indices</strong>&nbsp;: <code>i</code> marque le début du lexème, <code>j</code> explore vers la droite tant que la catégorie tient. C'est ce couple, et lui seul, qui applique la règle de la plus longue correspondance&nbsp;; supprime la boucle sur <code>j</code> et <code>soit</code> redevient quatre jetons d'une lettre.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Sans rien exécuter, découpe à la main le texte <code>soitx = affichette + 40</code> avec le lexique de Brindille. Pour chaque jeton, donne son <strong>type</strong>, sa <strong>valeur</strong> et sa <strong>position</strong>. Attention aux deux pièges&nbsp;: <code>soitx</code> commence comme le mot-clé <code>soit</code>, et <code>affichette</code> commence comme le mot-clé <code>affiche</code>. Vérifie ensuite ta réponse en remplaçant la source du bloc «&nbsp;Écrire l'analyseur, à la main&nbsp;» par ce texte.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">nombre de jetons : 5
+ 0 IDENT    soitx
+ 6 SYMBOLE  =
+ 8 IDENT    affichette
+19 SYMBOLE  +
+21 NOMBRE   40</code></pre></figure>
+<p>Cinq jetons, et <strong>aucun</strong> <code>MOT_CLE</code>. C'est tout l'intérêt de l'exercice&nbsp;: <code>soitx</code> et <code>affichette</code> commencent chacun comme un mot-clé, mais la lecture du plus long identificateur donne des mots qui ne figurent pas dans la liste — ils restent donc des <code>IDENT</code>. Vérifie aussi les positions&nbsp;: <code>affichette</code> commence en 8 et fait dix caractères, donc le <code>+</code> qui suit l'espace tombe en 19, et <code>40</code> en 21. Un analyseur qui aurait testé les mots-clés en premier aurait rendu sept jetons, dont <strong>quatre</strong> introuvables dans le découpage correct&nbsp;: <code>MOT_CLE:soit</code>, <code>IDENT:x</code>, <code>MOT_CLE:affiche</code> et <code>IDENT:tte</code>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Brindille gagne un opérateur de comparaison&nbsp;: <code>==</code>, deux caractères, <strong>un seul</strong> jeton. Écris un découpeur qui le reconnaît, et démontre par une exécution que la règle de la plus longue correspondance est ce qui le rend possible&nbsp;: le même code, privé de l'essai à deux caractères, doit rendre deux jetons <code>=</code> au lieu d'un. Vérifie au passage que <code>a = b</code>, lui, n'est pas abîmé. Question à te poser avant d'écrire&nbsp;: dans quel <strong>ordre</strong> faut-il tester les deux longueurs&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Brindille gagne un operateur de comparaison : "==". Deux caracteres, un seul jeton.
+const DOUBLES = ["=="];
+const SIMPLES = "+-*/()=";
+
+// plusLong = true : on essaie D'ABORD l'operateur de deux caracteres.
+function symboles(txt, plusLong) {
+  const out = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    if (txt[i] === " ") { i++; continue; }
+    if (plusLong &amp;&amp; DOUBLES.includes(txt.slice(i, i + 2))) {
+      out.push("EGALITE:" + txt.slice(i, i + 2)); i += 2; continue;
+    }
+    if (SIMPLES.includes(txt[i])) { out.push("SYMBOLE:" + txt[i]); i++; continue; }
+    let j = i;
+    while (j &lt; txt.length &amp;&amp; /[a-z0-9_]/i.test(txt[j])) j++;
+    out.push("IDENT:" + txt.slice(i, j)); i = j;
+  }
+  return out;
+}
+
+for (const src of ["a == b", "a = b"]) {
+  console.log(JSON.stringify(src).padEnd(8), "| plus longue :", symboles(src, true).join(" "));
+  console.log(JSON.stringify(src).padEnd(8), "| un caractere:", symboles(src, false).join(" "));
+}
+// affiche : "a == b" | plus longue : IDENT:a EGALITE:== IDENT:b
+// affiche : "a == b" | un caractere: IDENT:a SYMBOLE:= SYMBOLE:= IDENT:b
+// affiche : "a = b"  | plus longue : IDENT:a SYMBOLE:= IDENT:b
+// affiche : "a = b"  | un caractere: IDENT:a SYMBOLE:= IDENT:b</code></pre></figure>
+<p>Regarde les deux premières lignes&nbsp;: sur <code>a == b</code>, la version qui essaie d'abord les deux caractères rend <code>EGALITE:==</code>&nbsp;; celle qui n'essaie qu'un caractère rend <strong>deux</strong> <code>SYMBOLE:=</code> — c'est-à-dire deux affectations à la suite, ce qui n'a aucun sens. Les deux dernières lignes sont la contre-épreuve indispensable&nbsp;: sur <code>a = b</code>, les deux versions donnent <em>le même</em> résultat, car <code>"= "</code> ne figure pas dans <code>DOUBLES</code> et l'essai long échoue proprement. La réponse à la question posée est donc&nbsp;: <strong>du plus long au plus court</strong>. C'est le même principe que pour les mots-clés, appliqué aux opérateurs — et c'est ainsi que, dans les langages qui les possèdent, un analyseur distingue <code>=</code> de <code>==</code> ou <code>+</code> de <code>+=</code>&nbsp;: il tente toujours la plus grosse bouchée en premier.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

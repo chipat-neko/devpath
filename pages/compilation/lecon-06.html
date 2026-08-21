@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Espaces, commentaires et erreurs lexicales — Leçon 06 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="Ce que l'analyse lexicale jette et pourquoi : espaces, sauts de ligne et commentaires, mesurés à 65 % d'un fichier ; le motif gourmand qui fait disparaître du code sans erreur ; les commentaires imbriqués, qui ne sont pas un langage régulier ; et la traduction d'un indice brut en « ligne 2, colonne 19 », avec le repère placé sous le caractère fautif." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Analyse lexicale — Leçon 06</p>
+              <h1 class="lesson-header__title">Espaces, commentaires et erreurs lexicales</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~54 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : les leçons 4 et 5 de ce cours — les jetons, et la table de motifs collants</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>reconnaître espaces, sauts de ligne et <strong>commentaires</strong> par des règles ordinaires de la table, puis décider — séparément — de les <strong>jeter, garder ou ranger à part</strong>&nbsp;;</li>
+                  <li>éviter le motif <strong>gourmand</strong>, qui fait disparaître du code entre deux commentaires sans lever la moindre erreur&nbsp;;</li>
+                  <li>dire pourquoi des commentaires <strong>imbriqués</strong> ne sont pas un langage régulier, et écrire la règle à compteur qui les traite&nbsp;;</li>
+                  <li>traduire l'indice brut d'un jeton en «&nbsp;<strong>ligne L, colonne C</strong>&nbsp;» et composer un message d'erreur qui <em>montre</em> l'endroit fautif.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Ouvre n'importe quel fichier source qui a vécu un peu, et compte. Les espaces d'indentation, les lignes vides entre les fonctions, les commentaires qui expliquent l'intention&nbsp;: dans un fichier écrit avec soin, tout cela occupe souvent la moitié des caractères. Or rien de tout cela n'atteindra jamais l'analyseur syntaxique. Les <a href="lecon-04.html">leçons 4</a> et <a href="lecon-05.html">5</a> l'ont déjà montré sur une ligne&nbsp;: les espaces sont lus, puis oubliés. Cette leçon-ci prend le problème pour lui-même, parce qu'il est plus riche qu'il n'en a l'air.</p>
+<p>Trois questions l'occupent, et aucune n'a de réponse évidente. La première&nbsp;: comment reconnaître un <strong>commentaire</strong>, sachant qu'un caractère de trop dans le motif fait disparaître du code sans le moindre message&nbsp;? La deuxième&nbsp;: que faire quand un commentaire en contient un autre — nous y retrouverons, dans notre propre lexique, la frontière que la <a href="lecon-03.html">leçon 3</a> avait tracée en théorie. La troisième&nbsp;: comment transformer l'indice brut conservé dans chaque jeton en un message que l'on peut lire, du genre «&nbsp;<em>ligne 2, colonne 19</em>&nbsp;». C'est la promesse faite à la leçon 4, et nous la tiendrons&nbsp;: à la fin de cette leçon, notre analyseur ne dira plus «&nbsp;erreur en position 33&nbsp;», il montrera l'endroit.</p>
+
+<h2>Ce que le fichier contient et que personne ne lira</h2>
+<p>Commençons par mesurer, parce que l'intuition se trompe sur les proportions. Voici notre analyseur augmenté de trois règles&nbsp;: les espaces s'étendent maintenant aux tabulations et aux <strong>sauts de ligne</strong>, un commentaire de ligne commence par <code>#</code> et court jusqu'au bout de la ligne, un commentaire de bloc s'ouvre par <code>(*</code> et se ferme par <code>*)</code>. La boucle, elle, ne change presque pas&nbsp;: elle gagne une liste <code>IGNORES</code>, et c'est tout.</p>
+
+<figure class="code-block" data-file="ignores.js"><pre><code class="language-javascript">// Brindille apprend a ignorer : espaces, sauts de ligne et commentaires.
+// La table gagne trois regles, et la boucle une seule notion : IGNORES.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+
+function jetons(txt) {
+  const sortie = [];
+  let i = 0, ignores = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (IGNORES.includes(regle.type)) ignores += m[0].length;   // lu, compte, jete
+      else {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex;
+      avance = true;
+      break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return { sortie, ignores };
+}
+
+const source = [
+  "# le prix unitaire",
+  "soit prix = 12",
+  "soit total = prix * 3   (* trois articles *)",
+].join("\n");
+
+const r = jetons(source);
+console.log("caracteres en entree :", source.length);
+console.log("caracteres ignores   :", r.ignores);
+console.log("jetons produits      :", r.sortie.length);
+// affiche : caracteres en entree : 78
+// affiche : caracteres ignores   : 51
+// affiche : jetons produits      : 10</code></pre></figure>
+
+<p><strong>78 caractères en entrée, 51 ignorés.</strong> Soit <strong>65&nbsp;%</strong> du fichier — près de deux tiers — qui traversent l'analyseur sans laisser la moindre trace, et cela sur trois lignes seulement, dont un unique commentaire de chaque sorte. Les dix jetons qui sortent ne représentent que le tiers restant. Ce n'est pas un cas tordu&nbsp;: c'est la proportion ordinaire d'un fichier commenté et indenté.</p>
+<p>Regarde maintenant comment ce tri est <em>écrit</em>, car c'est là que se joue la qualité du code. Il n'y a pas de branche spéciale, pas de <code>if</code> placé avant la boucle pour «&nbsp;nettoyer&nbsp;» le texte. Les trois catégories ignorées sont des <strong>règles ordinaires</strong> de la table&nbsp;: elles ont un motif, elles sont essayées dans le même ordre, elles avancent le curseur comme les autres. La seule différence tient dans une ligne&nbsp;: <code>if (IGNORES.includes(regle.type))</code>, qui décide de <em>ranger ou non</em> le résultat. Reconnaître et conserver sont deux gestes distincts, et les séparer est ce qui rend la suite possible.</p>
+<p>Cette distinction n'est pas gratuite&nbsp;: elle laisse trois politiques ouvertes, et les vrais langages les emploient toutes les trois. On peut <strong>jeter</strong> — c'est notre choix, et celui de la grande majorité des langages. On peut <strong>garder</strong> le jeton et le rendre significatif — c'est ce que fait Python, où l'indentation en début de ligne porte la structure des blocs. On peut enfin <strong>ranger à part</strong>, dans une liste annexe attachée aux jetons voisins&nbsp;: c'est indispensable à tout outil qui doit réécrire le fichier sans l'abîmer — un formateur automatique, un outil de renommage, un éditeur qui replie le code. Sans cette troisième voie, passer un fichier dans un formateur en effacerait tous les commentaires.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Les trois politiques possibles pour les espaces et les commentaires, présentées en trois colonnes côte à côte. Chaque colonne part de la même boîte du haut, intitulée la règle a reconnu un espace ou un commentaire. La première colonne, intitulée jeter, indique que rien n'est rangé et que le curseur avance seulement ; elle est marquée comme le choix de Brindille et de la plupart des langages, et sa conséquence est que l'étape suivante ne saura jamais que ce texte a existé. La deuxième colonne, intitulée garder, indique que le jeton est rangé comme les autres et devient significatif ; elle cite l'indentation de Python, qui porte la structure des blocs, et sa conséquence est que la grammaire doit alors en tenir compte. La troisième colonne, intitulée ranger à part, indique que le texte est conservé dans une liste annexe attachée aux jetons voisins ; elle cite les formateurs automatiques et les outils de renommage, et sa conséquence est que le fichier peut être réécrit sans perdre ni les commentaires ni la mise en forme. Une ligne de légende conclut que le mécanisme de reconnaissance est le même dans les trois cas et que seule change la décision de conserver.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Reconnaître et conserver sont deux gestes distincts : trois politiques</text>
+
+    <rect class="d-box" x="180" y="34" width="280" height="30" rx="8" /><text class="d-text" x="320" y="54" text-anchor="middle" font-size="10">la règle a reconnu un espace ou un commentaire</text>
+    <path class="d-line" d="M320 64 L320 78" fill="none" />
+    <path class="d-line" d="M110 78 L530 78" fill="none" />
+    <path class="d-line" d="M110 78 L110 92" fill="none" /><path class="d-line" d="M106 86 L110 92 L114 86" fill="none" />
+    <path class="d-line" d="M320 78 L320 92" fill="none" /><path class="d-line" d="M316 86 L320 92 L324 86" fill="none" />
+    <path class="d-line" d="M530 78 L530 92" fill="none" /><path class="d-line" d="M526 86 L530 92 L534 86" fill="none" />
+
+    <rect class="d-accent" x="18" y="92" width="184" height="34" rx="8" /><text class="d-text" x="110" y="107" text-anchor="middle" font-size="10.5">JETER</text><text class="d-mut" x="110" y="120" text-anchor="middle" font-size="8">rien n'est rangé, le curseur avance</text>
+    <rect class="d-box" x="228" y="92" width="184" height="34" rx="8" /><text class="d-text" x="320" y="107" text-anchor="middle" font-size="10.5">GARDER</text><text class="d-mut" x="320" y="120" text-anchor="middle" font-size="8">le jeton devient significatif</text>
+    <rect class="d-box" x="438" y="92" width="184" height="34" rx="8" /><text class="d-text" x="530" y="107" text-anchor="middle" font-size="10.5">RANGER À PART</text><text class="d-mut" x="530" y="120" text-anchor="middle" font-size="8">dans une liste annexe</text>
+
+    <text class="d-tag" x="110" y="150" text-anchor="middle" font-size="9">Brindille, et la plupart</text>
+    <text class="d-tag" x="320" y="150" text-anchor="middle" font-size="9">l'indentation de Python</text>
+    <text class="d-tag" x="530" y="150" text-anchor="middle" font-size="9">formateurs, renommage</text>
+
+    <text class="d-mut" x="110" y="176" text-anchor="middle" font-size="8.5">l'étape suivante ne saura</text>
+    <text class="d-mut" x="110" y="188" text-anchor="middle" font-size="8.5">jamais que ce texte a existé</text>
+    <text class="d-mut" x="320" y="176" text-anchor="middle" font-size="8.5">la grammaire doit</text>
+    <text class="d-mut" x="320" y="188" text-anchor="middle" font-size="8.5">alors en tenir compte</text>
+    <text class="d-mut" x="530" y="176" text-anchor="middle" font-size="8.5">le fichier se réécrit sans perdre</text>
+    <text class="d-mut" x="530" y="188" text-anchor="middle" font-size="8.5">ni commentaires ni mise en forme</text>
+
+    <text class="d-mut" x="320" y="222" text-anchor="middle" font-size="9">Le mécanisme de reconnaissance est le même dans les trois cas.</text>
+    <text class="d-mut" x="320" y="238" text-anchor="middle" font-size="9">Seule change la décision de conserver — une ligne dans la boucle.</text>
+  </svg>
+  <figcaption>La même règle, trois destins. C'est pour cela qu'il vaut la peine de traiter les espaces comme une catégorie ordinaire plutôt que comme un cas particulier&nbsp;: changer de politique redevient une décision d'une ligne, au lieu d'une réécriture.</figcaption>
+</figure>
+
+<h2>Le commentaire, et l'étoile qui change tout</h2>
+<p>Passons au motif du commentaire de bloc, car il cache le piège le plus coûteux de toute l'analyse lexicale. Notre règle s'écrit <code>/\(\*[\s\S]*?\*\)/y</code>. Décomposons&nbsp;: <code>\(\*</code> reconnaît l'ouverture <code>(*</code> — les deux caractères sont échappés parce que la parenthèse et l'étoile ont un sens spécial dans une expression régulière. <code>[\s\S]</code> veut dire «&nbsp;n'importe quel caractère, saut de ligne compris&nbsp;» — un simple point ne suffirait pas, car le point exclut les sauts de ligne, et un commentaire de bloc en contient. <code>\*\)</code> reconnaît la fermeture.</p>
+<p>Reste le caractère qui décide de tout&nbsp;: le <strong><code>?</code></strong> qui suit l'étoile de répétition. Il rend la répétition <em>non gourmande</em> — «&nbsp;prends-en le moins possible&nbsp;». Sans lui, elle est <em>gourmande</em>&nbsp;: «&nbsp;prends-en le plus possible&nbsp;». Un caractère de différence. Mesurons ce qu'il coûte sur un texte qui contient <strong>deux</strong> commentaires.</p>
+
+<figure class="code-block" data-file="gourmand.js"><pre><code class="language-javascript">// Gourmand ou non gourmand : une etoile de difference, et du CODE qui disparait.
+const NON_GOURMAND = /\(\*[\s\S]*?\*\)/y;   // s'arrete au PREMIER "*)"
+const GOURMAND     = /\(\*[\s\S]*\*\)/y;    // s'etire jusqu'au DERNIER "*)"
+
+function analyse(txt, motifCommentaire) {
+  const REGLES = [
+    { type: "ESPACE",      motif: /[ \t\r\n]+/y },
+    { type: "COMMENTAIRE", motif: motifCommentaire },
+    { type: "NOMBRE",      motif: /[0-9]+/y },
+    { type: "IDENT",       motif: /[a-z_][a-z0-9_]*/y },
+    { type: "SYMBOLE",     motif: /[-+*\/()=]/y },
+  ];
+  const out = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const r of REGLES) {
+      r.motif.lastIndex = i;
+      const m = r.motif.exec(txt);
+      if (!m) continue;
+      if (r.type !== "ESPACE" &amp;&amp; r.type !== "COMMENTAIRE") out.push(m[0]);
+      i = r.motif.lastIndex;
+      avance = true;
+      break;
+    }
+    if (!avance) return { out, bute: i };
+  }
+  return { out, bute: -1 };
+}
+
+const src = "soit a = 1 (* un *) soit b = 2 (* deux *) soit c = 3";
+for (const [nom, motif] of [["non gourmand", NON_GOURMAND], ["gourmand    ", GOURMAND]]) {
+  const r = analyse(src, motif);
+  console.log(nom, "| jetons :", String(r.out.length).padStart(2), "|", r.out.join(" "));
+}
+// affiche : non gourmand | jetons : 12 | soit a = 1 soit b = 2 soit c = 3
+// affiche : gourmand     | jetons :  8 | soit a = 1 soit c = 3</code></pre></figure>
+
+<p>Lis la seconde ligne jusqu'au bout. La déclaration <code>soit b = 2</code> <strong>n'est plus là</strong>. Elle n'a pas été mal découpée&nbsp;: elle a <em>disparu</em>. Le motif gourmand a ouvert son commentaire au premier <code>(*</code>, puis s'est étiré jusqu'au <em>dernier</em> <code>*)</code> du texte, avalant au passage les trente caractères du milieu — les deux commentaires <em>et</em> la déclaration coincée entre eux. Douze jetons contre huit&nbsp;: quatre jetons se sont évaporés, et avec eux une instruction entière.</p>
+<p>Ce qui rend ce défaut redoutable, c'est qu'il ne produit <strong>aucune erreur</strong>. Le fichier est accepté. Il compile. Il s'exécute. Simplement, la variable <code>b</code> n'existe pas — et le message que tu recevras, bien plus tard, parlera d'une variable inconnue, à un endroit qui n'a rien à voir avec la vraie cause. C'est le mode de défaillance le plus coûteux qui soit&nbsp;: un programme <em>différent</em> de ce que tu as écrit, obtenu sans le moindre avertissement. Un caractère dans un motif.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 236" role="img" aria-label="Comparaison de deux découpages du même texte, soit a égale 1, commentaire un, soit b égale 2, commentaire deux, soit c égale 3. Le texte est représenté par une longue bande horizontale de cinquante-deux caractères, avec les positions repérées en dessous. Dans la première bande, intitulée non gourmand, deux zones sombres marquent les deux commentaires, l'une des positions 11 à 19, l'autre des positions 31 à 41 ; entre elles, la portion des positions 20 à 30, qui contient la déclaration soit b égale 2, reste claire et produit donc des jetons. Le verdict de cette bande est douze jetons. Dans la seconde bande, intitulée gourmand, une seule zone sombre s'étend d'un seul tenant de la position 11 à la position 41 : elle recouvre les deux commentaires et, entre eux, la déclaration soit b égale 2, qui est ainsi absorbée. Le verdict de cette bande est huit jetons, et la déclaration du milieu a disparu sans qu'aucune erreur ne soit signalée. Une légende finale précise que la seule différence entre les deux motifs est un point d'interrogation, qui demande à la répétition de prendre le moins de caractères possible.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un « ? » de différence : ce que le motif avale</text>
+    <text class="d-mut" x="320" y="38" text-anchor="middle" font-size="9">soit a = 1 (* un *) soit b = 2 (* deux *) soit c = 3</text>
+
+    <text class="d-tag" x="34" y="70" font-size="9.5">NON GOURMAND</text>
+    <rect class="d-box" x="40" y="76" width="520" height="30" rx="4" />
+    <rect class="d-accent" x="150" y="76" width="80" height="30" rx="4" />
+    <rect class="d-accent" x="350" y="76" width="100" height="30" rx="4" />
+    <text class="d-text" x="290" y="95" text-anchor="middle" font-size="9">soit b = 2</text>
+    <text class="d-mut" x="150" y="120" text-anchor="middle" font-size="7.5">11</text>
+    <text class="d-mut" x="230" y="120" text-anchor="middle" font-size="7.5">19</text>
+    <text class="d-mut" x="350" y="120" text-anchor="middle" font-size="7.5">31</text>
+    <text class="d-mut" x="450" y="120" text-anchor="middle" font-size="7.5">41</text>
+    <text class="d-mut" x="576" y="95" font-size="9">12 jetons</text>
+
+    <text class="d-tag" x="34" y="152" font-size="9.5">GOURMAND</text>
+    <rect class="d-box" x="40" y="158" width="520" height="30" rx="4" />
+    <rect class="d-accent" x="150" y="158" width="300" height="30" rx="4" />
+    <text class="d-text" x="300" y="177" text-anchor="middle" font-size="9">tout ceci est pris pour un seul commentaire</text>
+    <text class="d-mut" x="150" y="202" text-anchor="middle" font-size="7.5">11</text>
+    <text class="d-mut" x="450" y="202" text-anchor="middle" font-size="7.5">41</text>
+    <text class="d-mut" x="576" y="177" font-size="9">8 jetons</text>
+
+    <text class="d-mut" x="320" y="224" text-anchor="middle" font-size="9">« soit b = 2 » a disparu du programme, et aucune erreur n'a été signalée.</text>
+  </svg>
+  <figcaption>Les zones sombres sont ce que le motif considère comme un commentaire. À gauche du dessin comme à droite, le texte est le même&nbsp;; seul le <code>?</code> a été retiré. Il suffit à faire tomber la déclaration du milieu dans la zone jetée — et le compilateur n'aura rien à redire, puisqu'il n'aura jamais vu cette déclaration.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le test qui aurait attrapé le bogue</p><p>Le motif gourmand se comporte parfaitement tant qu'il n'y a <strong>qu'un seul</strong> commentaire dans le texte. C'est précisément pour cela qu'il survit aux essais&nbsp;: on écrit un exemple, on vérifie, tout va bien. La règle à en tirer vaut pour tous les motifs de lexique&nbsp;: <em>teste toujours avec deux occurrences de la chose que tu reconnais</em>. Deux commentaires, deux chaînes de caractères, deux blocs — c'est le plus petit cas capable de révéler une répétition trop gourmande, et il ne coûte rien à écrire.</p></div></div>
+
+<h2>Quand un commentaire en contient un autre</h2>
+<p>Une question se pose maintenant, et sa réponse va nous ramener, dans notre propre code, à une frontière que nous n'avions rencontrée qu'en théorie. Que doit faire Brindille du texte <code>(* un (* deux *) trois *)</code>&nbsp;? Autrement dit&nbsp;: les commentaires de bloc peuvent-ils s'<strong>imbriquer</strong>&nbsp;?</p>
+<p>La question n'est pas académique&nbsp;: elle se pose le jour où l'on veut mettre en commentaire un morceau de code qui contenait déjà un commentaire — le geste le plus banal du débogage. Les langages ne répondent pas tous pareil, et chacun assume sa réponse&nbsp;: certains l'autorisent, la plupart la refusent. Mais avant de choisir, il faut savoir ce que chaque réponse <em>coûte</em>. Mesurons.</p>
+
+<figure class="code-block" data-file="imbriques.js"><pre><code class="language-javascript">// Un commentaire qui en contient un autre : la regex ne peut pas, le compteur peut.
+// C'est la frontiere de la lecon 3, rencontree pour de bon dans notre propre lexique.
+const MOTIF = /\(\*[\s\S]*?\*\)/y;    // non gourmand : s'arrete au PREMIER "*)"
+
+function parRegex(txt) {
+  MOTIF.lastIndex = 0;
+  const m = MOTIF.exec(txt);
+  return m ? m[0].length : -1;
+}
+
+function parCompteur(txt) {           // une pile reduite a un entier : la profondeur
+  if (!txt.startsWith("(*")) return -1;
+  let profondeur = 0, i = 0;
+  while (i &lt; txt.length) {
+    if (txt.startsWith("(*", i)) { profondeur++; i += 2; continue; }
+    if (txt.startsWith("*)", i)) { profondeur--; i += 2; if (profondeur === 0) return i; continue; }
+    i++;
+  }
+  return -1;                          // bloc jamais referme
+}
+
+for (const t of ["(* simple *)", "(* un (* deux *) trois *)", "(* a (* b *) c *)", "(* jamais referme"]) {
+  const r = parRegex(t), c = parCompteur(t);
+  console.log(
+    JSON.stringify(t).padEnd(29),
+    "| regex :", String(r).padStart(3),
+    "| compteur :", String(c).padStart(3),
+    "| laisse dehors :", JSON.stringify(r === -1 ? "" : t.slice(r))
+  );
+}
+// affiche : "(* simple *)"                | regex :  12 | compteur :  12 | laisse dehors : ""
+// affiche : "(* un (* deux *) trois *)"   | regex :  16 | compteur :  25 | laisse dehors : " trois *)"
+// affiche : "(* a (* b *) c *)"           | regex :  12 | compteur :  17 | laisse dehors : " c *)"
+// affiche : "(* jamais referme"           | regex :  -1 | compteur :  -1 | laisse dehors : ""</code></pre></figure>
+
+<p>La première ligne est la contre-épreuve&nbsp;: sur un commentaire simple, les deux méthodes donnent <strong>12</strong>. Aucune n'est meilleure que l'autre tant qu'il n'y a rien à imbriquer.</p>
+<p>La deuxième est le verdict. Sur <code>(* un (* deux *) trois *)</code>, la regex s'arrête à <strong>16</strong> caractères et le compteur va jusqu'à <strong>25</strong>, la fin du texte. La colonne de droite dit ce que la regex a <em>laissé dehors</em>&nbsp;: <code>" trois *)"</code>. Ces neuf caractères ne seront pas jetés comme du commentaire&nbsp;: ils seront analysés comme du <strong>code</strong>. L'analyseur produira un <code>IDENT</code> nommé <code>trois</code>, puis un <code>*</code>, puis une parenthèse fermante — trois jetons parasites, sortis de nulle part, qui feront échouer l'analyse syntaxique sur un message incompréhensible.</p>
+<p>Et la raison de cet échec, tu la connais déjà. Regarde ce que <code>parCompteur</code> fait et que la regex ne fait pas&nbsp;: il tient une variable <code>profondeur</code>, qu'il incrémente et décrémente. Il <strong>compte</strong>. C'est exactement — mot pour mot — ce que la <a href="lecon-03.html">leçon 3</a> a démontré impossible pour un automate fini&nbsp;: une machine à nombre d'états borné ne peut pas retenir une profondeur quelconque. Les commentaires imbriqués ne sont pas un langage régulier. Ils sont, très précisément, le même problème que les parenthèses équilibrées, sous un autre déguisement.</p>
+<p>D'où trois options, et il faut voir qu'elles sont <em>toutes trois</em> défendables. <strong>Interdire l'imbrication</strong>&nbsp;: c'est le choix le plus courant, celui de C, de Java, de JavaScript — le motif régulier suffit, et l'on documente que <code>/* ... /* ... */</code> se ferme au premier <code>*/</code>. <strong>Autoriser l'imbrication</strong>&nbsp;: le compteur ci-dessus fait l'affaire, et c'est le choix d'OCaml, de Rust, de Haskell&nbsp;; le prix est une règle écrite à la main, hors table, qui n'est plus une expression régulière. <strong>Ni l'un ni l'autre</strong>&nbsp;: n'offrir que le commentaire de ligne, comme Python le fait par nature, et laisser l'éditeur de texte se charger de commenter plusieurs lignes d'un coup. Ce qu'il ne faut surtout pas faire, c'est croire qu'on autorise l'imbrication alors qu'on emploie le motif régulier&nbsp;: là, on ne choisit pas, on se trompe.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">La règle qui sort de la table n'est pas une défaite</p><p>Un lexique n'est presque jamais <em>entièrement</em> régulier dans un vrai langage, et il ne faut pas y voir un échec de la méthode. Les commentaires imbriqués demandent un compteur&nbsp;; les chaînes de caractères multilignes, la détection d'une fin non atteinte&nbsp;; l'indentation de Python, une pile. La bonne façon de faire n'est pas de tordre un motif jusqu'à ce qu'il fasse semblant, mais d'écrire une <strong>règle nommée</strong>, à la main, à côté de la table — une fonction qui reçoit le texte et le curseur, et rend la longueur consommée ou <code>-1</code>. La table reste ce qu'elle est pour les quatre-vingt-dix pour cent réguliers, et la poignée de cas irréguliers est traitée explicitement, en pleine lumière. Ce qui compte est que le passage de l'un à l'autre soit <em>visible dans le code</em>&nbsp;: quiconque le relira saura que cette règle-là a demandé plus qu'un motif.</p></div></div>
+
+<h2>De l'indice à «&nbsp;ligne 2, colonne 19&nbsp;»</h2>
+<p>Tenons maintenant la promesse de la leçon 4. Chaque jeton porte un champ <code>pos</code>, l'indice de son premier caractère dans le texte. Nous avions dit que cette information n'a qu'un seul client, l'être humain — et qu'elle ne lui sert à rien sous cette forme. Personne ne lit un fichier en comptant les caractères depuis le début&nbsp;: on lit des lignes et des colonnes. Il manque donc une traduction, et elle est plus simple qu'on ne le croit.</p>
+<p>Le principe tient en deux temps. Pour connaître la <strong>ligne</strong> d'une position, on compte les sauts de ligne qui la précèdent, et l'on ajoute un — la première ligne porte le numéro 1, pas 0. Pour connaître la <strong>colonne</strong>, on retient au passage l'indice du <em>début</em> de la ligne courante, et l'on soustrait&nbsp;: la colonne est la distance entre le début de la ligne et la position visée, plus un. Deux compteurs mis à jour dans une seule boucle.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 254" role="img" aria-label="Le calcul qui transforme un indice brut en un numéro de ligne et de colonne, présenté en quatre étapes reliées par des flèches. La première boîte contient la donnée de départ : la position 33. Une flèche mène à la deuxième boîte : on compte les sauts de ligne situés avant la position 33 ; il y en a un, celui de la position 14, donc la ligne est la deuxième. Une flèche mène à la troisième boîte : on retient l'indice du début de cette ligne, qui est 15, c'est-à-dire l'indice qui suit immédiatement ce saut de ligne. Une flèche mène à la quatrième boîte, le résultat : la colonne vaut 33 moins 15 plus 1, soit 19. Sous ces quatre étapes, le texte source est rappelé sur trois lignes, chacune précédée de son numéro et de l'indice où elle commence : la ligne 1, qui commence à l'indice 0, contient soit prix égale 12 ; la ligne 2, qui commence à l'indice 15, contient soit total égale prix arobase 3, et le caractère arobase y est mis en évidence ; la ligne 3, qui commence à l'indice 37, contient affiche total. Une légende finale rappelle que les lignes et les colonnes se comptent à partir de 1, alors que les indices se comptent à partir de 0, et que c'est de là que vient le plus un de la formule.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Position 33 → ligne 2, colonne 19 : le calcul en quatre temps</text>
+
+    <rect class="d-accent" x="10" y="36" width="120" height="42" rx="8" /><text class="d-text" x="70" y="54" text-anchor="middle" font-size="10">position 33</text><text class="d-mut" x="70" y="69" text-anchor="middle" font-size="8">ce que porte le jeton</text>
+    <path class="d-line" d="M130 57 L152 57" fill="none" /><path class="d-line" d="M146 53 L152 57 L146 61" fill="none" />
+
+    <rect class="d-box" x="152" y="36" width="150" height="42" rx="8" /><text class="d-text" x="227" y="54" text-anchor="middle" font-size="10">1 saut de ligne avant</text><text class="d-mut" x="227" y="69" text-anchor="middle" font-size="8">celui de l'indice 14 → ligne 2</text>
+    <path class="d-line" d="M302 57 L324 57" fill="none" /><path class="d-line" d="M318 53 L324 57 L318 61" fill="none" />
+
+    <rect class="d-box" x="324" y="36" width="150" height="42" rx="8" /><text class="d-text" x="399" y="54" text-anchor="middle" font-size="10">la ligne 2 débute en 15</text><text class="d-mut" x="399" y="69" text-anchor="middle" font-size="8">juste après ce saut de ligne</text>
+    <path class="d-line" d="M474 57 L496 57" fill="none" /><path class="d-line" d="M490 53 L496 57 L490 61" fill="none" />
+
+    <rect class="d-accent" x="496" y="36" width="134" height="42" rx="8" /><text class="d-text" x="563" y="54" text-anchor="middle" font-size="10">33 − 15 + 1 = 19</text><text class="d-mut" x="563" y="69" text-anchor="middle" font-size="8">la colonne</text>
+
+    <text class="d-mut" x="60" y="118" text-anchor="end" font-size="8.5">ligne 1 · indice 0</text>
+    <rect class="d-box" x="68" y="104" width="330" height="24" rx="4" /><text class="d-text" x="80" y="120" font-size="10">soit prix = 12</text>
+
+    <text class="d-mut" x="60" y="152" text-anchor="end" font-size="8.5">ligne 2 · indice 15</text>
+    <rect class="d-box" x="68" y="138" width="330" height="24" rx="4" /><text class="d-text" x="80" y="154" font-size="10">soit total = prix</text>
+    <rect class="d-accent" x="196" y="138" width="14" height="24" rx="3" /><text class="d-text" x="203" y="154" text-anchor="middle" font-size="10">@</text>
+    <text class="d-text" x="216" y="154" font-size="10">3</text>
+    <path class="d-line" d="M203 168 L203 178" fill="none" /><text class="d-tag" x="203" y="190" text-anchor="middle" font-size="8.5">colonne 19</text>
+
+    <text class="d-mut" x="60" y="216" text-anchor="end" font-size="8.5">ligne 3 · indice 37</text>
+    <rect class="d-box" x="68" y="202" width="330" height="24" rx="4" /><text class="d-text" x="80" y="218" font-size="10">affiche total</text>
+
+    <text class="d-mut" x="320" y="246" text-anchor="middle" font-size="9">Lignes et colonnes se comptent à partir de 1 ; les indices, à partir de 0. D'où le « + 1 ».</text>
+  </svg>
+  <figcaption>Le décalage entre les deux conventions est la seule difficulté de ce calcul, et c'est aussi la seule source d'erreur&nbsp;: un indice part de <strong>0</strong>, une ligne et une colonne partent de <strong>1</strong>. Oublier le <code>+ 1</code> donne un message qui pointe systématiquement un caractère trop à gauche — assez juste pour paraître correct, assez faux pour dérouter.</figcaption>
+</figure>
+
+<p>Voici les deux fonctions. <code>situer</code> fait le calcul&nbsp;; <code>montrer</code> s'en sert pour composer un message en trois lignes&nbsp;: la description, la ligne fautive recopiée telle quelle, et un accent circonflexe placé dessous, exactement sous le caractère en cause.</p>
+
+<figure class="code-block" data-file="situer.js"><pre><code class="language-javascript">// D'un indice brut a "ligne L, colonne C" — puis a un message qui MONTRE l'endroit.
+function situer(txt, pos) {
+  let ligne = 1, debutLigne = 0;
+  for (let k = 0; k &lt; pos; k++) {
+    if (txt[k] === "\n") { ligne++; debutLigne = k + 1; }
+  }
+  return { ligne, colonne: pos - debutLigne + 1, debutLigne };
+}
+
+function montrer(txt, pos, souci) {
+  const { ligne, colonne, debutLigne } = situer(txt, pos);
+  let fin = txt.indexOf("\n", debutLigne);
+  if (fin === -1) fin = txt.length;            // derniere ligne : pas de saut apres
+  console.log(souci + " (ligne " + ligne + ", colonne " + colonne + ")");
+  console.log("  " + txt.slice(debutLigne, fin));
+  console.log("  " + " ".repeat(colonne - 1) + "^");
+}
+
+const source = ["soit prix = 12", "soit total = prix @ 3", "affiche total"].join("\n");
+
+for (const pos of [0, 5, 15, 33]) {
+  const s = situer(source, pos);
+  console.log("position", String(pos).padStart(2), "-&gt; ligne", s.ligne, "colonne", String(s.colonne).padStart(2),
+              "| caractere", JSON.stringify(source[pos]));
+}
+console.log("");
+montrer(source, 33, 'caractere inattendu "@"');
+// affiche : position  0 -&gt; ligne 1 colonne  1 | caractere "s"
+// affiche : position  5 -&gt; ligne 1 colonne  6 | caractere "p"
+// affiche : position 15 -&gt; ligne 2 colonne  1 | caractere "s"
+// affiche : position 33 -&gt; ligne 2 colonne 19 | caractere "@"
+//=&gt;
+// affiche : caractere inattendu "@" (ligne 2, colonne 19)
+// affiche :   soit total = prix @ 3
+// affiche :                     ^</code></pre></figure>
+
+<p>Les quatre premières lignes valident le calcul sur des cas choisis. La position <strong>0</strong> est le tout premier caractère&nbsp;: ligne 1, colonne 1 — jamais 0, et c'est le contrôle le plus utile de tous, parce qu'il attrape l'oubli du <code>+ 1</code> immédiatement. La position <strong>15</strong> est le premier caractère de la deuxième ligne&nbsp;: colonne 1 à nouveau, ce qui vérifie que <code>debutLigne</code> a bien sauté par-dessus le saut de ligne au lieu de s'arrêter dessus. Et la position <strong>33</strong> donne <strong>ligne 2, colonne 19</strong>, sur le <code>@</code>.</p>
+<p>Puis viennent les trois lignes du message, et c'est là que le travail devient visible. Compare&nbsp;: «&nbsp;<code>caractere inattendu "@" en position 33</code>&nbsp;» oblige à ouvrir le fichier, à compter, à chercher. «&nbsp;<code>ligne 2, colonne 19</code>&nbsp;», avec la ligne recopiée et l'accent circonflexe dessous, se lit d'un coup d'œil&nbsp;: l'endroit est <em>montré</em>, pas décrit. Le coût de cette amélioration est de trois lignes de code et d'un champ conservé depuis la leçon 4. Le bénéfice se répète à chaque erreur, pour chaque personne qui écrira du Brindille. C'est probablement le meilleur rapport de tout le compilateur.</p>
+<p>Deux détails du code méritent l'attention, parce qu'ils sont les deux endroits où l'on se trompe. Le premier est <code>if (fin === -1) fin = txt.length</code>&nbsp;: si l'erreur tombe sur la <em>dernière</em> ligne, il n'y a pas de saut de ligne après elle, et <code>indexOf</code> rend <code>-1</code>. Or <code>-1</code>, pour <code>slice</code>, ne veut pas dire «&nbsp;introuvable&nbsp;»&nbsp;: il veut dire «&nbsp;un caractère avant la fin&nbsp;». Sans ce garde-fou, le message afficherait donc la ligne <strong>amputée de son dernier caractère</strong> — mesuré sur notre texte&nbsp;: <code>affiche tota</code> au lieu de <code>affiche total</code>. Une valeur de retour interprétée dans un sens qu'elle n'a pas&nbsp;: c'est plus vicieux qu'une erreur franche, parce que le message reste presque juste. Le second est <code>" ".repeat(colonne - 1)</code>&nbsp;: on retire un, puisque la colonne 1 ne demande aucune espace avant l'accent. C'est le même décalage que tout à l'heure, dans l'autre sens — et si le curseur de tes messages d'erreur est décalé d'un cran, c'est toujours ici qu'il faut regarder.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: calculer une fois, ou à chaque erreur</p><p>Notre <code>situer</code> reparcourt le texte depuis le début à chaque appel&nbsp;: sur un fichier de cent mille caractères, chaque message d'erreur coûte cent mille comparaisons. C'est parfaitement acceptable pour une erreur, discutable pour mille. Les compilateurs qui doivent rapporter beaucoup d'erreurs procèdent autrement&nbsp;: ils construisent, en un seul passage, un tableau des indices de <strong>début de chaque ligne</strong>, puis retrouvent la ligne d'une position par une recherche dichotomique dans ce tableau. Le principe reste le même&nbsp;; seule change la façon de payer — une fois pour toutes plutôt qu'à chaque question. Une autre voie consiste à maintenir <code>ligne</code> et <code>colonne</code> <em>pendant</em> l'analyse lexicale, en les mettant à jour à chaque caractère consommé, et à les ranger directement dans le jeton. C'est la solution la plus rapide, et la moins souple&nbsp;: le jeton pèse alors trois champs de position au lieu d'un.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Le motif gourmand qui avale le code entre deux commentaires.</strong> C'est le défaut le plus coûteux de cette leçon, parce qu'il est <em>silencieux</em>&nbsp;: aucune erreur, aucun avertissement, simplement des instructions qui n'existent plus. Il se cache dans une répétition à laquelle il manque un <code>?</code>, et il survit à tous les essais menés sur un fichier ne contenant qu'un seul commentaire. Deux réflexes le rendent impossible&nbsp;: écrire <code>[\s\S]*?</code> plutôt que <code>[\s\S]*</code> dès qu'un motif court jusqu'à un délimiteur de fin, et tester <em>systématiquement</em> avec deux occurrences.</p></div></div>
+<ul>
+<li><strong>Oublier les sauts de ligne dans la règle des espaces</strong> — un motif <code>/[ \t]+/y</code> traite l'espace et la tabulation mais bute sur le premier passage à la ligne. Le symptôme est déroutant&nbsp;: le fichier est accepté tant qu'il tient sur une ligne. Il faut <code>/[ \t\r\n]+/y</code>, et penser au <code>\r</code> des fichiers venus de Windows.</li>
+<li><strong>Écrire <code>.</code> au lieu de <code>[\s\S]</code> dans un commentaire de bloc</strong> — le point ne reconnaît pas le saut de ligne, donc le motif s'arrête à la fin de la première ligne du commentaire, et le reste redevient du code. Même famille de dégât que le motif gourmand, en sens inverse.</li>
+<li><strong>Croire qu'on autorise l'imbrication alors qu'on emploie un motif régulier</strong> — <code>(* a (* b *) c *)</code> laisse alors <code>c *)</code> dehors, qui devient des jetons parasites. Autoriser l'imbrication demande un compteur&nbsp;: une règle écrite à la main, hors de la table, et assumée comme telle.</li>
+<li><strong>Compter les lignes à partir de 0</strong> — les indices commencent à 0, les lignes et les colonnes à 1. Le contrôle qui attrape l'erreur en une seconde&nbsp;: la position 0 doit donner <em>ligne 1, colonne 1</em>.</li>
+<li><strong>Ne pas traiter la dernière ligne du fichier</strong> — <code>indexOf("\n", debut)</code> rend <code>-1</code> quand il n'y a plus de saut de ligne, et <code>slice</code> comprend ce <code>-1</code> comme «&nbsp;un caractère avant la fin&nbsp;»&nbsp;: le message affiche alors la ligne <strong>tronquée d'un caractère</strong>, ce qui se remarque d'autant moins que le reste est juste. Le seul moyen de s'en apercevoir est de provoquer une erreur sur la dernière ligne&nbsp;: c'est un cas de test à écrire, pas à espérer.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe maintient un petit langage de règles métier, avec des commentaires de bloc. Un développeur veut désactiver temporairement une règle&nbsp;: il l'entoure de <code>(*</code> et <code>*)</code>, comme il l'a toujours fait. Seulement la règle contenait déjà un commentaire explicatif. Le fichier est accepté sans un mot, les tests passent — car les tests portaient sur les <em>autres</em> règles —, et la modification part en production. Trois semaines plus tard, un contrôle de cohérence révèle qu'une règle voisine, jamais touchée par personne, ne s'applique plus. La cause est à quatre lignes de là&nbsp;: le commentaire s'était refermé au premier <code>*)</code> rencontré, celui du commentaire intérieur&nbsp;; la fin de la règle désactivée était redevenue du code, et ce code, syntaxiquement valide par malchance, avait écrasé la règle suivante. Ce qu'il faut retenir tient en trois points. <strong>Un&nbsp;:</strong> l'imbrication des commentaires est une décision de conception du langage, qui doit être écrite dans sa documentation — « non supportée » est une réponse parfaitement acceptable, « on n'y a pas pensé » ne l'est pas. <strong>Deux&nbsp;:</strong> un analyseur lexical qui ne signale rien n'a pas dit que tout allait bien&nbsp;; il a dit qu'il avait su tout ranger dans une catégorie. Ce sont deux affirmations très différentes. <strong>Trois&nbsp;:</strong> quand du code cesse d'agir sans avoir été modifié, cherche ce qui a changé <em>autour</em> de lui — en particulier ce qui délimite.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les motifs de ce que l'on ignore, et ce que chacun coûte si on le rate</caption>
+    <thead><tr><th scope="col">Catégorie</th><th scope="col">Motif</th><th scope="col">Le détail qui compte</th><th scope="col">Si on le rate</th></tr></thead>
+    <tbody>
+      <tr><td>Espaces</td><td><code>/[ \t\r\n]+/y</code></td><td>inclure <code>\n</code> <em>et</em> <code>\r</code></td><td>bute au premier passage à la ligne</td></tr>
+      <tr><td>Commentaire de ligne</td><td><code>/#[^\n]*/y</code></td><td>ne pas consommer le <code>\n</code> final</td><td>le saut de ligne disparaît&nbsp;; gênant si le langage le compte</td></tr>
+      <tr><td>Commentaire de bloc</td><td><code>/\(\*[\s\S]*?\*\)/y</code></td><td>le <code>?</code>, et <code>[\s\S]</code> plutôt que <code>.</code></td><td>gourmand&nbsp;: le code entre deux commentaires disparaît</td></tr>
+      <tr><td>Bloc imbriqué</td><td>aucun motif possible</td><td>compteur de profondeur, écrit à la main</td><td>le texte après le premier <code>*)</code> redevient du code</td></tr>
+    </tbody>
+  </table>
+</figure>
+<figure class="cheat-table">
+  <table>
+    <caption>D'un indice à un message lisible</caption>
+    <thead><tr><th scope="col">Ce qu'on veut</th><th scope="col">Comment</th><th scope="col">Le piège</th></tr></thead>
+    <tbody>
+      <tr><td>le numéro de ligne</td><td>compter les <code>\n</code> avant la position, puis <code>+ 1</code></td><td>les lignes partent de 1, les indices de 0</td></tr>
+      <tr><td>le début de la ligne</td><td>l'indice qui suit le dernier <code>\n</code> rencontré</td><td>le <code>+ 1</code> de <code>debutLigne = k + 1</code></td></tr>
+      <tr><td>le numéro de colonne</td><td><code>pos - debutLigne + 1</code></td><td>oublier le <code>+ 1</code> décale tout d'un cran</td></tr>
+      <tr><td>la ligne fautive</td><td><code>slice(debutLigne, indexOf("\n", debutLigne))</code></td><td>sur la dernière ligne, <code>indexOf</code> rend <code>-1</code>, que <code>slice</code> comprend comme «&nbsp;un caractère avant la fin&nbsp;»</td></tr>
+      <tr><td>le repère <code>^</code></td><td><code>" ".repeat(colonne - 1) + "^"</code></td><td>ici on retire 1&nbsp;: colonne 1 = aucune espace</td></tr>
+      <tr><td>le contrôle qui attrape tout</td><td>la position <code>0</code> doit donner ligne 1, colonne 1</td><td>si elle donne 0, un <code>+ 1</code> manque</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Espace au sens large</dt><dd>Tout caractère qui sépare sans rien signifier&nbsp;: espace, tabulation, retour chariot, saut de ligne. Reconnu par une règle ordinaire de la table, puis jeté — sauf dans les langages où l'indentation porte du sens.</dd>
+  <dt>Commentaire de ligne</dt><dd>Commentaire qui commence par un marqueur et court jusqu'à la fin de la ligne (<code>#</code> en Brindille). Son motif ne doit pas consommer le saut de ligne final, qui appartient à la règle des espaces.</dd>
+  <dt>Commentaire de bloc</dt><dd>Commentaire délimité par une ouverture et une fermeture (<code>(*</code> et <code>*)</code>), pouvant couvrir plusieurs lignes. Son motif exige <code>[\s\S]</code> et une répétition non gourmande.</dd>
+  <dt>Répétition gourmande</dt><dd>Répétition qui prend le plus de caractères possible. Dans un commentaire de bloc, elle s'étire jusqu'au <em>dernier</em> délimiteur de fermeture du fichier et fait disparaître le code intermédiaire — sans erreur&nbsp;: 12 jetons deviennent 8.</dd>
+  <dt>Répétition non gourmande</dt><dd>Répétition qui prend le moins de caractères possible, notée par un <code>?</code> après le quantificateur. C'est la forme correcte pour tout motif qui court jusqu'à un délimiteur de fin.</dd>
+  <dt>Commentaires imbriqués</dt><dd>Commentaire de bloc contenant un autre commentaire de bloc. Les reconnaître demande de compter une profondeur&nbsp;: ce n'est pas un langage régulier, donc aucune expression régulière n'y suffit.</dd>
+  <dt>Erreur lexicale</dt><dd>Faute détectée par l'analyse lexicale, et la seule qu'elle sache formuler&nbsp;: «&nbsp;aucun motif ne décrit ce qui commence ici&nbsp;». Elle se situe à un caractère près, ce qui la rend plus facile à corriger que toute autre.</dd>
+  <dt>Ligne et colonne</dt><dd>Traduction lisible d'un indice&nbsp;: la ligne est le nombre de sauts de ligne précédents plus un, la colonne la distance au début de la ligne plus un. Les deux comptent à partir de 1, contrairement aux indices.</dd>
+  <dt>Trivia</dt><dd>Nom donné, dans les outils qui doivent réécrire du code, aux espaces et commentaires conservés à part et rattachés aux jetons voisins. C'est ce qui permet à un formateur de reformater un fichier sans effacer ses commentaires.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Espaces et commentaires sont reconnus par des <strong>règles ordinaires</strong> de la table&nbsp;; ce qui les distingue tient dans une ligne, celle qui décide de <strong>ranger ou non</strong>. Mesure&nbsp;: 78 caractères en entrée, <strong>51 ignorés</strong> — 65&nbsp;% —, 10 jetons en sortie.</li>
+<li>Trois politiques sont possibles et toutes employées&nbsp;: <strong>jeter</strong> (Brindille et la plupart des langages), <strong>garder</strong> (l'indentation de Python), <strong>ranger à part</strong> (indispensable à un formateur, qui doit réécrire sans effacer).</li>
+<li>Un <code>?</code> de différence dans le motif du commentaire de bloc, et le code situé <em>entre</em> deux commentaires disparaît&nbsp;: <strong>12 jetons contre 8</strong>, sans la moindre erreur signalée. Teste toujours avec <strong>deux</strong> occurrences.</li>
+<li>Les <strong>commentaires imbriqués</strong> ne sont pas réguliers&nbsp;: <code>(* un (* deux *) trois *)</code> donne <strong>16</strong> caractères à la regex contre <strong>25</strong> au compteur, et les neuf caractères laissés dehors redeviennent du code. C'est la frontière de la <a href="lecon-03.html">leçon 3</a>, rencontrée dans notre propre lexique.</li>
+<li>La position d'un jeton se traduit en <strong>ligne</strong> (nombre de <code>\n</code> avant, plus un) et en <strong>colonne</strong> (<code>pos - debutLigne + 1</code>). Contrôle qui attrape tout&nbsp;: la position <strong>0</strong> doit donner <em>ligne 1, colonne 1</em>.</li>
+<li>Trois lignes de code transforment «&nbsp;erreur en position 33&nbsp;» en un message qui <strong>montre</strong> l'endroit&nbsp;: <em>ligne 2, colonne 19</em>, la ligne fautive recopiée, un <code>^</code> dessous. C'est le meilleur rapport travail/bénéfice de tout le compilateur.</li>
+<li>Le module 2 est clos&nbsp;: le texte est devenu une suite de jetons situés. Le module 3 prendra cette suite et vérifiera qu'elle forme une <em>phrase</em>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue signale que son fichier «&nbsp;perd&nbsp;» une déclaration sur deux, sans aucun message d'erreur. Quelle est ta première hypothèse, et quel texte de trois lignes écris-tu pour la confirmer&nbsp;?</li>
+<li>Explique pourquoi les commentaires imbriqués ne peuvent pas être reconnus par une expression régulière, en une phrase qui ne contienne ni le mot «&nbsp;compliqué&nbsp;» ni le mot «&nbsp;long&nbsp;».</li>
+<li>Ta fonction <code>situer</code> rend systématiquement une colonne trop petite d'une unité. Donne les deux endroits du code où l'erreur peut se trouver, et le test qui les départage.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Le motif d'un commentaire de bloc s'écrit avec une répétition gourmande au lieu d'une répétition non gourmande. Que se passe-t-il sur un fichier contenant deux commentaires ?","a":["Le code situé entre les deux commentaires est avalé et disparaît du programme, sans qu'aucune erreur ne soit signalée","L'analyseur lève une erreur lexicale sur le second commentaire, dont l'ouverture se trouve déjà consommée par le premier","Les deux commentaires sont reconnus normalement : la gourmandise ne change rien tant que chaque commentaire est bien fermé","L'analyseur boucle indéfiniment, la répétition gourmande ne parvenant jamais à décider où le commentaire doit s'arrêter"],"correct":0,"explain":"Le motif gourmand ouvre au premier « (* » et s'étire jusqu'au DERNIER « *) » du texte : il absorbe les deux commentaires et tout ce qui les sépare. Mesuré dans la leçon : 12 jetons deviennent 8, et une déclaration entière s'évapore — sans le moindre message."},
+  {"q":"Pourquoi aucune expression régulière ne peut-elle reconnaître un commentaire de bloc qui en contient un autre ?","a":["Il faudrait retenir une profondeur d'imbrication quelconque, ce qu'une machine à nombre fini d'états ne peut pas faire","Parce que les caractères d'ouverture et de fermeture devraient être échappés deux fois, ce que la syntaxe des motifs interdit","Parce qu'un motif ne peut pas contenir de saut de ligne, et qu'un commentaire imbriqué en contient nécessairement au moins un","Parce que le drapeau collant y interdit à un motif de reconnaître deux fois la même sous-chaîne dans un seul texte"],"correct":0,"explain":"C'est exactement le problème des parenthèses équilibrées de la leçon 3 : il faut compter, donc une mémoire non bornée. La solution est une règle écrite à la main, avec un compteur de profondeur, à côté de la table — et il faut l'assumer comme telle."},
+  {"q":"Dans un texte, le caractère fautif est à l'indice 33 ; le dernier saut de ligne avant lui est à l'indice 14. Quelle est sa colonne ?","a":["19, car la ligne commence à l'indice 15 et que la colonne vaut 33 moins 15 plus 1","18, car il suffit de retrancher l'indice du saut de ligne à celui du caractère fautif","33, car la colonne se compte depuis le début du fichier, comme l'indice lui-même","15, car la colonne est l'indice auquel commence la ligne où se trouve le caractère"],"correct":0,"explain":"La ligne débute juste APRÈS le saut de ligne, donc à 15. La colonne est la distance au début de la ligne, plus un puisque les colonnes se comptent à partir de 1 : 33 − 15 + 1 = 19. Le contrôle qui attrape l'oubli du « + 1 » : la position 0 doit donner colonne 1."},
+  {"q":"Quel est le seul reproche qu'un analyseur lexical sache formuler ?","a":["« Aucun motif ne décrit ce qui commence ici » — il ne connaît ni la grammaire, ni les types, ni la portée des noms","« Ces jetons sont valides mais leur enchaînement ne respecte pas la grammaire du langage utilisé »","« Cette variable est employée alors qu'aucune déclaration ne lui a jamais donné de valeur »","« Ce fichier contient plus de commentaires que de code exécutable, ce qui dépasse le seuil configuré »"],"correct":0,"explain":"C'est la contrepartie de son ignorance, et c'est ce qui rend ses messages précis : l'erreur lexicale se situe à un caractère près. Un enchaînement fautif relève de l'analyse syntaxique, une variable non déclarée de l'analyse sémantique."}
+]
+</script>
+
+<script type="application/json" data-quiz-bilan="Bilan des modules 1 et 2">
+[
+  {"q":"Un traducteur produit du bytecode, exécuté ensuite par une machine virtuelle. Où se situe-t-il entre les deux stratégies ?","a":["Entre les deux : la traduction a lieu d'avance, mais vers un jeu d'instructions abstrait, pas vers le processeur réel","Entièrement du côté « à la volée » : le bytecode est relu et retraduit à chaque instruction rencontrée","Entièrement du côté « d'avance » : le bytecode est du code machine, simplement rangé dans un autre format de fichier","Hors des deux : le bytecode est du texte source abrégé, que la machine virtuelle réinterprète ligne à ligne"],"correct":0,"explain":"Le bytecode est un compromis : compilé une fois, mais vers une machine imaginaire. C'est cette indirection qui rend le même fichier exécutable sur des processeurs différents."},
+  {"q":"À quoi sert un compilateur à la volée (JIT) à l'intérieur d'une machine virtuelle ?","a":["À traduire en code machine, pendant l'exécution, les portions de bytecode les plus souvent parcourues","À vérifier, avant tout démarrage, que le bytecode ne contient aucune instruction interdite par la machine","À compresser le bytecode en mémoire afin de réduire la place occupée par le programme qui s'exécute","À remplacer la machine virtuelle par un interpréteur plus simple dès que le programme devient volumineux"],"correct":0,"explain":"Le JIT observe ce qui tourne vraiment, repère les points chauds et les compile pendant l'exécution — d'où des performances qu'un interpréteur pur n'atteint pas."},
+  {"q":"Le source contient « long total = \"douze\"; ». À quelle étape de la chaîne l'erreur est-elle détectée ?","a":["À l'analyse sémantique : les jetons sont valides et la phrase bien formée, seuls les types sont incompatibles","À l'analyse lexicale : le mot « douze » n'appartient à aucune catégorie de jeton connue du langage","À l'analyse syntaxique : la forme « type nom = valeur ; » n'est pas reconnue par la grammaire du langage","À l'édition de liens : le symbole correspondant à la valeur « douze » reste introuvable dans les bibliothèques"],"correct":0,"explain":"Chaque étape ne voit que ses propres fautes. Ici le découpage en jetons réussit, la forme de l'instruction est correcte : c'est la cohérence des types qui échoue, donc la sémantique."},
+  {"q":"Qu'est-ce qui, dans une grammaire, donne à « * » une priorité plus forte qu'à « + » ?","a":["La stratification des règles : expression est faite de termes, et terme de facteurs — donc « * » se noue plus bas","Une table de priorités que l'évaluateur consulte au moment de parcourir l'arbre de dérivation","L'ordre d'écriture des alternatives : la règle citée en premier l'emporte sur toutes celles qui viennent après elle","Le nombre d'occurrences du symbole dans la grammaire : le plus fréquent se lie toujours au plus près"],"correct":0,"explain":"Une règle ne peut couper que ce qui est à son niveau. Comme « + » sépare des termes et que « 3 * 4 » est un terme entier, il ne peut pas entrer dedans."},
+  {"q":"Que doit produire un analyseur lexical correct sur « soitx », sachant que « soit » est un mot-clé du langage ?","a":["Un seul jeton IDENT de valeur soitx : on lit l'identifiant le plus long possible, puis on consulte la liste des mots-clés","Le mot-clé MOT_CLE soit suivi de l'identifiant IDENT x, puisque le texte commence par les quatre lettres de soit","Une erreur lexicale, car un identifiant n'a pas le droit de commencer par les lettres d'un mot-clé réservé du langage","Deux jetons de type IDENT, soit et x, le classement en mot-clé n'intervenant qu'à l'étape d'analyse syntaxique"],"correct":0,"explain":"C'est la règle de la plus longue correspondance, et l'ordre des deux gestes n'est pas négociable : lire l'identifiant entier D'ABORD, consulter la liste ENSUITE. Un mot-clé n'est pas un motif à part, c'est un identifiant que le langage s'est réservé."},
+  {"q":"Dans une table de motifs, à quoi sert le drapeau « y » posé sur chaque expression régulière ?","a":["À forcer la correspondance à commencer exactement à lastIndex, et à rendre null s'il n'y a rien à cet endroit précis","À autoriser un même motif à être appliqué plusieurs fois de suite sur le même texte sans être reconstruit","À rendre la recherche insensible à la casse, de sorte qu'un identifiant puisse commencer par une majuscule","À faire porter la correspondance sur le texte entier plutôt que sur la seule tranche qui suit le curseur"],"correct":0,"explain":"L'analyseur lexical ne demande jamais « où est-ce ? » mais « qu'y a-t-il ICI ? ». Ce « null » local est ce qui lui permet d'essayer la règle suivante, puis de signaler un caractère illégal quand aucune n'accroche."},
+  {"q":"Une expression régulière et un automate fini décrivent-ils les mêmes langages ?","a":["Oui, exactement les mêmes : c'est le théorème de Kleene, et la traduction entre les deux notations est mécanique","Non : l'automate est strictement plus puissant, car il peut mémoriser un nombre d'états choisi à l'avance","Non : l'expression régulière est strictement plus puissante, grâce aux groupes capturants qu'un automate ignore","Oui, mais seulement pour les motifs sans répétition : dès qu'une étoile apparaît, l'équivalence cesse d'être vraie"],"correct":0,"explain":"Les deux familles coïncident, et la conversion se fait dans les deux sens par un procédé automatique. C'est ce qui rend possibles les outils qui fabriquent un analyseur lexical à partir d'une simple liste de motifs."},
+  {"q":"Un motif de commentaire de bloc est écrit avec une répétition gourmande. Quel en est l'effet sur un fichier qui contient deux commentaires ?","a":["Le code situé entre les deux commentaires est absorbé et disparaît du programme, sans le moindre message d'erreur","Le second commentaire n'est pas reconnu, ce qui provoque une erreur lexicale sur son caractère d'ouverture","Rien : la gourmandise ne se manifeste que si l'un des deux commentaires n'a pas été correctement refermé","Les deux commentaires sont fusionnés en un seul jeton, que l'analyse syntaxique refusera avec un message clair"],"correct":0,"explain":"Le motif s'ouvre au premier délimiteur et s'étire jusqu'au dernier du fichier. Mesuré dans la leçon 6 : 12 jetons deviennent 8, une déclaration entière s'évapore — et le programme compile quand même."},
+  {"q":"Le caractère fautif est à l'indice 33 ; le dernier saut de ligne avant lui se trouve à l'indice 14. Que vaut sa colonne ?","a":["19 : la ligne débute à l'indice 15, et la colonne vaut 33 moins 15 plus 1","18 : il suffit de retrancher l'indice du saut de ligne à celui du caractère fautif","33 : les colonnes se comptent depuis le début du fichier, exactement comme les indices","15 : la colonne est l'indice auquel commence la ligne contenant le caractère fautif"],"correct":0,"explain":"La ligne commence juste APRÈS le saut de ligne, donc à 15, et les colonnes se comptent à partir de 1 alors que les indices partent de 0 : 33 − 15 + 1 = 19. Le contrôle qui attrape l'oubli du « + 1 » : la position 0 doit donner ligne 1, colonne 1."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"19"},"placeholder":"écris situer(txt, pos) puis affiche la colonne de la position 33","hints":["Parcours le texte de 0 à pos : à chaque \"\\n\" rencontré, incrémente la ligne et note que la ligne suivante débute en k + 1.","La colonne vaut pos - debutLigne + 1 : le « + 1 » vient de ce que les colonnes partent de 1 et les indices de 0.","Le texte est [\"soit prix = 12\", \"soit total = prix @ 3\", \"affiche total\"].join(\"\\n\"), et la position 33 est celle du @."],"link":{"href":"lecon-06.html","label":"Revoir « De l'indice à ligne 2, colonne 19 »"}},
+  {"type":"text","accept":["gourmand","gourmande","greedy","repetition gourmande","répétition gourmande","une repetition gourmande","une répétition gourmande"],"placeholder":"une répétition qui prend le plus de caractères possible est dite g_______","hints":["C'est ce qu'on obtient en oubliant le « ? » après l'étoile de répétition.","Sur un fichier à deux commentaires, elle fait disparaître le code du milieu.","Neuf lettres au masculin : g_______."],"link":{"href":"lecon-06.html","label":"Revoir « Le commentaire, et l'étoile qui change tout »"}},
+  {"type":"text","accept":["profondeur","la profondeur","compteur de profondeur","un compteur de profondeur","profondeur d'imbrication"],"placeholder":"pour reconnaître des commentaires imbriqués, il faut tenir un compteur de p_________","hints":["C'est ce que la leçon 3 avait démontré impossible pour un automate fini.","On l'augmente à chaque ouverture, on la diminue à chaque fermeture, et le commentaire s'achève quand elle revient à zéro.","Dix lettres : p_________."],"link":{"href":"lecon-06.html","label":"Revoir « Quand un commentaire en contient un autre »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>situer(txt, pos)</code>, qui rend la ligne et la colonne d'une position, puis affiche la <strong>colonne</strong> de la position 33 dans le texte <code>["soit prix = 12", "soit total = prix @ 3", "affiche total"].join("\n")</code>. Avant de lancer&nbsp;: fais le calcul de tête, puis vérifie aussi que la position <code>0</code> donne bien la colonne 1 — c'est le contrôle qui attrape l'oubli du <code>+ 1</code>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">function situer(txt, pos) {
+  let ligne = 1, debutLigne = 0;
+  for (let k = 0; k &lt; pos; k++) {
+    if (txt[k] === "\n") { ligne++; debutLigne = k + 1; }   // la ligne suivante debute APRES le saut
+  }
+  return { ligne, colonne: pos - debutLigne + 1 };
+}
+
+const source = ["soit prix = 12", "soit total = prix @ 3", "affiche total"].join("\n");
+console.log(situer(source, 33).colonne);
+// affiche : 19</code></pre></figure>
+<p>La position 33 tombe sur le <code>@</code>. Le seul saut de ligne qui la précède est à l'indice 14, donc la deuxième ligne débute à l'indice <strong>15</strong>, et la colonne vaut <code>33 - 15 + 1</code>, soit <strong>19</strong>. Les deux <code>+ 1</code> du code n'ont rien à voir l'un avec l'autre, et c'est ce qui rend l'exercice instructif&nbsp;: celui de <code>debutLigne = k + 1</code> saute par-dessus le caractère de saut de ligne, celui de la colonne traduit le décalage entre des indices qui partent de 0 et des colonnes qui partent de 1. Retire l'un ou l'autre et compare&nbsp;: le premier décale d'un caractère à partir de la deuxième ligne seulement, le second décale <em>partout</em>, y compris à la position 0 — d'où l'intérêt de la tester.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Sans rien exécuter, prédis ce que donne un motif de commentaire <strong>gourmand</strong> sur le texte <code>soit a = 1 (* un *) soit b = 2 (* deux *) soit c = 3 (* trois *) soit d = 4</code>, qui contient <em>trois</em> commentaires. Combien de jetons restera-t-il, et lesquels des quatre <code>soit</code> survivront&nbsp;? Vérifie ensuite en remplaçant la source du programme «&nbsp;gourmand ou non gourmand&nbsp;».</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">non gourmand | jetons : 16 | soit a = 1 soit b = 2 soit c = 3 soit d = 4
+gourmand     | jetons :  8 | soit a = 1 soit d = 4</code></pre></figure>
+<p>Il reste <strong>8</strong> jetons sur 16&nbsp;: exactement la moitié du programme a disparu. Seuls survivent <code>soit a = 1</code> — situé <em>avant</em> le premier <code>(*</code> — et <code>soit d = 4</code>, situé <em>après</em> le dernier <code>*)</code>. Les deux déclarations du milieu, <code>b</code> et <code>c</code>, tombent dans la zone avalée. Retiens la forme du dégât plutôt que le chiffre&nbsp;: un motif gourmand ne mange pas «&nbsp;un peu trop&nbsp;», il mange <strong>tout ce qui sépare le premier délimiteur d'ouverture du dernier délimiteur de fermeture du fichier</strong>. Plus le fichier est long et commenté, plus il en emporte — et il n'émet toujours aucune erreur.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Brindille décide d'autoriser les commentaires imbriqués. Écris <code>commentaire(txt, i)</code>, qui rend la <strong>longueur</strong> du commentaire de bloc commençant à l'indice <code>i</code>, ou <code>-1</code> si le texte ne commence pas par <code>(*</code> ou si le bloc n'est jamais refermé. Démontre <strong>par une exécution</strong> qu'elle réussit là où le motif régulier échoue, sur au moins deux niveaux d'imbrication. Question à te poser avant d'écrire&nbsp;: quelle est la <em>seule</em> variable dont tu as besoin, et pourquoi la leçon 3 interdisait-elle à une expression régulière de la tenir&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Une seule variable suffit : la PROFONDEUR. C'est aussi tout ce qui manque
+// a une expression reguliere — un automate fini n'a pas de quoi la retenir.
+function commentaire(txt, i) {
+  if (!txt.startsWith("(*", i)) return -1;
+  let profondeur = 0, k = i;
+  while (k &lt; txt.length) {
+    if (txt.startsWith("(*", k)) { profondeur++; k += 2; continue; }
+    if (txt.startsWith("*)", k)) { profondeur--; k += 2; if (profondeur === 0) return k - i; continue; }
+    k++;
+  }
+  return -1;                                   // bloc jamais referme
+}
+
+for (const t of ["(* a *)", "(* a (* b *) c *)", "(* a (* b (* c *) d *) e *)", "(* jamais"]) {
+  const re = /\(\*[\s\S]*?\*\)/y;
+  re.lastIndex = 0;
+  const m = re.exec(t);
+  console.log(
+    JSON.stringify(t).padEnd(31),
+    "compteur:", String(commentaire(t, 0)).padStart(3),
+    "| regex:", String(m ? m[0].length : -1).padStart(3),
+    "| longueur:", t.length
+  );
+}
+// affiche : "(* a *)"                       compteur:   7 | regex:   7 | longueur: 7
+// affiche : "(* a (* b *) c *)"             compteur:  17 | regex:  12 | longueur: 17
+// affiche : "(* a (* b (* c *) d *) e *)"   compteur:  27 | regex:  17 | longueur: 27
+// affiche : "(* jamais"                     compteur:  -1 | regex:  -1 | longueur: 9</code></pre></figure>
+<p>La première ligne est la contre-épreuve&nbsp;: sur un commentaire sans imbrication, les deux méthodes donnent <strong>7</strong>. Les deux suivantes sont la démonstration&nbsp;: à un niveau d'imbrication, le compteur rend 17 — toute la chaîne — quand la regex s'arrête à 12&nbsp;; à deux niveaux, 27 contre 17. Les caractères manquants ne disparaissent pas&nbsp;: ils repartent dans la boucle et deviennent des jetons de code, <code>c</code>, <code>*</code>, <code>)</code>. La quatrième ligne montre le seul cas où les deux se rejoignent&nbsp;: un bloc jamais refermé est refusé par l'une comme par l'autre, et il vaut mieux ainsi. La réponse à la question posée&nbsp;: la seule variable nécessaire est <code>profondeur</code>, un entier sans borne — et c'est très exactement ce qu'un automate fini, qui n'a qu'un nombre <em>fixé</em> d'états, ne peut pas retenir. Écrire cette fonction, c'est franchir sciemment la frontière de la <a href="lecon-03.html">leçon 3</a>&nbsp;; ce qui est parfaitement permis, à condition de savoir qu'on la franchit.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
