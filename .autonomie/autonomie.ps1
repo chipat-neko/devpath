@@ -21,6 +21,20 @@ $claude = 'C:\Users\chipat\.local\bin\claude.exe'
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') }
 
+# Ecriture du journal a l'epreuve d'un verrou. Constate le 2026-08-21 : un simple
+# tail -f ouvert sur journal.log par un outil exterieur EMPECHE Add-Content d'ecrire
+# (Windows refuse l'acces, le fichier etant deja ouvert par un autre processus).
+# L'erreur etant non terminante, la passe continue mais devient INVISIBLE : une heure
+# de travail sans une ligne de journal. On reessaie donc, et en dernier recours on
+# ecrit a cote plutot que de perdre la trace.
+function Log($texte) {
+  for ($i = 1; $i -le 5; $i++) {
+    try { Add-Content -Path $log -Value $texte -Encoding utf8 -ErrorAction Stop; return }
+    catch { Start-Sleep -Milliseconds 400 }
+  }
+  try { Add-Content -Path ($log + '.secours') -Value $texte -Encoding utf8 -ErrorAction Stop } catch {}
+}
+
 # Verrou anti-chevauchement. ANCIENNE VERSION : on sautait si le fichier lock avait
 # moins de 90 minutes. Defaut constate le 2026-08-21 : une passe reelle a depasse
 # 92 minutes, donc son verrou etait deja perime alors qu'elle tournait toujours --
@@ -44,7 +58,7 @@ if (Test-Path $lock) {
     }
   } catch {}
   if ($vivant -and $age.TotalHours -lt 6) {
-    Add-Content $log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou, $([int]$age.TotalMinutes) min)."
+    Log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou, $([int]$age.TotalMinutes) min)."
     exit 0
   }
 }
@@ -90,15 +104,15 @@ $modeVerif = $false
 $arretDemande = $false
 if (Test-ChantierFini) {
   if (Test-Path $okFile) {
-    Add-Content $log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE. Tache desactivee. =====" -Encoding utf8
+    Log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE. Tache desactivee. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
-    catch { Add-Content $log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
+    catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
     exit 0
   }
   $echecs = 0
   if (Test-Path $cptFile) { $echecs = [int](Get-Content $cptFile -TotalCount 1) }
   if ($echecs -ge 3) {
-    Add-Content $log "[$(Stamp)] ===== ARRET : verification finale ROUGE 3 fois de suite. Intervention humaine requise (voir VERIF-FINALE.md). Tache desactivee. =====" -Encoding utf8
+    Log "[$(Stamp)] ===== ARRET : verification finale ROUGE 3 fois de suite. Intervention humaine requise (voir VERIF-FINALE.md). Tache desactivee. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null } catch {}
     exit 0
   }
@@ -113,9 +127,9 @@ $debutPasse = Get-Date
 New-Item -ItemType File -Path $lock -Force | Out-Null
 Set-Content -Path $lock -Value $PID -Encoding ascii   # le verrou porte le PID : voir plus haut
 if ($modeVerif) {
-  Add-Content $log "[$(Stamp)] ===== reveil autonome -- PASSE DE SECURITE (verification finale) ====="
+  Log "[$(Stamp)] ===== reveil autonome -- PASSE DE SECURITE (verification finale) ====="
 } else {
-  Add-Content $log "[$(Stamp)] ===== reveil autonome ====="
+  Log "[$(Stamp)] ===== reveil autonome ====="
 }
 
 $promptTravail = @'
@@ -195,7 +209,7 @@ try {
   $sortie = ''; $code = 1
   for ($try = 1; $try -le 2 -and $code -ne 0; $try++) {
     if ($try -gt 1) {
-      Add-Content $log "[$(Stamp)] echec (exit $code) -- nouvelle tentative ($try/2) dans 30s..." -Encoding utf8
+      Log "[$(Stamp)] echec (exit $code) -- nouvelle tentative ($try/2) dans 30s..."
       Start-Sleep -Seconds 30
     }
     $sortie = (& $claude -p $prompt --model 'claude-opus-5[1m]' --effort max --dangerously-skip-permissions 2>&1 | Out-String)
@@ -213,8 +227,8 @@ try {
   if ($estMojibake) {
     try { $sortie = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding(1252).GetBytes($sortie)) } catch {}
   }
-  Add-Content $log $sortie -Encoding utf8
-  Add-Content $log "[$(Stamp)] ===== fin (exit $code) =====" -Encoding utf8
+  Log $sortie
+  Log "[$(Stamp)] ===== fin (exit $code) ====="
 
   # --- Ligne BILAN lisible : on compte le nombre REEL de lecons enrichies = fichiers
   # pages/<cours>/lecon-*.html contenant un glossaire (class glossary), marqueur pose par
@@ -228,7 +242,7 @@ try {
     $restants = (Select-String -Path $plan -Pattern '^- \[ \]').Count
     $faits = $coches; $total = $coches + $restants
   } catch {}
-  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points de $planCourant" -Encoding utf8
+  Log "[$(Stamp)] BILAN [$statut] -- $faits/$total points de $planCourant"
 
   # --- Verdict de la passe de securite ---------------------------------------
   # Le modele ecrit VERDICT: VERT ou VERDICT: ROUGE en 1re ligne de VERIF-FINALE.md.
@@ -245,7 +259,7 @@ try {
       $ecritPendantLaPasse = (Get-Item $rapport).LastWriteTime -ge $debutPasse
       if (-not $ecritPendantLaPasse) {
         $verdict = 'PERIME'
-        Add-Content $log "[$(Stamp)] VERIFICATION FINALE : rapport PERIME (ecrit le $((Get-Item $rapport).LastWriteTime.ToString('yyyy-MM-dd HH:mm')), passe demarree a $($debutPasse.ToString('HH:mm'))) -- verdict ignore." -Encoding utf8
+        Log "[$(Stamp)] VERIFICATION FINALE : rapport PERIME (ecrit le $((Get-Item $rapport).LastWriteTime.ToString('yyyy-MM-dd HH:mm')), passe demarree a $($debutPasse.ToString('HH:mm'))) -- verdict ignore."
       } else {
         $tete = (Get-Content $rapport -TotalCount 1 -Encoding utf8)
         if ($tete -match 'VERDICT\s*:\s*VERT') { $verdict = 'VERT' }
@@ -261,19 +275,19 @@ try {
       if (Test-Path $cptFile) { $n = [int](Get-Content $cptFile -TotalCount 1) }
       $n = $n + 1
       Set-Content -Path $cptFile -Value $n -Encoding ascii
-      Add-Content $log "[$(Stamp)] VERIFICATION FINALE : $verdict (tentative $n/3) -- voir VERIF-FINALE.md, un nouveau reveil va corriger." -Encoding utf8
+      Log "[$(Stamp)] VERIFICATION FINALE : $verdict (tentative $n/3) -- voir VERIF-FINALE.md, un nouveau reveil va corriger."
     }
   }
 } catch {
-  Add-Content $log "[$(Stamp)] ERREUR wrapper : $_"
+  Log "[$(Stamp)] ERREUR wrapper : $_"
 } finally {
   Remove-Item $lock -Force -ErrorAction SilentlyContinue
   if ($arretDemande) {
     # Fin de chantier confirmee par la passe de securite : on coupe ici, sans
     # replanifier, plutot que de gaspiller un reveil de plus.
-    Add-Content $log "[$(Stamp)] ===== CHANTIER TERMINE : verification finale VERTE. Tache desactivee, aucun reveil replanifie. =====" -Encoding utf8
+    Log "[$(Stamp)] ===== CHANTIER TERMINE : verification finale VERTE. Tache desactivee, aucun reveil replanifie. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
-    catch { Add-Content $log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
+    catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
   }
   # Auto-replanification -- SAUF si la fin de chantier vient d'etre confirmee.
   # (Pas de return ici : PowerShell interdit de sortir d'un bloc finally.)
@@ -291,9 +305,9 @@ try {
       $next  = (Get-Date).AddMinutes(5)
       $tOnce = New-ScheduledTaskTrigger -Once -At $next -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tOnce -ErrorAction Stop | Out-Null
-      Add-Content $log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) (5 min apres la fin)" -Encoding utf8
+      Log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) (5 min apres la fin)"
     } catch {
-      Add-Content $log "[$(Stamp)] ATTENTION replanification KO ($_) -- le filet 2h prend le relais." -Encoding utf8
+      Log "[$(Stamp)] ATTENTION replanification KO ($_) -- le filet 2h prend le relais."
     }
   }
 }

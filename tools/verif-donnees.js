@@ -54,6 +54,12 @@
  *                             commentaires+chaînes retirés). Garde-fou, 0 aujourd'hui.
  *   I22 SQL mot réservé nu  : AVERTISSEMENT — colonne de CREATE TABLE ou alias « AS x »
  *                             qui est un mot réservé sans délimiteur (cas « end »).
+ *   I23 hubs atteignables   : chaque page de LESSON_FOOTER_COLS (main.js, pied de
+ *                             page injecté sur les 1463 leçons) existe sur le disque,
+ *                             et les hubs de l'espace personnel — dont « Mes données »,
+ *                             seule page de sauvegarde ET de réparation — sont liés
+ *                             depuis la page Progression. Elle n'était atteignable
+ *                             que par le pied de page de l'accueil (V12-B4).
  *
  * USAGE
  * -----
@@ -766,6 +772,51 @@ Object.keys(LESSONS).forEach((id) => {
         }
       }
     }));
+  });
+})();
+
+/* ============================ I23 hubs de l'espace personnel atteignables */
+/* Une page qu'on n'atteint que par le pied de page de l'accueil est une page
+   morte : « Mes données » est pourtant l'unique endroit où l'on exporte, où l'on
+   efface au détail, et où l'on récupère une sauvegarde mise de côté parce
+   qu'elle était illisible (V12-B2). Deux contrôles, tous deux statiques :
+     (a) toute page citée par LESSON_FOOTER_COLS existe bien dans pages/ ;
+     (b) les hubs de l'espace personnel sont liés depuis progression.html. */
+(function () {
+  const c = check('I23', 'hubs de l\'espace personnel atteignables');
+  let mainJs = '';
+  try { mainJs = fs.readFileSync(path.join(JS, 'main.js'), 'utf8'); }
+  catch (e) { c.err('js/main.js illisible'); return; }
+
+  const bloc = /var LESSON_FOOTER_COLS = \[([\s\S]*?)\n  \];/.exec(mainJs);
+  if (!bloc) { c.err('LESSON_FOOTER_COLS introuvable dans js/main.js'); return; }
+
+  const cites = [];
+  const re = /\["([a-z0-9-]+\.html)",\s*"([^"]+)"\]/g;
+  let m;
+  while ((m = re.exec(bloc[1]))) cites.push({ page: m[1], libelle: m[2] });
+  if (!cites.length) { c.err('LESSON_FOOTER_COLS ne cite aucune page'); return; }
+
+  cites.forEach((x) => {
+    if (!fs.existsSync(path.join(PAGES, x.page))) {
+      c.err('pied de page des leçons → pages/' + x.page + ' n\'existe pas');
+    }
+  });
+
+  /* Les pages où l'on gère SES données doivent être atteignables depuis le
+     tableau de bord, pas seulement depuis l'accueil. */
+  const DEPUIS_PROGRESSION = ['donnees-perso.html'];
+  let prog = '';
+  try { prog = fs.readFileSync(path.join(PAGES, 'progression.html'), 'utf8'); }
+  catch (e) { c.err('pages/progression.html illisible'); return; }
+  DEPUIS_PROGRESSION.forEach((page) => {
+    if (prog.indexOf(page) === -1) {
+      c.err('pages/progression.html ne renvoie pas vers ' + page +
+        ' — la page n\'est alors atteignable que par le pied de page de l\'accueil');
+    }
+    if (!cites.some((x) => x.page === page)) {
+      c.err('pied de page des leçons (LESSON_FOOTER_COLS) ne cite pas ' + page);
+    }
   });
 })();
 

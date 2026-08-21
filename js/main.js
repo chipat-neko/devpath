@@ -682,6 +682,10 @@
       ["bilan.html", "Mon bilan"],
       ["notes.html", "Mes notes"],
       ["mes-qcm.html", "Mes QCM"],
+      /* B4 : la page de sauvegarde ET de réparation n'était atteignable que par
+         le pied de page de l'accueil — or c'est là qu'on récupère une donnée
+         mise de côté parce qu'elle était illisible (cf. B2). */
+      ["donnees-perso.html", "Mes données"],
     ] },
   ];
 
