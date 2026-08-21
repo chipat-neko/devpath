@@ -27,7 +27,10 @@
  *   I8  related             : chaque related.course désigne un cours existant.
  *   I9  tracks              : chaque track.courses[] désigne un cours existant.
  *   I10 fils rouges         : FILS_ROUGES (cours.js) → cours + page existants,
- *                             aucune entrée morte ; fil-rouge-*-data.js cohérents.
+ *                             aucune entrée morte ; fil-rouge-*-data.js cohérents ;
+ *                             et CONCORDANCE des numéros d'étape entre la table et
+ *                             le fil réel (V13-A4 : `kotlin` et `clojure` avaient
+ *                             disparu de la table, rendant leur fil invisible).
  *   I11 projets             : chaque PROJETS.course existe, chaque cours couvert.
  *   I12 quiz bilan          : chaque cours a son QCM bilan (les 4 fusionnés : 2).
  *   I13 data-exos alignés   : aucun capstone ne reçoit de champ (piège A8), aucune
@@ -361,6 +364,51 @@ const totalLessons = Object.keys(LESSONS).reduce((n, id) => n + LESSONS[id].file
     if (!fr || !Array.isArray(fr.etapes)) { c.warn(f + ' : pas de FIL_ROUGE.etapes exploitable'); return; }
     fr.etapes.forEach((e) => {
       if (e && e.course && !COURSE_IDS.has(e.course)) c.err(f + ' : étape ' + (e.n || '?') + ' cite le cours inexistant « ' + e.course + ' »');
+    });
+  });
+
+  /* CONCORDANCE table ⇄ fil réel (V13-A4). Jusqu'ici, I10 vérifiait que la page
+     existe et que les cours cités existent — jamais que les NUMÉROS d'étape
+     concordent. Deux fils avaient ainsi dérivé en silence : `kotlin` (fil
+     mobile) et `clojure` (fil jvm) étaient absents de la table, donc leur fil
+     était INVISIBLE depuis leur page de cours. Un numéro périmé, lui, enverrait
+     l'apprenant sur la mauvaise étape. C'est le garde-fou des chantiers qui
+     renumérotent un fil (une insertion décale toutes les étapes suivantes).
+     La page fait foi pour trouver les données : on lit le <script> qu'elle
+     charge, ce qui détecte aussi une page branchée sur le mauvais fichier. */
+  fils.forEach((fr) => {
+    if (!fr.page) return;
+    const rel = fr.page.replace(/^(\.\.\/)+/, '');
+    const abs = path.join(PAGES, rel);
+    if (!fs.existsSync(abs)) return; // déjà signalé plus haut
+    const html = fs.readFileSync(abs, 'utf8');
+    const m = html.match(/src="\.\.\/js\/(fil-rouge[a-z0-9-]*-data\.js)"/);
+    if (!m) { c.err('FILS_ROUGES (' + fr.page + ') : la page ne charge aucun fil-rouge-*-data.js'); return; }
+    let F;
+    try { F = loadGlobal(path.join(JS, m[1]), 'FIL_ROUGE'); } catch (e) { return; }
+    if (!F || !Array.isArray(F.etapes)) return;
+    if (fr.total !== F.etapes.length) {
+      c.err('FILS_ROUGES (' + fr.page + ') : total=' + fr.total + ' mais ' + m[1] + ' compte ' + F.etapes.length + ' étapes');
+    }
+    F.etapes.forEach((st) => {
+      const vise = fr.map ? fr.map[st.course] : undefined;
+      if (vise === undefined) {
+        c.err('FILS_ROUGES (' + fr.page + ') : le cours « ' + st.course + ' » (étape ' + st.n +
+          ') manque à la map → le fil est invisible depuis sa page de cours');
+        return;
+      }
+      /* Un cours peut occuper DEUX étapes d'un même fil (python en 1 et 6 dans
+         « donnees ») : la map ne peut en désigner qu'une, n'importe laquelle. */
+      const occ = F.etapes.filter((x) => x.course === st.course).map((x) => x.n);
+      if (occ.indexOf(vise) === -1) {
+        c.err('FILS_ROUGES (' + fr.page + ') : « ' + st.course + ' » pointe l\'étape ' + vise +
+          ' alors qu\'il occupe l\'étape ' + occ.join(' ou ') + ' dans ' + m[1]);
+      }
+    });
+    Object.keys(fr.map || {}).forEach((cid) => {
+      if (!F.etapes.some((x) => x.course === cid)) {
+        c.err('FILS_ROUGES (' + fr.page + ') : la map cite « ' + cid +' », qui n\'est étape d\'aucune de ce fil');
+      }
     });
   });
 })();
