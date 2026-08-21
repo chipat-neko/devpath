@@ -409,7 +409,41 @@ window.FIL_ROUGE = {
         "Un <strong>artefact</strong> est produit.",
         "Le <strong>déploiement</strong> est conditionné à la branche <code>main</code>.",
       ],
-      livrable: "🎉 Le portfolio full-stack déployé automatiquement — fil rouge terminé !",
+      livrable: "Le portfolio full-stack déployé automatiquement, à chaque push.",
+    },
+    {
+      n: 16,
+      course: "equipe",
+      courseTitle: "Travailler à plusieurs sur du code",
+      dir: "equipe",
+      accent: "equipe",
+      phase: "Industrialisation",
+      titre: "Ouvrir le projet à quelqu'un d'autre",
+      depart: "Un projet complet, déployé automatiquement — et que personne d'autre que toi n'a jamais lu.",
+      objectif:
+        "<p>Un projet qui ne sert qu'à son auteur n'a pas besoin d'être lisible. Dès qu'une deuxième personne arrive, " +
+        "tout change : elle doit pouvoir <strong>installer</strong> le projet sans t'appeler, <strong>comprendre</strong> " +
+        "pourquoi le code est comme il est, <strong>proposer</strong> une modification, et la voir " +
+        "<strong>relue</strong> sans que cela tourne au conflit.</p>" +
+        "<p>C'est aussi l'étape qui prépare une candidature : le premier recruteur qui ouvre ton dépôt fait exactement " +
+        "ce parcours-là. On automatise donc le <strong>style</strong> (pour ne plus jamais en débattre), on soigne les " +
+        "<strong>messages de commit</strong> et la <strong>demande de fusion</strong>, et on documente " +
+        "<strong>ce qui compte</strong> — pas tout.</p>",
+      ajoute: [
+        "Un <strong>README</strong> qui permet d'installer et de lancer le projet sans aide extérieure.",
+        "Le <strong>style automatisé</strong> (formateur + linter) branché sur le pipeline de l'étape 15.",
+        "Des <strong>messages de commit</strong> qui disent le pourquoi, pas seulement le quoi.",
+        "Une <strong>demande de fusion</strong> exemplaire : petite, décrite, avec ce qu'il faut vérifier.",
+        "Une <strong>revue</strong> reçue et une revue faite — sur ce projet ou sur celui d'un autre.",
+      ],
+      criteres: [
+        "Une personne extérieure <strong>installe et lance</strong> le projet en suivant le seul README.",
+        "Le <strong>style</strong> est vérifié automatiquement : plus personne n'en discute en revue.",
+        "L'historique se <strong>lit</strong> : un commit, une intention, un message qui l'explique.",
+        "Une <strong>demande de fusion</strong> a été ouverte, décrite et relue avant d'être fusionnée.",
+        "Les remarques de revue portent sur le <strong>code</strong>, jamais sur la personne — dans les deux sens.",
+      ],
+      livrable: "🎉 Un portfolio full-stack déployé automatiquement — et un dépôt qu'un inconnu peut installer, lire et améliorer !",
     },
   ],
 };

@@ -382,11 +382,11 @@
       map: { docker: 1, kubernetes: 2, cicd: 3, iac: 4 },
     },
     {
-      page: "../fil-rouge.html", total: 15, label: "ton portfolio full-stack",
+      page: "../fil-rouge.html", total: 16, label: "ton portfolio full-stack",
       map: {
         html: 1, css: 2, javascript: 3,
         typescript: 7, react: 8, nodejs: 9, sql: 10,
-        git: 11, securite: 12, tests: 13, docker: 14, cicd: 15,
+        git: 11, securite: 12, tests: 13, docker: 14, cicd: 15, equipe: 16,
       },
     },
     {
@@ -399,11 +399,11 @@
     },
     {
       page: "../fil-rouge-jvm.html", total: 5, label: "ta médiathèque JVM",
-      map: { java: 1, kotlin: 2, scala: 3, groovy: 4 },
+      map: { java: 1, kotlin: 2, scala: 3, groovy: 4, clojure: 5 },
     },
     {
-      page: "../fil-rouge-donnees.html", total: 5, label: "ton analyse de données",
-      map: { python: 1, sql: 2, r: 3, julia: 4 },
+      page: "../fil-rouge-donnees.html", total: 7, label: "ton analyse de données",
+      map: { python: 1, bdd: 2, sql: 3, r: 4, julia: 5, "data-eng": 7 },
     },
     {
       page: "../fil-rouge-backend.html", total: 7, label: "ton API multi-langages",
@@ -414,8 +414,8 @@
       map: { sass: 1, vue: 2, http: 3, regex: 4, formats: 5, patterns: 6, bash: 7, markdown: 8, vscode: 9 },
     },
     {
-      page: "../fil-rouge-mobile.html", total: 4, label: "ton app de notes mobile",
-      map: { swift: 1, objc: 2, dart: 4 },
+      page: "../fil-rouge-mobile.html", total: 5, label: "ton app de notes mobile",
+      map: { mobile: 1, swift: 2, objc: 3, kotlin: 4, dart: 5 },
     },
     {
       page: "../fil-rouge-arcade.html", total: 6, label: "ton casse-briques",
@@ -434,12 +434,12 @@
       map: { bash: 1, powershell: 2, perl: 3 },
     },
     {
-      page: "../fil-rouge-patrimoine.html", total: 3, label: "le patrimoine logiciel",
-      map: { cobol: 1, fortran: 2, pascal: 3 },
+      page: "../fil-rouge-patrimoine.html", total: 4, label: "le patrimoine logiciel",
+      map: { cobol: 1, fortran: 2, pascal: 3, vb: 4 },
     },
     {
-      page: "../fil-rouge-frontpro.html", total: 3, label: "ton front-end de pro",
-      map: { "a11y": 1, "perf-web": 2, wasm: 3 },
+      page: "../fil-rouge-frontpro.html", total: 4, label: "ton front-end de pro",
+      map: { ux: 1, "a11y": 2, "perf-web": 3, wasm: 4 },
     },
     {
       page: "../fil-rouge-echelle.html", total: 3, label: "ton déploiement à l'échelle",
@@ -452,6 +452,10 @@
     {
       page: "../fil-rouge-fiabilite.html", total: 2, label: "tes systèmes fiables",
       map: { ada: 1, erlang: 2 },
+    },
+    {
+      page: "../fil-rouge-exploitation.html", total: 4, label: "ton service en production",
+      map: { linux: 1, reseaux: 2, os: 3, observabilite: 4 },
     },
   ];
   function makeFilRougeLink(hit) {

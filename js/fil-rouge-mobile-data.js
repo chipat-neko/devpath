@@ -1,7 +1,12 @@
 /* =============================================================================
    fil-rouge-mobile-data.js — FIL ROUGE « Une app de notes mobile ».
-   La même petite application (des notes : créer, lister, éditer) du natif iOS
-   au multiplateforme : Swift → Objective-C → Dart (Flutter).
+   La même petite application (des notes : créer, lister, éditer) conçue d'abord
+   hors langage, puis du natif iOS au multiplateforme :
+   mobile → Swift → Objective-C → Kotlin → Dart (Flutter).
+   L'étape 1 a été ajoutée au chantier V13-A3 : le cours `mobile` — ce qui fait
+   une application mobile, par-delà le langage — ne figurait dans aucun fil
+   rouge, alors que ce fil enchaînait quatre langages sans jamais poser la
+   question du cycle de vie, de la navigation ni du hors-ligne.
    Définit window.FIL_ROUGE → moteur générique js/fil-rouge.js.
    Page : pages/fil-rouge-mobile.html. 100 % file://.
    ⚠️ Projet conceptuel : se réalise dans Xcode / Flutter (pas dans le navigateur).
@@ -9,25 +14,64 @@
 window.FIL_ROUGE = {
   id: "mobile",
   titre: "Une app de notes mobile",
-  sousTitre: "La même app, du natif iOS au multiplateforme — Swift, Objective-C, Dart (Flutter).",
+  sousTitre: "La même app, conçue une fois puis écrite partout : ce qui fait une app mobile, puis Swift, Objective-C, Kotlin et Dart (Flutter).",
   intro:
-    "<p>Une petite <strong>application de notes</strong> (créer, lister, éditer, supprimer) sert de fil conducteur. Tu la " +
-    "construis d'abord en <strong>Swift</strong> (le natif iOS moderne), tu apprends à lire et maintenir du code " +
+    "<p>Une petite <strong>application de notes</strong> (créer, lister, éditer, supprimer) sert de fil conducteur. Tu " +
+    "commences par ce qui ne dépend d'<strong>aucun langage</strong> — le cycle de vie, la navigation, l'état, le " +
+    "hors-ligne, les permissions —, puis tu la " +
+    "construis en <strong>Swift</strong> (le natif iOS moderne), tu apprends à lire et maintenir du code " +
     "<strong>Objective-C</strong> (le legacy d'Apple), puis tu la portes en <strong>Dart/Flutter</strong> pour qu'elle " +
     "tourne sur iOS <em>et</em> Android.</p>" +
     "<p>Le modèle (une note : titre, contenu, date) ne change pas : c'est la <strong>plateforme</strong> et le " +
-    "<strong>langage</strong> qui évoluent. ⚠️ Ce fil rouge se réalise dans un vrai environnement mobile (Xcode, Flutter), " +
-    "pas dans le navigateur.</p>",
+    "<strong>langage</strong> qui évoluent. ⚠️ Ce fil rouge se réalise dans un vrai environnement mobile (Xcode, " +
+    "Android Studio, Flutter), pas dans le navigateur — sauf l'étape 1, qui se conçoit sur le papier.</p>",
+  /* Renumérotation V13-A3 (cf. migrerStore dans js/fil-rouge.js) : le fil
+     commençait sur swift=1, objc=2, kotlin=3, dart=4. */
+  remapVersion: 1,
+  remap: { "1": 2, "2": 3, "3": 4, "4": 5 },
   etapes: [
     {
       n: 1,
+      course: "mobile",
+      courseTitle: "Développer une application mobile",
+      dir: "mobile",
+      accent: "mobile",
+      phase: "Concevoir",
+      titre: "Ce qui fait une app mobile, avant tout langage",
+      depart: "Une idée d'app de notes (titre, contenu, date) — et l'envie d'ouvrir tout de suite un éditeur.",
+      objectif:
+        "<p>Une application mobile n'est pas un site rétréci. Elle est <strong>interrompue</strong> sans prévenir (appel, " +
+        "notification, batterie), elle perd le réseau, elle demande des <strong>permissions</strong>, et elle est jugée " +
+        "sur des listes qui doivent défiler sans accroc. Ces contraintes ne dépendent d'aucun langage : les décider " +
+        "d'abord évite de les redécouvrir quatre fois.</p>" +
+        "<p>On choisit ici <strong>natif ou multiplateforme</strong> en connaissance de cause, on dessine les " +
+        "<strong>écrans</strong> et la <strong>navigation</strong>, on décide où vit l'<strong>état</strong>, et on " +
+        "tranche la question qui décide de tout le reste : que fait l'app <strong>sans réseau</strong> ?</p>",
+      ajoute: [
+        "Un choix <strong>natif ou multiplateforme</strong> argumenté (public visé, équipe, budget, accès matériel).",
+        "La carte des <strong>écrans</strong> et de la <strong>navigation</strong> entre eux.",
+        "Le <strong>modèle</strong> d'une note et l'endroit où vit son <strong>état</strong>.",
+        "La règle du <strong>hors-ligne</strong> : ce qui fait autorité, l'appareil ou le serveur.",
+        "La liste des <strong>permissions</strong> réellement nécessaires — et de celles dont on se passe.",
+      ],
+      criteres: [
+        "Le choix <strong>natif / multiplateforme</strong> est justifié par des contraintes réelles, pas par une mode.",
+        "La <strong>navigation</strong> est dessinée : on sait revenir en arrière de partout.",
+        "L'endroit où vit l'<strong>état</strong> est décidé, et le cycle de vie (mise en veille, retour) est prévu.",
+        "Le comportement <strong>hors ligne</strong> est écrit noir sur blanc.",
+        "Chaque <strong>permission</strong> demandée est justifiée par une fonctionnalité visible.",
+      ],
+      livrable: "Une conception d'app mobile tenant sur une page : écrans, navigation, état, hors-ligne, permissions — indépendante du langage.",
+    },
+    {
+      n: 2,
       course: "swift",
       courseTitle: "Swift",
       dir: "swift",
       accent: "swift",
       phase: "iOS natif",
       titre: "L'app de notes en Swift",
-      depart: "Une idée d'app de notes (titre, contenu, date).",
+      depart: "La conception de l'étape 1 : les écrans, la navigation et le modèle d'une note (titre, contenu, date), sur le papier.",
       objectif:
         "<p>Construire l'application en <strong>Swift</strong>, le langage moderne d'Apple : un modèle sûr, une liste de " +
         "notes, l'ajout et la suppression.</p>",
@@ -47,7 +91,7 @@ window.FIL_ROUGE = {
       livrable: "L'app de notes en Swift natif.",
     },
     {
-      n: 2,
+      n: 3,
       course: "objc",
       courseTitle: "Objective-C",
       dir: "objc",
@@ -76,7 +120,7 @@ window.FIL_ROUGE = {
     },
 
     {
-      n: 3,
+      n: 4,
       course: "kotlin",
       courseTitle: "Kotlin",
       dir: "kotlin",
@@ -103,7 +147,7 @@ window.FIL_ROUGE = {
       livrable: "L'app de notes en Kotlin (Android natif).",
     },
     {
-      n: 4,
+      n: 5,
       course: "dart",
       courseTitle: "Dart",
       dir: "dart",

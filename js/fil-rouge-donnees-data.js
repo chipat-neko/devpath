@@ -1,20 +1,32 @@
 /* =============================================================================
    fil-rouge-donnees-data.js — FIL ROUGE « Une analyse de données de bout en bout ».
    Un même jeu de données mené du prototype à la production : explorer (Python),
-   stocker & interroger (SQL), modéliser & visualiser (R), industrialiser (Python
-   avancé). Définit window.FIL_ROUGE → moteur générique js/fil-rouge.js.
+   CONCEVOIR SA BASE (bdd), stocker & interroger (SQL), modéliser & visualiser
+   (R), accélérer (Julia), industrialiser (Python avancé), puis EXPLOITER LE
+   PIPELINE tous les jours (data-eng).
+   Les étapes `bdd` (2) et `data-eng` (7) ont été ajoutées au chantier V13-A3 :
+   ces deux cours ne figuraient dans aucun fil rouge, alors que le fil sautait
+   de l'exploration aux requêtes SQL sans jamais concevoir de schéma, et
+   s'arrêtait à un pipeline qui tourne une fois, à la main.
+   Définit window.FIL_ROUGE → moteur générique js/fil-rouge.js.
    Page : pages/fil-rouge-donnees.html. 100 % file://.
    ============================================================================= */
 window.FIL_ROUGE = {
   id: "donnees",
   titre: "Une analyse de données de bout en bout",
-  sousTitre: "Un même jeu de données, de l'exploration au pipeline industrialisé — Python, SQL, R, Python avancé.",
+  sousTitre: "Un même jeu de données, de l'exploration au pipeline qui tourne tout seul — Python, conception de base, SQL, R, Julia, Python avancé, ingénierie de données.",
   intro:
     "<p>Une vraie analyse de données ne tient pas dans un seul outil. Tu pars d'un <strong>jeu de données</strong> (par ex. " +
-    "des ventes), tu l'<strong>explores</strong> en Python, tu le <strong>stockes et l'interroges</strong> en SQL, tu le " +
-    "<strong>modélises et le visualises</strong> en R, puis tu <strong>industrialises</strong> le tout en Python avancé.</p>" +
+    "des ventes), tu l'<strong>explores</strong> en Python, tu <strong>conçois le schéma</strong> qui l'accueillera, tu le " +
+    "<strong>stockes et l'interroges</strong> en SQL, tu le <strong>modélises et le visualises</strong> en R, tu " +
+    "<strong>accélères</strong> les calculs lourds en Julia, puis tu <strong>industrialises</strong> le tout en Python " +
+    "avancé — et tu finis par en faire un <strong>pipeline exploité</strong>, qui tourne chaque jour sans toi.</p>" +
     "<p>Le fil conducteur, c'est <strong>la donnée</strong> : à chaque étape elle est mieux rangée, mieux comprise, et le " +
     "traitement devient plus fiable et reproductible.</p>",
+  /* Renumérotation V13-A3 (cf. migrerStore dans js/fil-rouge.js) : le fil était
+     python=1, sql=2, r=3, julia=4, python avancé=5. */
+  remapVersion: 1,
+  remap: { "2": 3, "3": 4, "4": 5, "5": 6 },
   etapes: [
     {
       n: 1,
@@ -45,13 +57,44 @@ window.FIL_ROUGE = {
     },
     {
       n: 2,
+      course: "bdd",
+      courseTitle: "Concevoir une base de données",
+      dir: "bdd",
+      accent: "bdd",
+      phase: "Concevoir",
+      titre: "Concevoir le schéma avant de le remplir",
+      depart: "Un jeu exploré et nettoyé — et la tentation de le verser tel quel dans une table unique de quarante colonnes.",
+      objectif:
+        "<p>Un tableau plat n'est pas une base. Avant la première requête, repérer les <strong>entités</strong> et leurs " +
+        "<strong>relations</strong>, choisir les <strong>clés</strong>, poser les <strong>contraintes</strong> qui " +
+        "laisseront la base refuser une donnée absurde, et <strong>normaliser</strong> juste ce qu'il faut — puis savoir " +
+        "quand <strong>dénormaliser</strong> pour une lecture qui compte.</p>" +
+        "<p>C'est l'étape la plus rentable du fil : un schéma bancal se paye dans toutes les requêtes qui suivront.</p>",
+      ajoute: [
+        "Les <strong>entités</strong> du jeu et leurs attributs, séparées de ce qui n'est qu'une mesure.",
+        "Les <strong>relations</strong> et leurs cardinalités (un client, plusieurs commandes).",
+        "Une <strong>clé primaire</strong> par table et les <strong>clés étrangères</strong> qui relient.",
+        "Des <strong>contraintes</strong> qui rendent une donnée fausse impossible à insérer.",
+        "Une <strong>normalisation</strong> jusqu'à la 3<sup>e</sup> forme, et les dénormalisations assumées.",
+      ],
+      criteres: [
+        "Chaque table représente <strong>une seule</strong> chose, nommée d'après ce qu'elle décrit.",
+        "Chaque ligne est <strong>identifiable</strong> par une clé primaire stable.",
+        "Les <strong>clés étrangères</strong> existent et l'intégrité référentielle est active.",
+        "Une donnée absurde est <strong>refusée par la base</strong>, pas seulement par le code.",
+        "Toute <strong>dénormalisation</strong> est justifiée par une lecture précise, pas par confort.",
+      ],
+      livrable: "Un schéma relationnel justifié : entités, relations, clés et contraintes — prêt à être créé.",
+    },
+    {
+      n: 3,
       course: "sql",
       courseTitle: "SQL",
       dir: "sql",
       accent: "sql",
       phase: "Stocker & interroger",
       titre: "Stocker et interroger en base",
-      depart: "Les données explorées et nettoyées de l'étape 1.",
+      depart: "Les données explorées de l'étape 1 et le schéma conçu à l'étape 2 — il ne reste qu'à le créer pour de vrai.",
       objectif:
         "<p>Donner une vraie maison aux données : un <strong>schéma relationnel</strong> et des <strong>requêtes SQL</strong> " +
         "pour répondre efficacement aux questions, même sur de gros volumes.</p>",
@@ -71,7 +114,7 @@ window.FIL_ROUGE = {
       livrable: "Les données rangées en base, interrogeables en SQL.",
     },
     {
-      n: 3,
+      n: 4,
       course: "r",
       courseTitle: "R",
       dir: "r",
@@ -99,7 +142,7 @@ window.FIL_ROUGE = {
     },
 
     {
-      n: 4,
+      n: 5,
       course: "julia",
       courseTitle: "Julia",
       dir: "julia",
@@ -126,7 +169,7 @@ window.FIL_ROUGE = {
       livrable: "Un calcul scientifique performant, en Julia.",
     },
     {
-      n: 5,
+      n: 6,
       course: "python",
       courseTitle: "Python",
       dir: "python",
@@ -150,7 +193,40 @@ window.FIL_ROUGE = {
         "Le pipeline est <strong>reproductible</strong> (une commande relance tout).",
         "Un <strong>rapport / export</strong> des résultats est produit automatiquement.",
       ],
-      livrable: "🏁 Une analyse de données complète, de l'exploration au pipeline industrialisé et testé !",
+      livrable: "Une analyse complète, de l'exploration au pipeline industrialisé et testé — qui tourne quand on le lance.",
+    },
+    {
+      n: 7,
+      course: "data-eng",
+      courseTitle: "Ingénierie de données",
+      dir: "data-eng",
+      accent: "data-eng",
+      phase: "Exploiter",
+      titre: "Le faire tourner tous les jours, sans toi",
+      depart: "Un pipeline reproductible qu'il faut encore lancer à la main — et qui doublonne si on le relance deux fois.",
+      objectif:
+        "<p>Passer du script qu'on lance au <strong>pipeline qu'on exploite</strong>. Décider entre " +
+        "<strong>ETL et ELT</strong>, choisir un <strong>format</strong> (le CSV a des limites que Parquet n'a pas), " +
+        "<strong>partitionner</strong> le stockage pour ne pas tout relire, rendre chaque traitement " +
+        "<strong>idempotent</strong> — rejouer une journée ne doit rien doublonner —, l'<strong>orchestrer</strong> " +
+        "(dépendances, planification, reprise), et le <strong>surveiller</strong> : fraîcheur, volumétrie, qualité.</p>" +
+        "<p>C'est ici qu'un pipeline cesse d'être un script personnel pour devenir une source sur laquelle d'autres " +
+        "s'appuient — et qu'on doit prévenir quand la donnée est en retard.</p>",
+      ajoute: [
+        "Un choix <strong>ETL / ELT</strong> argumenté, et une ingestion <strong>pleine ou incrémentale</strong> assumée.",
+        "Un <strong>format</strong> et un <strong>partitionnement</strong> adaptés au volume et aux requêtes.",
+        "Des étapes <strong>idempotentes</strong> : rejouer une exécution ne crée aucun doublon.",
+        "Une <strong>orchestration</strong> : dépendances entre étapes, planification, reprise après échec.",
+        "Des <strong>contrôles de qualité</strong> et une alerte sur la <strong>fraîcheur</strong> des données.",
+      ],
+      criteres: [
+        "Le pipeline se <strong>relance sans dégâts</strong> : la même exécution rejouée donne le même résultat.",
+        "Le <strong>partitionnement</strong> évite de tout relire à chaque exécution, et c'est mesuré.",
+        "Les étapes s'enchaînent par <strong>dépendances</strong>, pas par ordre d'écriture.",
+        "Un <strong>test de qualité</strong> bloque la publication d'un lot manifestement faux.",
+        "Une <strong>alerte</strong> se déclenche si la donnée n'est pas arrivée à l'heure.",
+      ],
+      livrable: "🏁 Une analyse de données complète, du premier coup d'oeil au pipeline exploité : schéma pensé, calculs accélérés, exécution quotidienne surveillée !",
     },
   ],
 };

@@ -54,6 +54,7 @@
     scripting: "Automatiser le système",
     securite: "Sécuriser une application",
     patrimoine: "Explorer le patrimoine logiciel",
+    exploitation: "Mettre un service en ligne, et le garder debout",
   };
 
   /* Copie de secours posée par SyntaxeStore.getJSON (theme.js) quand une
