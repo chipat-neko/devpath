@@ -47,6 +47,8 @@
  *   I19 compteurs affichés  : « N cours/leçons/langages/parcours » de l'accueil, du
  *                             catalogue et d'« À propos » == décompte réel de data.js
  *                             (commentaires retirés d'abord). Trois pannes historiques.
+ *   I20 titre ⇄ <h1>        : le title de data.js (catalogue, recherche, nav) ==
+ *                             le <h1 class="lesson-header__title"> écrit en dur.
  *
  * USAGE
  * -----
@@ -611,6 +613,35 @@ Object.keys(LESSONS).forEach((id) => {
   });
   Object.keys(REEL).forEach((type) => {
     if (!vus[type]) c.warn('aucun compteur « ' + LABEL[type] + ' » (= ' + REEL[type] + ') trouvé dans les pages de stats — surveillance impossible');
+  });
+})();
+
+/* ==================================== I20 titre data.js ⇄ <h1> affiché */
+/* Le <h1 class="lesson-header__title"> est écrit EN DUR dans chaque leçon, alors
+   que data.js déclare le title (celui du catalogue, de la recherche, de la nav).
+   Rien ne les rapprochait : 4 divergences vivaient. On les confronte, entités
+   HTML décodées. */
+(function () {
+  const c = check('I20', 'titre data.js ⇄ <h1> affiché');
+  function norm(s) {
+    return String(s == null ? '' : s)
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+      .replace(/&#0?39;/g, "'").replace(/&#x27;/gi, "'").replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ').trim();
+  }
+  Object.keys(CONTENT).forEach((id) => {
+    const cc = CONTENT[id];
+    const dir = cc.dir || id;
+    (cc.modules || []).forEach((m) => (m.lessons || []).forEach((l) => {
+      if (!l || !l.file || l.file === '#') return;
+      const html = readPage(dir, l.file);
+      if (html == null || isRedirect(html)) return;
+      const mm = html.match(/<h1[^>]*class="lesson-header__title"[^>]*>([\s\S]*?)<\/h1>/);
+      if (!mm) { c.warn(id + '/' + l.file + ' : pas de <h1 class="lesson-header__title">'); return; }
+      const h1 = norm(mm[1].replace(/<[^>]+>/g, ''));
+      const titre = norm(l.title);
+      if (h1 !== titre) c.err(id + '/' + l.file + ' : data.js « ' + titre + ' » ≠ <h1> « ' + h1 + ' »');
+    }));
   });
 })();
 

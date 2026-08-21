@@ -4206,7 +4206,7 @@ window.SITE_DATA = (function () {
           num: "04", title: "À l'échelle et en production", sub: "coût, volumétrie, projet de bout en bout", level: "avance",
           lessons: [
             { num: "13", title: "Coût et volumétrie : quand la donnée devient chère", file: "lecon-13.html", status: "complet" },
-            { num: "14", title: "Projet — le pipeline de Vélociti de bout en bout", file: "lecon-14.html", status: "complet" },
+            { num: "14", title: "Projet : le pipeline de Vélociti de bout en bout", file: "lecon-14.html", status: "complet" },
           ],
         },
       ],
@@ -4254,7 +4254,7 @@ window.SITE_DATA = (function () {
             { num: "12", title: "Lire un plan d'exécution", file: "lecon-12.html", status: "complet" },
             { num: "13", title: "Transactions et isolation : le cas du dernier billet", file: "lecon-13.html", status: "complet" },
             { num: "14", title: "Faire évoluer un schéma : les migrations", file: "lecon-14.html", status: "complet" },
-            { num: "15", title: "Projet — concevoir la base de Rideau de bout en bout", file: "lecon-15.html", status: "complet" },
+            { num: "15", title: "Projet : concevoir la base de Rideau de bout en bout", file: "lecon-15.html", status: "complet" },
           ],
         },
       ],
@@ -4292,8 +4292,8 @@ window.SITE_DATA = (function () {
           num: "03", title: "L'app dans le monde réel", sub: "stockage local, réseau, hors ligne, permissions, notifications", level: "intermediaire",
           lessons: [
             { num: "09", title: "Stocker des données sur l'appareil", file: "lecon-09.html", status: "complet" },
-            { num: "10", title: "Parler au réseau", file: "lecon-10.html", status: "complet" },
-            { num: "11", title: "Fonctionner hors ligne", file: "lecon-11.html", status: "complet" },
+            { num: "10", title: "Parler au réseau : appeler une API sans figer l'écran", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Fonctionner hors ligne : le stockage local fait autorité", file: "lecon-11.html", status: "complet" },
             { num: "12", title: "Permissions et vie privée", file: "lecon-12.html", status: "complet" },
             { num: "13", title: "Les notifications, à bon escient", file: "lecon-13.html", status: "complet" },
           ],
