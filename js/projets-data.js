@@ -3516,4 +3516,55 @@ window.PROJETS = [
       "programme « attend » sans consommer de CPU… Ce projet éclaire aussi <a href=\"../linux/cours.html\">Linux</a> et " +
       "l'<a href=\"../algo/cours.html\">algorithmique</a>.</p>",
   },
+  {
+    id: "compilation-calculette",
+    course: "compilation",
+    courseTitle: "Compilation",
+    dir: "compilation",
+    accent: "compilation",
+    type: "Langage & interpréteur",
+    niveau: "Avancé",
+    titre: "Un langage de formules pour une feuille de calcul",
+    contexte:
+      "<p>Une petite application de gestion affiche des tableaux, et ses utilisateurs réclament une " +
+      "<strong>colonne calculée</strong>&nbsp;: pouvoir écrire <code>(prix * quantite) * (1 + tva)</code> dans une case " +
+      "et voir le résultat. Tentation immédiate&nbsp;: passer la formule à la fonction d'évaluation du langage hôte. " +
+      "Refusé en revue de code — cela exécuterait n'importe quoi. On te demande donc d'écrire un " +
+      "<strong>vrai petit langage</strong>&nbsp;: il ne comprend que des formules, et rien d'autre.</p>",
+    objectif:
+      "<p>Construire la chaîne complète sur un langage minuscule&nbsp;: <strong>analyse lexicale</strong> " +
+      "(le texte devient des jetons), <strong>analyse syntaxique</strong> (les jetons deviennent un arbre), puis " +
+      "<strong>évaluation</strong> de cet arbre. La priorité et l'associativité des opérateurs doivent venir de la " +
+      "<strong>grammaire</strong>, pas d'une série de cas particuliers.</p>",
+    livrable: "Un évaluateur de formules autonome : une fonction qui reçoit un texte et des variables, et renvoie un nombre ou une erreur claire.",
+    fonctionnalites: [
+      "Un <strong>analyseur lexical</strong> qui produit des jetons&nbsp;: nombres, noms de variables, opérateurs, parenthèses.",
+      "Une <strong>grammaire écrite</strong> (en EBNF) avant la moindre ligne de code de l'analyseur.",
+      "Un <strong>analyseur syntaxique</strong> par descente récursive qui construit un arbre de syntaxe abstraite.",
+      "La <strong>priorité</strong> correcte de <code>*</code> et <code>/</code> sur <code>+</code> et <code>-</code>, et l'associativité <strong>à gauche</strong> de la soustraction.",
+      "Les <strong>parenthèses</strong>, imbriquées à n'importe quelle profondeur.",
+      "Des <strong>variables</strong> résolues dans un dictionnaire fourni à l'évaluation.",
+      "Des <strong>messages d'erreur</strong> qui nomment l'étape fautive et la position dans le texte.",
+    ],
+    criteres: [
+      "<code>2 + 3 * 4</code> vaut <strong>14</strong>, et <code>(2 + 3) * 4</code> vaut <strong>20</strong>.",
+      "<code>10 - 4 - 3</code> vaut <strong>3</strong>&nbsp;: l'associativité à gauche est respectée.",
+      "Une formule <strong>mal formée</strong> (<code>2 +</code>, <code>(1</code>) est refusée avec un message situé, jamais par un plantage.",
+      "Un caractère <strong>inconnu</strong> est signalé comme erreur <strong>lexicale</strong>, pas syntaxique.",
+      "La <strong>grammaire</strong> livrée décrit exactement le langage accepté&nbsp;: rien de plus, rien de moins.",
+      "Aucune <strong>évaluation dynamique</strong> du langage hôte n'est utilisée&nbsp;: c'est tout l'intérêt du projet.",
+      "Une <strong>batterie de tests</strong> couvre les cas limites&nbsp;: parenthèses profondes, variable absente, division par zéro.",
+    ],
+    pistes:
+      "<p>Commence par la <strong>grammaire</strong>, sur papier&nbsp;: trois niveaux suffisent — expression, terme, " +
+      "facteur. C'est cette stratification qui donne gratuitement la priorité des opérateurs&nbsp;; si tu la sautes, " +
+      "tu la réécriras en cas particuliers et tu te tromperas.</p>" +
+      "<p>Écris ensuite l'analyseur lexical seul, et affiche ses jetons&nbsp;: tant qu'ils sont faux, l'arbre le sera " +
+      "aussi. Une fois l'arbre construit, affiche-le en JSON avant d'écrire l'évaluateur — un arbre juste rend " +
+      "l'évaluation presque triviale.</p>" +
+      "<p>Pour aller plus loin&nbsp;: remplace l'évaluation directe par une <strong>compilation</strong> vers une liste " +
+      "d'instructions de machine à pile, et vérifie que les deux chemins donnent le même résultat. C'est exactement la " +
+      "différence entre interpréter et compiler. Les <a href=\"../regex/cours.html\">expressions régulières</a> aident " +
+      "pour l'analyse lexicale&nbsp;; l'<a href=\"../algo/cours.html\">algorithmique</a>, pour les parcours d'arbre.</p>",
+  },
 ];

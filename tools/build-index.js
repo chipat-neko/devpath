@@ -110,7 +110,11 @@ var COURSES = Object.keys(DATA.content).map(function (id) {
   var meta = {};
   (c.modules || []).forEach(function (m) {
     (m.lessons || []).forEach(function (l) {
-      if (l && l.file) {
+      /* file « # » = lecon annoncee au programme mais pas encore ecrite
+         (status "bientot", cf. l'en-tete de js/data.js). Ce n'est pas une page
+         manquante : la sauter ici evite 10 faux « lecon absente du disque »
+         par cours en cours d'ecriture, bruit qui masquerait un vrai trou. */
+      if (l && l.file && l.file !== "#") {
         lessons.push(l.file);
         meta[l.file] = { num: l.num || "", title: l.title || "" };
       }

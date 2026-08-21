@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La chaîne de compilation, étape par étape — Leçon 02 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="Les étapes d'une chaîne de compilation dans l'ordre, avec ce que chacune reçoit et produit : analyse lexicale, syntaxique, sémantique, représentation intermédiaire, optimisation, génération de code, édition de liens. Partie avant, partie médiane, partie arrière — et à quelle étape chaque message d'erreur a été produit." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-02.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 02</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 1 · Ce qu'est compiler — Leçon 02</p>
+              <h1 class="lesson-header__title">La chaîne de compilation, étape par étape</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~52 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : la leçon 1 de ce cours ; savoir lire une fonction récursive</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>nommer les <strong>étapes</strong> d'une chaîne de compilation et dire ce que chacune <strong>reçoit</strong> et <strong>produit</strong>&nbsp;;</li>
+                  <li>situer la frontière entre <strong>partie avant</strong> (<em>front-end</em>), <strong>partie médiane</strong> et <strong>partie arrière</strong> (<em>back-end</em>), et expliquer pourquoi elle rend les compilateurs <strong>modulaires</strong>&nbsp;;</li>
+                  <li>rattacher un <strong>message d'erreur</strong> à l'étape qui l'a produit&nbsp;;</li>
+                  <li>comprendre ce que la <strong>compilation séparée</strong> et l'<strong>édition de liens</strong> ajoutent <em>après</em> le compilateur.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La leçon précédente a posé le <em>pourquoi</em>&nbsp;: aucune machine ne lit ton texte, il faut donc le traduire, et cette traduction peut se faire d'avance ou à la volée. Elle s'est arrêtée à la porte du traducteur. Cette leçon l'ouvre. Ce que tu vas y trouver n'est pas un bloc monolithique qui avalerait du texte d'un côté pour recracher des octets de l'autre&nbsp;: c'est une <strong>suite d'étapes</strong>, chacune avec une entrée précise, une sortie précise, et un métier qui tient en une phrase.</p>
+<p>Cette leçon est le pivot du cours. Le schéma que nous allons dessiner dans quelques lignes servira de <strong>carte</strong> à tous les modules suivants&nbsp;: chaque fois que nous construirons un morceau de <strong>Brindille</strong> — le petit langage que ce cours fabrique en entier —, tu pourras pointer sur cette carte l'endroit exact où nous nous trouvons. Prends donc le temps de bien la lire&nbsp;; c'est probablement la seule figure de ce cours que tu auras intérêt à mémoriser.</p>
+
+<h2>Un tuyau, pas une boîte noire</h2>
+<p>Un compilateur ne fait pas «&nbsp;une chose compliquée&nbsp;»&nbsp;: il fait une dizaine de choses simples, à la file. Chacune reçoit ce que la précédente a produit, le transforme un peu, et le passe à la suivante. C'est exactement le principe d'un tuyau&nbsp;: on ne fabrique pas un objet fini d'un coup, on le fait passer par des postes successifs qui le rapprochent, à chaque fois, de sa forme finale.</p>
+<p>Cette découpe n'est pas une élégance d'architecte&nbsp;; elle est <em>forcée</em> par le problème. Ton code source est une chaîne de caractères&nbsp;: une suite plate de symboles, sans structure, sans sens. Le code que la machine exécute est une suite d'instructions numérotées, où chaque valeur doit vivre dans un registre ou à une adresse. Entre les deux, l'écart est trop grand pour être franchi d'un bond. On le franchit donc par paliers, et chaque palier a un nom.</p>
+<p>Trois propriétés rendent cette découpe précieuse. D'abord, chaque étape est <strong>testable seule</strong>&nbsp;: on lui donne une entrée, on regarde sa sortie, on sait si elle a raison. Ensuite, chaque étape est <strong>remplaçable</strong>&nbsp;: si tu changes de machine cible, tu ne réécris que les dernières. Enfin — et c'est ce qui te servira dès demain — chaque étape a son <strong>vocabulaire d'erreurs</strong>&nbsp;: quand un message parle de «&nbsp;jeton inattendu&nbsp;», il ne peut venir que d'un endroit bien précis de la chaîne.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 312" role="img" aria-label="La chaîne de compilation complète, présentée sur deux rangées lues de gauche à droite puis de haut en bas. Sur la première rangée, le code source entre dans l'analyse lexicale, qui le découpe et transmet des jetons à l'analyse syntaxique, laquelle assemble un arbre de syntaxe et le transmet à l'analyse sémantique, qui en vérifie le sens ; ces trois étapes d'analyse sont regroupées sous l'étiquette partie avant, ou front-end. De l'analyse sémantique part un arbre annoté accompagné d'une table des symboles, qui redescend vers la seconde rangée. Celle-ci commence par la représentation intermédiaire, suivie de l'optimisation, toutes deux regroupées sous l'étiquette partie médiane ; viennent ensuite la génération de code puis l'édition de liens, regroupées sous l'étiquette partie arrière, ou back-end, la génération transmettant du code machine rangé dans un fichier objet. La chaîne s'achève sur un dernier bloc, le programme exécutable, obtenu en un fichier unique.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">La chaîne de compilation — la carte de tout le cours</text>
+
+    <text class="d-tag" x="400" y="42" text-anchor="middle" font-size="9.5">PARTIE AVANT (front-end) — comprendre le texte</text>
+    <path class="d-line" d="M172 60 L172 50 L628 50 L628 60" fill="none" stroke-dasharray="4 3" />
+
+    <rect class="d-accent" x="12" y="70" width="136" height="44" rx="8" /><text class="d-text" x="80" y="90" text-anchor="middle" font-size="10.5">code source</text><text class="d-mut" x="80" y="105" text-anchor="middle" font-size="8.5">ce que tu écris</text>
+    <rect class="d-box" x="172" y="70" width="136" height="44" rx="8" /><text class="d-text" x="240" y="90" text-anchor="middle" font-size="10.5">analyse lexicale</text><text class="d-mut" x="240" y="105" text-anchor="middle" font-size="8.5">découpe le texte</text>
+    <rect class="d-box" x="332" y="70" width="136" height="44" rx="8" /><text class="d-text" x="400" y="90" text-anchor="middle" font-size="10.5">analyse syntaxique</text><text class="d-mut" x="400" y="105" text-anchor="middle" font-size="8.5">assemble en arbre</text>
+    <rect class="d-box" x="492" y="70" width="136" height="44" rx="8" /><text class="d-text" x="560" y="90" text-anchor="middle" font-size="10.5">analyse sémantique</text><text class="d-mut" x="560" y="105" text-anchor="middle" font-size="8.5">vérifie le sens</text>
+
+    <path class="d-line" d="M148 92 L168 92" fill="none" /><path class="d-line" d="M162 88 L168 92 L162 96" fill="none" />
+    <path class="d-line" d="M308 92 L328 92" fill="none" /><path class="d-line" d="M322 88 L328 92 L322 96" fill="none" />
+    <path class="d-line" d="M468 92 L488 92" fill="none" /><path class="d-line" d="M482 88 L488 92 L482 96" fill="none" />
+
+    <text class="d-mut" x="160" y="130" text-anchor="middle" font-size="8.5">le texte, tel quel</text>
+    <text class="d-mut" x="320" y="130" text-anchor="middle" font-size="8.5">jetons</text>
+    <text class="d-mut" x="480" y="130" text-anchor="middle" font-size="8.5">arbre de syntaxe</text>
+
+    <path class="d-line" d="M560 114 L560 158 L64 158 L64 200" fill="none" /><path class="d-line" d="M60 194 L64 200 L68 194" fill="none" />
+    <text class="d-mut" x="320" y="152" text-anchor="middle" font-size="8.5">arbre annoté + table des symboles</text>
+
+    <text class="d-tag" x="128" y="182" text-anchor="middle" font-size="9.5">PARTIE MÉDIANE</text>
+    <path class="d-line" d="M8 196 L8 188 L248 188 L248 196" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="320" y="182" text-anchor="middle" font-size="9.5">PARTIE ARRIÈRE (back-end)</text>
+    <path class="d-line" d="M264 196 L264 188 L376 188 L376 196" fill="none" stroke-dasharray="4 3" />
+
+    <rect class="d-box" x="8" y="204" width="112" height="50" rx="8" /><text class="d-text" x="64" y="226" text-anchor="middle" font-size="10">représentation</text><text class="d-text" x="64" y="240" text-anchor="middle" font-size="10">intermédiaire</text>
+    <rect class="d-box" x="136" y="204" width="112" height="50" rx="8" /><text class="d-text" x="192" y="228" text-anchor="middle" font-size="10">optimisation</text><text class="d-mut" x="192" y="243" text-anchor="middle" font-size="8.5">améliore la RI</text>
+    <rect class="d-box" x="264" y="204" width="112" height="50" rx="8" /><text class="d-text" x="320" y="226" text-anchor="middle" font-size="10">génération</text><text class="d-text" x="320" y="240" text-anchor="middle" font-size="10">de code</text>
+    <rect class="d-box" x="392" y="204" width="112" height="50" rx="8" /><text class="d-text" x="448" y="226" text-anchor="middle" font-size="10">édition</text><text class="d-text" x="448" y="240" text-anchor="middle" font-size="10">de liens</text>
+    <rect class="d-accent" x="520" y="204" width="112" height="50" rx="8" /><text class="d-text" x="576" y="226" text-anchor="middle" font-size="10">programme</text><text class="d-text" x="576" y="240" text-anchor="middle" font-size="10">exécutable</text>
+
+    <path class="d-line" d="M120 229 L132 229" fill="none" /><path class="d-line" d="M127 225 L132 229 L127 233" fill="none" />
+    <path class="d-line" d="M248 229 L260 229" fill="none" /><path class="d-line" d="M255 225 L260 229 L255 233" fill="none" />
+    <path class="d-line" d="M376 229 L388 229" fill="none" /><path class="d-line" d="M383 225 L388 229 L383 233" fill="none" />
+    <path class="d-line" d="M504 229 L516 229" fill="none" /><path class="d-line" d="M511 225 L516 229 L511 233" fill="none" />
+
+    <text class="d-mut" x="128" y="272" text-anchor="middle" font-size="8.5">la RI, non optimisée</text>
+    <text class="d-mut" x="256" y="272" text-anchor="middle" font-size="8.5">la RI, optimisée</text>
+    <text class="d-mut" x="384" y="272" text-anchor="middle" font-size="8.5">code machine</text>
+    <text class="d-mut" x="384" y="283" text-anchor="middle" font-size="8.5">(fichier objet)</text>
+    <text class="d-mut" x="512" y="272" text-anchor="middle" font-size="8.5">un fichier unique</text>
+
+    <text class="d-mut" x="320" y="304" text-anchor="middle" font-size="9">L'édition de liens est faite par un outil distinct du compilateur : l'éditeur de liens.</text>
+  </svg>
+  <figcaption><strong>Garde cette figure sous la main&nbsp;: elle est la carte de tout le reste du cours.</strong> Chaque boîte est une étape&nbsp;; chaque flèche porte l'<em>objet</em> qui circule d'une étape à l'autre. On lit la chaîne de gauche à droite, puis de haut en bas&nbsp;: les trois analyses forment la <strong>partie avant</strong>, la représentation intermédiaire et son optimisation la <strong>partie médiane</strong>, la génération de code la <strong>partie arrière</strong>. L'<strong>édition de liens</strong>, elle, reste en dehors des trois&nbsp;: elle n'est pas faite par le compilateur, mais par un outil distinct. Chaque module de ce cours reviendra pointer un endroit de ce dessin.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note</p><p>Aucun compilateur réel n'a exactement ces boîtes-là. Certains fusionnent l'analyse lexicale et l'analyse syntaxique&nbsp;; d'autres enchaînent plusieurs représentations intermédiaires successives&nbsp;; d'autres encore n'ont pas de partie médiane du tout. Le schéma n'est pas un plan de construction, c'est un <strong>découpage de référence</strong>&nbsp;: il te donne des noms pour désigner ce que tu vois. C'est déjà énorme — la moitié de l'incompréhension autour des compilateurs vient de ce qu'on n'a pas de mot pour nommer l'endroit où ça se passe.</p></div></div>
+
+<h2>Les trois premières étapes&nbsp;: comprendre le texte</h2>
+<p>Les trois premières étapes ont un but commun&nbsp;: passer d'un texte plat à une structure qui a du sens. Elles ne produisent aucune ligne de code machine. Elles ne font que <em>comprendre</em>, de plus en plus finement, ce que tu as écrit. C'est pour cela qu'on les regroupe sous le nom de <strong>partie avant</strong>.</p>
+<p>L'<strong>analyse lexicale</strong> reçoit une chaîne de caractères et produit une liste de <strong>jetons</strong>. Un jeton est un mot du langage&nbsp;: un nombre, un identifiant, un opérateur, une parenthèse, un mot-clé. Elle jette au passage ce que le langage juge sans portée — souvent les espaces, les retours à la ligne et les commentaires (souvent seulement&nbsp;: en Python, un retour à la ligne et une indentation <em>sont</em> des jetons) — et attache à chaque jeton une <em>catégorie</em>. Après elle, on ne raisonne plus jamais en caractères. Le module 2 construira cette étape pour Brindille.</p>
+<p>L'<strong>analyse syntaxique</strong> reçoit cette liste de jetons et produit un <strong>arbre</strong>. Elle vérifie que la suite de jetons obéit aux règles d'écriture du langage, et — surtout — elle rend explicite l'imbrication que le texte ne faisait que suggérer. Une expression plate devient une structure emboîtée dans laquelle chaque opérateur sait quels sont ses opérandes. C'est le sujet du module 3.</p>
+<p>L'<strong>analyse sémantique</strong> reçoit cet arbre et le rend au parcours suivant <strong>annoté</strong>, accompagné d'une <strong>table des symboles</strong>. C'est elle qui répond aux questions que la syntaxe ne pose pas&nbsp;: ce nom a-t-il été déclaré&nbsp;? Cette fonction reçoit-elle le bon nombre d'arguments&nbsp;? Peut-on additionner ces deux types&nbsp;? Une phrase peut être parfaitement bien formée et n'avoir aucun sens&nbsp;; c'est ici qu'on s'en aperçoit.</p>
+<p>Le plus court chemin pour s'en convaincre est de le faire tourner. Le programme ci-dessous tient en une trentaine de lignes&nbsp;: il parcourt les <strong>deux premiers</strong> postes du tuyau — analyse lexicale, analyse syntaxique —, puis évalue l'arbre directement, sur une seule expression, <code>2 + 3 * 4</code>. Lance-le&nbsp;: regarde comment la même information change de forme à chaque étape.</p>
+
+<figure class="code-block" data-file="chaine.js"><pre><code class="language-javascript">const source = "2 + 3 * 4";
+
+// ÉTAPE 1 — ANALYSE LEXICALE : le texte devient une liste de jetons.
+// Chaque jeton porte une catégorie ; les espaces disparaissent.
+function jetons(txt) {
+  return txt.match(/\d+|[+*()]/g).map(t =&gt;
+    /\d/.test(t) ? { type: "nombre", valeur: Number(t) } : { type: "operateur", valeur: t });
+}
+
+// ÉTAPE 2 — ANALYSE SYNTAXIQUE : les jetons deviennent un arbre.
+// Deux fonctions récursives suffisent : une pour les produits, une pour les sommes.
+function analyse(js) {
+  let i = 0;
+  function facteur() { return { valeur: js[i++].valeur }; }
+  function terme() {
+    let n = facteur();
+    while (i &lt; js.length &amp;&amp; js[i].valeur === "*") { i++; n = { op: "*", gauche: n, droite: facteur() }; }
+    return n;
+  }
+  function expression() {
+    let n = terme();
+    while (i &lt; js.length &amp;&amp; js[i].valeur === "+") { i++; n = { op: "+", gauche: n, droite: terme() }; }
+    return n;
+  }
+  return expression();
+}
+
+// ÉTAPE 3 — ÉVALUATION : l'arbre devient une valeur.
+// On descend jusqu'aux feuilles, puis on remonte en combinant.
+function evalue(n) {
+  if ("valeur" in n) return n.valeur;
+  return n.op === "+" ? evalue(n.gauche) + evalue(n.droite) : evalue(n.gauche) * evalue(n.droite);
+}
+
+const js = jetons(source);
+console.log("1. jetons :", js); // affiche : 1. jetons : [{"type":"nombre","valeur":2},{"type":"operateur","valeur":"+"},{"type":"nombre","valeur":3},{"type":"operateur","valeur":"*"},{"type":"nombre","valeur":4}]
+const arbre = analyse(js);
+console.log("2. arbre  :", arbre); // affiche : 2. arbre  : {"op":"+","gauche":{"valeur":2},"droite":{"op":"*","gauche":{"valeur":3},"droite":{"valeur":4}}}
+console.log("3. valeur :", evalue(arbre)); // affiche : 3. valeur : 14
+console.log("nb de jetons :", js.length); // affiche : nb de jetons : 5</code></pre></figure>
+
+<p>Regarde le mouvement, plus que le code. Neuf caractères de texte entrent&nbsp;; <strong>5&nbsp;jetons</strong> en sortent, et ces cinq jetons sont tout ce que l'étape 2 recevra — le texte d'origine, ses espaces, sa mise en forme, tout cela a disparu et ne manquera à personne. L'étape 2 rend <strong>un seul arbre</strong>. L'étape 3 rend <strong>une seule valeur</strong>. Sur ces deux premiers postes, la matière diminue pendant que la structure augmente. Ne généralise pas trop vite&nbsp;: plus loin dans la chaîne, la tendance s'inverse — tu verras la représentation intermédiaire transformer cette unique expression en <em>trois</em> instructions.</p>
+<p>Le point vraiment important est ailleurs, et il vaut la peine de s'y arrêter. Dans l'arbre affiché, le nœud <code>*</code> se trouve <strong>plus bas</strong> que le nœud <code>+</code>&nbsp;: il est plus près des feuilles. Or l'évaluateur descend d'abord jusqu'aux feuilles avant de remonter&nbsp;; ce qui est plus bas est donc calculé <em>en premier</em>. Autrement dit&nbsp;: la priorité de la multiplication sur l'addition n'est écrite nulle part dans <code>evalue</code>. Relis cette fonction, tu n'y trouveras aucune règle de priorité — juste une addition et une multiplication, traitées exactement de la même façon.</p>
+<p>La priorité est inscrite dans la <strong>forme</strong> de l'arbre, et cette forme vient de l'étape précédente. C'est un renversement complet par rapport à l'intuition habituelle&nbsp;: on croit que le calcul «&nbsp;sait&nbsp;» quoi faire en premier, alors que c'est l'analyse qui a déjà tranché, en plaçant les nœuds à la bonne hauteur. D'où vient cette forme, exactement&nbsp;? De la manière dont les deux fonctions <code>terme</code> et <code>expression</code> s'appellent l'une l'autre — et cela, c'est le sujet de la <a href="lecon-03.html">leçon 3</a>, qui montrera que cette structure d'appels n'est rien d'autre qu'une <em>grammaire</em> écrite en code.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que cette maquette ne fait pas</p><p>Elle saute <strong>cinq</strong> des sept étapes de la carte, volontairement — et deux méritent un mot. Pas d'analyse sémantique&nbsp;: il n'y a ici ni variable à déclarer, ni type à confronter, donc rien à vérifier — la table des symboles serait vide. Et pas de génération de code&nbsp;: on <em>évalue</em> l'arbre directement au lieu de le traduire en instructions. Une maquette de trente lignes ne remplace pas un compilateur&nbsp;; elle sert seulement à te faire toucher du doigt le passage «&nbsp;texte → jetons → arbre&nbsp;», qui est le même partout.</p></div></div>
+
+<h2>Le milieu&nbsp;: une représentation intermédiaire</h2>
+<p>À la sortie de la partie avant, nous avons un arbre annoté. La machine, elle, veut des instructions. Pourquoi ne pas traduire directement l'arbre en code machine et en finir&nbsp;? On le peut, et de petits compilateurs le font. Mais dès qu'un projet dépasse le jouet, deux problèmes surgissent.</p>
+<p>Le premier est celui de la <strong>distance</strong>. Un arbre parle de fonctions, de boucles et d'expressions&nbsp;; une machine parle de registres, de sauts et d'adresses. Faire les deux traductions à la fois — restructurer <em>et</em> descendre au niveau machine — dans une même fonction, c'est mélanger deux raisonnements très différents, et le code devient rapidement impossible à faire évoluer.</p>
+<p>Le second est celui de la <strong>combinatoire</strong>, et c'est le plus parlant. Imagine que tu veuilles couvrir 4&nbsp;langages sources et 3&nbsp;machines cibles. Sans étape pivot, chaque paire réclame son propre traducteur&nbsp;: il t'en faut 4&nbsp;×&nbsp;3, soit <strong>12</strong>. Ajoute un cinquième langage et tu dois écrire trois traducteurs de plus, un par machine. Avec un pivot, la comptabilité change de nature&nbsp;: chaque langage écrit une fois vers la représentation intermédiaire (4&nbsp;traducteurs) et chaque machine lit une fois cette représentation (3&nbsp;traducteurs), soit 4&nbsp;+&nbsp;3&nbsp;=&nbsp;<strong>7</strong>. Cinq de moins, sur un exemple minuscule&nbsp;; et surtout, ajouter un langage ne coûte plus qu'<em>un seul</em> traducteur, quel que soit le nombre de machines.</p>
+<p>L'écart devient spectaculaire dès qu'on grandit&nbsp;: 12&nbsp;langages et 9&nbsp;machines demanderaient 108&nbsp;traducteurs sans pivot, contre 21 avec. Une multiplication d'un côté, une addition de l'autre&nbsp;: c'est toute la raison d'être de la partie médiane.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 272" role="img" aria-label="Deux montages comparés pour relier quatre langages sources à trois machines cibles. À gauche, sans représentation intermédiaire, chacun des quatre langages est relié directement à chacune des trois machines, ce qui trace douze traits : quatre multiplié par trois égale douze traducteurs à écrire. À droite, avec une représentation intermédiaire placée au centre, chacun des quatre langages ne se relie qu'au pivot, et le pivot se relie à chacune des trois machines : sept traits seulement, soit quatre plus trois égale sept traducteurs. Ajouter un langage coûte trois traducteurs à gauche, un seul à droite.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Quatre langages, trois machines : avec ou sans pivot</text>
+
+    <text class="d-mut" x="150" y="44" text-anchor="middle" font-size="9.5">sans représentation intermédiaire</text>
+    <rect class="d-box" x="14" y="70" width="76" height="24" rx="6" /><text class="d-text" x="52" y="86" text-anchor="middle" font-size="9">langage A</text>
+    <rect class="d-box" x="14" y="106" width="76" height="24" rx="6" /><text class="d-text" x="52" y="122" text-anchor="middle" font-size="9">langage B</text>
+    <rect class="d-box" x="14" y="142" width="76" height="24" rx="6" /><text class="d-text" x="52" y="158" text-anchor="middle" font-size="9">langage C</text>
+    <rect class="d-box" x="14" y="178" width="76" height="24" rx="6" /><text class="d-text" x="52" y="194" text-anchor="middle" font-size="9">langage D</text>
+    <rect class="d-box" x="210" y="76" width="76" height="24" rx="6" /><text class="d-text" x="248" y="92" text-anchor="middle" font-size="9">machine X</text>
+    <rect class="d-box" x="210" y="124" width="76" height="24" rx="6" /><text class="d-text" x="248" y="140" text-anchor="middle" font-size="9">machine Y</text>
+    <rect class="d-box" x="210" y="172" width="76" height="24" rx="6" /><text class="d-text" x="248" y="188" text-anchor="middle" font-size="9">machine Z</text>
+    <path class="d-line" d="M90 82 L210 88" fill="none" /><path class="d-line" d="M90 82 L210 136" fill="none" /><path class="d-line" d="M90 82 L210 184" fill="none" />
+    <path class="d-line" d="M90 118 L210 88" fill="none" /><path class="d-line" d="M90 118 L210 136" fill="none" /><path class="d-line" d="M90 118 L210 184" fill="none" />
+    <path class="d-line" d="M90 154 L210 88" fill="none" /><path class="d-line" d="M90 154 L210 136" fill="none" /><path class="d-line" d="M90 154 L210 184" fill="none" />
+    <path class="d-line" d="M90 190 L210 88" fill="none" /><path class="d-line" d="M90 190 L210 136" fill="none" /><path class="d-line" d="M90 190 L210 184" fill="none" />
+    <text class="d-tag" x="150" y="228" text-anchor="middle" font-size="11">4 × 3 = 12 traducteurs</text>
+    <text class="d-mut" x="150" y="246" text-anchor="middle" font-size="9">un langage de plus : + 3 traducteurs</text>
+
+    <path class="d-line" d="M312 40 L312 250" fill="none" stroke-dasharray="4 4" />
+
+    <text class="d-mut" x="484" y="44" text-anchor="middle" font-size="9.5">avec une représentation intermédiaire</text>
+    <rect class="d-box" x="336" y="70" width="72" height="24" rx="6" /><text class="d-text" x="372" y="86" text-anchor="middle" font-size="9">langage A</text>
+    <rect class="d-box" x="336" y="106" width="72" height="24" rx="6" /><text class="d-text" x="372" y="122" text-anchor="middle" font-size="9">langage B</text>
+    <rect class="d-box" x="336" y="142" width="72" height="24" rx="6" /><text class="d-text" x="372" y="158" text-anchor="middle" font-size="9">langage C</text>
+    <rect class="d-box" x="336" y="178" width="72" height="24" rx="6" /><text class="d-text" x="372" y="194" text-anchor="middle" font-size="9">langage D</text>
+    <rect class="d-accent" x="440" y="104" width="64" height="92" rx="8" /><text class="d-text" x="472" y="146" text-anchor="middle" font-size="12">RI</text><text class="d-mut" x="472" y="162" text-anchor="middle" font-size="8.5">le pivot</text>
+    <rect class="d-box" x="548" y="76" width="76" height="24" rx="6" /><text class="d-text" x="586" y="92" text-anchor="middle" font-size="9">machine X</text>
+    <rect class="d-box" x="548" y="124" width="76" height="24" rx="6" /><text class="d-text" x="586" y="140" text-anchor="middle" font-size="9">machine Y</text>
+    <rect class="d-box" x="548" y="172" width="76" height="24" rx="6" /><text class="d-text" x="586" y="188" text-anchor="middle" font-size="9">machine Z</text>
+    <path class="d-line" d="M408 82 L440 140" fill="none" /><path class="d-line" d="M408 118 L440 145" fill="none" />
+    <path class="d-line" d="M408 154 L440 155" fill="none" /><path class="d-line" d="M408 190 L440 160" fill="none" />
+    <path class="d-line" d="M504 140 L548 88" fill="none" /><path class="d-line" d="M504 150 L548 136" fill="none" /><path class="d-line" d="M504 160 L548 184" fill="none" />
+    <text class="d-tag" x="484" y="228" text-anchor="middle" font-size="11">4 + 3 = 7 traducteurs</text>
+    <text class="d-mut" x="484" y="246" text-anchor="middle" font-size="9">un langage de plus : + 1 traducteur</text>
+  </svg>
+  <figcaption>Le pivot transforme une <strong>multiplication</strong> en <strong>addition</strong>. Sans lui, relier N langages à M machines demande N&nbsp;×&nbsp;M traducteurs&nbsp;; avec lui, N&nbsp;+&nbsp;M. Sur 4 et 3, l'écart paraît modeste (12 contre 7)&nbsp;; sur 12 langages et 9 machines, il devient 108 contre 21. C'est cette économie qui explique pourquoi presque tous les compilateurs sérieux ont une partie médiane.</figcaption>
+</figure>
+
+<p>Reste à savoir à quoi <em>ressemble</em> cette représentation intermédiaire. Il n'y a pas de réponse unique, mais une famille de formes qui partagent un air commun&nbsp;: elles sont plus simples qu'un arbre et plus abstraites qu'un code machine. La plus classique décompose chaque calcul en opérations élémentaires à trois éléments — deux entrées, une sortie —, avec autant de variables temporaires qu'il en faut, comme si la machine disposait d'une réserve infinie de registres. Notre expression <code>2 + 3 * 4</code> pourrait ainsi devenir&nbsp;:</p>
+
+<figure class="code-block" data-file="ri.txt"><pre><code class="language-plaintext">t1 = 3 * 4        ; une opération, deux entrées, une sortie
+t2 = 2 + t1       ; t1 et t2 sont des temporaires, en nombre illimité
+resultat = t2</code></pre></figure>
+
+<p>Cette forme est délibérément pauvre&nbsp;: pas d'imbrication, pas de priorité à interpréter, une opération par ligne. C'est précisément ce qui la rend <strong>analysable</strong>. Sur un arbre, savoir si une valeur est encore utilisée plus loin demande un parcours compliqué&nbsp;; sur une suite d'affectations élémentaires, cela se lit presque directement. La représentation intermédiaire n'est pas une étape de perte, c'est une étape de <em>mise à plat</em> qui rend possibles les questions suivantes.</p>
+<p>Ces questions, c'est l'<strong>optimisation</strong> qui les pose. Elle ne change jamais ce que le programme <em>fait</em>&nbsp;: elle change ce qu'il <em>coûte</em>. Un calcul dont toutes les entrées sont connues d'avance peut être fait tout de suite, une fois pour toutes, plutôt qu'à chaque exécution. Un résultat calculé deux fois à l'identique peut n'être calculé qu'une fois et réutilisé. Une portion de code qu'aucun chemin d'exécution n'atteint peut être supprimée. Une variable qui ne sert plus libère son emplacement. Chacune de ces transformations est locale, vérifiable, et s'applique sur la représentation intermédiaire — pas sur ton texte, pas sur l'arbre.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que « optimiser » veut dire, et ne veut pas dire</p><p>Optimiser, pour un compilateur, c'est produire un programme qui <strong>fait la même chose</strong> en consommant moins. La contrainte de sens est absolue&nbsp;: une transformation qui accélère le code mais change le résultat n'est pas une optimisation, c'est un bug. C'est aussi pour cela qu'un compilateur ne peut pas tout&nbsp;: il ne remplacera jamais un mauvais algorithme par un bon, parce qu'il ne sait pas <em>ce que tu voulais</em>, seulement ce que tu as écrit. L'optimisation fait gagner un facteur, parfois important&nbsp;; le choix de l'algorithme joue sur les ordres de grandeur — c'est le domaine du <a href="../algo/cours.html">cours d'algorithmique</a>.</p></div></div>
+
+<h2>La sortie&nbsp;: générer, assembler, lier</h2>
+<p>La partie arrière reprend la représentation intermédiaire — optimisée — et redescend jusqu'au réel. Trois problèmes l'attendent, dans cet ordre.</p>
+<p>La <strong>sélection d'instructions</strong> d'abord&nbsp;: à chaque opération de la représentation intermédiaire, il faut faire correspondre une ou plusieurs instructions réellement offertes par la machine visée. Ce n'est pas une traduction mot à mot. Une même opération peut se rendre de plusieurs façons, et certaines machines offrent des instructions composées qui font d'un coup ce que la représentation intermédiaire exprime en trois lignes. Choisir la bonne combinaison est un problème à part entière.</p>
+<p>L'<strong>allocation des registres</strong> ensuite, et c'est souvent la partie la plus délicate. La représentation intermédiaire s'autorisait un nombre illimité de temporaires&nbsp;; une vraie machine en a un nombre <em>fixe</em>, et très petit. Il faut donc décider quelles valeurs vivent dans un registre, lesquelles sont renvoyées en mémoire, et à quel moment. Une valeur qu'on doit ranger en mémoire faute de place coûte cher&nbsp;; bien allouer les registres est un des leviers les plus efficaces sur la vitesse du programme final. Si le vocabulaire des registres t'est étranger, le <a href="../asm/cours.html">cours d'assembleur</a> le rendra concret.</p>
+<p>Vient enfin l'<strong>assemblage</strong>, qui transforme les instructions en octets et produit un <strong>fichier objet</strong>. Ce fichier contient du vrai code machine, mais il n'est pas encore exécutable&nbsp;: il est plein de trous. Chaque fois que ton code appelle une fonction définie ailleurs, l'assembleur ne peut pas écrire l'adresse de cette fonction — il ne la connaît pas. Il laisse donc une case vide et une note&nbsp;: «&nbsp;ici, il faudra l'adresse du symbole <em>racine_carree</em>&nbsp;». Le fichier objet porte ainsi deux listes&nbsp;: les symboles qu'il <strong>définit</strong> et ceux qu'il <strong>réclame</strong>.</p>
+<p>C'est ce qui permet la <strong>compilation séparée</strong>&nbsp;: chaque fichier source est compilé indépendamment, sans rien savoir de l'implémentation des autres. Un projet de mille fichiers ne se recompile pas en entier quand tu en modifies un seul&nbsp;; on refabrique le seul objet concerné. Sans compilation séparée, aucun gros projet ne serait tenable.</p>
+<p>Reste à recoller les morceaux&nbsp;: c'est l'<strong>édition de liens</strong>. L'éditeur de liens prend tous les fichiers objets, plus les bibliothèques demandées, et fait un travail de comptable&nbsp;: pour chaque symbole réclamé, il cherche qui le définit, puis remplit la case vide avec la bonne adresse. Quand tout est apparié, il réunit le résultat en un programme unique. Quand un symbole reste orphelin, il s'arrête et le dit&nbsp;: c'est le fameux message de <strong>symbole non défini</strong> — «&nbsp;référence indéfinie vers…&nbsp;» —, qui n'a rien à voir avec la compilation et tout à voir avec l'assemblage final.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 268" role="img" aria-label="Le chemin qui va de plusieurs fichiers sources à un programme exécutable unique. Trois sources, nommées source A, source B et source C, sont compilées séparément, chacune donnant son propre fichier objet : objet A, objet B et objet C. Ces trois objets, ainsi qu'une bibliothèque déjà compilée, entrent tous dans l'éditeur de liens, dont le rôle est de résoudre les symboles réclamés par les uns et définis par les autres. L'éditeur de liens produit en sortie le programme exécutable. Si un symbole déclaré n'est défini dans aucun des objets fournis, l'éditeur de liens refuse de produire le programme et signale une référence indéfinie.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Compilation séparée, puis édition de liens</text>
+
+    <rect class="d-box" x="12" y="52" width="96" height="28" rx="6" /><text class="d-text" x="60" y="70" text-anchor="middle" font-size="9.5">source A</text>
+    <rect class="d-box" x="12" y="96" width="96" height="28" rx="6" /><text class="d-text" x="60" y="114" text-anchor="middle" font-size="9.5">source B</text>
+    <rect class="d-box" x="12" y="140" width="96" height="28" rx="6" /><text class="d-text" x="60" y="158" text-anchor="middle" font-size="9.5">source C</text>
+
+    <path class="d-line" d="M108 66 L188 66" fill="none" /><path class="d-line" d="M182 62 L188 66 L182 70" fill="none" />
+    <path class="d-line" d="M108 110 L188 110" fill="none" /><path class="d-line" d="M182 106 L188 110 L182 114" fill="none" />
+    <path class="d-line" d="M108 154 L188 154" fill="none" /><path class="d-line" d="M182 150 L188 154 L182 158" fill="none" />
+    <text class="d-mut" x="148" y="44" text-anchor="middle" font-size="8.5">compilateur</text>
+
+    <rect class="d-box" x="196" y="52" width="96" height="28" rx="6" /><text class="d-text" x="244" y="70" text-anchor="middle" font-size="9.5">objet A</text>
+    <rect class="d-box" x="196" y="96" width="96" height="28" rx="6" /><text class="d-text" x="244" y="114" text-anchor="middle" font-size="9.5">objet B</text>
+    <rect class="d-box" x="196" y="140" width="96" height="28" rx="6" /><text class="d-text" x="244" y="158" text-anchor="middle" font-size="9.5">objet C</text>
+    <rect class="d-box" x="196" y="192" width="96" height="28" rx="6" /><text class="d-text" x="244" y="210" text-anchor="middle" font-size="9.5">bibliothèque</text>
+
+    <text class="d-mut" x="60" y="188" text-anchor="middle" font-size="8.5">un appel du compilateur</text>
+    <text class="d-mut" x="60" y="200" text-anchor="middle" font-size="8.5">par fichier source</text>
+
+    <path class="d-line" d="M292 66 L360 108" fill="none" /><path class="d-line" d="M292 110 L360 118" fill="none" />
+    <path class="d-line" d="M292 154 L360 128" fill="none" /><path class="d-line" d="M292 206 L360 140" fill="none" />
+
+    <rect class="d-accent" x="364" y="88" width="120" height="68" rx="8" /><text class="d-text" x="424" y="112" text-anchor="middle" font-size="10.5">éditeur</text><text class="d-text" x="424" y="126" text-anchor="middle" font-size="10.5">de liens</text><text class="d-mut" x="424" y="143" text-anchor="middle" font-size="8.5">résout les symboles</text>
+
+    <path class="d-line" d="M484 122 L524 122" fill="none" /><path class="d-line" d="M518 118 L524 122 L518 126" fill="none" />
+    <rect class="d-box" x="530" y="100" width="100" height="44" rx="8" /><text class="d-text" x="580" y="118" text-anchor="middle" font-size="9.5">programme</text><text class="d-text" x="580" y="132" text-anchor="middle" font-size="9.5">exécutable</text>
+
+    <text class="d-mut" x="320" y="238" text-anchor="middle" font-size="9">Un symbole déclaré mais défini dans AUCUN objet fourni : « référence indéfinie ».</text>
+    <text class="d-mut" x="320" y="252" text-anchor="middle" font-size="9">Le message vient alors de l'éditeur de liens, jamais du compilateur.</text>
+  </svg>
+  <figcaption>La compilation traite <strong>un fichier à la fois</strong> et produit un objet plein de trous&nbsp;; l'édition de liens rassemble tous les objets, comble les trous, et n'accepte de produire le programme que si <em>chaque</em> symbole réclamé trouve exactement une définition. Deux outils, deux étapes, deux familles de messages d'erreur.</figcaption>
+</figure>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Statique ou dynamique&nbsp;: deux moments pour lier</p><p>L'édition de liens <strong>statique</strong> recopie le code des bibliothèques <em>dans</em> le programme&nbsp;: le fichier produit est autonome, plus gros, et ne bougera plus. L'édition de liens <strong>dynamique</strong> se contente d'inscrire le nom de la bibliothèque et reporte la résolution au <em>lancement</em> du programme&nbsp;: le fichier est plus léger, plusieurs programmes partagent la même bibliothèque, et une correction de sécurité dans celle-ci profite à tout le monde sans rien recompiler. La contrepartie&nbsp;: le programme ne démarre plus si la bibliothèque attendue est absente ou d'une version incompatible. Les deux mécanismes existent partout&nbsp;; c'est un choix, pas une hiérarchie.</p></div></div>
+
+<h2>À quelle étape ton erreur a-t-elle été détectée&nbsp;?</h2>
+<p>Les messages reproduits ci-dessous sont ceux de <strong>V8</strong>, le moteur de Chrome et de Node&nbsp;: un autre moteur les formulera autrement. Les <em>étapes</em>, elles, sont les mêmes partout.</p>
+<p>Voilà la partie qui te servira le plus souvent. Un message d'erreur n'est pas un verdict global sur ton programme&nbsp;: c'est <em>une étape précise qui parle</em>. Savoir laquelle réduit énormément le champ des recherches. Pour le voir, on prend six extraits minuscules et, pour chacun, on demande d'abord au moteur JavaScript de les <strong>analyser sans les exécuter</strong>, puis de les exécuter. La colonne du milieu dit à quel moment la porte s'est refermée.</p>
+
+<figure class="code-block" data-file="quand-l-erreur-tombe.txt"><pre><code class="language-plaintext">extrait                       | détecté à            | erreur
+2 @ 3                         | ANALYSE              | SyntaxError: Invalid or unexpected token
+let x = 2 + ;                 | ANALYSE              | SyntaxError: Unexpected token ';'
+let z = 1; let z = 2;         | ANALYSE              | SyntaxError: Identifier 'z' has already been declared
+const y = 1; y = 2;           | EXÉCUTION            | TypeError: Assignment to constant variable.
+console.log(inconnue);        | EXÉCUTION            | ReferenceError: inconnue is not defined
+const t = null; t.longueur    | EXÉCUTION            | TypeError: Cannot read properties of null (reading 'longueur')</code></pre></figure>
+
+<p>Prenons-les dans l'ordre, parce que chacun apprend quelque chose de différent.</p>
+<p><code>2 @ 3</code> échoue dès l'<strong>analyse lexicale</strong>. Le caractère <code>@</code> n'est le début d'aucun jeton valide dans ce langage&nbsp;: le découpeur bute dessus avant même qu'on ait pu se demander ce que la phrase voudrait dire. Remarque le mot employé par le message&nbsp;: <em>token</em>, c'est-à-dire jeton. Le vocabulaire de l'étape 1 affleure directement dans le texte de l'erreur — c'est un indice qu'on apprend vite à repérer.</p>
+<p><code>let x = 2 + ;</code> passe l'étape lexicale sans encombre. Chaque symbole pris isolément est un jeton parfaitement légitime&nbsp;: <code>let</code>, un identifiant, <code>=</code>, un nombre, <code>+</code>, un point-virgule. C'est leur <em>enchaînement</em> qui ne correspond à aucune règle d'écriture&nbsp;: après un <code>+</code>, on attend une expression, et un point-virgule n'en est pas une. L'échec est donc à l'<strong>analyse syntaxique</strong>. Là encore le message le trahit&nbsp;: il ne se plaint pas du caractère, mais du jeton <em>inattendu à cet endroit</em>.</p>
+<p>Le troisième cas est le plus instructif. Déclarer <code>z</code> deux fois n'est pas une faute de syntaxe&nbsp;: la phrase est irréprochablement bien formée, chaque déclaration prise seule est correcte. C'est une faute de <strong>sens</strong> — une erreur sémantique. Et pourtant, elle est détectée <strong>avant toute exécution</strong>, en même temps que les erreurs de syntaxe. Retiens-le, car c'est un piège de raisonnement classique&nbsp;: la frontière «&nbsp;analyse / exécution&nbsp;» ne coïncide pas avec la frontière «&nbsp;syntaxe / sémantique&nbsp;». Certaines vérifications de sens se font très tôt.</p>
+<p>Le quatrième cas est la contre-épreuve, et il est presque troublant. <code>const y = 1; y = 2;</code> est, lui aussi, une erreur de sens&nbsp;: on réaffecte ce qui a été déclaré non réaffectable. Même famille que le précédent, même genre de vérification — et pourtant elle n'est rendue qu'à l'<strong>exécution</strong>. Rien, absolument rien, n'obligeait à ce choix&nbsp;: l'information nécessaire est disponible dès l'analyse, et un autre langage refuserait ce programme à la compilation. Ces frontières sont des <em>décisions de conception</em>, prises par ceux qui ont défini le langage, pas des lois de la nature. Un même code peut être rejeté tôt ici et tard là&nbsp;; ce n'est pas une question de puissance de l'outil, c'est une question de contrat.</p>
+<p>Les deux derniers cas, enfin, sont ceux qu'un langage sans types statiques ne peut pas voir venir. <code>inconnue</code> n'existe peut-être pas maintenant, mais rien n'interdit qu'une autre partie du programme la crée entre-temps&nbsp;; quant à <code>t.longueur</code>, il faudrait connaître la valeur de <code>t</code> pour savoir si elle a des propriétés, et cette valeur n'est connue qu'au moment où on y arrive. Un langage dont le système de types <strong>distingue les valeurs nulles</strong> — le <code>Option</code> de Rust, le mode strict de TypeScript, les types nullables de Kotlin ou de C# — déplace la dernière ligne de ce tableau vers la colonne <strong>ANALYSE</strong>&nbsp;: il aurait su, avant de lancer quoi que ce soit, que <code>t</code> peut être <code>null</code> et que <code>null</code> n'a pas de propriété. Attention&nbsp;: des types statiques n'y suffisent pas. Java et C# sans cette distinction compilent <code>t.longueur</code> sans broncher et lèvent l'erreur à l'exécution — c'est ce que l'on a surnommé «&nbsp;l'erreur à un milliard de dollars&nbsp;».</p>
+<p>La conclusion pratique tient en une phrase&nbsp;: le message que tu lis t'apprend <em>d'où</em> vient le problème, à condition de savoir quelle étape parle. Un message qui mentionne un caractère ou un jeton vient de l'entrée du tuyau, et la faute est presque toujours à quelques caractères du curseur. Un message qui parle de type, de déclaration ou de portée vient de l'analyse sémantique, et la faute peut être à cinquante lignes de là. Un message qui parle de symbole indéfini vient de l'éditeur de liens, et la faute n'est même pas dans ce fichier. Ce n'est pas de la théorie&nbsp;: c'est ce qui fait la différence entre chercher trois minutes et chercher trois heures.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le déplacement de la frontière est l'un des grands mouvements de l'informatique récente&nbsp;: vérificateurs de types ajoutés par-dessus des langages qui n'en avaient pas, analyseurs statiques qui signalent avant exécution ce qui n'aurait planté qu'en production, systèmes de types capables de garantir qu'un accès mémoire est valide. Le mouvement va toujours dans le même sens&nbsp;: faire remonter des erreurs de la colonne «&nbsp;exécution&nbsp;» vers la colonne «&nbsp;analyse&nbsp;». Le prix à payer est double — plus de choses à écrire, et des programmes corrects parfois refusés. C'est un arbitrage permanent, et c'est ce qui distingue le plus profondément les familles de langages entre elles.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre «&nbsp;ça ne compile pas&nbsp;» et «&nbsp;ça ne se construit pas&nbsp;».</strong> Ce sont deux étapes différentes, séparées par un fichier objet parfaitement produit. Tant que l'erreur mentionne une ligne et une colonne de <em>ton</em> fichier, c'est le compilateur qui parle. Dès qu'elle mentionne un <em>symbole</em> sans te donner de position dans le source, c'est l'éditeur de liens. Le premier réflexe, devant un message inconnu, devrait toujours être&nbsp;: «&nbsp;quelle étape vient de parler&nbsp;?&nbsp;»</p></div></div>
+<ul>
+<li><strong>Croire que l'optimisation corrige les mauvais choix</strong> — elle rend le même programme moins coûteux, elle ne change pas l'algorithme que tu as écrit&nbsp;; un tri quadratique optimisé reste quadratique.</li>
+<li><strong>Attendre que le compilateur trouve les fautes de logique</strong> — il vérifie la forme et, dans une certaine mesure, le sens&nbsp;; il ne sait rien de ton intention. Un programme qui compile n'est pas un programme juste.</li>
+<li><strong>Lire un message d'erreur en partant de la fin</strong> — la première erreur signalée est souvent la seule vraie&nbsp;: les suivantes sont fréquemment des conséquences d'un analyseur qui a perdu le fil. Corrige la première, relance, et regarde ce qui reste.</li>
+<li><strong>Prendre le schéma pour la réalité</strong> — les compilateurs réels fusionnent, dédoublent ou sautent des étapes. La carte sert à nommer, pas à décrire un produit précis.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un développeur passe une demi-journée sur un message qu'il lit comme une erreur de compilation&nbsp;: «&nbsp;référence indéfinie vers…&nbsp;», suivi du nom d'une fonction. Il relit son fichier ligne par ligne, vérifie l'orthographe de l'appel, contrôle le nombre d'arguments, ajoute des inclusions au hasard, nettoie et recommence. Rien ne bouge. Or son fichier compilait <em>parfaitement</em>&nbsp;: le fichier objet était bel et bien produit, sans le moindre avertissement. L'étape qui échouait était la suivante. La fonction était <strong>déclarée</strong> dans un en-tête — de quoi satisfaire le compilateur, qui n'a besoin que de la signature pour vérifier l'appel — mais elle n'était <strong>implémentée nulle part</strong> dans les objets fournis à l'éditeur de liens&nbsp;: le fichier qui contenait sa définition n'avait pas été ajouté à la construction. Lire l'étape dans le message aurait tranché en deux minutes&nbsp;: l'erreur ne donnait aucune ligne de code source, seulement un nom de symbole, signature typique de l'édition de liens&nbsp;; la question à se poser n'était donc pas «&nbsp;mon appel est-il correct&nbsp;?&nbsp;» mais «&nbsp;qui définit cette fonction, et cet objet-là est-il bien dans la liste&nbsp;?&nbsp;». C'est exactement pour cela qu'on répète qu'une <strong>déclaration ne vaut pas une définition</strong>&nbsp;: la première est une promesse faite au compilateur, la seconde est le code que l'éditeur de liens réclamera plus tard. Promettre suffit pour compiler&nbsp;; il faut tenir pour lier.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les étapes de la chaîne&nbsp;: entrée, sortie, erreurs typiques</caption>
+    <thead><tr><th scope="col">Étape</th><th scope="col">Reçoit</th><th scope="col">Produit</th><th scope="col">Erreurs typiques</th></tr></thead>
+    <tbody>
+      <tr><td>Analyse lexicale</td><td>Texte source</td><td>Jetons</td><td>Caractère ou jeton invalide</td></tr>
+      <tr><td>Analyse syntaxique</td><td>Jetons</td><td>Arbre de syntaxe</td><td>Jeton inattendu à cet endroit</td></tr>
+      <tr><td>Analyse sémantique</td><td>Arbre</td><td>Arbre annoté + table des symboles</td><td>Nom inconnu, types incompatibles</td></tr>
+      <tr><td>Représentation intermédiaire</td><td>Arbre annoté</td><td>RI (opérations élémentaires)</td><td>Rarement visible de l'extérieur</td></tr>
+      <tr><td>Optimisation</td><td>RI</td><td>RI équivalente, moins coûteuse</td><td>Avertissements (code inatteignable…)</td></tr>
+      <tr><td>Génération de code</td><td>RI optimisée</td><td>Code machine, fichier objet</td><td>Cible non supportée</td></tr>
+      <tr><td>Édition de liens</td><td>Objets + bibliothèques</td><td>Programme exécutable</td><td>Symbole non défini, défini deux fois</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Chaîne de compilation</dt><dd>Suite d'étapes qui mène du texte source au programme exécutable, chacune recevant la sortie de la précédente et produisant une forme un peu plus proche de la machine.</dd>
+  <dt>Analyse lexicale</dt><dd>Première étape&nbsp;: elle découpe le texte en jetons, écarte espaces et commentaires, et attribue à chaque jeton sa catégorie.</dd>
+  <dt>Jeton</dt><dd>Plus petite unité porteuse de sens du langage (nombre, identifiant, opérateur, mot-clé, parenthèse), produite par l'analyse lexicale.</dd>
+  <dt>Arbre de syntaxe abstraite</dt><dd>Structure emboîtée produite par l'analyse syntaxique&nbsp;; sa <em>forme</em> encode l'imbrication des opérations, et donc leur ordre d'évaluation.</dd>
+  <dt>Table des symboles</dt><dd>Répertoire construit par l'analyse sémantique&nbsp;: il associe à chaque nom déclaré ce qu'on sait de lui (type, portée, nature), et sert à vérifier les usages.</dd>
+  <dt>Représentation intermédiaire</dt><dd>Forme pivot, plus simple qu'un arbre et plus abstraite qu'un code machine, qui découple les langages sources des machines cibles et sert de support à l'optimisation.</dd>
+  <dt>Partie avant / partie arrière</dt><dd>La partie avant (<em>front-end</em>) comprend le texte et dépend du langage&nbsp;; la partie arrière (<em>back-end</em>) produit le code et dépend de la machine. Entre les deux, la partie médiane travaille sur la représentation intermédiaire.</dd>
+  <dt>Fichier objet</dt><dd>Sortie du compilateur pour un fichier source&nbsp;: du code machine assorti de la liste des symboles qu'il définit et de ceux qu'il réclame. Il n'est pas exécutable tel quel.</dd>
+  <dt>Édition de liens</dt><dd>Étape finale, assurée par l'éditeur de liens&nbsp;: elle rassemble les fichiers objets et les bibliothèques, apparie chaque symbole réclamé avec sa définition, et produit le programme exécutable.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un compilateur est un <strong>tuyau</strong>&nbsp;: une suite d'étapes qui ont chacune une entrée et une sortie bien définies, et non une boîte noire monolithique.</li>
+<li>La <strong>partie avant</strong> comprend le texte (jetons, arbre, arbre annoté), la <strong>partie médiane</strong> travaille sur la représentation intermédiaire, la <strong>partie arrière</strong> produit le code machine.</li>
+<li>Le pivot transforme une multiplication en addition&nbsp;: <strong>N&nbsp;×&nbsp;M</strong> traducteurs sans lui, <strong>N&nbsp;+&nbsp;M</strong> avec — 12 contre 7 pour 4 langages et 3 machines.</li>
+<li>La priorité des opérateurs vit dans la <strong>forme de l'arbre</strong>, pas dans l'évaluateur&nbsp;: le nœud le plus bas est calculé le premier.</li>
+<li>La frontière «&nbsp;analyse / exécution&nbsp;» n'est pas la frontière «&nbsp;syntaxe / sémantique&nbsp;»&nbsp;: certaines erreurs de sens sont détectées avant exécution, d'autres non. C'est un <strong>choix de conception du langage</strong>.</li>
+<li>Après le compilateur vient l'<strong>édition de liens</strong>&nbsp;: elle apparie les symboles réclamés et définis. Une déclaration ne vaut pas une définition.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Cite, dans l'ordre, ce que reçoit et ce que produit chacune des trois étapes de la partie avant.</li>
+<li>Pour relier 6 langages à 5 machines, combien de traducteurs faut-il avec un pivot, et combien sans&nbsp;? Justifie le calcul.</li>
+<li>Un message d'erreur donne un nom de fonction mais aucune ligne de code source. Quelle étape parle, et que faut-il vérifier en premier&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que reçoit et que produit l'analyse lexicale ?","a":["Elle reçoit le texte source et produit une liste de jetons, en écartant espaces et commentaires","Elle reçoit une liste de jetons et produit un arbre de syntaxe abstraite","Elle reçoit un arbre et produit une représentation intermédiaire annotée","Elle reçoit des fichiers objets et produit un programme exécutable"],"correct":0,"explain":"C'est la première étape du tuyau : elle passe de caractères à jetons. Les trois autres réponses décrivent l'analyse syntaxique, la partie médiane et l'édition de liens."},
+  {"q":"Pourquoi placer une représentation intermédiaire entre la partie avant et la partie arrière ?","a":["Parce qu'elle sert de pivot : relier N langages à M machines coûte alors N + M traducteurs au lieu de N × M","Parce qu'elle rend le programme produit plus rapide que du code machine écrit à la main","Parce qu'elle remplace l'analyse sémantique, devenue inutile une fois l'arbre construit","Parce qu'elle permet de se passer entièrement d'une étape de génération de code"],"correct":0,"explain":"Chaque langage écrit une fois vers la RI, chaque machine la lit une fois : 4 langages et 3 machines demandent 7 traducteurs au lieu de 12, et un langage de plus n'en coûte qu'un."},
+  {"q":"Un message dit « référence indéfinie vers calculer_total » et ne cite aucune ligne de ton fichier. Quelle étape parle ?","a":["L'édition de liens : un symbole réclamé n'est défini dans aucun objet ni aucune bibliothèque fournie","L'analyse lexicale : un caractère du fichier ne peut appartenir à aucun jeton valide","L'analyse syntaxique : l'appel de fonction ne respecte pas les règles d'écriture du langage","L'optimisation : la fonction a été supprimée parce qu'aucun chemin ne l'atteignait"],"correct":0,"explain":"Le compilateur cite toujours une position dans le source ; l'éditeur de liens, lui, ne connaît que des symboles. La fonction était déclarée, mais définie nulle part parmi les objets fournis."},
+  {"q":"En JavaScript, « let z = 1; let z = 2; » est refusé avant exécution, mais « const y = 1; y = 2; » ne l'est qu'à l'exécution. Qu'est-ce que cela montre ?","a":["Que la frontière analyse / exécution ne coïncide pas avec la frontière syntaxe / sémantique : c'est un choix de conception du langage","Que la première erreur est syntaxique alors que la seconde est purement lexicale, d'où le décalage","Que toute vérification portant sur le sens d'un programme est nécessairement reportée à l'exécution","Que l'analyse sémantique n'existe pas dans les langages sans types statiques déclarés"],"correct":0,"explain":"Les deux fautes sont sémantiques : la phrase est bien formée dans les deux cas. Rien n'obligeait à rendre l'une tôt et l'autre tard — un autre langage refuserait la seconde dès la compilation."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"3"},"placeholder":"écris jetons(txt) puis affiche le nombre de jetons de « 12+7 »","hints":["Une seule ligne suffit dans la fonction : txt.match(/\\d+|[+*()]/g) rend déjà un tableau.","Le motif \\d+ capte « 12 » d'un bloc : un nombre à deux chiffres reste UN seul jeton.","Il ne reste qu'à afficher la longueur du tableau rendu, avec .length."],"link":{"href":"lecon-02.html","label":"Revoir « Les trois premières étapes : comprendre le texte »"}},
+  {"type":"text","accept":["représentation intermédiaire","representation intermediaire","ri","une représentation intermédiaire"],"placeholder":"la forme pivot placée entre la partie avant et la partie arrière s'appelle une r_____________ i____________","hints":["C'est elle qui fait passer de N × M traducteurs à N + M.","C'est aussi sur elle que travaille l'optimisation.","Deux mots, ou son sigle de deux lettres."],"link":{"href":"lecon-02.html","label":"Revoir « Le milieu : une représentation intermédiaire »"}},
+  {"type":"text","accept":["édition de liens","edition de liens","l'édition de liens","linker","éditeur de liens"],"placeholder":"l'étape qui rassemble les fichiers objets et apparie les symboles s'appelle l'é______ de l____","hints":["Elle vient APRÈS le compilateur, et c'est un outil distinct.","C'est elle qui produit le message « référence indéfinie vers… ».","Trois mots : é______ de l____."],"link":{"href":"lecon-02.html","label":"Revoir « La sortie : générer, assembler, lier »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris la fonction <code>jetons(txt)</code> qui découpe une expression avec le motif <code>/\d+|[+*()]/g</code>, puis affiche <code>jetons("12+7").length</code>. Avant de lancer&nbsp;: combien de jetons attends-tu&nbsp;? Attention, <code>12</code> compte pour un seul jeton, pas deux.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Le découpage, réduit à l'essentiel : on garde les morceaux tels quels.
+function jetons(txt) {
+  return txt.match(/\d+|[+*()]/g);
+}
+
+// « 12+7 » donne les jetons ["12", "+", "7"] : le motif \d+ capte 12 d'un bloc.
+console.log(jetons("12+7").length); // affiche : 3</code></pre></figure>
+<p>Le point à retenir&nbsp;: le jeton n'est pas le caractère. <code>12</code> fait deux caractères mais <strong>un</strong> jeton, parce que c'est le motif <code>\d+</code> — «&nbsp;un ou plusieurs chiffres&nbsp;» — qui décide de la frontière. Toute l'analyse lexicale tient dans ce choix de frontières.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Une équipe maintient des compilateurs pour 6&nbsp;langages vers 5&nbsp;machines. Calcule le nombre de traducteurs nécessaires <strong>sans</strong> représentation intermédiaire, puis <strong>avec</strong>. Ensuite, dis ce que coûte l'ajout d'un septième langage dans chacun des deux montages, et nomme l'étape de la chaîne qui rend cette économie possible.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">SANS pivot : chaque paire (langage, machine) a son traducteur.
+   6 x 5 = 30 traducteurs.
+   Ajouter un 7e langage : il faut le relier aux 5 machines -&gt; + 5.
+
+AVEC pivot : chaque langage écrit vers la RI, chaque machine la lit.
+   6 + 5 = 11 traducteurs.
+   Ajouter un 7e langage : un seul traducteur vers la RI -&gt; + 1.
+
+Économie immédiate : 30 - 11 = 19 traducteurs.
+Et le coût de croissance passe de « + M » à « + 1 ».
+
+L'étape qui rend cela possible est la REPRÉSENTATION INTERMÉDIAIRE
+(partie médiane) : elle découple ce qui dépend du LANGAGE (partie
+avant) de ce qui dépend de la MACHINE (partie arrière).</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Pour chacun des quatre messages ci-dessous, dis <strong>quelle étape</strong> de la chaîne l'a produit et <strong>où</strong> tu irais chercher la faute en premier&nbsp;: (a) «&nbsp;caractère inattendu «&nbsp;§&nbsp;» ligne 12&nbsp;»&nbsp;; (b) «&nbsp;il manque une parenthèse fermante avant «&nbsp;;&nbsp;»&nbsp;»&nbsp;; (c) «&nbsp;la variable <code>total</code> n'est pas déclarée dans cette portée&nbsp;»&nbsp;; (d) «&nbsp;référence indéfinie vers <code>ouvrir_fichier</code>&nbsp;».</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) « caractère inattendu » -&gt; ANALYSE LEXICALE.
+    Le découpeur bute sur un caractère qui ne peut commencer aucun
+    jeton. La faute est À CET ENDROIT, ligne 12 : caractère collé,
+    guillemet exotique, copier-coller depuis un traitement de texte.
+
+(b) « parenthèse fermante manquante » -&gt; ANALYSE SYNTAXIQUE.
+    Chaque jeton est valide, c'est leur enchaînement qui ne suit
+    aucune règle. La faute est sur la ligne signalée OU AVANT :
+    remonter jusqu'à la parenthèse ouvrante restée seule.
+
+(c) « variable non déclarée dans cette portée » -&gt; ANALYSE SÉMANTIQUE.
+    La phrase est bien formée ; c'est la table des symboles qui ne
+    trouve pas le nom. Chercher AILLEURS : déclaration oubliée,
+    faute de frappe sur le nom, ou déclaration hors de la portée.
+
+(d) « référence indéfinie vers ... » -&gt; ÉDITION DE LIENS.
+    Ce n'est plus le compilateur : le fichier objet a bien été
+    produit. Chercher HORS DE CE FICHIER : qui définit la fonction,
+    et cet objet (ou cette bibliothèque) est-il dans la liste
+    donnée à l'éditeur de liens ?
+
+Règle de lecture : plus le message parle de CARACTÈRES ou de JETONS,
+plus la faute est près du curseur ; plus il parle de NOMS ou de
+SYMBOLES, plus il faut chercher loin — voire dans un autre fichier.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

@@ -632,6 +632,13 @@ window.SITE_DATA = (function () {
       tagline: "Comprendre ce qui se passe sous le code : le rôle d'un système d'exploitation, les processus et threads, l'ordonnancement, la mémoire virtuelle, les fichiers et les entrées/sorties, jusqu'au temps réel, à la sécurité et à la tolérance aux pannes — les concepts qui éclairent tout le reste.",
       tags: ["Transversal", "Système", "Bas niveau"],
     },
+    {
+      id: "compilation", dir: "compilation", title: "Compilation : du texte source au code exécuté",
+      glyph: "cp", language: "Compilation", level: "avance", status: "apercu",
+      accent: "#7a5a1e", lessons: 3, hours: 2,
+      tagline: "Ce qui se passe entre le fichier que tu écris et ce que la machine exécute : compiler ou interpréter, les étapes d'une chaîne de compilation, pourquoi un langage a besoin d'une grammaire — puis, module après module, construire un langage minuscule de bout en bout : analyse lexicale, analyse syntaxique, arbre de syntaxe, évaluation et machine à pile. Tous les exemples sont en JavaScript et s'exécutent dans la page.",
+      tags: ["Transversal", "Langages", "Bas niveau"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -1386,6 +1393,57 @@ window.SITE_DATA = (function () {
         },
       ],
     },
+    compilation: {
+      id: "compilation", dir: "compilation", title: "Compilation : du texte source au code exécuté",
+      glyph: "cp", accent: "#7a5a1e", overview: "cours.html",
+      related: [
+        { course: "algo", note: "Un compilateur est une chaîne d'algorithmes sur des arbres : parcours récursifs, piles, tables. Ce cours-là en donne les briques ; celui-ci montre à quoi elles servent une fois assemblées." },
+        { course: "regex", note: "L'analyse lexicale est le premier vrai métier des expressions régulières — et la leçon 3 explique précisément où elles s'arrêtent : équilibrer des parenthèses leur est impossible." },
+        { course: "asm", note: "Le bout de la chaîne : ce que le générateur de code produit. Voir les instructions d'une machine réelle rend concret ce que « générer du code » veut dire." },
+        { course: "c", note: "Le langage compilé de référence : compilation séparée, fichiers objets, édition de liens. Les messages d'erreur du C prennent tout leur sens une fois la chaîne connue." },
+        { course: "python", note: "Python compile lui aussi, en bytecode, avant d'exécuter — la leçon 1 le démontre avec le module dis. Le cours Python donne le langage ; celui-ci montre son moteur." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Ce qu'est compiler", sub: "interprété ou compilé, la chaîne, la grammaire", level: "avance",
+          lessons: [
+            { num: "01", title: "Compiler ou interpréter : deux façons de faire tourner du texte", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "La chaîne de compilation, étape par étape", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Pourquoi un langage a besoin d'une grammaire", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Analyse lexicale", sub: "du texte aux jetons, automates, espaces et commentaires", level: "avance",
+          lessons: [
+            { num: "04", title: "Du texte aux jetons", file: "#", status: "bientot" },
+            { num: "05", title: "Expressions régulières et automates", file: "#", status: "bientot" },
+            { num: "06", title: "Espaces, commentaires et erreurs lexicales", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "03", title: "Analyse syntaxique", sub: "grammaires, descente récursive, arbre de syntaxe", level: "avance",
+          lessons: [
+            { num: "07", title: "Grammaires et dérivations", file: "#", status: "bientot" },
+            { num: "08", title: "L'analyse par descente récursive", file: "#", status: "bientot" },
+            { num: "09", title: "Priorité des opérateurs et arbre de syntaxe abstraite", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "04", title: "Évaluer et générer", sub: "parcourir l'arbre, machine à pile, bytecode", level: "avance",
+          lessons: [
+            { num: "10", title: "Parcourir l'arbre et évaluer", file: "#", status: "bientot" },
+            { num: "11", title: "Une machine à pile", file: "#", status: "bientot" },
+            { num: "12", title: "Générer du bytecode", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "05", title: "Le projet", sub: "un petit langage complet, du texte au résultat", level: "avance",
+          lessons: [
+            { num: "13", title: "Projet — Brindille, un langage de bout en bout", file: "#", status: "bientot" },
+          ],
+        },
+      ],
+    },
     javascript: {
       id: "javascript", dir: "js", title: "JavaScript : des fondations au niveau expert",
       glyph: "JS", accent: "#caa12f", overview: "cours.html",
@@ -1569,6 +1627,7 @@ window.SITE_DATA = (function () {
       glyph: "O(n)", accent: "#6a4fb0", overview: "cours.html",
       related: [
         { course: "javascript", note: "Les bases JS indispensables avant de plonger dans les algorithmes." },
+        { course: "compilation", note: "Un compilateur est le plus bel assemblage de ces algorithmes : arbres, piles, tables et parcours récursifs y travaillent ensemble sur un vrai problème." },
       ],
       modules: [
         {
@@ -1744,6 +1803,7 @@ window.SITE_DATA = (function () {
         { course: "git", note: "Versionne tes scripts dès le premier jour." },
         { course: "javascript", note: "Compare les deux langages : beaucoup de concepts se recoupent." },
         { course: "pandas", note: "La bibliothèque reine pour manipuler des données tabulaires en Python." },
+        { course: "compilation", note: "Python compile en bytecode avant d'exécuter : le cours le démontre avec le module dis, et explique la machine qui exécute ce bytecode." },
       ],
       modules: [
         {
@@ -2584,6 +2644,7 @@ window.SITE_DATA = (function () {
         { course: "javascript", note: "JavaScript intègre les regex nativement (/.../) : le terrain d'essai idéal." },
         { course: "python", note: "Le module re de Python : search, findall, sub sur tes motifs." },
         { course: "bash", note: "grep, sed et awk filtrent le texte avec des expressions régulières." },
+        { course: "compilation", note: "Le premier métier des regex : découper un code source en jetons. Le cours montre aussi, mesure à l'appui, ce qu'elles ne peuvent pas faire — équilibrer des parenthèses." },
       ],
       modules: [
         {
@@ -3377,6 +3438,7 @@ window.SITE_DATA = (function () {
         { course: "cpp", note: "Le C++ étend le C avec les objets et la STL : la suite naturelle." },
         { course: "rust", note: "Rust vise la même puissance que le C, avec la sûreté mémoire en plus." },
         { course: "algo", note: "Implémente les structures de données au plus près de la mémoire." },
+        { course: "compilation", note: "Compilation séparée, fichier objet, édition de liens : les étapes que gcc enchaîne pour toi, expliquées une à une." },
       ],
       modules: [
         {
@@ -4478,6 +4540,7 @@ window.SITE_DATA = (function () {
         { course: "c", note: "Le C est le pont naturel vers l'assembleur : pointeurs et mémoire d'abord." },
         { course: "rust", note: "Comprendre la machine éclaire les garanties de Rust (et son unsafe)." },
         { course: "cpp", note: "Lire l'assembleur produit par le compilateur aide à optimiser en C++." },
+        { course: "compilation", note: "D'où vient cet assembleur ? Le cours remonte la chaîne, du texte source jusqu'à la génération de code." },
       ],
       modules: [
         {
@@ -5630,7 +5693,7 @@ window.SITE_DATA = (function () {
       title: "Fondamentaux & informatique",
       glyph: "O(n)",
       tagline: "Les bases solides : programmer, raisonner, comprendre la machine.",
-      courses: ["python", "algo", "c", "rust"],
+      courses: ["python", "algo", "c", "rust", "compilation"],
     },
     {
       id: "data",
@@ -5802,6 +5865,7 @@ window.SITE_DATA = (function () {
     "observabilite": {"lecon-01.html":29,"lecon-02.html":31,"lecon-03.html":32,"lecon-04.html":31,"lecon-05.html":32,"lecon-06.html":37,"lecon-07.html":35,"lecon-08.html":36,"lecon-09.html":34,"lecon-10.html":35,"lecon-11.html":40},
     "os": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":31,"lecon-04.html":33,"lecon-05.html":30,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":31,"lecon-09.html":33,"lecon-10.html":32,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":33,"lecon-14.html":40},
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
+    "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
     "cobol": {"lecon-01.html":44,"lecon-02.html":50,"lecon-03.html":55,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":45,"lecon-10.html":48,"lecon-11.html":46,"lecon-12.html":46,"lecon-13.html":44,"lecon-14.html":50},

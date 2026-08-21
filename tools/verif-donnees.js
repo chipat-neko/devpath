@@ -440,6 +440,27 @@ function vendorPresent(file) {
   if (vendorHas[file] === undefined) vendorHas[file] = fs.existsSync(path.join(vendorDir, file));
   return vendorHas[file];
 }
+/* Dépendances d'un composant Prism, LUES DANS LE VENDOR : un composant qui fait
+   Prism.languages.extend('X', …) exige que X soit chargé avant lui. On les
+   extrait du fichier minifié plutôt que de tenir une liste à la main, qui se
+   périmerait au premier composant ajouté. Résultat mis en cache. */
+const vendorDeps = {};
+function prismDeps(file) {
+  if (vendorDeps[file] !== undefined) return vendorDeps[file];
+  const moi = /^prism-([a-z0-9-]+)\.min\.js$/.exec(file);
+  const out = [];
+  try {
+    const src = fs.readFileSync(path.join(vendorDir, file), 'utf8');
+    const re = /\.extend\(\s*["']([a-z0-9-]+)["']/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      if (moi && m[1] === moi[1]) continue;          // un composant peut s'étendre lui-même
+      if (out.indexOf(m[1]) === -1 && vendorPresent('prism-' + m[1] + '.min.js')) out.push(m[1]);
+    }
+  } catch (e) { /* composant illisible : traité comme sans dépendance */ }
+  vendorDeps[file] = out;
+  return out;
+}
 
 const cQuiz = check('I12', 'QCM bilan par cours (data-quiz-bilan)');
 const cExos = check('I13', 'data-exos alignés (piège A8)');
@@ -517,6 +538,38 @@ Object.keys(LESSONS).forEach((id) => {
       const file = 'prism-' + gram + '.min.js';
       if (!vendorPresent(file)) cPrism.err(where + ' : language-' + lang + ' mais ' + file + ' absent du vendor Prism');
       else if (html.indexOf(file) === -1) cPrism.err(where + ' : language-' + lang + ' utilisé mais ' + file + ' non chargé dans la page');
+    });
+
+    /* V13-B1 : la grammaire est là, mais ses DÉPENDANCES ? Un composant qui fait
+       Prism.languages.extend('clike', …) lève « Cannot read properties of
+       undefined (reading 'class-name') » si clike n'est pas chargé AVANT lui —
+       et c'est la coloration de la page ENTIÈRE qui meurt. Aucun contrôle de
+       source ne le voyait : il a fallu verif-rendu et un vrai navigateur pour le
+       trouver sur les 3 premières leçons du cours `compilation` (36 exceptions).
+       On lit les dépendances DANS le vendor (pas une liste écrite à la main, qui
+       se périmerait), on suit la chaîne complète (cpp → c → clike), et on
+       contrôle l'ORDRE. On parcourt TOUS les composants chargés, pas seulement
+       ceux qu'un language-* réclame : un composant chargé pour rien plante tout
+       autant. */
+    const chargesRe = /prism-([a-z0-9-]+)\.min\.js/g;
+    const charges = [];
+    let mc;
+    while ((mc = chargesRe.exec(html)) !== null) if (charges.indexOf(mc[1]) === -1) charges.push(mc[1]);
+    charges.forEach((comp) => {
+      if (comp === 'core') return;
+      const file = 'prism-' + comp + '.min.js';
+      const vus = {};
+      const pile = prismDeps(file).slice();
+      while (pile.length) {
+        const dep = pile.shift();
+        if (vus[dep]) continue;
+        vus[dep] = 1;
+        const depFile = 'prism-' + dep + '.min.js';
+        const iDep = html.indexOf(depFile);
+        if (iDep === -1) { cPrism.err(where + ' : ' + file + ' chargé sans sa dépendance ' + depFile + ' (la coloration plante)'); continue; }
+        if (iDep > html.indexOf(file)) cPrism.err(where + ' : ' + depFile + ' chargé APRÈS ' + file + ' (une dépendance doit précéder)');
+        prismDeps(depFile).forEach((d) => { if (!vus[d]) pile.push(d); });
+      }
     });
   });
 

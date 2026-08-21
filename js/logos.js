@@ -215,6 +215,11 @@
     observabilite: badge("Obs", 7),
     /* Systèmes d'exploitation : badge à lettres */
     os: badge("OS", 8.5),
+    /* Compilation : un arbre de syntaxe — la racine, deux branches, les feuilles */
+    compilation: stroke(
+      '<circle cx="12" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="19" r="2.2"/>' +
+      '<path d="M10.5 6.6 7.5 17.3M13.5 6.6l3 10.7"/>'
+    ),
   };
 
   /* id de cours -> clé de logo (les variantes partagent le logo du langage) */
@@ -231,7 +236,7 @@
     fsharp: "fsharp", clojure: "clojure", prolog: "prolog", ada: "ada", pascal: "pascal", vb: "vb",
     objc: "objc", erlang: "erlang", groovy: "groovy", solidity: "solidity",
     ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", bdd: "bdd", mobile: "mobile", equipe: "equipe", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
-    "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os",
+    "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os", compilation: "compilation",
   };
 
   function courseLogo(id) {
