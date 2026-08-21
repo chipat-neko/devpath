@@ -52,6 +52,8 @@
  *   I21 étiquette ⇄ contenu : AVERTISSEMENT — un bloc language-X sans marqueur de X
  *                             mais avec ≥2 marqueurs d'un autre (js/python/sql,
  *                             commentaires+chaînes retirés). Garde-fou, 0 aujourd'hui.
+ *   I22 SQL mot réservé nu  : AVERTISSEMENT — colonne de CREATE TABLE ou alias « AS x »
+ *                             qui est un mot réservé sans délimiteur (cas « end »).
  *
  * USAGE
  * -----
@@ -699,6 +701,69 @@ Object.keys(LESSONS).forEach((id) => {
         let best = null, bs = 0;
         for (const o of Object.keys(EXCL)) { if (o === lang) continue; const s = sc(code, EXCL[o]); if (s > bs) { bs = s; best = o; } }
         if (bs >= 2) c.warn(id + '/' + l.file + ' : bloc language-' + lang + ' sans marqueur ' + lang + ', ressemble à ' + best + ' (' + bs + ' marqueurs)');
+      }
+    }));
+  });
+})();
+
+/* ============================= I22 SQL : mot réservé comme identifiant nu */
+/* 353 blocs SQL, aucun contrôle jusqu'ici : l'audit V10 a dû trouver « end » comme
+   nom de colonne À LA MAIN dans 5 leçons (depuis délimité "end"). AVERTISSEMENT
+   (non bloquant) : une COLONNE de CREATE TABLE ou un ALIAS « AS x » qui est un mot
+   RÉSERVÉ du standard SANS délimiteur ("x", `x`, [x]). 0 aujourd'hui — garde-fou.
+   La COHÉRENCE DE DIALECTE n'est PAS contrôlée : les 2 seules leçons mêlant
+   plusieurs marqueurs (sql/l18, bdd/l05) COMPARENT volontairement SERIAL/IDENTITY/
+   AUTO_INCREMENT — la mixité y est pédagogique, la signaler serait un faux positif. */
+(function () {
+  const c = check('I22', 'SQL : mot réservé comme identifiant nu (garde-fou)');
+  // Mots RÉSERVÉS stricts : erreur de syntaxe quasi garantie comme identifiant nu.
+  // On ÉCARTE les « non-reserved » (key, level, row, range, rank, user, value, role,
+  // name…), utilisables comme colonnes sans délimiteur dans MySQL/Postgres/SQLite.
+  const RES = new Set(['end', 'order', 'group', 'table', 'column', 'default', 'check', 'index',
+    'primary', 'foreign', 'references', 'constraint', 'desc', 'case', 'when', 'then', 'values',
+    'natural', 'using', 'over', 'partition', 'window', 'limit', 'offset', 'having', 'union',
+    'distinct', 'select', 'from', 'where', 'grant']);
+  // Après « AS », ces mots introduisent une sous-requête/structure, pas un alias.
+  const NON_ALIAS = new Set(['select', 'values', 'table', 'with', 'from']);
+  function dec(s) { return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, '&'); }
+  function splitTop(s) {          // split par virgule de premier niveau (hors parenthèses)
+    const out = []; let depth = 0, cur = '';
+    for (const ch of s) {
+      if (ch === '(') depth++; else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { out.push(cur); cur = ''; } else cur += ch;
+    }
+    if (cur.trim()) out.push(cur);
+    return out;
+  }
+  const TYPES = /^(INT|INTEGER|TEXT|VARCHAR|CHAR|REAL|FLOAT|DOUBLE|NUMERIC|DECIMAL|BOOLEAN|BOOL|DATE|TIME|TIMESTAMP|BLOB|SERIAL|BIGINT|SMALLINT|UUID|JSON|JSONB)\b/i;
+  Object.keys(CONTENT).forEach((id) => {
+    const cc = CONTENT[id];
+    const dir = cc.dir || id;
+    (cc.modules || []).forEach((m) => (m.lessons || []).forEach((l) => {
+      if (!l || !l.file || l.file === '#') return;
+      const html = readPage(dir, l.file);
+      if (html == null || isRedirect(html)) return;
+      const re = /<code class="language-sql">([\s\S]*?)<\/code>/gi;
+      let mm;
+      while ((mm = re.exec(html))) {
+        const code = dec(mm[1]);
+        // colonnes de CREATE TABLE (…)
+        const ct = code.match(/CREATE\s+TABLE[^(]*\(([\s\S]*?)\)\s*;/i);
+        if (ct) {
+          splitTop(ct[1]).forEach((item) => {
+            const t = item.trim();
+            const w = t.match(/^([a-zA-Z_]\w*)\s+/);
+            if (w && TYPES.test(t.slice(w[1].length).trim()) && RES.has(w[1].toLowerCase())) {
+              c.warn(id + '/' + l.file + ' : colonne « ' + w[1] + ' » est un mot réservé SQL nu (délimiter : "' + w[1] + '")');
+            }
+          });
+        }
+        // alias AS x nu
+        let a; const reA = /\bAS\s+(?!["`\[])([a-zA-Z_]\w*)/gi;
+        while ((a = reA.exec(code))) {
+          const w = a[1].toLowerCase();
+          if (RES.has(w) && !NON_ALIAS.has(w)) c.warn(id + '/' + l.file + ' : alias « AS ' + a[1] + ' » est un mot réservé SQL nu');
+        }
       }
     }));
   });
