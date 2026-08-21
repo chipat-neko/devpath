@@ -536,16 +536,14 @@
     card.appendChild(a);
   }
 
-  /* ---- Lien « version imprimable du cours » (PDF) --------------------- */
+  /* ---- Lien « livret de révision » (PDF) ------------------------------ */
   function renderPrintLink() {
-    /* L'assemblage du cours complet lit chaque leçon par fetch(), bloqué en
-       file:// (origine opaque : ni fetch ni iframe ne peuvent lire un autre
-       fichier local). On ne montre donc ce lien qu'en HTTP ; en file:// —
-       le mode d'usage fondateur — l'utilisateur imprime chaque leçon via son
-       propre bouton « Imprimer ». Évite un lien qui ne mène qu'à un message
-       « Assemblage indisponible en local ». */
-    var httpOk = location.protocol === "http:" || location.protocol === "https:";
-    if (!httpOk) return;
+    /* Le lien était réservé à HTTP : assembler le TEXTE INTÉGRAL des leçons
+       demande un fetch, refusé en file://. Depuis V12-E2, la page produit un
+       LIVRET (plan + antisèches + glossaire + pièges) construit à partir
+       d'index déjà présents dans le dépôt : il fonctionne en file://, donc le
+       lien s'affiche partout. En HTTP, la page propose en plus le texte
+       intégral, en section à cocher. */
     var card = document.querySelector(".start-card");
     if (!card || !course.dir) return;
     var a = document.createElement("a");
@@ -553,7 +551,7 @@
     a.href = "../imprimer.html?cours=" + encodeURIComponent(course.dir);
     a.innerHTML =
       '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>' +
-      "Version imprimable du cours (PDF)";
+      "Livret de révision à imprimer (PDF)";
     card.appendChild(a);
   }
 

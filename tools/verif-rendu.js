@@ -35,6 +35,7 @@
      node tools/verif-rendu.js --cours          # tous les cours.html
      node tools/verif-rendu.js --tout           # toutes les pages de premier niveau
      node tools/verif-rendu.js --pages=a,b      # pages precises (chemins relatifs)
+     node tools/verif-rendu.js --attente=2500    # delai avant mesure (page qui charge a la demande)
      node tools/verif-rendu.js --largeurs=320,1280
      node tools/verif-rendu.js --themes=light,dark
      node tools/verif-rendu.js --strict         # sort en code 1 des le premier AVERTISSEMENT
@@ -56,6 +57,11 @@ function opt(n, d) {
   return d;
 }
 var ROOT = path.resolve(opt("root", path.join(__dirname, "..")));
+/* Delai avant la sonde. 700 ms suffisent aux pages qui se rendent au chargement ;
+   celles qui INJECTENT un index a la demande (livret de revision : 5,3 Mo de
+   donnees) ont besoin de plus, sinon on mesure une page encore vide et le vert
+   ne prouve rien. */
+var ATTENTE = Math.max(200, parseInt(opt("attente", "700"), 10) || 700);
 var STRICT = flag("strict");
 var TOUT = flag("tout");
 var LARGEURS = opt("largeurs", "320,375,1280").split(",").map(Number).filter(Boolean);
@@ -99,6 +105,11 @@ function premierNiveau() {
       if (f.endsWith(".html")) out.push("pages/" + f);
     });
   } catch (e) { console.error("(pages/ illisible : " + e.message + ")"); }
+  /* Certaines pages ne montrent rien sans parametre : mesurees nues, elles
+     affichent un ecran « introuvable » et le vert ne prouve RIEN. On les
+     remesure donc dans leur etat utile. Le livret d'un GROS cours est le pire
+     cas : 66 antiseches, 456 termes, 117 pieges. */
+  out.push("pages/imprimer.html?cours=js");
   return out;
 }
 
@@ -557,9 +568,19 @@ function avertir(page, categorie, texte) {
 
   for (var ip = 0; ip < pages.length; ip++) {
     var rel = pages[ip];
+    /* Une page peut etre demandee AVEC ses parametres : « pages/imprimer.html
+       ?cours=regex », « pages/projets.html#course=js ». Plusieurs pages du site
+       ne montrent leur vrai contenu qu'ainsi ; sans cela on ne mesurait qu'un
+       ecran « introuvable ». Le suffixe est retire pour trouver le fichier sur
+       le disque, puis remis dans l'URL. */
+    var suffixe = "";
+    var coupe = rel.search(/[?#]/);
+    if (coupe !== -1) { suffixe = rel.slice(coupe); rel = rel.slice(0, coupe); }
     var abs = path.join(ROOT, rel);
     if (!fs.existsSync(abs)) { avertir(rel, "page", "fichier introuvable"); continue; }
     var url = "file:///" + abs.replace(/\\/g, "/");
+    url += suffixe;
+    rel = rel + suffixe;
     RAPPORT.pages++;
 
     var cid = (await nav.envoyer("Target.createTarget", { url: "about:blank" })).targetId;
@@ -612,7 +633,10 @@ function avertir(page, categorie, texte) {
             "document.documentElement.setAttribute('data-theme','" + theme + "')}catch(e){}",
         });
         await envoyer("Page.navigate", { url: url });
-        await attendre(700);
+        /* Une page listee AVEC parametre construit son contenu apres coup (le
+           livret injecte 5,3 Mo d'index) : lui laisser le temps, sinon on
+           mesurerait une page vide. */
+        await attendre(suffixe ? Math.max(ATTENTE, 3000) : ATTENTE);
         await envoyer("Runtime.evaluate", {
           expression: "document.documentElement.setAttribute('data-theme','" + theme + "')",
         });

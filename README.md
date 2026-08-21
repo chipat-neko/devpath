@@ -81,7 +81,7 @@ test-claude/
     ├── catalogue.html          Grille de 65 cours, recherche, filtres, tri, groupement par thème
     ├── recherche.html          Recherche plein-texte dans le contenu des leçons
     ├── playground.html         Bac à sable web (HTML/CSS/JS) · console.html : Python & SQL
-    ├── imprimer.html           Version imprimable / PDF d'un cours · a-propos.html : à propos
+    ├── imprimer.html           Livret de révision / PDF d'un cours · a-propos.html : à propos
     │
     │   UN SOUS-DOSSIER PAR COURS (cours.html = présentation, lecon-NN.html = leçons)
     ├── js/         cours.html + lecon-01.html … lecon-37.html   ← cours COMPLET (12 modules, 37 leçons)
@@ -203,8 +203,10 @@ Au-delà du catalogue, le site propose :
   lui, cherche dans les titres/descriptions et **propose la leçon exacte** quand un mot y correspond.
 - **Bacs à sable** : `pages/playground.html` (HTML/CSS/JS avec aperçu en direct) et
   `pages/console.html` (**Python via Pyodide** et **SQL via sql.js**, base de démo fournie).
-- **Export d'un cours en PDF** (`pages/imprimer.html`) : assemble toutes les leçons d'un cours en un
-  seul document imprimable (un lien « Version imprimable » est ajouté sur chaque page de cours).
+- **Livret de révision d'un cours** (`pages/imprimer.html`) : un document imprimable (PDF) qui
+  réunit le plan du cours, ses antisèches, son glossaire et ses pièges fréquents — sections à
+  cocher, sans dupliquer un octet de contenu (un lien « Livret de révision à imprimer » est ajouté
+  sur chaque page de cours). En HTTP, le texte intégral des leçons peut s'y ajouter.
 - **Badges de fin de cours**, **glossaire + mini-projet « fil rouge »** en fin de cours, **exercices
   interactifs auto-corrigés** (blocs `data-exos`) et **bascule FR / EN** de l'interface (bouton dans
   l'en-tête ; le contenu des leçons reste en français).
