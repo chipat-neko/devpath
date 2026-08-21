@@ -35,14 +35,14 @@
      node tools/build-index.js                       # comparaison seule, n'ecrit RIEN
      node tools/build-index.js --write               # ecrit quiz + flashcards
      node tools/build-index.js --write --only=search --out=<dossier>
-     node tools/build-index.js --only=quiz,flashcards,search,antiseches,searchlite
+     node tools/build-index.js --only=quiz,flashcards,search,antiseches,searchlite,pieges
      node tools/build-index.js --write --only=antiseches
      node tools/build-index.js --write --only=search,searchlite   # index de recherche
    Options
      --write        autorise l'ecriture (sans elle, mode comparaison pur)
      --fresh        ignore l'ancien index (ne reprend rien) : purge les orphelines
      --strict       code 1 si une entree doit etre reprise (garde-fou anti-peremption)
-     --only=a,b     sous-ensemble parmi quiz, flashcards, search, antiseches,
+     --only=a,b     sous-ensemble parmi quiz, flashcards, search, antiseches, pieges,
                     searchlite (defaut : quiz,flashcards)
      --out=DIR      dossier de sortie (defaut : <racine>/js)
      --root=DIR     racine du site (defaut : dossier parent de tools/)
@@ -279,6 +279,66 @@ function safeInline(html) {
   s = s.replace(/<(?![a-zA-Z\/])/g, "&lt;");
   return collapse(s);
 }
+/* Les encadrés « Piège fréquent » sont la convention éditoriale la plus suivie
+   du site — 1 743 encadrés sur 949 leçons — et aucune page ne les rassemblait.
+   « Erreur fréquente » (28) est la même chose sous un autre nom : on prend les
+   deux, et rien d'autre : « Attention », « Note » ou « Astuce » ne décrivent pas
+   une erreur reproductible.
+   ATTENTION à l'extraction : un callout contient un <div class="callout__body">,
+   donc une regex non gourmande s'arrêterait au PREMIER </div>. On équilibre. */
+var TITRES_PIEGE = { "piege frequent": 1, "erreur frequente": 1 };
+
+function blocEquilibre(html, depart) {
+  /* depart = index du '<' de la balise ouvrante. Renvoie l'index de fin (exclu). */
+  var i = depart, prof = 0;
+  var re = /<(\/?)div\b[^>]*>/g;
+  re.lastIndex = depart;
+  var m;
+  while ((m = re.exec(html))) {
+    if (m[1]) {
+      prof--;
+      if (prof === 0) return m.index + m[0].length;
+    } else {
+      prof++;
+    }
+    i = re.lastIndex;
+  }
+  return -1;
+}
+
+function readPieges(html, where, problems) {
+  var out = [];
+  var re = /<div[^>]*class="[^"]*\bcallout\b[^"]*"[^>]*>/g;
+  var m;
+  while ((m = re.exec(html))) {
+    var fin = blocEquilibre(html, m.index);
+    if (fin === -1) { problems.push("pieges : callout non ferme dans " + where); continue; }
+    var bloc = html.slice(m.index, fin);
+    var t = /<p class="callout__title">([\s\S]*?)<\/p>/.exec(bloc);
+    if (!t) continue; /* callout sans titre : ce n'est pas un piège nommé */
+    var titre = safeInline(t[1]).replace(/&nbsp;/g, " ").trim();
+    if (!TITRES_PIEGE[fold(titre).replace(/\s+/g, " ").trim()]) continue;
+
+    /* Corps = les paragraphes qui suivent le titre. Le code d'illustration est
+       laissé de côté : un index doit rester lisible d'un coup d'œil, et la
+       leçon est à un clic. */
+    var corps = bloc.slice(t.index + t[0].length);
+    var textes = [];
+    var reP = /<p[^>]*>([\s\S]*?)<\/p>/g;
+    var p;
+    while ((p = reP.exec(corps))) {
+      var txt = safeInline(p[1]).trim();
+      if (txt) textes.push(txt);
+    }
+    var x = textes.join(" ").trim();
+    if (!x) { problems.push("pieges : encadre « " + titre + " » sans texte dans " + where); continue; }
+    out.push({ t: titre, x: x });
+    /* Reprendre la recherche APRÈS le bloc : un callout ne s'imbrique pas. */
+    re.lastIndex = fin;
+  }
+  return out;
+}
+
 function readCheats(html, where, problems) {
   var out = [];
   var reFig = /<figure[^>]*class="[^"]*\bcheat-table\b[^"]*"[^>]*>([\s\S]*?)<\/figure>/g;
@@ -487,6 +547,67 @@ function buildFlashcards(problems) {
   return { arr: out, old: old, carried: carried, dropped: dropped };
 }
 
+/* ================================================================ PIEGES === */
+/* Enregistrement : {c, ct, f, n, lt, t, x}
+   c = DOSSIER du cours, ct = titre du cours, f = fichier, n = numero de lecon,
+   lt = titre de la lecon, t = intitule de l'encadre, x = son texte. */
+function buildPieges(problems) {
+  var old = FRESH ? [] : (loadGlobal("js/pieges-data.js", "PIEGES") || []);
+  var oldByCourse = {};
+  old.forEach(function (p) { (oldByCourse[p.c] = oldByCourse[p.c] || []).push(p); });
+
+  var out = [];
+  var carried = [];
+  var dropped = 0;
+  var empty = [];
+  COURSES.forEach(function (co) {
+    var seen = {};
+    var group = [];
+    function keyOf(p) { return fold(p.x); }
+    co.lessons.forEach(function (file) {
+      var html = readPage(co.dir, file);
+      if (html === null) {
+        problems.push("pieges : lecon absente du disque : pages/" + co.dir + "/" + file);
+        return;
+      }
+      var meta = co.meta[file] || { num: "", title: "" };
+      readPieges(html, co.dir + "/" + file, problems).forEach(function (p) {
+        var key = keyOf(p);
+        if (seen[key]) { dropped++; return; } /* meme piege repete dans le cours */
+        seen[key] = 1;
+        group.push({
+          c: co.dir, ct: co.title, f: file, n: meta.num, lt: meta.title,
+          t: p.t, x: p.x
+        });
+      });
+    });
+    (oldByCourse[co.dir] || []).forEach(function (p) {
+      var key = keyOf(p);
+      if (seen[key]) return;
+      seen[key] = 1;
+      carried.push(co.dir + " | " + String(p.x).slice(0, 60));
+      group.push(p);
+    });
+    if (!group.length) empty.push(co.dir);
+    out = out.concat(group);
+  });
+
+  var known = {};
+  COURSES.forEach(function (c) { known[c.dir] = 1; });
+  Object.keys(oldByCourse).forEach(function (dir) {
+    if (!known[dir]) problems.push("pieges : cours « " + dir + " » present dans l ancien index mais absent de data.js");
+  });
+  /* Un cours sans le moindre encadre d'erreur est un TROU dans l'index : on le
+     dit, sans bloquer (c'est un manque de contenu, pas une incoherence). */
+  if (empty.length) problems.push("pieges : cours sans aucun encadre d erreur (" + empty.length + ") : " + empty.join(", "));
+
+  var couverts = {};
+  out.forEach(function (p) { couverts[p.c] = 1; });
+  console.log("PIEGES : " + out.length + " encadres, " + Object.keys(couverts).length + "/" + COURSES.length + " cours couverts");
+  console.log("  doublons ecartes : " + dropped + " | repris de l ancien index : " + carried.length);
+  return { arr: out, old: old, carried: carried };
+}
+
 /* ============================================================ ANTISECHES === */
 /* Enregistrement : {c, ct, f, n, lt, t, h, r}
    c  = DOSSIER du cours (js, pas javascript), ct = titre du cours (data.js),
@@ -675,6 +796,11 @@ if (wanted("antiseches")) {
   var a = buildCheats(problems);
   a.carried.forEach(function (x) { carriedAll.push("antiseches | " + x); });
   emit("antiseches-data.js", "ANTISECHES", a.arr, false, a.old.length);
+}
+if (wanted("pieges")) {
+  var pg = buildPieges(problems);
+  pg.carried.forEach(function (x) { carriedAll.push("pieges     | " + x); });
+  emit("pieges-data.js", "PIEGES", pg.arr, false, pg.old.length);
 }
 if (wanted("search") || wanted("searchlite")) {
   var s = buildSearch(problems);

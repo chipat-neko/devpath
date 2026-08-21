@@ -674,6 +674,7 @@
     { titre: "Référence", liens: [
       ["glossaire.html", "Glossaire général"],
       ["antiseches.html", "Antisèches"],
+      ["pieges.html", "Les pièges du code"],
       ["reference.html", "Fiches de référence"],
       ["carte.html", "Carte des cours"],
     ] },

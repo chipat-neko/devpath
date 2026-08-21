@@ -43,7 +43,7 @@
  *                             AVERTISSEMENT à examiner.
  *   I18 index non périmés   : build-index.js --strict (sous-processus) — ERREUR si
  *                             une entrée de l'ancien index doit être reprise (quiz/
- *                             flashcards/antisèches périmées). Purge : --write --fresh.
+ *                             flashcards/antisèches/pièges périmées). Purge : --write --fresh.
  *   I19 compteurs affichés  : « N cours/leçons/langages/parcours » de l'accueil, du
  *                             catalogue et d'« À propos » == décompte réel de data.js
  *                             (commentaires retirés d'abord). Trois pannes historiques.
@@ -64,6 +64,11 @@
  *                             portent un <noscript> expliquant que le contenu est
  *                             construit dans le navigateur. Sans lui, 18 fils rouges
  *                             tombaient sous 25 mots visibles, sans un mot (V12-B5).
+ *   I25 index des pièges    : chaque entrée de js/pieges-data.js pointe une leçon qui
+ *                             existe ET qui est déclarée dans data.js ; la page
+ *                             pages/pieges.html charge bien l'index et son script.
+ *                             AVERTISSEMENT : les cours sans aucun encadré d'erreur
+ *                             (trou d'index, cf. V12-D1/D2).
  *
  * USAGE
  * -----
@@ -560,7 +565,7 @@ Object.keys(LESSONS).forEach((id) => {
   const script = path.join(__dirname, 'build-index.js');
   try {
     execFileSync(process.execPath,
-      [script, '--strict', '--root=' + ROOT, '--only=quiz,flashcards,antiseches'],
+      [script, '--strict', '--root=' + ROOT, '--only=quiz,flashcards,antiseches,pieges'],
       { stdio: 'pipe' });
   } catch (e) {
     const out = (e.stdout ? e.stdout.toString() : '') + (e.stderr ? e.stderr.toString() : '');
@@ -851,6 +856,65 @@ Object.keys(LESSONS).forEach((id) => {
       c.warn(x.nom + ' a un <noscript> mais pas la classe noscript-avis (mise en forme perdue)');
     }
   });
+})();
+
+/* ================================== I25 index des pièges (V12-D1) ========= */
+/* 1 773 encadrés « Piège fréquent » rassemblés depuis les leçons. Un index qui
+   renverrait vers une leçon disparue serait pire que pas d'index : on vérifie
+   que chaque entrée pointe un fichier réel ET déclaré, que la page le charge, et
+   on signale (sans bloquer) les cours qui n'ont aucun encadré d'erreur — c'est
+   un manque de contenu, pas une incohérence. */
+(function () {
+  const c = check('I25', 'index des pièges ⇄ leçons réelles');
+  const arr = loadGlobal(path.join(JS, 'pieges-data.js'), 'PIEGES');
+  if (!arr) { c.err('js/pieges-data.js illisible ou sans window.PIEGES'); return; }
+  if (!arr.length) { c.err('js/pieges-data.js est vide'); return; }
+
+  /* Fichiers DÉCLARÉS par data.js, par dossier de cours. */
+  const declares = {};
+  COURSES.forEach((co) => {
+    const cont = CONTENT[co.id];
+    if (!cont) return;
+    declares[cont.dir] = declares[cont.dir] || {};
+    (cont.modules || []).forEach((m) => {
+      (m.lessons || []).forEach((l) => { declares[cont.dir][l.file] = 1; });
+    });
+  });
+
+  let inconnus = 0, absents = 0, vides = 0;
+  arr.forEach((p) => {
+    if (!p || !p.c || !p.f) { vides++; return; }
+    if (!declares[p.c] || !declares[p.c][p.f]) {
+      if (inconnus < 5) c.err('pièges : ' + p.c + '/' + p.f + ' n\'est pas une leçon déclarée');
+      inconnus++;
+      return;
+    }
+    if (!fs.existsSync(path.join(PAGES, p.c, p.f))) {
+      if (absents < 5) c.err('pièges : pages/' + p.c + '/' + p.f + ' est absent du disque');
+      absents++;
+    }
+    if (!p.x || !String(p.x).trim()) vides++;
+  });
+  if (inconnus > 5) c.err('… et ' + (inconnus - 5) + ' autre(s) leçon(s) inconnue(s)');
+  if (vides) c.err(vides + ' entrée(s) de piège sans texte');
+
+  /* La page doit charger l'index ET son script, sinon elle reste vide. */
+  let page = '';
+  try { page = fs.readFileSync(path.join(PAGES, 'pieges.html'), 'utf8'); }
+  catch (e) { c.err('pages/pieges.html illisible'); }
+  if (page) {
+    if (page.indexOf('pieges-data.js') === -1) c.err('pages/pieges.html ne charge pas js/pieges-data.js');
+    if (page.indexOf('js/pieges.js') === -1) c.err('pages/pieges.html ne charge pas js/pieges.js');
+    if (page.indexOf('id="piege-list"') === -1) c.err('pages/pieges.html n\'a pas de conteneur #piege-list');
+  }
+
+  /* Trou d'index : un cours sans le moindre encadré d'erreur. */
+  const couverts = {};
+  arr.forEach((p) => { couverts[p.c] = 1; });
+  const sans = COURSES.map((co) => (CONTENT[co.id] || {}).dir).filter((d) => d && !couverts[d]);
+  if (sans.length) {
+    c.warn(sans.length + ' cours sans aucun encadré d\'erreur (trou dans l\'index) : ' + sans.join(', '));
+  }
 })();
 
 /* ================================================================ sortie */
