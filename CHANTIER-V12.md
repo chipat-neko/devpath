@@ -136,9 +136,41 @@ L'autonomie enchaîne les trois plans dans l'ordre, sans intervention.
 
 ## PHASE H — Contrôle final
 
-- [ ] **H1 · Mesure globale.** Reprendre chaque chiffre du plan et donner sa valeur finale.
-- [ ] **H2 · Non-régression.** `node tools/verif.js` complet, les cinq vérificateurs verts (les quatre plus `verif-exemples.js` de A1).
-- [ ] **H3 · Les points laissés de côté.** Lister ce qui n'a pas été fait et pourquoi. Un point écarté avec sa raison est un résultat ; un point oublié n'en est pas un.
+- [x] **H1 · Mesure globale.** ✅ Chaque chiffre **recalculé après coup**, pas repris des comptes rendus.
+
+| Point | Avant | Après |
+|---|---|---|
+| B1 · écritures `localStorage` | **29** points actifs, **21** en `catch` vide | **3** points, tous dans le helper ou son repli ; 0 muet (le seul `catch` sans corps est la mise en quarantaine, dont l'échec déclenche le message suivant) |
+| B2 · lecteurs `JSON.parse(localStorage…)` | **36**, **36 muets** | **1**, le repli de `sync.js` (chargé par aucune page) |
+| B3 · import | écrase, sur les **2** chemins | fusionner / remplacer / annuler, sur les 2 |
+| B4 · « Mes données » atteignable depuis | **1** page sur 1 702 | **2** en dur **+ les 1 463 leçons** (pied de page injecté) = **1 465** |
+| B5 · `<noscript>` | **0** | **63 / 63** pages transverses (+ l'accueil) |
+| C1 · examen | **0** `localStorage` sur 225 lignes | historique `syntaxe-examen`, 50 derniers, **affiché** |
+| C2 · champ `f` de la banque | jeté par `prepare()` | **5 627 / 5 627** questions le portent, correction liée à la leçon |
+| C3 · scores bas | invisibles | section « À retravailler », seuil 70 %, + index des questions manquées |
+| C4 · examen hors sujet | **86 %** des questions sur du non-lu (JavaScript) | filtre « leçons terminées », compteur affiché |
+| C5 · erreurs à refaire | impossible | cahier d'erreurs par empreinte d'énoncé, **se vide quand on corrige** |
+| D1 · pièges indexés | **0** page les rassemble | **1 827** encadrés, **83 cours**, page dédiée |
+| D2 · cours sans encadré d'erreur | **18** | **0** (54 encadrés écrits) |
+| D3 · cartes avec leçon d'origine | **0 / 10 678** | **10 678 / 10 678 (100 %)** |
+| D4 · révision limitée au lu | impossible | filtre à la **leçon**, compteur, case désactivée si vide |
+| D5 · matériaux du moteur Leitner | **1** (vocabulaire) | **3** : 10 678 cartes, 5 627 QCM, 1 827 pièges |
+| E1 · palette clavier | **1 463** leçons, **0** page transverse | 1 463 + **63 pages**, kicker indexé |
+| E3 · date de reprise | aucune | `at` dans `syntaxe-last` + repli sur le journal, phrase graduée |
+| E4 · diagnostic d'entrée | aucun | 3 questions → 3 parcours, domaine ×2, exigeants écartés pour un débutant |
+
+**Outillage : 4 vérificateurs → 6.** `tools/verif-stockage.js` créé (**25 scénarios** sous Chrome) et branché dans `verif.js` ; **4 invariants ajoutés** à `verif-donnees.js` (`I23` hubs atteignables, `I24` repli `<noscript>`, `I25` index des pièges, `I26` source des cartes) — **22 → 26 contrôles**. `build-index.js` gagne la cible `--only=pieges`, intégrée au contrôle de péremption `I18`. **20 commits, 158 fichiers, +4 384 / −343 lignes.**
+- [x] **H2 · Non-régression.** ✅ **`node tools/verif.js --complet` — 6 verts en 1 353,2 s**, la vérification la plus large dont dispose le projet : `source` (1 552 fichiers, 0 problème), `donnees` (**26 contrôles**, 0 erreur), `contenu` (0 leçon maigre, 0 redondance), `exemples` (**0 divergence**, JavaScript **et** Python exécutés), `rendu` (**229 pages** × largeurs × thèmes : débordement, contraste, focus, aria, console, réseau — 0 erreur, 0 avertissement), `stockage` (**25 scénarios** sous Chrome, 25 conformes). Le plan demandait « les cinq vérificateurs verts » : il y en a **six**, le sixième ayant été créé pendant cette passe. Rappel des blocages prouvés en cours de route — chaque outil neuf a été **testé contre une régression injectée**, et a bien renvoyé `exit 1` : écriture nue (`writeProgress`), lecteur muet (74 lectures sans filet), faux succès d'effacement, écrasement à l'import, examen sans trace, champ `f` rejeté, filtre d'examen neutralisé, erreurs corrigées non retirées, lien vers `pieges.html` retiré (`I23`), `<noscript>` retiré (`I24`), entrée fantôme dans l'index des pièges (`I25`), carte pointant une leçon absente (`I26`).
+- [x] **H3 · Les points laissés de côté.** ✅ **Un seul point du plan reste ouvert, et c'est un arbitrage, pas un oubli.**
+
+1. **E2 · imprimer un cours entier** — décoché **volontairement**. La solution demandée duplique **35,7 Mo** de contenu (~440 Ko × 83 cours) et, comme l'autonomie modifie des leçons à chaque passe, cette duplication **rentrerait dans l'historique git encore et encore**. Aucune voie sans duplication n'existe en `file://`. Trois options écrites dans la case ; ma préférence va au « livret » par cours (antisèches + glossaire + pièges, déjà indexés, quelques centaines de Ko) — mais c'est un choix de produit, pas d'implémentation.
+2. **A3(b) · le biais de longueur des QCM** — hors de portée d'une passe, déjà consigné en phase A : **4 306 questions** où la bonne réponse est nettement la plus longue. Chantier éditorial à planifier.
+3. **A9 · recalibrer les durées** — 5 cours aux durées trop serrées (`stats`, `data-eng`, `mobile`, `equipe`, `bdd`) ; détecteur en place, correction éditoriale non faite.
+4. **433 `callout--warn` à titre personnalisé** (365 intitulés, « Attention » 61 fois) — découverts en D2. Ils décrivent souvent un piège mais restent **hors de l'index**, qui ne capture que « Piège fréquent » et « Erreur fréquente ». Les normaliser serait un chantier à part.
+5. **Le `<noscript>` ne couvre pas les 1 463 leçons ni les 83 `cours.html`** — écarté à dessein en B5 : leur texte est du HTML statique, donc lisible sans JavaScript (seuls QCM et exercices disparaissent), et le plan désignait les 62 pages transverses.
+6. **Une leçon apparaît deux fois dans le glossaire** si deux cours définissent le même terme — comportement d'origine, non touché.
+
+**Ce que la passe a appris, et qui vaut pour V13-V15** : *un test qui guette un symptôme visible ne bloque pas une régression*. Il a fallu le corriger **quatre fois** — le bandeau d'alerte apparaissait grâce à une AUTRE écriture, le lecteur muet était couvert par une AUTRE lecture, le bloc d'historique lu était le périmé (deux dans le DOM), le semis n'arrivait pas faute de `Page.enable`. La parade qui marche : **vérifier QUI fait l'appel** (pile d'appels) ou **comparer la valeur finale exacte**, jamais un symptôme.
 
 ---
 
