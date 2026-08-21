@@ -215,6 +215,25 @@ var MED = {};
   MED[k] = mediane(lecons.map(function (l) { return l[k]; }));
 });
 
+/* -------------------------------------------------- A9 : rythme des durees --- */
+/* I2 (verif-donnees) verifie que les durees EXISTENT, jamais qu'elles sont
+   PLAUSIBLES : le rythme de lecture implicite (mots visibles / minute annoncee)
+   varie d'un facteur ~4,7 d'un cours a l'autre. On le mesure par cours et on
+   AVERTIT (non bloquant) ceux qui s'ecartent d'un facteur 2 de la mediane. */
+var DUR = (DATA && DATA.durations) || {};
+var RYTHME = { parCours: [], med: 0 };
+(function () {
+  var agg = {};
+  lecons.forEach(function (l) {
+    var mn = (DUR[l.cours] || {})[l.file] || 0;
+    if (mn > 0) { (agg[l.cours] = agg[l.cours] || { mots: 0, minutes: 0 }); agg[l.cours].mots += l.mots; agg[l.cours].minutes += mn; }
+  });
+  Object.keys(agg).forEach(function (id) {
+    if (agg[id].minutes > 0) RYTHME.parCours.push({ id: id, mpm: agg[id].mots / agg[id].minutes, mots: agg[id].mots, minutes: agg[id].minutes });
+  });
+  if (RYTHME.parCours.length) RYTHME.med = mediane(RYTHME.parCours.map(function (r) { return r.mpm; }));
+})();
+
 /* ------------------------------------------------------- sous le standard --- */
 var incompletes = [];
 lecons.forEach(function (l) {
@@ -284,6 +303,7 @@ if (JSON_OUT) {
     maigres: maigres.map(function (x) { return { cours: x.l.cours, file: x.l.file, titre: x.l.titre, sous: x.sous, detail: x.detail }; }),
     redondances: redondances,
     biaisQcm: { total: BIAIS.total, plusLongue: BIAIS.plusLongue, net: BIAIS.net, seuil: { ratio: BIAIS_RATIO, diff: BIAIS_DIFF } },
+    rythme: { median: Math.round(RYTHME.med), cours: RYTHME.parCours.map(function (r) { return { id: r.id, mpm: Math.round(r.mpm) }; }) },
   }, null, 1));
   process.exit(incompletes.length && STRICT ? 1 : 0);
 }
@@ -337,6 +357,22 @@ if (!flag("maigres") && !flag("redondance") && BIAIS.total) {
       " bonne " + p.lc + "c / distracteur max " + p.maxA + "c (x" + p.ratio.toFixed(1) + ")");
   });
   console.log("  Rappel : les options SONT melangees a l'affichage (shuffle Fisher-Yates, lecon.js) — la position ne trahit pas la reponse.");
+}
+
+if (!flag("maigres") && !flag("redondance") && RYTHME.parCours.length) {
+  var med = RYTHME.med, bas = med / 2, haut = med * 2;
+  var mpmAll = RYTHME.parCours.map(function (r) { return r.mpm; });
+  var mn = Math.min.apply(null, mpmAll), mx = Math.max.apply(null, mpmAll);
+  var hors = RYTHME.parCours.filter(function (r) { return r.mpm < bas || r.mpm > haut; }).sort(function (a, b) { return a.mpm - b.mpm; });
+  console.log("\n=== RYTHME DES DUREES (avertissement, non bloquant) ===");
+  console.log("  " + RYTHME.parCours.length + " cours · rythme median : " + Math.round(med) + " mots visibles / minute annoncee");
+  console.log("  ecart reel : " + Math.round(mn) + " -> " + Math.round(mx) + " mots/min (facteur " + (mx / mn).toFixed(1) + ")");
+  console.log("  hors de [" + Math.round(bas) + ", " + Math.round(haut) + "] (facteur 2 de la mediane) : " + hors.length + " cours");
+  hors.forEach(function (r) {
+    console.log("    " + r.id.padEnd(14) + Math.round(r.mpm) + " mots/min  (" + r.mots + " mots / " + r.minutes + " min)  " +
+      (r.mpm < bas ? "durees trop GENEREUSES" : "durees trop SERREES"));
+  });
+  if (hors.length) console.log("  -> calibrage editorial (ni erreur ni urgence) : rapprocher ces durees de ~" + Math.round(med) + " mots/min.");
 }
 
 console.log("\n" + (incompletes.length ? incompletes.length + " lecon(s) sous le standard" : "Toutes les lecons tiennent le standard") +
