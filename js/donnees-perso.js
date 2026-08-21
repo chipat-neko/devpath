@@ -172,6 +172,46 @@
     });
   }
 
+  /* Les clés du site telles qu'elles sont, pour comparer avec le fichier. */
+  function exportBrut() {
+    var o = {};
+    keys().forEach(function (k) {
+      try { o[k] = localStorage.getItem(k); } catch (e) {}
+    });
+    return o;
+  }
+
+  /* Un paquet de « Mes données » est une table clé → TEXTE : on décode les deux
+     clés qui portent le gros de l'effort pour annoncer un décompte parlant. */
+  function resumeDe(paquet) {
+    var F = window.SyntaxeFusion;
+    if (!F) return Object.keys(paquet || {}).length + " entrée(s)";
+    function lire(k) {
+      try { return JSON.parse((paquet || {})[k] || "{}"); } catch (e) { return {}; }
+    }
+    return F.resume(lire("syntaxe-progress"), lire("syntaxe-quiz")) +
+      " · " + Object.keys(paquet || {}).length + " entrée(s)";
+  }
+
+  function appliquerImport(data, fusion) {
+    var F = window.SyntaxeFusion;
+    var n = 0, rates = 0;
+    Object.keys(data).forEach(function (k) {
+      if (k.indexOf(PREFIX) !== 0 || typeof data[k] !== "string") return;
+      var v = data[k];
+      if (fusion && F) {
+        var local = null;
+        try { local = localStorage.getItem(k); } catch (e) {}
+        v = F.fusionnerTexte(local, v);
+      }
+      if (window.SyntaxeStore.set(k, v)) n++;
+      else rates++;
+    });
+    render();
+    if (rates) msg(rates + " entrée(s) sur " + (n + rates) + " n'ont pas pu être enregistrées.", false);
+    else msg(n + " entrée(s) " + (fusion ? "fusionnée(s)" : "importée(s)") + " ✓", true);
+  }
+
   if (importInput) {
     importInput.addEventListener("change", function () {
       var file = importInput.files && importInput.files[0];
@@ -181,15 +221,20 @@
         try {
           var data = JSON.parse(reader.result);
           if (!data || typeof data !== "object") return msg("Fichier invalide.", false);
-          var n = 0;
-          Object.keys(data).forEach(function (k) {
-            if (k.indexOf(PREFIX) === 0 && typeof data[k] === "string") {
-              localStorage.setItem(k, data[k]);
-              n++;
+          /* B3 : ne plus écraser sans demander. Même choix que sur la page
+             Progression — fusionner, remplacer, annuler. */
+          var F = window.SyntaxeFusion;
+          var hote = document.querySelector(".dp-actions");
+          if (!F || !hote) return appliquerImport(data, false);
+          F.demanderChoix(
+            hote,
+            resumeDe(data),
+            resumeDe(exportBrut()),
+            function (reponse) {
+              if (reponse === "annuler") return msg("Import annulé.", false);
+              appliquerImport(data, reponse === "fusion");
             }
-          });
-          render();
-          msg(n + " entrée(s) importée(s) ✓", true);
+          );
         } catch (e) {
           msg("JSON invalide.", false);
         }

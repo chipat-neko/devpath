@@ -603,36 +603,73 @@
         window.alert("Ce fichier ne ressemble pas à un export Syntaxe.");
         return;
       }
-      if (
-        !window.confirm(
-          "Importer remplacera ta progression actuelle par celle du fichier. Continuer ?"
-        )
-      )
-        return;
-      try {
-        localStorage.setItem("syntaxe-progress", JSON.stringify(data.progress || {}));
-        if (data.quiz) localStorage.setItem("syntaxe-quiz", JSON.stringify(data.quiz));
-        if (data.last) localStorage.setItem("syntaxe-last", JSON.stringify(data.last));
-        /* Champ ajouté par les exports récents : restaure le reste de la
-           progression. Filtré au préfixe et aux préférences d'affichage pour
-           qu'un fichier bricolé ne puisse pas écrire n'importe quelle clé. */
-        if (data.keys && typeof data.keys === "object") {
-          Object.keys(data.keys).forEach(function (k) {
-            if (k.indexOf(PREFIX) !== 0) return;
-            if (PREFS_A_GARDER.indexOf(k) !== -1) return;
-            var v = data.keys[k];
-            if (typeof v !== "string") return;
-            localStorage.setItem(k, v);
-          });
-        }
-      } catch (e) {
-        window.alert("Impossible d'enregistrer la progression importée.");
+      /* B3 : l'import est la SEULE route entre deux machines, et il écrasait.
+         On demande maintenant, avec les deux inventaires sous les yeux :
+         fusionner (union des leçons, meilleur score), remplacer, ou annuler. */
+      var F = window.SyntaxeFusion;
+      var hote = document.querySelector(".dash-actions");
+      if (!F || !hote) {
+        if (!window.confirm("Importer remplacera ta progression actuelle par celle du fichier. Continuer ?")) return;
+        appliquerImport(data, false);
         return;
       }
-      render();
-      window.alert("Progression importée avec succès.");
+      F.demanderChoix(
+        hote,
+        F.resume(data.progress, data.quiz),
+        F.resume(progress(), quizScores()),
+        function (reponse) {
+          if (reponse === "annuler") return;
+          appliquerImport(data, reponse === "fusion");
+        }
+      );
     };
     reader.readAsText(file);
+  }
+
+  /* `fusion` à true : rien n'est perdu des deux côtés. À false : le fichier
+     remplace, comme avant. */
+  function appliquerImport(data, fusion) {
+    var F = window.SyntaxeFusion;
+    var ok = true;
+    function poser(cle, valeurImportee, valeurLocale) {
+      var v = fusion && F ? F.fusionner(valeurLocale, valeurImportee) : valeurImportee;
+      if (!window.SyntaxeStore.setJSON(cle, v)) ok = false;
+    }
+    poser("syntaxe-progress", data.progress || {}, progress());
+    if (data.quiz) poser("syntaxe-quiz", data.quiz, quizScores());
+    /* La dernière leçon visitée n'est pas cumulable : en fusion, celle de cet
+       appareil fait foi ; elle n'est reprise du fichier que si elle manque. */
+    if (data.last && (!fusion || !lastVisited())) {
+      if (!window.SyntaxeStore.setJSON("syntaxe-last", data.last)) ok = false;
+    }
+    /* Champ ajouté par les exports récents : le reste de la progression (notes,
+       objectif, activité, projets, fils rouges…), en texte brut. Filtré au
+       préfixe et aux préférences d'affichage pour qu'un fichier bricolé ne
+       puisse pas écrire n'importe quelle clé. */
+    if (data.keys && typeof data.keys === "object") {
+      Object.keys(data.keys).forEach(function (k) {
+        if (k.indexOf(PREFIX) !== 0) return;
+        if (PREFS_A_GARDER.indexOf(k) !== -1) return;
+        var v = data.keys[k];
+        if (typeof v !== "string") return;
+        if (fusion && F) {
+          var local = null;
+          try { local = localStorage.getItem(k); } catch (e) {}
+          v = F.fusionnerTexte(local, v);
+        }
+        if (!window.SyntaxeStore.set(k, v)) ok = false;
+      });
+    }
+    render();
+    if (!ok) {
+      window.alert("Une partie de la progression importée n'a pas pu être enregistrée.");
+      return;
+    }
+    window.alert(
+      fusion
+        ? "Progression fusionnée : rien n'a été perdu des deux côtés."
+        : "Progression importée : elle a remplacé celle de cet appareil."
+    );
   }
 
   function initExportImport() {

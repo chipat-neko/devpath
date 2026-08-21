@@ -31,9 +31,12 @@
  *  5. Sème aussi des données ABÎMÉES (V12-B2) et vérifie qu'elles sont
  *     signalées puis mises de côté sous `syntaxe-secours-…` à l'identique,
  *     alors qu'une donnée simplement ABSENTE ne produit rien.
+ *  6. Importe un VRAI fichier dans le vrai <input type=file> (V12-B3) et
+ *     vérifie la valeur finale des clés selon le choix — fusionner, remplacer,
+ *     annuler. Une fusion se juge sur le résultat, pas sur un message.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 13 scénarios
+ *   node tools/verif-stockage.js            # les 17 scénarios
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -116,6 +119,10 @@ var MOUCHARD = function (MODE, CLE_SURVEILLEE) {
      modale fige la page et Runtime.evaluate expire. On repond « oui » d'office,
      ce qui est justement le chemin a tester. */
   window.confirm = function () { return true; };
+  /* alert() fige aussi la page en headless ; on garde le dernier message pour
+     pouvoir l'inspecter. */
+  window.__alertes = [];
+  window.alert = function (m) { window.__alertes.push(String(m)); };
   var vrai = Storage.prototype.setItem;
   var vraiRetrait = Storage.prototype.removeItem;
   var vraiLire = Storage.prototype.getItem;
@@ -164,7 +171,8 @@ var MOUCHARD = function (MODE, CLE_SURVEILLEE) {
 /* Cookies bloqués : l'ACCÈS à window.localStorage jette, pas seulement
    l'écriture. Un try posé autour du seul setItem ne suffirait pas. */
 var BLOCAGE =
-  "(function(){window.__directes=[];window.__lectures=[];window.confirm=function(){return true};try{Object.defineProperty(window,'localStorage',{configurable:true," +
+  "(function(){window.__directes=[];window.__lectures=[];window.__alertes=[];" +
+  "window.confirm=function(){return true};window.alert=function(m){window.__alertes.push(String(m))};try{Object.defineProperty(window,'localStorage',{configurable:true," +
   "get:function(){var e=new Error('cookies bloques');e.name='SecurityError';throw e}})}catch(e){}})()";
 
 function source(panne, cleSurveillee) {
@@ -172,6 +180,46 @@ function source(panne, cleSurveillee) {
   return "(" + MOUCHARD.toString() + ")(" + JSON.stringify(panne || "sain") + ", " +
     JSON.stringify(cleSurveillee || null) + ")";
 }
+
+/* Le panneau de choix n'existe qu'après un import : verif-rendu.js, qui mesure
+   des pages au repos, ne peut pas le voir. On mesure donc ici son contraste
+   dans les DEUX thèmes, au seuil WCAG AA du petit texte (4,5:1). */
+var CONTRASTE = function () {
+  function lum(c) {
+    var m = /rgba?\((\d+), ?(\d+), ?(\d+)/.exec(c);
+    if (!m) return null;
+    var v = [m[1], m[2], m[3]].map(function (x) {
+      var n = parseInt(x, 10) / 255;
+      return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  }
+  function fond(el) {
+    var n = el;
+    while (n && n.nodeType === 1) {
+      var c = getComputedStyle(n).backgroundColor;
+      if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c;
+      n = n.parentNode;
+    }
+    return "rgb(255, 255, 255)";
+  }
+  function ratio(el) {
+    var a = lum(getComputedStyle(el).color), b = lum(fond(el));
+    if (a === null || b === null) return null;
+    var hi = Math.max(a, b), lo = Math.min(a, b);
+    return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+  }
+  var out = {};
+  ["light", "dark"].forEach(function (t) {
+    document.documentElement.setAttribute("data-theme", t);
+    out[t] = [];
+    [".import-choix__texte", ".import-choix__aide"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) out[t].push({ sel: sel, ratio: ratio(el) });
+    });
+  });
+  return out;
+};
 
 var REFUS = /refuse le stockage local/;
 var ABIME = /Sauvegarde illisible/;
@@ -251,6 +299,52 @@ var SCENARIOS = [
     bandeau: null, secours: {},
   },
   {
+    nom: "import FUSION : union des leçons, meilleur score (5/5 bat 9/10)",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress',\"{\\\"html\\\":{\\\"lecon-01.html\\\":true,\\\"lecon-02.html\\\":true}}\");localStorage.setItem('syntaxe-quiz',\"{\\\"html\\\":{\\\"lecon-01.html\\\":{\\\"q1\\\":{\\\"best\\\":9,\\\"total\\\":10}}}}\")}catch(e){}",
+    geste: "",
+    bandeau: null,
+    importer: { input: "#dash-import-file", contenu: {"progress":{"html":{"lecon-03.html":true},"css":{"lecon-01.html":true}},"quiz":{"html":{"lecon-01.html":{"q1":{"best":5,"total":5}}}}}, choix: "fusion" },
+    attendu: {
+      "syntaxe-progress": { html: { "lecon-01.html": true, "lecon-02.html": true, "lecon-03.html": true },
+                            css: { "lecon-01.html": true } },
+      "syntaxe-quiz": { html: { "lecon-01.html": { q1: { best: 5, total: 5 } } } },
+    },
+  },
+  {
+    nom: "import REMPLACER : le fichier prend la place de l'existant",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress',\"{\\\"html\\\":{\\\"lecon-01.html\\\":true,\\\"lecon-02.html\\\":true}}\");localStorage.setItem('syntaxe-quiz',\"{\\\"html\\\":{\\\"lecon-01.html\\\":{\\\"q1\\\":{\\\"best\\\":9,\\\"total\\\":10}}}}\")}catch(e){}",
+    geste: "",
+    bandeau: null,
+    importer: { input: "#dash-import-file", contenu: {"progress":{"html":{"lecon-03.html":true},"css":{"lecon-01.html":true}},"quiz":{"html":{"lecon-01.html":{"q1":{"best":5,"total":5}}}}}, choix: "remplacer" },
+    attendu: {
+      "syntaxe-progress": { html: { "lecon-03.html": true }, css: { "lecon-01.html": true } },
+      "syntaxe-quiz": { html: { "lecon-01.html": { q1: { best: 5, total: 5 } } } },
+    },
+  },
+  {
+    nom: "import ANNULER : rien ne bouge",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress',\"{\\\"html\\\":{\\\"lecon-01.html\\\":true,\\\"lecon-02.html\\\":true}}\");localStorage.setItem('syntaxe-quiz',\"{\\\"html\\\":{\\\"lecon-01.html\\\":{\\\"q1\\\":{\\\"best\\\":9,\\\"total\\\":10}}}}\")}catch(e){}",
+    geste: "",
+    bandeau: null,
+    importer: { input: "#dash-import-file", contenu: {"progress":{"html":{"lecon-03.html":true},"css":{"lecon-01.html":true}},"quiz":{"html":{"lecon-01.html":{"q1":{"best":5,"total":5}}}}}, choix: "annuler" },
+    attendu: {
+      "syntaxe-progress": { html: { "lecon-01.html": true, "lecon-02.html": true } },
+      "syntaxe-quiz": { html: { "lecon-01.html": { q1: { best: 9, total: 10 } } } },
+    },
+  },
+  {
+    nom: "mes données : import FUSION d'un export global (table clé → texte)",
+    page: "pages/donnees-perso.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress',\"{\\\"html\\\":{\\\"lecon-01.html\\\":true,\\\"lecon-02.html\\\":true}}\")}catch(e){}",
+    geste: "",
+    bandeau: null,
+    importer: { input: "#dp-import", contenu: {"syntaxe-progress": "{\"css\":{\"lecon-01.html\":true}}", "syntaxe-notes": "{\"css\":{\"lecon-01.html\":{\"note\":\"venue du portable\"}}}"}, choix: "fusion" },
+    attendu: {"syntaxe-progress": {"html": {"lecon-01.html": true, "lecon-02.html": true}, "css": {"lecon-01.html": true}}, "syntaxe-notes": {"css": {"lecon-01.html": {"note": "venue du portable"}}}},
+  },
+  {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
@@ -286,6 +380,24 @@ var SONDE = function () {
     message: (document.querySelector(".dp-msg") || {}).textContent || "",
     messageOk: !!document.querySelector(".dp-msg.is-ok"),
     boutonReset: !!document.querySelector(".course-reset"),
+    alertes: (window.__alertes || []).slice(0, 3),
+    cles: (function () {
+      var out = {};
+      try {
+        ["syntaxe-progress", "syntaxe-quiz", "syntaxe-notes"].forEach(function (k) {
+          out[k] = localStorage.getItem(k);
+        });
+      } catch (e) {}
+      return out;
+    })(),
+    panneau: (function () {
+      var b = document.querySelector(".import-choix");
+      if (!b) return null;
+      var btns = b.querySelectorAll("button");
+      var noms = [];
+      for (var i = 0; i < btns.length; i++) noms.push(btns[i].textContent);
+      return { texte: (b.querySelector(".import-choix__texte") || {}).textContent || "", boutons: noms };
+    })(),
     secours: (function () {
       var out = {};
       try {
@@ -371,6 +483,43 @@ var SONDE = function () {
     if (sc.geste) {
       await nav.envoyer("Runtime.evaluate", { expression: "(function(){" + sc.geste + "})()" }, sess);
     }
+
+    /* Import de bout en bout : on pose un vrai fichier dans le vrai <input
+       type=file> (c'est la seule route entre deux machines), on attend le
+       panneau de choix, puis on clique le bouton demande. */
+    var panneauVu = null;
+    var contrasteVu = null;
+    if (sc.importer) {
+      var chemin = path.join(os.tmpdir(), "verif-stockage-import-" + process.pid + ".json");
+      fs.writeFileSync(chemin, JSON.stringify(sc.importer.contenu), "utf8");
+      await nav.envoyer("DOM.enable", {}, sess);
+      var obj = await nav.envoyer("Runtime.evaluate",
+        { expression: "document.querySelector(" + JSON.stringify(sc.importer.input) + ")" }, sess);
+      var oid = (obj.result || {}).objectId;
+      if (!oid) {
+        console.log("  KO   " + sc.nom + "\n         input introuvable : " + sc.importer.input);
+        ko++;
+        await nav.envoyer("Target.closeTarget", { targetId: cid });
+        continue;
+      }
+      await nav.envoyer("DOM.setFileInputFiles", { files: [chemin], objectId: oid }, sess);
+      await attendre(600);
+      var vuePanneau = await nav.envoyer("Runtime.evaluate",
+        { expression: "(function(){var b=document.querySelector('.import-choix');if(!b)return null;" +
+          "var t=b.querySelectorAll('button');var n=[];for(var i=0;i<t.length;i++)n.push(t[i].textContent);" +
+          "return {texte:(b.querySelector('.import-choix__texte')||{}).textContent||'',boutons:n}})()",
+          returnByValue: true }, sess);
+      panneauVu = (vuePanneau.result || {}).value || null;
+      var mes = await nav.envoyer("Runtime.evaluate",
+        { expression: "(" + CONTRASTE.toString() + ")()", returnByValue: true }, sess);
+      contrasteVu = (mes.result || {}).value || null;
+      var libelle = { fusion: "Fusionner", remplacer: "Remplacer", annuler: "Annuler" }[sc.importer.choix];
+      await nav.envoyer("Runtime.evaluate",
+        { expression: "(function(){var b=document.querySelectorAll('.import-choix button');" +
+          "for(var i=0;i<b.length;i++){if(b[i].textContent===" + JSON.stringify(libelle) + "){b[i].click();return}}})()" }, sess);
+      await attendre(500);
+      try { fs.unlinkSync(chemin); } catch (e) {}
+    }
     await attendre(500);
 
     var out = await nav.envoyer(
@@ -407,8 +556,40 @@ var SONDE = function () {
     /* Une cle abimee ne doit etre lue QUE par le helper : un lecteur reste nu
        rendrait {} en silence, et la premiere ecriture ecraserait la donnee. */
     var okLectures = sc.cleAbimee ? v.nbLectures === 0 : true;
+    /* Le panneau doit proposer les TROIS reponses, et annoncer les deux
+       inventaires : un choix sans chiffres n'est pas un choix. */
+    var okPanneau = true;
+    if (sc.importer) {
+      okPanneau = !!panneauVu &&
+        panneauVu.boutons.join("|") === "Fusionner|Remplacer|Annuler" &&
+        /Fichier : .*le\u00e7on/.test(panneauVu.texte) &&
+        /appareil : .*le\u00e7on/.test(panneauVu.texte);
+      /* Le panneau doit rester lisible dans les deux thèmes. */
+      if (contrasteVu) {
+        ["light", "dark"].forEach(function (t) {
+          (contrasteVu[t] || []).forEach(function (m) {
+            if (!(m.ratio >= 4.5)) {
+              okPanneau = false;
+              v.__ecart = "contraste " + m.sel + " en " + t + " = " + m.ratio + ":1 (seuil 4,5)";
+            }
+          });
+        });
+      }
+    }
+    /* Et le resultat doit etre EXACTEMENT celui attendu : la fusion se juge sur
+       la valeur finale, pas sur un message rassurant. */
+    var okAttendu = true;
+    if (sc.attendu) {
+      Object.keys(sc.attendu).forEach(function (k) {
+        var eu = (v.cles || {})[k];
+        var att = JSON.stringify(sc.attendu[k]);
+        var euNorm = eu;
+        try { euNorm = JSON.stringify(JSON.parse(eu)); } catch (e) {}
+        if (euNorm !== att) { okAttendu = false; v.__ecart = k + " : attendu " + att + ", obtenu " + eu; }
+      });
+    }
     var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage &&
-      okResteLa && okSecours && okLectures;
+      okResteLa && okSecours && okLectures && okPanneau && okAttendu;
     if (!bon) ko++;
 
     console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
@@ -422,6 +603,17 @@ var SONDE = function () {
       if (sc.ecrit) console.log("         écrit : " + String(v.progression).slice(0, 70));
       if (sc.message) console.log("         message de la page : « " + v.message + " » (vert=" + v.messageOk + ")");
       if (sc.resteLa) console.log("         bouton encore présent (pas de rechargement) : " + v.boutonReset);
+      if (sc.importer) {
+        console.log("         panneau : " + (panneauVu ? panneauVu.boutons.join(" / ") : "ABSENT"));
+        if (panneauVu) console.log("         « " + panneauVu.texte + " »");
+        if (contrasteVu) {
+          console.log("         contraste : " + ["light", "dark"].map(function (t) {
+            return t + " " + (contrasteVu[t] || []).map(function (m) { return m.ratio + ":1"; }).join("/");
+          }).join(" · "));
+        }
+        if (v.alertes && v.alertes.length) console.log("         message : " + v.alertes[0]);
+      }
+      if (v.__ecart) console.log("         ECART : " + v.__ecart);
       if (sc.secours) {
         var ks = Object.keys(v.secours || {});
         console.log("         copies de secours : " + (ks.length ? ks.join(", ") : "aucune") +
