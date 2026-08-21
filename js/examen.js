@@ -44,6 +44,36 @@
     return COURSE_TITLE[dir] || dir;
   }
 
+  /* ------------------------------------ Examen sur ce qu'on a lu (V12-C4)
+     Le tirage prenait TOUTE la banque du cours. Sur JavaScript — 217 questions,
+     65 leçons — quelqu'un qui en a terminé 10 recevait 86 % de questions sur du
+     contenu jamais ouvert : 17 des 20 questions d'un examen. Il obtenait 6/20 et
+     le site lui répondait « À retravailler — courage ! ». Les deux ingrédients
+     existaient déjà : « syntaxe-progress » et le champ « f » de chaque question.
+     Attention : la banque désigne un cours par son DIR, la progression par son
+     ID — ce ne sont pas toujours les mêmes (javascript / js). */
+  var DIR_TO_ID = {};
+  if (DATA && DATA.content) {
+    for (var cid in DATA.content) {
+      if (DATA.content.hasOwnProperty(cid)) DIR_TO_ID[DATA.content[cid].dir] = cid;
+    }
+  }
+  function progression() {
+    return window.SyntaxeStore ? window.SyntaxeStore.getJSON("syntaxe-progress", {}) : {};
+  }
+  function estTerminee(prog, dir, fichier) {
+    var id = DIR_TO_ID[dir];
+    return !!(id && prog[id] && prog[id][fichier]);
+  }
+  /* Questions tirables pour un cours (« all » = tout le site), selon qu'on se
+     limite ou non aux leçons terminées. */
+  function bassin(dir, seulementFaites) {
+    var pool = dir === "all" ? BANK.slice() : BANK.filter(function (q) { return q.c === dir; });
+    if (!seulementFaites) return pool;
+    var prog = progression();
+    return pool.filter(function (q) { return estTerminee(prog, q.c, q.f); });
+  }
+
   var courses = (function () {
     var seen = {},
       list = [];
@@ -130,9 +160,30 @@
       '<label class="exam-field"><span>Nombre de questions</span>' +
       '<select class="select" id="exam-n"><option>10</option><option selected>20</option><option>30</option></select></label>' +
       '<label class="exam-field"><span>Cours</span><select class="select" id="exam-c">' + opts + "</select></label>" +
+      '<label class="exam-field exam-field--check">' +
+      '<input type="checkbox" id="exam-faites" />' +
+      "<span>Seulement les leçons que j'ai terminées " +
+      '<span class="exam-dispo" id="exam-dispo"></span></span></label>' +
       '<p class="exam-hint">Tu as <strong>30 secondes par question</strong> ; le minuteur s\'arrête tout seul. Bonne chance&nbsp;!</p>' +
       '<button type="button" class="btn btn--primary btn--lg" id="exam-start">Commencer l\'examen</button>' +
       "</div>" + historiqueHtml();
+    var selCours = document.getElementById("exam-c");
+    var caseFaites = document.getElementById("exam-faites");
+    var dispo = document.getElementById("exam-dispo");
+
+    /* Le compteur dit COMBIEN de questions restent : cocher une case qui vide le
+       tirage sans le dire serait pire que le défaut qu'on corrige. */
+    function majDispo() {
+      var n = bassin(selCours.value, true).length;
+      dispo.textContent = "(" + n + " question" + (n > 1 ? "s" : "") + ")";
+      caseFaites.disabled = n === 0;
+      if (n === 0) {
+        caseFaites.checked = false;
+        dispo.textContent = "(aucune leçon terminée dans ce choix)";
+      }
+    }
+    majDispo();
+    selCours.addEventListener("change", majDispo);
     document.getElementById("exam-start").addEventListener("click", start);
   }
 
@@ -150,9 +201,8 @@
   function start() {
     var n = parseInt(document.getElementById("exam-n").value, 10) || 20;
     var c = document.getElementById("exam-c").value;
-    var pool = c === "all" ? BANK.slice() : BANK.filter(function (q) {
-      return q.c === c;
-    });
+    var faites = document.getElementById("exam-faites");
+    var pool = bassin(c, !!(faites && faites.checked));
     shuffle(pool);
     var picked = pool.slice(0, Math.min(n, pool.length));
     state = {

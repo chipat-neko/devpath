@@ -36,7 +36,7 @@
  *     annuler. Une fusion se juge sur le résultat, pas sur un message.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 22 scénarios (B1-B3, C1-C3)
+ *   node tools/verif-stockage.js            # les 24 scénarios (B1-B3, C1-C4)
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -385,6 +385,22 @@ var SCENARIOS = [
     rates: { cours: "javascript", fichier: "lecon-01.html", attendus: [0, 2] },
   },
   {
+    nom: "examen : « seulement les leçons terminées » ne tire que dans ce qui a été lu",
+    page: "pages/examen.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress',\"{\\\"javascript\\\": {\\\"lecon-01.html\\\": true, \\\"lecon-02.html\\\": true, \\\"lecon-03.html\\\": true}}\")}catch(e){}",
+    geste: "var s=document.getElementById('exam-n');if(s)s.value='10';var c=document.getElementById('exam-c');if(c){c.value='js';c.dispatchEvent(new Event('change'))}var f=document.getElementById('exam-faites');if(f)f.checked=true;document.getElementById('exam-start').click();for(var i=0;i<10;i++){var o=document.querySelectorAll('.exam-opt');if(o.length)o[0].click();var n=document.getElementById('exam-next');if(n)n.click()}var fin=document.getElementById('exam-finish');if(fin)fin.click();",
+    bandeau: null,
+    tirage: { fichiers: ["lecon-01.html", "lecon-02.html", "lecon-03.html"], cours: "js" },
+  },
+  {
+    nom: "examen : aucune leçon terminée — la case est désactivée et le dit",
+    page: "pages/examen.html", panne: null,
+    semer: "try{localStorage.clear()}catch(e){}",
+    geste: "var c=document.getElementById('exam-c');if(c){c.value='js';c.dispatchEvent(new Event('change'))}",
+    bandeau: null,
+    caseVide: /aucune leçon terminée/,
+  },
+  {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
@@ -474,6 +490,8 @@ var SONDE = function () {
       });
       return { nb: items.length, vide: null, ordre: ordre, contraste: res };
     })(),
+    dispoExamen: (document.getElementById("exam-dispo") || {}).textContent || "",
+    caseDesactivee: !!(document.getElementById("exam-faites") || {}).disabled,
     scoreAffiche: (document.querySelector(".exam-score__n") || {}).textContent || "",
     liensLecon: (function () {
       var a = document.querySelectorAll(".exam-rev__lien a");
@@ -485,7 +503,9 @@ var SONDE = function () {
       }
       /* L'URL RESOLUE par le navigateur : Node ira verifier que le fichier
          existe vraiment, ce qu'un test du seul attribut href ne prouve pas. */
-      return { nb: a.length, malformes: faux, exemple: ex,
+      var tous = [];
+      for (var j = 0; j < a.length; j++) tous.push(a[j].getAttribute("href") || "");
+      return { nb: a.length, malformes: faux, exemple: ex, tous: tous,
                absolu: a.length ? a[0].href : "" };
     })(),
     historiqueExamen: (function () {
@@ -767,9 +787,29 @@ var SONDE = function () {
       if (!okRates) v.__ecart = "rates : " + JSON.stringify(e2);
       else v.__rates = JSON.stringify(e2);
     }
+    /* Le tirage doit se limiter aux lecons terminees : on lit les liens de
+       correction (V12-C2), qui portent le cours et le fichier de chaque
+       question posee. */
+    /* Cocher une case qui viderait le tirage sans le dire serait pire que le
+       defaut corrige : sans lecon terminee, la case doit etre desactivee. */
+    var okCaseVide = true;
+    if (sc.caseVide) {
+      okCaseVide = v.caseDesactivee === true && sc.caseVide.test(v.dispoExamen || "");
+      if (!okCaseVide) v.__ecart = "case : desactivee=" + v.caseDesactivee + " · texte « " + v.dispoExamen + " »";
+    }
+    var okTirage = true;
+    if (sc.tirage) {
+      var liens = (v.liensLecon || {}).tous || [];
+      okTirage = liens.length > 0 && liens.every(function (h) {
+        var m = /^([a-z0-9-]+)\/(lecon-\d+\.html)$/.exec(h);
+        return m && m[1] === sc.tirage.cours && sc.tirage.fichiers.indexOf(m[2]) !== -1;
+      });
+      if (!okTirage) v.__ecart = "tirage hors des lecons terminees : " + JSON.stringify(liens.slice(0, 6));
+      else v.__tirage = liens.length + " question(s), toutes dans " + JSON.stringify(sc.tirage.fichiers);
+    }
     var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage &&
       okResteLa && okSecours && okLectures && okPanneau && okAttendu && okExamen &&
-      okRetravail && okRates;
+      okRetravail && okRates && okTirage && okCaseVide;
     if (!bon) ko++;
 
     console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
@@ -810,6 +850,9 @@ var SONDE = function () {
           console.log("            " + x.score + "  " + x.titre + "  [" + x.cours + "]  → " + x.href);
         });
       }
+      if (sc.caseVide) console.log("         case désactivée : " + v.caseDesactivee + " · « " + v.dispoExamen + " »");
+      if (sc.tirage) console.log("         disponibles annoncés : " + v.dispoExamen +
+        "  · tirage : " + (v.__tirage || "?"));
       if (v.__rates) console.log("         score enregistré : " + v.__rates);
       if (v.__ecart) console.log("         ECART : " + v.__ecart);
       if (sc.secours) {
