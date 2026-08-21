@@ -60,6 +60,10 @@
  *                             seule page de sauvegarde ET de réparation — sont liés
  *                             depuis la page Progression. Elle n'était atteignable
  *                             que par le pied de page de l'accueil (V12-B4).
+ *   I24 repli sans JS       : chaque page transverse (pages/*.html) et l'accueil
+ *                             portent un <noscript> expliquant que le contenu est
+ *                             construit dans le navigateur. Sans lui, 18 fils rouges
+ *                             tombaient sous 25 mots visibles, sans un mot (V12-B5).
  *
  * USAGE
  * -----
@@ -816,6 +820,35 @@ Object.keys(LESSONS).forEach((id) => {
     }
     if (!cites.some((x) => x.page === page)) {
       c.err('pied de page des leçons (LESSON_FOOTER_COLS) ne cite pas ' + page);
+    }
+  });
+})();
+
+/* ================================== I24 repli <noscript> des pages transverses */
+/* Le site n'a pas de serveur : catalogue, progression, QCM et exercices sont
+   construits dans le navigateur. JavaScript coupé, les pages transverses
+   n'affichent plus que leur texte fixe — mesuré sous Chrome, script désactivé :
+   18 fils rouges tombaient à 14-22 mots, imprimer.html à 4 — et RIEN ne disait
+   pourquoi. Le <noscript> le dit. Il ne peut pas être injecté par main.js (sans
+   JavaScript, rien n'injecte) : il est écrit en dur, donc il faut le garder. */
+(function () {
+  const c = check('I24', 'repli <noscript> des pages transverses');
+  const cibles = [];
+  try {
+    fs.readdirSync(PAGES).forEach((f) => {
+      if (f.endsWith('.html')) cibles.push({ chemin: path.join(PAGES, f), nom: 'pages/' + f });
+    });
+  } catch (e) { c.err('dossier pages/ illisible'); return; }
+  cibles.push({ chemin: path.join(ROOT, 'index.html'), nom: 'index.html' });
+
+  cibles.forEach((x) => {
+    let src = '';
+    try { src = fs.readFileSync(x.chemin, 'utf8'); } catch (e) { c.err(x.nom + ' illisible'); return; }
+    if (isRedirect(src)) return; /* une redirection n'a pas de contenu à expliquer */
+    if (src.indexOf('<noscript') === -1) {
+      c.err(x.nom + ' n\'a pas de <noscript> : sans JavaScript, la page ne dit pas pourquoi elle est vide');
+    } else if (src.indexOf('noscript-avis') === -1) {
+      c.warn(x.nom + ' a un <noscript> mais pas la classe noscript-avis (mise en forme perdue)');
     }
   });
 })();
