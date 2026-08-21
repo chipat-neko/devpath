@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>De la grammaire à l'analyseur : dériver et reconnaître — Leçon 07 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="Ce que l'analyse syntaxique fait et que l'analyse lexicale ne peut pas faire, la différence entre dériver et reconnaître, le coût mesuré d'une recherche à l'aveugle (337 formes explorées contre 11 décisions), les ensembles PREMIERS calculés par point fixe, le flux de jetons à trois gestes, et ce qui arrive quand un seul jeton d'avance ne suffit plus." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Analyse syntaxique — Leçon 07</p>
+              <h1 class="lesson-header__title">De la grammaire à l'analyseur&nbsp;: dériver et reconnaître</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~75 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : les leçons 3 et 6 de ce cours — la grammaire EBNF, et les jetons situés</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer ce que l'analyse <strong>lexicale</strong> sait refuser de ce que seule l'analyse <strong>syntaxique</strong> peut refuser&nbsp;;</li>
+                  <li>faire la différence entre <strong>dériver</strong> une phrase depuis la grammaire et <strong>reconnaître</strong> qu'un texte en est une&nbsp;;</li>
+                  <li>calculer les ensembles <strong>PREMIERS</strong> d'une grammaire, et t'en servir pour choisir une règle avec <strong>un seul jeton d'avance</strong>&nbsp;;</li>
+                  <li>écrire le <strong>flux de jetons</strong> — regarder, avaler, exiger — sur lequel reposera tout l'analyseur de la leçon suivante.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le module 2 s'est achevé sur un résultat très concret&nbsp;: un texte source entre, une suite de jetons sort. Chaque jeton porte trois choses — un type, une valeur, la position de son premier caractère —, les espaces et les commentaires ont été lus puis jetés, et la <a href="lecon-06.html">leçon 6</a> a montré comment transformer cette position en un message qui <em>montre</em> l'endroit de la faute. Le texte n'est plus une file de caractères&nbsp;: c'est une file de mots, étiquetés et situés. C'est exactement ce dont l'étape suivante a besoin, et c'est tout ce qu'elle recevra&nbsp;: à partir d'ici, plus personne ne regardera un caractère.</p>
+<p>Seulement, la question qu'on pose à cette file change de nature. Jusqu'ici elle était locale&nbsp;: «&nbsp;ces caractères sont-ils légaux&nbsp;?&nbsp;» — on y répond en regardant un petit bout de texte à la fois, et l'on n'a jamais besoin de se souvenir de ce qui précède. Désormais elle est globale&nbsp;: «&nbsp;cette suite forme-t-elle une <strong>phrase</strong>&nbsp;?&nbsp;» Un jeton isolé n'est plus ni juste ni faux&nbsp;; ce qui est juste ou faux, c'est l'<em>enchaînement</em>. Cette leçon répond en six temps&nbsp;: ce que le lexique laisse passer, ce que veut dire <strong>dériver</strong>, pourquoi <strong>reconnaître</strong> est le problème inverse et pourquoi il coûte cher, comment un seul jeton d'avance le rend bon marché, quel objet minuscule — trois fonctions — portera tout l'analyseur de la leçon suivante, et enfin ce qui se passe le jour où un seul jeton d'avance ne suffit plus.</p>
+
+<h2>Ce que le lexique laisse passer</h2>
+<p>Avant de construire quoi que ce soit, mesurons le trou. Le programme ci-dessous est celui de la leçon 6, sans une modification&nbsp;: la même table de six règles, la même liste d'ignorés, la même boucle qui essaie les motifs dans l'ordre. On lui donne quatre textes, et l'on compte simplement les jetons qu'il produit.</p>
+
+<figure class="code-block" data-file="laisse-passer.js"><pre><code class="language-javascript">// Trois textes que l'analyseur LEXICAL accepte sans broncher.
+// Aucun des trois n'est un programme.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = [];
+  let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex;
+      avance = true;
+      break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+
+const textes = ["2 + + 3", "soit = 12", "affiche )", "2 + 3 * 4"];
+for (const t of textes) {
+  const js = jetons(t);
+  console.log(JSON.stringify(t).padEnd(13), js.length, "jetons :", js.map((j) =&gt; j.valeur).join(" "));
+}
+// affiche : "2 + + 3"     4 jetons : 2 + + 3
+// affiche : "soit = 12"   3 jetons : soit = 12
+// affiche : "affiche )"   2 jetons : affiche )
+// affiche : "2 + 3 * 4"   5 jetons : 2 + 3 * 4</code></pre></figure>
+
+<p>Quatre lignes, et trois d'entre elles devraient te gêner. Regardons-les une par une, parce que chacune rate pour une raison différente.</p>
+<p><strong><code>2 + + 3</code> donne quatre jetons&nbsp;:</strong> un <code>NOMBRE</code>, deux <code>SYMBOLE</code>, un <code>NOMBRE</code>. Aucun des quatre n'est mal formé. Le second <code>+</code> est un <code>+</code> tout à fait ordinaire&nbsp;; il est simplement au mauvais endroit. La grammaire de la <a href="lecon-03.html">leçon 3</a>, elle, le refuse en une ligne&nbsp;: après un <code>+</code>, la règle <code>expression</code> réclame un <code>terme</code>, et un terme ne peut pas commencer par un opérateur. Le lexique n'en sait rien&nbsp;: il ne regarde jamais ce qui précède un jeton.</p>
+<p><strong><code>soit = 12</code> donne trois jetons&nbsp;:</strong> le mot-clé <code>soit</code>, le symbole <code>=</code>, le nombre <code>12</code>. Il manque le nom de la variable, et c'est tout le problème d'une déclaration à laquelle il manque son sujet. Là encore, rien dans le motif du mot <code>soit</code> ne parle de ce qui doit venir <em>après</em> lui — un motif décrit une forme de mot, pas une place dans une phrase.</p>
+<p><strong><code>affiche )</code> donne deux jetons&nbsp;:</strong> le mot-clé <code>affiche</code> et une parenthèse fermante. <code>affiche</code> attend qu'on lui donne quelque chose à calculer&nbsp;; une parenthèse fermante ne commence aucune expression. La faute est ici de la même famille que la première, à ceci près qu'elle porte sur le tout premier jeton attendu au lieu du troisième.</p>
+<p><strong><code>2 + 3 * 4</code> donne cinq jetons&nbsp;:</strong> c'est le seul des quatre qui soit vraiment une expression, et il servira de fil conducteur à toute la leçon. Retiens ce chiffre, <strong>cinq</strong>&nbsp;: nous allons mesurer, sur ces cinq jetons précisément, ce que coûte une analyse menée à l'aveugle.</p>
+<p>Ce que ces quatre lignes disent tient en une phrase&nbsp;: <strong>l'analyse lexicale est incapable de formuler ces reproches-là</strong>, et ce n'est pas un défaut de notre programme. La leçon 6 l'a établi noir sur blanc en nommant le seul reproche qu'un analyseur lexical sache formuler&nbsp;: «&nbsp;aucun motif ne décrit ce qui commence ici&nbsp;». Un motif décrit un mot. Il ne dit rien de la place que ce mot occupe. Trois de nos quatre textes sont donc, du point de vue du lexique, irréprochables — et c'est très exactement la contrepartie de cette précision-là&nbsp;: puisqu'il ne regarde qu'un endroit à la fois, il ne peut se plaindre que d'un endroit à la fois.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Une suite de mots n'est pas une phrase</p><p>Prends la suite de mots «&nbsp;<em>chien le mange os un</em>&nbsp;». Ouvre un dictionnaire&nbsp;: les cinq mots y sont, correctement orthographiés, sans la moindre faute. Un correcteur orthographique n'aurait rien à en dire. Pourtant ce n'est pas une phrase française. C'est <strong>exactement</strong> la situation dans laquelle nous sommes&nbsp;: le lexique est le correcteur orthographique de Brindille, il valide les mots un par un et se tait sur leur ordre. Ce qui manque n'est pas un motif de plus dans la table&nbsp;; c'est une <em>autre sorte</em> de description, capable de parler d'enchaînement. Cette description existe déjà, elle a été écrite à la leçon 3, et elle s'appelle une grammaire. Le module 3 tout entier consiste à en faire un programme.</p></div></div>
+
+<h2>Dériver n'est pas reconnaître</h2>
+<p>La <a href="lecon-03.html">leçon 3</a> a laissé sur la table un fichier de cinq règles, <code>expressions.ebnf</code>, et une affirmation&nbsp;: cette grammaire <em>définit</em> le langage des expressions arithmétiques. Prenons cette affirmation au pied de la lettre, et demandons-nous ce qu'une grammaire sait faire, exactement, quand on la lit comme une machine.</p>
+<p>Une grammaire est un <strong>générateur</strong>. On part du symbole de départ — ici <code>expression</code> —, on repère un non-terminal dans ce qu'on a écrit, on le remplace par l'une de ses alternatives, et l'on recommence tant qu'il reste un non-terminal. Quand il n'en reste plus, ce qui est écrit devant toi est une phrase du langage, par construction. Ce procédé porte un nom&nbsp;: <strong>dériver</strong>. Il n'échoue jamais, il ne demande aucune intelligence, et surtout&nbsp;: à chaque étape, tu es <em>libre</em>. Rien ne te dit quelle alternative choisir&nbsp;; toutes donnent une phrase valide, simplement pas la même.</p>
+<p>C'est ce que fait un poète, pas ce que fait un compilateur. Le compilateur, lui, reçoit une phrase toute faite et doit répondre à la question inverse&nbsp;: «&nbsp;existe-t-il une suite de remplacements qui produit exactement <em>ceci</em>&nbsp;?&nbsp;» Ce problème s'appelle <strong>reconnaître</strong>, et ce n'est pas le même. Dériver, c'est descendre un arbre en choisissant ses branches&nbsp;; reconnaître, c'est retrouver le chemin quand on ne connaît que la feuille où il aboutit.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 262" role="img" aria-label="Comparaison des deux sens de parcours entre une grammaire et un texte, en deux parties séparées par un trait horizontal. La partie du haut, intitulée engendrer, se lit de gauche à droite en trois boîtes reliées par des flèches : la grammaire, cinq règles EBNF ; puis on remplace un non-terminal par une de ses alternatives ; puis le texte en jetons, écrit NOMBRE plus NOMBRE fois NOMBRE. Au-dessus de la première flèche est écrit onze étapes. La partie du bas, intitulée reconnaître, compare deux stratégies sur deux rangées de trois boîtes chacune. La première rangée part de à l'aveugle, sans aucune anticipation, passe par on essaie chaque règle et l'on revient en arrière, et aboutit à trois cent trente-sept formes explorées pour onze étapes utiles. La seconde rangée part d'un jeton d'avance, où l'ensemble PREMIERS décide, passe par une seule règle possible à chaque remplacement, et aboutit à onze décisions et zéro forme explorée. Sont surlignées la première et la dernière boîte de la partie du haut, ainsi que les boîtes de départ et d'arrivée de la seconde rangée. Deux lignes de légende concluent que la dérivation trouvée est exactement la même, onze étapes, et que ce que le jeton d'avance supprime n'est pas le travail mais l'exploration.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Engendrer va de la grammaire au texte ; reconnaître fait l'inverse</text>
+
+    <text class="d-tag" x="20" y="44" font-size="9.5">ENGENDRER (dériver)</text>
+    <rect class="d-accent" x="20" y="52" width="150" height="34" rx="8" />
+    <text class="d-text" x="95" y="68" text-anchor="middle" font-size="10">la grammaire</text>
+    <text class="d-mut" x="95" y="80" text-anchor="middle" font-size="8">5 règles EBNF</text>
+    <path class="d-line" d="M170 69 L226 69" fill="none" /><path class="d-line" d="M220 65 L226 69 L220 73" fill="none" />
+    <text class="d-mut" x="198" y="59" text-anchor="middle" font-size="8">11 étapes</text>
+    <rect class="d-box" x="232" y="52" width="176" height="34" rx="8" />
+    <text class="d-text" x="320" y="68" text-anchor="middle" font-size="10">on remplace un non-terminal</text>
+    <text class="d-mut" x="320" y="80" text-anchor="middle" font-size="8">par une de ses alternatives</text>
+    <path class="d-line" d="M408 69 L434 69" fill="none" /><path class="d-line" d="M428 65 L434 69 L428 73" fill="none" />
+    <rect class="d-accent" x="440" y="52" width="180" height="34" rx="8" />
+    <text class="d-text" x="530" y="68" text-anchor="middle" font-size="9">NOMBRE + NOMBRE * NOMBRE</text>
+    <text class="d-mut" x="530" y="80" text-anchor="middle" font-size="8">le texte, en jetons</text>
+
+    <path class="d-line" d="M20 100 L620 100" fill="none" />
+
+    <text class="d-tag" x="20" y="120" font-size="9.5">RECONNAÎTRE (analyser)</text>
+    <rect class="d-box" x="20" y="132" width="150" height="34" rx="8" />
+    <text class="d-text" x="95" y="148" text-anchor="middle" font-size="9.5">À L'AVEUGLE</text>
+    <text class="d-mut" x="95" y="161" text-anchor="middle" font-size="8">aucune anticipation</text>
+    <path class="d-line" d="M170 149 L226 149" fill="none" /><path class="d-line" d="M220 145 L226 149 L220 153" fill="none" />
+    <rect class="d-box" x="232" y="132" width="176" height="34" rx="8" />
+    <text class="d-text" x="320" y="148" text-anchor="middle" font-size="9.5">on essaie chaque règle</text>
+    <text class="d-mut" x="320" y="161" text-anchor="middle" font-size="8">et l'on revient en arrière</text>
+    <path class="d-line" d="M408 149 L434 149" fill="none" /><path class="d-line" d="M428 145 L434 149 L428 153" fill="none" />
+    <rect class="d-box" x="440" y="132" width="180" height="34" rx="8" />
+    <text class="d-text" x="530" y="148" text-anchor="middle" font-size="10">337 formes explorées</text>
+    <text class="d-mut" x="530" y="161" text-anchor="middle" font-size="8">pour 11 étapes utiles</text>
+
+    <rect class="d-accent" x="20" y="178" width="150" height="34" rx="8" />
+    <text class="d-text" x="95" y="194" text-anchor="middle" font-size="9.5">1 JETON D'AVANCE</text>
+    <text class="d-mut" x="95" y="207" text-anchor="middle" font-size="8">PREMIERS décide</text>
+    <path class="d-line" d="M170 195 L226 195" fill="none" /><path class="d-line" d="M220 191 L226 195 L220 199" fill="none" />
+    <rect class="d-box" x="232" y="178" width="176" height="34" rx="8" />
+    <text class="d-text" x="320" y="194" text-anchor="middle" font-size="9.5">une seule règle possible</text>
+    <text class="d-mut" x="320" y="207" text-anchor="middle" font-size="8">à chaque remplacement</text>
+    <path class="d-line" d="M408 195 L434 195" fill="none" /><path class="d-line" d="M428 191 L434 195 L428 199" fill="none" />
+    <rect class="d-accent" x="440" y="178" width="180" height="34" rx="8" />
+    <text class="d-text" x="530" y="194" text-anchor="middle" font-size="10">11 décisions</text>
+    <text class="d-mut" x="530" y="207" text-anchor="middle" font-size="8">0 forme explorée</text>
+
+    <text class="d-mut" x="320" y="234" text-anchor="middle" font-size="9">La dérivation trouvée est exactement la même : 11 étapes.</text>
+    <text class="d-mut" x="320" y="250" text-anchor="middle" font-size="9">Ce que le jeton d'avance supprime, ce n'est pas le travail, c'est l'exploration.</text>
+  </svg>
+  <figcaption>Les deux chiffres de droite sont ceux que cette leçon va mesurer, sur le même texte de cinq jetons et avec la même grammaire. Ils ne comparent pas deux résultats — le résultat est identique — mais deux façons de l'atteindre.</figcaption>
+</figure>
+
+<p>Avant de mesurer, une précaution d'écriture. Le programme qui suit ne manipule pas la grammaire sous sa forme EBNF, mais sous une forme équivalente&nbsp;: chaque règle y devient une liste d'alternatives, et chaque alternative une liste de symboles. La répétition <code>{ ... }</code> de l'EBNF, que la leçon 3 employait pour écrire «&nbsp;autant de fois qu'on veut&nbsp;», est déroulée en une règle auxiliaire qui s'appelle elle-même — <code>suiteA</code> pour les additions, <code>suiteM</code> pour les multiplications — avec une alternative <strong>vide</strong> pour s'arrêter. C'est une réécriture mécanique, et elle engendre exactement les mêmes phrases&nbsp;; nous la faisons parce qu'un programme qui remplace des symboles a besoin de règles toutes de la même forme, sans notation spéciale.</p>
+<p>La différence n'est pas cosmétique pour autant, et il vaut mieux la voir tout de suite&nbsp;: dans cette forme déroulée, une règle peut se réduire à <em>rien</em>. <code>suiteA</code> a trois alternatives — une addition, une soustraction, et l'alternative vide. Choisir la troisième, c'est décider qu'il n'y a plus d'addition à lire. Ce sont ces alternatives vides qui feront, tout à l'heure, la différence entre un analyseur qui devine et un analyseur qui sait.</p>
+
+<figure class="code-block" data-file="aveugle.js"><pre><code class="language-javascript">const G = {
+  expression: [["terme", "suiteA"]],
+  suiteA:     [["+", "terme", "suiteA"], ["-", "terme", "suiteA"], []],
+  terme:      [["facteur", "suiteM"]],
+  suiteM:     [["*", "facteur", "suiteM"], ["/", "facteur", "suiteM"], []],
+  facteur:    [["NOMBRE"], ["(", "expression", ")"]],
+};
+const estRegle = (s) =&gt; Object.prototype.hasOwnProperty.call(G, s);
+const cible = ["NOMBRE", "+", "NOMBRE", "*", "NOMBRE"];
+
+// Recherche EN LARGEUR de toutes les derivations a gauche, sans regarder la cible.
+let file = [{ f: ["expression"], hist: [["expression"]] }];
+let explorees = 0, trouve = null;
+while (file.length &amp;&amp; !trouve) {
+  const { f, hist } = file.shift();
+  explorees++;
+  const i = f.findIndex(estRegle);
+  if (i === -1) { if (f.join(" ") === cible.join(" ")) trouve = hist; continue; }
+  if (f.length &gt; cible.length + 4) continue;                 // borne : on elague
+  for (const alt of G[f[i]]) {
+    const nf = f.slice(0, i).concat(alt, f.slice(i + 1));
+    file.push({ f: nf, hist: hist.concat([nf]) });
+  }
+}
+console.log("formes explorees a l'aveugle :", explorees);
+console.log("longueur de la derivation    :", trouve.length - 1, "etapes");
+console.log("");
+trouve.forEach((f, k) =&gt; console.log(String(k).padStart(2) + ". " + f.join(" ")));</code></pre></figure>
+
+<figure class="code-block" data-file="sortie-aveugle.txt"><pre><code class="language-plaintext">formes explorees a l'aveugle : 337
+longueur de la derivation    : 11 etapes
+
+ 0. expression
+ 1. terme suiteA
+ 2. facteur suiteM suiteA
+ 3. NOMBRE suiteM suiteA
+ 4. NOMBRE suiteA
+ 5. NOMBRE + terme suiteA
+ 6. NOMBRE + facteur suiteM suiteA
+ 7. NOMBRE + NOMBRE suiteM suiteA
+ 8. NOMBRE + NOMBRE * facteur suiteM suiteA
+ 9. NOMBRE + NOMBRE * NOMBRE suiteM suiteA
+10. NOMBRE + NOMBRE * NOMBRE suiteA
+11. NOMBRE + NOMBRE * NOMBRE</code></pre></figure>
+
+<p>Deux nombres, et tout le module 3 tient dans leur écart&nbsp;: <strong>337 formes explorées pour une dérivation qui en compte 11</strong>. La division donne un peu plus de trente — pour chaque étape finalement conservée, le programme en a examiné une trentaine d'autres, qu'il a jetées. Et ce n'est ni une grammaire tordue ni un texte long&nbsp;: cinq jetons, cinq règles.</p>
+<p>Regarde comment il s'y prend, parce que c'est la méthode la plus bête possible, et c'est voulu. Il tient une <strong>file</strong> de formes à examiner, initialisée avec la seule forme <code>expression</code>. Il en retire une, cherche son non-terminal le plus à gauche — <code>findIndex(estRegle)</code> —, et s'il en trouve un, il ajoute à la file <em>toutes</em> les formes obtenues en le remplaçant par chacune de ses alternatives. S'il n'en trouve pas, la forme ne contient plus que des terminaux&nbsp;: c'est une phrase complète, qu'il compare alors à la cible. C'est un parcours en largeur, exhaustif, qui ne regarde jamais le texte à reconnaître avant d'avoir fini de dériver.</p>
+<p>Il faut être honnête sur la ligne <code>if (f.length &gt; cible.length + 4) continue;</code>. Sans elle, le programme fabriquerait indéfiniment des formes de plus en plus longues et ne s'arrêterait jamais&nbsp;: <code>suiteA</code> peut se remplacer par quelque chose qui contient <code>suiteA</code>, et rien n'oblige à choisir un jour l'alternative vide. Cette ligne est donc un garde-fou, et il est généreux&nbsp;: il laisse passer toute forme de neuf symboles ou moins, alors que la plus longue de notre dérivation — la ligne 8 — en compte sept. Le nombre 337 est donc bien le coût d'une recherche qui n'a rien deviné, mais c'est déjà le coût d'une recherche <em>aidée</em> par une borne. Sans borne, il n'y aurait pas de nombre du tout.</p>
+<p>Lis maintenant la dérivation elle-même, ligne à ligne&nbsp;: c'est le squelette de tout ce que fera l'analyseur de la leçon suivante. La ligne 0 est le point de départ. Les lignes 1 à 3 descendent l'escalier de la grammaire — <code>expression</code> donne <code>terme suiteA</code>, <code>terme</code> donne <code>facteur suiteM</code>, <code>facteur</code> donne <code>NOMBRE</code> —, et c'est cette descente en trois temps qui portera, à la <a href="lecon-09.html">leçon 9</a>, la priorité de la multiplication sur l'addition.</p>
+<p>Trois lignes sont plus <em>courtes</em> que celle qui les précède&nbsp;: les lignes <strong>4</strong>, <strong>10</strong> et <strong>11</strong>. Ce sont les trois moments où une règle a été remplacée par son alternative vide. À la ligne 4, la dérivation décide qu'il n'y a pas de multiplication après le premier nombre&nbsp;; aux lignes 10 et 11, qu'il n'y a plus rien du tout à lire. Ces trois disparitions sont exactement les décisions qu'un humain prend sans y penser et qu'une machine doit justifier — et l'on verra dans deux sections qu'il suffit, pour les justifier, de regarder le jeton suivant.</p>
+<p>Enfin, compte les usages de chaque règle&nbsp;: <code>expression</code> une fois, <code>terme</code> deux fois, <code>facteur</code> trois fois, <code>suiteM</code> trois fois, <code>suiteA</code> deux fois. Total&nbsp;: onze, et les trois emplois de <code>facteur</code> correspondent aux trois <code>NOMBRE</code> du texte. Retiens ce onze&nbsp;: c'est le travail incompressible. Les 326 formes restantes ne sont pas du travail, ce sont des essais.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Dérivation à gauche&nbsp;: une convention, pas une loi</p><p>Le programme remplace toujours le non-terminal <strong>le plus à gauche</strong>&nbsp;: c'est ce que fait <code>f.findIndex(estRegle)</code>, qui rend le premier indice trouvé. On parle alors d'une <em>dérivation à gauche</em>. Rien ne l'imposait&nbsp;: on aurait pu prendre le plus à droite, ou n'importe lequel, et l'on aurait obtenu la même phrase finale par un chemin différent. Si l'on retient celui de gauche, c'est pour une raison très pratique&nbsp;: c'est le seul ordre qui suit la lecture du texte. Une dérivation à gauche produit ses terminaux de gauche à droite, donc dans l'ordre où les jetons arrivent, donc sans jamais avoir besoin de revenir en arrière dans le flux. Toute la suite du module en dépend&nbsp;; quand la <a href="lecon-08.html">leçon 8</a> écrira une fonction par règle et les laissera s'appeler dans l'ordre du texte, elle ne fera rien d'autre qu'une dérivation à gauche.</p></div></div>
+
+<h2>PREMIERS&nbsp;: ce qui peut commencer une règle</h2>
+<p>Reprenons le moment précis où la recherche à l'aveugle gaspille son temps. Elle tient la forme <code>NOMBRE suiteM suiteA</code>, elle doit remplacer <code>suiteM</code>, et elle a trois alternatives&nbsp;: <code>* facteur suiteM</code>, <code>/ facteur suiteM</code>, ou rien. Elle les essaie toutes les trois. Or le texte, à cet endroit, continue par <code>+</code>. Un lecteur humain écarte les deux premières sans réfléchir&nbsp;: elles commencent par <code>*</code> ou par <code>/</code>, le texte commence par <code>+</code>, c'est fini. Il ne reste que l'alternative vide.</p>
+<p>Ce raisonnement d'une seconde a un contenu précis, et c'est lui qu'il faut apprendre à la machine. Il repose sur une question posée à chaque alternative&nbsp;: <strong>par quels jetons peux-tu commencer&nbsp;?</strong> La réponse, pour un non-terminal <code>X</code>, s'appelle l'ensemble <strong>PREMIERS</strong> de <code>X</code>. C'est la collection de tous les terminaux qui peuvent apparaître en première position d'une phrase engendrée par <code>X</code>.</p>
+<p>Sur trois de nos règles, la réponse se lit à l'œil nu. <code>facteur</code> se remplace soit par <code>NOMBRE</code>, soit par <code>( expression )</code>&nbsp;: ses PREMIERS sont donc <code>NOMBRE</code> et <code>(</code>. Sur les deux autres, il faut déjà enchaîner un raisonnement&nbsp;: <code>terme</code> commence par un <code>facteur</code>, donc PREMIERS de <code>terme</code> contient tout PREMIERS de <code>facteur</code>&nbsp;; et <code>expression</code> commence par un <code>terme</code>, donc hérite du précédent. Trois ensembles identiques, obtenus par deux propagations successives.</p>
+<p>C'est là que la difficulté commence, et elle n'est pas où on l'attend. Pour connaître PREMIERS de <code>expression</code>, il faut déjà connaître PREMIERS de <code>terme</code>&nbsp;; pour connaître celui-là, il faut PREMIERS de <code>facteur</code>. Un ordre de calcul existe donc&nbsp;: de la règle la plus profonde vers la plus haute. Seulement, ce bon ordre, personne ne te le donne — il dépend de la grammaire, il change dès qu'on ajoute une règle, et sur une grammaire réelle il peut ne pas exister du tout, parce que deux règles peuvent dépendre l'une de l'autre en cercle.</p>
+<p>La parade est une des plus élégantes de l'informatique, et elle consiste à <strong>renoncer à trouver le bon ordre</strong>. On part de tous les ensembles vides. On parcourt toutes les règles, dans l'ordre où elles sont écrites, en ajoutant tout ce qu'on peut ajouter. Beaucoup d'ajouts seront prématurés et n'ajouteront rien, tant pis. Puis on recommence. Et l'on recommence encore, tant qu'un tour a modifié quelque chose. Le jour où un tour complet ne change plus rien, c'est fini&nbsp;: on a atteint un <strong>point fixe</strong>.</p>
+
+<figure class="code-block" data-file="premiers.js"><pre><code class="language-javascript">// PREMIERS(X) : quels jetons peuvent COMMENCER un X ? C'est ce qui permet de
+// choisir une regle en ne regardant qu'UN SEUL jeton d'avance.
+const G = {
+  expression: [["terme", "suiteA"]],
+  suiteA:     [["+", "terme", "suiteA"], ["-", "terme", "suiteA"], []],
+  terme:      [["facteur", "suiteM"]],
+  suiteM:     [["*", "facteur", "suiteM"], ["/", "facteur", "suiteM"], []],
+  facteur:    [["NOMBRE"], ["(", "expression", ")"]],
+};
+const estRegle = (s) =&gt; Object.prototype.hasOwnProperty.call(G, s);
+
+const PREMIERS = {}, VIDE = {};
+for (const nom in G) { PREMIERS[nom] = new Set(); VIDE[nom] = false; }
+let bouge = true, tours = 0;
+while (bouge) {                       // on recommence tant que quelque chose bouge
+  bouge = false; tours++;
+  for (const nom in G) for (const alt of G[nom]) {
+    if (alt.length === 0) { if (!VIDE[nom]) { VIDE[nom] = true; bouge = true; } continue; }
+    for (const s of alt) {
+      for (const t of (estRegle(s) ? PREMIERS[s] : [s]))
+        if (!PREMIERS[nom].has(t)) { PREMIERS[nom].add(t); bouge = true; }
+      if (!estRegle(s) || !VIDE[s]) break;      // on ne va plus loin que si s peut etre vide
+    }
+  }
+}
+for (const nom in G)
+  console.log("PREMIERS(" + nom.padEnd(10) + ") = { " + [...PREMIERS[nom]].join(" ").padEnd(9) + "}"
+    + (VIDE[nom] ? "   peut aussi etre vide" : ""));
+console.log("tours de boucle jusqu'au point fixe :", tours);
+// affiche : PREMIERS(expression) = { NOMBRE ( }
+// affiche : PREMIERS(suiteA    ) = { + -      }   peut aussi etre vide
+// affiche : PREMIERS(terme     ) = { NOMBRE ( }
+// affiche : PREMIERS(suiteM    ) = { * /      }   peut aussi etre vide
+// affiche : PREMIERS(facteur   ) = { NOMBRE ( }
+// affiche : tours de boucle jusqu'au point fixe : 4</code></pre></figure>
+
+<p>Le résultat confirme le raisonnement fait à la main&nbsp;: <code>expression</code>, <code>terme</code> et <code>facteur</code> ont le <em>même</em> ensemble PREMIERS, <code>{ NOMBRE, ( }</code>, parce que les trois commencent par la même chose. <code>suiteA</code> peut commencer par <code>+</code> ou par <code>-</code>, <code>suiteM</code> par <code>*</code> ou par <code>/</code>, et toutes deux portent une mention supplémentaire&nbsp;: elles <em>peuvent aussi être vides</em>. Cette mention n'est pas décorative, nous y reviendrons.</p>
+<p>Le nombre à regarder, c'est le dernier&nbsp;: <strong>quatre tours</strong>. Pourquoi quatre, alors que la grammaire ne compte que cinq règles&nbsp;? Parce que la boucle les parcourt dans l'ordre où elles sont écrites — <code>expression</code>, <code>suiteA</code>, <code>terme</code>, <code>suiteM</code>, <code>facteur</code> — et que l'information circule dans le sens exactement inverse. Au premier tour, <code>expression</code> est traitée en premier&nbsp;: <code>terme</code> est encore vide, donc elle n'apprend rien. Puis <code>terme</code> est traitée&nbsp;: <code>facteur</code> est encore vide, elle n'apprend rien non plus. Enfin <code>facteur</code>, qui ne dépend de personne, se remplit. Le premier tour ne fait donc progresser que le bas de l'escalier. Le deuxième tour permet à <code>terme</code> de recopier <code>facteur</code>. Le troisième permet à <code>expression</code> de recopier <code>terme</code>. Le quatrième ne change rien du tout — et c'est précisément son rôle&nbsp;: <strong>il ne sert pas à calculer, il sert à prouver qu'il n'y a plus rien à calculer</strong>.</p>
+<p>Une itération sur quatre semble perdue&nbsp;; elle est en réalité la seule qui donne une garantie. Si l'on s'arrêtait au bout de trois tours «&nbsp;parce que ça a l'air fini&nbsp;», on ferait une hypothèse sur la grammaire. En s'arrêtant sur un tour blanc, on ne fait aucune hypothèse&nbsp;: la définition même du point fixe est atteinte. C'est aussi ce qui rend la méthode indifférente à l'ordre d'écriture des règles. Réordonne la grammaire, mets <code>facteur</code> en premier&nbsp;: le résultat sera identique, seul le nombre de tours changera.</p>
+<p>Reste à comprendre la ligne la plus dense du programme, celle qui gère les règles pouvant être vides&nbsp;: <code>if (!estRegle(s) || !VIDE[s]) break;</code>. Elle répond à une question qu'on n'imagine pas tant qu'on n'y a pas été confronté&nbsp;: quand une alternative commence par un non-terminal qui <em>peut disparaître</em>, il ne suffit pas de recopier les PREMIERS de celui-ci. Il faut aussi tenir compte du symbole qui vient après lui, puisque le premier peut s'effacer et lui laisser la place. La boucle parcourt donc les symboles de l'alternative de gauche à droite, et ne s'arrête qu'en rencontrant un symbole qui ne peut pas être vide. Sur notre grammaire, cette subtilité ne se déclenche jamais — aucune alternative ne commence par <code>suiteA</code> ni par <code>suiteM</code> — mais l'écrire coûte une ligne, et l'oublier produit un ensemble PREMIERS trop petit, donc un analyseur qui refuse des textes corrects.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Calculer PREMIERS à la main, en trois règles</p><p>Tu n'as pas besoin d'un programme pour une petite grammaire, et le faire à la main une fois vaut mieux que lire trois explications. Prends une alternative et applique ceci dans l'ordre. <strong>Un&nbsp;:</strong> si elle est vide, elle n'apporte aucun jeton, mais elle apprend que la règle peut être vide — note-le à part. <strong>Deux&nbsp;:</strong> si elle commence par un terminal, ce terminal est le seul jeton qu'elle apporte, et tu t'arrêtes là. <strong>Trois&nbsp;:</strong> si elle commence par un non-terminal, recopie tout PREMIERS de ce non-terminal&nbsp;; puis, <em>seulement</em> s'il peut être vide, passe au symbole suivant de la même alternative et recommence. Répète sur toutes les règles jusqu'à ce qu'un passage complet n'ajoute plus rien. Le contrôle qui attrape les erreurs&nbsp;: un non-terminal dont l'ensemble PREMIERS est resté <em>vide</em> alors qu'il n'a pas d'alternative vide est le signe qu'un tour manque, ou qu'une règle n'est définie nulle part.</p></div></div>
+
+<h2>Un jeton d'avance, et l'exploration disparaît</h2>
+<p>Nous avons maintenant les deux pièces&nbsp;: une dérivation qui remplace toujours le non-terminal le plus à gauche, et, pour chaque alternative, la liste des jetons par lesquels elle peut commencer. Il ne reste qu'à les assembler, et la règle du jeu tient en une phrase&nbsp;: <strong>avant chaque remplacement, on regarde le prochain jeton non encore consommé, et l'on choisit l'alternative dont les débuts possibles le contiennent.</strong> On ne le consomme pas&nbsp;; on le <em>regarde</em>. C'est pour cela qu'on l'appelle un <strong>jeton d'avance</strong>.</p>
+<p>Le programme ci-dessous fait exactement cela, et rien d'autre. Il reprend la grammaire de tout à l'heure, y ajoute les ensembles PREMIERS que le calcul par point fixe vient de produire, et remplace la file d'exploration par un choix. La fonction <code>debut(alt)</code> rend les jetons par lesquels une alternative peut commencer&nbsp;: rien si elle est vide, les PREMIERS du premier symbole s'il s'agit d'un non-terminal, le symbole lui-même s'il s'agit d'un terminal. Le reste est une boucle qui s'arrête quand il ne reste plus de non-terminal.</p>
+
+<figure class="code-block" data-file="guide.js"><pre><code class="language-javascript">// GUIDER la derivation avec UN SEUL jeton d'avance : plus aucune exploration.
+const G = {
+  expression: [["terme", "suiteA"]],
+  suiteA:     [["+", "terme", "suiteA"], ["-", "terme", "suiteA"], []],
+  terme:      [["facteur", "suiteM"]],
+  suiteM:     [["*", "facteur", "suiteM"], ["/", "facteur", "suiteM"], []],
+  facteur:    [["NOMBRE"], ["(", "expression", ")"]],
+};
+const PREMIERS = {
+  expression: ["NOMBRE", "("], terme: ["NOMBRE", "("], facteur: ["NOMBRE", "("],
+  suiteA: ["+", "-"], suiteM: ["*", "/"],
+};
+const estRegle = (s) =&gt; Object.prototype.hasOwnProperty.call(G, s);
+const debut = (alt) =&gt; (alt.length === 0 ? [] : estRegle(alt[0]) ? PREMIERS[alt[0]] : [alt[0]]);
+
+function deriverGuide(entree) {
+  let forme = ["expression"], lu = 0, decisions = 0;
+  const trace = [forme.join(" ")];
+  for (;;) {
+    const i = forme.findIndex(estRegle);
+    if (i === -1) break;
+    const suivant = entree[lu] || "FIN";
+    const alts = G[forme[i]];
+    let choisie = alts.findIndex((alt) =&gt; debut(alt).includes(suivant));
+    if (choisie === -1) choisie = alts.findIndex((alt) =&gt; alt.length === 0);  // sinon, la regle vide
+    if (choisie === -1) throw new Error("bloque sur " + suivant);
+    decisions++;
+    forme = forme.slice(0, i).concat(alts[choisie], forme.slice(i + 1));
+    trace.push(forme.join(" "));
+    while (lu &lt; entree.length &amp;&amp; forme[lu] === entree[lu]) lu++;   // on avale ce qui est deja terminal
+  }
+  return { forme, decisions, trace };
+}
+
+const entree = ["NOMBRE", "+", "NOMBRE", "*", "NOMBRE"];
+const r = deriverGuide(entree);
+console.log("jetons en entree :", entree.length);
+console.log("decisions prises :", r.decisions);
+console.log("resultat         :", r.forme.join(" "));
+console.log("identique a l'entree ?", r.forme.join(" ") === entree.join(" "));
+console.log("etapes de la derivation :", r.trace.length - 1);
+// affiche : jetons en entree : 5
+// affiche : decisions prises : 11
+// affiche : resultat         : NOMBRE + NOMBRE * NOMBRE
+// affiche : identique a l'entree ? true
+// affiche : etapes de la derivation : 11</code></pre></figure>
+
+<p>Compare avec la section précédente, sur les mêmes cinq jetons et la même grammaire&nbsp;: <strong>11 décisions, 11 étapes, et aucune forme explorée en pure perte</strong>. Le nombre de décisions égale le nombre d'étapes, ce qui veut dire exactement une chose&nbsp;: aucun choix n'a été repris. La dérivation obtenue est celle-là même que la recherche à l'aveugle avait fini par trouver après 337 essais — la ligne <code>identique a l'entree ? true</code> le confirme, en comparant la forme finale à la suite de jetons de départ.</p>
+<p>Prends la mesure de ce que ce <code>true</code> signifie, parce qu'il est la définition même de «&nbsp;reconnaître&nbsp;». La forme finale ne contient plus aucun non-terminal, et elle est <em>égale</em> au texte. Autrement dit&nbsp;: la grammaire peut engendrer ce texte, et voici comment. Si la forme finale avait différé de l'entrée, ne serait-ce que d'un jeton, la réponse aurait été «&nbsp;non&nbsp;» — et un analyseur digne de ce nom devrait alors dire <em>où</em>.</p>
+<p>Une remarque sur la ligne de fin de boucle, <code>while (lu &lt; entree.length &amp;&amp; forme[lu] === entree[lu]) lu++;</code>. C'est elle qui fait avancer le curseur de lecture&nbsp;: tant que le début de la forme coïncide avec le début de l'entrée, on considère ces jetons comme consommés, et le jeton d'avance devient le suivant. Elle joue ici le rôle que la <a href="lecon-08.html">leçon 8</a> confiera à une fonction nommée <code>avaler</code>. Nous y venons.</p>
+<p>Reste un point de franchise, et il est important parce que c'est là que notre miniature simplifie. Quand aucune alternative ne peut commencer par le jeton vu, le programme se rabat sur l'alternative vide&nbsp;: <code>if (choisie === -1) choisie = alts.findIndex((alt) =&gt; alt.length === 0);</code>. C'est un raccourci. Un analyseur rigoureux ne choisirait pas l'alternative vide parce qu'il ne sait pas quoi faire d'autre&nbsp;: il vérifierait que le jeton vu fait partie de ceux qui peuvent <em>suivre</em> la règle en cours — un second ensemble, appelé SUIVANTS, calculé lui aussi par point fixe. Sur notre grammaire, la distinction ne change aucun verdict, parce qu'après <code>suiteA</code> ou <code>suiteM</code> il ne peut venir qu'une parenthèse fermante ou la fin du texte. Sur une grammaire plus riche, elle décide entre «&nbsp;cette règle s'arrête ici&nbsp;» et «&nbsp;ce texte est fautif&nbsp;». Retiens la forme de la question, tu la reverras&nbsp;: <em>une règle qui peut être vide a besoin de savoir ce qui a le droit de la suivre</em>. La leçon 8 obtiendra le même effet d'une manière beaucoup plus terre à terre — une boucle <code>while</code> qui s'arrête quand elle ne voit plus son opérateur — sans jamais nommer SUIVANTS.</p>
+
+<h2>Le flux de jetons&nbsp;: voir, avaler, exiger</h2>
+<p>Tout ce qui précède manipulait des <em>formes</em>&nbsp;: des listes de symboles qu'on réécrit. C'était le bon niveau pour comprendre, ce n'est pas celui auquel on programme. Un analyseur réel ne construit jamais la suite <code>NOMBRE + facteur suiteM suiteA</code> en mémoire&nbsp;; il n'en a pas besoin, parce que la structure de son propre code lui en tient lieu. Ce dont il a besoin, en revanche, c'est d'un accès discipliné à la suite de jetons que le module 2 lui a remise.</p>
+<p>Discipliné veut dire ceci&nbsp;: pas d'indice qui traîne, pas de <code>jetons[i + 1]</code> écrit ici et <code>jetons[i - 1]</code> écrit là, pas de position modifiée à deux endroits différents. Un seul objet détient le curseur, et il n'expose que trois gestes. Trois, pas quatre. Toute la leçon 8 se construira avec ces trois-là, et il vaut la peine de les regarder de près maintenant, parce qu'ils sont si petits qu'on est tenté de les écrire sans y penser — et c'est là qu'on se trompe.</p>
+<p>Le premier geste est <strong>voir</strong>&nbsp;: rendre le jeton sous le curseur, sans bouger. On peut l'appeler dix fois de suite, on obtient dix fois le même jeton. C'est ce qui permet à une règle de <em>demander conseil</em> avant de décider — c'est le jeton d'avance de la section précédente, devenu appel de fonction.</p>
+<p>Le deuxième est <strong>avaler</strong>&nbsp;: rendre le jeton sous le curseur, puis avancer d'un cran. C'est le seul geste qui fasse progresser la lecture. Si une règle réussit sans avaler, elle n'a rien consommé&nbsp;; répétée, elle boucle indéfiniment. Ce détail paraît théorique&nbsp;; il est la cause d'une des deux grandes pannes de l'analyse par descente récursive, et la leçon 8 la mesurera.</p>
+<p>Le troisième est <strong>exiger</strong> — nous l'appellerons <code>attendre</code>. Il dit&nbsp;: «&nbsp;à cet endroit, il doit y avoir <em>cela</em>&nbsp;; si ce n'est pas cela, le texte est fautif, et voici où&nbsp;». Il combine une vérification et un <code>avaler</code>. C'est lui qui produira l'immense majorité des messages d'erreur du compilateur, et c'est pourquoi il porte la position du jeton dans son message.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Le flux de jetons du texte soit prix égale 12, représenté par une bande de cinq cases côte à côte. Les quatre premières cases contiennent respectivement : soit, de type MOT_CLE à la position 0 ; prix, de type IDENT à la position 5 ; le signe égal, de type SYMBOLE à la position 10 ; et 12, de type NOMBRE à la position 12. La cinquième case, surlignée, contient FIN, à la position 14, et porte la mention sentinelle. Une flèche montante placée sous la première case désigne le curseur. Sous la bande, trois boîtes surlignées énumèrent les trois gestes, chacune suivie de son explication. Première boîte : voir, ne bouge pas, rend le jeton sous le curseur sans l'avancer, et l'on peut appeler voir dix fois de suite. Deuxième boîte : avaler, avance de 1, rend le jeton sous le curseur puis avance d'un cran, et au-delà du dernier jeton il n'avance plus. Troisième boîte : attendre d'une valeur, avale ou échoue, compare la valeur du jeton à celle qui est exigée, et si elle diffère l'erreur cite la position exacte.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un curseur, trois gestes, et une sentinelle qui ne s'épuise jamais</text>
+
+    <rect class="d-box" x="60" y="48" width="96" height="40" rx="6" />
+    <text class="d-text" x="108" y="66" text-anchor="middle" font-size="10">soit</text>
+    <text class="d-mut" x="108" y="80" text-anchor="middle" font-size="7.5">MOT_CLE · pos 0</text>
+    <rect class="d-box" x="156" y="48" width="96" height="40" rx="6" />
+    <text class="d-text" x="204" y="66" text-anchor="middle" font-size="10">prix</text>
+    <text class="d-mut" x="204" y="80" text-anchor="middle" font-size="7.5">IDENT · pos 5</text>
+    <rect class="d-box" x="252" y="48" width="96" height="40" rx="6" />
+    <text class="d-text" x="300" y="66" text-anchor="middle" font-size="10">=</text>
+    <text class="d-mut" x="300" y="80" text-anchor="middle" font-size="7.5">SYMBOLE · pos 10</text>
+    <rect class="d-box" x="348" y="48" width="96" height="40" rx="6" />
+    <text class="d-text" x="396" y="66" text-anchor="middle" font-size="10">12</text>
+    <text class="d-mut" x="396" y="80" text-anchor="middle" font-size="7.5">NOMBRE · pos 12</text>
+    <rect class="d-accent" x="444" y="48" width="96" height="40" rx="6" />
+    <text class="d-text" x="492" y="66" text-anchor="middle" font-size="10">FIN</text>
+    <text class="d-mut" x="492" y="80" text-anchor="middle" font-size="7.5">pos 14 · sentinelle</text>
+
+    <path class="d-line" d="M108 102 L108 90" fill="none" /><path class="d-line" d="M104 96 L108 90 L112 96" fill="none" />
+    <text class="d-tag" x="108" y="114" text-anchor="middle" font-size="9">curseur</text>
+
+    <rect class="d-accent" x="20" y="132" width="140" height="32" rx="8" />
+    <text class="d-text" x="90" y="147" text-anchor="middle" font-size="10">voir()</text>
+    <text class="d-mut" x="90" y="159" text-anchor="middle" font-size="8">ne bouge pas</text>
+    <text class="d-mut" x="172" y="152" font-size="9">rend le jeton sous le curseur, sans l'avancer</text>
+
+    <rect class="d-accent" x="20" y="172" width="140" height="32" rx="8" />
+    <text class="d-text" x="90" y="187" text-anchor="middle" font-size="10">avaler()</text>
+    <text class="d-mut" x="90" y="199" text-anchor="middle" font-size="8">avance de 1</text>
+    <text class="d-mut" x="172" y="192" font-size="9">rend ce jeton PUIS avance d'un cran ; au-delà, n'avance plus</text>
+
+    <rect class="d-accent" x="20" y="212" width="140" height="32" rx="8" />
+    <text class="d-text" x="90" y="227" text-anchor="middle" font-size="10">attendre(v)</text>
+    <text class="d-mut" x="90" y="239" text-anchor="middle" font-size="8">avale ou échoue</text>
+    <text class="d-mut" x="172" y="232" font-size="9">compare la VALEUR à v ; si elle diffère, cite la position</text>
+  </svg>
+  <figcaption>La cinquième case n'existe pas dans le texte&nbsp;: elle est fabriquée par le flux. C'est ce qui permet à <code>voir()</code> de rendre toujours un jeton, avec un type, une valeur et une position — donc à tout le code appelant d'être écrit sans une seule vérification de dépassement.</figcaption>
+</figure>
+
+<p>Voici l'objet complet. Il tient en une douzaine de lignes, et il n'a pas d'état visible de l'extérieur&nbsp;: l'indice <code>i</code> est enfermé dans la fonction, et les trois gestes rendus sont les seuls moyens de l'atteindre.</p>
+
+<figure class="code-block" data-file="flux.js"><pre><code class="language-javascript">// LE FLUX DE JETONS : la seule interface que l'analyseur syntaxique utilisera.
+// Trois gestes, pas un de plus : regarder, avaler, exiger.
+function flux(jetons, longueurTexte) {
+  const FIN = { type: "FIN", valeur: "", pos: longueurTexte };
+  let i = 0;
+  function voir() { return i &lt; jetons.length ? jetons[i] : FIN; }
+  function avaler() { const j = voir(); if (i &lt; jetons.length) i++; return j; }
+  function attendre(valeur) {
+    const j = voir();
+    if (j.valeur !== valeur)
+      throw new Error("attendu " + JSON.stringify(valeur) + ", trouve "
+        + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler();
+  }
+  return { voir, avaler, attendre };
+}
+
+// --- demonstration sur  soit prix = 12
+const js = [
+  { type: "MOT_CLE", valeur: "soit", pos: 0 },
+  { type: "IDENT",   valeur: "prix", pos: 5 },
+  { type: "SYMBOLE", valeur: "=",    pos: 10 },
+  { type: "NOMBRE",  valeur: "12",   pos: 12 },
+];
+const f = flux(js, 14);
+console.log("voir   -&gt;", f.voir().type, f.voir().valeur);
+console.log("voir   -&gt;", f.voir().type, f.voir().valeur, "  (rien n'a bouge)");
+console.log("avaler -&gt;", f.avaler().valeur);
+console.log("voir   -&gt;", f.voir().type, f.voir().valeur);
+f.avaler(); f.avaler(); f.avaler();
+console.log("voir   -&gt;", f.voir().type, "        (au-dela du dernier jeton)");
+console.log("voir   -&gt;", f.voir().type, "        (et autant de fois qu'on veut)");
+
+const g = flux(js, 14);
+g.attendre("soit"); g.avaler();
+try { g.attendre("=="); } catch (e) { console.log("attendre -&gt; " + e.message); }</code></pre></figure>
+
+<figure class="code-block" data-file="sortie-flux.txt"><pre><code class="language-plaintext">voir   -&gt; MOT_CLE soit
+voir   -&gt; MOT_CLE soit   (rien n'a bouge)
+avaler -&gt; soit
+voir   -&gt; IDENT prix
+voir   -&gt; FIN         (au-dela du dernier jeton)
+voir   -&gt; FIN         (et autant de fois qu'on veut)
+attendre -&gt; attendu "==", trouve "=" en position 10</code></pre></figure>
+
+<p>Les deux premières lignes disent la même chose, et c'est le but&nbsp;: deux appels consécutifs à <code>voir()</code> rendent le même jeton, parce que <code>voir()</code> ne touche pas à <code>i</code>. La troisième montre <code>avaler()</code> rendant lui aussi <code>soit</code> — il rend le jeton qu'il consomme, pas le suivant —, et la quatrième prouve que le curseur a bougé&nbsp;: <code>voir()</code> donne désormais <code>prix</code>.</p>
+<p>Les cinquième et sixième lignes sont les plus importantes de la démonstration. Après avoir avalé les quatre jetons, il n'y a plus rien&nbsp;; pourtant <code>voir()</code> ne rend ni <code>undefined</code>, ni <code>null</code>, ni une exception&nbsp;: il rend un jeton de type <code>FIN</code>. Et il continue de le rendre, autant de fois qu'on le lui demande. Cette petite invention porte un nom&nbsp;: une <strong>sentinelle</strong>. Elle transforme «&nbsp;il n'y a plus de jeton&nbsp;», qui est un cas particulier, en «&nbsp;il y a un jeton de type FIN&nbsp;», qui est un cas ordinaire.</p>
+<p>Le bénéfice est considérable pour un coût de trois lignes. Sans sentinelle, chacune des fonctions de la leçon 8 devrait écrire, avant de regarder un jeton, une vérification du genre «&nbsp;si le curseur a dépassé la fin, alors…&nbsp;» — et il suffirait d'en oublier une pour lire une propriété de <code>undefined</code>, c'est-à-dire pour planter à un endroit qui n'a aucun rapport avec la faute. Avec la sentinelle, il n'y a rien à oublier&nbsp;: toutes les comparaisons du genre <code>voir().valeur === "+"</code> sont simplement fausses sur <code>FIN</code>, ce qui est précisément le comportement voulu.</p>
+<p>Note aussi que <code>avaler()</code> refuse d'avancer au-delà du dernier jeton&nbsp;: <code>if (i &lt; jetons.length) i++;</code>. Ce n'est pas une coquetterie. C'est ce qui garantit qu'un analyseur qui aurait, par erreur, appelé <code>avaler()</code> mille fois de trop ne partirait pas dans les indices négatifs ou lointains&nbsp;: il resterait sur <code>FIN</code>, et la faute serait signalée à la position de la fin du texte plutôt qu'à une position inventée.</p>
+<p>Reste le cinquième type. Le module 2 en a produit quatre — <code>MOT_CLE</code>, <code>IDENT</code>, <code>NOMBRE</code>, <code>SYMBOLE</code> —, et le module 3 en ajoute un&nbsp;: <code>FIN</code>. C'est le seul type de jeton qui ne provienne d'aucun motif et ne corresponde à aucun caractère du texte. Sa position, d'ailleurs, ne désigne aucun caractère&nbsp;: c'est <code>longueurTexte</code>, soit un cran après le dernier — exactement ce qu'il faut pour qu'un message d'erreur pointe la fin du fichier.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">La sentinelle est un patron, pas une astuce de compilateur</p><p>Le procédé consiste à ajouter au bout d'une collection un élément fabriqué, reconnaissable, qui rend la condition d'arrêt inutile. On le retrouve partout&nbsp;: le zéro final d'une chaîne de caractères en C, la carte «&nbsp;fin de partie&nbsp;» glissée sous une pioche, le nœud factice en tête d'une liste chaînée qui supprime le cas «&nbsp;la liste est vide&nbsp;». Le motif est toujours le même&nbsp;: <em>on paie un élément de plus pour supprimer une branche de code dans tous les appelants</em>. Le calcul est presque toujours favorable, parce qu'un élément coûte une fois et qu'une branche coûte à chaque endroit où on l'écrit — et surtout à chaque endroit où l'on oublie de l'écrire.</p></div></div>
+
+<p>Dernière ligne de la démonstration, et elle règle une dette contractée deux modules plus tôt. On demande <code>attendre("==")</code> là où le texte porte <code>=</code>, et le message tombe&nbsp;: <code>attendu "==", trouve "=" en position 10</code>. Trois choses y sont dites&nbsp;: ce qu'on voulait, ce qu'on a trouvé, et où. La position vient telle quelle du jeton — c'est le troisième champ que la <a href="lecon-04.html">leçon 4</a> avait décidé de conserver «&nbsp;alors que la grammaire ne s'en sert jamais&nbsp;», et c'est ici qu'il sert. La <a href="lecon-06.html">leçon 6</a>, elle, a écrit la fonction qui transforme cet indice en <em>ligne 1, colonne 11</em> avec la ligne fautive recopiée dessous&nbsp;; la leçon 8 branchera les deux.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">La facture de la leçon 4 arrive&nbsp;: on compare des valeurs, pas des types</p><p>Regarde ce que <code>attendre</code> compare&nbsp;: <code>if (j.valeur !== valeur)</code>. La <strong>valeur</strong>, pas le type. Ce n'est pas un choix de style, c'est une obligation, et la <a href="lecon-04.html">leçon 4</a> l'avait annoncée mot pour mot en décidant de regrouper les sept caractères <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>(</code>, <code>)</code> et <code>=</code> sous un seul type&nbsp;: «&nbsp;l'analyseur syntaxique du module 3 devra écrire <code>jeton.valeur === "+"</code> là où il aurait écrit <code>jeton.type === "PLUS"</code>&nbsp;». Nous y sommes. Il n'existe pas de type <code>PLUS</code>, ni <code>PAR_OUVRANTE</code>, ni <code>EGAL</code>&nbsp;: ces sept caractères portent tous le type <code>SYMBOLE</code>, et un test <code>jeton.type === "PLUS"</code> serait toujours faux — silencieusement, sans erreur, en refusant toutes les additions. La règle de survie tient en une phrase&nbsp;: <strong>pour un symbole, teste la valeur&nbsp;; pour un nombre ou un identificateur, teste le type.</strong> C'est ce que fera chaque ligne de la leçon 8, y compris <code>voir().valeur === "+"</code> et <code>voir().type === "NOMBRE"</code> dans la même fonction, à deux lignes d'écart. Le jour où Brindille se dotera d'un opérateur de deux caractères, il faudra rouvrir la décision de la leçon 4&nbsp;; en attendant, elle se paie ici, et le prix est exactement celui qui avait été annoncé.</p></div></div>
+
+<h2>Quand un seul jeton d'avance ne suffit plus</h2>
+<p>Tout ce qui précède repose sur une propriété que nous n'avons jamais nommée, parce qu'elle était vraie sans qu'on ait eu à y penser&nbsp;: dans notre grammaire, <strong>deux alternatives d'une même règle ne commencent jamais par le même jeton</strong>. Relis les cinq ensembles PREMIERS de tout à l'heure et vérifie-le à l'œil&nbsp;: les deux alternatives de <code>facteur</code> commencent l'une par <code>NOMBRE</code>, l'autre par <code>(</code>&nbsp;; celles de <code>suiteA</code> par <code>+</code> et par <code>-</code>&nbsp;; celles de <code>suiteM</code> par <code>*</code> et par <code>/</code>. Aucun jeton n'apparaît deux fois dans la même règle. C'est cette disjonction, et elle seule, qui donne un sens à la phrase «&nbsp;on choisit l'alternative dont les débuts contiennent le jeton vu&nbsp;»&nbsp;: si deux alternatives le contenaient, il n'y aurait pas <em>une</em> alternative à choisir, mais deux.</p>
+<p>Cette propriété n'a rien d'automatique, et elle cessera d'être vraie dès la première extension sérieuse du langage. Imaginons que Brindille se dote d'appels de fonction — <code>racine(9)</code>, <code>abs(x)</code>. La règle <code>facteur</code> gagne alors une alternative, et l'on écrit sans y réfléchir&nbsp;: un facteur est un nombre, ou un nom de variable, ou un nom de fonction suivi d'une parenthèse ouvrante, d'une expression et d'une parenthèse fermante. C'est exactement ce que dira la documentation du langage, c'est parfaitement lisible, et c'est inutilisable en l'état. Les deux dernières alternatives commencent toutes les deux par <code>IDENT</code>.</p>
+<p>Ce qui rend cette situation dangereuse, ce n'est pas qu'elle échoue&nbsp;: c'est qu'elle <em>n'échoue pas</em>. Retourne voir la ligne qui choisit, dans le programme guidé de la section précédente&nbsp;: <code>alts.findIndex((alt) =&gt; debut(alt).includes(suivant))</code>. <code>findIndex</code> rend le <strong>premier</strong> indice qui convient. Devant deux alternatives également recevables, il n'émet aucun avertissement et ne lève aucune exception&nbsp;: il prend celle qui se trouve écrite en premier. L'analyseur ne sait même pas qu'il vient de parier.</p>
+
+<figure class="code-block" data-file="prefixe-commun.js"><pre><code class="language-javascript">// QUAND UN SEUL JETON NE SUFFIT PLUS : deux regles qui COMMENCENT pareil.
+//   facteur = IDENT                          (une variable)
+//           | IDENT "(" expression ")"       (un appel de fonction)
+// Les deux commencent par IDENT : PREMIERS se recouvrent, le choix est impossible.
+const entree = ["IDENT", "(", "NOMBRE", ")"];      // racine(9)
+
+function choisirAvecUnJeton(entree) {
+  const suivant = entree[0];
+  const candidates = [];
+  if (suivant === "IDENT") candidates.push("variable", "appel");
+  return candidates;
+}
+console.log("jeton d'avance      :", entree[0]);
+console.log("regles possibles    :", choisirAvecUnJeton(entree).join(" ou "));
+console.log("nombre de candidates:", choisirAvecUnJeton(entree).length, "-&gt; le choix n'est pas determine");
+
+// Ce que donne le pari "c'est une variable" : la regle reussit, et laisse du texte derriere.
+let lu = 1;
+console.log("");
+console.log("si l'on parie 'variable' : jetons consommes", lu, "sur", entree.length);
+console.log("reste sur le flux       :", entree.slice(lu).join(" "), "-&gt; erreur signalee au mauvais endroit");
+
+// LA FACTORISATION A GAUCHE : lire la partie commune D'ABORD, decider APRES.
+//   facteur = IDENT [ "(" expression ")" ]
+function facteurFactorise(entree) {
+  let i = 0;
+  if (entree[i] !== "IDENT") throw new Error("attendu IDENT");
+  i++;                                              // la partie commune est lue
+  if (entree[i] === "(") { i++; i++; if (entree[i] !== ")") throw new Error("attendu )"); i++; return { forme: "appel", lu: i }; }
+  return { forme: "variable", lu: i };
+}
+console.log("");
+for (const t of [["IDENT", "(", "NOMBRE", ")"], ["IDENT"]]) {
+  const r = facteurFactorise(t);
+  console.log(t.join(" ").padEnd(22), "-&gt;", r.forme.padEnd(9), "jetons consommes :", r.lu, "sur", t.length);
+}</code></pre></figure>
+
+<figure class="code-block" data-file="sortie-prefixe.txt"><pre><code class="language-plaintext">jeton d'avance      : IDENT
+regles possibles    : variable ou appel
+nombre de candidates: 2 -&gt; le choix n'est pas determine
+
+si l'on parie 'variable' : jetons consommes 1 sur 4
+reste sur le flux       : ( NOMBRE ) -&gt; erreur signalee au mauvais endroit
+
+IDENT ( NOMBRE )       -&gt; appel     jetons consommes : 4 sur 4
+IDENT                  -&gt; variable  jetons consommes : 1 sur 1</code></pre></figure>
+
+<p>Les trois premières lignes constatent le blocage. Sur le texte <code>racine(9)</code>, dont les jetons sont <code>IDENT ( NOMBRE )</code>, le jeton d'avance est <code>IDENT</code>, et <strong>deux</strong> règles peuvent commencer ainsi. Le mot important est celui de la troisième ligne&nbsp;: le choix n'est pas <em>déterminé</em>. Il ne s'agit pas d'un choix difficile&nbsp;; il s'agit d'un choix que l'information disponible ne permet pas de faire.</p>
+<p>Les deux lignes suivantes montrent la vraie facture. L'analyseur a parié sur <code>variable</code>, il a consommé <strong>1 jeton sur 4</strong>, et sa règle a <em>réussi</em>&nbsp;: elle a bel et bien reconnu une variable nommée <code>racine</code>. Il reste <code>( NOMBRE )</code> sur le flux, et personne ne s'en apercevra à cet endroit-là. La faute remontera bien plus tard, quand une règle appelante constatera qu'il traîne du texte qu'elle n'attendait pas — et le message parlera de la parenthèse ouvrante, à trois jetons de la vraie cause. Un analyseur qui devine ne produit pas des erreurs&nbsp;: il produit des erreurs <strong>déplacées</strong>, ce qui est nettement pire pour qui doit les lire.</p>
+<p>Avant d'aller plus loin, écartons une confusion qui coûte cher. Ceci n'est <strong>pas</strong> une grammaire ambiguë au sens de la <a href="lecon-03.html">leçon 3</a>. Le texte <code>racine(9)</code> n'admet qu'une seule lecture — c'est un appel de fonction, et rien d'autre —, et la grammaire ne lui attribue qu'un seul arbre. Ce qui échoue ici n'est pas la définition du langage, c'est notre <em>méthode</em>&nbsp;: décider avec un jeton d'avance. Une grammaire ambiguë est malade&nbsp;; celle-ci se porte très bien, elle est simplement écrite sous une forme que notre analyseur ne sait pas lire. Les deux situations se ressemblent de loin et se soignent différemment, alors garde la distinction en tête&nbsp;: <em>ambiguïté</em>, c'est deux arbres pour un texte&nbsp;; <em>préfixe commun</em>, c'est un seul arbre, mais un choix qu'on ne peut pas faire assez tôt.</p>
+<p>Le remède porte un nom et tient en une idée&nbsp;: <strong>la factorisation à gauche</strong>. Puisque les deux alternatives commencent pareil, on refuse de choisir tant qu'elles se ressemblent. On lit la partie commune — ici le seul jeton <code>IDENT</code> —, et l'on ne décide qu'<em>après</em>, au moment où les chemins se séparent enfin. La règle s'écrit alors avec une partie optionnelle&nbsp;: un facteur est un <code>IDENT</code>, éventuellement suivi d'une parenthèse ouvrante, d'une expression et d'une parenthèse fermante. Il n'y a plus deux alternatives concurrentes&nbsp;; il y en a une, avec un morceau facultatif à l'intérieur.</p>
+<p>Les deux dernières lignes de la sortie mesurent le résultat. Sur <code>IDENT ( NOMBRE )</code>, la règle factorisée reconnaît un <strong>appel</strong> et consomme <strong>4 jetons sur 4</strong>&nbsp;; sur <code>IDENT</code> seul, elle reconnaît une <strong>variable</strong> et consomme <strong>1 sur 1</strong>. Le chiffre qui compte est celui de droite&nbsp;: dans les deux cas, tout est lu, rien ne reste derrière. C'est très exactement ce que le pari de tout à l'heure ratait, et c'est le seul critère qui vaille — une règle qui laisse traîner du texte qu'elle aurait dû prendre a déjà perdu, même lorsqu'elle rend un résultat.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 252" role="img" aria-label="Comparaison, en deux parties séparées par un trait horizontal, de la règle facteur avant et après factorisation à gauche. La partie du haut, intitulée avant, deux alternatives, montre deux rangées de trois boîtes reliées de gauche à droite par des flèches. Première rangée : jeton d'avance IDENT, facteur doit choisir ; puis IDENT ou IDENT parenthèse ouvrante expr parenthèse fermante, les deux conviennent ; puis choix non déterminé, findIndex prend la première. Seconde rangée : on parie variable, la règle réussit ; puis 1 jeton consommé sur 4, reste parenthèse ouvrante NOMBRE parenthèse fermante sur le flux ; puis erreur au mauvais endroit, loin de la vraie cause. La partie du bas, intitulée après, factorisation à gauche, montre une seule rangée de trois boîtes : la partie commune, IDENT lu d'abord ; puis le jeton suivant décide, une parenthèse ouvrante donne un appel, sinon une variable ; puis 4 jetons sur 4, et 1 sur 1 pour la variable. Sont surlignées la première boîte de chaque partie ainsi que la dernière boîte de la rangée du bas. Deux lignes de légende concluent en donnant la règle factorisée, facteur égale IDENT virgule crochet ouvrant parenthèse ouvrante virgule expression virgule parenthèse fermante crochet fermant, puis en rappelant que la grammaire change de forme mais que le langage reconnu ne change pas.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux règles qui commencent pareil, et la réécriture qui les sépare</text>
+
+    <text class="d-tag" x="20" y="42" font-size="9.5">AVANT (deux alternatives)</text>
+    <rect class="d-accent" x="20" y="50" width="150" height="34" rx="8" />
+    <text class="d-text" x="95" y="66" text-anchor="middle" font-size="10">jeton d'avance : IDENT</text>
+    <text class="d-mut" x="95" y="78" text-anchor="middle" font-size="8">facteur doit choisir</text>
+    <path class="d-line" d="M170 67 L226 67" fill="none" /><path class="d-line" d="M220 63 L226 67 L220 71" fill="none" />
+    <rect class="d-box" x="232" y="50" width="176" height="34" rx="8" />
+    <text class="d-text" x="320" y="66" text-anchor="middle" font-size="9.5">IDENT ou IDENT ( expr )</text>
+    <text class="d-mut" x="320" y="78" text-anchor="middle" font-size="8">les deux conviennent</text>
+    <path class="d-line" d="M408 67 L434 67" fill="none" /><path class="d-line" d="M428 63 L434 67 L428 71" fill="none" />
+    <rect class="d-box" x="440" y="50" width="180" height="34" rx="8" />
+    <text class="d-text" x="530" y="66" text-anchor="middle" font-size="10">choix non déterminé</text>
+    <text class="d-mut" x="530" y="78" text-anchor="middle" font-size="8">findIndex prend la première</text>
+
+    <rect class="d-box" x="20" y="92" width="150" height="34" rx="8" />
+    <text class="d-text" x="95" y="108" text-anchor="middle" font-size="9.5">on parie « variable »</text>
+    <text class="d-mut" x="95" y="120" text-anchor="middle" font-size="8">la règle réussit</text>
+    <path class="d-line" d="M170 109 L226 109" fill="none" /><path class="d-line" d="M220 105 L226 109 L220 113" fill="none" />
+    <rect class="d-box" x="232" y="92" width="176" height="34" rx="8" />
+    <text class="d-text" x="320" y="108" text-anchor="middle" font-size="9.5">1 jeton consommé sur 4</text>
+    <text class="d-mut" x="320" y="120" text-anchor="middle" font-size="8">reste ( NOMBRE ) sur le flux</text>
+    <path class="d-line" d="M408 109 L434 109" fill="none" /><path class="d-line" d="M428 105 L434 109 L428 113" fill="none" />
+    <rect class="d-box" x="440" y="92" width="180" height="34" rx="8" />
+    <text class="d-text" x="530" y="108" text-anchor="middle" font-size="10">erreur au mauvais endroit</text>
+    <text class="d-mut" x="530" y="120" text-anchor="middle" font-size="8">loin de la vraie cause</text>
+
+    <path class="d-line" d="M20 140 L620 140" fill="none" />
+
+    <text class="d-tag" x="20" y="158" font-size="9.5">APRÈS (factorisation à gauche)</text>
+    <rect class="d-accent" x="20" y="166" width="150" height="34" rx="8" />
+    <text class="d-text" x="95" y="182" text-anchor="middle" font-size="10">la partie commune</text>
+    <text class="d-mut" x="95" y="194" text-anchor="middle" font-size="8">IDENT, lu d'abord</text>
+    <path class="d-line" d="M170 183 L226 183" fill="none" /><path class="d-line" d="M220 179 L226 183 L220 187" fill="none" />
+    <rect class="d-box" x="232" y="166" width="176" height="34" rx="8" />
+    <text class="d-text" x="320" y="182" text-anchor="middle" font-size="9.5">le jeton suivant décide</text>
+    <text class="d-mut" x="320" y="194" text-anchor="middle" font-size="8">« ( » donne un appel, sinon une variable</text>
+    <path class="d-line" d="M408 183 L434 183" fill="none" /><path class="d-line" d="M428 179 L434 183 L428 187" fill="none" />
+    <rect class="d-accent" x="440" y="166" width="180" height="34" rx="8" />
+    <text class="d-text" x="530" y="182" text-anchor="middle" font-size="10">4 jetons sur 4</text>
+    <text class="d-mut" x="530" y="194" text-anchor="middle" font-size="8">et 1 sur 1 pour la variable</text>
+
+    <text class="d-mut" x="320" y="222" text-anchor="middle" font-size="9">facteur = IDENT , [ "(" , expression , ")" ]</text>
+    <text class="d-mut" x="320" y="238" text-anchor="middle" font-size="9">La grammaire change de forme ; le langage reconnu, lui, ne change pas.</text>
+  </svg>
+  <figcaption>La factorisation ne retire ni n'ajoute un seul texte au langage&nbsp;: <code>racine(9)</code> et <code>racine</code> étaient acceptés avant, ils le sont après. Ce qui change, c'est la <em>place</em> de la décision — elle a reculé d'un jeton, juste assez pour devenir possible.</figcaption>
+</figure>
+
+<p>La recette générale tient en trois gestes, et elle s'applique à n'importe quelle règle. <strong>Un&nbsp;:</strong> regroupe les alternatives qui commencent par le même symbole. <strong>Deux&nbsp;:</strong> écris ce symbole commun une seule fois, en tête. <strong>Trois&nbsp;:</strong> range tout ce qui les distinguait dans une nouvelle règle, dont l'une des alternatives sera <em>vide</em> — c'est cette alternative vide qui remplace la version courte. Puis recalcule PREMIERS, parce que la grammaire n'est plus la même. Le procédé est purement mécanique&nbsp;; certains générateurs d'analyseurs l'appliquent d'eux-mêmes, les autres se contentent de signaler le conflit et te laissent écrire la nouvelle règle.</p>
+<p>Il faut être honnête sur ce que cela coûte. La grammaire factorisée est moins agréable à lire que celle qu'on avait écrite d'abord&nbsp;: la règle ne dit plus «&nbsp;une variable ou un appel&nbsp;», deux choses que le langage distingue, mais «&nbsp;un nom, éventuellement suivi d'arguments&nbsp;», qui n'en est qu'une. La documentation du langage continuera de présenter les deux formes séparément&nbsp;; c'est la grammaire de <em>l'analyseur</em> qui les fusionne. Et il faudra les redistinguer plus tard, au moment de construire l'arbre&nbsp;: ce sera le petit <code>if</code> qui regarde si la parenthèse était là, et qui décide de fabriquer un nœud «&nbsp;variable&nbsp;» ou un nœud «&nbsp;appel&nbsp;». La <a href="lecon-09.html">leçon 9</a> fera exactement ce genre de choix pour chaque forme de Brindille.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Repérer le conflit avant qu'il ne te trouve</p><p>Tu n'as pas besoin d'attendre le premier texte mal analysé pour savoir qu'une grammaire pose problème. Le contrôle tient en une boucle&nbsp;: pour chaque règle, calcule les débuts possibles de chacune de ses alternatives, jette-les tous dans le même sac, et regarde si un jeton y tombe deux fois. S'il y tombe deux fois, un seul jeton d'avance ne suffira pas pour cette règle-là — et le message utile n'est pas «&nbsp;grammaire invalide&nbsp;», c'est «&nbsp;<em>dans la règle facteur, deux alternatives commencent par IDENT</em>&nbsp;», qui dit exactement quoi factoriser. Fais tourner ce contrôle chaque fois que tu ajoutes une règle&nbsp;: il coûte quelques lignes, il s'exécute en un clin d'œil, et il transforme une classe entière de fautes silencieuses en un message lisible. C'est l'objet du troisième exercice de cette leçon.</p></div></div>
+
+<p>Reste la question qu'on se pose légitimement en arrivant ici&nbsp;: et si la factorisation ne suffisait pas&nbsp;? Elle règle les préfixes communs de longueur finie et connue, ce qui couvre l'immense majorité des cas réels, mais il existe des grammaires où aucune réécriture raisonnable ne rend la décision possible avec un seul jeton. Trois sorties s'offrent alors, et aucune n'est gratuite. On peut <strong>regarder plus loin</strong> — deux jetons, trois, <em>k</em> jetons —, ce qui repousse le problème sans le supprimer et fait grossir les tables de décision. On peut <strong>essayer puis revenir en arrière</strong>, c'est-à-dire renoncer au déterminisme et retomber, dans le pire des cas, sur l'exploration coûteuse de la deuxième section. Ou l'on peut changer de famille d'analyseur pour un procédé qui décide <em>après</em> avoir lu au lieu de décider avant&nbsp;: c'est le principe des analyseurs ascendants, ceux que produisent les générateurs classiques, qui acceptent des grammaires strictement plus nombreuses au prix d'un fonctionnement beaucoup moins lisible à la main.</p>
+<p>Il existe enfin une quatrième sortie, la plus employée de toutes, et elle mérite d'être dite parce qu'elle renverse le sens de la contrainte&nbsp;: <strong>on change le langage</strong>. Tant que la syntaxe est encore sur la table, il est infiniment moins coûteux de déplacer un mot-clé que de bâtir un analyseur exotique. C'est pour cela que tant de langages font commencer leurs déclarations par un mot réservé — <code>soit</code> en Brindille, et la règle se choisit sur ce seul mot. À l'inverse, un langage qui a laissé passer une difficulté la traîne pour toujours&nbsp;: en C, la suite <code>(x) * y</code> est une multiplication si <code>x</code> est une variable, et la conversion d'un déréférencement si <code>x</code> est un nom de type introduit par <code>typedef</code>. Aucun nombre de jetons d'avance ne tranche, parce que la réponse ne se trouve pas dans le texte qui suit, mais dans ce qui a été déclaré avant. La règle à retenir vaut bien au-delà des compilateurs&nbsp;: <em>une syntaxe se conçoit en sachant qui devra la lire</em>.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: le nom de ce que nous venons de construire</p><p>Une grammaire dont chaque règle se décide en lisant le texte de <strong>g</strong>auche à droite tout en construisant une dérivation à <strong>g</strong>auche, avec <strong>1</strong> jeton d'avance, est dite <em>LL(1)</em> — les deux L pour ces deux sens de parcours, le 1 pour le nombre de jetons regardés. C'est très exactement ce que ces sections ont assemblé pièce par pièce, sans le nommer. Le <em>k</em> de <em>LL(k)</em> désigne la variante qui en regarde <em>k</em>&nbsp;; la famille rivale, notée <em>LR</em>, lit elle aussi de gauche à droite mais construit la dérivation à <em>droite</em>, ce qui lui permet d'attendre bien plus longtemps avant de trancher. Retiens surtout la logique de ces sigles&nbsp;: ils ne désignent pas des programmes, mais des <strong>classes de grammaires</strong> — l'ensemble de celles qu'une méthode donnée sait traiter. Dire «&nbsp;cette grammaire n'est pas LL(1)&nbsp;» ne signifie donc jamais qu'elle est mauvaise, seulement qu'elle est hors de portée de cette méthode-là&nbsp;; et c'est précisément ce que la factorisation vient corriger.</p></div></div>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Arrêter le calcul de PREMIERS au premier tour qui «&nbsp;a l'air&nbsp;» terminé.</strong> C'est le défaut le plus coûteux de cette leçon, parce qu'il ne se voit nulle part&nbsp;: rien ne plante, aucun message n'apparaît, les ensembles sont simplement trop petits. Mesuré sur nos cinq règles, prises dans l'ordre où elles sont écrites&nbsp;: après <strong>un seul</strong> passage, <code>PREMIERS(expression)</code> et <code>PREMIERS(terme)</code> sont encore <strong>vides</strong> — seul <code>facteur</code>, qui ne dépend de personne, s'est rempli. Le deuxième tour remplit <code>terme</code>, le troisième <code>expression</code>, et le quatrième ne change plus rien. Un analyseur bâti sur la table du premier tour ne reconnaîtra plus une seule expression, et il refusera dès le premier jeton avec un message parfaitement crédible. Deux réflexes le rendent impossible&nbsp;: ne s'arrêter que sur un tour <strong>blanc</strong> — celui qui n'ajoute rien —, et contrôler à la fin qu'aucun non-terminal n'a gardé un ensemble vide alors qu'il n'a pas d'alternative vide.</p></div></div>
+<ul>
+<li><strong>Avaler le jeton d'avance au lieu de le regarder</strong> — <code>voir()</code> ne touche pas au curseur, <code>avaler()</code> l'avance d'un cran, et la démonstration du flux montre la différence à trois lignes d'intervalle&nbsp;: deux <code>voir()</code> consécutifs rendent <code>MOT_CLE soit</code> deux fois, alors qu'un <code>avaler()</code> intercalé fait passer le suivant à <code>IDENT prix</code>. Un <code>avaler()</code> écrit là où il fallait un <code>voir()</code> fait décider sur le jeton d'après, et le décalage se propage jusqu'au bout de la règle&nbsp;: la faute finit par être signalée, mais ailleurs.</li>
+<li><strong>Croire que le jeton <code>FIN</code> sort du lexique</strong> — le module 2 produit quatre types, <code>MOT_CLE</code>, <code>IDENT</code>, <code>NOMBRE</code> et <code>SYMBOLE</code>&nbsp;; <code>FIN</code> est le cinquième, et c'est le flux qui le fabrique, à la position <code>longueurTexte</code> — 14 sur <code>soit prix = 12</code>, soit un cran après le dernier caractère du texte. Sans cette sentinelle, une fois les quatre jetons avalés, <code>voir()</code> rend <code>undefined</code>&nbsp;: la panne se produit alors dans le code appelant, sur une propriété lue de travers, et pas là où le texte est fautif.</li>
+<li><strong>Confondre une grammaire ambiguë et un simple préfixe commun</strong> — les deux se manifestent de la même façon, «&nbsp;deux règles conviennent&nbsp;», et se soignent à l'opposé. Mesuré sur <code>racine(9)</code>&nbsp;: deux candidates, <code>findIndex</code> prend la première sans un mot, <strong>1 jeton consommé sur 4</strong>, et <code>( NOMBRE )</code> reste sur le flux. Or ce texte n'a qu'un seul arbre. Ce n'est donc pas le langage qu'il faut amputer, c'est la règle qu'il faut réécrire — et les deux remèdes ne sont pas interchangeables.</li>
+<li><strong>Croire que la factorisation à gauche change le langage</strong> — elle n'ajoute ni ne retire un seul texte&nbsp;: <code>IDENT ( NOMBRE )</code> et <code>IDENT</code> sont acceptés avant comme après, et la règle factorisée consomme <strong>4 jetons sur 4</strong> dans le premier cas, <strong>1 sur 1</strong> dans le second. Seule bouge la place de la décision. En revanche la grammaire, elle, n'est plus la même&nbsp;: il faut <strong>recalculer PREMIERS</strong> avant de s'en resservir, sans quoi l'on décide avec une table périmée — une faute silencieuse de plus, et de la même famille que la première de cette liste.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Tu écriras un jour un lecteur de JSON à la main — pour un outil, pour un exercice, pour éviter une dépendance de plus. C'est l'occasion de retrouver toute la matière de cette leçon dans un format que tout le monde a déjà ouvert. La RFC 8259, qui définit JSON, énumère <strong>sept</strong> formes possibles pour une valeur&nbsp;: <code>false</code>, <code>null</code>, <code>true</code>, un objet, un tableau, un nombre, une chaîne. Regarde maintenant par quoi commence chacune&nbsp;: <code>f</code>, <code>n</code>, <code>t</code>, <code>{</code>, <code>[</code>, un chiffre ou un signe moins, et le guillemet. Sept formes, sept débuts tous différents — un seul jeton d'avance suffit à choisir, et ce n'est pas un heureux hasard&nbsp;: c'est ce qui rend ce format si facile à lire pour un programme écrit à la main. Transcris cette grammaire dans le format de cette leçon — sept règles&nbsp;: <code>valeur</code>, <code>objet</code>, <code>membres</code>, <code>suiteM</code>, <code>tableau</code>, <code>elements</code>, <code>suiteE</code> — puis passe-la au compteur de conflits du troisième exercice&nbsp;: il rend <strong>0</strong>, et <code>PREMIERS(valeur)</code> contient exactement sept jetons, un par forme, sans un seul doublon. Vient alors la faute la plus naturelle du monde. En écrivant la règle de l'objet, on distingue spontanément l'objet vide de l'objet garni, parce que c'est ainsi qu'on y pense&nbsp;: <code>objet = "{" "}" | "{" membres "}"</code>. Le compteur passe à <strong>1</strong>, et il dit lequel&nbsp;: <em>dans la règle objet, deux alternatives commencent par <code>{</code></em>. Le remède est celui de la leçon — écrire l'accolade une seule fois et rendre le contenu facultatif&nbsp;: <code>objet = "{" , membres , "}"</code>, avec un <code>membres</code> qui a le droit d'être vide. Trois choses à en retenir. <strong>Un&nbsp;:</strong> ce n'est pas le format qui posait problème, c'est la façon de l'écrire — les deux versions de la règle acceptent exactement les mêmes textes. <strong>Deux&nbsp;:</strong> la faute est invisible à la relecture, parce que la règle fautive est la <em>plus lisible</em> des deux&nbsp;; c'est même ce qui la rend tentante. <strong>Trois&nbsp;:</strong> un contrôle automatique, relancé chaque fois qu'on touche à la grammaire, nomme la règle et le jeton en défaut. C'est très exactement ce que fait un générateur d'analyseurs lorsqu'il refuse une grammaire — et c'est ce que le troisième exercice te fait écrire, en deux fonctions.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Quel test écrire, selon ce que l'on cherche dans le flux</caption>
+    <thead><tr><th scope="col">Ce qu'on cherche</th><th scope="col">Le test</th><th scope="col">Pourquoi celui-là</th><th scope="col">Ce qu'on obtient en se trompant</th></tr></thead>
+    <tbody>
+      <tr><td>un <code>+</code>, ou l'un des six autres symboles</td><td><code>jeton.valeur === "+"</code></td><td><code>+ - * / ( ) =</code> portent <em>tous</em> le type <code>SYMBOLE</code></td><td><code>jeton.type === "PLUS"</code> est toujours faux&nbsp;: toutes les additions sont refusées, sans message</td></tr>
+      <tr><td>un nombre littéral</td><td><code>jeton.type === "NOMBRE"</code></td><td>sa valeur change à chaque littéral, son type non</td><td>tester la valeur obligerait à énumérer tous les nombres possibles</td></tr>
+      <tr><td>un nom de variable</td><td><code>jeton.type === "IDENT"</code></td><td>même raison, et le lexique a déjà écarté les mots-clés</td><td>accepter aussi <code>MOT_CLE</code>&nbsp;: <code>soit</code> passerait pour un nom de variable</td></tr>
+      <tr><td>le mot-clé <code>soit</code></td><td><code>jeton.valeur === "soit"</code></td><td><code>MOT_CLE</code> regroupe <code>soit</code> <em>et</em> <code>affiche</code></td><td><code>jeton.type === "MOT_CLE"</code> accepte <code>affiche</code> là où l'on voulait <code>soit</code></td></tr>
+      <tr><td>la fin du texte</td><td><code>jeton.type === "FIN"</code></td><td>la sentinelle porte une valeur vide&nbsp;: il n'y a rien à comparer</td><td>un test <code>=== undefined</code> ne se déclenche jamais&nbsp;: la sentinelle est toujours là</td></tr>
+    </tbody>
+  </table>
+</figure>
+<figure class="cheat-table">
+  <table>
+    <caption>De la grammaire à la décision, geste par geste</caption>
+    <thead><tr><th scope="col">Geste</th><th scope="col">Comment on le fait</th><th scope="col">Sur notre grammaire</th><th scope="col">Si on le rate</th></tr></thead>
+    <tbody>
+      <tr><td>Calculer PREMIERS</td><td>par point fixe&nbsp;: on répète le même passage tant qu'un tour ajoute quelque chose</td><td>4 tours, le quatrième n'ajoute rien</td><td>après un seul tour, <code>expression</code> et <code>terme</code> sont encore vides</td></tr>
+      <tr><td>Vérifier la disjonction</td><td>pour chaque règle, jeter les débuts de toutes ses alternatives dans un même sac et chercher un doublon</td><td>0 conflit</td><td><code>findIndex</code> prend l'alternative écrite en premier, sans un mot</td></tr>
+      <tr><td>Choisir l'alternative</td><td>regarder le jeton d'avance sans le consommer, puis remplacer</td><td>11 décisions pour 5 jetons, 0 forme explorée</td><td>337 formes explorées pour 11 étapes utiles</td></tr>
+      <tr><td>Arrêter une règle</td><td>vérifier que le jeton vu a le droit de <em>suivre</em> la règle&nbsp;: c'est l'ensemble SUIVANTS</td><td>notre miniature s'en dispense et se rabat sur l'alternative vide</td><td>une erreur signalée trop tard, ou pas signalée du tout</td></tr>
+      <tr><td>Factoriser un préfixe commun</td><td>écrire la partie commune une seule fois, décider après</td><td><code>IDENT</code> lu d'abord&nbsp;: 4 jetons sur 4, puis 1 sur 1</td><td>1 jeton consommé sur 4, et <code>( NOMBRE )</code> laissé sur le flux</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Dériver</dt><dd>Partir du symbole de départ et remplacer, encore et encore, un non-terminal par l'une de ses alternatives, jusqu'à ce qu'il n'en reste aucun. Le procédé n'échoue jamais et ne regarde aucun texte&nbsp;: toute suite de choix produit une phrase du langage. Quand on remplace systématiquement le non-terminal le plus à gauche, on parle d'une <em>dérivation à gauche</em>&nbsp;: c'est la seule qui produise les terminaux dans l'ordre où les jetons arrivent.</dd>
+  <dt>Reconnaître</dt><dd>Le problème inverse&nbsp;: on reçoit un texte, et il faut retrouver une suite de remplacements qui le produit exactement — ou établir qu'il n'en existe aucune. C'est le travail de l'analyseur syntaxique. Menée à l'aveugle sur les cinq jetons de <code>2 + 3 * 4</code>, la recherche a examiné 337 formes pour une dérivation qui en compte 11.</dd>
+  <dt>PREMIERS</dt><dd>Pour un non-terminal, l'ensemble des terminaux qui peuvent apparaître en <em>première</em> position d'une phrase qu'il engendre. C'est exactement l'information qu'il faut pour choisir une alternative en ne regardant qu'un seul jeton. Sur la grammaire de la leçon, <code>expression</code>, <code>terme</code> et <code>facteur</code> ont le même&nbsp;: <code>{ NOMBRE, ( }</code>.</dd>
+  <dt>Point fixe</dt><dd>Méthode de calcul qui renonce à chercher le bon ordre&nbsp;: on répète le même passage sur toutes les règles tant qu'un tour modifie quelque chose, et l'on s'arrête sur un tour blanc. Ce dernier tour ne calcule rien&nbsp;; il prouve qu'il n'y a plus rien à calculer. Quatre tours sur notre grammaire, et un résultat qui ne dépend pas de l'ordre d'écriture des règles.</dd>
+  <dt>Jeton d'avance</dt><dd>Le prochain jeton du flux, <em>regardé</em> mais non consommé, sur lequel se fonde le choix de l'alternative. Un seul suffit tant que deux alternatives d'une même règle ne peuvent pas commencer par le même jeton&nbsp;; c'est ce que désigne le sigle LL(1).</dd>
+  <dt>Sentinelle</dt><dd>Élément fabriqué, ajouté au bout d'une collection pour supprimer chez tous ses lecteurs le cas particulier «&nbsp;il n'y a plus rien&nbsp;». Ici le jeton <code>FIN</code>, que <code>voir()</code> rend indéfiniment une fois le dernier jeton dépassé, à la position <code>longueurTexte</code> — un cran après le dernier caractère, ce qu'il faut pour qu'un message pointe la fin du fichier.</dd>
+  <dt>Préfixe commun</dt><dd>Situation où deux alternatives d'une même règle commencent par les mêmes symboles&nbsp;: le jeton d'avance ne les départage pas. Ce n'est <em>pas</em> une ambiguïté — le texte n'admet qu'un seul arbre —, c'est la méthode de décision qui est en défaut&nbsp;; c'est donc la grammaire qu'on réécrit, pas le langage qu'on ampute.</dd>
+  <dt>Factorisation à gauche</dt><dd>Réécriture qui met en facteur le début commun de plusieurs alternatives&nbsp;: on lit la partie commune d'abord, et l'on ne décide qu'ensuite, à l'endroit où les chemins se séparent. Elle change la forme de la grammaire sans changer l'ensemble des textes acceptés — mais elle oblige à recalculer PREMIERS.</dd>
+  <dt>Type <code>SYMBOLE</code></dt><dd>Type unique sous lequel le module 2 range les sept caractères <code>+ - * / ( ) =</code>. Il n'existe donc ni type <code>PLUS</code> ni type <code>EGAL</code>&nbsp;: l'analyseur syntaxique compare des <em>valeurs</em> pour les symboles, et des <em>types</em> pour les nombres, les noms et la fin du texte. C'est la contrepartie annoncée par la <a href="lecon-04.html">leçon 4</a> le jour où elle a choisi ce regroupement.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le lexique valide des <strong>mots</strong>, pas des <strong>phrases</strong>&nbsp;: <code>2 + + 3</code> lui donne <strong>4</strong> jetons irréprochables, <code>soit = 12</code> en donne <strong>3</strong>, <code>affiche )</code> en donne <strong>2</strong>. Aucun de ces trois textes n'est un programme, et l'analyse lexicale n'a pas les moyens de le dire.</li>
+<li><strong>Dériver</strong> va de la grammaire au texte et n'échoue jamais&nbsp;; <strong>reconnaître</strong> est le problème inverse. Menée à l'aveugle sur les 5 jetons de <code>2 + 3 * 4</code>, la recherche a examiné <strong>337 formes</strong> pour une dérivation de <strong>11 étapes</strong>&nbsp;: 326 essais jetés.</li>
+<li><strong>PREMIERS</strong> répond à «&nbsp;par quels jetons peux-tu commencer&nbsp;?&nbsp;», et se calcule par <strong>point fixe</strong>&nbsp;: <strong>4 tours</strong>, dont le dernier ne change rien et sert uniquement de preuve d'arrêt.</li>
+<li>Avec <strong>un seul jeton d'avance</strong>, la même dérivation coûte <strong>11 décisions</strong> et <strong>0 exploration</strong>&nbsp;; la forme finale est identique à l'entrée, et c'est cette égalité, exactement, qui s'appelle «&nbsp;reconnaître&nbsp;».</li>
+<li>Le flux n'expose que <strong>trois gestes</strong>&nbsp;: <code>voir</code> ne bouge pas, <code>avaler</code> avance d'un cran, <code>attendre</code> compare la <strong>valeur</strong> puis avale — sinon il lève une erreur qui cite la position&nbsp;: <code>attendu "==", trouve "=" en position 10</code>.</li>
+<li>La <strong>sentinelle</strong> <code>FIN</code> est le cinquième type de jeton, et le seul qu'aucun motif ne produise. Elle supprime toute vérification de dépassement dans le code appelant&nbsp;: il n'y a plus rien à oublier.</li>
+<li>Un <strong>préfixe commun</strong> rend le choix impossible&nbsp;: deux règles pour <code>IDENT</code>, <strong>1 jeton consommé sur 4</strong>, et une erreur signalée loin de sa cause. La <strong>factorisation à gauche</strong> rend <strong>4 sur 4</strong> puis <strong>1 sur 1</strong>, sans toucher au langage reconnu.</li>
+<li>Tout ceci manipulait des <em>formes</em>, des listes de symboles réécrites en mémoire. La <a href="lecon-08.html">leçon 8</a> les remplace par des fonctions — une par règle — et la <a href="lecon-09.html">leçon 9</a> leur fait construire un arbre.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un analyseur guidé accepte <code>2 + 3 * 4</code> mais refuse <code>(2 + 3) * 4</code> en se plaignant du tout premier jeton. Quelle partie du calcul de PREMIERS soupçonnes-tu, et quel contrôle d'une seule ligne écris-tu pour trancher&nbsp;?</li>
+<li>Explique la différence entre un texte qui admet deux arbres et une règle dont deux alternatives commencent par le même jeton, en une phrase qui n'emploie ni le mot «&nbsp;ambigu&nbsp;» ni le mot «&nbsp;compliqué&nbsp;».</li>
+<li>Ton flux rend <code>undefined</code> au lieu du jeton <code>FIN</code> dès que le texte est entièrement lu. Donne les deux endroits du code où l'erreur peut se trouver, et le test de trois lignes qui les départage.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Sur les cinq jetons de 2 + 3 * 4, une recherche à l'aveugle examine 337 formes ; la même dérivation, guidée par un seul jeton d'avance, n'en explore aucune. Qu'est-ce qui change entre les deux ?","a":["Rien du résultat : la dérivation trouvée est la même, longue de 11 étapes ; seul disparaît le travail d'exploration qui était ensuite jeté","La dérivation guidée est plus courte, car le jeton d'avance permet de sauter les étapes qui n'apportent aucun terminal nouveau au texte","La recherche à l'aveugle parcourt un langage plus vaste, car elle seule accepte des formes plus longues que la suite de jetons visée","La version guidée renonce aux alternatives vides, qui sont précisément celles que l'exploration à l'aveugle passait son temps à essayer"],"correct":0,"explain":"Les deux méthodes rendent exactement la MÊME dérivation, de 11 étapes. La version guidée prend 11 décisions et n'en reprend aucune ; la recherche à l'aveugle avait examiné 337 formes pour arriver au même endroit, soit 326 essais jetés. Le jeton d'avance ne supprime pas le travail, il supprime l'exploration."},
+  {"q":"Le calcul de PREMIERS par point fixe fait quatre tours sur notre grammaire de cinq règles, alors que le troisième tour a déjà rempli tous les ensembles. À quoi sert le quatrième ?","a":["À constater qu'un passage complet n'ajoute plus rien : c'est ce tour blanc, et lui seul, qui prouve que le calcul est terminé","À propager les ensembles une dernière fois vers les règles écrites en tête du fichier, que les tours précédents avaient traitées trop tôt","À repérer les non-terminaux qui peuvent se réduire à rien, information que les trois premiers tours n'avaient pas encore eu l'occasion de recueillir","À contrôler que deux alternatives d'une même règle ne partagent aucun jeton de début, vérification que la boucle garde toujours pour la fin"],"correct":0,"explain":"Trois tours suffisent à remplir : après un seul, expression et terme sont encore vides, le deuxième remplit terme, le troisième expression. Le quatrième ne calcule rien — il établit qu'il n'y a plus rien à calculer, et c'est ce qui rend le résultat indépendant de l'ordre d'écriture des règles."},
+  {"q":"Deux alternatives de la règle facteur commencent par IDENT. Que fait exactement le dériveur guidé, dont le choix repose sur findIndex ?","a":["Il retient l'alternative écrite en premier sans rien signaler, consomme 1 jeton sur 4, et laisse le reste du texte au code appelant","Il lève une erreur de grammaire au démarrage, avant même d'avoir lu le premier jeton du texte qu'on vient de lui soumettre","Il essaie les deux alternatives l'une après l'autre, puis conserve celle des deux qui a consommé le plus grand nombre de jetons","Il refuse le texte en signalant que deux règles conviennent, ce qui est très exactement la définition d'une grammaire ambiguë"],"correct":0,"explain":"findIndex rend le premier indice qui convient : le pari est pris en silence. Mesuré sur racine(9), dont les jetons sont IDENT ( NOMBRE ) : 2 candidates, 1 jeton consommé sur 4, et « ( NOMBRE ) » qui reste sur le flux, donc une erreur signalée trois jetons plus loin. Après factorisation à gauche : 4 jetons sur 4."},
+  {"q":"Dans l'analyseur syntaxique de Brindille, comment reconnaît-on un jeton « + » ?","a":["En comparant sa valeur, jeton.valeur === \"+\", car les sept caractères + - * / ( ) = portent tous le même type SYMBOLE","En comparant son type à PLUS, catégorie que l'analyseur lexical attribue à chaque signe d'addition qu'il rencontre dans le texte","En comparant son type à OPERATEUR puis sa valeur, le lexique séparant les opérateurs de calcul des signes de ponctuation","En comparant sa position à celle du jeton précédent, un opérateur binaire se trouvant toujours encadré par deux expressions"],"correct":0,"explain":"C'est la facture annoncée par la leçon 4, et elle se paie ici : sept caractères regroupés sous un seul type. C'est aussi ce que compare attendre, qui teste la valeur et non le type — d'où le message mesuré « attendu \"==\", trouve \"=\" en position 10 ». Un test sur le type PLUS serait toujours faux, sans la moindre erreur signalée."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"FIN"},"placeholder":"écris flux(jetons, longueurTexte), avale les 4 jetons, puis affiche voir().type","hints":["voir() rend jetons[i] tant que i est dans le tableau, et l'objet FIN sinon ; il ne touche jamais à i.","avaler() rend d'abord le jeton vu, puis n'avance que si i est encore dans le tableau — c'est ce qui l'empêche de dépasser.","Les quatre jetons sont soit (MOT_CLE), prix (IDENT), = (SYMBOLE) et 12 (NOMBRE) ; le texte fait 14 caractères."],"link":{"href":"lecon-07.html","label":"Revoir « Le flux de jetons : voir, avaler, exiger »"}},
+  {"type":"code","run":{"expect":"3"},"placeholder":"calcule PREMIERS par point fixe, puis affiche PREMIERS.facteur.size","hints":["Pars de tous les ensembles vides et répète le même passage sur toutes les règles tant qu'un tour ajoute quelque chose.","Une alternative qui commence par un terminal n'apporte que ce terminal ; une alternative qui commence par un non-terminal apporte tout PREMIERS de celui-ci.","facteur a maintenant trois alternatives, et chacune commence par un symbole différent."],"link":{"href":"lecon-07.html","label":"Revoir « PREMIERS : ce qui peut commencer une règle »"}},
+  {"type":"code","run":{"expect":"0 1 0"},"placeholder":"écris conflits(G), puis affiche les trois nombres sur une seule ligne","hints":["Les débuts possibles d'une alternative : rien si elle est vide, PREMIERS du premier symbole s'il est un non-terminal, le symbole lui-même sinon.","Pour chaque règle, jette tous ces débuts dans un même Set : un jeton qui s'y trouve déjà est un conflit.","Un seul console.log à trois arguments suffit à produire la ligne attendue."],"link":{"href":"lecon-07.html","label":"Revoir « Quand un seul jeton d'avance ne suffit plus »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>flux(jetons, longueurTexte)</code> avec ses deux premiers gestes, <code>voir()</code> et <code>avaler()</code>. Applique-le aux quatre jetons de <code>soit prix = 12</code>, avale-les tous les quatre, puis affiche le <strong>type</strong> que rend <code>voir()</code>. Avant de lancer&nbsp;: demande-toi ce que rendrait <code>voir()</code> si tu écrivais simplement <code>return jetons[i];</code>, sans la condition — et pourquoi cette réponse-là serait beaucoup plus pénible à traiter chez l'appelant.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Le flux, reduit aux deux gestes dont l'exercice a besoin.
+function flux(jetons, longueurTexte) {
+  const FIN = { type: "FIN", valeur: "", pos: longueurTexte };
+  let i = 0;
+  function voir() { return i &lt; jetons.length ? jetons[i] : FIN; }
+  function avaler() { const j = voir(); if (i &lt; jetons.length) i++; return j; }
+  return { voir, avaler };
+}
+
+const js = [
+  { type: "MOT_CLE", valeur: "soit", pos: 0 },
+  { type: "IDENT",   valeur: "prix", pos: 5 },
+  { type: "SYMBOLE", valeur: "=",    pos: 10 },
+  { type: "NOMBRE",  valeur: "12",   pos: 12 },
+];
+
+const f = flux(js, 14);
+f.avaler();
+f.avaler();
+f.avaler();
+f.avaler();
+console.log(f.voir().type);
+// affiche : FIN</code></pre></figure>
+<p>Les deux conditions <code>i &lt; jetons.length</code> ne font pas la même chose, et c'est tout l'intérêt de l'exercice. Celle de <code>voir()</code> décide <em>quoi rendre</em>&nbsp;: le jeton s'il en reste un, la sentinelle sinon. Celle d'<code>avaler()</code> décide <em>s'il faut avancer</em>&nbsp;: elle empêche le curseur de partir au-delà du tableau, si bien qu'un appel de trop ne coûte rien. Retire la première, et <code>voir()</code> rend <code>undefined</code>&nbsp;; l'appelant qui écrit <code>voir().valeur === "+"</code> ne reçoit alors pas <code>false</code>, il reçoit une exception — dans <em>sa</em> ligne à lui, pas dans le flux, et sans aucun rapport avec l'endroit du texte qui posait problème. Retire la seconde, et le curseur s'éloigne indéfiniment&nbsp;: <code>voir()</code> continue de rendre <code>FIN</code>, donc rien ne casse tout de suite, mais toute position calculée à partir du curseur devient fausse. La sentinelle coûte trois lignes et supprime une branche de code chez <em>chaque</em> appelant&nbsp;; c'est le meilleur échange de toute la leçon.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Brindille doit accepter les noms de variables&nbsp;: la règle devient <code>facteur = NOMBRE | IDENT | "(" , expression , ")"</code>. Reprends le calcul de PREMIERS par point fixe, applique-le à cette grammaire modifiée, et affiche la <strong>taille</strong> de <code>PREMIERS(facteur)</code>. Deux questions à te poser avant d'exécuter&nbsp;: les ensembles de <code>terme</code> et d'<code>expression</code> changent-ils eux aussi, et le nombre de tours nécessaires change-t-il&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// facteur gagne une alternative : un nom de variable.
+const G = {
+  expression: [["terme", "suiteA"]],
+  suiteA:     [["+", "terme", "suiteA"], ["-", "terme", "suiteA"], []],
+  terme:      [["facteur", "suiteM"]],
+  suiteM:     [["*", "facteur", "suiteM"], ["/", "facteur", "suiteM"], []],
+  facteur:    [["NOMBRE"], ["IDENT"], ["(", "expression", ")"]],
+};
+const estRegle = (s) =&gt; Object.prototype.hasOwnProperty.call(G, s);
+
+const PREMIERS = {}, VIDE = {};
+for (const nom in G) { PREMIERS[nom] = new Set(); VIDE[nom] = false; }
+let bouge = true;
+while (bouge) {
+  bouge = false;
+  for (const nom in G) for (const alt of G[nom]) {
+    if (alt.length === 0) { if (!VIDE[nom]) { VIDE[nom] = true; bouge = true; } continue; }
+    for (const s of alt) {
+      for (const t of (estRegle(s) ? PREMIERS[s] : [s]))
+        if (!PREMIERS[nom].has(t)) { PREMIERS[nom].add(t); bouge = true; }
+      if (!estRegle(s) || !VIDE[s]) break;
+    }
+  }
+}
+console.log(PREMIERS.facteur.size);
+// affiche : 3</code></pre></figure>
+<p>La réponse est <strong>3</strong>&nbsp;: <code>NOMBRE</code>, <code>IDENT</code> et <code>(</code>. Les trois alternatives commencent par trois choses différentes, donc un seul jeton d'avance continue de suffire — et c'est ce qu'il fallait vérifier avant d'écrire la moindre ligne d'analyseur. Réponse aux deux questions&nbsp;: oui, <code>terme</code> et <code>expression</code> passent eux aussi à trois éléments, puisqu'ils héritent de <code>facteur</code> par les deux propagations habituelles&nbsp;; et non, le nombre de tours ne bouge pas — c'est toujours quatre, parce que la chaîne de dépendances a la même longueur, seul le contenu qui la remonte a grossi. Compare maintenant avec la section «&nbsp;Quand un seul jeton d'avance ne suffit plus&nbsp;»&nbsp;: ajouter <code>IDENT</code> comme <em>troisième</em> alternative ne coûte rien, alors qu'ajouter <code>IDENT "(" expression ")"</code> comme <em>quatrième</em> casse tout. Ce qui compte n'est pas le nombre d'alternatives, c'est leur premier symbole.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>conflits(G)</code>, qui rend le <strong>nombre</strong> de conflits d'une grammaire&nbsp;: chaque fois que deux alternatives d'une même règle partagent un début possible, cela compte pour un. Applique-le à trois grammaires — celle de la leçon, la même augmentée des appels de fonction (<code>facteur = NOMBRE | IDENT | IDENT "(" expression ")" | "(" expression ")"</code>), puis sa version factorisée à gauche — et affiche les trois nombres sur une seule ligne, séparés par des espaces. Question à te poser avant d'écrire&nbsp;: peux-tu réutiliser tel quel le calcul de PREMIERS de la troisième section, ou faut-il l'adapter&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// DEFI : verifier AUTOMATIQUEMENT qu'une grammaire se decide avec UN SEUL jeton.
+// Pour chaque regle, les debuts possibles de ses alternatives doivent etre DISJOINTS.
+function premiers(G) {
+  const estRegle = (s) =&gt; Object.prototype.hasOwnProperty.call(G, s);
+  const P = {}, VIDE = {};
+  for (const n in G) { P[n] = new Set(); VIDE[n] = false; }
+  let bouge = true;
+  while (bouge) {
+    bouge = false;
+    for (const n in G) for (const alt of G[n]) {
+      if (alt.length === 0) { if (!VIDE[n]) { VIDE[n] = true; bouge = true; } continue; }
+      for (const s of alt) {
+        for (const t of (estRegle(s) ? P[s] : [s])) if (!P[n].has(t)) { P[n].add(t); bouge = true; }
+        if (!estRegle(s) || !VIDE[s]) break;
+      }
+    }
+  }
+  return { P, estRegle };
+}
+function conflits(G) {
+  const { P, estRegle } = premiers(G);
+  const debut = (alt) =&gt; (alt.length === 0 ? [] : estRegle(alt[0]) ? [...P[alt[0]]] : [alt[0]]);
+  let n = 0;
+  for (const nom in G) {
+    const vus = new Set();
+    for (const alt of G[nom]) for (const t of debut(alt)) { if (vus.has(t)) n++; else vus.add(t); }
+  }
+  return n;
+}
+
+const BASE = {
+  expression: [["terme", "suiteA"]],
+  suiteA:     [["+", "terme", "suiteA"], ["-", "terme", "suiteA"], []],
+  terme:      [["facteur", "suiteM"]],
+  suiteM:     [["*", "facteur", "suiteM"], ["/", "facteur", "suiteM"], []],
+};
+// (a) la grammaire de la lecon : facteur = NOMBRE | "(" expression ")"
+const STRATIFIEE = Object.assign({}, BASE, {
+  facteur: [["NOMBRE"], ["(", "expression", ")"]],
+});
+// (b) on ajoute les variables ET les appels : deux alternatives commencent par IDENT
+const AVEC_APPEL = Object.assign({}, BASE, {
+  facteur: [["NOMBRE"], ["IDENT"], ["IDENT", "(", "expression", ")"], ["(", "expression", ")"]],
+});
+// (c) factorisation a gauche : IDENT une seule fois, la suite dans une regle a part
+const FACTORISEE = Object.assign({}, BASE, {
+  facteur: [["NOMBRE"], ["IDENT", "suiteI"], ["(", "expression", ")"]],
+  suiteI:  [["(", "expression", ")"], []],
+});
+
+console.log(conflits(STRATIFIEE), conflits(AVEC_APPEL), conflits(FACTORISEE));
+// affiche : 0 1 0</code></pre></figure>
+<p>Réponse à la question posée&nbsp;: le calcul de PREMIERS se réutilise <strong>tel quel</strong>, à une chose près — il faut aussi rendre <code>estRegle</code>, parce que <code>conflits</code> en a besoin pour distinguer un début terminal d'un début à aller chercher dans PREMIERS. Le reste tient en deux idées. D'abord <code>debut(alt)</code>, exactement la même fonction que dans le dériveur guidé&nbsp;: rien pour une alternative vide, les PREMIERS du premier symbole s'il s'agit d'un non-terminal, le symbole lui-même sinon. Ensuite un <code>Set</code> par règle&nbsp;: on y jette les débuts de toutes ses alternatives, et tout jeton qui s'y trouvait déjà est un conflit. Le verdict est <code>0 1 0</code>&nbsp;: la grammaire de la leçon passe, celle qui ajoute les appels de fonction échoue en un point, et sa version factorisée repasse — sans que le langage reconnu ait changé entre ces deux dernières.</p>
+<p>Un dernier pas, et le contrôle devient utilisable au quotidien&nbsp;: remplace le compteur par un message. La boucle est la même&nbsp;; seule change la ligne qui, au lieu d'incrémenter, nomme la règle et le jeton fautifs.</p>
+<figure class="code-block" data-file="diagnostic.js"><pre><code class="language-javascript">// La meme boucle, mais qui DIT ce qui ne va pas au lieu de compter.
+function premiers(G) {
+  const estRegle = (s) =&gt; Object.prototype.hasOwnProperty.call(G, s);
+  const P = {}, VIDE = {};
+  for (const n in G) { P[n] = new Set(); VIDE[n] = false; }
+  let bouge = true;
+  while (bouge) {
+    bouge = false;
+    for (const n in G) for (const alt of G[n]) {
+      if (alt.length === 0) { if (!VIDE[n]) { VIDE[n] = true; bouge = true; } continue; }
+      for (const s of alt) {
+        for (const t of (estRegle(s) ? P[s] : [s])) if (!P[n].has(t)) { P[n].add(t); bouge = true; }
+        if (!estRegle(s) || !VIDE[s]) break;
+      }
+    }
+  }
+  return { P, estRegle };
+}
+function diagnostic(G) {
+  const { P, estRegle } = premiers(G);
+  const debut = (alt) =&gt; (alt.length === 0 ? [] : estRegle(alt[0]) ? [...P[alt[0]]] : [alt[0]]);
+  const messages = [];
+  for (const nom in G) {
+    const vus = new Set();
+    for (const alt of G[nom]) for (const t of debut(alt))
+      if (vus.has(t)) messages.push("dans la regle " + nom + ", deux alternatives commencent par " + t);
+      else vus.add(t);
+  }
+  return messages;
+}
+const AVEC_APPEL = {
+  expression: [["terme", "suiteA"]],
+  suiteA:     [["+", "terme", "suiteA"], ["-", "terme", "suiteA"], []],
+  terme:      [["facteur", "suiteM"]],
+  suiteM:     [["*", "facteur", "suiteM"], ["/", "facteur", "suiteM"], []],
+  facteur:    [["NOMBRE"], ["IDENT"], ["IDENT", "(", "expression", ")"], ["(", "expression", ")"]],
+};
+const m = diagnostic(AVEC_APPEL);
+console.log("conflits :", m.length);
+m.forEach((x) =&gt; console.log("  " + x));
+// affiche : conflits : 1
+// affiche :   dans la regle facteur, deux alternatives commencent par IDENT</code></pre></figure>
+<p>Compare les deux messages possibles. «&nbsp;Grammaire invalide&nbsp;» ne t'apprend rien et te laisse relire cinq règles&nbsp;; <em>dans la règle facteur, deux alternatives commencent par IDENT</em> te dit quoi factoriser, et où. Ce contrôle coûte deux fonctions, s'exécute instantanément, et se lance chaque fois que tu touches à la grammaire — c'est-à-dire au seul moment où la faute est encore facile à réparer. C'est, à peu de chose près, ce que te dit un générateur d'analyseurs lorsqu'il refuse une grammaire&nbsp;; la différence est que tu sais désormais d'où sort ce diagnostic, et donc quoi en faire.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

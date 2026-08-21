@@ -635,7 +635,7 @@ window.SITE_DATA = (function () {
     {
       id: "compilation", dir: "compilation", title: "Compilation : du texte source au code exécuté",
       glyph: "cp", language: "Compilation", level: "avance", status: "apercu",
-      accent: "#7a5a1e", lessons: 6, hours: 5,
+      accent: "#7a5a1e", lessons: 9, hours: 10,
       tagline: "Ce qui se passe entre le fichier que tu écris et ce que la machine exécute : compiler ou interpréter, les étapes d'une chaîne de compilation, pourquoi un langage a besoin d'une grammaire — puis, module après module, construire un langage minuscule de bout en bout : analyse lexicale, analyse syntaxique, arbre de syntaxe, évaluation et machine à pile. Tous les exemples sont en JavaScript et s'exécutent dans la page.",
       tags: ["Transversal", "Langages", "Bas niveau"],
     },
@@ -1423,9 +1423,9 @@ window.SITE_DATA = (function () {
         {
           num: "03", title: "Analyse syntaxique", sub: "grammaires, descente récursive, arbre de syntaxe", level: "avance",
           lessons: [
-            { num: "07", title: "Grammaires et dérivations", file: "#", status: "bientot" },
-            { num: "08", title: "L'analyse par descente récursive", file: "#", status: "bientot" },
-            { num: "09", title: "Priorité des opérateurs et arbre de syntaxe abstraite", file: "#", status: "bientot" },
+            { num: "07", title: "De la grammaire à l'analyseur : dériver et reconnaître", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "L'analyse par descente récursive", file: "lecon-08.html", status: "complet" },
+            { num: "09", title: "Priorité, associativité et arbre de syntaxe abstraite", file: "lecon-09.html", status: "complet" },
           ],
         },
         {
@@ -5865,7 +5865,7 @@ window.SITE_DATA = (function () {
     "observabilite": {"lecon-01.html":29,"lecon-02.html":31,"lecon-03.html":32,"lecon-04.html":31,"lecon-05.html":32,"lecon-06.html":37,"lecon-07.html":35,"lecon-08.html":36,"lecon-09.html":34,"lecon-10.html":35,"lecon-11.html":40},
     "os": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":31,"lecon-04.html":33,"lecon-05.html":30,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":31,"lecon-09.html":33,"lecon-10.html":32,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":33,"lecon-14.html":40},
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
-    "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54},
+    "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
     "cobol": {"lecon-01.html":44,"lecon-02.html":50,"lecon-03.html":55,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":45,"lecon-10.html":48,"lecon-11.html":46,"lecon-12.html":46,"lecon-13.html":44,"lecon-14.html":50},
