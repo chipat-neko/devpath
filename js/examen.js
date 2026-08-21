@@ -58,6 +58,31 @@
       if (DATA.content.hasOwnProperty(cid)) DIR_TO_ID[DATA.content[cid].dir] = cid;
     }
   }
+  /* ------------------------------- Refaire ce qu'on a raté (V12-C5)
+     Identifier une question par sa POSITION serait faux : `build-index.js`
+     écarte les doublons d'énoncé d'un même cours, et la banque agrège le QCM de
+     la leçon ET le QCM bilan — mesuré, 87 leçons sur 1 463 n'ont donc pas le
+     même compte des deux côtés. On identifie donc par l'ÉNONCÉ, qui est déjà la
+     clé de déduplication du générateur : une empreinte courte suffit. */
+  function empreinte(texte) {
+    var t = String(texte || "").toLowerCase().replace(/\s+/g, " ").trim();
+    var h = 5381;
+    for (var i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+
+  /* Ce qui reste à refaire : on parcourt l'historique du plus ANCIEN au plus
+     récent et on garde le dernier verdict de chaque question — une erreur
+     corrigée depuis sort du cahier, sinon on la reposerait indéfiniment. */
+  function erreursCourantes() {
+    var etat = {};
+    lireHistorique().forEach(function (p) {
+      (p.bons || []).forEach(function (h) { etat[h] = false; });
+      (p.rates || []).forEach(function (h) { etat[h] = true; });
+    });
+    return etat;
+  }
+
   function progression() {
     return window.SyntaxeStore ? window.SyntaxeStore.getJSON("syntaxe-progress", {}) : {};
   }
@@ -67,11 +92,17 @@
   }
   /* Questions tirables pour un cours (« all » = tout le site), selon qu'on se
      limite ou non aux leçons terminées. */
-  function bassin(dir, seulementFaites) {
+  function bassin(dir, seulementFaites, seulementErreurs) {
     var pool = dir === "all" ? BANK.slice() : BANK.filter(function (q) { return q.c === dir; });
-    if (!seulementFaites) return pool;
-    var prog = progression();
-    return pool.filter(function (q) { return estTerminee(prog, q.c, q.f); });
+    if (seulementFaites) {
+      var prog = progression();
+      pool = pool.filter(function (q) { return estTerminee(prog, q.c, q.f); });
+    }
+    if (seulementErreurs) {
+      var etat = erreursCourantes();
+      pool = pool.filter(function (q) { return etat[empreinte(q.q)] === true; });
+    }
+    return pool;
   }
 
   var courses = (function () {
@@ -103,17 +134,22 @@
     return Object.prototype.toString.call(h) === "[object Array]" ? h : [];
   }
 
-  function enregistrerPassage(cours, score, total) {
+  function enregistrerPassage(cours, score, total, rates, bons) {
     if (!window.SyntaxeStore || !total) return false;
     var d = new Date();
     var mm = d.getMonth() + 1, jj = d.getDate();
     var h = lireHistorique();
-    h.push({
+    var entree = {
       date: d.getFullYear() + "-" + (mm < 10 ? "0" + mm : mm) + "-" + (jj < 10 ? "0" + jj : jj),
       cours: cours,
       score: score,
       total: total,
-    });
+    };
+    /* Empreintes des questions manquées et réussies : c'est ce qui permet de
+       refaire ses erreurs, et de les retirer une fois corrigées. */
+    if (rates && rates.length) entree.rates = rates;
+    if (bons && bons.length) entree.bons = bons;
+    h.push(entree);
     /* On garde les 50 derniers : de quoi voir une évolution sans laisser la
        clé grossir sans fin. */
     if (h.length > HISTORIQUE_MAX) h = h.slice(h.length - HISTORIQUE_MAX);
@@ -164,26 +200,41 @@
       '<input type="checkbox" id="exam-faites" />' +
       "<span>Seulement les leçons que j'ai terminées " +
       '<span class="exam-dispo" id="exam-dispo"></span></span></label>' +
+      '<label class="exam-field exam-field--check">' +
+      '<input type="checkbox" id="exam-erreurs" />' +
+      "<span>Refaire seulement ce que j'ai raté " +
+      '<span class="exam-dispo" id="exam-dispo-err"></span></span></label>' +
       '<p class="exam-hint">Tu as <strong>30 secondes par question</strong> ; le minuteur s\'arrête tout seul. Bonne chance&nbsp;!</p>' +
       '<button type="button" class="btn btn--primary btn--lg" id="exam-start">Commencer l\'examen</button>' +
       "</div>" + historiqueHtml();
     var selCours = document.getElementById("exam-c");
     var caseFaites = document.getElementById("exam-faites");
+    var caseErreurs = document.getElementById("exam-erreurs");
     var dispo = document.getElementById("exam-dispo");
+    var dispoErr = document.getElementById("exam-dispo-err");
 
     /* Le compteur dit COMBIEN de questions restent : cocher une case qui vide le
        tirage sans le dire serait pire que le défaut qu'on corrige. */
     function majDispo() {
-      var n = bassin(selCours.value, true).length;
+      var n = bassin(selCours.value, true, caseErreurs.checked).length;
       dispo.textContent = "(" + n + " question" + (n > 1 ? "s" : "") + ")";
       caseFaites.disabled = n === 0;
       if (n === 0) {
         caseFaites.checked = false;
         dispo.textContent = "(aucune leçon terminée dans ce choix)";
       }
+      var e = bassin(selCours.value, caseFaites.checked, true).length;
+      dispoErr.textContent = "(" + e + " question" + (e > 1 ? "s" : "") + ")";
+      caseErreurs.disabled = e === 0;
+      if (e === 0) {
+        caseErreurs.checked = false;
+        dispoErr.textContent = "(aucune erreur en attente)";
+      }
     }
     majDispo();
     selCours.addEventListener("change", majDispo);
+    caseFaites.addEventListener("change", majDispo);
+    caseErreurs.addEventListener("change", majDispo);
     document.getElementById("exam-start").addEventListener("click", start);
   }
 
@@ -202,7 +253,8 @@
     var n = parseInt(document.getElementById("exam-n").value, 10) || 20;
     var c = document.getElementById("exam-c").value;
     var faites = document.getElementById("exam-faites");
-    var pool = bassin(c, !!(faites && faites.checked));
+    var erreurs = document.getElementById("exam-erreurs");
+    var pool = bassin(c, !!(faites && faites.checked), !!(erreurs && erreurs.checked));
     shuffle(pool);
     var picked = pool.slice(0, Math.min(n, pool.length));
     state = {
@@ -289,13 +341,16 @@
       state.timer = null;
     }
     var score = 0;
+    var rates = [], bons = [];
     state.questions.forEach(function (q, i) {
       var a = state.answers[i];
-      if (a >= 0 && q.opts[a] && q.opts[a].correct) score++;
+      var juste = a >= 0 && q.opts[a] && q.opts[a].correct;
+      if (juste) { score++; bons.push(empreinte(q.q)); }
+      else rates.push(empreinte(q.q));
     });
     var n = state.questions.length;
     var pct = n ? Math.round((score / n) * 100) : 0;
-    var garde = enregistrerPassage(state.cours, score, n);
+    var garde = enregistrerPassage(state.cours, score, n, rates, bons);
 
     var details = state.questions
       .map(function (q, i) {

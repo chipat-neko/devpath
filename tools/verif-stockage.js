@@ -36,7 +36,7 @@
  *     annuler. Une fusion se juge sur le résultat, pas sur un message.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 24 scénarios (B1-B3, C1-C4)
+ *   node tools/verif-stockage.js            # les 25 scénarios (B1-B3, C1-C5)
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -401,6 +401,14 @@ var SCENARIOS = [
     caseVide: /aucune leçon terminée/,
   },
   {
+    nom: "examen : « refaire ce que j'ai raté » ne propose que les erreurs NON corrigées",
+    page: "pages/examen.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-examen',\"[{\\\"date\\\":\\\"2026-08-01\\\",\\\"cours\\\":\\\"js\\\",\\\"score\\\":1,\\\"total\\\":3,\\\"rates\\\":[\\\"1nocbmq\\\",\\\"66iswt\\\"],\\\"bons\\\":[\\\"1rwbri5\\\"]},{\\\"date\\\":\\\"2026-08-10\\\",\\\"cours\\\":\\\"js\\\",\\\"score\\\":2,\\\"total\\\":3,\\\"rates\\\":[\\\"1nocbmq\\\"],\\\"bons\\\":[\\\"66iswt\\\",\\\"1rwbri5\\\"]}]\")}catch(e){}",
+    geste: "var c=document.getElementById('exam-c');if(c){c.value='js';c.dispatchEvent(new Event('change'))}var e=document.getElementById('exam-erreurs');if(e){e.checked=true;e.dispatchEvent(new Event('change'))}document.getElementById('exam-start').click();",
+    bandeau: null,
+    erreurs: { dispo: /^\(1 question\)$/, enonce: "Quel est le rôle respectif de HTML, CSS " },
+  },
+  {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
@@ -491,6 +499,10 @@ var SONDE = function () {
       return { nb: items.length, vide: null, ordre: ordre, contraste: res };
     })(),
     dispoExamen: (document.getElementById("exam-dispo") || {}).textContent || "",
+    dispoErreurs: (document.getElementById("exam-dispo-err") || {}).textContent || "",
+    questionPosee: (document.querySelector(".exam-q") || {}).textContent || "",
+    nbQuestions: (document.querySelector(".exam-count") || {}).textContent || "",
+    caseErrDesactivee: !!(document.getElementById("exam-erreurs") || {}).disabled,
     caseDesactivee: !!(document.getElementById("exam-faites") || {}).disabled,
     scoreAffiche: (document.querySelector(".exam-score__n") || {}).textContent || "",
     liensLecon: (function () {
@@ -797,6 +809,18 @@ var SONDE = function () {
       okCaseVide = v.caseDesactivee === true && sc.caseVide.test(v.dispoExamen || "");
       if (!okCaseVide) v.__ecart = "case : desactivee=" + v.caseDesactivee + " · texte « " + v.dispoExamen + " »";
     }
+    /* Une erreur corrigee doit SORTIR du cahier, sinon on la reposerait
+       indefiniment ; une question jamais ratee ne doit pas y entrer. */
+    var okErreurs = true;
+    if (sc.erreurs) {
+      okErreurs = sc.erreurs.dispo.test((v.dispoErreurs || "").trim());
+      if (okErreurs && sc.erreurs.enonce) {
+        /* La question POSEE doit etre celle qui est restee ratee. */
+        okErreurs = (v.questionPosee || "").indexOf(sc.erreurs.enonce) === 0;
+      }
+      if (!okErreurs) v.__ecart = "compteur « " + v.dispoErreurs + " » · question posée « " +
+        String(v.questionPosee).slice(0, 50) + " »";
+    }
     var okTirage = true;
     if (sc.tirage) {
       var liens = (v.liensLecon || {}).tous || [];
@@ -809,7 +833,7 @@ var SONDE = function () {
     }
     var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage &&
       okResteLa && okSecours && okLectures && okPanneau && okAttendu && okExamen &&
-      okRetravail && okRates && okTirage && okCaseVide;
+      okRetravail && okRates && okTirage && okCaseVide && okErreurs;
     if (!bon) ko++;
 
     console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
@@ -849,6 +873,10 @@ var SONDE = function () {
         (rr.ordre || []).forEach(function (x) {
           console.log("            " + x.score + "  " + x.titre + "  [" + x.cours + "]  → " + x.href);
         });
+      }
+      if (sc.erreurs) {
+        console.log("         erreurs en attente : " + v.dispoErreurs + " · " + v.nbQuestions);
+        console.log("         question posée : « " + String(v.questionPosee).slice(0, 60) + " »");
       }
       if (sc.caseVide) console.log("         case désactivée : " + v.caseDesactivee + " · « " + v.dispoExamen + " »");
       if (sc.tirage) console.log("         disponibles annoncés : " + v.dispoExamen +
