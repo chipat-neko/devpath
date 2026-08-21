@@ -34,14 +34,17 @@
     return v !== null && typeof v === "object" && !Array.isArray(v);
   }
 
-  /* Un score de QCM tel que l'écrit lecon.js : { best, total }. */
+  /* Un score de QCM tel que l'écrit lecon.js : { best, total } et, depuis
+     V12-C3, un `rates` facultatif (index des questions manquées). Le test
+     reste STRICT — aucune autre clé — pour ne pas confondre un score avec un
+     objet quelconque qui aurait un best et un total. */
+  var CLES_SCORE = { best: 1, total: 1, rates: 1 };
   function estScore(v) {
-    return (
-      estObjet(v) &&
-      typeof v.best === "number" &&
-      typeof v.total === "number" &&
-      Object.keys(v).length === 2
-    );
+    if (!estObjet(v)) return false;
+    if (typeof v.best !== "number" || typeof v.total !== "number") return false;
+    return Object.keys(v).every(function (k) {
+      return CLES_SCORE[k] === 1;
+    });
   }
 
   function meilleurScore(a, b) {

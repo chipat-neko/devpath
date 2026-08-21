@@ -118,7 +118,11 @@
       null
     );
   }
-  function saveQuizBest(scoreKey, good, total) {
+  /* `rates` = index (0-based) des questions manquées lors de CET essai. On ne
+     les garde que si l'essai devient le meilleur, pour qu'ils décrivent bien le
+     score conservé et non un essai plus ancien. C'est ce qui permet de dire
+     quelle NOTION est à revoir, et pas seulement quelle leçon (V12-C3). */
+  function saveQuizBest(scoreKey, good, total, rates) {
     var q = readQuizScores();
     if (!q[courseId]) q[courseId] = {};
     if (!q[courseId][lessonFile]) q[courseId][lessonFile] = {};
@@ -129,7 +133,9 @@
     var prevRatio = prev && prev.total ? prev.best / prev.total : -1;
     var newRatio = total > 0 ? good / total : 0;
     if (!prev || newRatio > prevRatio) {
-      q[courseId][lessonFile][scoreKey] = { best: good, total: total };
+      var entree = { best: good, total: total };
+      if (rates && rates.length) entree.rates = rates.slice();
+      q[courseId][lessonFile][scoreKey] = entree;
       window.SyntaxeStore.setJSON(QKEY, q);
     }
   }
@@ -500,6 +506,7 @@
     var total = data.length;
     var answered = 0;
     var good = 0;
+    var rates = []; /* index des questions manquées, dans l'ordre du bloc */
 
     data.forEach(function (item, qi) {
       // mélange les options en gardant trace de la bonne réponse
@@ -548,6 +555,7 @@
             good++;
             btn.classList.add("is-correct");
           } else {
+            rates.push(qi);
             btn.classList.add("is-wrong");
             // révèle la bonne
             q.querySelectorAll('.quiz__opt[data-correct="1"]').forEach(function (g) {
@@ -606,7 +614,7 @@
         score.textContent = "Score : " + good + " / " + total +
           (good === total ? " — parfait ! 🎉" : "");
         score.classList.add("is-final");
-        saveQuizBest(scoreKey, good, total);
+        saveQuizBest(scoreKey, good, total, rates);
         paintBest();
       }
     }

@@ -36,7 +36,7 @@
  *     annuler. Une fusion se juge sur le résultat, pas sur un message.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 18 scénarios (B1-B3, C1-C2)
+ *   node tools/verif-stockage.js            # les 22 scénarios (B1-B3, C1-C3)
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -353,6 +353,38 @@ var SCENARIOS = [
     examen: { passages: 2, total: 10, liens: true },
   },
   {
+    nom: "progression : « À retravailler » liste les QCM sous 70 %, du pire au moins pire",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-quiz',\"{\\\"html\\\": {\\\"lecon-01.html\\\": {\\\"quiz\\\": {\\\"best\\\": 1, \\\"total\\\": 4, \\\"rates\\\": [0, 2, 3]}}, \\\"lecon-02.html\\\": {\\\"quiz\\\": {\\\"best\\\": 2, \\\"total\\\": 4}}}, \\\"css\\\": {\\\"lecon-03.html\\\": {\\\"quiz\\\": {\\\"best\\\": 3, \\\"total\\\": 10}}, \\\"lecon-40.html\\\": {\\\"bilan\\\": {\\\"best\\\": 9, \\\"total\\\": 10}}}}\")}catch(e){}",
+    geste: "",
+    bandeau: null,
+    retravail: { nb: 3, premier: "1 / 4 · 25%", pire: 0.25, mention: /3 questions à revoir/ },
+  },
+  {
+    nom: "progression : que des scores acquis — la section le dit, sans rien lister",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-quiz',\"{\\\"html\\\": {\\\"lecon-01.html\\\": {\\\"quiz\\\": {\\\"best\\\": 4, \\\"total\\\": 4}}}}\")}catch(e){}",
+    geste: "",
+    bandeau: null,
+    retravail: { nb: 0, vide: /Aucun QCM en dessous/ },
+  },
+  {
+    nom: "progression : aucun QCM passé — pas de section du tout (non-régression)",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear()}catch(e){}",
+    geste: "",
+    bandeau: null,
+    retravail: { nb: 0, vide: null },
+  },
+  {
+    nom: "leçon : un QCM raté note QUELLES questions (rates), pas seulement combien",
+    page: "pages/js/lecon-01.html", panne: null,
+    semer: "try{localStorage.clear()}catch(e){}",
+    geste: "var qs=document.querySelectorAll('.quiz .quiz__q');for(var i=0;i<qs.length;i++){var rater=(i===0||i===2);var b=qs[i].querySelector(rater?'.quiz__opt[data-correct=\"0\"]':'.quiz__opt[data-correct=\"1\"]');if(b)b.click()}",
+    bandeau: null,
+    rates: { cours: "javascript", fichier: "lecon-01.html", attendus: [0, 2] },
+  },
+  {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
@@ -397,6 +429,50 @@ var SONDE = function () {
         });
       } catch (e) {}
       return out;
+    })(),
+    retravailler: (function () {
+      var items = document.querySelectorAll(".dash-retravail__item");
+      if (!items.length) {
+        var vide = document.querySelector("#dash-retravailler .dash-empty");
+        return { nb: 0, vide: vide ? vide.textContent.trim().slice(0, 60) : null, ordre: [], contraste: null };
+      }
+      var ordre = [];
+      for (var i = 0; i < items.length; i++) {
+        ordre.push({
+          titre: (items[i].querySelector(".dash-retravail__titre") || {}).textContent || "",
+          score: (items[i].querySelector(".dash-retravail__score") || {}).textContent || "",
+          cours: (items[i].querySelector(".dash-retravail__cours") || {}).textContent || "",
+          href: (items[i].querySelector("a") || {}).getAttribute("href"),
+        });
+      }
+      /* Le score est en rouge : il doit rester lisible dans les deux themes. */
+      function lum(c) {
+        var q = /rgba?\((\d+), ?(\d+), ?(\d+)/.exec(c);
+        if (!q) return null;
+        var v = [q[1], q[2], q[3]].map(function (x) {
+          var n = parseInt(x, 10) / 255;
+          return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+      }
+      function fond(el) {
+        var n = el;
+        while (n && n.nodeType === 1) {
+          var c = getComputedStyle(n).backgroundColor;
+          if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c;
+          n = n.parentNode;
+        }
+        return "rgb(255, 255, 255)";
+      }
+      var res = {};
+      ["light", "dark"].forEach(function (th) {
+        document.documentElement.setAttribute("data-theme", th);
+        var el = items[0].querySelector(".dash-retravail__score");
+        var a1 = lum(getComputedStyle(el).color), b1 = lum(fond(el));
+        res[th] = (a1 === null || b1 === null) ? null :
+          Math.round(((Math.max(a1, b1) + 0.05) / (Math.min(a1, b1) + 0.05)) * 100) / 100;
+      });
+      return { nb: items.length, vide: null, ordre: ordre, contraste: res };
     })(),
     scoreAffiche: (document.querySelector(".exam-score__n") || {}).textContent || "",
     liensLecon: (function () {
@@ -654,8 +730,46 @@ var SONDE = function () {
       if (!okExamen) v.__ecart = "historique d'examen : " + JSON.stringify(hist) +
         " · bloc affiché : " + JSON.stringify(v.historiqueExamen);
     }
+    var okRetravail = true;
+    if (sc.retravail) {
+      var r = v.retravailler || {};
+      okRetravail = r.nb === sc.retravail.nb;
+      if (okRetravail && sc.retravail.premier) {
+        okRetravail = (r.ordre[0] || {}).score.replace(/\s/g, " ").trim() === sc.retravail.premier;
+      }
+      if (okRetravail && sc.retravail.vide) okRetravail = sc.retravail.vide.test(r.vide || "");
+      /* Dire QUELLE notion, pas seulement quelle leçon : le nombre de questions
+         manquées doit apparaître sous le titre (réserve du point C3). */
+      if (okRetravail && sc.retravail.mention) {
+        okRetravail = sc.retravail.mention.test((r.ordre[0] || {}).cours || "");
+      }
+      if (okRetravail && sc.retravail.vide === null && sc.retravail.nb === 0) okRetravail = r.vide === null;
+      /* le score en rouge doit rester lisible dans les deux themes */
+      if (okRetravail && r.contraste) {
+        ["light", "dark"].forEach(function (t) {
+          if (!(r.contraste[t] >= 4.5)) {
+            okRetravail = false;
+            v.__ecart = "contraste du score en " + t + " = " + r.contraste[t] + ":1";
+          }
+        });
+      }
+      if (!okRetravail) v.__ecart = v.__ecart || ("« À retravailler » : " + JSON.stringify(r).slice(0, 220));
+    }
+    /* Les index manques doivent etre ceux qu'on a volontairement rates. */
+    var okRates = true;
+    if (sc.rates) {
+      var q = null;
+      try { q = JSON.parse((v.cles || {})["syntaxe-quiz"] || "null"); } catch (e) { q = null; }
+      var e2 = q && q[sc.rates.cours] && q[sc.rates.cours][sc.rates.fichier]
+        ? q[sc.rates.cours][sc.rates.fichier].quiz : null;
+      okRates = !!e2 && JSON.stringify(e2.rates || []) === JSON.stringify(sc.rates.attendus) &&
+        e2.total - e2.best === sc.rates.attendus.length;
+      if (!okRates) v.__ecart = "rates : " + JSON.stringify(e2);
+      else v.__rates = JSON.stringify(e2);
+    }
     var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage &&
-      okResteLa && okSecours && okLectures && okPanneau && okAttendu && okExamen;
+      okResteLa && okSecours && okLectures && okPanneau && okAttendu && okExamen &&
+      okRetravail && okRates;
     if (!bon) ko++;
 
     console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
@@ -687,6 +801,16 @@ var SONDE = function () {
         console.log("         affiché : « " + v.historiqueExamen.resume + " » (" +
           v.historiqueExamen.lignes + " ligne(s)) · score à l'écran : " + v.scoreAffiche);
       }
+      if (sc.retravail) {
+        var rr = v.retravailler || {};
+        console.log("         à retravailler : " + rr.nb + " entrée(s)" +
+          (rr.vide ? " · message « " + rr.vide + " »" : "") +
+          (rr.contraste ? " · contraste clair " + rr.contraste.light + ":1 / sombre " + rr.contraste.dark + ":1" : ""));
+        (rr.ordre || []).forEach(function (x) {
+          console.log("            " + x.score + "  " + x.titre + "  [" + x.cours + "]  → " + x.href);
+        });
+      }
+      if (v.__rates) console.log("         score enregistré : " + v.__rates);
       if (v.__ecart) console.log("         ECART : " + v.__ecart);
       if (sc.secours) {
         var ks = Object.keys(v.secours || {});

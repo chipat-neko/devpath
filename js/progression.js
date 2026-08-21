@@ -62,6 +62,114 @@
     return best;
   }
 
+  /* ------------------------------------------- « À retravailler » (V12-C3)
+     Les quatre lecteurs de « syntaxe-quiz » ne regardaient que le HAUT de la
+     distribution — « Maîtrisé », « Sans faute », « As des QCM ». Un score bas
+     était enregistré et jamais montré : aucune page ne disait où ça coince.
+     On liste donc l'inverse : les leçons dont le MEILLEUR score reste sous le
+     seuil de maîtrise déjà utilisé ailleurs sur le site (70 %). */
+  var SEUIL_MAITRISE = 0.7;
+  var RETRAVAILLER_MAX = 12;
+
+  /* Titre d'une leçon à partir de son fichier, sans reparcourir data.js à
+     chaque appel. */
+  var titresLecon = null;
+  function titreLecon(coursId, fichier) {
+    if (!titresLecon) {
+      titresLecon = {};
+      Object.keys(DATA.content).forEach(function (id) {
+        DATA.content[id].modules.forEach(function (m) {
+          m.lessons.forEach(function (l) {
+            titresLecon[id + "/" + l.file] = l.title;
+          });
+        });
+      });
+    }
+    return titresLecon[coursId + "/" + fichier] || fichier;
+  }
+
+  function aRetravailler() {
+    var scores = quizScores();
+    var out = [];
+    Object.keys(scores).forEach(function (coursId) {
+      var c = DATA.content[coursId];
+      if (!c) return; /* cours disparu : on n'invente pas de lien */
+      var parFichier = scores[coursId];
+      if (!parFichier || typeof parFichier !== "object") return;
+      Object.keys(parFichier).forEach(function (fichier) {
+        var entrees = parFichier[fichier];
+        if (!entrees || typeof entrees !== "object") return;
+        Object.keys(entrees).forEach(function (cle) {
+          var s = entrees[cle];
+          if (!s || typeof s.total !== "number" || !s.total) return;
+          var ratio = (s.best || 0) / s.total;
+          if (ratio >= SEUIL_MAITRISE) return;
+          out.push({
+            coursId: coursId,
+            dir: c.dir,
+            coursTitre: c.title,
+            fichier: fichier,
+            titre: cle === "bilan"
+              ? "QCM bilan du cours"
+              : titreLecon(coursId, fichier),
+            bilan: cle === "bilan",
+            best: s.best || 0,
+            total: s.total,
+            /* Écrit par lecon.js depuis C3 : les scores enregistrés avant ne
+               l'ont pas, et on n'invente pas un chiffre qu'on n'a pas. */
+            rates: (s.rates && s.rates.length) || 0,
+            ratio: ratio,
+          });
+        });
+      });
+    });
+    /* Du plus faible au moins faible : ce qu'il faut reprendre d'abord. */
+    out.sort(function (a, b) {
+      return a.ratio - b.ratio || b.total - a.total;
+    });
+    return out;
+  }
+
+  function renderARetravailler() {
+    var host = document.getElementById("dash-retravailler");
+    if (!host) return;
+    var scores = quizScores();
+    var aucunScore = !Object.keys(scores).length;
+    var liste = aRetravailler();
+
+    if (aucunScore) {
+      host.innerHTML = ""; /* pas encore de QCM passé : rien à dire */
+      return;
+    }
+    if (!liste.length) {
+      host.innerHTML =
+        "<h2>À retravailler</h2>" +
+        '<p class="dash-empty">Aucun QCM en dessous de 70&nbsp;%. Tout ce que tu as passé est acquis.</p>';
+      return;
+    }
+    var restants = liste.length - RETRAVAILLER_MAX;
+    host.innerHTML =
+      "<h2>À retravailler</h2>" +
+      '<p class="dash-retravail__intro">' + liste.length + " QCM" + (liste.length > 1 ? " sont" : " est") +
+      " sous 70&nbsp;%, du plus faible au moins faible. Le score gardé est le meilleur : " +
+      "refaire le QCM ne peut que l'améliorer.</p>" +
+      '<ul class="dash-retravail">' +
+      liste.slice(0, RETRAVAILLER_MAX).map(function (x) {
+        var pct = Math.round(x.ratio * 100);
+        return '<li class="dash-retravail__item">' +
+          '<a class="dash-retravail__lien" href="' + esc(x.dir) + "/" + esc(x.fichier) + '">' +
+          '<span class="dash-retravail__titre">' + esc(x.titre) + "</span>" +
+          '<span class="dash-retravail__cours">' + esc(x.coursTitre) +
+          (x.rates ? " · " + x.rates + " question" + (x.rates > 1 ? "s" : "") + " à revoir" : "") +
+          "</span></a>" +
+          '<span class="dash-retravail__score">' + x.best + " / " + x.total + " · " + pct + "%</span></li>";
+      }).join("") +
+      "</ul>" +
+      (restants > 0
+        ? '<p class="dash-retravail__reste">et ' + restants + " autre" + (restants > 1 ? "s" : "") + ".</p>"
+        : "");
+  }
+
   /* Calcule l'état de chaque cours */
   function computeCourses() {
     var prog = progress();
@@ -409,6 +517,9 @@
 
     /* Niveau & succès (gamification, P1) */
     renderGamification(finished.length, finished);
+
+    /* Ce qui n'est PAS acquis (C3) */
+    renderARetravailler();
 
     /* Reprendre */
     var resumeHost = document.getElementById("dash-resume");
