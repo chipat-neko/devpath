@@ -37,16 +37,24 @@
  * nombre de valeurs annoncées ; sinon le bloc est « non vérifié (compte) », pas
  * divergent. On préfère taire un doute que crier une fausse alerte.
  *
+ * EN PLUS (A2) : les RÉPONSES D'EXERCICES. Les blocs data-exos `type:"code"` portent
+ * un `run.expect` (sortie attendue). Faute de solution stockée, on rejoue l'ÉNONCÉ —
+ * le seul code de référence sûr — avec le moteur EXACT du site (fmt + normExo de
+ * lecon.js) : s'il produit expect, run.expect est confirmé ; sinon (correction/
+ * complétion), c'est non vérifiable. Les `type:"text"` ne sont pas exécutables.
+ *
  * USAGE
- *   node tools/verif-exemples.js                 tous les langages exécutables
- *   node tools/verif-exemples.js --lang js       JavaScript seulement
- *   node tools/verif-exemples.js --lang py       Python seulement
+ *   node tools/verif-exemples.js                 exemples (js+py) + réponses d'exercices
+ *   node tools/verif-exemples.js --lang js       exemples JavaScript (+ exos)
+ *   node tools/verif-exemples.js --lang py       exemples Python (+ exos)
+ *   node tools/verif-exemples.js --exos          seulement les réponses d'exercices
+ *   node tools/verif-exemples.js --pas-exos      sauter les réponses d'exercices
  *   node tools/verif-exemples.js --divergents    n'affiche que les divergences
  *   node tools/verif-exemples.js --details       affiche aussi les « non vérifié »
  *   node tools/verif-exemples.js --json          sortie machine
  *   node tools/verif-exemples.js --fichier <p>   un seul fichier
  *
- * CODE DE SORTIE : 1 s'il existe au moins un bloc DIVERGENT, sinon 0.
+ * CODE DE SORTIE : 1 s'il existe au moins une DIVERGENCE (exemple ou exercice), sinon 0.
  * Un « non vérifié » n'est jamais bloquant : c'est une limite de l'outil, pas un bug
  * du contenu.
  */
@@ -514,6 +522,118 @@ function memeSortie(attendus, produits) {
   return { verdict: glose ? 'glose' : 'conforme' };
 }
 
+/* ================================================================== */
+/* A2 — les RÉPONSES D'EXERCICES (data-exos type:code)                 */
+/* ================================================================== */
+/*
+ * 4 241 réponses sont déclarées dans les blocs data-exos ; seules les entrées
+ * `type:"code"` portent un code exécutable (`run.expect` = sortie attendue). Le
+ * data-exos NE stocke PAS de solution : le code de référence est, selon le cas, la
+ * solution repliée (<details>) ou le code de l'énoncé (exercice de « prédiction »).
+ * On rejoue ce code EXACTEMENT comme le site (worker EXO_WORKER_SRC + normExo de
+ * lecon.js) et on confronte à `run.expect`. Un `type:"text"` (réponse textuelle,
+ * `accept:[…]`) n'est pas exécutable : on le chiffre à part, sans le compter vérifié.
+ */
+
+// Reproduction EXACTE de normExo(lecon.js) : c'est le juge du site.
+function normExo(s) {
+  s = s == null ? '' : String(s);
+  s = s.replace(/ /g, ' ').replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+  if (s.normalize) s = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return s.trim().replace(/\s+/g, ' ').replace(/;+\s*$/, '').toLowerCase();
+}
+
+// Reproduction EXACTE du fmt du worker d'exercice (PAS de cas NaN/BigInt/function :
+// c'est volontaire, on veut CE que le site affiche, y compris ses limites).
+function fmtExo(v) {
+  if (typeof v === 'string') return v;
+  if (v === undefined) return 'undefined';
+  if (v === null) return 'null';
+  try { return JSON.stringify(v); } catch (e) { return String(v); }
+}
+
+// Exécute un code d'exercice comme le worker : capture la console, et en cas
+// d'erreur AJOUTE le message à la sortie (le worker fait exactement cela).
+function executeExo(code) {
+  if (BROWSER_ONLY.test(code)) return { etat: 'skip', motif: 'API navigateur/Node' };
+  if (NON_DETERMINISTE.test(code)) return { etat: 'skip', motif: 'non déterministe' };
+  if (DEPEND_ENV.test(code)) return { etat: 'skip', motif: 'locale/ICU' };
+  const out = [];
+  const cap = function () { out.push(Array.prototype.slice.call(arguments).map(fmtExo).join(' ')); };
+  const noop = function () {};
+  const sandbox = {
+    console: { log: cap, info: cap, debug: cap, warn: cap, error: cap,
+      table: noop, group: noop, groupEnd: noop, dir: noop, assert: noop, time: noop, timeEnd: noop, trace: noop, count: noop }
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  try {
+    new vm.Script(code, { filename: 'exo.js' }).runInContext(sandbox, { timeout: 2000, displayErrors: false });
+    return { etat: 'ok', sortie: out.join('\n') };
+  } catch (e) {
+    out.push(e && e.message ? e.name + ': ' + e.message : String(e));
+    return { etat: 'erreur', sortie: out.join('\n') };
+  }
+}
+
+// Extrait, pour un fichier, les exercices type:code avec leur zone .exercise
+// (par index, comme lecon.js) et les blocs de code JS de cette zone.
+function exosCodeDe(fichier) {
+  const src = fs.readFileSync(fichier, 'utf8');
+  const m = src.match(/<script type="application\/json" data-exos>([\s\S]*?)<\/script>/);
+  if (!m) return [];
+  let arr;
+  try { arr = JSON.parse(m[1]); } catch (e) { return []; }
+  const debuts = [];
+  const re = /<div class="exercise">/g;
+  let mm;
+  while ((mm = re.exec(src))) debuts.push(mm.index);
+  const res = [];
+  for (let i = 0; i < arr.length; i++) {
+    const e = arr[i];
+    if (!e || e.type !== 'code' || !e.run || e.run.expect == null) continue;
+    const start = debuts[i];
+    const zone = start == null ? '' : src.slice(start, i + 1 < debuts.length ? debuts[i + 1] : src.length);
+    const blocs = [...zone.matchAll(/<code class="language-javascript">([\s\S]*?)<\/code>/g)].map(x => decode(x[1]));
+    res.push({
+      fichier, index: i, expect: e.run.expect,
+      aSolution: /<details/.test(zone),
+      blocs, ligne: start == null ? 0 : numLigne(src, start)
+    });
+  }
+  return res;
+}
+
+// Classe un exercice type:code. Le data-exos NE stocke PAS de solution fiable (le
+// dernier bloc d'un .exercise n'est souvent qu'une démonstration, pas la réponse) :
+// on ne teste donc QUE l'énoncé, le seul code de référence sûr.
+//   · énoncé == expect  ⇒ conforme (exercice de « prédiction » : run.expect confirmé) ;
+//   · sinon             ⇒ non vérifiable (correction/complétion, solution absente).
+// On ne crie JAMAIS « divergent » faute de solution officielle à opposer à expect.
+function traiteExo(exo) {
+  const base = { fichier: exo.fichier, ligne: exo.ligne, index: exo.index, expect: exo.expect };
+  if (!exo.blocs.length) return Object.assign(base, { etat: 'non-verifie', raison: 'aucun bloc de code' });
+  const en = executeExo(exo.blocs[0]);
+  if (en.etat === 'skip') return Object.assign(base, { etat: 'non-verifie', raison: 'énoncé ' + en.motif });
+  if (normExo(en.sortie) === normExo(exo.expect)) return Object.assign(base, { etat: 'conforme' });
+  return Object.assign(base, { etat: 'non-verifie', raison: 'correction/complétion (énoncé ≠ expect, pas de solution stockée)' });
+}
+
+function verifieExos(fichiers) {
+  let code = 0, text = 0, nul = 0;
+  const resultats = [];
+  for (const f of fichiers) {
+    const src = fs.readFileSync(f, 'utf8');
+    const m = src.match(/<script type="application\/json" data-exos>([\s\S]*?)<\/script>/);
+    if (m) {
+      let arr; try { arr = JSON.parse(m[1]); } catch (e) { arr = []; }
+      for (const e of arr) { if (e === null) nul++; else if (e.type === 'code') code++; else text++; }
+    }
+    for (const exo of exosCodeDe(f)) resultats.push(traiteExo(exo));
+  }
+  return { resultats, nCode: code, nText: text, nNull: nul };
+}
+
 /* ------------------------------------------------------------------ */
 /* Traitement d'un bloc                                                 */
 /* ------------------------------------------------------------------ */
@@ -576,13 +696,15 @@ function traite(bloc) {
 /* ------------------------------------------------------------------ */
 
 function main(argv) {
-  const opt = { lang: 'all', json: false, divergents: false, details: false, fichiers: [], racine: path.resolve(__dirname, '..') };
+  const opt = { lang: 'all', json: false, divergents: false, details: false, exosOnly: false, pasExos: false, fichiers: [], racine: path.resolve(__dirname, '..') };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--lang') opt.lang = String(argv[++i] || 'all').toLowerCase();
     else if (a === '--json') opt.json = true;
     else if (a === '--divergents') opt.divergents = true;
     else if (a === '--details') opt.details = true;
+    else if (a === '--exos') opt.exosOnly = true;       // seulement les réponses d'exercices
+    else if (a === '--pas-exos') opt.pasExos = true;    // sauter les réponses d'exercices
     else if (a === '--fichier') opt.fichiers.push(path.resolve(argv[++i]));
     else if (a === '--aide' || a === '-h' || a === '--help') {
       console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^#![^\n]*\n/, ''));
@@ -598,36 +720,47 @@ function main(argv) {
   const t0 = Date.now();
   const resultats = [];
   let nBlocs = 0, nAvecAttendu = 0;
-  for (const f of fichiers) {
-    let blocs;
-    try { blocs = blocsDe(f); } catch (e) { continue; }
-    for (const b of blocs) {
-      if (!langsVoulus.includes(b.lang)) continue;
-      nBlocs++;
-      const r = traite(b);
-      if (r) { nAvecAttendu++; resultats.push(r); }
+  if (!opt.exosOnly) {
+    for (const f of fichiers) {
+      let blocs;
+      try { blocs = blocsDe(f); } catch (e) { continue; }
+      for (const b of blocs) {
+        if (!langsVoulus.includes(b.lang)) continue;
+        nBlocs++;
+        const r = traite(b);
+        if (r) { nAvecAttendu++; resultats.push(r); }
+      }
     }
   }
+
+  // A2 — réponses d'exercices (data-exos type:code). Rapide (JS pur), sauf si écarté.
+  const exos = opt.pasExos ? null : verifieExos(fichiers);
+  const exosDiv = exos ? exos.resultats.filter(r => r.etat === 'divergent') : [];
+  const exosConf = exos ? exos.resultats.filter(r => r.etat === 'conforme') : [];
+  const exosNV = exos ? exos.resultats.filter(r => r.etat === 'non-verifie') : [];
   const duree = (Date.now() - t0) / 1000;
 
   const par = (e) => resultats.filter(r => r.etat === e);
   const divergents = par('divergent');
   const conformes = par('conforme');
   const nonVerifies = par('non-verifie');
+  const totalDiv = divergents.length + exosDiv.length;
 
   if (opt.json) {
     console.log(JSON.stringify({
       fichiers: fichiers.length, blocs: nBlocs, avecAttendu: nAvecAttendu,
       conformes: conformes.length, divergents: divergents.length, nonVerifies: nonVerifies.length,
+      exos: exos ? { code: exos.nCode, text: exos.nText, nul: exos.nNull,
+        conformes: exosConf.length, divergents: exosDiv.length, nonVerifies: exosNV.length, resultats: exos.resultats } : null,
       secondes: duree, resultats
     }, null, 2));
-    return divergents.length ? 1 : 0;
+    return totalDiv ? 1 : 0;
   }
 
   const rel = (f) => path.relative(opt.racine, f) || f;
   console.log('Vérificateur d\'exemples — exécute et confronte la sortie annoncée au réel');
   console.log('langages : ' + langsVoulus.join(', ') + '  ·  ' + fichiers.length + ' leçon(s)  ·  ' + duree.toFixed(1) + ' s');
-  if (langsVoulus.includes('python')) {
+  if (!opt.exosOnly && langsVoulus.includes('python')) {
     console.log('interpréteur Python : ' + (trouvePython() || 'ABSENT — blocs Python non vérifiés'));
   }
 
@@ -644,6 +777,15 @@ function main(argv) {
     }
   }
 
+  if (exosDiv.length) {
+    console.log('\n=== EXERCICE DIVERGENT — la solution officielle ne produit pas run.expect (' + exosDiv.length + ') ===');
+    for (const d of exosDiv) {
+      console.log('\n  ' + rel(d.fichier) + ':' + d.ligne + '  (exercice ' + (d.index + 1) + ')');
+      console.log('    run.expect : ' + JSON.stringify(d.expect));
+      console.log('    solution   : ' + JSON.stringify(d.produit));
+    }
+  }
+
   if (opt.details && nonVerifies.length) {
     console.log('\n=== NON VÉRIFIÉ (' + nonVerifies.length + ') — limite de l\'outil, pas un bug du contenu ===');
     const parRaison = {};
@@ -657,18 +799,28 @@ function main(argv) {
   }
 
   console.log('\n=== RÉSUMÉ ===');
-  console.log('  blocs ' + langsVoulus.join('/') + ' analysés ......... ' + nBlocs);
-  console.log('  dont porteurs d\'une valeur attendue . ' + nAvecAttendu);
-  console.log('  · conformes ......................... ' + conformes.length);
-  console.log('  · DIVERGENTS ........................ ' + divergents.length);
-  console.log('  · non vérifiés ...................... ' + nonVerifies.length +
-    '  (fragments, API, async, erreurs — ' + (opt.details ? 'détail ci-dessus' : 'voir --details') + ')');
+  if (!opt.exosOnly) {
+    console.log('  EXEMPLES (valeur annoncée en commentaire) — ' + langsVoulus.join('/'));
+    console.log('    blocs analysés .................... ' + nBlocs);
+    console.log('    dont porteurs d\'une valeur attendue ' + nAvecAttendu);
+    console.log('    · conformes ....................... ' + conformes.length);
+    console.log('    · DIVERGENTS ...................... ' + divergents.length);
+    console.log('    · non vérifiés .................... ' + nonVerifies.length +
+      '  (fragments, API, async — ' + (opt.details ? 'détail ci-dessus' : 'voir --details') + ')');
+  }
+  if (exos) {
+    console.log('  EXERCICES (data-exos)');
+    console.log('    entrées : ' + exos.nCode + ' code · ' + exos.nText + ' texte (non exécutable) · ' + exos.nNull + ' laissées');
+    console.log('    type:code · conformes ............. ' + exosConf.length + '  (run.expect confirmé par exécution)');
+    console.log('    type:code · DIVERGENTS ............ ' + exosDiv.length);
+    console.log('    type:code · non vérifiables ....... ' + exosNV.length + '  (correction sans solution stockée)');
+  }
   console.log('  durée ............................... ' + duree.toFixed(1) + ' s');
-  if (!divergents.length) console.log('\n  Aucune divergence : toutes les sorties exécutables correspondent à ce qui est annoncé.');
-  else console.log('\n  ⚠ ' + divergents.length + ' exemple(s) affichent une sortie fausse à l\'apprenant. À corriger.');
+  if (!totalDiv) console.log('\n  Aucune divergence : sorties et réponses exécutables correspondent à ce qui est annoncé.');
+  else console.log('\n  ⚠ ' + totalDiv + ' divergence(s) — sortie fausse affichée à l\'apprenant. À corriger.');
 
-  return divergents.length ? 1 : 0;
+  return totalDiv ? 1 : 0;
 }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { blocsDe, instrumente, executeJs, comparePaire, LANGS, decode };
+module.exports = { blocsDe, instrumente, executeJs, comparePaire, verifieExos, normExo, LANGS, decode };
