@@ -36,7 +36,7 @@
  *     annuler. Une fusion se juge sur le résultat, pas sur un message.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 17 scénarios
+ *   node tools/verif-stockage.js            # les 18 scénarios
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -345,6 +345,14 @@ var SCENARIOS = [
     attendu: {"syntaxe-progress": {"html": {"lecon-01.html": true, "lecon-02.html": true}, "css": {"lecon-01.html": true}}, "syntaxe-notes": {"css": {"lecon-01.html": {"note": "venue du portable"}}}},
   },
   {
+    nom: "examen : deux passages empilés, score enregistré = score affiché",
+    page: "pages/examen.html", panne: null,
+    semer: "try{localStorage.clear()}catch(e){}",
+    geste: "function passer(n){var s=document.getElementById('exam-n');if(s)s.value=String(n);var b=document.getElementById('exam-start');if(b)b.click();for(var i=0;i<n;i++){var o=document.querySelectorAll('.exam-opt');if(o.length)o[i%o.length].click();var v=document.getElementById('exam-next');if(v)v.click()}var f=document.getElementById('exam-finish');if(f)f.click()}passer(10);var a=document.getElementById('exam-again');if(a)a.click();passer(10);",
+    bandeau: null,
+    examen: { passages: 2, total: 10 },
+  },
+  {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
@@ -384,11 +392,23 @@ var SONDE = function () {
     cles: (function () {
       var out = {};
       try {
-        ["syntaxe-progress", "syntaxe-quiz", "syntaxe-notes"].forEach(function (k) {
+        ["syntaxe-progress", "syntaxe-quiz", "syntaxe-notes", "syntaxe-examen"].forEach(function (k) {
           out[k] = localStorage.getItem(k);
         });
       } catch (e) {}
       return out;
+    })(),
+    scoreAffiche: (document.querySelector(".exam-score__n") || {}).textContent || "",
+    historiqueExamen: (function () {
+      /* Il peut y avoir DEUX blocs dans le DOM (celui des réglages, masqué, et
+         celui du résultat) : on ne juge que sur le bloc VISIBLE — offsetParent,
+         jamais display, qui ment quand c'est un parent qui masque. */
+      var tous = document.querySelectorAll(".exam-hist");
+      var h = null;
+      for (var i = 0; i < tous.length; i++) if (tous[i].offsetParent !== null) h = tous[i];
+      if (!h) return null;
+      return { resume: (h.querySelector(".exam-hist__resume") || {}).textContent || "",
+               lignes: h.querySelectorAll(".exam-hist__item").length };
     })(),
     panneau: (function () {
       var b = document.querySelector(".import-choix");
@@ -588,8 +608,25 @@ var SONDE = function () {
         if (euNorm !== att) { okAttendu = false; v.__ecart = k + " : attendu " + att + ", obtenu " + eu; }
       });
     }
+    /* L'examen doit laisser une trace ET la montrer : une donnee enregistree
+       mais invisible ne sert a personne. */
+    var okExamen = true;
+    if (sc.examen) {
+      var hist = [];
+      try { hist = JSON.parse((v.cles || {})["syntaxe-examen"] || "[]"); } catch (e) { hist = null; }
+      var dernier = hist && hist.length ? hist[hist.length - 1] : null;
+      okExamen = !!hist && hist.length === sc.examen.passages &&
+        !!dernier && dernier.total === sc.examen.total &&
+        typeof dernier.score === "number" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(dernier.date || "") &&
+        /* le chiffre gardé est bien CELUI que l'apprenant a vu */
+        (v.scoreAffiche || "").replace(/\s/g, "") === dernier.score + "/" + dernier.total &&
+        !!v.historiqueExamen && v.historiqueExamen.lignes === sc.examen.passages;
+      if (!okExamen) v.__ecart = "historique d'examen : " + JSON.stringify(hist) +
+        " · bloc affiché : " + JSON.stringify(v.historiqueExamen);
+    }
     var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage &&
-      okResteLa && okSecours && okLectures && okPanneau && okAttendu;
+      okResteLa && okSecours && okLectures && okPanneau && okAttendu && okExamen;
     if (!bon) ko++;
 
     console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
@@ -612,6 +649,11 @@ var SONDE = function () {
           }).join(" · "));
         }
         if (v.alertes && v.alertes.length) console.log("         message : " + v.alertes[0]);
+      }
+      if (sc.examen && v.historiqueExamen) {
+        console.log("         enregistré : " + (v.cles || {})["syntaxe-examen"]);
+        console.log("         affiché : « " + v.historiqueExamen.resume + " » (" +
+          v.historiqueExamen.lignes + " ligne(s)) · score à l'écran : " + v.scoreAffiche);
       }
       if (v.__ecart) console.log("         ECART : " + v.__ecart);
       if (sc.secours) {

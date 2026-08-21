@@ -59,6 +59,61 @@
     return list;
   })();
 
+  /* ------------------------------------------------- Historique (V12-C1)
+     L'examen était la SEULE activité du site à ne rien laisser derrière elle :
+     le score s'affichait, puis disparaissait au premier clic. Impossible de
+     savoir si l'on progresse. On empile donc chaque passage — date, cours,
+     score, total — et on le montre, sur la page de réglages comme après le
+     résultat : une donnée enregistrée mais invisible ne sert à personne. */
+  var HKEY = "syntaxe-examen";
+  var HISTORIQUE_MAX = 50;
+
+  function lireHistorique() {
+    var h = window.SyntaxeStore ? window.SyntaxeStore.getJSON(HKEY, []) : [];
+    return Object.prototype.toString.call(h) === "[object Array]" ? h : [];
+  }
+
+  function enregistrerPassage(cours, score, total) {
+    if (!window.SyntaxeStore || !total) return false;
+    var d = new Date();
+    var mm = d.getMonth() + 1, jj = d.getDate();
+    var h = lireHistorique();
+    h.push({
+      date: d.getFullYear() + "-" + (mm < 10 ? "0" + mm : mm) + "-" + (jj < 10 ? "0" + jj : jj),
+      cours: cours,
+      score: score,
+      total: total,
+    });
+    /* On garde les 50 derniers : de quoi voir une évolution sans laisser la
+       clé grossir sans fin. */
+    if (h.length > HISTORIQUE_MAX) h = h.slice(h.length - HISTORIQUE_MAX);
+    return window.SyntaxeStore.setJSON(HKEY, h);
+  }
+
+  function moyenne(h) {
+    var s = 0, t = 0;
+    h.forEach(function (x) { s += x.score || 0; t += x.total || 0; });
+    return t ? Math.round((s / t) * 100) : 0;
+  }
+
+  /* Les 10 derniers, du plus récent au plus ancien. */
+  function historiqueHtml() {
+    var h = lireHistorique();
+    if (!h.length) return "";
+    var lignes = h.slice(-10).reverse().map(function (x) {
+      var pct = x.total ? Math.round((x.score / x.total) * 100) : 0;
+      return '<li class="exam-hist__item">' +
+        '<span class="exam-hist__date">' + esc(x.date) + "</span>" +
+        '<span class="exam-hist__cours">' + esc(x.cours === "all" ? "Tous les cours" : courseTitle(x.cours)) + "</span>" +
+        '<span class="exam-hist__score">' + x.score + " / " + x.total + " · " + pct + "%</span></li>";
+    }).join("");
+    return '<section class="exam-hist">' +
+      "<h2>Tes examens précédents</h2>" +
+      '<p class="exam-hist__resume">' + h.length + " examen" + (h.length > 1 ? "s" : "") +
+      " passé" + (h.length > 1 ? "s" : "") + " · moyenne " + moyenne(h) + "%</p>" +
+      '<ul class="exam-hist__list">' + lignes + "</ul></section>";
+  }
+
   var state = null;
 
   function renderSetup() {
@@ -77,7 +132,7 @@
       '<label class="exam-field"><span>Cours</span><select class="select" id="exam-c">' + opts + "</select></label>" +
       '<p class="exam-hint">Tu as <strong>30 secondes par question</strong> ; le minuteur s\'arrête tout seul. Bonne chance&nbsp;!</p>' +
       '<button type="button" class="btn btn--primary btn--lg" id="exam-start">Commencer l\'examen</button>' +
-      "</div>";
+      "</div>" + historiqueHtml();
     document.getElementById("exam-start").addEventListener("click", start);
   }
 
@@ -98,6 +153,7 @@
     shuffle(pool);
     var picked = pool.slice(0, Math.min(n, pool.length));
     state = {
+      cours: c,
       questions: picked.map(prepare),
       idx: 0,
       answers: picked.map(function () {
@@ -186,6 +242,7 @@
     });
     var n = state.questions.length;
     var pct = n ? Math.round((score / n) * 100) : 0;
+    var garde = enregistrerPassage(state.cours, score, n);
 
     var details = state.questions
       .map(function (q, i) {
@@ -215,6 +272,7 @@
       '<span class="exam-score__pct">' + pct + "%</span>" +
       '<span class="exam-score__msg">' + scoreMsg(pct) + "</span></div>" +
       '<button type="button" class="btn btn--primary" id="exam-again">Refaire un examen</button>' +
+      (garde ? historiqueHtml() : "") +
       "<h2>Correction</h2>" +
       '<ul class="exam-revs">' + details + "</ul>";
     document.getElementById("exam-again").addEventListener("click", renderSetup);

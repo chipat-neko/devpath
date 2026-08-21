@@ -22,6 +22,7 @@
     "syntaxe-defis": "Défis de code résolus",
     "syntaxe-mes-qcm": "Mes QCM personnels",
     "syntaxe-goal": "Objectif d'étude",
+    "syntaxe-examen": "Examens blancs passés",
     "syntaxe-pomodoro": "Sessions Pomodoro",
     "syntaxe-playground": "Bac à sable web",
     "syntaxe-console-python": "Console Python",
