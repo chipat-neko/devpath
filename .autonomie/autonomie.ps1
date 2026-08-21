@@ -105,6 +105,10 @@ LE SITE : 83 cours, 1463 lecons, 25 parcours, 100 % file:// — aucun serveur, a
 
 CE QUI A FONDE CETTE CHAINE, et qui vaut pour les trois : les quatre verificateurs du site etaient VERTS quand un inventaire a trouve CINQ exemples dont la sortie annoncee etait fausse — dont une lecon sur les expressions regulieres qui affichait un commentaire true sous un test renvoyant false, visible par l'apprenant puisque runner.js pose un bouton Tester sur ces blocs. Ces cinq erreurs sont corrigees, mais LA CAUSE RESTE : aucun outil n'execute jamais un exemple. REGLE ABSOLUE : NE JAMAIS CORRIGER NI ECRIRE UN CALCUL DE TETE, LE FAIRE TOURNER. Le compte rendu de chaque case cite le chiffre obtenu par l'execution. Deuxieme regle : UN MOTIF DE REMPLACEMENT TROP LARGE CASSE CE QUI ETAIT JUSTE — un meme chiffre apparait souvent plusieurs fois dans une page pour des raisons differentes, donc rejoue le scenario complet apres correction. Troisieme regle : CERTAINS POINTS SONT DE VRAIS CHANTIERS — evalue avant de commencer, et si l'un depasse manifestement ce qu'une passe peut faire, laisse la case decochee en ecrivant ce qui bloque. Mieux vaut un point clos que trois ebauches. LE PROJET EST SOUS GIT et sauvegarde sur un depot prive : un commit par point, avec la mesure dans le message.
 
+ULTRACODE : ce reveil tourne en mode ultracode. Le mot-cle ultracode present dans ce prompt t'ouvre l'outil Workflow (orchestration multi-agents). SERS-T'EN quand la case le merite : un audit, une revue, une recherche large, une verification adversariale, ou un fan-out sur une liste d'elements independants (des lecons, des cours, des exemples a executer). N'en lance PAS pour une correction d'une ligne : le cout ne se justifie pas. DIMENSIONNE a moins de 15 agents.
+
+REGLE DE SECURITE DU FAN-OUT, elle prime sur tout le reste : les sous-agents peuvent LIRE, MESURER, EXECUTER et VERIFIER en parallele sans aucun risque. L'ECRITURE, elle, reste coordonnee : deux agents qui modifient la meme lecon en meme temps se detruisent mutuellement, et un git commit lance par deux agents a la fois casse le depot. Donc un seul agent ecrit a la fois dans un fichier donne, et TOI SEUL fais les commits. Le fan-out sert d'abord a PROUVER : faire executer les exemples, rejouer les calculs, et CONTREDIRE tes propres conclusions avant de les ecrire. C'est exactement ce qui manquait quand cinq exemples faux ont traverse quatre verificateurs verts.
+
 1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V12.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A a H, dans l'ordre). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
 2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
 3) LES QUATRE OUTILS DU PROJET, a utiliser systematiquement — ils font en quelques secondes ce qui prendrait des heures a la main, et ils ne se trompent pas : (a) node tools/verif-html.js analyse le SOURCE des 1425 lecons et detecte toute balise creee par erreur dans un bloc de code ; il DOIT rester a zero apres ton passage. (b) node tools/verif-donnees.js verifie 17 invariants de DONNEES (courses/content/durations, fichiers cites contre fichiers disque, index, doublons de QCM). (c) node tools/verif-rendu.js mesure CE QUE LE NAVIGATEUR AFFICHE : debordement horizontal, contraste du texte sur son fond effectif, repere de focus au clavier, aria, erreurs de console, requetes reseau ; sans argument il prend un echantillon de 20 pages, avec --tout --lecons il en couvre 139, et il pilote Chrome donc il prend plusieurs minutes. Lance-le des que tu touches a du CSS ou a un gabarit. (d) node tools/build-index.js regenere les index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,searchlite,antiseches.
@@ -137,12 +141,14 @@ Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) sur le projet Syntaxe, dos
    h) REDIRECTIONS : chaque ancienne URL de cours -avance existe encore et pointe vers une lecon qui existe vraiment.
    i) COMPTEURS AFFICHES : le nombre de cours et de lecons annonce sur l'accueil et le catalogue correspond a la realite.
 2) CORRIGE uniquement ce qui est simple et sur (index, durees, compteurs, liens). Si une correction est lourde ou douteuse, NE LA FAIS PAS : signale-la dans le rapport.
+ULTRACODE : le mot-cle ultracode present dans ce prompt t'ouvre l'outil Workflow. Cette passe est precisement son cas d'usage : lance les controles EN PARALLELE, un agent par dimension, puis fais REFUTER chaque probleme trouve par un second agent dont la consigne est de le demolir. Un constat qui n'a pas ete reproduit n'entre pas dans le rapport. Moins de 15 agents. Les agents LISENT et MESURENT ; les corrections et les commits, c'est toi.
+
 3) ECRIS le rapport dans d:\test-claude\VERIF-FINALE.md. Sa toute PREMIERE ligne doit etre exactement VERDICT: VERT si tous les controles sont bons apres tes corrections, sinon exactement VERDICT: ROUGE. Ensuite le detail controle par controle avec les chiffres, puis la liste des problemes restants.
 4) Mets a jour la memoire du chantier (fichier enrichissement-cron-3.md) avec le resultat. Messages BREFS.
 '@
 
 # Le prompt de travail nomme CHANTIER-V12.md ; on y substitue le plan courant de
-# la chaine, pour que le meme wrapper serve aux trois chantiers.
+# la chaine, pour que le meme wrapper serve a tous les chantiers.
 $planCourant = Get-PlanCourant
 if (-not $planCourant) { $planCourant = 'CHANTIER-V12.md' }
 $promptTravail = $promptTravail.Replace('CHANTIER-V12.md', $planCourant)
@@ -150,8 +156,19 @@ $prompt = if ($modeVerif) { $promptVerif } else { $promptTravail }
 
 try {
   Set-Location $proj
-  # Modele + effort EPINGLES (choix utilisateur) : Opus 4.8, effort max, pour du
+  # Modele + effort EPINGLES (choix utilisateur, 2026-08-21) : Opus 5, effort max, pour du
   # travail non surveille. --dangerously-skip-permissions = agir sans prompt.
+  # Le mot-cle ultracode est dans le prompt : il ouvre l'outil Workflow (multi-agents).
+  # Il n'existe PAS de drapeau CLI equivalent ; le declencheur est le mot dans le texte.
+  # SUFFIXE [1m] OBLIGATOIRE, ne pas l'enlever : le binaire epingle est en 2.1.168
+  # (8 juin) et ne connait pas claude-opus-5 -- zero occurrence dans le fichier, contre
+  # 42 dans la version 2.1.238. Sa table de fenetre de contexte n'accorde le million de
+  # jetons qu'a claude-opus-4-7 et claude-opus-4-8, codes en dur ; tout autre nom retombe
+  # a 200 000. Or sur les 390 passes deja journalisees, 125 ont depasse 200 000 jetons
+  # (pic mesure : 608 342) : sans ce suffixe, une passe sur trois se ferait compacter en
+  # plein milieu d'une case, juste avant d'ecrire son compte rendu chiffre. Le suffixe est
+  # retire du nom avant l'appel a l'API, donc il ne change pas le modele appele : teste,
+  # exit 0. Quand le binaire sera mis a jour, le suffixe restera valide (opus 5 y est natif 1M).
   # RETRY : les echecs sont surtout des coupures API transitoires (ex 529 Overloaded).
   # On reessaie UNE fois apres 30s. Le reveil est idempotent (une lecon deja enrichie,
   # reperable a son glossaire, n'est jamais refaite), donc relancer est sans risque.
@@ -161,7 +178,7 @@ try {
       Add-Content $log "[$(Stamp)] echec (exit $code) -- nouvelle tentative ($try/2) dans 30s..." -Encoding utf8
       Start-Sleep -Seconds 30
     }
-    $sortie = (& $claude -p $prompt --model claude-opus-4-8 --effort max --dangerously-skip-permissions 2>&1 | Out-String)
+    $sortie = (& $claude -p $prompt --model 'claude-opus-5[1m]' --effort max --dangerously-skip-permissions 2>&1 | Out-String)
     $code = $LASTEXITCODE
   }
   # Reparation du mojibake : sous le Planificateur (aucune console), [Console]::OutputEncoding
@@ -186,12 +203,12 @@ try {
   $statut = if ($code -eq 0) { 'OK' } else { 'ECHEC' }
   $faits = '?'; $total = '?'
   try {
-    $plan = Join-Path $proj 'CHANTIER-V12.md'
+    $plan = Join-Path $proj $planCourant
     $coches = (Select-String -Path $plan -Pattern '^- \[x\]').Count
     $restants = (Select-String -Path $plan -Pattern '^- \[ \]').Count
     $faits = $coches; $total = $coches + $restants
   } catch {}
-  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points du chantier V12" -Encoding utf8
+  Add-Content $log "[$(Stamp)] BILAN [$statut] -- $faits/$total points de $planCourant" -Encoding utf8
 
   # --- Verdict de la passe de securite ---------------------------------------
   # Le modele ecrit VERDICT: VERT ou VERDICT: ROUGE en 1re ligne de VERIF-FINALE.md.
