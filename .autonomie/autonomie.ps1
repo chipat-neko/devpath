@@ -106,7 +106,7 @@ if (Test-ChantierFini) {
   if (Test-Path $okFile) {
     Log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE. Tache desactivee. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
-    catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
+    catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." }
     exit 0
   }
   $echecs = 0
@@ -287,7 +287,7 @@ try {
     # replanifier, plutot que de gaspiller un reveil de plus.
     Log "[$(Stamp)] ===== CHANTIER TERMINE : verification finale VERTE. Tache desactivee, aucun reveil replanifie. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
-    catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." -Encoding utf8 }
+    catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." }
   }
   # Auto-replanification -- SAUF si la fin de chantier vient d'etre confirmee.
   # (Pas de return ici : PowerShell interdit de sortir d'un bloc finally.)
