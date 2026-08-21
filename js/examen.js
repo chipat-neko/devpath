@@ -141,7 +141,10 @@
       return { t: t, correct: i === q.k };
     });
     shuffle(opts);
-    return { q: q.q, e: q.e, c: q.c, opts: opts };
+    /* V12-C2 : le fichier d'origine (q.f) etait jete, alors que les 5 627
+       questions de la banque le portent — la correction ne pouvait donc pas
+       renvoyer vers la lecon qui enseigne la reponse. On le garde. */
+    return { q: q.q, e: q.e, c: q.c, f: q.f, opts: opts };
   }
 
   function start() {
@@ -259,6 +262,12 @@
           (ok ? "" : '<p class="exam-rev__given">Ta réponse : ' + esc(a >= 0 ? q.opts[a].t : "(aucune)") + "</p>") +
           '<p class="exam-rev__good">Bonne réponse : ' + esc(good ? good.t : "?") + "</p>" +
           (q.e ? '<p class="exam-rev__exp">' + esc(q.e) + "</p>" : "") +
+          /* Depuis pages/examen.html, une lecon est a <cours>/<fichier> :
+             les 1 463 couples de la banque ont ete verifies sur le disque. */
+          (q.f
+            ? '<p class="exam-rev__lien"><a href="' + esc(q.c) + "/" + esc(q.f) + '">' +
+              "Revoir la leçon — " + esc(courseTitle(q.c)) + "</a></p>"
+            : "") +
           "</div></li>"
         );
       })

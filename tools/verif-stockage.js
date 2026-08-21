@@ -36,7 +36,7 @@
  *     annuler. Une fusion se juge sur le résultat, pas sur un message.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 18 scénarios
+ *   node tools/verif-stockage.js            # les 18 scénarios (B1-B3, C1-C2)
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -345,12 +345,12 @@ var SCENARIOS = [
     attendu: {"syntaxe-progress": {"html": {"lecon-01.html": true, "lecon-02.html": true}, "css": {"lecon-01.html": true}}, "syntaxe-notes": {"css": {"lecon-01.html": {"note": "venue du portable"}}}},
   },
   {
-    nom: "examen : deux passages empilés, score enregistré = score affiché",
+    nom: "examen : passages empilés, score fidèle, correction qui renvoie à la leçon",
     page: "pages/examen.html", panne: null,
     semer: "try{localStorage.clear()}catch(e){}",
     geste: "function passer(n){var s=document.getElementById('exam-n');if(s)s.value=String(n);var b=document.getElementById('exam-start');if(b)b.click();for(var i=0;i<n;i++){var o=document.querySelectorAll('.exam-opt');if(o.length)o[i%o.length].click();var v=document.getElementById('exam-next');if(v)v.click()}var f=document.getElementById('exam-finish');if(f)f.click()}passer(10);var a=document.getElementById('exam-again');if(a)a.click();passer(10);",
     bandeau: null,
-    examen: { passages: 2, total: 10 },
+    examen: { passages: 2, total: 10, liens: true },
   },
   {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
@@ -399,6 +399,19 @@ var SONDE = function () {
       return out;
     })(),
     scoreAffiche: (document.querySelector(".exam-score__n") || {}).textContent || "",
+    liensLecon: (function () {
+      var a = document.querySelectorAll(".exam-rev__lien a");
+      var faux = 0, ex = "";
+      for (var i = 0; i < a.length; i++) {
+        var h = a[i].getAttribute("href") || "";
+        if (!/^[a-z0-9-]+\/lecon-\d+\.html$/.test(h)) faux++;
+        if (!ex) ex = h;
+      }
+      /* L'URL RESOLUE par le navigateur : Node ira verifier que le fichier
+         existe vraiment, ce qu'un test du seul attribut href ne prouve pas. */
+      return { nb: a.length, malformes: faux, exemple: ex,
+               absolu: a.length ? a[0].href : "" };
+    })(),
     historiqueExamen: (function () {
       /* Il peut y avoir DEUX blocs dans le DOM (celui des réglages, masqué, et
          celui du résultat) : on ne juge que sur le bloc VISIBLE — offsetParent,
@@ -611,7 +624,23 @@ var SONDE = function () {
     /* L'examen doit laisser une trace ET la montrer : une donnee enregistree
        mais invisible ne sert a personne. */
     var okExamen = true;
-    if (sc.examen) {
+    if (sc.examen && sc.examen.liens) {
+      /* Chaque question de la correction doit renvoyer vers SA lecon. */
+      okExamen = v.liensLecon && v.liensLecon.nb === sc.examen.total && v.liensLecon.malformes === 0;
+      /* Le lien doit mener a un fichier qui EXISTE : on resout l'URL et on
+         regarde le disque. */
+      if (okExamen) {
+        var cible = decodeURIComponent(String(v.liensLecon.absolu || "").replace(/^file:\/\/\//, ""));
+        if (!cible || !fs.existsSync(cible)) {
+          okExamen = false;
+          v.__ecart = "le lien ne mene nulle part : " + cible;
+        } else {
+          v.__cible = cible.slice(-40);
+        }
+      }
+      if (!okExamen) v.__ecart = v.__ecart || ("liens « Revoir la lecon » : " + JSON.stringify(v.liensLecon));
+    }
+    if (sc.examen && okExamen) {
       var hist = [];
       try { hist = JSON.parse((v.cles || {})["syntaxe-examen"] || "[]"); } catch (e) { hist = null; }
       var dernier = hist && hist.length ? hist[hist.length - 1] : null;
@@ -652,6 +681,9 @@ var SONDE = function () {
       }
       if (sc.examen && v.historiqueExamen) {
         console.log("         enregistré : " + (v.cles || {})["syntaxe-examen"]);
+        console.log("         liens vers la leçon : " + v.liensLecon.nb + " (0 malformé : " +
+          (v.liensLecon.malformes === 0) + ") ex. " + v.liensLecon.exemple +
+          (v.__cible ? "  → fichier trouvé : …" + v.__cible : ""));
         console.log("         affiché : « " + v.historiqueExamen.resume + " » (" +
           v.historiqueExamen.lignes + " ligne(s)) · score à l'écran : " + v.scoreAffiche);
       }
