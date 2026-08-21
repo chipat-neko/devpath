@@ -121,6 +121,9 @@ les yeux ne voient pas.
 
 ---
 
+> **⚠ AU PROCHAIN RÉVEIL — ne pas re-analyser E2.** C'est la seule case encore ouverte du plan, et le wrapper désignera donc encore CHANTIER-V12.md. L'analyse est faite et chiffrée (35,7 Mo dupliqués, régénérés à chaque passe) : il n'y a plus rien à mesurer, il y a une décision à prendre, et elle appartient à Noah.
+> **Si aucune consigne n'est arrivée** : appliquer la troisième option — un **« livret » imprimable par cours** (antisèches + glossaire + pièges, tous déjà indexés, quelques centaines de Ko au total), puis cocher la case en disant clairement que le point a été traité *en version livret*, pas en copie intégrale. **Le chantier V12 est terminé par ailleurs : 30 cases sur 31.**
+
 ## PHASES F et G — déplacées vers les chantiers V13 et V14
 
 Le catalogue et les gros morceaux pédagogiques ont été sortis de ce plan le 2026-08-21 : une case
