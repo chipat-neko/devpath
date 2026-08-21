@@ -52,7 +52,9 @@ if (!RAPIDE) {
   ETAPES.push({
     nom: "rendu  ",
     fichier: "verif-rendu.js",
-    args: COMPLET ? ["--tout", "--lecons"] : [],
+    // normal : echantillon leger (~20 pages) ; complet : premier niveau + TOUS les
+    // cours.html + une lecon par cours (~229 pages, plusieurs minutes).
+    args: COMPLET ? ["--tout", "--cours", "--lecons"] : ["--echantillon"],
     quoi: "debordement, contraste, focus, aria, console, reseau",
     lent: true,
   });

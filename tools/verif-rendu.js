@@ -28,7 +28,11 @@
        une ressource distante est detectee, pas silencieusement servie par le cache.
 
    USAGE
-     node tools/verif-rendu.js                  # echantillon representatif (~20 pages)
+     node tools/verif-rendu.js                  # DEFAUT ELARGI : premier niveau + tous
+                                                #   les cours.html + une lecon/cours (~229)
+     node tools/verif-rendu.js --echantillon    # ~20 pages representatives (rapide)
+     node tools/verif-rendu.js --lister         # liste les pages sans lancer Chrome
+     node tools/verif-rendu.js --cours          # tous les cours.html
      node tools/verif-rendu.js --tout           # toutes les pages de premier niveau
      node tools/verif-rendu.js --pages=a,b      # pages precises (chemins relatifs)
      node tools/verif-rendu.js --largeurs=320,1280
@@ -87,44 +91,85 @@ var ECHANTILLON = [
   "pages/reseaux/lecon-11.html",
 ];
 
-/* Une lecon par cours : les 1376 lecons partagent le gabarit, mais leur CONTENU
-   varie (tableaux larges, blocs de code interminables, schemas SVG, QCM denses).
-   En prendre une par cours couvre les 76 accents de couleur et les 76 formes de
-   contenu pour 77 pages, au lieu de 1376. On prend la lecon du MILIEU du cours :
-   la premiere est souvent une introduction courte, peu representative. */
-function unePageParCours() {
-  var out = [];
+/* Toutes les pages transverses de premier niveau (accueil + pages/*.html). */
+function premierNiveau() {
+  var out = ["index.html"];
+  try {
+    fs.readdirSync(path.join(ROOT, "pages")).forEach(function (f) {
+      if (f.endsWith(".html")) out.push("pages/" + f);
+    });
+  } catch (e) { console.error("(pages/ illisible : " + e.message + ")"); }
+  return out;
+}
+
+/* Charge SITE_DATA une seule fois (partage entre tousCoursHtml et unePageParCours). */
+function chargerData() {
   try {
     var code = fs.readFileSync(path.join(ROOT, "js/data.js"), "utf8");
     var faux = { window: {} };
     new Function("window", code)(faux.window);
-    var d = faux.window.SITE_DATA;
-    Object.keys(d.content).forEach(function (id) {
-      var c = d.content[id];
-      var fichiers = [];
-      (c.modules || []).forEach(function (m) {
-        (m.lessons || []).forEach(function (l) { if (l && l.file) fichiers.push(l.file); });
-      });
-      if (fichiers.length) out.push("pages/" + (c.dir || id) + "/" + fichiers[Math.floor(fichiers.length / 2)]);
-    });
-  } catch (e) {
-    console.error("(impossible de lister les lecons : " + e.message + ")");
-  }
+    return faux.window.SITE_DATA;
+  } catch (e) { console.error("(data.js illisible : " + e.message + ")"); return null; }
+}
+
+/* Les 83 cours.html (la sommaire d'un cours) : c'est la page la PLUS visitee apres
+   l'accueil, et 82 des 83 n'etaient JAMAIS mesurees (seul html/cours.html l'etait).
+   Leur mise en page (grille de modules, badges de niveau, progression) est generee
+   par cours.js et peut deborder ou manquer de contraste comme n'importe quelle page. */
+function tousCoursHtml() {
+  var out = [];
+  var d = chargerData();
+  if (!d) return out;
+  Object.keys(d.content).forEach(function (id) {
+    var rel = "pages/" + (d.content[id].dir || id) + "/cours.html";
+    if (fs.existsSync(path.join(ROOT, rel))) out.push(rel);
+  });
   return out;
 }
 
+/* Une lecon par cours : les 1463 lecons partagent le gabarit, mais leur CONTENU
+   varie (tableaux larges, blocs de code interminables, schemas SVG, QCM denses).
+   On prend la lecon du MILIEU du cours : la premiere est souvent une introduction
+   courte, peu representative. */
+function unePageParCours() {
+  var out = [];
+  var d = chargerData();
+  if (!d) return out;
+  Object.keys(d.content).forEach(function (id) {
+    var c = d.content[id];
+    var fichiers = [];
+    (c.modules || []).forEach(function (m) {
+      (m.lessons || []).forEach(function (l) { if (l && l.file) fichiers.push(l.file); });
+    });
+    if (fichiers.length) out.push("pages/" + (c.dir || id) + "/" + fichiers[Math.floor(fichiers.length / 2)]);
+  });
+  return out;
+}
+
+function dedup(arr) {
+  var vu = {};
+  return arr.filter(function (x) { return x && !vu[x] && (vu[x] = true); });
+}
+
+/* Selection des pages a mesurer.
+     --pages=a,b       : liste explicite
+     --echantillon     : les ~20 pages representatives (rapide)
+     --tout            : toutes les pages de premier niveau
+     --cours           : tous les cours.html
+     --lecons          : une lecon par cours
+   DEFAUT (aucun de ces drapeaux) = ELARGI (A8) : premier niveau + TOUS les
+   cours.html + une lecon par cours. verif-rendu ne voyait que 20 pages sur 1702
+   et ratait 82 des 83 cours.html ; le defaut couvre desormais toutes les FORMES. */
 function pagesAMesurer() {
   var p = opt("pages", "");
-  if (p) return p.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+  if (p) return dedup(p.split(",").map(function (s) { return s.trim(); }).filter(Boolean));
+  if (flag("echantillon")) return ECHANTILLON;
   var out = [];
-  if (TOUT) {
-    out.push("index.html");
-    fs.readdirSync(path.join(ROOT, "pages")).forEach(function (f) {
-      if (f.endsWith(".html")) out.push("pages/" + f);
-    });
-  }
+  if (TOUT) out = out.concat(premierNiveau());
+  if (flag("cours")) out = out.concat(tousCoursHtml());
   if (flag("lecons")) out = out.concat(unePageParCours());
-  return out.length ? out : ECHANTILLON;
+  if (out.length) return dedup(out);
+  return dedup(premierNiveau().concat(tousCoursHtml()).concat(unePageParCours()));
 }
 
 /* --------------------------------------------------------------- Chrome ---- */
@@ -459,6 +504,12 @@ function avertir(page, categorie, texte) {
 
 /* ------------------------------------------------------------------- main */
 (async function main() {
+  if (flag("lister")) {   // debug : quelles pages seraient mesurees, sans lancer Chrome
+    var liste = pagesAMesurer();
+    console.log(liste.length + " page(s) :");
+    liste.forEach(function (x) { console.log("  " + x); });
+    return;
+  }
   var chrome = trouverChrome();
   if (!chrome) {
     console.error("ERREUR : Chrome introuvable. Renseigne CHROME_PATH.");
