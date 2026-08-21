@@ -19,6 +19,10 @@
 
     var started = 0;
     Object.keys(store).forEach(function (n) {
+      /* Seules les clés NUMÉRIQUES sont des étapes : un fil recomposé pose
+         aussi une marque de renumérotation (`__remap`, cf. fil-rouge.js), qui
+         serait sinon comptée comme une étape abordée de plus. */
+      if (!/^[0-9]+$/.test(n)) return;
       var st = store[n];
       if (st && Object.keys(st).length > 0) started++;
     });

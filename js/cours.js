@@ -406,8 +406,8 @@
       map: { python: 1, sql: 2, r: 3, julia: 4 },
     },
     {
-      page: "../fil-rouge-backend.html", total: 6, label: "ton API multi-langages",
-      map: { api: 1, go: 2, csharp: 3, php: 4, ruby: 5, nosql: 6 },
+      page: "../fil-rouge-backend.html", total: 7, label: "ton API multi-langages",
+      map: { api: 1, go: 2, csharp: 3, php: 4, ruby: 5, nosql: 6, graphql: 7 },
     },
     {
       page: "../fil-rouge-outils.html", total: 9, label: "ton projet web outillé",
@@ -446,8 +446,8 @@
       map: { archi: 1, cloud: 2, iac: 3 },
     },
     {
-      page: "../fil-rouge-ia.html", total: 3, label: "ton application d'IA",
-      map: { ml: 1, llm: 2, graphql: 3 },
+      page: "../fil-rouge-ia.html", total: 5, label: "ton application d'IA",
+      map: { pandas: 1, stats: 2, ml: 3, llm: 4, dataviz: 5 },
     },
     {
       page: "../fil-rouge-fiabilite.html", total: 2, label: "tes systèmes fiables",

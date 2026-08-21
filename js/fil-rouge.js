@@ -35,9 +35,39 @@
   function readStore() {
     return window.SyntaxeStore.getJSON(KEY, {});
   }
+  /* Toute écriture porte la MARQUE de renumérotation (cf. migrerStore) : sans
+     elle, une progression créée après coup serait reprise pour de l'ancien
+     format au chargement suivant, et convertie une seconde fois. */
   function writeStore(s) {
+    if (FR.remap && FR.remapVersion) s.__remap = "v" + FR.remapVersion;
     window.SyntaxeStore.setJSON(KEY, s);
   }
+  /* RENUMÉROTATION D'UN FIL — la progression est stockée PAR NUMÉRO d'étape
+     (`{ "3": { "0": true } }`). Insérer ou retirer une étape décale donc les
+     numéros et ferait apparaître les cases d'un cours sous un autre, en
+     silence. Un fil recomposé déclare `remap` (ancien numéro → nouveau, ou
+     `null` si l'étape a quitté le fil) et `remapVersion` (entier) : la
+     conversion s'applique UNE seule fois, marquée par la clé `__remap`. Les
+     clés non numériques sont ignorées partout ailleurs (cf. fils-rouges.js).
+     Un store VIDE n'est pas converti : rien à déplacer, et écrire la marque
+     poserait une donnée pour un apprenant qui n'a rien coché. */
+  function migrerStore() {
+    if (!FR.remap || !FR.remapVersion) return;
+    var s = readStore();
+    if (s.__remap === "v" + FR.remapVersion) return;
+    var anciens = Object.keys(s).filter(function (k) { return /^[0-9]+$/.test(k); });
+    if (!anciens.length) return;
+    var out = {};
+    anciens.forEach(function (k) {
+      var cible = FR.remap[k];
+      /* Numéro absent de la table : le fil ne l'a pas bougé, on le garde tel quel. */
+      if (cible === undefined) cible = parseInt(k, 10);
+      if (cible === null) return; // étape retirée du fil : sa progression n'a plus de sens ici
+      out[cible] = s[k];
+    });
+    writeStore(out);
+  }
+  migrerStore();
   function byN(n) {
     for (var i = 0; i < FR.etapes.length; i++) {
       if (FR.etapes[i].n === n) return FR.etapes[i];
