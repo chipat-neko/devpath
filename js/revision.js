@@ -56,6 +56,35 @@
 
   var state = load();
   var filter = "all";
+  /* ------------------------------- Réviser ce qu'on a lu (V12-D4)
+     La révision proposait les 10 678 cartes du site, y compris celles de cours
+     jamais ouverts : réviser du vocabulaire qu'on n'a jamais rencontré n'est pas
+     de la révision, c'est du bachotage à l'aveugle. Depuis D3, chaque carte
+     porte SA leçon : le filtre se fait donc à la leçon, pas au cours.
+     Attention : les cartes parlent en DOSSIER (js), la progression en ID de
+     cours (javascript). */
+  var seulementLues = false;
+  var DIR_TO_ID = (function () {
+    var m = {};
+    var d = window.SITE_DATA;
+    if (d && d.content) {
+      for (var id in d.content) {
+        if (d.content.hasOwnProperty(id)) m[d.content[id].dir] = id;
+      }
+    }
+    return m;
+  })();
+  function progression() {
+    return window.SyntaxeStore ? window.SyntaxeStore.getJSON("syntaxe-progress", {}) : {};
+  }
+  /* Une carte venant de « cours.html » appartient au cours : elle compte dès
+     qu'au moins une leçon du cours est terminée. */
+  function estLue(prog, carte) {
+    var id = DIR_TO_ID[carte.c];
+    if (!id || !prog[id]) return false;
+    if (!carte.f || carte.f === "cours.html") return Object.keys(prog[id]).length > 0;
+    return !!prog[id][carte.f];
+  }
   var queue = [];
   var session = { done: 0, knew: 0 };
 
@@ -82,20 +111,57 @@
     selCourse.addEventListener("change", function () {
       filter = selCourse.value;
       session = { done: 0, knew: 0 };
+      majDispo();
       buildQueue();
       showCard();
     });
   })();
+
+  /* Case « seulement les leçons que j'ai lues » : elle annonce combien de cartes
+     restent, et se désactive quand elle en laisserait zéro — cocher une case qui
+     vide l'écran sans le dire serait pire que le défaut corrigé. */
+  var caseLues = document.getElementById("rev-lues");
+  var dispoEl = document.getElementById("rev-dispo");
+  function majDispo() {
+    if (!caseLues || !dispoEl) return;
+    var etait = seulementLues;
+    seulementLues = true;
+    var n = bassin().length;
+    seulementLues = etait;
+    dispoEl.textContent = n ? "(" + n + " carte" + (n > 1 ? "s" : "") + ")" : "(aucune leçon lue dans ce choix)";
+    caseLues.disabled = n === 0;
+    if (n === 0 && caseLues.checked) {
+      caseLues.checked = false;
+      seulementLues = false;
+    }
+  }
+  if (caseLues) {
+    caseLues.addEventListener("change", function () {
+      seulementLues = caseLues.checked;
+      session = { done: 0, knew: 0 };
+      buildQueue();
+      showCard();
+    });
+    majDispo();
+  }
 
   function due(c) {
     var s = state[cardId(c)];
     return !s || !s.due || s.due <= Date.now();
   }
 
-  function buildQueue() {
-    var pool = CARDS.filter(function (c) {
-      return filter === "all" || c.c === filter;
+  /* Le bassin de cartes, selon le cours choisi et la case « déjà lues ». */
+  function bassin() {
+    var prog = seulementLues ? progression() : null;
+    return CARDS.filter(function (c) {
+      if (filter !== "all" && c.c !== filter) return false;
+      if (seulementLues && !estLue(prog, c)) return false;
+      return true;
     });
+  }
+
+  function buildQueue() {
+    var pool = bassin();
     var dues = pool.filter(due);
     if (dues.length) {
       queue = shuffle(dues.slice());
@@ -111,9 +177,7 @@
 
   function renderStats() {
     if (!statsEl) return;
-    var pool = CARDS.filter(function (c) {
-      return filter === "all" || c.c === filter;
-    });
+    var pool = bassin();
     var remaining = pool.filter(due).length;
     statsEl.textContent =
       session.done +
