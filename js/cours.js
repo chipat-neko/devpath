@@ -81,7 +81,7 @@
     if (!host) return;
     var done = 0;
     try {
-      var p = JSON.parse(localStorage.getItem("syntaxe-progress") || "{}");
+      var p = window.SyntaxeStore.getJSON("syntaxe-progress", {});
       if (p[courseId]) {
         flat.forEach(function (l) {
           if (p[courseId][l.file]) done++;
@@ -135,10 +135,7 @@
   function renderQuizSummary() {
     var host = document.querySelector("[data-course-progress]");
     if (!host) return;
-    var scores = {};
-    try {
-      scores = JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}") || {};
-    } catch (e) {}
+    var scores = window.SyntaxeStore.getJSON("syntaxe-quiz", {});
     var cs = scores[courseId];
     if (!cs) return;
 
@@ -163,12 +160,9 @@
   function renderResetButton() {
     var host = document.querySelector("[data-course-progress]");
     if (!host) return;
-    var hasProgress = false;
-    try {
-      var p = JSON.parse(localStorage.getItem("syntaxe-progress") || "{}");
-      var q = JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}");
-      hasProgress = !!(p[courseId] || q[courseId]);
-    } catch (e) {}
+    var p = window.SyntaxeStore.getJSON("syntaxe-progress", {});
+    var q = window.SyntaxeStore.getJSON("syntaxe-quiz", {});
+    var hasProgress = !!(p[courseId] || q[courseId]);
     if (!hasProgress) return; // rien à réinitialiser
 
     var btn = document.createElement("button");
@@ -188,10 +182,10 @@
          l'apprenant verrait sa progression intacte sans un mot d'explication. */
       var ecrit = false;
       try {
-        var prog = JSON.parse(localStorage.getItem("syntaxe-progress") || "{}");
+        var prog = window.SyntaxeStore.getJSON("syntaxe-progress", {});
         delete prog[courseId];
         ecrit = window.SyntaxeStore.setJSON("syntaxe-progress", prog);
-        var sc = JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}");
+        var sc = window.SyntaxeStore.getJSON("syntaxe-quiz", {});
         delete sc[courseId];
         window.SyntaxeStore.setJSON("syntaxe-quiz", sc);
       } catch (e) {}
@@ -209,7 +203,7 @@
 
     var done = 0;
     try {
-      var p = JSON.parse(localStorage.getItem("syntaxe-progress") || "{}");
+      var p = window.SyntaxeStore.getJSON("syntaxe-progress", {});
       if (p[courseId]) {
         flat.forEach(function (l) {
           if (p[courseId][l.file]) done++;
@@ -221,7 +215,7 @@
     var mastered = false;
     var bilanTxt = "";
     try {
-      var q = JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}");
+      var q = window.SyntaxeStore.getJSON("syntaxe-quiz", {});
       var cs = q[courseId];
       var bilan = bestBilan(cs, flat);
       if (bilan && bilan.total && bilan.best / bilan.total >= 0.7) {

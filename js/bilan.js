@@ -18,11 +18,7 @@
     });
   }
   function ls(key) {
-    try {
-      return JSON.parse(localStorage.getItem(key) || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON(key, {});
   }
   function ymd(d) {
     var m = d.getMonth() + 1,

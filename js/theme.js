@@ -1,12 +1,20 @@
-/* stockage.js (inclus dans theme.js) — Écriture localStorage qui ne se tait plus.
-   Constat V12-B1 : sur 29 points d'écriture, 21 avalaient l'échec dans un
-   `catch (e) {}` vide. En navigation privée stricte, sur un profil durci ou
-   avec un quota plein, l'apprenant travaillait une heure sans qu'un mot ne
-   lui dise que rien n'était gardé.
-   `SyntaxeStore.set` renvoie un booléen ET prévient (une fois par cause,
-   par session) via le bandeau `window.SyntaxeToast` défini dans main.js.
-   Défini ici parce que theme.js est le PREMIER script de toutes les pages,
-   chargé sans `defer` : tous les autres scripts s'exécutent après lui. */
+/* stockage.js (inclus dans theme.js) — les accès à localStorage qui ne se
+   taisent plus. Défini ici parce que theme.js est le PREMIER script de toutes
+   les pages, chargé sans `defer` : tous les autres scripts s'exécutent après lui.
+
+   ÉCRITURE (V12-B1). Sur 29 points d'écriture, 21 avalaient l'échec dans un
+   `catch (e) {}` vide : en navigation privée stricte, sur un profil durci ou
+   avec un quota plein, l'apprenant travaillait une heure sans qu'un mot ne lui
+   dise que rien n'était gardé. `set`, `setJSON` et `remove` renvoient un
+   booléen et préviennent via le bandeau `window.SyntaxeToast` (main.js).
+
+   LECTURE (V12-B2). Les 36 lecteurs faisaient `try { JSON.parse(…) } catch
+   { return {} }` : une donnée ABÎMÉE était donc indistinguable d'une donnée
+   ABSENTE. La progression paraissait effacée, rien ne le disait, et la première
+   écriture suivante l'écrasait définitivement. `getJSON` sépare les deux cas :
+   si la valeur est présente mais illisible, elle est MISE DE CÔTÉ sous
+   `syntaxe-secours-…` (donc plus rien n'est perdu, et la page « Mes données »
+   l'exporte comme le reste) et l'apprenant est prévenu. */
 (function () {
   "use strict";
   /* Un seul bandeau par cause dans la minute : une rafale d'écritures (un clic
@@ -38,6 +46,31 @@
     })();
   }
 
+  /* Une donnée illisible est mise à l'abri AVANT que la première écriture ne
+     l'écrase. On ne recopie qu'une fois : les lecteurs sont appelés en boucle,
+     et la deuxième copie écraserait la bonne avec la même valeur abîmée. */
+  function quarantaine(cle, brut) {
+    var secours = "syntaxe-secours-" + cle.replace(/^syntaxe-/, "");
+    var deja = null;
+    try { deja = localStorage.getItem(secours); } catch (e) {}
+    var sauve = deja !== null;
+    if (!sauve) {
+      try {
+        localStorage.setItem(secours, brut);
+        sauve = true;
+      } catch (e) {}
+    }
+    prevenir(
+      sauve
+        ? "Sauvegarde illisible : « " + cle + " » était abîmée. La version brute est " +
+          "mise de côté, tu peux la récupérer depuis « Mes données ». Le site repart " +
+          "de zéro pour cette donnée."
+        : "Sauvegarde illisible : « " + cle + " » était abîmée, et il n'y a pas eu " +
+          "la place de la mettre de côté. Exporte tes données depuis « Mes données » " +
+          "avant de continuer."
+    );
+  }
+
   /* Quota dépassé : code 22 (standard), 1014 (Firefox), ou le nom. */
   function estQuota(e) {
     if (!e) return false;
@@ -50,7 +83,8 @@
   }
 
   window.SyntaxeStore = {
-    echecs: 0, /* compteur, utilisé par les vérifications automatisées */
+    echecs: 0,  /* compteurs, utilisés par les vérifications automatisées */
+    abimees: 0,
     /* Écrit une chaîne. Renvoie true si c'est bien passé. */
     set: function (cle, valeur) {
       try {
@@ -73,6 +107,31 @@
         return false;
       }
       return this.set(cle, texte);
+    },
+    /* Lit une valeur JSON. Trois cas SÉPARÉS :
+         - absente (ou stockage inaccessible) : renvoie `defaut`, en silence ;
+         - présente et lisible : renvoie la valeur ;
+         - présente mais ILLISIBLE : la met de côté, prévient, renvoie `defaut`.
+       `null` stocké est traité comme absent : c'est ce que faisaient déjà les
+       lecteurs, avec leur `|| "{}"` puis `|| {}`. */
+    getJSON: function (cle, defaut) {
+      var brut = null;
+      try {
+        brut = localStorage.getItem(cle);
+      } catch (e) {
+        this.echecs++;
+        return defaut;
+      }
+      if (brut === null || brut === "") return defaut;
+      var v;
+      try {
+        v = JSON.parse(brut);
+      } catch (e) {
+        this.abimees++;
+        quarantaine(cle, brut);
+        return defaut;
+      }
+      return v === null || v === undefined ? defaut : v;
     },
     /* Efface une clé. Renvoie true si c'est bien passé. */
     remove: function (cle) {

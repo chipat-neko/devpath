@@ -15,12 +15,7 @@
     var el = card.querySelector("[data-fr-progress]");
     if (!el || !key) return;
 
-    var store = {};
-    try {
-      store = JSON.parse(localStorage.getItem(key) || "{}") || {};
-    } catch (e) {
-      store = {};
-    }
+    var store = window.SyntaxeStore.getJSON(key, {});
 
     var started = 0;
     Object.keys(store).forEach(function (n) {

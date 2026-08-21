@@ -28,9 +28,12 @@
  *  4. Vérifie qu'un bandeau `.toast--err` apparaît AVEC LE BON MESSAGE,
  *     que le quota plein se distingue du refus, et — non-régression — que sur
  *     un stockage sain il n'y a AUCUN bandeau et que la donnée est bien écrite.
+ *  5. Sème aussi des données ABÎMÉES (V12-B2) et vérifie qu'elles sont
+ *     signalées puis mises de côté sous `syntaxe-secours-…` à l'identique,
+ *     alors qu'une donnée simplement ABSENTE ne produit rien.
  *
  * USAGE
- *   node tools/verif-stockage.js            # les 10 scénarios
+ *   node tools/verif-stockage.js            # les 13 scénarios
  *   node tools/verif-stockage.js --detail   # + le détail de chaque mesure
  *   CHROME_PATH=... node tools/verif-stockage.js
  *
@@ -108,14 +111,37 @@ Client.prototype.envoyer = function (methode, params, sess) {
         est une écriture SANS FILET, et le scénario échoue même si un bandeau
         apparaît par ailleurs. Sans ce relevé, un geste qui déclenche plusieurs
         écritures masquerait celle qui est restée nue. */
-var MOUCHARD = function (MODE) {
+var MOUCHARD = function (MODE, CLE_SURVEILLEE) {
   /* Les gestes d'effacement passent par window.confirm : en headless la boite
      modale fige la page et Runtime.evaluate expire. On repond « oui » d'office,
      ce qui est justement le chemin a tester. */
   window.confirm = function () { return true; };
   var vrai = Storage.prototype.setItem;
   var vraiRetrait = Storage.prototype.removeItem;
+  var vraiLire = Storage.prototype.getItem;
   window.__directes = [];
+  window.__lectures = [];
+  /* Qui appelle ? Le premier cadre de pile qui vient d'un fichier .js. Une
+     lecture ou une ecriture passee par le helper a theme.js en tete, puisque
+     SyntaxeStore y est defini. */
+  function appelant() {
+    var pile = (new Error().stack || "").split(String.fromCharCode(10)).slice(1);
+    for (var i = 0; i < pile.length; i++) {
+      if (/\.js:\d+/.test(pile[i])) return pile[i].replace(/^\s*at\s*/, "").slice(-90);
+    }
+    return "";
+  }
+  /* Lecture SANS FILET d'une cle qu'on a volontairement abimee : le lecteur
+     rendra {} sans rien dire, exactement le defaut que B2 ferme. Surveiller UNE
+     cle precise evite les faux positifs (syntaxe-theme, syntaxe-lang… ne sont
+     pas du JSON et sont lus directement, legitimement). */
+  Storage.prototype.getItem = function (k) {
+    if (CLE_SURVEILLEE && k === CLE_SURVEILLEE) {
+      var qui = appelant();
+      if (qui && qui.indexOf("theme.js") === -1) window.__lectures.push(qui);
+    }
+    return vraiLire.call(this, k);
+  };
   /* L'effacement souffre du meme mal que l'ecriture : « Entree effacee » ne
      doit pas s'afficher quand rien n'a ete efface. */
   Storage.prototype.removeItem = function (k) {
@@ -125,14 +151,8 @@ var MOUCHARD = function (MODE) {
     throw er;
   };
   Storage.prototype.setItem = function (k, v) {
-    var pile = (new Error().stack || "").split(String.fromCharCode(10)).slice(1);
-    var appelant = "";
-    for (var i = 0; i < pile.length; i++) {
-      if (/\.js:\d+/.test(pile[i])) { appelant = pile[i]; break; }
-    }
-    if (appelant && appelant.indexOf("theme.js") === -1) {
-      window.__directes.push(appelant.replace(/^\s*at\s*/, "").slice(-90));
-    }
+    var qui2 = appelant();
+    if (qui2 && qui2.indexOf("theme.js") === -1) window.__directes.push(qui2);
     if (MODE === "sain") return vrai.call(this, k, v);
     var e;
     if (MODE === "quota") { e = new Error("quota"); e.name = "QuotaExceededError"; e.code = 22; }
@@ -144,15 +164,17 @@ var MOUCHARD = function (MODE) {
 /* Cookies bloqués : l'ACCÈS à window.localStorage jette, pas seulement
    l'écriture. Un try posé autour du seul setItem ne suffirait pas. */
 var BLOCAGE =
-  "(function(){window.__directes=[];window.confirm=function(){return true};try{Object.defineProperty(window,'localStorage',{configurable:true," +
+  "(function(){window.__directes=[];window.__lectures=[];window.confirm=function(){return true};try{Object.defineProperty(window,'localStorage',{configurable:true," +
   "get:function(){var e=new Error('cookies bloques');e.name='SecurityError';throw e}})}catch(e){}})()";
 
-function source(panne) {
+function source(panne, cleSurveillee) {
   if (panne === "bloque") return BLOCAGE;
-  return "(" + MOUCHARD.toString() + ")(" + JSON.stringify(panne || "sain") + ")";
+  return "(" + MOUCHARD.toString() + ")(" + JSON.stringify(panne || "sain") + ", " +
+    JSON.stringify(cleSurveillee || null) + ")";
 }
 
 var REFUS = /refuse le stockage local/;
+var ABIME = /Sauvegarde illisible/;
 var PLEIN = /stockage plein/;
 
 var SCENARIOS = [
@@ -206,6 +228,29 @@ var SCENARIOS = [
     bandeau: REFUS,
   },
   {
+    nom: "leçon : progression ABÎMÉE — prévenue, mise de côté, puis réécrite",
+    page: "pages/js/lecon-01.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress','{\"javascript\":{')}catch(e){}",
+    geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
+    bandeau: ABIME, ecrit: /lecon-01/, cleAbimee: "syntaxe-progress",
+    secours: { "syntaxe-secours-progress": "{\"javascript\":{" },
+  },
+  {
+    nom: "progression : scores de QCM ABÎMÉS — prévenue et mise de côté",
+    page: "pages/progression.html", panne: null,
+    semer: "try{localStorage.clear();localStorage.setItem('syntaxe-quiz','pas du JSON')}catch(e){}",
+    geste: "",
+    bandeau: ABIME,
+    secours: { "syntaxe-secours-quiz": "pas du JSON" }, cleAbimee: "syntaxe-quiz",
+  },
+  {
+    nom: "leçon : données ABSENTES — ni bandeau ni copie de secours (non-régression)",
+    page: "pages/js/lecon-01.html", panne: null,
+    semer: "try{localStorage.clear()}catch(e){}",
+    geste: "",
+    bandeau: null, secours: {},
+  },
+  {
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
@@ -231,6 +276,8 @@ var SONDE = function () {
   return {
     directes: (window.__directes || []).slice(0, 6),
     nbDirectes: (window.__directes || []).length,
+    lectures: (window.__lectures || []).slice(0, 6),
+    nbLectures: (window.__lectures || []).length,
     bandeaux: t.length,
     textes: textes,
     echecs: (window.SyntaxeStore || {}).echecs,
@@ -239,6 +286,16 @@ var SONDE = function () {
     message: (document.querySelector(".dp-msg") || {}).textContent || "",
     messageOk: !!document.querySelector(".dp-msg.is-ok"),
     boutonReset: !!document.querySelector(".course-reset"),
+    secours: (function () {
+      var out = {};
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf("syntaxe-secours-") === 0) out[k] = localStorage.getItem(k);
+        }
+      } catch (e) {}
+      return out;
+    })(),
   };
 };
 
@@ -307,10 +364,13 @@ var SONDE = function () {
          sinon l'ecriture du semis echouerait elle aussi. */
       await nav.envoyer("Page.addScriptToEvaluateOnNewDocument", { source: sc.semer }, sess);
     }
-    await nav.envoyer("Page.addScriptToEvaluateOnNewDocument", { source: source(sc.panne) }, sess);
+    await nav.envoyer("Page.addScriptToEvaluateOnNewDocument",
+      { source: source(sc.panne, sc.cleAbimee) }, sess);
     await nav.envoyer("Page.navigate", { url: url }, sess);
     await attendre(1100);
-    await nav.envoyer("Runtime.evaluate", { expression: "(function(){" + sc.geste + "})()" }, sess);
+    if (sc.geste) {
+      await nav.envoyer("Runtime.evaluate", { expression: "(function(){" + sc.geste + "})()" }, sess);
+    }
     await attendre(500);
 
     var out = await nav.envoyer(
@@ -333,18 +393,40 @@ var SONDE = function () {
     /* Le bouton doit encore être là : la page n'a PAS rechargé, donc le bandeau
        a eu le temps d'être lu et la progression est intacte. */
     var okResteLa = sc.resteLa ? v.boutonReset === true : true;
-    var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage && okResteLa;
+    /* Une donnée illisible doit être mise de côté À L'IDENTIQUE, et une donnée
+       simplement absente ne doit RIEN produire. */
+    var okSecours = true;
+    if (sc.secours) {
+      var att = Object.keys(sc.secours).sort();
+      var eus = Object.keys(v.secours || {}).sort();
+      okSecours = att.join("|") === eus.join("|");
+      att.forEach(function (k) {
+        if (sc.secours[k] !== (v.secours || {})[k]) okSecours = false;
+      });
+    }
+    /* Une cle abimee ne doit etre lue QUE par le helper : un lecteur reste nu
+       rendrait {} en silence, et la premiere ecriture ecraserait la donnee. */
+    var okLectures = sc.cleAbimee ? v.nbLectures === 0 : true;
+    var bon = okHelper && okBandeau && okEcrit && okDirectes && okMessage &&
+      okResteLa && okSecours && okLectures;
     if (!bon) ko++;
 
     console.log((bon ? "  OK   " : "  KO   ") + sc.nom);
     if (DETAIL || !bon) {
       console.log("         helper=" + v.helper + " bandeaux=" + v.bandeaux + " échecs=" + v.echecs +
-        " écritures sans filet=" + v.nbDirectes);
-      (v.directes || []).forEach(function (d) { console.log("         SANS FILET : " + d); });
+        " écritures sans filet=" + v.nbDirectes +
+        (sc.cleAbimee ? " lectures sans filet=" + v.nbLectures : ""));
+      (v.directes || []).forEach(function (d) { console.log("         ECRITURE SANS FILET : " + d); });
+      (v.lectures || []).forEach(function (d) { console.log("         LECTURE SANS FILET : " + d); });
       if (v.textes && v.textes.length) console.log("         message : " + v.textes[0]);
       if (sc.ecrit) console.log("         écrit : " + String(v.progression).slice(0, 70));
       if (sc.message) console.log("         message de la page : « " + v.message + " » (vert=" + v.messageOk + ")");
       if (sc.resteLa) console.log("         bouton encore présent (pas de rechargement) : " + v.boutonReset);
+      if (sc.secours) {
+        var ks = Object.keys(v.secours || {});
+        console.log("         copies de secours : " + (ks.length ? ks.join(", ") : "aucune") +
+          (ks.length ? "  →  " + JSON.stringify(v.secours[ks[0]]).slice(0, 50) : ""));
+      }
     }
     await nav.envoyer("Target.closeTarget", { targetId: cid });
   }
@@ -354,7 +436,7 @@ var SONDE = function () {
   console.log("  scénarios ........ " + SCENARIOS.length);
   console.log("  conformes ........ " + (SCENARIOS.length - ko));
   console.log("  NON conformes .... " + ko);
-  console.log(ko ? "\nUne écriture échoue sans prévenir l'apprenant, ou contourne le helper." :
-                   "\nToute écriture passe par le helper et prévient quand elle échoue.");
+  console.log(ko ? "\nUn accès au stockage échoue sans prévenir l'apprenant, ou contourne le helper." :
+                   "\nTout accès au stockage passe par le helper : rien n'échoue en silence.");
   process.exit(ko ? 1 : 0);
 })();

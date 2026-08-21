@@ -49,10 +49,8 @@
   };
 
   function load() {
-    try {
-      var s = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (s && typeof s === "object" && typeof s.html === "string") return s;
-    } catch (e) {}
+    var s = window.SyntaxeStore.getJSON(KEY, null);
+    if (s && typeof s === "object" && typeof s.html === "string") return s;
     return DEFAULT;
   }
   function save() {

@@ -74,12 +74,13 @@
   var host = document.querySelector("[data-home-resume]");
   if (!host) return;
 
+  /* Le repli est écrit en JSON par les appelants (« {} », « null ») : on le
+     décode une fois pour le passer au helper, qui distingue « absent » de
+     « présent mais illisible ». */
   function read(key, fallback) {
-    try {
-      return JSON.parse(localStorage.getItem(key) || fallback);
-    } catch (e) {
-      return JSON.parse(fallback);
-    }
+    var defaut = null;
+    try { defaut = JSON.parse(fallback); } catch (e) {}
+    return window.SyntaxeStore.getJSON(key, defaut);
   }
 
   var prog = read("syntaxe-progress", "{}") || {};

@@ -21,11 +21,7 @@
     });
   }
   function solvedMap() {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON(KEY, {});
   }
   function markSolved(id) {
     var s = solvedMap();

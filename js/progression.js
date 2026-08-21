@@ -16,25 +16,13 @@
   }
 
   function progress() {
-    try {
-      return JSON.parse(localStorage.getItem("syntaxe-progress") || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON("syntaxe-progress", {});
   }
   function lastVisited() {
-    try {
-      return JSON.parse(localStorage.getItem("syntaxe-last") || "null");
-    } catch (e) {
-      return null;
-    }
+    return window.SyntaxeStore.getJSON("syntaxe-last", null);
   }
   function quizScores() {
-    try {
-      return JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON("syntaxe-quiz", {});
   }
 
   function glyphOf(id) {
@@ -167,12 +155,8 @@
 
   /* ------------------------------------------------ Objectif quotidien (R7) */
   function getGoal() {
-    try {
-      var g = JSON.parse(localStorage.getItem("syntaxe-goal") || "{}") || {};
-      return g.daily || 0;
-    } catch (e) {
-      return 0;
-    }
+    var g = window.SyntaxeStore.getJSON("syntaxe-goal", {});
+    return g.daily || 0;
   }
   function setGoal(n) {
     window.SyntaxeStore.setJSON("syntaxe-goal", { daily: n });
@@ -181,13 +165,9 @@
     /* Compte les leçons DISTINCTES terminées aujourd'hui (journal « syntaxe-done-log »
        écrit par lecon.js), et non les chargements de page : recharger la même leçon
        ne fait plus avancer l'objectif. */
-    try {
-      var log = JSON.parse(localStorage.getItem("syntaxe-done-log") || "{}") || {};
-      var arr = log[ymd(new Date())];
-      return arr && arr.length ? arr.length : 0;
-    } catch (e) {
-      return 0;
-    }
+    var log = window.SyntaxeStore.getJSON("syntaxe-done-log", {});
+    var arr = log[ymd(new Date())];
+    return arr && arr.length ? arr.length : 0;
   }
   function renderGoal() {
     var host = document.getElementById("dash-goal");
@@ -236,10 +216,7 @@
   function renderStatsCharts() {
     var host = document.getElementById("dash-charts");
     if (!host) return;
-    var act = {};
-    try {
-      act = JSON.parse(localStorage.getItem("syntaxe-activity") || "{}") || {};
-    } catch (e) {}
+    var act = window.SyntaxeStore.getJSON("syntaxe-activity", {});
     var activeDays = Object.keys(act).length;
     if (activeDays === 0) {
       host.innerHTML = "";

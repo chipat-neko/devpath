@@ -16,10 +16,7 @@
     });
   }
 
-  var store = {};
-  try {
-    store = JSON.parse(localStorage.getItem("syntaxe-notes") || "{}") || {};
-  } catch (e) {}
+  var store = window.SyntaxeStore.getJSON("syntaxe-notes", {});
 
   function courseInfo(id) {
     var c = DATA && DATA.content && DATA.content[id];

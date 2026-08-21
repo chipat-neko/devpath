@@ -47,11 +47,7 @@
   /* ----------------------------------------------- Progression (storage) */
   var PKEY = "syntaxe-progress";
   function readProgress() {
-    try {
-      return JSON.parse(localStorage.getItem(PKEY) || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON(PKEY, {});
   }
   function writeProgress(p) {
     window.SyntaxeStore.setJSON(PKEY, p);
@@ -84,7 +80,7 @@
      (heatmap & séries) — on ne le touche pas ici. */
   function logDailyDone(file, done) {
     try {
-      var log = JSON.parse(localStorage.getItem("syntaxe-done-log") || "{}") || {};
+      var log = window.SyntaxeStore.getJSON("syntaxe-done-log", {});
       var d = new Date();
       var mm = d.getMonth() + 1, dd = d.getDate();
       var day = d.getFullYear() + "-" + (mm < 10 ? "0" + mm : mm) + "-" + (dd < 10 ? "0" + dd : dd);
@@ -111,11 +107,7 @@
   /* ---- Scores de QCM (mémorisés en localStorage, par leçon) ---- */
   var QKEY = "syntaxe-quiz";
   function readQuizScores() {
-    try {
-      return JSON.parse(localStorage.getItem(QKEY) || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON(QKEY, {});
   }
   function getQuizBest(scoreKey) {
     var q = readQuizScores();
@@ -943,7 +935,7 @@
     } catch (e) {}
     /* Journal d'activité par jour (heatmap & séries — P3) */
     try {
-      var act = JSON.parse(localStorage.getItem("syntaxe-activity") || "{}") || {};
+      var act = window.SyntaxeStore.getJSON("syntaxe-activity", {});
       var d = new Date();
       var mm = d.getMonth() + 1;
       var dd = d.getDate();
@@ -1114,11 +1106,7 @@
      (`syntaxe-notes`). Les surlignages sont mémorisés par leur TEXTE (robuste
      aux changements de structure) et restaurés au chargement. */
   function notesStore() {
-    try {
-      return JSON.parse(localStorage.getItem("syntaxe-notes") || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON("syntaxe-notes", {});
   }
   function getLessonNotes() {
     var s = notesStore();

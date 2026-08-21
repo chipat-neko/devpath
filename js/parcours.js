@@ -20,11 +20,7 @@
 
   /* Progression partagée */
   function progress() {
-    try {
-      return JSON.parse(localStorage.getItem("syntaxe-progress") || "{}") || {};
-    } catch (e) {
-      return {};
-    }
+    return window.SyntaxeStore.getJSON("syntaxe-progress", {});
   }
 
   /* Nb de leçons (total / faites) d'un cours */

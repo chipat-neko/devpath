@@ -288,14 +288,11 @@
      de QCM) — aucune nouvelle donnée obligatoire. Niveaux progressifs, succès
      dérivés de l'état. Exposé via window.SyntaxeXP ; badge dans l'en-tête. */
   function readStore(k) {
-    try {
-      var v = JSON.parse(localStorage.getItem(k) || "{}");
-      /* Garantir un OBJET : une valeur corrompue (null, tableau, chaîne…) ferait
-         planter les itérations Object.keys en aval. (cf. C6) */
-      return v && typeof v === "object" && !Array.isArray(v) ? v : {};
-    } catch (e) {
-      return {};
-    }
+    var v = window.SyntaxeStore.getJSON(k, {});
+    /* Garantir un OBJET : une valeur LISIBLE mais de mauvaise forme (nombre,
+       tableau, chaîne…) ferait planter les itérations Object.keys en aval.
+       (cf. C6) */
+    return v && typeof v === "object" && !Array.isArray(v) ? v : {};
   }
 
   function writeStore(k, v) {

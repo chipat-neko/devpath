@@ -25,6 +25,7 @@
   var KEYS = ["syntaxe-progress", "syntaxe-quiz", "syntaxe-last", "syntaxe-lang"];
 
   function readJSON(k) {
+    if (window.SyntaxeStore) return window.SyntaxeStore.getJSON(k, null);
     try {
       return JSON.parse(localStorage.getItem(k));
     } catch (e) {

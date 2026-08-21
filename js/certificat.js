@@ -22,12 +22,10 @@
     });
   }
   function progress() {
-    try { return JSON.parse(localStorage.getItem("syntaxe-progress") || "{}") || {}; }
-    catch (e) { return {}; }
+    return window.SyntaxeStore.getJSON("syntaxe-progress", {});
   }
   function quizScores() {
-    try { return JSON.parse(localStorage.getItem("syntaxe-quiz") || "{}") || {}; }
-    catch (e) { return {}; }
+    return window.SyntaxeStore.getJSON("syntaxe-quiz", {});
   }
   function glyphOf(id) {
     if (window.courseLogo) {

@@ -35,16 +35,12 @@
     return d.getFullYear() + "-" + (m < 10 ? "0" + m : m) + "-" + (j < 10 ? "0" + j : j);
   }
   function todayCount() {
-    try {
-      var a = JSON.parse(localStorage.getItem(KEY) || "{}") || {};
-      return a[ymd()] || 0;
-    } catch (e) {
-      return 0;
-    }
+    var a = window.SyntaxeStore.getJSON(KEY, {});
+    return a[ymd()] || 0;
   }
   function addPomodoro() {
     try {
-      var a = JSON.parse(localStorage.getItem(KEY) || "{}") || {};
+      var a = window.SyntaxeStore.getJSON(KEY, {});
       a[ymd()] = (a[ymd()] || 0) + 1;
       window.SyntaxeStore.setJSON(KEY, a);
     } catch (e) {}

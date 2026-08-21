@@ -55,8 +55,17 @@
     patrimoine: "Explorer le patrimoine logiciel",
   };
 
+  /* Copie de secours posée par SyntaxeStore.getJSON (theme.js) quand une
+     sauvegarde s'est révélée illisible : la version brute est gardée ici pour
+     que la première écriture suivante ne l'efface pas. (cf. V12-B2) */
+  var SECOURS_PREFIX = "syntaxe-secours-";
+
   function labelFor(k) {
     if (LABELS[k]) return LABELS[k];
+    if (k.indexOf(SECOURS_PREFIX) === 0) {
+      var origine = "syntaxe-" + k.slice(SECOURS_PREFIX.length);
+      return "⚠ Copie de secours — " + (LABELS[origine] || origine) + " (donnée illisible mise de côté)";
+    }
     if (k.indexOf(FR_PREFIX) === 0) {
       var id = k.slice(FR_PREFIX.length);
       return "Fil rouge — " + (FIL_ROUGE_TITRES[id] || id);
