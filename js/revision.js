@@ -1,20 +1,96 @@
 /* =============================================================================
-   revision.js — Flashcards avec répétition espacée (P2).
-   Cartes tirées de window.FLASHCARDS (js/flashcards-data.js, généré depuis les
-   glossaires des cours). Système de Leitner (5 boîtes) ; échéances en
-   localStorage (clé `syntaxe-revision`). 100 % statique, aucun fetch.
-   Page : pages/revision.html.
+   revision.js — Répétition espacée (P2), sur TROIS matériaux (V12-D5).
+
+   Le moteur de Leitner (5 boîtes, intervalles 0/1/3/7/16 jours, échéances
+   persistées dans `syntaxe-revision`) ne tournait que sur le vocabulaire des
+   glossaires. Or une DÉFINITION se reconnaît sans se rappeler ; une QUESTION de
+   QCM et un PIÈGE sont des prédictions vérifiables, un bien meilleur matériau de
+   rappel. Le même moteur sert donc désormais :
+     · le vocabulaire  → window.FLASHCARDS (10 678 cartes)
+     · les QCM         → window.QUIZ_BANK  (5 627 questions)
+     · les pièges      → window.PIEGES     (1 827 encadrés)
+   Les deux derniers index pèsent 3,9 Mo : ils ne sont chargés QUE si on les
+   demande, par injection d'un <script> (aucun fetch, donc toujours file://).
+   Les identifiants Leitner sont PRÉFIXÉS par le matériau, sauf le vocabulaire
+   qui garde sa forme historique `cours|terme` — sinon toute la progression
+   déjà accumulée serait perdue.
+
+   Page : pages/revision.html. 100 % statique.
    ============================================================================= */
 (function () {
   "use strict";
 
-  var CARDS = window.FLASHCARDS || [];
+  var CARDS = [];
+  var selType = document.getElementById("rev-type");
   var selCourse = document.getElementById("rev-course");
   var cardEl = document.getElementById("rev-card");
   var statsEl = document.getElementById("rev-stats");
-  if (!cardEl || !CARDS.length) {
-    if (cardEl) cardEl.innerHTML = '<p class="rev-empty">Aucune carte disponible.</p>';
-    return;
+  if (!cardEl) return;
+
+  /* ---------------------------------------------- Les trois matériaux (D5) */
+  var MATERIAUX = {
+    vocabulaire: {
+      global: "FLASHCARDS",
+      script: null, /* déjà chargé par la page */
+      vide: "Aucune carte de vocabulaire disponible.",
+      cartes: function (src) {
+        return src.map(function (x) {
+          return { k: "v", c: x.c, ct: x.ct, t: x.t, d: x.d, f: x.f, n: x.n, lt: x.lt };
+        });
+      },
+    },
+    qcm: {
+      global: "QUIZ_BANK",
+      script: "quiz-index.js",
+      vide: "Aucune question disponible.",
+      cartes: function (src) {
+        return src.map(function (x) {
+          /* Recto : l'énoncé. Verso : la bonne réponse, et l'explication quand
+             la question en porte une. */
+          var bonne = x.a && x.a.length ? x.a[typeof x.k === "number" ? x.k : 0] : "";
+          return {
+            k: "q", c: x.c, ct: titreCours(x.c), t: x.q,
+            d: "<strong>" + esc(bonne) + "</strong>" + (x.e ? "<br />" + esc(x.e) : ""),
+            f: x.f,
+          };
+        });
+      },
+    },
+    pieges: {
+      global: "PIEGES",
+      script: "pieges-data.js",
+      vide: "Aucun piège disponible.",
+      cartes: function (src) {
+        return src.map(function (x) {
+          /* Un piège est une affirmation : on interroge sur SA leçon, et la
+             réponse est le piège lui-même. */
+          return {
+            k: "p", c: x.c, ct: x.ct,
+            /* Espace insécable en CARACTÈRE, pas en entité : le recto est
+               posé via esc(), qui afficherait « &nbsp; » en toutes lettres. */
+            t: (x.lt || x.f) + " — quel est le piège ?",
+            d: x.x, f: x.f, n: x.n, lt: x.lt,
+          };
+        });
+      },
+    },
+  };
+  var materiau = "vocabulaire";
+
+  /* La banque de QCM ne porte que le DOSSIER du cours ; son titre vient de
+     data.js, chargé sur cette page depuis D4. */
+  var TITRE_COURS = (function () {
+    var m = {};
+    var d = window.SITE_DATA;
+    if (d && d.content) {
+      for (var id in d.content) {
+        if (d.content.hasOwnProperty(id)) m[d.content[id].dir] = d.content[id].title;
+      }
+    }
+    return m;
+  })();
+  function titreCours(dir) {
+    return TITRE_COURS[dir] || dir;
   }
 
   var KEY = "syntaxe-revision";
@@ -41,8 +117,11 @@
       window.SyntaxeStore.setJSON(KEY, state);
     } catch (e) {}
   }
+  /* Le vocabulaire garde sa forme historique : préfixer casserait la
+     progression déjà accumulée. Les deux nouveaux matériaux sont préfixés pour
+     ne pas se confondre avec lui ni entre eux. */
   function cardId(c) {
-    return c.c + "|" + c.t;
+    return (c.k && c.k !== "v" ? c.k + "|" : "") + c.c + "|" + c.t;
   }
   function shuffle(a) {
     for (var i = a.length - 1; i > 0; i--) {
@@ -88,8 +167,10 @@
   var queue = [];
   var session = { done: 0, knew: 0 };
 
-  /* Sélecteur de cours (depuis les cartes). */
-  (function buildCourseOptions() {
+  /* Sélecteur de cours — reconstruit à chaque changement de matériau : les
+     trois n'ont pas la même liste de cours (83 pour le vocabulaire, 65 pour les
+     pièges avant D2). */
+  function buildCourseOptions() {
     if (!selCourse) return;
     var seen = {};
     var list = [];
@@ -102,12 +183,17 @@
     list.sort(function (a, b) {
       return a.title.localeCompare(b.title, "fr");
     });
+    selCourse.innerHTML = '<option value="all">Tous les cours</option>';
     list.forEach(function (o) {
       var opt = document.createElement("option");
       opt.value = o.id;
       opt.textContent = o.title;
       selCourse.appendChild(opt);
     });
+    filter = "all";
+    selCourse.value = "all";
+  }
+  if (selCourse) {
     selCourse.addEventListener("change", function () {
       filter = selCourse.value;
       session = { done: 0, knew: 0 };
@@ -115,7 +201,51 @@
       buildQueue();
       showCard();
     });
-  })();
+  }
+
+  /* Chargement à la demande : les index des QCM (3 Mo) et des pièges (0,9 Mo)
+     ne sont posés dans la page que si on les demande. Injection d'un <script>,
+     pas de fetch : le site vit en file://, où fetch est refusé. */
+  var scriptsCharges = {};
+  function chargerMateriau(nom, apres) {
+    var def = MATERIAUX[nom];
+    if (!def) return apres(false);
+    if (window[def.global]) return apres(true);
+    if (!def.script) return apres(false);
+    if (scriptsCharges[def.script] === "erreur") return apres(false);
+    var el = document.createElement("script");
+    el.src = "../js/" + def.script;
+    el.onload = function () {
+      scriptsCharges[def.script] = "ok";
+      apres(!!window[def.global]);
+    };
+    el.onerror = function () {
+      scriptsCharges[def.script] = "erreur";
+      apres(false);
+    };
+    document.head.appendChild(el);
+  }
+
+  function appliquerMateriau(nom) {
+    var def = MATERIAUX[nom];
+    cardEl.innerHTML = '<p class="rev-empty">Chargement…</p>';
+    chargerMateriau(nom, function (ok) {
+      var src = ok ? window[def.global] : null;
+      CARDS = src && src.length ? def.cartes(src) : [];
+      materiau = nom;
+      session = { done: 0, knew: 0 };
+      if (!CARDS.length) {
+        buildCourseOptions();
+        cardEl.innerHTML = '<p class="rev-empty">' + esc(def.vide) + "</p>";
+        renderStats();
+        return;
+      }
+      buildCourseOptions();
+      majDispo();
+      buildQueue();
+      showCard();
+    });
+  }
 
   /* Case « seulement les leçons que j'ai lues » : elle annonce combien de cartes
      restent, et se désactive quand elle en laisserait zéro — cocher une case qui
@@ -247,6 +377,10 @@
     showCard();
   }
 
-  buildQueue();
-  showCard();
+  if (selType) {
+    selType.addEventListener("change", function () {
+      appliquerMateriau(selType.value);
+    });
+  }
+  appliquerMateriau("vocabulaire");
 })();
