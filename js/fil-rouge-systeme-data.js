@@ -9,25 +9,63 @@
 window.FIL_ROUGE = {
   id: "systeme",
   titre: "Construis ton propre langage de programmation",
-  sousTitre: "Un même projet, du prototype Python jusqu'au métal — un lexer, un interpréteur, puis une machine virtuelle.",
+  sousTitre: "Un même projet, de la théorie comprise jusqu'au métal — un lexer, un interpréteur, puis une machine virtuelle.",
   intro:
-    "<p>Le projet le plus formateur de l'informatique : <strong>écrire ton propre langage</strong>. Tu commences par un " +
-    "prototype rapide en Python, puis tu <strong>ré-implémentes le même projet</strong> de plus en plus bas niveau — " +
+    "<p>Le projet le plus formateur de l'informatique : <strong>écrire ton propre langage</strong>. Tu commences par " +
+    "<strong>comprendre la chaîne</strong> et par la construire une première fois en JavaScript, dans la page ; puis tu " +
+    "<strong>ré-implémentes le même projet</strong> de plus en plus bas niveau — " +
     "structures de données, gestion mémoire manuelle, machine virtuelle à bytecode, sûreté garantie, contrôle total, " +
     "et enfin une routine en <strong>assembleur</strong>.</p>" +
     "<p>Le langage à interpréter reste simple (expressions, variables, <code>print</code>) : c'est l'<strong>implémentation</strong> " +
     "qui descend vers la machine à chaque étape. Chaque étape part du livrable précédent (au moins de sa conception) et " +
     "ajoute la dimension du cours.</p>",
+  /* Le cours « compilation » a été inséré en étape 1 : les 7 étapes d'origine
+     sont décalées de un. La progression étant stockée par NUMÉRO d'étape, il
+     faut la convertir une fois, sinon les cases de python réapparaîtraient
+     sous compilation. Mécanisme générique : js/fil-rouge.js, migrerStore(). */
+  remapVersion: 1,
+  remap: { "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 7, "7": 8 },
   etapes: [
     {
       n: 1,
+      course: "compilation",
+      courseTitle: "Compilation",
+      dir: "compilation",
+      accent: "compilation",
+      phase: "Comprendre (avant de coder)",
+      titre: "La chaîne complète, expliquée puis construite",
+      depart: "Rien — sinon l'envie de savoir ce qui se passe entre le texte que tu écris et ce qui s'affiche.",
+      objectif:
+        "<p>Ce fil demande d'écrire un lexer, un parser, un interpréteur puis une machine à pile. Cette étape " +
+        "les <strong>explique</strong> et les fait <strong>construire une première fois</strong>, en JavaScript, " +
+        "dans la page : le cours bâtit <em>Brindille</em>, un langage minuscule, du texte source jusqu'au résultat. " +
+        "Les six étapes suivantes ré-implémentent ce même projet de plus en plus bas niveau — mais tu sauras " +
+        "alors <strong>ce que</strong> tu ré-implémentes.</p>",
+      ajoute: [
+        "Un <strong>analyseur lexical</strong> qui découpe le texte en jetons, jette les espaces et les commentaires, et retient la <strong>position</strong> de chaque jeton.",
+        "Une <strong>grammaire</strong> écrite, et l'analyseur par <strong>descente récursive</strong> qui en découle.",
+        "Un <strong>arbre de syntaxe abstraite</strong> où la priorité et l'associativité sont inscrites dans la forme.",
+        "Deux moteurs d'exécution&nbsp;: un <strong>évaluateur d'arbre</strong>, puis un <strong>générateur de bytecode</strong> et sa <strong>machine à pile</strong>.",
+        "Une <strong>façade</strong> unique, des erreurs qui disent leur <strong>ligne et leur colonne</strong>, un pilote en ligne de commande et une batterie de tests.",
+      ],
+      criteres: [
+        "Le lexique produit des jetons <strong>positionnés</strong>&nbsp;; espaces et commentaires ne laissent aucune trace.",
+        "La priorité et l'associativité viennent de la <strong>grammaire</strong>&nbsp;: <code>2 + 3 * 4</code> vaut <strong>14</strong> et <code>10 - 3 - 2</code> vaut <strong>5</strong>.",
+        "Les <strong>trois chemins</strong> — arbre, bytecode, bytecode plié — donnent le <strong>même écran</strong> sur le même programme.",
+        "Une erreur de chacune des <strong>trois étapes</strong> (lexicale, syntaxique, exécution) est signalée avec sa <strong>ligne et sa colonne</strong>.",
+        "Le langage se lance <strong>sur un fichier</strong> et rend un <strong>code de sortie</strong> non nul quand le programme est fautif.",
+      ],
+      livrable: "Un langage minuscule mais complet : lexique, analyseur, arbre, bytecode, machine, erreurs situées, pilote.",
+    },
+    {
+      n: 2,
       course: "python",
       courseTitle: "Python",
       dir: "python",
       accent: "python",
       phase: "Concevoir (haut niveau)",
       titre: "Le prototype de l'interpréteur",
-      depart: "Une idée de mini-langage (expressions, variables, affichage).",
+      depart: "Brindille, construit et compris à l'étape 1 : sa grammaire, son arbre, ses deux moteurs d'exécution.",
       objectif:
         "<p>Prototyper rapidement un <strong>interpréteur arborescent</strong> (<em>tree-walking</em>) en Python : du texte " +
         "source jusqu'au résultat, en passant par un lexer, un parser et un évaluateur.</p>",
@@ -48,7 +86,7 @@ window.FIL_ROUGE = {
       livrable: "Un interpréteur en Python qui exécute un mini-langage.",
     },
     {
-      n: 2,
+      n: 3,
       course: "algo",
       courseTitle: "Algorithmes",
       dir: "algo",
@@ -76,7 +114,7 @@ window.FIL_ROUGE = {
       livrable: "Un interpréteur aux fondations solides (parsing + structures correctes).",
     },
     {
-      n: 3,
+      n: 4,
       course: "c",
       courseTitle: "C",
       dir: "c",
@@ -105,7 +143,7 @@ window.FIL_ROUGE = {
       livrable: "L'interpréteur réécrit en C, mémoire gérée manuellement.",
     },
     {
-      n: 4,
+      n: 5,
       course: "cpp",
       courseTitle: "C++",
       dir: "cpp",
@@ -134,7 +172,7 @@ window.FIL_ROUGE = {
       livrable: "Une machine virtuelle à bytecode en C++.",
     },
     {
-      n: 5,
+      n: 6,
       course: "rust",
       courseTitle: "Rust",
       dir: "rust",
@@ -163,7 +201,7 @@ window.FIL_ROUGE = {
       livrable: "La VM réécrite en Rust, sûre et robuste.",
     },
     {
-      n: 6,
+      n: 7,
       course: "zig",
       courseTitle: "Zig",
       dir: "zig",
@@ -191,7 +229,7 @@ window.FIL_ROUGE = {
       livrable: "La VM en Zig, contrôle mémoire total et performances mesurées.",
     },
     {
-      n: 7,
+      n: 8,
       course: "asm",
       courseTitle: "Assembleur",
       dir: "asm",

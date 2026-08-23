@@ -233,7 +233,7 @@
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
     "home.meta.courses": "<strong>84</strong> courses in the catalogue",
-    "home.meta.lessons": "<strong>1475</strong> written lessons",
+    "home.meta.lessons": "<strong>1476</strong> written lessons",
     "home.meta.langs": "<strong>76</strong> languages &amp; tech",
   };
 
@@ -274,7 +274,7 @@
      ne traduisait que ~13 libellés de navigation sur un contenu resté français —
      une seule page (l'accueil) portait 8 éléments instrumentés, tout le reste de
      son propre contenu compris. Il promettait un bilinguisme inexistant, alors
-     que traduire les 1475 leçons n'est pas à l'ordre du jour. On assume donc le
+     que traduire les 1476 leçons n'est pas à l'ordre du jour. On assume donc le
      site comme francophone et on force l'affichage FR, même si une ancienne
      préférence « en » traîne encore dans localStorage. La fondation i18n
      (getLang, applyI18n, tables) est conservée, dormante, pour une éventuelle
@@ -583,7 +583,7 @@
   }
 
   /* ------------------------------------------------ Menu principal unique */
-  /* La navigation est statique et dupliquée sur ~1475 pages : son 3ᵉ élément
+  /* La navigation est statique et dupliquée sur ~1476 pages : son 3ᵉ élément
      était un lien figé recopié du gabarit (« Cours JavaScript » sur 1154 pages,
      jusque dans les cours COBOL ou Prolog, et changeant d'une leçon à l'autre).
      Ce lien a été retiré du gabarit ; le menu complet est désormais construit
@@ -686,10 +686,10 @@
      Une leçon n'avait qu'un lien de pied (« ← Retour au programme »), et une
      dizaine de hubs transverses (entraînement, outils, références, espace
      perso) n'étaient atteignables que depuis l'accueil. On construit ici, sur
-     les seules pages de leçon (repère : body[data-lesson], présent sur les 1475
+     les seules pages de leçon (repère : body[data-lesson], présent sur les 1476
      leçons et absent des pages de cours/outils), une grille de liens réutilisant
      le gabarit `.site-footer__grid` déjà stylé pour l'accueil (aucune édition des
-     1475 fichiers, aucun CSS nouveau). Profondeur déduite du favicon, comme
+     1476 fichiers, aucun CSS nouveau). Profondeur déduite du favicon, comme
      initPWA ; les hubs vivent tous dans pages/. */
   var LESSON_FOOTER_COLS = [
     { titre: "S'entraîner", liens: [
@@ -933,7 +933,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1475 leçons et 63 pages du site.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1476 leçons et 63 pages du site.</li>';
         return;
       }
       items = doSearch(tk);

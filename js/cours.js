@@ -370,7 +370,7 @@
 
   /* ---- Lien « reprendre le fil rouge » (cours d'un parcours fil rouge) -- */
   /* Deux fils rouges progressifs : le web (pages/fil-rouge.html, 15 étapes) et
-     le système (pages/fil-rouge-systeme.html, 7 étapes). Chaque cours concerné
+     le système (pages/fil-rouge-systeme.html, 8 étapes). Chaque cours concerné
      correspond à une étape (ancre #n). Aucun cours n'est dans les deux. */
   /* Les fils rouges, dans l'ordre de priorité : un cours présent dans plusieurs
      parcours est rattaché au PREMIER de cette liste. Cas réels de conflit :
@@ -390,8 +390,8 @@
       },
     },
     {
-      page: "../fil-rouge-systeme.html", total: 7, label: "ton propre langage",
-      map: { python: 1, algo: 2, c: 3, cpp: 4, rust: 5, zig: 6, asm: 7 },
+      page: "../fil-rouge-systeme.html", total: 8, label: "ton propre langage",
+      map: { compilation: 1, python: 2, algo: 3, c: 4, cpp: 5, rust: 6, zig: 7, asm: 8 },
     },
     {
       page: "../fil-rouge-fonctionnel.html", total: 7, label: "ton calculateur symbolique",
