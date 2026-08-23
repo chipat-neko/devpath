@@ -30,6 +30,23 @@ else { Write-Host "Tache '$task' introuvable ou deja desactivee." -ForegroundCol
 # 2) Stopper un reveil EN COURS, en ne ciblant QUE le claude de CE projet.
 #    Le marqueur est une phrase presente UNIQUEMENT dans la consigne de Syntaxe
 #    (le reveil d'Amalia porte "projet Amalia EN AUTONOMIE" et ne sera pas touche).
+# LE PARENT D'ABORD (correctif 2026-08-23). Sans cela, tuer claude.exe ne suffit
+# pas : le wrapper voit un code de sortie non nul, croit a une coupure API
+# transitoire, attend 30 secondes et RELANCE une passe. L'arret ne tenait donc pas.
+# Le fichier lock porte le PID du PowerShell qui execute autonomie.ps1 : on le
+# termine avant de toucher a claude.exe.
+if (Test-Path $lock) {
+  $pidLock = (Get-Content $lock -Raw -ErrorAction SilentlyContinue)
+  if ($pidLock) { $pidLock = $pidLock.Trim() }
+  if ($pidLock -match '^\d+$') {
+    $parent = Get-Process -Id ([int]$pidLock) -ErrorAction SilentlyContinue
+    if ($parent -and $parent.ProcessName -like 'powershell*') {
+      try { Stop-Process -Id ([int]$pidLock) -Force -ErrorAction Stop; Write-Host "Wrapper PowerShell (PID $pidLock) arrete : plus de nouvelle tentative." -ForegroundColor Green } catch {}
+      Start-Sleep -Seconds 2
+    }
+  }
+}
+
 $marqueur = 'projet Syntaxe EN AUTONOMIE'
 $procs = Get-CimInstance Win32_Process -Filter "Name = 'claude.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -and ($_.CommandLine -like "*$marqueur*") }
