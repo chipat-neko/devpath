@@ -305,7 +305,12 @@ function fmtJs(v) {
 
 // Marqueurs d'un bloc NON exécutable tel quel dans un worker/vm (repris de runner.js
 // pour rester cohérent avec ce qui reçoit — ou non — un bouton « Tester »).
-const BROWSER_ONLY = /\b(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename|require|module|exports|globalThis)\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts|import\s|export\s/;
+/* Aligné sur `js/runner.js`, qui est la référence : c'est lui qui décide si le bouton
+   « Tester » apparaît. La version large — les mots nus `require`, `module`, `exports` —
+   rendait « non vérifiable » tout bloc dont un COMMENTAIRE contenait « module 2 » ou
+   « le module dis ». Ce sont les FORMES qui trahissent Node, pas les mots : `require(`,
+   `module.exports`, `exports.`. */
+const BROWSER_ONLY = /\b(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename|globalThis)\b|require\s*\(|module\.exports|\bexports\.|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts|import\s|export\s/;
 
 // Une sortie qui change à chaque exécution ne peut pas être confrontée à une valeur
 // figée : l'annonce est alors un EXEMPLE de sortie, pas une prédiction. On ne crie
