@@ -3567,4 +3567,57 @@ window.PROJETS = [
       "différence entre interpréter et compiler. Les <a href=\"../regex/cours.html\">expressions régulières</a> aident " +
       "pour l'analyse lexicale&nbsp;; l'<a href=\"../algo/cours.html\">algorithmique</a>, pour les parcours d'arbre.</p>",
   },
+  {
+    id: "neurones-chiffres",
+    course: "neurones",
+    courseTitle: "Réseaux de neurones",
+    dir: "neurones",
+    accent: "neurones",
+    type: "Réseau de neurones à la main",
+    niveau: "Avancé",
+    titre: "Reconnaître un chiffre dessiné, sans aucune bibliothèque",
+    contexte:
+      "<p>Un formulaire de saisie demande un chiffre, et les utilisateurs le <strong>dessinent</strong> au doigt sur une " +
+      "petite grille de 7 lignes sur 5 colonnes. Il faut deviner lequel. Réflexe habituel : importer une " +
+      "bibliothèque d'apprentissage, charger un modèle pré-entraîné de plusieurs mégaoctets, et ne rien " +
+      "comprendre à ce qui se passe. On te demande l'inverse : <strong>tout écrire toi-même</strong>, en " +
+      "quelques centaines de lignes, sans la moindre dépendance — pour que chaque nombre du modèle soit un " +
+      "nombre dont tu peux dire d'où il vient.</p>",
+    objectif:
+      "<p>Construire un réseau complet : <strong>35 entrées</strong> (une par case de la grille), une " +
+      "<strong>couche cachée</strong> avec sa fonction d'activation, <strong>10 sorties</strong> (une par chiffre). " +
+      "Puis l'<strong>entraîner</strong> — fonction de perte, descente de gradient, rétropropagation — et " +
+      "surtout mesurer honnêtement ce qu'il vaut sur des dessins qu'il n'a jamais vus.</p>",
+    livrable: "Un classifieur autonome : une fonction qui reçoit 35 zéros et uns et renvoie un chiffre, plus le fichier de poids qui l'accompagne et le programme qui les a produits.",
+    fonctionnalites: [
+      "Une <strong>couche</strong> générique : n entrées, m neurones, ses propres poids et biais, une activation au choix.",
+      "Un <strong>jeu d'exemples</strong> écrit à la main : au moins cinq dessins différents par chiffre, dont des variantes mal centrées.",
+      "Une <strong>fonction de perte</strong> qui donne un seul nombre, et qui décroît visiblement pendant l'entraînement.",
+      "La <strong>rétropropagation</strong> écrite à la main, sans bibliothèque de dérivation automatique.",
+      "Une <strong>séparation stricte</strong> entre les exemples d'entraînement et ceux d'évaluation.",
+      "L'<strong>export des poids</strong> en JSON, et leur rechargement sans ré-entraînement.",
+      "Un <strong>affichage des scores</strong> des dix sorties, pas seulement du gagnant : c'est là qu'on voit les hésitations.",
+    ],
+    criteres: [
+      "Le réseau reconnaît au moins <strong>9 des 10 chiffres</strong> sur des dessins qu'il n'a <strong>jamais vus</strong>.",
+      "La <strong>perte</strong> affichée décroît : sa valeur finale est inférieure au dixième de sa valeur initiale.",
+      "Le nombre de <strong>paramètres</strong> est compté et affiché : pour un 35-12-10, c'est <strong>562</strong> nombres.",
+      "Retirer la <strong>fonction d'activation</strong> de la couche cachée fait <strong>chuter</strong> le score : la mesure le prouve, et le rapport l'explique.",
+      "Le score sur les exemples d'<strong>entraînement</strong> et celui sur ceux d'<strong>évaluation</strong> sont donnés séparément ; un écart important est commenté, pas masqué.",
+      "<strong>Aucune dépendance</strong> : le programme tourne avec le seul interpréteur du langage.",
+      "Les poids exportés, rechargés dans un programme neuf, redonnent <strong>exactement</strong> les mêmes prédictions.",
+    ],
+    pistes:
+      "<p>Commence <strong>sans entraînement</strong> : pose les poids à la main pour un seul chiffre — par exemple " +
+      "un neurone qui répond au 1, une barre verticale — et vérifie qu'il déclenche. Tant que la passe avant est " +
+      "fausse, l'entraînement ne fera qu'amplifier l'erreur, et tu chercheras le bogue au mauvais endroit.</p>" +
+      "<p>Entraîne ensuite sur <strong>deux chiffres seulement</strong>, très dissemblables, avant de passer à dix. " +
+      "Affiche la perte à chaque passage : si elle ne descend pas, c'est presque toujours un signe inversé dans la " +
+      "mise à jour, ou un taux d'apprentissage trop grand. Et vérifie ton gradient en le comparant à une " +
+      "différence finie : c'est le test qui sauve le plus de temps.</p>" +
+      "<p>Pour aller plus loin : dessine, pour chaque neurone caché, la grille de ses 35 poids en niveaux de gris. " +
+      "On y voit souvent apparaître des morceaux de traits — c'est la façon la plus directe de regarder ce qu'un " +
+      "réseau a retenu. Le cours <a href=\"../stats/cours.html\">statistiques</a> aide à lire les scores ; " +
+      "l'<a href=\"../algo/cours.html\">algorithmique</a>, à écrire les boucles sur les tableaux.</p>",
+  },
 ];

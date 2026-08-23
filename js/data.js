@@ -639,6 +639,13 @@ window.SITE_DATA = (function () {
       tagline: "Ce qui se passe entre le fichier que tu écris et ce que la machine exécute : compiler ou interpréter, les étapes d'une chaîne de compilation, pourquoi un langage a besoin d'une grammaire — puis, module après module, construire un langage minuscule de bout en bout : analyse lexicale, analyse syntaxique, arbre de syntaxe, évaluation et machine à pile. Tous les exemples sont en JavaScript et s'exécutent dans la page.",
       tags: ["Transversal", "Langages", "Bas niveau"],
     },
+    {
+      id: "neurones", dir: "neurones", title: "Réseaux de neurones : de l'addition à l'apprentissage profond",
+      glyph: "nn", language: "Réseaux de neurones", level: "avance", status: "apercu",
+      accent: "#1c6822", lessons: 3, hours: 3,
+      tagline: "Ce qu'il y a vraiment sous un « réseau de neurones » : une addition, une décision, et beaucoup de répétitions. On part du neurone formel, on mesure pourquoi un seul ne suffit pas, puis on empile des couches — chaque calcul étant refait dans la page, jamais admis. Tous les exemples sont en JavaScript et s'exécutent d'un clic.",
+      tags: ["IA", "Données", "Transversal"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -655,6 +662,7 @@ window.SITE_DATA = (function () {
         { course: "r", note: "Une autre voie pour les statistiques et la visualisation." },
         { course: "stats", note: "Régression, sur-ajustement, échantillon d'entraînement et de test : le ML repose sur les statistiques du cours dédié." },
         { course: "pandas", note: "Nettoyer et préparer les données tabulaires : le premier vrai chantier avant tout modèle." },
+        { course: "neurones", note: "La famille de modèles que ce cours ne traite pas : réseaux de neurones et apprentissage profond. Il en montre le fonctionnement interne, calcul par calcul." },
       ],
       modules: [
         {
@@ -799,6 +807,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "Python est le langage le plus courant pour l'IA." },
         { course: "nodejs", note: "Node.js est tout aussi adapté pour appeler un LLM." },
         { course: "ml", note: "Comprendre le ML éclaire ce qu'est — et n'est pas — un LLM." },
+        { course: "neurones", note: "Un cran plus bas : ce qui rend un LLM possible. Des couches, des poids, une fonction d'activation — expliqués avec des nombres qu'on peut refaire à la main." },
       ],
       modules: [
         {
@@ -1444,6 +1453,56 @@ window.SITE_DATA = (function () {
         },
       ],
     },
+    neurones: {
+      id: "neurones", dir: "neurones", title: "Réseaux de neurones : de l'addition à l'apprentissage profond",
+      glyph: "nn", accent: "#1c6822", overview: "cours.html",
+      related: [
+        { course: "ml", note: "Le cours qui s'arrête juste avant : régression, classification, arbres, pipelines. Il apprend à faire tourner un modèle ; celui-ci ouvre la boîte de la famille qu'il ne traite pas." },
+        { course: "stats", note: "Un réseau ne devine rien : il minimise une erreur mesurée. Moyenne, variance, sur-ajustement, jeu de test — le vocabulaire du module 3 vient de là." },
+        { course: "python", note: "Les réseaux s'écrivent en Python dans la vraie vie. Ici les exemples sont en JavaScript pour tourner dans la page, mais les idées se transposent ligne à ligne." },
+        { course: "llm", note: "Ce que ce cours explique est exactement ce qui rend un LLM possible : des couches, des poids, une fonction d'activation. Le cours LLM part de là et monte d'un cran." },
+        { course: "algo", note: "Une couche est une boucle sur des tableaux, un réseau une composition de fonctions. Les briques algorithmiques rendent le code des leçons évident plutôt que magique." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Du neurone au réseau", sub: "le neurone formel, les activations, les couches", level: "avance",
+          lessons: [
+            { num: "01", title: "Un neurone, c'est une addition et une décision", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Pourquoi il faut une fonction non linéaire", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Des couches, et ce qu'elles contiennent", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Apprendre", sub: "fonction de perte, descente de gradient, rétropropagation", level: "avance",
+          lessons: [
+            { num: "04", title: "Mesurer l'erreur : la fonction de perte", file: "#", status: "bientot" },
+            { num: "05", title: "Descendre la pente : le gradient", file: "#", status: "bientot" },
+            { num: "06", title: "La rétropropagation, étape par étape", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "03", title: "Ce qui rate", sub: "surapprentissage, régularisation, gradients qui meurent", level: "avance",
+          lessons: [
+            { num: "07", title: "Surapprentissage : quand le réseau récite au lieu d'apprendre", file: "#", status: "bientot" },
+            { num: "08", title: "Régularisation et taux d'apprentissage", file: "#", status: "bientot" },
+            { num: "09", title: "Le gradient qui disparaît", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "04", title: "Les familles d'architectures", sub: "convolutifs pour l'image, attention pour les séquences", level: "avance",
+          lessons: [
+            { num: "10", title: "Convolutifs : regarder une image par morceaux", file: "#", status: "bientot" },
+            { num: "11", title: "Récurrents et attention : traiter une séquence", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "05", title: "Le projet", sub: "un réseau entraîné de bout en bout, à la main", level: "avance",
+          lessons: [
+            { num: "12", title: "Projet — un réseau qui apprend, du premier poids au dernier", file: "#", status: "bientot" },
+          ],
+        },
+      ],
+    },
     javascript: {
       id: "javascript", dir: "js", title: "JavaScript : des fondations au niveau expert",
       glyph: "JS", accent: "#caa12f", overview: "cours.html",
@@ -1628,6 +1687,7 @@ window.SITE_DATA = (function () {
       related: [
         { course: "javascript", note: "Les bases JS indispensables avant de plonger dans les algorithmes." },
         { course: "compilation", note: "Un compilateur est le plus bel assemblage de ces algorithmes : arbres, piles, tables et parcours récursifs y travaillent ensemble sur un vrai problème." },
+        { course: "neurones", note: "Une couche de neurones n'est qu'une boucle sur des tableaux, un réseau qu'une composition de fonctions : les briques d'ici, appliquées ailleurs." },
       ],
       modules: [
         {
@@ -1804,6 +1864,7 @@ window.SITE_DATA = (function () {
         { course: "javascript", note: "Compare les deux langages : beaucoup de concepts se recoupent." },
         { course: "pandas", note: "La bibliothèque reine pour manipuler des données tabulaires en Python." },
         { course: "compilation", note: "Python compile en bytecode avant d'exécuter : le cours le démontre avec le module dis, et explique la machine qui exécute ce bytecode." },
+        { course: "neurones", note: "Le domaine où Python règne sans partage. Les exemples y sont en JavaScript pour tourner dans la page, mais la traduction en Python est immédiate." },
       ],
       modules: [
         {
@@ -4186,6 +4247,7 @@ window.SITE_DATA = (function () {
         { course: "dataviz", note: "Une distribution, une corrélation, un intervalle : la statistique se lit surtout en images. La dataviz est son bras visuel." },
         { course: "python", note: "Les exemples s'écrivent en Python (module statistics, un peu de numpy) : le langage sous les calculs." },
         { course: "ml", note: "Régression, sur-ajustement, échantillon d'entraînement et de test : le machine learning est de la statistique appliquée à grande échelle." },
+        { course: "neurones", note: "Un réseau apprend en minimisant une erreur mesurée : perte, moyenne, jeu de test. Ce cours-ci fournit les notions dont le module « Ce qui rate » se sert en permanence." },
       ],
       modules: [
         {
@@ -5776,7 +5838,7 @@ window.SITE_DATA = (function () {
       title: "Intelligence artificielle",
       glyph: "AI",
       tagline: "De Python à l'apprentissage automatique et aux LLM.",
-      courses: ["python", "pandas", "stats", "ml", "llm"],
+      courses: ["python", "pandas", "stats", "ml", "neurones", "llm"],
     },
     {
       id: "mobile-dev",
@@ -5866,6 +5928,7 @@ window.SITE_DATA = (function () {
     "os": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":31,"lecon-04.html":33,"lecon-05.html":30,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":31,"lecon-09.html":33,"lecon-10.html":32,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":33,"lecon-14.html":40},
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
+    "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
     "cobol": {"lecon-01.html":44,"lecon-02.html":50,"lecon-03.html":55,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":45,"lecon-10.html":48,"lecon-11.html":46,"lecon-12.html":46,"lecon-13.html":44,"lecon-14.html":50},
