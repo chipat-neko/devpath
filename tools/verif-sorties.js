@@ -147,8 +147,16 @@ PAGES.forEach(function (page) {
     }
     if (!reel.length) { fragments++; return; }
 
-    var attendu = b.code.replace(/\s+$/, '').split('\n');
-    var obtenu = reel.join('\n').replace(/\s+$/, '').split('\n');
+    /* Le « \r » d'un fichier en CRLF n'est PAS une divergence : il est invisible et
+       ne change rien à ce que l'apprenant lit. Sans cette neutralisation, une leçon
+       enregistrée en CRLF sort à 100 % divergente — mesuré le 2026-08-23 : la même
+       page donne 4 blocs conformes en LF et 4 « divergences » en CRLF, ligne à ligne.
+       `verif-clic.js` le faisait déjà (sa fonction norm) ; les deux outils comparent
+       désormais la même chose. Le dépôt est à 1780 fichiers en LF contre 29 en CRLF,
+       donc le piège est rare — et d'autant plus coûteux quand il tombe. */
+    var sansCR = function (s) { return String(s).replace(/\r/g, ''); };
+    var attendu = sansCR(b.code).replace(/\s+$/, '').split('\n');
+    var obtenu = sansCR(reel.join('\n')).replace(/\s+$/, '').split('\n');
     if (JSON.stringify(attendu) === JSON.stringify(obtenu)) { identiques++; return; }
 
     divergents++;
