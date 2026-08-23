@@ -642,7 +642,7 @@ window.SITE_DATA = (function () {
     {
       id: "neurones", dir: "neurones", title: "Réseaux de neurones : de l'addition à l'apprentissage profond",
       glyph: "nn", language: "Réseaux de neurones", level: "avance", status: "apercu",
-      accent: "#1c6822", lessons: 3, hours: 3,
+      accent: "#1c6822", lessons: 6, hours: 9,
       tagline: "Ce qu'il y a vraiment sous un « réseau de neurones » : une addition, une décision, et beaucoup de répétitions. On part du neurone formel, on mesure pourquoi un seul ne suffit pas, puis on empile des couches — chaque calcul étant refait dans la page, jamais admis. Tous les exemples sont en JavaScript et s'exécutent d'un clic.",
       tags: ["IA", "Données", "Transversal"],
     },
@@ -1475,9 +1475,9 @@ window.SITE_DATA = (function () {
         {
           num: "02", title: "Apprendre", sub: "fonction de perte, descente de gradient, rétropropagation", level: "avance",
           lessons: [
-            { num: "04", title: "Mesurer l'erreur : la fonction de perte", file: "#", status: "bientot" },
-            { num: "05", title: "Descendre la pente : le gradient", file: "#", status: "bientot" },
-            { num: "06", title: "La rétropropagation, étape par étape", file: "#", status: "bientot" },
+            { num: "04", title: "Mesurer l'erreur : la fonction de perte", file: "lecon-04.html", status: "complet" },
+            { num: "05", title: "Descendre la pente : le gradient", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "La rétropropagation, étape par étape", file: "lecon-06.html", status: "complet" },
           ],
         },
         {
@@ -5928,7 +5928,7 @@ window.SITE_DATA = (function () {
     "os": {"lecon-01.html":28,"lecon-02.html":31,"lecon-03.html":31,"lecon-04.html":33,"lecon-05.html":30,"lecon-06.html":32,"lecon-07.html":32,"lecon-08.html":31,"lecon-09.html":33,"lecon-10.html":32,"lecon-11.html":34,"lecon-12.html":34,"lecon-13.html":33,"lecon-14.html":40},
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
-    "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88},
+    "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
     "cobol": {"lecon-01.html":44,"lecon-02.html":50,"lecon-03.html":55,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":45,"lecon-10.html":48,"lecon-11.html":46,"lecon-12.html":46,"lecon-13.html":44,"lecon-14.html":50},

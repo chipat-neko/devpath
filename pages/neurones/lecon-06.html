@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La rétropropagation, étape par étape — Leçon 06 · Cours Réseaux de neurones — Syntaxe</title>
+    <meta name="description" content="La rétropropagation sans formule matricielle et sans acte de foi : une passe avant qui retient chaque valeur intermédiaire, une passe arrière qui redescend la responsabilité de l'erreur poids par poids, avec des dérivées qui tombent toutes sur des entiers. Puis la vérification qui empêche d'y croire sur parole : deux méthodes sans rien en commun, écart maximal 3,0·10⁻⁹." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="neurones" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Réseaux de neurones</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Apprendre — Leçon 06</p>
+              <h1 class="lesson-header__title">La rétropropagation, étape par étape</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~102 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: les leçons 4 et 5 de ce cours — la perte, et la pente qui dit de quel côté descendre. Aucune notation matricielle n'est employée ici</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>conduire une <strong>passe avant</strong> en retenant chaque valeur intermédiaire, et dire pourquoi on les retient&nbsp;;</li>
+                  <li>conduire la <strong>passe arrière</strong> sur un réseau à quatre poids, et lire chaque ligne comme «&nbsp;de combien la perte bouge si … bouge de 1&nbsp;»&nbsp;;</li>
+                  <li><strong>vérifier</strong> un gradient en le comparant à une mesure obtenue autrement, et savoir que c'est le premier test à écrire&nbsp;;</li>
+                  <li>enchaîner passe avant, passe arrière et mise à jour dans une <strong>boucle d'apprentissage</strong> complète.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-05.html">leçon 5</a> a laissé entre tes mains un algorithme complet et une facture impayée. L'algorithme, c'est la descente&nbsp;: mesurer la pente de la perte, faire un pas dans le sens opposé, recommencer. Il marche — départ w = 4, taux 0,05, la perte tombe de 30 à 1,875 puis 0,11719, et au bout de huit pas le poids vaut 2,00003 sans que personne ne lui ait dit que la réponse était 2. La facture, c'est la façon dont la pente a été obtenue&nbsp;: bouger le poids d'un cheveu dans un sens, puis dans l'autre, et relancer le réseau entier à chaque fois. Deux passes complètes. Par poids.</p>
+<p>Tant qu'il n'y a qu'un poids, personne ne s'en aperçoit. Le <code>2-2-1</code> de la <a href="lecon-03.html">leçon 3</a> en a déjà 9, soit 18 passes pour un pas&nbsp;; le <code>784-512-256-10</code> en compte 535 818, soit <strong>1 071 636 passes</strong>. Ce n'est pas une lenteur qu'on répare en achetant une machine plus rapide&nbsp;: c'est un coût qui grandit exactement comme le réseau.</p>
+<p>Cette leçon paie la facture, et elle ne fait que ça. La <strong>rétropropagation</strong> obtient <em>toutes</em> les pentes en une passe avant et une passe arrière, que le réseau ait quatre nombres ou 535 818. Et pour que tu n'aies pas à la croire sur parole, ses quatre pentes seront comparées une à une à celles que mesure la méthode de la leçon 5 — lente, indépendante, sans un seul calcul en commun. Les deux tombent sur les mêmes nombres. <strong>Écart maximal&nbsp;: 3,0·10⁻⁹.</strong> C'est la mesure forte de cette leçon, et le test que tu écriras en premier le jour où un entraînement refusera de descendre.</p>
+<p>Deux choses ne se trouveront pas ici. Aucune matrice&nbsp;: le réseau est trop petit pour en avoir besoin. Aucun symbole de dérivée partielle&nbsp;: chaque quantité de la passe arrière se lit en français, «&nbsp;de combien la perte bouge si … bouge de 1&nbsp;», et c'est cette phrase, répétée sept fois, qui fait toute la difficulté du sujet. Le réseau est minuscule — une entrée, un neurone caché, un neurone de sortie — pour une raison précise&nbsp;: toutes ses dérivées tombent sur des entiers. <strong>−6, −12, −6, −18, −18, −36, −18.</strong> Tu peux les refaire de tête, et tu vas le faire.</p>
+
+<h2>Deux passes par poids&nbsp;: ce que coûte la leçon 5</h2>
+<p>La méthode de la leçon 5 s'appelle la <strong>différence finie</strong>&nbsp;: pour connaître la pente de la perte par rapport à un poids, on ajoute un cheveu à ce poids, on relance le réseau, on retire un cheveu, on relance encore, et on regarde de combien la perte a changé. Elle ne suppose rien, elle marche sur n'importe quel calcul — et elle a un défaut unique&nbsp;: elle ne renseigne que sur <em>un</em> poids à la fois.</p>
+<p>Or un pas de descente a besoin de <em>toutes</em> les pentes en même temps&nbsp;: on ne corrige pas un poids puis l'autre, on les bouge ensemble. Il faut donc refaire l'opération pour chaque nombre du réseau. Celui de cette leçon a 4 nombres à régler&nbsp;: 8 passes. Le <code>2-2-1</code> en a 9&nbsp;: 18 passes. Le <code>2-3-1</code> en a 13&nbsp;: 26 passes. Le <code>784-128-10</code> en a 101 770&nbsp;: <strong>203 540 passes</strong>. Et le <code>784-512-256-10</code>, avec ses 535 818 nombres&nbsp;: <strong>1 071 636 passes</strong> — chacune étant un parcours complet du réseau, et tout cela ne produisant qu'<em>un seul</em> déplacement des poids.</p>
+<p>La rétropropagation remplace ce compte par un autre, et c'est le point de bascule du module&nbsp;: <strong>une passe avant, une passe arrière, quel que soit le nombre de poids</strong>. Deux pour 4 nombres, deux pour 535 818. Le rapport entre les deux méthodes vaut exactement le nombre de paramètres&nbsp;: 4, 9, 13, 101 770, 535 818 selon le réseau. Plus il grandit, plus l'écart se creuse — dans le bon sens.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Comparaison des deux façons d'obtenir toutes les pentes d'un réseau, pour un seul pas de descente. À gauche, la méthode de la leçon 5, dite par différence finie : pour chacun des quatre nombres du petit réseau, w1, b1, w2 et b2, il faut relancer le réseau entier deux fois, une fois le poids augmenté et une fois le poids diminué. Quatre nombres multipliés par deux passes donnent huit passes, et ce compte grandit avec le réseau. À droite, la rétropropagation : une seule passe avant qui traverse le réseau de l'entrée vers la sortie en retenant les valeurs intermédiaires, suivie d'une seule passe arrière qui redescend de la sortie vers l'entrée et rend les quatre pentes à la fois. Deux passes en tout, et ce compte ne change pas quand le réseau grandit. En bas, la comparaison chiffrée sur un réseau 784-512-256-10 de 535 818 paramètres : un million soixante et onze mille six cent trente-six passes d'un côté, deux de l'autre.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Toutes les pentes, pour UN pas : deux comptes très différents</text>
+    <text class="d-tag" x="165" y="44" text-anchor="middle" font-size="9.5">mesurer poids par poids (leçon 5)</text>
+    <text class="d-tag" x="475" y="44" text-anchor="middle" font-size="9.5">remonter une fois (leçon 6)</text>
+    <rect class="d-frame" x="30" y="56" width="270" height="176" rx="12" fill="none" stroke-dasharray="4 3" />
+    <rect class="d-frame" x="345" y="56" width="270" height="176" rx="12" fill="none" stroke-dasharray="4 3" />
+    <rect class="d-box" x="50" y="72" width="230" height="26" rx="7" /><text class="d-text" x="165" y="90" text-anchor="middle" font-size="10">w1 : 2 passes</text>
+    <rect class="d-box" x="50" y="106" width="230" height="26" rx="7" /><text class="d-text" x="165" y="124" text-anchor="middle" font-size="10">b1 : 2 passes</text>
+    <rect class="d-box" x="50" y="140" width="230" height="26" rx="7" /><text class="d-text" x="165" y="158" text-anchor="middle" font-size="10">w2 : 2 passes</text>
+    <rect class="d-box" x="50" y="174" width="230" height="26" rx="7" /><text class="d-text" x="165" y="192" text-anchor="middle" font-size="10">b2 : 2 passes</text>
+    <text class="d-label" x="165" y="220" text-anchor="middle" font-size="11">4 nombres × 2 = 8 passes</text>
+    <rect class="d-accent" x="365" y="88" width="230" height="34" rx="8" /><text class="d-text" x="480" y="110" text-anchor="middle" font-size="10">1 passe avant</text>
+    <path class="d-line" d="M480 126 L480 148" fill="none" /><path class="d-line" d="M474 142 L480 149 L486 142" fill="none" />
+    <rect class="d-accent" x="365" y="152" width="230" height="34" rx="8" /><text class="d-text" x="480" y="174" text-anchor="middle" font-size="10">1 passe arrière</text>
+    <text class="d-label" x="480" y="220" text-anchor="middle" font-size="11">2 passes, les 4 pentes</text>
+    <text class="d-mut" x="165" y="248" text-anchor="middle" font-size="9">le compte grandit avec le réseau</text>
+    <text class="d-mut" x="480" y="248" text-anchor="middle" font-size="9">le compte ne bouge pas</text>
+    <text class="d-label" x="320" y="278" text-anchor="middle" font-size="11">réseau 784-512-256-10, 535 818 nombres : 1 071 636 passes contre 2</text>
+  </svg>
+  <figcaption>Le même travail vu par les deux méthodes. À gauche, le compte se multiplie par le nombre de nombres à régler&nbsp;; à droite, il ne bouge pas.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Trois mots pour la même chose</p><p>Tu vas croiser <strong>pente</strong>, <strong>dérivée</strong> et <strong>gradient</strong>&nbsp;: ici, ils désignent la même quantité mesurée, <em>de combien la perte bouge si un nombre du réseau bouge de 1</em>. «&nbsp;Gradient&nbsp;» désigne la <em>collection</em> des pentes de tous les poids d'un coup — d'où «&nbsp;descente de gradient&nbsp;»&nbsp;: on descend dans toutes les directions à la fois.</p><p>Et une pente n'est pas une correction, ni même une prédiction pour un pas de 1&nbsp;: c'est une <em>vitesse</em>. −36 se lit «&nbsp;autour de ce point, la perte descend au rythme de 36 par unité de <code>w1</code>&nbsp;». Mesuré&nbsp;: pour un déplacement de 0,01, la perte tombe de 9,000000 à 8,643600&nbsp;; pour un déplacement de 1, elle est retombée à 9,000000, sa valeur de départ. Ce qu'on en fait ensuite est le sujet de la leçon 5.</p></div></div>
+
+<h2>Une erreur a des responsables, et chacun à sa mesure</h2>
+<p>Avant tout calcul, l'idée&nbsp;: si tu la tiens, la suite n'est qu'une suite de multiplications.</p>
+<p>Un réseau se trompe en sortie. Cette erreur n'est pas apparue toute seule&nbsp;: elle a été fabriquée en amont par des nombres qui ont chacun contribué au résultat. Ces nombres sont les <strong>responsables</strong> de l'erreur, et ils ne le sont pas également&nbsp;: certains ont pesé lourd, d'autres à peine. La rétropropagation ne fait rien d'autre que <strong>distribuer cette responsabilité</strong>, de la sortie vers l'entrée&nbsp;: chaque nombre reçoit une part proportionnelle à l'effet qu'il a réellement eu.</p>
+<p>«&nbsp;À proportion de l'effet qu'il a&nbsp;» est à prendre au pied de la lettre. Dans le réseau qu'on va suivre, le poids <code>w2</code> et le biais <code>b2</code> entrent tous deux dans le calcul de la sortie <code>y</code>, mais pas de la même façon. Le biais s'ajoute tel quel&nbsp;: augmente-le de 1, la sortie monte de 1. Le poids est multiplié par la valeur qui arrive du neurone caché&nbsp;: augmente-le de 1, la sortie monte de cette valeur-là, qui vaut 2 ici. Le poids a donc deux fois plus d'effet — et la remontée lui attribuera deux fois plus de pente&nbsp;: <strong>−12 contre −6</strong>.</p>
+<p>Voilà tout le principe&nbsp;: qui agit deux fois plus sur la sortie reçoit deux fois plus de correction. Le raisonnement se répète d'une couche à l'autre, et c'est ce qui impose de remonter&nbsp;: pour savoir de combien un poids de la <em>première</em> couche est responsable, il faut d'abord connaître la responsabilité de la valeur qu'il produit.</p>
+<p>Dernier point, le seul qui demande un instant d'attention&nbsp;: les responsabilités se <strong>multiplient</strong> le long du chemin. Des engrenages en série&nbsp;: si chaque étage amplifie ce qu'il reçoit, l'effet du premier sur le dernier est le <em>produit</em> des amplifications, jamais leur somme. La passe arrière est ce calcul fait à l'envers&nbsp;: on part de l'effet sur la perte et on le multiplie par l'effet local de chaque étage traversé.</p>
+
+<h2>Le plus petit réseau qui ait une couche cachée</h2>
+<p>Une entrée, un neurone caché, un neurone de sortie&nbsp;: <code>1-1-1</code>, avec la notation par tailles de la leçon 3. C'est le plus petit réseau qui possède encore une couche cachée&nbsp;: en retirer quoi que ce soit ferait disparaître le seul étage intermédiaire, et tout l'intérêt de la remontée.</p>
+<p>Il a quatre nombres à régler&nbsp;: le poids <code>w1</code> et le biais <code>b1</code> du neurone caché, le poids <code>w2</code> et le biais <code>b2</code> de la sortie, valant au départ 1, 0, 3 et 1. L'exemple à apprendre tient en deux nombres&nbsp;: <code>x</code> vaut 2, la sortie attendue — la <strong>cible</strong> — vaut 10. Le neurone caché passe sa somme dans une ReLU, la fonction de la <a href="lecon-02.html">leçon 2</a>. Ces valeurs ont été choisies pour que <em>toutes</em> les quantités de la passe arrière tombent sur des entiers&nbsp;: une leçon dont on ne peut pas refaire les calculs est une leçon qu'on croit sur parole.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="La passe avant du réseau 1-1-1, de gauche à droite. À gauche, une case d'entrée contient x égale 2. Une flèche portant le poids w1 égal à 1 mène au neurone caché. Le neurone caché, encadré, calcule sa somme s1 égale à w1 fois x plus b1, soit 1 fois 2 plus 0, ce qui donne 2 ; il applique ensuite une ReLU, et comme 2 est positif, sa sortie h vaut aussi 2. Une flèche portant le poids w2 égal à 3 mène au neurone de sortie, dont le biais b2 vaut 1. Le neurone de sortie calcule y égale w2 fois h plus b2, soit 3 fois 2 plus 1, ce qui donne 7. À droite, la cible vaut 10, l'erreur, qui est la sortie moins la cible, vaut moins 3, et la perte, qui est l'erreur au carré, vaut 9. Une légende du bas rappelle que les quatre valeurs intermédiaires s1 égale 2, h égale 2, y égale 7 et erreur égale moins 3 sont retenues, parce que la passe arrière en aura besoin.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">La passe avant : on calcule, et on retient tout</text>
+    <text class="d-tag" x="66" y="46" text-anchor="middle" font-size="9.5">entrée</text>
+    <text class="d-tag" x="270" y="46" text-anchor="middle" font-size="9.5">neurone caché</text>
+    <text class="d-tag" x="500" y="46" text-anchor="middle" font-size="9.5">neurone de sortie</text>
+    <rect class="d-box" x="26" y="104" width="80" height="30" rx="7" /><text class="d-text" x="66" y="124" text-anchor="middle" font-size="11">x = 2</text>
+    <path class="d-line" d="M106 119 L196 119" fill="none" /><path class="d-line" d="M188 113 L196 119 L188 125" fill="none" />
+    <text class="d-tag" x="151" y="110" text-anchor="middle" font-size="9.5">w1 = 1</text>
+    <rect class="d-accent" x="196" y="90" width="148" height="58" rx="8" />
+    <text class="d-text" x="270" y="110" text-anchor="middle" font-size="9.5">s1 = 1 × 2 + 0 = 2</text>
+    <text class="d-text" x="270" y="128" text-anchor="middle" font-size="9.5">h = relu(2) = 2</text>
+    <text class="d-mut" x="270" y="142" text-anchor="middle" font-size="8">biais b1 = 0</text>
+    <path class="d-line" d="M344 119 L432 119" fill="none" /><path class="d-line" d="M424 113 L432 119 L424 125" fill="none" />
+    <text class="d-tag" x="388" y="110" text-anchor="middle" font-size="9.5">w2 = 3</text>
+    <rect class="d-accent" x="432" y="90" width="148" height="58" rx="8" />
+    <text class="d-text" x="506" y="112" text-anchor="middle" font-size="9.5">y = 3 × 2 + 1 = 7</text>
+    <text class="d-mut" x="506" y="130" text-anchor="middle" font-size="8">biais b2 = 1</text>
+    <rect class="d-box" x="196" y="184" width="148" height="30" rx="7" /><text class="d-text" x="270" y="204" text-anchor="middle" font-size="10">cible = 10</text>
+    <rect class="d-box" x="432" y="184" width="148" height="30" rx="7" /><text class="d-text" x="506" y="204" text-anchor="middle" font-size="10">erreur = 7 - 10 = -3</text>
+    <path class="d-line" d="M506 148 L506 184" fill="none" /><path class="d-line" d="M500 178 L506 185 L512 178" fill="none" />
+    <path class="d-line" d="M344 199 L432 199" fill="none" /><path class="d-line" d="M424 193 L432 199 L424 205" fill="none" />
+    <text class="d-label" x="506" y="238" text-anchor="middle" font-size="11">perte = (-3)² = 9</text>
+    <text class="d-mut" x="320" y="266" text-anchor="middle" font-size="9">retenus pour la passe arrière : s1 = 2 · h = 2 · y = 7 · erreur = -3</text>
+    <text class="d-label" x="320" y="288" text-anchor="middle" font-size="11">4 nombres à régler : w1, b1, w2, b2</text>
+  </svg>
+  <figcaption>Les valeurs écrites sur les flèches et dans les cases sont celles que le programme affiche, et aucune n'est arrondie&nbsp;: elles tombent toutes juste.</figcaption>
+</figure>
+
+<p>Le programme qui suit fait les deux passes d'un coup. Cette section en commente la première moitié&nbsp;; la suivante prendra la seconde ligne par ligne.</p>
+
+<figure class="code-block" data-file="retropropagation.js"><pre><code class="language-javascript">// Le plus petit réseau qui ait une couche cachée : une entrée, un neurone caché,
+// un neurone de sortie. Quatre nombres à régler : w1, b1, w2, b2.
+let w1 = 1, b1 = 0, w2 = 3, b2 = 1;
+const x = 2, cible = 10;
+const relu = (v) =&gt; (v &gt; 0 ? v : 0);
+
+// ---- LA PASSE AVANT : on calcule, et on RETIENT chaque valeur intermédiaire.
+const s1 = w1 * x + b1;          // la somme du neurone caché
+const h = relu(s1);              // sa sortie, après activation
+const y = w2 * h + b2;           // la sortie du réseau
+const erreur = y - cible;
+const perte = erreur * erreur;
+
+console.log("PASSE AVANT");
+console.log("   s1 = w1 × x + b1 = " + w1 + " × " + x + " + " + b1 + " = " + s1);
+console.log("   h  = relu(s1) = " + h);
+console.log("   y  = w2 × h + b2 = " + w2 + " × " + h + " + " + b2 + " = " + y);
+console.log("   erreur = y - cible = " + y + " - " + cible + " = " + erreur);
+console.log("   perte  = erreur² = " + perte);
+console.log("");
+
+// ---- LA PASSE ARRIÈRE : on remonte, en multipliant les effets un à un.
+const dPerte_dy = 2 * erreur;                 // de combien la perte bouge si y bouge de 1
+const dPerte_dw2 = dPerte_dy * h;             // ... et w2 agit sur y en proportion de h
+const dPerte_db2 = dPerte_dy * 1;
+const dPerte_dh = dPerte_dy * w2;             // h agit sur y en proportion de w2
+const dh_ds1 = s1 &gt; 0 ? 1 : 0;                // la ReLU laisse passer, ou coupe tout
+const dPerte_ds1 = dPerte_dh * dh_ds1;
+const dPerte_dw1 = dPerte_ds1 * x;
+const dPerte_db1 = dPerte_ds1 * 1;
+
+console.log("PASSE ARRIÈRE — chaque ligne se lit « de combien la perte bouge si … bouge de 1 »");
+console.log("   perte par rapport à y   = 2 × erreur = " + dPerte_dy);
+console.log("   perte par rapport à w2  = " + dPerte_dy + " × h(" + h + ")   = " + dPerte_dw2);
+console.log("   perte par rapport à b2  = " + dPerte_dy + " × 1      = " + dPerte_db2);
+console.log("   perte par rapport à h   = " + dPerte_dy + " × w2(" + w2 + ")  = " + dPerte_dh);
+console.log("   la ReLU laisse passer (s1 = " + s1 + " &gt; 0), donc elle transmet tel quel");
+console.log("   perte par rapport à s1  = " + dPerte_dh + " × 1     = " + dPerte_ds1);
+console.log("   perte par rapport à w1  = " + dPerte_ds1 + " × x(" + x + ")  = " + dPerte_dw1);
+console.log("   perte par rapport à b1  = " + dPerte_ds1 + " × 1     = " + dPerte_db1);
+console.log("");
+console.log("Rien d'autre qu'une suite de multiplications, remontée de la sortie vers l'entrée.");
+console.log("Chaque poids reçoit sa part de responsabilité dans l'erreur, en une seule remontée.");</code></pre></figure>
+<figure class="code-block" data-file="retropropagation.txt"><pre><code class="language-plaintext">PASSE AVANT
+   s1 = w1 × x + b1 = 1 × 2 + 0 = 2
+   h  = relu(s1) = 2
+   y  = w2 × h + b2 = 3 × 2 + 1 = 7
+   erreur = y - cible = 7 - 10 = -3
+   perte  = erreur² = 9
+
+PASSE ARRIÈRE — chaque ligne se lit « de combien la perte bouge si … bouge de 1 »
+   perte par rapport à y   = 2 × erreur = -6
+   perte par rapport à w2  = -6 × h(2)   = -12
+   perte par rapport à b2  = -6 × 1      = -6
+   perte par rapport à h   = -6 × w2(3)  = -18
+   la ReLU laisse passer (s1 = 2 &gt; 0), donc elle transmet tel quel
+   perte par rapport à s1  = -18 × 1     = -18
+   perte par rapport à w1  = -18 × x(2)  = -36
+   perte par rapport à b1  = -18 × 1     = -18
+
+Rien d'autre qu'une suite de multiplications, remontée de la sortie vers l'entrée.
+Chaque poids reçoit sa part de responsabilité dans l'erreur, en une seule remontée.</code></pre></figure>
+
+<p>La <strong>passe avant</strong>, d'abord&nbsp;: rien de nouveau, c'est la propagation avant de la leçon 3 sur un réseau plus petit. Quatre lignes, chacune refaisable de tête.</p>
+<p><strong>La somme du neurone caché&nbsp;:</strong> <code>s1 = w1 × x + b1</code>, soit <code>1 × 2 + 0</code>, donc <strong>s1 = 2</strong>. <strong>Sa sortie après activation&nbsp;:</strong> <code>h = relu(s1)</code>, et comme 2 est positif la ReLU laisse passer, donc <strong>h = 2</strong> — égalité qui est une coïncidence de cet exemple, pas une règle. <strong>La sortie du réseau&nbsp;:</strong> <code>y = w2 × h + b2</code>, soit <code>3 × 2 + 1</code>, donc <strong>y = 7</strong>.</p>
+<p><strong>L'erreur et la perte.</strong> L'erreur est l'écart entre ce qu'on obtient et ce qu'on voulait&nbsp;: <code>7 - 10</code>, soit <strong>−3</strong>. La perte est cette erreur au carré, comme la <a href="lecon-04.html">leçon 4</a> l'a établi&nbsp;: <strong>9</strong>. Le carré empêche des erreurs de signes opposés de se compenser — mesuré sur deux modèles dont la somme des écarts valait 0 des deux côtés, quand la somme des carrés valait 4 pour l'un et 0 pour l'autre.</p>
+<p>Ce qui est nouveau tient dans un mot&nbsp;: <strong>on retient</strong>. Chaque valeur intermédiaire est rangée dans une variable — <code>s1</code>, <code>h</code>, <code>y</code>, <code>erreur</code> — et aucune n'est jetée. Un programme qui ne ferait que prédire pourrait tout écraser au fur et à mesure&nbsp;; celui-ci ne le peut pas.</p>
+<p>La raison se lit dans une ligne de la passe arrière&nbsp;: <code>perte par rapport à w2 = −6 × h</code>. Pour calculer la pente de <code>w2</code>, il faut <code>h</code> — la valeur exacte que le neurone caché a produite <em>pour cet exemple-là</em>. Effacée, il faudrait refaire la passe avant pour la retrouver, et l'on repaierait la facture de la leçon 5. C'est aussi pour cela que l'entraînement d'un gros réseau consomme beaucoup de mémoire&nbsp;: toutes les valeurs de la passe avant attendent que la passe arrière les consomme.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi <code>s1</code> <em>et</em> <code>h</code>, alors qu'ils valent tous les deux 2</p><p>Ce ne sont pas deux noms pour la même chose, mais deux quantités qui se trouvent égales parce que la somme était positive — et la passe arrière a besoin des <strong>deux</strong>&nbsp;: de <code>h</code> comme <em>valeur</em>, pour calculer la pente de <code>w2</code>&nbsp;; de <code>s1</code> comme <em>signe</em>, pour savoir si la ReLU a laissé passer ou coupé, la ligne <code>s1 &gt; 0 ? 1 : 0</code> ne regardant rien d'autre. Avec un <code>s1</code> négatif, <code>h</code> vaudrait 0 et les deux cesseraient de se ressembler.</p></div></div>
+
+<h2>La passe arrière, ligne par ligne</h2>
+<p>Voici le cœur de la leçon. Sept lignes, sept nombres, une seule phrase à répéter&nbsp;: <em>de combien la perte bouge si … bouge de 1</em>. On les prend lentement, dans l'ordre où le programme les calcule — à l'envers du réseau.</p>
+<p><strong>1. La perte par rapport à <code>y</code>&nbsp;: −6.</strong> Point de départ de toute la remontée, à comprendre plutôt qu'à mémoriser. La perte vaut l'erreur au carré, et l'erreur vaut <code>y - cible</code>&nbsp;: si <code>y</code> monte de 1, l'erreur monte de 1, puisque la cible ne bouge pas. Et quand on élève au carré, la vitesse à laquelle le carré change vaut <strong>deux fois</strong> la valeur elle-même — seule règle de calcul de toute la leçon, et la vérification du gradient la contrôle plus bas, avec les trois autres facteurs. L'erreur vaut −3, donc la perte bouge de <code>2 × (−3)</code>, soit <strong>−6</strong>. Le signe compte&nbsp;: négatif, donc augmenter <code>y</code> <em>diminue</em> la perte. Logique&nbsp;: on est à 7, on vise 10.</p>
+<p><strong>2. La perte par rapport à <code>w2</code>&nbsp;: −12.</strong> Le programme écrit <code>−6 × h</code>, et <code>h</code> vaut 2. En français&nbsp;: si <code>w2</code> augmente de 1, la sortie <code>y</code> augmente de <code>h</code>, puisque <code>w2</code> est multiplié par <code>h</code>&nbsp;; et chaque unité de <code>y</code> coûte −6 à la perte. Donc <code>−6 × 2</code>, soit <strong>−12</strong>. C'est ici que les effets se composent en se multipliant.</p>
+<p><strong>3. La perte par rapport à <code>b2</code>&nbsp;: −6.</strong> Même raisonnement, autre effet local&nbsp;: un biais s'ajoute, il n'est multiplié par rien, son effet vaut 1, et la pente vaut <code>−6 × 1</code>, soit <strong>−6</strong>. Deux fois moins que le poids, qui agit deux fois plus.</p>
+<p><strong>4. La perte par rapport à <code>h</code>&nbsp;: −18.</strong> On quitte les nombres réglables pour une valeur qui circule&nbsp;: <code>h</code> n'est pas un poids, on ne le corrigera jamais, mais c'est par lui que la responsabilité franchit la couche. Si <code>h</code> augmente de 1, <code>y</code> augmente de <code>w2</code>, c'est-à-dire de 3&nbsp;: <code>−6 × 3</code>, soit <strong>−18</strong>. Symétrie avec la ligne 2&nbsp;: pour la pente du poids on multiplie par la valeur qui entre, pour la pente de la valeur on multiplie par le poids.</p>
+<p><strong>5. La perte par rapport à <code>s1</code>&nbsp;: −18.</strong> Entre <code>h</code> et <code>s1</code> il y a la ReLU, dont l'effet local est binaire&nbsp;: elle laisse passer ou elle coupe. Ici <code>s1</code> vaut 2, donc elle laisse passer, et son effet local vaut 1&nbsp;: <code>−18 × 1</code>, soit <strong>−18</strong>. Cette ligne a l'air de ne rien faire&nbsp;; on verra plus bas ce qu'elle fait quand elle coupe.</p>
+<p><strong>6. La perte par rapport à <code>w1</code>&nbsp;: −36.</strong> De l'autre côté de la couche cachée, rien n'a changé de nature&nbsp;: si <code>w1</code> augmente de 1, la somme <code>s1</code> augmente de <code>x</code>, c'est-à-dire de 2, donc <code>−18 × 2</code>, soit <strong>−36</strong>.</p>
+<p><strong>7. La perte par rapport à <code>b1</code>&nbsp;: −18.</strong> Un biais s'ajoute&nbsp;: effet local 1, pente <strong>−18</strong>. La remontée est terminée, et les quatre nombres réglables ont chacun leur pente — <strong>w1&nbsp;: −36, b1&nbsp;: −18, w2&nbsp;: −12, b2&nbsp;: −6</strong> — en une seule descente de la sortie vers l'entrée.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="La passe arrière du même réseau 1-1-1, cette fois de droite à gauche. On part de la perte, tout à droite, et de la première quantité : la perte par rapport à y vaut moins 6, c'est-à-dire deux fois l'erreur qui vaut moins 3. De là partent trois branches. Première branche : la perte par rapport à w2 vaut moins 6 multiplié par h, qui vaut 2, soit moins 12. Deuxième branche : la perte par rapport à b2 vaut moins 6 multiplié par 1, soit moins 6. Troisième branche : la perte par rapport à h vaut moins 6 multiplié par w2, qui vaut 3, soit moins 18 ; c'est elle qui traverse la couche. La ReLU laisse passer, parce que s1 vaut 2 et qu'il est positif : son facteur vaut 1, donc la perte par rapport à s1 vaut aussi moins 18. De cette quantité repartent deux branches : la perte par rapport à w1 vaut moins 18 multiplié par x, qui vaut 2, soit moins 36, et la perte par rapport à b1 vaut moins 18 multiplié par 1, soit moins 18. Une légende rappelle que chaque flèche multiplie par un effet local et que les sept quantités s'obtiennent en une seule remontée.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">La passe arrière : la responsabilité redescend, en se multipliant</text>
+    <rect class="d-accent" x="470" y="44" width="150" height="30" rx="8" /><text class="d-text" x="545" y="64" text-anchor="middle" font-size="10">perte/y = -6</text>
+    <text class="d-mut" x="545" y="36" text-anchor="middle" font-size="8.5">= 2 × erreur = 2 × (-3)</text>
+    <path class="d-line" d="M470 59 L392 59" fill="none" /><path class="d-line" d="M400 53 L392 59 L400 65" fill="none" />
+    <text class="d-tag" x="431" y="50" text-anchor="middle" font-size="9">× h (2)</text>
+    <rect class="d-box" x="244" y="44" width="148" height="30" rx="7" /><text class="d-text" x="318" y="64" text-anchor="middle" font-size="10">perte/w2 = -12</text>
+    <path class="d-line" d="M545 74 L545 118" fill="none" /><path class="d-line" d="M539 112 L545 119 L551 112" fill="none" />
+    <text class="d-tag" x="576" y="112" text-anchor="middle" font-size="9">× 1</text>
+    <rect class="d-box" x="470" y="120" width="150" height="30" rx="7" /><text class="d-text" x="545" y="140" text-anchor="middle" font-size="10">perte/b2 = -6</text>
+    <path class="d-line" d="M470 172 L392 172" fill="none" /><path class="d-line" d="M400 166 L392 172 L400 178" fill="none" />
+    <path class="d-line" d="M620 59 L632 59 L632 172 L624 172" fill="none" /><path class="d-line" d="M632 166 L624 172 L632 178" fill="none" />
+    <rect class="d-accent" x="470" y="157" width="150" height="30" rx="8" /><text class="d-text" x="545" y="177" text-anchor="middle" font-size="10">perte/h = -18</text>
+    <text class="d-tag" x="601" y="100" text-anchor="middle" font-size="9">× w2 (3)</text>
+    <rect class="d-frame" x="244" y="157" width="148" height="30" rx="8" fill="none" stroke-dasharray="4 3" /><text class="d-text" x="318" y="177" text-anchor="middle" font-size="9">ReLU : s1 = 2 &gt; 0, × 1</text>
+    <path class="d-line" d="M244 172 L172 172" fill="none" /><path class="d-line" d="M180 166 L172 172 L180 178" fill="none" />
+    <rect class="d-accent" x="24" y="157" width="148" height="30" rx="8" /><text class="d-text" x="98" y="177" text-anchor="middle" font-size="10">perte/s1 = -18</text>
+    <path class="d-line" d="M98 157 L98 122" fill="none" /><path class="d-line" d="M92 128 L98 121 L104 128" fill="none" />
+    <text class="d-tag" x="130" y="140" text-anchor="middle" font-size="9">× x (2)</text>
+    <rect class="d-box" x="24" y="92" width="148" height="30" rx="7" /><text class="d-text" x="98" y="112" text-anchor="middle" font-size="10">perte/w1 = -36</text>
+    <path class="d-line" d="M98 187 L98 222" fill="none" /><path class="d-line" d="M92 216 L98 223 L104 216" fill="none" />
+    <text class="d-tag" x="126" y="208" text-anchor="middle" font-size="9">× 1</text>
+    <rect class="d-box" x="24" y="222" width="148" height="30" rx="7" /><text class="d-text" x="98" y="242" text-anchor="middle" font-size="10">perte/b1 = -18</text>
+    <text class="d-mut" x="320" y="212" text-anchor="middle" font-size="9">chaque flèche multiplie par un effet local</text>
+    <text class="d-label" x="360" y="278" text-anchor="middle" font-size="11">7 quantités, 1 seule remontée — et 4 pentes utilisables : -36, -18, -12, -6</text>
+  </svg>
+  <figcaption>La figure précédente, retournée. À chaque flèche, la quantité qui circule est multipliée par un effet local — <code>h</code>, <code>w2</code>, <code>x</code>, ou 1 pour un biais. Les quantités encadrées en couleur sont celles qui traversent&nbsp;; les autres sont des pentes de poids, qui sortent du circuit.</figcaption>
+</figure>
+
+<p>Relis la ligne 6 en remontant le chemin entier&nbsp;: <code>−6 × 3 × 1 × 2 = −36</code>. Quatre facteurs, un par étage traversé — le carré de la perte, le poids de sortie, la ReLU qui laisse passer, l'entrée. <strong>Voilà toute la rétropropagation.</strong> Le reste — les réseaux à mille couches, les bibliothèques qui font ça toutes seules — n'ajoute pas une idée&nbsp;: cela ajoute des étages, donc des facteurs.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Comment relire une ligne de la passe arrière</p><p>Prends n'importe quelle ligne et pose-toi deux questions, toujours les mêmes, toujours dans cet ordre. <strong>Qu'est-ce qui arrive d'en haut&nbsp;?</strong> La responsabilité déjà calculée, celle de la quantité située juste après dans le réseau. <strong>Quel est l'effet local&nbsp;?</strong> Si <em>ce</em> nombre-ci augmente de 1, de combien la quantité d'en haut augmente-t-elle&nbsp;? La réponse est toujours d'une simplicité décevante — la valeur par laquelle il est multiplié, ou 1 s'il est ajouté, ou 0 si une ReLU a coupé. Multiplie les deux, tu as la ligne. Sur celle de <code>w1</code>&nbsp;: −18 arrive d'en haut, l'effet local vaut 2, et <code>−18 × 2</code> donne −36.</p></div></div>
+
+<p><strong>Reste la ligne 5, celle qui avait l'air de ne rien faire.</strong> Le programme y écrit <code>s1 &gt; 0 ? 1 : 0</code>&nbsp;: deux valeurs possibles, et deux seulement. Ici <code>s1</code> vaut 2, la ReLU laisse passer, le facteur vaut <strong>1</strong>, et la pente traverse intacte. Si <code>s1</code> avait été négatif, le facteur aurait valu <strong>0</strong>, et une multiplication par zéro n'atténue pas&nbsp;: elle annule. <em>Tout</em> ce qui est en amont aurait reçu une pente nulle — et un poids dont la pente vaut zéro ne bouge pas, puisque le pas vaut le taux multiplié par la pente.</p>
+<p>Cela se mesure. En changeant le seul <code>w1</code>, de 1 à −1&nbsp;: <code>s1</code> devient −2, la ReLU coupe, <code>h</code> tombe à 0, la sortie vaut 1, l'erreur −9 et la perte grimpe à 81. La remontée donne −18 pour <code>y</code>, −18 pour <code>b2</code>, −54 pour <code>h</code> — puis le facteur vaut 0, et à partir de là <strong>tout tombe à zéro</strong>&nbsp;: <code>s1</code>, <code>w1</code>, <code>b1</code>. La pente de <code>w2</code> tombe elle aussi à 0, pour une raison instructive&nbsp;: elle se calcule en multipliant par <code>h</code>, qui vaut 0. Perte de 81, et un seul des quatre nombres reçoit encore une correction&nbsp;: <code>b2</code>, avec −18.</p>
+<p>Ce phénomène a un nom&nbsp;: le <strong>neurone mort</strong>. Il ne sera pas traité davantage ici&nbsp;: c'est le sujet du <strong>module 3</strong>, «&nbsp;Ce qui rate&nbsp;». Retiens la mécanique&nbsp;: une multiplication par zéro dans la remontée coupe l'alimentation de tout ce qui est en amont.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Honnêtement&nbsp;: cette leçon a choisi le cas facile</p><p>Le réseau que tu suis a une somme cachée positive dès le départ, donc le facteur vaut 1 partout et la remontée se lit sans accroc. Ce n'est pas représentatif&nbsp;: dans un réseau réel, une bonne partie des neurones ont une somme négative sur un exemple donné, et leur branche de la remontée est annulée pour cet exemple-là. Ce n'est pas forcément une panne — d'autres exemples les réveillent —, mais un neurone dont la somme reste négative sur <em>tous</em> les exemples ne recevra plus jamais la moindre correction. Le cours ne fera pas semblant que son exemple couvre ce cas&nbsp;: il le mesure, il le nomme, il renvoie au module 3.</p></div></div>
+
+<h2>Le test qui empêche la magie</h2>
+<p>Tu viens de refaire sept lignes à la main, et rien ne prouve encore qu'elles sont justes. Une passe arrière est du code comme un autre&nbsp;: on peut y oublier un facteur, se tromper de variable, appliquer l'effet local du mauvais étage — et le programme ne plantera pas. Il rendra des nombres, avec l'aplomb habituel des nombres.</p>
+<p>La parade&nbsp;: comparer ce que la remontée annonce avec ce qu'une <em>autre</em> méthode mesure — la différence finie de la leçon 5. On bouge chaque nombre d'un millionième et on regarde de combien la perte change. Lente, mais totalement indépendante&nbsp;: elle ne partage pas une ligne de code avec la remontée. Si les deux tombent sur les mêmes valeurs, la coïncidence devient difficile à croire.</p>
+
+<figure class="code-block" data-file="gradient-verifie.js"><pre><code class="language-javascript">// Les quatre nombres du réseau, et l'exemple à apprendre.
+const DEPART = { w1: 1, b1: 0, w2: 3, b2: 1 };
+const x = 2, cible = 10;
+const relu = (v) =&gt; (v &gt; 0 ? v : 0);
+
+function perte(p) {
+  const h = relu(p.w1 * x + p.b1);
+  const y = p.w2 * h + p.b2;
+  return (y - cible) * (y - cible);
+}
+
+// (a) ce que la rétropropagation annonce
+const s1 = DEPART.w1 * x + DEPART.b1, h = relu(s1);
+const dy = 2 * (DEPART.w2 * h + DEPART.b2 - cible);
+const ds1 = dy * DEPART.w2 * (s1 &gt; 0 ? 1 : 0);
+const ANNONCE = { w1: ds1 * x, b1: ds1, w2: dy * h, b2: dy };
+
+// (b) ce qu'on mesure en bougeant chaque nombre d'un cheveu, un à la fois
+function mesure(nom, h2) {
+  const plus = Object.assign({}, DEPART), moins = Object.assign({}, DEPART);
+  plus[nom] += h2; moins[nom] -= h2;
+  return (perte(plus) - perte(moins)) / (2 * h2);
+}
+
+console.log("  poids   annoncé par la remontée   mesuré en bougeant le poids     écart");
+let pire = 0;
+for (const nom of ["w1", "b1", "w2", "b2"]) {
+  const m = mesure(nom, 0.000001), e = Math.abs(m - ANNONCE[nom]);
+  if (e &gt; pire) pire = e;
+  console.log("   " + nom.padEnd(6) + String(ANNONCE[nom]).padStart(14)
+    + m.toFixed(6).padStart(28) + e.toExponential(1).padStart(14));
+}
+console.log("");
+console.log("écart maximal : " + pire.toExponential(1));
+console.log("Les deux méthodes ne se ressemblent en rien : l'une remonte le réseau une fois,");
+console.log("l'autre le relance deux fois par poids. Elles tombent pourtant sur les mêmes nombres.");
+console.log("C'est ce test qu'on écrit d'abord, avant de soupçonner quoi que ce soit d'autre.");</code></pre></figure>
+<figure class="code-block" data-file="gradient-verifie.txt"><pre><code class="language-plaintext">  poids   annoncé par la remontée   mesuré en bougeant le poids     écart
+   w1               -36                  -36.000000        3.0e-9
+   b1               -18                  -18.000000       1.5e-10
+   w2               -12                  -12.000000        1.7e-9
+   b2                -6                   -6.000000       8.4e-10
+
+écart maximal : 3.0e-9
+Les deux méthodes ne se ressemblent en rien : l'une remonte le réseau une fois,
+l'autre le relance deux fois par poids. Elles tombent pourtant sur les mêmes nombres.
+C'est ce test qu'on écrit d'abord, avant de soupçonner quoi que ce soit d'autre.</code></pre></figure>
+
+<p>Lis le tableau colonne par colonne. «&nbsp;Annoncé&nbsp;»&nbsp;: les quatre nombres de la section précédente, −36, −18, −12, −6. «&nbsp;Mesuré&nbsp;»&nbsp;: ce que la différence finie obtient sans jamais consulter la remontée, −36,000000, −18,000000, −12,000000, −6,000000. Et l'écart&nbsp;: 3,0·10⁻⁹ pour <code>w1</code>, 1,5·10⁻¹⁰ pour <code>b1</code>, 1,7·10⁻⁹ pour <code>w2</code>, 8,4·10⁻¹⁰ pour <code>b2</code>. <strong>Maximum&nbsp;: 3,0·10⁻⁹.</strong></p>
+<p>Reste la bonne question&nbsp;: pourquoi l'écart n'est-il pas <em>nul</em>&nbsp;? La réponse ne met pas la rétropropagation en cause, mais la mesure. La leçon 5 avait déjà rencontré ce résidu au fond de sa cuvette&nbsp;: là où la pente vaut exactement 0, la différence finie annonçait <strong>1,8·10⁻¹⁵</strong>, pas 0. C'est une propriété des nombres à virgule flottante d'une machine, pas du réseau&nbsp;: soustraire deux valeurs de perte presque identiques, puis diviser par un déplacement minuscule, laisse toujours des poussières dans les derniers chiffres. Le côté «&nbsp;annoncé&nbsp;», lui, ne fait que des multiplications d'entiers&nbsp;: c'est le côté <em>mesuré</em> qui tremble.</p>
+<p>Et pourquoi 3,0·10⁻⁹ suffit-il à conclure&nbsp;? Parce qu'il faut comparer cet écart à ce qu'on mesure&nbsp;: les pentes valent 36, 18, 12 et 6, et l'écart est de l'ordre du milliardième. Une vraie faute ne produit pas des écarts de cet ordre — un facteur oublié, un signe inversé, une variable prise pour une autre se voient à l'œil nu, souvent à l'échelle de la pente elle-même. Le seuil que la leçon 5 employait pour décider si une pente était nulle, 1e-9, est du même ordre&nbsp;: on n'ergote pas sur des décimales, on constate que deux méthodes étrangères l'une à l'autre donnent le même nombre.</p>
+<p>Ce test a un nom — la <strong>vérification du gradient</strong> — et une place précise&nbsp;: <strong>c'est le premier qu'on écrit quand un entraînement ne descend pas.</strong> Devant une perte qui stagne, les coupables possibles sont nombreux&nbsp;: le taux, les données, l'initialisation, l'architecture, la perte, le calcul des pentes. La vérification élimine le dernier en quelques secondes — et si elle échoue, elle donne mieux qu'un verdict&nbsp;: l'<em>endroit</em>, puisqu'elle teste chaque nombre séparément.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Le déplacement de la mesure, et pourquoi il est plus petit qu'en leçon 5</p><p>La leçon 5 bougeait le poids de 0,0001&nbsp;; ce programme-ci le bouge de 0,000001, cent fois moins. Il y a là un arbitrage. Trop <strong>grand</strong>, le déplacement mesure la pente moyenne sur un intervalle au lieu de la pente au point&nbsp;: l'écart vient de la méthode. Trop <strong>petit</strong>, il fait se ressembler les deux valeurs de perte au point que leur différence n'est plus faite que de poussières&nbsp;: l'écart vient de la machine. Entre les deux il y a une plage confortable, et 0,000001 y tombe. Le programme bouge en outre le poids <em>dans les deux sens</em>&nbsp;: cette forme symétrique, déjà celle de la leçon 5, est ce qui rend l'écart aussi petit.</p></div></div>
+
+<h2>La boucle complète, et ce que «&nbsp;rétropropagation&nbsp;» ne désigne pas</h2>
+<p>Il ne manque plus rien. La leçon 5 sait quoi faire d'une pente&nbsp;: un pas dans le sens opposé, égal au taux multiplié par la pente. Celle-ci sait obtenir toutes les pentes d'un coup. Mettons les deux bout à bout.</p>
+
+<figure class="code-block" data-file="apprendre.js"><pre><code class="language-javascript">// Le même réseau minuscule, mais cette fois on le laisse corriger ses quatre nombres.
+let w1 = 1, b1 = 0, w2 = 3, b2 = 1;
+const x = 2, cible = 10, taux = 0.01;
+const relu = (v) =&gt; (v &gt; 0 ? v : 0);
+
+console.log("étape     w1       b1       w2       b2       sortie     perte");
+for (let n = 0; n &lt;= 10; n++) {
+  const s1 = w1 * x + b1, h = relu(s1);
+  const y = w2 * h + b2, erreur = y - cible;
+
+  console.log("  " + String(n).padStart(2) + "   " + w1.toFixed(3).padStart(6)
+    + "   " + b1.toFixed(3).padStart(6) + "   " + w2.toFixed(3).padStart(6)
+    + "   " + b2.toFixed(3).padStart(6) + "   " + y.toFixed(4).padStart(8)
+    + "   " + (erreur * erreur).toFixed(5).padStart(8));
+
+  // la remontée, puis un pas dans le sens opposé à chaque pente
+  const dy = 2 * erreur;
+  const ds1 = dy * w2 * (s1 &gt; 0 ? 1 : 0);
+  const gw2 = dy * h, gb2 = dy, gw1 = ds1 * x, gb1 = ds1;
+  w1 -= taux * gw1; b1 -= taux * gb1; w2 -= taux * gw2; b2 -= taux * gb2;
+}
+console.log("");
+console.log("Aucun des quatre nombres n'a été choisi par personne : chacun a bougé");
+console.log("dans le sens que sa propre pente indiquait, et la sortie est allée vers 10.");</code></pre></figure>
+<figure class="code-block" data-file="apprendre.txt"><pre><code class="language-plaintext">étape     w1       b1       w2       b2       sortie     perte
+   0    1.000    0.000    3.000    1.000     7.0000    9.00000
+   1    1.360    0.180    3.120    1.060    10.1080    0.01166
+   2    1.347    0.173    3.114    1.058     9.9828    0.00030
+   3    1.349    0.174    3.115    1.058    10.0027    0.00001
+   4    1.348    0.174    3.115    1.058     9.9996    0.00000
+   5    1.348    0.174    3.115    1.058    10.0001    0.00000
+   6    1.348    0.174    3.115    1.058    10.0000    0.00000
+   7    1.348    0.174    3.115    1.058    10.0000    0.00000
+   8    1.348    0.174    3.115    1.058    10.0000    0.00000
+   9    1.348    0.174    3.115    1.058    10.0000    0.00000
+  10    1.348    0.174    3.115    1.058    10.0000    0.00000
+
+Aucun des quatre nombres n'a été choisi par personne : chacun a bougé
+dans le sens que sa propre pente indiquait, et la sortie est allée vers 10.</code></pre></figure>
+
+<p><strong>Étape 0</strong>&nbsp;: 1,000 · 0,000 · 3,000 · 1,000, sortie 7,0000, perte 9,00000 — la passe avant du début de la leçon, avec ses quatre pentes −36, −18, −12, −6.</p>
+<p><strong>Étape 1</strong>&nbsp;: chaque nombre a bougé de son taux fois sa pente, dans le sens opposé — le code écrit <code>w1 -= taux * gw1</code>, avec un taux de 0,01. Les déplacements&nbsp;: <code>w1</code> passe de 1,000 à 1,360, soit 0,360&nbsp;; <code>b1</code> de 0,000 à 0,180&nbsp;; <code>w2</code> de 3,000 à 3,120&nbsp;; <code>b2</code> de 1,000 à 1,060. Les quatre sont dans le rapport exact des quatre pentes — 0,360 pour −36, 0,060 pour −6. <strong>Le nombre le plus responsable est celui qui bouge le plus.</strong> Et la perte tombe de 9,00000 à <strong>0,01166</strong>.</p>
+<p><strong>Étape 2</strong>&nbsp;: 0,00030. <strong>Étape 3</strong>&nbsp;: 0,00001. <strong>Étape 4</strong>&nbsp;: 0,00000 à cinq décimales, et elle y reste jusqu'à l'étape 10. Personne n'a écrit 1,348, ni 0,174, ni 3,115, ni 1,058&nbsp;: ces quatre nombres sont le résultat du mécanisme, pas d'un choix. La leçon 5 l'avait déjà fait pour un poids seul&nbsp;; ici, ce sont les <em>quatre</em> nombres d'un réseau à couche cachée qui se règlent ensemble.</p>
+<p>Reste la colonne des sorties, et elle demande de l'honnêteté. La sortie ne monte pas tranquillement de 7 vers 10&nbsp;: elle vaut 7,0000, puis <strong>10,1080</strong> — au-dessus de la cible —, puis <strong>9,9828</strong> — en dessous —, puis 10,0027, 9,9996, 10,0001, et seulement à partir de l'étape 6 elle affiche 10,0000. Elle <strong>oscille en s'amortissant</strong>&nbsp;: chaque écart est plus petit que le précédent, et de signe opposé.</p>
+<p>L'explication tient dans les deux nombres qui gouvernent le pas. Au premier, l'erreur vaut −3, donc les pentes sont grandes&nbsp;: −36 sur <code>w1</code>, ce qui donne 0,360 une fois multiplié par le taux 0,01 — et comme les quatre nombres bougent <em>en même temps</em>, leurs effets s'additionnent sur la sortie. Le total dépasse ce qu'il fallait. À l'étape suivante l'erreur a changé de signe, donc les pentes aussi, donc les nombres reviennent en arrière&nbsp;: <code>w1</code> redescend de 1,360 à 1,347. La leçon 5 avait mesuré ce régime&nbsp;: l'écart au fond y était multiplié à chaque pas par un facteur valant 0,25 au taux 0,05 et −1,25 au taux 0,15 — négatif donc alternant, et supérieur à 1 en valeur absolue donc divergent. Ici on alterne et on se rapproche&nbsp;: le dépassement est le symptôme d'un pas un peu trop grand, pas d'une panne.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Honnêtement&nbsp;: ce réseau apprend UN exemple, et ce n'est pas apprendre</p><p>Il faut le dire sans détour, parce que le tableau est joliment trompeur. Ce réseau a un seul exemple&nbsp;: <code>x = 2</code> doit donner 10. Il n'a pas appris une règle, il a trouvé quatre nombres qui font passer sa courbe par un point. Demande-lui ce que vaut <code>x = 3</code>&nbsp;: il répondra quelque chose, et rien ici ne garantit que cette réponse ait un sens. Ce que la boucle démontre est <strong>la mécanique</strong>, isolée exprès pour être suivie à la main.</p><p>Un entraînement réel ne change qu'une chose à cette boucle, et elle pèse lourd&nbsp;: il calcule les pentes sur <em>beaucoup</em> d'exemples et en fait la moyenne avant de bouger les poids. C'est là que naissent les ennuis du module 3 — un réseau qui récite ses exemples au lieu d'en tirer une règle, des exemples qui se contredisent et tirent les poids dans des sens opposés, une perte qui descend sur ce qu'on montre et monte sur le reste. La leçon 4 l'avait effleuré&nbsp;: une seule valeur aberrante, sur cinq exemples, déplaçait le fond de la cuvette de 2 à 3,8182. Un exemple unique ne peut pas montrer cela.</p></div></div>
+
+<p>Reste un mot à mettre en place. <strong>Rétropropagation</strong> se lit littéralement&nbsp;: <em>rétro</em>, en arrière, et <em>propagation</em>, la circulation d'une valeur dans le réseau. La leçon 3 avait nommé la <strong>propagation avant</strong>, de l'entrée vers la sortie&nbsp;; ici, une autre quantité circule dans l'autre sens, la responsabilité de l'erreur. Le mot ne dit rien de plus, et il dit exactement cela.</p>
+<p>Il faut donc être précis sur ce qu'il ne désigne <em>pas</em>. Dans le programme ci-dessus, deux choses distinctes occupent des lignes différentes. La rétropropagation, c'est le calcul des pentes&nbsp;: <code>dy</code>, <code>ds1</code>, <code>gw2</code>, <code>gb2</code>, <code>gw1</code>, <code>gb1</code>. La descente, c'est la ligne d'après&nbsp;: <code>w1 -= taux * gw1</code>. <strong>La rétropropagation ne modifie aucun poids&nbsp;;</strong> elle rend des pentes et s'arrête là.</p>
+<p>Beaucoup de textes confondent les deux et emploient «&nbsp;rétropropagation&nbsp;» pour tout l'entraînement. La confusion coûte cher au diagnostic&nbsp;: devant une perte qui refuse de descendre, il y a deux suspects très différents — des pentes fausses, que la vérification du gradient tranche en quelques secondes, ou des pentes justes mal employées, c'est-à-dire le taux et ses trois régimes. Un mot pour deux choses, c'est une heure perdue au mauvais endroit.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le geste le plus répandu, devant un entraînement qui ne descend pas, est de <strong>toucher au taux d'apprentissage</strong>&nbsp;: on le divise par dix, on le multiplie par dix, on relance. C'est parfois la bonne réponse — la leçon 5 a montré trois régimes très différents pour trois taux, et l'un d'eux faisait grimper la perte jusqu'à 2,8·10² à la sixième valeur affichée. Mais tant que les pentes n'ont pas été vérifiées, ce réglage revient à corriger la trajectoire d'une voiture dont on ne sait pas si le volant est branché. Écris d'abord la vérification du gradient&nbsp;: quelques lignes, un réseau minuscule, un verdict net — ici, 3,0·10⁻⁹. Ensuite seulement, discute du taux.</p></div></div>
+<ul>
+<li><strong>Croire que la rétropropagation apprend</strong> — elle calcule des pentes, un point c'est tout&nbsp;: aucun poids n'a bougé quand elle a fini. Le déplacement, c'est <code>w1 -= taux * gw1</code>, et cette ligne appartient à la leçon 5.</li>
+<li><strong>Jeter les valeurs intermédiaires après la passe avant</strong> — la pente de <code>w2</code> se calcule en multipliant par <code>h</code>&nbsp;: sans <code>h</code>, il faut refaire la passe avant, et l'on repaie la facture qu'on venait d'éviter.</li>
+<li><strong>Oublier le facteur de l'activation</strong> — la faute la plus discrète&nbsp;: tant que les sommes sont positives le facteur vaut 1, et l'oublier revient à multiplier par 1. Le jour où une somme devient négative, le programme rend toujours des nombres, mais ils sont faux. Mesuré ici avec <code>w1 = −1</code>&nbsp;: la remontée correcte donne 0 pour <code>w1</code>, <code>b1</code> et <code>w2</code>, et laisse −18 au seul <code>b2</code>.</li>
+<li><strong>Confondre le signe de la pente avec le sens de la correction</strong> — la pente de <code>w1</code> vaut −36, donc la perte <em>descend</em> quand <code>w1</code> monte, donc on ajoute à <code>w1</code>&nbsp;: c'est exactement ce que fait <code>w1 -= taux * gw1</code> avec une pente négative. Relis le signe avant de «&nbsp;corriger&nbsp;» le code.</li>
+<li><strong>Croire un gradient sur parole parce que la perte descend</strong> — une passe arrière fausse peut faire descendre la perte quelque temps, surtout sur un seul exemple. La descente n'est pas une preuve de justesse&nbsp;; l'écart avec une méthode indépendante, si.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe écrit son propre réseau, sans bibliothèque, pour comprendre ce qu'elle fait. La perte descend un peu, puis se traîne, puis remonte doucement. Personne n'a d'erreur à l'écran&nbsp;: le programme ne plante pas, il donne des nombres.</p><p>La première réunion tourne au concours d'hypothèses&nbsp;: baisser le taux, soupçonner les données, ajouter une couche «&nbsp;parce que le réseau est peut-être trop petit&nbsp;». Chaque piste demande une demi-journée, et aucune ne peut être écartée par le raisonnement.</p><p>Quelqu'un propose alors la seule chose qui coûte dix minutes&nbsp;: réduire le problème au plus petit réseau qui ait encore une couche cachée — quatre nombres — et comparer, poids par poids, ce que la passe arrière annonce à ce qu'on mesure en bougeant chaque poids d'un millionième. Premier essai, sur le jeu de départ&nbsp;: le test <em>passe</em> — écarts 3,0·10⁻⁹, 1,5·10⁻¹⁰, 1,7·10⁻⁹, 8,4·10⁻¹⁰, le tableau plus haut au chiffre près, avec un code faux. Second essai, <code>w1 = −1</code> pour rendre la somme cachée négative&nbsp;: là, <code>w1</code> et <code>b1</code> sont fausses de <strong>1,1·10²</strong> et <strong>5,4·10¹</strong>, tandis que <code>w2</code> et <code>b2</code> restent d'accord — écarts 0,0·10⁰ et 9,9·10⁻⁹.</p><p>Cette répartition est un diagnostic à elle seule, et c'est là que le test montre sa valeur&nbsp;: il ne dit pas seulement «&nbsp;c'est faux&nbsp;», il dit <em>où</em>. La couche de sortie est correcte&nbsp;; la faute est dans les lignes qui séparent la pente de <code>h</code> de celle de <code>s1</code>. C'est exactement là que se trouve le facteur de l'activation — et il avait été oublié. Sur les exemples où la somme cachée était positive, l'oubli ne se voyait pas&nbsp;: multiplier par 1 ou ne pas multiplier donne le même résultat. Sur les autres, le réseau corrigeait des poids qui n'auraient dû recevoir aucune correction. D'où la perte qui descend, se traîne, puis remonte.</p><p>Le correctif tient en une ligne. Le test est relancé sur le second essai, celui qui avait parlé&nbsp;: écart maximal 9,9·10⁻⁹, les quatre pentes d'accord. Et il reste dans le dépôt, rejoué à chaque modification. La suite est moins glorieuse&nbsp;: avec les pentes justes, la perte descend franchement sur les exemples d'entraînement… et reste mauvaise sur les autres. Aucune passe arrière ne répare cela — le calcul des pentes était le suspect le plus rapide à écarter, pas le seul. Le reste appartient au module 3.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>La rétropropagation sur un réseau 1-1-1 — mémo chiffré</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Le problème</td><td>Mesurer les pentes une par une coûte <strong>2 passes par poids</strong>&nbsp;: 18 pour un <code>2-2-1</code>, <strong>1 071 636</strong> pour un <code>784-512-256-10</code> — pour <strong>un seul pas</strong></td></tr>
+      <tr><td>La réponse</td><td><strong>1 passe avant + 1 passe arrière</strong>, quel que soit le nombre de poids. Le rapport entre les deux méthodes vaut le nombre de paramètres</td></tr>
+      <tr><td>Le réseau de la leçon</td><td><code>1-1-1</code>&nbsp;: <code>w1 = 1</code>, <code>b1 = 0</code>, <code>w2 = 3</code>, <code>b2 = 1</code>&nbsp;; <code>x = 2</code>, cible 10, ReLU sur le neurone caché</td></tr>
+      <tr><td>Passe avant</td><td><code>s1 = 2</code> · <code>h = 2</code> · <code>y = 7</code> · erreur <strong>−3</strong> · perte <strong>9</strong>. On retient <code>s1</code> (son <em>signe</em>) et <code>h</code> (sa <em>valeur</em>)&nbsp;: sans <code>h</code>, pas de pente pour <code>w2</code></td></tr>
+      <tr><td>Passe arrière, les 7 quantités</td><td><code>y</code> −6 (= <code>2 × erreur</code>) · <code>w2</code> −12 · <code>b2</code> −6 · <code>h</code> −18 · <code>s1</code> −18 · <code>w1</code> −36 · <code>b1</code> −18</td></tr>
+      <tr><td>La règle unique</td><td>ce qui arrive d'en haut <strong>×</strong> l'effet local&nbsp;: la valeur multipliée, ou <strong>1</strong> pour un biais, ou <strong>0</strong> si la ReLU a coupé. Un facteur par étage&nbsp;: <code>−6 × 3 × 1 × 2 = −36</code></td></tr>
+      <tr><td>Facteur de la ReLU</td><td><strong>1</strong> si <code>s1 &gt; 0</code>, <strong>0</strong> sinon. Mesuré avec <code>w1 = −1</code>&nbsp;: perte 81, et <code>w1</code>, <code>b1</code>, <code>w2</code> à 0, seul <code>b2</code> garde −18</td></tr>
+      <tr><td>Vérification du gradient</td><td>Comparer à la différence finie (déplacement <strong>0,000001</strong>)&nbsp;: 3,0·10⁻⁹ · 1,5·10⁻¹⁰ · 1,7·10⁻⁹ · 8,4·10⁻¹⁰, <strong>maximum 3,0·10⁻⁹</strong></td></tr>
+      <tr><td>Pourquoi pas 0</td><td>Résidu numérique de la mesure, déjà vu en leçon 5&nbsp;: au fond exact d'une cuvette, la différence finie annonçait <strong>1,8·10⁻¹⁵</strong></td></tr>
+      <tr><td>Quand l'écrire</td><td><strong>En premier</strong>, dès qu'un entraînement ne descend pas&nbsp;: il élimine — ou désigne — le calcul des pentes, poids par poids</td></tr>
+      <tr><td>La boucle (taux 0,01)</td><td>perte <strong>9,00000 → 0,01166 → 0,00030 → 0,00001 → 0,00000</strong>&nbsp;; poids finaux 1,348 · 0,174 · 3,115 · 1,058</td></tr>
+      <tr><td>Honnêtement&nbsp;: la sortie oscille</td><td>7,0000 → <strong>10,1080</strong> → <strong>9,9828</strong> → 10,0027 → 9,9996 → 10,0001, puis 10,0000&nbsp;: elle s'amortit, elle ne monte pas tout droit</td></tr>
+      <tr><td>Honnêtement&nbsp;: un seul exemple</td><td><code>x = 2 → 10</code>, rien d'autre&nbsp;: la mécanique isolée, pas un apprentissage. Un vrai entraînement moyenne les pentes sur beaucoup d'exemples</td></tr>
+      <tr><td>Le mot</td><td><em>rétro</em> + <em>propagation</em>&nbsp;: une quantité circule en arrière. Ce n'est <strong>pas</strong> l'apprentissage — aucun poids ne bouge, elle rend des pentes</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Passe avant</dt><dd>Le parcours de l'entrée vers la sortie, couche après couche. Pendant l'entraînement, elle <strong>retient</strong> ses valeurs intermédiaires&nbsp;: la passe arrière en aura besoin.</dd>
+  <dt>Passe arrière</dt><dd>Le parcours de la sortie vers l'entrée qui distribue la responsabilité de l'erreur. À chaque étage traversé, la quantité qui circule est multipliée par un effet local.</dd>
+  <dt>Rétropropagation</dt><dd>Le nom de cette passe arrière&nbsp;: <em>rétro</em> (en arrière) et <em>propagation</em> (la circulation d'une valeur dans le réseau). Elle produit toutes les pentes en une remontée et <strong>ne modifie aucun poids</strong>.</dd>
+  <dt>Effet local</dt><dd>De combien une quantité change quand le nombre juste avant elle augmente de 1&nbsp;: la valeur par laquelle il est multiplié, ou 1 pour un biais, ou 0 quand une ReLU a coupé.</dd>
+  <dt>Pente (dérivée)</dt><dd>De combien la perte bouge si un nombre bouge de 1. Le signe dit de quel côté la perte monte, la valeur à quelle vitesse&nbsp;: −36 pour <code>w1</code>, −6 pour <code>b2</code>.</dd>
+  <dt>Gradient</dt><dd>La collection des pentes de <em>tous</em> les nombres réglables, prises au même point&nbsp;: ce que la rétropropagation rend d'un coup, et ce que la descente consomme.</dd>
+  <dt>Différence finie</dt><dd>La mesure d'une pente en déplaçant le nombre d'un cheveu dans les deux sens. Indépendante de la rétropropagation, mais coûteuse&nbsp;: deux passes par nombre.</dd>
+  <dt>Vérification du gradient</dt><dd>La comparaison, nombre par nombre, entre les pentes annoncées par la remontée et celles mesurées par différence finie&nbsp;: ici, écart maximal 3,0·10⁻⁹. Le premier test à écrire quand un entraînement ne descend pas.</dd>
+  <dt>Neurone mort</dt><dd>Neurone dont la somme reste négative&nbsp;: sa ReLU coupe, son effet local vaut 0, tout ce qui est en amont reçoit une pente nulle et ne bouge plus. Sujet du module 3.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Mesurer les pentes une par une coûte <strong>deux passes par poids</strong>&nbsp;: 18 pour un <code>2-2-1</code>, <strong>1 071 636</strong> pour un <code>784-512-256-10</code>, pour <strong>un seul pas</strong>. La rétropropagation les obtient toutes en <strong>une passe avant et une passe arrière</strong>, quel que soit le nombre de poids.</li>
+<li>La <strong>passe avant</strong> retient ses valeurs intermédiaires&nbsp;: <code>s1 = 2</code>, <code>h = 2</code>, <code>y = 7</code>, erreur <strong>−3</strong>, perte <strong>9</strong> — <code>h</code> pour sa valeur, <code>s1</code> pour son signe.</li>
+<li>La <strong>passe arrière</strong> tient en sept lignes et une règle&nbsp;: ce qui arrive d'en haut, multiplié par l'effet local. <code>y</code> −6 · <code>w2</code> −12 · <code>b2</code> −6 · <code>h</code> −18 · <code>s1</code> −18 · <code>w1</code> −36 · <code>b1</code> −18. Les effets se <strong>composent en se multipliant</strong>&nbsp;: <code>−6 × 3 × 1 × 2 = −36</code>.</li>
+<li>La <strong>ReLU</strong> a un effet local de 1 quand elle laisse passer, de <strong>0</strong> quand elle coupe. Mesuré avec <code>w1 = −1</code>&nbsp;: perte 81, trois pentes sur quatre à zéro, seul <code>b2</code> gardant −18.</li>
+<li>La <strong>vérification du gradient</strong> compare la remontée à une mesure indépendante, poids par poids&nbsp;: <strong>écart maximal 3,0·10⁻⁹</strong>. Il n'est pas nul à cause du résidu numérique de la mesure — la leçon 5 lisait 1,8·10⁻¹⁵ là où la pente valait exactement 0. C'est le <strong>premier</strong> test à écrire quand un entraînement ne descend pas.</li>
+<li>La boucle complète fait tomber la perte de <strong>9,00000 à 0,00000</strong> en quatre pas, mais la sortie <strong>oscille</strong> (10,1080 puis 9,9828) et le réseau n'apprend <strong>qu'un exemple</strong>. La rétropropagation ne fait que calculer les pentes&nbsp;: le déplacement des poids, c'est la leçon 5. La suite — surapprentissage, régularisation, gradient qui disparaît — est le <strong>module 3, «&nbsp;Ce qui rate&nbsp;»</strong>, en préparation.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Refais la passe avant à voix haute, puis les sept lignes de la passe arrière, sans regarder le tableau. À chaque ligne, énonce «&nbsp;de combien la perte bouge si … bouge de 1&nbsp;», puis nomme l'effet local que tu multiplies.</li>
+<li>Le programme retient <code>s1</code> <em>et</em> <code>h</code> alors que les deux valent 2. À quoi sert chacun dans la passe arrière, et que changerait un <code>s1</code> valant −2&nbsp;?</li>
+<li>Un entraînement ne descend pas, et quelqu'un propose de diviser le taux par dix. Pourquoi écris-tu d'abord la vérification du gradient&nbsp;? Que t'apprend-elle si elle échoue sur <code>w1</code> et <code>b1</code> mais passe sur <code>w2</code> et <code>b2</code>&nbsp;? Et pourquoi 3,0·10⁻⁹ est-il un succès&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Combien de passes faut-il à la rétropropagation pour obtenir les pentes de TOUS les poids, pour un pas ?","a":["Une passe avant et une passe arrière, quel que soit le nombre de poids : deux pour quatre nombres comme pour 535 818","Deux passes par poids, comme la mesure de la leçon 5, mais organisées dans un ordre qui les rend beaucoup plus rapides","Une passe par couche du réseau, ce qui donne trois passes ici, une par couche du 1-1-1, entrée comprise","Une passe avant par poids, la passe arrière étant partagée par tous : cinq passes ici, pour quatre nombres à régler"],"correct":0,"explain":"C'est tout l'intérêt de la méthode : le compte ne dépend pas du réseau. Mesurer poids par poids demandait 8 passes pour ces 4 nombres, 18 pour un 2-2-1 et 1 071 636 pour un 784-512-256-10 ; la remontée en demande 2 dans les trois cas."},
+  {"q":"D'où vient le nombre −6 qui ouvre la passe arrière ?","a":["De 2 × erreur : la perte est l'erreur au carré, et un carré bouge deux fois plus vite que la valeur qu'on élève","De la différence entre la sortie 7 et la cible 10, à laquelle on retire encore le biais de sortie b2, qui vaut 1","Du produit de l'erreur par le poids de sortie w2, soit −3 multiplié par 3, ramené ensuite à l'échelle de la perte","De la moyenne des quatre pentes finales −36, −18, −12 et −6, qui sert de point de départ commun à la remontée"],"correct":0,"explain":"L'erreur vaut 7 − 10 = −3, donc la perte bouge de 2 × (−3) = −6 quand y bouge de 1. Le signe négatif dit que faire monter y fait descendre la perte : on est à 7, on vise 10."},
+  {"q":"Pourquoi la passe avant retient-elle la valeur h du neurone caché ?","a":["Parce que la pente de w2 se calcule en multipliant par h : le programme écrit −6 × h, et h vaut 2, ce qui donne −12","Parce que la sortie du réseau doit être recalculée à chaque ligne de la passe arrière, et h en est le point de départ","Parce que la descente ajoute h au poids w2 après la remontée, en plus du produit du taux par la pente obtenue","Parce que la vérification du gradient compare h à la valeur mesurée en bougeant le poids w2 d'un millionième"],"correct":0,"explain":"Sans h, il faudrait refaire la passe avant pour le retrouver — et l'on recommencerait à payer les deux passes par poids de la leçon 5. Le programme retient aussi s1, mais pour une autre raison : son signe décide du facteur 1 ou 0 de la ReLU."},
+  {"q":"La vérification du gradient annonce un écart maximal de 3,0·10⁻⁹. Qu'est-ce que cela établit ?","a":["Que deux méthodes sans rien en commun donnent les mêmes pentes, l'écart restant venant du résidu numérique de la mesure","Que la rétropropagation est fausse d'un milliardième, erreur qu'il faudra corriger avant d'entraîner un réseau plus grand","Que la perte a atteint son minimum, l'écart entre les deux méthodes tendant vers zéro à mesure qu'on approche du fond","Que le taux d'apprentissage est bien réglé, puisque les pentes annoncées et mesurées se rejoignent après quelques pas"],"correct":0,"explain":"Les écarts valent 3,0·10⁻⁹, 1,5·10⁻¹⁰, 1,7·10⁻⁹ et 8,4·10⁻¹⁰ sur des pentes de 36, 18, 12 et 6. Ils ne sont pas nuls parce qu'une différence finie tremble toujours un peu : la leçon 5 lisait 1,8·10⁻¹⁵ là où la pente valait exactement 0."}
+]
+</script>
+
+<script type="application/json" data-quiz-bilan="Bilan des modules 1 et 2">
+[
+  {"q":"Réduit à son mécanisme, que fait exactement un neurone formel ?","a":["Il multiplie chaque entrée par son poids, additionne le tout avec un biais, puis compare le total à zéro","Il compare chaque entrée à un seuil qui lui est propre, puis retient la plus grande des valeurs obtenues","Il mémorise les entrées déjà rencontrées et rend la moyenne de celles qui ressemblent le plus à la nouvelle","Il choisit, parmi ses poids, celui qui correspond le mieux à l'entrée reçue, et rend la valeur associée"],"correct":0,"explain":"Rien d'autre. Le mot « neurone » est un héritage historique : la machine n'observe rien et ne décide rien. Le même neurone calcule ET avec un biais de -1,5 et OU avec un biais de -0,5, sans qu'un seul poids ait bougé."},
+  {"q":"Deux couches empilées sans aucune fonction non linéaire entre elles : que vaut ce montage ?","a":["Exactement un seul neurone : la leçon 2 en donne l'équivalent, de poids 23 et 1, avec un écart maximal de 0","Un montage plus expressif : deux couches valent toujours mieux qu'une seule, même sans fonction entre elles","Un montage instable : les sorties s'écartent d'autant plus l'une de l'autre que les entrées grandissent","Un montage équivalent en moyenne seulement : les écarts se compensent sans jamais s'annuler tout à fait"],"correct":0,"explain":"Mesuré sur six entrées : -3, 20, -2, 21, 46 et -22 des deux côtés, écart maximal 0. Composer des sommes pondérées ne produit qu'une somme pondérée : c'est pour cela qu'il faut une fonction non linéaire entre les couches."},
+  {"q":"En zéro, la sigmoïde vaut 0.5 et la tangente hyperbolique vaut 0. Qu'est-ce que cela change ?","a":["La sortie de tanh est centrée sur zéro, quand celle de la sigmoïde est décalée et reste entre 0 et 1","La sigmoïde répond plus vite, n'ayant pas d'exponentielle à calculer lorsque la somme reçue est nulle","Seule tanh possède une pente en zéro, la sigmoïde y étant plate comme la marche l'est partout ailleurs","La sigmoïde ne peut pas servir en couche cachée, sa valeur en zéro étant trop grande pour être transmise"],"correct":0,"explain":"Les deux ont bien une pente en zéro : ce n'est pas ce qui les sépare ici. Ce qui change est l'endroit où elles passent. tanh est centrée sur zéro et va de -1 à 1 ; la sigmoïde vaut 0.5 en zéro et reste strictement entre 0 et 1, donc sa sortie ne change jamais de signe."},
+  {"q":"Le module 1 posait tous ses poids à la main. Par quoi le module 2 remplace-t-il ce geste ?","a":["Par une mesure de l'erreur, une pente lue sur cette mesure, et un pas répété dans le sens opposé","Par la résolution d'un système d'équations dont les poids sont les inconnues, calculée une fois pour toutes","Par un tirage au sort répété, dont on conserve le premier jeu de poids qui donne un résultat acceptable","Par une bibliothèque de valeurs de référence, publiée avec chaque architecture et reprise telle quelle"],"correct":0,"explain":"Trois gestes, et rien de plus : la perte donne un seul nombre à rendre petit, la pente dit de quel côté descendre, le taux fixe la taille du pas. Depuis w = 4 au taux 0,05, l'écart au fond est divisé par 4 à chaque pas sans que personne n'ait dit que la réponse était 2."},
+  {"q":"Perte, descente de gradient, rétropropagation : laquelle de ces trois choses règle les poids ?","a":["La descente : la perte ne fait que mesurer, et la rétropropagation ne fait que calculer les pentes","La rétropropagation : c'est elle qui remonte le réseau et corrige chaque poids au passage","La perte : c'est en la calculant qu'on obtient directement la valeur que chaque poids doit prendre","Les trois indifféremment : ce sont trois noms d'un même mécanisme, employés selon les auteurs"],"correct":0,"explain":"Cette confusion est la plus répandue du domaine. La rétropropagation obtient les pentes de tous les poids en une passe arrière ; c'est la descente qui s'en sert pour faire un pas. Sans la ligne w = w - taux x pente, rien ne bouge."},
+  {"q":"L'écart au fond est multiplié par 0,25 à chaque pas au taux 0,05, et par -0,50 au taux 0,10. Que fait la descente au taux 0,10 ?","a":["Elle passe d'un côté à l'autre du fond à chaque pas, en s'en rapprochant : l'écart change de signe et diminue","Elle s'éloigne du fond un peu plus à chaque pas : le signe négatif du facteur signale toujours une divergence","Elle avance deux fois plus vite qu'au taux 0,05, le facteur étant deux fois plus grand en valeur absolue","Elle se bloque sur place : un facteur négatif annule le pas suivant, et le poids ne bouge plus du tout"],"correct":0,"explain":"Mesuré : au taux 0,10 les écarts font 2 ; -1 ; 0,5 ; -0,25 ; 0,125 ; -0,0625. Le signe alterne, la valeur absolue est divisée par 2. Ce qui décide, c'est |1 - 15 x taux| : au-dessous de 1 ça converge, au-dessus ça diverge, et à 0,13333 le facteur vaut exactement -1."},
+  {"q":"Un neurone caché à ReLU dont la somme d'entrée est négative : que reçoivent ses poids à la remontée ?","a":["Zéro : la ReLU coupe, et tout ce qui est en amont d'elle cesse d'être corrigé","La même pente qu'un neurone actif, la ReLU ne modifiant que la valeur transmise vers l'avant","Une pente de signe opposé, la ReLU inversant la correction pour ramener la somme vers le positif","Une pente réduite de moitié, la ReLU laissant passer une part de l'information dans les deux sens"],"correct":0,"explain":"Mesuré sur le réseau 1-1-1 avec w1 = -1 : la somme vaut -2, donc h vaut 0. La remontée arrive bien jusqu'à h (perte/h = -54), mais la ReLU la multiplie par 0, et perte/w1 comme perte/b1 tombent à 0. Le neurone ne corrige plus rien : c'est un des sujets du module 3."},
+  {"q":"En apprenant, la sortie du réseau passe par 7 puis 10,1080 puis 9,9828 puis 10,0027. Que montre cette suite ?","a":["Qu'elle dépasse la cible puis repasse dessous en s'amortissant : elle oscille, elle ne monte pas tout droit","Que le taux d'apprentissage est trop grand, une sortie correcte devant approcher la cible sans la dépasser","Qu'une erreur de signe subsiste quelque part dans la remontée, seule capable de faire repasser la sortie dessous","Que le réseau a commencé par apprendre un autre exemple, avant de revenir corriger celui que l'on suit ici"],"correct":0,"explain":"C'est le comportement normal d'une descente : chaque pas est proportionnel à la pente, et un pas un peu trop grand fait passer de l'autre côté. Les écarts alternent de signe et décroissent strictement sur les 11 étapes ; la sortie ne se lit 10,0000 qu'à partir de l'étape 6."},
+  {"q":"Le module 2 sait régler des poids. Permet-il à un neurone seul de calculer enfin le OU exclusif ?","a":["Non : la limite est géométrique, et le balayage du module 1 avait déjà essayé tous les réglages possibles","Oui : la descente trouve des réglages qu'un balayage à pas fixe ne pouvait pas atteindre entre ses valeurs","Oui, mais seulement avec un taux d'apprentissage assez petit pour ne pas sauter par-dessus la solution","Non, car la descente de gradient ne s'applique qu'aux réseaux munis d'au moins une couche cachée"],"correct":0,"explain":"Apprendre, c'est chercher les meilleurs poids d'une architecture donnée — pas en changer. Les 136 161 combinaisons essayées au module 1 couvraient déjà l'espace : 0 solution, meilleur score 3 lignes sur 4. Pour aller à 4 sur 4, il faut la couche cachée de la leçon 3, pas un meilleur réglage."}
+]
+</script>
+
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["rétropropagation","retropropagation","la rétropropagation","la retropropagation","rétro-propagation","retro-propagation"],"placeholder":"le parcours de la sortie vers l'entrée, qui distribue la responsabilité de l'erreur et rend toutes les pentes, s'appelle la r_______________","hints":["Le mot se coupe en deux morceaux : « rétro », en arrière, et le nom du parcours de la leçon 3.","Elle ne modifie aucun poids : elle rend des pentes, et c'est la descente qui les utilise.","Seize lettres, un accent aigu sur le premier e : r__ro_ro_a_a_ion."],"link":{"href":"lecon-06.html","label":"Revoir « La boucle complète, et ce que rétropropagation ne désigne pas »"}},
+  {"type":"text","accept":["2","deux","2 passes","deux passes","2 passe","une passe avant et une passe arriere","une passe avant et une passe arrière"],"placeholder":"combien de passes la rétropropagation demande-t-elle pour obtenir les 535 818 pentes d'un réseau 784-512-256-10 ?","hints":["La mesure poids par poids en demandait 1 071 636. La remontée ne compte pas de la même façon.","Le compte ne dépend pas du nombre de poids : il est le même pour 4 nombres et pour 535 818.","Une passe avant, une passe arrière. Écris le nombre."],"link":{"href":"lecon-06.html","label":"Revoir « Deux passes par poids : ce que coûte la leçon 5 »"}},
+  {"type":"code","run":{"expect":"-72 -24 -84 -12"},"placeholder":"même réseau 1-1-1, autres nombres : w1 = 2, b1 = 1, w2 = 2, b2 = 0, x = 3, cible = 20. Fais la passe avant puis la passe arrière, et affiche les quatre pentes séparées par un espace, dans l'ordre w1 b1 w2 b2","hints":["Passe avant d'abord, et retiens tout : s1 = w1 * x + b1, h = relu(s1), y = w2 * h + b2, erreur = y - cible.","Le point de départ de la remontée vaut 2 * erreur. Ensuite : pente de w2 = ce nombre × h, pente de b2 = ce nombre × 1, pente de h = ce nombre × w2.","La somme cachée est positive, donc le facteur de la ReLU vaut 1. Puis pente de w1 = pente de s1 × x, et pente de b1 = pente de s1 × 1. Un seul console.log, quatre nombres séparés par des espaces."],"link":{"href":"lecon-06.html","label":"Revoir « La passe arrière, ligne par ligne »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Comment nomme-t-on le parcours qui va de la sortie vers l'entrée et distribue la responsabilité de l'erreur&nbsp;? Dis ensuite, en une phrase, ce que ce mot ne désigne <em>pas</em>.</p>
+<details><summary>Voir une solution</summary><p>C'est la <strong>rétropropagation</strong>&nbsp;: <em>rétro</em>, en arrière, et <em>propagation</em>, le parcours d'une valeur à travers le réseau — celui que la leçon 3 avait nommé dans l'autre sens.</p><p>Ce qu'elle ne désigne pas&nbsp;: l'apprentissage. Quand la remontée a fini, <strong>aucun poids n'a bougé</strong>&nbsp;: elle a rendu quatre pentes, −36, −18, −12 et −6, et rien d'autre. Le déplacement des poids est écrit sur une autre ligne (<code>w1 -= taux * gw1</code>)&nbsp;: c'est la descente de gradient de la leçon 5.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un réseau <code>784-512-256-10</code> a 535 818 nombres à régler. Combien de passes faut-il à la rétropropagation pour obtenir <em>toutes</em> leurs pentes, pour un pas&nbsp;? Compare avec la méthode de la leçon 5, et dis ce que représente le rapport entre les deux comptes.</p>
+<details><summary>Voir une solution</summary><p><strong>2.</strong> Une passe avant, une passe arrière — et ce compte ne dépend pas du nombre de poids&nbsp;: il vaut 2 pour les 4 nombres du réseau de cette leçon comme pour les 535 818 du gros.</p><p>La méthode de la leçon 5 demande deux passes par nombre&nbsp;: <strong>1 071 636 passes</strong> pour un seul pas. Le rapport entre les deux comptes vaut exactement le <strong>nombre de paramètres</strong>&nbsp;: 4, 9, 13, 101 770, 535 818 selon le réseau. Plus il est gros, plus l'écart se creuse — c'est ce qui rend praticable un réseau à plusieurs centaines de milliers de paramètres.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Reprends le réseau <code>1-1-1</code> avec d'autres nombres&nbsp;: <code>w1 = 2</code>, <code>b1 = 1</code>, <code>w2 = 2</code>, <code>b2 = 0</code>, <code>x = 3</code>, cible 20. Écris la passe avant puis la passe arrière, et affiche les quatre pentes séparées par un espace, dans l'ordre <code>w1</code>, <code>b1</code>, <code>w2</code>, <code>b2</code>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">let w1 = 2, b1 = 1, w2 = 2, b2 = 0;
+const x = 3, cible = 20;
+const relu = (v) =&gt; (v &gt; 0 ? v : 0);
+
+// passe avant : on calcule ET on retient
+const s1 = w1 * x + b1;        // 2 × 3 + 1 = 7
+const h = relu(s1);            // 7 est positif : la ReLU laisse passer
+const y = w2 * h + b2;         // 2 × 7 + 0 = 14
+const erreur = y - cible;      // 14 - 20 = -6
+
+// passe arrière : ce qui arrive d'en haut × l'effet local
+const dy = 2 * erreur;                    // -12
+const dh = dy * w2;                       // h agit sur y en proportion de w2
+const ds1 = dh * (s1 &gt; 0 ? 1 : 0);        // la ReLU laisse passer : facteur 1
+const gw1 = ds1 * x, gb1 = ds1, gw2 = dy * h, gb2 = dy;
+
+console.log(gw1 + " " + gb1 + " " + gw2 + " " + gb2); // affiche : -72 -24 -84 -12</code></pre></figure>
+<p>Déroule les nombres. Passe avant&nbsp;: <code>s1 = 2 × 3 + 1 = 7</code>, la ReLU laisse passer donc <code>h = 7</code>, <code>y = 2 × 7 + 0 = 14</code>, erreur <code>14 - 20 = −6</code>, perte 36. Passe arrière&nbsp;: le point de départ vaut <code>2 × (−6)</code>, soit <strong>−12</strong>&nbsp;; la pente de <code>w2</code> vaut <code>−12 × 7 = −84</code>, celle de <code>b2</code> <code>−12</code>, celle de <code>h</code> <code>−12 × 2 = −24</code>, celle de <code>s1</code> aussi puisque la ReLU laisse passer, celle de <code>w1</code> <code>−24 × 3 = −72</code> et celle de <code>b1</code> <code>−24</code>.</p>
+<p>Deux contrôles valent d'être faits à chaque fois. Les <strong>signes</strong>&nbsp;: la sortie 14 est sous la cible 20, donc augmenter n'importe lequel des quatre nombres ferait descendre la perte — les quatre pentes doivent être négatives, et elles le sont. Les <strong>rapports</strong>&nbsp;: la pente de <code>w2</code> vaut 7 fois celle de <code>b2</code>, comme <code>h</code> vaut 7&nbsp;; celle de <code>w1</code> vaut 3 fois celle de <code>b1</code>, comme <code>x</code> vaut 3.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
+
