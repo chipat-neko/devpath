@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Parcourir l'arbre pour l'exécuter — Leçon 10 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="L'arbre du module 3 est une donnée inerte : cette leçon écrit le programme qui le parcourt. Un cas par sorte de nœud, 5 nœuds visités et une profondeur de 3 sur « 2 + 3 * 4 », un environnement nom vers valeur qui rend 38 puis 26, et la ligne exacte qui sépare une erreur de syntaxe d'une erreur d'exécution — division par zéro comprise, que la page affiche « null »." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Évaluer et générer — Leçon 10</p>
+              <h1 class="lesson-header__title">Parcourir l'arbre pour l'exécuter</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~90 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : la leçon 9 de ce cours — l'arbre de syntaxe abstraite de Brindille</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire un <strong>évaluateur</strong> d'arbre&nbsp;: une fonction, un cas par sorte de nœud, et pas une ligne qui parle de priorité&nbsp;;</li>
+                  <li>nommer le parcours qu'il effectue — <strong>en profondeur, post-ordre</strong> — et le relier à la pile d'appels du langage hôte&nbsp;;</li>
+                  <li>tenir l'état d'un programme dans un <strong>environnement</strong> nom → valeur, et exécuter les instructions dans l'ordre&nbsp;;</li>
+                  <li>séparer, par la mesure, ce que l'analyseur <strong>refuse</strong> de ce que seule l'exécution <strong>découvre</strong> — division par zéro comprise.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le module 3 s'est achevé sur un objet. Pas sur un affichage, pas sur un verdict&nbsp;: un objet, rangé dans une variable, que la <a href="lecon-09.html">leçon 9</a> a dessiné ligne par ligne et compté nœud par nœud. Il contient tout ce que le texte source voulait dire — quel opérateur s'applique à quoi, quel nom est déclaré, quelle expression sera affichée — et rien d'autre&nbsp;: ni espaces, ni commentaires, ni parenthèses. Résultat considérable, et pour l'instant parfaitement stérile.</p>
+<p>Cette leçon ouvre le module 4 sur la question qui vient tout de suite après&nbsp;: <em>qu'est-ce qu'on en fait&nbsp;?</em> La réponse la plus directe est celle d'aujourd'hui — on le parcourt, et on calcule en le parcourant. Nous écrirons un <strong>évaluateur</strong>, qui prend un arbre et rend une valeur, puis un <strong>interprète</strong>, qui prend un programme entier et le fait agir&nbsp;; nous nommerons leur parcours, nous mesurerons sa profondeur, nous verrons quel état ils gardent entre deux instructions, et nous finirons par la question que tout évaluateur rencontre au bout de dix minutes&nbsp;: que faire quand le calcul demandé est impossible. La <a href="lecon-11.html">leçon 11</a> reprendra le même arbre pour en tirer des instructions, et la <a href="lecon-12.html">leçon 12</a> mesurera ce que ce détour fait gagner.</p>
+
+<h2>Un arbre ne fait rien non plus</h2>
+<p>La <a href="lecon-01.html">leçon 1</a> ouvrait ce cours sur une phrase volontairement plate&nbsp;: un fichier source ne fait rien. C'est du texte, une suite d'octets sur un disque, un document au même titre qu'une liste de courses&nbsp;; il ne calcule pas, il ne s'affiche pas, il ne se lance pas. Il fallait un traducteur pour lui donner vie, et c'est ce traducteur que les modules 2 et 3 ont construit par morceaux.</p>
+<p>Il faut maintenant répéter cette phrase, presque à l'identique, sur l'objet que ces deux modules ont produit&nbsp;: <strong>un arbre ne fait rien non plus</strong>. Ce que <code>analyser(source)</code> rend est un objet JavaScript ordinaire, fait de champs et de tableaux, du même genre que celui qu'on écrirait à la main pour représenter une commande. Aucun de ces objets ne s'exécute&nbsp;; aucun ne se met à calculer parce qu'on l'a regardé. Construis l'arbre de <code>affiche 2 + 3 * 4</code> et n'en fais rien de plus&nbsp;: <em>rien</em> ne se produit. Tu as occupé un peu de mémoire.</p>
+<p>Il y a pourtant une différence énorme entre le texte et cet objet, et c'est elle qui justifie tout le travail des deux modules précédents. Le texte est une suite de caractères dont la structure est <em>implicite</em>&nbsp;: pour savoir que <code>3 * 4</code> forme un bloc dans <code>2 + 3 * 4</code>, il faut connaître la grammaire et l'appliquer. L'arbre, lui, la porte de façon <em>explicite</em>&nbsp;: le nœud <code>*</code> est physiquement placé sous le nœud <code>+</code>. La <a href="lecon-09.html">leçon 9</a> a prouvé d'où vient cette forme — stratification de la grammaire pour la priorité, forme de la règle pour l'associativité — et que les parenthèses, ce travail fait, disparaissent sans laisser de trace. Nous n'y reviendrons pas&nbsp;: nous allons en <em>profiter</em>.</p>
+<p>En profiter veut dire quelque chose de très précis. Le programme que nous allons écrire n'aura <strong>aucune notion de priorité</strong>&nbsp;: il ne saura pas que <code>*</code> lie plus fort que <code>+</code>, il ne verra jamais une parenthèse, il n'aura ni grammaire, ni table de jetons, ni position dans un texte. Il fera une seule chose&nbsp;: regarder un nœud, décider quoi en faire d'après son champ <code>type</code>, et redescendre dans ses enfants s'il en a. Toute l'intelligence syntaxique a été dépensée en amont, et elle est désormais rangée dans la forme des données — déplacer une décision d'un algorithme vers une structure, c'est cela même.</p>
+<p>Un mot de vocabulaire, parce qu'il flotte. Le programme qui parcourt un arbre pour en tirer une valeur s'appelle un <strong>évaluateur</strong>&nbsp;; quand il exécute un programme complet, variables et affichages compris, on parle d'<strong>interprète</strong>, et plus précisément d'interprète <em>à parcours d'arbre</em> — <em>tree-walking interpreter</em> en anglais. La <a href="lecon-01.html">leçon 1</a> opposait déjà l'interprète au compilateur en termes de <em>calendrier</em>&nbsp;; ce que nous ajoutons ici, c'est le <em>mécanisme</em>. Et notons enfin ce que l'inertie de l'arbre a d'utile&nbsp;: le parcourir ne le consomme pas, contrairement au flux de jetons du module 3, qui, lui, avançait sans retour. On pourra donc le relire autant de fois qu'on veut — c'est ce que fera la <a href="lecon-11.html">leçon 11</a>, sur le même objet, sans en changer un octet.</p>
+<h2>Une fonction, un cas par nœud</h2>
+<p>Voici l'évaluateur. Une quinzaine de lignes, et une charpente que tu retrouveras dans n'importe quel interprète d'arbre&nbsp;: une seule fonction, une suite de tests sur le champ <code>type</code>, un cas par sorte de nœud. Le bloc reprend le socle des modules 2 et 3 pour être exécutable seul&nbsp;; ne le relis pas, il n'a pas changé d'un caractère depuis la <a href="lecon-09.html">leçon 9</a>. Ce qui est neuf commence à la ligne marquée «&nbsp;L'ÉVALUATEUR&nbsp;».</p>
+
+<figure class="code-block" data-file="eval-decouverte.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- L'ÉVALUATEUR : une fonction, un cas par type de nœud.
+function evaluer(n, env) {
+  if (n.type === "nombre")   return n.valeur;
+  if (n.type === "variable") {
+    if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom);
+    return env.get(n.nom);
+  }
+  if (n.type === "binaire") {
+    const g = evaluer(n.gauche, env);
+    const d = evaluer(n.droite, env);
+    if (n.op === "+") return g + d;
+    if (n.op === "-") return g - d;
+    if (n.op === "*") return g * d;
+    if (n.op === "/") return g / d;
+  }
+  throw new Error("noeud inconnu : " + n.type);
+}
+const env = new Map();
+const arbre = analyser("affiche 2 + 3 * 4").corps[0].valeur;
+console.log("2 + 3 * 4 =", evaluer(arbre, env));
+console.log("(2 + 3) * 4 =", evaluer(analyser("affiche (2 + 3) * 4").corps[0].valeur, env));
+console.log("10 - 3 - 2 =", evaluer(analyser("affiche 10 - 3 - 2").corps[0].valeur, env));</code></pre></figure>
+
+<figure class="code-block" data-file="eval-decouverte.txt"><pre><code class="language-plaintext">2 + 3 * 4 = 14
+(2 + 3) * 4 = 20
+10 - 3 - 2 = 5</code></pre></figure>
+
+<p>Prends d'abord la <em>forme</em> de la fonction. Elle reçoit le nœud <code>n</code> et l'environnement <code>env</code>, dont nous ne ferons rien avant la troisième section — retiens qu'il est déjà là, et que c'est volontaire. Puis viennent trois tests et un <code>throw</code> final.</p>
+<p><strong>Le cas <code>nombre</code></strong> est le plus court du module&nbsp;: <code>return n.valeur</code>. Une feuille porte déjà sa valeur, il n'y a rien à calculer et nulle part où descendre. Remarque que la <a href="lecon-09.html">leçon 9</a> nous a rendu ce service&nbsp;: la conversion <code>Number(...)</code> ayant eu lieu dans <code>facteur()</code>, <code>n.valeur</code> est un vrai nombre et non la chaîne <code>"12"</code>&nbsp;; oubliée, elle ferait propager une chaîne par ce <code>return</code> innocent.</p>
+<p><strong>Le cas <code>variable</code></strong> ne calcule pas davantage&nbsp;: il <em>consulte</em>. Il demande à <code>env</code> si le nom qu'il porte y est connu, rend la valeur associée, et lève sinon une exception qui dit quel nom manque. C'est la première apparition d'une idée qui occupera la moitié de la leçon&nbsp;: <strong>un nœud peut avoir besoin de quelque chose qui n'est pas dans l'arbre</strong>. La feuille <code>nombre</code> se suffit à elle-même&nbsp;; la feuille <code>variable</code>, non.</p>
+<p><strong>Le cas <code>binaire</code></strong> est le seul qui redescende&nbsp;: il évalue son enfant de gauche, puis celui de droite, et combine les deux valeurs selon <code>n.op</code>. Trois lignes, dont deux appels à lui-même&nbsp;: c'est là, et nulle part ailleurs, que le parcours a lieu.</p>
+<p>Reste le <code>throw new Error("noeud inconnu : " + n.type)</code> final, qu'on prend pour une politesse et qui est un outil de travail. Il sert le jour où le langage gagne une construction&nbsp;: ajoute un nœud à la grammaire, oublie de l'ajouter ici, et l'évaluateur te le dira <em>en nommant le type qu'il ne connaît pas</em>, au lieu de rendre silencieusement <code>undefined</code>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 310" role="img" aria-label="Schéma de l'aiguillage de la fonction evaluer. À gauche, une boîte intitulée un nœud, avec en dessous la mention accolade type deux points, points de suspension. Une flèche horizontale la relie à une boîte centrale mise en évidence, intitulée evaluer parenthèse n virgule env, avec en dessous la mention regarde n point type. De cette boîte centrale partent trois flèches coudées vers trois boîtes empilées à droite. La première boîte porte le test n point type est égal à la chaîne nombre, et en dessous la mention rend n point valeur, sans appel. La deuxième boîte porte le test n point type est égal à la chaîne variable, et en dessous la mention lit l'environnement. La troisième boîte porte le test n point type est égal à la chaîne binaire, et en dessous deux mentions : deux appels, gauche puis droite, et puis combine avec n point op. Une flèche courbe repart de cette troisième boîte vers le bas, contourne le schéma par la gauche et remonte dans la boîte centrale evaluer ; elle est légendée : c'est ce seul cas qui fait le parcours. Deux lignes de légende concluent que deux cas sur trois s'arrêtent tout de suite, ce sont les feuilles de l'arbre, et qu'aucune ligne du dessin ne parle de priorité ni de parenthèse.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">evaluer(n, env) : trois cas, dont un seul redescend</text>
+
+    <rect class="d-frame" x="16" y="96" width="132" height="52" rx="8" />
+    <text class="d-text" x="82" y="116" text-anchor="middle" font-size="10">un nœud</text>
+    <text class="d-mut" x="82" y="132" text-anchor="middle" font-size="8.5">{ type: …, … }</text>
+    <path class="d-line" d="M148 122 L182 122" fill="none" /><path class="d-line" d="M174 117 L182 122 L174 127" fill="none" />
+
+    <rect class="d-accent" x="186" y="96" width="140" height="52" rx="8" />
+    <text class="d-text" x="256" y="116" text-anchor="middle" font-size="10.5">evaluer(n, env)</text>
+    <text class="d-mut" x="256" y="132" text-anchor="middle" font-size="8.5">regarde n.type</text>
+
+    <path class="d-line" d="M326 122 L356 122 L356 62 L378 62" fill="none" /><path class="d-line" d="M370 57 L378 62 L370 67" fill="none" />
+    <path class="d-line" d="M326 122 L378 122" fill="none" /><path class="d-line" d="M370 117 L378 122 L370 127" fill="none" />
+    <path class="d-line" d="M326 122 L356 122 L356 188 L378 188" fill="none" /><path class="d-line" d="M370 183 L378 188 L370 193" fill="none" />
+
+    <rect class="d-box" x="386" y="40" width="238" height="44" rx="8" />
+    <text class="d-text" x="398" y="58" font-size="9.5">n.type === "nombre"</text>
+    <text class="d-mut" x="398" y="74" font-size="8.5">rend n.valeur, sans appel</text>
+
+    <rect class="d-box" x="386" y="100" width="238" height="44" rx="8" />
+    <text class="d-text" x="398" y="118" font-size="9.5">n.type === "variable"</text>
+    <text class="d-mut" x="398" y="134" font-size="8.5">lit l'environnement</text>
+
+    <rect class="d-accent" x="386" y="160" width="238" height="56" rx="8" />
+    <text class="d-text" x="398" y="178" font-size="9.5">n.type === "binaire"</text>
+    <text class="d-mut" x="398" y="194" font-size="8.5">deux appels : gauche, droite</text>
+    <text class="d-mut" x="398" y="208" font-size="8.5">puis combine avec n.op</text>
+
+    <path class="d-line" d="M450 216 C450 252 300 252 256 160" fill="none" stroke-dasharray="4 3" /><path class="d-line" d="M251 168 L256 158 L261 168" fill="none" />
+    <text class="d-mut" x="360" y="262" text-anchor="middle" font-size="9">c'est ce seul cas qui fait le parcours</text>
+
+    <text class="d-mut" x="320" y="284" text-anchor="middle" font-size="9">Deux cas sur trois s'arrêtent tout de suite : ce sont les feuilles de l'arbre.</text>
+    <text class="d-mut" x="320" y="298" text-anchor="middle" font-size="9">Aucune ligne de ce dessin ne parle de priorité ni de parenthèse.</text>
+  </svg>
+  <figcaption>L'évaluateur n'est qu'un aiguillage&nbsp;: il lit une étiquette et applique le cas correspondant. Deux cas rendent une valeur immédiatement&nbsp;; le troisième se rappelle deux fois, et c'est cette flèche de retour qui transforme trois <code>if</code> en parcours d'arbre.</figcaption>
+</figure>
+
+<p>Venons-en aux trois nombres. Sur <code>2 + 3 * 4</code>, l'évaluateur rend <strong>14</strong>&nbsp;; sur <code>(2 + 3) * 4</code>, <strong>20</strong>&nbsp;; sur <code>10 - 3 - 2</code>, <strong>5</strong>. Ce sont les bonnes réponses, celles qu'un être humain écrirait au tableau. La question intéressante n'est pas de savoir si elles sont justes&nbsp;: c'est <em>d'où elles viennent</em>, puisque le code qui les produit ne contient rien qui puisse les expliquer.</p>
+<p>Relis la fonction en cherchant la priorité. Elle n'y est pas&nbsp;: pas de table opérateur → niveau, pas de comparaison entre deux opérateurs, pas même deux opérateurs au même endroit du code — le cas <code>binaire</code> ne voit jamais qu'un seul <code>n.op</code>, celui du nœud qu'il traite. Cherche les parenthèses&nbsp;: aucune trace, et pour cause. Le texte <code>(2 + 3) * 4</code> en contenait deux&nbsp;; l'objet que l'évaluateur reçoit, zéro.</p>
+<p>Alors d'où viennent 14 et 20&nbsp;? De la <strong>forme de l'arbre</strong>, et de rien d'autre. Dans le premier cas, <code>+</code> est au sommet et <code>*</code> en dessous&nbsp;; dans le second, l'inverse. Or le cas <code>binaire</code> ne peut pas combiner ses deux enfants avant de les avoir évalués&nbsp;: un nœud placé <em>plus bas</em> est donc calculé <em>plus tôt</em>, mécaniquement. Être en dessous, dans un arbre, <strong>c'est</strong> être calculé d'abord. La priorité n'a pas disparu&nbsp;: l'analyseur l'a convertie en une propriété géométrique que le parcours respecte sans y penser.</p>
+<p>Le troisième texte, <code>10 - 3 - 2</code>, dit la même chose de l'associativité. Les deux soustractions sont au même étage&nbsp;: ce n'est pas la stratification qui les départage, mais la forme de la règle, et la <a href="lecon-09.html">leçon 9</a> a mesuré ce que coûte le mauvais choix. Ici l'arbre penche à gauche, <code>10 - 3</code> est la soustraction la plus profonde, donc la première calculée&nbsp;; groupé dans l'autre sens, il donnerait un autre nombre avec exactement le même évaluateur. D'où une conséquence utile en débogage&nbsp;: <strong>un résultat faux ne prouve pas que l'évaluateur est faux</strong>. Il y a deux suspects, la forme de l'arbre et la combinaison des valeurs, et le test qui les sépare est celui que la leçon 9 a écrit sous le nom de <code>forme(a)</code> — fais afficher la forme parenthésée avant d'évaluer. Forme juste et nombre faux&nbsp;: regarde l'évaluateur. Forme fausse&nbsp;: relis la grammaire.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">L'ordre des <code>if</code> est libre ici — et il ne l'était pas dans l'analyseur</p><p>Le détail passe inaperçu et marque un vrai changement de nature. Dans <code>facteur()</code>, à la leçon 9, l'ordre des tests comptait&nbsp;: les alternatives d'une règle sont essayées dans l'ordre où elles sont écrites, et intervertir deux branches dont les premiers jetons se recouvrent change le langage reconnu. Ici, rien de tel&nbsp;: les trois cas portent sur la <em>même</em> propriété, <code>n.type</code>, dont les valeurs s'excluent mutuellement. Tu peux donc réordonner les trois <code>if</code>, ou les remplacer par un <code>switch</code>, sans changer une seule sortie. C'est le signe qu'on a quitté le monde de la <em>reconnaissance</em>, où l'ordre encode une préférence, pour celui de l'<em>aiguillage</em>, où il n'encode rien.</p></div></div>
+<h2>Descendre, puis calculer en remontant</h2>
+<p>Nous savons ce que l'évaluateur rend, pas encore <em>dans quel ordre</em> il s'y prend — et cet ordre n'est pas un détail d'implémentation&nbsp;: c'est ce que tu devras avoir en tête chaque fois qu'un évaluateur te donnera un résultat inattendu. Rendons-le visible. Le programme ci-dessous est le précédent à trois lignes près&nbsp;: un compteur de visites, un compteur de profondeur, et deux <code>console.log</code>, l'un à l'entrée du nœud, l'autre à la sortie.</p>
+
+<figure class="code-block" data-file="eval-ordre.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- L'ORDRE DES VISITES : on descend d'abord, on calcule en remontant.
+let profondeur = 0, visites = 0, maxProfondeur = 0;
+function evaluer(n, env) {
+  visites++; profondeur++; if (profondeur &gt; maxProfondeur) maxProfondeur = profondeur;
+  const creux = "  ".repeat(profondeur - 1);
+  console.log(creux + "-&gt; " + n.type + (n.op || n.nom || n.valeur !== undefined ? " " + (n.op || n.nom || n.valeur) : ""));
+  let r;
+  if (n.type === "nombre") r = n.valeur;
+  else if (n.type === "variable") r = env.get(n.nom);
+  else if (n.type === "binaire") {
+    const g = evaluer(n.gauche, env), d = evaluer(n.droite, env);
+    r = n.op === "+" ? g + d : n.op === "-" ? g - d : n.op === "*" ? g * d : g / d;
+  }
+  console.log(creux + "&lt;- " + r);
+  profondeur--;
+  return r;
+}
+const arbre = analyser("affiche 2 + 3 * 4").corps[0].valeur;
+const v = evaluer(arbre, new Map());
+console.log("");
+console.log("resultat :", v);
+console.log("noeuds visites :", visites);
+console.log("profondeur maximale :", maxProfondeur);</code></pre></figure>
+
+<figure class="code-block" data-file="eval-ordre.txt"><pre><code class="language-plaintext">-&gt; binaire +
+  -&gt; nombre 2
+  &lt;- 2
+  -&gt; binaire *
+    -&gt; nombre 3
+    &lt;- 3
+    -&gt; nombre 4
+    &lt;- 4
+  &lt;- 12
+&lt;- 14
+
+resultat : 14
+noeuds visites : 5
+profondeur maximale : 3</code></pre></figure>
+
+<p>Dix lignes de trace pour cinq nœuds, et ce n'est pas une coïncidence&nbsp;: chaque nœud apparaît deux fois, une fois avec la flèche <code>-&gt;</code> quand on y entre, une fois avec la flèche <code>&lt;-</code> quand on en ressort. Il est visité une fois <em>dans chaque sens</em>. Retiens cette symétrie, elle est le squelette de tout le reste.</p>
+<p>Lis la trace de haut en bas, lentement. <code>-&gt; binaire +</code>&nbsp;: on entre dans la racine. <code>-&gt; nombre 2</code>&nbsp;: on descend déjà, et rien n'a été calculé. <code>&lt;- 2</code> est la <strong>première valeur produite de toute l'exécution</strong>. Puis on entre dans <code>binaire *</code>, on descend encore, on ressort avec 3, on redescend, on ressort avec 4, et alors seulement <code>&lt;- 12</code> apparaît. La dernière ligne est <code>&lt;- 14</code>.</p>
+<p>Deux faits en sortent. <strong>La racine est le premier nœud visité et le dernier calculé</strong> — elle ouvre la trace et elle la ferme. Et pendant toute la descente, il ne s'est <em>rien</em> passé&nbsp;: les quatre premières lignes ne produisent aucune valeur, elles ne font qu'ouvrir des appels. Le calcul commence quand on touche le fond, et remonte en combinant ce que chaque niveau a produit. Un évaluateur d'arbre ne calcule pas en avançant&nbsp;: il calcule en revenant.</p>
+<p>Ce parcours porte un nom universel&nbsp;: un <strong>parcours en profondeur</strong> — à chaque nœud, on s'enfonce dans un enfant jusqu'au bout avant de s'occuper du suivant, par opposition au parcours <em>en largeur</em>, qui traiterait tous les nœuds d'un niveau avant de descendre. Et parmi les parcours en profondeur, celui-ci est le <strong>post-ordre</strong>&nbsp;: on traite un nœud <em>après</em> ses enfants. L'ordre dans lequel les <code>&lt;-</code> se succèdent — 2, 3, 4, 12, 14 — est exactement l'ordre post-fixe de cet arbre.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 336" role="img" aria-label="Le même arbre de l'expression 2 plus 3 fois 4 dessiné dans deux panneaux séparés par un trait vertical, avec dans chaque panneau un numéro d'ordre placé à côté de chaque nœud. Dans les deux panneaux l'arbre est identique : à la racine l'opérateur plus, avec pour enfant de gauche le nombre 2 et pour enfant de droite l'opérateur fois, lequel a pour enfants les nombres 3 et 4. Le panneau de gauche est intitulé l'ordre où l'on arrive, la descente : la racine plus porte le numéro 1, le nombre 2 porte le numéro 2, l'opérateur fois porte le numéro 3, le nombre 3 porte le numéro 4 et le nombre 4 porte le numéro 5 ; une ligne sous l'arbre récapitule cette suite, plus, 2, fois, 3, 4. Le panneau de droite est intitulé l'ordre où l'on calcule, la remontée : le nombre 2 porte le numéro 1 suivi de sa valeur 2, le nombre 3 porte le numéro 2 suivi de sa valeur 3, le nombre 4 porte le numéro 3 suivi de sa valeur 4, l'opérateur fois porte le numéro 4 suivi de sa valeur 12, et la racine plus porte le numéro 5 suivi de sa valeur 14 ; une ligne sous l'arbre récapitule cette suite, 2, 3, 4, fois, plus. Deux lignes de légende concluent qu'on visite les enfants avant le parent, ce qui est un parcours en profondeur post-ordre, et que la mesure donne 5 nœuds visités pour une profondeur maximale de 3.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le même arbre, deux ordres : où l'on arrive, où l'on calcule</text>
+    <path class="d-line" d="M320 34 L320 300" fill="none" />
+
+    <text class="d-label" x="160" y="46" text-anchor="middle" font-size="10.5">l'ordre où l'on ARRIVE — la descente</text>
+    <rect class="d-accent" x="142" y="110" width="36" height="28" rx="8" /><text class="d-text" x="160" y="129" text-anchor="middle" font-size="11">+</text>
+    <text class="d-mut" x="186" y="129" font-size="9">1er</text>
+    <path class="d-line" d="M160 138 L160 156" fill="none" />
+    <path class="d-line" d="M110 156 L210 156" fill="none" />
+    <path class="d-line" d="M110 156 L110 175" fill="none" />
+    <path class="d-line" d="M210 156 L210 175" fill="none" />
+    <rect class="d-box" x="92" y="175" width="36" height="28" rx="8" /><text class="d-text" x="110" y="194" text-anchor="middle" font-size="11">2</text>
+    <text class="d-mut" x="132" y="194" font-size="9">2e</text>
+    <rect class="d-accent" x="192" y="175" width="36" height="28" rx="8" /><text class="d-text" x="210" y="194" text-anchor="middle" font-size="11">*</text>
+    <text class="d-mut" x="232" y="194" font-size="9">3e</text>
+    <path class="d-line" d="M210 203 L210 221" fill="none" />
+    <path class="d-line" d="M180 221 L240 221" fill="none" />
+    <path class="d-line" d="M180 221 L180 240" fill="none" />
+    <path class="d-line" d="M240 221 L240 240" fill="none" />
+    <rect class="d-box" x="162" y="240" width="36" height="28" rx="8" /><text class="d-text" x="180" y="259" text-anchor="middle" font-size="11">3</text>
+    <text class="d-mut" x="158" y="259" text-anchor="end" font-size="9">4e</text>
+    <rect class="d-box" x="222" y="240" width="36" height="28" rx="8" /><text class="d-text" x="240" y="259" text-anchor="middle" font-size="11">4</text>
+    <text class="d-mut" x="262" y="259" font-size="9">5e</text>
+    <text class="d-text" x="160" y="288" text-anchor="middle" font-size="10">+ · 2 · * · 3 · 4</text>
+
+    <text class="d-label" x="480" y="46" text-anchor="middle" font-size="10.5">l'ordre où l'on CALCULE — la remontée</text>
+    <rect class="d-accent" x="462" y="110" width="36" height="28" rx="8" /><text class="d-text" x="480" y="129" text-anchor="middle" font-size="11">+</text>
+    <text class="d-mut" x="506" y="129" font-size="9">5e → 14</text>
+    <path class="d-line" d="M480 138 L480 156" fill="none" />
+    <path class="d-line" d="M430 156 L530 156" fill="none" />
+    <path class="d-line" d="M430 156 L430 175" fill="none" />
+    <path class="d-line" d="M530 156 L530 175" fill="none" />
+    <rect class="d-box" x="412" y="175" width="36" height="28" rx="8" /><text class="d-text" x="430" y="194" text-anchor="middle" font-size="11">2</text>
+    <text class="d-mut" x="452" y="194" font-size="9">1er → 2</text>
+    <rect class="d-accent" x="512" y="175" width="36" height="28" rx="8" /><text class="d-text" x="530" y="194" text-anchor="middle" font-size="11">*</text>
+    <text class="d-mut" x="552" y="194" font-size="9">4e → 12</text>
+    <path class="d-line" d="M530 203 L530 221" fill="none" />
+    <path class="d-line" d="M500 221 L560 221" fill="none" />
+    <path class="d-line" d="M500 221 L500 240" fill="none" />
+    <path class="d-line" d="M560 221 L560 240" fill="none" />
+    <rect class="d-box" x="482" y="240" width="36" height="28" rx="8" /><text class="d-text" x="500" y="259" text-anchor="middle" font-size="11">3</text>
+    <text class="d-mut" x="478" y="259" text-anchor="end" font-size="9">2e → 3</text>
+    <rect class="d-box" x="542" y="240" width="36" height="28" rx="8" /><text class="d-text" x="560" y="259" text-anchor="middle" font-size="11">4</text>
+    <text class="d-mut" x="582" y="259" font-size="9">3e → 4</text>
+    <text class="d-text" x="480" y="288" text-anchor="middle" font-size="10">2 · 3 · 4 · * · +</text>
+
+    <text class="d-mut" x="320" y="314" text-anchor="middle" font-size="9">On visite les enfants AVANT le parent : c'est un parcours en profondeur, post-ordre.</text>
+    <text class="d-mut" x="320" y="328" text-anchor="middle" font-size="9">Mesuré : 5 nœuds visités, profondeur maximale 3.</text>
+  </svg>
+  <figcaption>Deux numérotations du même arbre. À gauche, l'ordre des flèches <code>-&gt;</code>&nbsp;: on arrive à la racine en premier. À droite, l'ordre des flèches <code>&lt;-</code>&nbsp;: on la quitte en dernier, avec la seule valeur qui intéresse l'appelant.</figcaption>
+</figure>
+
+<p>La <strong>profondeur maximale de 3</strong> se lit tout aussi directement sur le dessin&nbsp;: la racine, puis <code>*</code>, puis <code>4</code>. Ce chiffre n'est pas une propriété de l'évaluateur, c'est la <em>hauteur de l'arbre</em>, qu'il ne fait que subir — un texte plus imbriqué creusera davantage. Or il a un correspondant très concret dans la machine qui exécute ton évaluateur.</p>
+<p>La fonction <code>evaluer</code> s'appelle elle-même, et chaque appel non terminé occupe une place dans la <strong>pile d'appels</strong> du langage hôte&nbsp;: un cadre y est empilé au <code>-&gt;</code>, dépilé au <code>&lt;-</code>. <em>L'indentation de la trace est la hauteur de la pile.</em> La récursion de l'évaluateur épouse la forme de l'arbre, exactement, cadre pour nœud&nbsp;: c'est ce qui rend cette écriture si courte, la descente ayant été déléguée au mécanisme d'appel du langage.</p>
+<p>Cette élégance a un revers, que la <a href="lecon-08.html">leçon 8</a> a mesuré du côté de l'analyseur&nbsp;: une récursion mal formée y consommait la pile sans jamais avancer — 2&nbsp;000 appels pour 0 jeton consommé —, et le <code>RangeError</code> tombait sur un texte valide. Notre évaluateur, lui, est bien formé pour une raison qu'il faut savoir énoncer&nbsp;: <strong>chaque appel travaille sur un sous-arbre strictement plus petit que celui de son appelant</strong>. L'arbre étant fini et sans cycle, la descente s'arrête forcément&nbsp;; la terminaison est une propriété de la structure de données, pas une chance. Seul subsiste le risque de <em>hauteur</em>, qu'une expression imbriquée à quelques milliers de niveaux réaliserait&nbsp;: la leçon 12 mesurera cet écart de profondeur entre notre interprète et la machine à pile de la leçon 11.</p>
+<p>Un dernier rapprochement, qui boucle une boucle ouverte au début du cours. La <a href="lecon-01.html">leçon 1</a> possédait déjà une fonction <code>interprete(n)</code> de six lignes, qui redescendait dans un arbre <em>écrit à la main</em> et comptait ses visites&nbsp;: 15 nœuds pour trois parcours du calcul <code>2 + 3 * 4</code>. Ce jouet opposait deux stratégies et annonçait sa limite — l'arbre y était posé, pas construit. Ce qui vient de tourner est le même geste sur le <em>vrai</em> arbre, produit par le vrai analyseur à partir du vrai texte&nbsp;: cinq nœuds, mesurés, pour un parcours. Le maillon manquant est en place, et la forme de la fonction n'a pas bougé.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Trois façons de parcourir le même arbre, et à quoi chacune sert</p><p>Un parcours en profondeur peut traiter le nœud courant à trois moments, et le choix n'est pas affaire de goût. <strong>En pré-ordre</strong>, le parent avant ses enfants&nbsp;: c'est la fonction <code>dessiner</code> de la leçon 9, qui imprime la ligne du nœud puis descend — le bon choix quand l'information va du haut vers le bas, comme une indentation ou une portée. <strong>En post-ordre</strong>, le parent après ses enfants&nbsp;: c'est notre évaluateur, et c'est obligatoire, un nœud <code>binaire</code> ayant besoin des <em>valeurs</em> de ses enfants. <strong>En ordre infixe</strong>, le parent entre ses deux enfants&nbsp;: réservé aux arbres binaires, cela sert à réécrire une expression sous sa forme habituelle. Une question suffit à choisir&nbsp;: <em>ce que je fabrique à ce nœud dépend-il de ce que ses enfants ont fabriqué&nbsp;?</em> Si oui, post-ordre, sans discussion.</p></div></div>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: la trace est le meilleur outil de mise au point d'un évaluateur</p><p>Les deux <code>console.log</code> ajoutés dans ce bloc valent tous les points d'arrêt du monde, pour une raison structurelle&nbsp;: un débogueur pas à pas montre <em>un</em> état à la fois, alors qu'un évaluateur récursif se comprend par la <em>forme</em> de ses appels. Écris la trace indentée dès le premier jour, derrière un drapeau. Trois signes s'y lisent immédiatement. Des <code>&lt;-</code> qui ne correspondent pas un pour un aux <code>-&gt;</code> signalent un chemin de sortie qui oublie de décrémenter, souvent un <code>return</code> anticipé. Une trace qui descend toujours du même côté révèle une associativité inattendue avant même que le résultat ne soit faux. Et une trace qui s'enfonce sans jamais remonter dit qu'un nœud se contient lui-même&nbsp;: impossible avec un arbre construit par notre analyseur, très courant dès qu'on <em>transforme</em> des arbres — ce que fera la leçon 12.</p></div></div>
+<h2>L'état du programme&nbsp;: l'environnement</h2>
+<p>Tout ce qui précède évalue <strong>une</strong> expression, et c'est très loin d'un programme. Un programme Brindille, tel que la <a href="lecon-09.html">leçon 9</a> l'a défini, est une suite d'instructions&nbsp;: des <code>soit</code> qui donnent un nom à une valeur, des <code>affiche</code> qui montrent un résultat. Deux choses manquent donc à notre évaluateur pour mériter le nom d'interprète&nbsp;: un <em>endroit où ranger les noms</em> — l'environnement, dont le cas <code>variable</code> avait déjà besoin sans jamais y trouver personne — et une <em>boucle sur les instructions</em>, car un programme se lit dans l'ordre.</p>
+
+<figure class="code-block" data-file="eval-complet.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- L'INTERPRETE COMPLET : l'arbre entier, avec ses variables et ses affichages.
+function executer(prog) {
+  const env = new Map();      // le seul etat du programme : nom -&gt; valeur
+  const ecran = [];           // ce que « affiche » produit
+  function evaluer(n) {
+    if (n.type === "nombre")   return n.valeur;
+    if (n.type === "variable") {
+      if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom);
+      return env.get(n.nom);
+    }
+    if (n.type === "binaire") {
+      const g = evaluer(n.gauche), d = evaluer(n.droite);
+      if (n.op === "+") return g + d;
+      if (n.op === "-") return g - d;
+      if (n.op === "*") return g * d;
+      if (n.op === "/") return g / d;
+    }
+    throw new Error("noeud inconnu : " + n.type);
+  }
+  for (const instr of prog.corps) {
+    if (instr.type === "declaration") env.set(instr.nom, evaluer(instr.valeur));
+    else if (instr.type === "affichage") ecran.push(evaluer(instr.valeur));
+    else throw new Error("instruction inconnue : " + instr.type);
+  }
+  return { ecran, env };
+}
+const source = [
+  "# le prix unitaire",
+  "soit prix = 12",
+  "soit total = prix * 3 + 2",
+  "affiche total",
+  "affiche total - prix",
+].join("\n");
+const r = executer(analyser(source));
+console.log("ecran :", r.ecran);
+console.log("variables :", [...r.env.entries()].map(([k, v]) =&gt; k + "=" + v).join(", "));</code></pre></figure>
+
+<figure class="code-block" data-file="eval-complet.txt"><pre><code class="language-plaintext">ecran : [38,26]
+variables : prix=12, total=38</code></pre></figure>
+
+<p>Commence par la structure du fichier, qui a changé de façon discrète. <code>evaluer</code> est maintenant <em>à l'intérieur</em> de <code>executer</code> et n'a plus qu'un paramètre&nbsp;: le nœud. Le second, l'environnement, est devenu une variable de la fonction englobante, que <code>evaluer</code> voit sans qu'on la lui passe. C'est une clôture, et c'est le bon choix ici pour une raison précise&nbsp;: <strong>il n'existe qu'un seul environnement pour toute la durée du programme</strong>. Le passer en paramètre donnerait à croire qu'il pourrait y en avoir plusieurs — ce qui sera vrai le jour où Brindille aura des fonctions, et ne l'est pas aujourd'hui.</p>
+<p>Regarde ensuite les deux formes de parcours qui cohabitent dans ces vingt lignes, car on les confond volontiers. En bas, <code>evaluer</code> descend dans un arbre par récursion et produit une <em>valeur</em>. En haut, une boucle <code>for</code> traverse <code>prog.corps</code> de gauche à droite&nbsp;: c'est une suite, pas un arbre, et elle ne produit rien — elle <em>modifie</em>. Un interprète est fait de ces deux étages superposés.</p>
+<p><strong>L'instruction <code>declaration</code></strong> tient en une ligne&nbsp;: <code>env.set(instr.nom, evaluer(instr.valeur))</code>. Lis-la de droite à gauche, c'est ainsi qu'elle s'exécute&nbsp;: on évalue l'expression, on remonte avec un nombre, puis on associe ce nombre au nom — lequel n'est pas un nœud mais un <em>champ</em>, la leçon 9 en a décidé ainsi. <strong>L'instruction <code>affichage</code></strong> évalue son expression et pousse le résultat dans un tableau, l'écran, faute d'en avoir un vrai. Ce n'est pas une facilité&nbsp;: un <code>console.log</code> planté au milieu de l'interprète produirait un effet impossible à comparer, là où un tableau rendu à la fin se compare en une ligne — ce dont la leçon 12 fera un usage systématique.</p>
+<p>Passons aux résultats. L'écran contient <strong>38 puis 26</strong>, et les variables valent <strong><code>prix=12</code></strong> et <strong><code>total=38</code></strong>. Chaque nombre a son histoire. <code>prix</code> reçoit 12 directement, l'expression étant une feuille. <code>total</code> reçoit la valeur de <code>prix * 3 + 2</code>&nbsp;: l'évaluateur va chercher 12 dans l'environnement, multiplie par 3, ajoute 2, range 38 — et note que la priorité joue encore, la multiplication étant plus bas dans l'arbre. Le premier <code>affiche</code> montre 38&nbsp;; le second évalue <code>total - prix</code>, soit deux lectures de l'environnement dans la même expression, et montre 26.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Tableau de quatre lignes montrant l'état du programme après chaque instruction. Trois colonnes, intitulées l'instruction exécutée, l'environnement après, et l'écran après. Première ligne : instruction soit prix égale 12, environnement prix égale 12, écran vide. Deuxième ligne : instruction soit total égale prix fois 3 plus 2, environnement prix égale 12 et total égale 38, écran vide. Troisième ligne : instruction affiche total, environnement inchangé prix égale 12 et total égale 38, écran contenant 38. Quatrième ligne : instruction affiche total moins prix, environnement toujours inchangé prix égale 12 et total égale 38, écran contenant 38 puis 26. Dans chaque ligne, la case qui vient de changer est mise en évidence. Deux lignes de légende concluent qu'une seule chose change à la fois et que ce qui change reste jusqu'à la fin, et que l'environnement est le seul état du programme, l'arbre étant relu et jamais modifié.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">L'état après chaque instruction — l'arbre, lui, ne bouge pas</text>
+
+    <text class="d-label" x="130" y="46" text-anchor="middle" font-size="10">l'instruction exécutée</text>
+    <text class="d-label" x="370" y="46" text-anchor="middle" font-size="10">l'environnement après</text>
+    <text class="d-label" x="550" y="46" text-anchor="middle" font-size="10">l'écran après</text>
+    <path class="d-line" d="M250 54 L250 258" fill="none" stroke-dasharray="4 3" />
+    <path class="d-line" d="M470 54 L470 258" fill="none" stroke-dasharray="4 3" />
+
+    <rect class="d-box" x="16" y="58" width="608" height="44" rx="8" />
+    <text class="d-text" x="130" y="85" text-anchor="middle" font-size="9.5">soit prix = 12</text>
+    <text class="d-tag" x="370" y="85" text-anchor="middle" font-size="9.5">prix=12</text>
+    <text class="d-mut" x="550" y="85" text-anchor="middle" font-size="9.5">(vide)</text>
+
+    <rect class="d-box" x="16" y="108" width="608" height="44" rx="8" />
+    <text class="d-text" x="130" y="135" text-anchor="middle" font-size="9.5">soit total = prix * 3 + 2</text>
+    <text class="d-tag" x="370" y="135" text-anchor="middle" font-size="9.5">prix=12, total=38</text>
+    <text class="d-mut" x="550" y="135" text-anchor="middle" font-size="9.5">(vide)</text>
+
+    <rect class="d-box" x="16" y="158" width="608" height="44" rx="8" />
+    <text class="d-text" x="130" y="185" text-anchor="middle" font-size="9.5">affiche total</text>
+    <text class="d-mut" x="370" y="185" text-anchor="middle" font-size="9.5">prix=12, total=38</text>
+    <text class="d-tag" x="550" y="185" text-anchor="middle" font-size="9.5">[38]</text>
+
+    <rect class="d-box" x="16" y="208" width="608" height="44" rx="8" />
+    <text class="d-text" x="130" y="235" text-anchor="middle" font-size="9.5">affiche total - prix</text>
+    <text class="d-mut" x="370" y="235" text-anchor="middle" font-size="9.5">prix=12, total=38</text>
+    <text class="d-tag" x="550" y="235" text-anchor="middle" font-size="9.5">[38, 26]</text>
+
+    <text class="d-mut" x="320" y="272" text-anchor="middle" font-size="9">Une seule chose change à la fois, et ce qui change reste jusqu'à la fin.</text>
+    <text class="d-mut" x="320" y="286" text-anchor="middle" font-size="9">L'environnement est le seul état du programme : l'arbre est relu, jamais modifié.</text>
+  </svg>
+  <figcaption>Exécuter un programme, c'est faire défiler ses instructions en laissant chacune modifier l'état. Les deux dernières lignes ne changent rien à l'environnement&nbsp;: un <code>affiche</code> lit, il n'écrit pas.</figcaption>
+</figure>
+
+<p>Ce tableau donne une définition utilisable de «&nbsp;exécuter un programme&nbsp;». Ce n'est pas «&nbsp;calculer un résultat&nbsp;» — un programme Brindille n'en a pas d'unique. C'est&nbsp;: <strong>parcourir les instructions dans l'ordre, chacune modifiant l'état</strong>, lequel tient en deux objets, l'environnement et l'écran&nbsp;; tout le reste est le <em>moyen</em>. Et ce que le tableau ne montre pas éclaire autant&nbsp;: l'arbre n'y figure nulle part, parce qu'<strong>il ne change jamais</strong>. Il est relu à chaque instruction, parfois plusieurs fois, et ressort de chaque lecture rigoureusement identique. C'est ce qui distingue le <em>programme</em>, immuable, de l'<em>exécution</em>, qui avance&nbsp;; beaucoup de bogues d'interprète débutant viennent d'avoir mélangé les deux, en rangeant par exemple la valeur d'une variable <em>dans le nœud</em> qui la porte — ce qui marche tant qu'on n'exécute le programme qu'une fois.</p>
+<p>Deux mots de vocabulaire, enfin&nbsp;: l'association d'un nom et d'une valeur s'appelle une <strong>liaison</strong>, l'ensemble des liaisons en vigueur l'<strong>environnement</strong>. Le nôtre est plat, sans notion de portée&nbsp;; c'est suffisant pour un langage sans fonction ni bloc, et c'est le premier endroit à enrichir pour en avoir — une portée est une chaîne d'environnements, où l'on cherche un nom dans la table locale puis dans celle du dessus. Le mécanisme du parcours, lui, ne changerait pas d'une ligne.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi une <code>Map</code> et pas un objet ordinaire</p><p>On pourrait ranger les variables dans un objet JavaScript, <code>env[nom] = valeur</code>, et cela marcherait sur les exemples de cette leçon. Trois raisons font préférer une <code>Map</code>, et elles valent au-delà de JavaScript. <strong>Un&nbsp;:</strong> un objet ordinaire n'est pas vide au départ — il hérite de propriétés, si bien qu'un programme déclarant une variable nommée <code>constructor</code> ou <code>toString</code> y trouverait un occupant, et que le test «&nbsp;ce nom existe-t-il&nbsp;?&nbsp;» répondrait oui à tort. <strong>Deux&nbsp;:</strong> <code>has</code> pose exactement la question qu'on veut poser, là où un test sur la valeur confond «&nbsp;non déclaré&nbsp;» et «&nbsp;déclaré à une valeur qui ressemble à rien&nbsp;». <strong>Trois&nbsp;:</strong> une <code>Map</code> conserve l'ordre d'insertion, ce qui rend l'affichage reproductible, donc comparable dans un test. Principe général&nbsp;: pour une table dont les clés viennent du <em>programme de l'utilisateur</em>, choisis la structure qui n'a pas de clés à elle.</p></div></div>
+<h2>Deux familles d'erreurs</h2>
+<p>Nous voici au point où l'interprète cesse d'être un exercice et devient un outil, parce qu'il faut lui apprendre à refuser. Et refuser, dans un langage de programmation, se fait à deux endroits qu'il ne faut jamais confondre. La ligne de partage tient en une phrase à retenir mot pour mot&nbsp;: <strong>l'analyseur juge la forme, l'exécution découvre le sens</strong>.</p>
+<p>La <a href="lecon-01.html">leçon 1</a> avait posé cette distinction de l'extérieur, en observant deux fichiers JavaScript&nbsp;: l'un mourait avant d'avoir affiché sa première ligne, l'autre l'affichait puis mourait deux lignes plus loin, et <code>node --check</code> ne voyait qu'un seul des deux problèmes. Nous sommes maintenant de l'autre côté&nbsp;: c'est <em>nous</em> l'implémentation, et nous pouvons montrer non seulement <em>quand</em> chaque faute est vue, mais <em>par quelle ligne de code</em>. Le programme qui suit exécute quatre textes en notant l'étape atteinte, puis interroge JavaScript sur la division par zéro.</p>
+
+<figure class="code-block" data-file="eval-erreurs.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- DEUX FAMILLES D'ERREURS : celle que l'analyseur voit, celle qu'il ne peut pas voir.
+function evaluer(n, env) {
+  if (n.type === "nombre")   return n.valeur;
+  if (n.type === "variable") {
+    if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom);
+    return env.get(n.nom);
+  }
+  const g = evaluer(n.gauche, env), d = evaluer(n.droite, env);
+  if (n.op === "/" &amp;&amp; d === 0) throw new Error("division par zero");
+  return n.op === "+" ? g + d : n.op === "-" ? g - d : n.op === "*" ? g * d : g / d;
+}
+function essai(src) {
+  let etape = "analyse";
+  try {
+    const arbre = analyser(src);
+    etape = "execution";
+    const env = new Map();
+    for (const i of arbre.corps) {
+      if (i.type === "declaration") env.set(i.nom, evaluer(i.valeur, env));
+      else console.log("  affiche -&gt; " + evaluer(i.valeur, env));
+    }
+    console.log(JSON.stringify(src) + " : ok");
+  } catch (e) {
+    console.log(JSON.stringify(src) + " : refuse a l'" + etape + " -&gt; " + e.message);
+  }
+}
+essai("affiche 2 +");            // il manque un operande
+essai("affiche inconnue");       // ecrit correctement, mais la variable n'existe pas
+essai("soit x = 12 / 0");        // ecrit correctement, mais le calcul est impossible
+essai("soit x = 1 affiche x");   // deux instructions sur une ligne : la grammaire l'accepte
+// Et sans le garde-fou sur la division :
+console.log("");
+console.log("12 / 0 en JavaScript :", 12 / 0);
+console.log("typeof :", typeof (12 / 0));
+console.log("0 / 0 :", 0 / 0);
+console.log("(12 / 0) - (12 / 0) :", (12 / 0) - (12 / 0));
+console.log("7 / 2 :", 7 / 2);</code></pre></figure>
+
+<figure class="code-block" data-file="eval-erreurs.txt"><pre><code class="language-plaintext">"affiche 2 +" : refuse a l'analyse -&gt; attendu un nombre, un nom ou une parenthese, trouve la fin du texte en position 11
+"affiche inconnue" : refuse a l'execution -&gt; variable inconnue : inconnue
+"soit x = 12 / 0" : refuse a l'execution -&gt; division par zero
+  affiche -&gt; 1
+"soit x = 1 affiche x" : ok
+
+12 / 0 en JavaScript : null
+typeof : number
+0 / 0 : null
+(12 / 0) - (12 / 0) : null
+7 / 2 : 3.5</code></pre></figure>
+
+<p>La première ligne est la famille que tu connais déjà. <code>affiche 2 +</code> est <strong>refusé à l'analyse</strong>&nbsp;: <code>attendu un nombre, un nom ou une parenthèse, trouvé la fin du texte en position 11</code>. Ce message vient de <code>facteur()</code>, écrit à la leçon 9, et l'évaluateur n'a jamais été appelé. La faute est <em>dans le texte</em>&nbsp;: il manque un opérande, et cela se constate sans rien exécuter.</p>
+<p>La deuxième ligne est la famille nouvelle, et la plus intéressante de la leçon. <code>affiche inconnue</code> est <strong>refusé à l'exécution</strong>&nbsp;: <code>variable inconnue : inconnue</code>. Ce texte est pourtant <em>parfaitement bien formé</em> — un mot-clé, une expression valide, aucune objection de l'analyseur, qui en produit un arbre irréprochable, la leçon 9 l'ayant déjà mesuré sur <code>affiche inconnu</code>. Le refus n'arrive qu'au moment où quelqu'un demande la <em>valeur</em> du nom&nbsp;: «&nbsp;ce nom a-t-il été déclaré&nbsp;?&nbsp;» n'est pas une question de forme. Voilà, en une ligne de sortie, ce qui sépare une <strong>erreur de syntaxe</strong> d'une <strong>erreur d'exécution</strong> — distinction que tout programmeur croit connaître et confond en pratique, parce que les deux se présentent de la même façon, un message rouge qui interrompt le programme. Le critère n'est ni la gravité, ni le moment où <em>toi</em> tu la vois&nbsp;: c'est la question à laquelle chaque étape sait répondre.</p>
+<p>Les deux dernières lignes complètent le tableau. <code>soit x = 12 / 0</code> est bien formé lui aussi, et refusé à l'exécution&nbsp;: <code>division par zero</code> — la section suivante lui est consacrée. Et <code>soit x = 1 affiche x</code> passe&nbsp;: c'est le cas «&nbsp;deux instructions sur une ligne&nbsp;» que la leçon 9 avait mesuré, Brindille n'ayant aucun séparateur d'instruction. Note surtout l'ordre des lignes&nbsp;: <code>affiche -&gt; 1</code> apparaît <em>avant</em> le verdict <code>ok</code>, ce qui montre que l'affichage a eu lieu <strong>pendant</strong> l'exécution. Un programme qui échoue à sa troisième instruction a déjà produit les effets des deux premières&nbsp;: c'est précisément pour cela qu'une erreur d'exécution coûte plus cher qu'une erreur de syntaxe.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le message doit dire l'étape, et il ne le dit jamais tout seul</p><p>Regarde la variable <code>etape</code> dans <code>essai</code>&nbsp;: elle vaut <code>"analyse"</code>, et passe à <code>"execution"</code> sur la ligne qui suit l'appel à <code>analyser</code>. Deux lignes en tout, et c'est ce qui rend la sortie lisible&nbsp;: sans elles, les trois refus se ressembleraient. Les vrais compilateurs font la même chose en plus élaboré, en préfixant leurs diagnostics du nom de la phase ou en employant un vocabulaire distinct — <em>syntax error</em> contre <em>runtime error</em>. Décide de ce vocabulaire tôt&nbsp;: l'utilisateur qui lit «&nbsp;erreur&nbsp;» sans savoir de quelle famille elle relève ne sait pas s'il doit relire son texte ou ses données. Et vérifie la position que tu affiches&nbsp;: nos erreurs d'analyse portent un numéro de caractère parce que le jeton le transporte, nos erreurs d'exécution n'en ont pas, la leçon 9 ayant choisi de ne pas garder <code>pos</code> dans les nœuds. Dette assumée, et qui se voit ici pour la première fois.</p></div></div>
+
+<h3>L'ordre d'évaluation se lit dans le message d'erreur</h3>
+<p>Il reste une question que le code précédent tranche sans le dire. Dans le cas <code>binaire</code>, nous évaluons l'enfant de gauche, puis celui de droite&nbsp;: pourquoi cet ordre&nbsp;? Tant que les deux calculs réussissent, la question est sans objet — l'addition rend la même chose quel que soit l'ordre dans lequel on a obtenu ses opérandes. Mais dès qu'un côté <em>échoue</em>, l'ordre devient une propriété observable du langage.</p>
+<p>Le programme ci-dessous écrit l'évaluateur deux fois, avec les deux ordres, et lui donne à évaluer <code>pomme + poire</code> dans un environnement vide, où <em>aucun</em> des deux noms n'existe. Puis il reprend cinq textes et note l'étape qui les refuse.</p>
+
+<figure class="code-block" data-file="ordre-erreurs.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- L'ORDRE D'EVALUATION SE VOIT DANS LE MESSAGE D'ERREUR.
+function faire(ordre) {
+  return function evaluer(n, env) {
+    if (n.type === "nombre") return n.valeur;
+    if (n.type === "variable") { if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom); return env.get(n.nom); }
+    let g, d;
+    if (ordre === "gauche") { g = evaluer(n.gauche, env); d = evaluer(n.droite, env); }
+    else                    { d = evaluer(n.droite, env); g = evaluer(n.gauche, env); }
+    return n.op === "+" ? g + d : n.op === "-" ? g - d : n.op === "*" ? g * d : g / d; };
+}
+for (const ordre of ["gauche", "droite"]) {
+  const ev = faire(ordre);
+  try { ev(analyser("affiche pomme + poire").corps[0].valeur, new Map()); }
+  catch (e) { console.log("ordre " + ordre + " d'abord -&gt; " + e.message); }
+}
+console.log("");
+// ------- CE QUE L'ANALYSEUR ACCEPTE ET QUE L'EXECUTION REFUSE.
+function evaluer(n, env) {
+  if (n.type === "nombre") return n.valeur;
+  if (n.type === "variable") { if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom); return env.get(n.nom); }
+  const g = evaluer(n.gauche, env), d = evaluer(n.droite, env);
+  return n.op === "+" ? g + d : n.op === "-" ? g - d : n.op === "*" ? g * d : g / d; }
+function essai(src) {
+  let etape = "analyse";
+  try {
+    const a = analyser(src); etape = "execution";
+    const env = new Map(); const ecran = [];
+    for (const i of a.corps) { if (i.type === "declaration") env.set(i.nom, evaluer(i.valeur, env)); else ecran.push(evaluer(i.valeur, env)); }
+    console.log("ok        " + JSON.stringify(src) + " -&gt; " + JSON.stringify(ecran));
+  } catch (e) { console.log("refuse a l'" + etape + "  " + JSON.stringify(src) + " -&gt; " + e.message); }
+}
+essai("soit x = x + 1");
+essai("affiche total\nsoit total = 3");
+essai("soit x = 5\naffiche x");
+essai("soit soit = 2");
+essai("affiche 5 5");</code></pre></figure>
+
+<figure class="code-block" data-file="ordre-erreurs.txt"><pre><code class="language-plaintext">ordre gauche d'abord -&gt; variable inconnue : pomme
+ordre droite d'abord -&gt; variable inconnue : poire
+
+refuse a l'execution  "soit x = x + 1" -&gt; variable inconnue : x
+refuse a l'execution  "affiche total\nsoit total = 3" -&gt; variable inconnue : total
+ok        "soit x = 5\naffiche x" -&gt; [5]
+refuse a l'analyse  "soit soit = 2" -&gt; attendu un IDENT, trouve "soit" en position 5
+refuse a l'analyse  "affiche 5 5" -&gt; attendu une instruction, trouve "5" en position 10</code></pre></figure>
+
+<p>Les deux premières lignes sont d'une clarté brutale. L'ordre «&nbsp;gauche d'abord&nbsp;» accuse <strong><code>pomme</code></strong>&nbsp;; l'ordre «&nbsp;droite d'abord&nbsp;» accuse <strong><code>poire</code></strong>. Même texte, même arbre, même environnement vide, deux coupables. Aucun des deux évaluateurs n'a tort — les deux noms sont également inconnus, et chacun signale le premier rencontré. Ce qui change n'est pas la justesse, c'est <em>ce que l'utilisateur lit</em>.</p>
+<p>Trois conclusions s'en déduisent. Le choix est <strong>arbitraire</strong>&nbsp;: ni les mathématiques, ni la grammaire, ni la forme de l'arbre ne désignent un côté — l'arbre dit que ces deux sous-arbres sont les opérandes d'un <code>+</code>, jamais leur chronologie. Il est <strong>observable</strong>, et pas seulement par les messages d'erreur&nbsp;: il le serait tout autant si les opérandes avaient des effets. Donc il doit être <strong>fixé et documenté</strong>. Les langages réels ont tranché, et pas tous pareil&nbsp;: JavaScript, Java et Python spécifient un ordre de gauche à droite, sur lequel on peut compter&nbsp;; le C a longtemps laissé cet ordre <em>non spécifié</em>, expressément pour laisser les compilateurs réorganiser les calculs. La première position protège l'utilisateur, la seconde libère l'optimiseur. Ce qui ne se défend pas, c'est de ne pas choisir.</p>
+<p>Passons aux cinq textes suivants, qui rangent des cas concrets dans les deux familles. <code>soit x = x + 1</code> est <strong>refusé à l'exécution</strong>&nbsp;: <code>variable inconnue : x</code>. La cause est dans la ligne de <code>declaration</code> lue plus haut — l'expression est évaluée <em>avant</em> l'appel à <code>env.set</code>, donc au moment où l'on cherche <code>x</code>, il n'a pas encore été rangé. Encore une décision de conception&nbsp;: un autre langage déclarerait d'abord le nom, ce qui permettrait des définitions récursives au prix de valeurs à moitié construites.</p>
+<p><code>affiche total</code> suivi de <code>soit total = 3</code> est refusé pour la même raison, et énonce une propriété plus générale&nbsp;: <strong>l'ordre des instructions compte</strong>. Aucune remontée des déclarations, aucune passe préalable qui collecterait les noms. La ligne suivante le confirme par l'exemple opposé&nbsp;: <code>soit x = 5</code> puis <code>affiche x</code> donne <code>[5]</code>. Mêmes instructions, deux issues, pour seule différence leur ordre.</p>
+<p>Les deux derniers textes retombent du côté de l'analyse. <code>soit soit = 2</code> échoue sur <code>attendu un IDENT, trouve "soit" en position 5</code>&nbsp;: le module 2 a rangé <code>soit</code> parmi les mots-clés, son jeton n'est donc pas de type <code>IDENT</code>&nbsp;— qu'un mot-clé ne puisse pas servir de nom est décidé dans la table des mots-clés du lexique, bien avant l'exécution. Et <code>affiche 5 5</code> échoue sur <code>attendu une instruction, trouve "5" en position 10</code>&nbsp;: la première instruction s'arrête après le premier <code>5</code>, puis <code>programme()</code> repart sur ce qu'il croit être une instruction neuve.</p>
+<h2>La division par zéro&nbsp;: un choix de conception, pas un accident</h2>
+<p>Reviens sur la ligne <code>if (n.op === "/" &amp;&amp; d === 0) throw new Error("division par zero")</code>. Elle a l'air d'une précaution évidente, du genre qu'on écrit sans y penser, et c'est pour cela qu'elle mérite qu'on s'y arrête&nbsp;: <strong>elle n'était pas obligatoire</strong>. Sans elle, notre interprète n'aurait pas planté&nbsp;; il aurait rendu quelque chose, et ce quelque chose est à la fin du bloc précédent.</p>
+<p>Les cinq dernières lignes de sa sortie interrogent JavaScript directement, hors de Brindille. <code>12 / 0</code> ne lève <em>aucune</em> exception&nbsp;: le calcul aboutit. Son <code>typeof</code> vaut <strong><code>number</code></strong>&nbsp;: c'est un nombre, du même type que 12 et 0, utilisable dans n'importe quel calcul suivant. Et <code>7 / 2</code> rend <strong>3.5</strong>, ce qui rappelle au passage que Brindille hérite de la division de son hôte, avec sa virgule — un langage à division entière rendrait un autre nombre, et ce serait là encore un choix, pas une vérité. Le langage dans lequel notre interprète est écrit a donc déjà tranché la question, en disant «&nbsp;ce n'est pas une erreur&nbsp;». Écrire un interprète, c'est décider si l'on reprend cette réponse à son compte. Trois options s'offrent, et chacune se paie.</p>
+<p><strong>Première option&nbsp;: hériter du langage hôte.</strong> On supprime la ligne, <code>soit x = 12 / 0</code> réussit, et <code>x</code> reçoit une valeur bien réelle avec laquelle tout calcul ultérieur fonctionnera sans broncher. La moins chère à écrire — zéro ligne — et la plus coûteuse à déboguer, parce que la faute se manifeste <em>loin</em> de sa cause&nbsp;: un résultat étrange dix instructions plus bas, sans le moindre message pour ramener à la division fautive. C'est pourtant un choix que beaucoup de langages assument pour les nombres à virgule, dont la norme prévoit ces valeurs et les fait circuler exprès.</p>
+<p><strong>Deuxième option&nbsp;: refuser à l'exécution.</strong> C'est ce que fait Brindille&nbsp;: le message tombe au moment précis où le calcul impossible est demandé, et il nomme la faute. Coût double&nbsp;: le programme s'arrête — sanction sévère dans un langage sans mécanisme pour rattraper une erreur —, et il faut penser à écrire ce test pour <em>chaque</em> opération susceptible d'échouer.</p>
+<p><strong>Troisième option&nbsp;: refuser avant l'exécution.</strong> Quand le diviseur est écrit en toutes lettres, un traducteur qui regarde le programme d'ensemble voit le zéro sans rien exécuter, et refuse de traduire. Séduisant, et très limité&nbsp;: écris <code>soit z = 0</code> puis <code>affiche 12 / z</code>, et plus aucune analyse du texte ne suffit. Ce n'est donc jamais une alternative aux deux premières, mais un filet supplémentaire qui attrape les cas grossiers. La <a href="lecon-12.html">leçon 12</a> y reviendra, et montrera qu'un traducteur trop pressé de calculer d'avance fait, sur ce cas précis, <em>disparaître</em> l'erreur au lieu de la déplacer&nbsp;: <code>12 / 0</code> devient une constante <code>Infinity</code>, que la page affiche <code>null</code>, et plus rien ne proteste nulle part. Retiens surtout que <strong>ton langage choisit une de ces trois options, même quand tu ne choisis pas</strong>&nbsp;: ne pas écrire la ligne, c'est prendre la première.</p>
+
+<h3>Quand la couche d'affichage ment</h3>
+<p>Il reste un fait déroutant dans la sortie précédente, laissé de côté exprès parce qu'il ne parle pas de Brindille&nbsp;: <code>12 / 0</code> s'affiche <code>null</code>. Pas <code>Infinity</code>. Or son <code>typeof</code> vaut <code>number</code>, juste en dessous. Un nombre qui s'affiche <code>null</code>&nbsp;: il y a manifestement quelqu'un entre le calcul et l'écran. Le bloc suivant, très court, va chercher ce quelqu'un.</p>
+
+<figure class="code-block" data-file="piege-infini.js"><pre><code class="language-javascript">console.log("brut      12/0 :", 12 / 0);
+console.log("String()  12/0 :", String(12 / 0));
+console.log("concat    12/0 :", "" + (12 / 0));
+console.log("brut       0/0 :", 0 / 0);
+console.log("String()   0/0 :", String(0 / 0));
+console.log("isFinite(12/0) :", Number.isFinite(12 / 0));
+console.log("dans un tableau :", [1, 12 / 0, 3]);</code></pre></figure>
+
+<figure class="code-block" data-file="piege-infini.txt"><pre><code class="language-plaintext">brut      12/0 : null
+String()  12/0 : Infinity
+concat    12/0 : Infinity
+brut       0/0 : null
+String()   0/0 : NaN
+isFinite(12/0) : false
+dans un tableau : [1,null,3]</code></pre></figure>
+
+<p>Prends les lignes deux par deux, c'est ainsi qu'elles ont été écrites. <code>12 / 0</code> passé <strong>brut</strong> à <code>console.log</code> s'affiche <code>null</code>&nbsp;; la même valeur passée par <code>String(...)</code> s'affiche <code>Infinity</code>. Idem pour <code>0 / 0</code>&nbsp;: <code>null</code> à l'état brut, <code>NaN</code> une fois convertie en texte. La concaténation, <code>"" + (12 / 0)</code>, fait la même chose que <code>String</code>. Et <code>Number.isFinite(12 / 0)</code> rend <code>false</code>, sans ambiguïté.</p>
+<p>L'explication tient à la façon dont cette page exécute les blocs de code&nbsp;: le fil de calcul met les valeurs en forme avec <code>JSON.stringify</code> <em>avant</em> de les envoyer à la page — ce n'est donc pas le canal qui perd l'information, il transporterait <code>Infinity</code> intact, c'est la mise en forme. Or le format JSON ne sait pas représenter l'infini ni «&nbsp;pas un nombre&nbsp;» — il n'a que des nombres finis —, et la conversion remplace donc <code>Infinity</code> et <code>NaN</code> par <code>null</code>. La dernière ligne le montre au sein d'un tableau&nbsp;: <code>[1, 12 / 0, 3]</code> s'affiche <code>[1,null,3]</code>, particulièrement traître, car au milieu de deux nombres normaux la valeur infinie se déguise en trou.</p>
+<p>Cette histoire illustre une chose que tu rencontreras toute ta vie de programmeur&nbsp;: <strong>ce que le programme calcule et ce que tu lis ne sont pas la même chose</strong>. Entre les deux, il y a toujours une couche d'affichage, et cette couche a ses limites. Ici, <code>Infinity</code> et <code>NaN</code>, que tout distingue, deviennent le même <code>null</code>, lequel désigne par ailleurs tout autre chose&nbsp;: trois valeurs réduites à une seule apparence. Le réflexe à prendre ne coûte rien&nbsp;: quand un affichage te surprend, <strong>demande autre chose que la valeur elle-même</strong> — son type, sa longueur, un test booléen, n'importe quoi qui traverse la couche d'affichage sans se déformer. C'est ce que font les deux lignes de contrôle de cette page&nbsp;: le <code>typeof</code> du bloc précédent répond <code>number</code>, et le <code>Number.isFinite</code> de celui-ci répond <code>false</code>, réponses qui arrivent intactes parce qu'une chaîne et un booléen se transportent sans perte. La leçon 9 avait rencontré le même aveuglement d'un autre côté&nbsp;: son dessin d'arbre affichait <code>nombre 12</code> à l'identique, que la valeur fût le nombre 12 ou la chaîne <code>"12"</code>. Même morale, deux fois&nbsp;: quand un affichage ne distingue pas deux états, affiche autre chose.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ne laisse jamais une valeur non finie arriver brute dans un affichage</p><p>Sur ce site, tout bloc exécutable qui laisse un <code>Infinity</code> ou un <code>NaN</code> parvenir tel quel à <code>console.log</code> affichera <code>null</code>&nbsp;: le lecteur qui clique sur «&nbsp;Tester&nbsp;» lira autre chose que ce que l'auteur croyait montrer, et le correctif tient en <code>String(...)</code>. Plus largement, chaque fois qu'une valeur traverse une frontière — un canal entre deux fils d'exécution, un fichier, une réponse réseau, un journal —, demande-toi ce que ce format sait représenter. <code>JSON.stringify</code>, le plus employé de tous, ne sait représenter ni l'infini, ni <code>NaN</code>, ni une valeur <code>undefined</code> rangée dans un objet&nbsp;: il remplace les deux premières par <code>null</code> et <em>supprime</em> la troisième. Un chiffre qui disparaît d'un journal parce que le format ne savait pas l'écrire est un bogue pénible à retrouver, précisément parce qu'il ne laisse pas de trace.</p></div></div>
+
+<p>Faisons le point. Nous sommes partis d'un objet inerte et nous en avons tiré une exécution, avec une fonction d'une quinzaine de lignes et une boucle. Le parcours qui la porte a un nom — en profondeur, post-ordre —, une profondeur mesurable, et une correspondance exacte avec la pile d'appels du langage hôte. L'état tient dans une table de noms, que les déclarations écrivent et que les variables lisent. Et deux familles d'erreurs se sont séparées proprement. La <a href="lecon-11.html">leçon 11</a> repartira du même arbre pour lui poser une tout autre question — non plus «&nbsp;combien cela vaut-il&nbsp;?&nbsp;», mais «&nbsp;quelles instructions faudrait-il exécuter pour l'obtenir&nbsp;?&nbsp;» — et le module 5 rassemblera le tout en un langage de bout en bout.</p>
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre «&nbsp;bien écrit&nbsp;» et «&nbsp;exécutable&nbsp;».</strong> C'est le malentendu central de cette leçon, et il se glisse partout&nbsp;: dans les tests qu'on écrit, dans les messages qu'on rédige, dans les promesses qu'on fait aux utilisateurs d'un langage. Mesuré&nbsp;: <code>affiche inconnue</code> est accepté sans réserve par l'analyseur, qui en produit un arbre parfaitement régulier, et échoue à l'exécution sur <code>variable inconnue : inconnue</code>&nbsp;; même scénario pour <code>soit x = x + 1</code>. En face, <code>affiche 2 +</code> ne franchit jamais l'analyse. Le critère n'est ni la gravité ni le moment où <em>tu</em> t'en aperçois&nbsp;: c'est la question à laquelle chaque étape sait répondre. Le contrôle qui te remet dans le droit chemin&nbsp;: avant d'accuser une étape, note l'étape atteinte, comme la variable <code>etape</code> de nos essais.</p></div></div>
+<ul>
+<li><strong>Croire que l'ordre des instructions est une préférence de style</strong> — dès qu'il existe un état, l'ordre est un fait. Mesuré&nbsp;: <code>affiche total</code> suivi de <code>soit total = 3</code> est refusé sur <code>variable inconnue : total</code>, tandis que <code>soit x = 5</code> suivi de <code>affiche x</code> donne <code>[5]</code>. Mêmes instructions, deux issues, et rien ne les sépare que leur ordre&nbsp;: aucune remontée des déclarations n'a lieu.</li>
+<li><strong>Traiter un nœud avant ses enfants</strong> — écrire le calcul <em>en descendant</em> paraît naturel et reste impossible&nbsp;: un nœud <code>binaire</code> n'a aucune valeur tant que ses deux enfants n'en ont pas. Mesuré sur la trace&nbsp;: la première valeur produite est <code>2</code>, la dernière <code>14</code>, et la racine — premier nœud visité — est le dernier calculé. Ce que tu fais <em>avant</em> de descendre ne peut pas dépendre du résultat des enfants&nbsp;: c'est la définition même du pré-ordre.</li>
+<li><strong>Attendre qu'un calcul impossible se signale tout seul</strong> — il ne se signalera pas. Mesuré&nbsp;: <code>12 / 0</code> ne lève aucune exception en JavaScript, et <code>typeof</code> de son résultat vaut <code>number</code>. Sans la ligne de garde, <code>soit x = 12 / 0</code> réussit et la valeur se propage — <em>en se déguisant</em>, puisque sur cette page elle s'affiche <code>null</code>, et que <code>[1, 12 / 0, 3]</code> devient <code>[1,null,3]</code>. Un calcul faux qui n'a pas l'air faux coûte plus cher qu'un plantage.</li>
+<li><strong>Supposer un ordre d'évaluation sans l'avoir fixé</strong> — l'arbre dit quels sont les opérandes, jamais dans quel ordre les calculer. Mesuré sur <code>pomme + poire</code>, dans un environnement où aucun des deux noms n'existe&nbsp;: commencer par la gauche accuse <code>pomme</code>, commencer par la droite accuse <code>poire</code>. Tant que rien n'échoue et que rien n'a d'effet, la question dort&nbsp;; le jour où elle se réveille, il est trop tard pour décider.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un doute légitime traverse ce module&nbsp;: cette fonction de quinze lignes est-elle un jouet pédagogique, ou la vraie chose&nbsp;? On peut trancher sans discuter, parce qu'une des bibliothèques standard les plus employées au monde contient les deux moitiés de notre travail. Python livre un module <code>ast</code> qui fait le métier du module 3 — il rend l'arbre de syntaxe abstraite d'un texte source — et, dans le même module, une classe <code>ast.NodeVisitor</code> qui fait le métier de la leçon 10&nbsp;: elle parcourt cet arbre en appelant, pour chaque nœud, une méthode nommée d'après son type. Écrire un évaluateur avec elle consiste à définir <code>visit_Constant</code>, <code>visit_Name</code> et <code>visit_BinOp</code> — aux noms près, nos trois cas. Le programme reproduit sous cet encadré a été exécuté sur Python 3.14.5, sur <code>prix * 3 + 2</code> avec <code>prix</code> valant 12&nbsp;: le calcul que notre interprète effectue au milieu de son programme. Trois choses en ressortent, toutes mesurées. <strong>Un&nbsp;:</strong> la forme de l'arbre est la nôtre — le <code>BinOp</code> de la multiplication est l'enfant <em>gauche</em> de celui de l'addition, donc plus bas, donc calculé d'abord. <strong>Deux&nbsp;:</strong> le compteur de visites s'arrête à <strong>5</strong>, le chiffre de notre parcours. <strong>Trois&nbsp;:</strong> le résultat est <strong>38</strong>, le même que notre interprète range dans <code>total</code>. Deux implémentations sans aucun lien produisent le même arbre, le même nombre de visites et le même nombre&nbsp;: le signe qu'il n'y a qu'une façon raisonnable de parcourir un arbre d'expression, et que tu viens de l'écrire.</p></div></div>
+
+<figure class="code-block" data-file="evaluateur_ast.py"><pre><code class="language-python">import ast
+
+arbre = ast.parse("prix * 3 + 2", mode="eval")
+print(ast.dump(arbre.body))
+
+class Evaluateur(ast.NodeVisitor):
+    def __init__(self, env):
+        self.env = env
+        self.visites = 0
+    def visit_Constant(self, n):
+        self.visites += 1
+        return n.value
+    def visit_Name(self, n):
+        self.visites += 1
+        return self.env[n.id]
+    def visit_BinOp(self, n):
+        self.visites += 1
+        g = self.visit(n.left)
+        d = self.visit(n.right)
+        if isinstance(n.op, ast.Add):
+            return g + d
+        if isinstance(n.op, ast.Mult):
+            return g * d
+        raise ValueError("operateur non gere")
+
+e = Evaluateur({"prix": 12})
+print("resultat :", e.visit(arbre.body))
+print("noeuds visites :", e.visites)</code></pre></figure>
+
+<figure class="code-block" data-file="evaluateur_ast.txt"><pre><code class="language-plaintext">BinOp(left=BinOp(left=Name(id='prix', ctx=Load()), op=Mult(), right=Constant(value=3)), op=Add(), right=Constant(value=2))
+resultat : 38
+noeuds visites : 5</code></pre></figure>
+
+<p>Une différence d'écriture, qui n'est pas une différence de fond&nbsp;: là où notre évaluateur teste <code>n.type</code> dans une suite de <code>if</code>, <code>NodeVisitor</code> fabrique le nom de la méthode à appeler à partir du nom de la classe du nœud. C'est un aiguillage lui aussi, simplement écrit par la bibliothèque au lieu de l'être par toi. La contrepartie est celle que notre <code>throw</code> final rendait visible&nbsp;: quand aucune méthode ne correspond, il faut décider quoi faire, et la bibliothèque prévoit pour cela un comportement par défaut redéfinissable. Le problème est le même, la réponse est mieux rangée.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Un cas par sorte de nœud&nbsp;: ce que l'interprète fait de chacun</caption>
+    <thead><tr><th scope="col">Nœud</th><th scope="col">Ce que l'interprète en fait</th><th scope="col">Redescend-il&nbsp;?</th><th scope="col">Ce qu'il touche</th></tr></thead>
+    <tbody>
+      <tr><td><code>nombre</code></td><td>rend <code>n.valeur</code>, déjà convertie par l'analyseur</td><td>non — c'est une feuille</td><td>rien</td></tr>
+      <tr><td><code>variable</code></td><td>rend <code>env.get(n.nom)</code>, ou lève <code>variable inconnue</code></td><td>non — c'est une feuille</td><td>lit l'environnement</td></tr>
+      <tr><td><code>binaire</code></td><td>évalue <code>gauche</code>, puis <code>droite</code>, puis combine selon <code>n.op</code></td><td><strong>oui, deux fois</strong></td><td>rien&nbsp;: il ne fait que combiner</td></tr>
+      <tr><td><code>programme</code></td><td>boucle <code>for</code> sur <code>corps</code>, dans l'ordre du texte</td><td>non — une suite, pas un arbre</td><td>déclenche tout le reste</td></tr>
+      <tr><td><code>declaration</code></td><td>évalue l'expression, <em>puis</em> <code>env.set(nom, valeur)</code></td><td>oui, une fois</td><td>écrit l'environnement</td></tr>
+      <tr><td><code>affichage</code></td><td>évalue l'expression et pousse le résultat sur l'écran</td><td>oui, une fois</td><td>écrit l'écran</td></tr>
+      <tr><td><em>tout autre</em></td><td><code>throw new Error("noeud inconnu : " + n.type)</code></td><td>—</td><td>te prévient au lieu de rendre <code>undefined</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+<figure class="cheat-table">
+  <table>
+    <caption>Forme ou sens&nbsp;: qui refuse quoi, et avec quel message — tous mesurés</caption>
+    <thead><tr><th scope="col">Texte</th><th scope="col">Étape qui tranche</th><th scope="col">Message obtenu</th></tr></thead>
+    <tbody>
+      <tr><td><code>affiche 2 +</code></td><td>analyse</td><td>attendu un nombre, un nom ou une parenthese, trouve la fin du texte en position 11</td></tr>
+      <tr><td><code>soit soit = 2</code></td><td>analyse</td><td>attendu un IDENT, trouve "soit" en position 5</td></tr>
+      <tr><td><code>affiche 5 5</code></td><td>analyse</td><td>attendu une instruction, trouve "5" en position 10</td></tr>
+      <tr><td><code>affiche inconnue</code></td><td><strong>exécution</strong></td><td>variable inconnue : inconnue</td></tr>
+      <tr><td><code>soit x = x + 1</code></td><td><strong>exécution</strong></td><td>variable inconnue : x</td></tr>
+      <tr><td><code>soit x = 12 / 0</code></td><td><strong>exécution</strong></td><td>division par zero — et seulement parce que nous l'avons écrit</td></tr>
+      <tr><td><code>soit x = 5</code> puis <code>affiche x</code></td><td>aucune&nbsp;: accepté</td><td>écran <code>[5]</code></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Évaluateur</dt><dd>Programme qui prend un nœud d'arbre et rend une valeur. Il se réduit à un aiguillage sur le type du nœud, plus des appels à lui-même pour les nœuds qui ont des enfants. Quand il exécute un programme entier, variables et affichages compris, on parle d'interprète à parcours d'arbre.</dd>
+  <dt>Parcours en profondeur</dt><dd>Façon de visiter un arbre où l'on s'enfonce dans un enfant jusqu'au bout avant de passer au suivant, par opposition au parcours en largeur. Mesuré sur <code>2 + 3 * 4</code>&nbsp;: 5 nœuds visités, profondeur maximale 3.</dd>
+  <dt>Post-ordre</dt><dd>Parcours en profondeur où l'on traite un nœud <em>après</em> ses enfants. Ordre obligatoire dès que la valeur d'un nœud dépend de celles de ses enfants, donc pour tout évaluateur d'expression. Mesuré&nbsp;: les valeurs sortent dans l'ordre 2, 3, 4, 12, 14, la racine en dernier.</dd>
+  <dt>Environnement</dt><dd>Table qui associe les noms en vigueur à leurs valeurs&nbsp;; avec l'écran, seul état durable d'un programme Brindille. Écrit par <code>declaration</code>, lu par <code>variable</code>. Le nôtre est plat&nbsp;: une seule table, aucune notion de portée.</dd>
+  <dt>Liaison</dt><dd>Association d'un nom à une valeur dans un environnement. L'établir est un acte daté&nbsp;: avant, le nom n'existe pas. Mesuré&nbsp;: <code>soit x = x + 1</code> échoue, parce que l'expression est évaluée avant que la liaison ne soit créée.</dd>
+  <dt>Erreur d'exécution</dt><dd>Faute qu'aucune inspection du texte ne peut découvrir, parce qu'elle dépend de l'état atteint. Elle survient sur un programme de forme irréprochable, après que les instructions précédentes ont produit leurs effets. Mesuré&nbsp;: <code>affiche inconnue</code> passe l'analyse et échoue sur <code>variable inconnue : inconnue</code>.</dd>
+  <dt>Ordre d'évaluation</dt><dd>Ordre dans lequel les opérandes d'un opérateur sont calculés. L'arbre ne le contient pas&nbsp;: il dit quels sont les opérandes, pas quand les calculer. Arbitraire, observable dès qu'un côté échoue ou produit un effet, donc à fixer et à documenter. Mesuré sur <code>pomme + poire</code>&nbsp;: <code>pomme</code> ou <code>poire</code> selon le côté commencé.</dd>
+  <dt>Effet de bord</dt><dd>Toute conséquence d'une évaluation autre que la valeur qu'elle rend&nbsp;: écrire dans l'environnement, pousser une ligne sur l'écran, ouvrir un fichier. C'est l'existence d'effets qui rend l'ordre observable&nbsp;; une expression sans effet peut être calculée dans n'importe quel ordre.</dd>
+  <dt>Valeur non finie</dt><dd>Résultat d'un calcul sans valeur numérique ordinaire&nbsp;: <code>Infinity</code> et <code>NaN</code>. En JavaScript ce sont de vrais nombres — <code>typeof</code> vaut <code>number</code> — et aucune exception n'est levée pour les produire. Elles ne survivent pas à toutes les couches d'affichage&nbsp;: mesuré, <code>JSON.stringify</code> les remplace par <code>null</code>, ce que <code>Number.isFinite</code> permet de déceler.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un arbre <strong>ne fait rien</strong>&nbsp;: c'est un objet ordinaire. Ce qui le distingue du texte, c'est que sa structure y est <em>explicite</em> — et qu'il est relisible autant de fois qu'on veut, là où le flux de jetons s'épuisait.</li>
+<li>L'évaluateur est un <strong>aiguillage sur <code>n.type</code></strong>, un cas par sorte de nœud&nbsp;: deux s'arrêtent, un seul redescend. Aucune de ses lignes ne parle de priorité ni de parenthèse&nbsp;; mesuré, il rend pourtant <strong>14</strong>, <strong>20</strong> et <strong>5</strong>. Ces nombres sortent de la <em>forme</em> de l'arbre, que la <a href="lecon-09.html">leçon 9</a> a fixée.</li>
+<li>Le parcours est <strong>en profondeur, post-ordre</strong>&nbsp;: les enfants avant le parent. Mesuré sur <code>2 + 3 * 4</code>&nbsp;: <strong>5</strong> nœuds visités, <strong>profondeur maximale 3</strong>, dix lignes de trace — un aller et un retour par nœud. La racine est le premier nœud visité et le dernier calculé.</li>
+<li>La récursion de l'évaluateur <strong>épouse la forme de l'arbre</strong>&nbsp;: l'indentation de la trace est la hauteur de la pile d'appels. Elle termine toujours, chaque appel travaillant sur un sous-arbre strictement plus petit — la <a href="lecon-08.html">leçon 8</a> avait mesuré le cas contraire, 2&nbsp;000 appels pour 0 jeton consommé.</li>
+<li>Exécuter un programme, c'est <strong>parcourir ses instructions dans l'ordre, chacune modifiant l'état</strong> — l'environnement, écrit par <code>declaration</code> et lu par <code>variable</code>, et l'écran. Mesuré&nbsp;: écran <strong>38 puis 26</strong>, <code>prix=12</code>, <code>total=38</code>. L'arbre, lui, ne change jamais.</li>
+<li>Deux familles d'erreurs, une ligne de partage&nbsp;: <strong>l'analyseur juge la forme, l'exécution découvre le sens</strong>. Mesuré&nbsp;: <code>affiche 2 +</code> ne passe pas l'analyse&nbsp;; <code>affiche inconnue</code>, parfaitement bien formé, échoue à l'exécution — et l'affichage produit avant le verdict rappelle que les instructions précédentes ont déjà agi.</li>
+<li>L'<strong>ordre d'évaluation</strong> des opérandes n'est pas dans l'arbre. Mesuré sur <code>pomme + poire</code>&nbsp;: <code>pomme</code> d'un côté, <code>poire</code> de l'autre. Arbitraire, observable, donc à fixer et à documenter.</li>
+<li>La <strong>division par zéro</strong> est un choix à trois branches — hériter du langage hôte, refuser à l'exécution, refuser d'avance quand le diviseur est une constante. Ne pas choisir, c'est prendre la première. Mesuré&nbsp;: JavaScript ne lève rien, <code>typeof</code> vaut <code>number</code>, et cette page affiche <code>null</code> là où la valeur est <code>Infinity</code>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Ton évaluateur rend 20 sur <code>2 + 3 * 4</code>, et tu jures n'avoir touché ni au lexique ni à l'analyseur. Quel affichage demandes-tu <em>avant</em> l'évaluation pour savoir en une exécution qui accuser, et que dois-tu lire dans chacun des deux cas&nbsp;?</li>
+<li>Explique en une phrase, sans employer les mots «&nbsp;récursion&nbsp;» ni «&nbsp;post-ordre&nbsp;», pourquoi la racine est le premier nœud visité et le dernier calculé.</li>
+<li>Un utilisateur se plaint&nbsp;: son programme affiche deux lignes correctes, puis meurt. Un autre, que le sien n'affiche rien du tout avant de mourir. Ces deux plaintes ne décrivent pas la même famille de faute&nbsp;: dis laquelle est laquelle, et ce que chacun doit relire en priorité.</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"L'évaluateur de cette leçon rend 14 sur « 2 + 3 * 4 » et 20 sur « (2 + 3) * 4 ». Où, dans son code, la priorité des opérateurs est-elle écrite ?","a":["Nulle part : il combine les enfants d'un nœud sans jamais comparer deux opérateurs, et l'écart vient de la forme de l'arbre","Dans l'ordre des tests du cas binaire, qui examine la multiplication avant l'addition et lui accorde ainsi la priorité la plus forte","Dans le cas de la parenthèse, qui force l'évaluation du sous-arbre qu'elle entoure avant de rendre la main à l'opérateur du dessus","Dans une table opérateur vers niveau que l'évaluateur consulte au moment de choisir laquelle de ses deux branches il calcule en premier"],"correct":0,"explain":"Mesuré : 14 et 20 avec exactement le même code. L'arbre du premier texte porte le plus au sommet et l'étoile en dessous ; celui du second, l'inverse. Un nœud placé plus bas est calculé plus tôt, puisqu'un parent a besoin des valeurs de ses enfants. Quant aux parenthèses, elles ne figurent pas dans l'arbre : la leçon 9 a montré qu'elles disparaissent après avoir servi."},
+  {"q":"Sur la trace de « 2 + 3 * 4 », quelle est la première valeur produite par l'évaluateur, et pour quelle raison ?","a":["2, parce que le calcul ne commence qu'une fois une feuille atteinte : la descente, elle, ne produit rien","14, parce que la racine est le premier nœud visité et qu'un parcours produit une valeur dès qu'il entre dans un nœud","12, parce que la multiplication est la plus prioritaire et que l'évaluateur cherche donc l'opérateur le plus fort avant tout autre","3, parce que la descente s'engage toujours dans le sous-arbre le plus profond avant de s'occuper des feuilles les plus proches"],"correct":0,"explain":"Mesuré : la trace ouvre sur l'entrée dans le nœud binaire plus, puis sur l'entrée dans le nombre 2 ; la troisième ligne, qui rend 2, est la première valeur de toute l'exécution. Les valeurs sortent ensuite dans l'ordre 2, 3, 4, 12, 14. La racine est donc visitée en premier et calculée en dernier : c'est la définition du post-ordre."},
+  {"q":"Le texte « affiche inconnue » ne déclare nulle part le nom inconnue. À quel moment est-il refusé, et pourquoi ?","a":["À l'exécution : sa forme est irréprochable, et seule la recherche de la valeur du nom révèle qu'il n'existe pas","À l'analyse : la grammaire exige qu'un nom apparaisse dans une déclaration avant de pouvoir figurer dans une expression","À l'analyse : le module 2 tient la liste des noms déjà rencontrés et refuse tout identifiant qui n'y a pas encore été inscrit","Nulle part : le programme aboutit et affiche une valeur vide, faute d'un nom auquel rattacher une valeur connue de l'interprète"],"correct":0,"explain":"Mesuré : refusé à l'exécution, avec le message « variable inconnue : inconnue ». L'analyseur ne sait répondre qu'à une seule question, celle de la forme. Vérifier qu'un nom a été déclaré demande un état, donc une exécution — ou bien une passe supplémentaire sur l'arbre, qui serait l'analyse sémantique."},
+  {"q":"Dans un bloc exécutable de ce site, console.log reçoit directement le résultat de 12 / 0. Qu'affiche la page, et qu'est-ce que cela dit de la valeur ?","a":["null, alors que la valeur vaut Infinity : le formateur emploie JSON.stringify, qui ne sait pas écrire une valeur non finie","Infinity, puisque la valeur est bien de type number et que rien, dans le calcul lui-même, ne la dénature avant l'affichage","Une exception de division par zéro, levée par le moteur du navigateur au moment même où l'opération est évaluée dans le worker","0, la division rendant la valeur neutre du calcul dès lors qu'aucun résultat numérique fini ne peut être représenté ici"],"correct":0,"explain":"Mesuré, trois lignes de suite : brut, 12 / 0 affiche null ; passé par String, il affiche Infinity ; et dans un tableau, [1, 12 / 0, 3] devient [1,null,3]. typeof vaut pourtant number, et Number.isFinite rend false. Ce que le programme calcule et ce que tu lis ne sont pas la même chose."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"9"},"placeholder":"affiche le nombre de nœuds visités par l'évaluateur sur « affiche 1 + 2 * 3 - 4 / 2 »","hints":["Reprends l'évaluateur de la leçon tel quel, et ajoute une seule ligne : un compteur incrémenté à l'entrée de la fonction.","« affiche ... » est une instruction : l'expression à évaluer est le champ valeur de la première entrée de corps.","Ne compte pas les instructions ni la racine programme : la question porte sur les nœuds visités par evaluer, donc sur l'expression seule."],"link":{"href":"lecon-10.html","label":"Revoir « Descendre, puis calculer en remontant »"}},
+  {"type":"code","run":{"expect":"variable inconnue : x"},"placeholder":"affiche le message d'erreur que l'exécution de « soit x = x + 1 » produit","hints":["Le texte est accepté par l'analyseur : la faute ne peut donc apparaître qu'en exécutant. Enveloppe l'exécution dans un try et affiche e.message.","Dans le cas variable, teste env.has(n.nom) et lève une erreur dont le message nomme la variable manquante.","Le point décisif est l'ordre à l'intérieur de la déclaration : l'expression est évaluée AVANT que env.set ne crée la liaison."],"link":{"href":"lecon-10.html","label":"Revoir « Deux familles d'erreurs »"}},
+  {"type":"code","run":{"expect":"4"},"placeholder":"ajoute l'opérateur % à Brindille, puis affiche le résultat de « affiche 2 + 3 * 4 % 5 »","hints":["Il y a exactement trois endroits à toucher, et ils sont dans trois étages différents : le lexique, l'analyseur, l'évaluateur.","Le reste est un opérateur de même force que la multiplication : il rejoint donc la boucle de terme(), et non celle de expression().","Dans l'évaluateur, un cas de plus au même endroit que les quatre autres. Prédis le résultat avant de lancer : deux règles jouent, la priorité et l'associativité à gauche."],"link":{"href":"lecon-10.html","label":"Revoir « Une fonction, un cas par nœud »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Fais compter ses visites à l'évaluateur de cette leçon, puis affiche ce compteur pour <code>affiche 1 + 2 * 3 - 4 / 2</code>. Avant de lancer&nbsp;: note ta prédiction, et surtout <em>la liste</em> — nomme les nœuds un par un. Le chiffre seul ne prouve rien&nbsp;; la liste, si.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique + analyseur, recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// COMPTER LES NOEUDS VISITES : un compteur, une ligne de plus dans l'evaluateur.
+let visites = 0;
+function evaluer(n, env) {
+  visites++;                                   // &lt;-- la seule ligne ajoutee
+  if (n.type === "nombre")   return n.valeur;
+  if (n.type === "variable") {
+    if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom);
+    return env.get(n.nom);
+  }
+  if (n.type === "binaire") {
+    const g = evaluer(n.gauche, env), d = evaluer(n.droite, env);
+    if (n.op === "+") return g + d;
+    if (n.op === "-") return g - d;
+    if (n.op === "*") return g * d;
+    if (n.op === "/") return g / d;
+  }
+  throw new Error("noeud inconnu : " + n.type);
+}
+// « affiche ... » est une INSTRUCTION : on va chercher l'expression qu'elle porte.
+const arbre = analyser("affiche 1 + 2 * 3 - 4 / 2").corps[0].valeur;
+evaluer(arbre, new Map());
+console.log(visites);
+// affiche : 9</code></pre></figure>
+<p>Le compte est de <strong>9</strong>, et la liste vaut mieux que le chiffre&nbsp;: le nœud <code>-</code> de la racine, le nœud <code>+</code> à sa gauche, la feuille <code>1</code>, le nœud <code>*</code> avec ses feuilles <code>2</code> et <code>3</code>, puis le nœud <code>/</code> avec ses feuilles <code>4</code> et <code>2</code>. Cinq feuilles, quatre nœuds internes&nbsp;: neuf. Deux vérifications valent la peine. Le nombre de visites est exactement le nombre de nœuds, chacun étant évalué une fois et une seule&nbsp;; cela cesserait d'être vrai si un sous-arbre pouvait être partagé par deux parents, ce que notre analyseur ne produit jamais. Et la racine est la soustraction, non l'addition, parce que <code>+</code> et <code>-</code> sont au même étage et que la boucle de <code>expression()</code> empile vers la gauche.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris l'interprète complet, environnement compris, puis fais-lui exécuter <code>soit x = x + 1</code>. Ce texte est accepté par l'analyseur&nbsp;: c'est à l'exécution qu'il faut l'attraper. Affiche le message d'erreur obtenu, et rien d'autre. Avant de lancer&nbsp;: quel nom sera cité, et qu'est-ce qui, dans <em>l'ordre des deux opérations</em> de la déclaration, décide de la réponse&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique + analyseur, recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// LIRE UN NOM AVANT DE L'AVOIR DECLARE : l'analyse dit oui, l'execution dit non.
+function evaluer(n, env) {
+  if (n.type === "nombre")   return n.valeur;
+  if (n.type === "variable") {
+    if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom);
+    return env.get(n.nom);
+  }
+  const g = evaluer(n.gauche, env), d = evaluer(n.droite, env);
+  return n.op === "+" ? g + d : n.op === "-" ? g - d : n.op === "*" ? g * d : g / d;
+}
+function executer(src) {
+  const env = new Map(), ecran = [];
+  for (const i of analyser(src).corps) {
+    // L'ORDRE EST LE POINT : on evalue l'expression AVANT de creer la liaison.
+    if (i.type === "declaration") env.set(i.nom, evaluer(i.valeur, env));
+    else ecran.push(evaluer(i.valeur, env));
+  }
+  return ecran;
+}
+let message = "aucune erreur";
+try { executer("soit x = x + 1"); }
+catch (e) { message = e.message; }
+console.log(message);
+// affiche : variable inconnue : x</code></pre></figure>
+<p>Le message est <code>variable inconnue : x</code>, et tout se joue sur une ligne&nbsp;: <code>env.set(i.nom, evaluer(i.valeur, env))</code>. Les arguments d'un appel étant calculés avant l'appel, <code>evaluer</code> s'exécute <em>d'abord</em> et <code>env.set</code> <em>ensuite</em>&nbsp;; au moment où l'on cherche <code>x</code>, la liaison n'existe pas encore. Le refus est une conséquence de l'ordre, pas d'une règle écrite quelque part contre les définitions récursives. Retourne les deux opérations et le comportement change du tout au tout&nbsp;: <code>env.set(i.nom, undefined)</code> puis évaluation donnerait un programme qui ne proteste plus et calcule <code>undefined + 1</code>. C'est exactement le genre de choix qu'un langage doit faire consciemment, et écrire dans sa documentation.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Brindille se dote d'un cinquième opérateur, le reste de la division entière, écrit <code>%</code>. Il a la <strong>même force</strong> que <code>*</code> et <code>/</code>, et il est <strong>associatif à gauche</strong> comme eux. Étends le langage et affiche le résultat de <code>affiche 2 + 3 * 4 % 5</code>. Trois questions avant d'écrire une ligne&nbsp;: où le caractère <code>%</code> doit-il entrer pour que le lexique le reconnaisse&nbsp;? dans quelle boucle de l'analyseur doit-il être accepté&nbsp;? et combien de lignes l'évaluateur gagne-t-il&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// TROIS RETOUCHES POUR UN OPERATEUR DE PLUS : le lexique, l'analyseur, l'evaluateur.
+// 1. le lexique : le % entre dans la classe de caracteres de la regle SYMBOLE.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=%]/y },      // &lt;-- le % etait absent
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  // 2. l'analyseur : le % rejoint * et / dans la boucle de terme(), donc au MEME etage.
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/" || voir().valeur === "%") {
+      const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese en position " + j.pos); }
+  return programme();
+}
+// 3. l'evaluateur : un cas de plus, exactement au meme endroit que les quatre autres.
+function evaluer(n, env) {
+  if (n.type === "nombre")   return n.valeur;
+  if (n.type === "variable") {
+    if (!env.has(n.nom)) throw new Error("variable inconnue : " + n.nom);
+    return env.get(n.nom);
+  }
+  const g = evaluer(n.gauche, env), d = evaluer(n.droite, env);
+  if (n.op === "+") return g + d;
+  if (n.op === "-") return g - d;
+  if (n.op === "*") return g * d;
+  if (n.op === "/") return g / d;
+  if (n.op === "%") return g % d;
+  throw new Error("operateur inconnu : " + n.op);
+}
+console.log(evaluer(analyser("affiche 2 + 3 * 4 % 5").corps[0].valeur, new Map()));
+
+// affiche : 4</code></pre></figure>
+<p>Le résultat est <strong>4</strong>, et il fait travailler les deux règles de la leçon 9 en même temps. La priorité&nbsp;: <code>*</code> et <code>%</code> étant tous deux dans la boucle de <code>terme()</code>, ils sont plus bas que <code>+</code>, donc <code>3 * 4 % 5</code> forme un bloc que l'addition ne peut pas couper. L'associativité&nbsp;: dans ce bloc, deux opérateurs de même force se suivent et la boucle empile vers la gauche — on calcule <code>3 * 4</code>, puis le reste de ce produit par 5, puis on ajoute 2. Les trois retouches illustrent la propriété la plus utile de l'architecture en étages&nbsp;: <strong>chacune vit dans une seule couche et ignore les deux autres</strong>. Un caractère dans la classe <code>SYMBOLE</code> — sans lui, l'erreur serait <em>lexicale</em> et parlerait d'un caractère inattendu, pas d'un opérateur. Une valeur de plus dans la boucle de <code>terme()</code> — la mettre dans <code>expression()</code> marcherait aussi bien et donnerait un autre nombre. Et un <code>if</code> de plus dans l'évaluateur — l'oublier ne provoquerait aucune erreur visible, le dernier <code>if</code> de la chaîne attrapant le cas et rendant une division. Meilleur argument possible en faveur d'une clause finale qui proteste.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons">
+                <a class="lesson-nav__link lesson-nav__link--prev" href="lecon-09.html">
+                  <span class="lesson-nav__dir">← Précédent</span>
+                  <span class="lesson-nav__title">Priorité, associativité et arbre de syntaxe abstraite</span>
+                </a>
+                <a class="lesson-nav__link lesson-nav__link--next" href="lecon-11.html">
+                  <span class="lesson-nav__dir">Suivant →</span>
+                  <span class="lesson-nav__title">Une machine à pile, et le code qui la nourrit</span>
+                </a>
+              </nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+  </body>
+</html>
+
+
+
+
+
+
+

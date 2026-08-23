@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Une machine à pile, et le code qui la nourrit — Leçon 11 · Cours Compilation — Syntaxe</title>
+    <meta name="description" content="Quitter l'arbre pour une liste plate d'instructions : huit opcodes, un générateur qui refait le parcours post-ordre de la leçon 10 mais qui émet au lieu de calculer, et une machine de vingt lignes qui ignore tout de la grammaire. Le programme de Brindille compilé en 10 instructions, hauteur de pile maximale 2 et 0 en fin de programme — et pourquoi 1 + 2 + 3 + 4 + 5 n'empile jamais plus de 2 valeurs là où 1 + (2 + (3 + (4 + 5))) en empile 5." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="compilation" data-lesson="lecon-11.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Compilation</a></li>
+            <li aria-current="page">Leçon 11</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Évaluer et générer — Leçon 11</p>
+              <h1 class="lesson-header__title">Une machine à pile, et le code qui la nourrit</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~85 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : la leçon 10 de ce cours — l'arbre parcouru et évalué</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>dire ce qu'une <strong>liste plate d'instructions</strong> permet et qu'un arbre en mémoire interdit&nbsp;;</li>
+                  <li>choisir entre une machine <strong>à pile</strong> et une machine <strong>à registres</strong>, et expliquer ce que le second choix oblige à faire&nbsp;;</li>
+                  <li>écrire un <strong>générateur de code</strong> en reprenant, geste pour geste, le parcours de l'évaluateur de la leçon 10&nbsp;;</li>
+                  <li>écrire la <strong>machine</strong> qui exécute ce code, et contrôler le bytecode <em>sans l'exécuter</em> grâce à l'<strong>invariant de pile</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-10.html">leçon 10</a> s'est achevée sur un résultat confortable et légèrement gênant&nbsp;: l'arbre suffit. Un évaluateur d'une trentaine de lignes, un cas par sorte de nœud, une table qui retient les variables, et Brindille tourne&nbsp;: le programme de quatre lignes affiche <strong>38</strong> puis <strong>26</strong>, la priorité tombe juste, et les parenthèses, absentes de l'arbre depuis la <a href="lecon-09.html">leçon 9</a>, ne manquent à personne. On pourrait s'arrêter là et appeler le résultat un interprète, parce que c'en est un.</p>
+<p>C'est justement parce que cela marche que la question suivante mérite d'être posée&nbsp;: <em>pourquoi produire encore autre chose&nbsp;?</em> Parce que l'arbre n'est pas un objet ordinaire&nbsp;: c'est un enchevêtrement de petits objets qui se pointent les uns les autres, vivant dans la mémoire d'un seul programme et pour la seule durée de son exécution. Tant qu'on ne veut que le parcourir tout de suite, cette forme est parfaite&nbsp;; dès qu'on veut le <em>ranger</em>, le <em>transmettre</em>, le <em>relire plus tard</em> ou le <em>transformer</em>, elle devient une gêne.</p>
+<p>Cette leçon construit donc la sortie&nbsp;: une liste plate d'instructions pour une machine imaginaire, et la machine elle-même. Nous choisirons une architecture, fixerons un jeu de huit instructions qui est un <em>contrat</em>, écrirons le générateur — l'évaluateur de la leçon 10 dont un seul geste a changé — puis la machine. Et nous regarderons la pile monter puis redescendre, parce que c'est là que se cache la mesure la plus surprenante du module.</p>
+
+<h2>Pourquoi quitter l'arbre</h2>
+<p>L'arbre de la <a href="lecon-09.html">leçon 9</a> est un objet <strong>ramifié</strong>&nbsp;: chaque nœud binaire porte deux champs qui ne sont pas des valeurs mais des <em>références</em> vers d'autres nœuds. C'était ce qu'il fallait pour inscrire la priorité et l'associativité dans une forme. Mais trois conséquences très concrètes en découlent.</p>
+<p><strong>Un&nbsp;: on ne peut pas l'écrire tel quel dans un fichier.</strong> Un fichier est une suite d'octets, parfaitement linéaire&nbsp;; un arbre ne l'est pas. Pour le ranger, il faut le <strong>sérialiser</strong> — inventer une convention qui aplatit les liens, puis écrire le programme inverse. Il faut donc <em>ajouter</em> un format, et un format se documente, se versionne et se casse. Une liste d'instructions, elle, est déjà une suite.</p>
+<p><strong>Deux&nbsp;: on ne peut pas le lire de haut en bas.</strong> L'évaluateur de la leçon 10 commence par le nœud <code>+</code> de <code>2 + 3 * 4</code> mais ne peut rien en faire tout de suite&nbsp;: il doit descendre à gauche, puis à droite, puis remonter. L'ordre dans lequel les calculs ont lieu n'existe que dans la <em>pile d'appels</em> de la fonction qui parcourt, et disparaît avec elle. Un arbre ne se «&nbsp;lit&nbsp;» donc pas, il se traverse — et la traversée est un programme à part entière, à réécrire pour chaque outil.</p>
+<p><strong>Trois&nbsp;: on ne le transforme pas facilement.</strong> Repérer deux calculs identiques pour n'en garder qu'un, sur une liste plate, c'est demander&nbsp;: «&nbsp;ces deux fenêtres de trois instructions sont-elles les mêmes&nbsp;?&nbsp;». Sur un arbre&nbsp;: «&nbsp;ces deux sous-arbres sont-ils structurellement égaux, sachant qu'il faudra remplacer une référence chez un parent que le nœud ne connaît pas&nbsp;». Plus lourd, donc — et il le reste pour <em>chacune</em> des transformations qu'on ajoutera.</p>
+<p>Ces trois besoins portent un nom collectif&nbsp;: la <a href="lecon-02.html">leçon 2</a> les a rangés sous l'étiquette <strong>représentation intermédiaire</strong>, cette forme volontairement pauvre qui s'intercale entre les analyses et la génération de code. Ce que nous fabriquons ici en est une, taillée pour Brindille — la leçon 2 décrivait une case dans un schéma, nous allons l'écrire. Une précision pour finir&nbsp;: rien de tout cela ne promet à soi seul un programme <em>plus rapide</em>, et la <a href="lecon-01.html">leçon 1</a> avait déjà averti que sa démonstration jouet ne mesurait aucun gain de vitesse.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">L'arbre ne disparaît pas&nbsp;: il cesse d'être nécessaire</p><p>«&nbsp;Quitter l'arbre&nbsp;» ne veut pas dire «&nbsp;l'arbre était une erreur&nbsp;». Il reste la bonne forme pour tout ce qui touche au <em>sens</em> du programme&nbsp;: c'est sur lui qu'on vérifie les types, qu'on résout les noms, qu'on repère une variable déclarée deux fois — ces questions ont besoin de la structure pour être seulement posées. Le terme du métier est <em>abaissement</em>&nbsp;: on <em>abaisse</em> une représentation vers une autre, plus proche de la machine et plus pauvre en information. Chaque abaissement jette quelque chose, définitivement&nbsp;; tout l'art consiste à ne le faire qu'une fois que plus personne n'a besoin de ce qu'on jette.</p></div></div>
+
+<h2>Une pile, ou des registres&nbsp;?</h2>
+<p>Avant d'écrire la moindre instruction, il faut trancher une question d'architecture&nbsp;: <em>où les résultats intermédiaires attendent-ils leur tour&nbsp;?</em> Dans <code>2 + 3 * 4</code>, la valeur 12 existe un instant — née de la multiplication, consommée par l'addition —, et il faut bien qu'elle soit quelque part. Toute l'histoire des machines virtuelles tient dans les deux réponses possibles.</p>
+<p>La première est la <strong>pile</strong>&nbsp;: une seule réserve, où l'on ne peut ajouter et retirer qu'à un bout. Personne ne choisit d'emplacement, personne ne nomme rien&nbsp;: la position est implicite, c'est toujours «&nbsp;en haut&nbsp;». La seconde est celle des <strong>registres</strong>&nbsp;: des cases numérotées, chaque instruction disant explicitement d'où elle lit et où elle écrit. Au lieu de <code>MUL</code>, on écrit <code>MUL r1, r1, r2</code>&nbsp;: prends <code>r1</code> et <code>r2</code>, multiplie, range dans <code>r1</code>. C'est la forme qu'ont les vraies machines.</p>
+<p>La façon honnête de choisir n'est pas d'invoquer l'élégance mais de traduire le <em>même</em> arbre dans les deux formes et de compter. Le générateur à registres doit tenir un compteur de registres libres, ce que la pile lui épargne. Le cas <code>LIRE</code> figure dans le code pour être complet&nbsp;: aucune des deux expressions testées ne contient de nom, il ne sera pas exercé.</p>
+
+<figure class="code-block" data-file="registres.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- POURQUOI UNE PILE, ET PAS DES REGISTRES : le meme calcul, les deux facons.
+const OPS = { "+": "ADD", "-": "SUB", "*": "MUL", "/": "DIV" };
+function versPile(n, code) {
+  code = code || [];
+  if (n.type === "nombre")   { code.push("CONST " + n.valeur); return code; }
+  if (n.type === "variable") { code.push("CHARGE " + n.nom);   return code; }
+  versPile(n.gauche, code); versPile(n.droite, code); code.push(OPS[n.op]); return code;
+}
+// Version a registres : chaque resultat intermediaire doit recevoir un NUMERO.
+function versRegistres(n, code, libre) {
+  code = code || []; libre = libre || { n: 0 };
+  const r = libre.n++;
+  if (n.type === "nombre")   { code.push("CHARGER r" + r + ", " + n.valeur); return { code, r, max: libre.n }; }
+  if (n.type === "variable") { code.push("LIRE    r" + r + ", " + n.nom);    return { code, r, max: libre.n }; }
+  libre.n--;                                  // le noeud lui-meme n'occupe pas de registre
+  const g = versRegistres(n.gauche, code, libre);
+  const d = versRegistres(n.droite, code, libre);
+  code.push(OPS[n.op] + "     r" + g.r + ", r" + g.r + ", r" + d.r);
+  libre.n = d.r;                              // le registre de droite redevient libre
+  return { code, r: g.r, max: Math.max(g.max, d.max) };
+}
+// On compile l EXPRESSION seule : ni AFFICHE, ni RANGE, pour comparer ce qui est comparable.
+for (const src of ["2 + 3 * 4", "1 + (2 + (3 + (4 + 5)))"]) {
+  const arbre = analyser("affiche " + src).corps[0].valeur;
+  const p = versPile(arbre);
+  const etat = { n: 0 };
+  const r = versRegistres(arbre, [], etat);
+  console.log(JSON.stringify(src));
+  console.log("  pile      : " + p.length + " instructions -&gt; " + p.join(" | "));
+  console.log("  registres : " + r.code.length + " instructions, " + r.max + " registres");
+  r.code.forEach((l) =&gt; console.log("      " + l));
+  console.log("");
+}</code></pre></figure>
+
+<figure class="code-block" data-file="registres.txt"><pre><code class="language-plaintext">"2 + 3 * 4"
+  pile      : 5 instructions -&gt; CONST 2 | CONST 3 | CONST 4 | MUL | ADD
+  registres : 5 instructions, 3 registres
+      CHARGER r0, 2
+      CHARGER r1, 3
+      CHARGER r2, 4
+      MUL     r1, r1, r2
+      ADD     r0, r0, r1
+
+"1 + (2 + (3 + (4 + 5)))"
+  pile      : 9 instructions -&gt; CONST 1 | CONST 2 | CONST 3 | CONST 4 | CONST 5 | ADD | ADD | ADD | ADD
+  registres : 9 instructions, 5 registres
+      CHARGER r0, 1
+      CHARGER r1, 2
+      CHARGER r2, 3
+      CHARGER r3, 4
+      CHARGER r4, 5
+      ADD     r3, r3, r4
+      ADD     r2, r2, r3
+      ADD     r1, r1, r2
+      ADD     r0, r0, r1</code></pre></figure>
+
+<p>Prends la première moitié, celle de <code>2 + 3 * 4</code>. Le verdict n'est pas celui qu'on attend&nbsp;: <strong>5 instructions des deux côtés</strong>. La pile ne fait gagner aucune instruction — et l'argument «&nbsp;la pile, c'est plus court&nbsp;» ne tient pas davantage sur la seconde expression&nbsp;: <strong>9 instructions</strong> des deux côtés, encore. La différence est visible à l'œil nu dans la <em>forme</em> des lignes.</p>
+<p>Du côté pile, une instruction s'écrit <code>CONST 2</code>, ou même <code>MUL</code> tout court. Du côté registres, <code>CHARGER r2, 4</code> et <code>MUL r1, r1, r2</code>&nbsp;: la version à registres doit <strong>nommer chaque résultat intermédiaire</strong>. Ce n'est pas un détail de notation mais une décision à prendre à chaque nœud, et à prendre <em>correctement</em>&nbsp;: quel numéro attribuer, lequel redevient libre et quand. Regarde la ligne <code>libre.n = d.r;</code>&nbsp;: retire-la et le programme reste lisible, mais il consomme un registre par <em>feuille</em> sans jamais en rendre. Le piège, mesuré, est que sur les deux expressions ci-dessus cela <strong>ne change rien</strong> — 3 et 5 dans les deux cas&nbsp;; l'écart n'apparaît que sur un arbre penché à gauche, où <code>1 + 2 + 3 + 4 + 5</code> passe de <strong>2</strong> registres à <strong>5</strong>.</p>
+<p>Le second chiffre dit le reste&nbsp;: <strong>3</strong> registres pour <code>2 + 3 * 4</code>, <strong>5</strong> pour <code>1 + (2 + (3 + (4 + 5)))</code>. Le nombre nécessaire n'est donc une propriété ni du langage ni de la longueur du programme, mais de la <em>forme de l'expression</em>&nbsp;: plus elle est emboîtée, plus elle en réclame, et rien n'en borne le nombre.</p>
+<p>C'est ici que la théorie rencontre le réel&nbsp;: <strong>une vraie machine a un nombre fixe de registres, et il est petit.</strong> Quand une expression en réclame plus qu'il n'en existe, le générateur doit choisir des valeurs à <em>déverser</em> en mémoire, écrire les instructions qui les rangent, puis celles qui les relisent au bon moment. Ce problème porte un nom, l'<strong>allocation de registres</strong>, que la <a href="lecon-02.html">leçon 2</a> annonçait comme l'une des parties les plus délicates de la partie arrière&nbsp;: un problème combinatoire dont les compilateurs industriels n'attaquent que des variantes simplifiées.</p>
+<p>La pile, elle, n'a jamais rien à nommer&nbsp;: pas d'emplacement à choisir, donc pas d'allocation ni de déversement. Cela se lit dans la longueur des deux fonctions&nbsp;: <code>versPile</code> tient en quatre lignes utiles sans aucun état&nbsp;; <code>versRegistres</code> en fait le double et traîne un compteur, un numéro rendu et un maximum. <strong>Voilà la vraie raison du choix</strong> — celui de Java, C#, Python et WebAssembly, et le nôtre pour Brindille.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que cette mesure ne dit pas — et pourquoi des machines à registres existent</p><p>Notre comptage compare deux <em>générateurs</em>, sur deux expressions, à granularité d'instruction égale&nbsp;: ni deux vitesses d'exécution, ni deux tailles de fichier. Il serait malhonnête de lui faire dire que la pile gagne partout. Des machines virtuelles à registres existent et ont été choisies en connaissance de cause — Lua en est une, la machine Dalvik d'Android en était une —, leur argument étant que la pile impose beaucoup de mouvements de valeurs qu'un registre rend inutiles. Le compromis&nbsp;: la pile déplace la difficulté du générateur vers l'exécution, les registres font l'inverse. Ce cours écrit un générateur&nbsp;; il choisit donc de le simplifier.</p></div></div>
+
+<h2>Le jeu d'instructions&nbsp;: un contrat en huit lignes</h2>
+<p>Choisir la pile ne suffit pas&nbsp;: il faut dire <em>exactement</em> quelles instructions existent et ce que chacune fait. Cette liste s'appelle un <strong>jeu d'instructions</strong>, chaque élément un <strong>opcode</strong> — de l'anglais <em>operation code</em>. Brindille en aura huit&nbsp;: deux pour faire entrer une valeur, une pour la ranger sous un nom, quatre pour l'arithmétique, une pour l'écran.</p>
+<p>Le mot important est <strong>contrat</strong>. Ce qui suit n'est une description ni de la machine ni du générateur&nbsp;: c'est ce que les deux devront respecter <em>séparément</em>, sans jamais se lire l'un l'autre — et ce découplage, lui seul, donne son intérêt à un bytecode. Le contrat de chaque opcode tient en trois points&nbsp;: ce qu'il retire de la pile, ce qu'il y remet, et l'argument qu'il porte s'il en a un. La figure les range par leur effet sur la hauteur, la grandeur qui servira bientôt à vérifier du code sans l'exécuter.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 312" role="img" aria-label="Les huit instructions de Brindille rangées en trois panneaux, selon leur effet sur la hauteur de la pile. Le panneau de gauche est intitulé « elles empilent, une valeur de plus », porte l'étiquette plus un, et contient les deux instructions CONST n et CHARGE nom ; son dessin montre à gauche une pile de deux cases vides, une flèche vers la droite, et à droite la même pile surmontée d'une troisième case mise en évidence et portant la lettre n. Le panneau du milieu est intitulé « elles dépilent, une valeur de moins », porte l'étiquette moins un, et contient les deux instructions RANGE nom et AFFICHE ; son dessin montre à gauche une pile de trois cases dont la plus haute est mise en évidence et porte la lettre v, une flèche vers la droite, et à droite la même pile réduite à ses deux cases du bas. Le panneau de droite est intitulé « elles combinent, deux valeurs puis une », porte l'étiquette moins un net, et contient les quatre instructions ADD, SUB, MUL et DIV ; son dessin montre à gauche une pile de trois cases dont les deux plus hautes sont mises en évidence et portent les lettres g puis d de bas en haut, une flèche vers la droite, et à droite une pile de deux cases dont la plus haute est mise en évidence et porte la lettre r. Chaque pile repose sur un trait qui figure le fond de la pile, et les deux états sont légendés avant et après. Deux lignes de conclusion précisent que sur une opération binaire le sommet de la pile est l'opérande de droite, celui qui sort le premier, et que RANGE range la valeur en mémoire tandis qu'AFFICHE l'envoie à l'écran, la valeur quittant la pile dans les deux cas.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Les huit instructions, rangées par leur effet sur la pile</text>
+
+    <rect class="d-frame" x="8" y="34" width="200" height="238" rx="8" />
+    <text class="d-label" x="108" y="54" text-anchor="middle" font-size="10.5">Elles empilent</text>
+    <text class="d-label" x="108" y="68" text-anchor="middle" font-size="10.5">une valeur de plus</text>
+    <text class="d-tag" x="108" y="88" text-anchor="middle" font-size="11">+1</text>
+    <text class="d-text" x="108" y="110" text-anchor="middle" font-size="10">CONST n</text>
+    <text class="d-text" x="108" y="126" text-anchor="middle" font-size="10">CHARGE nom</text>
+    <rect class="d-box" x="44" y="222" width="36" height="22" rx="4" />
+    <rect class="d-box" x="44" y="198" width="36" height="22" rx="4" />
+    <path class="d-line" d="M40 246 L84 246" fill="none" />
+    <path class="d-line" d="M88 210 L128 210" fill="none" />
+    <path class="d-line" d="M122 206 L128 210 L122 214" fill="none" />
+    <rect class="d-box" x="136" y="222" width="36" height="22" rx="4" />
+    <rect class="d-box" x="136" y="198" width="36" height="22" rx="4" />
+    <rect class="d-accent" x="136" y="174" width="36" height="22" rx="4" />
+    <text class="d-text" x="154" y="189" text-anchor="middle" font-size="10">n</text>
+    <path class="d-line" d="M132 246 L176 246" fill="none" />
+    <text class="d-mut" x="62" y="262" text-anchor="middle" font-size="9">avant</text>
+    <text class="d-mut" x="154" y="262" text-anchor="middle" font-size="9">après</text>
+
+    <rect class="d-frame" x="220" y="34" width="200" height="238" rx="8" />
+    <text class="d-label" x="320" y="54" text-anchor="middle" font-size="10.5">Elles dépilent</text>
+    <text class="d-label" x="320" y="68" text-anchor="middle" font-size="10.5">une valeur de moins</text>
+    <text class="d-tag" x="320" y="88" text-anchor="middle" font-size="11">−1</text>
+    <text class="d-text" x="320" y="110" text-anchor="middle" font-size="10">RANGE nom</text>
+    <text class="d-text" x="320" y="126" text-anchor="middle" font-size="10">AFFICHE</text>
+    <rect class="d-box" x="256" y="222" width="36" height="22" rx="4" />
+    <rect class="d-box" x="256" y="198" width="36" height="22" rx="4" />
+    <rect class="d-accent" x="256" y="174" width="36" height="22" rx="4" />
+    <text class="d-text" x="274" y="189" text-anchor="middle" font-size="10">v</text>
+    <path class="d-line" d="M252 246 L296 246" fill="none" />
+    <path class="d-line" d="M300 210 L340 210" fill="none" />
+    <path class="d-line" d="M334 206 L340 210 L334 214" fill="none" />
+    <rect class="d-box" x="348" y="222" width="36" height="22" rx="4" />
+    <rect class="d-box" x="348" y="198" width="36" height="22" rx="4" />
+    <path class="d-line" d="M344 246 L388 246" fill="none" />
+    <text class="d-mut" x="274" y="262" text-anchor="middle" font-size="9">avant</text>
+    <text class="d-mut" x="366" y="262" text-anchor="middle" font-size="9">après</text>
+
+    <rect class="d-frame" x="432" y="34" width="200" height="238" rx="8" />
+    <text class="d-label" x="532" y="54" text-anchor="middle" font-size="10.5">Elles combinent</text>
+    <text class="d-label" x="532" y="68" text-anchor="middle" font-size="10.5">deux valeurs, puis une</text>
+    <text class="d-tag" x="532" y="88" text-anchor="middle" font-size="11">−1 net</text>
+    <text class="d-text" x="532" y="110" text-anchor="middle" font-size="10">ADD   SUB</text>
+    <text class="d-text" x="532" y="126" text-anchor="middle" font-size="10">MUL   DIV</text>
+    <rect class="d-box" x="468" y="222" width="36" height="22" rx="4" />
+    <rect class="d-accent" x="468" y="198" width="36" height="22" rx="4" />
+    <text class="d-text" x="486" y="213" text-anchor="middle" font-size="10">g</text>
+    <rect class="d-accent" x="468" y="174" width="36" height="22" rx="4" />
+    <text class="d-text" x="486" y="189" text-anchor="middle" font-size="10">d</text>
+    <path class="d-line" d="M464 246 L508 246" fill="none" />
+    <path class="d-line" d="M512 210 L552 210" fill="none" />
+    <path class="d-line" d="M546 206 L552 210 L546 214" fill="none" />
+    <rect class="d-box" x="560" y="222" width="36" height="22" rx="4" />
+    <rect class="d-accent" x="560" y="198" width="36" height="22" rx="4" />
+    <text class="d-text" x="578" y="213" text-anchor="middle" font-size="10">r</text>
+    <path class="d-line" d="M556 246 L600 246" fill="none" />
+    <text class="d-mut" x="486" y="262" text-anchor="middle" font-size="9">avant</text>
+    <text class="d-mut" x="578" y="262" text-anchor="middle" font-size="9">après</text>
+
+    <text class="d-mut" x="320" y="290" text-anchor="middle" font-size="9">Sur une opération binaire, le sommet de la pile est l'opérande de DROITE : c'est lui qui sort le premier.</text>
+    <text class="d-mut" x="320" y="304" text-anchor="middle" font-size="9">RANGE range la valeur en mémoire, AFFICHE l'envoie à l'écran : dans les deux cas, elle quitte la pile.</text>
+  </svg>
+  <figcaption>Trois familles, et pas une de plus. Ce classement donne directement la règle de calcul de la hauteur de pile, qui servira à contrôler un bytecode <em>sans l'exécuter</em>. Remarque que la case ajoutée ou retirée est toujours celle du haut&nbsp;: c'est la seule chose qu'une pile sache faire.</figcaption>
+</figure>
+
+<p>La même chose, écrite ligne à ligne, avec la représentation exacte que nous emploierons en mémoire&nbsp;:</p>
+
+<figure class="code-block" data-file="jeu-instructions.txt"><pre><code class="language-plaintext">opcode        depile  empile  hauteur   ce que ca fait
+------------  ------  ------  -------   -------------------------------------------
+CONST n         0       1       +1      pose la valeur n sur la pile
+CHARGE nom      0       1       +1      pose la valeur rangee sous « nom »
+RANGE nom       1       0       -1      retire le sommet, le range sous « nom »
+ADD             2       1       -1      retire d puis g, pose g + d
+SUB             2       1       -1      retire d puis g, pose g - d
+MUL             2       1       -1      retire d puis g, pose g * d
+DIV             2       1       -1      retire d puis g, pose g / d
+AFFICHE         1       0       -1      retire le sommet, l'envoie a l'ecran
+
+Une instruction est un TABLEAU : ["CONST", 12] · ["RANGE", "prix"] · ["ADD"]
+Un programme est un tableau d'instructions, lu du premier au dernier.</code></pre></figure>
+
+<p>Trois remarques sur ce tableau, qui vont toutes servir.</p>
+<p><strong>L'ordre des opérandes.</strong> Une opération binaire retire <em>d</em> puis <em>g</em>, parce que la pile ne rend jamais que son sommet et que le sommet est ce qui a été empilé en dernier — l'opérande de droite. Sur <code>ADD</code> et <code>MUL</code>, se tromper d'ordre ne se voit pas&nbsp;; sur <code>SUB</code> et <code>DIV</code>, l'erreur est grossière&nbsp;: <code>10 - 3</code> rendrait <code>-7</code>. La seule parade est de ne jamais tester un générateur uniquement avec des additions.</p>
+<p><strong>L'argument.</strong> Trois opcodes sur huit en portent un&nbsp;: <code>CONST</code> un nombre, <code>CHARGE</code> et <code>RANGE</code> un nom. Les cinq autres n'en ont aucun, tout ce dont ils ont besoin étant déjà sur la pile. D'où la représentation par un tableau plutôt que par un objet&nbsp;: <code>["ADD"]</code> et <code>["CONST", 12]</code> ont la même forme et s'écrivent dans un fichier sans effort.</p>
+<p><strong>Ce qui n'y est pas.</strong> Ni saut, ni comparaison, ni appel de fonction, parce que Brindille n'a ni condition, ni boucle, ni fonction&nbsp;: la <a href="lecon-09.html">leçon 9</a> a fixé sa grammaire et elle s'arrête là. L'absence n'est pas une lacune de la machine, c'est la conséquence exacte de la grammaire.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un jeu d'instructions se fige, et c'est là toute sa valeur</p><p>La tentation, quand un cas se présente mal, est d'ajouter un opcode «&nbsp;juste pour celui-là&nbsp;». Elle est mauvaise pour une raison concrète&nbsp;: <strong>chaque opcode ajouté doit être implémenté partout</strong> — dans la machine, mais aussi dans le vérificateur, le désassembleur, le calcul de hauteur de pile, les transformations de la leçon 12. Un jeu d'instructions est une <em>interface publique</em>&nbsp;: le jour où un fichier de bytecode a été écrit avec, on ne peut plus en retirer un opcode sans casser les fichiers existants. D'où le numéro de version que portent les vrais formats, et le refus fréquent d'un fichier compilé pour la version précédente.</p></div></div>
+
+<h2>Le générateur&nbsp;: le même parcours, mais il émet</h2>
+<p>Voici le moment où l'on s'attend à un gros programme, et où il n'y en a pas. Le générateur de Brindille n'est pas un nouveau parcours d'arbre&nbsp;: c'est <em>exactement</em> celui de la <a href="lecon-10.html">leçon 10</a>, avec un seul geste remplacé. Mets les deux fonctions côte à côte.</p>
+
+<figure class="code-block" data-file="deux-parcours.txt"><pre><code class="language-plaintext">L'EVALUATEUR (lecon 10) : il CALCULE           LE GENERATEUR (lecon 11) : il EMET
+---------------------------------------------  ---------------------------------------------
+function evaluer(n, env) {                     function expr(n) {
+  if (n.type === "nombre")                       if (n.type === "nombre")
+    return n.valeur;                               { emettre("CONST", n.valeur); return; }
+  if (n.type === "variable")                     if (n.type === "variable")
+    return env.get(n.nom);                         { emettre("CHARGE", n.nom); return; }
+  if (n.type === "binaire") {                    if (n.type === "binaire") {
+    const g = evaluer(n.gauche, env);              expr(n.gauche);
+    const d = evaluer(n.droite, env);              expr(n.droite);
+    return calculer(n.op, g, d);                   emettre(OPS[n.op]); return;
+  }                                              }
+}                                              }
+
+Meme forme, meme ordre de visite, meme recursion. Trois lignes changent :
+  « rendre une valeur »   devient   « emettre une instruction ».</code></pre></figure>
+
+<p>L'évaluateur est resserré pour que les colonnes s'alignent — son contrôle de variable inconnue et ses quatre branches d'opérateur sont remplacés par un appel à <code>calculer</code> —, mais la charpente est intacte&nbsp;: trois questions dans le même ordre, un appel à gauche puis un appel à droite, une action au retour. C'est le parcours <strong>post-ordre</strong> que la leçon 10 a nommé. Ce que le générateur change n'est pas <em>quand</em> il agit mais <em>ce qu'il fait</em>&nbsp;: là où l'évaluateur rendait une valeur, il ajoute une instruction à la fin d'une liste et ne rend rien.</p>
+<p>Ce «&nbsp;ne rend rien&nbsp;» explique tout le reste. Dans l'évaluateur, l'assemblage se faisait dans la pile d'appels de JavaScript&nbsp;; dans le générateur, plus rien ne remonte, chaque appel <em>laisse une trace</em> dans un tableau commun, et l'ordre de ces traces raconte à lui seul l'ordre dans lequel les calculs devront avoir lieu. La récursion n'a pas disparu, elle a été <em>écrite</em> — et c'est pour cela que la pile est le bon choix&nbsp;: à l'exécution, la pile de la machine rejouera le rôle de la pile d'appels du parcours.</p>
+<p>Le programme complet ajoute autour de <code>expr</code> une boucle sur les instructions du source — une déclaration se termine par un <code>RANGE</code>, un affichage par un <code>AFFICHE</code> — et une fonction d'impression. Rien d'autre.</p>
+
+<figure class="code-block" data-file="gen-decouverte.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+// ------- LE GENERATEUR : meme parcours que l'evaluateur, mais il EMET au lieu de calculer.
+function compiler(prog) {
+  const code = [];
+  const emettre = (op, arg) =&gt; code.push(arg === undefined ? [op] : [op, arg]);
+  const OPS = { "+": "ADD", "-": "SUB", "*": "MUL", "/": "DIV" };
+  function expr(n) {
+    if (n.type === "nombre")   { emettre("CONST", n.valeur); return; }
+    if (n.type === "variable") { emettre("CHARGE", n.nom);   return; }
+    if (n.type === "binaire")  { expr(n.gauche); expr(n.droite); emettre(OPS[n.op]); return; }
+    throw new Error("noeud inconnu : " + n.type);
+  }
+  for (const i of prog.corps) {
+    if (i.type === "declaration") { expr(i.valeur); emettre("RANGE", i.nom); }
+    else if (i.type === "affichage") { expr(i.valeur); emettre("AFFICHE"); }
+    else throw new Error("instruction inconnue : " + i.type);
+  }
+  return code;
+}
+function montrer(code) {
+  code.forEach((ins, k) =&gt; console.log(String(k).padStart(2, " ") + "  " + ins[0]
+    + (ins.length &gt; 1 ? " " + ins[1] : "")));
+}
+console.log("--- affiche 2 + 3 * 4");
+montrer(compiler(analyser("affiche 2 + 3 * 4")));
+console.log("");
+console.log("--- affiche (2 + 3) * 4");
+montrer(compiler(analyser("affiche (2 + 3) * 4")));</code></pre></figure>
+
+<figure class="code-block" data-file="gen-decouverte.txt"><pre><code class="language-plaintext">--- affiche 2 + 3 * 4
+ 0  CONST 2
+ 1  CONST 3
+ 2  CONST 4
+ 3  MUL
+ 4  ADD
+ 5  AFFICHE
+
+--- affiche (2 + 3) * 4
+ 0  CONST 2
+ 1  CONST 3
+ 2  ADD
+ 3  CONST 4
+ 4  MUL
+ 5  AFFICHE</code></pre></figure>
+
+<p>Les deux textes sont ceux que la <a href="lecon-09.html">leçon 9</a> avait opposés&nbsp;: <code>2 + 3 * 4</code> et <code>(2 + 3) * 4</code>. Ils produisent <strong>6 instructions chacun</strong> — mieux, <em>les mêmes</em> six&nbsp;: trois <code>CONST</code>, un <code>MUL</code>, un <code>ADD</code>, un <code>AFFICHE</code>. Aucun argument ne diffère&nbsp;; et pourtant la leçon 10 a mesuré que ces deux programmes ne donnent pas le même résultat, <strong>14</strong> et <strong>20</strong>.</p>
+<p>La seule chose qui les sépare est l'<strong>ORDRE</strong>&nbsp;: dans le premier, <code>MUL</code> vient avant <code>ADD</code>&nbsp;; dans le second, l'inverse. Voilà le fait central de la leçon&nbsp;: les parenthèses du texte source, disparues de l'arbre depuis la leçon 9, viennent de réapparaître sous une troisième forme. Elles étaient des caractères, elles sont devenues un emboîtement de nœuds, elles sont maintenant un <em>ordre d'émission</em>. À chaque étape de la chaîne, la même information change de support sans se perdre.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 344" role="img" aria-label="Deux arbres de syntaxe abstraite comparés dans deux panneaux séparés par un trait vertical, chacun accompagné des instructions qu'il fait émettre. Le panneau de gauche, intitulé affiche 2 plus 3 fois 4, montre un arbre dont la racine est l'opérateur plus, avec pour enfant de gauche le nombre 2 et pour enfant de droite l'opérateur fois, lequel a pour enfants les nombres 3 et 4. Chaque nœud porte à sa gauche un petit numéro qui est l'indice de l'instruction qu'il fait émettre : le nombre 2 porte le numéro zéro, le nombre 3 le numéro un, le nombre 4 le numéro deux, l'opérateur fois le numéro trois et l'opérateur plus le numéro quatre. Sous l'arbre, la liste émise dans cet ordre se lit : zéro CONST 2, un CONST 3, deux CONST 4, trois MUL, quatre ADD, cinq AFFICHE. Le panneau de droite, intitulé affiche parenthèse 2 plus 3 fermante fois 4, montre un arbre dont la racine est l'opérateur fois, avec pour enfant de gauche l'opérateur plus et pour enfant de droite le nombre 4 ; l'opérateur plus a pour enfants les nombres 2 et 3. Les numéros portés par les nœuds sont : zéro pour le nombre 2, un pour le nombre 3, deux pour l'opérateur plus, trois pour le nombre 4 et quatre pour l'opérateur fois. Sous cet arbre, la liste émise se lit : zéro CONST 2, un CONST 3, deux ADD, trois CONST 4, quatre MUL, cinq AFFICHE. Deux lignes de conclusion précisent que le numéro à gauche de chaque nœud est l'indice de l'instruction qu'il fait émettre, et que l'instruction AFFICHE, la sixième, ne vient pas de l'expression mais de l'instruction qui la contient.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le même parcours post-ordre, deux arbres, deux ordres d'émission</text>
+    <path class="d-line" d="M320 34 L320 310" fill="none" />
+
+    <text class="d-text" x="160" y="44" text-anchor="middle" font-size="10.5">affiche 2 + 3 * 4</text>
+    <rect class="d-accent" x="143" y="64" width="34" height="26" rx="7" /><text class="d-text" x="160" y="82" text-anchor="middle" font-size="11">+</text>
+    <text class="d-tag" x="139" y="82" text-anchor="end" font-size="9">4</text>
+    <path class="d-line" d="M160 90 L160 104" fill="none" />
+    <path class="d-line" d="M112 104 L208 104" fill="none" />
+    <path class="d-line" d="M112 104 L112 116" fill="none" />
+    <path class="d-line" d="M208 104 L208 116" fill="none" />
+    <rect class="d-box" x="95" y="116" width="34" height="26" rx="7" /><text class="d-text" x="112" y="134" text-anchor="middle" font-size="11">2</text>
+    <text class="d-tag" x="91" y="134" text-anchor="end" font-size="9">0</text>
+    <rect class="d-accent" x="191" y="116" width="34" height="26" rx="7" /><text class="d-text" x="208" y="134" text-anchor="middle" font-size="11">*</text>
+    <text class="d-tag" x="187" y="134" text-anchor="end" font-size="9">3</text>
+    <path class="d-line" d="M208 142 L208 156" fill="none" />
+    <path class="d-line" d="M182 156 L234 156" fill="none" />
+    <path class="d-line" d="M182 156 L182 168" fill="none" />
+    <path class="d-line" d="M234 156 L234 168" fill="none" />
+    <rect class="d-box" x="165" y="168" width="34" height="26" rx="7" /><text class="d-text" x="182" y="186" text-anchor="middle" font-size="11">3</text>
+    <text class="d-tag" x="161" y="186" text-anchor="end" font-size="9">1</text>
+    <rect class="d-box" x="217" y="168" width="34" height="26" rx="7" /><text class="d-text" x="234" y="186" text-anchor="middle" font-size="11">4</text>
+    <text class="d-tag" x="213" y="186" text-anchor="end" font-size="9">2</text>
+    <text class="d-label" x="160" y="214" text-anchor="middle" font-size="10">émis dans cet ordre</text>
+    <text class="d-text" x="126" y="232" font-size="9.5">0  CONST 2</text>
+    <text class="d-text" x="126" y="246" font-size="9.5">1  CONST 3</text>
+    <text class="d-text" x="126" y="260" font-size="9.5">2  CONST 4</text>
+    <text class="d-text" x="126" y="274" font-size="9.5">3  MUL</text>
+    <text class="d-text" x="126" y="288" font-size="9.5">4  ADD</text>
+    <text class="d-mut" x="126" y="302" font-size="9.5">5  AFFICHE</text>
+
+    <text class="d-text" x="480" y="44" text-anchor="middle" font-size="10.5">affiche (2 + 3) * 4</text>
+    <rect class="d-accent" x="463" y="64" width="34" height="26" rx="7" /><text class="d-text" x="480" y="82" text-anchor="middle" font-size="11">*</text>
+    <text class="d-tag" x="459" y="82" text-anchor="end" font-size="9">4</text>
+    <path class="d-line" d="M480 90 L480 104" fill="none" />
+    <path class="d-line" d="M432 104 L528 104" fill="none" />
+    <path class="d-line" d="M432 104 L432 116" fill="none" />
+    <path class="d-line" d="M528 104 L528 116" fill="none" />
+    <rect class="d-accent" x="415" y="116" width="34" height="26" rx="7" /><text class="d-text" x="432" y="134" text-anchor="middle" font-size="11">+</text>
+    <text class="d-tag" x="411" y="134" text-anchor="end" font-size="9">2</text>
+    <rect class="d-box" x="511" y="116" width="34" height="26" rx="7" /><text class="d-text" x="528" y="134" text-anchor="middle" font-size="11">4</text>
+    <text class="d-tag" x="507" y="134" text-anchor="end" font-size="9">3</text>
+    <path class="d-line" d="M432 142 L432 156" fill="none" />
+    <path class="d-line" d="M406 156 L458 156" fill="none" />
+    <path class="d-line" d="M406 156 L406 168" fill="none" />
+    <path class="d-line" d="M458 156 L458 168" fill="none" />
+    <rect class="d-box" x="389" y="168" width="34" height="26" rx="7" /><text class="d-text" x="406" y="186" text-anchor="middle" font-size="11">2</text>
+    <text class="d-tag" x="385" y="186" text-anchor="end" font-size="9">0</text>
+    <rect class="d-box" x="441" y="168" width="34" height="26" rx="7" /><text class="d-text" x="458" y="186" text-anchor="middle" font-size="11">3</text>
+    <text class="d-tag" x="437" y="186" text-anchor="end" font-size="9">1</text>
+    <text class="d-label" x="480" y="214" text-anchor="middle" font-size="10">émis dans cet ordre</text>
+    <text class="d-text" x="446" y="232" font-size="9.5">0  CONST 2</text>
+    <text class="d-text" x="446" y="246" font-size="9.5">1  CONST 3</text>
+    <text class="d-text" x="446" y="260" font-size="9.5">2  ADD</text>
+    <text class="d-text" x="446" y="274" font-size="9.5">3  CONST 4</text>
+    <text class="d-text" x="446" y="288" font-size="9.5">4  MUL</text>
+    <text class="d-mut" x="446" y="302" font-size="9.5">5  AFFICHE</text>
+
+    <text class="d-mut" x="320" y="324" text-anchor="middle" font-size="9">Le numéro à gauche de chaque nœud est l'indice de l'instruction qu'il fait émettre.</text>
+    <text class="d-mut" x="320" y="338" text-anchor="middle" font-size="9">AFFICHE, la sixième, ne vient pas de l'expression mais de l'instruction qui la contient.</text>
+  </svg>
+  <figcaption>Les numéros se lisent en post-ordre&nbsp;: descends jusqu'aux feuilles, puis remonte. À gauche, le nœud <code>*</code> émet l'instruction n°&nbsp;3&nbsp;; à droite, c'est le nœud <code>+</code> qui occupe cette place. Aucune instruction ne change&nbsp;: seule change la <strong>place</strong> de deux d'entre elles.</figcaption>
+</figure>
+
+<p>Deux détails pour finir. Les six instructions sont numérotées à partir de <strong>0</strong>&nbsp;: ce numéro est l'<em>adresse</em> de l'instruction, que le compteur de la machine parcourra d'un cran à la fois. Et le nœud <code>affichage</code> ne sait pas calculer&nbsp;: il appelle <code>expr</code> sur son sous-arbre puis ajoute <code>AFFICHE</code> derrière, le nœud <code>declaration</code> faisant de même avec <code>RANGE</code>. D'où une régularité désarmante&nbsp;: <strong>toute instruction de Brindille se compile en «&nbsp;le code de son expression, puis une instruction qui consomme le résultat&nbsp;»</strong>. C'est elle qui garantira, section suivante, que la pile finit vide.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le test qui attrape la faute d'ordre en une exécution</p><p>Un générateur qui émet <code>expr(n.droite)</code> avant <code>expr(n.gauche)</code> reste parfaitement plausible à la lecture, et il passe tous les tests écrits avec des <code>+</code> et des <code>*</code>&nbsp;: ces opérations ne voient pas l'inversion. Le contrôle qui la révèle doit contenir un opérateur <strong>non commutatif</strong>. Prends <code>10 - 3 - 2</code>, dont la <a href="lecon-10.html">leçon 10</a> a mesuré la valeur, <strong>5</strong>&nbsp;: si ton générateur inverse les deux appels, tu n'obtiendras pas 5. Le même raisonnement vaut pour la machine, dont l'ordre de dépilage s'inverse tout aussi facilement. La règle dépasse Brindille&nbsp;: <em>un cas de test symétrique ne teste pas la symétrie</em>.</p></div></div>
+
+<h2>Le programme entier, et l'invariant de la pile</h2>
+<p>Passons d'une expression à un programme&nbsp;: quatre lignes, dont une de commentaire que l'analyseur a jetée depuis la <a href="lecon-06.html">leçon 6</a>, donc trois instructions. Le bloc ajoute une fonction de comptage, <code>hauteurMax</code>, dont nous ferons un usage inattendu.</p>
+
+<figure class="code-block" data-file="gen-complet.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+function compiler(prog) {
+  const code = [];
+  const emettre = (op, arg) =&gt; code.push(arg === undefined ? [op] : [op, arg]);
+  const OPS = { "+": "ADD", "-": "SUB", "*": "MUL", "/": "DIV" };
+  function expr(n) {
+    if (n.type === "nombre")   { emettre("CONST", n.valeur); return; }
+    if (n.type === "variable") { emettre("CHARGE", n.nom);   return; }
+    if (n.type === "binaire")  { expr(n.gauche); expr(n.droite); emettre(OPS[n.op]); return; }
+    throw new Error("noeud inconnu : " + n.type);
+  }
+  for (const i of prog.corps) {
+    if (i.type === "declaration") { expr(i.valeur); emettre("RANGE", i.nom); }
+    else if (i.type === "affichage") { expr(i.valeur); emettre("AFFICHE"); }
+  }
+  return code;
+}
+// Hauteur de pile : +1 pour CONST/CHARGE, -1 pour RANGE/AFFICHE, -1 net pour un binaire.
+function hauteurMax(code) {
+  let h = 0, max = 0;
+  for (const [op] of code) {
+    if (op === "CONST" || op === "CHARGE") h += 1;
+    else if (op === "RANGE" || op === "AFFICHE") h -= 1;
+    else h -= 1;                       // ADD/SUB/MUL/DIV : depile 2, empile 1
+    if (h &gt; max) max = h;
+  }
+  return { max, fin: h };
+}
+const source = [
+  "# le prix unitaire",
+  "soit prix = 12",
+  "soit total = prix * 3 + 2",
+  "affiche total",
+].join("\n");
+const code = compiler(analyser(source));
+code.forEach((ins, k) =&gt; console.log(String(k).padStart(2, " ") + "  " + ins[0] + (ins.length &gt; 1 ? " " + ins[1] : "")));
+console.log("");
+console.log("instructions :", code.length);
+const h = hauteurMax(code);
+console.log("hauteur de pile maximale :", h.max);
+console.log("hauteur en fin de programme :", h.fin);
+console.log("");
+console.log("hauteur max de « 1 + (2 + (3 + (4 + 5))) » :", hauteurMax(compiler(analyser("affiche 1 + (2 + (3 + (4 + 5)))"))).max);
+console.log("hauteur max de « 1 + 2 + 3 + 4 + 5 »       :", hauteurMax(compiler(analyser("affiche 1 + 2 + 3 + 4 + 5"))).max);</code></pre></figure>
+
+<figure class="code-block" data-file="gen-complet.txt"><pre><code class="language-plaintext"> 0  CONST 12
+ 1  RANGE prix
+ 2  CHARGE prix
+ 3  CONST 3
+ 4  MUL
+ 5  CONST 2
+ 6  ADD
+ 7  RANGE total
+ 8  CHARGE total
+ 9  AFFICHE
+
+instructions : 10
+hauteur de pile maximale : 2
+hauteur en fin de programme : 0
+
+hauteur max de « 1 + (2 + (3 + (4 + 5))) » : 5
+hauteur max de « 1 + 2 + 3 + 4 + 5 »       : 2</code></pre></figure>
+
+<p>Le programme de trois instructions donne <strong>10 instructions</strong> de bytecode, qui se lisent en trois tronçons correspondant exactement aux trois instructions du source. <code>CONST 12</code> puis <code>RANGE prix</code> traduisent <code>soit prix = 12</code>. Les six suivantes sont <code>soit total = prix * 3 + 2</code>&nbsp;: charge <code>prix</code>, pose 3, multiplie, pose 2, additionne, range sous <code>total</code>. Les deux dernières sont <code>affiche total</code>. Rien ne s'entrelace.</p>
+<p>Viennent les deux chiffres pour lesquels cette section existe&nbsp;: <strong>hauteur maximale 2</strong>, <strong>hauteur en fin de programme 0</strong>. Le premier surprend&nbsp;: ce programme n'a <em>jamais</em> plus de deux valeurs en attente. On imagine volontiers une pile qui gonfle&nbsp;; ici elle respire, chaque instruction du source vidant ce qu'elle a rempli avant de laisser la place à la suivante.</p>
+<p>Le second est le plus important de la leçon. <strong>La hauteur en fin de programme vaut zéro</strong>, et ce n'est pas un hasard sur cet exemple&nbsp;: c'est une propriété que tout bytecode correctement engendré doit avoir. Elle porte un nom&nbsp;: un <strong>invariant</strong>.</p>
+<p>Le raisonnement découle de la régularité relevée à la section précédente. Le générateur ne produit du code que d'une seule manière&nbsp;: pour chaque instruction du source, le code d'une expression puis <em>une</em> instruction qui en consomme le résultat. Or le code d'une expression laisse toujours exactement une valeur sur la pile&nbsp;: une feuille en pose une, une opération binaire en retire deux pour en poser une. Chaque instruction ajoute donc une valeur puis la retire&nbsp;; bilan du programme entier&nbsp;: zéro.</p>
+<p>Cela donne un outil de contrôle d'une puissance disproportionnée à sa simplicité&nbsp;: <strong>si la pile ne finit pas vide, le code produit est faux</strong> — et l'on s'en aperçoit <em>sans exécuter une seule instruction</em>. La règle sort du classement en trois familles de la figure&nbsp;: <strong>+1</strong> pour <code>CONST</code> et <code>CHARGE</code>, <strong>−1</strong> pour <code>RANGE</code> et <code>AFFICHE</code>, <strong>−1 net</strong> pour une opération binaire. Applique-la à la main&nbsp;:</p>
+
+<figure class="code-block" data-file="hauteur-a-la-main.txt"><pre><code class="language-plaintext">adresse  instruction     effet   hauteur apres
+   0     CONST 12         +1          1
+   1     RANGE prix       -1          0
+   2     CHARGE prix      +1          1
+   3     CONST 3          +1          2      (maximum)
+   4     MUL              -1          1
+   5     CONST 2          +1          2      (maximum)
+   6     ADD              -1          1
+   7     RANGE total      -1          0
+   8     CHARGE total     +1          1
+   9     AFFICHE          -1          0      (fin : la pile est vide)
+
+hauteur maximale : 2        hauteur en fin de programme : 0</code></pre></figure>
+
+<p>Aucun calcul arithmétique, aucune exécution&nbsp;: c'est une <em>analyse statique</em> au sens propre. Note la ligne d'adresse 1, où la hauteur retombe à zéro <em>au milieu</em> du programme&nbsp;: c'est normal, chaque instruction refermant ce qu'elle a ouvert. Un contrôle complet ajouterait une seconde vérification&nbsp;: la hauteur ne doit jamais devenir <strong>négative</strong>, ce qui signifierait qu'une instruction a dépilé une pile vide. Le premier contrôle vérifie qu'on n'oublie rien, le second qu'on ne prend rien qui n'existe pas — la fin de la leçon montrera ce qui arrive quand personne ne fait le second.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi la hauteur se calcule sans connaître les valeurs</p><p>Ce qui rend l'analyse possible est une propriété structurelle du jeu d'instructions&nbsp;: <strong>l'effet de chaque opcode sur la hauteur ne dépend ni de ses arguments, ni des valeurs présentes</strong>. <code>DIV</code> a le même effet qu'il divise par zéro ou par sept. La hauteur est donc entièrement déterminée par la <em>suite des opcodes</em> — et c'est cela, pas une astuce de programmation, qui rend le contrôle possible en un seul balayage. La propriété tomberait dès qu'un saut apparaîtrait&nbsp;: deux chemins pourraient arriver au même endroit avec deux hauteurs différentes, et le contrôle deviendrait un problème de graphe. C'est ce que fait le vérificateur d'une machine réelle, et pourquoi il est autrement plus long que notre boucle de six lignes.</p></div></div>
+
+<h2>La machine&nbsp;: vingt lignes qui ne savent rien</h2>
+<p>Il faut maintenant quelqu'un pour exécuter ce code, et ce quelqu'un tient en vingt lignes. Quatre choses lui suffisent&nbsp;: une <strong>pile</strong>, une <strong>mémoire</strong> qui associe un nom à une valeur, un <strong>compteur d'instructions</strong> — traditionnellement <code>pc</code>, pour <em>program counter</em> — et une <strong>boucle</strong> qui lit l'instruction pointée, avance le compteur, puis agit.</p>
+<p>Le programme ci-dessous est celui de la <a href="lecon-10.html">leçon 10</a>, avec ses deux affichages&nbsp;: aux trois instructions de la section précédente s'ajoute <code>affiche total - prix</code>, qui met en jeu la soustraction et vérifie donc l'ordre de dépilage.</p>
+
+<figure class="code-block" data-file="vm-decouverte.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+function compiler(prog) {
+  const code = []; const emettre = (op, arg) =&gt; code.push(arg === undefined ? [op] : [op, arg]);
+  const OPS = { "+": "ADD", "-": "SUB", "*": "MUL", "/": "DIV" };
+  function expr(n) {
+    if (n.type === "nombre")   { emettre("CONST", n.valeur); return; }
+    if (n.type === "variable") { emettre("CHARGE", n.nom);   return; }
+    expr(n.gauche); expr(n.droite); emettre(OPS[n.op]);
+  }
+  for (const i of prog.corps) {
+    if (i.type === "declaration") { expr(i.valeur); emettre("RANGE", i.nom); }
+    else { expr(i.valeur); emettre("AFFICHE"); }
+  }
+  return code;
+}
+// ------- LA MACHINE : une pile, un compteur, une boucle. Elle ignore tout de la grammaire.
+function machine(code) {
+  const pile = [], memoire = new Map(), ecran = [];
+  let pc = 0;
+  while (pc &lt; code.length) {
+    const [op, arg] = code[pc];
+    pc++;
+    if (op === "CONST")   { pile.push(arg); continue; }
+    if (op === "CHARGE")  { if (!memoire.has(arg)) throw new Error("variable inconnue : " + arg);
+                            pile.push(memoire.get(arg)); continue; }
+    if (op === "RANGE")   { memoire.set(arg, pile.pop()); continue; }
+    if (op === "AFFICHE") { ecran.push(pile.pop()); continue; }
+    const d = pile.pop(), g = pile.pop();
+    if (op === "ADD") pile.push(g + d);
+    else if (op === "SUB") pile.push(g - d);
+    else if (op === "MUL") pile.push(g * d);
+    else if (op === "DIV") pile.push(g / d);
+    else throw new Error("instruction inconnue : " + op);
+  }
+  return { ecran, memoire, restePile: pile.length };
+}
+const source = ["soit prix = 12", "soit total = prix * 3 + 2", "affiche total", "affiche total - prix"].join("\n");
+const code = compiler(analyser(source));
+const r = machine(code);
+console.log("ecran :", r.ecran);
+console.log("memoire :", [...r.memoire.entries()].map(([k, v]) =&gt; k + "=" + v).join(", "));
+console.log("il reste sur la pile :", r.restePile);</code></pre></figure>
+
+<figure class="code-block" data-file="vm-decouverte.txt"><pre><code class="language-plaintext">ecran : [38,26]
+memoire : prix=12, total=38
+il reste sur la pile : 0</code></pre></figure>
+
+<p><strong>38</strong> puis <strong>26</strong>&nbsp;: le même écran que l'interprète de la leçon 10, et les mêmes variables, <code>prix=12</code> et <code>total=38</code>. Deux chemins différents, un seul résultat — la <a href="lecon-12.html">leçon 12</a> en fera un contrôle systématique. Mais l'important est dans ce que ce programme <em>ne contient pas</em>.</p>
+<p>Cherche, dans les vingt lignes de <code>machine</code>, un seul mot du module 2 ou du module 3. Pas de motif d'expression régulière, pas de jeton&nbsp;; ni <code>expression</code>, ni <code>terme</code>, ni <code>facteur</code>&nbsp;; aucune trace de priorité ni d'associativité, pas la moindre parenthèse. La machine serait bien incapable de dire si <code>2 + 3 * 4</code> vaut 14 ou 20, puisqu'elle ne sait pas lire ce texte. <strong>Tout le savoir grammatical a été consommé par le générateur, et il n'en reste rien dans la machine.</strong></p>
+<p>C'est tout l'intérêt du montage, et ce qui explique la portabilité d'une machine virtuelle&nbsp;: les huit instructions ne parlent que de valeurs, de noms et d'arithmétique. Écris un second langage, de syntaxe toute différente, dont le générateur émette les mêmes huit opcodes&nbsp;: la même machine l'exécutera sans qu'on lui change une ligne. C'est la promesse que la <a href="lecon-02.html">leçon 2</a> attachait à la représentation intermédiaire.</p>
+<p>Trois détails reviendront dans toute machine virtuelle que tu liras un jour. <strong>Le compteur avance avant l'exécution&nbsp;:</strong> <code>pc++;</code> suit la lecture de l'instruction, non la fin du tour — invisible sur Brindille, capital sur une machine à sauts, puisqu'un saut écrit directement dans <code>pc</code>. <strong>Le dépilage n'est écrit qu'une fois&nbsp;:</strong> <code>const d = pile.pop(), g = pile.pop();</code> précède les quatre branches arithmétiques au lieu d'être recopié dans chacune — écrire l'ordre une fois, c'est le contrôler une fois. <strong>Deux erreurs sont attrapées, et pas les autres&nbsp;:</strong> la machine refuse une variable inconnue et un opcode inconnu, rien de plus. Ni pile vide, ni division par zéro&nbsp;; une machine ne détecte que ce qu'on lui a écrit de détecter.</p>
+<p>Une dernière ligne confirme ce que la section précédente démontrait par le calcul&nbsp;: <code>il reste sur la pile : 0</code>. L'invariant tenait sur le papier, il tient à l'exécution&nbsp;: deux méthodes indépendantes d'accord, dont le désaccord serait le signal le plus précieux qu'un compilateur puisse produire.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: ce qui sépare notre boucle d'une vraie machine virtuelle</p><p>Notre boucle compare des chaînes de caractères — <code>op === "CONST"</code> —, ce qu'aucune machine virtuelle sérieuse ne fait. Dans un vrai format, un opcode est un <em>octet</em>, et c'est de là que vient le mot <em>bytecode</em>. La comparaison de chaînes devient alors un aiguillage sur un entier, que le compilateur du langage hôte traduit en table de sauts. Les implémentations les plus poussées vont plus loin&nbsp;: le <em>threaded code</em>, où chaque instruction saute elle-même à la suivante sans repasser par le sommet de la boucle, ou la <em>superinstruction</em>, qui fusionne une paire fréquente en un seul opcode. Aucune ne change la sémantique du jeu d'instructions&nbsp;: elles ne touchent qu'au coût du décodage. Bonne illustration de ce que le contrat sépare vraiment — on peut réécrire l'exécuteur sans toucher au générateur, parce qu'ils ne se connaissent pas.</p></div></div>
+
+<h2>La pile, pas à pas</h2>
+<p>Regardons maintenant la pile pour de vrai. Le bloc reprend la machine et lui ajoute six mots&nbsp;: après chaque instruction, elle imprime son contenu. Il mesure au passage deux expressions qui ont l'air jumelles sans l'être, puis se termine sur un bytecode volontairement cassé.</p>
+
+<figure class="code-block" data-file="pile-reelle.js"><pre><code class="language-javascript">// Le lexique du module 2 et l'analyseur du module 3, recopies tels quels
+// pour que le bloc soit executable seul.
+// ------- Socle Brindille : lexique (module 2) + analyseur (module 3), recopié tel quel.
+const IGNORES = ["ESPACE", "COMMENTAIRE_LIGNE", "COMMENTAIRE_BLOC"];
+const REGLES = [
+  { type: "ESPACE",            motif: /[ \t\r\n]+/y },
+  { type: "COMMENTAIRE_LIGNE", motif: /#[^\n]*/y },
+  { type: "COMMENTAIRE_BLOC",  motif: /\(\*[\s\S]*?\*\)/y },
+  { type: "NOMBRE",            motif: /[0-9]+/y },
+  { type: "IDENT",             motif: /[a-z_][a-z0-9_]*/y },
+  { type: "SYMBOLE",           motif: /[-+*\/()=]/y },
+];
+const MOTS_CLES = ["soit", "affiche"];
+function jetons(txt) {
+  const sortie = []; let i = 0;
+  while (i &lt; txt.length) {
+    let avance = false;
+    for (const regle of REGLES) {
+      regle.motif.lastIndex = i;
+      const m = regle.motif.exec(txt);
+      if (!m) continue;
+      if (!IGNORES.includes(regle.type)) {
+        const type = regle.type === "IDENT" &amp;&amp; MOTS_CLES.includes(m[0]) ? "MOT_CLE" : regle.type;
+        sortie.push({ type, valeur: m[0], pos: i });
+      }
+      i = regle.motif.lastIndex; avance = true; break;
+    }
+    if (!avance) throw new Error("caractere inattendu " + JSON.stringify(txt[i]) + " en position " + i);
+  }
+  return sortie;
+}
+function analyser(txt) {
+  const js = jetons(txt);
+  const FIN = { type: "FIN", valeur: "", pos: txt.length };
+  let i = 0;
+  const voir = () =&gt; (i &lt; js.length ? js[i] : FIN);
+  const avaler = () =&gt; { const j = voir(); if (i &lt; js.length) i++; return j; };
+  const attendre = (v) =&gt; { const j = voir();
+    if (j.valeur !== v) throw new Error("attendu " + JSON.stringify(v) + ", trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos);
+    return avaler(); };
+  const attendreType = (t) =&gt; { const j = voir();
+    if (j.type !== t) throw new Error("attendu un " + t + ", trouve " + JSON.stringify(j.valeur) + " en position " + j.pos);
+    return avaler(); };
+  function programme() { const corps = [];
+    while (voir().type !== "FIN") corps.push(instruction());
+    return { type: "programme", corps }; }
+  function instruction() { const j = voir();
+    if (j.valeur === "soit") { avaler(); const nom = attendreType("IDENT").valeur; attendre("=");
+      return { type: "declaration", nom, valeur: expression() }; }
+    if (j.valeur === "affiche") { avaler(); return { type: "affichage", valeur: expression() }; }
+    throw new Error("attendu une instruction, trouve " + JSON.stringify(j.valeur) + " en position " + j.pos); }
+  function expression() { let g = terme();
+    while (voir().valeur === "+" || voir().valeur === "-") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: terme() }; }
+    return g; }
+  function terme() { let g = facteur();
+    while (voir().valeur === "*" || voir().valeur === "/") { const op = avaler().valeur; g = { type: "binaire", op, gauche: g, droite: facteur() }; }
+    return g; }
+  function facteur() { const j = voir();
+    if (j.type === "NOMBRE") { avaler(); return { type: "nombre", valeur: Number(j.valeur) }; }
+    if (j.type === "IDENT")  { avaler(); return { type: "variable", nom: j.valeur }; }
+    if (j.valeur === "(") { avaler(); const e = expression(); attendre(")"); return e; }
+    throw new Error("attendu un nombre, un nom ou une parenthese, trouve "
+      + (j.type === "FIN" ? "la fin du texte" : JSON.stringify(j.valeur)) + " en position " + j.pos); }
+  return programme();
+}
+
+const OPS = { "+": "ADD", "-": "SUB", "*": "MUL", "/": "DIV" };
+function compiler(prog) {
+  const code = []; const em = (op, arg) =&gt; code.push(arg === undefined ? [op] : [op, arg]);
+  function expr(n) {
+    if (n.type === "nombre")   { em("CONST", n.valeur); return; }
+    if (n.type === "variable") { em("CHARGE", n.nom);   return; }
+    expr(n.gauche); expr(n.droite); em(OPS[n.op]); }
+  for (const i of prog.corps) {
+    if (i.type === "declaration") { expr(i.valeur); em("RANGE", i.nom); }
+    else { expr(i.valeur); em("AFFICHE"); } }
+  return code; }
+// La machine, instrumentee : elle note la hauteur de pile apres chaque instruction.
+function machine(code, trace) {
+  const pile = [], mem = new Map(), ecran = []; let pc = 0, hmax = 0;
+  while (pc &lt; code.length) {
+    const [op, arg] = code[pc]; pc++;
+    if (op === "CONST") pile.push(arg);
+    else if (op === "CHARGE") pile.push(mem.get(arg));
+    else if (op === "RANGE") mem.set(arg, pile.pop());
+    else if (op === "AFFICHE") ecran.push(pile.pop());
+    else { const d = pile.pop(), g = pile.pop();
+      pile.push(op === "ADD" ? g + d : op === "SUB" ? g - d : op === "MUL" ? g * d : g / d); }
+    if (pile.length &gt; hmax) hmax = pile.length;
+    if (trace) console.log(String(pc - 1).padStart(2) + "  " + (op + (arg !== undefined ? " " + arg : "")).padEnd(12)
+      + "pile [" + pile.join(", ") + "]");
+  }
+  return { ecran, hmax, reste: pile.length };
+}
+console.log("--- TRACE : affiche 2 + 3 * 4");
+const t = machine(compiler(analyser("affiche 2 + 3 * 4")), true);
+console.log("    ecran :", t.ecran, " hauteur max :", t.hmax, " reste :", t.reste);
+console.log("");
+for (const src of ["affiche 1 + 2 + 3 + 4 + 5", "affiche 1 + (2 + (3 + (4 + 5)))"]) {
+  const r = machine(compiler(analyser(src)), false);
+  console.log(JSON.stringify(src) + " -&gt; resultat " + r.ecran[0] + ", hauteur de pile mesuree : " + r.hmax);
+}
+console.log("");
+console.log("--- LE BYTECODE MAL FORME : la pile vide ne proteste pas");
+const casse = [["CONST", 2], ["ADD"], ["AFFICHE"]];
+const r = machine(casse, false);
+console.log("bytecode :", casse.map((i) =&gt; i.join(" ")).join(" | "));
+console.log("ecran (brut)   :", r.ecran);
+console.log("ecran (String) :", r.ecran.map(String).join(", "));
+console.log("reste sur la pile :", r.reste);</code></pre></figure>
+
+<figure class="code-block" data-file="pile-reelle.txt"><pre><code class="language-plaintext">--- TRACE : affiche 2 + 3 * 4
+ 0  CONST 2     pile [2]
+ 1  CONST 3     pile [2, 3]
+ 2  CONST 4     pile [2, 3, 4]
+ 3  MUL         pile [2, 12]
+ 4  ADD         pile [14]
+ 5  AFFICHE     pile []
+    ecran : [14]  hauteur max : 3  reste : 0
+
+"affiche 1 + 2 + 3 + 4 + 5" -&gt; resultat 15, hauteur de pile mesuree : 2
+"affiche 1 + (2 + (3 + (4 + 5)))" -&gt; resultat 15, hauteur de pile mesuree : 5
+
+--- LE BYTECODE MAL FORME : la pile vide ne proteste pas
+bytecode : CONST 2 | ADD | AFFICHE
+ecran (brut)   : [null]
+ecran (String) : NaN
+reste sur la pile : 0</code></pre></figure>
+
+<p>Lis la trace ligne à ligne, c'est la meilleure minute que tu passeras sur cette leçon. Trois <code>CONST</code> montent jusqu'à <code>[2, 3, 4]</code>, soit <strong>trois valeurs en attente</strong>&nbsp;: le point le plus haut. <code>MUL</code> retire 4 et 3, pose 12&nbsp;: <code>[2, 12]</code> — deux sorties, une entrée, la hauteur baisse d'un cran. <code>ADD</code> donne <code>[14]</code>, <code>AFFICHE</code> vide la pile&nbsp;: <code>hauteur max : 3</code>, <code>reste : 0</code>. Remarque que la valeur <strong>2</strong>, posée en première instruction, reste au fond pendant que trois autres s'exécutent au-dessus d'elle&nbsp;: personne n'a eu à lui donner de nom, là où un générateur à registres aurait dû la ranger dans <code>r0</code> et penser à l'y rechercher.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 400" role="img" aria-label="Deux mesures de hauteur de pile réunies dans une même figure. La partie du haut montre l'état de la pile après chaque instruction du programme affiche 2 plus 3 fois 4, sous la forme de sept colonnes de cases empilées reposant chacune sur un trait qui figure le fond de la pile. La première colonne, intitulée avant, porte la mention hauteur égale zéro et ne contient aucune case ; on lit dessous pile vide. La deuxième colonne, intitulée CONST 2, porte hauteur égale un et contient une seule case, en évidence, portant la valeur 2. La troisième colonne, intitulée CONST 3, porte hauteur égale deux et contient de bas en haut la valeur 2 puis la valeur 3 en évidence. La quatrième colonne, intitulée CONST 4, porte hauteur égale trois et contient de bas en haut les valeurs 2, 3 puis 4 en évidence : c'est la colonne la plus haute. La cinquième colonne, intitulée MUL, porte hauteur égale deux et contient de bas en haut la valeur 2 puis la valeur 12 en évidence. La sixième colonne, intitulée ADD, porte hauteur égale un et contient une seule case en évidence portant la valeur 14. La septième colonne, intitulée AFFICHE, porte hauteur égale zéro, ne contient aucune case, et on lit dessous vide, écran deux points crochet quatorze crochet. La partie du bas compare deux profils de hauteur de pile tracés comme des lignes brisées au-dessus d'un axe horizontal. À gauche, pour l'expression 1 plus 2 plus 3 plus 4 plus 5, la ligne monte à deux, redescend à un, remonte à deux, redescend à un, et ainsi de suite en dents de scie, sans jamais dépasser deux ; une légende indique que la pile redescend après chaque ADD. À droite, pour l'expression 1 plus parenthèse 2 plus parenthèse 3 plus parenthèse 4 plus 5, la ligne monte régulièrement de zéro jusqu'à cinq, puis redescend régulièrement jusqu'à zéro, formant un unique triangle ; une légende indique qu'il faut empiler cinq valeurs avant le premier ADD. Une ligne de conclusion précise que le résultat est le même, quinze des deux côtés, mais que l'une garde deux valeurs en attente là où l'autre en garde cinq.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">La pile monte, puis redescend — et sa hauteur dépend de la forme de l'arbre</text>
+    <text class="d-label" x="320" y="44" text-anchor="middle" font-size="10.5">État de la pile après chaque instruction de « affiche 2 + 3 * 4 »</text>
+
+    <text class="d-text" x="64" y="64" text-anchor="middle" font-size="9.5">avant</text>
+    <text class="d-tag" x="64" y="82" text-anchor="middle" font-size="9.5">h = 0</text>
+    <path class="d-line" d="M38 174 L90 174" fill="none" />
+    <text class="d-mut" x="64" y="192" text-anchor="middle" font-size="9">pile vide</text>
+
+    <text class="d-text" x="148" y="64" text-anchor="middle" font-size="9.5">CONST 2</text>
+    <text class="d-tag" x="148" y="82" text-anchor="middle" font-size="9.5">h = 1</text>
+    <rect class="d-accent" x="126" y="150" width="44" height="22" rx="4" /><text class="d-text" x="148" y="165" text-anchor="middle" font-size="10">2</text>
+    <path class="d-line" d="M122 174 L174 174" fill="none" />
+
+    <text class="d-text" x="232" y="64" text-anchor="middle" font-size="9.5">CONST 3</text>
+    <text class="d-tag" x="232" y="82" text-anchor="middle" font-size="9.5">h = 2</text>
+    <rect class="d-box" x="210" y="150" width="44" height="22" rx="4" /><text class="d-text" x="232" y="165" text-anchor="middle" font-size="10">2</text>
+    <rect class="d-accent" x="210" y="126" width="44" height="22" rx="4" /><text class="d-text" x="232" y="141" text-anchor="middle" font-size="10">3</text>
+    <path class="d-line" d="M206 174 L258 174" fill="none" />
+
+    <text class="d-text" x="316" y="64" text-anchor="middle" font-size="9.5">CONST 4</text>
+    <text class="d-tag" x="316" y="82" text-anchor="middle" font-size="9.5">h = 3</text>
+    <rect class="d-box" x="294" y="150" width="44" height="22" rx="4" /><text class="d-text" x="316" y="165" text-anchor="middle" font-size="10">2</text>
+    <rect class="d-box" x="294" y="126" width="44" height="22" rx="4" /><text class="d-text" x="316" y="141" text-anchor="middle" font-size="10">3</text>
+    <rect class="d-accent" x="294" y="102" width="44" height="22" rx="4" /><text class="d-text" x="316" y="117" text-anchor="middle" font-size="10">4</text>
+    <path class="d-line" d="M288 174 L340 174" fill="none" />
+
+    <text class="d-text" x="400" y="64" text-anchor="middle" font-size="9.5">MUL</text>
+    <text class="d-tag" x="400" y="82" text-anchor="middle" font-size="9.5">h = 2</text>
+    <rect class="d-box" x="378" y="150" width="44" height="22" rx="4" /><text class="d-text" x="400" y="165" text-anchor="middle" font-size="10">2</text>
+    <rect class="d-accent" x="378" y="126" width="44" height="22" rx="4" /><text class="d-text" x="400" y="141" text-anchor="middle" font-size="10">12</text>
+    <path class="d-line" d="M374 174 L426 174" fill="none" />
+
+    <text class="d-text" x="484" y="64" text-anchor="middle" font-size="9.5">ADD</text>
+    <text class="d-tag" x="484" y="82" text-anchor="middle" font-size="9.5">h = 1</text>
+    <rect class="d-accent" x="462" y="150" width="44" height="22" rx="4" /><text class="d-text" x="484" y="165" text-anchor="middle" font-size="10">14</text>
+    <path class="d-line" d="M458 174 L510 174" fill="none" />
+
+    <text class="d-text" x="568" y="64" text-anchor="middle" font-size="9.5">AFFICHE</text>
+    <text class="d-tag" x="568" y="82" text-anchor="middle" font-size="9.5">h = 0</text>
+    <path class="d-line" d="M542 174 L594 174" fill="none" />
+    <text class="d-mut" x="568" y="192" text-anchor="middle" font-size="9">vide — écran : [14]</text>
+
+    <path class="d-line" d="M20 214 L620 214" fill="none" />
+
+    <text class="d-text" x="150" y="240" text-anchor="middle" font-size="10">« 1 + 2 + 3 + 4 + 5 »   hauteur max 2</text>
+    <path class="d-line" d="M34 320 L266 320" fill="none" stroke-dasharray="3 3" />
+    <path class="d-line" d="M34 360 L266 360" fill="none" />
+    <text class="d-mut" x="30" y="323" text-anchor="end" font-size="9">2</text>
+    <text class="d-mut" x="30" y="364" text-anchor="end" font-size="9">0</text>
+    <path class="d-line" d="M40 360 L62 340 L84 320 L106 340 L128 320 L150 340 L172 320 L194 340 L216 320 L238 340 L260 360" fill="none" />
+    <circle class="d-accent" cx="40" cy="360" r="2.5" /><circle class="d-accent" cx="62" cy="340" r="2.5" /><circle class="d-accent" cx="84" cy="320" r="2.5" /><circle class="d-accent" cx="106" cy="340" r="2.5" /><circle class="d-accent" cx="128" cy="320" r="2.5" /><circle class="d-accent" cx="150" cy="340" r="2.5" /><circle class="d-accent" cx="172" cy="320" r="2.5" /><circle class="d-accent" cx="194" cy="340" r="2.5" /><circle class="d-accent" cx="216" cy="320" r="2.5" /><circle class="d-accent" cx="238" cy="340" r="2.5" /><circle class="d-accent" cx="260" cy="360" r="2.5" />
+    <text class="d-mut" x="150" y="378" text-anchor="middle" font-size="9">la pile redescend après chaque ADD</text>
+
+    <text class="d-text" x="490" y="240" text-anchor="middle" font-size="10">« 1 + (2 + (3 + (4 + 5))) »   hauteur max 5</text>
+    <path class="d-line" d="M374 260 L606 260" fill="none" stroke-dasharray="3 3" />
+    <path class="d-line" d="M374 360 L606 360" fill="none" />
+    <text class="d-mut" x="370" y="263" text-anchor="end" font-size="9">5</text>
+    <text class="d-mut" x="370" y="364" text-anchor="end" font-size="9">0</text>
+    <path class="d-line" d="M380 360 L402 340 L424 320 L446 300 L468 280 L490 260 L512 280 L534 300 L556 320 L578 340 L600 360" fill="none" />
+    <circle class="d-accent" cx="380" cy="360" r="2.5" /><circle class="d-accent" cx="402" cy="340" r="2.5" /><circle class="d-accent" cx="424" cy="320" r="2.5" /><circle class="d-accent" cx="446" cy="300" r="2.5" /><circle class="d-accent" cx="468" cy="280" r="2.5" /><circle class="d-accent" cx="490" cy="260" r="2.5" /><circle class="d-accent" cx="512" cy="280" r="2.5" /><circle class="d-accent" cx="534" cy="300" r="2.5" /><circle class="d-accent" cx="556" cy="320" r="2.5" /><circle class="d-accent" cx="578" cy="340" r="2.5" /><circle class="d-accent" cx="600" cy="360" r="2.5" />
+    <text class="d-mut" x="490" y="378" text-anchor="middle" font-size="9">il faut empiler 5 valeurs avant le premier ADD</text>
+
+    <text class="d-mut" x="320" y="394" text-anchor="middle" font-size="9">Même résultat, 15 des deux côtés — mais 2 valeurs en attente contre 5.</text>
+  </svg>
+  <figcaption>En haut, la pile de <code>2 + 3 * 4</code> instruction par instruction. En bas, deux profils pour deux textes qui donnent le <em>même</em> nombre&nbsp;: à gauche des dents de scie qui ne dépassent jamais 2, à droite un seul triangle qui grimpe à 5. La forme de l'arbre est visible à l'œil nu dans celle de la courbe.</figcaption>
+</figure>
+
+<p>La mesure la plus intéressante du module tient dans les deux lignes du milieu de la sortie. <code>1 + 2 + 3 + 4 + 5</code> et <code>1 + (2 + (3 + (4 + 5)))</code> donnent tous deux <strong>15</strong>, l'addition étant associative. Mais leur <strong>hauteur de pile mesurée</strong> vaut <strong>2</strong> pour le premier et <strong>5</strong> pour le second&nbsp;: deux textes qui calculent la même chose occupent la machine de deux façons radicalement différentes.</p>
+<p>L'explication est dans la forme de l'arbre, et la <a href="lecon-09.html">leçon 9</a> nous a donné de quoi la lire. Sans parenthèses, la règle <code>expression = terme , { ("+"|"-") , terme }</code> boucle et accumule vers la <em>gauche</em>&nbsp;: l'arbre est <code>((((1 + 2) + 3) + 4) + 5)</code>, et chaque nœud <code>+</code> y a pour enfant de droite une simple feuille. Le générateur émet <code>CONST 1 | CONST 2 | ADD | CONST 3 | ADD | CONST 4 | ADD | CONST 5 | ADD</code>, puis <code>AFFICHE</code>&nbsp;: chaque <code>ADD</code> suit immédiatement le <code>CONST</code> qui vient de monter, si bien que la pile remonte à 2 puis redescend à 1, encore et encore. Écris mille termes, la hauteur restera 2.</p>
+<p>Les parenthèses imposent l'emboîtement inverse, celui que la leçon 9 obtenait par une règle récursive à droite&nbsp;: chaque nœud <code>+</code> a pour enfant de droite un autre nœud <code>+</code>, et le générateur ne peut émettre aucune addition tant qu'il n'est pas descendu jusqu'au fond. Il émet <code>CONST 1 | CONST 2 | CONST 3 | CONST 4 | CONST 5 | ADD | ADD | ADD | ADD</code>, exactement comme le montrait la sortie sur les registres. <strong>Cinq valeurs doivent être empilées avant que le premier calcul puisse avoir lieu.</strong></p>
+<p>La conclusion dépasse Brindille&nbsp;: <strong>l'associativité de la leçon 9 a une conséquence physique</strong>. Un choix de forme dans la grammaire — une boucle plutôt qu'un rappel en dernière position — décide, deux modules plus loin, de la mémoire que la machine devra réserver. La <a href="lecon-08.html">leçon 8</a> avait mesuré le même phénomène sur la pile d'<em>appels</em> de l'analyseur. Même cause, même effet, deux piles différentes.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi les vraies machines calculent cette hauteur d'avance</p><p>Sur nos exemples, l'écart entre 2 et 5 n'a aucune importance pratique. Alors pourquoi les machines virtuelles réelles calculent-elles cette valeur pour chaque fonction et la rangent-elles dans le fichier compilé&nbsp;? Parce que <strong>connaître la hauteur maximale d'avance permet d'allouer la pile une seule fois, à la bonne taille</strong>&nbsp;: elle ne réalloue jamais et ne peut pas déborder sans qu'on l'ait su avant. Le format de classe de Java range ainsi, pour chaque méthode, sa profondeur de pile maximale. Notre <code>hauteurMax</code> de six lignes fait le même travail à l'échelle de Brindille.</p></div></div>
+
+<h2>Le bytecode mal formé ne proteste pas</h2>
+<p>Restent les dernières lignes de la sortie. Nous avons donné à la machine un bytecode que le générateur n'aurait jamais pu produire&nbsp;: <code>CONST 2 | ADD | AFFICHE</code>. Applique la règle de hauteur et le défaut saute aux yeux&nbsp;: <code>CONST 2</code> monte à 1, puis <code>ADD</code> voudrait retirer <em>deux</em> valeurs alors qu'il n'y en a qu'une. La hauteur devient négative&nbsp;: ce bytecode est mal formé.</p>
+<p>La machine, elle, ne dit rien&nbsp;: elle exécute les trois instructions et rend un résultat. Chaque maillon est pourtant raisonnable pris isolément. <code>ADD</code> commence par <code>const d = pile.pop(), g = pile.pop();</code>&nbsp;: le premier <code>pop</code> rend 2, le second s'applique à une pile vide. Or en JavaScript, dépiler un tableau vide ne lève pas d'exception — c'est un choix du langage — et rend <code>undefined</code>. La machine calcule donc <code>undefined + 2</code>&nbsp;: là encore JavaScript ne proteste pas, tente une conversion numérique, échoue et rend <code>NaN</code>, qui est empilé, dépilé par <code>AFFICHE</code>, et arrive à l'écran.</p>
+<p>Un dernier tour de passe-passe l'y attend, celui que la <a href="lecon-10.html">leçon 10</a> a mesuré&nbsp;: les blocs de ce site s'exécutent dans un <em>Web Worker</em> qui met en forme les valeurs avec <code>JSON.stringify</code>, format qui ne connaît ni <code>NaN</code> ni l'infini et les remplace par <code>null</code>. D'où <code>ecran (brut) : [null]</code>&nbsp;; seule la conversion forcée en texte écrit la vérité, <code>ecran (String) : NaN</code>. <strong>Si une valeur peut valoir <code>NaN</code> ou l'infini, passe-la par <code>String(...)</code></strong>, faute de quoi tu chercheras longtemps une valeur nulle qui n'existe pas.</p>
+<p>Faisons le compte&nbsp;: <strong>aucune erreur, aucun avertissement, une pile qui finit tout de même à zéro — et un résultat faux.</strong> Un plantage aurait été bruyant donc utile&nbsp;; là, rien ne signale rien. Voilà pourquoi une machine virtuelle sérieuse <strong>vérifie son bytecode avant de l'exécuter</strong>&nbsp;: c'est un point d'architecture. Le contrat voulait que le générateur et la machine soient écrits séparément&nbsp;; mais «&nbsp;séparément&nbsp;» veut dire aussi «&nbsp;par n'importe qui&nbsp;», et un fichier de bytecode peut venir d'un générateur bogué ou d'une source quelconque. La machine virtuelle de Java exécute donc un vérificateur au chargement de chaque classe&nbsp;; WebAssembly fait de cette validation une condition d'existence du format. Notre <code>hauteurMax</code> en est l'ancêtre miniature&nbsp;: il lui manque une ligne, refuser dès que la hauteur devient négative — un exercice te propose de l'écrire.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Une pile vide en fin de programme ne prouve rien</p><p>Le piège le plus subtil tient dans un chiffre qu'on lirait volontiers comme une bonne nouvelle&nbsp;: <code>reste sur la pile : 0</code>. Il faut se garder d'y lire que l'invariant de fin est respecté, car <strong>ce zéro n'est pas la hauteur</strong>&nbsp;: c'est la longueur du tableau JavaScript, et <code>pop()</code> sur un tableau vide rend <code>undefined</code> sans jamais la faire descendre sous zéro. La hauteur, elle, se calcule&nbsp;: <code>CONST</code> la monte à 1, <code>ADD</code> la ramène à 0, <code>AFFICHE</code> la fait tomber à <strong>−1</strong>. Le contrôle de fin attrape donc bel et bien ce bytecode-là. <strong>Il reste qu'une hauteur nulle en fin de programme est une condition nécessaire, jamais suffisante&nbsp;:</strong> sur <code>ADD | CONST 2 | CONST 3 | AFFICHE</code>, mesuré, les hauteurs valent <strong>−1, 0, 1, 0</strong> — la fin est à zéro, le contrôle de fin ne dit rien, et pourtant l'écran reçoit <strong>3</strong> tandis que le <code>NaN</code> né du premier <code>ADD</code> reste enterré au fond de la pile. C'est le minimum de la hauteur, jamais sa valeur finale, qui trahit une faute qui se compense.</p></div></div>
+
+<p>Nous avons désormais tout&nbsp;: un jeu d'instructions, un générateur correct par construction, une machine qui l'exécute, une règle pour contrôler le code sans le lancer. La <a href="lecon-12.html">leçon 12</a> posera la seule question qui reste&nbsp;: <em>qu'est-ce que tout ce travail fait gagner&nbsp;?</em> Elle mesurera les tailles, comparera les chemins d'exécution, et tiendra la promesse que la <a href="lecon-01.html">leçon 1</a> avait laissée en suspens à propos du pliage de constantes. Le module 5 rassemblera l'ensemble en un projet, Brindille de bout en bout&nbsp;; il n'est pas encore écrit, et cette leçon ne pointe donc vers rien au-delà de la leçon 12.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Émettre le sous-arbre droit avant le gauche.</strong> La faute la plus discrète de la leçon&nbsp;: elle ne se manifeste jamais sur les exemples avec lesquels on teste spontanément, <code>2 + 3 * 4</code> rendant <strong>14</strong> quel que soit l'ordre d'émission. Seuls les opérateurs non commutatifs révèlent l'inversion. Le contrôle tient en un texte&nbsp;: <code>10 - 3 - 2</code>, dont la <a href="lecon-10.html">leçon 10</a> a mesuré la valeur, <strong>5</strong>. Écris ce cas <em>avant</em> le générateur&nbsp;: il coûte une ligne et ferme une famille entière de bugs.</p></div></div>
+<ul>
+<li><strong>Inverser le dépilage dans la machine — et compenser sans le savoir.</strong> Écrire <code>const g = pile.pop(), d = pile.pop();</code> produit le même symptôme que la faute ci-dessus, mais dans l'autre programme. Le vrai piège&nbsp;: si tu as inversé <em>les deux</em>, générateur et machine, les fautes se compensent et tous tes tests redeviennent verts. Le code est faux, le résultat juste, et tu ne t'en apercevras que le jour où ton bytecode rencontrera une machine écrite par quelqu'un d'autre. La parade&nbsp;: tester les deux <em>séparément</em>.</li>
+<li><strong>Émettre l'opérateur avant ses opérandes.</strong> La tentation est réelle quand on écrit <code>expr</code> de mémoire&nbsp;: on pense «&nbsp;le nœud, puis ses enfants&nbsp;», qui est l'ordre <em>préfixe</em>. Le code produit ressemble à <code>ADD | CONST 2 | CONST 3</code>, et la machine dépile une pile vide dès la première instruction. Le mode de défaillance est pire que celui de la dernière section, et il a été mesuré&nbsp;: cette suite-là n'affiche <strong>rien du tout</strong>, et terminée par <code>AFFICHE</code> elle met <strong>3</strong> à l'écran — un nombre banal, le <code>NaN</code> restant enterré sous les valeurs empilées après lui. Une machine à pile veut ses opérandes <em>déjà là</em>.</li>
+<li><strong>Oublier le <code>RANGE</code> ou l'<code>AFFICHE</code> qui clôt une instruction du source.</strong> Le code calcule correctement mais abandonne son résultat sur la pile. Rien ne plante&nbsp;; seule la hauteur en fin de programme trahit la faute, en valant 1 ou davantage au lieu de <strong>0</strong>. C'est le meilleur argument en faveur de l'invariant&nbsp;: il attrape en une lecture une faute qu'aucune exécution ne signale.</li>
+<li><strong>Compter une opération binaire pour <code>−2</code> dans le calcul de hauteur.</strong> L'erreur est naturelle — <code>ADD</code> retire bien deux valeurs — mais oublie qu'il en repose une&nbsp;: le bilan net est <strong>−1</strong>. Avec <code>−2</code>, le balayage de <code>CONST 2 | CONST 3 | CONST 4 | MUL | ADD | AFFICHE</code> passerait en territoire négatif et te ferait rejeter un bytecode correct, dont la mesure donne une hauteur maximale de <strong>3</strong> et une hauteur finale de <strong>0</strong>.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>La <a href="lecon-01.html">leçon 1</a> a déjà ouvert CPython avec le module <code>dis</code>, sur une <em>expression seule</em>, et constaté que la forme des instructions ressemblait à celle de sa machine jouet. À ce stade du cours, la ressemblance ne pouvait rester qu'une impression, faute d'un jeu d'instructions auquel comparer quoi que ce soit. Maintenant nous en avons huit, et nous pouvons aligner les deux colonnes ligne à ligne. Encore faut-il donner à <code>dis</code> le <strong>programme entier</strong>, transcrit mot pour mot en Python&nbsp;: c'est là que sortent les instructions qu'une expression seule ne montrait pas — celle qui range une variable, et celle qui la relit.</p></div></div>
+
+<figure class="code-block" data-file="python-dis.txt"><pre><code class="language-plaintext">Le programme, transcrit de Brindille en Python, instruction pour instruction :
+
+    prix = 12
+    total = prix * 3 + 2
+    print(total)
+
+$ python -c "import dis; dis.dis(compile(SOURCE, '&lt;t&gt;', 'exec'))"     # Python 3.14.5
+
+  0           RESUME                   0
+
+  1           LOAD_SMALL_INT          12
+              STORE_NAME               0 (prix)
+
+  2           LOAD_NAME                0 (prix)
+              LOAD_SMALL_INT           3
+              BINARY_OP                5 (*)
+              LOAD_SMALL_INT           2
+              BINARY_OP                0 (+)
+              STORE_NAME               1 (total)
+
+  3           LOAD_NAME                2 (print)
+              PUSH_NULL
+              LOAD_NAME                1 (total)
+              CALL                     1
+              POP_TOP
+              LOAD_CONST               1 (None)
+              RETURN_VALUE</code></pre></figure>
+
+<p>La colonne de gauche donne les numéros de ligne du source, comme nos trois tronçons de bytecode correspondaient à nos trois instructions. Puis vient le tronçon de la ligne 2&nbsp;: on charge <code>prix</code>, on pose 3, on multiplie, on pose 2, on additionne, on range. C'est <em>notre</em> suite, dans <em>notre</em> ordre, avec des noms plus longs&nbsp;:</p>
+
+<figure class="code-block" data-file="correspondance.txt"><pre><code class="language-plaintext">CPython 3.14.5                    Brindille (lecon 11)      ce que ca fait
+--------------------------------  -----------------------   ------------------------
+LOAD_SMALL_INT   12               CONST 12                   empile une constante
+STORE_NAME        0 (prix)        RANGE prix                 depile, range sous un nom
+LOAD_NAME         0 (prix)        CHARGE prix                empile la valeur d'un nom
+BINARY_OP         5 (*)           MUL                        depile 2, empile 1
+BINARY_OP         0 (+)           ADD                        depile 2, empile 1</code></pre></figure>
+
+<p>Cinq lignes, cinq équivalences exactes. Ce n'est pas une analogie, c'est la même architecture&nbsp;: <strong>CPython est une machine à pile</strong>, et le compilateur qui produit ce listing fait, sur un langage immense, le travail de notre <code>compiler</code> de quinze lignes. Deux différences de notation sont instructives. <code>BINARY_OP</code> porte un numéro d'opération — <code>5</code> pour la multiplication, <code>0</code> pour l'addition — là où nous avons quatre opcodes distincts&nbsp;; aucune des deux conventions n'est meilleure. <code>STORE_NAME</code> et <code>LOAD_NAME</code> portent un <em>indice</em> suivi du nom entre parenthèses&nbsp;: le nom réel est rangé dans une table à côté, dont l'instruction ne garde qu'un numéro — un entier tient sur quelques octets là où une chaîne en prend autant que de caractères. Notre <code>["RANGE", "prix"]</code> est la version pédagogique de la même idée.</p>
+<p>Reste ce que CPython a et que nous n'avons pas. <code>RESUME</code> est un point d'entrée technique propre aux versions récentes. <code>PUSH_NULL</code>, <code>CALL 1</code> et <code>POP_TOP</code> forment un appel de fonction&nbsp;: dans Python, <code>print</code> n'est pas un mot-clé mais un <em>nom</em>, qu'il faut charger comme n'importe quelle variable — d'où le <code>LOAD_NAME 2 (print)</code> — avant de l'appeler, puis jeter ce qu'il rend. Chez Brindille, <code>affiche</code> est un mot-clé depuis la <a href="lecon-09.html">leçon 9</a>&nbsp;: il devient un opcode, pas un appel. Enfin <code>LOAD_CONST 1 (None)</code> et <code>RETURN_VALUE</code> traduisent qu'un module Python est une fonction comme une autre. Trois écarts, trois conséquences de ce que le langage possède et que le nôtre n'a pas&nbsp;; aucun ne touche à l'architecture.</p>
+<p>Le réflexe à emporter&nbsp;: quand tu veux savoir comment une machine virtuelle range ses valeurs, ne cherche pas la documentation — <em>demande-lui son bytecode</em>. Java expose le sien avec <code>javap</code>, et son jeu d'instructions est celui d'une machine à pile&nbsp;; WebAssembly, conçu trente ans plus tard, l'est également. Trois environnements que rien ne relie historiquement, trois fois la même réponse à la question du début&nbsp;: où les résultats intermédiaires attendent-ils leur tour&nbsp;? Sur une pile.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Les huit instructions de Brindille&nbsp;: contrat, argument, effet sur la hauteur de pile</caption>
+    <thead><tr><th scope="col">Opcode</th><th scope="col">Argument</th><th scope="col">Ce qu'il retire</th><th scope="col">Ce qu'il remet</th><th scope="col">Hauteur</th></tr></thead>
+    <tbody>
+      <tr><td><code>CONST n</code></td><td>un nombre</td><td>rien</td><td>la valeur <code>n</code></td><td><strong>+1</strong></td></tr>
+      <tr><td><code>CHARGE nom</code></td><td>un nom</td><td>rien</td><td>la valeur rangée sous ce nom</td><td><strong>+1</strong></td></tr>
+      <tr><td><code>RANGE nom</code></td><td>un nom</td><td>le sommet</td><td>rien&nbsp;: la valeur part en mémoire</td><td><strong>−1</strong></td></tr>
+      <tr><td><code>ADD</code></td><td>aucun</td><td><code>d</code> puis <code>g</code></td><td><code>g + d</code></td><td><strong>−1</strong></td></tr>
+      <tr><td><code>SUB</code></td><td>aucun</td><td><code>d</code> puis <code>g</code></td><td><code>g - d</code> — l'ordre compte</td><td><strong>−1</strong></td></tr>
+      <tr><td><code>MUL</code></td><td>aucun</td><td><code>d</code> puis <code>g</code></td><td><code>g * d</code></td><td><strong>−1</strong></td></tr>
+      <tr><td><code>DIV</code></td><td>aucun</td><td><code>d</code> puis <code>g</code></td><td><code>g / d</code> — l'ordre compte</td><td><strong>−1</strong></td></tr>
+      <tr><td><code>AFFICHE</code></td><td>aucun</td><td>le sommet</td><td>rien&nbsp;: la valeur part à l'écran</td><td><strong>−1</strong></td></tr>
+    </tbody>
+  </table>
+</figure>
+<figure class="cheat-table">
+  <table>
+    <caption>Diagnostiquer un générateur ou une machine à pile&nbsp;: le symptôme, la cause, le contrôle</caption>
+    <thead><tr><th scope="col">Ce que tu observes</th><th scope="col">Cause la plus probable</th><th scope="col">Le contrôle qui tranche</th></tr></thead>
+    <tbody>
+      <tr><td><code>2 + 3 * 4</code> juste, mais <code>10 - 3 - 2</code> faux</td><td>les deux opérandes sont inversés, dans le générateur ou dans la machine</td><td>tester le générateur seul, sur la liste qu'il produit, puis la machine seule sur un bytecode écrit à la main</td></tr>
+      <tr><td>l'écran affiche <code>null</code></td><td>la valeur vaut <code>NaN</code> ou l'infini, et le formateur du worker les remplace par <code>null</code></td><td>réafficher la même valeur via <code>String(...)</code>&nbsp;: le vrai nom apparaît</td></tr>
+      <tr><td>hauteur en fin de programme différente de <strong>0</strong></td><td>une instruction du source n'a pas consommé son résultat&nbsp;: <code>RANGE</code> ou <code>AFFICHE</code> manquant</td><td>balayer le bytecode avec la règle +1 / −1 / −1 net, sans rien exécuter</td></tr>
+      <tr><td>hauteur négative en cours de route</td><td>une instruction dépile plus que ce qui a été empilé&nbsp;: bytecode mal formé</td><td>même balayage, mais en refusant dès que la hauteur passe sous zéro</td></tr>
+      <tr><td>la hauteur maximale grandit avec la longueur de l'expression</td><td>l'arbre penche à droite&nbsp;: chaque sous-arbre droit est lui-même un nœud</td><td>comparer <code>1 + 2 + 3 + 4 + 5</code> (mesuré&nbsp;: <strong>2</strong>) et <code>1 + (2 + (3 + (4 + 5)))</code> (mesuré&nbsp;: <strong>5</strong>)</td></tr>
+      <tr><td>«&nbsp;la pile fait gagner des instructions&nbsp;»</td><td>croyance non vérifiée&nbsp;: sur <code>2 + 3 * 4</code>, mesuré <strong>5</strong> instructions des deux côtés</td><td>compter non pas les instructions, mais les <em>registres</em>&nbsp;: <strong>3</strong> ici, <strong>5</strong> sur l'expression creuse</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Opcode</dt><dd>Nom de l'opération que porte une instruction, par opposition à ses arguments. Brindille en compte huit. Dans un vrai format, un opcode est un octet&nbsp;: c'est de là que <em>bytecode</em> tire son nom.</dd>
+  <dt>Compteur d'instructions (<code>pc</code>)</dt><dd>Variable de la machine qui désigne l'instruction à exécuter. Elle est incrémentée <em>avant</em> l'exécution, de sorte qu'elle indique déjà «&nbsp;la suite&nbsp;» pendant que l'instruction courante travaille — convention indispensable dès qu'un jeu d'instructions possède des sauts.</dd>
+  <dt>Empiler / dépiler</dt><dd>Les deux seuls gestes qu'une pile autorise, toujours au même bout&nbsp;: ajouter une valeur au sommet, retirer celle du sommet. Cette restriction dispense de nommer les emplacements. Sur une opération binaire, le premier dépilage rend l'opérande de <em>droite</em>, empilé en dernier.</dd>
+  <dt>Hauteur de pile</dt><dd>Nombre de valeurs présentes sur la pile à un instant donné. Elle se calcule sans exécuter le code&nbsp;: +1 pour <code>CONST</code> et <code>CHARGE</code>, −1 pour <code>RANGE</code> et <code>AFFICHE</code>, −1 net pour une opération binaire. Mesuré&nbsp;: maximum <strong>2</strong> sur le programme de la leçon.</dd>
+  <dt>Invariant de pile</dt><dd>Propriété que tout bytecode correctement engendré doit vérifier&nbsp;: la hauteur vaut <strong>0</strong> en fin de programme et n'est jamais négative. La première condition attrape un résultat abandonné, la seconde un dépilage de trop&nbsp;; aucune ne demande d'exécution.</dd>
+  <dt>Générateur de code</dt><dd>Programme qui traduit l'arbre en instructions. Sur Brindille, c'est le parcours post-ordre de l'évaluateur de la leçon 10 dont l'action de fin a changé&nbsp;: au lieu de rendre une valeur, il ajoute une instruction à une liste.</dd>
+  <dt>Machine à registres</dt><dd>Architecture où les résultats intermédiaires vivent dans des cases numérotées, chaque instruction désignant ses sources et sa destination. Mesuré sur <code>2 + 3 * 4</code>&nbsp;: <strong>5</strong> instructions comme avec une pile, mais <strong>3</strong> registres à gérer.</dd>
+  <dt>Allocation de registres</dt><dd>Problème que pose une machine à registres&nbsp;: quelle valeur occupe quel registre, quand il redevient libre, laquelle déverser en mémoire quand il n'en reste plus. Une vraie machine en a un nombre fixe et petit, alors que le besoin croît avec l'emboîtement — mesuré&nbsp;: <strong>5</strong> registres pour cinq termes creusés à droite.</dd>
+  <dt>Vérification du bytecode</dt><dd>Contrôle qu'une machine virtuelle applique au code <em>avant</em> de l'exécuter, le contrat n'obligeant personne à lui fournir du code honnête. Mesuré sur <code>CONST 2 | ADD | AFFICHE</code>&nbsp;: sans elle, aucune erreur n'est levée et l'écran reçoit une valeur fausse.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Quitter l'arbre est un <strong>abaissement</strong>, motivé par trois besoins dont aucun n'est une question de vitesse&nbsp;: écrire le programme dans un fichier, le lire de haut en bas, le transformer localement. La <a href="lecon-02.html">leçon 2</a> appelait cela une <strong>représentation intermédiaire</strong>.</li>
+<li><strong>Pile ou registres&nbsp;?</strong> Mesuré sur <code>2 + 3 * 4</code>&nbsp;: <strong>5</strong> instructions des deux côtés — la pile n'en fait gagner aucune. Ce qu'elle épargne, c'est de <em>nommer</em>&nbsp;: <strong>3</strong> registres ici, <strong>5</strong> sur <code>1 + (2 + (3 + (4 + 5)))</code> pour les mêmes <strong>9</strong> instructions. Comme une vraie machine en a un nombre fixe, il faut déverser en mémoire&nbsp;: c'est l'<strong>allocation de registres</strong>, que la pile supprime au lieu de la résoudre.</li>
+<li>Le <strong>jeu d'instructions</strong> est un contrat. Huit opcodes, trois familles selon leur effet sur la hauteur&nbsp;: <strong>+1</strong> pour <code>CONST</code> et <code>CHARGE</code>, <strong>−1</strong> pour <code>RANGE</code> et <code>AFFICHE</code>, <strong>−1 net</strong> pour les quatre opérations binaires.</li>
+<li>Le <strong>générateur</strong> est le parcours post-ordre de la <a href="lecon-10.html">leçon 10</a> dont on a remplacé «&nbsp;rendre une valeur&nbsp;» par «&nbsp;émettre une instruction&nbsp;». Mesuré&nbsp;: <code>2 + 3 * 4</code> et <code>(2 + 3) * 4</code> donnent <strong>6</strong> instructions chacun, exactement les mêmes six&nbsp;; seul l'<strong>ordre</strong> diffère. Les parenthèses, devenues emboîtement à la <a href="lecon-09.html">leçon 9</a>, sont maintenant un ordre d'émission.</li>
+<li>Le programme entier donne <strong>10 instructions</strong>, une hauteur maximale de <strong>2</strong>, une hauteur finale de <strong>0</strong>. Ce zéro est un <strong>invariant</strong>, contrôlable par un simple balayage, <em>sans rien exécuter</em>.</li>
+<li>La <strong>machine</strong> tient en vingt lignes&nbsp;: une pile, une mémoire, un compteur <code>pc</code>, une boucle. Pas un mot de grammaire, et pourtant le même écran que l'interprète&nbsp;: <strong>38</strong> puis <strong>26</strong>, <strong>0</strong> valeur restée sur la pile.</li>
+<li>La trace donne une hauteur maximale de <strong>3</strong> sur <code>2 + 3 * 4</code>. Et voici la mesure à retenir&nbsp;: <code>1 + 2 + 3 + 4 + 5</code> et <code>1 + (2 + (3 + (4 + 5)))</code> rendent le même <strong>15</strong> avec des hauteurs de <strong>2</strong> et <strong>5</strong>. À gauche chaque sous-arbre droit est une feuille, donc la pile redescend aussitôt&nbsp;; à droite il faut empiler cinq valeurs avant de calculer. L'associativité de la leçon 9 a une conséquence physique.</li>
+<li>Un <strong>bytecode mal formé ne proteste pas</strong>. Mesuré sur <code>CONST 2 | ADD | AFFICHE</code>&nbsp;: dépiler une pile vide rend <code>undefined</code>, le calcul donne <code>NaN</code>, l'écran affiche <code>null</code> (le worker met en forme avec <code>JSON.stringify</code>). Aucune erreur, un résultat faux — et une pile qui finit tout de même vide&nbsp;: l'invariant de fin est nécessaire, jamais suffisant. D'où les vérificateurs de bytecode.</li>
+<li>Le <strong>cas réel</strong> ferme la boucle&nbsp;: sur le programme transcrit en Python, CPython 3.14.5 produit un désassemblage dont cinq instructions correspondent une à une aux nôtres.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>On te donne le bytecode <code>CONST 5 | CONST 3 | SUB | AFFICHE</code>, écrit à la main, et l'écran affiche <strong>−2</strong>. Dis ce que la machine aurait dû afficher, puis pourquoi tu sais, sans lire une ligne, que la faute n'est pas dans le générateur.</li>
+<li>Ton générateur produit un bytecode dont la hauteur en fin de programme vaut <strong>1</strong> au lieu de 0. Sans rien exécuter, dis quelle sorte d'instruction du source tu vas chercher, et pourquoi une seule fautive suffit à expliquer ce chiffre.</li>
+<li>Explique, sans employer le mot «&nbsp;parenthèse&nbsp;», pourquoi une somme de cinq termes peut occuper deux emplacements de pile ou cinq selon la façon dont elle est écrite — et ce que tu regarderais dans la grammaire pour prédire lequel des deux cas se produira.</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Les textes « 2 + 3 * 4 » et « (2 + 3) * 4 » donnent chacun 6 instructions, et ce sont exactement les mêmes six : trois CONST, un MUL, un ADD, un AFFICHE. Qu'est-ce qui les distingue alors ?","a":["L'ordre d'émission : MUL précède ADD dans le premier, ADD précède MUL dans le second — l'emboîtement de l'arbre est devenu une place dans la liste","Les arguments des trois CONST, qui ne portent pas les mêmes nombres selon que l'expression est parenthésée ou non au moment de l'analyse","Rien dans le bytecode : c'est la machine qui, en lisant la liste, applique la priorité des opérateurs qu'elle connaît et rétablit le bon groupement","Le second émet en plus une instruction de groupement, invisible dans le listing parce qu'elle ne porte aucun argument et n'occupe pas d'adresse"],"correct":0,"explain":"Mesuré : les deux listings contiennent les mêmes opcodes avec les mêmes arguments. Dans le premier, MUL est à l'adresse 3 et ADD à l'adresse 4 ; dans le second, c'est l'inverse. La machine ne connaît aucune priorité — elle exécute la liste dans l'ordre, et c'est cet ordre qui porte tout le sens."},
+  {"q":"Pourquoi un langage qui veut un générateur simple choisit-il une machine à pile plutôt qu'une machine à registres ?","a":["Parce que la pile ne demande jamais de nommer un emplacement : mesuré, 5 instructions des deux côtés sur « 2 + 3 * 4 », mais 3 registres à attribuer et à libérer du côté registres","Parce que la version à pile produit nettement moins d'instructions : 5 contre 9 sur la même expression, soit près de moitié moins de travail pour la machine","Parce qu'une machine à registres ne sait pas exécuter une expression imbriquée : il lui faudrait autant de registres que l'expression compte de niveaux de profondeur","Parce que le nombre d'instructions d'une machine à registres croît avec l'emboîtement de l'expression, là où celui d'une machine à pile en reste indépendant"],"correct":0,"explain":"Mesuré : 5 instructions des deux côtés sur « 2 + 3 * 4 », et 9 des deux côtés sur l'expression creuse — la pile ne fait gagner aucune instruction. Ce qu'elle supprime, c'est la décision : quel numéro attribuer, quand le libérer, et que faire quand il n'en reste plus. Ce dernier point est l'allocation de registres, un problème difficile."},
+  {"q":"« 1 + 2 + 3 + 4 + 5 » et « 1 + (2 + (3 + (4 + 5))) » rendent tous deux 15, mais leurs hauteurs de pile mesurées valent 2 et 5. D'où vient l'écart ?","a":["De la forme de l'arbre : à gauche chaque sous-arbre droit est une feuille, donc chaque ADD suit son CONST et la pile redescend aussitôt ; à droite il faut empiler les cinq valeurs avant le premier ADD","Du nombre de jetons : le second texte en contient davantage, donc il produit davantage d'instructions, donc la pile a mécaniquement plus de valeurs à retenir au même instant","D'un opcode de groupement que le générateur émet à chaque parenthèse ouvrante et qui reste sur la pile jusqu'à ce que la parenthèse fermante correspondante soit atteinte","De la machine, qui réserve d'avance un emplacement par niveau de parenthèses rencontré pendant l'analyse syntaxique du texte, avant même d'exécuter la moindre instruction"],"correct":0,"explain":"Les parenthèses ont disparu de l'arbre depuis la leçon 9 et n'émettent aucun opcode. Ce qu'elles ont laissé, c'est un emboîtement à droite : chaque nœud d'addition y a pour enfant de droite un autre nœud d'addition, et rien ne peut être calculé avant d'avoir touché le fond. La forme de la grammaire décide donc de la mémoire consommée."},
+  {"q":"On donne à la machine le bytecode « CONST 2 | ADD | AFFICHE », que le générateur n'aurait jamais pu produire. Que se passe-t-il ?","a":["Rien ne proteste : le second dépilage d'une pile vide rend undefined, le calcul donne NaN, et l'écran du site affiche null parce que le worker met en forme avec JSON.stringify","La machine lève une exception dès la deuxième instruction, le dépilage d'une pile vide étant l'un des deux cas d'erreur qu'elle contrôle explicitement dans sa boucle","La machine s'interrompt à la fin sans rien afficher, parce que sa hauteur de pile en fin de programme n'est pas nulle et que l'invariant est donc violé","La machine affiche 2 : faute d'un second opérande à dépiler, l'instruction ADD est ignorée et la valeur déjà présente traverse le programme sans être modifiée"],"correct":0,"explain":"Mesuré : ecran (brut) vaut [null], ecran (String) vaut NaN, et il reste 0 valeur sur la pile. Aucune exception n'est levée — ni par la machine, qui ne contrôle que la variable inconnue et l'opcode inconnu, ni par JavaScript, dont pop() sur un tableau vide rend undefined sans se plaindre. Un résultat faux, aucun signal : c'est exactement pourquoi une machine virtuelle réelle vérifie son bytecode avant de l'exécuter."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"3"},"placeholder":"affiche la hauteur de pile maximale du bytecode de « affiche 2 + 3 * 4 »","hints":["Le bytecode t'est donné, tu n'as pas besoin de l'analyseur : c'est le tableau [[\"CONST\",2],[\"CONST\",3],[\"CONST\",4],[\"MUL\"],[\"ADD\"],[\"AFFICHE\"]].","La regle est celle de la lecon : +1 pour CONST et CHARGE, -1 pour RANGE et AFFICHE, -1 net pour ADD, SUB, MUL et DIV.","Deux variables suffisent : la hauteur courante, et le maximum vu jusqu'ici. Mets a jour le maximum APRES avoir applique l'effet de l'instruction."],"link":{"href":"lecon-11.html","label":"Revoir « Le programme entier, et l'invariant de la pile »"}},
+  {"type":"code","run":{"expect":"14"},"placeholder":"execute le bytecode CONST 2, CONST 3, CONST 4, MUL, ADD, AFFICHE et affiche la valeur envoyee a l'ecran","hints":["Il te faut trois choses : un tableau qui sert de pile, un tableau qui sert d'ecran, et un compteur pc qui parcourt le bytecode du premier au dernier.","Pour une operation binaire, depile d'ABORD l'operande de droite : c'est lui qui est au sommet, parce qu'il a ete empile en dernier.","AFFICHE depile le sommet et le pousse dans l'ecran. La valeur cherchee est donc la premiere case de l'ecran a la fin."],"link":{"href":"lecon-11.html","label":"Revoir « La machine : vingt lignes qui ne savent rien »"}},
+  {"type":"text","accept":["2","h = 2","hauteur 2","hauteur maximale 2","2 valeurs"],"placeholder":"apres avoir ajoute DOUBLE, la hauteur maximale de CONST 2 | DOUBLE | CONST 3 | DOUBLE | ADD | AFFICHE vaut _","hints":["DOUBLE retire une valeur et en remet une : son effet sur la hauteur de pile est donc nul, ni +1 ni -1.","Balaie les six instructions en tenant la hauteur : elle monte a 1, ne bouge pas, monte a 2, ne bouge pas, puis redescend deux fois.","La reponse est un seul chiffre."],"link":{"href":"lecon-11.html","label":"Revoir « Le jeu d'instructions : un contrat en huit lignes »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris <code>hauteurMax(code)</code>, qui applique la règle de hauteur à une liste d'instructions et rend la plus grande hauteur atteinte. Le bytecode t'est donné&nbsp;: <code>[["CONST",2],["CONST",3],["CONST",4],["MUL"],["ADD"],["AFFICHE"]]</code>, celui de <code>affiche 2 + 3 * 4</code>. Affiche le résultat, après avoir noté ta prédiction en balayant les six lignes à la main.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// La regle de hauteur : +1 pour CONST/CHARGE, -1 pour RANGE/AFFICHE,
+// -1 net pour une operation binaire (elle depile 2 et empile 1).
+const code = [["CONST", 2], ["CONST", 3], ["CONST", 4], ["MUL"], ["ADD"], ["AFFICHE"]];
+
+function hauteurMax(code) {
+  let h = 0, max = 0;
+  for (const [op] of code) {
+    if (op === "CONST" || op === "CHARGE") h += 1;
+    else h -= 1;
+    if (h &gt; max) max = h;
+  }
+  return max;
+}
+
+console.log(hauteurMax(code));
+// affiche : 3</code></pre></figure>
+<p>Trois remarques. <strong>Le <code>for</code> déstructure le premier élément seulement</strong>&nbsp;: <code>const [op] of code</code> ignore l'argument, dont l'effet sur la hauteur ne dépend jamais. <strong>Le maximum se met à jour après l'effet</strong>, sinon <code>CONST 4</code> ne serait pas compté. <strong>La branche par défaut couvre six opcodes d'un coup</strong>, tous de bilan <code>−1</code>. Variante utile&nbsp;: rends aussi la hauteur finale et lève une erreur dès que <code>h</code> devient négatif — tu auras écrit un vérificateur.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la machine, réduite aux quatre opcodes dont ce bytecode a besoin&nbsp;: <code>CONST</code>, <code>ADD</code>, <code>MUL</code> et <code>AFFICHE</code>. Elle tient une pile, un écran et un compteur <code>pc</code>. Exécute-la sur le même bytecode qu'à l'exercice 1 et affiche la valeur envoyée à l'écran. Attention au détail que la moitié des premières versions rate&nbsp;: l'ordre dans lequel tu dépiles les deux opérandes.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">const code = [["CONST", 2], ["CONST", 3], ["CONST", 4], ["MUL"], ["ADD"], ["AFFICHE"]];
+
+function machine(code) {
+  const pile = [], ecran = [];
+  let pc = 0;
+  while (pc &lt; code.length) {
+    const [op, arg] = code[pc];
+    pc++;                                  // on avance AVANT d'agir
+    if (op === "CONST")   { pile.push(arg); continue; }
+    if (op === "AFFICHE") { ecran.push(pile.pop()); continue; }
+    const d = pile.pop(), g = pile.pop();  // d est le sommet : l'operande de DROITE
+    pile.push(op === "ADD" ? g + d : g * d);
+  }
+  return ecran;
+}
+
+console.log(machine(code)[0]);
+// affiche : 14</code></pre></figure>
+<p>L'ordre de dépilage est la seule ligne délicate, et sur ce bytecode l'erreur ne se verrait pas&nbsp;: <code>3 * 4</code> et <code>4 * 3</code> valent 12. Pour la voir, il faut un opérateur non commutatif&nbsp;: ajoute <code>SUB</code> et exécute <code>[["CONST",10],["CONST",3],["SUB"],["AFFICHE"]]</code>, dont la bonne réponse est 7 et l'inversion −7. Remarque aussi le <code>continue</code> après chaque cas&nbsp;: sans lui, l'exécution tomberait dans le dépilage commun et retirerait deux valeurs après un <code>CONST</code>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Pour aller plus loin</span></div><p>Ajoute un neuvième opcode, <code>DOUBLE</code>&nbsp;: il retire le sommet de la pile et y remet son double. Écris sa branche dans la machine, décide de son effet sur la hauteur, ajoute-le au calcul. Réponds ensuite dans le champ&nbsp;: quelle est la hauteur <strong>maximale</strong> de <code>CONST 2 | DOUBLE | CONST 3 | DOUBLE | ADD | AFFICHE</code>&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// DOUBLE depile une valeur et en empile une : son effet sur la hauteur est NUL.
+const code = [["CONST", 2], ["DOUBLE"], ["CONST", 3], ["DOUBLE"], ["ADD"], ["AFFICHE"]];
+
+function hauteurMax(code) {
+  let h = 0, max = 0;
+  for (const [op] of code) {
+    if (op === "CONST" || op === "CHARGE") h += 1;
+    else if (op === "DOUBLE") h += 0;      // 1 depilee, 1 empilee
+    else h -= 1;
+    if (h &gt; max) max = h;
+  }
+  return max;
+}
+
+function machine(code) {
+  const pile = [], ecran = [];
+  let pc = 0;
+  while (pc &lt; code.length) {
+    const [op, arg] = code[pc];
+    pc++;
+    if (op === "CONST")   { pile.push(arg); continue; }
+    if (op === "DOUBLE")  { pile.push(pile.pop() * 2); continue; }
+    if (op === "AFFICHE") { ecran.push(pile.pop()); continue; }
+    const d = pile.pop(), g = pile.pop();
+    pile.push(g + d);
+  }
+  return ecran;
+}
+
+console.log(hauteurMax(code));
+// affiche : 2
+console.log("ecran :", machine(code));
+// affiche : ecran : [10]</code></pre></figure>
+<p><code>DOUBLE</code> forme à lui seul une <strong>quatrième famille</strong>, absente de la figure parce qu'aucun des huit opcodes d'origine n'en relevait&nbsp;: les instructions <em>unaires</em>, de bilan nul. Deux enseignements. <strong>Un&nbsp;:</strong> le classement d'un opcode ne dépend que du couple «&nbsp;combien il dépile, combien il empile&nbsp;», ce qui permet à la règle de s'étendre sans se réécrire. <strong>Deux&nbsp;:</strong> ajouter un opcode oblige à toucher <em>au moins deux endroits</em>, la machine et le calcul de hauteur, et l'oubli du second est silencieux&nbsp;: un <code>DOUBLE</code> compté <code>−1</code> par distraction ferait tomber la hauteur finale à <code>−2</code> et te ferait rejeter un bytecode valide.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
