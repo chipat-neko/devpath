@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Convolutifs : regarder une image par morceaux — Leçon 10 · Cours Réseaux de neurones — Syntaxe</title>
+    <meta name="description" content="Pourquoi une couche dense ne convient pas aux images : 100 480 nombres à régler pour 128 neurones sur une image 28×28, contre 80 pour huit filtres 3×3 — et surtout, la dense rend exactement les mêmes sorties si l'on permute les pixels (écart maximal 0), quand le même noyau ne retrouve plus rien. La convolution posée à la main terme à terme, les 9 poids réutilisés à 36 positions, l'équivariance mesurée, et ce que le max-pooling jette : 50 625 cartes distinctes pour une seule sortie." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="neurones" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Réseaux de neurones</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · Les familles d'architectures — Leçon 10</p>
+              <h1 class="lesson-header__title">Convolutifs&nbsp;: regarder une image par morceaux</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~104 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: les leçons 1 et 3 de ce cours — le neurone, la couche, et le compte des paramètres d'un réseau. Aucune notion de traitement d'image n'est supposée</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>compter les paramètres d'une couche <strong>dense</strong> et d'une couche <strong>convolutive</strong> sur la même image, et dire lequel des deux comptes dépend de la taille de l'image&nbsp;;</li>
+                  <li>établir par une mesure qu'une couche dense <strong>ignore la géométrie</strong> — permuter les pixels ne change rien à ce qu'elle apprend&nbsp;;</li>
+                  <li>poser une <strong>convolution</strong> à la main, terme à terme, et lire la carte qu'elle produit&nbsp;;</li>
+                  <li>distinguer <strong>équivariance</strong> et <strong>invariance</strong> avec un chiffre, et dire ce qu'un <strong>max-pooling</strong> gagne et ce qu'il jette.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le module 3 a fait le tour de ce qui rate. Celui-ci n'a plus qu'une question&nbsp;: <strong>pourquoi certaines familles de réseaux existent, et ce qu'elles changent aux nombres.</strong> Premier volet&nbsp;: les images.</p>
+<p>Sur une image de 28 pixels de côté en niveaux de gris, une couche <strong>dense</strong> de 128 neurones demande <strong>100 480</strong> nombres à régler&nbsp;: la <a href="lecon-03.html">leçon 3</a> comptait déjà cette couche-là. Huit filtres 3×3 en demandent <strong>80</strong>, soit <strong>1 256 fois moins</strong> — et ce compte <em>ne bouge pas</em> avec la taille de l'image.</p>
+<p>Une leçon malhonnête s'arrêterait là. Le même bloc compte aussi les <em>multiplications</em>, et ce tableau dit presque le contraire&nbsp;: <strong>2,06</strong> sur la même image, et <strong>1,79</strong> en 512×512. <strong>1 256 compte des nombres à régler, pas du calcul.</strong></p>
+<p>Le vrai argument est ailleurs. Permuter les 64 pixels d'une image et réétiqueter les poids de la dense de la même façon lui rend <strong>exactement les mêmes sorties</strong>&nbsp;: écart maximal <strong>0</strong>. Le même noyau, lui, ne retrouve rien. <strong>La dense doit apprendre la géométrie&nbsp;; la convolution la reçoit gratuitement.</strong></p>
+
+<h2>Cent mille nombres pour une image de vingt-huit pixels de côté</h2>
+<p>Rien n'empêche de brancher une couche dense sur des pixels&nbsp;: la règle de comptage de la <a href="lecon-03.html">leçon 3</a> s'y applique telle quelle. Le bloc suivant la pousse sur quatre tailles d'image, puis la compare à 8 filtres 3×3.</p>
+
+<figure class="code-block" data-file="l10-dense-aveugle.js"><pre><code class="language-javascript">// Une couche dense sur une image : ce qu'elle coûte, et ce qu'elle ne voit pas.
+// (a) on compte les paramètres d'une dense puis d'une convolution, sur 4 tailles ;
+// (b) on permute les pixels, et on regarde qui survit. Tout y est entier : les sommes sont exactes.
+const NEUR = 128, FILT = 8, K = 3, LP = [17, 9, 13, 8, 11], LM = [17, 14, 14, 11];
+const CAS = [[28, 28, 1, "28×28 gris"], [64, 64, 1, "64×64 gris"],
+  [224, 224, 3, "224×224 couleur"], [512, 512, 3, "512×512 couleur"]];
+const esp = (n) =&gt; String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const tab = (v, l) =&gt; "  " + v.map((s, i) =&gt; i ? s.padStart(l[i]) : s.padEnd(l[0])).join("");
+console.log("(a) COMBIEN DE NOMBRES À RÉGLER — une couche dense de " + NEUR + " neurones,\n"
+  + "    puis une couche convolutive de " + FILT + " filtres " + K + "×" + K + ", sur la même image.\n");
+console.log(tab(["image", "entrées", "dense", "conv", "rapport"], LP));
+const rapP = [], rapM = [], sor = [];
+for (const [h, w, ca, nom] of CAS) { const ent = h * w * ca, de = ent * NEUR + NEUR, co = FILT * K * K * ca + FILT;
+  rapP.push(de / co); console.log(tab([nom, esp(ent), esp(de), esp(co), (de / co).toFixed(1)], LP)); }
+console.log("\n  Dense : entrées × neurones + biais. Conv : filtres × " + (K * K) + " × canaux + biais.\n"
+  + "  La colonne « conv » ne bouge qu'avec le nombre de canaux, pas avec la\n"
+  + "  taille de l'image : le rapport passe de " + rapP[0].toFixed(0) + " à " + rapP[3].toFixed(0) + ".");
+console.log("\n(a bis) LE MÊME TABLEAU EN MULTIPLICATIONS, une image, une passe avant :\n");
+console.log(tab(["image", "dense", "conv", "rapport"], LM));
+for (const [h, w, ca, nom] of CAS) { const md = h * w * ca * NEUR, mc = (h - K + 1) * (w - K + 1) * FILT * K * K * ca;
+  rapM.push(md / mc); sor.push((h - K + 1) * (w - K + 1) * FILT); console.log(tab([nom, esp(md), esp(mc), (md / mc).toFixed(2)], LM)); }
+console.log("\n  Le rapport tombe de " + rapP[0].toFixed(0) + " à " + rapM[3].toFixed(2) + " : la convolution économise des POIDS,\n"
+  + "  pas des multiplications. Elle refait ses " + (K * K) + " produits à chaque position, et\n"
+  + "  sort " + esp(sor[0]) + " valeurs sur l'image " + CAS[0][0] + "×" + CAS[0][1] + ", là où la dense en sort " + NEUR + ".");
+
+// ---------- (b) L'AVEUGLEMENT À LA GÉOMÉTRIE ----------
+// Trois images 8×8 à valeurs entières : un carré, une barre, le carré décalé.
+const C = 8, P = C * C, carre = [], barre = [], decale = [];
+for (let r = 0; r &lt; C; r++) for (let c = 0; c &lt; C; c++) { carre.push(r &gt; 1 &amp;&amp; r &lt; 6 &amp;&amp; c &gt; 1 &amp;&amp; c &lt; 6 ? 10 : 0);
+  barre.push(c === 3 || c === 4 ? 10 : 0); decale.push(r &gt; 0 &amp;&amp; r &lt; 5 &amp;&amp; c &gt; 2 &amp;&amp; c &lt; 7 ? 10 : 0); }
+// Une permutation fixe des 64 pixels (MINSTD, graine 42) : la MÊME pour les trois.
+let g = 42; const hasard = () =&gt; { g = (g * 16807) % 2147483647; return g / 2147483647; };
+const perm = []; for (let i = 0; i &lt; P; i++) perm.push(i);
+for (let i = P - 1; i &gt; 0; i--) { const j = Math.floor(hasard() * (i + 1)), t = perm[i]; perm[i] = perm[j]; perm[j] = t; }
+// Une dense de 128 neurones : poids entiers de -4 à 4, biais entiers de -2 à 2.
+const W = [], BIA = [];
+for (let i = 0; i &lt; NEUR; i++) { const l = []; for (let j = 0; j &lt; P; j++) l.push(Math.floor(hasard() * 9) - 4); W.push(l); BIA.push(Math.floor(hasard() * 5) - 2); }
+const dense = (po, x) =&gt; po.map((l, i) =&gt; { let s = BIA[i]; for (let j = 0; j &lt; P; j++) s += l[j] * x[j]; return s; });
+const Wp = W.map((l) =&gt; perm.map((p) =&gt; l[p]));          // les mêmes poids, réétiquetés
+let ecartD = 0, ex = null;
+for (const x of [carre, barre, decale]) { const a = dense(W, x), b = dense(Wp, perm.map((p) =&gt; x[p]));
+  if (ex === null) ex = [a.slice(0, 4), b.slice(0, 4)];
+  for (let i = 0; i &lt; NEUR; i++) ecartD = Math.max(ecartD, Math.abs(a[i] - b[i])); }
+console.log("\n(b) UNE PERMUTATION FIXE DES " + P + " PIXELS, LA MÊME POUR LES TROIS IMAGES\n\n"
+  + "  Sorties des 4 premiers neurones, image « carré » :\n"
+  + "     pixels intacts,  poids intacts  :" + ex[0].map((v) =&gt; String(v).padStart(7)).join("") + "\n"
+  + "     pixels permutés, poids permutés :" + ex[1].map((v) =&gt; String(v).padStart(7)).join("") + "\n"
+  + "  Écart maximal sur " + (3 * NEUR) + " sorties (3 images × " + NEUR + " neurones) : " + ecartD + ".");
+
+const VERT = [[1, 0, -1], [2, 0, -2], [1, 0, -1]];       // détecteur de bord vertical
+const conv = (x) =&gt; { const m = []; for (let r = 0; r &lt; C - 2; r++) for (let c = 0; c &lt; C - 2; c++) { let v = 0; for (let i = 0; i &lt; 3; i++) for (let j = 0; j &lt; 3; j++) v += VERT[i][j] * x[(r + i) * C + c + j]; m.push(v); } return m; };
+const stat = (m) =&gt; { let nz = 0, mx = 0, so = 0; for (const v of m) { if (v !== 0) nz++; if (Math.abs(v) &gt; mx) mx = Math.abs(v); so += Math.abs(v); } return [nz, mx, so]; };
+const m1 = conv(carre), m2 = conv(perm.map((p) =&gt; carre[p])), s1 = stat(m1), s2 = stat(m2), L3 = [21, 10, 8, 12];
+let ecartC = 0, pareils = 0, zeros = 0;
+for (let i = 0; i &lt; m1.length; i++) { const d = Math.abs(m1[i] - m2[i]); if (d &gt; ecartC) ecartC = d; if (d === 0) { pareils++; if (m1[i] === 0) zeros++; } }
+console.log("\n  Le même détecteur de bord vertical (9 poids), sur les deux images :\n"
+  + tab(["   carte", "non nuls", "|max|", "somme |v|"], L3));
+[["   pixels intacts", s1], ["   pixels permutés", s2]].forEach(([n, s]) =&gt; console.log(tab([n].concat(s.map(String)), L3)));
+console.log("  " + m1.length + " positions. Écart maximal entre les deux cartes : " + ecartC + ". Positions\n"
+  + "  identiques : " + pareils + " sur " + m1.length + ", dont " + zeros + " à zéro des deux côtés. La réponse la\n"
+  + "  plus forte tombe de " + s1[1] + " à " + s2[1] + " : il n'y a plus de bord franc à trouver.");
+
+const src = []; for (let i = 0; i &lt; 3; i++) for (let j = 0; j &lt; 3; j++) src.push(perm[(2 + i) * C + 1 + j]);
+const li = src.map((p) =&gt; Math.floor(p / C)), cl = src.map((p) =&gt; p % C), dl = Math.max(...li) - Math.min(...li), dc = Math.max(...cl) - Math.min(...cl);
+let fact = 1; for (let i = 2; i &lt;= P; i++) fact *= i;
+console.log("\n  La fenêtre 3×3 posée en (2,1) prenait 9 pixels voisins, sur 3 lignes et\n"
+  + "  3 colonnes contiguës. Après permutation, ces 9 cases tiennent des pixels\n"
+  + "  venus de " + new Set(li).size + " lignes et " + new Set(cl).size + " colonnes, écartés de " + dl + " lignes et " + dc + " colonnes.\n"
+  + "  Les " + P + "! = " + fact.toExponential(2) + " rangements des pixels posent à la dense le même\n"
+  + "  problème, à un réétiquetage de ses poids près. À la convolution, non.");</code></pre></figure>
+<figure class="code-block" data-file="l10-dense-aveugle.txt"><pre><code class="language-plaintext">(a) COMBIEN DE NOMBRES À RÉGLER — une couche dense de 128 neurones,
+    puis une couche convolutive de 8 filtres 3×3, sur la même image.
+
+  image              entrées        dense    conv    rapport
+  28×28 gris             784      100 480      80     1256.0
+  64×64 gris           4 096      524 416      80     6555.2
+  224×224 couleur    150 528   19 267 712     224    86016.6
+  512×512 couleur    786 432  100 663 424     224   449390.3
+
+  Dense : entrées × neurones + biais. Conv : filtres × 9 × canaux + biais.
+  La colonne « conv » ne bouge qu'avec le nombre de canaux, pas avec la
+  taille de l'image : le rapport passe de 1256 à 449390.
+
+(a bis) LE MÊME TABLEAU EN MULTIPLICATIONS, une image, une passe avant :
+
+  image                     dense          conv    rapport
+  28×28 gris              100 352        48 672       2.06
+  64×64 gris              524 288       276 768       1.89
+  224×224 couleur      19 267 584    10 645 344       1.81
+  512×512 couleur     100 663 296    56 181 600       1.79
+
+  Le rapport tombe de 1256 à 1.79 : la convolution économise des POIDS,
+  pas des multiplications. Elle refait ses 9 produits à chaque position, et
+  sort 5 408 valeurs sur l'image 28×28, là où la dense en sort 128.
+
+(b) UNE PERMUTATION FIXE DES 64 PIXELS, LA MÊME POUR LES TROIS IMAGES
+
+  Sorties des 4 premiers neurones, image « carré » :
+     pixels intacts,  poids intacts  :     38     39    -50    118
+     pixels permutés, poids permutés :     38     39    -50    118
+  Écart maximal sur 384 sorties (3 images × 128 neurones) : 0.
+
+  Le même détecteur de bord vertical (9 poids), sur les deux images :
+     carte               non nuls   |max|   somme |v|
+     pixels intacts            24      40         640
+     pixels permutés           23      30         380
+  36 positions. Écart maximal entre les deux cartes : 60. Positions
+  identiques : 7 sur 36, dont 4 à zéro des deux côtés. La réponse la
+  plus forte tombe de 40 à 30 : il n'y a plus de bord franc à trouver.
+
+  La fenêtre 3×3 posée en (2,1) prenait 9 pixels voisins, sur 3 lignes et
+  3 colonnes contiguës. Après permutation, ces 9 cases tiennent des pixels
+  venus de 5 lignes et 5 colonnes, écartés de 7 lignes et 6 colonnes.
+  Les 64! = 1.27e+89 rangements des pixels posent à la dense le même
+  problème, à un réétiquetage de ses poids près. À la convolution, non.</code></pre></figure>
+
+<p>Lis la colonne <em>conv</em> en premier&nbsp;: <strong>80, 80, 224, 224</strong>. Elle ne bouge qu'à la ligne où l'image passe en couleur — ce compte dépend des filtres, du noyau et des canaux, jamais de la surface. La colonne <em>dense</em> fait le contraire, <strong>un poids par pixel et par neurone</strong>&nbsp;: 100 352 poids plus 128 biais, soit <strong>100 480</strong> pour 784 entrées, <strong>19 267 712</strong> pour 150 528, des rapports de <strong>1 256,0</strong> à <strong>449 390,3</strong>.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Comparaison des deux comptes de paramètres sur la même image. À gauche, une couche dense de cent vingt-huit neurones branchée sur une image de vingt-huit pixels sur vingt-huit en niveaux de gris : sept cent quatre-vingt-quatre entrées multipliées par cent vingt-huit neurones, plus cent vingt-huit biais, soit cent mille quatre cent quatre-vingts nombres à régler. À droite, une couche convolutive de huit filtres de trois sur trois sur la même image : huit filtres multipliés par neuf poids et par un canal, plus huit biais, soit quatre-vingts nombres à régler. Le rapport entre les deux vaut mille deux cent cinquante-six virgule zéro. En dessous, un tableau à quatre colonnes montre ce que deviennent ces deux comptes quand l'image grandit. Pour la couche dense : cent mille quatre cent quatre-vingts en vingt-huit sur vingt-huit gris, cinq cent vingt-quatre mille quatre cent seize en soixante-quatre sur soixante-quatre gris, dix-neuf millions deux cent soixante-sept mille sept cent douze en deux cent vingt-quatre sur deux cent vingt-quatre couleur, et cent millions six cent soixante-trois mille quatre cent vingt-quatre en cinq cent douze sur cinq cent douze couleur. Pour la couche convolutive : quatre-vingts, quatre-vingts, deux cent vingt-quatre, deux cent vingt-quatre. Son compte ne bouge qu'avec le nombre de canaux, jamais avec la taille de l'image. Une dernière ligne avertit que ces rapports comptent des nombres à régler et non des produits : sur la même image vingt-huit sur vingt-huit, le rapport des multiplications ne vaut que deux virgule zéro six, et il descend à un virgule sept neuf en cinq cent douze sur cinq cent douze.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux façons de brancher une première couche sur une image 28×28</text>
+    <rect class="d-box" x="34" y="36" width="266" height="64" rx="8" />
+    <text class="d-text" x="167" y="56" text-anchor="middle" font-size="10">couche dense, 128 neurones</text>
+    <text class="d-text" x="167" y="76" text-anchor="middle" font-size="11">100 480 nombres à régler</text>
+    <text class="d-mut" x="167" y="92" text-anchor="middle" font-size="8.5">784 × 128 + 128 biais</text>
+    <rect class="d-accent" x="340" y="36" width="266" height="64" rx="8" />
+    <text class="d-text" x="473" y="56" text-anchor="middle" font-size="10">couche convolutive, 8 filtres 3×3</text>
+    <text class="d-text" x="473" y="76" text-anchor="middle" font-size="11">80 nombres à régler</text>
+    <text class="d-mut" x="473" y="92" text-anchor="middle" font-size="8.5">8 × 9 × 1 canal + 8 biais</text>
+    <text class="d-tag" x="320" y="118" text-anchor="middle" font-size="10">rapport 1 256,0</text>
+    <rect class="d-frame" x="34" y="130" width="572" height="98" rx="10" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="320" y="152" text-anchor="middle" font-size="9.5">quand l'image grandit — 28×28, 64×64, 224×224, 512×512</text>
+    <text class="d-mut" x="46" y="180" text-anchor="start" font-size="9">dense</text>
+    <text class="d-text" x="340" y="180" text-anchor="middle" font-size="9.5">100 480 · 524 416 · 19 267 712 · 100 663 424</text>
+    <text class="d-mut" x="46" y="206" text-anchor="start" font-size="9">conv</text>
+    <text class="d-text" x="340" y="206" text-anchor="middle" font-size="9.5">80 · 80 · 224 · 224 — les canaux, jamais la surface</text>
+    <text class="d-label" x="320" y="254" text-anchor="middle" font-size="11">mais en multiplications, même image : 2,06 — et 1,79 en 512×512</text>
+  </svg>
+  <figcaption>Le compte de gauche suit la surface de l'image&nbsp;; celui de droite l'ignore.</figcaption>
+</figure>
+
+<h2>Le rapport qui ne se transporte pas</h2>
+<p>Un tel nombre donne envie d'écrire «&nbsp;1 256 fois moins cher&nbsp;». C'est faux&nbsp;: sur une passe avant, la dense fait <strong>100 352</strong> multiplications et la convolution <strong>48 672</strong>, soit <strong>2,06</strong> — et ce rapport <em>rétrécit</em> quand l'image grandit&nbsp;: 1,89, 1,81, <strong>1,79</strong>.</p>
+<p>La raison est imprimée sous le tableau&nbsp;: la convolution <strong>refait ses 9 produits à chaque position</strong>. Ses poids sont partagés, ses produits non&nbsp;; elle sort <strong>5 408</strong> valeurs sur l'image 28×28 là où la dense en sort <strong>128</strong>. L'une ne «&nbsp;remplace&nbsp;» pas l'autre.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Honnêtement&nbsp;: trois rapports circulent ici, et pas sur le même montage</p><p><strong>1 256</strong> compare les <em>paramètres</em> d'une dense de 128 neurones et de 8 filtres 3×3 sur une image 28×28. <strong>2,06</strong> compare les <em>multiplications</em> des deux mêmes couches. <strong>256</strong>, plus bas, comparera les <em>poids</em> d'un autre montage&nbsp;: un noyau unique sur une image 8×8. Aucun des trois n'est une durée&nbsp;: <strong>rien n'a été chronométré ici.</strong></p></div></div>
+
+<h2>Ce qu'une couche dense ne voit pas</h2>
+<p>La seconde moitié du bloc donne le vrai argument. Trois images 8×8, <strong>une seule permutation</strong> des 64 pixels, une dense de 128 neurones à poids entiers&nbsp;: on mélange les pixels <em>et</em> on réétiquette les poids pareillement.</p>
+<p>Les quatre premières sorties, image «&nbsp;carré&nbsp;»&nbsp;: <strong>38, 39, −50, 118</strong> avant, <strong>38, 39, −50, 118</strong> après. Sur les 384 sorties, écart maximal <strong>0</strong> — les mêmes termes dans un autre ordre. <strong>Une dense ne voit qu'un sac de 64 nombres.</strong></p>
+<p>Le détecteur de bord vertical, lui, s'effondre&nbsp;: <strong>24</strong> valeurs non nulles, maximum <strong>40</strong>, somme des valeurs absolues <strong>640</strong>&nbsp;; sur la permutée, <strong>23</strong>, <strong>30</strong>, <strong>380</strong>. Écart maximal&nbsp;: <strong>60</strong>, et <strong>7</strong> positions identiques sur 36. Mais 23 contre 24&nbsp;: la carte n'est pas vide — ce qui change, c'est <em>où</em> et <em>combien fort</em>.</p>
+<p>La cause tient en une ligne&nbsp;: la fenêtre posée en (2,1) prenait 9 pixels voisins, sur 3 lignes et 3 colonnes contiguës&nbsp;; après permutation, ces 9 cases tiennent des pixels venus de <strong>5 lignes et 5 colonnes</strong>, écartés de <strong>7 lignes et 6 colonnes</strong>. Le voisinage sur lequel les 9 poids pariaient a disparu.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Ce que la permutation des pixels fait à une fenêtre de trois sur trois. À gauche, une grille de huit sur huit cases représente l'image intacte ; un bloc de neuf cases contiguës y est mis en évidence, sur trois lignes et trois colonnes voisines : c'est la fenêtre posée en ligne deux, colonne un. À droite, la même grille de huit sur huit montre d'où viennent réellement les neuf pixels que cette fenêtre trouve après permutation. Les neuf cases mises en évidence sont éparpillées dans toute l'image : elles occupent cinq lignes différentes et cinq colonnes différentes, la plus haute et la plus basse étant écartées de sept lignes, la plus à gauche et la plus à droite de six colonnes. Le voisinage sur lequel les neuf poids du noyau pariaient n'existe plus. En bas, deux mesures opposées. Une couche dense ne voit aucune différence entre les deux images, à condition de réétiqueter ses poids de la même façon : l'écart maximal entre ses sorties vaut zéro sur trois cent quatre-vingt-quatre sorties. Le même noyau, lui, voit une différence énorme : l'écart maximal entre les deux cartes vaut soixante, il ne reste que sept positions identiques sur trente-six, et la réponse la plus forte tombe de quarante à trente.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Les 9 pixels d'une fenêtre 3×3, avant et après permutation</text>
+    <rect class="d-accent" x="60" y="90" width="60" height="60" rx="2" />
+    <path class="d-line" d="M40 50V210 M60 50V210 M80 50V210 M100 50V210 M120 50V210 M140 50V210 M160 50V210 M180 50V210 M200 50V210" fill="none" />
+    <path class="d-line" d="M40 50H200 M40 70H200 M40 90H200 M40 110H200 M40 130H200 M40 150H200 M40 170H200 M40 190H200 M40 210H200" fill="none" />
+    <text class="d-tag" x="120" y="228" text-anchor="middle" font-size="9">fenêtre en (2,1)</text>
+    <text class="d-mut" x="120" y="242" text-anchor="middle" font-size="8.5">3 lignes, 3 colonnes contiguës</text>
+    <path class="d-line" d="M225 130 L395 130" fill="none" /><path class="d-line" d="M387 124 L395 130 L387 136" fill="none" />
+    <text class="d-tag" x="310" y="122" text-anchor="middle" font-size="9">une permutation</text>
+    <text class="d-mut" x="310" y="146" text-anchor="middle" font-size="8.5">des 64 pixels</text>
+    <rect class="d-accent" x="440" y="50" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="560" y="50" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="500" y="90" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="460" y="130" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="480" y="130" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="560" y="130" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="480" y="170" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="500" y="170" width="20" height="20" rx="2" />
+    <rect class="d-accent" x="500" y="190" width="20" height="20" rx="2" />
+    <path class="d-line" d="M420 50V210 M440 50V210 M460 50V210 M480 50V210 M500 50V210 M520 50V210 M540 50V210 M560 50V210 M580 50V210" fill="none" />
+    <path class="d-line" d="M420 50H580 M420 70H580 M420 90H580 M420 110H580 M420 130H580 M420 150H580 M420 170H580 M420 190H580 M420 210H580" fill="none" />
+    <text class="d-tag" x="500" y="228" text-anchor="middle" font-size="9">les mêmes 9 cases : 5 lignes, 5 colonnes</text>
+    <text class="d-mut" x="500" y="242" text-anchor="middle" font-size="8.5">écartées de 7 lignes et 6 colonnes</text>
+    <text class="d-label" x="320" y="268" text-anchor="middle" font-size="11">la dense ne voit aucune différence : écart maximal 0 sur 384 sorties</text>
+    <text class="d-mut" x="320" y="288" text-anchor="middle" font-size="9">le noyau, si : écart maximal 60, 7 positions identiques sur 36, réponse maximale 40 → 30</text>
+  </svg>
+  <figcaption>À droite, les cases d'où viennent les pixels que la fenêtre trouve après permutation&nbsp;: elles ne sont plus voisines.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce zéro dit, et ce qu'il ne dit pas</p><p>L'écart <strong>0</strong> est exact <strong>parce que tout est entier</strong>. Avec des poids à virgule, une somme réordonnée peut différer sur ses derniers chiffres — <em>non mesuré ici</em>. Et le bloc n'essaie pas de <em>réarranger les 9 poids</em> pour rattraper la permutation&nbsp;: ce qui est établi, c'est qu'<strong>avec le même noyau</strong> la carte est détruite. Au-delà, l'argument est un comptage&nbsp;: 64 poids par neurone contre 9 pour toute l'image.</p></div></div>
+
+<h2>La convolution, posée à la main</h2>
+<p>Voici l'opération elle-même, sur une image assez petite pour être lue en entier&nbsp;: fond à <strong>0</strong>, carré clair à <strong>10</strong>, noyau <code>1 0 -1 / 2 0 -2 / 1 0 -1</code>. On pose, on multiplie case à case, on additionne les 9 produits, on glisse.</p>
+
+<figure class="code-block" data-file="l10-convolution.js"><pre><code class="language-javascript">// La convolution posée à la main : une image 8×8, un noyau 3×3, une carte de sortie.
+// Tout est entier : le fond vaut 0, le carré vaut 10, les 9 poids sont ±1 et ±2.
+// Chaque somme affichée se refait sur une ligne.
+const C = 8, K = 3, VAL = 10, img = [];
+for (let r = 0; r &lt; C; r++) { const l = []; for (let c = 0; c &lt; C; c++) l.push(r &gt; 1 &amp;&amp; r &lt; 6 &amp;&amp; c &gt; 1 &amp;&amp; c &lt; 6 ? VAL : 0); img.push(l); }
+const VERT = [[1, 0, -1], [2, 0, -2], [1, 0, -1]];   // bord vertical : gauche moins droite
+const HORI = [[1, 2, 1], [0, 0, 0], [-1, -2, -1]];   // bord horizontal : haut moins bas
+// Poser le noyau sur une fenêtre 3×3, multiplier case à case, additionner les 9 produits.
+function balaye(x, k) {
+  const t = x.length - K + 1, m = [];
+  for (let r = 0; r &lt; t; r++) { const l = [];
+    for (let c = 0; c &lt; t; c++) { let v = 0;
+      for (let i = 0; i &lt; K; i++) for (let j = 0; j &lt; K; j++) v += k[i][j] * x[r + i][c + j];
+      l.push(v); }
+    m.push(l); }
+  return m;
+}
+const grille = (m, w) =&gt; m.map((l) =&gt; "   " + l.map((v) =&gt; String(v).padStart(w)).join("")).join("\n");
+const cv = balaye(img, VERT), ch = balaye(img, HORI), T = cv.length;
+
+console.log("L'IMAGE — " + C + "×" + C + " = " + (C * C) + " pixels : un carré clair (" + VAL + ") sur fond sombre (0)");
+console.log(grille(img, 4));
+console.log("\nLE NOYAU — " + (K * K) + " nombres, détecteur de bord vertical (gauche moins droite)");
+console.log(grille(VERT, 4));
+console.log("\nLA CARTE DE SORTIE — " + T + "×" + T + " = " + (T * T) + " valeurs");
+console.log(grille(cv, 6));
+
+const R = 2, U = 1;                                  // le pixel de sortie qu'on détaille
+console.log("\nUN PIXEL DE SORTIE, TERME À TERME — carte[" + R + "][" + U + "] : la fenêtre couvre les\n"
+  + "   lignes " + R + " à " + (R + K - 1) + " et les colonnes " + U + " à " + (U + K - 1) + " de l'image.\n"
+  + "   pixel   noyau   produit");
+let som = 0;
+for (let i = 0; i &lt; K; i++) for (let j = 0; j &lt; K; j++) { const p = img[R + i][U + j] * VERT[i][j]; som += p;
+  console.log(String(img[R + i][U + j]).padStart(8) + String(VERT[i][j]).padStart(8) + String(p).padStart(10)); }
+console.log("   somme des " + (K * K) + " produits = " + som + ", et la carte porte bien " + cv[R][U] + ".");
+
+console.log("\nLE MÊME NOYAU PARTOUT — " + (T * T) + " positions, " + (K * K) + " poids, " + (T * T * K * K) + " multiplications,\n"
+  + "   mais " + (K * K) + " nombres seulement à régler. Une couche dense qui produirait ces\n"
+  + "   " + (T * T) + " valeurs à partir des " + (C * C) + " pixels demanderait " + (T * T * C * C) + " poids, tous différents.");
+// Les mêmes 9 poids à chaque position : on décale le carré d'une colonne pour voir.
+const img2 = img.map((l) =&gt; [0].concat(l.slice(0, C - 1))), cv2 = balaye(img2, VERT);
+let ecart = 0; for (let r = 0; r &lt; T; r++) for (let c = 1; c &lt; T; c++) ecart = Math.max(ecart, Math.abs(cv2[r][c] - cv[r][c - 1]));
+console.log("   Carré décalé d'une colonne : la carte est la même, décalée d'une colonne.\n"
+  + "   Écart maximal sur les " + (T * (T - 1)) + " valeurs comparées : " + ecart + ".");
+
+console.log("\nUN SECOND NOYAU, LA MÊME IMAGE — haut moins bas (bord horizontal)");
+console.log(grille(HORI, 4));
+console.log("   sa carte :");
+console.log(grille(ch, 6));
+let z1 = 0, z2 = 0, z12 = 0, transposee = 0;
+for (let r = 0; r &lt; T; r++) for (let c = 0; c &lt; T; c++) { if (cv[r][c] === 0) z1++; if (ch[r][c] === 0) z2++;
+  if (cv[r][c] === 0 &amp;&amp; ch[r][c] === 0) z12++; if (ch[r][c] === cv[c][r]) transposee++; }
+console.log("   Deux détecteurs, " + (K * K) + " nombres chacun, deux cartes. Le premier marque les côtés\n"
+  + "   gauche et droit du carré, le second son haut et son bas : la première\n"
+  + "   carte est nulle " + z1 + " fois, la seconde " + z2 + " fois, les deux ensemble " + z12 + " fois.\n"
+  + "   (Ici la seconde carte est la transposée de la première — " + transposee + " positions sur\n"
+  + "   " + (T * T) + " — parce que ce carré-ci est symétrique. Sur une vraie image, non.)");
+
+console.log("\nL'EFFET DE BORD — " + C + "×" + C + " pixels en entrée, " + T + "×" + T + " en sortie");
+console.log("   La fenêtre " + K + "×" + K + " doit tenir entière dans l'image : son coin haut-gauche ne\n"
+  + "   peut aller que de 0 à " + (C - K) + ", soit " + T + " positions par axe (" + C + " - " + K + " + 1 = " + T + ").\n"
+  + "   On perd " + (C * C - T * T) + " valeurs sur " + (C * C) + ", tout le tour de l'image. On peut border l'image\n"
+  + "   de zéros pour garder la taille : c'est tout ce qu'on dira du padding.");</code></pre></figure>
+<figure class="code-block" data-file="l10-convolution.txt"><pre><code class="language-plaintext">L'IMAGE — 8×8 = 64 pixels : un carré clair (10) sur fond sombre (0)
+      0   0   0   0   0   0   0   0
+      0   0   0   0   0   0   0   0
+      0   0  10  10  10  10   0   0
+      0   0  10  10  10  10   0   0
+      0   0  10  10  10  10   0   0
+      0   0  10  10  10  10   0   0
+      0   0   0   0   0   0   0   0
+      0   0   0   0   0   0   0   0
+
+LE NOYAU — 9 nombres, détecteur de bord vertical (gauche moins droite)
+      1   0  -1
+      2   0  -2
+      1   0  -1
+
+LA CARTE DE SORTIE — 6×6 = 36 valeurs
+      -10   -10     0     0    10    10
+      -30   -30     0     0    30    30
+      -40   -40     0     0    40    40
+      -40   -40     0     0    40    40
+      -30   -30     0     0    30    30
+      -10   -10     0     0    10    10
+
+UN PIXEL DE SORTIE, TERME À TERME — carte[2][1] : la fenêtre couvre les
+   lignes 2 à 4 et les colonnes 1 à 3 de l'image.
+   pixel   noyau   produit
+       0       1         0
+      10       0         0
+      10      -1       -10
+       0       2         0
+      10       0         0
+      10      -2       -20
+       0       1         0
+      10       0         0
+      10      -1       -10
+   somme des 9 produits = -40, et la carte porte bien -40.
+
+LE MÊME NOYAU PARTOUT — 36 positions, 9 poids, 324 multiplications,
+   mais 9 nombres seulement à régler. Une couche dense qui produirait ces
+   36 valeurs à partir des 64 pixels demanderait 2304 poids, tous différents.
+   Carré décalé d'une colonne : la carte est la même, décalée d'une colonne.
+   Écart maximal sur les 30 valeurs comparées : 0.
+
+UN SECOND NOYAU, LA MÊME IMAGE — haut moins bas (bord horizontal)
+      1   2   1
+      0   0   0
+     -1  -2  -1
+   sa carte :
+      -10   -30   -40   -40   -30   -10
+      -10   -30   -40   -40   -30   -10
+        0     0     0     0     0     0
+        0     0     0     0     0     0
+       10    30    40    40    30    10
+       10    30    40    40    30    10
+   Deux détecteurs, 9 nombres chacun, deux cartes. Le premier marque les côtés
+   gauche et droit du carré, le second son haut et son bas : la première
+   carte est nulle 12 fois, la seconde 12 fois, les deux ensemble 4 fois.
+   (Ici la seconde carte est la transposée de la première — 36 positions sur
+   36 — parce que ce carré-ci est symétrique. Sur une vraie image, non.)
+
+L'EFFET DE BORD — 8×8 pixels en entrée, 6×6 en sortie
+   La fenêtre 3×3 doit tenir entière dans l'image : son coin haut-gauche ne
+   peut aller que de 0 à 5, soit 6 positions par axe (8 - 3 + 1 = 6).
+   On perd 28 valeurs sur 64, tout le tour de l'image. On peut border l'image
+   de zéros pour garder la taille : c'est tout ce qu'on dira du padding.</code></pre></figure>
+
+<p>Le pixel détaillé est là pour être refait&nbsp;: <code>carte[2][1]</code> est la somme des neuf produits <code>0, 0, -10, 0, 0, -20, 0, 0, -10</code>, soit <strong>−40</strong>. Les colonnes 2 et 3 sont nulles&nbsp;: dans chacune des trois lignes de la fenêtre, la colonne de gauche et celle de droite portent la même valeur, donc ce détecteur de <strong>changement</strong> — et non de clarté — ne voit rien. Attention&nbsp;: <strong>4</strong> de ces douze fenêtres seulement sont entièrement uniformes&nbsp;; les <strong>8</strong> autres couvrent le haut ou le bas du carré, et le second noyau y répondra <strong>±40</strong>. Le long du bord&nbsp;: <strong>−10, −30, −40, −40, −30, −10</strong>.</p>
+<p>Vient le chiffre qui définit la famille&nbsp;: <strong>36 positions, 9 poids, 324 multiplications</strong>, mais <strong>9 nombres à régler</strong> — une dense produisant ces 36 valeurs en demanderait <strong>2 304</strong>. Le carré décalé d'une colonne donne la même carte décalée d'une colonne&nbsp;: écart maximal <strong>0</strong> sur 30 valeurs.</p>
+<p>Le second noyau montre l'autre moitié de l'affaire&nbsp;: neuf autres nombres, la même image, une carte qui marque le haut et le bas. La première est nulle <strong>12</strong> fois, la seconde <strong>12</strong>, les deux ensemble <strong>4</strong>. <em>(Elle est ici la transposée de la première&nbsp;: accident de ce carré symétrique.)</em></p>
+<p>Reste le bord&nbsp;: la fenêtre doit tenir entière, soit <strong>8 − 3 + 1 = 6</strong> positions par axe, et l'on perd <strong>28 valeurs sur 64</strong>. Border l'image de zéros garde la taille&nbsp;: c'est tout ce qu'on dira du <em>padding</em> — et du <em>stride</em>, qu'il existe.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Refais un pixel avec un crayon</p><p>Vérifie une case que le bloc ne détaille pas. La valeur <strong>40</strong> tient en une ligne&nbsp;: la fenêtre y voit le bord droit du carré, ses trois pixels à 10 tombant sur la colonne de poids <code>1</code>, <code>2</code>, <code>1</code> — soit <code>(1 + 2 + 1) × 10</code> — pendant que la colonne <code>-1</code>, <code>-2</code>, <code>-1</code> a déjà quitté le carré et ne voit que des zéros. C'est le miroir du <strong>−40</strong> détaillé plus haut, où les mêmes trois pixels tombaient sur <code>-1</code>, <code>-2</code>, <code>-1</code>.</p></div></div>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le nom savant, et ce que cette carte n'est pas encore</p><p>Poser le noyau tel quel et additionner les 9 produits est ce que font les bibliothèques&nbsp;; en mathématiques cela s'appelle une <strong>corrélation croisée</strong>, la vraie convolution retournant d'abord le noyau — non mesuré ici. Autre borne&nbsp;: cette carte est la partie <strong>linéaire</strong> d'une couche&nbsp;; il y manque le biais et la fonction non linéaire de la <a href="lecon-02.html">leçon 2</a>.</p></div></div>
+
+<h2>La carte suit le motif&nbsp;: l'équivariance</h2>
+<p>Le décalage d'une colonne était une illustration&nbsp;; en voici la mesure. Image 8×8 noire, un motif en coin dessiné dans un gabarit 3×3 — <strong>9 cases</strong> dont <strong>5 allumées</strong> —, un noyau valant <code>+1</code> là où le motif est allumé et <code>-1</code> là où il doit être éteint. <strong>36 places</strong>, <strong>36 cases</strong>&nbsp;: rien n'est appris ici.</p>
+
+<figure class="code-block" data-file="l10-translation.js"><pre><code class="language-javascript">// Bloc « translation » : image 8x8, motif 3x3 (un coin), noyau 3x3 -&gt; 6x6.
+const N = 8, T = 3, S = N - T + 1;
+const MOTIF = [[1, 1, 1], [1, 0, 0], [1, 0, 0]];      // un coin, 5 pixels
+const NOYAU = [[1, 1, 1], [1, -1, -1], [1, -1, -1]];  // +1 allumé, -1 éteint
+const ligne = (l) =&gt; l.map((v) =&gt; String(v).padStart(3)).join('');
+const dit = (t, v) =&gt; console.log('   ' + (t+' ').padEnd(37,'.') + ' ' + v);
+
+// Image noire, motif collé en (r,c) ; ce qui dépasse le cadre est perdu.
+function image(r, c) {
+  const img = Array.from({ length: N }, () =&gt; new Array(N).fill(0));
+  let dedans = 0;
+  for (let a = 0; a &lt; T; a++) for (let b = 0; b &lt; T; b++)
+    if (r + a &lt; N &amp;&amp; c + b &lt; N) { img[r + a][c + b] = MOTIF[a][b]; dedans++; }
+  return { img, dedans };
+}
+// Une case de la carte : le noyau posé en (i,j). Toujours les mêmes 9 poids.
+function val(img, i, j) {
+  let s = 0;
+  for (let a = 0; a &lt; T; a++) for (let b = 0; b &lt; T; b++)
+    s += img[i + a][j + b] * NOYAU[a][b];
+  return s;
+}
+const carte = (img) =&gt; Array.from({ length: S }, (_, i) =&gt;
+  Array.from({ length: S }, (_, j) =&gt; val(img, i, j)));
+
+const REF = carte(image(0, 0).img), AUTRE = carte(image(2, 3).img);
+console.log('Carte 6x6 du même noyau, pour deux places du même motif :');
+console.log('  motif en (0,0)          motif en (2,3)');
+REF.forEach((l,i) =&gt; console.log('  ' + ligne(l) + '    ' + ligne(AUTRE[i])));
+
+// Une seule passe : carte décalée (équivariance) et carte brute (l'inverse).
+let cmp = 0, ecart = 0, dMin = S * S, dMax = 0, ampli = 0, sommes = new Set();
+for (let r = 0; r &lt; S; r++) for (let c = 0; c &lt; S; c++) {
+  const m = carte(image(r, c).img);
+  sommes.add(m.flat().reduce((a, b) =&gt; a + b, 0));
+  let d = 0;
+  for (let i = 0; i &lt; S; i++) for (let j = 0; j &lt; S; j++) {
+    if (i &gt;= r &amp;&amp; j &gt;= c)
+      { cmp++; ecart = Math.max(ecart, Math.abs(m[i][j] - REF[i-r][j-c])); }
+    if (m[i][j] !== REF[i][j])
+      { d++; ampli = Math.max(ampli, Math.abs(m[i][j] - REF[i][j])); }
+  }
+  if (r || c) { dMin = Math.min(dMin, d); dMax = Math.max(dMax, d); }
+}
+console.log('\n1) Équivariance : la carte se déplace avec le motif');
+dit('positions du motif testées', S * S);
+dit('cases comparées à la carte décalée', cmp);
+dit('écart maximal', ecart);
+console.log('\n2) Non-invariance : mêmes cases, sans décalage');
+dit('cases changées sur les 35 autres', 'de ' + dMin + ' à ' + dMax);
+dit('écart maximal entre deux cartes', ampli);
+dit('sommes distinctes sur les 36 places', sommes.size);
+
+console.log('\n3) Le motif glisse vers la droite, ligne r=2');
+console.log('   colonne  pixels dedans   maximum   nb de maxima');
+for (let c = 0; c &lt;= N; c++) {
+  const e = image(2, c), f = carte(e.img).flat(), v = Math.max(...f);
+  const q = f.filter((x) =&gt; x === v).length;
+  console.log('   ' + String(c).padStart(7) + String(e.dedans).padStart(15)
+    + String(v).padStart(10) + String(q).padStart(15));
+}
+
+// Ce que les 9 poids partagés ont évité : une dense par place du motif.
+const dense = S * S * N * N, conv = T * T, db = dense + S * S, cb = conv + 1;
+console.log('\n4) Le prix de la même détection avec une dense de 36 sorties');
+dit('poids de la dense', dense);
+dit('poids du noyau, réutilisés 36 fois', conv);
+dit('rapport', dense / conv);
+dit('avec les biais', db + ' contre ' + cb + ', rapport ' + db / cb);
+dit('multiplications faites', dense + ' contre ' + S * S * T * T);</code></pre></figure>
+<figure class="code-block" data-file="l10-translation.txt"><pre><code class="language-plaintext">Carte 6x6 du même noyau, pour deux places du même motif :
+  motif en (0,0)          motif en (2,3)
+    5  2  1  0  0  0      0 -1 -2 -1  0  1
+    2  0  0  0  0  0      0 -2 -3  0  0  1
+    1  0  0  0  0  0      0 -1  0  5  2  1
+    0  0  0  0  0  0      0  0  0  2  0  0
+    0  0  0  0  0  0      0  1  1  1  0  0
+    0  0  0  0  0  0      0  0  0  0  0  0
+
+1) Équivariance : la carte se déplace avec le motif
+   positions du motif testées .......... 36
+   cases comparées à la carte décalée .. 441
+   écart maximal ....................... 0
+
+2) Non-invariance : mêmes cases, sans décalage
+   cases changées sur les 35 autres .... de 7 à 20
+   écart maximal entre deux cartes ..... 8
+   sommes distinctes sur les 36 places . 13
+
+3) Le motif glisse vers la droite, ligne r=2
+   colonne  pixels dedans   maximum   nb de maxima
+         0              9         5              1
+         1              9         5              1
+         2              9         5              1
+         3              9         5              1
+         4              9         5              1
+         5              9         5              1
+         6              6         1              2
+         7              3         1              1
+         8              0         0             36
+
+4) Le prix de la même détection avec une dense de 36 sorties
+   poids de la dense ................... 2304
+   poids du noyau, réutilisés 36 fois .. 9
+   rapport ............................. 256
+   avec les biais ...................... 2340 contre 10, rapport 234
+   multiplications faites .............. 2304 contre 324</code></pre></figure>
+
+<p>Première mesure&nbsp;: <strong>36 places, 441 cases comparées à la carte décalée, écart maximal 0</strong>. Déplacer le motif déplace la carte, à l'identique&nbsp;: c'est l'<strong>équivariance</strong>. Le pic <strong>5</strong> est dans le coin pour un motif en (0,0), en ligne 2 colonne 3 pour un motif en (2,3).</p>
+<p>Seconde mesure, et c'est une réserve&nbsp;: <strong>sans décalage</strong>, la référence et les 35 autres cartes diffèrent sur <strong>7 à 20 cases sur 36</strong>, écart maximal <strong>8</strong>. Ce n'est <strong>pas</strong> de l'invariance&nbsp;: la sortie est la même <em>ailleurs</em>. Une couche qui la sommerait obtiendrait <strong>13 valeurs distinctes</strong>.</p>
+<p>La table du milieu donne le prix du bord, motif glissé sur la ligne <code>r=2</code>. Tant qu'il tient entier (les <strong>9</strong> cases du gabarit dans le cadre, dont 5 allumées — c'est ce que compte la colonne «&nbsp;pixels dedans&nbsp;»), le maximum vaut <strong>5</strong>, atteint <strong>une seule fois</strong>&nbsp;; dès qu'une colonne sort (<strong>6</strong> cases sur 9), il tombe à <strong>1</strong> avec <strong>2</strong> maxima, puis reste à <strong>1</strong> avec un seul maximum quand deux colonnes sortent, et ne vaut <strong>0</strong> qu'une fois le motif entièrement hors du cadre. La carte <em>suit</em> le motif, elle ne le <em>reconnaît</em> pas.</p>
+<p>Le dernier tableau chiffre le partage des poids sur ce montage&nbsp;: <strong>2 304</strong> poids pour une dense de 36 sorties contre <strong>9</strong> pour le noyau, rapport <strong>256</strong> — <strong>2 340 contre 10</strong>, soit <strong>234</strong>, avec les biais. Les multiplications passent de 2 304 à <strong>324</strong>&nbsp;: à un seul filtre, elle en économise vraiment.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Honnêtement&nbsp;: équivariant ne veut pas dire invariant</p><p>«&nbsp;Une convolution est invariante par translation&nbsp;» se lit partout&nbsp;: <strong>mesuré faux</strong>. Sans décalage, les cartes diffèrent sur <strong>7 à 20 cases sur 36</strong>, écart maximal <strong>8</strong>, et la somme prend <strong>13 valeurs distinctes</strong>. Ce qui est stable, c'est le <strong>maximum</strong>&nbsp;: <strong>5</strong> aux 36 places où le motif tient entier, et toujours atteint une seule fois. Dès qu'une colonne sort il tombe — à <strong>1</strong> sur la ligne que le bloc mesure, mais jusqu'à <strong>0</strong> ailleurs&nbsp;: sur les six places où une seule colonne dépasse, deux ne rendent plus qu'un maximum nul. Répondre pareil où que soit l'objet ne s'obtient pas de la convolution seule.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Deux cartes de sortie six sur six, produites par le même noyau de neuf poids sur la même image, le motif étant placé à deux endroits différents. À gauche, le motif est en ligne zéro, colonne zéro : la carte porte son pic de valeur cinq dans la case du coin haut-gauche, et le reste est faible. À droite, le motif est en ligne deux, colonne trois : la carte porte exactement le même pic de valeur cinq, mais dans la case de la ligne deux, colonne trois. Le pic s'est déplacé exactement comme le motif. C'est ce que veut dire le mot équivariance, et il est mesuré sur les trente-six places possibles du motif : quatre cent quarante et une cases ont été comparées à la carte décalée, l'écart maximal vaut zéro. Une seconde ligne rappelle la limite : comparées sans décalage, aux mêmes cases, la carte de référence et les trente-cinq autres diffèrent sur sept à vingt cases sur trente-six, avec un écart maximal de huit, et la somme de la carte prend treize valeurs distinctes selon la place du motif. La sortie n'est donc pas la même : elle est la même ailleurs.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">Le même noyau, deux places du motif</text>
+    <rect class="d-accent" x="60" y="46" width="30" height="30" rx="2" />
+    <text class="d-text" x="75" y="67" text-anchor="middle" font-size="12">5</text>
+    <path class="d-line" d="M60 46V226 M90 46V226 M120 46V226 M150 46V226 M180 46V226 M210 46V226 M240 46V226" fill="none" />
+    <path class="d-line" d="M60 46H240 M60 76H240 M60 106H240 M60 136H240 M60 166H240 M60 196H240 M60 226H240" fill="none" />
+    <text class="d-tag" x="150" y="244" text-anchor="middle" font-size="9.5">motif en (0,0)</text>
+    <path class="d-line" d="M262 136 L358 136" fill="none" /><path class="d-line" d="M350 130 L358 136 L350 142" fill="none" />
+    <text class="d-tag" x="310" y="128" text-anchor="middle" font-size="9">le motif bouge</text>
+    <rect class="d-accent" x="470" y="106" width="30" height="30" rx="2" />
+    <text class="d-text" x="485" y="127" text-anchor="middle" font-size="12">5</text>
+    <path class="d-line" d="M380 46V226 M410 46V226 M440 46V226 M470 46V226 M500 46V226 M530 46V226 M560 46V226" fill="none" />
+    <path class="d-line" d="M380 46H560 M380 76H560 M380 106H560 M380 136H560 M380 166H560 M380 196H560 M380 226H560" fill="none" />
+    <text class="d-tag" x="470" y="244" text-anchor="middle" font-size="9.5">motif en (2,3)</text>
+    <text class="d-label" x="320" y="268" text-anchor="middle" font-size="11">36 places, 441 cases comparées à la carte décalée : écart maximal 0</text>
+    <text class="d-mut" x="320" y="288" text-anchor="middle" font-size="9">sans décalage : 7 à 20 cases changées sur 36, écart maximal 8, 13 sommes distinctes</text>
+  </svg>
+  <figcaption>Le pic ne reste pas en place&nbsp;: il se déplace comme le motif — une propriété forte, mais pas celle qu'on croit avoir.</figcaption>
+</figure>
+
+<h2>Le max-pooling&nbsp;: ce qu'il gagne, ce qu'il tolère, ce qu'il jette</h2>
+<p>La section précédente laisse un manque&nbsp;: la carte bouge avec l'objet. Le geste habituel juste après une convolution s'attaque à ce manque et à la taille&nbsp;: découper en blocs 2×2, ne garder que le <strong>maximum</strong> de chacun.</p>
+
+<figure class="code-block" data-file="l10-pooling.js"><pre><code class="language-javascript">// Bloc « pooling » : ce que le max-pooling 2x2 gagne, ce qu'il tolère et ce
+// qu'il jette. On reste au niveau du principe : aucune passe arrière ici.
+const N = 8, P = 2, S = N / P;   // carte 8x8 -&gt; carte 4x4
+const CARTE = [                  // carte de réponses posée à la main
+  [0,1,0,0,2,1,0,0], [1,3,2,0,1,4,1,0], [0,2,9,1,0,1,0,2], [0,0,1,1,3,0,1,1],
+  [2,1,0,3,5,2,0,0], [1,0,1,2,1,1,3,1], [0,4,2,0,0,2,1,0], [1,1,0,1,6,0,1,2]];
+// Max-pooling 2x2, pas de 2 : chaque bloc ne laisse passer que son maximum.
+const pool = (m) =&gt; Array.from({ length: m.length / P }, (_, i) =&gt;
+  Array.from({ length: m.length / P }, (_, j) =&gt;
+    Math.max(m[2*i][2*j], m[2*i][2*j+1], m[2*i+1][2*j], m[2*i+1][2*j+1])));
+const ligne = (l) =&gt; l.map((v) =&gt; String(v).padStart(3)).join('');
+const dit = (t, v) =&gt; console.log('   ' + (t+' ').padEnd(37,'.') + ' ' + v);
+const idem = (a, b) =&gt; a.every((l, i) =&gt; l.every((v, j) =&gt; v === b[i][j]));
+const pic = (r, c) =&gt; Array.from({ length: N }, (_, i) =&gt;   // un pic isolé
+  Array.from({ length: N }, (_, j) =&gt; (i === r &amp;&amp; j === c ? 9 : 0)));
+
+// 1) LE GAIN
+const PET = pool(CARTE), d1 = N*N*10, d2 = S*S*10, d3 = d1 - d2;
+console.log('  avant : 8x8'.padEnd(31) + 'après : 4x4');
+CARTE.forEach((l, i) =&gt;
+  console.log('  ' + ligne(l) + (i &lt; S ? '     ' + ligne(PET[i]) : '')));
+console.log('\n1) Le gain');
+dit('valeurs avant / après', N*N + ' / ' + S*S + ', facteur ' + N*N/(S*S));
+dit('poids appris par le pooling', 0);
+dit('comparaisons faites', S * S * 3);
+dit('dense de 10 neurones ensuite', d1+' -&gt; '+d2+', '+d3+' de moins');
+
+// 2) LA TOLÉRANCE : le même pic, décalé d'un pixel puis de deux.
+const meme = (r,c,dr,dc) =&gt; idem(pool(pic(r,c)), pool(pic(r+dr, c+dc)));
+const A = pool(pic(2, 0)), B = pool(pic(2, 1)), C = pool(pic(2, 2));
+console.log('\n2) La tolérance : un pic unique glissé vers la droite');
+console.log('  pic en (2,0)   pic en (2,1)   pic en (2,2)');
+A.forEach((l, i) =&gt; console.log('  ' + ligne(l) + '   ' + ligne(B[i])
+  + '   ' + ligne(C[i])));
+dit('(2,0) et (2,1) : même carte ?', idem(A, B));
+dit('(2,1) et (2,2) : même carte ?', idem(B, C));
+let ok1 = 0, t1 = 0, ok2 = 0, t2 = 0, okV = 0, tV = 0;
+for (let r = 0; r &lt; N; r++) for (let c = 0; c &lt; N; c++) {
+  if (c &lt; N - 1) { t1++; if (meme(r, c, 0, 1)) ok1++; }
+  if (c &lt; N - 2) { t2++; if (meme(r, c, 0, 2)) ok2++; }
+  if (r &lt; N - 1) { tV++; if (meme(r, c, 1, 0)) okV++; }
+}
+dit('décalage de 1 à droite', ok1 + ' cartes inchangées sur ' + t1);
+dit('décalage de 1 vers le bas', okV + ' cartes inchangées sur ' + tV);
+dit('décalage de 2 à droite', ok2 + ' cartes inchangées sur ' + t2);
+
+// 3) LA PERTE : combien d'entrées DISTINCTES donnent la MÊME sortie ?
+const V = 4, cpt = new Array(V).fill(0);   // énumération complète
+for (let a = 0; a &lt; V; a++) for (let b = 0; b &lt; V; b++)
+  for (let c = 0; c &lt; V; c++) for (let d = 0; d &lt; V; d++)
+    cpt[Math.max(a, b, c, d)]++;
+console.log('\n3) La perte : blocs 2x2 à valeurs dans {0,1,2,3}');
+cpt.forEach((n,v) =&gt; console.log('   sortie '+v+' : '+String(n).padStart(3)
+  + (n &gt; 1 ? ' blocs d\'entrée distincts' : ' bloc d\'entrée')));
+dit('total', V ** 4 + ' blocs distincts, ' + V + ' sorties');
+const seaux = new Array(16).fill(0);   // même énumération, en plus grand
+const g = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+for (let x = 0; x &lt; 65536; x++) {
+  for (let i = 0; i &lt; 4; i++) for (let j = 0; j &lt; 4; j++)
+    g[i][j] = (x &gt;&gt; (i * 4 + j)) &amp; 1;
+  const p = pool(g).flat();
+  seaux[p[0] + 2*p[1] + 4*p[2] + 8*p[3]]++;
+}
+const vues = seaux.filter((n) =&gt; n &gt; 0).length;
+dit('cartes 4x4 à valeurs 0 ou 1', 2**16 + ' -&gt; ' + vues + ' sorties');
+dit('cartes par sortie, en moyenne', 2 ** 16 / vues);
+dit('le plus gros groupe', Math.max(...seaux));
+dit('le plus petit groupe', Math.min(...seaux));
+dit('4x4 dans {0..3} (formule)', 4**16 + ' cartes, ' + 4**4 + ' sorties');
+dit('pire groupe : 175^4', 175 ** 4 + ' cartes, une seule sortie');</code></pre></figure>
+<figure class="code-block" data-file="l10-pooling.txt"><pre><code class="language-plaintext">  avant : 8x8                  après : 4x4
+    0  1  0  0  2  1  0  0       3  2  4  1
+    1  3  2  0  1  4  1  0       2  9  3  2
+    0  2  9  1  0  1  0  2       2  3  5  3
+    0  0  1  1  3  0  1  1       4  2  6  2
+    2  1  0  3  5  2  0  0
+    1  0  1  2  1  1  3  1
+    0  4  2  0  0  2  1  0
+    1  1  0  1  6  0  1  2
+
+1) Le gain
+   valeurs avant / après ............... 64 / 16, facteur 4
+   poids appris par le pooling ......... 0
+   comparaisons faites ................. 48
+   dense de 10 neurones ensuite ........ 640 -&gt; 160, 480 de moins
+
+2) La tolérance : un pic unique glissé vers la droite
+  pic en (2,0)   pic en (2,1)   pic en (2,2)
+    0  0  0  0     0  0  0  0     0  0  0  0
+    9  0  0  0     9  0  0  0     0  9  0  0
+    0  0  0  0     0  0  0  0     0  0  0  0
+    0  0  0  0     0  0  0  0     0  0  0  0
+   (2,0) et (2,1) : même carte ? ....... true
+   (2,1) et (2,2) : même carte ? ....... false
+   décalage de 1 à droite .............. 32 cartes inchangées sur 56
+   décalage de 1 vers le bas ........... 32 cartes inchangées sur 56
+   décalage de 2 à droite .............. 0 cartes inchangées sur 48
+
+3) La perte : blocs 2x2 à valeurs dans {0,1,2,3}
+   sortie 0 :   1 bloc d'entrée
+   sortie 1 :  15 blocs d'entrée distincts
+   sortie 2 :  65 blocs d'entrée distincts
+   sortie 3 : 175 blocs d'entrée distincts
+   total ............................... 256 blocs distincts, 4 sorties
+   cartes 4x4 à valeurs 0 ou 1 ......... 65536 -&gt; 16 sorties
+   cartes par sortie, en moyenne ....... 4096
+   le plus gros groupe ................. 50625
+   le plus petit groupe ................ 1
+   4x4 dans {0..3} (formule) ........... 4294967296 cartes, 256 sorties
+   pire groupe : 175^4 ................. 937890625 cartes, une seule sortie</code></pre></figure>
+
+<p>Le gain&nbsp;: <strong>64 valeurs deviennent 16</strong>, facteur <strong>4</strong>, <strong>0 poids appris</strong> — mais pas zéro calcul, l'opération faisant <strong>48 comparaisons</strong>. Une dense de 10 neurones placée ensuite passe de <strong>640</strong> produits à <strong>160</strong>.</p>
+<p>La tolérance, sur un pic unique qu'on déplace&nbsp;: de (2,0) à (2,1) la carte réduite est la même — <code>true</code>&nbsp;; de (2,1) à (2,2), non — <code>false</code>. Tout tient à la frontière des blocs&nbsp;: <strong>32 cartes inchangées sur 56</strong> à droite, <strong>32 sur 56</strong> en bas, <strong>0 sur 48</strong> pour deux pixels.</p>
+<p>Reste ce qu'il jette, et la mesure est <strong>exhaustive</strong>. Sur les blocs 2×2 dans <code>{0,1,2,3}</code>, <strong>256</strong> blocs distincts ne donnent que <strong>4</strong> sorties — <strong>175</strong> d'entre eux rendent 3. En 4×4 binaire, <strong>65 536</strong> cartes énumérées une à une ne laissent que <strong>16</strong> sorties&nbsp;: le plus petit groupe compte <strong>1</strong> carte, le plus gros <strong>50 625</strong>, soit 15<sup>4</sup> — où 15 est le nombre de blocs 2×2 de maximum 1 compté juste au-dessus.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Honnêtement&nbsp;: une tolérance partielle, mesurée sur un cas facile</p><p>«&nbsp;Le pooling rend le réseau invariant aux petites translations&nbsp;» est trop fort deux fois. Les chiffres&nbsp;: <strong>32 sur 56</strong> pour un pixel, <strong>0 sur 48</strong> pour deux. Le montage&nbsp;: un <strong>pic unique dans un fond nul</strong>, le cas le plus favorable&nbsp;; ailleurs, non mesuré. Le mot juste est <strong>tolérance partielle</strong>. Et le facteur 4 vaut pour une <em>dense</em> placée ensuite (640 → 160), pas pour une convolution.</p></div></div>
+
+<p>Les bornes, pour finir. <strong>Aucun de ces quatre blocs ne fait de passe arrière</strong>&nbsp;: la rétropropagation à travers une convolution ou un pooling n'est pas traitée, et les noyaux sont posés à la main, jamais appris. L'<em>average-pooling</em> — la moyenne au lieu du maximum — n'est chiffré nulle part&nbsp;; ResNet, VGG et les autres assemblent ces briques, et ce module reste à la brique. Enfin, <strong>aucun réseau n'a été entraîné</strong>&nbsp;: «&nbsp;les convolutifs font mieux&nbsp;» n'est pas prouvé ici. Empiler ces couches ramène le produit de la <a href="lecon-09.html">leçon 9</a>.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le plus répandu&nbsp;: «&nbsp;la convolution, c'est pour aller plus vite&nbsp;». Les deux tableaux du même bloc la contredisent&nbsp;: <strong>1 256 fois moins de nombres à régler, mais 2,06 fois moins de multiplications</strong>, et ce second rapport <em>descend</em> à 1,79. Ce qu'on gagne, c'est un modèle plus petit et une géométrie donnée d'avance.</p></div></div>
+<ul>
+<li><strong>Transporter un rapport d'un montage à l'autre</strong> — 1 256 vient d'une dense contre 8 filtres&nbsp;; 256, d'un seul noyau sur une image 8×8.</li>
+<li><strong>Dire «&nbsp;invariante par translation&nbsp;»</strong> — mesuré faux&nbsp;: sans décalage, 7 à 20 cases changent sur 36. Le mot est <strong>équivariante</strong>.</li>
+<li><strong>Croire le pooling insensible aux petits décalages</strong> — 32 sur 56 pour un pixel, <strong>0 sur 48</strong> pour deux.</li>
+<li><strong>Conclure d'une carte permutée qu'elle est vide</strong> — 23 valeurs non nulles contre 24&nbsp;: ce qui change, c'est où et combien fort.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe trie des vignettes grises de 28 pixels de côté avec un réseau dense&nbsp;: 128 neurones en première couche, <strong>100 480</strong> nombres à régler. Le modèle marche sur son jeu et rate dès que l'objet est décalé — un défaut que le protocole du cours <a href="../ml/cours.html">Machine Learning</a> aurait signalé plus tôt.</p><p>La discussion s'enlise sur la taille du réseau, jusqu'à une expérience de deux lignes&nbsp;: mélanger les pixels de toutes les images <em>avec la même permutation</em>, puis réentraîner. Même score — le premier bloc retrouvé sur un cas réel.</p><p>Ils passent à 8 filtres 3×3, <strong>80</strong> nombres pour la première couche, et le modèle généralise mieux. Mais le temps par image ne s'effondre pas, et deux personnes cherchent une erreur de configuration une journée durant. Il n'y en avait pas&nbsp;: <strong>2,06</strong>, et <strong>5 408</strong> valeurs en sortie contre 128.</p><p>Enfin, un max-pooling 2×2 est ajouté et l'équipe annonce un modèle «&nbsp;insensible aux décalages&nbsp;». La recette la contredit&nbsp;: à un pixel beaucoup d'exemples passent, à deux presque plus — <strong>32 sur 56</strong> et <strong>0 sur 48</strong>. La leçon&nbsp;: <strong>on ne promet que ce qu'on a mesuré.</strong></p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Convolutifs — mémo chiffré</caption>
+    <thead><tr><th scope="col">Élément</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Deux comptes, image 28×28 grise</td><td>Dense de 128 neurones&nbsp;: <strong>100 480</strong>&nbsp;; 8 filtres 3×3&nbsp;: <strong>80</strong>&nbsp;; rapport <strong>1 256,0</strong>, en <strong>nombres à régler</strong>. Plus grande&nbsp;: conv <strong>80, 80, 224, 224</strong>, dense jusqu'à <strong>19 267 712</strong></td></tr>
+      <tr><td>Le garde-fou</td><td>Multiplications&nbsp;: <strong>100 352 contre 48 672 = 2,06</strong>, <strong>1,79</strong> en 512×512. La conv sort <strong>5 408</strong> valeurs, la dense <strong>128</strong></td></tr>
+      <tr><td>La dense ignore la géométrie</td><td>Pixels et poids permutés pareil&nbsp;: <strong>écart 0 sur 384 sorties</strong>. Le noyau&nbsp;: écart <strong>60</strong>, maximum <strong>40 → 30</strong></td></tr>
+      <tr><td>Montage 8×8 → 6×6</td><td><code>carte[2][1]</code> = neuf produits, somme <strong>−40</strong>. <strong>36 positions, 9 poids, 324 multiplications</strong>&nbsp;; dense équivalente <strong>2 304</strong> poids, rapport <strong>256</strong> (234 avec biais). Bord&nbsp;: <strong>8 − 3 + 1 = 6</strong></td></tr>
+      <tr><td>Équivariance, pas invariance</td><td>Avec décalage&nbsp;: <strong>36 places, 441 cases, écart 0</strong>. Sans&nbsp;: <strong>7 à 20 cases changées sur 36</strong>, écart <strong>8</strong>, <strong>13 sommes distinctes</strong>. Maximum <strong>5</strong> aux 36 places entières, une seule fois&nbsp;; au bord <strong>1</strong>, et <strong>0</strong> à deux des six places où une colonne sort</td></tr>
+      <tr><td>Max-pooling 2×2</td><td><strong>64 → 16</strong>, <strong>0 poids</strong> mais <strong>48 comparaisons</strong>&nbsp;; dense de 10 neurones ensuite&nbsp;: <strong>640 → 160</strong></td></tr>
+      <tr><td>Tolérance, puis perte</td><td><strong>32 sur 56</strong> (un pixel), <strong>0 sur 48</strong> (deux). Énuméré&nbsp;: <strong>65 536</strong> cartes → <strong>16</strong> sorties, plus gros groupe <strong>50 625</strong></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Convolution (ici)</dt><dd>Poser un noyau, multiplier case à case, additionner, glisser&nbsp;: <strong>36 positions</strong>, <strong>324 multiplications</strong>. Les mathématiciens disent <strong>corrélation croisée</strong>.</dd>
+  <dt>Noyau (ou filtre)</dt><dd>Les poids d'une convolution&nbsp;: <strong>9</strong> nombres en 3×3, réutilisés partout. Deux noyaux voient deux choses&nbsp;: leurs cartes sont nulles 12 fois chacune, <strong>4</strong> fois ensemble.</dd>
+  <dt>Carte de sortie</dt><dd>Le résultat d'un noyau balayé&nbsp;: <strong>36</strong> valeurs ici, <strong>5 408</strong> pour 8 filtres en 28×28.</dd>
+  <dt>Partage des poids</dt><dd>Les mêmes 9 nombres à toutes les positions&nbsp;: le compte tombe à <strong>80</strong>, et ne dépend plus de la taille de l'image.</dd>
+  <dt>Équivariance</dt><dd>Déplacer l'entrée déplace la sortie à l'identique&nbsp;: <strong>36 places, 441 cases, écart 0</strong>.</dd>
+  <dt>Invariance</dt><dd>Déplacer l'entrée ne changerait <em>rien</em>&nbsp;: une convolution ne l'a <strong>pas</strong>. 7 à 20 cases changent sur 36.</dd>
+  <dt>Max-pooling</dt><dd>Le maximum de chaque bloc 2×2&nbsp;: <strong>64 → 16</strong>, <strong>0 poids</strong>, <strong>48 comparaisons</strong>. Tolère un pixel <strong>32 fois sur 56</strong>, deux jamais.</dd>
+  <dt>Effet de bord</dt><dd>La fenêtre doit tenir entière&nbsp;: <strong>8 − 3 + 1 = 6</strong> positions par axe, <strong>28 valeurs perdues sur 64</strong>.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une dense de 128 neurones sur une image 28×28 grise demande <strong>100 480</strong> nombres, 8 filtres 3×3 en demandent <strong>80</strong>, et ce compte ne bouge qu'avec les canaux.</li>
+<li>Le rapport <strong>1 256</strong> porte sur les <strong>paramètres</strong>&nbsp;; celui des multiplications vaut <strong>2,06</strong> et <strong>descend à 1,79</strong>&nbsp;: des poids économisés, pas des produits.</li>
+<li>Permuter les pixels et réétiqueter les poids rend à la dense <strong>exactement</strong> ses sorties&nbsp;: écart <strong>0</strong> sur 384. Le noyau, lui, s'effondre.</li>
+<li>La convolution se refait à la main&nbsp;: <code>carte[2][1]</code> vaut <strong>−40</strong>, et <strong>9</strong> poids servent aux <strong>36</strong> positions contre <strong>2 304</strong> pour une dense.</li>
+<li>Elle est <strong>équivariante</strong> — 36 places, 441 cases, écart <strong>0</strong> — et <strong>pas invariante</strong>&nbsp;: sans décalage, 7 à 20 cases changent sur 36.</li>
+<li>Le max-pooling gagne un facteur <strong>4</strong> sans poids appris, tolère <strong>32 décalages sur 56</strong> d'un pixel et <strong>0 sur 48</strong> de deux, et jette&nbsp;: <strong>50 625</strong> cartes pour une même sortie.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue écrit&nbsp;: «&nbsp;en convolutif, ce sera 1 256 fois moins coûteux&nbsp;». Quel chiffre lui opposes-tu, et que corriges-tu dans sa phrase&nbsp;?</li>
+<li>Pourquoi l'écart maximal de 0 sur 384 sorties est-il un <em>défaut</em> de la couche dense&nbsp;?</li>
+<li>On te demande un réseau qui réponde pareil où que soit l'objet&nbsp;: qu'apporte la convolution, que n'apporte-t-elle pas, et jusqu'où le pooling comble-t-il l'écart&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Une dense de 128 neurones sur une image 28×28 demande 100 480 nombres à régler, huit filtres 3×3 en demandent 80. Que mesure le rapport 1 256 ?","a":["Des nombres à régler, et rien d'autre : sur cette même image, le rapport des multiplications ne vaut que 2,06","Le temps d'une passe avant, la convolution ne lisant l'image qu'une fois pour toutes ses positions de fenêtre","La mémoire prise par les sorties des deux couches, la convolution n'en produisant que 128 contre 5 408 pour la dense","Le nombre de produits économisés à chaque position balayée par un noyau de 9 poids sur les 784 pixels"],"correct":0,"explain":"1 256 est un rapport de paramètres. Sur la même image, le rapport des multiplications vaut 2,06 — 100 352 contre 48 672 — et il descend à 1,79 en 512×512. La convolution sort d'ailleurs 5 408 valeurs là où la dense en sort 128 : rien n'a été chronométré sur cette page."},
+  {"q":"On permute les 64 pixels de trois images et l'on réétiquette les poids de la dense de la même façon : écart maximal 0 sur 384 sorties. Que montre ce zéro ?","a":["Qu'une dense ne voit qu'un sac de nombres : que deux pixels soient voisins, ou aux deux bouts, ne lui parvient jamais","Que la permutation tirée était trop douce pour déranger la couche, la plupart des 64 pixels restant près de leur place","Que la dense a retenu la géométrie de l'image pendant l'apprentissage et sait donc la reconstituer dans les deux cas","Que les poids entiers de ce montage se compensent deux à deux, ce qu'une couche à poids décimaux ne ferait pas"],"correct":0,"explain":"38, 39, −50, 118 des deux côtés : ce sont les mêmes termes additionnés dans un autre ordre. Le même détecteur de bord, lui, ne retrouve rien sur l'image permutée — écart maximal 60, 7 positions identiques sur 36, et la réponse la plus forte tombe de 40 à 30."},
+  {"q":"36 places du motif, 441 cases comparées à la carte décalée, écart maximal 0 ; mais sans décalage, 7 à 20 cases changent sur 36. Comment nomme-t-on cette propriété ?","a":["L'équivariance : la carte se déplace avec le motif, au lieu de rester identique quand il change de place","L'invariance : la carte produite par le noyau reste la même quelle que soit la place du motif dans l'image","La saturation : plus le motif s'éloigne de sa place d'origine, plus le noyau répond fort, jusqu'à un plafond","La régularisation : le partage des 9 poids empêche la carte de dépendre de la place occupée par le motif"],"correct":0,"explain":"Équivariance, et le mot compte. Comparées sans décalage, la carte de référence et les 35 autres diffèrent sur 7 à 20 cases sur 36, avec un écart maximal de 8, et la somme de la carte prend 13 valeurs distinctes sur les 36 places."},
+  {"q":"L'énumération complète des 65 536 cartes 4×4 à valeurs 0 ou 1 ne laisse que 16 sorties après un max-pooling 2×2. Qu'est-ce que cela établit ?","a":["Que le pooling jette de l'information, et beaucoup : jusqu'à 50 625 cartes distinctes rendent la même sortie","Que le pooling garde l'essentiel, chacune des 16 sorties retenant le maximum du bloc 2×2 dont elle provient","Que le pooling tolère les décalages, les 56 cartes à pic unique restant inchangées quand le pic glisse d'un pixel","Que le pooling ne coûte que 48 comparaisons et un poids appris par bloc, donc qu'il a appris quoi jeter"],"correct":0,"explain":"16 sorties pour 65 536 cartes, 4 096 par sortie en moyenne : le plus petit groupe compte 1 carte, le plus gros 50 625. Sur les blocs 2×2 à valeurs dans {0,1,2,3}, 175 blocs distincts sur 256 rendent tous la sortie 3."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["100480","100 480","100.480","100 480 nombres"],"placeholder":"combien de nombres à régler pour une couche dense de 128 neurones sur une image 28×28 en niveaux de gris, biais compris ?","hints":["Une image 28×28 en niveaux de gris fait 784 entrées, et la dense a un poids par entrée et par neurone.","La formule imprimée par le bloc est : entrées × neurones + biais.","Six chiffres, commençant par 100. La leçon 3 comptait la même couche en deux morceaux : 100 352 poids et 128 biais."],"link":{"href":"lecon-10.html","label":"Revoir « Cent mille nombres pour une image de vingt-huit pixels de côté »"}},
+  {"type":"text","accept":["équivariance","l'équivariance","équivariante","équivariant","équivariance par translation","l'équivariance par translation","équivariante par translation","la propriété d'équivariance"],"placeholder":"comment s'appelle la propriété mesurée ainsi : 36 places du motif, 441 cases comparées à la carte décalée, écart maximal 0 ?","hints":["Ce n'est pas l'invariance : sans décalage, 7 à 20 cases changent sur 36.","La sortie ne reste pas identique : elle se déplace exactement comme l'entrée.","Un mot de douze lettres, qui commence par « équi »."],"link":{"href":"lecon-10.html","label":"Revoir « La carte suit le motif : l'équivariance »"}},
+  {"type":"code","run":{"expect":"24 40 640"},"placeholder":"reconstruis l'image 8×8 (fond 0, carré de 10 sur les lignes 2 à 5 et les colonnes 2 à 5), balaye-la avec le noyau 1 0 -1 / 2 0 -2 / 1 0 -1, et affiche sur une seule ligne, séparés par un espace : le nombre de valeurs non nulles de la carte, la plus forte en valeur absolue, la somme des valeurs absolues","hints":["L'image : img[r][c] vaut 10 si r > 1 et r < 6 et c > 1 et c < 6, sinon 0.","La carte fait 6×6 : le coin de la fenêtre va de 0 à 5 sur chaque axe, et chaque valeur est la somme des 9 produits noyau × pixel.","Tes trois nombres doivent redonner la ligne « pixels intacts » du premier bloc, séparés par un espace dans un seul console.log."],"link":{"href":"lecon-10.html","label":"Revoir « La convolution, posée à la main »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Combien de nombres faut-il régler dans une couche dense de 128 neurones branchée sur une image 28×28 grise, biais compris&nbsp;? Puis&nbsp;: que devient ce compte en 224×224 couleur, et pourquoi celui de la convolution bouge-t-il à peine&nbsp;?</p>
+<details><summary>Voir une solution</summary><p><strong>100 480</strong>&nbsp;: 784 entrées × 128 neurones, plus 128 biais — la <a href="lecon-03.html">leçon 3</a> comptait la même couche en deux morceaux, 100 352 poids et 128 biais.</p><p>En 224×224 couleur la dense passe à <strong>19 267 712</strong>, la convolution de <strong>80</strong> à <strong>224</strong>&nbsp;: elle ne bouge qu'avec les canaux. Rapports&nbsp;: <strong>1 256,0</strong> puis <strong>86 016,6</strong>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Comment s'appelle la propriété qu'établit cette mesure — 36 places du motif, 441 cases comparées à la carte décalée, écart maximal 0&nbsp;? Donne ensuite deux chiffres qui montrent que ce n'est <em>pas</em> l'autre propriété.</p>
+<details><summary>Voir une solution</summary><p>L'<strong>équivariance</strong>&nbsp;: déplacer le motif déplace la carte à l'identique — le pic 5 passe du coin à la ligne 2, colonne 3, quand le motif passe de (0,0) à (2,3).</p><p>Ce n'est pas de l'<strong>invariance</strong>&nbsp;: sans décalage, les cartes diffèrent sur <strong>7 à 20 cases sur 36</strong> et la somme prend <strong>13 valeurs distinctes</strong>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Reconstruis l'image 8×8 (fond 0, carré de 10 aux lignes 2 à 5 et colonnes 2 à 5), balaye-la avec le noyau <code>1 0 -1 / 2 0 -2 / 1 0 -1</code> et affiche sur une seule ligne, séparés par un espace&nbsp;: le nombre de valeurs non nulles, la plus forte en valeur absolue, la somme des valeurs absolues.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">const VERT = [[1, 0, -1], [2, 0, -2], [1, 0, -1]];
+const img = Array.from({ length: 8 }, (_, r) =&gt;
+  Array.from({ length: 8 }, (_, c) =&gt; (r &gt; 1 &amp;&amp; r &lt; 6 &amp;&amp; c &gt; 1 &amp;&amp; c &lt; 6 ? 10 : 0)));
+let nz = 0, mx = 0, so = 0;
+for (let r = 0; r &lt; 6; r++) for (let c = 0; c &lt; 6; c++) {
+  let v = 0;
+  for (let i = 0; i &lt; 3; i++) for (let j = 0; j &lt; 3; j++) v += VERT[i][j] * img[r + i][c + j];
+  if (v !== 0) nz++;
+  mx = Math.max(mx, Math.abs(v));
+  so += Math.abs(v);
+}
+console.log(nz + " " + mx + " " + so);   // 24 40 640</code></pre></figure><p>La sortie est <strong>24 40 640</strong>, la ligne <em>pixels intacts</em> du premier bloc.</p><p>Le contrôle utile vient après&nbsp;: sur l'image permutée, la même mesure donne <strong>23 30 380</strong> — presque autant de réponses, mais plus faibles et ailleurs. C'est la différence entre «&nbsp;le noyau ne trouve plus rien&nbsp;» et «&nbsp;la carte est vide&nbsp;».</p></details></div>
+
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
+
+
