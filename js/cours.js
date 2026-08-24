@@ -446,8 +446,8 @@
       map: { archi: 1, cloud: 2, iac: 3 },
     },
     {
-      page: "../fil-rouge-ia.html", total: 5, label: "ton application d'IA",
-      map: { pandas: 1, stats: 2, ml: 3, llm: 4, dataviz: 5 },
+      page: "../fil-rouge-ia.html", total: 6, label: "ton application d'IA",
+      map: { pandas: 1, stats: 2, ml: 3, neurones: 4, llm: 5, dataviz: 6 },
     },
     {
       page: "../fil-rouge-fiabilite.html", total: 2, label: "tes systèmes fiables",

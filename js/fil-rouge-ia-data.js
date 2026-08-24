@@ -2,16 +2,16 @@
    fil-rouge-ia-data.js — FIL ROUGE « Construire une app d'IA ».
    UN projet mené de la donnée brute à l'écran : on PRÉPARE un jeu de données
    (pandas), on le COMPREND honnêtement (stats), on entraîne un modèle qui
-   prédit (ml), on fait EXPLIQUER ses résultats par un LLM (llm), puis on les
-   MONTRE dans un tableau de bord qui ne ment pas (dataviz) :
-   pandas → stats → ml → llm → dataviz.
+   prédit (ml), on OUVRE LA BOÎTE en le réécrivant à la main (neurones), on
+   fait EXPLIQUER ses résultats par un LLM (llm), puis on les MONTRE dans un
+   tableau de bord qui ne ment pas (dataviz) :
+   pandas → stats → ml → neurones → llm → dataviz.
    Recomposé au chantier V13-A2 : le fil s'arrêtait sur ml → llm → graphql, où
    l'étape GraphQL n'exposait pas de l'IA mais servait de débouché au cours
    graphql (relogé en étape 7 du fil « backend », à sa vraie place : la même
    API, en REST puis en GraphQL). Le fil suit désormais le parcours « ia ».
-   ⚠️ Le cours de RÉSEAUX DE NEURONES (chantier V13, phase C) s'insérera en
-   ÉTAPE 4, entre ml et llm : llm passera en 5 et dataviz en 6, avec
-   remapVersion: 2 et remap { "4": 5, "5": 6 }.
+   Chantier V13-C5 : le cours de RÉSEAUX DE NEURONES s'est inséré en ÉTAPE 4,
+   entre ml et llm ; llm est passé en 5 et dataviz en 6 (remapVersion 2).
    Définit window.FIL_ROUGE → moteur générique js/fil-rouge.js.
    Page : pages/fil-rouge-ia.html. 100 % file://.
    ============================================================================= */
@@ -30,12 +30,21 @@ window.FIL_ROUGE = {
     "<strong>entraîne et on évalue</strong> un modèle (ML), on lui fait <strong>mettre en mots</strong> ses résultats par un " +
     "grand modèle de langage — qui rédige mais ne calcule jamais —, puis on <strong>montre</strong> le tout dans un tableau " +
     "de bord qui ne ment pas sur ses échelles.</p>" +
-    "<p>Ce fil suit le parcours <strong>Intelligence artificielle</strong> du site. Un cours viendra s'y insérer : les " +
-    "<strong>réseaux de neurones</strong>, entre le modèle classique et le LLM.</p>",
-  /* Renumérotation V13-A2 (cf. migrerStore dans js/fil-rouge.js) : l'ancien fil
-     était ml=1, llm=2, graphql=3. Les cases déjà cochées suivent leur cours. */
-  remapVersion: 1,
-  remap: { "1": 3, "2": 4, "3": null },
+    "<p>Ce fil suit le parcours <strong>Intelligence artificielle</strong> du site, et passe par les " +
+    "<strong>réseaux de neurones</strong> : entre le modèle classique et le LLM, une étape où l'on écrit soi-même " +
+    "ce que les deux autres emploient sans le montrer.</p>",
+  /* RENUMÉROTATIONS SUCCESSIVES (cf. migrerStore dans js/fil-rouge.js) — les cases
+     déjà cochées suivent leur cours, quelle que soit la version d'où part le store.
+       v1 (chantier V13-A2) : le fil était ml=1, llm=2, graphql=3 ; graphql est parti
+                              au fil « backend », pandas et stats sont arrivés devant.
+       v2 (chantier V13-C5) : « neurones » s'insère en 4, entre ml et llm.
+     ⚠️ NE JAMAIS RETIRER UNE TABLE ANCIENNE : un apprenant qui a commencé le fil avant
+     la v1 et ne rouvre la page qu'aujourd'hui part de v0 et doit subir les DEUX. */
+  remapVersion: 2,
+  remaps: {
+    1: { "1": 3, "2": 4, "3": null },
+    2: { "4": 5, "5": 6 },
+  },
   etapes: [
     {
       n: 1,
@@ -130,6 +139,40 @@ window.FIL_ROUGE = {
     },
     {
       n: 4,
+      course: "neurones",
+      courseTitle: "Réseaux de neurones",
+      dir: "neurones",
+      accent: "neurones",
+      phase: "Ouvrir la boîte",
+      titre: "Refaire le modèle à la main, et le comparer honnêtement",
+      depart: "Un modèle entraîné qui prédit correctement — et dont personne, dans l'équipe, ne sait dire ce qu'il calcule.",
+      objectif:
+        "<p>L'étape 3 a produit un modèle qui marche. Celle-ci demande de savoir <strong>ce qu'il y a dedans</strong>, " +
+        "en écrivant soi-même le modèle de la famille dont tout le monde parle : un <strong>réseau de neurones</strong>. " +
+        "Une somme pondérée, une décision, des couches empilées, une <strong>rétropropagation</strong> écrite à la main — " +
+        "aucune bibliothèque d'apprentissage, aucune dérivation automatique.</p>" +
+        "<p>Et surtout : le <strong>comparer</strong> au modèle de l'étape 3, sur le même jeu de test, avec la même " +
+        "métrique. Le résultat honnête est souvent que le réseau <em>ne gagne pas</em> — sur quelques milliers de lignes " +
+        "de données tabulaires, un modèle classique reste difficile à battre. C'est un résultat, pas un échec, et " +
+        "savoir le dire vaut mieux que d'empiler des couches.</p>",
+      ajoute: [
+        "Un <strong>réseau écrit à la main</strong> : couche, activation, perte, rétropropagation — sans bibliothèque d'apprentissage.",
+        "Le <strong>compte de ses paramètres</strong>, posé avant de l'entraîner : on doit savoir combien de nombres on règle.",
+        "Une <strong>comparaison</strong> au modèle de l'étape 3, sur le <em>même</em> jeu de test et la <em>même</em> métrique.",
+        "Une <strong>courbe d'entraînement</strong> à deux traits — apprentissage et test — pour voir le sur-apprentissage arriver.",
+        "Une <strong>décision écrite</strong> : lequel des deux modèles part en production, et pourquoi.",
+      ],
+      criteres: [
+        "La <strong>rétropropagation</strong> est écrite à la main et vérifiée (par exemple par différences finies).",
+        "Le <strong>nombre de paramètres</strong> du réseau est compté et affiché, pas estimé.",
+        "Les deux modèles sont comparés sur le <strong>même</strong> jeu de test, avec la <strong>même</strong> métrique.",
+        "Le <strong>sur-apprentissage</strong> est visible sur une courbe à deux traits, et traité (arrêt précoce ou pénalité).",
+        "La décision finale est <strong>écrite et argumentée</strong> — y compris si elle consiste à garder le modèle de l'étape 3.",
+      ],
+      livrable: "Un réseau écrit de bout en bout, et une comparaison chiffrée qui dit lequel des deux modèles mérite la production.",
+    },
+    {
+      n: 5,
       course: "llm",
       courseTitle: "IA & LLM",
       dir: "llm",
@@ -160,7 +203,7 @@ window.FIL_ROUGE = {
       livrable: "Une synthèse rédigée automatiquement, vérifiée, qui ne dit que ce que les données disent.",
     },
     {
-      n: 5,
+      n: 6,
       course: "dataviz",
       courseTitle: "Data visualisation",
       dir: "dataviz",

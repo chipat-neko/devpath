@@ -35,37 +35,86 @@
   function readStore() {
     return window.SyntaxeStore.getJSON(KEY, {});
   }
-  /* Toute écriture porte la MARQUE de renumérotation (cf. migrerStore) : sans
-     elle, une progression créée après coup serait reprise pour de l'ancien
-     format au chargement suivant, et convertie une seconde fois. */
-  function writeStore(s) {
-    if (FR.remap && FR.remapVersion) s.__remap = "v" + FR.remapVersion;
-    window.SyntaxeStore.setJSON(KEY, s);
-  }
   /* RENUMÉROTATION D'UN FIL — la progression est stockée PAR NUMÉRO d'étape
      (`{ "3": { "0": true } }`). Insérer ou retirer une étape décale donc les
      numéros et ferait apparaître les cases d'un cours sous un autre, en
-     silence. Un fil recomposé déclare `remap` (ancien numéro → nouveau, ou
-     `null` si l'étape a quitté le fil) et `remapVersion` (entier) : la
-     conversion s'applique UNE seule fois, marquée par la clé `__remap`. Les
-     clés non numériques sont ignorées partout ailleurs (cf. fils-rouges.js).
+     silence. Un fil recomposé déclare ses conversions successives, et la
+     version courante :
+
+       remapVersion: 2,
+       remaps: { 1: { "1": 3, "2": 4, "3": null }, 2: { "4": 5, "5": 6 } }
+
+     Chaque table donne `ancien numéro → nouveau`, ou `null` si l'étape a
+     quitté le fil. Un fil qui n'a été recomposé qu'une fois peut s'en tenir à
+     la forme courte `remap: { … }` + `remapVersion: 1` : elle est traduite ici.
+
+     ⚠️ POURQUOI PLUSIEURS TABLES, ET NON UNE SEULE — la version qui compte est
+     celle du STORE, pas celle du fil. Un apprenant qui a commencé le fil avant
+     une recomposition et qui ne rouvre la page qu'après la suivante a un store
+     resté à v0 : n'appliquer que la table courante lui ferait SAUTER les
+     précédentes, et ses coches atterriraient sur un autre cours. On applique
+     donc toutes les tables de version supérieure à celle du store, dans
+     l'ordre croissant. (Trou constaté sur le fil « ia » au chantier V13-C5,
+     lors du passage de v1 à v2.)
+
+     Les clés non numériques sont ignorées partout ailleurs (cf. fils-rouges.js).
      Un store VIDE n'est pas converti : rien à déplacer, et écrire la marque
      poserait une donnée pour un apprenant qui n'a rien coché. */
+  function tablesRemap() {
+    if (FR.remaps) return FR.remaps;
+    if (FR.remap && FR.remapVersion) {
+      var t = {};
+      t[FR.remapVersion] = FR.remap;
+      return t;
+    }
+    return null;
+  }
+  function versionsRemap() {
+    var t = tablesRemap();
+    if (!t) return [];
+    return Object.keys(t)
+      .map(function (v) { return parseInt(v, 10); })
+      .filter(function (v) { return v > 0; })
+      .sort(function (a, b) { return a - b; });
+  }
+  /* Toute écriture porte la MARQUE de renumérotation : sans elle, une progression
+     créée après coup serait reprise pour de l'ancien format au chargement
+     suivant, et convertie une seconde fois. */
+  function writeStore(s) {
+    var vs = versionsRemap();
+    if (vs.length) s.__remap = "v" + vs[vs.length - 1];
+    window.SyntaxeStore.setJSON(KEY, s);
+  }
   function migrerStore() {
-    if (!FR.remap || !FR.remapVersion) return;
+    var tables = tablesRemap();
+    var vs = versionsRemap();
+    if (!tables || !vs.length) return;
     var s = readStore();
-    if (s.__remap === "v" + FR.remapVersion) return;
+    var derniere = vs[vs.length - 1];
+    if (s.__remap === "v" + derniere) return;
     var anciens = Object.keys(s).filter(function (k) { return /^[0-9]+$/.test(k); });
     if (!anciens.length) return;
-    var out = {};
-    anciens.forEach(function (k) {
-      var cible = FR.remap[k];
-      /* Numéro absent de la table : le fil ne l'a pas bougé, on le garde tel quel. */
-      if (cible === undefined) cible = parseInt(k, 10);
-      if (cible === null) return; // étape retirée du fil : sa progression n'a plus de sens ici
-      out[cible] = s[k];
+    /* version déjà atteinte par CE store : "v1" → 1, marque absente → 0 */
+    var depuis = 0;
+    if (typeof s.__remap === "string" && /^v[0-9]+$/.test(s.__remap)) {
+      depuis = parseInt(s.__remap.slice(1), 10);
+    }
+    var etat = {};
+    anciens.forEach(function (k) { etat[k] = s[k]; });
+    vs.forEach(function (v) {
+      if (v <= depuis) return;            // ce store a déjà subi cette conversion
+      var table = tables[v] || {};
+      var out = {};
+      Object.keys(etat).forEach(function (k) {
+        var cible = table[k];
+        /* Numéro absent de la table : le fil ne l'a pas bougé, on le garde tel quel. */
+        if (cible === undefined) cible = parseInt(k, 10);
+        if (cible === null) return; // étape retirée du fil : sa progression n'a plus de sens ici
+        out[cible] = etat[k];
+      });
+      etat = out;
     });
-    writeStore(out);
+    writeStore(etat);
   }
   migrerStore();
   function byN(n) {
