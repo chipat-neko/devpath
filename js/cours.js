@@ -454,8 +454,8 @@
       map: { ada: 1, erlang: 2 },
     },
     {
-      page: "../fil-rouge-exploitation.html", total: 4, label: "ton service en production",
-      map: { linux: 1, reseaux: 2, os: 3, observabilite: 4 },
+      page: "../fil-rouge-exploitation.html", total: 5, label: "ton service en production",
+      map: { linux: 1, reseaux: 2, os: 3, distribue: 4, observabilite: 5 },
     },
   ];
   function makeFilRougeLink(hit) {

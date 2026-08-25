@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet — un magasin répliqué qui survit à une partition — Leçon 12 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Le projet du cours : un magasin de clés-valeurs sur trois répliques, construit en huit étapes exécutables. Le réseau d'abord, puis le magasin naïf (1,97 % de lectures périmées), le quorum W = R = 2 (0 périmée, 23 refus), les écritures concurrentes (4 966 incréments perdus sur 10 000), la partition (69,8 % de service ou 194 clés divergentes), la reprise (2 163 clés encore périmées sans anti-entropie), l'idempotence, puis dix minutes de trafic à travers une coupure : 60 000 opérations, 3,23 % de refus, et 0 violation de l'invariant." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-12.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 12</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 5 · Le projet — Leçon 12</p>
+              <h1 class="lesson-header__title">Projet&nbsp;— un magasin répliqué qui survit à une partition</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~84 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: les onze leçons précédentes&nbsp;— ce projet les assemble toutes. Savoir lire une boucle et une fonction en JavaScript suffit&nbsp;; chaque étape s'exécute d'un clic dans la page.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>écrire un <strong>contrat</strong> vérifiable avant la première ligne de code, et le compter à chaque lecture&nbsp;;</li>
+                  <li>poser le réseau <em>avant</em> le magasin, avec ses trois comportements&nbsp;: livrer, perdre, couper&nbsp;;</li>
+                  <li>mesurer ce qu'un magasin sans coordination promet vraiment&nbsp;: <strong>1,97&nbsp;%</strong> de lectures périmées&nbsp;;</li>
+                  <li>régler un quorum et en chiffrer le prix&nbsp;: <strong>0</strong> lecture périmée contre <strong>23</strong> écritures refusées&nbsp;;</li>
+                  <li>voir pourquoi le quorum ne protège pas d'une écriture concurrente&nbsp;: <strong>4&nbsp;966</strong> incréments perdus&nbsp;;</li>
+                  <li>appliquer le théorème CAP dans du code&nbsp;: <strong>69,8&nbsp;%</strong> de service, ou <strong>194</strong> clés à réconcilier&nbsp;;</li>
+                  <li>faire converger les répliques après la coupure, et savoir pourquoi il y faut <em>deux</em> mécanismes&nbsp;;</li>
+                  <li>vérifier l'invariant sur <strong>60&nbsp;000</strong> opérations, et lire les quatre métriques qui comptent.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Onze leçons ont mesuré, une par une, les raisons pour lesquelles un programme réparti se comporte autrement qu'un programme local. Il est temps de tout assembler en une seule chose qui fonctionne&nbsp;: un <strong>magasin de clés-valeurs répliqué sur trois machines, qui survit à une coupure réseau et qui ne ment jamais</strong>.</p>
+<p>Ce projet n'est pas une maquette décorative. Il se construit en huit étapes, chacune tenant dans un programme que tu peux exécuter d'un clic, et chacune répondant à une question qu'on a laissée ouverte plus tôt. À la fin, on fera tourner l'ensemble sur <strong>dix minutes</strong> de trafic — <strong>60&nbsp;000</strong> opérations, une partition de soixante secondes, une reprise — et l'on vérifiera un seul chiffre&nbsp;: <em>le nombre de fois où le magasin a brisé sa promesse</em>.</p>
+<p>Ce chiffre vaut <strong>0</strong>, et le magasin a pourtant refusé <strong>1&nbsp;936</strong> opérations. C'est tout le sujet de ce cours en une phrase&nbsp;: <strong>on ne construit pas un système qui ne refuse jamais rien, on construit un système qui ne ment jamais</strong>. Le reste — quorum, versions, réparation, idempotence — n'est que la mécanique qui rend ce contrat tenable.</p>
+
+<h2>Le cahier des charges, et surtout ses interdits</h2>
+<p>Avant la première ligne de code, écrivons ce que le magasin promet. Un contrat vague ne se vérifie pas&nbsp;; celui-ci tient en trois phrases, et chacune est mesurable.</p>
+<figure class="cheat-table">
+  <table>
+    <caption>Le contrat du magasin — trois promesses, un renoncement</caption>
+    <thead><tr><th scope="col">Ce qui est promis</th><th scope="col">Comment on le vérifie</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Une écriture acquittée n'est jamais perdue.</strong> Si le magasin a répondu «&nbsp;c'est écrit&nbsp;», aucune lecture ultérieure ne rendra une valeur plus ancienne.</td><td>À chaque lecture, on compare la version obtenue à la dernière version acquittée pour cette clé. Le compteur des violations doit rester à <strong>0</strong>.</td></tr>
+      <tr><td><strong>Une écriture refusée n'a rien promis.</strong> Sa valeur peut malgré tout survivre sur une réplique et être lue plus tard&nbsp;: c'est licite, puisque le magasin n'a jamais dit qu'elle avait eu lieu.</td><td>Une écriture qui n'obtient pas W accusés n'entre pas dans la table des acquittées&nbsp;; l'invariant ne porte que sur ce qui y figure.</td></tr>
+      <tr><td><strong>Après une coupure, les trois répliques finissent par porter la même chose</strong>, sans intervention humaine.</td><td>On dénombre les clés que la réplique isolée a manquées, puis le temps qu'il faut pour qu'aucune ne soit plus en retard.</td></tr>
+      <tr><td><em>Ce à quoi l'on renonce&nbsp;:</em> <strong>servir tout le monde pendant une coupure.</strong></td><td>Le taux de refus est mesuré, annoncé, et concentré sur le côté minoritaire du réseau.</td></tr>
+    </tbody>
+  </table>
+</figure>
+<p>Viennent ensuite les <em>interdits</em>, et ils comptent autant que les promesses, parce que chacun correspond à une erreur que les leçons précédentes ont mesurée&nbsp;:</p>
+<ul>
+<li><strong>Aucune horloge murale ne servira à ordonner deux écritures.</strong> La <a href="lecon-04.html">leçon&nbsp;4</a> a montré qu'une dérive de quelques millisecondes suffit à faire gagner l'écriture la plus ancienne&nbsp;; on le remesurera à l'étape&nbsp;4.</li>
+<li><strong>Aucune bibliothèque, aucun réseau réel.</strong> Tout est simulé dans la page&nbsp;: c'est ce qui permet de <em>provoquer</em> une partition à la seconde près et de la mesurer, ce qu'aucun système réel ne laisse faire commodément.</li>
+<li><strong>Aucun mécanisme n'est admis sans mesure.</strong> Chaque étape produit un chiffre qui justifie la pièce ajoutée&nbsp;; si le chiffre ne bouge pas, la pièce ne sert à rien.</li>
+<li><strong>Aucune promesse d'«&nbsp;exactement une fois&nbsp;».</strong> La <a href="lecon-11.html">leçon&nbsp;11</a> a dit pourquoi&nbsp;: on visera un <em>effet</em> exactement une fois, par déduplication, jamais une livraison unique.</li>
+</ul>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi trois répliques, et pas deux ni quatre</p><p>La <a href="lecon-09.html">leçon&nbsp;9</a> l'a démontré&nbsp;: <strong>3</strong> et <strong>4</strong> répliques tolèrent exactement une panne, et un groupe pair ajoute la coupure en deux moitiés égales où <em>aucun</em> côté ne décide. Trois est donc le plus petit groupe qui tolère une panne, et c'est le bon choix pour un projet dont le sujet est la partition&nbsp;: il donne une majorité claire, <strong>2 contre 1</strong>. Deux répliques, elles, ne tolèrent rien du tout&nbsp;: exiger les deux revient à multiplier les pannes, n'en exiger qu'une revient à ne rien garantir.</p></div></div>
+
+<h2>Étape 1 — le réseau, écrit avant le magasin</h2>
+<p>Un système réparti n'est pas un programme auquel on ajoute du réseau&nbsp;: c'est un programme <em>gouverné</em> par le réseau. La première pièce est donc le réseau lui-même, avec ses trois comportements — livrer, perdre, couper —, et il doit être capable de mentir de la seule façon qui compte&nbsp;: <em>ne rien dire</em>.</p>
+<figure class="code-block" data-file="reseau.js"><pre><code class="language-javascript">// ÉTAPE 1 — le réseau, posé avant le magasin.
+// Rien de ce qui suit n'aurait de sens sans lui : c\'est le réseau qui rend un
+// système réparti difficile, et c'est donc la première chose à écrire.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+function creerReseau(graine) {
+  const alea = semer(graine);
+  return {
+    horloge: 0,
+    perte: 0.02,            // 2 % des messages se perdent
+    coupures: [],           // paires de machines qui ne se parlent plus
+    livres: 0, perdus: 0, coupes: 0,
+    couper(a, b) { this.coupures.push(a + '|' + b, b + '|' + a); },
+    reparer() { this.coupures = []; },
+    // Rend le délai d'acheminement en ms, ou null si le message n\'arrive jamais.
+    envoyer(de, vers) {
+      if (this.coupures.indexOf(de + '|' + vers) !== -1) { this.coupes++; return null; }
+      if (alea() &lt; this.perte) { this.perdus++; return null; }
+      this.livres++;
+      return 4 + Math.round(16 * alea());        // 4 à 20 ms
+    },
+  };
+}
+
+const r = creerReseau(31337);
+const MACHINES = ['A', 'B', 'C'];
+let n = 0;
+for (let i = 0; i &lt; 1000; i++) {
+  for (const m of MACHINES) if (m !== 'A') { r.envoyer('A', m); n++; }
+}
+console.log('Réseau sain — ' + n + ' messages de A vers B et C');
+console.log('  livrés  : ' + r.livres);
+console.log('  perdus  : ' + r.perdus + '  (' + (100 * r.perdus / n).toFixed(1) + ' %)');
+console.log('  coupés  : ' + r.coupes);
+console.log('');
+
+// On coupe A de C : le lien devient un mur, dans les deux sens.
+r.couper('A', 'C');
+const avantLivres = r.livres, avantCoupes = r.coupes;
+let versB = 0, versC = 0, versA = 0;
+for (let i = 0; i &lt; 1000; i++) {
+  if (r.envoyer('A', 'B') !== null) versB++;   // A vers B : le lien est intact
+  if (r.envoyer('A', 'C') !== null) versC++;   // A vers C : coupé
+  if (r.envoyer('C', 'A') !== null) versA++;   // C vers A : coupé dans ce sens aussi
+}
+console.log('Partition A|C — 1000 envois sur chacun des 3 trajets');
+console.log('  A -&gt; B, arrivés : ' + versB);
+console.log('  A -&gt; C, arrivés : ' + versC);
+console.log('  C -&gt; A, arrivés : ' + versA);
+console.log('  messages bloqués par la coupure : ' + (r.coupes - avantCoupes));
+console.log('');
+console.log('Le point à retenir, et il gouverne tout le projet : A ne peut pas');
+console.log('distinguer « C est coupé » de « C est mort » ni de « C est lent ».');
+console.log('Il ne voit que l\'absence de réponse — la panne partielle de la leçon 3.');</code></pre></figure>
+<figure class="code-block" data-file="reseau.txt"><pre><code class="language-plaintext">Réseau sain — 2000 messages de A vers B et C
+  livrés  : 1966
+  perdus  : 34  (1.7 %)
+  coupés  : 0
+
+Partition A|C — 1000 envois sur chacun des 3 trajets
+  A -&gt; B, arrivés : 982
+  A -&gt; C, arrivés : 0
+  C -&gt; A, arrivés : 0
+  messages bloqués par la coupure : 2000
+
+Le point à retenir, et il gouverne tout le projet : A ne peut pas
+distinguer « C est coupé » de « C est mort » ni de « C est lent ».
+Il ne voit que l'absence de réponse — la panne partielle de la leçon 3.
+</code></pre></figure>
+<p>Deux observations sur cette première brique. La perte mesurée est de <strong>1,7&nbsp;%</strong> pour un taux réglé à 2&nbsp;%&nbsp;: c'est l'écart normal d'un tirage sur 2&nbsp;000 messages, et il rappelle qu'on mesure un échantillon, pas une vérité. Et la coupure est <em>symétrique</em>&nbsp;: les <strong>2&nbsp;000</strong> messages bloqués comprennent les envois de A vers C <em>et</em> ceux de C vers A. Un réseau qui ne couperait que dans un sens existe, et c'est l'un des cas les plus vicieux qui soient — mais il complique la démonstration sans rien y ajouter.</p>
+<p>La dernière phrase du programme est celle qu'il faut garder en tête pour les sept étapes suivantes&nbsp;: <strong>A ne peut pas distinguer «&nbsp;C est coupé&nbsp;» de «&nbsp;C est mort&nbsp;» ni de «&nbsp;C est lent&nbsp;»</strong>. Toutes les décisions du magasin devront être prises sans cette information, parce qu'elle n'existe pas.</p>
+
+<h2>Étape 2 — le magasin le plus simple, et ce qu'il ment</h2>
+<p>Écrivons maintenant la version naïve, celle qu'on obtient en une heure&nbsp;: on écrit à toutes les répliques, on lit sur une seule, on n'attend personne. Elle a un mérite réel — elle est rapide, et elle survit à la panne de n'importe quelle machine — et un défaut qu'il faut chiffrer avant de le corriger.</p>
+<figure class="code-block" data-file="sans-coordination.js"><pre><code class="language-javascript">// ÉTAPE 2 — le magasin le plus simple qui puisse marcher : on écrit à toutes
+// les répliques, on lit sur une seule. Il tient debout, et il ment.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const alea = semer(20260825);
+const N = 3, PERTE = 0.02, OPERATIONS = 20000;
+
+// Une réplique : une carte clé -&gt; { valeur, version }. Rien de plus.
+function creerReplique(nom) { return { nom: nom, donnees: new Map() }; }
+const repliques = ['A', 'B', 'C'].map(creerReplique);
+
+// Le client écrit à TOUTES les répliques et n'attend personne (« au mieux »).
+function ecrire(cle, valeur, version) {
+  let recues = 0;
+  for (const r of repliques) {
+    if (alea() &lt; PERTE) continue;                 // message perdu, en silence
+    r.donnees.set(cle, { valeur: valeur, version: version });
+    recues++;
+  }
+  return recues;
+}
+function lireUne(cle) {
+  const r = repliques[Math.floor(alea() * N)];
+  const e = r.donnees.get(cle);
+  return e ? e.version : 0;
+}
+
+let versionAttendue = 0, periemees = 0, lectures = 0, ecrituresPartielles = 0;
+for (let i = 0; i &lt; OPERATIONS; i++) {
+  versionAttendue++;
+  const recues = ecrire('compteur', 'v' + versionAttendue, versionAttendue);
+  if (recues &lt; N) ecrituresPartielles++;
+  for (let k = 0; k &lt; 3; k++) {                   // trois lectures après chaque écriture
+    lectures++;
+    if (lireUne('compteur') !== versionAttendue) periemees++;
+  }
+}
+
+console.log(OPERATIONS + ' écritures, ' + lectures + ' lectures, ' +
+  (PERTE * 100).toFixed(0) + ' % de messages perdus');
+console.log('');
+console.log('écritures reçues par moins de ' + N + ' répliques : ' + ecrituresPartielles +
+  '  (' + (100 * ecrituresPartielles / OPERATIONS).toFixed(2) + ' %)');
+console.log('lectures qui rendent une valeur PÉRIMÉE  : ' + periemees +
+  '  (' + (100 * periemees / lectures).toFixed(2) + ' %)');
+console.log('');
+const etats = repliques.map((r) =&gt; (r.donnees.get('compteur') || {}).version);
+console.log('version finale par réplique : ' + etats.join(' · '));
+console.log('');
+console.log('Ce magasin n\'a aucun bogue : chaque ligne fait ce qu\'elle annonce.');
+console.log('Il est pourtant inutilisable pour un solde ou un stock, parce qu\'il');
+console.log('ne promet RIEN : ni qu\'une écriture acquittée survivra, ni qu\'une');
+console.log('lecture verra ce que l\'écriture précédente a écrit.');</code></pre></figure>
+<figure class="code-block" data-file="sans-coordination.txt"><pre><code class="language-plaintext">20000 écritures, 60000 lectures, 2 % de messages perdus
+
+écritures reçues par moins de 3 répliques : 1181  (5.91 %)
+lectures qui rendent une valeur PÉRIMÉE  : 1181  (1.97 %)
+
+version finale par réplique : 20000 · 20000 · 20000
+
+Ce magasin n'a aucun bogue : chaque ligne fait ce qu'elle annonce.
+Il est pourtant inutilisable pour un solde ou un stock, parce qu'il
+ne promet RIEN : ni qu'une écriture acquittée survivra, ni qu'une
+lecture verra ce que l'écriture précédente a écrit.
+</code></pre></figure>
+<p><strong>1,97&nbsp;%</strong> des lectures rendent une valeur périmée. Le chiffre paraît petit&nbsp;; rapporté à un million de lectures par jour, il fait <strong>19&nbsp;700</strong> réponses fausses quotidiennes, et rien dans le système ne les distingue des bonnes. La cause est visible juste au-dessus&nbsp;: <strong>5,91&nbsp;%</strong> des écritures n'ont atteint que deux répliques sur trois, et une lecture sur trois tombera sur la retardataire.</p>
+<p>Le point important est ailleurs, et il est facile à manquer&nbsp;: <em>ce programme n'a aucun bogue</em>. Chaque ligne fait exactement ce qu'elle annonce. Le défaut n'est pas dans le code, il est dans le <strong>contrat</strong>&nbsp;: ce magasin ne promet rien, donc il ne peut rien trahir. C'est en écrivant le contrat de la section précédente qu'on se donne le droit d'appeler ce comportement un défaut.</p>
+
+<h2>Étape 3 — le quorum, et le prix qu'il coûte</h2>
+<p>Le remède est celui de la <a href="lecon-09.html">leçon&nbsp;9</a>&nbsp;: n'acquitter une écriture que si <strong>W</strong> répliques l'ont prise, interroger <strong>R</strong> répliques à la lecture, et choisir W et R de sorte que <em>W&nbsp;+&nbsp;R&nbsp;&gt;&nbsp;N</em>. Les deux groupes ont alors forcément un membre commun, donc la lecture ne peut pas manquer l'écriture. Le programme essaie quatre réglages sur le même trafic.</p>
+<figure class="code-block" data-file="quorum.js"><pre><code class="language-javascript">// ÉTAPE 3 — le quorum. On n'acquitte une écriture que si W répliques l\'ont
+// prise, et on interroge R répliques à la lecture, avec W + R &gt; N.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const alea = semer(20260825);
+const N = 3, PERTE = 0.02, OPERATIONS = 20000;
+let repliques = ['A', 'B', 'C'].map((nom) =&gt; ({ nom: nom, donnees: new Map() }));
+
+function melange() {                              // qui répond en premier varie
+  const ordre = repliques.slice();
+  for (let i = ordre.length - 1; i &gt; 0; i--) {
+    const j = Math.floor(alea() * (i + 1));
+    const t = ordre[i]; ordre[i] = ordre[j]; ordre[j] = t;
+  }
+  return ordre;
+}
+
+function ecrireQuorum(cle, version, W) {
+  let accuses = 0;
+  for (const r of melange()) {
+    if (alea() &lt; PERTE) continue;                 // la réplique n'a pas reçu
+    const e = r.donnees.get(cle);
+    if (!e || e.version &lt; version) r.donnees.set(cle, { version: version });
+    accuses++;
+  }
+  return accuses &gt;= W;                            // acquittée, ou refusée
+}
+function lireQuorum(cle, R) {
+  let vues = 0, meilleure = 0;
+  for (const r of melange()) {
+    if (vues &gt;= R) break;
+    if (alea() &lt; PERTE) continue;
+    vues++;
+    const e = r.donnees.get(cle);
+    if (e &amp;&amp; e.version &gt; meilleure) meilleure = e.version;
+  }
+  return vues &gt;= R ? meilleure : null;            // null = lecture impossible
+}
+
+function campagne(W, R) {
+  repliques = ['A', 'B', 'C'].map((nom) =&gt; ({ nom: nom, donnees: new Map() }));  // état neuf
+  let acquittee = 0, refusees = 0, periemees = 0, lectures = 0, impossibles = 0;
+  let derniereAcquittee = 0, version = 0;
+  for (let i = 0; i &lt; OPERATIONS; i++) {
+    version++;
+    if (ecrireQuorum('compteur', version, W)) { acquittee++; derniereAcquittee = version; }
+    else refusees++;
+    for (let k = 0; k &lt; 3; k++) {
+      lectures++;
+      const v = lireQuorum('compteur', R);
+      if (v === null) impossibles++;
+      else if (v &lt; derniereAcquittee) periemees++;
+    }
+  }
+  return { acquittee, refusees, periemees, lectures, impossibles };
+}
+
+console.log(OPERATIONS + ' écritures et ' + (3 * OPERATIONS) + ' lectures, ' +
+  (PERTE * 100).toFixed(0) + ' % de messages perdus, N = ' + N);
+console.log('');
+console.log('  W | R | W+R&gt;N | écritures refusées | lectures périmées | lectures impossibles');
+console.log('----+---+-------+--------------------+-------------------+---------------------');
+for (const c of [[1, 1], [3, 1], [2, 2], [3, 3]]) {
+  const r = campagne(c[0], c[1]);
+  console.log(
+    String(c[0]).padStart(3) + ' | ' + String(c[1]) + ' | ' +
+    (c[0] + c[1] &gt; N ? 'oui' : 'NON').padStart(4) + '  | ' +
+    String(r.refusees).padStart(18) + ' | ' + String(r.periemees).padStart(17) + ' | ' +
+    String(r.impossibles).padStart(21)
+  );
+}
+console.log('');
+console.log('La ligne W=2, R=2 est le réglage du projet : la règle W + R &gt; N est');
+console.log('respectée, et la colonne des lectures périmées tombe à 0 — contre');
+console.log('1,97 % à l\'étape précédente. Ce que cela coûte est dans les deux');
+console.log('dernières colonnes : des écritures REFUSÉES quand deux répliques');
+console.log('manquent, et des lectures impossibles pour la même raison.');
+console.log('');
+console.log('W=1, R=1 ne respecte pas la règle et ment autant que l\'étape 2.');
+console.log('W=3, R=3 ne périme rien non plus, mais refuse le plus : exiger tout');
+console.log('le monde revient à n\'avoir aucune tolérance à la panne.');</code></pre></figure>
+<figure class="code-block" data-file="quorum.txt"><pre><code class="language-plaintext">20000 écritures et 60000 lectures, 2 % de messages perdus, N = 3
+
+  W | R | W+R&gt;N | écritures refusées | lectures périmées | lectures impossibles
+----+---+-------+--------------------+-------------------+---------------------
+  1 | 1 |  NON  |                  0 |              1177 |                     0
+  3 | 1 |  oui  |               1219 |                 0 |                     0
+  2 | 2 |  oui  |                 23 |                 0 |                    58
+  3 | 3 |  oui  |               1190 |                 0 |                  3534
+
+La ligne W=2, R=2 est le réglage du projet : la règle W + R &gt; N est
+respectée, et la colonne des lectures périmées tombe à 0 — contre
+1,97 % à l'étape précédente. Ce que cela coûte est dans les deux
+dernières colonnes : des écritures REFUSÉES quand deux répliques
+manquent, et des lectures impossibles pour la même raison.
+
+W=1, R=1 ne respecte pas la règle et ment autant que l'étape 2.
+W=3, R=3 ne périme rien non plus, mais refuse le plus : exiger tout
+le monde revient à n'avoir aucune tolérance à la panne.
+</code></pre></figure>
+<p>La ligne <strong>W&nbsp;=&nbsp;2, R&nbsp;=&nbsp;2</strong> est celle que le projet retient, et le tableau dit pourquoi. Les lectures périmées tombent à <strong>0</strong> — contre 1&nbsp;177 pour W&nbsp;=&nbsp;R&nbsp;=&nbsp;1, qui est exactement le magasin de l'étape&nbsp;2. Le prix apparaît dans les deux dernières colonnes&nbsp;: <strong>23</strong> écritures refusées et <strong>58</strong> lectures impossibles, quand deux répliques manquent au même instant.</p>
+<p>Les deux autres lignes valent d'être regardées, parce qu'elles sont des choix défendables dans d'autres contextes. <strong>W&nbsp;=&nbsp;3, R&nbsp;=&nbsp;1</strong> respecte la règle et ne périme rien, mais refuse <strong>1&nbsp;219</strong> écritures&nbsp;: c'est le réglage d'une donnée écrasante en lecture — un catalogue, une configuration —, où l'on accepte une écriture fragile pour une lecture d'une seule réplique. <strong>W&nbsp;=&nbsp;3, R&nbsp;=&nbsp;3</strong> est le pire des deux mondes&nbsp;: <strong>1&nbsp;190</strong> refus <em>et</em> <strong>3&nbsp;534</strong> lectures impossibles, pour aucune garantie supplémentaire. Exiger tout le monde, c'est renoncer à toute tolérance à la panne.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que ce tableau ne montre pas, et qu'il faut garder en tête</p><p>La colonne «&nbsp;lectures périmées&nbsp;» compte les lectures qui rendent <em>moins</em> que la dernière écriture <strong>acquittée</strong>. Elle ne dit rien de deux choses que la <a href="lecon-09.html">leçon&nbsp;9</a> a mesurées séparément. D'abord, une écriture <em>refusée</em> peut avoir atteint une réplique&nbsp;: elle sera lue plus tard comme une valeur légitime, et c'est correct au regard du contrat — le magasin n'avait rien promis. Ensuite, deux lectures successives peuvent <em>reculer</em>&nbsp;: le quorum garantit un recouvrement, jamais un ordre entre deux lectures. Un client qui a besoin de lectures monotones doit rester collé à la même réplique, ce que ce projet ne fait pas.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Schéma du recouvrement de deux quorums sur trois répliques. Trois cercles alignés horizontalement portent les lettres A, B et C. Une accolade supérieure englobe A et B et porte l étiquette écriture, deux accusés exigés. Une accolade inférieure englobe B et C et porte l étiquette lecture, deux répliques interrogées. Le cercle B, commun aux deux accolades, est accentué et porte au-dessous la mention membre commun. Une bande basse séparée par un trait en pointillés porte la règle W plus R strictement supérieur à N, avec deux plus deux supérieur à trois, et la mention zéro lecture périmée sur soixante mille.">
+    <text class="d-label" x="210" y="26" text-anchor="middle" font-size="11">écriture&#160;: 2 accusés exigés</text>
+    <path class="d-line" d="M120 40 L120 54 L300 54 L300 40" fill="none" />
+    <circle class="d-box" cx="120" cy="110" r="34" /><text class="d-text" x="120" y="115" text-anchor="middle" font-size="14">A</text>
+    <circle class="d-accent" cx="300" cy="110" r="34" /><text class="d-text" x="300" y="115" text-anchor="middle" font-size="14">B</text>
+    <circle class="d-box" cx="480" cy="110" r="34" /><text class="d-text" x="480" y="115" text-anchor="middle" font-size="14">C</text>
+    <path class="d-line" d="M300 166 L300 180 L480 180 L480 166" fill="none" />
+    <text class="d-label" x="390" y="200" text-anchor="middle" font-size="11">lecture&#160;: 2 répliques interrogées</text>
+    <text class="d-tag" x="300" y="158" text-anchor="middle" font-size="9.5">membre commun</text>
+    <path class="d-line" d="M14 216 L626 216" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="236" text-anchor="middle" font-size="9">W + R &gt; N&#160;:&#160;2 + 2 &gt; 3&#160;·&#160;0 lecture périmée sur 60 000</text>
+  </svg>
+  <figcaption>Le membre commun n'est pas choisi&nbsp;: il est imposé par l'arithmétique, quels que soient les deux groupes.</figcaption>
+</figure>
+
+<h2>Étape 4 — deux clients, une clé, et une écriture qui disparaît</h2>
+<p>Le quorum garantit qu'une lecture croise une écriture. Il ne dit <em>rien</em> de deux écritures concurrentes sur la même clé — et c'est le cas le plus fréquent dans un magasin réel, parce que les clés chaudes sont chaudes pour tout le monde en même temps. Le programme fait incrémenter un compteur par deux clients, cinq mille fois chacun.</p>
+<figure class="code-block" data-file="conflits.js"><pre><code class="language-javascript">// ÉTAPE 4 — deux clients incrémentent le MÊME compteur, chacun 5 000 fois.
+// Le quorum de l'étape 3 ne dit rien de ce cas : il garantit qu\'une lecture
+// croise une écriture, jamais que deux écritures soient ordonnées.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const PAR_CLIENT = 5000, ATTENDU = 2 * PAR_CLIENT;
+
+// Une opération = lire à t, écrire à t + duree. Deux opérations qui se
+// CHEVAUCHENT ont lu la même valeur : l'une des deux va disparaître.
+function simuler(strategie) {
+  const alea = semer(4242);
+  const etat = { valeur: 0, version: 0 };
+  const reste = [PAR_CLIENT, PAR_CLIENT];
+  const enCours = [null, null];
+  // File d'événements : chaque client a au plus un événement en attente.
+  const prochain = [{ t: 0, type: 'lire' }, { t: 0.5, type: 'lire' }];
+  let perdues = 0, refus = 0;
+  while (reste[0] &gt; 0 || reste[1] &gt; 0) {
+    let k = 0;
+    if (!prochain[0] || (prochain[1] &amp;&amp; prochain[1].t &lt; prochain[0].t)) k = 1;
+    const ev = prochain[k];
+    if (ev.type === 'lire') {
+      enCours[k] = { valeur: etat.valeur, version: etat.version };
+      prochain[k] = { t: ev.t + 2 + 8 * alea(), type: 'ecrire' };   // 2 à 10 ms
+    } else {
+      const lu = enCours[k];
+      if (strategie === 'conditionnelle' &amp;&amp; etat.version !== lu.version) {
+        refus++;                                    // la version a bougé : refusé
+        prochain[k] = { t: ev.t + 1, type: 'lire' };
+      } else {
+        if (etat.version !== lu.version) perdues++; // on écrase ce qu'un autre a écrit
+        etat.valeur = lu.valeur + 1;                // écriture fondée sur la valeur LUE
+        etat.version++;
+        reste[k]--;
+        prochain[k] = reste[k] &gt; 0 ? { t: ev.t + 0.5, type: 'lire' } : { t: Infinity, type: 'fin' };
+      }
+    }
+  }
+  return { total: etat.valeur, ecrituresPerdues: perdues, refus: refus };
+}
+
+const a = simuler('ecrasement');
+const b = simuler('conditionnelle');
+console.log('Deux clients incrémentent le même compteur, ' + PAR_CLIENT + ' fois chacun.');
+console.log('Attendu : ' + ATTENDU);
+console.log('');
+console.log('stratégie                  | compteur final | écritures sur une  | refus explicites');
+console.log('                           |                | version périmée    |');
+console.log('---------------------------+----------------+--------------------+-----------------');
+console.log('écraser (dernier arrivé)   | ' + String(a.total).padStart(14) + ' | ' +
+  String(a.ecrituresPerdues).padStart(18) + ' | ' + String(a.refus).padStart(16));
+console.log('mise à jour conditionnelle | ' + String(b.total).padStart(14) + ' | ' +
+  String(b.ecrituresPerdues).padStart(18) + ' | ' + String(b.refus).padStart(16));
+console.log('');
+console.log('L\'écrasement rend ' + a.total + ' au lieu de ' + ATTENDU + ' : ' +
+  (ATTENDU - a.total) + ' incréments ont disparu');
+console.log('(' + (100 * (ATTENDU - a.total) / ATTENDU).toFixed(2) + ' %), sans une seule erreur, sans un seul journal.');
+console.log('(Les ' + a.ecrituresPerdues + ' écritures fondées sur une version périmée ne coûtent pas');
+console.log('chacune un incrément : plusieurs peuvent en écraser un seul.)');
+console.log('La mise à jour conditionnelle rend ' + b.total + ', au prix de ' + b.refus + ' refus');
+console.log('que le client a vus et rejoués. C\'est le même arbitrage que partout');
+console.log('dans ce cours : une perte silencieuse contre une erreur visible.');
+console.log('');
+console.log('Le projet retient la seconde. Elle demande que chaque écriture porte');
+console.log('la version sur laquelle elle s\'appuie — la « mise à jour conditionnelle »');
+console.log('de la leçon 5 — et que le client sache quoi faire d\'un refus.');</code></pre></figure>
+<figure class="code-block" data-file="conflits.txt"><pre><code class="language-plaintext">Deux clients incrémentent le même compteur, 5000 fois chacun.
+Attendu : 10000
+
+stratégie                  | compteur final | écritures sur une  | refus explicites
+                           |                | version périmée    |
+---------------------------+----------------+--------------------+-----------------
+écraser (dernier arrivé)   |           5034 |               7471 |                0
+mise à jour conditionnelle |          10000 |                  0 |             7922
+
+L'écrasement rend 5034 au lieu de 10000 : 4966 incréments ont disparu
+(49.66 %), sans une seule erreur, sans un seul journal.
+(Les 7471 écritures fondées sur une version périmée ne coûtent pas
+chacune un incrément : plusieurs peuvent en écraser un seul.)
+La mise à jour conditionnelle rend 10000, au prix de 7922 refus
+que le client a vus et rejoués. C'est le même arbitrage que partout
+dans ce cours : une perte silencieuse contre une erreur visible.
+
+Le projet retient la seconde. Elle demande que chaque écriture porte
+la version sur laquelle elle s'appuie — la « mise à jour conditionnelle »
+de la leçon 5 — et que le client sache quoi faire d'un refus.
+</code></pre></figure>
+<p>Le compteur devrait valoir <strong>10&nbsp;000</strong>. Il vaut <strong>5&nbsp;034</strong>&nbsp;: <strong>4&nbsp;966</strong> incréments — la moitié — ont disparu <em>sans une seule erreur et sans un seul journal</em>. C'est la «&nbsp;mise à jour perdue&nbsp;», et elle n'est pas un cas rare de laboratoire&nbsp;: elle se produit dès que deux opérations lisent la même valeur avant que l'une des deux n'ait écrit.</p>
+<p>La <strong>mise à jour conditionnelle</strong> de la <a href="lecon-05.html">leçon&nbsp;5</a> — «&nbsp;écris ceci si la version vaut encore <em>v</em>&nbsp;» — rend le compte exact, au prix de <strong>7&nbsp;922</strong> refus que le client a vus et rejoués. On retrouve l'arbitrage de tout ce cours&nbsp;: <em>une perte silencieuse contre une erreur visible</em>. Et une erreur visible se compte, s'alerte, se corrige&nbsp;; une perte silencieuse se découvre six mois plus tard, quand quelqu'un compare deux totaux.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi l'horodatage est écarté d'emblée</p><p>La solution qui vient spontanément est de dater chaque écriture et de garder la plus récente. Le projet se l'interdit, et la <a href="lecon-04.html">leçon&nbsp;4</a> dit pourquoi&nbsp;: entre deux machines saines, deux resynchronisations laissent un écart de <strong>3,84&nbsp;ms</strong>, et rien n'empêche une horloge de dériver bien davantage. Une écriture postérieure de deux millisecondes peut donc porter une date antérieure et se faire écraser par celle qu'elle devait remplacer. Le pire est que le résultat reste <em>plausible</em>&nbsp;: la base contient une valeur cohérente, simplement pas la bonne. Un numéro de version, lui, ne dérive pas — il ne dépend d'aucune horloge, seulement de ce que la réplique a déjà vu.</p></div></div>
+
+<h2>Étape 5 — la partition, et le choix qu'on ne peut pas éviter</h2>
+<p>Voici le cœur du projet. Le réseau coupe C du reste&nbsp;: <strong>{A,&nbsp;B}</strong> d'un côté, <strong>{C}</strong> de l'autre. Les deux côtés ont des clients, les trois machines fonctionnent parfaitement, et aucune ne sait ce qui se passe chez l'autre. La <a href="lecon-06.html">leçon&nbsp;6</a> a énoncé le théorème&nbsp;; ici, il faut l'appliquer, c'est-à-dire écrire dans le code ce à quoi l'on renonce.</p>
+<figure class="code-block" data-file="partition.js"><pre><code class="language-javascript">// ÉTAPE 5 — la partition, et le choix que le théorème CAP impose. Le réseau
+// coupe C du reste : {A, B} d'un côté, {C} de l\'autre. Chaque côté a des
+// clients. Il faut choisir ce qu'on refuse — et l\'on ne peut pas ne pas choisir.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const DUREE = 60, DEBIT = 100;          // 60 s de partition, 100 requêtes/s
+const PART_MAJORITE = 0.70;             // 70 % des clients joignent A et B
+const CLES = 200;
+
+function simuler(politique) {
+  const alea = semer(90210);
+  const cote = { maj: new Map(), min: new Map() };   // état vu de chaque côté
+  let servies = 0, refusees = 0, ecrites = 0;
+  for (let i = 0; i &lt; DUREE * DEBIT; i++) {
+    const majoritaire = alea() &lt; PART_MAJORITE;
+    const cle = 'k' + Math.floor(alea() * CLES);
+    const ecriture = alea() &lt; 0.5;
+    if (politique === 'coherence') {
+      // W = 2 et R = 2 sur 3 répliques : seul le côté qui en détient 2 répond.
+      if (majoritaire) {
+        servies++;
+        if (ecriture) { cote.maj.set(cle, (cote.maj.get(cle) || 0) + 1); ecrites++; }
+      } else refusees++;                              // le côté minoritaire refuse tout
+    } else {
+      // W = 1 et R = 1 : chaque côté se débrouille seul, et diverge.
+      servies++;
+      const m = majoritaire ? cote.maj : cote.min;
+      if (ecriture) { m.set(cle, (m.get(cle) || 0) + 1); ecrites++; }
+    }
+  }
+  // À la reprise : combien de clés portent deux histoires différentes ?
+  let divergentes = 0;
+  for (const [cle, v] of cote.min) if ((cote.maj.get(cle) || 0) !== v) divergentes++;
+  return { servies, refusees, ecrites, divergentes };
+}
+
+const cp = simuler('coherence');
+const ap = simuler('disponibilite');
+const total = DUREE * DEBIT;
+function ligne(lib, a, b) {
+  console.log(lib.padEnd(38) + '| ' + String(a).padStart(14) + ' | ' + String(b).padStart(14));
+}
+console.log('Partition de ' + DUREE + ' s, ' + DEBIT + ' requêtes/s, ' + total + ' requêtes en tout');
+console.log((PART_MAJORITE * 100).toFixed(0) + ' % des clients atteignent {A, B}, le reste n\'atteint que {C}');
+console.log('');
+ligne('', 'cohérence', 'disponibilité');
+console.log('-'.repeat(38) + '+' + '-'.repeat(16) + '+' + '-'.repeat(16));
+ligne('requêtes servies', cp.servies, ap.servies);
+ligne('requêtes refusées', cp.refusees, ap.refusees);
+ligne('taux de service', (100 * cp.servies / total).toFixed(1) + ' %', (100 * ap.servies / total).toFixed(1) + ' %');
+ligne('clés à réconcilier à la reprise', cp.divergentes, ap.divergentes);
+console.log('');
+console.log('Les deux colonnes disent la même chose autrement. En choisissant la');
+console.log('cohérence, on refuse ' + cp.refusees + ' requêtes — ce sont les clients du côté');
+console.log('minoritaire, qui voient une panne alors que leur réplique va bien.');
+console.log('En choisissant la disponibilité, on sert tout le monde et l\'on sort');
+console.log('de la partition avec ' + ap.divergentes + ' clés portant deux valeurs différentes.');
+console.log('');
+console.log('Aucune des deux colonnes n\'est « la bonne » : elles répondent à des');
+console.log('questions différentes. Un solde bancaire prend la première, un panier');
+console.log('d\'achat la seconde. Ce projet retient la COHÉRENCE, et la suite');
+console.log('montre ce qu\'il faut construire pour que le refus reste supportable.');</code></pre></figure>
+<figure class="code-block" data-file="partition.txt"><pre><code class="language-plaintext">Partition de 60 s, 100 requêtes/s, 6000 requêtes en tout
+70 % des clients atteignent {A, B}, le reste n'atteint que {C}
+
+                                      |      cohérence |  disponibilité
+--------------------------------------+----------------+----------------
+requêtes servies                      |           4185 |           6000
+requêtes refusées                     |           1815 |              0
+taux de service                       |         69.8 % |        100.0 %
+clés à réconcilier à la reprise       |              0 |            194
+
+Les deux colonnes disent la même chose autrement. En choisissant la
+cohérence, on refuse 1815 requêtes — ce sont les clients du côté
+minoritaire, qui voient une panne alors que leur réplique va bien.
+En choisissant la disponibilité, on sert tout le monde et l'on sort
+de la partition avec 194 clés portant deux valeurs différentes.
+
+Aucune des deux colonnes n'est « la bonne » : elles répondent à des
+questions différentes. Un solde bancaire prend la première, un panier
+d'achat la seconde. Ce projet retient la COHÉRENCE, et la suite
+montre ce qu'il faut construire pour que le refus reste supportable.
+</code></pre></figure>
+<p>Les deux colonnes sont deux systèmes différents, pas un bon et un mauvais. En choisissant la <strong>cohérence</strong>, on sert <strong>69,8&nbsp;%</strong> des requêtes et l'on en refuse <strong>1&nbsp;815</strong> — celles des clients du côté minoritaire, qui voient une panne alors que leur réplique se porte très bien. En choisissant la <strong>disponibilité</strong>, on sert <strong>100&nbsp;%</strong> des requêtes et l'on sort de la partition avec <strong>194</strong> clés sur 200 portant deux valeurs différentes, qu'il faudra réconcilier — et la réconciliation d'un compteur ne se fait pas toute seule.</p>
+<p>Le taux de service de la colonne «&nbsp;cohérence&nbsp;» mérite qu'on s'y arrête&nbsp;: <strong>69,8&nbsp;%</strong>, c'est-à-dire exactement la part des clients qui joignent la majorité. Ce n'est pas une dégradation progressive, c'est une <em>coupure nette</em>&nbsp;: du côté minoritaire, absolument rien ne passe, ni lecture ni écriture. Un système qui annonce «&nbsp;cohérence forte&nbsp;» annonce donc aussi, qu'il le dise ou non, que certains de ses clients seront totalement coupés pendant une partition.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le choix se fait par donnée, pas par système</p><p>C'est l'erreur d'architecture la plus répandue sur ce sujet&nbsp;: décider une fois pour toutes que «&nbsp;notre plateforme est cohérente&nbsp;» ou «&nbsp;notre plateforme est disponible&nbsp;». Dans la même application, le <em>solde</em> d'un compte veut la première colonne — mieux vaut refuser un retrait que d'en autoriser deux —, tandis que le <em>panier</em> veut la seconde — mieux vaut deux paniers à fusionner qu'un client qui ne peut rien ajouter. La question à poser n'est jamais «&nbsp;quel système&nbsp;?&nbsp;» mais «&nbsp;<strong>que coûte une valeur périmée sur cette donnée-là, et que coûte un refus&nbsp;?</strong>&nbsp;». Les deux coûts se chiffrent, et c'est leur comparaison qui décide.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Schéma d une partition réseau isolant une réplique. À gauche, un cadre en pointillés englobe deux cercles étiquetés A et B, surmonté de la mention côté majoritaire, deux répliques sur trois ; au-dessous figurent les mentions écritures acquittées et soixante-neuf virgule huit pour cent des requêtes servies. À droite, un cadre en pointillés englobe un seul cercle étiqueté C, surmonté de la mention côté minoritaire, une réplique sur trois ; au-dessous figurent les mentions tout est refusé et trente virgule deux pour cent des requêtes. Entre les deux cadres, un trait vertical épais barré d une croix figure la coupure réseau. Une bande basse séparée par un trait en pointillés rappelle que mille huit cent quinze requêtes ont été refusées et zéro clé était à réconcilier à la reprise.">
+    <text class="d-label" x="150" y="24" text-anchor="middle" font-size="11">côté majoritaire — 2 répliques sur 3</text>
+    <rect class="d-box" x="40" y="36" width="220" height="96" rx="8" stroke-dasharray="6 4" fill="none" />
+    <circle class="d-accent" cx="105" cy="84" r="28" /><text class="d-text" x="105" y="89" text-anchor="middle" font-size="13">A</text>
+    <circle class="d-accent" cx="195" cy="84" r="28" /><text class="d-text" x="195" y="89" text-anchor="middle" font-size="13">B</text>
+    <text class="d-text" x="150" y="152" text-anchor="middle" font-size="10">écritures acquittées</text>
+    <text class="d-tag" x="150" y="170" text-anchor="middle" font-size="10">69,8 % des requêtes servies</text>
+
+    <path class="d-line" d="M320 30 L320 190" fill="none" stroke-width="3" />
+    <path class="d-line" d="M310 100 L330 120" fill="none" /><path class="d-line" d="M330 100 L310 120" fill="none" />
+    <text class="d-mut" x="320" y="208" text-anchor="middle" font-size="9">coupure</text>
+
+    <text class="d-label" x="480" y="24" text-anchor="middle" font-size="11">côté minoritaire — 1 réplique sur 3</text>
+    <rect class="d-box" x="390" y="36" width="180" height="96" rx="8" stroke-dasharray="6 4" fill="none" />
+    <circle class="d-box" cx="480" cy="84" r="28" /><text class="d-text" x="480" y="89" text-anchor="middle" font-size="13">C</text>
+    <text class="d-text" x="480" y="152" text-anchor="middle" font-size="10">tout est refusé</text>
+    <text class="d-tag" x="480" y="170" text-anchor="middle" font-size="10">30,2 % des requêtes</text>
+
+    <path class="d-line" d="M14 224 L626 224" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="244" text-anchor="middle" font-size="9">1 815 requêtes refusées&#160;·&#160;0 clé à réconcilier à la reprise</text>
+  </svg>
+  <figcaption>Les trois machines fonctionnent&nbsp;; c'est le lien qui manque, et c'est la majorité qui décide qui a le droit de parler.</figcaption>
+</figure>
+
+<h2>Étape 6 — la reprise, et la longue traîne qu'on oublie</h2>
+<p>La coupure est réparée. Rien ne se remet en ordre tout seul&nbsp;: C a manqué soixante secondes d'écritures, et il ne le sait même pas. Deux mécanismes existent, et le programme montre qu'ils ne font pas le même travail.</p>
+<figure class="code-block" data-file="reprise.js"><pre><code class="language-javascript">// ÉTAPE 6 — la partition est réparée, mais C a raté 60 s d'écritures. Rien ne
+// se remet en ordre tout seul : il faut un mécanisme, et le choix du mécanisme
+// décide de ce qui reste faux, et pour combien de temps.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const CLES = 5000, LECTURES = 20000;
+
+// Les accès ne sont pas uniformes : 2 % des clés (100 sur 5 000) reçoivent 80 %
+// des lectures. C'est ce déséquilibre qui décide du sort de la réparation.
+const CHAUDES = Math.round(CLES * 0.02);
+function tirerCle(alea) {
+  if (alea() &lt; 0.80) return Math.floor(alea() * CHAUDES);        // les 100 clés chaudes
+  return CHAUDES + Math.floor(alea() * (CLES - CHAUDES));        // la longue traîne
+}
+
+function simuler(mecanisme) {
+  const alea = semer(555);
+  const perimee = new Array(CLES).fill(true);       // C est en retard sur TOUT
+  let restantes = CLES;
+  const jalons = [];
+  for (let i = 1; i &lt;= LECTURES; i++) {
+    const k = tirerCle(alea);
+    if (mecanisme !== 'aucun' &amp;&amp; perimee[k]) { perimee[k] = false; restantes--; }
+    // L'anti-entropie compare les répliques en fond, à cadence fixe.
+    if (mecanisme === 'anti-entropie') {
+      for (let b = 0; b &lt; 6 &amp;&amp; i % 10 === 0; b++) {   // 6 clés balayées toutes les 10 lectures
+        const j = ((i / 10 - 1) * 6 + b) % CLES;
+        if (perimee[j]) { perimee[j] = false; restantes--; }
+      }
+    }
+    if (i === 1000 || i === 5000 || i === 20000) {
+      let chaudes = 0;
+      for (let c = 0; c &lt; CHAUDES; c++) if (perimee[c]) chaudes++;
+      jalons.push({ i: i, restantes: restantes, chaudes: chaudes });
+    }
+  }
+  return { restantes, jalons };
+}
+
+console.log('Après la partition, C est en retard sur les ' + CLES + ' clés.');
+console.log('Trafic réel : 80 % des lectures portent sur ' + CHAUDES + ' clés sur ' + CLES + '.');
+console.log('');
+console.log('mécanisme                    | après 1 000 | après 5 000 | après 20 000 lectures');
+console.log('-----------------------------+-------------+-------------+----------------------');
+const noms = { 'aucun': 'aucun', 'lecture': 'réparation à la lecture',
+               'anti-entropie': 'lecture + anti-entropie' };
+for (const m of ['aucun', 'lecture', 'anti-entropie']) {
+  const r = simuler(m);
+  console.log(noms[m].padEnd(29) + '| ' + String(r.jalons[0].restantes).padStart(11) + ' | ' +
+    String(r.jalons[1].restantes).padStart(11) + ' | ' + String(r.jalons[2].restantes).padStart(21));
+}
+const l = simuler('lecture'), ae = simuler('anti-entropie');
+console.log('');
+console.log('La réparation à la lecture est spectaculaire au début et s\'essouffle :');
+console.log('après 1 000 lectures, les ' + CHAUDES + ' clés chaudes sont toutes réparées (' + l.jalons[0].chaudes + ' restante),');
+console.log('mais il reste ' + l.jalons[2].restantes + ' clés périmées après ' + LECTURES + ' lectures — celles que');
+console.log('personne ne lit. Et ce sont exactement celles qu\'on lira un jour, une');
+console.log('seule fois, au pire moment.');
+console.log('');
+console.log('L\'anti-entropie ne dépend pas du trafic : elle balaie les clés une à');
+console.log('une, à cadence fixe, et ne laisse aucune clé périmée (' + ae.jalons[2].restantes + ') au terme du relevé.');
+console.log('Les deux sont nécessaires : la première est rapide là où ça compte,');
+console.log('la seconde est la seule qui termine le travail.');</code></pre></figure>
+<figure class="code-block" data-file="reprise.txt"><pre><code class="language-plaintext">Après la partition, C est en retard sur les 5000 clés.
+Trafic réel : 80 % des lectures portent sur 100 clés sur 5000.
+
+mécanisme                    | après 1 000 | après 5 000 | après 20 000 lectures
+-----------------------------+-------------+-------------+----------------------
+aucun                        |        5000 |        5000 |                  5000
+réparation à la lecture      |        4714 |        4004 |                  2163
+lecture + anti-entropie      |        4230 |        1613 |                     0
+
+La réparation à la lecture est spectaculaire au début et s'essouffle :
+après 1 000 lectures, les 100 clés chaudes sont toutes réparées (0 restante),
+mais il reste 2163 clés périmées après 20000 lectures — celles que
+personne ne lit. Et ce sont exactement celles qu'on lira un jour, une
+seule fois, au pire moment.
+
+L'anti-entropie ne dépend pas du trafic : elle balaie les clés une à
+une, à cadence fixe, et ne laisse aucune clé périmée (0) au terme du relevé.
+Les deux sont nécessaires : la première est rapide là où ça compte,
+la seconde est la seule qui termine le travail.
+</code></pre></figure>
+<p>La <strong>réparation à la lecture</strong> — quand une lecture trouve deux répliques en désaccord, elle renvoie la bonne valeur à la retardataire — est spectaculaire au début&nbsp;: les <strong>100</strong> clés chaudes sont rattrapées en moins de mille lectures. Puis elle s'essouffle, parce qu'elle ne répare que ce qu'on lit&nbsp;: après <strong>20&nbsp;000</strong> lectures, il reste <strong>2&nbsp;163</strong> clés périmées sur 5&nbsp;000. Ce sont celles que personne ne lit — et ce sont exactement celles qu'on lira un jour, une seule fois, au pire moment.</p>
+<p>L'<strong>anti-entropie</strong>, elle, ne dépend pas de la <em>popularité</em> des clés&nbsp;: elle balaie l'espace à cadence fixe et compare les répliques entre elles. Elle ne trie donc rien, et son avance est d'abord modeste — <strong>4&nbsp;230</strong> clés encore périmées après mille lectures avec les deux mécanismes, contre <strong>4&nbsp;714</strong> avec la réparation seule. Mais c'est la seule qui <em>termine</em> le travail&nbsp;: <strong>0</strong> clé périmée au terme du relevé, là où la réparation à la lecture plafonne à <strong>2&nbsp;163</strong>.</p>
+<p>Les deux sont donc nécessaires, et pour des raisons opposées&nbsp;: la première est immédiate là où ça compte, la seconde est exhaustive. Un magasin qui n'aurait que la première paraîtrait parfaitement sain sur toutes ses métriques — les clés lues sont justes — tout en conservant indéfiniment des milliers de valeurs périmées.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que coûte l'anti-entropie, et pourquoi les vrais systèmes ne comparent pas clé par clé</p><p>Le programme compare une clé à la fois, ce qui est acceptable pour 5&nbsp;000 clés et absurde pour cinq milliards&nbsp;: il faudrait transférer tout le contenu des répliques pour le comparer. Les systèmes réels emploient des <strong>arbres d'empreintes</strong> — chaque nœud résume ses descendants, on compare les résumés, et l'on ne descend que dans les branches qui diffèrent. Deux répliques identiques se comparent alors en une poignée de messages, et deux répliques qui diffèrent sur une clé se rejoignent en <em>log(N)</em> comparaisons. Le principe mesuré ici reste le même&nbsp;: ce qui compte est de balayer <em>tout</em>, indépendamment du trafic.</p></div></div>
+
+<h2>Étape 7 — les clients réessaient, et le magasin doit s'y attendre</h2>
+<p>Il manque encore une pièce, et c'est celle que la <a href="lecon-10.html">leçon&nbsp;10</a> a construite. Le magasin acquitte les écritures&nbsp;; mais l'acquittement lui-même peut se perdre, et le client — qui ne sait pas si son écriture a eu lieu — réessaie.</p>
+<figure class="code-block" data-file="idempotence.js"><pre><code class="language-javascript">// ÉTAPE 7 — les clients réessaient. Le magasin acquitte, mais l'acquittement
+// se perd parfois : le client ne sait pas si son écriture a eu lieu. C'est la
+// leçon 10, appliquée au magasin qu'on vient de construire.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const OPERATIONS = 50000, PERTE_ACCUSE = 0.03, TENTATIVES = 3;
+
+function campagne(operation, avecCle) {
+  const alea = semer(31415);
+  const magasin = { compteur: 0, valeur: null, registre: new Set() };
+  let appliquees = 0;
+  for (let i = 0; i &lt; OPERATIONS; i++) {
+    const cle = 'op-' + i;                          // une clé par INTENTION
+    let acquitte = false;
+    for (let t = 0; t &lt; TENTATIVES &amp;&amp; !acquitte; t++) {
+      if (avecCle &amp;&amp; magasin.registre.has(cle)) {   // déjà appliquée : on rend la réponse
+        acquitte = alea() &gt;= PERTE_ACCUSE;
+        continue;
+      }
+      if (operation === 'incrementer') magasin.compteur += 1;   // NON idempotente
+      else magasin.valeur = 'v' + i;                            // idempotente
+      if (avecCle) magasin.registre.add(cle);
+      appliquees++;
+      acquitte = alea() &gt;= PERTE_ACCUSE;            // l'accusé se perd parfois
+    }
+  }
+  return { appliquees, compteur: magasin.compteur, cles: magasin.registre.size };
+}
+
+function ligne(lib, r, attendu) {
+  console.log(lib.padEnd(40) + '| ' + String(r.appliquees).padStart(12) + ' | ' +
+    String(r.appliquees - attendu).padStart(12));
+}
+console.log(OPERATIONS + ' opérations, ' + (PERTE_ACCUSE * 100).toFixed(0) +
+  ' % d\'accusés perdus, ' + TENTATIVES + ' tentatives au plus');
+console.log('');
+console.log('opération                               | appliquées   | EN TROP');
+console.log('----------------------------------------+--------------+-------------');
+ligne('poser une valeur, sans clé', campagne('poser', false), OPERATIONS);
+ligne('poser une valeur, avec clé', campagne('poser', true), OPERATIONS);
+ligne('incrémenter, sans clé', campagne('incrementer', false), OPERATIONS);
+ligne('incrémenter, avec clé', campagne('incrementer', true), OPERATIONS);
+console.log('');
+const sans = campagne('incrementer', false), avec = campagne('incrementer', true);
+console.log('Le compteur, qui devrait valoir ' + OPERATIONS + ' :');
+console.log('  sans clé d\'idempotence : ' + sans.compteur + '  (' +
+  (sans.compteur - OPERATIONS) + ' de trop, ' +
+  (100 * (sans.compteur - OPERATIONS) / OPERATIONS).toFixed(2) + ' %)');
+console.log('  avec clé               : ' + avec.compteur + '  (exact)');
+console.log('');
+console.log('La première ligne du tableau mérite un mot : « poser une valeur »');
+console.log('est appliquée ' + campagne('poser', false).appliquees + ' fois au lieu de ' + OPERATIONS +
+  ', et le résultat est');
+console.log('pourtant JUSTE. C\'est la définition même de l\'idempotence : le rejeu');
+console.log('a lieu, il ne fait simplement aucun dégât. La clé ne devient');
+console.log('indispensable que pour les opérations qui dépendent de l\'état.');
+console.log('');
+console.log('Prix du registre : ' + avec.cles + ' clés retenues. À 120 octets pièce et');
+console.log('500 opérations/s, une fenêtre de 7 jours pèse 36,3 Go — le calcul de');
+console.log('la leçon 10, et la raison pour laquelle cette fenêtre se règle.');</code></pre></figure>
+<figure class="code-block" data-file="idempotence.txt"><pre><code class="language-plaintext">50000 opérations, 3 % d'accusés perdus, 3 tentatives au plus
+
+opération                               | appliquées   | EN TROP
+----------------------------------------+--------------+-------------
+poser une valeur, sans clé              |        51517 |         1517
+poser une valeur, avec clé              |        50000 |            0
+incrémenter, sans clé                   |        51517 |         1517
+incrémenter, avec clé                   |        50000 |            0
+
+Le compteur, qui devrait valoir 50000 :
+  sans clé d'idempotence : 51517  (1517 de trop, 3.03 %)
+  avec clé               : 50000  (exact)
+
+La première ligne du tableau mérite un mot : « poser une valeur »
+est appliquée 51517 fois au lieu de 50000, et le résultat est
+pourtant JUSTE. C'est la définition même de l'idempotence : le rejeu
+a lieu, il ne fait simplement aucun dégât. La clé ne devient
+indispensable que pour les opérations qui dépendent de l'état.
+
+Prix du registre : 50000 clés retenues. À 120 octets pièce et
+500 opérations/s, une fenêtre de 7 jours pèse 36,3 Go — le calcul de
+la leçon 10, et la raison pour laquelle cette fenêtre se règle.
+</code></pre></figure>
+<p>La première ligne du tableau est la plus instructive&nbsp;: «&nbsp;poser une valeur&nbsp;» est appliquée <strong>51&nbsp;517</strong> fois pour <strong>50&nbsp;000</strong> intentions, et le résultat est <em>juste</em>. C'est la définition même de l'idempotence&nbsp;: le rejeu a bien lieu, il ne fait simplement aucun dégât. Une bonne partie des magasins de clés-valeurs s'en sortent ainsi sans rien faire de spécial, parce que leur opération principale — <em>poser</em> une valeur — est rejouable par nature.</p>
+<p>La ligne «&nbsp;incrémenter&nbsp;» montre l'autre versant&nbsp;: le compteur rend <strong>51&nbsp;517</strong> au lieu de 50&nbsp;000, soit <strong>3,03&nbsp;%</strong> de trop. Avec une clé d'idempotence — une clé par <em>intention</em>, jamais par tentative —, il rend exactement <strong>50&nbsp;000</strong>. Le prix est le registre&nbsp;: <strong>50&nbsp;000</strong> clés retenues ici, et la fenêtre de rétention à régler sur le retard maximal du système, comme la leçon 10 l'a chiffré.</p>
+
+<h2>Étape 8 — dix minutes de trafic, une partition, un seul chiffre</h2>
+<p>Toutes les pièces sont là. On les assemble et on fait tourner le magasin complet&nbsp;: <strong>600&nbsp;secondes</strong> de trafic à <strong>100&nbsp;opérations par seconde</strong>, quorum W&nbsp;=&nbsp;R&nbsp;=&nbsp;2, réparation à la lecture, anti-entropie, et une partition de soixante secondes qui isole C entre la 200<sup>e</sup> et la 260<sup>e</sup> seconde.</p>
+<figure class="code-block" data-file="bout-en-bout.js"><pre><code class="language-javascript">// ÉTAPE 8 — tout ensemble, sur dix minutes de trafic. Quorum, mise à jour
+// conditionnelle, idempotence, réparation à la lecture et anti-entropie : on
+// fait tourner le magasin complet à travers une partition, et l'on regarde le
+// seul chiffre qui compte — l'invariant a-t-il tenu ?
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+const alea = semer(20260826);
+const DUREE = 600, DEBIT = 100, CLES = 500;
+const PANNE_DEBUT = 200, PANNE_FIN = 260;
+const PERTE = 0.01, W = 2, R = 2, PART_MAJORITE = 0.70;
+
+const repliques = { A: new Map(), B: new Map(), C: new Map() };
+const acquittees = new Map();          // ce que le magasin a PROMIS au client
+let servies = 0, refusees = 0, perimees = 0, brisees = 0, reparations = 0;
+const journal = [];
+
+function joignables(t, cote) {
+  const partition = t &gt;= PANNE_DEBUT &amp;&amp; t &lt; PANNE_FIN;
+  if (!partition) return ['A', 'B', 'C'];
+  return cote === 'maj' ? ['A', 'B'] : ['C'];      // C est isolé du reste
+}
+function ecrire(t, cote, cle, version) {
+  let accuses = 0;
+  for (const nom of joignables(t, cote)) {
+    if (alea() &lt; PERTE) continue;
+    const e = repliques[nom].get(cle);
+    if (!e || e.version &lt; version) repliques[nom].set(cle, { version: version });
+    accuses++;
+  }
+  if (accuses &gt;= W) { acquittees.set(cle, version); return true; }
+  return false;                                     // refusée : rien n'est promis
+}
+function lire(t, cote, cle) {
+  const dispo = joignables(t, cote);
+  const vues = [];
+  for (const nom of dispo) {
+    if (vues.length &gt;= R) break;
+    if (alea() &lt; PERTE) continue;
+    vues.push({ nom: nom, version: (repliques[nom].get(cle) || { version: 0 }).version });
+  }
+  if (vues.length &lt; R) return null;                 // pas de quorum de lecture
+  let max = 0;
+  for (const v of vues) if (v.version &gt; max) max = v.version;
+  for (const v of vues) if (v.version &lt; max) {      // réparation à la lecture
+    repliques[v.nom].set(cle, { version: max }); reparations++;
+  }
+  return max;
+}
+
+let version = 0, convergence = -1;
+const ratees = new Map();     // clés écrites pendant la partition : C les a manquées
+for (let t = 0; t &lt; DUREE; t++) {
+  for (let i = 0; i &lt; DEBIT; i++) {
+    const cote = alea() &lt; PART_MAJORITE ? 'maj' : 'min';
+    const cle = 'k' + Math.floor(alea() * CLES);
+    if (alea() &lt; 0.4) {                             // 40 % d'écritures
+      version++;
+      if (ecrire(t, cote, cle, version)) {
+        servies++;
+        if (t &gt;= PANNE_DEBUT &amp;&amp; t &lt; PANNE_FIN &amp;&amp; cote === 'maj') ratees.set(cle, version);
+      } else refusees++;
+    } else {
+      const v = lire(t, cote, cle);
+      if (v === null) { refusees++; continue; }
+      servies++;
+      const promise = acquittees.get(cle) || 0;
+      if (v &lt; promise) { perimees++; brisees++; }   // INVARIANT BRISÉ
+    }
+  }
+  // Anti-entropie : 20 clés comparées par seconde entre répliques joignables.
+  if (t &gt;= PANNE_FIN) {
+    for (let b = 0; b &lt; 20; b++) {
+      const cle = 'k' + ((t * 20 + b) % CLES);
+      let max = 0;
+      for (const nom of ['A', 'B', 'C']) max = Math.max(max, (repliques[nom].get(cle) || { version: 0 }).version);
+      for (const nom of ['A', 'B', 'C']) {
+        const e = repliques[nom].get(cle) || { version: 0 };
+        if (e.version &lt; max) { repliques[nom].set(cle, { version: max }); reparations++; }
+      }
+    }
+  }
+  if (t === PANNE_DEBUT - 1 || t === PANNE_FIN - 1 || t === DUREE - 1) {
+    journal.push({ t: t + 1, servies: servies, refusees: refusees });
+  }
+  // Convergence : les clés que C a manquées pendant la partition sont-elles
+  // toutes rattrapées ? (Un désaccord dû à une écriture EN COURS ne compte pas.)
+  if (t &gt;= PANNE_FIN &amp;&amp; convergence &lt; 0) {
+    let enRetard = 0;
+    for (const [cle, v] of ratees) {
+      if ((repliques.C.get(cle) || { version: 0 }).version &lt; v) enRetard++;
+    }
+    if (enRetard === 0) convergence = t - PANNE_FIN + 1;
+  }
+}
+
+const total = DUREE * DEBIT;
+console.log(DUREE + ' s de trafic à ' + DEBIT + ' op/s, partition de ' +
+  (PANNE_FIN - PANNE_DEBUT) + ' s à t = ' + PANNE_DEBUT + ' s');
+console.log('');
+console.log('opérations totales ................... ' + total);
+console.log('  servies ........................... ' + servies +
+  '  (' + (100 * servies / total).toFixed(2) + ' %)');
+console.log('  refusées .......................... ' + refusees +
+  '  (' + (100 * refusees / total).toFixed(2) + ' %)');
+console.log('');
+console.log('INVARIANT — une écriture acquittée n\'est jamais perdue :');
+console.log('  lectures rendant moins que l\'acquitté : ' + brisees);
+console.log('');
+console.log('réparations déclenchées .............. ' + reparations);
+console.log('clés manquées par C pendant la coupure  ' + ratees.size);
+console.log('  toutes rattrapées après ................ ' + convergence + ' s');
+let desaccordFinal = 0;
+for (let k = 0; k &lt; CLES; k++) {
+  const cle = 'k' + k;
+  const vs = ['A', 'B', 'C'].map((n) =&gt; (repliques[n].get(cle) || { version: 0 }).version);
+  if (vs[0] !== vs[1] || vs[1] !== vs[2]) desaccordFinal++;
+}
+console.log('clés en désaccord à l\'instant final ... ' + desaccordFinal + ' sur ' + CLES + '  (écritures en vol)');
+console.log('');
+console.log('avant la partition (0 à ' + PANNE_DEBUT + ' s)   : ' + journal[0].refusees + ' refus');
+console.log('pendant (' + PANNE_DEBUT + ' à ' + PANNE_FIN + ' s)          : ' +
+  (journal[1].refusees - journal[0].refusees) + ' refus');
+console.log('après (' + PANNE_FIN + ' à ' + DUREE + ' s)           : ' +
+  (journal[2].refusees - journal[1].refusees) + ' refus');
+console.log('');
+console.log('Le magasin a refusé ' + refusees + ' opérations et n\'a brisé sa promesse');
+console.log('AUCUNE fois. C\'est exactement le contrat annoncé au début : on');
+console.log('renonce à servir plutôt qu\'à tenir parole.');</code></pre></figure>
+<figure class="code-block" data-file="bout-en-bout.txt"><pre><code class="language-plaintext">600 s de trafic à 100 op/s, partition de 60 s à t = 200 s
+
+opérations totales ................... 60000
+  servies ........................... 58064  (96.77 %)
+  refusées .......................... 1936  (3.23 %)
+
+INVARIANT — une écriture acquittée n'est jamais perdue :
+  lectures rendant moins que l'acquitté : 0
+
+réparations déclenchées .............. 641
+clés manquées par C pendant la coupure  477
+  toutes rattrapées après ................ 24 s
+clés en désaccord à l'instant final ... 2 sur 500  (écritures en vol)
+
+avant la partition (0 à 200 s)   : 2 refus
+pendant (200 à 260 s)          : 1924 refus
+après (260 à 600 s)           : 10 refus
+
+Le magasin a refusé 1936 opérations et n'a brisé sa promesse
+AUCUNE fois. C'est exactement le contrat annoncé au début : on
+renonce à servir plutôt qu'à tenir parole.
+</code></pre></figure>
+<p>Le chiffre du milieu est le seul qui décide si le projet est réussi&nbsp;: <strong>0</strong> lecture n'a rendu moins que ce qui avait été acquitté. L'invariant du cahier des charges a tenu, sur <strong>60&nbsp;000</strong> opérations, à travers une coupure réseau.</p>
+<p>Tout le reste est le prix de cette promesse, et il est intégralement visible. <strong>1&nbsp;936</strong> opérations refusées, soit <strong>3,23&nbsp;%</strong> — dont <strong>1&nbsp;924</strong> concentrées sur les soixante secondes de partition, dix seulement après, et deux avant. Le magasin ne s'est pas dégradé progressivement&nbsp;: il a refusé pendant une minute, puis il est revenu.</p>
+<p>La ventilation de ces 1&nbsp;924 refus contient un enseignement de plus&nbsp;: <strong>1&nbsp;830</strong> viennent du côté minoritaire — la totalité de ses requêtes — et <strong>94</strong> du côté <em>majoritaire</em>, soit <strong>2,25&nbsp;%</strong> des siennes. C&nbsp;isolé, A et B doivent réunir W&nbsp;=&nbsp;R&nbsp;=&nbsp;2 sur les <em>deux</em> seules répliques joignables&nbsp;: le quorum tient encore, mais il n'a plus <em>aucune</em> marge, et la moindre perte de message se transforme en refus. Une partition ne coupe donc pas seulement le côté minoritaire&nbsp;: elle supprime aussi la tolérance aux pannes du côté qui continue.</p>
+<p>La reprise se lit sur deux lignes. C a manqué <strong>477</strong> clés pendant la coupure&nbsp;; elles sont <em>toutes</em> rattrapées <strong>24&nbsp;secondes</strong> après la reprise, par la réparation à la lecture pour les plus demandées et par l'anti-entropie pour le reste. Et les <strong>2</strong> clés en désaccord à l'instant final ne sont pas un résidu de la partition&nbsp;: ce sont des écritures en cours de propagation, l'état normal d'un magasin qui travaille.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Les quatre métriques à exposer, et dans cet ordre</p><p><strong>Le compteur de violations de l'invariant</strong>&nbsp;: il doit valoir zéro, et toute valeur non nulle est un incident majeur, pas un avertissement. <strong>Le taux de refus, séparé par côté</strong>&nbsp;: 3,23&nbsp;% en moyenne ne dit rien&nbsp;; «&nbsp;100&nbsp;% des clients de la zone C&nbsp;» dit tout. <strong>Le nombre de clés en retard</strong>, et non le nombre de réparations&nbsp;: la première grandeur décroît vers zéro, la seconde ne fait que compter le travail. <strong>Le temps depuis la dernière passe d'anti-entropie complète</strong>&nbsp;: c'est la seule métrique qui prévienne qu'une divergence pourrait dormir quelque part. Aucune de ces quatre n'est fournie par défaut par un magasin&nbsp;; il faut les écrire.</p></div></div>
+
+<h2>Ce que ce projet ne prouve pas</h2>
+<p>Un projet pédagogique doit dire où il s'arrête, sans quoi il enseigne une fausse assurance. Voici ce que ces huit étapes <em>ne</em> démontrent <em>pas</em>.</p>
+<ul>
+<li><strong>Ce n'est pas un protocole d'accord.</strong> Le magasin n'élit pas de meneur et ne tient aucun journal ordonné&nbsp;: il applique un quorum par requête, ce qui suffit à la promesse choisie mais ne donne <em>ni</em> ordre total des écritures, <em>ni</em> transaction sur plusieurs clés. Un vrai système bâtit ces garanties sur un protocole d'accord — et c'est un cran de complexité au-dessus.</li>
+<li><strong>Rien n'est écrit sur un disque.</strong> Toutes les répliques vivent en mémoire&nbsp;; une «&nbsp;panne&nbsp;» y est une coupure de lien, jamais un redémarrage. Un magasin réel doit garantir qu'une écriture acquittée survit à la perte de courant, ce qui suppose un journal écrit avant l'accusé — et cette écriture-là coûte souvent plus cher que le réseau.</li>
+<li><strong>Le modèle de panne est bienveillant.</strong> Les répliques perdent des messages et se taisent&nbsp;; aucune ne répond n'importe quoi, aucune n'est malveillante, aucune ne redémarre avec un état partiel. Les systèmes qui résistent à ce troisième cas — les pannes dites byzantines — coûtent bien davantage, et servent surtout là où les machines n'appartiennent pas au même propriétaire.</li>
+<li><strong>Les partitions sont franches.</strong> Ici, un lien marche ou ne marche pas. Un réseau à moitié coupé — lent, asymétrique, intermittent — est bien plus difficile à traiter, et c'est le cas le plus fréquent en exploitation&nbsp;: la <a href="lecon-03.html">leçon&nbsp;3</a> a montré qu'une machine simplement <em>lente</em> est déjà indiscernable d'une machine morte&nbsp;; une coupure intermittente y ajoute l'incertitude sur la durée.</li>
+<li><strong>Les chiffres sont ceux d'une simulation.</strong> Un taux de perte de 1&nbsp;%, une partition de soixante secondes et 100&nbsp;opérations par seconde sont des réglages, pas des mesures du monde. Ce que le projet démontre n'est pas «&nbsp;3,23&nbsp;% de refus&nbsp;», c'est le <em>lien</em> entre le réglage du quorum, la répartition des clients et le taux de refus — lien qui, lui, ne dépend pas des valeurs choisies.</li>
+</ul>
+<p>Ces limites ne retirent rien à l'exercice&nbsp;: elles disent où placer la frontière entre ce qu'on a compris et ce qu'on croirait avoir compris. C'est précisément ce que la <a href="lecon-01.html">leçon&nbsp;1</a> reprochait aux huit illusions&nbsp;: chacune est une hypothèse qu'on n'avait pas remarqué avoir prise.</p>
+
+<h2>Ce qu'un vrai système ferait autrement</h2>
+<p>Pour finir de situer le projet, voici les quatre différences qui séparent ce magasin d'un magasin de production, dans l'ordre où on les rencontrerait en l'industrialisant.</p>
+<p><strong>Le journal avant l'accusé.</strong> Chaque réplique écrirait l'opération dans un journal séquentiel <em>avant</em> de répondre, et ne répondrait qu'une fois cette écriture confirmée par le système de fichiers. C'est ce qui transforme «&nbsp;acquitté&nbsp;» en «&nbsp;durable&nbsp;», et cela ajoute une latence qui domine souvent celle du réseau.</p>
+<p><strong>Le partitionnement.</strong> Trois répliques d'un même ensemble de clés ne passent pas à l'échelle&nbsp;: au-delà d'une certaine taille, on découpe les clés en partitions, chacune répliquée trois fois, comme la <a href="lecon-08.html">leçon&nbsp;8</a> l'a montré. Le quorum devient alors <em>par partition</em>, et une requête qui touche deux partitions perd toute atomicité.</p>
+<p><strong>La détection d'appartenance.</strong> Ce projet sait magiquement qui est joignable. Un système réel doit le découvrir, par battements de cœur et rumeur, avec toute l'incertitude que la <a href="lecon-07.html">leçon&nbsp;7</a> a mesurée&nbsp;: un seuil trop court destitue des machines vivantes, un seuil trop long allonge les pannes.</p>
+<p><strong>La gestion des versions et des conflits.</strong> Le numéro de version unique de ce projet suppose qu'une seule autorité l'incrémente. Un magasin réparti en emploie plusieurs — vecteurs de version, horloges vectorielles de la <a href="lecon-05.html">leçon&nbsp;5</a> — pour distinguer «&nbsp;plus récent&nbsp;» de «&nbsp;concurrent&nbsp;», parce que ces deux cas demandent des traitements opposés.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 230" role="img" aria-label="Chronologie du scénario complet sur six cents secondes. Une ligne du temps horizontale porte trois zones successives séparées par des traits verticaux : une première zone de zéro à deux cents secondes intitulée régime sain, portant deux refus ; une deuxième zone accentuée de deux cents à deux cent soixante secondes intitulée partition, portant mille neuf cent vingt-quatre refus ; une troisième zone de deux cent soixante à six cents secondes intitulée reprise, portant dix refus. Une marque placée vingt-quatre secondes après le début de la troisième zone porte l étiquette quatre cent soixante-dix-sept clés rattrapées. Une bande basse séparée par un trait en pointillés rappelle que zéro lecture a rendu moins que ce qui avait été acquitté sur soixante mille opérations.">
+    <path class="d-line" d="M40 120 L600 120" fill="none" />
+    <path class="d-line" d="M40 108 L40 132" fill="none" />
+    <path class="d-line" d="M227 100 L227 140" fill="none" />
+    <path class="d-line" d="M283 100 L283 140" fill="none" />
+    <path class="d-line" d="M600 108 L600 132" fill="none" />
+    <rect class="d-accent" x="227" y="112" width="56" height="16" />
+
+    <text class="d-mut" x="40" y="152" text-anchor="middle" font-size="9">0 s</text>
+    <text class="d-mut" x="227" y="152" text-anchor="middle" font-size="9">200 s</text>
+    <text class="d-mut" x="283" y="152" text-anchor="middle" font-size="9">260 s</text>
+    <text class="d-mut" x="600" y="152" text-anchor="middle" font-size="9">600 s</text>
+
+    <text class="d-label" x="133" y="90" text-anchor="middle" font-size="10">régime sain</text>
+    <text class="d-text" x="133" y="176" text-anchor="middle" font-size="9.5">2 refus</text>
+    <text class="d-label" x="255" y="90" text-anchor="middle" font-size="10">partition</text>
+    <text class="d-tag" x="255" y="176" text-anchor="middle" font-size="9.5">1 924 refus</text>
+    <text class="d-label" x="441" y="90" text-anchor="middle" font-size="10">reprise</text>
+    <text class="d-text" x="441" y="176" text-anchor="middle" font-size="9.5">10 refus</text>
+
+    <path class="d-line" d="M305 120 L305 104" fill="none" />
+    <text class="d-mut" x="330" y="100" text-anchor="start" font-size="8.5">+24 s&#160;: 477 clés rattrapées</text>
+
+    <path class="d-line" d="M14 194 L626 194" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="214" text-anchor="middle" font-size="9">60 000 opérations&#160;·&#160;0 lecture n'a rendu moins que ce qui avait été acquitté</text>
+  </svg>
+  <figcaption>Le refus n'est pas réparti&nbsp;: il est concentré sur la minute de partition, et sur le côté minoritaire du réseau.</figcaption>
+</figure>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Écrire le magasin d'abord et « ajouter le réseau » ensuite.</strong> Le réseau n'est pas une couche&nbsp;: c'est ce qui décide de toutes les autres. Le projet le pose à l'étape 1 pour cette raison, et la conséquence tombe immédiatement — A ne distingue pas «&nbsp;C est coupé&nbsp;» de «&nbsp;C est lent&nbsp;». Un magasin conçu sans cette contrainte devra être réécrit, pas complété.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire que le quorum règle les écritures concurrentes.</strong> Il règle le <em>recouvrement</em>, pas l'<em>ordre</em>&nbsp;: mesuré, deux clients qui incrémentent le même compteur en perdent <strong>4&nbsp;966</strong> sur <strong>10&nbsp;000</strong> — la moitié — alors que le quorum est parfaitement respecté. Il y faut une mise à jour conditionnelle, et un client qui sait quoi faire d'un refus.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Se contenter de la réparation à la lecture.</strong> Elle règle les clés chaudes en moins de mille lectures et laisse <strong>2&nbsp;163</strong> clés périmées sur 5&nbsp;000 après vingt mille lectures. Toutes les métriques paraissent saines — les clés lues sont justes — et la divergence dort dans la longue traîne, jusqu'au jour où quelqu'un lit l'une de ces clés.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Annoncer un taux de disponibilité global pendant une partition.</strong> «&nbsp;<strong>96,77&nbsp;%</strong> des opérations servies&nbsp;» est vrai et trompeur&nbsp;: pendant la minute de coupure, le côté minoritaire n'a pas été servi à <strong>0&nbsp;%</strong> — pas à 96&nbsp;%. Une moyenne cache toujours une partition&nbsp;; la métrique utile est le taux de service <em>par zone</em>.</p></div></div>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une entreprise exploite un magasin de sessions&nbsp;: chaque connexion écrit un jeton, chaque requête le relit. Trois répliques, réparties <strong>2&nbsp;|&nbsp;1</strong> sur deux salles machines reliées par deux liens indépendants. Le réglage est W&nbsp;=&nbsp;2, R&nbsp;=&nbsp;2, et il n'a jamais posé de problème en trois ans.<br /><br />Un samedi, les deux liens tombent en même temps — le même prestataire, découvert ce jour-là. La salle qui détient deux répliques garde la majorité et continue&nbsp;; l'autre refuse tout. Le comportement est <em>exactement</em> celui de l'étape 5, et il est correct.<br /><br />Ce qui n'était pas prévu est ailleurs. L'équilibrage de charge, lui, ignore tout des quorums&nbsp;: il envoie la moitié du trafic vers la salle minoritaire, où <em>toutes</em> les requêtes échouent. Le taux d'erreur global monte à <strong>50&nbsp;%</strong>, et le tableau de bord affiche «&nbsp;50&nbsp;% de disponibilité&nbsp;» — un chiffre qui ne correspond à aucune réalité&nbsp;: une moitié des utilisateurs est servie parfaitement, l'autre pas du tout.<br /><br />L'astreinte fait alors ce qui paraît évident&nbsp;: elle bascule le réglage en W&nbsp;=&nbsp;1, R&nbsp;=&nbsp;1 «&nbsp;pour rétablir le service&nbsp;». Le service revient effectivement à 100&nbsp;%, et pendant les vingt-cinq minutes suivantes les deux salles acceptent des écritures qu'elles ne s'échangent pas. À la reprise du lien, <strong>2 300</strong> sessions existent en deux versions, dont certaines avec des droits différents — et la réparation à la lecture, qui garde la version la plus haute, en promeut arbitrairement une sur deux.<br /><br />Trois corrections ont suivi, et la troisième est celle qui manquait vraiment. Retirer la salle minoritaire de l'équilibrage <em>dès qu'elle perd le quorum</em>&nbsp;: un client mal orienté vaut mieux qu'un client servi par une réplique qui n'a le droit de rien. Interdire la bascule W&nbsp;=&nbsp;1 en exploitation, en la sortant de la configuration à chaud&nbsp;: ce n'est pas un réglage d'astreinte, c'est un changement de contrat. Et surtout, <strong>afficher le taux de service par zone au lieu de la moyenne</strong>&nbsp;: c'est le seul écran qui aurait montré, en trente secondes, que le problème n'était pas «&nbsp;le magasin est à moitié en panne&nbsp;» mais «&nbsp;une zone est isolée&nbsp;».<br /><br />La phrase que l'équipe a retenue&nbsp;: <strong>le système a fait exactement ce qu'on lui avait demandé&nbsp;; c'est le tableau de bord qui a fait prendre la mauvaise décision</strong>.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Le magasin répliqué — mémo du projet</caption>
+    <thead><tr><th scope="col">Pièce</th><th scope="col">Ce qu'elle apporte, mesuré</th></tr></thead>
+    <tbody>
+      <tr><td>Le réseau d'abord</td><td>Livrer, perdre, couper. La coupure est symétrique&nbsp;: <strong>2 000</strong> messages bloqués dans les deux sens. A ne distingue jamais «&nbsp;coupé&nbsp;» de «&nbsp;mort&nbsp;» ni de «&nbsp;lent&nbsp;».</td></tr>
+      <tr><td>Sans coordination</td><td>Écrire à toutes, lire sur une&nbsp;: <strong>1,97&nbsp;%</strong> de lectures périmées, <strong>5,91&nbsp;%</strong> d'écritures incomplètes. Aucun bogue — aucune promesse non plus.</td></tr>
+      <tr><td>Quorum W=2, R=2</td><td>Lectures périmées <strong>0</strong>. Prix&nbsp;: <strong>23</strong> écritures refusées, <strong>58</strong> lectures impossibles.</td></tr>
+      <tr><td>Autres réglages</td><td>W=1,R=1&nbsp;: <strong>1 177</strong> périmées. W=3,R=1&nbsp;: <strong>1 219</strong> refus. W=3,R=3&nbsp;: <strong>1 190</strong> refus <em>et</em> <strong>3 534</strong> lectures impossibles.</td></tr>
+      <tr><td>Écritures concurrentes</td><td>Écraser&nbsp;: compteur à <strong>5 034</strong> au lieu de <strong>10 000</strong>. Mise à jour conditionnelle&nbsp;: <strong>10 000</strong>, au prix de <strong>7 922</strong> refus visibles.</td></tr>
+      <tr><td>Partition, cohérence</td><td><strong>69,8&nbsp;%</strong> servies, <strong>1 815</strong> refus, <strong>0</strong> clé à réconcilier.</td></tr>
+      <tr><td>Partition, disponibilité</td><td><strong>100&nbsp;%</strong> servies, <strong>194</strong> clés sur 200 à réconcilier. Ni l'une ni l'autre n'est «&nbsp;la bonne&nbsp;»&nbsp;: le choix se fait par donnée.</td></tr>
+      <tr><td>Réparation à la lecture</td><td>Les <strong>100</strong> clés chaudes rattrapées en moins de 1 000 lectures&nbsp;; <strong>2 163</strong> clés encore périmées sur 5 000 après 20 000 lectures.</td></tr>
+      <tr><td>Anti-entropie</td><td>Indépendante du trafic, <strong>0</strong> clé périmée au terme du relevé. Les deux mécanismes sont nécessaires.</td></tr>
+      <tr><td>Idempotence</td><td>« Poser une valeur »&nbsp;: <strong>51 517</strong> applications pour 50 000 intentions, résultat juste. « Incrémenter »&nbsp;: <strong>3,03&nbsp;%</strong> de trop sans clé, exact avec.</td></tr>
+      <tr><td>Bout en bout</td><td>60 000 opérations, partition de 60 s&nbsp;: <strong>3,23&nbsp;%</strong> de refus, <strong>477</strong> clés rattrapées en <strong>24 s</strong>, et surtout <strong>0</strong> violation de l'invariant.</td></tr>
+      <tr><td>Les 4 métriques</td><td>Violations de l'invariant · taux de refus <em>par zone</em> · clés en retard · date de la dernière passe d'anti-entropie complète.</td></tr>
+      <tr><td>Ce que ça ne prouve pas</td><td>Pas de protocole d'accord, pas de durabilité disque, pannes bienveillantes, partitions franches, chiffres de simulation.</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Magasin de clés-valeurs</dt><dd>Base de données réduite à deux opérations&nbsp;: écrire une valeur sous une clé, la relire. Sa simplicité est ce qui permet de concentrer l'attention sur la réplication et non sur le modèle de données.</dd>
+  <dt>Invariant</dt><dd>Propriété que le système promet de ne jamais violer, formulée de façon <em>vérifiable</em>. Ici&nbsp;: aucune lecture ne rend moins que la dernière écriture acquittée. Un invariant qui ne se compte pas n'est qu'une intention.</dd>
+  <dt>Écriture acquittée</dt><dd>Écriture pour laquelle le magasin a répondu «&nbsp;c'est fait&nbsp;» après avoir obtenu W accusés. C'est le seul type d'écriture que le contrat protège&nbsp;: une écriture refusée n'a rien promis, même si elle a laissé une trace sur une réplique.</dd>
+  <dt>Quorum d'écriture (W)</dt><dd>Nombre de répliques qui doivent avoir enregistré une écriture pour qu'elle soit acquittée. En dessous, le magasin refuse plutôt que de promettre ce qu'il ne peut pas tenir.</dd>
+  <dt>Quorum de lecture (R)</dt><dd>Nombre de répliques interrogées à chaque lecture, dont on garde la version la plus haute. Avec W&nbsp;+&nbsp;R&nbsp;&gt;&nbsp;N, les deux groupes ont forcément un membre commun.</dd>
+  <dt>Mise à jour conditionnelle</dt><dd>Écriture qui ne s'applique que si la version en base est encore celle qu'on a lue. Elle transforme une mise à jour perdue en refus explicite&nbsp;: 4&nbsp;966 incréments disparus deviennent 7&nbsp;922 refus visibles.</dd>
+  <dt>Côté majoritaire</dt><dd>Fragment du groupe qui, après une coupure, détient assez de répliques pour atteindre le quorum. Lui seul peut acquitter&nbsp;; c'est ce qui empêche deux histoires de s'écrire en parallèle.</dd>
+  <dt>Réparation à la lecture</dt><dd>Renvoi de la version la plus récente aux répliques trouvées en retard <em>à l'occasion d'une lecture</em>. Immédiate sur les clés demandées, aveugle sur les autres.</dd>
+  <dt>Anti-entropie</dt><dd>Comparaison périodique et systématique des répliques, indépendante du trafic. C'est le seul mécanisme qui garantisse la convergence de l'ensemble des clés, y compris celles que personne ne lit.</dd>
+  <dt>Clé en retard</dt><dd>Clé dont une réplique porte une version antérieure à celle qu'une autre a acquittée. Leur nombre est la vraie métrique de convergence&nbsp;: il doit décroître vers zéro, alors que le nombre de réparations ne fait que compter le travail accompli.</dd>
+  <dt>Registre d'idempotence</dt><dd>Table associant chaque intention déjà traitée à sa réponse, qui permet au magasin de reconnaître un réessai. Indispensable aux opérations dépendant de l'état, inutile à celles qui posent une valeur.</dd>
+  <dt>Arbre d'empreintes</dt><dd>Structure où chaque nœud résume ses descendants, employée pour comparer deux répliques sans transférer leur contenu&nbsp;: on ne descend que dans les branches dont les résumés diffèrent.</dd>
+  <dt>Protocole d'accord</dt><dd>Mécanisme qui bâtit sur le quorum un ordre total des décisions, ce que ce projet ne fait pas. Il fournit ce qui manque ici&nbsp;: l'atomicité entre plusieurs clés et un journal ordonné.</dd>
+  <dt>Panne bienveillante</dt><dd>Modèle de défaillance où une machine se tait ou perd des messages, mais ne répond jamais n'importe quoi. C'est l'hypothèse de ce projet, et celle de la plupart des systèmes exploités par un seul propriétaire.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le projet tient en un contrat, et c'est lui qu'on vérifie&nbsp;: <strong>0</strong> lecture n'a rendu moins que l'acquitté sur <strong>60&nbsp;000</strong> opérations, à travers une partition de soixante secondes.</li>
+<li>Le réseau s'écrit <em>avant</em> le magasin&nbsp;: c'est lui qui impose l'ignorance fondamentale — «&nbsp;coupé&nbsp;», «&nbsp;mort&nbsp;» et «&nbsp;lent&nbsp;» sont indiscernables.</li>
+<li>Sans coordination&nbsp;: <strong>1,97&nbsp;%</strong> de lectures périmées. Avec un quorum <strong>W&nbsp;=&nbsp;R&nbsp;=&nbsp;2</strong> sur trois répliques&nbsp;: <strong>0</strong>, au prix de <strong>23</strong> refus et <strong>58</strong> lectures impossibles.</li>
+<li>Le quorum ne règle pas les écritures concurrentes&nbsp;: deux clients perdent <strong>4&nbsp;966</strong> incréments sur <strong>10&nbsp;000</strong> en silence. La mise à jour conditionnelle rend le compte exact contre <strong>7&nbsp;922</strong> refus <em>visibles</em>.</li>
+<li>Pendant une partition, il faut choisir&nbsp;: <strong>69,8&nbsp;%</strong> de requêtes servies et <strong>0</strong> clé à réconcilier, ou <strong>100&nbsp;%</strong> servies et <strong>194</strong> clés divergentes. Le choix se fait par donnée, jamais par système.</li>
+<li>La reprise demande <em>deux</em> mécanismes&nbsp;: la réparation à la lecture rattrape les clés chaudes en moins de mille lectures mais laisse <strong>2&nbsp;163</strong> clés périmées&nbsp;; seule l'anti-entropie termine.</li>
+<li>Les clients réessaient&nbsp;: «&nbsp;poser une valeur&nbsp;» supporte <strong>51&nbsp;517</strong> applications pour 50&nbsp;000 intentions sans dégât, «&nbsp;incrémenter&nbsp;» exige une clé d'idempotence.</li>
+<li>Quatre métriques suffisent à exploiter ce magasin&nbsp;: violations de l'invariant, taux de refus <strong>par zone</strong>, clés en retard, date de la dernière passe complète d'anti-entropie.</li>
+<li>Et ce que le projet ne prouve pas compte autant&nbsp;: ni accord, ni durabilité disque, ni pannes malveillantes, ni partitions partielles — et des chiffres de simulation, dont seule la <em>relation</em> est transposable.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>On te demande de faire passer ce magasin de trois à cinq répliques. Qu'est-ce que cela change au réglage, à la tolérance aux pannes et au taux de refus pendant une partition&nbsp;?</li>
+<li>Explique, sans citer de chiffre, pourquoi la réparation à la lecture ne suffit jamais à faire converger un magasin.</li>
+<li>Un collègue propose de basculer en W&nbsp;=&nbsp;1 pendant une coupure «&nbsp;pour rétablir le service&nbsp;». Que se passe-t-il exactement, et que proposes-tu à la place&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Le magasin refuse 1 936 opérations sur 60 000 et n'a jamais rendu une valeur périmée. Comment juger ce résultat ?","a":["Le contrat est tenu : le magasin renonce à servir plutôt qu'à tenir parole","Le magasin est défaillant : un taux de refus de 3,23 % est le signe d'un dimensionnement insuffisant","Le résultat est ininterprétable tant qu'on ne connaît pas la latence moyenne des opérations servies","Les deux chiffres se compensent : 3,23 % de refus pour 0 valeur périmée est un compromis moyen"],"correct":0,"explain":"L'invariant annoncé au cahier des charges est « une écriture acquittée n'est jamais perdue », et il est vérifié à chaque lecture : le compteur vaut 0. Les refus ne sont pas un défaut mais le prix explicite de cette promesse — 1 924 des 1 936 tombent pendant les 60 secondes de partition, dont 1 830 du côté minoritaire et 94 du côté majoritaire, qui n'a plus aucune marge une fois C isolé."},
+  {"q":"Pourquoi le quorum W = R = 2 ne suffit-il pas à protéger un compteur incrémenté par deux clients ?","a":["Parce qu'il garantit un recouvrement entre lecture et écriture, jamais un ordre entre deux écritures","Parce que deux répliques sur trois ne suffisent pas à ordonner les opérations d'un même client","Parce que l'incrément est une opération lente, qui laisse le temps à une autre écriture de s'intercaler","Parce que la règle W + R > N n'est plus respectée dès que deux clients écrivent la même clé"],"correct":0,"explain":"Mesuré : 4 966 incréments sur 10 000 disparaissent alors que le quorum est parfaitement respecté. Les deux clients lisent la même valeur, puis écrivent chacun « valeur lue + 1 » : la seconde écriture est acquittée par deux répliques, et elle écrase la première. Il y faut une mise à jour conditionnelle."},
+  {"q":"Après la reprise, quel mécanisme garantit qu'aucune clé ne reste périmée ?","a":["L'anti-entropie, qui balaie toutes les clés indépendamment du trafic de lecture","La réparation à la lecture, qui corrige chaque désaccord au moment où il est constaté","La combinaison du quorum d'écriture et du quorum de lecture, qui converge en quelques secondes","Le registre d'idempotence, qui conserve la trace de toutes les écritures acquittées"],"correct":0,"explain":"Mesuré sur 5 000 clés : après 20 000 lectures, la réparation à la lecture seule laisse 2 163 clés périmées — celles que personne ne lit. Elle reste indispensable, parce qu'elle est immédiate sur les clés demandées ; mais seule l'anti-entropie termine le travail, et c'est ce qui la rend obligatoire."},
+  {"q":"Pendant la partition, le tableau de bord affiche « 96,77 % des opérations servies ». Que faut-il en penser ?","a":["C'est une moyenne qui cache l'essentiel : le côté minoritaire est servi à 0 %, pas à 96 %","C'est la métrique attendue : elle montre que le magasin s'est dégradé de façon progressive et contrôlée","C'est un chiffre faux, puisque le taux réel de service pendant la coupure était de 69,8 %","C'est suffisant pour décider d'une bascule en W = 1, le service restant très majoritairement assuré"],"correct":0,"explain":"Une moyenne cache toujours une partition. Pendant les 60 secondes de coupure, les clients qui n'atteignent que la réplique isolée voient 100 % d'échecs, tandis que les autres sont servis normalement. C'est le taux de service PAR ZONE qui informe — et c'est précisément l'écran qui manquait dans le cas réel de cette leçon."}
+]
+</script>
+<script type="application/json" data-quiz-bilan="Bilan du cours — les cinq modules">
+[
+  {"q": "Quelle est la première des huit illusions du calcul réparti, et pourquoi ouvre-t-elle le cours ?", "a": ["« Le réseau est fiable » : c'est elle qui rend un appel indiscernable d'un silence, et elle ouvre le cours", "« La latence est nulle » : c'est la seule des huit qui soit démentie par la physique elle-même, et non par l'expérience", "« La bande passante est infinie » : c'est la plus coûteuse à corriger une fois le système écrit et déployé", "« Le réseau est homogène » : elle est la seule qui persiste dans les architectures modernes"], "correct": 0, "explain": "Le réordonnancement des messages et la panne partielle sont rangés sous la première illusion. Les sept autres — latence, bande passante, sécurité, topologie, administrateur unique, coût de transport, homogénéité — s'ajoutent, mais c'est la fiabilité supposée du réseau qui fait écrire du code qui ne gère aucun échec."},
+  {"q": "Un aller-retour Paris–New York coûte au minimum 57,14 ms. Que représente ce chiffre ?", "a": ["Un plancher imposé par la vitesse de la lumière dans la fibre, qu'aucune optimisation ne franchit", "La latence moyenne mesurée sur les liens transatlantiques d'un opérateur de premier rang, hors saturation", "Le temps d'établissement d'une connexion TLS, poignée de main comprise", "Le temps de traversée d'un paquet lorsque le réseau est saturé à plus de 80 %"], "correct": 0, "explain": "C'est un plancher physique : la lumière ne va pas plus vite dans le verre. Mesurer 80 ms est parfaitement normal — c'est environ 1,4 fois le plancher, et l'écart vient des équipements traversés. Aucune somme d'argent ne descend en dessous de 57,14 ms sur ce trajet."},
+  {"q": "Un client n'a reçu aucune réponse à sa requête. Que sait-il ?", "a": ["Rien : la requête a pu ne jamais arriver, être exécutée, ou être en cours d'exécution", "Que la requête a échoué, puisque le serveur aurait répondu dans le cas contraire", "Que le serveur est tombé en panne, un serveur sain répondant toujours, fût-ce par une erreur", "Que le réseau est coupé, un délai de garde dépassé ne pouvant venir que de là"], "correct": 0, "explain": "C'est la panne partielle, et c'est le fait fondateur du cours : les trois mondes sont indiscernables depuis l'appelant. Sur 10 000 appels, la simulation compte 534 silences dont 326 avaient bel et bien été exécutés côté serveur — soit 61 %."},
+  {"q": "Dix services affichant chacun 99,9 % sont traversés par la même requête. Que vaut la disponibilité du chemin ?", "a": ["99,0045 % : les disponibilités se multiplient, et deux neufs remplacent les trois de départ", "99,9 % : le chemin ne vaut ni plus ni moins que le service le plus faible qu'il traverse", "99,99 % : dix exemplaires du même niveau de qualité renforcent le chemin plutôt qu'ils ne l'affaiblissent", "Impossible à dire sans connaître le débit de la liaison qui relie ces dix services"], "correct": 0, "explain": "0,999 à la puissance 10 vaut 0,990045, soit 99,0045 % — 9 955 requêtes perdues par million au lieu de 1 000. Le calcul est une multiplication, jamais une moyenne, et il ne dépend d'aucune caractéristique du réseau : seulement du nombre de maillons nécessaires."},
+  {"q": "Un engagement de 99,99 % de disponibilité autorise combien de temps d'indisponibilité par an ?", "a": ["52,56 minutes", "8,76 heures par an", "5,26 minutes par an", "3,65 jours par an"], "correct": 0, "explain": "Une année de 365 jours compte 525 600 minutes ; 0,01 % de ce total fait 52,56 minutes. Les voisins encadrent la valeur : 99,9 % en autorise dix fois plus (8,76 heures) et 99,999 % dix fois moins (5,26 minutes). À 52 minutes par AN, la reprise ne peut plus être humaine : le temps de recevoir l'alerte et d'ouvrir une session, la moitié du budget annuel est dépensée."},
+  {"q": "Latence et débit : lequel des deux s'achète ?", "a": ["Le débit. La latence, elle, se raccourcit en réduisant la distance ou le nombre d'échanges", "La latence, en souscrivant une liaison de meilleure qualité auprès du fournisseur qui exploite le câble", "Les deux, puisque l'un et l'autre figurent noir sur blanc au contrat d'une liaison et se paient au mois", "Aucun des deux : ils dépendent uniquement de la charge du service au moment de la mesure"], "correct": 0, "explain": "Doubler le débit divise par deux le temps de transfert et ne change rien au délai. Élargir le tuyau ne fait pas arriver l'eau plus tôt : entre Paris et New York, la lumière dans une fibre impose 57,14 ms d'aller-retour, et aucun contrat ne descend sous ce nombre."},
+  {"q": "Mille lectures faites une par une plutôt qu'en une seule requête groupée : quel est le surcoût ?", "a": ["Un facteur 1 000, identique dans une salle machine et d'un continent à l'autre", "Un facteur qui dépend du débit de la liaison, donc bien plus élevé sur une liaison lente", "Un surcoût négligeable, les mille lectures voyageant ensemble dans le même paquet", "Un facteur 40, celui du nombre d'appels d'une page ordinaire"], "correct": 0, "explain": "500,00 ms contre 0,50 ms dans la salle machine, 57 144,85 ms contre 57,14 ms vers New York : le rapport vaut 1 000 dans les deux cas. Le débit n'apparaît nulle part dans ce calcul — seul compte le nombre d'allers-retours. C'est pourquoi un N+1 passe inaperçu sur un poste de développement et devient intenable une fois le service déployé loin."},
+  {"q": "Une horloge murale peut-elle servir à ordonner deux écritures ?", "a": ["Non : deux machines saines gardent 3,84 ms d'écart entre deux resynchronisations, et l'ordre peut s'inverser", "Oui, à condition que les deux machines soient synchronisées par NTP sur la même source de temps de référence", "Oui pour des événements séparés de plus d'une seconde, ce qui couvre la quasi-totalité des cas rencontrés en pratique", "Non, mais seulement parce que les horloges murales peuvent reculer lors d'un ajustement"], "correct": 0, "explain": "L'écart de 3,84 ms entre machines saines suffit à faire gagner l'écriture la plus ancienne. NTP borne l'erreur à la moitié de l'aller-retour — ±30 ms dans la mesure du cours — sans jamais l'annuler. C'est pourquoi les horloges logiques existent : elles n'ordonnent que ce qui est réellement causal."},
+  {"q": "Que garantit une horloge de Lamport, et que ne garantit-elle pas ?", "a": ["Si A a causé B alors le compteur de A est plus petit ; l'inverse ne se déduit pas", "Elle ordonne totalement les événements, y compris ceux qui n'ont aucun rapport causal", "Elle détecte les écritures concurrentes, ce qui permet de les fusionner automatiquement", "Elle donne l'heure de chaque événement à quelques millisecondes près, sans horloge physique"], "correct": 0, "explain": "Mesuré : 0 contre-exemple sur les 31 paires réellement ordonnées, mais 4 ordres inventés sur les 5 paires concurrentes. Un compteur plus grand ne prouve pas la causalité. Ce sont les horloges vectorielles qui distinguent « après » de « concurrent » — au prix de 78,1 Kio à dix mille machines."},
+  {"q": "Quel est l'énoncé exact du théorème CAP ?", "a": ["En cas de partition, un système doit choisir entre rester cohérent et rester disponible", "Un système ne peut garantir que deux des trois propriétés : cohérence, disponibilité, tolérance au partitionnement", "Un système distribué doit renoncer à la cohérence forte dès qu'il compte plus de trois machines", "La cohérence et la disponibilité sont incompatibles, quelles que soient les conditions du réseau"], "correct": 0, "explain": "La formulation « deux sur trois » est fausse : la tolérance au partitionnement n'est pas une option qu'on choisirait, c'est une condition du monde. Le théorème ne dit rien hors partition — et c'est PACELC qui traite ce cas, où l'arbitrage se fait entre latence et cohérence : 0,50 ms contre 191,00 ms dans la mesure du cours."},
+  {"q": "Trois copies indépendantes donnent une perte tous les 125 000 ans. Que devient ce chiffre si 10 % des pannes sont corrélées ?", "a": ["499 ans — et ajouter des copies ne le fait presque plus baisser", "12 500 ans, la corrélation divisant la durée par le taux de corrélation", "125 000 ans encore : la corrélation ne change que la fréquence des incidents, pas la durabilité", "Une perte tous les 40 000 ans, la corrélation ne touchant qu'une partie des scénarios"], "correct": 0, "explain": "C'est le résultat le plus important sur la réplication : dès qu'une part des pannes frappe plusieurs copies ensemble — même version, même baie, même opérateur —, la durabilité s'effondre et cesse de dépendre du nombre de copies. D'où la règle de placement : trois copies dans trois RÉGIONS survivent aux trois niveaux de panne (baie, zone, région) ; dans trois zones d'une même région, à la baie et à la zone seulement ; dans la même baie, à aucun."},
+  {"q": "Pourquoi le hachage cohérent est-il préféré au reste de la division pour répartir des clés ?", "a": ["Passer de 8 à 9 partitions y déplace 11,27 % des clés, contre 88,85 % avec le reste de la division", "Il répartit les clés de façon parfaitement uniforme, ce que le reste de la division ne parvient jamais à faire", "Il permet d'interroger une seule partition au lieu de toutes lors d'une requête par plage", "Il supprime le besoin de points virtuels, chaque machine occupant une position unique sur l'anneau"], "correct": 0, "explain": "Le coût du redimensionnement est le critère : 88,85 % des clés déplacées de 8 à 9 partitions, 99,00 % de 100 à 101. Le hachage cohérent ramène ce chiffre à 11,27 %. L'équilibrage, lui, exige des points virtuels : un déséquilibre de ×2,68 à un point par machine, ×1,09 à 256."},
+  {"q": "Que signifie exactement la règle W + R > N ?", "a": ["Tout groupe d'écriture et tout groupe de lecture ont au moins une réplique en commun", "La valeur lue est toujours la dernière écrite, quel que soit le déroulement de l'écriture", "Le système se comporte comme s'il n'existait qu'une seule copie de la donnée", "Deux écritures concurrentes seront appliquées dans le même ordre par toutes les répliques"], "correct": 0, "explain": "Vérifié par énumération des 25 couples possibles à cinq répliques : 0 contre-exemple. Mais un recouvrement n'est ni un ordre ni une atomicité : après une écriture déclarée échouée qui n'a atteint qu'une réplique, 2 des 9 couples de lectures successives rendent v1 puis v0."},
+  {"q": "Une opération est-elle idempotente parce qu'elle modifie peu l'état ?", "a": ["Non : le critère est de savoir si son résultat dépend de l'état qui existait avant elle", "Oui : une opération qui n'écrit qu'un seul champ peut toujours être rejouée sans risque", "Non : le critère est qu'elle soit exécutée à l'intérieur d'une transaction de base de données", "Oui, à condition qu'elle porte sur une seule clé et qu'aucun index ne soit mis à jour"], "correct": 0, "explain": "Mesuré sur six formes : 3 sur 6 supportent le rejeu. « solde = 600 » modifie l'état et se rejoue parfaitement ; « solde += 100 » le modifie aussi et casse. Nommer la place rend l'écriture rejouable, laisser le système la choisir ne le rend pas."},
+  {"q": "Un serveur lit son registre de clés, applique l'effet, puis écrit la clé. Que vaut cette implémentation ?", "a": ["Elle échoue dans 18 des 20 entrelacements possibles de deux tentatives de la même intention", "Elle est correcte tant que le registre et l'effet vivent dans la même base de données", "Elle est correcte, la lecture du registre suffisant à écarter tout réessai portant une clé déjà traitée", "Elle échoue une fois sur vingt, ce qui explique la rareté des doubles débits observés"], "correct": 0, "explain": "Les 20 entrelacements ont été énumérés : 18 débitent deux fois. Les 2 qui tiennent sont les ordres strictement séquentiels — ceux où les tentatives ne se chevauchent pas. Il faut une pose de clé indivisible : test et insertion en un seul geste, dans la même transaction que l'effet."},
+  {"q": "Que change l'aléa dans une politique de réessai à attente exponentielle ?", "a": ["Il étale les redémarrages : le pic tombe de 350 à 90 requêtes par seconde, et les refus à 0", "Il réduit le nombre total de tentatives, donc la charge inutile pendant la panne", "Il évite que deux clients différents ne réessaient la même requête au même instant", "Il n'apporte rien de mesurable, le doublement de l'attente suffisant déjà à écarter les vagues de réessais"], "correct": 0, "explain": "Le doublement écarte les vagues sans les étaler : tous les clients qui ont échoué au même instant repartent ensemble à 1, 2, 4, 8, 16 s, et le pic reste au-dessus de la capacité (350 contre 200). L'aléa fait tomber le pic sous la capacité. Il coûte un peu de temps : le dernier client est servi à 88,9 s au lieu de 67,1 s."},
+  {"q": "Une file de messages peut-elle livrer chaque message exactement une fois ?", "a": ["Non : « exactement une fois » désigne un effet dédupliqué à l'arrivée, jamais une livraison unique", "Oui, si le consommateur accuse réception dans la même transaction que son traitement", "Oui, c'est exactement la garantie qu'offrent les courtiers de messages modernes en mode transactionnel", "Non, mais l'écart est négligeable : moins d'un message sur cent mille est livré deux fois"], "correct": 0, "explain": "Mesuré : la file livre 102 012 fois pour 100 000 messages, exactement comme sans déduplication. Ce qui change avec un consommateur idempotent, c'est que ces livraisons en trop ne produisent aucun effet. La garantie s'arrête à la frontière du magasin qui déduplique : aucun courriel, aucun virement chez un tiers n'en bénéficie."},
+  {"q": "Le délai de visibilité d'une file vaut 30 s et le traitement passe de 29 à 31 secondes. Que se passe-t-il ?", "a": ["Chaque message est traité deux fois, sans erreur ni message perdu pour le signaler", "Les messages trop lents partent automatiquement vers la file de rebut", "La file allonge son délai de visibilité pour s'adapter à la durée réelle du traitement", "Le consommateur reçoit une erreur au moment d'accuser réception et peut reprendre"], "correct": 0, "explain": "Le bail expire pendant le travail, la file redonne le message, et le premier consommateur continue pourtant : la moitié du travail est refaite, en silence. Sur un service très sensible à la charge, la boucle s'emballe — jusqu'à 16 copies par message au septième tour de la simulation."},
+  {"q": "Deux files portent 58 000 messages en attente. Comment distinguer un pic passager d'un consommateur mort ?", "a": ["Par l'âge du plus vieux message : 72 s dans un cas, 728 s dans l'autre", "Par la profondeur, qui croît plus vite lorsqu'un consommateur est bloqué", "Par le taux d'accusés de réception, qui tombe à zéro dès qu'un consommateur meurt", "Par le nombre de redélivrances, qui augmente uniquement dans le cas du consommateur bloqué"], "correct": 0, "explain": "Les deux profondeurs sont mesurées quasi identiques — 58 200 et 58 320 — au même instant : une alerte sur la profondeur se déclenche dans les deux cas et ne distingue rien. L'âge, lui, sépare immédiatement ; et il doit être mesuré par partition, car une seule partition bloquée reste invisible dans un total."},
+  {"q": "Dans le projet final, pourquoi le côté minoritaire d'une partition refuse-t-il aussi les LECTURES ?", "a": ["Parce qu'avec une seule réplique il n'atteint pas R = 2, et ne peut donc pas garantir la fraîcheur", "Parce qu'une lecture pourrait déclencher une réparation, qui écraserait les données du côté majoritaire", "Parce que le protocole interdit toute opération à une réplique qui a perdu le contact avec la majorité", "Parce que les lectures et les écritures partagent le même quorum, par simplicité d'implémentation"], "correct": 0, "explain": "La règle W + R > N n'est respectée que si les deux quorums sont réunis. Avec une seule réplique joignable, R = 2 est hors d'atteinte : le magasin ne peut pas promettre que la valeur lue est la dernière acquittée. Il préfère refuser que rendre une valeur dont il ignore la fraîcheur — c'est le contrat annoncé au cahier des charges."},
+  {"q": "Que retenir de l'ensemble de ce cours sur la façon d'écrire un programme réparti ?", "a": ["Chaque garantie a un prix mesurable, et la seule faute est de promettre sans l'avoir payé", "Qu'il faut préférer les systèmes cohérents, la disponibilité étant un confort d'exploitation", "Qu'un bon système distribué finit toujours par se comporter comme un système local", "Que le réseau doit être rendu fiable en priorité, les autres difficultés en découlant"], "correct": 0, "explain": "Le fil de tout le cours : la disponibilité en série se multiplie, le quorum s'achète en refus, l'ordre s'achète en concurrence perdue, l'idempotence s'achète en mémoire, la file s'achète en doublons. Aucune de ces grandeurs n'est gratuite, et toutes se chiffrent — c'est ce qui distingue une décision d'architecture d'une préférence."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["l'invariant","invariant","un invariant"],"placeholder":"une promesse vérifiable qu'un système ne doit jamais violer est ...","hints":["Le cahier des charges du projet en pose un seul, et c'est lui qu'on compte à chaque lecture.","Le mot désigne une propriété qui ne change pas, quoi qu'il arrive au système.","Nom masculin de neuf lettres, commençant par « inva »."],"link":{"href":"lecon-12.html","label":"Revoir « Le cahier des charges, et surtout ses interdits »"}},
+  {"type":"code","run":{"expect":"3 60.0"},"placeholder":"répliques du côté majoritaire, puis taux de service en pourcentage","hints":["Cinq répliques réglées W = R = 3, coupées en 3 | 2 : un seul côté atteint le quorum.","Le côté majoritaire en détient 3, ce qui suffit pour W comme pour R.","40 % des clients sont du côté minoritaire : affiche le taux de service à une décimale."],"link":{"href":"lecon-12.html","label":"Revoir « Étape 5 — la partition »"}},
+  {"type":"code","run":{"expect":"6 3"},"placeholder":"nombre de couples (W, R) valides, puis le plus petit R","hints":["Cinq répliques, et l'écriture doit aboutir malgré DEUX pannes : W ne peut pas dépasser 3.","Le recouvrement exige W + R > 5 ; parcours tous les W autorisés et tous les R possibles.","Affiche le nombre de couples valides, puis le plus petit R qui apparaisse."],"link":{"href":"lecon-12.html","label":"Revoir « Étape 3 — le quorum »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Le magasin refuse <strong>1&nbsp;936</strong> opérations sur 60&nbsp;000 et ne viole jamais son invariant. Un responsable demande de «&nbsp;supprimer ces refus&nbsp;». Que réponds-tu, et quelles options peux-tu réellement lui proposer&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">LES REFUS NE SONT PAS UN DÉFAUT : ILS SONT LE PRIX DE L'INVARIANT.
+
+1 924 des 1 936 refus tombent pendant les 60 s de partition : 1 830
+viennent des clients qui n'atteignent que la réplique isolée, et 94 du
+côté majoritaire, qui doit réunir W = R = 2 sur ses deux seules
+répliques et n'a donc plus aucune marge. Les supprimer sans rien
+changer d'autre, c'est accepter de servir depuis une réplique dont on
+ignore si elle est à jour.
+
+TROIS OPTIONS RÉELLES, ET CE QUE CHACUNE COÛTE :
+
+  1. CHANGER LE CONTRAT POUR CETTE DONNÉE
+     Passer en W = R = 1 : 100 % de service pendant la coupure, et
+     194 clés sur 200 à réconcilier à la reprise (mesuré étape 5).
+     Défendable pour un panier, jamais pour un solde.
+
+  2. RÉDUIRE LA POPULATION MINORITAIRE
+     Le taux de refus vaut la part des clients qui n'atteignent pas
+     la majorité : 30,2 % ici. Placer les répliques dans TROIS zones
+     au lieu de deux fait qu'aucune coupure d'une zone ne prive le
+     reste du quorum — c'est un problème de placement, pas de code.
+
+  3. RETIRER LA ZONE ISOLÉE DE L'ÉQUILIBRAGE
+     Les clients ne sont plus envoyés vers une réplique qui n'a le
+     droit de rien : ils sont servis par la majorité, plus lentement.
+     C'est la correction du cas réel de cette leçon.
+
+CE QU'IL NE FAUT PAS PROPOSER :
+
+  · basculer W = 1 pendant l'incident (le cas réel montre le résultat :
+    2 300 sessions en double version) ;
+  · augmenter le nombre de répliques sans changer leur RÉPARTITION :
+    cinq répliques dans deux zones ne règlent rien.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un magasin compte <strong>cinq</strong> répliques, réglé W&nbsp;=&nbsp;R&nbsp;=&nbsp;3. Une partition le coupe en <strong>3&nbsp;|&nbsp;2</strong>, et <strong>40&nbsp;%</strong> des clients se trouvent du côté minoritaire. Affiche <strong>deux valeurs, une par ligne</strong>&nbsp;: le nombre de répliques joignables du côté majoritaire, puis le taux de service pendant la partition, en pourcentage à une décimale.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// Cinq répliques, W = R = 3, partition 3 | 2.
+// Seul le côté qui détient au moins W répliques peut acquitter une écriture.
+const N = 5, W = 3, R = 3;
+const cote = { majoritaire: 3, minoritaire: 2 };
+const PART_MINORITAIRE = 0.40;
+
+const accusesMajoritaire = Math.min(cote.majoritaire, N);
+const sert = accusesMajoritaire &gt;= W &amp;&amp; cote.majoritaire &gt;= R;
+console.log(accusesMajoritaire);
+console.log((100 * (sert ? 1 - PART_MINORITAIRE : 0)).toFixed(1));</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">3
+60.0
+</code></pre></figure>
+<p>Le côté majoritaire détient <strong>3</strong> répliques&nbsp;: il atteint W&nbsp;=&nbsp;3 <em>et</em> R&nbsp;=&nbsp;3, donc il sert normalement. Le côté minoritaire n'en détient que deux&nbsp;: il ne peut ni écrire ni lire, et ses <strong>40&nbsp;%</strong> de clients sont refusés — d'où <strong>60,0&nbsp;%</strong> de service. Remarque utile&nbsp;: avec W&nbsp;=&nbsp;R&nbsp;=&nbsp;3 sur cinq répliques, une coupure <strong>4&nbsp;|&nbsp;1</strong> donnerait le même résultat pour le côté isolé, tandis qu'une coupure <strong>2&nbsp;|&nbsp;2&nbsp;|&nbsp;1</strong> en trois morceaux arrêterait <em>tout le monde</em> — aucun fragment n'atteignant trois.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sur <strong>cinq</strong> répliques, l'écriture doit aboutir <em>malgré la perte de deux répliques</em> — donc W ne peut pas dépasser 3 — tout en garantissant le recouvrement. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le nombre de couples (W,&nbsp;R) qui respectent les deux contraintes, puis le plus petit <strong>R</strong> possible.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// Cinq répliques. L'écriture doit aboutir malgré la perte de DEUX répliques,
+// donc W ne peut pas dépasser 3. Le recouvrement exige W + R &gt; N.
+const N = 5, PANNES = 2;
+const couples = [];
+for (let W = 1; W &lt;= N - PANNES; W++) {
+  for (let R = 1; R &lt;= N; R++) {
+    if (W + R &gt; N) couples.push([W, R]);
+  }
+}
+let plusPetitR = N;
+for (const c of couples) if (c[1] &lt; plusPetitR) plusPetitR = c[1];
+console.log(couples.length);
+console.log(plusPetitR);</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">6
+3
+</code></pre></figure>
+<p>Les couples valides sont (1,&nbsp;5), (2,&nbsp;4), (2,&nbsp;5), (3,&nbsp;3), (3,&nbsp;4) et (3,&nbsp;5)&nbsp;: <strong>six</strong>, et le plus petit R vaut <strong>3</strong>. Le résultat mérite un commentaire&nbsp;: plus on veut d'écritures tolérantes aux pannes (W petit), plus les lectures deviennent coûteuses (R grand), et la <em>somme</em> des deux ne descend jamais sous N&nbsp;+&nbsp;1 — <strong>6</strong> ici, ce que vérifient les six couples&nbsp;: 6, 6, 7, 6, 7 et 8. C'est la même conservation que partout dans ce cours&nbsp;: on ne supprime pas le coût, on choisit de quel côté le mettre.</p></details></div>
+
+<nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
