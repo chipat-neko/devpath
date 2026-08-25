@@ -656,7 +656,7 @@ window.SITE_DATA = (function () {
     {
       id: "offensive", dir: "offensive", title: "Sécurité offensive : comprendre l'attaque pour savoir défendre",
       glyph: "◎", language: "Sécurité offensive", level: "avance", status: "apercu",
-      accent: "#943f1a", lessons: 9, hours: 6,
+      accent: "#943f1a", lessons: 11, hours: 8,
       tagline: "Le cours Sécurité applicative enseigne les défenses. Celui-ci enseigne ce contre quoi elles défendent — parce qu'on ne protège correctement que ce dont on a compris l'attaque. Cadre strict : tout y est fait sur des cibles fictives, avec l'autorisation écrite comme premier chapitre, et la loi française citée article par article. Chaque affirmation est chiffrée par un programme qui tourne dans la page.",
       tags: ["Transversal", "Sécurité", "Web"],
     },
@@ -1559,8 +1559,8 @@ window.SITE_DATA = (function () {
         {
           num: "04", title: "Chaîne d'approvisionnement et outillage", sub: "dépendances, intégrité, limites de l'automatique", level: "avance",
           lessons: [
-            { num: "10", title: "La dépendance comme porte d'entrée", file: "#", status: "bientot" },
-            { num: "11", title: "Ce qu'un outil automatique trouve, et ce qu'il ne trouvera jamais", file: "#", status: "bientot" },
+            { num: "10", title: "La dépendance comme porte d'entrée", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Ce qu'un outil automatique trouve, et ce qu'il ne trouvera jamais", file: "lecon-11.html", status: "complet" },
           ],
         },
         {
@@ -6053,7 +6053,7 @@ window.SITE_DATA = (function () {
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
-    "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22},
+    "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
