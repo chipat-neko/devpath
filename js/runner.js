@@ -7,18 +7,25 @@
      HTML dans une <iframe> sandbox → on VOIT le résultat.
    - Blocs Python (language-python) : bouton « ▶ Tester » → éditeur + exécution
      via Pyodide (WebAssembly) dans un Web Worker isolé → panneau console.
-   JS et HTML fonctionnent en file:// (aucun serveur). ⚠️ Python (Pyodide) et SQL
-   (sql.js) se chargent depuis un CDN et EXIGENT le protocole HTTP : en file://
-   — le mode fondateur du site — l'exécution échoue toujours. On le SIGNALE donc
-   AVANT le clic (bouton « Serveur requis » désactivé, aucune requête émise) au
-   lieu d'afficher une erreur après. À charger après main.js.
+   - Blocs SQL (language-sql) : bouton « ▶ Exécuter » → éditeur + requête exécutée
+     par SQLite (sql.js) dans un Web Worker isolé → résultat en tableau.
+   JS, HTML et SQL fonctionnent en file:// (aucun serveur). ⚠️ Python (Pyodide) se
+   charge encore depuis un CDN et EXIGE le protocole HTTP : en file:// — le mode
+   fondateur du site — l'exécution échoue toujours. On le SIGNALE donc AVANT le clic
+   (bouton « Serveur requis » désactivé, aucune requête émise) au lieu d'afficher une
+   erreur après.
+   SQL, lui, ne dépend plus du réseau depuis le 2026-08-26 : le binaire WebAssembly de
+   SQLite est embarqué dans assets/vendor/sqljs/ (encodé en base64, car en file:// un
+   fetch() vers un .wasm local est refusé) et le Worker l'importe par une URL file://
+   ABSOLUE — un Worker issu d'un Blob n'a aucune base pour un chemin relatif.
+   À charger après main.js.
    ============================================================================= */
 (function () {
   "use strict";
 
-  // Pyodide et sql.js se chargent depuis un CDN et n'aboutissent qu'en HTTP.
-  // En file:// (mode fondateur), un Web Worker à origine opaque ne peut ni
-  // importScripts ni fetch le .wasm : inutile d'essayer, on prévient d'abord.
+  // Pyodide se charge depuis un CDN et n'aboutit qu'en HTTP : inutile d'essayer en
+  // file://, on prévient avant le clic. (sql.js, lui, est embarqué depuis le
+  // 2026-08-26 et n'a plus besoin de cette garde.)
   var HTTP_OK = location.protocol === "http:" || location.protocol === "https:";
 
   function $all(sel, ctx) {
@@ -105,7 +112,14 @@
   var pyLoaded = false;
 
   /* ------------------------------------------------------- SQL (sql.js) */
-  var SQL_VER = "1.10.3";
+  /* Marqueurs d'un AUTRE moteur que SQLite. Deux candidats ont été écartés après
+     mesure, et ils illustrent la règle « un motif trop large casse ce qui marchait » :
+     /@\w/ (variables SQL Server) attrapait toutes les ADRESSES E-MAIL des chaînes
+     d'exemple, et NULLS FIRST/LAST comme RETURNING sont en réalité gérés par SQLite. */
+  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
+
+  /* La version de sql.js n'est plus une variable de ce fichier : le moteur est
+     embarqué, sa provenance et sa version (1.14.2) sont dans assets/vendor/sqljs/README.md. */
   /* Base de démo (le schéma fil rouge des leçons SQL : clients/commandes/
      produits/lignes_commande). Préchargée quand le bloc ne crée pas ses tables. */
   var SEED_SQL = [
@@ -117,13 +131,18 @@
     " (4,'Liam Bernard','Lyon','liam.bernard@example.fr'),",
     " (5,'Sofia Da Silva','Paris','sofia.dasilva@example.fr'),",
     " (6,'Noe Petit','Nantes',NULL);",
-    "CREATE TABLE produits (id INTEGER PRIMARY KEY, libelle TEXT NOT NULL, prix REAL NOT NULL, categorie TEXT);",
-    "INSERT INTO produits (id,libelle,prix,categorie) VALUES",
-    " (500,'Carnet A5',4.90,'Papeterie'),",
-    " (501,'Stylo plume',24.00,'Papeterie'),",
-    " (502,'Lampe de bureau',39.00,'Mobilier'),",
-    " (503,'Casque audio',79.00,'Electronique'),",
-    " (504,'Souris sans fil',19.90,'Electronique');",
+    /* ⚠️ « nom » ET « libelle » désignent le même produit. Ce doublon n'est pas une
+       négligence : mesuré le 2026-08-26, les leçons écrivent « SELECT nom FROM
+       produits » alors que ce schéma ne connaissait que « libelle » — 62 blocs
+       échouaient en « no such column ». Supprimer « libelle » casserait en retour les
+       26 endroits qui l'emploient. On garde donc les deux, tenus égaux. */
+    "CREATE TABLE produits (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, libelle TEXT NOT NULL, prix REAL NOT NULL, categorie TEXT, stock INTEGER NOT NULL DEFAULT 0);",
+    "INSERT INTO produits (id,nom,libelle,prix,categorie,stock) VALUES",
+    " (500,'Carnet A5','Carnet A5',4.90,'Papeterie',120),",
+    " (501,'Stylo plume','Stylo plume',24.00,'Papeterie',35),",
+    " (502,'Lampe de bureau','Lampe de bureau',39.00,'Mobilier',12),",
+    " (503,'Casque audio','Casque audio',79.00,'Electronique',8),",
+    " (504,'Souris sans fil','Souris sans fil',19.90,'Electronique',54);",
     "CREATE TABLE commandes (id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, date_achat TEXT NOT NULL, montant REAL NOT NULL);",
     "INSERT INTO commandes (id,client_id,date_achat,montant) VALUES",
     " (10,1,'2026-05-02',59.90),(11,1,'2026-05-18',120.00),(12,2,'2026-05-20',34.50),",
@@ -131,26 +150,79 @@
     "CREATE TABLE lignes_commande (commande_id INTEGER NOT NULL, produit_id INTEGER NOT NULL, quantite INTEGER NOT NULL, PRIMARY KEY (commande_id,produit_id));",
     "INSERT INTO lignes_commande (commande_id,produit_id,quantite) VALUES",
     " (10,500,2),(10,501,1),(11,502,1),(11,503,1),(12,504,1),(13,501,2),(14,500,3),(15,501,1),(16,503,1),(16,500,2);",
+
+    /* --- au-delà du fil rouge : les autres schémas que les leçons interrogent -------
+       Ces tables ne sont pas décoratives. Mesuré le 2026-08-26 par tools/verif-sql.js,
+       « no such table » était la première cause d'échec (77 blocs sur 345) : les leçons
+       s'appuient sur des schémas qu'elles déclarent AILLEURS dans la page, or chaque
+       bloc s'exécute sur une base neuve. On fournit donc ici les plus cités. */
+
+    /* Le fil rouge « Rideau » du cours bdd : billetterie. */
+    "CREATE TABLE spectacle (spectacle_id INTEGER PRIMARY KEY, titre TEXT NOT NULL, genre TEXT, duree_min INTEGER);",
+    "INSERT INTO spectacle VALUES (1,'Nocturne','Danse',95),(2,'Le Malentendu','Theatre',110),(3,'Quatuor No 3','Musique',75);",
+    "CREATE TABLE representation (representation_id INTEGER PRIMARY KEY, spectacle_id INTEGER NOT NULL, debut TEXT NOT NULL);",
+    "INSERT INTO representation VALUES (1,1,'2026-09-12 20:30'),(2,1,'2026-09-13 20:30'),(3,2,'2026-09-19 19:00'),(4,3,'2026-10-02 18:30');",
+    "CREATE TABLE client (client_id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, nom TEXT NOT NULL, prenom TEXT, ville TEXT);",
+    "INSERT INTO client VALUES (1,'camille.roy@example.fr','Roy','Camille','Lyon'),(2,'hugo.marin@example.fr','Marin','Hugo','Nantes'),(3,'ines.lopez@example.fr','Lopez','Ines','Lille');",
+    "CREATE TABLE place (place_id INTEGER PRIMARY KEY, rangee TEXT NOT NULL, numero INTEGER NOT NULL, categorie TEXT);",
+    "INSERT INTO place VALUES (1,'A',1,'Orchestre'),(2,'A',2,'Orchestre'),(3,'B',1,'Balcon'),(4,'B',2,'Balcon');",
+    "CREATE TABLE commande (commande_id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, passee_le TEXT NOT NULL);",
+    "INSERT INTO commande VALUES (1,1,'2026-08-20'),(2,2,'2026-08-21'),(3,1,'2026-08-25');",
+    "CREATE TABLE billet (billet_id INTEGER PRIMARY KEY, commande_id INTEGER NOT NULL, representation_id INTEGER NOT NULL, place_id INTEGER NOT NULL, prix_paye NUMERIC NOT NULL);",
+    "INSERT INTO billet VALUES (1,1,1,1,32.00),(2,1,1,2,32.00),(3,2,3,3,24.50),(4,3,4,4,18.00);",
+
+    /* Schémas ponctuels du cours sql : hiérarchie, transactions, séries datées. */
+    "CREATE TABLE employes (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, service TEXT, salaire REAL, manager_id INTEGER);",
+    "INSERT INTO employes VALUES (1,'Ada Lambert','Direction',7200,NULL),(2,'Hugo Marin','Ventes',3400,1),(3,'Ines Lopez','Ventes',3150,2),(4,'Liam Bernard','Technique',3800,1);",
+    "CREATE TABLE comptes (id INTEGER PRIMARY KEY, titulaire TEXT NOT NULL, solde REAL NOT NULL);",
+    "INSERT INTO comptes VALUES (1,'Camille Roy',1500.00),(2,'Hugo Marin',430.50),(3,'Ines Lopez',2780.00);",
+    "CREATE TABLE ventes (id INTEGER PRIMARY KEY, produit_id INTEGER NOT NULL, jour TEXT NOT NULL, quantite INTEGER NOT NULL, montant REAL NOT NULL);",
+    "INSERT INTO ventes VALUES (1,500,'2026-01-14',3,14.70),(2,501,'2026-02-02',1,24.00),(3,503,'2026-03-11',2,158.00),",
+    " (4,502,'2026-05-30',1,39.00),(5,504,'2026-06-08',4,79.60),(6,500,'2026-06-21',6,29.40);",
   ].join("\n");
 
-  /* Worker isolé : charge sql.js depuis le CDN puis exécute la requête. */
+  /* Racine du site, déduite de l'URL de CE script (js/runner.js) : les leçons vivent
+     à des profondeurs différentes (index.html à la racine, pages/<cours>/lecon-NN.html
+     deux crans plus bas), et un Worker construit depuis un Blob n'a de toute façon
+     aucune base pour résoudre un chemin relatif. Il lui faut une URL ABSOLUE. */
+  var MOI = document.currentScript && document.currentScript.src;
+  var RACINE_SITE = MOI ? MOI.replace(/\/js\/runner\.js(\?.*)?$/, "") : "";
+
+  /* Worker isolé : charge sql.js DEPUIS LE DÉPÔT (aucun réseau) puis exécute la requête.
+     Mesuré le 2026-08-26 : un Worker issu d'un Blob PEUT importScripts() une URL file://
+     absolue, même sans le drapeau --allow-file-access-from-files. C'est ce qui rend SQL
+     exécutable en file:// alors que le CDN ne l'a jamais permis. */
   var SQL_WORKER_SRC = [
     "var SQLP = null;",
     "var SEED = " + JSON.stringify(SEED_SQL) + ";",
     "self.onmessage = function (ev) {",
     "  var d = ev.data || {};",
     "  if (d.type === 'load') {",
-    "    try { importScripts('https://cdn.jsdelivr.net/npm/sql.js@" + SQL_VER + "/dist/sql-wasm.js'); }",
-    "    catch (e) { self.postMessage({ type: 'fatal' }); return; }",
-    "    if (typeof initSqlJs !== 'function') { self.postMessage({ type: 'fatal' }); return; }",
-    "    SQLP = initSqlJs({ locateFile: function (f) { return 'https://cdn.jsdelivr.net/npm/sql.js@" + SQL_VER + "/dist/' + f; } });",
-    "    SQLP.then(function () { self.postMessage({ type: 'ready' }); }, function () { self.postMessage({ type: 'fatal' }); });",
+    "    try {",
+    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm-base64.js');",
+    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm.js');",
+    "    }",
+    "    catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
+    "    if (typeof initSqlJs !== 'function') { self.postMessage({ type: 'fatal', text: 'initSqlJs absent' }); return; }",
+    "    if (typeof self.SQL_WASM_BASE64 !== 'string') { self.postMessage({ type: 'fatal', text: 'binaire absent' }); return; }",
+    "    var brut = atob(self.SQL_WASM_BASE64), bin = new Uint8Array(brut.length);",
+    "    for (var i = 0; i < brut.length; i++) bin[i] = brut.charCodeAt(i);",
+    /* locateFile est appelé même avec wasmBinary : il doit rendre le nom sans lever,
+       sinon Emscripten avale l'exception et la promesse ne se résout jamais. */
+    "    SQLP = initSqlJs({ wasmBinary: bin, locateFile: function (f) { return f; } });",
+    "    SQLP.then(function () { self.postMessage({ type: 'ready' }); }, function (e) { self.postMessage({ type: 'fatal', text: String(e && e.message || e) }); });",
     "    return;",
     "  }",
     "  if (d.type === 'run') {",
     "    SQLP.then(function (SQL) {",
     "      var db = new SQL.Database();",
     "      try {",
+    /* Chaque bloc part d'une base NEUVE, avec la base de démonstration s'il ne crée pas
+       ses propres tables. Rejouer d'abord les blocs SQL précédents de la page a été
+       essayé le 2026-08-26 puis abandonné : mesuré sur 41 blocs de 4 leçons, le
+       résultat était le MÊME (5 blocs aboutis) pour un mécanisme bien plus fragile.
+       Une leçon n'est pas un carnet linéaire — elle enchaîne des schémas concurrents et
+       des violations de contraintes démontrées exprès, que rejouer met en collision. */
     "        if (!/CREATE\\s+TABLE/i.test(d.code)) { db.exec(SEED); }",
     "        var res = db.exec(d.code);",
     "        self.postMessage({ type: 'result', res: res });",
@@ -307,11 +379,19 @@
           block.setAttribute("data-runner", "skip");
           return;
         }
-        block.setAttribute("data-runner", "sql");
-        if (!HTTP_OK) {
-          addOfflineBtn(bar, block, "SQL");
+        /* Le moteur embarqué est SQLite. Beaucoup de blocs enseignent PostgreSQL,
+           MySQL ou SQL Server : leur poser un bouton ne rendrait qu'un « near "FOR":
+           syntax error » — plus déroutant qu'un bloc sans bouton. Mesuré le 2026-08-26
+           sur les 345 blocs SQL du site : ce filtre en écarte 57, dont 55 échouaient
+           bel et bien, et fait passer les blocs restants de 49 % à 58 % de réussite. */
+        if (AUTRE_SGBD.test(sql.textContent)) {
+          block.setAttribute("data-runner", "skip");
           return;
         }
+        /* Plus de garde HTTP_OK ici : depuis le 2026-08-26, SQLite est embarqué dans
+           assets/vendor/sqljs/ et s'exécute en file:// (prouvé réseau coupé par
+           tools/preuve-hors-reseau.js). Seul Python dépend encore d'un CDN. */
+        block.setAttribute("data-runner", "sql");
         addBtn(bar, "code-block__try", ICON_PLAY + "<span>Exécuter</span>", function (b) {
           activateSql(block, sql, bar, b);
         });
@@ -644,11 +724,15 @@
       sqlWorker = null;
       sqlLoaded = false;
     }
-    function fatal() {
+    /* SQLite est dans le dépôt : un échec ici n'est plus un problème de réseau mais un
+       fichier manquant ou déplacé. On le dit, avec le détail remonté par le Worker. */
+    function fatal(detail) {
       out.innerHTML = '<p class="runner-output__head">Résultat SQL</p>';
       line(
         "error",
-        "SQLite n'a pas pu se charger. Cette fonctionnalité a besoin d'une connexion Internet et que le site soit servi en HTTP — elle ne marche pas en file://. Astuce : lance « python -m http.server » dans le dossier du site, puis recharge la page."
+        "SQLite n'a pas pu se charger" + (detail ? " (" + detail + ")" : "") +
+          ". Le moteur est pourtant embarqué dans le site : vérifie que le dossier " +
+          "assets/vendor/sqljs/ est bien présent à côté du dossier js/."
       );
       killWorker();
       finish();
@@ -665,7 +749,7 @@
     function onMsg(ev) {
       var d = ev.data || {};
       if (d.type === "fatal") {
-        fatal();
+        fatal(d.text);
       } else if (d.type === "ready") {
         sqlLoaded = true;
         startRun();
@@ -689,7 +773,7 @@
       }
       sqlWorker.addEventListener("message", onMsg);
       line("empty", "Chargement de SQLite… (quelques secondes la première fois)");
-      sqlWorker.postMessage({ type: "load" });
+      sqlWorker.postMessage({ type: "load", base: RACINE_SITE });
     } else {
       sqlWorker.addEventListener("message", onMsg);
       if (sqlLoaded) {

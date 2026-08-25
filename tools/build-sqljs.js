@@ -23,9 +23,13 @@ function entete(taille) {
   return '/* sql-wasm-base64.js — le binaire WebAssembly de SQLite, encodé en base64.\n' +
     '   Pourquoi : en file://, un fetch() ou un XMLHttpRequest vers un fichier local est\n' +
     '   refusé par Chrome (origine opaque). Le seul moyen de charger le .wasm sans serveur\n' +
-    '   est donc de le porter DANS un script classique. Expose window.SQL_WASM_BASE64,\n' +
-    '   que assets/vendor/sqljs/sql-charge.js décode en Uint8Array et passe à initSqlJs\n' +
-    '   via l option wasmBinary — ce qui supprime toute requête.\n' +
+    '   est donc de le porter DANS un script classique. Il est décodé en Uint8Array puis\n' +
+    '   passé à initSqlJs via l option wasmBinary, ce qui supprime toute requête —\n' +
+    '   par assets/vendor/sqljs/sql-charge.js dans une page, par js/runner.js dans un Worker.\n' +
+    '   ⚠ Expose self.SQL_WASM_BASE64, et NON window : ce script est aussi chargé par\n' +
+    '   importScripts() depuis un Web Worker, où window n existe pas. Une assignation à\n' +
+    '   window y lève une ReferenceError que importScripts rapporte comme un banal\n' +
+    '   « failed to load » — mesuré le 2026-08-26.\n' +
     '   Source : sql.js ' + VERSION + ' (MIT), dist/sql-wasm.wasm, ' + taille + ' octets.\n' +
     '   Régénérable : node tools/build-sqljs.js */\n';
 }
@@ -37,7 +41,7 @@ if (!source) {
   if (!fs.existsSync(CIBLE)) { console.error('absent : ' + CIBLE); process.exit(1); }
   var txt = fs.readFileSync(CIBLE, 'utf8');
   var m = txt.match(/dist\/sql-wasm\.wasm, (\d+) octets/);
-  var b = txt.match(/window\.SQL_WASM_BASE64\s*=\s*"([A-Za-z0-9+/=]+)"/);
+  var b = txt.match(/self\.SQL_WASM_BASE64\s*=\s*"([A-Za-z0-9+/=]+)"/);
   if (!m || !b) { console.error('en-tête ou contenu illisible.'); process.exit(1); }
   var attendu = parseInt(m[1], 10);
   var buf = Buffer.from(b[1], 'base64');
@@ -54,7 +58,7 @@ var bin = fs.readFileSync(source);
 if (!(bin[0] === 0x00 && bin[1] === 0x61 && bin[2] === 0x73 && bin[3] === 0x6d)) {
   console.error(source + " n'est pas un binaire WebAssembly."); process.exit(1);
 }
-var out = entete(bin.length) + 'window.SQL_WASM_BASE64="' + bin.toString('base64') + '";\n';
+var out = entete(bin.length) + 'self.SQL_WASM_BASE64="' + bin.toString('base64') + '";\n';
 fs.writeFileSync(CIBLE, out);
 console.log('écrit : ' + CIBLE);
 console.log('  wasm ' + bin.length + ' octets -> script ' + out.length + ' octets (+' +

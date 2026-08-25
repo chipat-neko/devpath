@@ -40,12 +40,12 @@
     if (typeof window.initSqlJs !== "function") {
       return Promise.reject(new Error("sql-wasm.js n'est pas chargé (voir l'ordre des <script>)."));
     }
-    if (typeof window.SQL_WASM_BASE64 !== "string") {
+    if (typeof self.SQL_WASM_BASE64 !== "string") {
       return Promise.reject(new Error("sql-wasm-base64.js n'est pas chargé."));
     }
     var binaire;
     try {
-      binaire = decoder(window.SQL_WASM_BASE64);
+      binaire = decoder(self.SQL_WASM_BASE64);
     } catch (e) {
       return Promise.reject(new Error("binaire WebAssembly illisible : " + e.message));
     }
@@ -76,10 +76,10 @@
     },
     /* Vrai si les deux scripts nécessaires sont présents dans la page. */
     disponible: function () {
-      return typeof window.initSqlJs === "function" && typeof window.SQL_WASM_BASE64 === "string";
+      return typeof window.initSqlJs === "function" && typeof self.SQL_WASM_BASE64 === "string";
     },
     poidsBase64: function () {
-      return typeof window.SQL_WASM_BASE64 === "string" ? window.SQL_WASM_BASE64.length : 0;
+      return typeof self.SQL_WASM_BASE64 === "string" ? self.SQL_WASM_BASE64.length : 0;
     },
   };
 })();

@@ -1,0 +1,166 @@
+'use strict';
+/**
+ * tools/verif-sql.js — Exécuter POUR DE VRAI les blocs SQL du site.
+ *
+ * POURQUOI CE SCRIPT EXISTE
+ * -------------------------
+ * Depuis le 2026-08-26, `js/runner.js` pose un bouton « ▶ Exécuter » sur les blocs
+ * `language-sql` et SQLite tourne en `file://`. Un bouton qui rend une erreur est pire
+ * que pas de bouton : il faut donc savoir, pour chaque bloc, s'il aboutit contre la
+ * base de démonstration que `runner.js` précharge.
+ *
+ * Le premier passage a montré à quoi sert ce contrôle : les leçons interrogent
+ * `produits(nom, prix)` alors que la base de démonstration déclarait
+ * `produits(id, libelle, prix, categorie)`. Le schéma avait été écrit dans `runner.js`
+ * sans jamais être confronté aux leçons — il ne pouvait pas l'être, SQL ne s'exécutant
+ * nulle part.
+ *
+ * Ce script utilise le MÊME moteur et le MÊME jeu de données que le navigateur : sql.js
+ * embarqué dans `assets/vendor/sqljs/`, dont il décode le base64, et le bloc SEED_SQL
+ * lu directement dans `js/runner.js` — pour qu'un écart entre les deux soit impossible.
+ *
+ *   node tools/verif-sql.js               # tous les blocs SQL du site
+ *   node tools/verif-sql.js pages/sql     # un dossier
+ *   node tools/verif-sql.js --erreurs     # ne lister que les blocs en échec
+ * Code de sortie : 1 si la part de blocs aboutis passe sous le seuil (voir SEUIL).
+ */
+var fs = require('fs');
+var path = require('path');
+
+var RACINE = path.resolve(__dirname, '..');
+/* Part minimale de blocs devant aboutir. On ne vise pas 100 % : beaucoup de blocs
+   DÉMONTRENT une erreur (violation de contrainte, colonne absente) ou décrivent un
+   schéma propre à leur leçon. Le seuil protège contre une régression du moteur ou de
+   la base de démonstration, pas contre l'imperfection éditoriale. */
+var SEUIL = 0.55;
+
+var args = process.argv.slice(2);
+var SEULEMENT_ERREURS = args.indexOf('--erreurs') !== -1;
+var cibles = args.filter(function (a) { return a.indexOf('--') !== 0; });
+
+/* --- le SEED, lu dans runner.js pour qu'il ne puisse pas diverger ---------- */
+function lireSeed() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var i = src.indexOf('var SEED_SQL = [');
+  if (i < 0) throw new Error('SEED_SQL introuvable dans js/runner.js');
+  var j = src.indexOf('].join("\\n");', i);
+  if (j < 0) throw new Error('fin de SEED_SQL introuvable');
+  var corps = src.slice(i + 'var SEED_SQL = ['.length, j);
+  var lignes = [];
+  var re = /"((?:[^"\\]|\\.)*)"/g, m;
+  while ((m = re.exec(corps))) lignes.push(JSON.parse('"' + m[1] + '"'));
+  return lignes.join('\n');
+}
+
+/* Le filtre de dialecte est LU dans runner.js, jamais recopié : deux exemplaires
+   d'une même règle finissent toujours par diverger, et ce vérificateur mesurerait
+   alors autre chose que ce que voit l'apprenant. */
+function lireFiltreDialecte() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var m = src.match(/var AUTRE_SGBD = (\/[\s\S]*?\/i);/);
+  if (!m) throw new Error('AUTRE_SGBD introuvable dans js/runner.js');
+  return eval(m[1]); // une littérale d'expression régulière lue dans notre propre dépôt
+}
+
+function dec(s) {
+  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+}
+
+function blocsSql(fichier) {
+  var src = fs.readFileSync(fichier, 'utf8');
+  var out = [], re = /<code class="language-sql">([\s\S]*?)<\/code>/g, m;
+  while ((m = re.exec(src))) out.push(dec(m[1]).trim());
+  return out;
+}
+
+function lecons(cible) {
+  var out = [];
+  var base = cible ? path.resolve(RACINE, cible) : path.join(RACINE, 'pages');
+  (function marche(d) {
+    var st; try { st = fs.statSync(d); } catch (e) { return; }
+    if (st.isFile()) { if (/\.html$/.test(d)) out.push(d); return; }
+    for (var f of fs.readdirSync(d)) marche(path.join(d, f));
+  })(base);
+  return out.filter(function (f) { return /lecon-\d+\.html$/.test(f); });
+}
+
+/* La même règle que le Worker de runner.js : la base de démonstration n'est posée
+   que si le bloc ne crée pas ses propres tables. */
+function aBesoinDuSeed(code) { return !/CREATE\s+TABLE/i.test(code); }
+
+var initSqlJs = require(path.join(RACINE, 'assets', 'vendor', 'sqljs', 'sql-wasm.js'));
+
+/* Le binaire est décodé depuis le base64 du dépôt : pas de second exemplaire du .wasm
+   à maintenir, et l'on vérifie du même coup que ce base64 est intact. */
+var b64src = fs.readFileSync(path.join(RACINE, 'assets', 'vendor', 'sqljs', 'sql-wasm-base64.js'), 'utf8');
+var mb = b64src.match(/self\.SQL_WASM_BASE64\s*=\s*"([A-Za-z0-9+/=]+)"/);
+if (!mb) { console.error('base64 illisible dans sql-wasm-base64.js'); process.exit(1); }
+var wasmBinary = Buffer.from(mb[1], 'base64');
+
+initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).then(function (SQL) {
+  var SEED = lireSeed();
+  var fichiers = [];
+  if (cibles.length) cibles.forEach(function (c) { fichiers = fichiers.concat(lecons(c)); });
+  else fichiers = lecons(null);
+
+  var AUTRE_SGBD = lireFiltreDialecte();
+  var total = 0, ok = 0, ko = 0, ecartes = 0;
+  var causes = {};
+  var parCours = {};
+
+  fichiers.forEach(function (f) {
+    var rel = path.relative(RACINE, f).replace(/\\/g, '/');
+    var cours = rel.split('/')[1];
+    blocsSql(f).forEach(function (code, i) {
+      /* Même filtre que runner.js : les pseudo-schémas sans verbe SQL n'ont pas de bouton. */
+      if (!/\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|WITH)\b/i.test(code)) return;
+      /* Un bloc écrit pour un autre SGBD ne reçoit pas de bouton : il ne compte donc
+         ni dans les réussites ni dans les échecs, mais on le dénombre. */
+      if (AUTRE_SGBD.test(code)) { ecartes++; return; }
+      total++;
+      parCours[cours] = parCours[cours] || { total: 0, ok: 0 };
+      parCours[cours].total++;
+      var db = new SQL.Database();
+      try {
+        if (aBesoinDuSeed(code)) db.exec(SEED);
+        db.exec(code);
+        ok++; parCours[cours].ok++;
+        if (!SEULEMENT_ERREURS) console.log('  OK  ' + rel + ' #' + (i + 1));
+      } catch (e) {
+        ko++;
+        var msg = String(e && e.message || e);
+        var cle = msg.replace(/: .*/, '').replace(/"[^"]*"/g, '…');
+        causes[cle] = (causes[cle] || 0) + 1;
+        console.log('  KO  ' + rel + ' #' + (i + 1) + ' — ' + msg.slice(0, 90));
+      }
+      try { db.close(); } catch (e) {}
+    });
+  });
+
+  var part = total ? ok / total : 1;
+  console.log('\n=== RÉSUMÉ ===');
+  console.log('  blocs SQL avec bouton ... ' + total);
+  console.log('  écartés (autre SGBD) .... ' + ecartes);
+  console.log('  aboutissent ............. ' + ok + '  (' + (100 * part).toFixed(1) + ' %)');
+  console.log('  en erreur ............... ' + ko);
+  console.log('\n--- par cours ---');
+  Object.keys(parCours).sort(function (a, b) { return parCours[b].total - parCours[a].total; })
+    .forEach(function (c) {
+      var p = parCours[c];
+      console.log('  ' + c.padEnd(14) + String(p.ok).padStart(4) + ' / ' + String(p.total).padStart(4) +
+        '  (' + (100 * p.ok / p.total).toFixed(0) + ' %)');
+    });
+  console.log('\n--- causes d\'échec ---');
+  Object.entries(causes).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12)
+    .forEach(function (e) { console.log('  ' + String(e[1]).padStart(4) + '  ' + e[0]); });
+
+  if (part < SEUIL) {
+    console.log('\nSOUS LE SEUIL de ' + (100 * SEUIL).toFixed(0) + ' % — le moteur ou la base de démonstration a régressé.');
+    process.exit(1);
+  }
+  console.log('\nAu-dessus du seuil de ' + (100 * SEUIL).toFixed(0) + ' %.');
+}).catch(function (e) {
+  console.error('sql.js n\'a pas pu se charger : ' + (e && e.message || e));
+  process.exit(1);
+});

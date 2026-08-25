@@ -116,7 +116,36 @@ L'ordre compte : SQL d'abord parce qu'il est petit et que le besoin est massif (
 
   Contrôles : `sql-wasm.js` ne contient **aucune** URL de CDN (son unique `https://` est un lien de commentaire vers un ticket GitHub, inerte) et **n'est pas un module ES** (0 `export`/`import`), donc compatible avec la contrainte fondatrice. `node tools/build-sqljs.js` régénère le base64 et, sans argument, contrôle son intégrité (658 410 octets redécodés, `\0asm` présent). `verif-html` 0/0, `verif-donnees` 0 erreur.
 
-- [ ] **A3 · Le bouton « Tester » pour SQL.** Une fois A2 prouvé : étendre `runner.js` aux blocs `language-sql`, avec une base d'exemple créée à la volée. L'apprenant écrit une requête, la lance, voit le résultat. **21 cours** en bénéficient (`sql`, `bdd`, `nosql`, `data-eng`, `pandas`…).
+- [x] **A3 · Le bouton « Tester » pour SQL.** ✅ **2026-08-26. L'apprenant écrit une requête, la lance, et voit un tableau de résultats — en `file://`, sans réseau.**
+
+  Toute la mécanique SQL existait déjà dans `runner.js` (`activateSql`, `runSql`, rendu en tableau) : elle était simplement branchée sur un CDN et neutralisée par la garde `HTTP_OK`. Trois changements ont suffi — puis la vraie difficulté est apparue ailleurs.
+
+  1. **Le Worker charge le moteur depuis le dépôt.** Mesuré : un Worker issu d'un `Blob` **peut** `importScripts()` une URL `file://` **absolue**, sans drapeau permissif. Absolue est le mot : un Worker-Blob n'a aucune base pour résoudre un chemin relatif, et les leçons vivent à des profondeurs différentes. La racine est déduite de `document.currentScript.src`.
+  2. **La garde `HTTP_OK` est levée pour SQL** (Python la garde). Plus de bouton « Serveur requis » sur les blocs SQL.
+  3. **Le message d'échec, devenu faux, a été réécrit** : il conseillait de lancer `python -m http.server`, alors que le moteur est désormais dans le dépôt.
+
+  **⚠️ Piège d'encodage qui a coûté un essai : `self`, jamais `window`.** Le fichier base64 assignait à `window.SQL_WASM_BASE64` ; dans un Worker, `window` n'existe pas, la `ReferenceError` est rapportée par `importScripts` comme un banal *« failed to load »* qui n'oriente vers rien. Corrigé dans `tools/build-sqljs.js` et documenté en tête du fichier généré.
+
+  **La vraie difficulté : la base de démonstration ne correspondait pas aux leçons.** Écrite dans `runner.js` sans jamais avoir pu être confrontée à quoi que ce soit — SQL ne s'exécutait nulle part — elle déclarait `produits(id, **libelle**, prix, categorie)` quand les leçons écrivent partout `SELECT **nom** FROM produits`. D'où l'**outil neuf `tools/verif-sql.js`**, qui exécute les blocs SQL du site avec le **même moteur et le même jeu de données que le navigateur** (il lit `SEED_SQL` et le filtre de dialecte directement dans `runner.js`, pour qu'un écart soit impossible).
+
+  | étape | blocs aboutis |
+  |---|---:|
+  | départ | 133 / 345 — **38,6 %** |
+  | après ajout de `produits.nom` (et `stock`) | 153 / 345 — 44,3 % |
+  | après ajout de 8 tables réellement interrogées | 170 / 345 — 49,3 % |
+  | après le filtre de dialecte | **172 / 288 — 59,7 %** (57 blocs écartés) |
+
+  Les 8 tables ajoutées sont celles que les leçons citent le plus et qu'aucun bloc ne pouvait trouver, « no such table » étant la première cause d'échec (77 blocs) : le fil rouge « Rideau » du cours `bdd` (`spectacle`, `representation`, `client`, `place`, `commande`, `billet`) plus `employes`, `comptes` et `ventes`. **`libelle` a été CONSERVÉ à côté de `nom`** : 26 blocs l'emploient, et le supprimer aurait cassé ce qui marchait.
+
+  **Le filtre de dialecte, et le motif trop large qu'il a fallu écarter.** Le moteur est SQLite ; beaucoup de blocs enseignent PostgreSQL, MySQL ou SQL Server. Leur poser un bouton ne rend qu'un « near "FOR": syntax error » — **pire que pas de bouton du tout**. Un motif (`$$`, `MATERIALIZED VIEW`, `FOR UPDATE`, `GROUPING SETS`, `MERGE INTO`, `ISOLATION LEVEL`, `SERIAL`, `AUTO_INCREMENT`, `::`…) écarte **57 blocs : 55 échouaient bel et bien, 2 seulement marchaient** — et ces 2 sont explicitement intitulés « Version PostgreSQL ». Deux candidats ont été **retirés après mesure** : `/@\w/`, censé viser les variables SQL Server, attrapait **toutes les adresses e-mail** des chaînes d'exemple (4 faux positifs à lui seul) ; et `NULLS FIRST/LAST` comme `RETURNING` sont en réalité gérés par SQLite. La règle « un motif trop large casse ce qui était juste » s'est vérifiée au premier jet.
+
+  **Une piste explorée puis abandonnée, mesure à l'appui.** Rejouer les blocs SQL précédents de la page avant celui qu'on lance — pour qu'un `SELECT` retrouve la table créée plus haut — donnait **exactement le même résultat** (5 blocs aboutis sur 41 dans le navigateur) pour un mécanisme bien plus fragile. Une leçon n'est pas un carnet linéaire : elle enchaîne des schémas concurrents et des violations de contraintes démontrées exprès, que rejouer met en collision (« table client already exists »).
+
+  **Preuve dans le navigateur** — `tools/preuves/sql-lecon.js` clique pour de vrai sur chaque bouton, en `file://`, DNS coupé, sans `--allow-file-access-from-files` : **21 blocs aboutis sur 27** contre **5 sur 41** avant ce point, **0 requête distante**. Le script a lui-même dû être corrigé deux fois — il jugeait « aucune ligne à afficher » comme un échec alors que c'est la réponse normale d'un `CREATE` ou d'un `INSERT`, et il ne dépliait pas les `<details>` où sont rangées les solutions d'exercices, ce qui faisait passer 6 blocs sains pour muets.
+
+  **4 fautes de contenu révélées par l'exécution, dans `pages/sql/lecon-03.html`** — invisibles pour les quatre vérificateurs, puisque aucun n'exécutait : trois blocs interrogeaient `ville` **dans `produits`** (c'est un attribut de `clients`), un quatrième lisait `commandes.client` au lieu de `client_id`. Le tableau de résultats annoncé omettait Nantes. Corrigés, énoncé de l'exercice 3 réaligné, et le second exemple de `DISTINCT` illustre désormais bien mieux son propos — **4 lignes puis 6** : ajouter une colonne fait réapparaître les villes. La leçon passe de 9/14 à **14/14**.
+
+  `verif-html` 0/0 sur 1 612 fichiers, `verif-donnees` 0 erreur sur 25 invariants, 0 URL de CDN dans `runner.js`, 0 BOM.
 
 - [ ] **A4 · Python : décider, pas bricoler.** Pyodide pèse environ 10 Mo — c'est un tiers du dépôt actuel. Trois options à évaluer honnêtement, chiffres à l'appui : (a) l'embarquer malgré le poids ; (b) écrire un mini-interpréteur Python couvrant le sous-ensemble réellement utilisé dans les exercices (variables, conditions, boucles, listes, chaînes, fonctions simples) ; (c) renoncer et l'assumer explicitement dans l'interface. **Écrire la recommandation et son raisonnement ici, puis appliquer.** Ne pas se lancer dans (b) sans avoir mesuré ce que couvrent réellement les exercices Python.
 
