@@ -471,7 +471,7 @@ Object.keys(LESSONS).forEach((id) => {
   const dir = LESSONS[id].dir;
   const co = COURSES.find((x) => x.id === id);
   const multiLevel = co && Array.isArray(co.levels) && co.levels.length > 1;
-  let bilans = 0;
+  let bilans = 0, paliers = 0;
 
   LESSONS[id].files.forEach((f) => {
     const html = readPage(dir, f);
@@ -482,7 +482,13 @@ Object.keys(LESSONS).forEach((id) => {
     const reBlk = /<script[^>]*type="application\/json"[^>]*\s(data-quiz-bilan|data-quiz|data-exos)[^>]*>([\s\S]*?)<\/script>/g;
     let mb, exosText = null;
     while ((mb = reBlk.exec(html)) !== null) {
-      if (mb[1] === 'data-quiz-bilan') bilans++;
+      // Un bilan PORTANT UN LIBELLÉ est un bilan de PALIER (fin de module ou de
+      // niveau) : js/lecon.js le rend sous ce titre-là, avec une autre introduction.
+      // Il ne compte donc pas comme un second bilan de fin de cours.
+      if (mb[1] === 'data-quiz-bilan') {
+        const lib = /data-quiz-bilan\s*=\s*"([^"]*)"/.exec(mb[0]);
+        if (lib && lib[1].trim()) paliers++; else bilans++;
+      }
       if (mb[1] === 'data-exos') exosText = mb[2];
       try { JSON.parse(mb[2]); }
       catch (e) { cJson.err(where + ' : JSON invalide dans ' + mb[1] + ' — ' + e.message); }
@@ -574,8 +580,8 @@ Object.keys(LESSONS).forEach((id) => {
   });
 
   /* --- I12 verdict par cours --- */
-  if (bilans === 0) cQuiz.err(id + ' : aucun QCM bilan (data-quiz-bilan) sur l\'ensemble du cours');
-  else if (bilans > 1 && !multiLevel) cQuiz.warn(id + ' : ' + bilans + ' blocs data-quiz-bilan (attendu 1 pour un cours mono-niveau)');
+  if (bilans + paliers === 0) cQuiz.err(id + ' : aucun QCM bilan (data-quiz-bilan) sur l\'ensemble du cours');
+  else if (bilans > 1 && !multiLevel) cQuiz.warn(id + ' : ' + bilans + ' blocs data-quiz-bilan SANS libellé (attendu 1 pour un cours mono-niveau ; un bilan de palier porte un libellé)');
 });
 
 /* =================================================== I16 orphelins disque */

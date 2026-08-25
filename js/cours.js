@@ -426,8 +426,8 @@
       map: { python: 1, algo: 2, prolog: 3, haskell: 4, javascript: 5 },
     },
     {
-      page: "../fil-rouge-securite.html", total: 5, label: "ton application sécurisée",
-      map: { securite: 1, offensive: 2, api: 3, http: 4, tests: 5 },
+      page: "../fil-rouge-securite.html", total: 6, label: "ton application sécurisée",
+      map: { securite: 1, offensive: 2, crypto: 3, api: 4, http: 5, tests: 6 },
     },
     {
       page: "../fil-rouge-scripting.html", total: 3, label: "ton automatisation système",
