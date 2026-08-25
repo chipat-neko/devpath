@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XSS : exécuter du code dans le navigateur d'un autre — Leçon 05 · Cours Sécurité offensive — Syntaxe</title>
+    <meta name="description" content="Le XSS ne vise pas le serveur mais les autres visiteurs. Démonstration sûre de l'exécution dans un bac à sable, puis les mesures : retirer la balise script laisse 8 charges sur 10 s'exécuter par des gestionnaires onerror/onload, l'encodage à la sortie les neutralise toutes 10. Le même encodeur protège 3 contextes sur 4 mais échoue dans un attribut sans guillemets. Et les portées : un XSS stocké touche 850 sessions pour un seul dépôt, un réfléchi 68 pour 850 liens envoyés. Cas réel : le ver Samy, plus d'un million de profils en 20 heures." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="offensive" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Sécurité offensive</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Les failles du web — Leçon 05</p>
+              <h1 class="lesson-header__title">XSS&nbsp;: exécuter du code dans le navigateur d'un autre</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~18 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: la <a href="lecon-04.html">leçon&nbsp;4</a> de ce cours&nbsp;; le <a href="../securite/lecon-04.html">cours Sécurité applicative sur le XSS et le CSRF</a> (la défense)&nbsp;; savoir ce qu'est une balise HTML et un attribut.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li><strong>dire qui est la victime d'un XSS</strong>&nbsp;: pas le serveur, mais un <em>autre utilisateur</em>, dans le navigateur duquel le code s'exécute&nbsp;;</li>
+                  <li><strong>voir une exécution de tes propres yeux</strong>, dans un bac à sable isolé, et comprendre ce qui l'a déclenchée&nbsp;;</li>
+                  <li><strong>mesurer pourquoi retirer <code>&lt;script&gt;</code> ne protège de rien</strong>&nbsp;: 8&nbsp;charges sur 10&nbsp;s'exécutent encore, l'encodage à la sortie les neutralise <strong>toutes les 10</strong>&nbsp;;</li>
+                  <li><strong>comprendre que l'encodage dépend du contexte</strong>&nbsp;: le même encodeur protège <strong>3&nbsp;contextes sur 4</strong> et échoue dans un attribut sans guillemets&nbsp;;</li>
+                  <li><strong>classer les trois familles par portée</strong>&nbsp;: un XSS stocké touche <strong>850&nbsp;sessions</strong> pour un seul dépôt, un réfléchi <strong>68</strong> pour 850&nbsp;liens&nbsp;;</li>
+                  <li><strong>relier cela à un cas réel</strong>&nbsp;: le ver Samy, plus d'un million de profils en vingt heures.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Les deux failles précédentes visaient le serveur&nbsp;: on faisait exécuter à sa base ou à son interpréteur quelque chose qu'il n'avait pas prévu. Le <strong>XSS</strong> — pour <em>cross-site scripting</em> — change de cible. Il ne s'attaque pas au serveur, mais aux <em>autres visiteurs</em> du site. Le code injecté s'exécute dans <strong>leur</strong> navigateur, avec leur session, leurs droits, sous leurs yeux. C'est ce déplacement de victime qui rend le XSS déroutant au début&nbsp;: le site qui héberge la faille n'est pas celui qui souffre&nbsp;; il n'est que le messager.</p>
+<p>Le mécanisme est cousin de l'injection SQL — une donnée fournie par un utilisateur finit interprétée comme du code —, mais l'interpréteur, cette fois, est le <em>navigateur</em>, et le langage, c'est HTML et JavaScript. Le cours <a href="../securite/lecon-04.html">Sécurité applicative</a> enseigne la défense&nbsp;: encoder à la sortie, poser une politique de sécurité du contenu. Nous, nous allons d'abord <em>voir</em> une exécution, puis mesurer pourquoi les demi-mesures échouent.</p>
+
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><p class="callout__title">Le cadre, et un mot sur l'aperçu qui suit</p><p>Les charges montrées ici affichent un simple marqueur&nbsp;; aucune ne vole quoi que ce soit. L'aperçu de la section suivante s'exécute dans une <strong>iframe isolée</strong> (bac à sable sans accès à cette page ni au réseau)&nbsp;: c'est un lieu sûr pour observer le mécanisme, jamais une arme. Écrire une charge XSS et la déposer sur un site qui ne vous appartient pas reste un délit&nbsp;: la <a href="lecon-01.html">leçon&nbsp;1</a> rappelle le cadre. On apprend à reconnaître pour défendre, pas à nuire.</p></div></div>
+
+<h2>Voir une exécution, en sécurité</h2>
+<p>Commençons par le plus concret. Imagine un champ «&nbsp;laisser un avis&nbsp;» sur une fiche produit de «&nbsp;Rideau&nbsp;». Un visiteur y écrit, au lieu d'un texte, un fragment de HTML. Si le site le réaffiche tel quel aux visiteurs suivants, ce fragment devient partie de la page — et s'il contient un moyen d'exécuter du code, ce code s'exécute. Voici un tel fragment. Clique sur «&nbsp;Aperçu&nbsp;»&nbsp;: il s'ouvre dans un bac à sable isolé, et tu verras le texte de la page remplacé par un message que <em>personne n'a écrit dans la page</em>.</p>
+<figure class="code-block" data-file="apercu-onerror.html"><pre><code class="language-markup">&lt;p&gt;Avis laissé par un visiteur sur la fiche «&nbsp;Rideau occultant&nbsp;»&nbsp;:&lt;/p&gt;
+&lt;img src="image-introuvable" onerror="this.outerHTML='&lt;mark&gt;⚠ Ce texte a été écrit par du code injecté, pas par la page.&lt;/mark&gt;'"&gt;
+&lt;p&gt;Rien, dans la page, n'a demandé à exécuter ce code.&lt;/p&gt;</code></pre></figure>
+<p>Ce qui vient de se passer&nbsp;: l'image pointe une adresse qui n'existe pas, donc le navigateur déclenche son gestionnaire d'erreur — l'attribut <code>onerror</code> —, et ce gestionnaire contient du JavaScript. Aucune balise <code>&lt;script&gt;</code> n'était nécessaire. C'est le premier enseignement, et il ruine la défense la plus répandue&nbsp;: on croit qu'un XSS, «&nbsp;c'est une balise script&nbsp;», alors que n'importe quel attribut <code>on…</code> — <code>onerror</code>, <code>onload</code>, <code>onfocus</code>, <code>ontoggle</code> — porte du code, et qu'il y en a des dizaines.</p>
+<p>Trois familles de XSS existent, selon <em>par où</em> la charge arrive jusqu'au navigateur de la victime. Le <strong>réfléchi</strong>&nbsp;: la charge est dans un lien piégé&nbsp;; la victime doit cliquer, et le serveur la lui «&nbsp;renvoie&nbsp;» dans la page de réponse. Le <strong>stocké</strong>&nbsp;: la charge est enregistrée sur le serveur (notre avis), puis servie à chaque visiteur, sans qu'aucun ait rien à faire. Le <strong>DOM</strong>&nbsp;: la charge n'atteint jamais le serveur&nbsp;; elle vit dans un morceau de l'adresse que le code de la page recopie lui-même dans le document. Nous allons mesurer leurs portées&nbsp;; elles sont très différentes.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Trois couloirs pour les trois familles de XSS. Réfléchi : un lien piégé est envoyé à une victime, qui doit cliquer pour que le code s'exécute dans son navigateur ; portée 68 sessions sur 850 liens. Stocké : le code est déposé une fois sur le serveur, puis servi à chaque visiteur de la page sans action de sa part ; portée 850 sessions. DOM : le code vit dans un paramètre de l'adresse et est recopié dans la page par le code du navigateur, sans jamais atteindre le serveur ; portée 68 sessions mais aucune trace côté serveur.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Trois familles de XSS, trois portées</text>
+    <rect class="d-box" x="20" y="44" width="190" height="150" rx="6" />
+    <text class="d-text" x="115" y="66" text-anchor="middle" font-size="12">RÉFLÉCHI</text>
+    <text class="d-mut" x="115" y="92" text-anchor="middle" font-size="9">un lien piégé</text>
+    <text class="d-mut" x="115" y="108" text-anchor="middle" font-size="9">la victime doit CLIQUER</text>
+    <text class="d-mut" x="115" y="150" text-anchor="middle" font-size="11">68 sessions</text>
+    <text class="d-mut" x="115" y="168" text-anchor="middle" font-size="8.5">(8 % de 850 liens)</text>
+    <rect class="d-accent" x="225" y="44" width="190" height="150" rx="6" />
+    <text class="d-text" x="320" y="66" text-anchor="middle" font-size="12">STOCKÉ</text>
+    <text class="d-mut" x="320" y="92" text-anchor="middle" font-size="9">déposé UNE fois</text>
+    <text class="d-mut" x="320" y="108" text-anchor="middle" font-size="9">servi à tous, sans clic</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="11">850 sessions</text>
+    <text class="d-mut" x="320" y="168" text-anchor="middle" font-size="8.5">12,5 × plus, 850 × moins d'effort</text>
+    <rect class="d-box" x="430" y="44" width="190" height="150" rx="6" />
+    <text class="d-text" x="525" y="66" text-anchor="middle" font-size="12">DOM</text>
+    <text class="d-mut" x="525" y="92" text-anchor="middle" font-size="9">dans l'adresse</text>
+    <text class="d-mut" x="525" y="108" text-anchor="middle" font-size="9">recopié par la page</text>
+    <text class="d-mut" x="525" y="150" text-anchor="middle" font-size="11">68 sessions</text>
+    <text class="d-mut" x="525" y="168" text-anchor="middle" font-size="8.5">0 trace côté serveur</text>
+    <text class="d-mut" x="320" y="220" text-anchor="middle" font-size="9">le même code exécuté chez un AUTRE utilisateur — jamais chez le serveur</text>
+  </svg>
+  <figcaption>Le XSS ne vise pas le serveur mais les autres visiteurs. Le stocké est le plus grave&nbsp;: un seul dépôt, tout le monde touché, sans le moindre clic.</figcaption>
+</figure>
+
+<h2>Pourquoi retirer <code>&lt;script&gt;</code> ne protège de rien</h2>
+<p>Le réflexe, devant un champ qui accepte du texte, est de «&nbsp;nettoyer&nbsp;» l'entrée en retirant ce qui ressemble à du danger — la balise <code>&lt;script&gt;</code> en tête. Mesurons ce que cette liste noire laisse passer, face à un encodage à la sortie. Le programme utilise un petit analyseur fidèle&nbsp;: pour chaque charge, il répond à la seule question qui compte, «&nbsp;le navigateur exécuterait-il cela&nbsp;?&nbsp;», en cherchant une balise <code>&lt;script&gt;</code> ou un attribut <code>on…</code> sur une vraie balise.</p>
+<figure class="code-block" data-file="filtre.js"><pre><code class="language-javascript">// XSS : pourquoi retirer « &lt;script&gt; » ne protège de rien. On ne lance aucune
+// attaque : on modélise la seule question qui compte pour le navigateur — « ce
+// fragment, une fois inséré, exécuterait-il du code ? » — par un mini-analyseur
+// fidèle, puis on mesure ce que laissent passer deux défenses.
+
+// Le mini-analyseur : il ne repère une exécution que là où le navigateur en verrait
+// une — une balise &lt;script&gt;, ou un attribut onXxx d'une VRAIE balise ouvrante.
+function executerait(html) {
+  var i = 0, n = html.length;
+  while (i &lt; n) {
+    if (html[i] === '&lt;' &amp;&amp; /[a-z\/]/i.test(html[i + 1] || '')) {
+      var j = i + 1;
+      if (html[j] === '/') j++;
+      var name = '';
+      while (j &lt; n &amp;&amp; /[a-z0-9]/i.test(html[j])) { name += html[j]; j++; }
+      var attrs = [];
+      while (j &lt; n &amp;&amp; html[j] !== '&gt;') {
+        if (/\s/.test(html[j])) { j++; continue; }
+        var an = '';
+        while (j &lt; n &amp;&amp; /[a-z0-9\-]/i.test(html[j])) { an += html[j]; j++; }
+        while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+        if (html[j] === '=') {
+          j++;
+          while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+          if (html[j] === '"') { j++; while (j &lt; n &amp;&amp; html[j] !== '"') j++; j++; }
+          else if (html[j] === "'") { j++; while (j &lt; n &amp;&amp; html[j] !== "'") j++; j++; }
+          else { while (j &lt; n &amp;&amp; !/[\s&gt;]/.test(html[j])) j++; }
+        }
+        if (an) attrs.push(an.toLowerCase());
+      }
+      if (name.toLowerCase() === 'script') return true;
+      for (var k = 0; k &lt; attrs.length; k++) if (/^on\w+$/.test(attrs[k])) return true;
+      i = j + 1;
+    } else i++;
+  }
+  return false;
+}
+
+// Défense 1 — LISTE NOIRE : on retire les balises &lt;script&gt;…&lt;/script&gt;. Le réflexe.
+function listeNoire(html) { return html.replace(/&lt;script[\s\S]*?&lt;\/script&gt;/gi, ''); }
+// Défense 2 — ENCODAGE À LA SORTIE : les cinq caractères qui donnent son sens au
+// HTML. Après ça, un « &lt; » n'ouvre plus aucune balise.
+function encoder(html) {
+  return html.replace(/&amp;/g, '&amp;amp;').replace(/&lt;/g, '&amp;lt;').replace(/&gt;/g, '&amp;gt;')
+             .replace(/"/g, '&amp;quot;').replace(/'/g, '&amp;#39;');
+}
+
+// Dix vecteurs d'exécution connus. Le contenu est neutre (un marqueur) : le POINT
+// est qu'ils S'EXÉCUTENT, pas ce qu'ils feraient ensuite.
+var charges = [
+  '&lt;script&gt;MARQUE&lt;/script&gt;',
+  '&lt;SCRIPT&gt;MARQUE&lt;/SCRIPT&gt;',
+  '&lt;img src=x onerror=MARQUE&gt;',
+  '&lt;svg onload=MARQUE&gt;',
+  '&lt;body onload=MARQUE&gt;',
+  '&lt;input autofocus onfocus=MARQUE&gt;',
+  '&lt;details open ontoggle=MARQUE&gt;',
+  '&lt;img src=x oNeRrOr=MARQUE&gt;',
+  '&lt;marquee onstart=MARQUE&gt;défile&lt;/marquee&gt;',
+  '&lt;video&gt;&lt;source onerror=MARQUE&gt;&lt;/video&gt;',
+];
+
+var passentNoire = 0, passentEncodeur = 0;
+console.log('charge'.padEnd(44) + 'liste noire   encodage');
+charges.forEach(function (c) {
+  if (executerait(listeNoire(c))) passentNoire++;
+  if (executerait(encoder(c))) passentEncodeur++;
+  var vue = c.length &gt; 42 ? c.slice(0, 39) + '...' : c;
+  console.log(vue.padEnd(44) + (executerait(listeNoire(c)) ? 'EXÉCUTE ' : 'neutre  ').padEnd(14) + (executerait(encoder(c)) ? 'EXÉCUTE' : 'neutre'));
+});
+console.log('');
+console.log(charges.length + ' charges, toutes exécutables au départ');
+console.log('liste noire (retire &lt;script&gt;) : ' + passentNoire + ' s\'exécutent encore');
+console.log('encodage à la sortie : ' + passentEncodeur + ' s\'exécutent');</code></pre></figure>
+<figure class="code-block" data-file="filtre.txt"><pre><code class="language-plaintext">charge                                      liste noire   encodage
+&lt;script&gt;MARQUE&lt;/script&gt;                     neutre        neutre
+&lt;SCRIPT&gt;MARQUE&lt;/SCRIPT&gt;                     neutre        neutre
+&lt;img src=x onerror=MARQUE&gt;                  EXÉCUTE       neutre
+&lt;svg onload=MARQUE&gt;                         EXÉCUTE       neutre
+&lt;body onload=MARQUE&gt;                        EXÉCUTE       neutre
+&lt;input autofocus onfocus=MARQUE&gt;            EXÉCUTE       neutre
+&lt;details open ontoggle=MARQUE&gt;              EXÉCUTE       neutre
+&lt;img src=x oNeRrOr=MARQUE&gt;                  EXÉCUTE       neutre
+&lt;marquee onstart=MARQUE&gt;défile&lt;/marquee&gt;    EXÉCUTE       neutre
+&lt;video&gt;&lt;source onerror=MARQUE&gt;&lt;/video&gt;      EXÉCUTE       neutre
+
+10 charges, toutes exécutables au départ
+liste noire (retire &lt;script&gt;) : 8 s'exécutent encore
+encodage à la sortie : 0 s'exécutent</code></pre></figure>
+<p>Le résultat est sans appel. Retirer <code>&lt;script&gt;</code> laisse <strong>8&nbsp;charges sur 10</strong> s'exécuter&nbsp;: toutes celles qui passent par un gestionnaire d'événement, c'est-à-dire l'immense majorité. L'encodage à la sortie, lui, neutralise <strong>les 10</strong>. La raison est la même qu'au chapitre SQL, transposée&nbsp;: encoder remplace <code>&lt;</code> par <code>&amp;lt;</code>, si bien qu'il n'y a plus <em>aucune balise</em> — ni <code>script</code>, ni <code>img</code>, ni rien. Le texte de l'avis redevient du texte, affiché tel quel, inoffensif. On ne cherche pas à deviner ce qui est dangereux&nbsp;; on retire au navigateur la capacité de lire l'entrée comme du HTML.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Comparaison de deux défenses sur dix charges toutes exécutables au départ. Retirer la balise script laisse huit charges sur dix s'exécuter encore, car elles passent par des gestionnaires d'événements comme onerror ou onload. Encoder les cinq caractères à la sortie neutralise les dix, car sans un vrai chevron ouvrant il n'y a plus aucune balise.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Dix charges exécutables — que reste-t-il après chaque défense&nbsp;?</text>
+    <text class="d-mut" x="24" y="70" font-size="9">retirer &lt;script&gt; (liste noire)</text>
+    <rect class="d-box" x="24" y="78" width="470" height="30" rx="4" />
+    <text class="d-text" x="259" y="98" text-anchor="middle" font-size="12">8 / 10 s'exécutent encore</text>
+    <text class="d-mut" x="24" y="140" font-size="9">encoder à la sortie</text>
+    <rect class="d-accent" x="24" y="148" width="6" height="30" rx="3" />
+    <text class="d-text" x="40" y="168" text-anchor="start" font-size="12">0 / 10</text>
+    <text class="d-mut" x="616" y="200" text-anchor="end" font-size="8.5">onerror, onload, onfocus… ne sont pas &lt;script&gt;</text>
+  </svg>
+  <figcaption>La balise <code>&lt;script&gt;</code> n'est qu'un vecteur parmi beaucoup. Encoder à la sortie ferme la porte à tous d'un coup&nbsp;: il n'y a plus de balise du tout.</figcaption>
+</figure>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Encoder à la SORTIE, pas nettoyer à l'entrée</p><p>Une nuance qui fait toute la différence&nbsp;: on n'encode pas la donnée quand elle <em>entre</em> (à la saisie), mais quand elle <em>sort</em> (au moment de l'insérer dans une page). Pourquoi&nbsp;? Parce que la même donnée peut être affichée dans plusieurs contextes — une page HTML, un courriel, un fichier — qui n'ont pas les mêmes règles d'échappement. L'encoder trop tôt la corrompt pour les autres usages et rate parfois le bon. La règle du cours <a href="../securite/lecon-04.html">Sécurité applicative</a>&nbsp;: stocker la donnée brute, l'encoder au dernier moment, selon l'endroit exact où elle atterrit. C'est précisément le sujet de la section suivante.</p></div></div>
+
+<h2>L'encodage dépend du contexte</h2>
+<p>«&nbsp;Encoder les cinq caractères&nbsp;» n'est pas une formule magique qu'on applique les yeux fermés. Le même encodage protège dans certains endroits d'une page et échoue dans d'autres, parce que les règles de sortie d'un <em>contexte</em> ne sont pas celles d'un autre. Le programme met le même encodeur HTML à l'épreuve de quatre contextes d'insertion.</p>
+<figure class="code-block" data-file="contexte.js"><pre><code class="language-javascript">// Le même encodage ne protège pas partout : ce qui neutralise une donnée dans le
+// corps d'une page peut la laisser dangereuse dans un attribut non protégé. On
+// mesure un encodeur HTML (les cinq caractères) contre quatre CONTEXTES.
+function encoder(v) {
+  return v.replace(/&amp;/g, '&amp;amp;').replace(/&lt;/g, '&amp;lt;').replace(/&gt;/g, '&amp;gt;')
+          .replace(/"/g, '&amp;quot;').replace(/'/g, '&amp;#39;');
+}
+
+// Un mini-analyseur fidèle : il repère une exécution UNIQUEMENT là où le
+// navigateur en verrait une — une balise &lt;script&gt;, ou un attribut onXxx D'UNE
+// VRAIE BALISE (pas un « onerror » qui traîne dans du texte encodé).
+function executerait(html) {
+  var i = 0, n = html.length;
+  while (i &lt; n) {
+    if (html[i] === '&lt;' &amp;&amp; /[a-z\/]/i.test(html[i + 1] || '')) {
+      var j = i + 1;
+      if (html[j] === '/') j++;
+      var name = '';
+      while (j &lt; n &amp;&amp; /[a-z0-9]/i.test(html[j])) { name += html[j]; j++; }
+      var attrs = [];
+      while (j &lt; n &amp;&amp; html[j] !== '&gt;') {
+        if (/\s/.test(html[j])) { j++; continue; }
+        var an = '';
+        while (j &lt; n &amp;&amp; /[a-z0-9\-]/i.test(html[j])) { an += html[j]; j++; }
+        while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+        if (html[j] === '=') {
+          j++;
+          while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+          if (html[j] === '"') { j++; while (j &lt; n &amp;&amp; html[j] !== '"') j++; j++; }
+          else if (html[j] === "'") { j++; while (j &lt; n &amp;&amp; html[j] !== "'") j++; j++; }
+          else { while (j &lt; n &amp;&amp; !/[\s&gt;]/.test(html[j])) j++; }
+        }
+        if (an) attrs.push(an.toLowerCase());
+      }
+      if (name.toLowerCase() === 'script') return true;
+      for (var k = 0; k &lt; attrs.length; k++) if (/^on\w+$/.test(attrs[k])) return true;
+      i = j + 1;
+    } else i++;
+  }
+  return false;
+}
+
+// Quatre contextes, chacun avec la charge la plus adaptée pour en sortir.
+var cas = [
+  { nom: 'corps de page', charge: '&lt;img src=x onerror=MARQUE&gt;', insere: function (e) { return '&lt;p&gt;' + e + '&lt;/p&gt;'; } },
+  { nom: 'attribut entre guillemets', charge: 'x" onerror="MARQUE', insere: function (e) { return '&lt;img src="' + e + '"&gt;'; } },
+  { nom: 'attribut entre apostrophes', charge: "x' onerror='MARQUE", insere: function (e) { return "&lt;img src='" + e + "'&gt;"; } },
+  { nom: 'attribut SANS guillemets', charge: 'x onerror=MARQUE', insere: function (e) { return '&lt;img src=' + e + '&gt;'; } },
+];
+
+var protege = 0;
+console.log('contexte'.padEnd(30) + 'après encodage HTML');
+cas.forEach(function (c) {
+  var danger = executerait(c.insere(encoder(c.charge)));
+  if (!danger) protege++;
+  console.log(c.nom.padEnd(30) + (danger ? 'EXÉCUTE ENCORE' : 'neutralisé'));
+});
+console.log('');
+console.log('l\'encodeur HTML protège ' + protege + ' des ' + cas.length + ' contextes');
+console.log('le seul resté ouvert : l\'attribut SANS guillemets — la charge n\'a');
+console.log('ni « &lt; » ni guillemet à encoder, l\'espace et le = suffisent à ajouter onerror');</code></pre></figure>
+<figure class="code-block" data-file="contexte.txt"><pre><code class="language-plaintext">contexte                      après encodage HTML
+corps de page                 neutralisé
+attribut entre guillemets     neutralisé
+attribut entre apostrophes    neutralisé
+attribut SANS guillemets      EXÉCUTE ENCORE
+
+l'encodeur HTML protège 3 des 4 contextes
+le seul resté ouvert : l'attribut SANS guillemets — la charge n'a
+ni « &lt; » ni guillemet à encoder, l'espace et le = suffisent à ajouter onerror</code></pre></figure>
+<p>Trois contextes sur quatre sont protégés&nbsp;; le quatrième ne l'est pas. Dans un attribut <strong>sans guillemets</strong> — <code>&lt;img src=<u>ici</u>&gt;</code> —, la charge <code>x onerror=MARQUE</code> ne contient <em>ni</em> chevron <em>ni</em> guillemet&nbsp;: l'encodeur, qui ne touche qu'à ces cinq caractères, n'a rien à faire, et la charge passe intacte. Une fois insérée, l'espace referme la valeur de <code>src</code> et <code>onerror=</code> devient un attribut à part entière. Le correctif n'est pas «&nbsp;encoder plus&nbsp;»&nbsp;: c'est <strong>mettre des guillemets</strong> autour de l'attribut (tu le vérifieras à l'exercice&nbsp;3), et, mieux, utiliser une bibliothèque de gabarits qui encode automatiquement selon le contexte. Le principe général&nbsp;: <em>l'échappement correct dépend de l'endroit où la donnée est écrite</em>, et confier ce choix à la main mène tôt ou tard à l'oubli d'un cas.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="Le même encodage HTML face à quatre contextes d'insertion. Dans le corps de page, il neutralise. Dans un attribut entre guillemets doubles, il neutralise. Dans un attribut entre apostrophes, il neutralise. Dans un attribut sans guillemets, il échoue : la charge n'a ni chevron ni guillemet à encoder, un espace et un signe égal suffisent à ajouter un gestionnaire onerror.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un seul encodeur, quatre contextes</text>
+    <rect class="d-box" x="24" y="40" width="288" height="34" rx="5" /><text class="d-text" x="40" y="62" text-anchor="start" font-size="11">corps de page → neutralisé</text>
+    <rect class="d-box" x="24" y="82" width="288" height="34" rx="5" /><text class="d-text" x="40" y="104" text-anchor="start" font-size="11">attribut « … » → neutralisé</text>
+    <rect class="d-box" x="24" y="124" width="288" height="34" rx="5" /><text class="d-text" x="40" y="146" text-anchor="start" font-size="11">attribut '…' → neutralisé</text>
+    <rect class="d-accent" x="328" y="82" width="288" height="34" rx="5" /><text class="d-text" x="344" y="104" text-anchor="start" font-size="11">attribut sans guillemets → EXÉCUTE</text>
+    <text class="d-mut" x="472" y="150" text-anchor="middle" font-size="9">3 protégés sur 4</text>
+    <text class="d-mut" x="472" y="176" text-anchor="middle" font-size="8.5">le 4ᵉ se corrige en… mettant des guillemets</text>
+  </svg>
+  <figcaption>Encoder ne suffit pas si l'on ignore <em>où</em> la donnée atterrit. Un attribut sans guillemets se referme sur un espace&nbsp;: la charge n'a rien à faire encoder.</figcaption>
+</figure>
+
+<h2>Trois portées, trois dangers</h2>
+<p>Nous avons dit que les trois familles diffèrent par leur portée. Chiffrons-le, parce que c'est ce qui décide de la gravité dans un rapport. Le programme compare, sur une page d'avis fréquentée, combien de sessions chaque variante atteint.</p>
+<figure class="code-block" data-file="portee.js"><pre><code class="language-javascript">// Trois familles de XSS, une même exécution mais des PORTÉES très différentes.
+// On ne diffuse rien : on compare, sur une page fictive de « Rideau », combien de
+// sessions chaque variante atteint. Tout est simulé par des nombres.
+
+var VISITEURS_JOUR = 850;      // sessions qui ouvrent la page « avis clients » en un jour
+
+// RÉFLÉCHI : la charge est dans un lien piégé. Il faut que la victime CLIQUE.
+// On envoie le lien à tout le monde, mais seule une fraction clique.
+var LIENS_ENVOYES = 850;
+var TAUX_CLIC = 0.08;          // 8 % — généreux pour une campagne d'hameçonnage
+var reflechi = Math.round(LIENS_ENVOYES * TAUX_CLIC);
+
+// STOCKÉ : la charge est enregistrée une fois (un avis), puis servie à CHAQUE
+// visiteur de la page, sans aucune action de sa part.
+var stocke = VISITEURS_JOUR;
+
+// DOM : la charge n'atteint jamais le serveur ; elle vit dans un paramètre d'URL
+// que le code de la page recopie dans le document. Même portée qu'un réfléchi,
+// mais invisible côté serveur (rien dans les journaux d'accès applicatifs).
+var dom = reflechi;
+
+console.log('page « avis clients » — ' + VISITEURS_JOUR + ' sessions par jour');
+console.log('');
+console.log('RÉFLÉCHI : ' + LIENS_ENVOYES + ' liens envoyés × ' + (TAUX_CLIC * 100) + ' % de clic = ' + reflechi + ' sessions atteintes');
+console.log('STOCKÉ   : 1 avis déposé, servi à tous = ' + stocke + ' sessions atteintes');
+console.log('DOM      : ' + dom + ' sessions (comme le réfléchi), mais 0 trace côté serveur');
+console.log('');
+console.log('le stocké atteint ' + (stocke / reflechi).toFixed(1) + ' fois plus de sessions que le réfléchi,');
+console.log('pour ' + (LIENS_ENVOYES) + ' fois moins d\'effort (1 dépôt contre ' + LIENS_ENVOYES + ' envois)');</code></pre></figure>
+<figure class="code-block" data-file="portee.txt"><pre><code class="language-plaintext">page « avis clients » — 850 sessions par jour
+
+RÉFLÉCHI : 850 liens envoyés × 8 % de clic = 68 sessions atteintes
+STOCKÉ   : 1 avis déposé, servi à tous = 850 sessions atteintes
+DOM      : 68 sessions (comme le réfléchi), mais 0 trace côté serveur
+
+le stocké atteint 12.5 fois plus de sessions que le réfléchi,
+pour 850 fois moins d'effort (1 dépôt contre 850 envois)</code></pre></figure>
+<p>Le contraste est brutal. Le XSS <strong>réfléchi</strong> exige un clic&nbsp;: on envoie 850&nbsp;liens piégés, 8&nbsp;% cliquent, <strong>68&nbsp;sessions</strong> touchées — et il a fallu diffuser 850&nbsp;liens, ce qui est bruyant et laisse des traces partout. Le XSS <strong>stocké</strong> ne demande rien à personne&nbsp;: un seul avis déposé, servi ensuite à chaque visiteur, <strong>850&nbsp;sessions</strong> touchées — <strong>12,5&nbsp;fois plus</strong>, pour <strong>850&nbsp;fois moins d'effort</strong>. C'est pourquoi le stocké est, de loin, la variante la plus grave&nbsp;: le rapport coût/portée est écrasant. Le XSS <strong>DOM</strong>, enfin, atteint autant de monde que le réfléchi mais <strong>ne laisse aucune trace côté serveur</strong>&nbsp;: la charge n'arrive jamais jusqu'à lui, elle est assemblée dans le navigateur&nbsp;; les journaux d'accès applicatifs sont vierges, ce qui complique la détection.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le filet de sécurité qui limite les dégâts</p><p>Même avec une faille XSS, tout n'est pas perdu si le site a posé une <strong>politique de sécurité du contenu</strong> (<em>Content-Security-Policy</em>) et marqué ses cookies de session <code>HttpOnly</code>. La première interdit au navigateur d'exécuter du script non prévu&nbsp;; le second empêche le JavaScript de lire le cookie de session, donc de le voler. Ce sont des <em>défenses en profondeur</em>&nbsp;: elles ne corrigent pas la faille (seul l'encodage le fait), mais transforment une compromission complète en gêne. Le cours <a href="../securite/lecon-04.html">Sécurité applicative</a> montre comment les poser.</p></div></div>
+
+<h2>Ce que le défenseur en retient</h2>
+<p>Le XSS se ferme par un geste simple, appliqué sans exception&nbsp;: <strong>encoder chaque donnée au moment où on l'écrit dans une page, selon le contexte exact</strong> où elle atterrit. Tout le reste est du colmatage. Les trois erreurs à ne plus commettre&nbsp;:</p>
+<ul>
+  <li><strong>Croire qu'un XSS est une balise <code>&lt;script&gt;</code>.</strong> C'est l'un des vecteurs, pas le seul&nbsp;: 8&nbsp;charges sur 10&nbsp;s'en passent. Retirer <code>&lt;script&gt;</code> donne une fausse assurance.</li>
+  <li><strong>Nettoyer à l'entrée plutôt qu'encoder à la sortie.</strong> La donnée doit être stockée brute et encodée au dernier moment, là où l'on connaît son contexte.</li>
+  <li><strong>Encoder sans regarder le contexte.</strong> Le bon échappement d'un corps de page n'est pas celui d'un attribut, d'une URL ou d'un fragment JavaScript. Une bibliothèque de gabarits qui encode par contexte évite l'oubli.</li>
+</ul>
+<p>Et, comme toujours, on n'a attaqué personne&nbsp;: on a mesuré, dans un bac à sable, ce qui exécute et ce qui ne s'exécute pas, et à combien de sessions chaque variante donne accès. Ces nombres sont ce qui fait la différence, dans un rapport, entre «&nbsp;le champ d'avis est vulnérable au XSS&nbsp;» et «&nbsp;un avis piégé s'exécute chez les 850&nbsp;visiteurs quotidiens de la page, cookies de session compris faute de <code>HttpOnly</code>&nbsp;».</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg><div class="callout__body"><ul>
+<li><strong>Bloquer le mot «&nbsp;script&nbsp;» et se croire couvert.</strong> Les gestionnaires d'événements, les URL <code>javascript:</code>, les <code>&lt;svg onload&gt;</code> passent tous. 8&nbsp;sur 10 dans la mesure.</li>
+<li><strong>Encoder à l'entrée «&nbsp;une bonne fois&nbsp;».</strong> On corrompt la donnée pour les autres usages et on rate le contexte réel d'affichage. On encode à la sortie.</li>
+<li><strong>Oublier les attributs sans guillemets.</strong> Ils se referment sur un espace&nbsp;: un encodeur des cinq caractères n'y peut rien. Toujours mettre des guillemets.</li>
+<li><strong>Sous-estimer le stocké.</strong> Un dépôt unique touche tout le monde, sans clic. C'est la variante la plus grave, à traiter en priorité.</li>
+<li><strong>Se croire à l'abri parce que «&nbsp;rien n'arrive au serveur&nbsp;».</strong> Le XSS DOM se joue entièrement dans le navigateur&nbsp;: les journaux serveur ne le voient pas.</li>
+</ul></div></div>
+
+<h2>Cas réel</h2>
+<p>Le 4&nbsp;octobre&nbsp;2005, un développeur de 19&nbsp;ans, Samy Kamkar, dépose sur son profil du réseau social <strong>MySpace</strong> un petit fragment de code exploitant un XSS <strong>stocké</strong>. Le code fait deux choses&nbsp;: il ajoute son auteur à la liste d'amis de quiconque consulte le profil, et il se <em>recopie</em> sur le profil de ce visiteur. Chaque profil contaminé contamine à son tour ses visiteurs&nbsp;: c'est un <strong>ver</strong>, qui se propage tout seul. En moins de <strong>vingt heures</strong>, plus d'<strong>un million</strong> de profils portent la charge et la phrase «&nbsp;<em>but most of all, samy is my hero</em>&nbsp;». MySpace doit fermer le site le temps de nettoyer.</p>
+<p>Ce cas dit deux choses que nos mesures annonçaient. D'abord, la <strong>portée du stocké</strong>&nbsp;: un seul dépôt, une propagation exponentielle, sans qu'aucune victime ne clique sur quoi que ce soit — exactement le rapport coût/portée écrasant du programme. Ensuite, que le XSS n'est pas une curiosité théorique&nbsp;: c'est resté, année après année, l'une des failles web les plus répandues, parce que chaque page qui affiche une donnée d'utilisateur est un endroit où l'oublier une fois suffit. Samy Kamkar, lui, a été poursuivi&nbsp;; son ver, écrit «&nbsp;pour voir&nbsp;», reste l'illustration la plus nette de ce qu'un champ de texte mal encodé peut déclencher.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Ce que le XSS exécute, où, et ce qui le ferme — mémo de la leçon 5</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Qui est la victime</td><td>Pas le serveur&nbsp;: un <em>autre utilisateur</em>. Le code s'exécute dans son navigateur, avec sa session.</td></tr>
+      <tr><td>Le vecteur n'est pas que <code>&lt;script&gt;</code></td><td>Tout attribut <code>on…</code> porte du code. Retirer <code>&lt;script&gt;</code> laisse <strong>8</strong>&nbsp;charges sur 10&nbsp;s'exécuter.</td></tr>
+      <tr><td>La parade</td><td>Encoder à la SORTIE&nbsp;: <code>&lt;</code> devient <code>&amp;lt;</code>, plus aucune balise. Les <strong>10</strong>&nbsp;charges neutralisées.</td></tr>
+      <tr><td>Le contexte compte</td><td>Le même encodeur protège <strong>3</strong>&nbsp;contextes sur 4&nbsp;; l'attribut sans guillemets échoue. Mettre des guillemets&nbsp;: <strong>4/4</strong>.</td></tr>
+      <tr><td>Réfléchi</td><td>Lien piégé, clic requis&nbsp;: 68&nbsp;sessions pour 850&nbsp;liens. Bruyant, traçable.</td></tr>
+      <tr><td>Stocké</td><td>Déposé une fois, servi à tous&nbsp;: 850&nbsp;sessions, sans clic. <strong>La variante la plus grave.</strong></td></tr>
+      <tr><td>DOM</td><td>Assemblé dans le navigateur depuis l'adresse&nbsp;: 0&nbsp;trace côté serveur.</td></tr>
+      <tr><td>Défense en profondeur</td><td>CSP + cookies <code>HttpOnly</code>&nbsp;: ne corrigent pas la faille, mais limitent le vol de session.</td></tr>
+      <tr><td>Cas réel</td><td>Ver Samy (2005)&nbsp;: XSS stocké auto-propageant, &gt;&nbsp;1&nbsp;million de profils en 20&nbsp;heures.</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>XSS (cross-site scripting)</dt><dd>Faille où une donnée non encodée est interprétée comme du HTML/JavaScript par le navigateur d'un utilisateur&nbsp;: le code s'exécute chez lui, pas sur le serveur.</dd>
+<dt>XSS réfléchi</dt><dd>La charge est dans un lien piégé&nbsp;; le serveur la renvoie dans sa réponse à la victime, qui doit avoir cliqué. Portée&nbsp;: limitée aux personnes qui cliquent.</dd>
+<dt>XSS stocké</dt><dd>La charge est enregistrée sur le serveur puis servie à chaque visiteur, sans action de leur part. La variante la plus grave, car elle touche tout le monde d'un seul dépôt.</dd>
+<dt>XSS DOM</dt><dd>La charge n'atteint jamais le serveur&nbsp;: le code de la page la recopie depuis l'adresse (ou un autre élément) dans le document. Invisible dans les journaux serveur.</dd>
+<dt>Gestionnaire d'événement</dt><dd>Attribut HTML de la forme <code>on…</code> (<code>onerror</code>, <code>onload</code>, <code>onclick</code>…) dont la valeur est du JavaScript exécuté quand l'événement survient. Un vecteur XSS sans balise <code>&lt;script&gt;</code>.</dd>
+<dt>Encodage à la sortie</dt><dd>Remplacement, au moment d'insérer une donnée dans une page, des caractères qui donnent son sens au HTML (<code>&lt; &gt; &amp; " '</code>) par leurs entités. La parade de référence contre le XSS.</dd>
+<dt>Contexte d'insertion</dt><dd>L'endroit exact où une donnée est écrite&nbsp;: corps de page, attribut, URL, fragment JavaScript. Chacun a ses règles d'échappement&nbsp;; le bon encodage en dépend.</dd>
+<dt>Content-Security-Policy (CSP)</dt><dd>En-tête HTTP qui restreint les sources de script qu'un navigateur accepte d'exécuter&nbsp;: une défense en profondeur qui limite l'effet d'un XSS sans le corriger.</dd>
+<dt>Cookie HttpOnly</dt><dd>Cookie qu'un attribut interdit au JavaScript de lire&nbsp;: même en cas de XSS, le cookie de session ne peut pas être exfiltré par le script injecté.</dd>
+<dt>Ver (worm)</dt><dd>Code qui se recopie tout seul de proche en proche. Un XSS stocké auto-propageant, comme le ver Samy, en est un&nbsp;: chaque victime devient un point de contamination.</dd>
+<dt>Bac à sable (sandbox)</dt><dd>Environnement d'exécution isolé, sans accès à la page hôte ni au réseau. Un lieu sûr pour observer une charge sans qu'elle puisse nuire, comme l'aperçu de cette leçon.</dd>
+<dt>Assainissement (sanitisation)</dt><dd>Nettoyage d'une entrée pour en retirer le dangereux. Utile pour du HTML riche légitime, mais insuffisant seul&nbsp;: une liste noire oublie toujours un vecteur.</dd>
+<dt>Vecteur d'exécution</dt><dd>Moyen par lequel un fragment injecté déclenche du code&nbsp;: balise <code>&lt;script&gt;</code>, gestionnaire <code>on…</code>, URL <code>javascript:</code>, attribut <code>srcdoc</code>. Il en existe des dizaines, d'où l'échec des listes noires.</dd>
+<dt>Charge utile (payload)</dt><dd>Le fragment de HTML ou de JavaScript qu'un attaquant fait exécuter chez la victime. Neutre ici (un simple affichage), il pourrait ailleurs voler une session ou agir au nom de l'utilisateur.</dd>
+<dt>Vol de session</dt><dd>Récupération du cookie de session d'une victime, souvent via un XSS, pour se faire passer pour elle. L'attribut <code>HttpOnly</code> l'empêche en interdisant au script de lire le cookie.</dd>
+<dt>Gabarit (templating)</dt><dd>Système qui insère des données dans un modèle de page. Un bon moteur de gabarit encode automatiquement selon le contexte, ce qui ferme le XSS sans effort manuel.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<p>Le XSS déplace la victime&nbsp;: du serveur vers les autres utilisateurs. On l'a vu s'exécuter sans balise <code>&lt;script&gt;</code>, résister à une liste noire, dépendre du contexte, et frapper d'autant plus fort qu'il est stocké. La parade tient en une phrase&nbsp;: encoder à la sortie, selon le contexte. Vérifie ta compréhension&nbsp;:</p>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"L'aperçu de la leçon s'exécute alors qu'il ne contient aucune balise « script ». Qu'est-ce qui a déclenché le code ?","a":["Le navigateur exécute toujours le contenu d'un attribut « src » quand l'image se charge","L'attribut onerror de l'image : l'adresse étant introuvable, le navigateur a déclenché son gestionnaire d'erreur, qui contenait du JavaScript","Le bac à sable exécute par défaut tout le HTML qu'on lui donne, script ou non","La balise img est interprétée comme du script quand son adresse est invalide"],"correct":1,"explain":"L'image pointe une adresse qui n'existe pas ; le navigateur déclenche alors le gestionnaire onerror, dont la valeur est du JavaScript. Aucune balise script n'est nécessaire : c'est pourquoi retirer « <script> » ne protège de rien. Il y a des dizaines d'attributs on… qui portent du code."},
+  {"q":"Retirer la balise « script » laisse 8 charges sur 10 s'exécuter, l'encodage à la sortie 0. Pourquoi l'encodage les neutralise-t-il toutes ?","a":["Parce qu'il reconnaît et supprime chaque gestionnaire d'événement dangereux","Parce qu'il remplace « < » par « &lt; », si bien qu'il n'y a plus aucune balise à interpréter","Parce qu'il n'accepte que les caractères d'une liste blanche de lettres et de chiffres","Parce qu'il s'exécute dans le navigateur de la victime et bloque le script à la source"],"correct":1,"explain":"Encoder transforme « < » en « &lt; » : le navigateur n'y voit plus l'ouverture d'une balise, donc ni script, ni img, ni gestionnaire — juste du texte affiché tel quel. On ne devine pas le danger, on retire au navigateur la capacité de lire l'entrée comme du HTML."},
+  {"q":"Le même encodeur HTML protège 3 contextes sur 4 mais échoue dans un attribut sans guillemets. Pourquoi cet échec ?","a":["L'encodeur ne fonctionne que lorsque la donnée est placée dans le corps de la page, et jamais à l'intérieur d'un attribut d'une balise","Dans un attribut sans guillemets, la charge « x onerror=… » n'a ni chevron ni guillemet à encoder : l'espace referme la valeur et ajoute un gestionnaire","Les attributs écrits sans guillemets désactivent purement et simplement l'encodage HTML appliqué par le navigateur à cet endroit","L'encodeur oublie systématiquement d'encoder le signe égal, qui est justement le caractère servant à ouvrir un gestionnaire d'événement"],"correct":1,"explain":"L'encodeur ne touche qu'à « < > & \" ' ». Une charge comme « x onerror=MARQUE » n'en contient aucun, donc elle passe intacte. Sans guillemets autour de l'attribut, l'espace termine la valeur de src et « onerror= » devient un attribut. Le correctif est de mettre des guillemets — l'échappement dépend du contexte."},
+  {"q":"Un XSS stocké touche 850 sessions pour un dépôt, un réfléchi 68 pour 850 liens envoyés. Qu'est-ce qui rend le stocké si dangereux ?","a":["Il s'exécute plus vite dans le navigateur que le réfléchi","Il ne peut pas être bloqué par une politique de sécurité du contenu","Un seul dépôt est servi à tous les visiteurs sans qu'aucun ait à cliquer : portée maximale pour un effort minimal","Il laisse moins de traces dans les journaux que le DOM"],"correct":2,"explain":"Le réfléchi exige un clic par victime et la diffusion bruyante de 850 liens pour 68 sessions ; le stocké est déposé une fois et servi passivement à tout le monde, soit 850 sessions. 12,5 fois plus de portée pour 850 fois moins d'effort : c'est pourquoi on le traite en priorité."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["encoder à la sortie","l'encodage à la sortie","encodage à la sortie","encoder a la sortie","l'encodage de sortie","encodage de sortie","encoder en sortie","échapper à la sortie","l'échappement à la sortie","echappement a la sortie","encoder au moment de l'affichage"],"placeholder":"le geste qui neutralise le XSS quelle que soit la balise employée","hints":["Ce n'est pas un filtre de l'entrée : c'est un traitement au moment d'écrire la donnée dans la page.","Il remplace « < » par « &lt; » : sans chevron ouvrant, plus aucune balise, donc plus aucun vecteur.","Trois mots : encoder à la ... . Le programme a montré qu'il neutralise 10 charges sur 10."],"link":{"href":"../securite/lecon-04.html","label":"Revoir « La parade : encoder à la sortie »"}},
+  {"type":"code","run":{"expect":"5 des 10 charges s'exécutent encore"},"placeholder":"le nombre de charges qui passent si la liste noire retire aussi le mot onerror","hints":["Reprends l'analyseur et les 10 charges de la leçon. La liste noire retire maintenant la balise script ET toute occurrence du mot « onerror » (avec /onerror/gi).","Les charges qui n'utilisent pas onerror — onload, onfocus, ontoggle, onstart — continuent de s'exécuter.","Affiche exactement : le nombre, puis « des 10 charges s'exécutent encore »."],"link":{"href":"lecon-05.html","label":"Revoir « Pourquoi retirer la balise script ne protège de rien »"}},
+  {"type":"code","run":{"expect":"avec les guillemets, l'encodeur protège 4 des 4 contextes"},"placeholder":"le nombre de contextes protégés si l'on met des guillemets à l'attribut","hints":["Reprends les 4 contextes de la leçon, mais écris le dernier attribut ENTRE GUILLEMETS : <img src=\"…\">.","Une fois l'attribut entre guillemets, la charge doit contenir un guillemet pour en sortir — et l'encodeur le transforme en &quot;.","Affiche exactement : « avec les guillemets, l'encodeur protège 4 des 4 contextes »."],"link":{"href":"lecon-05.html","label":"Revoir « L'encodage dépend du contexte »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un site tente d'empêcher le XSS en supprimant de chaque avis le mot «&nbsp;script&nbsp;». <strong>Quel geste</strong> ferme la faille quelle que soit la balise ou l'attribut employé — parce qu'il ne cherche pas à reconnaître le danger&nbsp;? Nomme-le, et explique en une phrase pourquoi il neutralise même une charge qu'on n'avait jamais vue.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo1.txt"><pre><code class="language-plaintext">Le geste est l'ENCODAGE À LA SORTIE (échappement HTML).
+
+Le mécanisme, en une phrase : au moment d'écrire la donnée dans
+la page, on remplace les cinq caractères qui donnent son sens au
+HTML — &lt; &gt; &amp; guillemet apostrophe — par leurs entités
+(&amp;lt; &amp;gt; &amp;amp; …).
+
+Pourquoi il neutralise l'inconnu :
+  · un « &lt; » encodé n'ouvre plus AUCUNE balise ;
+  · sans balise, il n'y a ni &lt;script&gt;, ni &lt;img onerror&gt;,
+    ni &lt;svg onload&gt; — pas même une charge jamais rencontrée ;
+  · on ne devine pas le danger, on retire au navigateur la
+    capacité de lire l'entrée comme du HTML.
+
+Mesuré dans la leçon : liste noire (retire &lt;script&gt;) = 8 charges
+sur 10 s'exécutent encore ; encodage à la sortie = 0 sur 10.
+
+Nuance : on encode à la SORTIE, pas à l'entrée, et selon le
+CONTEXTE d'insertion (corps, attribut, URL…).</code></pre></figure>
+<p>Retiens la formule&nbsp;: <em>on ne reconnaît pas le mal, on retire le pouvoir d'exécuter</em>. Le cours <a href="../securite/lecon-04.html">Sécurité applicative</a> donne le code côté défense.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Une équipe «&nbsp;renforce&nbsp;» sa liste noire&nbsp;: en plus de <code>&lt;script&gt;</code>, elle retire désormais toute occurrence du mot <code>onerror</code>. En reprenant l'analyseur et les 10&nbsp;charges de la leçon, écris le programme qui recompte combien s'exécutent encore. La liste noire est-elle enfin sûre&nbsp;?</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo2.js"><pre><code class="language-javascript">// Exercice 2 — l'équipe « améliore » sa liste noire : elle retire &lt;script&gt; ET
+// toute occurrence du mot « onerror ». Combien des 10 charges s'exécutent encore ?
+function executerait(html) {
+  var i = 0, n = html.length;
+  while (i &lt; n) {
+    if (html[i] === '&lt;' &amp;&amp; /[a-z\/]/i.test(html[i + 1] || '')) {
+      var j = i + 1;
+      if (html[j] === '/') j++;
+      var name = '';
+      while (j &lt; n &amp;&amp; /[a-z0-9]/i.test(html[j])) { name += html[j]; j++; }
+      var attrs = [];
+      while (j &lt; n &amp;&amp; html[j] !== '&gt;') {
+        if (/\s/.test(html[j])) { j++; continue; }
+        var an = '';
+        while (j &lt; n &amp;&amp; /[a-z0-9\-]/i.test(html[j])) { an += html[j]; j++; }
+        while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+        if (html[j] === '=') {
+          j++;
+          while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+          if (html[j] === '"') { j++; while (j &lt; n &amp;&amp; html[j] !== '"') j++; j++; }
+          else if (html[j] === "'") { j++; while (j &lt; n &amp;&amp; html[j] !== "'") j++; j++; }
+          else { while (j &lt; n &amp;&amp; !/[\s&gt;]/.test(html[j])) j++; }
+        }
+        if (an) attrs.push(an.toLowerCase());
+      }
+      if (name.toLowerCase() === 'script') return true;
+      for (var k = 0; k &lt; attrs.length; k++) if (/^on\w+$/.test(attrs[k])) return true;
+      i = j + 1;
+    } else i++;
+  }
+  return false;
+}
+function listeNoire2(html) {
+  return html.replace(/&lt;script[\s\S]*?&lt;\/script&gt;/gi, '').replace(/onerror/gi, '');
+}
+var charges = [
+  '&lt;script&gt;MARQUE&lt;/script&gt;', '&lt;SCRIPT&gt;MARQUE&lt;/SCRIPT&gt;', '&lt;img src=x onerror=MARQUE&gt;',
+  '&lt;svg onload=MARQUE&gt;', '&lt;body onload=MARQUE&gt;', '&lt;input autofocus onfocus=MARQUE&gt;',
+  '&lt;details open ontoggle=MARQUE&gt;', '&lt;img src=x oNeRrOr=MARQUE&gt;',
+  '&lt;marquee onstart=MARQUE&gt;défile&lt;/marquee&gt;', '&lt;video&gt;&lt;source onerror=MARQUE&gt;&lt;/video&gt;',
+];
+var passent = 0;
+charges.forEach(function (c) { if (executerait(listeNoire2(c))) passent++; });
+console.log(passent + ' des 10 charges s\'exécutent encore');</code></pre></figure>
+<figure class="code-block" data-file="solution-exo2.txt"><pre><code class="language-plaintext">5 des 10 charges s'exécutent encore</code></pre></figure>
+<p>Non&nbsp;: <strong>5&nbsp;charges sur 10</strong> passent toujours. En retirant <code>onerror</code>, on a neutralisé les trois charges qui l'employaient (dont la variante <code>oNeRrOr</code>, car le remplacement est insensible à la casse) et les deux <code>&lt;script&gt;</code>&nbsp;; mais <code>onload</code>, <code>onfocus</code>, <code>ontoggle</code> et <code>onstart</code> restent. On pourrait ajouter chaque nom à la liste noire sans jamais finir&nbsp;: il existe des dizaines de gestionnaires. C'est, encore, la démonstration qu'une liste noire ne converge pas — là où l'encodage fermait tout d'un coup.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On corrige le seul contexte qui restait ouvert&nbsp;: on met des <strong>guillemets</strong> autour de la valeur de l'attribut, au lieu de la laisser nue. En reprenant les 4&nbsp;contextes de la leçon avec cette correction, écris le programme qui recompte combien de contextes l'encodeur protège désormais. Suffit-il&nbsp;?</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo3.js"><pre><code class="language-javascript">// Exercice 3 — on corrige le seul contexte qui restait ouvert : on met des
+// guillemets autour de la valeur de l'attribut. L'encodeur HTML protège-t-il
+// alors les quatre contextes ?
+function encoder(v) {
+  return v.replace(/&amp;/g, '&amp;amp;').replace(/&lt;/g, '&amp;lt;').replace(/&gt;/g, '&amp;gt;')
+          .replace(/"/g, '&amp;quot;').replace(/'/g, '&amp;#39;');
+}
+function executerait(html) {
+  var i = 0, n = html.length;
+  while (i &lt; n) {
+    if (html[i] === '&lt;' &amp;&amp; /[a-z\/]/i.test(html[i + 1] || '')) {
+      var j = i + 1;
+      if (html[j] === '/') j++;
+      var name = '';
+      while (j &lt; n &amp;&amp; /[a-z0-9]/i.test(html[j])) { name += html[j]; j++; }
+      var attrs = [];
+      while (j &lt; n &amp;&amp; html[j] !== '&gt;') {
+        if (/\s/.test(html[j])) { j++; continue; }
+        var an = '';
+        while (j &lt; n &amp;&amp; /[a-z0-9\-]/i.test(html[j])) { an += html[j]; j++; }
+        while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+        if (html[j] === '=') {
+          j++;
+          while (j &lt; n &amp;&amp; /\s/.test(html[j])) j++;
+          if (html[j] === '"') { j++; while (j &lt; n &amp;&amp; html[j] !== '"') j++; j++; }
+          else if (html[j] === "'") { j++; while (j &lt; n &amp;&amp; html[j] !== "'") j++; j++; }
+          else { while (j &lt; n &amp;&amp; !/[\s&gt;]/.test(html[j])) j++; }
+        }
+        if (an) attrs.push(an.toLowerCase());
+      }
+      if (name.toLowerCase() === 'script') return true;
+      for (var k = 0; k &lt; attrs.length; k++) if (/^on\w+$/.test(attrs[k])) return true;
+      i = j + 1;
+    } else i++;
+  }
+  return false;
+}
+// Les quatre contextes, mais le dernier attribut est désormais ENTRE GUILLEMETS.
+var cas = [
+  { charge: '&lt;img src=x onerror=MARQUE&gt;', insere: function (e) { return '&lt;p&gt;' + e + '&lt;/p&gt;'; } },
+  { charge: 'x" onerror="MARQUE', insere: function (e) { return '&lt;img src="' + e + '"&gt;'; } },
+  { charge: "x' onerror='MARQUE", insere: function (e) { return "&lt;img src='" + e + "'&gt;"; } },
+  { charge: 'x onerror=MARQUE', insere: function (e) { return '&lt;img src="' + e + '"&gt;'; } }, // corrigé : guillemets
+];
+var protege = 0;
+cas.forEach(function (c) { if (!executerait(c.insere(encoder(c.charge)))) protege++; });
+console.log('avec les guillemets, l\'encodeur protège ' + protege + ' des 4 contextes');</code></pre></figure>
+<figure class="code-block" data-file="solution-exo3.txt"><pre><code class="language-plaintext">avec les guillemets, l'encodeur protège 4 des 4 contextes</code></pre></figure>
+<p>Oui, cette fois&nbsp;: <strong>4&nbsp;contextes sur 4</strong>. En entourant l'attribut de guillemets, on force la charge à contenir un guillemet pour en sortir — et l'encodeur le transforme aussitôt en <code>&amp;quot;</code>, si bien qu'elle reste prisonnière de la valeur. La leçon de fond&nbsp;: encoder <em>et</em> respecter les règles du contexte (ici, toujours guillemeter les attributs) vont de pair. L'un sans l'autre laisse une porte, comme l'attribut nu du départ.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-markup.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
