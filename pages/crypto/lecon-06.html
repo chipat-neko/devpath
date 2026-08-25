@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Certificats et chaîne de confiance, jusqu’à TLS — Leçon 06 · Cours Cryptographie appliquée — Syntaxe</title>
+    <meta name="description" content="Certificats X.509 : une déclaration signée fabriquée et attaquée, chaîne de confiance et magasin racine, vérification du nom d'hôte, révocation et durées de validité, puis une poignée de main TLS 1.3 complète et le rejeu du 0-RTT. Cours Cryptographie appliquée, module 2." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="crypto" data-lesson="lecon-06.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cryptographie appliquée</a></li>
+            <li aria-current="page">Leçon 06</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Les assembler</p>
+              <h1 class="lesson-header__title">Certificats et chaîne de confiance, jusqu’à TLS</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 1 à 5 de ce cours</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Fabriquer un certificat, le vérifier, et mesurer ce que sa signature couvre</li>
+                  <li>Suivre une chaîne jusqu’à une racine du magasin, et reconnaître cinq façons d’essayer de la casser</li>
+                  <li>Écrire la vérification du nom d’hôte, celle que les clients maison oublient</li>
+                  <li>Situer ce que la révocation protège réellement, et pourquoi la validité se raccourcit</li>
+                  <li>Assembler une poignée de main TLS 1.3 et lui opposer cinq tentatives</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Les deux leçons précédentes ont posé chacune une pièce, et laissé la même question ouverte. La signature prouve qu'un message vient du détenteur d'une clé privée — <em>mais à qui appartient cette clé&nbsp;?</em> L'échange de clés protège d'un espion passif à condition d'authentifier les parts — <em>mais avec quelle clé publique, obtenue d'où&nbsp;?</em></p>
+<p>Cette leçon répond, et la réponse est moins mathématique que les précédentes&nbsp;: c'est une construction sociale, adossée à quelques signatures. Nous allons l'écrire, la vérifier, l'attaquer, puis assembler une poignée de main TLS&nbsp;1.3 complète avec tout ce que le module a produit.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord ce qu'est un certificat, en le fabriquant&nbsp;: une déclaration signée, et rien de plus. Ensuite d'où vient la confiance — d'un magasin installé avec le système, jamais du réseau — et cinq façons d'essayer de casser une chaîne, qui échouent à trois endroits différents. Puis la vérification que l'on oublie le plus souvent, celle du nom, et le problème que personne n'a vraiment résolu, la révocation. Enfin la poignée de main complète, avec quatre attaques jouées contre elle, et le compromis du 0-RTT.</p></div></div>
+
+<h2>Un certificat est une phrase signée</h2>
+<p>Un certificat n'a rien de mystérieux&nbsp;: c'est un petit ensemble de champs en clair — un nom, une clé publique, un émetteur, deux dates —, suivi d'une signature qui porte sur l'ensemble. Le format réel s'appelle <strong>X.509</strong> et son encodage, DER, est austère&nbsp;; le contenu, lui, tient en dix lignes.</p>
+<figure class="code-block" data-file="certificat.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- secp256k1 + ECDSA, repliés depuis la leçon 4 (l'AC signe avec cette courbe) ----
+const Pc = 2n**256n - 2n**32n - 977n;
+const Nc = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+const G = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n, 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n];
+const mod = (a, m) =&gt; ((a % m) + m) % m;
+const inv = (a, m) =&gt; { let [an, ap] = [mod(a, m), m], [u, v] = [1n, 0n]; while (an &gt; 1n) { const k = an / ap; [an, ap] = [ap, an - k * ap]; [u, v] = [v, u - k * v]; } return mod(u, m); };
+function addP(A, B){ if (!A) return B; if (!B) return A; if (A[0] === B[0] &amp;&amp; mod(A[1] + B[1], Pc) === 0n) return null;
+  const l = A[0] === B[0] &amp;&amp; A[1] === B[1] ? mod(3n * A[0] * A[0] * inv(2n * A[1], Pc), Pc) : mod((B[1] - A[1]) * inv(B[0] - A[0], Pc), Pc);
+  const x = mod(l * l - A[0] - B[0], Pc); return [x, mod(l * (A[0] - x) - A[1], Pc)]; }
+function mulP(k, Q){ let R = null; while (k &gt; 0n) { if (k &amp; 1n) R = addP(R, Q); Q = addP(Q, Q); k &gt;&gt;= 1n; } return R; }
+const zz = t =&gt; BigInt('0x' + hex(sha256o(bof(t)))) % Nc;
+const clePublique = d =&gt; mulP(d, G);
+// Nonce dérivé du message et de la clé, dans l'esprit de la RFC 6979 (leçon 4).
+const signer = (d, t) =&gt; { const k = mod(BigInt('0x' + hex(sha256o(bof('k|' + d.toString(16) + '|' + t)))), Nc);
+  const r = mod(mulP(k, G)[0], Nc); return [r, mod(inv(k, Nc) * (zz(t) + r * d), Nc)]; };
+function verifier(pub, t, sig){ const [r, s] = sig; if (r &lt;= 0n || r &gt;= Nc || s &lt;= 0n || s &gt;= Nc) return false;
+  const w = inv(s, Nc), X = addP(mulP(mod(zz(t) * w, Nc), G), mulP(mod(r * w, Nc), pub));
+  return X !== null &amp;&amp; mod(X[0], Nc) === r; }
+// -----------------------------------------------------------------------------------
+
+// --- Un certificat : des champs en clair, et UNE signature sur l'ensemble -----------
+// Le vrai format s'appelle X.509 et s'encode en DER ; les champs sont ceux-ci.
+function corps(c){ return [c.sujet, c.clePub[0].toString(16), c.clePub[1].toString(16),
+  c.emetteur, c.debut, c.fin, c.numero, c.usage].join('|'); }
+function emettre(cleAC, c){ return Object.assign({}, c, { sig: signer(cleAC, corps(c)) }); }
+
+// L'autorité de certification : une clé privée, et une clé publique connue de tous.
+const cleAC = 0x2fd4e1c67a2d28fced849ee1bb76e7391b93eb12a0d9c5b7f9c1e4a2b6d80371n % Nc;
+const pubAC = clePublique(cleAC);
+
+const cert = emettre(cleAC, {
+  sujet: 'exemple.example', clePub: clePublique(0x51a3bf4f1b2b0b822cd15d6c15b0f00a08n % Nc),
+  emetteur: 'AC Syntaxe R1', debut: 20260101, fin: 20260401, numero: '0a3f91', usage: 'serveur',
+});
+console.log('Le certificat, tel qu\'il voyage (tout y est PUBLIC) :');
+for (const k of ['sujet', 'emetteur', 'debut', 'fin', 'numero', 'usage']) console.log('  ' + k.padEnd(9) + ' : ' + cert[k]);
+console.log('  clé publique du sujet : ' + cert.clePub[0].toString(16).slice(0, 20) + '…');
+console.log('  signature de l\'émetteur : r=' + cert.sig[0].toString(16).slice(0, 16) + '… s=' + cert.sig[1].toString(16).slice(0, 16) + '…');
+console.log('');
+
+// LA VÉRIFICATION : la signature de l'AC porte sur TOUS les champs à la fois.
+console.log('Vérification avec la clé publique de l\'AC : ' + (verifier(pubAC, corps(cert), cert.sig) ? 'VALIDE' : 'INVALIDE'));
+console.log('');
+
+// Que se passe-t-il si l'on modifie un seul champ ?
+const champs = ['sujet', 'emetteur', 'debut', 'fin', 'numero', 'usage'];
+let rejets = 0;
+console.log('Un champ modifié à la fois, signature inchangée :');
+for (const k of champs) {
+  const truque = Object.assign({}, cert);
+  truque[k] = (k === 'debut' || k === 'fin') ? cert[k] + 10000 : cert[k] + '-modifié';
+  const ok = verifier(pubAC, corps(truque), cert.sig);
+  if (!ok) rejets++;
+  console.log('  ' + k.padEnd(9) + ' → ' + (ok ? 'ACCEPTÉ' : 'rejeté'));
+}
+// Et si l'on remplace la clé publique du sujet par la sienne ?
+const vole = Object.assign({}, cert, { clePub: clePublique(0x666666n) });
+const okVole = verifier(pubAC, corps(vole), cert.sig);
+if (!okVole) rejets++;
+console.log('  clé publique remplacée par celle de l\'attaquant → ' + (okVole ? 'ACCEPTÉ' : 'rejeté'));
+console.log('  → ' + rejets + ' rejets sur ' + (champs.length + 1) + ' altérations.');
+console.log('');
+console.log('Un certificat n\'est donc pas un coffre : c\'est une DÉCLARATION SIGNÉE.');
+console.log('Elle dit : « la clé publique ci-dessus appartient à exemple.example, et je l\'atteste ».');
+console.log('Reste la question qui fait tout le sujet : pourquoi croire cette autorité ?');</code></pre></figure>
+<figure class="code-block" data-file="certificat.txt"><pre><code class="language-plaintext">Le certificat, tel qu'il voyage (tout y est PUBLIC) :
+  sujet     : exemple.example
+  emetteur  : AC Syntaxe R1
+  debut     : 20260101
+  fin       : 20260401
+  numero    : 0a3f91
+  usage     : serveur
+  clé publique du sujet : a7035978ad5e20793732…
+  signature de l'émetteur : r=54c80f26fc1d6767… s=34a19b8201c0b797…
+
+Vérification avec la clé publique de l'AC : VALIDE
+
+Un champ modifié à la fois, signature inchangée :
+  sujet     → rejeté
+  emetteur  → rejeté
+  debut     → rejeté
+  fin       → rejeté
+  numero    → rejeté
+  usage     → rejeté
+  clé publique remplacée par celle de l'attaquant → rejeté
+  → 7 rejets sur 7 altérations.
+
+Un certificat n'est donc pas un coffre : c'est une DÉCLARATION SIGNÉE.
+Elle dit : « la clé publique ci-dessus appartient à exemple.example, et je l'atteste ».
+Reste la question qui fait tout le sujet : pourquoi croire cette autorité ?</code></pre></figure>
+<p>Sept altérations, sept rejets. La signature de l'autorité couvre <em>tous</em> les champs à la fois&nbsp;: on ne peut ni prolonger la validité, ni changer le nom, ni — surtout — remplacer la clé publique du sujet par la sienne. Le certificat ne cache rien&nbsp;: il est intégralement public, et c'est normal, puisqu'il ne contient que ce qu'on veut faire savoir.</p>
+<p>Ce qu'il affirme se résume à une phrase&nbsp;: «&nbsp;<em>cette clé publique appartient à ce nom, et je l'atteste jusqu'à cette date</em>&nbsp;». Toute la question est de savoir pourquoi l'on croirait celui qui atteste.</p>
+
+<h2>La confiance ne vient pas du réseau</h2>
+<p>La réponse tient dans un objet dont on parle peu&nbsp;: le <strong>magasin de certificats racines</strong>, installé avec votre système ou votre navigateur. Il contient environ deux cents clés publiques d'autorités, arrivées <em>hors du réseau</em> — dans l'image du système, dans une mise à jour signée. Tout le reste n'est qu'une suite de signatures qui ramène à l'une d'elles.</p>
+<figure class="code-block" data-file="chaine-de-confiance.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- secp256k1 + ECDSA, repliés depuis la leçon 4 (l'AC signe avec cette courbe) ----
+const Pc = 2n**256n - 2n**32n - 977n;
+const Nc = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+const G = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n, 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n];
+const mod = (a, m) =&gt; ((a % m) + m) % m;
+const inv = (a, m) =&gt; { let [an, ap] = [mod(a, m), m], [u, v] = [1n, 0n]; while (an &gt; 1n) { const k = an / ap; [an, ap] = [ap, an - k * ap]; [u, v] = [v, u - k * v]; } return mod(u, m); };
+function addP(A, B){ if (!A) return B; if (!B) return A; if (A[0] === B[0] &amp;&amp; mod(A[1] + B[1], Pc) === 0n) return null;
+  const l = A[0] === B[0] &amp;&amp; A[1] === B[1] ? mod(3n * A[0] * A[0] * inv(2n * A[1], Pc), Pc) : mod((B[1] - A[1]) * inv(B[0] - A[0], Pc), Pc);
+  const x = mod(l * l - A[0] - B[0], Pc); return [x, mod(l * (A[0] - x) - A[1], Pc)]; }
+function mulP(k, Q){ let R = null; while (k &gt; 0n) { if (k &amp; 1n) R = addP(R, Q); Q = addP(Q, Q); k &gt;&gt;= 1n; } return R; }
+const zz = t =&gt; BigInt('0x' + hex(sha256o(bof(t)))) % Nc;
+const clePublique = d =&gt; mulP(d, G);
+// Nonce dérivé du message et de la clé, dans l'esprit de la RFC 6979 (leçon 4).
+const signer = (d, t) =&gt; { const k = mod(BigInt('0x' + hex(sha256o(bof('k|' + d.toString(16) + '|' + t)))), Nc);
+  const r = mod(mulP(k, G)[0], Nc); return [r, mod(inv(k, Nc) * (zz(t) + r * d), Nc)]; };
+function verifier(pub, t, sig){ const [r, s] = sig; if (r &lt;= 0n || r &gt;= Nc || s &lt;= 0n || s &gt;= Nc) return false;
+  const w = inv(s, Nc), X = addP(mulP(mod(zz(t) * w, Nc), G), mulP(mod(r * w, Nc), pub));
+  return X !== null &amp;&amp; mod(X[0], Nc) === r; }
+// -----------------------------------------------------------------------------------
+
+// --- Le même certificat, avec les champs qui font la CHAÎNE -------------------------
+function corps(c){ return [c.sujet, c.clePub[0].toString(16), c.emetteur, c.debut, c.fin, c.ac, c.portee].join('|'); }
+const emettre = (cleEmetteur, c) =&gt; Object.assign({}, c, { sig: signer(cleEmetteur, corps(c)) });
+
+// Trois clés : la racine, l'intermédiaire, le serveur.
+const cleRacine = 0x2fd4e1c67a2d28fced849ee1bb76e7391b93eb12a0d9c5b7f9c1e4a2b6d80371n % Nc;
+const cleInter  = 0x7d1a0c94e35b8f2604ad7193c5e8b2f0a641d97350c8e2b1f4a6079d3c58e1b2n % Nc;
+const cleServeur = 0x51a3bf4f1b2b0b822cd15d6c15b0f00a08n % Nc;
+
+// La RACINE est auto-signée : elle ne prouve rien par elle-même. Sa force vient
+// d'ailleurs — elle est INSTALLÉE dans le magasin du système, en dehors du réseau.
+const racine = emettre(cleRacine, { sujet: 'AC Syntaxe Racine', clePub: clePublique(cleRacine),
+  emetteur: 'AC Syntaxe Racine', debut: 20200101, fin: 20400101, ac: true, portee: '*' });
+const inter = emettre(cleRacine, { sujet: 'AC Syntaxe R1', clePub: clePublique(cleInter),
+  emetteur: 'AC Syntaxe Racine', debut: 20250101, fin: 20300101, ac: true, portee: '.example' });
+const feuille = emettre(cleInter, { sujet: 'boutique.example', clePub: clePublique(cleServeur),
+  emetteur: 'AC Syntaxe R1', debut: 20260101, fin: 20260401, ac: false, portee: '-' });
+
+const MAGASIN = { 'AC Syntaxe Racine': clePublique(cleRacine) };   // ce que le système a installé
+
+// --- LA VÉRIFICATION D'UNE CHAÎNE ---------------------------------------------------
+function verifierChaine(chaine, nomVoulu){
+  // On descend de la racine vers la feuille, et la portée autorisée ne fait que se
+  // RESSERRER : une AC ne délègue jamais plus qu'elle n'a reçu (RFC 5280, §6.1.4).
+  let porteeCourante = '*';
+  for (let i = chaine.length - 1; i &gt;= 0; i--) {
+    const c = chaine[i], parent = chaine[i + 1];
+    const clePubEmetteur = parent ? parent.clePub : MAGASIN[c.emetteur];
+    if (!clePubEmetteur) return 'émetteur inconnu : « ' + c.emetteur + " » n'est pas dans le magasin";
+    if (parent &amp;&amp; parent.sujet !== c.emetteur) return 'maillon décousu : émetteur ≠ sujet du parent';
+    if (parent &amp;&amp; parent.ac !== true) return "le parent n'a pas le droit d'émettre (contrainte de base)";
+    if (porteeCourante !== '*' &amp;&amp; !c.sujet.endsWith(porteeCourante)) return 'hors de la portée héritée « ' + porteeCourante + ' »';
+    if (!verifier(clePubEmetteur, corps(c), c.sig)) return 'signature invalide sur « ' + c.sujet + ' »';
+    if (c.ac &amp;&amp; c.portee !== '*') porteeCourante = c.portee;      // on ne peut que rétrécir
+  }
+  if (chaine[0].sujet !== nomVoulu) return 'mauvais nom : certificat pour « ' + chaine[0].sujet + ' »';
+  return 'VALIDE';
+}
+
+console.log('Chaîne honnête, pour boutique.example :');
+console.log('  boutique.example ← AC Syntaxe R1 ← AC Syntaxe Racine (dans le magasin)');
+console.log('  → ' + verifierChaine([feuille, inter], 'boutique.example'));
+console.log('');
+
+// --- Cinq tentatives, et l'endroit précis où chacune casse -------------------------
+const essais = [];
+// 1. Mallory forge un certificat pour boutique.example et l'auto-signe.
+const cleM = 0x666f7267657279206b657920666f7220746865206c6162n % Nc;
+const autoSigne = emettre(cleM, { sujet: 'boutique.example', clePub: clePublique(cleM),
+  emetteur: 'boutique.example', debut: 20260101, fin: 20260401, ac: false, portee: '-' });
+essais.push(['certificat auto-signé présenté seul', [autoSigne], 'boutique.example']);
+// 2. Mallory détient un certificat de FEUILLE légitime et s'en sert pour en émettre un autre.
+const emisParFeuille = emettre(cleServeur, { sujet: 'banque.example', clePub: clePublique(cleM),
+  emetteur: 'boutique.example', debut: 20260101, fin: 20260401, ac: false, portee: '-' });
+essais.push(['certificat émis par une feuille (ac: false)', [emisParFeuille, feuille, inter], 'banque.example']);
+// 3. L'intermédiaire, dont la portée est limitée à .example, émet pour un autre domaine.
+const horsPortee = emettre(cleInter, { sujet: 'banque.invalid', clePub: clePublique(cleM),
+  emetteur: 'AC Syntaxe R1', debut: 20260101, fin: 20260401, ac: false, portee: '-' });
+essais.push(['émis hors de la portée déléguée', [horsPortee, inter], 'banque.invalid']);
+// 4. Une chaîne parfaitement signée… par une racine que le système ne connaît pas.
+const racineInconnue = emettre(cleM, { sujet: 'AC Inconnue', clePub: clePublique(cleM),
+  emetteur: 'AC Inconnue', debut: 20200101, fin: 20400101, ac: true, portee: '*' });
+const feuilleInconnue = emettre(cleM, { sujet: 'boutique.example', clePub: clePublique(cleM),
+  emetteur: 'AC Inconnue', debut: 20260101, fin: 20260401, ac: false, portee: '-' });
+essais.push(['chaîne cohérente, racine absente du magasin', [feuilleInconnue, racineInconnue], 'boutique.example']);
+
+// 5. Une sous-AC émise dans les règles par l'intermédiaire, mais qui s'attribue « * ».
+const sousAc = emettre(cleInter, { sujet: 'sousac.example', clePub: clePublique(cleM),
+  emetteur: 'AC Syntaxe R1', debut: 20260101, fin: 20300101, ac: true, portee: '*' });
+const parSousAc = emettre(cleM, { sujet: 'banque.invalid', clePub: clePublique(cleM),
+  emetteur: 'sousac.example', debut: 20260101, fin: 20260401, ac: false, portee: '-' });
+essais.push(["sous-AC qui s'attribue une portée plus large que la sienne", [parSousAc, sousAc, inter], 'banque.invalid']);
+
+let rejetees = 0; const motifs = new Set();
+for (const [nom, chaine, voulu] of essais) {
+  const r = verifierChaine(chaine, voulu);
+  if (r !== 'VALIDE') { rejetees++; motifs.add(r.split(' :')[0]); }
+  console.log('  ' + nom);
+  console.log('     → ' + r);
+}
+console.log('  ' + rejetees + ' tentatives rejetées sur ' + essais.length + ', pour ' + motifs.size + ' motifs distincts.');
+console.log('  (la première et la dernière échouent au même endroit : la racine est inconnue.)');
+console.log('');
+console.log('La confiance ne vient donc jamais du réseau : elle vient du MAGASIN, installé');
+console.log('avec le système. Tout le reste n\'est qu\'une suite de signatures qui y ramène.');</code></pre></figure>
+<figure class="code-block" data-file="chaine-de-confiance.txt"><pre><code class="language-plaintext">Chaîne honnête, pour boutique.example :
+  boutique.example ← AC Syntaxe R1 ← AC Syntaxe Racine (dans le magasin)
+  → VALIDE
+
+  certificat auto-signé présenté seul
+     → émetteur inconnu : « boutique.example » n'est pas dans le magasin
+  certificat émis par une feuille (ac: false)
+     → le parent n'a pas le droit d'émettre (contrainte de base)
+  émis hors de la portée déléguée
+     → hors de la portée héritée « .example »
+  chaîne cohérente, racine absente du magasin
+     → émetteur inconnu : « AC Inconnue » n'est pas dans le magasin
+  sous-AC qui s'attribue une portée plus large que la sienne
+     → hors de la portée héritée « .example »
+  5 tentatives rejetées sur 5, pour 3 motifs distincts.
+  (la première et la dernière échouent au même endroit : la racine est inconnue.)
+
+La confiance ne vient donc jamais du réseau : elle vient du MAGASIN, installé
+avec le système. Tout le reste n'est qu'une suite de signatures qui y ramène.</code></pre></figure>
+<p>La chaîne honnête tient parce qu'elle remonte à une racine du magasin. Les cinq tentatives échouent à trois endroits distincts, et il vaut la peine de les regarder une à une. Le certificat <strong>auto-signé</strong> échoue faute de racine connue&nbsp;: n'importe qui peut s'en fabriquer un, c'est justement ce qui le rend sans valeur — et c'est l'avertissement que votre navigateur affiche devant un serveur mal configuré.</p>
+<p>Le deuxième est plus intéressant&nbsp;: un certificat de <em>feuille</em> parfaitement légitime, employé pour en émettre un autre. C'est ce que la contrainte de base <code>ac: false</code> interdit — sans elle, quiconque possède un certificat pour son propre site pourrait en émettre un pour n'importe quel autre. Cette contrainte n'a pas toujours été vérifiée&nbsp;; son absence a produit de vraies vulnérabilités dans des bibliothèques TLS.</p>
+<p>Le troisième illustre la <strong>contrainte de noms</strong>&nbsp;: une autorité intermédiaire dont le pouvoir est limité à un suffixe. Le cinquième montre pourquoi cette contrainte ne vaut que si elle est <em>héritée</em>&nbsp;: une sous-autorité, émise dans les règles par l'intermédiaire, s'attribue une portée universelle et tente d'émettre pour un autre domaine. Une vérification qui ne regarderait que le parent direct l'accepterait. La règle correcte, celle de la RFC&nbsp;5280, veut que la portée ne fasse que <em>se resserrer</em> en descendant&nbsp;: on ne délègue jamais plus qu'on n'a reçu. C'est le mécanisme qui permettrait, s'il était plus employé, de confier une autorité intermédiaire à une organisation sans lui donner le pouvoir d'émettre pour la terre entière.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">La faiblesse structurelle du système&nbsp;: n'importe quelle autorité peut émettre pour n'importe quel nom</p><p>Votre magasin contient environ deux cents racines, opérées par des organisations réparties dans des dizaines de pays. <strong>Chacune d'elles peut émettre un certificat valide pour votre banque</strong>, et votre navigateur l'acceptera — c'est ce que le cas réel de cette leçon montre en grandeur nature. La sécurité de l'ensemble est donc celle du <em>maillon le plus faible</em>, et non celle de l'autorité que vous avez choisie. Les parades sont venues après coup&nbsp;: la <strong>transparence des certificats</strong>, qui oblige à publier dans des journaux publics vérifiables tout certificat de confiance publique — Chrome l'exige pour ceux émis après le 30&nbsp;avril 2018, à partir de sa version&nbsp;68 —, et l'<strong>épinglage</strong>, qui fige la clé attendue dans l'application. Aucune des deux n'efface le problème&nbsp;: elles le rendent <em>détectable</em>.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 220" role="img" aria-label="La chaîne de confiance. En bas, le certificat de la boutique est signé par une autorité intermédiaire, elle-même signée par une racine. La racine est installée dans le magasin du système, hors du réseau, ce qui est la seule source de confiance. Sur le côté, un certificat auto-signé n'aboutit à aucune racine connue et n'est pas accepté.">
+    <rect class="d-box" x="180" y="16" width="200" height="34" rx="5" /><text class="d-text" x="280" y="38" text-anchor="middle" font-size="11">AC Racine (auto-signée)</text>
+    <rect class="d-accent" x="400" y="16" width="216" height="34" rx="5" /><text class="d-text" x="508" y="38" text-anchor="middle" font-size="10">installée dans le magasin du système</text>
+    <path class="d-line" d="M400 33 H384" />
+    <path class="d-line" d="M280 50 V78" /><text class="d-tag" x="300" y="68" font-size="9">signe</text>
+    <rect class="d-box" x="180" y="78" width="200" height="34" rx="5" /><text class="d-text" x="280" y="100" text-anchor="middle" font-size="11">AC intermédiaire</text>
+    <path class="d-line" d="M280 112 V140" /><text class="d-tag" x="300" y="130" font-size="9">signe</text>
+    <rect class="d-box" x="180" y="140" width="200" height="34" rx="5" /><text class="d-text" x="280" y="162" text-anchor="middle" font-size="11">boutique.example</text>
+    <rect class="d-box" x="20" y="140" width="140" height="34" rx="5" /><text class="d-text" x="90" y="162" text-anchor="middle" font-size="10">auto-signé</text>
+    <path class="d-line" d="M90 140 V112" stroke-dasharray="4 4" /><text class="d-tag" x="92" y="104" text-anchor="middle" font-size="9">✕ aucune racine</text>
+    <text class="d-mut" x="320" y="200" text-anchor="middle" font-size="9">la confiance descend du magasin vers la feuille ; elle ne monte jamais depuis le réseau</text>
+  </svg>
+  <figcaption>Une chaîne ne prouve rien par elle-même&nbsp;: elle ne fait que ramener à une clé que vous aviez déjà.</figcaption>
+</figure>
+
+<h2>La vérification qu'on oublie&nbsp;: le nom</h2>
+<p>Une chaîne valide dit que l'autorité a signé <em>ce</em> certificat. Elle ne dit pas qu'il vaut pour l'adresse que vous visitez. Cette seconde vérification est indépendante, et son oubli est l'une des vulnérabilités les plus répandues des applications qui parlent TLS sans passer par un navigateur.</p>
+<figure class="code-block" data-file="nom-hote.js"><pre><code class="language-javascript">// La règle qui décide si un certificat vaut pour l'adresse visitée.
+// Source : RFC 9525 (2023), qui remplace la RFC 6125 — cette dernière AUTORISAIT encore
+// le joker partiel « w*.example ». Le refus d'un joker sur un suffixe public, lui, ne
+// vient d'aucune norme : il vient d'une liste tenue à part, la Public Suffix List.
+const SUFFIXES_PUBLICS = ['example', 'invalid', 'test', 'co.uk', 'com.au'];   // extrait
+function correspond(nomVoulu, motif){
+  const v = nomVoulu.toLowerCase().replace(/\.$/, '').split('.');
+  const m = motif.toLowerCase().replace(/\.$/, '').split('.');
+  if (m.length !== v.length) return false;                 // un joker ne saute pas de niveau
+  for (let i = 0; i &lt; m.length; i++) {
+    if (m[i] === '*') {
+      if (i !== 0) return false;                            // joker uniquement en tête
+      if (SUFFIXES_PUBLICS.includes(m.slice(1).join('.'))) return false;   // « *.co.uk » : trop large
+      if (m.length &lt; 2) return false;
+      continue;
+    }
+    if (m[i].includes('*')) return false;                   // pas de joker partiel : « w*.example »
+    if (m[i] !== v[i]) return false;
+  }
+  return true;
+}
+// Le certificat porte SES noms dans l'extension « autres noms du sujet » (SAN).
+function accepte(nomVoulu, cert){
+  if (!cert.san || cert.san.length === 0) return false;     // le champ CN n'est plus lu
+  return cert.san.some(motif =&gt; correspond(nomVoulu, motif));
+}
+
+const certJoker = { cn: 'boutique.example', san: ['boutique.example', '*.boutique.example'] };
+const certAncien = { cn: 'ancien.example', san: [] };       // nom seulement dans le CN
+
+const cas = [
+  ['boutique.example',            certJoker,  true,  'nom exact, présent dans les SAN'],
+  ['BOUTIQUE.Example',            certJoker,  true,  'la comparaison ne tient pas compte de la casse'],
+  ['boutique.example.',           certJoker,  true,  'point final : même nom, forme absolue'],
+  ['www.boutique.example',        certJoker,  true,  'le joker couvre un seul niveau — celui-ci'],
+  ['paiement.boutique.example',   certJoker,  true,  'un autre sous-domaine, même règle'],
+  ['a.www.boutique.example',      certJoker,  false, 'DEUX niveaux sous le joker : refusé'],
+  ['boutique.example.attaquant.invalid', certJoker, false, 'suffixe ajouté : ce n\'est plus le même domaine'],
+  ['boutique.exemple',            certJoker,  false, "une lettre de différence dans l'extension : autre domaine"],
+  ['ancien.example',              certAncien, false, 'nom présent seulement dans le CN, plus lu depuis 2017'],
+];
+let justes = 0;
+console.log('  attendu | obtenu | adresse visitée');
+for (const [nom, cert, attendu, pourquoi] of cas) {
+  const obtenu = accepte(nom, cert);
+  if (obtenu === attendu) justes++;
+  console.log('  ' + (attendu ? ' OUI   ' : ' non   ') + ' | ' + (obtenu ? ' OUI  ' : ' non  ') + ' | ' + nom);
+  console.log('          ' + pourquoi);
+}
+console.log('');
+console.log(justes + ' verdicts conformes sur ' + cas.length + '.');
+console.log('');
+
+// Le motif interdit : un joker à la racine d'un suffixe public.
+console.log('Motifs qui correspondraient sans ces règles, et que ces règles refusent :');
+for (const [motif, nom] of [['*.example', 'boutique.example'], ['*.co.uk', 'boutique.co.uk'],
+                            ['w*.boutique.example', 'ws.boutique.example'], ['boutique.*.example', 'boutique.eu.example']]) {
+  // On essaie le nom qui, SANS la règle, correspondrait exactement au motif.
+  console.log('  « ' + motif.padEnd(20) + ' » face à « ' + nom.padEnd(22) + ' » : ' + (correspond(nom, motif) ? 'ACCEPTÉ' : 'refusé'));
+}
+console.log('');
+console.log('La signature de l\'AC était valide dans TOUS ces cas. Vérifier la chaîne sans');
+console.log('vérifier le nom, c\'est accepter n\'importe quel certificat émis à n\'importe qui :');
+console.log('l\'attaquant en achète un pour SON domaine, et le présente pour le vôtre.');</code></pre></figure>
+<figure class="code-block" data-file="nom-hote.txt"><pre><code class="language-plaintext">  attendu | obtenu | adresse visitée
+   OUI    |  OUI   | boutique.example
+          nom exact, présent dans les SAN
+   OUI    |  OUI   | BOUTIQUE.Example
+          la comparaison ne tient pas compte de la casse
+   OUI    |  OUI   | boutique.example.
+          point final : même nom, forme absolue
+   OUI    |  OUI   | www.boutique.example
+          le joker couvre un seul niveau — celui-ci
+   OUI    |  OUI   | paiement.boutique.example
+          un autre sous-domaine, même règle
+   non    |  non   | a.www.boutique.example
+          DEUX niveaux sous le joker : refusé
+   non    |  non   | boutique.example.attaquant.invalid
+          suffixe ajouté : ce n'est plus le même domaine
+   non    |  non   | boutique.exemple
+          une lettre de différence dans l'extension : autre domaine
+   non    |  non   | ancien.example
+          nom présent seulement dans le CN, plus lu depuis 2017
+
+9 verdicts conformes sur 9.
+
+Motifs qui correspondraient sans ces règles, et que ces règles refusent :
+  « *.example            » face à « boutique.example       » : refusé
+  « *.co.uk              » face à « boutique.co.uk         » : refusé
+  « w*.boutique.example  » face à « ws.boutique.example    » : refusé
+  « boutique.*.example   » face à « boutique.eu.example    » : refusé
+
+La signature de l'AC était valide dans TOUS ces cas. Vérifier la chaîne sans
+vérifier le nom, c'est accepter n'importe quel certificat émis à n'importe qui :
+l'attaquant en achète un pour SON domaine, et le présente pour le vôtre.</code></pre></figure>
+<p>Les règles paraissent tatillonnes&nbsp;; chacune répare une attaque réelle, et chacune a sa source. Le joker ne couvre <strong>qu'un seul niveau</strong> et ne se combine pas à d'autres caractères&nbsp;: c'est la <strong>RFC&nbsp;9525</strong>, publiée en 2023, qui l'impose — la RFC&nbsp;6125 qu'elle remplace <em>autorisait</em> encore un motif comme <code>w*.boutique.example</code>. Le refus d'un joker posé directement sur un suffixe public, lui, ne vient d'aucune norme&nbsp;: il vient d'une liste tenue à part, la <em>Public Suffix List</em>, et le programme en emploie un extrait — sans quoi un seul certificat pour <code>*.co.uk</code> vaudrait pour tout un pays. Enfin le nom se lit dans l'extension <strong>SAN</strong>, jamais dans le champ historique <em>Common Name</em>&nbsp;: Chrome a cessé de le lire à partir de sa version&nbsp;58, en avril&nbsp;2017, après que les exigences de base l'eurent rendu facultatif dès 2012.</p>
+<p>Le point à emporter&nbsp;: dans tous ces cas, <strong>la signature de l'autorité était valide</strong>. Une bibliothèque qui vérifie la chaîne mais pas le nom accepte n'importe quel certificat légitimement émis à n'importe qui — l'attaquant en achète un pour son propre domaine, tout à fait régulièrement, et le présente pour le vôtre.</p>
+
+<h2>Ce qui expire, et ce qui ne se révoque pas vraiment</h2>
+<p>Un certificat porte deux dates. La vérification correspondante est triviale&nbsp;; ce sont ses conséquences qui ne le sont pas — et le vrai problème est ailleurs&nbsp;: que faire d'une clé volée avant l'expiration&nbsp;?</p>
+<figure class="code-block" data-file="validite-revocation.js"><pre><code class="language-javascript">// --- Une date de début, une date de fin, et ce qui se passe entre les deux ----------
+const cert = { sujet: 'boutique.example', debut: 20260101, fin: 20260401 };
+const dansLaFenetre = (c, jour) =&gt; jour &gt;= c.debut &amp;&amp; jour &lt;= c.fin;
+
+console.log('Certificat valable du ' + cert.debut + ' au ' + cert.fin + ' :');
+for (const jour of [20251231, 20260101, 20260215, 20260401, 20260402]) {
+  console.log('  au ' + jour + ' → ' + (dansLaFenetre(cert, jour) ? 'accepté' : 'REFUSÉ'));
+}
+console.log('  Une horloge fausse suffit donc à faire accepter un certificat périmé,');
+console.log('  ou à refuser un certificat valide. C\'est la panne la plus fréquente du web.');
+console.log('');
+
+// --- Le vrai problème : la clé est volée AVANT la date de fin -----------------------
+// Le certificat reste parfaitement valide. Il faut donc un mécanisme de RÉVOCATION.
+const VOL = 20260115;                                  // jour du vol
+const FIN = 20260401;
+const enJours = j =&gt; Date.UTC(Math.floor(j / 10000), Math.floor(j / 100) % 100 - 1, j % 100) / 86400000;
+const jours = (a, b) =&gt; enJours(b) - enJours(a);        // écart réel, calendrier grégorien
+console.log('Clé volée le ' + VOL + '. Sans révocation, l\'attaquant en profite ' + jours(VOL, FIN) + ' jours.');
+console.log('');
+
+// Trois mécanismes, trois expositions résiduelles.
+const scenarios = [
+  ['liste de révocation publiée chaque semaine', 7,   'le client télécharge la liste ; entre deux publications, il ne sait rien'],
+  ['réponse en ligne (OCSP), cache de 4 jours',  4,   'le client interroge le répondeur ; la réponse est mise en cache'],
+  ['agrafage de la réponse par le serveur',      4,   'le serveur joint lui-même la réponse — sauf s\'il est aux mains de l\'attaquant'],
+  ['certificat de 47 jours, non renouvelé',      47,  'aucune révocation : on attend simplement l\'expiration'],
+];
+console.log('  exposition | mécanisme');
+for (const [nom, delai, note] of scenarios) {
+  console.log('  ' + (delai + ' j').padStart(10) + ' | ' + nom);
+  console.log('             ' + note);
+}
+console.log('');
+
+// --- Le point aveugle : que fait le client quand la réponse n'arrive pas ? ---------
+// 100 visites, chacune avec son état propre : le certificat présenté est-il révoqué,
+// et la réponse du répondeur parvient-elle jusqu'au client ?
+const visites = [];
+for (let i = 0; i &lt; 100; i++) {
+  visites.push({
+    revoque: i % 5 === 0 || i % 7 === 0,          // certificats révoqués
+    coupeeParAttaquant: i % 4 === 0,              // quelqu'un bloque la requête
+    repondeurEnPanne: i % 33 === 0,               // panne côté service
+  });
+}
+function verdict(v, politique){
+  const reponse = (v.coupeeParAttaquant || v.repondeurEnPanne) ? null
+                : (v.revoque ? 'révoqué' : 'valide');
+  if (reponse === 'révoqué') return 'bloquée';
+  if (reponse === 'valide') return 'acceptée';
+  return politique === 'doux' ? 'acceptée' : 'bloquée';   // pas de réponse : on choisit
+}
+console.log('100 visites, dont ' + visites.filter(v =&gt; v.revoque).length + ' avec un certificat RÉVOQUÉ, ' + visites.filter(v =&gt; v.coupeeParAttaquant).length + ' où un attaquant');
+console.log('coupe la requête de révocation, et ' + visites.filter(v =&gt; v.repondeurEnPanne).length + ' où le répondeur est en panne :');
+for (const politique of ['doux', 'dur']) {
+  let dangereuses = 0, aTort = 0, ok = 0;
+  for (const v of visites) {
+    const r = verdict(v, politique);
+    if (r === 'acceptée' &amp;&amp; v.revoque) dangereuses++;      // un certificat révoqué accepté
+    if (r === 'bloquée' &amp;&amp; !v.revoque) aTort++;            // un site honnête refusé
+    if (r === 'acceptée' &amp;&amp; !v.revoque) ok++;
+  }
+  console.log('  « échec ' + politique.padEnd(5) + ' » : ' + dangereuses + ' certificat(s) révoqué(s) accepté(s) · '
+    + aTort + ' site(s) sain(s) refusé(s) à tort · ' + ok + ' visite(s) saine(s) abouties');
+}
+console.log('');
+console.log('Les navigateurs ont choisi le premier comportement : un attaquant qui coupe la');
+console.log('requête neutralise donc la révocation. Le second refuserait des sites sains dès');
+console.log("que le répondeur tousse — c'est un arbitrage tranché, pas un oubli.");
+console.log('')
+console.log('D\'où le compromis retenu par l\'industrie : plutôt que de réparer la révocation,');
+console.log('RACCOURCIR LA VALIDITÉ. Un certificat qui expire dans 47 jours limite les dégâts');
+console.log('sans dépendre d\'un service en ligne qu\'un attaquant peut couper.');</code></pre></figure>
+<figure class="code-block" data-file="validite-revocation.txt"><pre><code class="language-plaintext">Certificat valable du 20260101 au 20260401 :
+  au 20251231 → REFUSÉ
+  au 20260101 → accepté
+  au 20260215 → accepté
+  au 20260401 → accepté
+  au 20260402 → REFUSÉ
+  Une horloge fausse suffit donc à faire accepter un certificat périmé,
+  ou à refuser un certificat valide. C'est la panne la plus fréquente du web.
+
+Clé volée le 20260115. Sans révocation, l'attaquant en profite 76 jours.
+
+  exposition | mécanisme
+         7 j | liste de révocation publiée chaque semaine
+             le client télécharge la liste ; entre deux publications, il ne sait rien
+         4 j | réponse en ligne (OCSP), cache de 4 jours
+             le client interroge le répondeur ; la réponse est mise en cache
+         4 j | agrafage de la réponse par le serveur
+             le serveur joint lui-même la réponse — sauf s'il est aux mains de l'attaquant
+        47 j | certificat de 47 jours, non renouvelé
+             aucune révocation : on attend simplement l'expiration
+
+100 visites, dont 32 avec un certificat RÉVOQUÉ, 25 où un attaquant
+coupe la requête de révocation, et 4 où le répondeur est en panne :
+  « échec doux  » : 8 certificat(s) révoqué(s) accepté(s) · 0 site(s) sain(s) refusé(s) à tort · 68 visite(s) saine(s) abouties
+  « échec dur   » : 0 certificat(s) révoqué(s) accepté(s) · 20 site(s) sain(s) refusé(s) à tort · 48 visite(s) saine(s) abouties
+
+Les navigateurs ont choisi le premier comportement : un attaquant qui coupe la
+requête neutralise donc la révocation. Le second refuserait des sites sains dès
+que le répondeur tousse — c'est un arbitrage tranché, pas un oubli.
+
+D'où le compromis retenu par l'industrie : plutôt que de réparer la révocation,
+RACCOURCIR LA VALIDITÉ. Un certificat qui expire dans 47 jours limite les dégâts
+sans dépendre d'un service en ligne qu'un attaquant peut couper.</code></pre></figure>
+<p>La révocation est le point faible reconnu de tout l'édifice. Les listes de révocation sont volumineuses et publiées à intervalles&nbsp;; les réponses en ligne exigent une requête supplémentaire, qui renseigne au passage le répondeur sur les sites que vous visitez. Et surtout, un client qui n'obtient pas de réponse doit choisir&nbsp;: continuer (l'<em>échec doux</em>) ou couper (l'<em>échec dur</em>). Le programme met les deux politiques devant les mêmes 100&nbsp;visites, dont 32&nbsp;portent un certificat révoqué&nbsp;: en <em>échec doux</em>, <strong>8&nbsp;certificats révoqués sont acceptés</strong> — ceux dont la requête de révocation n'aboutit pas —, mais aucun site sain n'est refusé&nbsp;; en <em>échec dur</em>, aucun révoqué ne passe, au prix de <strong>20&nbsp;sites parfaitement sains refusés à tort</strong>, victimes de la même coupure. Les navigateurs ont tranché pour le premier, ce qui revient à dire qu'un attaquant capable de couper la requête neutralise la révocation.</p>
+<p>Faute de solution satisfaisante, l'industrie a changé de levier&nbsp;: raccourcir la validité. Le CA/Browser Forum a voté le 11&nbsp;avril 2025 le bulletin <em>SC-081v3</em> — 25&nbsp;voix pour, aucune contre et 5&nbsp;abstentions du côté des autorités, 4&nbsp;voix pour du côté des navigateurs — qui fait passer la durée maximale d'un certificat public de <strong>398&nbsp;jours à 47&nbsp;jours</strong> par paliers, de mars&nbsp;2026 à mars&nbsp;2029. Le même texte raccourcit en parallèle la durée pendant laquelle une autorité peut réutiliser une validation de domaine déjà faite&nbsp;: jusqu'à <strong>10&nbsp;jours</strong> en 2029. C'est cette seconde échéance, plus encore que la première, qui rend le renouvellement manuel impraticable&nbsp;: l'automatisation cesse d'être un choix.</p>
+
+<h2>Tout assembler&nbsp;: une poignée de main TLS&nbsp;1.3</h2>
+<p>Nous avons maintenant toutes les pièces. Le programme qui suit les met bout à bout&nbsp;: un échange de clés éphémère (leçon&nbsp;5), une dérivation HKDF (leçon&nbsp;5), une signature du transcript (leçon&nbsp;4), une chaîne de certificats et une vérification de nom (cette leçon). C'est, à la simplification du groupe et de l'encodage près, ce que fait votre navigateur à chaque connexion.</p>
+<figure class="code-block" data-file="poignee-tls13.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- secp256k1 + ECDSA, repliés depuis la leçon 4 (l'AC signe avec cette courbe) ----
+const Pc = 2n**256n - 2n**32n - 977n;
+const Nc = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+const G = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n, 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n];
+const mod = (a, m) =&gt; ((a % m) + m) % m;
+const inv = (a, m) =&gt; { let [an, ap] = [mod(a, m), m], [u, v] = [1n, 0n]; while (an &gt; 1n) { const k = an / ap; [an, ap] = [ap, an - k * ap]; [u, v] = [v, u - k * v]; } return mod(u, m); };
+function addP(A, B){ if (!A) return B; if (!B) return A; if (A[0] === B[0] &amp;&amp; mod(A[1] + B[1], Pc) === 0n) return null;
+  const l = A[0] === B[0] &amp;&amp; A[1] === B[1] ? mod(3n * A[0] * A[0] * inv(2n * A[1], Pc), Pc) : mod((B[1] - A[1]) * inv(B[0] - A[0], Pc), Pc);
+  const x = mod(l * l - A[0] - B[0], Pc); return [x, mod(l * (A[0] - x) - A[1], Pc)]; }
+function mulP(k, Q){ let R = null; while (k &gt; 0n) { if (k &amp; 1n) R = addP(R, Q); Q = addP(Q, Q); k &gt;&gt;= 1n; } return R; }
+const zz = t =&gt; BigInt('0x' + hex(sha256o(bof(t)))) % Nc;
+const clePublique = d =&gt; mulP(d, G);
+// Nonce dérivé du message et de la clé, dans l'esprit de la RFC 6979 (leçon 4).
+const signer = (d, t) =&gt; { const k = mod(BigInt('0x' + hex(sha256o(bof('k|' + d.toString(16) + '|' + t)))), Nc);
+  const r = mod(mulP(k, G)[0], Nc); return [r, mod(inv(k, Nc) * (zz(t) + r * d), Nc)]; };
+function verifier(pub, t, sig){ const [r, s] = sig; if (r &lt;= 0n || r &gt;= Nc || s &lt;= 0n || s &gt;= Nc) return false;
+  const w = inv(s, Nc), X = addP(mulP(mod(zz(t) * w, Nc), G), mulP(mod(r * w, Nc), pub));
+  return X !== null &amp;&amp; mod(X[0], Nc) === r; }
+// -----------------------------------------------------------------------------------
+
+// --- HMAC et HKDF, repliés depuis la leçon 5 ----------------------------------------
+function hmac(cle, msg){ let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice(); while (k.length &lt; 64) k.push(0);
+  return sha256o([...k.map(b =&gt; b ^ 0x5c), ...sha256o([...k.map(b =&gt; b ^ 0x36), ...msg])]); }
+const extraire = (sel, mat) =&gt; hmac(sel, mat);
+function etendre(prk, etiquette, n){ const o = []; let t = [];
+  for (let i = 1; o.length &lt; n; i++) { t = hmac(prk, [...t, ...bof(etiquette), i]); o.push(...t); }
+  return o.slice(0, n); }
+// --- Le groupe d'échange (X25519 dans la vraie vie ; ici un premier sûr de 257 bits) -
+const pdh = 2n * 0x800000000000000000000000000000000000000000000000000000000001c197n + 1n;
+const gdh = 2n;
+const expmod = (b, e, m) =&gt; { let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; };
+// --- Certificats, repris du bloc 2 --------------------------------------------------
+const corpsCert = c =&gt; [c.sujet, c.clePub[0].toString(16), c.emetteur, c.debut, c.fin, c.ac].join('|');
+const emettre = (cleEmetteur, c) =&gt; Object.assign({}, c, { sig: signer(cleEmetteur, corpsCert(c)) });
+const cleRacine = 0x2fd4e1c67a2d28fced849ee1bb76e7391b93eb12a0d9c5b7f9c1e4a2b6d80371n % Nc;
+const MAGASIN = { 'AC Syntaxe Racine': clePublique(cleRacine) };
+const cleServeur = 0x51a3bf4f1b2b0b822cd15d6c15b0f00a08n % Nc;
+const certServeur = emettre(cleRacine, { sujet: 'boutique.example', clePub: clePublique(cleServeur),
+  emetteur: 'AC Syntaxe Racine', debut: 20260101, fin: 20260401, ac: false });
+const AUJOURDHUI = 20260215;
+
+// ============ LA POIGNÉE DE MAIN, DANS L'ORDRE ======================================
+const aleaClient = 'a1b2c3d4e5f60718';
+const aleaServeur = '293a4b5c6d7e8f90';
+const x = 0x3f5c1b9e77a0d4e2c8b1069f4d3a72e5n;      // éphémère, côté client
+const y = 0x7d2e94af0b613c85d7f2a04e6198bc35n;      // éphémère, côté serveur
+const X = expmod(gdh, x, pdh), Y = expmod(gdh, y, pdh);
+
+const clientHello = 'ClientHello|alea=' + aleaClient + '|groupes=x25519,secp256r1|part=' + X.toString(16) + '|nom=boutique.example';
+const serverHello = 'ServerHello|alea=' + aleaServeur + '|groupe=x25519|part=' + Y.toString(16);
+const chiffres = 'EncryptedExtensions|alpn=http/1.1';     // envoyé juste après, et chiffré
+console.log('1. Le client envoie   : ' + clientHello.slice(0, 62) + '…  (' + clientHello.length + ' octets)');
+console.log('2. Le serveur répond  : ' + serverHello.slice(0, 62) + '…  (' + serverHello.length + ' octets)');
+
+// À partir d'ici, TOUT est chiffré : les deux côtés ont le secret.
+const secret = expmod(Y, x, pdh);
+const prk = extraire(bof(aleaClient + aleaServeur), bof(secret.toString(16)));
+// Une clé de « Finished » PAR SENS, comme la RFC 8446 : jamais la même des deux côtés.
+const cleFinS = etendre(prk, 'tls13 finished serveur', 32);
+const cleFinC = etendre(prk, 'tls13 finished client', 32);
+const cleAppliClient = etendre(prk, 'tls13 c ap traffic', 32);
+const cleAppliServeur = etendre(prk, 'tls13 s ap traffic', 32);
+console.log('3. Secret d\'échange commun aux deux, puis dérivation :');
+console.log('   clé client→serveur : ' + hex(cleAppliClient).slice(0, 24) + '…');
+console.log('   clé serveur→client : ' + hex(cleAppliServeur).slice(0, 24) + '…');
+
+// Le serveur prouve qu'il DÉTIENT la clé privée du certificat, sur tout ce qui précède.
+const transcriptJusquAuCert = (ch) =&gt; ch + '||' + serverHello + '||' + chiffres + '||' + corpsCert(certServeur);
+// Séparation de domaine de la RFC 8446 §4.4.3 : 64 espaces, l'étiquette, un octet nul.
+const CONTEXTE = ' '.repeat(64) + 'TLS 1.3, server CertificateVerify' + String.fromCharCode(0);   // l'octet nul de la RFC 8446
+const aSigner = (ch) =&gt; CONTEXTE + hex(sha256o(bof(transcriptJusquAuCert(ch))));
+const certVerify = signer(cleServeur, aSigner(clientHello));
+// Le « Finished » du serveur couvre EN PLUS son CertificateVerify.
+const transcriptComplet = (ch, cv) =&gt; transcriptJusquAuCert(ch) + '||' + cv.join(',');
+const finished = hex(hmac(cleFinS, sha256o(bof(transcriptComplet(clientHello, certVerify)))));
+console.log('4. Le serveur envoie ses extensions chiffrées, son certificat, sa signature du');
+console.log('   transcript, puis « Finished » — qui couvre aussi cette signature.');
+console.log('');
+
+// ============ CE QUE LE CLIENT VÉRIFIE, DANS L'ORDRE ================================
+// Six contrôles. Le premier qui échoue arrête la connexion.
+function poigneeDeMain(cert, signatureTranscript, marqueFinished, nomVoulu, chVuParLeClient, jour){
+  const controles = [
+    ['racine connue',          () =&gt; !!MAGASIN[cert.emetteur]],
+    ['certificat bien signé',  () =&gt; verifier(MAGASIN[cert.emetteur], corpsCert(cert), cert.sig)],
+    ['dates de validité',      () =&gt; jour &gt;= cert.debut &amp;&amp; jour &lt;= cert.fin],
+    ['nom du certificat',      () =&gt; cert.sujet === nomVoulu],
+    ['preuve de détention',    () =&gt; verifier(cert.clePub, CONTEXTE + hex(sha256o(bof(chVuParLeClient + '||' + serverHello + '||' + chiffres + '||' + corpsCert(cert)))), signatureTranscript)],
+    ['transcript identique',   () =&gt; hex(hmac(cleFinS, sha256o(bof(chVuParLeClient + '||' + serverHello + '||' + chiffres + '||' + corpsCert(cert) + '||' + signatureTranscript.join(','))))) === marqueFinished],
+  ];
+  for (let i = 0; i &lt; controles.length; i++) {
+    if (!controles[i][1]()) return 'REFUSÉE au contrôle ' + (i + 1) + '/6 — ' + controles[i][0];
+  }
+  return 'CONNEXION ÉTABLIE (6 contrôles sur 6)';
+}
+console.log('Poignée de main honnête → ' + poigneeDeMain(certServeur, certVerify, finished, 'boutique.example', clientHello, AUJOURDHUI));
+console.log('');
+
+// ============ CINQ TENTATIVES =======================================================
+const cleM = 0x666f7267657279206b657920666f7220746865206c6162n % Nc;
+// (a) Un certificat parfaitement valide… pour le domaine de Mallory.
+const certM = emettre(cleRacine, { sujet: 'mallory.example', clePub: clePublique(cleM),
+  emetteur: 'AC Syntaxe Racine', debut: 20260101, fin: 20260401, ac: false });
+const cvM = signer(cleM, CONTEXTE + hex(sha256o(bof(clientHello + '||' + serverHello + '||' + chiffres + '||' + corpsCert(certM)))));
+const finM = hex(hmac(cleFinS, sha256o(bof(clientHello + '||' + serverHello + '||' + chiffres + '||' + corpsCert(certM) + '||' + cvM.join(',')))));
+console.log('(a) certificat valide, mais émis pour mallory.example :');
+console.log('    → ' + poigneeDeMain(certM, cvM, finM, 'boutique.example', clientHello, AUJOURDHUI));
+// (b) Le vrai certificat de la boutique, rejoué : Mallory n'a pas la clé privée.
+console.log('(b) le vrai certificat de la boutique, rejoué par Mallory :');
+const cvFaux = signer(cleM, aSigner(clientHello));
+console.log('    → ' + poigneeDeMain(certServeur, cvFaux, finished, 'boutique.example', clientHello, AUJOURDHUI));
+// (c) Le même certificat, mais présenté après sa date de fin.
+console.log('(c) le vrai certificat, présenté le 20260601 (il expire le 20260401) :');
+console.log('    → ' + poigneeDeMain(certServeur, certVerify, finished, 'boutique.example', clientHello, 20260601));
+// (d) Rétrogradage : Mallory réécrit le ClientHello EN VOL. Le serveur répond à la
+//     version truquée ; le client, lui, vérifie avec le ClientHello qu'il a envoyé.
+const helloTruque = clientHello.replace('groupes=x25519,secp256r1', 'groupes=export512');
+const cvTruque = signer(cleServeur, aSigner(helloTruque));
+const finTruque = hex(hmac(cleFinS, sha256o(bof(transcriptComplet(helloTruque, cvTruque)))));
+console.log('(d) rétrogradage : la liste des groupes du client est réécrite en vol :');
+console.log('    → ' + poigneeDeMain(certServeur, cvTruque, finTruque, 'boutique.example', clientHello, AUJOURDHUI));
+console.log("    (le serveur a signé ce qu'il a reçu ; le client vérifie ce qu'il a envoyé.)");
+// (e) Ce que le sixième contrôle attrape SEUL : une signature valide, un transcript
+//     complété différemment ensuite. Le client recalcule sa marque et voit l'écart.
+const finTronque = hex(hmac(cleFinS, sha256o(bof(transcriptJusquAuCert(clientHello)))));   // Finished qui « oublie » le CertificateVerify
+console.log('(e) « Finished » calculé sans couvrir la signature du serveur :');
+console.log('    → ' + poigneeDeMain(certServeur, certVerify, finTronque, 'boutique.example', clientHello, AUJOURDHUI));
+console.log('');
+// Et dans l'autre sens : le client envoie son propre « Finished », avec SA clé à lui.
+const finishedClient = hex(hmac(cleFinC, sha256o(bof(transcriptComplet(clientHello, certVerify) + '||ClientFinished'))));
+console.log('Le client répond avec son propre « Finished », dérivé d\'une clé distincte :');
+console.log('  côté client : ' + finishedClient.slice(0, 24) + '…');
+console.log('  (une clé par sens : le serveur ne peut pas fabriquer le Finished du client.)');
+console.log('');
+console.log('Un aller-retour, et les trois questions du cours ont trouvé leur réponse :');
+console.log("  la confidentialité vient de l'échange éphémère (leçon 5),");
+console.log("  l'origine vient de la signature du transcript (leçon 4),");
+console.log("  l'identité vient du certificat et du magasin (cette leçon).");</code></pre></figure>
+<figure class="code-block" data-file="poignee-tls13.txt"><pre><code class="language-plaintext">1. Le client envoie   : ClientHello|alea=a1b2c3d4e5f60718|groupes=x25519,secp256r1|par…  (149 octets)
+2. Le serveur répond  : ServerHello|alea=293a4b5c6d7e8f90|groupe=x25519|part=6a6e6b3a9…  (117 octets)
+3. Secret d'échange commun aux deux, puis dérivation :
+   clé client→serveur : 0b71f663e9194a9081e2be2b…
+   clé serveur→client : 8873eab501c3e1cc8d2cb86b…
+4. Le serveur envoie ses extensions chiffrées, son certificat, sa signature du
+   transcript, puis « Finished » — qui couvre aussi cette signature.
+
+Poignée de main honnête → CONNEXION ÉTABLIE (6 contrôles sur 6)
+
+(a) certificat valide, mais émis pour mallory.example :
+    → REFUSÉE au contrôle 4/6 — nom du certificat
+(b) le vrai certificat de la boutique, rejoué par Mallory :
+    → REFUSÉE au contrôle 5/6 — preuve de détention
+(c) le vrai certificat, présenté le 20260601 (il expire le 20260401) :
+    → REFUSÉE au contrôle 3/6 — dates de validité
+(d) rétrogradage : la liste des groupes du client est réécrite en vol :
+    → REFUSÉE au contrôle 5/6 — preuve de détention
+    (le serveur a signé ce qu'il a reçu ; le client vérifie ce qu'il a envoyé.)
+(e) « Finished » calculé sans couvrir la signature du serveur :
+    → REFUSÉE au contrôle 6/6 — transcript identique
+
+Le client répond avec son propre « Finished », dérivé d'une clé distincte :
+  côté client : 0662414c139961f522312833…
+  (une clé par sens : le serveur ne peut pas fabriquer le Finished du client.)
+
+Un aller-retour, et les trois questions du cours ont trouvé leur réponse :
+  la confidentialité vient de l'échange éphémère (leçon 5),
+  l'origine vient de la signature du transcript (leçon 4),
+  l'identité vient du certificat et du magasin (cette leçon).</code></pre></figure>
+<p>Six contrôles, dans cet ordre, et le premier qui échoue arrête tout. Les cinq tentatives tombent à quatre endroits différents, ce qui est instructif&nbsp;: le certificat de Mallory tombe au contrôle du <em>nom</em>&nbsp;; le vrai certificat rejoué tombe à la <em>preuve de détention</em> — Mallory peut recopier un certificat, elle ne peut pas signer avec la clé privée qui va avec&nbsp;; le certificat périmé tombe aux <em>dates</em>&nbsp;; le rétrogradage tombe encore à la preuve de détention, parce que le serveur signe ce qu'il a <em>reçu</em> tandis que le client vérifie ce qu'il a <em>envoyé</em>&nbsp;; et le dernier essai, où le <em>Finished</em> ne couvre pas la signature du serveur, ne tombe qu'au sixième contrôle — c'est le seul que les cinq premiers laissent passer.</p>
+<p>Le rétrogradage mérite qu'on s'y arrête, car la parade est structurelle et vaut pour toute la famille de Logjam et de FREAK. Dans TLS&nbsp;1.3, la signature du serveur porte sur le <strong>condensé de tous les messages de poignée de main jusqu'au certificat inclus</strong> — pas sur les octets bruts de la connexion, et pas au-delà du certificat. Toute réécriture en vol, y compris de la liste des algorithmes proposés, rend donc cette signature invalide chez celui qui a émis le message original. Le <em>Finished</em>, lui, va un cran plus loin&nbsp;: il couvre <em>aussi</em> la signature du serveur, et il emploie une clé dérivée du secret — une par sens, jamais la même des deux côtés. C'est le seul rempart dans le sens client vers serveur, puisque le client, lui, ne présente en général pas de certificat.</p>
+<div class="callout callout--astuce"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Ce que notre version simplifie, et ce qu'elle ne simplifie pas</p><p><strong>Simplifié&nbsp;:</strong> l'encodage (TLS emploie des structures binaires, pas du texte à barres verticales), le groupe d'échange (X25519 au lieu de notre premier sûr de 257&nbsp;bits), le chiffrement effectif des messages de la poignée de main, la reprise de session, la vérification d'une chaîne à plusieurs maillons — ici la racine signe directement le serveur —, la révocation, et la hiérarchie complète des secrets&nbsp;: TLS&nbsp;1.3 en dérive une douzaine, pas quatre. <strong>Non simplifié&nbsp;:</strong> l'ordre des messages, le fait que la signature du serveur porte sur le condensé du transcript jusqu'au certificat, la présence d'une séparation de domaine dans le <em>CertificateVerify</em> — la vraie commence par 64&nbsp;espaces et se termine par un octet nul, exactement comme ici —, le fait que le <em>Finished</em> couvre en plus cette signature et emploie une clé par sens, et les six contrôles du client. Ce qui est démontré ici est démontré pour de bon&nbsp;; ce qui est simplifié est dit dans cette phrase.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 230" role="img" aria-label="Chronologie d'une poignée de main TLS 1.3. Le client envoie son ClientHello avec un aléa et une part publique. Le serveur répond par son ServerHello, sa part publique, son certificat, la signature du transcript et son message Finished. Le client vérifie six points puis envoie son propre Finished, après quoi les données applicatives circulent chiffrées. Un seul aller-retour sépare le début de la connexion des premières données.">
+    <text class="d-label" x="80" y="20" text-anchor="middle" font-size="12">client</text>
+    <text class="d-label" x="560" y="20" text-anchor="middle" font-size="12">serveur</text>
+    <path class="d-line" d="M80 28 V206" stroke-dasharray="3 3" /><path class="d-line" d="M560 28 V206" stroke-dasharray="3 3" />
+    <path class="d-line" d="M84 48 H556" /><text class="d-tag" x="320" y="42" text-anchor="middle" font-size="10">ClientHello : aléa + part publique + nom demandé</text>
+    <path class="d-line" d="M556 84 H84" /><text class="d-tag" x="320" y="70" text-anchor="middle" font-size="10">ServerHello : aléa + part publique</text>
+    <text class="d-tag" x="320" y="100" text-anchor="middle" font-size="10">certificat + signature du transcript + Finished</text>
+    <rect class="d-accent" x="16" y="116" width="200" height="46" rx="5" /><text class="d-text" x="116" y="134" text-anchor="middle" font-size="9">6 contrôles : racine, signature, dates,</text><text class="d-text" x="116" y="152" text-anchor="middle" font-size="9">nom, détention, transcript</text>
+    <path class="d-line" d="M84 178 H556" /><text class="d-tag" x="320" y="172" text-anchor="middle" font-size="10">Finished du client, puis données chiffrées</text>
+    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="9">un seul aller-retour avant les premières données : c'est ce que TLS 1.3 a gagné sur TLS 1.2</text>
+  </svg>
+  <figcaption>La confidentialité vient de l'échange éphémère, l'origine de la signature, l'identité du certificat&nbsp;: trois leçons, un seul aller-retour.</figcaption>
+</figure>
+
+<h2>Le 0-RTT, ou ce qu'on paie pour gagner un aller-retour</h2>
+<p>TLS&nbsp;1.3 permet mieux qu'un aller-retour&nbsp;: si le client a déjà visité le site et détient un ticket, il peut envoyer des données <em>avec</em> son premier message. C'est le <strong>0-RTT</strong>. Le gain est réel&nbsp;; le prix aussi, et il est facile à mesurer.</p>
+<figure class="code-block" data-file="zero-rtt.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// --- HMAC, et un chiffrement à flot jouet dérivé du secret --------------------------
+function hmac(cle, msg){ let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice(); while (k.length &lt; 64) k.push(0);
+  return sha256o([...k.map(b =&gt; b ^ 0x5c), ...sha256o([...k.map(b =&gt; b ^ 0x36), ...msg])]); }
+const etendre = (prk, etiq, n) =&gt; { const o = []; let t = [];
+  for (let i = 1; o.length &lt; n; i++) { t = hmac(prk, [...t, ...bof(etiq), i]); o.push(...t); } return o.slice(0, n); };
+
+// Le client a déjà visité le site : il détient un secret pré-partagé (« ticket »).
+const psk = sha256o(bof('secret pré-partagé issu de la session précédente'));
+
+// PREMIER paquet, envoyé AVANT toute réponse du serveur : c'est le 0-RTT.
+// Sa clé ne dépend que du ticket et de l'aléa du client. Le serveur n'a rien apporté.
+const aleaClient = 'c41ab2f9';
+const cle0RTT = etendre(psk, 'tls13 c e traffic|' + aleaClient, 32);
+const requete = 'POST /commande {"article":"clavier","quantite":1}';
+const paquet = { alea: aleaClient, corps: bof(requete).map((o, i) =&gt; o ^ cle0RTT[i % 32]),
+                 marque: hex(hmac(cle0RTT, bof(requete))) };
+console.log('Paquet 0-RTT : ' + hex(paquet.corps).slice(0, 40) + '…');
+console.log('Il porte une marque d\'authenticité valide, et le serveur peut le traiter');
+console.log('AVANT d\'avoir répondu quoi que ce soit. C\'est tout l\'intérêt : zéro aller-retour.');
+console.log('');
+
+// --- Un serveur, plusieurs machines derrière le même nom ---------------------------
+function serveur(memoire, paquet){
+  const cle = etendre(psk, 'tls13 c e traffic|' + paquet.alea, 32);
+  const clair = String.fromCharCode(...paquet.corps.map((o, i) =&gt; o ^ cle[i % 32]));
+  if (hex(hmac(cle, bof(clair))) !== paquet.marque) return 'marque invalide';
+  if (memoire) {                                        // liste anti-rejeu, si elle existe
+    if (memoire.has(paquet.marque)) return 'déjà vu — rejeté';
+    memoire.add(paquet.marque);
+  }
+  return 'exécuté : ' + clair;
+}
+
+let executees = 0;
+for (let i = 0; i &lt; 20; i++) if (serveur(null, paquet).startsWith('exécuté')) executees++;
+console.log('Mallory capte le paquet et le renvoie 20 fois, sans rien y comprendre :');
+console.log('  → ' + executees + ' commandes exécutées sur 20. Un clavier commandé, ' + executees + ' livrés.');
+console.log('');
+
+// Parade 1 : une liste anti-rejeu par machine.
+const memoireUnique = new Set();
+let acceptes1 = 0;
+for (let i = 0; i &lt; 20; i++) if (serveur(memoireUnique, paquet).startsWith('exécuté')) acceptes1++;
+console.log('Avec une liste anti-rejeu sur UNE machine : ' + acceptes1 + ' accepté sur 20.');
+
+// Mais le site tient sur plusieurs machines, qui ne partagent pas cette liste.
+const parc = [new Set(), new Set(), new Set(), new Set()];
+let acceptes2 = 0;
+for (let i = 0; i &lt; 20; i++) if (serveur(parc[i % parc.length], paquet).startsWith('exécuté')) acceptes2++;
+console.log('Avec ' + parc.length + ' machines derrière le même nom, chacune sa liste : ' + acceptes2 + ' acceptés sur 20.');
+console.log('  La liste anti-rejeu doit donc être PARTAGÉE, ce qui coûte exactement ce que');
+console.log('  le 0-RTT prétendait faire gagner : un aller-retour vers un service commun.');
+console.log('');
+
+// Parade 2 : n'autoriser en 0-RTT que ce dont la répétition est sans effet.
+// La méthode HTTP est un critère COMMODE, pas un critère sûr : la RFC 8470 (§3) prévient
+// que « certaines ressources produisent des effets de bord avec des méthodes sûres ».
+const methodeSure = r =&gt; r.startsWith('GET ') || r.startsWith('HEAD ');
+const requetes = ['GET /catalogue', 'POST /commande {"article":"clavier"}', 'GET /panier', 'POST /virement {"montant":120}', 'GET /desabonner?jeton=9a04'];
+console.log('Filtrage par méthode, la parade de la RFC 8470 sur HTTP :');
+for (const r of requetes) console.log('  ' + (methodeSure(r) ? 'autorisé en 0-RTT ' : 'DIFFÉRÉ au 1-RTT') + ' : ' + r);
+const dangereuses = requetes.filter(r =&gt; !methodeSure(r)).length;
+console.log('  → ' + dangereuses + ' requêtes sur ' + requetes.length + ' attendent la poignée de main complète.');
+console.log('');
+console.log('  Mais regardez la dernière : un GET qui désabonne. Le filtre la laisse passer,');
+console.log('  et la rejouer désabonne autant de fois. Le critère est commode, pas suffisant ;');
+console.log('  la RFC 8470 propose aussi de DIFFÉRER le traitement, ou de répondre 425 Too Early.');
+console.log('');
+console.log("Le 0-RTT échange une garantie contre un aller-retour. Ce n'est pas un défaut caché :");
+console.log("la RFC 8446 le documente (§8 et annexe E.5), et laisse la décision à l'application.");</code></pre></figure>
+<figure class="code-block" data-file="zero-rtt.txt"><pre><code class="language-plaintext">Paquet 0-RTT : 64bcea61d56e7b6195544714442490a7dbfff50f…
+Il porte une marque d'authenticité valide, et le serveur peut le traiter
+AVANT d'avoir répondu quoi que ce soit. C'est tout l'intérêt : zéro aller-retour.
+
+Mallory capte le paquet et le renvoie 20 fois, sans rien y comprendre :
+  → 20 commandes exécutées sur 20. Un clavier commandé, 20 livrés.
+
+Avec une liste anti-rejeu sur UNE machine : 1 accepté sur 20.
+Avec 4 machines derrière le même nom, chacune sa liste : 4 acceptés sur 20.
+  La liste anti-rejeu doit donc être PARTAGÉE, ce qui coûte exactement ce que
+  le 0-RTT prétendait faire gagner : un aller-retour vers un service commun.
+
+Filtrage par méthode, la parade de la RFC 8470 sur HTTP :
+  autorisé en 0-RTT  : GET /catalogue
+  DIFFÉRÉ au 1-RTT : POST /commande {"article":"clavier"}
+  autorisé en 0-RTT  : GET /panier
+  DIFFÉRÉ au 1-RTT : POST /virement {"montant":120}
+  autorisé en 0-RTT  : GET /desabonner?jeton=9a04
+  → 2 requêtes sur 5 attendent la poignée de main complète.
+
+  Mais regardez la dernière : un GET qui désabonne. Le filtre la laisse passer,
+  et la rejouer désabonne autant de fois. Le critère est commode, pas suffisant ;
+  la RFC 8470 propose aussi de DIFFÉRER le traitement, ou de répondre 425 Too Early.
+
+Le 0-RTT échange une garantie contre un aller-retour. Ce n'est pas un défaut caché :
+la RFC 8446 le documente (§8 et annexe E.5), et laisse la décision à l'application.</code></pre></figure>
+<p>Vingt rejeux, vingt exécutions. La cause est structurelle&nbsp;: la clé qui protège ces données ne dépend que du ticket et de l'aléa du client&nbsp;; le serveur n'a encore rien apporté, donc rien ne distingue un envoi d'un renvoi. Ce n'est pas une faille de TLS&nbsp;1.3 mais un compromis <em>documenté par la norme</em> — RFC&nbsp;8446, §8 et annexe&nbsp;E.5 —, qui laisse explicitement à l'application le soin de décider.</p>
+<p>Les parades ont chacune leur coût. Une liste anti-rejeu ramène le compte à un — sur une seule machine&nbsp;; dès qu'un site en emploie plusieurs derrière le même nom, il en passe autant qu'il y a de machines, à moins de partager la liste, ce qui coûte l'aller-retour qu'on voulait éviter. Reste le filtrage, décrit par la <strong>RFC&nbsp;8470</strong> pour HTTP&nbsp;: n'autoriser en 0-RTT que les méthodes réputées sûres. La même RFC prévient que ce critère ne suffit pas — la dernière ligne du programme est un <code>GET</code> qui désabonne, et le filtre le laisse passer. Elle propose donc aussi de <em>différer</em> le traitement des premières données jusqu'à la fin de la poignée de main, ou de répondre <code>425 Too Early</code> pour demander au client de réessayer.</p>
+
+<h2>Cas réel</h2>
+<p><strong>DigiNotar</strong> était une autorité de certification néerlandaise, présente dans les magasins de la plupart des navigateurs et des systèmes, et opératrice d'une partie de l'infrastructure de l'administration néerlandaise. En juin et juillet&nbsp;2011, son réseau est compromis. Entre le 10 et le 20&nbsp;juillet, l'intrus émet au moins <strong>531&nbsp;certificats frauduleux</strong> — le rapport d'enquête précise que cette liste n'est pas exhaustive, des traces de journal ne correspondant à aucun certificat retrouvé — pour Google, mais aussi pour Skype, les modules complémentaires de Mozilla, les services de mise à jour de Microsoft, et d'autres.</p>
+<p>Le 28&nbsp;août 2011, un utilisateur publie le contenu d'un certificat joker pour <code>*.google.com</code> émis par DigiNotar, et toujours pas révoqué. L'enquête menée par Fox-IT, dont le rapport porte le nom <em>Black Tulip</em>, établit qu'il avait servi pendant des semaines à une attaque de l'homme du milieu&nbsp;: <strong>298&nbsp;140&nbsp;adresses réseau distinctes</strong> ont interrogé le service de révocation à son sujet, dont 95&nbsp;% situées en Iran — d'où l'ordre de grandeur de 300&nbsp;000&nbsp;personnes couramment cité. Les navigateurs retirent les racines de DigiNotar dans les jours qui suivent&nbsp;; le tribunal de Haarlem prononce la faillite de l'entreprise le 20&nbsp;septembre 2011.</p>
+<p>Ce que cet épisode démontre est exactement la faiblesse structurelle décrite plus haut. Les victimes n'avaient rien fait de travers&nbsp;: leur navigateur vérifiait la chaîne correctement, le nom correspondait, les dates étaient bonnes, la signature était valide. <strong>Le certificat était authentique&nbsp;;</strong> il avait simplement été émis par une autorité qui n'aurait jamais dû l'émettre, et à laquelle ils faisaient confiance sans le savoir, parce qu'elle figurait dans une liste installée avec leur système.</p>
+<p>Deux conséquences durables. La <strong>transparence des certificats</strong> — tout certificat TLS de confiance publique doit être publié dans des journaux publics et vérifiables, ce que Chrome exige pour ceux émis après le 30&nbsp;avril 2018 — fait qu'une émission frauduleuse de ce type serait aujourd'hui <em>visible</em> par le domaine visé, souvent en quelques heures. Et la surveillance des autorités s'est durcie&nbsp;: plusieurs ont été retirées des magasins depuis, pour des manquements bien moins spectaculaires.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Certificats et TLS&nbsp;: ce que chaque contrôle apporte</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Certificat</td><td>Une déclaration signée&nbsp;: «&nbsp;cette clé publique appartient à ce nom, jusqu’à cette date&nbsp;». Tout y est public. 7&nbsp;altérations sur 7 rejetées par la signature.</td></tr>
+      <tr><td>Magasin racine</td><td>La seule source de confiance, et elle n’arrive pas par le réseau&nbsp;: environ deux cents racines livrées avec le système. Une chaîne qui n’y aboutit pas ne vaut rien, si bien signée soit-elle.</td></tr>
+      <tr><td>Contraintes</td><td><code>ac: true</code> pour émettre, portée de noms pour limiter le pouvoir d’une intermédiaire — et cette portée doit être <strong>héritée</strong>, sinon une sous-AC se l’élargit en un maillon. Sans elles, une feuille émet pour n’importe qui.</td></tr>
+      <tr><td>Vérification du nom</td><td>Contrôle SÉPARÉ de la chaîne, et le plus souvent oublié. Joker sur un seul niveau et jamais partiel (RFC&nbsp;9525), jamais sur un suffixe public (Public Suffix List, aucune norme), nom lu dans les SAN — plus dans le <em>Common Name</em> depuis 2017.</td></tr>
+      <tr><td>Validité</td><td>Deux dates, et une horloge à l’heure. Le certificat expiré reste une cause de panne récurrente, et parfaitement évitable.</td></tr>
+      <tr><td>Révocation</td><td>Le point faible. Sur 100&nbsp;visites dont 32&nbsp;révoquées&nbsp;: «&nbsp;échec doux&nbsp;» = 8&nbsp;révoqués acceptés et 0&nbsp;site sain refusé&nbsp;; «&nbsp;échec dur&nbsp;» = 0&nbsp;révoqué accepté et 20&nbsp;sains refusés à tort.</td></tr>
+      <tr><td>Durée de vie</td><td>398&nbsp;jours → 47&nbsp;jours par paliers, de mars&nbsp;2026 à mars&nbsp;2029, et réutilisation de la validation de domaine ramenée à 10&nbsp;jours (bulletin SC-081v3, voté le 11&nbsp;avril 2025). L’automatisation devient obligatoire de fait.</td></tr>
+      <tr><td>Poignée de main</td><td>Six contrôles côté client&nbsp;: racine, signature du certificat, dates, nom, preuve de détention, transcript identique. Le premier échec coupe.</td></tr>
+      <tr><td>Transcript signé</td><td>La signature du serveur porte sur le condensé de tous les messages de poignée de main jusqu’au certificat&nbsp;: c’est ce qui rend le rétrogradage détectable. Le <em>Finished</em> couvre en plus cette signature, avec une clé par sens.</td></tr>
+      <tr><td>0-RTT</td><td>Un aller-retour gagné contre la protection contre le rejeu&nbsp;: 20&nbsp;rejeux, 20&nbsp;exécutions. À réserver aux requêtes sans effet — et le critère de la méthode HTTP ne suffit pas (RFC&nbsp;8470).</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Certificat X.509</dt><dd>Structure signée associant une clé publique à un nom, avec un émetteur, des dates de validité et des extensions.</dd>
+<dt>Autorité de certification</dt><dd>Organisation qui signe des certificats après avoir vérifié, à son niveau d’exigence, que le demandeur contrôle bien le nom demandé.</dd>
+<dt>Magasin racine</dt><dd>Ensemble des clés publiques d’autorités installées avec le système ou le navigateur. Point de départ obligé de toute vérification.</dd>
+<dt>Chaîne de certification</dt><dd>Suite de certificats reliant la feuille présentée par le serveur à une racine du magasin, chaque maillon signant le précédent.</dd>
+<dt>Contrainte de base</dt><dd>Extension qui indique si un certificat a le droit d’en émettre d’autres, et jusqu’à quelle profondeur.</dd>
+<dt>SAN</dt><dd>Extension listant les noms couverts par le certificat. C’est elle, et non le champ <em>Common Name</em>, que lisent les navigateurs actuels.</dd>
+<dt>Révocation</dt><dd>Déclaration qu’un certificat ne vaut plus avant sa date de fin. Listes publiées, réponses en ligne ou agrafage&nbsp;: aucun mécanisme n’est pleinement satisfaisant.</dd>
+<dt>Transparence des certificats</dt><dd>Publication de tout certificat TLS de confiance publique dans des journaux publics vérifiables, ce qui rend une émission frauduleuse détectable par le domaine visé.</dd>
+<dt>CertificateVerify</dt><dd>Message par lequel le serveur signe l’intégralité du transcript, prouvant qu’il détient la clé privée du certificat présenté.</dd>
+<dt>0-RTT</dt><dd>Envoi de données applicatives dès le premier message, à partir d’un ticket de session antérieure. Rapide, mais rejouable.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<p>Un certificat est une déclaration signée&nbsp;: 7&nbsp;altérations sur 7 rejetées, et rien d'autre à l'intérieur que des champs publics. La confiance vient du magasin racine installé avec le système, jamais du réseau&nbsp;: 5&nbsp;chaînes frauduleuses rejetées sur 5, pour 3&nbsp;motifs distincts — dont la sous-autorité qui s'attribue une portée plus large que la sienne. Le nom se vérifie séparément, avec ses règles propres&nbsp;: 9&nbsp;verdicts conformes sur 9, dont le joker qui ne couvre qu'un niveau. La révocation ne tient pas ses promesses&nbsp;: sur 100&nbsp;visites dont 32&nbsp;révoquées, l'échec doux laisse passer 8&nbsp;certificats révoqués et l'échec dur refuse 20&nbsp;sites sains — d'où le passage de 398 à 47&nbsp;jours de validité maximale d'ici mars&nbsp;2029. La poignée de main complète enchaîne six contrôles, et les cinq attaques essayées tombent à quatre endroits différents. Et le 0-RTT échange une garantie contre un aller-retour&nbsp;: 20&nbsp;rejeux, 20&nbsp;exécutions sans liste anti-rejeu, 1 avec — mais 4 dès que le site tient sur quatre machines.</p>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un client interne accepte tout certificat dont la chaîne remonte à une racine connue, sans regarder le nom. Quel est le scénario d'attaque le moins coûteux pour quelqu'un qui veut lire ce trafic&nbsp;?</li>
+<li>Une équipe s'étonne que son navigateur refuse un certificat auto-signé alors qu'il est «&nbsp;signé avec la même cryptographie&nbsp;» qu'un certificat commercial. Que répondre en deux phrases&nbsp;?</li>
+<li>Un site place une interface de programmation de paiement derrière du 0-RTT pour gagner en latence. Explique ce qui peut arriver, et la règle qui aurait évité la question.</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Le programme rejette un certificat auto-signé au premier contrôle, et une chaîne parfaitement cohérente signée par « AC Inconnue » au même endroit. Que montre cette similitude ?","a":["Que la validité d'une chaîne ne se juge jamais de l'intérieur : elle doit aboutir à une clé publique déjà présente dans le magasin du système","Que les deux certificats étaient mal signés, l'auto-signature et la signature par une autorité inconnue produisant toutes deux une valeur invalide","Que le programme ne vérifie pas les signatures et se contente de comparer les noms d'émetteur à une liste, ce qui est une simplification pédagogique","Que la racine inconnue aurait été acceptée si sa durée de validité avait été plus courte, la durée étant le critère qui départage les autorités"],"correct":0,"exp":"Les deux chaînes sont cryptographiquement irréprochables : chaque signature est valide, vérifiable, cohérente. Il leur manque la seule chose qui compte, un point d'ancrage installé hors du réseau."},
+  {"q":"Un client vérifie la chaîne du certificat mais pas le nom. Quel est le moyen le plus simple pour un attaquant de lire le trafic ?","a":["Acheter tout à fait régulièrement un certificat pour un domaine qui lui appartient, puis le présenter en se plaçant sur le chemin : la chaîne sera valide","Fabriquer un certificat auto-signé pour le domaine visé, ce qui suffit dès lors que le nom n'est pas contrôlé par le client","Trouver une collision SHA-256 entre le certificat légitime et le sien, afin que les deux partagent la même signature d'autorité","Rejouer le certificat légitime du serveur capté sur le réseau, ce qui lui donne la clé privée correspondante"],"correct":0,"exp":"L'auto-signé échouerait au contrôle de la chaîne, qui est fait. Rejouer un certificat ne donne pas la clé privée. La collision est hors d'atteinte. Il reste la voie légale : un vrai certificat, pour son propre domaine, présenté ailleurs."},
+  {"q":"Dans la poignée de main, Mallory rejoue le vrai certificat de la boutique, capté sur le réseau. Le programme la rejette au cinquième contrôle, celui de la preuve de détention. Pourquoi celui-là ?","a":["Parce que le serveur doit signer le transcript avec la clé privée du certificat présenté, et que Mallory ne dispose que de la partie publique","Parce que le certificat rejoué porte une date d'émission antérieure, que le client compare à l'heure courante lors du contrôle des dates","Parce que le nom du certificat ne correspond plus une fois qu'il a été recopié, la signature de l'autorité couvrant l'adresse réseau du serveur","Parce que le client détecte que le certificat a déjà été présenté dans une session antérieure et refuse tout certificat rejoué"],"correct":0,"exp":"Un certificat est public, donc recopiable sans difficulté. C'est justement pourquoi la preuve de détention existe : elle demande au serveur de faire quelque chose que seule la clé privée permet."},
+  {"q":"Un site active le 0-RTT sur toutes ses routes. Le programme montre 20 exécutions pour 20 rejeux, ramenées à 4 avec une liste anti-rejeu par machine sur un parc de 4 machines. Quelle conclusion s'impose ?","a":["Que la protection contre le rejeu doit être partagée entre les machines, ou bien que le 0-RTT doit être réservé aux requêtes dont la répétition est sans effet","Que le 0-RTT est une faille de TLS 1.3 qu'il faut désactiver systématiquement, la norme ayant reconnu l'erreur depuis sa publication","Que la clé de session employée en 0-RTT est trop courte, et qu'une clé de 512 bits rendrait les paquets non rejouables","Que le rejeu vient de l'absence de marque d'authenticité sur le paquet, qu'un code d'authentification de message suffirait à corriger"],"correct":0,"exp":"Le paquet PORTE une marque d'authenticité valide : c'est bien le problème, il est authentique. La norme documente ce compromis et laisse le choix à l'application ; les deux parades sont le partage de l'état anti-rejeu et le filtrage des requêtes."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["le magasin racine","le magasin de certificats racines","magasin racine","le magasin","magasin de certificats racines","le magasin de certificats"],"placeholder":"l'endroit d'où vient réellement la confiance, et qui n'arrive pas par le réseau","hints":["Il est installé avec le système ou le navigateur, et contient quelques centaines de clés publiques.","Une chaîne qui n'y aboutit pas ne vaut rien, même parfaitement signée.","Deux mots, dont un adjectif tiré de « racine »."],"link":{"href":"lecon-06.html","label":"Revoir « La confiance ne vient pas du réseau »"}},
+  {"type":"code","run":{"expect":"verdicts conformes : 6 sur 6"},"placeholder":"le résultat de ta règle de correspondance de nom sur six cas","hints":["Un joker ne remplace qu'une seule étiquette, et seulement la première.","« *.example » doit être refusé : un joker ne s'applique pas à un suffixe public.","Affiche exactement : « verdicts conformes : 6 sur 6 »."],"link":{"href":"lecon-06.html","label":"Revoir « La vérification qu'on oublie : le nom »"}},
+  {"type":"code","run":{"expect":"20 exécutions sur 20"},"placeholder":"le nombre d'exécutions obtenues en rejouant 20 fois un paquet 0-RTT","hints":["La clé du paquet ne dépend que du ticket et de l'aléa du client : elle est reproductible.","Le serveur vérifie la marque d'authenticité, qui est valide à chaque rejeu.","Affiche exactement : « 20 exécutions sur 20 »."],"link":{"href":"lecon-06.html","label":"Revoir « Le 0-RTT, ou ce qu'on paie pour gagner un aller-retour »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une équipe déploie une application mobile qui parle à son propre serveur. Pour «&nbsp;simplifier le développement&nbsp;», quelqu'un propose d'accepter tous les certificats sans vérification, en promettant de rétablir les contrôles avant la mise en production. En trois phrases, dis <em>lesquels</em> des six contrôles cette manœuvre désactive réellement — attention, ce ne sont pas les six —, pourquoi la promesse est rarement tenue, et ce qu'il faut faire à la place dans un environnement de développement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-exo1.txt"><pre><code class="language-plaintext">Ce qui est désactivé : les TROIS PREMIERS contrôles seulement — la remontée à
+une racine du magasin, la signature de chaque maillon, les dates, et la
+correspondance du nom. Les deux derniers, eux, restent actifs et PASSENT : un
+attaquant qui présente son propre certificat en détient la clé privée, donc il
+signe le transcript sans difficulté et son « Finished » est juste. C'est
+précisément ce qui rend la panne invisible : la connexion se déroule
+normalement, elle est simplement chiffrée AVEC L'ATTAQUANT.
+
+Pourquoi la promesse est rarement tenue : la ligne est ajoutée pendant une
+séance de débogage, elle marche, elle traverse la revue de code parce qu'elle
+est courte et isolée, et rien ne la signale ensuite — aucun test ne peut
+échouer à cause d'elle, puisqu'elle fait précisément passer les tests. Des
+audits en retrouvent régulièrement dans des applications publiées.
+
+Ce qu'il faut faire à la place : installer la racine de développement dans le
+magasin de l'appareil de test, ou l'épingler explicitement dans la
+configuration de développement. Le contrôle reste actif, seule la liste des
+racines change — et le code de production n'a pas de branche « sans
+vérification » qui puisse survivre par accident.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la règle de correspondance entre le nom visité et un motif du certificat, puis éprouve-la sur six cas&nbsp;: un sous-domaine couvert par un joker, un sous-domaine imbriqué qui ne l'est pas, le domaine nu face à un joker, une différence de casse, un joker sur un suffixe public, et un joker partiel. Le programme doit afficher exactement <code>verdicts conformes : 6 sur 6</code>.</p><details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo2.js"><pre><code class="language-javascript">// La règle de correspondance, écrite au plus près de la RFC 6125.
+function correspond(nom, motif){
+  const v = nom.toLowerCase().replace(/\.$/, '').split('.');
+  const m = motif.toLowerCase().replace(/\.$/, '').split('.');
+  if (m.length !== v.length) return false;          // pas de saut de niveau
+  return m.every((etiquette, i) =&gt; {
+    if (etiquette === '*') return i === 0 &amp;&amp; m.length &gt;= 3;   // en tête, jamais sur un suffixe public
+    if (etiquette.includes('*')) return false;                // pas de joker partiel
+    return etiquette === v[i];
+  });
+}
+const cas = [
+  ['www.boutique.example',   '*.boutique.example', true],
+  ['a.www.boutique.example', '*.boutique.example', false],
+  ['boutique.example',       '*.boutique.example', false],
+  ['BOUTIQUE.example',       'boutique.example',   true],
+  ['quoi.example',           '*.example',          false],
+  ['ws.boutique.example',    'w*.boutique.example', false],
+];
+const justes = cas.filter(([nom, motif, attendu]) =&gt; correspond(nom, motif) === attendu).length;
+console.log('verdicts conformes : ' + justes + ' sur ' + cas.length);</code></pre></figure>
+<figure class="code-block" data-file="solution-exo2.txt"><pre><code class="language-plaintext">verdicts conformes : 6 sur 6</code></pre></figure>
+<p>La table de cas <em>est</em> l'exercice&nbsp;: une règle de ce genre s'écrit en dix lignes et se trompe sur trois. Remarquez en particulier le troisième cas — un certificat pour <code>*.boutique.example</code> ne vaut pas pour <code>boutique.example</code> —, qui surprend beaucoup d'équipes en production, et explique pourquoi les autorités émettent presque toujours les deux noms dans le même certificat.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Aller plus loin</span></div><p>Fabrique un paquet 0-RTT&nbsp;: une requête chiffrée avec une clé dérivée d'un ticket et d'un aléa de client, accompagnée de sa marque d'authenticité. Écris ensuite le serveur qui vérifie la marque et exécute la requête, sans liste anti-rejeu, et rejoue le paquet vingt fois. Le programme doit afficher exactement <code>20 exécutions sur 20</code>. Puis dis quelle ligne, ajoutée où, ramènerait le compte à 1, et ce que cette ligne coûte dans un site réparti sur plusieurs machines.</p><details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo3.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// Le paquet 0-RTT ne dépend que du ticket et de l'aléa du CLIENT.
+function hmac(cle, msg){ let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice(); while (k.length &lt; 64) k.push(0);
+  return sha256o([...k.map(b =&gt; b ^ 0x5c), ...sha256o([...k.map(b =&gt; b ^ 0x36), ...msg])]); }
+const psk = sha256o(bof('ticket de la session précédente'));
+const cle = hmac(psk, bof('tls13 c e traffic|c41ab2f9'));
+const requete = 'POST /commande {"article":"clavier"}';
+const paquet = { corps: bof(requete).map((o, i) =&gt; o ^ cle[i % 32]), marque: hex(hmac(cle, bof(requete))) };
+
+// Un serveur SANS liste anti-rejeu : il vérifie la marque, et exécute.
+function serveur(p){
+  const clair = String.fromCharCode(...p.corps.map((o, i) =&gt; o ^ cle[i % 32]));
+  return hex(hmac(cle, bof(clair))) === p.marque ? 'exécuté' : 'rejeté';
+}
+let n = 0;
+for (let i = 0; i &lt; 20; i++) if (serveur(paquet) === 'exécuté') n++;
+console.log(n + ' exécutions sur 20');</code></pre></figure>
+<figure class="code-block" data-file="solution-exo3.txt"><pre><code class="language-plaintext">20 exécutions sur 20</code></pre></figure>
+<p>La ligne à ajouter est un ensemble mémorisé de marques déjà vues, testé et alimenté dans le serveur avant l'exécution. Son coût réel n'est pas le calcul mais la <strong>cohérence</strong>&nbsp;: pour que la protection tienne, toutes les machines qui reçoivent du trafic pour ce nom doivent partager cet ensemble, donc consulter un service commun — c'est-à-dire faire l'aller-retour que le 0-RTT prétendait supprimer. C'est la raison pour laquelle la plupart des déploiements choisissent l'autre parade&nbsp;: n'autoriser en 0-RTT que des requêtes dont la répétition est sans conséquence.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

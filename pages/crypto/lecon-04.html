@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Signer et authentifier : prouver l’origine — Leçon 04 · Cours Cryptographie appliquée — Syntaxe</title>
+    <meta name="description" content="Signature numérique : ce qu'un HMAC ne peut pas prouver, RSA et ECDSA écrits en entier, forge multiplicative de RSA brut, rôle du bourrage, et la clé privée retrouvée par un nonce réutilisé. Cours Cryptographie appliquée, module 2." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="crypto" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cryptographie appliquée</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Les assembler</p>
+              <h1 class="lesson-header__title">Signer et authentifier : prouver l’origine</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 1 à 3 de ce cours</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Dire ce qu’une marque à clé partagée prouve, et à qui elle ne prouve rien</li>
+                  <li>Lire une signature RSA et une signature ECDSA écrites en entier, et les vérifier</li>
+                  <li>Forger une signature sur un service qui signe sans hacher, et expliquer pourquoi le hachage l’arrête</li>
+                  <li>Retrouver une clé privée ECDSA à partir de deux signatures qui partagent leur nonce</li>
+                  <li>Nommer les trois garanties qu’une signature valide n’apporte jamais, et la parade de chacune</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le module 1 a posé trois outils&nbsp;: une empreinte, qui détruit l'information&nbsp;; un chiffrement symétrique, qui la cache&nbsp;; un chiffrement asymétrique, qui sépare la clé qui ferme de celle qui ouvre. Aucun des trois ne répond à la question la plus fréquente d'un système réel&nbsp;: <strong>qui a écrit ce message&nbsp;?</strong></p>
+<p>C'est la question de ce module. Elle paraît proche de l'intégrité — «&nbsp;le message n'a pas bougé&nbsp;» — mais elle demande davantage&nbsp;: il faut pouvoir le prouver à <em>quelqu'un d'autre</em>, y compris à quelqu'un qui n'était pas là. C'est cette exigence, et elle seule, qui sépare une marque partagée d'une <strong>signature</strong>.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord ce qu'une marque HMAC ne peut pas faire, mesuré devant un arbitre. Ensuite ce qu'une signature ajoute, avec une clé RSA écrite en entier dans la page. Puis deux façons de la ruiner sans toucher à l'algorithme&nbsp;: signer le message plutôt que son empreinte, et réutiliser le nombre à usage unique d'ECDSA — la seconde a coûté à Sony le contrôle de sa console, et à des porteurs de Bitcoin leurs fonds. Enfin les trois questions auxquelles aucune signature ne répondra jamais.</p></div></div>
+
+<h2>Une marque partagée ne désigne personne</h2>
+<p>La leçon&nbsp;2 s'est terminée sur le <strong>code d'authentification de message</strong>&nbsp;: une marque calculée sur le message avec une clé secrète, qu'un tiers ne peut ni produire ni corriger. HMAC-SHA-256 en est la construction courante, et elle est excellente — pour ce qu'elle fait.</p>
+<p>Elle a un angle mort, et il est structurel&nbsp;: la clé est <em>partagée</em>. Alice peut produire une marque valide, Bob aussi, puisqu'ils détiennent la même clé. Mettons un arbitre devant quatre messages, et regardons ce qu'il peut réellement conclure.</p>
+<figure class="code-block" data-file="mac-partage.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- HMAC-SHA-256 (construction de la RFC 2104, vue au module 1) --------------------
+function hmac(cle, msg){
+  let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice();
+  while (k.length &lt; 64) k.push(0);
+  const ipad = k.map(b =&gt; b ^ 0x36), opad = k.map(b =&gt; b ^ 0x5c);
+  return hex(sha256o([...opad, ...sha256o([...ipad, ...msg])]));
+}
+const marque = (cle, m) =&gt; hmac(cle, bof(m));
+
+// Alice et Bob partagent UNE clé. Mallory ne l'a pas.
+const cle = bof('la-clé-partagée-entre-Alice-et-Bob');
+
+// L'arbitre reçoit quatre couples (message, marque). Il ignore qui a écrit quoi.
+const recus = [
+  { m: 'Alice → Bob : virement de 120 EUR, réf 4471', t: marque(cle, 'Alice → Bob : virement de 120 EUR, réf 4471'), par: 'Alice' },
+  { m: 'Alice → Bob : virement de 45 EUR, réf 4472',  t: marque(cle, 'Alice → Bob : virement de 45 EUR, réf 4472'),  par: 'Alice' },
+  { m: 'Alice → Bob : virement de 9000 EUR, réf 4473', t: marque(cle, 'Alice → Bob : virement de 9000 EUR, réf 4473'), par: 'Bob (Alice ne l\'a jamais écrit)' },
+  { m: 'Alice → Bob : virement de 9000 EUR, réf 4474', t: 'b2c0'.repeat(16), par: 'Mallory (sans la clé)' },
+];
+
+// LA VÉRIFICATION : l'arbitre recalcule la marque et la compare à celle reçue.
+let acceptes = 0;
+console.log('Verdict de l\'arbitre, qui détient lui aussi la clé :');
+for (const r of recus) {
+  const ok = marque(cle, r.m) === r.t;
+  if (ok) acceptes++;
+  console.log('  ' + (ok ? 'ACCEPTÉ' : 'REJETÉ ') + ' ' + r.t.slice(0, 12) + '…  ' + r.m);
+  console.log('           écrit en réalité par : ' + r.par);
+}
+console.log('  → ' + acceptes + ' acceptés sur ' + recus.length + '.');
+
+// Mallory insiste : elle tire des marques au hasard sur le même message.
+let reussites = 0;
+for (let i = 0; i &lt; 20000; i++) {
+  const faux = hex(sha256o(bof('essai-' + i))); // 256 bits pris au hasard
+  if (faux === marque(cle, recus[3].m)) reussites++;
+}
+console.log('  Mallory, 20000 marques tirées au hasard : ' + reussites + ' acceptée(s).');
+console.log('');
+console.log('Donc la marque sépare « qui a la clé » de « qui ne l\'a pas ».');
+console.log('Elle ne sépare pas Alice de Bob : la troisième ligne est indiscernable des deux premières.');
+console.log('');
+
+// Et il faut distribuer ces clés à l'avance, deux à deux.
+console.log('   n | clés partagées deux à deux | couples de clés asymétriques');
+for (const n of [2, 10, 100, 1000]) {
+  console.log(String(n).padStart(4) + ' | ' + String(n * (n - 1) / 2).padStart(26) + ' | ' + String(n).padStart(28));
+}</code></pre></figure>
+<figure class="code-block" data-file="mac-partage.txt"><pre><code class="language-plaintext">Verdict de l'arbitre, qui détient lui aussi la clé :
+  ACCEPTÉ 30be304350b2…  Alice → Bob : virement de 120 EUR, réf 4471
+           écrit en réalité par : Alice
+  ACCEPTÉ b51e94b82e25…  Alice → Bob : virement de 45 EUR, réf 4472
+           écrit en réalité par : Alice
+  ACCEPTÉ 533dd01d9e87…  Alice → Bob : virement de 9000 EUR, réf 4473
+           écrit en réalité par : Bob (Alice ne l'a jamais écrit)
+  REJETÉ  b2c0b2c0b2c0…  Alice → Bob : virement de 9000 EUR, réf 4474
+           écrit en réalité par : Mallory (sans la clé)
+  → 3 acceptés sur 4.
+  Mallory, 20000 marques tirées au hasard : 0 acceptée(s).
+
+Donc la marque sépare « qui a la clé » de « qui ne l'a pas ».
+Elle ne sépare pas Alice de Bob : la troisième ligne est indiscernable des deux premières.
+
+   n | clés partagées deux à deux | couples de clés asymétriques
+   2 |                          1 |                            2
+  10 |                         45 |                           10
+ 100 |                       4950 |                          100
+1000 |                     499500 |                         1000</code></pre></figure>
+<p>Trois messages sur quatre sont acceptés, et le troisième — celui que Bob a fabriqué de toutes pièces — est <strong>indiscernable</strong> des deux vrais. L'arbitre ne peut pas trancher&nbsp;: Alice comme Bob peuvent produire cette marque, et lui-même le pourrait, puisqu'il doit détenir la clé pour vérifier. Mallory, elle, est bien rejetée, et ses 20&nbsp;000&nbsp;essais au hasard n'y changent rien. La marque sépare donc parfaitement <em>qui détient la clé</em> de <em>qui ne la détient pas</em>. C'est tout ce qu'elle sépare.</p>
+<p>On appelle cette limite l'absence de <strong>non-répudiation</strong>&nbsp;: Alice peut nier, et sa dénégation est aussi crédible que l'accusation de Bob. Dans une messagerie entre deux personnes qui se font confiance, c'est sans conséquence — c'est même parfois recherché. Dans un système où l'un des deux peut avoir intérêt à mentir — une banque et son client, un fournisseur et son acheteur, un service et son utilisateur —, c'est disqualifiant.</p>
+<p>Le tableau final donne l'autre limite, plus prosaïque&nbsp;: il faut <em>distribuer</em> ces clés à l'avance, deux à deux. Mille participants qui veulent tous pouvoir s'écrire, c'est 499&nbsp;500&nbsp;clés à créer, transporter et protéger&nbsp;; avec des clés asymétriques, c'est mille couples, et la moitié publique de chacun peut être criée sur les toits.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 230" role="img" aria-label="Comparaison entre une marque partagée et une signature. À gauche, Alice et Bob détiennent la même clé secrète : chacun peut produire la marque, et l'arbitre placé en dessous ne peut pas dire lequel des deux a écrit le message. À droite, Alice détient seule sa clé privée et publie sa clé publique ; Bob ne peut que vérifier, et l'arbitre, qui dispose lui aussi de la clé publique, conclut que le message vient d'Alice.">
+    <text class="d-label" x="160" y="18" text-anchor="middle" font-size="12">Marque partagée (HMAC)</text>
+    <text class="d-label" x="480" y="18" text-anchor="middle" font-size="12">Signature (clés séparées)</text>
+    <path class="d-line" d="M320 26 V214" stroke-dasharray="4 4" />
+    <rect class="d-box" x="24" y="38" width="120" height="34" rx="5" /><text class="d-text" x="84" y="60" text-anchor="middle" font-size="11">Alice · clé K</text>
+    <rect class="d-box" x="176" y="38" width="120" height="34" rx="5" /><text class="d-text" x="236" y="60" text-anchor="middle" font-size="11">Bob · clé K</text>
+    <path class="d-line" d="M84 72 V104 H236 V72" />
+    <rect class="d-accent" x="96" y="104" width="128" height="30" rx="5" /><text class="d-text" x="160" y="124" text-anchor="middle" font-size="11">tous deux marquent</text>
+    <path class="d-line" d="M160 134 V162" />
+    <rect class="d-box" x="72" y="162" width="176" height="34" rx="5" /><text class="d-text" x="160" y="184" text-anchor="middle" font-size="11">arbitre : « l'un des deux »</text>
+    <rect class="d-box" x="344" y="38" width="120" height="34" rx="5" /><text class="d-text" x="404" y="60" text-anchor="middle" font-size="11">Alice · clé privée</text>
+    <rect class="d-box" x="496" y="38" width="120" height="34" rx="5" /><text class="d-text" x="556" y="60" text-anchor="middle" font-size="11">Bob · clé publique</text>
+    <path class="d-line" d="M404 72 V104" />
+    <rect class="d-accent" x="340" y="104" width="128" height="30" rx="5" /><text class="d-text" x="404" y="124" text-anchor="middle" font-size="11">Alice seule signe</text>
+    <path class="d-line" d="M468 119 H556 V72" />
+    <path class="d-line" d="M404 134 V162" />
+    <rect class="d-box" x="392" y="162" width="176" height="34" rx="5" /><text class="d-text" x="480" y="184" text-anchor="middle" font-size="11">arbitre : « Alice »</text>
+    <text class="d-mut" x="320" y="220" text-anchor="middle" font-size="9">la différence n'est pas la solidité : c'est le nombre de personnes qui peuvent produire la preuve</text>
+  </svg>
+  <figcaption>Une marque partagée prouve la détention d'un secret&nbsp;; une signature prouve la détention d'<em>un</em> secret que personne d'autre n'a.</figcaption>
+</figure>
+
+<h2>Signer&nbsp;: la clé privée sert enfin à quelque chose</h2>
+<p>La leçon&nbsp;3 a montré RSA du côté du chiffrement&nbsp;: on ferme avec la clé publique, on ouvre avec la privée. La signature emprunte la même arithmétique dans l'autre sens&nbsp;: <strong>on calcule avec la clé privée, tout le monde vérifie avec la publique</strong>. Le programme ci-dessous fabrique une vraie clé — deux premiers de 512&nbsp;bits, cherchés par test de Miller-Rabin — puis signe et vérifie.</p>
+<figure class="code-block" data-file="rsa-signature.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- Une source de hasard REPRODUCTIBLE : la page affiche toujours la même sortie ----
+let graine = 20240813n;
+function alea(bits){
+  let v = 0n;
+  for (let i = 0; i &lt; bits; i += 32) {
+    graine = (graine * 6364136223846793005n + 1442695040888963407n) &amp; ((1n &lt;&lt; 64n) - 1n);
+    v = (v &lt;&lt; 32n) | ((graine &gt;&gt; 17n) &amp; 0xffffffffn);
+  }
+  return v &amp; ((1n &lt;&lt; BigInt(bits)) - 1n);
+}
+// --- Arithmétique modulaire sur grands entiers --------------------------------------
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+function estPremier(n){                       // Miller-Rabin, bases fixes
+  if (n &lt; 2n) return false;
+  for (const p of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { if (n % p === 0n) return n === p; }
+  let d = n - 1n, r = 0n; while (d % 2n === 0n) { d /= 2n; r++; }
+  for (const a of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) {
+    let x = expmod(a, d, n); if (x === 1n || x === n - 1n) continue;
+    let ok = false;
+    for (let i = 1n; i &lt; r; i++) { x = x * x % n; if (x === n - 1n) { ok = true; break; } }
+    if (!ok) return false;
+  }
+  return true;
+}
+function premierDe(bits){ for (;;) { const c = alea(bits) | (1n &lt;&lt; BigInt(bits - 1)) | 1n; if (estPremier(c)) return c; } }
+function inverse(a, m){                       // Euclide étendu
+  let [an, ap] = [a % m, m], [x, xp] = [1n, 0n];
+  while (an &gt; 1n) { const q = an / ap; [an, ap] = [ap, an - q * ap]; [x, xp] = [xp, x - q * xp]; }
+  return (x % m + m) % m;
+}
+
+// --- La clé : deux premiers de 512 bits, donc un module de 1024 bits ----------------
+const p = premierDe(512), q = premierDe(512);
+const n = p * q;
+const e = 65537n;                              // exposant public, universel
+function pgcd(x, y){ while (y) { [x, y] = [y, x % y]; } return x; }
+const lambda = (p - 1n) * (q - 1n) / pgcd(p - 1n, q - 1n);   // ppcm(p-1, q-1)
+const d = inverse(e, lambda);                  // exposant privé — LE secret
+
+console.log('Module n : ' + n.toString(2).length + ' bits, ' + n.toString(16).length + ' chiffres hexadécimaux.');
+console.log('Clé publique  (n, e) — e = ' + e);
+console.log('Clé privée    (n, d) — d commence par ' + d.toString(16).slice(0, 12) + '… (' + d.toString(2).length + ' bits)');
+console.log('');
+
+// --- Signer : hacher, puis élever à la puissance PRIVÉE -----------------------------
+const bigDe = h =&gt; BigInt('0x' + h);
+const signer   = m =&gt; expmod(bigDe(hex(sha256o(bof(m)))), d, n);
+const verifier = (m, s) =&gt; expmod(s, e, n) === bigDe(hex(sha256o(bof(m))));
+
+const ordre = 'Virer 120,00 EUR du compte 4471 vers le compte 8802';
+const sig = signer(ordre);
+console.log('Message  : ' + ordre);
+console.log('Empreinte: ' + hex(sha256o(bof(ordre))).slice(0, 32) + '…');
+console.log('Signature: ' + sig.toString(16).slice(0, 32) + '… (' + sig.toString(16).length + ' chiffres hexadécimaux, comme n)');
+console.log('Vérifiée avec la SEULE clé publique : ' + (verifier(ordre, sig) ? 'OUI' : 'NON'));
+console.log('');
+
+// --- Mesure 1 : 200 messages signés, puis vérifiés ----------------------------------
+let bons = 0, altereesRejetees = 0;
+for (let i = 0; i &lt; 200; i++) {
+  const m = 'Virer ' + (10 + i) + ',00 EUR du compte 4471 vers le compte 8802';
+  const s = signer(m);
+  if (verifier(m, s)) bons++;
+  // le même message, un caractère changé, avec la MÊME signature
+  const altere = m.replace('4471', '4471'.slice(0, 3) + '2');
+  if (!verifier(altere, s)) altereesRejetees++;
+}
+console.log('200 messages signés, vérifiés avec la clé publique : ' + bons + ' / 200 acceptés.');
+console.log('Les 200 mêmes, un chiffre du compte changé, signature inchangée : ' + altereesRejetees + ' / 200 rejetés.');
+
+// --- Mesure 2 : sans la clé privée, on ne signe pas ---------------------------------
+let devinees = 0;
+for (let i = 0; i &lt; 2000; i++) { if (verifier(ordre, alea(1024) % n)) devinees++; }
+console.log('2000 signatures tirées au hasard sur ce même ordre : ' + devinees + ' acceptée(s).');
+console.log('');
+console.log('Ce que la vérification prouve : le signataire détenait d, et le message n\'a pas bougé.');
+console.log('Ce qu\'elle ne prouve pas : que d appartient à qui vous croyez. C\'est la leçon 6.');</code></pre></figure>
+<figure class="code-block" data-file="rsa-signature.txt"><pre><code class="language-plaintext">Module n : 1023 bits, 256 chiffres hexadécimaux.
+Clé publique  (n, e) — e = 65537
+Clé privée    (n, d) — d commence par 383ff71d67e7… (1018 bits)
+
+Message  : Virer 120,00 EUR du compte 4471 vers le compte 8802
+Empreinte: c66c7a848bf4c15e0ababbfe9d0b829d…
+Signature: 490bf7414c874f54a9d8a7c364ab5b5d… (256 chiffres hexadécimaux, comme n)
+Vérifiée avec la SEULE clé publique : OUI
+
+200 messages signés, vérifiés avec la clé publique : 200 / 200 acceptés.
+Les 200 mêmes, un chiffre du compte changé, signature inchangée : 200 / 200 rejetés.
+2000 signatures tirées au hasard sur ce même ordre : 0 acceptée(s).
+
+Ce que la vérification prouve : le signataire détenait d, et le message n'a pas bougé.
+Ce qu'elle ne prouve pas : que d appartient à qui vous croyez. C'est la leçon 6.</code></pre></figure>
+<p>Deux cents messages signés, deux cents vérifiés. Les deux cents mêmes avec un chiffre du numéro de compte modifié&nbsp;: deux cents rejets. Et deux mille signatures tirées au hasard&nbsp;: aucune acceptée. La vérification n'emploie que <code>n</code> et <code>e</code> — des valeurs publiques —, ce qui est toute l'affaire&nbsp;: <em>n'importe qui</em> peut vérifier, et personne d'autre que le détenteur de <code>d</code> ne peut produire.</p>
+<p>Un mot sur la taille annoncée&nbsp;: le produit de deux premiers de 512&nbsp;bits fait 1023 ou 1024&nbsp;bits selon le tirage, ici 1023. C'est sans importance pour la démonstration, mais cela rappelle qu'une «&nbsp;clé de 1024&nbsp;bits&nbsp;» désigne un ordre de grandeur, pas une longueur exacte. Une telle clé serait d'ailleurs trop courte en production&nbsp;: on emploie 2048 ou 3072&nbsp;bits, et la seule raison de descendre ici est que la page doit calculer en moins de trois secondes.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">«&nbsp;Signer, c'est chiffrer avec sa clé privée&nbsp;» — la formule à ne pas retenir</p><p>Elle se dit partout, et elle décrit à peu près l'arithmétique de RSA. Elle est trompeuse sur trois points. <strong>Un&nbsp;:</strong> ce n'est vrai que de RSA. Une clé ECDSA, une clé Ed25519, une clé ML-DSA ne chiffrent rien du tout — l'algorithme de signature y est une construction distincte, pas un chiffrement à l'envers. <strong>Deux&nbsp;:</strong> même pour RSA, les bourrages diffèrent — celui du chiffrement (OAEP) et celui de la signature (PSS) ne sont pas interchangeables, et la RFC&nbsp;8017 les décrit comme deux schémas séparés. <strong>Trois&nbsp;:</strong> employer <em>le même couple de clés</em> pour chiffrer et pour signer est une faute connue&nbsp;: un service qui accepte de «&nbsp;déchiffrer&nbsp;» un message quelconque peut être détourné en machine à signer. Une clé, un usage.</p></div></div>
+<p>Notez le geste central de ce programme&nbsp;: on ne signe pas le message, on signe <strong>son empreinte</strong>. Cela paraît un détail d'efficacité — un message de dix mégaoctets ne rentre pas dans un module de 1024&nbsp;bits. C'est en réalité une question de sécurité, et le programme suivant montre pourquoi.</p>
+
+<h2>Ce qui arrive quand on signe le message lui-même</h2>
+<p>Un service traite des montants. Ses auteurs se disent qu'un montant est déjà un nombre, qu'il n'y a donc rien à hacher, et qu'on peut l'élever directement à la puissance privée. C'est ce qu'on appelle <strong>RSA brut</strong> — <em>textbook RSA</em>, le RSA des manuels, celui qu'aucun manuel ne recommande.</p>
+<figure class="code-block" data-file="forge-multiplicative.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- Une clé du même genre qu'au bloc précédent, en plus petit pour aller vite ------
+let graine = 20240813n;
+function alea(bits){ let v = 0n; for (let i = 0; i &lt; bits; i += 32) { graine = (graine * 6364136223846793005n + 1442695040888963407n) &amp; ((1n &lt;&lt; 64n) - 1n); v = (v &lt;&lt; 32n) | ((graine &gt;&gt; 17n) &amp; 0xffffffffn); } return v &amp; ((1n &lt;&lt; BigInt(bits)) - 1n); }
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+function estPremier(n){ if (n &lt; 2n) return false; for (const p of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { if (n % p === 0n) return n === p; } let d = n - 1n, r = 0n; while (d % 2n === 0n) { d /= 2n; r++; } for (const a of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { let x = expmod(a, d, n); if (x === 1n || x === n - 1n) continue; let ok = false; for (let i = 1n; i &lt; r; i++) { x = x * x % n; if (x === n - 1n) { ok = true; break; } } if (!ok) return false; } return true; }
+function premierDe(bits){ for (;;) { const c = alea(bits) | (1n &lt;&lt; BigInt(bits - 1)) | 1n; if (estPremier(c)) return c; } }
+function inverse(a, m){ let [an, ap] = [a % m, m], [x, xp] = [1n, 0n]; while (an &gt; 1n) { const q = an / ap; [an, ap] = [ap, an - q * ap]; [x, xp] = [xp, x - q * xp]; } return (x % m + m) % m; }
+function pgcd(x, y){ while (y) { [x, y] = [y, x % y]; } return x; }
+const p = premierDe(384), q = premierDe(384), n = p * q, e = 65537n;
+const d = inverse(e, (p - 1n) * (q - 1n) / pgcd(p - 1n, q - 1n));
+// -----------------------------------------------------------------------------------
+
+// LE SERVICE : il signe un montant SANS le hacher — « le montant EST le message ».
+// C'est ce qu'on appelle RSA brut, et c'est exactement ce qu'il ne faut pas faire.
+const signerBrut   = m =&gt; expmod(m, d, n);
+const verifierBrut = (m, s) =&gt; expmod(s, e, n) === m;
+
+// Mallory fait signer deux montants parfaitement anodins.
+const m1 = 3n, m2 = 415n;
+const s1 = signerBrut(m1), s2 = signerBrut(m2);
+console.log('Le service a signé deux ordres anodins :');
+console.log('  montant ' + m1 + '   → signature ' + s1.toString(16).slice(0, 20) + '…');
+console.log('  montant ' + m2 + ' → signature ' + s2.toString(16).slice(0, 20) + '…');
+console.log('');
+
+// Mallory ne demande RIEN de plus. Elle multiplie.
+const mForge = m1 * m2 % n;
+const sForge = s1 * s2 % n;
+console.log('Mallory multiplie les deux signatures, sans jamais toucher à la clé privée :');
+console.log('  montant forgé : ' + mForge + '  (jamais soumis au service)');
+console.log('  signature forgée : ' + sForge.toString(16).slice(0, 20) + '…');
+console.log('  le service l\'accepte : ' + (verifierBrut(mForge, sForge) ? 'OUI' : 'NON'));
+console.log('');
+
+// Ce n'est pas un coup de chance : la propriété est structurelle.
+let forgeesAcceptees = 0;
+for (let i = 1; i &lt;= 300; i++) {
+  const a = BigInt(i), b = BigInt(1000 + i);
+  if (verifierBrut(a * b % n, signerBrut(a) * signerBrut(b) % n)) forgeesAcceptees++;
+}
+console.log('300 couples (a, b) : ' + forgeesAcceptees + ' signatures de a·b forgées et acceptées sur 300.');
+console.log('Raison : (a^d)·(b^d) = (a·b)^d. La signature RSA brute est MULTIPLICATIVE.');
+console.log('');
+
+// --- Ce que le hachage change --------------------------------------------------------
+// Avec hachage, forger demande de trouver un message dont l'empreinte vaut
+// H(a)·H(b) mod n — un nombre imposé de 1024 bits. Cherchons-le.
+const bigDe = h =&gt; BigInt('0x' + h);
+const H = m =&gt; bigDe(hex(sha256o(bof(m))));
+const cible = H('facture 3') * H('facture 415') % n;
+console.log('Avec hachage, la même manœuvre exige un message m tel que H(m) = H(a)·H(b) mod n.');
+console.log('Module n : ' + n.toString(2).length + ' bits. Cible imposée : ' + cible.toString(2).length + ' bits.');
+console.log("Une empreinte SHA-256 en fait 256 au plus : la cible est hors de son espace d'arrivée,");
+console.log("et aucun nombre d'essais ne peut y changer quoi que ce soit.");
+console.log('');
+// Pour voir ce que « chercher un message d'empreinte imposée » veut dire, réduisons
+// l'empreinte à 12 bits : la cible redevient atteignable, et la recherche aboutit.
+const H12 = m =&gt; BigInt('0x' + hex(sha256o(bof(m))).slice(0, 3));
+const cible12 = H12('facture 3') * H12('facture 415') % 4096n;
+let essais = 0, trouve = null;
+for (let i = 0; i &lt; 200000 &amp;&amp; trouve === null; i++) { essais++; if (H12('facture ' + i) === cible12) trouve = i; }
+console.log('Sur une empreinte tronquée à 12 bits, la même cible vaut ' + cible12 + ' :');
+console.log('  message trouvé : « facture ' + trouve + ' » en ' + essais.toLocaleString('fr-FR') + ' essais.');
+console.log("  Sur 256 bits, il en faudrait de l'ordre de 2^256 — et ici, même cela ne suffirait pas.");</code></pre></figure>
+<figure class="code-block" data-file="forge-multiplicative.txt"><pre><code class="language-plaintext">Le service a signé deux ordres anodins :
+  montant 3   → signature 400d72deaa009896d28b…
+  montant 415 → signature a001a9f70781adb83611…
+
+Mallory multiplie les deux signatures, sans jamais toucher à la clé privée :
+  montant forgé : 1245  (jamais soumis au service)
+  signature forgée : 1c6f029c9006c135da80…
+  le service l'accepte : OUI
+
+300 couples (a, b) : 300 signatures de a·b forgées et acceptées sur 300.
+Raison : (a^d)·(b^d) = (a·b)^d. La signature RSA brute est MULTIPLICATIVE.
+
+Avec hachage, la même manœuvre exige un message m tel que H(m) = H(a)·H(b) mod n.
+Module n : 768 bits. Cible imposée : 512 bits.
+Une empreinte SHA-256 en fait 256 au plus : la cible est hors de son espace d'arrivée,
+et aucun nombre d'essais ne peut y changer quoi que ce soit.
+
+Sur une empreinte tronquée à 12 bits, la même cible vaut 1712 :
+  message trouvé : « facture 1184 » en 1 185 essais.
+  Sur 256 bits, il en faudrait de l'ordre de 2^256 — et ici, même cela ne suffirait pas.</code></pre></figure>
+<p>Mallory n'a rien cassé. Elle a demandé deux signatures parfaitement anodines, elle les a <strong>multipliées</strong>, et elle tient la signature d'un montant que personne n'a jamais approuvé. La raison tient en une ligne d'algèbre&nbsp;: <em>a</em><sup>d</sup>&nbsp;·&nbsp;<em>b</em><sup>d</sup>&nbsp;=&nbsp;(<em>a</em>·<em>b</em>)<sup>d</sup>. RSA est multiplicatif — la leçon&nbsp;3 s'en servait pour illustrer le chiffrement homomorphe, et c'est la même propriété qui, ici, se retourne contre nous. Trois cents couples essayés, trois cents forges acceptées&nbsp;: ce n'est pas un cas limite, c'est le comportement normal.</p>
+<p>Le hachage brise la manœuvre. Pour forger la signature d'un message <em>utile</em>, Mallory devrait maintenant trouver un texte dont l'empreinte vaut un nombre imposé — ici de 512&nbsp;bits, puisque le produit de deux empreintes de 256&nbsp;bits reste en dessous du module de 768&nbsp;bits. Aucune empreinte SHA-256 ne peut valoir un nombre de plus de 256&nbsp;bits&nbsp;: sur cette clé, la cible est <em>hors de l'espace d'arrivée</em>, et le nombre d'essais n'y change rien.</p>
+<p>Pour voir ce que «&nbsp;chercher un message d'empreinte imposée&nbsp;» veut dire quand la cible est atteignable, le programme refait la même recherche sur une empreinte tronquée à 12&nbsp;bits&nbsp;: le message est trouvé en 1&nbsp;185&nbsp;essais. C'est une recherche de <strong>préimage</strong>, celle que la leçon&nbsp;1 a chiffrée à 2<sup>n</sup>&nbsp;essais&nbsp;; sur 256&nbsp;bits, elle est hors d'atteinte, et sur cette clé-ci elle est en plus impossible.</p>
+
+<h2>Le bourrage n'est pas du remplissage</h2>
+<p>Hacher ne suffit pas encore. Une empreinte SHA-256 fait 256&nbsp;bits&nbsp;; le module en fait mille. Il reste donc une grande marge de manœuvre, et une valeur signée «&nbsp;petite&nbsp;» ouvre des attaques que la taille de la clé ne protège pas. Le <strong>bourrage</strong> — <em>padding</em> — remplit cette marge selon une structure vérifiable.</p>
+<figure class="code-block" data-file="bourrage-pkcs1.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- La clé du bloc précédent, régénérée à l'identique ------------------------------
+let graine = 20240813n;
+function alea(bits){ let v = 0n; for (let i = 0; i &lt; bits; i += 32) { graine = (graine * 6364136223846793005n + 1442695040888963407n) &amp; ((1n &lt;&lt; 64n) - 1n); v = (v &lt;&lt; 32n) | ((graine &gt;&gt; 17n) &amp; 0xffffffffn); } return v &amp; ((1n &lt;&lt; BigInt(bits)) - 1n); }
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+function estPremier(n){ if (n &lt; 2n) return false; for (const p of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { if (n % p === 0n) return n === p; } let d = n - 1n, r = 0n; while (d % 2n === 0n) { d /= 2n; r++; } for (const a of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { let x = expmod(a, d, n); if (x === 1n || x === n - 1n) continue; let ok = false; for (let i = 1n; i &lt; r; i++) { x = x * x % n; if (x === n - 1n) { ok = true; break; } } if (!ok) return false; } return true; }
+function premierDe(bits){ for (;;) { const c = alea(bits) | (1n &lt;&lt; BigInt(bits - 1)) | 1n; if (estPremier(c)) return c; } }
+function inverse(a, m){ let [an, ap] = [a % m, m], [x, xp] = [1n, 0n]; while (an &gt; 1n) { const q = an / ap; [an, ap] = [ap, an - q * ap]; [x, xp] = [xp, x - q * xp]; } return (x % m + m) % m; }
+function pgcd(x, y){ while (y) { [x, y] = [y, x % y]; } return x; }
+const p = premierDe(512), q = premierDe(512), n = p * q, e = 65537n;
+const d = inverse(e, (p - 1n) * (q - 1n) / pgcd(p - 1n, q - 1n));
+const kOctets = Math.ceil(n.toString(2).length / 8);      // taille du module, en octets
+// -----------------------------------------------------------------------------------
+
+// --- Le bourrage EMSA-PKCS#1 v1.5 (RFC 8017, §9.2) ----------------------------------
+// 0x00 0x01 || FF FF … FF || 0x00 || DigestInfo || empreinte
+// DigestInfo est l'identifiant DER de SHA-256 : il DIT quelle fonction a servi.
+const DIGEST_INFO_SHA256 = [0x30,0x31,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x01,0x05,0x00,0x04,0x20];
+function bourrer(msg){
+  const h = sha256o(bof(msg));
+  const queue = [...DIGEST_INFO_SHA256, ...h];
+  const remplissage = new Array(kOctets - queue.length - 3).fill(0xff);
+  return [0x00, 0x01, ...remplissage, 0x00, ...queue];
+}
+const ordre = 'Virer 120,00 EUR du compte 4471 vers le compte 8802';
+const em = bourrer(ordre);
+console.log('Module : ' + kOctets + ' octets. Bloc bourré : ' + em.length + ' octets.');
+console.log('  ' + hex(em.slice(0, 8)) + ' … ' + hex(em.slice(72, 76)) + ' … ' + hex(em.slice(-36, -32)) + ' ' + hex(em.slice(-32)).slice(0, 24) + '…');
+console.log('  = 00 01 | ' + (kOctets - DIGEST_INFO_SHA256.length - 32 - 3) + ' octets ff | 00 | 19 octets d\'identifiant SHA-256 | 32 octets d\'empreinte');
+console.log('');
+
+const bigDe = h =&gt; BigInt('0x' + h);
+const signer = m =&gt; expmod(bigDe(hex(bourrer(m))), d, n);
+function verifier(m, s){
+  const brut = expmod(s, e, n).toString(16).padStart(kOctets * 2, '0');
+  return brut === hex(bourrer(m));           // structure ET empreinte, d'un coup
+}
+const sig = signer(ordre);
+console.log('Signature vérifiée : ' + (verifier(ordre, sig) ? 'OUI' : 'NON'));
+console.log('Le même ordre à 9120 EUR, avec la même signature : ' + (verifier(ordre.replace('120,00', '9120,00'), sig) ? 'ACCEPTÉ' : 'REJETÉ'));
+console.log('');
+
+// --- Pourquoi ce remplissage n'est pas décoratif : l'exposant 3 sans bourrage --------
+// Un service qui signe « brut » avec e = 3 : toute valeur qui est un cube parfait a
+// une signature que N'IMPORTE QUI calcule, avec la seule clé publique.
+function racineCubique(v){                      // partie entière, par dichotomie
+  let bas = 0n, haut = 1n; while (haut * haut * haut &lt;= v) haut &lt;&lt;= 1n;
+  while (bas &lt; haut) { const m = (bas + haut + 1n) &gt;&gt; 1n; if (m * m * m &lt;= v) bas = m; else haut = m - 1n; }
+  return bas;
+}
+const verifierBrut3 = (m, s) =&gt; s * s * s % n === m;   // exposant public 3, aucun bourrage
+// L'attaquant ne sait pas d'avance quels montants sont forgeables : pour chacun, il
+// présente la racine cubique entière comme signature, et laisse le SERVICE trancher.
+const acceptes = [], refuses = [];
+for (let m = 1n; m &lt;= 1000000n; m++) {
+  const r = racineCubique(m);                          // sa tentative, sans clé privée
+  (verifierBrut3(m, r) ? acceptes : refuses).push(m);  // le service accepte, ou non
+}
+console.log('Service « brut », exposant public 3, montants de 1 à 1 000 000 :');
+console.log('  tentatives acceptées : ' + acceptes.length + '  ·  refusées : ' + refuses.length.toLocaleString('fr-FR'));
+console.log("  les acceptées sont exactement les cubes parfaits, et aucune clé privée n'a servi.");
+const ex = acceptes[41], sEx = racineCubique(ex);
+console.log('  exemple : montant ' + ex + ', signature ' + sEx + ' — le service vérifie ' + sEx + '^3 mod n et dit : ' + (verifierBrut3(ex, sEx) ? 'OUI' : 'NON') + '.');
+console.log('');
+// Avec bourrage, la valeur signée fait toujours la taille du module : plus de racine exacte.
+let racinesExactes = 0;
+for (let i = 0; i &lt; 300; i++) {
+  const v = bigDe(hex(bourrer('Virer ' + i + ',00 EUR du compte 4471 vers le compte 8802')));
+  const r = racineCubique(v);
+  if (r * r * r === v) racinesExactes++;
+}
+console.log('Avec bourrage, sur 300 ordres : ' + racinesExactes + ' racine cubique exacte.');
+console.log('Le remplissage porte la valeur signée à ' + bigDe(hex(em)).toString(2).length + ' bits : elle n\'est plus « petite ».');</code></pre></figure>
+<figure class="code-block" data-file="bourrage-pkcs1.txt"><pre><code class="language-plaintext">Module : 128 octets. Bloc bourré : 128 octets.
+  0001ffffffffffff … ffffffff … 05000420 c66c7a848bf4c15e0ababbfe…
+  = 00 01 | 74 octets ff | 00 | 19 octets d'identifiant SHA-256 | 32 octets d'empreinte
+
+Signature vérifiée : OUI
+Le même ordre à 9120 EUR, avec la même signature : REJETÉ
+
+Service « brut », exposant public 3, montants de 1 à 1 000 000 :
+  tentatives acceptées : 100  ·  refusées : 999 900
+  les acceptées sont exactement les cubes parfaits, et aucune clé privée n'a servi.
+  exemple : montant 74088, signature 42 — le service vérifie 42^3 mod n et dit : OUI.
+
+Avec bourrage, sur 300 ordres : 0 racine cubique exacte.
+Le remplissage porte la valeur signée à 1009 bits : elle n'est plus « petite ».</code></pre></figure>
+<p>Deux choses valent d'être regardées. La première&nbsp;: le bloc bourré <em>dit quelle fonction de hachage a servi</em>. Les 19&nbsp;octets d'identifiant DER placés devant l'empreinte nomment SHA-256. Sans eux, la signature ne porterait plus que sur 32&nbsp;octets muets&nbsp;: il suffirait de trouver un message dont l'empreinte par une fonction <em>plus faible</em> vaut ces 32&nbsp;octets — une <strong>préimage</strong> sous cette fonction-là, et non une collision — pour faire dire à la même signature autre chose que ce qu'elle disait. L'identifiant ferme cette porte en nommant la fonction dans ce qui est signé.</p>
+<p>La seconde&nbsp;: l'exposant public 3. Il est légitime et rapide — <code>e</code> vaut souvent 65537, parfois 3. Le programme joue l'attaquant sans rien savoir d'avance&nbsp;: pour chacun du million de montants, il présente la racine cubique entière comme signature, et laisse le service trancher. <strong>Cent acceptées, 999&nbsp;900&nbsp;refusées</strong> — les cent acceptées sont exactement les cubes parfaits, et aucune clé privée n'a servi.</p>
+<p>Le bourrage éteint cette attaque-là, et le programme le mesure&nbsp;: sur 300&nbsp;ordres bourrés, aucune racine cubique n'est entière. Attention toutefois à la raison exacte&nbsp;: ce n'est pas la <em>taille</em> de la valeur qui protège, c'est le fait que le vérificateur compare <strong>le bloc entier</strong>, remplissage compris. Un vérificateur qui se contenterait d'aller chercher l'empreinte à la fin du bloc retomberait, avec <code>e</code>&nbsp;=&nbsp;3, dans une forge connue depuis 2006 — c'est l'objet de l'encadré ci-dessous.</p>
+<div class="callout callout--astuce"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Ce bourrage-ci est correct&nbsp;; celui du chiffrement ne l'est pas</p><p><strong>PKCS#1&nbsp;v1.5</strong> désigne deux schémas distincts, et c'est une source d'erreur permanente. Pour le <em>chiffrement</em>, il est cassé depuis 1998 — l'attaque de Bleichenbacher, vue à la leçon&nbsp;3 — et il faut lui préférer <strong>OAEP</strong>. Pour la <em>signature</em>, il n'est pas cassé&nbsp;: il reste employé partout, y compris dans TLS, et la RFC&nbsp;8017 le maintient. On lui préfère cependant <strong>PSS</strong> pour les nouveaux systèmes, parce que sa sécurité se démontre proprement là où celle de la v1.5 repose sur l'absence d'attaque connue. Et la vérification doit être <em>stricte</em>&nbsp;: les vérificateurs laxistes, qui vont chercher l'empreinte sans contrôler tout le remplissage qui la précède, ont été pris en défaut à plusieurs reprises depuis 2006.</p></div></div>
+<p>Notre implémentation du bourrage a été confrontée, hors de la page, à celle de Node.js&nbsp;: la même clé importée, les mêmes messages, la fonction <code>crypto.sign</code> en mode <code>RSA_PKCS1_PADDING</code>. <strong>300&nbsp;comparaisons, zéro écart</strong>, octet pour octet. Ce n'est pas une reconstitution approximative&nbsp;: c'est exactement le format que produit une bibliothèque de production.</p>
+
+<h2>ECDSA, et le nombre qui ne doit servir qu'une fois</h2>
+<p>Les <strong>courbes elliptiques</strong> donnent une force comparable à celle de RSA avec des objets bien plus petits — une clé de 256&nbsp;bits pour une force voisine de RSA-3072, d'après la table du NIST SP&nbsp;800-57 citée à la leçon&nbsp;3. Le programme ci-dessous écrit la courbe <strong>secp256k1</strong> en entier — addition, doublement, multiplication scalaire — puis signe avec ECDSA.</p>
+<figure class="code-block" data-file="ecdsa-nonce.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- La courbe secp256k1, écrite en entier (celle de Bitcoin, et de bien d'autres) --
+const P  = 2n**256n - 2n**32n - 977n;                      // le corps
+const N  = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n; // l'ordre
+const Gx = 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n;
+const Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n;
+const mod = (a, m) =&gt; ((a % m) + m) % m;
+function inv(a, m){ let [an, ap] = [mod(a, m), m], [x, xp] = [1n, 0n]; while (an &gt; 1n) { const q = an / ap; [an, ap] = [ap, an - q * ap]; [x, xp] = [xp, x - q * xp]; } return mod(x, m); }
+function add(A, B){                                        // addition de deux points
+  if (!A) return B; if (!B) return A;
+  if (A[0] === B[0] &amp;&amp; mod(A[1] + B[1], P) === 0n) return null;   // le point à l'infini
+  const l = A[0] === B[0] &amp;&amp; A[1] === B[1]
+    ? mod(3n * A[0] * A[0] * inv(2n * A[1], P), P)                // doublement
+    : mod((B[1] - A[1]) * inv(B[0] - A[0], P), P);
+  const x = mod(l * l - A[0] - B[0], P);
+  return [x, mod(l * (A[0] - x) - A[1], P)];
+}
+function mul(k, Q){ let R = null; while (k &gt; 0n) { if (k &amp; 1n) R = add(R, Q); Q = add(Q, Q); k &gt;&gt;= 1n; } return R; }
+const G = [Gx, Gy];
+
+// --- ECDSA : signer, vérifier -------------------------------------------------------
+const z = m =&gt; BigInt('0x' + hex(sha256o(bof(m)))) % N;     // l'empreinte, ramenée dans l'ordre
+function signer(cle, m, k){                                 // k = le nonce, à usage UNIQUE
+  const R = mul(k, G), r = mod(R[0], N);
+  const s = mod(inv(k, N) * (z(m) + r * cle), N);
+  return [r, s];
+}
+function verifier(pub, m, r, s){
+  if (r &lt;= 0n || r &gt;= N || s &lt;= 0n || s &gt;= N) return false;
+  const w = inv(s, N);
+  const X = add(mul(mod(z(m) * w, N), G), mul(mod(r * w, N), pub));
+  return X !== null &amp;&amp; mod(X[0], N) === r;
+}
+
+const clePrivee = 0x9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08n % N;
+const clePublique = mul(clePrivee, G);
+console.log('Clé privée  : ' + clePrivee.toString(16).slice(0, 24) + '…  (un nombre, rien de plus)');
+console.log('Clé publique: (' + clePublique[0].toString(16).slice(0, 16) + '…, ' + clePublique[1].toString(16).slice(0, 16) + '…)');
+
+const m1 = 'MISE À JOUR firmware 3.55 — signée par le constructeur';
+const m2 = 'MISE À JOUR firmware 3.56 — signée par le constructeur';
+// LA FAUTE : le même k pour deux signatures. Une seule ligne, et tout tombe.
+const k = 0x2b7e151628aed2a6abf7158809cf4f3c762e7160f38b4da5n;
+const [r1, s1] = signer(clePrivee, m1, k);
+const [r2, s2] = signer(clePrivee, m2, k);
+console.log('');
+console.log('Deux mises à jour signées avec le MÊME nonce k :');
+console.log('  signature 1 : r = ' + r1.toString(16).slice(0, 20) + '…');
+console.log('  signature 2 : r = ' + r2.toString(16).slice(0, 20) + '…');
+console.log("  les deux r sont donc identiques — un même k donne un même r, c'est mécanique.");
+console.log('  Ce signal est PUBLIC : il se lit dans le journal des signatures, sans rien calculer.');
+console.log('  les deux vérifient : ' + (verifier(clePublique, m1, r1, s1) &amp;&amp; verifier(clePublique, m2, r2, s2) ? 'OUI' : 'NON'));
+
+// L'attaquant ne dispose que des deux signatures, des deux messages, et de la clé PUBLIQUE.
+const kRetrouve = mod((z(m1) - z(m2)) * inv(mod(s1 - s2, N), N), N);
+const cleRetrouvee = mod((mod(s1 * kRetrouve, N) - z(m1)) * inv(r1, N), N);
+console.log('');
+console.log('Ce que l\'attaquant calcule, en deux divisions :');
+console.log('  k       retrouvé : ' + kRetrouve.toString(16).slice(0, 24) + '…  identique au vrai : ' + (kRetrouve === k ? 'OUI' : 'NON'));
+console.log('  clé privée retrouvée : ' + cleRetrouvee.toString(16).slice(0, 24) + '…  identique : ' + (cleRetrouvee === clePrivee ? 'OUI' : 'NON'));
+
+// Et il signe ce qu'il veut, au nom du constructeur.
+const faux = 'MISE À JOUR firmware 9.99 — écrite par l\'attaquant';
+const [rf, sf] = signer(cleRetrouvee, faux, 0x1a2b3c4d5e6f70819293a4b5c6d7e8f9n);
+console.log('  signature d\'un firmware qu\'il a écrit lui-même, vérifiée par la clé publique du constructeur : ' + (verifier(clePublique, faux, rf, sf) ? 'ACCEPTÉE' : 'REJETÉE'));
+
+// --- Avec un k différent à chaque fois ----------------------------------------------
+let rDistincts = new Set(), recuperations = 0;
+for (let i = 0; i &lt; 40; i++) {
+  const ki = mod(BigInt('0x' + hex(sha256o(bof('nonce-' + i)))), N);
+  const mi = 'MISE À JOUR firmware ' + i;
+  const [ri, si] = signer(clePrivee, mi, ki);
+  rDistincts.add(ri.toString(16));
+  const kFaux = mod((z(mi) - z(m1)) * inv(mod(si - s1, N), N), N);        // la même attaque…
+  if (mod((mod(si * kFaux, N) - z(mi)) * inv(ri, N), N) === clePrivee) recuperations++;
+}
+console.log('');
+console.log('40 signatures avec un nonce différent : ' + rDistincts.size + ' valeurs de r distinctes.');
+console.log('La même attaque appliquée aux 40 : ' + recuperations + ' clé privée retrouvée.');
+console.log('Le nonce ECDSA n\'est pas un détail d\'implémentation : c\'est la clé privée elle-même.');</code></pre></figure>
+<figure class="code-block" data-file="ecdsa-nonce.txt"><pre><code class="language-plaintext">Clé privée  : 9f86d081884c7d659a2feaa0…  (un nombre, rien de plus)
+Clé publique: (5f81956d5826bad7…, 54ba511b8b782bc5…)
+
+Deux mises à jour signées avec le MÊME nonce k :
+  signature 1 : r = 30626ace77d6d1fba550…
+  signature 2 : r = 30626ace77d6d1fba550…
+  les deux r sont donc identiques — un même k donne un même r, c'est mécanique.
+  Ce signal est PUBLIC : il se lit dans le journal des signatures, sans rien calculer.
+  les deux vérifient : OUI
+
+Ce que l'attaquant calcule, en deux divisions :
+  k       retrouvé : 2b7e151628aed2a6abf71588…  identique au vrai : OUI
+  clé privée retrouvée : 9f86d081884c7d659a2feaa0…  identique : OUI
+  signature d'un firmware qu'il a écrit lui-même, vérifiée par la clé publique du constructeur : ACCEPTÉE
+
+40 signatures avec un nonce différent : 40 valeurs de r distinctes.
+La même attaque appliquée aux 40 : 0 clé privée retrouvée.
+Le nonce ECDSA n'est pas un détail d'implémentation : c'est la clé privée elle-même.</code></pre></figure>
+<p>La clé privée est retrouvée en deux divisions. Pas par force brute, pas par une faiblesse de la courbe&nbsp;: par une <em>équation à deux inconnues devenue à une seule</em>. Deux signatures produites avec le même <code>k</code> partagent la même valeur de <code>r</code>, qui est publique&nbsp;; ce signal se repère par simple lecture d'une chaîne de blocs ou d'un journal de mises à jour. On soustrait, on divise, et la clé tombe.</p>
+<p>Avec un <code>k</code> différent à chaque signature, quarante valeurs de <code>r</code> distinctes sur quarante, et la même attaque ne rend rien. Toute la sécurité d'ECDSA tient donc à la qualité de ce nombre à usage unique — au point que la <strong>RFC&nbsp;6979</strong>, publiée en août&nbsp;2013 par Thomas Pornin, propose de ne plus le tirer au hasard du tout&nbsp;: on le dérive du message et de la clé privée par HMAC. La signature devient reproductible, les vérificateurs existants n'y voient que du feu, et le générateur aléatoire de la machine cesse d'être un point de rupture. <strong>Ed25519</strong> a fait le même choix dès sa conception.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le mot «&nbsp;nonce&nbsp;» ne désigne pas ici la même chose qu'à la leçon&nbsp;2</p><p>Le nonce d'un chiffrement AEAD est <strong>public</strong>&nbsp;: il voyage en clair, et sa seule obligation est de ne pas se répéter. Le <em>k</em> d'ECDSA est <strong>secret</strong>&nbsp;: le publier, c'est publier la clé privée, puisque <em>d</em>&nbsp;=&nbsp;(<em>s·k</em>&nbsp;−&nbsp;<em>z</em>)&nbsp;/&nbsp;<em>r</em>. Et il ne suffit pas qu'il soit unique&nbsp;: il doit être <em>imprévisible</em>, y compris partiellement. Des attaques par réseaux euclidiens reconstituent la clé à partir de quelques bits de biais répétés sur quelques dizaines de signatures. Même nom, deux contrats très différents.</p></div></div>
+<p>Notre implémentation de la courbe a elle aussi été confrontée à Node.js hors de la page&nbsp;: <strong>60&nbsp;clés secp256k1 engendrées par Node, 60&nbsp;clés publiques recalculées identiques par notre arithmétique, 60&nbsp;signatures de Node acceptées par notre vérificateur et 60&nbsp;des nôtres acceptées par le sien — 180&nbsp;contrôles croisés, zéro échec.</strong></p>
+
+<h2>Trois questions auxquelles une signature ne répond pas</h2>
+<p>Supposons maintenant tout bien fait&nbsp;: empreinte, bourrage, nombre à usage unique irréprochable. Un service reçoit un ordre signé, la vérification passe. Que sait-il&nbsp;?</p>
+<figure class="code-block" data-file="rejeu.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- HMAC-SHA-256, qui tiendra ici lieu de signature (le raisonnement est le même) ---
+function hmac(cle, msg){ let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice(); while (k.length &lt; 64) k.push(0);
+  return hex(sha256o([...k.map(b =&gt; b ^ 0x5c), ...sha256o([...k.map(b =&gt; b ^ 0x36), ...bof(msg)])])); }
+const cle = bof('clé-de-signature-du-client');
+const signer = m =&gt; hmac(cle, m);
+
+// --- Le service, première version : il vérifie la signature, et rien d'autre --------
+let solde = 10000, acceptes = 0, rejetes = 0;
+function serviceNaif(ordre, sig){
+  if (signer(ordre) !== sig) { rejetes++; return; }        // signature invalide ?
+  acceptes++; solde -= 120;                                 // ordre exécuté
+}
+const ordre = 'virement:120.00:compte=8802';
+const sig = signer(ordre);
+// Mallory ne casse rien : elle écoute le réseau, capture le couple, et le renvoie.
+for (let i = 0; i &lt; 50; i++) serviceNaif(ordre, sig);
+console.log('Service naïf, un ordre légitime de 120 EUR rejoué 50 fois :');
+console.log('  ' + acceptes + ' acceptés, ' + rejetes + ' rejetés — solde : 10000 → ' + solde + ' EUR.');
+console.log('  Toutes les signatures étaient AUTHENTIQUES. C\'est bien le problème.');
+console.log('');
+
+// --- Deuxième version : l'ordre porte un identifiant unique et une date -------------
+// Les champs sont NOMMÉS, jamais repérés par leur position : un champ ajouté en tête
+// décalerait tout, et un contrôle qui lit le mauvais champ s'ouvre sans rien dire.
+const champ = (ordre, cle) =&gt; {
+  const t = ordre.split(':').find(x =&gt; x.startsWith(cle + '='));
+  return t === undefined ? null : t.slice(cle.length + 1);
+};
+const vus = new Set();
+const MAINTENANT = 1755000000;                              // horodatage de référence
+let solde2 = 10000, ok2 = 0, ko2 = 0;
+const motifs = { signature: 0, sansDate: 0, perime: 0, deja: 0 };
+function serviceSain(ordre, sig, maintenant){
+  if (signer(ordre) !== sig) { ko2++; motifs.signature++; return 'signature'; }
+  const id = champ(ordre, 'id'), t = Number(champ(ordre, 't'));
+  if (id === null || !Number.isFinite(t)) { ko2++; motifs.sansDate++; return 'sans date ni identifiant'; }
+  if (Math.abs(maintenant - t) &gt; 120) { ko2++; motifs.perime++; return 'périmé'; }   // fenêtre de 2 min
+  if (vus.has(id)) { ko2++; motifs.deja++; return 'identifiant déjà vu'; }
+  vus.add(id); ok2++; solde2 -= 120; return 'exécuté';
+}
+const ordre2 = 'virement:120.00:compte=8802:id=7f31c2:t=' + MAINTENANT;
+const sig2 = signer(ordre2);
+for (let i = 0; i &lt; 50; i++) serviceSain(ordre2, sig2, MAINTENANT + i);
+console.log('Même envoi 50 fois, service qui exige un identifiant unique et une date fraîche :');
+console.log('  ' + ok2 + ' exécution, ' + ko2 + ' rejets (' + motifs.deja + ' pour identifiant déjà vu) — solde : 10000 → ' + solde2 + ' EUR.');
+// Deux heures plus tard, avec la même signature authentique :
+console.log('  le même couple rejoué deux heures plus tard : ' + serviceSain(ordre2, sig2, MAINTENANT + 7200) + '.');
+// Et un ordre signé, authentique, mais sans date ni identifiant :
+const nu = 'virement:120.00:compte=8802';
+console.log('  un ordre signé sans date ni identifiant : ' + serviceSain(nu, signer(nu), MAINTENANT) + '.');
+console.log("  (le contrôle REFUSE ce qu'il ne sait pas juger — un contrôle qui laisse passer");
+console.log("   ce qu'il ne comprend pas ne protège de rien.)");
+console.log('');
+
+// --- Le second oubli : pour QUI cet ordre a-t-il été signé ? ------------------------
+// Le client signe le même texte pour deux services. Le premier peut le rejouer chez le second.
+const chezA = 'virement:120.00:compte=8802:id=9a04b1:t=' + MAINTENANT;
+const sigA = signer(chezA);
+console.log('Un ordre signé pour la banque A, présenté tel quel à la banque B :');
+const verifierChezB = (texte, s) =&gt; signer(texte) === s;    // B a la même clé de vérification
+console.log('  B vérifie la signature du texte reçu : ' + (verifierChezB(chezA, sigA) ? 'VALIDE' : 'INVALIDE') + ' — elle exécute.');
+console.log('  (son vérificateur n\'est pas complaisant : le même texte à 9120 EUR donne ' + (verifierChezB(chezA.replace('120.00', '9120.00'), sigA) ? 'VALIDE' : 'INVALIDE') + '.)');
+const chezA2 = 'pour=banque-A:virement:120.00:compte=8802:id=9a04b1:t=' + MAINTENANT;
+const sigA2 = signer(chezA2);
+const attenduChezB = signer(chezA2.replace('pour=banque-A', 'pour=banque-B'));
+console.log('  Avec le destinataire DANS le texte signé, la banque B compare à ce qu\'elle attend :');
+console.log('    signature reçue : ' + sigA2.slice(0, 16) + '…');
+console.log('    signature attendue par B : ' + attenduChezB.slice(0, 16) + '…');
+console.log('    identiques : ' + (sigA2 === attenduChezB ? 'OUI' : 'NON') + ' → rejeté.');
+console.log('');
+console.log('Une signature répond à : « qui ? » et « quoi ? ».');
+console.log('Elle ne répond jamais à : « quand ? », « combien de fois ? », « pour qui ? ».');
+console.log('Ces trois-là, c\'est au message de les porter.');</code></pre></figure>
+<figure class="code-block" data-file="rejeu.txt"><pre><code class="language-plaintext">Service naïf, un ordre légitime de 120 EUR rejoué 50 fois :
+  50 acceptés, 0 rejetés — solde : 10000 → 4000 EUR.
+  Toutes les signatures étaient AUTHENTIQUES. C'est bien le problème.
+
+Même envoi 50 fois, service qui exige un identifiant unique et une date fraîche :
+  1 exécution, 49 rejets (49 pour identifiant déjà vu) — solde : 10000 → 9880 EUR.
+  le même couple rejoué deux heures plus tard : périmé.
+  un ordre signé sans date ni identifiant : sans date ni identifiant.
+  (le contrôle REFUSE ce qu'il ne sait pas juger — un contrôle qui laisse passer
+   ce qu'il ne comprend pas ne protège de rien.)
+
+Un ordre signé pour la banque A, présenté tel quel à la banque B :
+  B vérifie la signature du texte reçu : VALIDE — elle exécute.
+  (son vérificateur n'est pas complaisant : le même texte à 9120 EUR donne INVALIDE.)
+  Avec le destinataire DANS le texte signé, la banque B compare à ce qu'elle attend :
+    signature reçue : cfc9e1c191965ef3…
+    signature attendue par B : a5ac63b4e707f365…
+    identiques : NON → rejeté.
+
+Une signature répond à : « qui ? » et « quoi ? ».
+Elle ne répond jamais à : « quand ? », « combien de fois ? », « pour qui ? ».
+Ces trois-là, c'est au message de les porter.</code></pre></figure>
+<p>Il sait <em>qui</em> et <em>quoi</em>. Il ne sait pas <em>quand</em>&nbsp;: la signature d'hier est aussi valide que celle de maintenant. Il ne sait pas <em>combien de fois</em>&nbsp;: le même couple envoyé cinquante fois, cinquante virements exécutés, six mille euros partis sans qu'une seule vérification cryptographique ait échoué. Et il ne sait pas <em>pour qui</em>&nbsp;: un ordre signé à destination de la banque&nbsp;A est accepté tel quel par la banque&nbsp;B.</p>
+<p>Les trois parades sont dans le message, jamais dans l'algorithme&nbsp;: un <strong>identifiant unique</strong> mémorisé par le service, un <strong>horodatage</strong> assorti d'une fenêtre d'acceptation étroite, et le <strong>destinataire attendu</strong> écrit dans le texte signé. Cette dernière précaution porte un nom, la <strong>séparation de domaine</strong>&nbsp;: on préfixe ce qu'on signe par le contexte — le nom du service, la version du protocole, l'usage — pour qu'une signature émise ici ne vaille rien ailleurs. TLS&nbsp;1.3, que la leçon&nbsp;6 démonte, fait exactement cela dans son message <em>CertificateVerify</em>.</p>
+<p>Remarquez au passage la mémoire que cela suppose&nbsp;: le service doit retenir les identifiants déjà vus. C'est la raison d'être de la fenêtre temporelle — sans elle, la liste grandirait indéfiniment&nbsp;; avec elle, on ne retient que quelques minutes d'historique. Les deux mesures se tiennent&nbsp;: l'horodatage borne la mémoire, l'identifiant traite les doublons à l'intérieur de la fenêtre.</p>
+<p>Deux détails du programme méritent le coup d'œil, parce qu'ils sont la source d'accidents réels. Le premier&nbsp;: les champs sont lus <strong>par leur nom</strong>, jamais par leur position. Un service qui découpe l'ordre et prend «&nbsp;le cinquième morceau&nbsp;» comme date cesse de contrôler quoi que ce soit le jour où l'on ajoute un champ en tête — et il ne le dit pas. Le second&nbsp;: un ordre dont la date est absente ou illisible est <em>rejeté</em>. Un contrôle qui laisse passer ce qu'il ne comprend pas ne protège de rien&nbsp;; c'est ainsi qu'une comparaison sur une valeur non numérique devient un feu vert permanent.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Signer un <em>morceau</em> de la requête. On voit des interfaces de programmation qui signent le corps du message mais pas les paramètres de l'adresse, ou l'ordre mais pas l'en-tête qui désigne le compte. Tout ce qui n'est pas couvert par la signature est modifiable, et le service ne verra rien&nbsp;: la vérification passe, puisqu'elle porte sur autre chose. La règle est mécanique&nbsp;: <strong>ce qui n'est pas signé n'est pas protégé</strong>, et il faut en faire l'inventaire champ par champ.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 190" role="img" aria-label="Ce qu'une signature couvre et ce qu'elle ne couvre pas. Une boîte centrale nommée signature vérifiée mène à deux colonnes. À gauche, ce qu'elle prouve : l'origine du message, c'est-à-dire qu'une clé privée précise a servi, et l'intégrité de ce qui est couvert. À droite, ce qu'elle ne prouve pas : la fraîcheur du message, l'unicité de son exécution, le destinataire visé, et l'identité réelle du détenteur de la clé.">
+    <rect class="d-accent" x="232" y="18" width="176" height="34" rx="5" /><text class="d-text" x="320" y="40" text-anchor="middle" font-size="11">signature vérifiée</text>
+    <path class="d-line" d="M280 52 V72 H148 V88" /><path class="d-line" d="M360 52 V72 H492 V88" />
+    <text class="d-label" x="148" y="84" text-anchor="middle" font-size="11">ce qu'elle prouve</text>
+    <text class="d-label" x="492" y="84" text-anchor="middle" font-size="11">ce qu'elle ne prouve pas</text>
+    <rect class="d-box" x="28" y="94" width="240" height="26" rx="5" /><text class="d-text" x="148" y="111" text-anchor="middle" font-size="10">origine : cette clé privée a servi</text>
+    <rect class="d-box" x="28" y="126" width="240" height="26" rx="5" /><text class="d-text" x="148" y="143" text-anchor="middle" font-size="10">intégrité de ce qui est couvert</text>
+    <rect class="d-box" x="372" y="94" width="240" height="26" rx="5" /><text class="d-text" x="492" y="111" text-anchor="middle" font-size="10">fraîcheur · unicité · destinataire</text>
+    <rect class="d-box" x="372" y="126" width="240" height="26" rx="5" /><text class="d-text" x="492" y="143" text-anchor="middle" font-size="10">à qui appartient vraiment la clé</text>
+    <text class="d-mut" x="320" y="176" text-anchor="middle" font-size="9">les trois premières se traitent dans le message ; la quatrième est le sujet de la leçon 6</text>
+  </svg>
+  <figcaption>Le partage des rôles&nbsp;: la cryptographie répond à deux questions, le protocole doit répondre aux autres.</figcaption>
+</figure>
+
+<h2>Cas réel</h2>
+<p>Le 29&nbsp;décembre 2010, au 27<sup>e</sup> Chaos Communication Congress de Berlin, l'équipe <strong>fail0verflow</strong> présente <em>Console Hacking 2010&nbsp;: PS3 Epic Fail</em>. La PlayStation&nbsp;3 n'exécute que du code signé par Sony&nbsp;; la signature est une ECDSA, l'algorithme même que nous venons d'écrire. L'implémentation est correcte sur tous les points sauf un&nbsp;: elle emploie <strong>la même valeur de <em>k</em> pour toutes les signatures</strong>. La présentation résume la faute par une plaisanterie empruntée à un dessin de xkcd — une fonction censée tirer un nombre au hasard, et qui renvoie toujours la même constante.</p>
+<p>Conséquence immédiate&nbsp;: tous les binaires signés partagent la même valeur de <em>r</em>, publique et lisible dans chaque fichier. Deux d'entre eux suffisent. La clé privée de signature du code est retrouvée exactement comme dans le programme ci-dessus, et à partir de là n'importe qui signe n'importe quel logiciel que la console accepte comme authentique.</p>
+<p>Sony a corrigé le générateur dès la version&nbsp;3.56 du logiciel système, puis chiffré les clés de chargeur à partir de la 3.60. La réparation a donc eu lieu — mais elle ne pouvait valoir que pour l'avenir et pour les consoles mises à jour&nbsp;: la clé compromise restait celle de tout ce qui avait été signé avant, et une machine laissée en 3.55 restait ouverte. C'est la propriété désagréable de ce genre de faute&nbsp;: on répare le générateur en une ligne, on ne retire pas les signatures déjà produites.</p>
+<p>Le détail qui compte pour nous&nbsp;: la courbe était solide, le hachage était solide, le bourrage était sans reproche. La faute tenait dans une fonction de quelques lignes que personne n'aurait qualifiée de cryptographique. C'est l'illustration la plus nette de la règle qui traverse ce cours&nbsp;: <strong>on ne tombe presque jamais par l'algorithme, on tombe par ce qui l'entoure</strong>.</p>
+<p>La même faute s'est reproduite ailleurs. En août&nbsp;2013, un défaut du générateur aléatoire d'Android a produit des valeurs de <em>k</em> répétées dans des portefeuilles Bitcoin&nbsp;; les signatures étant publiées dans la chaîne de blocs, les clés privées correspondantes ont été retrouvées par simple lecture, et des fonds ont été dérobés. Google a publié un correctif et la Fondation Bitcoin un avis aux utilisateurs. Même équation, autre décennie, autres victimes.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Signer&nbsp;: ce qui est garanti, et à quelles conditions</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>MAC (HMAC)</td><td>Clé partagée. Prouve la détention de la clé, jamais l’identité d’un détenteur en particulier. Rapide, et suffisant entre deux parties qui se font confiance.</td></tr>
+      <tr><td>Signature</td><td>Clé privée pour produire, clé publique pour vérifier. Ajoute la non-répudiation et supprime la distribution de secrets deux à deux.</td></tr>
+      <tr><td>Ce qu’on signe</td><td>L’empreinte, jamais le message brut. Signer le message expose à la forge multiplicative&nbsp;: 300&nbsp;forges acceptées sur 300&nbsp;couples, mesurées ci-dessus.</td></tr>
+      <tr><td>Bourrage</td><td>Obligatoire. RSA&nbsp;: PSS pour le neuf, PKCS#1&nbsp;v1.5 encore admis en signature — jamais en chiffrement. Il porte la valeur signée à la taille du module et nomme la fonction de hachage.</td></tr>
+      <tr><td>ECDSA</td><td>Petites clés, mais un nombre <em>k</em> secret, unique et imprévisible à chaque signature. Le répéter livre la clé privée en deux divisions.</td></tr>
+      <tr><td>Signature déterministe</td><td>RFC&nbsp;6979 pour ECDSA, natif pour Ed25519&nbsp;: <em>k</em> dérivé du message et de la clé. Supprime la dépendance au générateur aléatoire.</td></tr>
+      <tr><td>Rejeu</td><td>Une signature valide le reste. Identifiant unique mémorisé + horodatage à fenêtre étroite, lus <em>par leur nom</em> et non par leur position&nbsp;: sinon 50&nbsp;envois donnent 50&nbsp;exécutions.</td></tr>
+      <tr><td>Séparation de domaine</td><td>Écrire le destinataire, le protocole et l’usage dans ce qu’on signe. Sinon la signature vaut chez le voisin.</td></tr>
+      <tr><td>Une clé, un usage</td><td>Jamais le même couple pour chiffrer et pour signer&nbsp;; jamais la même clé pour deux protocoles.</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Signature numérique</dt><dd>Valeur calculée sur l’empreinte d’un message avec une clé privée, que toute personne détenant la clé publique correspondante peut vérifier.</dd>
+<dt>Non-répudiation</dt><dd>Propriété qui empêche le signataire de nier avoir signé, parce qu’il est le seul à avoir pu produire la valeur. Une marque à clé partagée ne l’offre pas.</dd>
+<dt>RSA brut</dt><dd>Emploi de l’exponentiation RSA sans hachage ni bourrage. Multiplicatif, donc forgeable&nbsp;: à ne jamais employer.</dd>
+<dt>Bourrage</dt><dd>Structure ajoutée autour de l’empreinte avant l’opération RSA, qui porte la valeur à la taille du module et nomme la fonction de hachage employée.</dd>
+<dt>PSS</dt><dd>Bourrage de signature RSA à sécurité démontrable, recommandé pour les nouveaux systèmes. PKCS#1&nbsp;v1.5 en est le prédécesseur, toujours admis en signature.</dd>
+<dt>ECDSA</dt><dd>Signature sur courbe elliptique. Clés et signatures courtes, au prix d’une exigence stricte sur le nombre à usage unique employé à chaque signature.</dd>
+<dt>Nonce de signature (k)</dt><dd>Nombre secret, unique et imprévisible tiré à chaque signature ECDSA. Le répéter, ou le rendre partiellement prévisible, livre la clé privée.</dd>
+<dt>Signature déterministe</dt><dd>Dérivation de <em>k</em> à partir du message et de la clé privée (RFC&nbsp;6979, Ed25519), qui supprime la dépendance au générateur aléatoire.</dd>
+<dt>Rejeu</dt><dd>Renvoi d’un message authentique déjà émis. La signature reste valide&nbsp;; seule une donnée de fraîcheur dans le message permet de le refuser.</dd>
+<dt>Séparation de domaine</dt><dd>Inscription du contexte — destinataire, protocole, usage — dans ce qui est signé, afin qu’une signature ne soit pas rejouable ailleurs.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<p>Une marque à clé partagée prouve la détention d'un secret&nbsp;: devant un arbitre, trois messages sur quatre passent, dont un que le destinataire a fabriqué lui-même. Une signature sépare produire et vérifier&nbsp;: 200&nbsp;messages signés et vérifiés, 200&nbsp;altérations rejetées, 2&nbsp;000&nbsp;tentatives au hasard sans succès. On signe l'empreinte, jamais le message&nbsp;: RSA brut donne 300&nbsp;forges acceptées sur 300&nbsp;couples. Le bourrage n'est pas décoratif&nbsp;: sans lui et avec l'exposant&nbsp;3, cent montants sur un million ont une signature calculable sans clé. ECDSA repose sur un nombre à usage unique&nbsp;: le répéter deux fois rend la clé privée à l'identique — c'est la faute de la PlayStation&nbsp;3. Et une signature valide ne dit ni quand, ni combien de fois, ni pour qui&nbsp;: le même couple envoyé 50&nbsp;fois donne 50&nbsp;exécutions sans précaution, et 1&nbsp;seule avec un identifiant unique et une date — les 49&nbsp;autres sont rejetées.</p>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une équipe protège ses appels entre services par HMAC-SHA-256 avec une clé partagée, et veut s'en servir pour prouver à un client qu'il a bien passé une commande. Où est l'erreur de raisonnement, et que faudrait-il changer&nbsp;?</li>
+<li>Un service de signature accepte de signer n'importe quel nombre qu'on lui soumet, sans le hacher, avec un exposant public de 65537. Quelle manœuvre permet d'obtenir la signature d'un montant qu'il aurait refusé, et pourquoi le hachage l'arrête-t-il&nbsp;?</li>
+<li>Dans un journal de mises à jour signées en ECDSA, tu remarques que deux signatures portent la même valeur de <em>r</em>. Qu'as-tu déjà entre les mains, et de quoi as-tu encore besoin&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Un arbitre reçoit quatre messages marqués par HMAC avec une clé qu'Alice et Bob partagent, et qu'il détient lui aussi pour vérifier. Le programme montre 3 acceptés sur 4. Que peut-il conclure du message qu'Alice affirme n'avoir jamais écrit ?","a":["Rien de plus que : il a été produit par un détenteur de la clé, ce qui inclut Alice, Bob et lui-même — la marque ne distingue pas les détenteurs entre eux","Qu'Alice l'a bien écrit, puisque la marque a été calculée avec la clé d'Alice et qu'elle est la seule à la posséder dans ce protocole","Que la marque est nécessairement fausse, car une marque valide sur un message contesté indiquerait une collision de HMAC-SHA-256","Que Bob l'a écrit, car un message contesté provient toujours du destinataire, qui est le seul à avoir intérêt à le fabriquer"],"correct":0,"exp":"L'arbitre détient la clé pour vérifier, donc il pourrait lui-même produire la marque : le procédé ne désigne personne. Dans le programme, c'est bien Bob qui a fabriqué le message — mais cela vient du commentaire, pas de la vérification."},
+  {"q":"Un service signe des montants sans les hacher. Mallory obtient les signatures de 3 et de 415, les multiplie, et le service accepte la signature du montant 1245. Quelle propriété exploite-t-elle ?","a":["La multiplicativité de l'exponentiation modulaire : le produit de deux signatures est la signature du produit des messages, sans aucun accès à la clé privée","Une collision entre les empreintes de 3, de 415 et de 1245, que la petite taille des trois nombres rend probable dans un module de 768 bits","La réutilisation par le service d'un même nombre aléatoire pour les deux signatures, qui permet de reconstituer la clé privée puis de signer librement","La faiblesse de l'exposant public 65537, qui rend l'exponentiation inversible pour tout message inférieur à la racine du module"],"correct":0,"exp":"Aucune collision, aucun aléa, aucune clé retrouvée : (a^d)·(b^d) = (a·b)^d, purement et simplement. Le hachage brise le lien parce que H(a·b) n'a aucune raison de valoir H(a)·H(b)."},
+  {"q":"Deux mises à jour signées en ECDSA portent la même valeur de r. Un attaquant qui ne dispose que des deux messages, des deux signatures et de la clé publique obtient quoi, et à quel coût ?","a":["La clé privée entière, au prix de deux divisions modulaires : k se déduit de la différence des empreintes divisée par la différence des s, puis d s'en déduit","Le message clair d'une des deux mises à jour, car des valeurs de r identiques révèlent le flux de chiffrement qui protégeait le binaire signé","Rien d'exploitable sans une troisième signature, la récupération de la clé exigeant au minimum trois équations pour trois inconnues","Une signature valide pour un troisième message, mais pas la clé privée, qui reste protégée par la difficulté du logarithme discret sur la courbe"],"correct":0,"exp":"Deux signatures suffisent : k = (z1 − z2)/(s1 − s2), puis d = (s·k − z)/r. Le programme le fait et retrouve la clé à l'identique — c'est la faute exacte de la PlayStation 3 en 2010."},
+  {"q":"Un service exécute un virement dès que la signature est valide. Un attaquant renvoie 50 fois le même couple message-signature, et le programme montre 50 exécutions. Quelle correction traite la cause ?","a":["Faire porter au message un identifiant unique que le service mémorise, ainsi qu'un horodatage assorti d'une fenêtre d'acceptation étroite","Passer d'une signature RSA de 1024 bits à une signature de 4096 bits, afin qu'une signature capturée ne puisse plus être réutilisée telle quelle","Chiffrer le message en plus de le signer, pour que l'attaquant ne puisse ni lire ni recopier le couple qui transite sur le réseau","Vérifier la signature deux fois, avant et après l'exécution de l'ordre, afin de détecter les envois multiples d'une même valeur"],"correct":0,"exp":"Ni la taille de la clé ni le chiffrement n'y changent quoi que ce soit : l'attaquant recopie un message authentique sans avoir besoin de le lire ni de le modifier. La fraîcheur et l'unicité se traitent dans le message."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["la non-répudiation","non-répudiation","non répudiation","la non répudiation","non-repudiation","la non-repudiation"],"placeholder":"la propriété qu'une signature apporte et qu'un HMAC n'apporte pas","hints":["Elle concerne ce que le signataire pourra dire, plus tard, devant un tiers.","Elle est hors d'atteinte dès que deux personnes détiennent la même clé.","En deux mots, avec un trait d'union."],"link":{"href":"lecon-04.html","label":"Revoir « Une marque partagée ne désigne personne »"}},
+  {"type":"code","run":{"expect":"forgee acceptee : OUI"},"placeholder":"le résultat de la forge multiplicative sur un service qui signe sans hacher","hints":["Reprends la clé jouet, fais signer a puis b, et multiplie les deux signatures modulo n.","Le service vérifie s^e mod n et le compare au produit a·b.","Affiche exactement : « forgee acceptee : OUI »."],"link":{"href":"lecon-04.html","label":"Revoir « Ce qui arrive quand on signe le message lui-même »"}},
+  {"type":"code","run":{"expect":"cle privee retrouvee : OUI"},"placeholder":"le résultat de l'attaque sur deux signatures ECDSA de même nonce","hints":["k = (z1 − z2) / (s1 − s2), modulo l'ordre de la courbe.","Puis d = (s1·k − z1) / r1, toujours modulo l'ordre.","Affiche exactement : « cle privee retrouvee : OUI »."],"link":{"href":"lecon-04.html","label":"Revoir « ECDSA, et le nombre qui ne doit servir qu'une fois »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une plateforme de paiement propose deux offres à ses marchands. Offre&nbsp;A&nbsp;: chaque requête est marquée par HMAC-SHA-256 avec une clé partagée entre le marchand et la plateforme. Offre&nbsp;B&nbsp;: chaque requête est signée par le marchand avec une clé privée qu'il est seul à détenir, la plateforme ne connaissant que la clé publique. En trois phrases, dis ce que la plateforme peut prouver à un juge dans chaque cas, et pourquoi l'offre&nbsp;A suffit pourtant à la très grande majorité des marchands.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-exo1.txt"><pre><code class="language-plaintext">Offre A : la plateforme peut prouver que la requête a été produite par un
+détenteur de la clé — c'est-à-dire par le marchand OU par la plateforme
+elle-même, puisqu'elle détient la même clé pour vérifier. Devant un juge,
+un marchand de mauvaise foi peut donc soutenir que la plateforme a fabriqué
+la requête, et rien dans la marque ne le contredit.
+
+Offre B : la plateforme peut prouver que la requête a été produite par le
+détenteur de la clé privée, et elle ne l'est pas elle-même. C'est la
+non-répudiation. Le marchand ne peut plus nier — sauf à soutenir que sa clé
+lui a été dérobée, ce qui est un autre débat, et qui se traite par la
+révocation (leçon 6).
+
+Pourquoi A suffit presque toujours : le litige envisagé est rare, et la
+plateforme n'a aucun intérêt à fabriquer des requêtes qu'elle devrait
+ensuite honorer. HMAC est en outre bien plus rapide, plus simple à
+implémenter correctement, et ne demande ni gestion de clés privées côté
+marchand ni horloge fiable. On paie la non-répudiation quand on en a besoin,
+pas par principe.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un service de signature accepte de signer n'importe quel nombre qu'on lui soumet, sans le hacher. Écris le programme qui obtient la signature de deux montants anodins, puis en déduit celle d'un troisième montant que le service n'a jamais vu — et fais vérifier cette signature forgée par le service lui-même. Le programme doit afficher exactement <code>forgee acceptee : OUI</code>.</p><details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo2.js"><pre><code class="language-javascript">// Une clé jouet, deux premiers connus — l'attaque ne dépend pas de la taille.
+const p = 1000000007n, q = 1000000009n, n = p * q, e = 65537n;
+const expmod = (b, x, m) =&gt; { let r = 1n; b %= m; while (x &gt; 0n) { if (x &amp; 1n) r = r * b % m; b = b * b % m; x &gt;&gt;= 1n; } return r; };
+const inverse = (a, m) =&gt; { let [an, ap] = [a % m, m], [u, v] = [1n, 0n]; while (an &gt; 1n) { const k = an / ap; [an, ap] = [ap, an - k * ap]; [u, v] = [v, u - k * v]; } return (u % m + m) % m; };
+const pgcd = (x, y) =&gt; { while (y) { [x, y] = [y, x % y]; } return x; };
+const d = inverse(e, (p - 1n) * (q - 1n) / pgcd(p - 1n, q - 1n));
+
+const signer = m =&gt; expmod(m, d, n);            // le service signe SANS hacher
+const verifier = (m, s) =&gt; expmod(s, e, n) === m;
+
+const a = 3n, b = 415n;                          // deux montants anodins
+const sa = signer(a), sb = signer(b);            // les seules signatures obtenues
+const cible = a * b % n;                         // 1245 : jamais soumis
+const forgee = sa * sb % n;                      // aucune clé privée employée
+console.log('forgee acceptee : ' + (verifier(cible, forgee) ? 'OUI' : 'NON'));</code></pre></figure>
+<figure class="code-block" data-file="solution-exo2.txt"><pre><code class="language-plaintext">forgee acceptee : OUI</code></pre></figure>
+<p>Deux remarques. La clé est minuscule — deux premiers de dix chiffres —, et cela ne change rien&nbsp;: l'attaque ne cherche jamais à factoriser <code>n</code>, elle exploite une identité algébrique valable pour toute taille de clé. Et le service n'a rien fait d'anormal&nbsp;: il a signé deux montants qu'il jugeait acceptables. C'est l'absence de hachage qui a créé la faille, pas une erreur de jugement.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Aller plus loin</span></div><p>Deux signatures ECDSA d'un même signataire portent la même valeur de <em>r</em>. Écris le programme de l'attaquant&nbsp;: il ne dispose que des deux empreintes, des deux couples <em>(r, s)</em> et de la courbe — jamais de la clé privée. Il doit retrouver <em>k</em>, puis la clé privée, et le programme doit afficher exactement <code>cle privee retrouvee : OUI</code>. Puis explique en une phrase pourquoi vérifier l'égalité des deux <em>r</em> fait partie de l'attaque, et pas seulement de sa mise en scène.</p><details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo3.js"><pre><code class="language-javascript">// La courbe et les deux signatures fautives : même k, donc même r.
+const P = 2n**256n - 2n**32n - 977n;
+const N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+const G = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n,
+           0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n];
+const mod = (a, m) =&gt; ((a % m) + m) % m;
+const inv = (a, m) =&gt; { let [an, ap] = [mod(a, m), m], [u, v] = [1n, 0n]; while (an &gt; 1n) { const k = an / ap; [an, ap] = [ap, an - k * ap]; [u, v] = [v, u - k * v]; } return mod(u, m); };
+function add(A, B){ if (!A) return B; if (!B) return A; if (A[0] === B[0] &amp;&amp; mod(A[1] + B[1], P) === 0n) return null;
+  const l = A[0] === B[0] &amp;&amp; A[1] === B[1] ? mod(3n * A[0] * A[0] * inv(2n * A[1], P), P) : mod((B[1] - A[1]) * inv(B[0] - A[0], P), P);
+  const x = mod(l * l - A[0] - B[0], P); return [x, mod(l * (A[0] - x) - A[1], P)]; }
+function mul(k, Q){ let R = null; while (k &gt; 0n) { if (k &amp; 1n) R = add(R, Q); Q = add(Q, Q); k &gt;&gt;= 1n; } return R; }
+
+const cle = 0x51a3bf4f1b2b0b822cd15d6c15b0f00a08n % N;   // ce que l'attaquant IGNORE
+const k   = 0x2b7e151628aed2a6abf7158809cf4f3cn;         // le nonce, réutilisé
+const z1 = 0x1111111111111111111111111111111111111111111111111111111111111111n % N;
+const z2 = 0x2222222222222222222222222222222222222222222222222222222222222222n % N;
+const sig = (z) =&gt; { const r = mod(mul(k, G)[0], N); return [r, mod(inv(k, N) * (z + r * cle), N)]; };
+const [r1, s1] = sig(z1), [r2, s2] = sig(z2);
+
+// Ce que l'attaquant fait, avec r1, r2, s1, s2, z1, z2 — rien d'autre.
+const kTrouve = mod((z1 - z2) * inv(mod(s1 - s2, N), N), N);
+const dTrouve = mod((mod(s1 * kTrouve, N) - z1) * inv(r1, N), N);
+// L'égalité r1 === r2 est le SIGNAL qui déclenche l'attaque, pas sa preuve : elle est
+// mécanique dès que k est réutilisé. Le seul verdict qui compte est celui-ci.
+console.log('cle privee retrouvee : ' + (dTrouve === cle ? 'OUI' : 'NON'));</code></pre></figure>
+<figure class="code-block" data-file="solution-exo3.txt"><pre><code class="language-plaintext">cle privee retrouvee : OUI</code></pre></figure>
+<p>L'égalité des deux <em>r</em> est le <em>déclencheur</em> de l'attaque, et c'est ce qui la rend praticable à grande échelle&nbsp;: un attaquant ne devine pas qu'un nonce a été réutilisé, il le <strong>lit</strong>. Les valeurs de <em>r</em> sont publiques et présentes dans chaque signature&nbsp;; il suffit donc de trier les signatures d'une chaîne de blocs ou d'un dépôt de mises à jour par valeur de <em>r</em>, et de regarder ce qui apparaît deux fois. C'est exactement ainsi que les portefeuilles Bitcoin touchés en 2013 ont été repérés — sans la moindre analyse cryptographique, par un simple regroupement.</p>
+<p>Une variante mérite d'être connue&nbsp;: si deux signataires <em>différents</em> partagent la même valeur de <em>r</em>, chacun peut retrouver la clé privée de l'autre, puisque chacun connaît son propre <em>k</em>. C'est le scénario du générateur aléatoire défaillant sur tout un parc de machines.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

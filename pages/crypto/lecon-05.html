@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>S’accorder sur un secret devant témoin — Leçon 05 · Cours Cryptographie appliquée — Syntaxe</title>
+    <meta name="description" content="Échange de clés : Diffie-Hellman sur le groupe 14 de la RFC 3526, logarithme discret cassé sur 32 bits, attaque de l'homme du milieu jouée en direct, parts signées, confidentialité persistante mesurée et dérivation HKDF. Cours Cryptographie appliquée, module 2." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="crypto" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cryptographie appliquée</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · Les assembler</p>
+              <h1 class="lesson-header__title">S’accorder sur un secret devant témoin</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~33 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 1 à 4 de ce cours</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Faire construire un secret commun à deux inconnus à partir de valeurs publiques</li>
+                  <li>Situer la difficulté du logarithme discret par une mesure, et non par principe</li>
+                  <li>Monter une attaque de l’homme du milieu sur un échange non authentifié, et l’arrêter</li>
+                  <li>Mesurer ce que la confidentialité persistante protège, et ce qu’elle ne protège pas</li>
+                  <li>Dériver plusieurs clés d’un secret brut avec HKDF, et vérifier le résultat contre un vecteur officiel</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La leçon&nbsp;3 a laissé une question en suspens, et c'est la plus pratique de tout le cours. Le chiffrement symétrique est rapide, mais il suppose une clé <em>déjà partagée</em>. Le chiffrement asymétrique résout ce partage, mais il est lent et son enveloppe a une taille très limitée&nbsp;: 190&nbsp;octets utiles sur une clé RSA-2048 avec OAEP-SHA-256, mesurés à la leçon&nbsp;3.</p>
+<p>La réponse courante — «&nbsp;on chiffre une clé de session avec RSA&nbsp;» — fonctionne, et c'est exactement ce que faisait TLS jusqu'en 2018. Cette leçon montre pourquoi on a cessé de le faire, et par quoi on l'a remplacé&nbsp;: un mécanisme qui permet à deux inconnus de se mettre d'accord sur un secret <strong>en parlant à voix haute</strong>, devant témoin.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord l'accord de clé de Diffie-Hellman, sur un vrai groupe de 2048&nbsp;bits, normalisé et encore employé. Ensuite ce qui le protège — un problème que personne ne sait résoudre en grand — et ce qui arrive quand on le pose en petit. Puis son angle mort, exploité en direct&nbsp;: un intrus au milieu qui lit et réécrit tout. Enfin les deux pièces qui manquaient&nbsp;: la signature pour savoir <em>à qui</em> l'on parle, et une fonction de dérivation pour transformer un secret brut en clés utilisables.</p></div></div>
+
+<h2>Un secret construit en public</h2>
+<p>Whitfield Diffie et Martin Hellman publient en 1976 <em>New Directions in Cryptography</em>, et le tour qu'ils décrivent est resté le même. Deux valeurs publiques, un grand nombre premier&nbsp;<code>p</code> et un générateur&nbsp;<code>g</code>&nbsp;; chacun tire un exposant privé et publie <code>g</code> élevé à cet exposant. Chacun élève ensuite <em>la valeur reçue</em> à son propre exposant, et les deux tombent sur le même nombre&nbsp;— parce que (<em>g</em><sup>b</sup>)<sup>a</sup> et (<em>g</em><sup>a</sup>)<sup>b</sup> sont le même objet.</p>
+<figure class="code-block" data-file="diffie-hellman.js"><pre><code class="language-javascript">// --- Le groupe : celui de la RFC 3526, « groupe 14 », 2048 bits ---------------------
+// p et g sont publics. Ce groupe-ci date de 2003 et sert encore à SSH et IPsec ;
+// TLS 1.3, lui, emploie les groupes de la RFC 7919 ou la courbe X25519.
+const p = BigInt('0x' + (
+  'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74' +
+  '020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F1437' +
+  '4FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED' +
+  'EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF05' +
+  '98DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB' +
+  '9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3B' +
+  'E39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF695581718' +
+  '3995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF'));
+const g = 2n;
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+
+// Deux secrets privés, choisis chacun de son côté et jamais transmis.
+const a = 0x3f5c1b9e77a0d4e2c8b1069f4d3a72e58c0fb631d9a24578e6c3b1f0a9d78452n; // Alice
+const b = 0x7d2e94af0b613c85d7f2a04e6198bc35720ade91f4c6d803b5e7192af06c3d84n; // Bob
+
+const A = expmod(g, a, p);      // Alice publie A = g^a mod p
+const B = expmod(g, b, p);      // Bob   publie B = g^b mod p
+console.log('Ce qui voyage EN CLAIR sur le réseau, et que l\'espion enregistre :');
+console.log('  p (2048 bits, public, connu de tous) : ' + p.toString(16).slice(0, 16) + '…');
+console.log('  g = ' + g);
+console.log('  A = ' + A.toString(16).slice(0, 24) + '…');
+console.log('  B = ' + B.toString(16).slice(0, 24) + '…');
+console.log('');
+
+const secretAlice = expmod(B, a, p);    // (g^b)^a
+const secretBob   = expmod(A, b, p);    // (g^a)^b
+console.log('Ce que chacun calcule DANS SON COIN :');
+console.log('  Alice : ' + secretAlice.toString(16).slice(0, 32) + '…');
+console.log('  Bob   : ' + secretBob.toString(16).slice(0, 32) + '…');
+console.log('  identiques : ' + (secretAlice === secretBob ? 'OUI' : 'NON') + '   (' + secretAlice.toString(2).length + ' bits partagés)');
+console.log('');
+
+// L'égalité des deux calculs n'est pas un résultat expérimental : c'est l'identité
+// (g^b)^a = (g^a)^b, vraie par construction. Ce qui MÉRITE d'être compté, c'est autre
+// chose : deux sessions tirées séparément tombent-elles parfois sur le même secret ?
+let graine = 20240813n;
+const tirer = () =&gt; { for (let k = 0; k &lt; 8; k++) graine = (graine * 6364136223846793005n + 1442695040888963407n) &amp; ((1n &lt;&lt; 256n) - 1n); return graine % (p - 2n) + 1n; };
+const secretsDistincts = new Set();
+for (let i = 0; i &lt; 100; i++) {
+  const ai = tirer(), bi = tirer();
+  secretsDistincts.add(expmod(expmod(g, bi, p), ai, p).toString(16).slice(0, 40));
+}
+console.log('100 sessions, exposants tirés séparément : ' + secretsDistincts.size + ' secrets distincts sur 100.');
+console.log("(Que les deux camps tombent sur le même nombre n'est pas une mesure, en revanche :");
+console.log(" c'est l'identité (g^b)^a = (g^a)^b, vraie par construction.)");
+console.log('');
+console.log('Ce que l\'espion tient : p, g, A, B. Ce qu\'il lui faudrait : a ou b.');
+console.log('Les extraire de A = g^a mod p, c\'est le LOGARITHME DISCRET.');
+console.log('Sur ce groupe de 2048 bits, personne ne sait le faire. Sur un petit groupe, si : bloc suivant.');</code></pre></figure>
+<figure class="code-block" data-file="diffie-hellman.txt"><pre><code class="language-plaintext">Ce qui voyage EN CLAIR sur le réseau, et que l'espion enregistre :
+  p (2048 bits, public, connu de tous) : ffffffffffffffff…
+  g = 2
+  A = ee9bfc1e70290f0fc142145c…
+  B = c81223066315f52b319ed35f…
+
+Ce que chacun calcule DANS SON COIN :
+  Alice : bef90e179ccdfd34b443c528c04c7157…
+  Bob   : bef90e179ccdfd34b443c528c04c7157…
+  identiques : OUI   (2048 bits partagés)
+
+100 sessions, exposants tirés séparément : 100 secrets distincts sur 100.
+(Que les deux camps tombent sur le même nombre n'est pas une mesure, en revanche :
+ c'est l'identité (g^b)^a = (g^a)^b, vraie par construction.)
+
+Ce que l'espion tient : p, g, A, B. Ce qu'il lui faudrait : a ou b.
+Les extraire de A = g^a mod p, c'est le LOGARITHME DISCRET.
+Sur ce groupe de 2048 bits, personne ne sait le faire. Sur un petit groupe, si : bloc suivant.</code></pre></figure>
+<p>Le groupe employé ici n'est pas une réduction pédagogique&nbsp;: c'est le <strong>groupe&nbsp;14 de la RFC&nbsp;3526</strong>, 2048&nbsp;bits, publié en 2003. Il sert encore à SSH et à IPsec&nbsp;; TLS&nbsp;1.3, lui, a remplacé ces groupes par ceux de la RFC&nbsp;7919 et, le plus souvent, par la courbe X25519 — le cas réel de cette leçon explique pourquoi. Nous avons vérifié hors de la page que son nombre premier est bien celui que Node.js renvoie pour <code>modp14</code>, chiffre pour chiffre, et que <strong>40&nbsp;accords de clé calculés par notre exponentiation coïncident avec ceux de la bibliothèque</strong> — zéro écart.</p>
+<p>Ce qui voyage sur le réseau est intégralement public&nbsp;: <code>p</code>, <code>g</code>, <code>A</code>, <code>B</code>. Un espion qui enregistre tout tient quatre nombres et rien d'autre. Ce qui reste chez chacun, ce sont les deux exposants privés — jamais transmis, jamais déductibles de ce qui l'a été. C'est là toute l'élégance du procédé&nbsp;: le secret n'a pas été <em>transporté</em>, il a été <strong>construit des deux côtés à la fois</strong>.</p>
+
+<h2>Ce qui rend l'espion impuissant, et ce qui le rendrait puissant</h2>
+<p>La sécurité repose sur un problème précis&nbsp;: connaissant <code>g</code>, <code>p</code> et <code>g<sup>a</sup> mod p</code>, retrouver <code>a</code>. C'est le <strong>logarithme discret</strong>. Il n'a rien d'insoluble en principe&nbsp;— il l'est en pratique, à condition que le groupe soit assez grand. Voyons ce qui se passe quand il ne l'est pas.</p>
+<figure class="code-block" data-file="log-discret.js"><pre><code class="language-javascript">// Le même échange, mais sur un groupe minuscule : p tient sur 32 bits.
+const p = 4294967291n;        // le plus grand premier inférieur à 2^32
+const g = 2n;
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+
+const a = 2718281828n;                 // le secret d'Alice — inconnu de l'espion
+const A = expmod(g, a, p);             // ce qu'elle publie
+console.log('p = ' + p + ' (32 bits), g = ' + g + ', A = ' + A);
+console.log('L\'espion cherche a tel que 2^a mod p = ' + A + '.');
+console.log('');
+
+// Méthode 1 : essayer tous les exposants.
+let essais = 0, trouveNaif = 0n, v = 1n;
+for (let i = 1n; i &lt;= 3000000n; i++) { v = v * g % p; essais++; if (v === A) { trouveNaif = i; break; } }
+console.log('Force brute, ' + essais.toLocaleString('fr-FR') + ' exposants essayés : ' + (trouveNaif ? 'trouvé' : 'rien'));
+console.log('  Il en faudrait ' + (p - 1n).toLocaleString('fr-FR') + ' dans le pire cas.');
+console.log('');
+
+// Méthode 2 : pas de bébé, pas de géant. On échange de la mémoire contre du temps.
+const m = 65536n;                                   // environ la racine carrée de p
+const table = new Map();
+let bebe = 1n, ops = 0;                             // on COMPTE ce qui est vraiment fait
+for (let j = 0n; j &lt; m; j++) { table.set(bebe.toString(), j); bebe = bebe * g % p; ops++; }   // g^j
+const facteur = expmod(expmod(g, p - 2n, p), m, p);  // g^(-m) mod p
+let geant = A, aTrouve = null;
+for (let i = 0n; i &lt; m; i++) {
+  const j = table.get(geant.toString());
+  ops++;
+  if (j !== undefined) { aTrouve = i * m + j; break; }
+  geant = geant * facteur % p;
+}
+console.log('Pas de bébé, pas de géant :');
+console.log('  a retrouvé  : ' + aTrouve);
+console.log('  a véritable : ' + a);
+console.log('  identiques  : ' + (aTrouve === a ? 'OUI' : 'NON') + '  en ' + ops.toLocaleString('fr-FR') + ' opérations comptées et ' + m.toLocaleString('fr-FR') + ' entrées de table.');
+console.log('  (le pire cas de la méthode vaudrait ' + (2n * m).toLocaleString('fr-FR') + ' : on est tombé avant.)');
+console.log('');
+
+// Et l'espion, une fois a connu, recalcule le secret partagé comme Alice.
+const b = 1414213562n, B = expmod(g, b, p);
+console.log('Il recalcule alors le secret : ' + expmod(B, aTrouve, p) + '  (Alice avait : ' + expmod(B, a, p) + ')');
+console.log('');
+console.log('   taille de p | racine carrée ≈ opérations, pire cas de cette méthode');
+for (const bits of [32, 64, 128, 256, 512, 1024, 2048]) {
+  const ops = 2n ** BigInt(bits / 2);
+  const chiffres = ops.toString().length;
+  console.log('  ' + String(bits).padStart(5) + ' bits  | ' + (chiffres &lt;= 13 ? ops.toLocaleString('fr-FR') : ops.toString()[0] + ',' + ops.toString().slice(1, 3) + ' · 10^' + (chiffres - 1)));
+}
+console.log('Cette méthode-ci ne va pas au-delà de quelques dizaines de bits en pratique :');
+console.log('il faut AUTANT de mémoire que d\'opérations. Les vraies attaques emploient le crible');
+console.log('de corps de nombres, bien plus efficace — et le record public reste très loin de 2048 bits.');</code></pre></figure>
+<figure class="code-block" data-file="log-discret.txt"><pre><code class="language-plaintext">p = 4294967291 (32 bits), g = 2, A = 2631602751
+L'espion cherche a tel que 2^a mod p = 2631602751.
+
+Force brute, 3 000 000 exposants essayés : rien
+  Il en faudrait 4 294 967 290 dans le pire cas.
+
+Pas de bébé, pas de géant :
+  a retrouvé  : 2718281828
+  a véritable : 2718281828
+  identiques  : OUI  en 107 014 opérations comptées et 65 536 entrées de table.
+  (le pire cas de la méthode vaudrait 131 072 : on est tombé avant.)
+
+Il recalcule alors le secret : 3986929881  (Alice avait : 3986929881)
+
+   taille de p | racine carrée ≈ opérations, pire cas de cette méthode
+     32 bits  | 65 536
+     64 bits  | 4 294 967 296
+    128 bits  | 1,84 · 10^19
+    256 bits  | 3,40 · 10^38
+    512 bits  | 1,15 · 10^77
+   1024 bits  | 1,34 · 10^154
+   2048 bits  | 1,79 · 10^308
+Cette méthode-ci ne va pas au-delà de quelques dizaines de bits en pratique :
+il faut AUTANT de mémoire que d'opérations. Les vraies attaques emploient le crible
+de corps de nombres, bien plus efficace — et le record public reste très loin de 2048 bits.</code></pre></figure>
+<p>Sur 32&nbsp;bits, l'exposant privé tombe en 107&nbsp;014&nbsp;opérations comptées — le pire cas de la méthode en vaudrait 131&nbsp;072, et l'affaire prend quelques dizaines de millisecondes, chronométrées hors de la page pour que la sortie reste reproductible. La méthode employée s'appelle <em>pas de bébé, pas de géant</em>&nbsp;: on précalcule une table de <code>g<sup>j</sup></code>, puis on avance par grands pas jusqu'à retomber sur une valeur de la table. Elle coûte de l'ordre de la <em>racine carrée</em> du groupe, en temps comme en mémoire — c'est ce compromis qui la rend inutilisable au-delà de quelques dizaines de bits&nbsp;: à 128&nbsp;bits il faudrait déjà 1,8&nbsp;·&nbsp;10<sup>19</sup>&nbsp;entrées de table.</p>
+<p>Les attaques sérieuses n'emploient pas cette méthode mais le <strong>crible de corps de nombres</strong>, beaucoup plus efficace, et dont la première étape ne dépend que de&nbsp;<code>p</code>. Ce détail a des conséquences considérables, et le cas réel de cette leçon y revient.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un grand nombre premier ne suffit pas&nbsp;: il faut le bon</p><p>Trois conditions, souvent oubliées. <strong>Un&nbsp;:</strong> <code>p</code> doit être premier — un module qui ne l'est pas ouvre des attaques par sous-groupes. Ce n'est pas une précaution théorique&nbsp;: le premier groupe employé pendant l'écriture de cette leçon avait été fabriqué à la main, et le test de primalité, passé après coup, a montré qu'il n'était premier ni lui ni son sous-groupe. Les programmes de cette leçon emploient tous, depuis, un groupe normalisé. <strong>Deux&nbsp;:</strong> l'ordre du sous-groupe engendré par <code>g</code> doit être grand et premier, sinon le logarithme discret se résout morceau par morceau — c'est l'attaque par petits sous-groupes. <strong>Trois&nbsp;:</strong> il faut <em>valider la part reçue</em>. Un correspondant malveillant qui envoie 0, 1 ou <code>p−1</code> force le secret partagé à une valeur qu'il connaît d'avance. Les bibliothèques sérieuses refusent ces valeurs&nbsp;; les implémentations maison, presque jamais.</p></div></div>
+
+<h2>L'angle mort&nbsp;: personne n'a dit à qui l'on parlait</h2>
+<p>Reprenons l'échange, et plaçons quelqu'un sur le chemin. Pas un espion passif&nbsp;: un intermédiaire qui peut retenir les messages et en envoyer d'autres. C'est la situation d'un point d'accès sans fil, d'un fournisseur d'accès, d'un routeur d'entreprise, ou de toute machine placée entre les deux.</p>
+<figure class="code-block" data-file="homme-du-milieu.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- Un petit groupe suffit pour la démonstration : l'attaque ne casse RIEN ---------
+const p = BigInt('0x' + 'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF');
+const g = 2n;
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+// Chiffrement à flot jouet : le flux est SHA-256(secret ‖ compteur), comme au module 1.
+// Un nonce par message, comme l'exige la leçon 2 : deux messages ne partagent jamais le flux.
+function flux(secret, nonce, n){ const f = []; let c = 0;
+  while (f.length &lt; n) { f.push(...sha256o(bof(secret.toString(16) + '|' + nonce + '|' + c))); c++; }
+  return f.slice(0, n); }
+function chiffrer(secret, nonce, texte){ const m = bof(texte), f = flux(secret, nonce, m.length); return m.map((o, i) =&gt; o ^ f[i]); }
+function dechiffrer(secret, nonce, oct){ const f = flux(secret, nonce, oct.length);
+  return decodeURIComponent(escape(String.fromCharCode(...oct.map((o, i) =&gt; o ^ f[i])))); }
+
+const a = 0x3f5c1b9e77a0d4e2c8b1069f4d3a72e58c0fb631d9a24578e6c3b1f0a9d78452n;  // Alice
+const b = 0x7d2e94af0b613c85d7f2a04e6198bc35720ade91f4c6d803b5e7192af06c3d84n;  // Bob
+const m = 0x11f3a7c95e08b6d240372ac1e95b8f0463d7a1902cf5e83b746d0912ab5c37e8n;  // Mallory
+
+// Mallory est SUR LE CHEMIN. Elle intercepte A, envoie sa propre valeur à Bob, et inversement.
+const A = expmod(g, a, p);            // Alice croit l'envoyer à Bob
+const B = expmod(g, b, p);            // Bob croit l'envoyer à Alice
+const M = expmod(g, m, p);            // ce que Mallory envoie aux deux
+
+const secretAlice   = expmod(M, a, p);      // Alice croit parler à Bob
+const secretBob     = expmod(M, b, p);      // Bob croit parler à Alice
+const secretMallory1 = expmod(A, m, p);     // côté Alice
+const secretMallory2 = expmod(B, m, p);     // côté Bob
+
+console.log('Alice et Bob ont-ils le même secret ? ' + (secretAlice === secretBob ? 'OUI' : 'NON') + '  — et ils n\'ont AUCUN moyen de le savoir.');
+console.log('Mallory partage un secret avec Alice : ' + (secretMallory1 === secretAlice ? 'OUI' : 'NON'));
+console.log('Mallory partage un secret avec Bob   : ' + (secretMallory2 === secretBob ? 'OUI' : 'NON'));
+console.log('');
+
+const messages = [
+  'Bonjour Bob, le virement part demain matin.',
+  'Le compte de destination est le 8802.',
+  'Confirme-moi la réception, s\'il te plaît.',
+];
+let lus = 0;
+console.log('Trafic Alice → Bob, chiffré de bout en bout (croient-ils) :');
+messages.forEach((texte, i) =&gt; {
+  const paquet = chiffrer(secretAlice, i, texte);              // Alice chiffre, nonce = i
+  const lu = dechiffrer(secretMallory1, i, paquet);            // Mallory déchiffre
+  if (lu === texte) lus++;
+  console.log('  sur le câble : ' + hex(paquet).slice(0, 28) + '…');
+  console.log('  Mallory lit  : ' + lu);
+});
+console.log('  → ' + lus + ' messages sur ' + messages.length + ' lus en clair par Mallory.');
+console.log('');
+
+// Elle ne se contente pas de lire : elle réécrit, et rechiffre pour Bob.
+const modifie = messages[1].replace('8802', '4417');
+const versBob = chiffrer(secretMallory2, 1, modifie);
+console.log('Elle réécrit le deuxième message et le rechiffre pour Bob :');
+console.log('  Alice avait écrit : ' + messages[1]);
+console.log('  Bob déchiffre     : ' + dechiffrer(secretBob, 1, versBob));
+console.log('  Bob voit-il quelque chose d\'anormal ? Non : la marque d\'authenticité,');
+console.log('  s\'il y en avait une, serait calculée avec le secret que MALLORY lui a donné.');
+console.log('');
+console.log('Diffie-Hellman garantit qu\'un espion PASSIF n\'apprend rien.');
+console.log('Il ne dit rien de celui qui se met AU MILIEU. Il faut donc authentifier les parts :');
+console.log('c\'est le rôle de la signature de la leçon 4, et des certificats de la leçon 6.');</code></pre></figure>
+<figure class="code-block" data-file="homme-du-milieu.txt"><pre><code class="language-plaintext">Alice et Bob ont-ils le même secret ? NON  — et ils n'ont AUCUN moyen de le savoir.
+Mallory partage un secret avec Alice : OUI
+Mallory partage un secret avec Bob   : OUI
+
+Trafic Alice → Bob, chiffré de bout en bout (croient-ils) :
+  sur le câble : effc02af9fe740ce67a725499720…
+  Mallory lit  : Bonjour Bob, le virement part demain matin.
+  sur le câble : 9e99cdcc284517acd60547519b5a…
+  Mallory lit  : Le compte de destination est le 8802.
+  sur le câble : 4b73851b806c6b09739a955ac569…
+  Mallory lit  : Confirme-moi la réception, s'il te plaît.
+  → 3 messages sur 3 lus en clair par Mallory.
+
+Elle réécrit le deuxième message et le rechiffre pour Bob :
+  Alice avait écrit : Le compte de destination est le 8802.
+  Bob déchiffre     : Le compte de destination est le 4417.
+  Bob voit-il quelque chose d'anormal ? Non : la marque d'authenticité,
+  s'il y en avait une, serait calculée avec le secret que MALLORY lui a donné.
+
+Diffie-Hellman garantit qu'un espion PASSIF n'apprend rien.
+Il ne dit rien de celui qui se met AU MILIEU. Il faut donc authentifier les parts :
+c'est le rôle de la signature de la leçon 4, et des certificats de la leçon 6.</code></pre></figure>
+<p>Mallory n'a cassé aucun calcul. Elle a simplement répondu à la place de chacun. Alice établit un secret avec Mallory en croyant l'établir avec Bob&nbsp;; Bob fait de même de son côté. Les trois messages sont lus en clair, et le deuxième est réécrit avant d'être transmis&nbsp;: le compte de destination change, et Bob n'a aucun moyen de s'en apercevoir — la marque d'authenticité, s'il y en a une, est calculée avec le secret que Mallory lui a donné.</p>
+<p>C'est le point à retenir de toute cette leçon&nbsp;: <strong>Diffie-Hellman établit un secret partagé avec quelqu'un, sans dire qui est ce quelqu'un</strong>. Il protège d'un espion passif, et de lui seul. Un protocole qui s'arrête là est une porte ouverte&nbsp;; il faut lui ajouter l'authentification, et c'est le rôle des signatures de la leçon précédente.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 220" role="img" aria-label="L'attaque de l'homme du milieu sur un échange Diffie-Hellman non authentifié. En haut, Alice envoie sa part publique A, mais Mallory l'intercepte et transmet sa propre part M à Bob ; symétriquement, la part B de Bob est remplacée par M. En bas, deux secrets distincts existent : celui d'Alice avec Mallory et celui de Mallory avec Bob. Mallory déchiffre, lit, modifie et rechiffre chaque message.">
+    <rect class="d-box" x="24" y="34" width="130" height="34" rx="5" /><text class="d-text" x="89" y="56" text-anchor="middle" font-size="11">Alice</text>
+    <rect class="d-accent" x="255" y="34" width="130" height="34" rx="5" /><text class="d-text" x="320" y="56" text-anchor="middle" font-size="11">Mallory</text>
+    <rect class="d-box" x="486" y="34" width="130" height="34" rx="5" /><text class="d-text" x="551" y="56" text-anchor="middle" font-size="11">Bob</text>
+    <path class="d-line" d="M154 46 H249" /><text class="d-tag" x="200" y="40" text-anchor="middle" font-size="10">A →</text>
+    <path class="d-line" d="M385 46 H480" /><text class="d-tag" x="432" y="40" text-anchor="middle" font-size="10">M →</text>
+    <path class="d-line" d="M480 62 H391" /><text class="d-tag" x="435" y="78" text-anchor="middle" font-size="10">← B</text>
+    <path class="d-line" d="M249 62 H160" /><text class="d-tag" x="205" y="78" text-anchor="middle" font-size="10">← M</text>
+    <rect class="d-box" x="24" y="112" width="290" height="30" rx="5" /><text class="d-text" x="169" y="132" text-anchor="middle" font-size="10">secret n° 1 : Alice ↔ Mallory</text>
+    <rect class="d-box" x="326" y="112" width="290" height="30" rx="5" /><text class="d-text" x="471" y="132" text-anchor="middle" font-size="10">secret n° 2 : Mallory ↔ Bob</text>
+    <path class="d-line" d="M169 142 V162 H471 V142" />
+    <rect class="d-accent" x="196" y="162" width="248" height="30" rx="5" /><text class="d-text" x="320" y="182" text-anchor="middle" font-size="10">déchiffre · lit · réécrit · rechiffre</text>
+    <text class="d-mut" x="320" y="210" text-anchor="middle" font-size="9">aucun calcul n'a été cassé : personne n'avait demandé à qui appartenait la part reçue</text>
+  </svg>
+  <figcaption>La faiblesse n'est pas dans l'arithmétique, elle est dans l'absence de question.</figcaption>
+</figure>
+
+<h2>Signer les parts, et rien d'autre</h2>
+<p>La parade est simple à énoncer&nbsp;: la part publique est <strong>signée</strong> par une clé de longue durée que l'autre connaît déjà. Une remarque sur la répartition des rôles, car elle décide de tout&nbsp;: c'est le <strong>serveur</strong> qui signe, et le <strong>client</strong> qui vérifie. Le client, lui, ne prouve rien — le serveur ignore à qui il parle, et c'est le cas ordinaire du web. Cela suffit pourtant à fermer la porte&nbsp;: Mallory ne peut plus se faire passer pour le serveur, donc plus s'installer au milieu.</p>
+<figure class="code-block" data-file="dh-signe.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- secp256k1 + ECDSA, repliés depuis la leçon 4 -----------------------------------
+const Pc = 2n**256n - 2n**32n - 977n;
+const Nc = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+const G = [0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n, 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n];
+const mod = (a, m) =&gt; ((a % m) + m) % m;
+const inv = (a, m) =&gt; { let [an, ap] = [mod(a, m), m], [u, v] = [1n, 0n]; while (an &gt; 1n) { const k = an / ap; [an, ap] = [ap, an - k * ap]; [u, v] = [v, u - k * v]; } return mod(u, m); };
+function addP(A, B){ if (!A) return B; if (!B) return A; if (A[0] === B[0] &amp;&amp; mod(A[1] + B[1], Pc) === 0n) return null;
+  const l = A[0] === B[0] &amp;&amp; A[1] === B[1] ? mod(3n * A[0] * A[0] * inv(2n * A[1], Pc), Pc) : mod((B[1] - A[1]) * inv(B[0] - A[0], Pc), Pc);
+  const x = mod(l * l - A[0] - B[0], Pc); return [x, mod(l * (A[0] - x) - A[1], Pc)]; }
+function mulP(k, Q){ let R = null; while (k &gt; 0n) { if (k &amp; 1n) R = addP(R, Q); Q = addP(Q, Q); k &gt;&gt;= 1n; } return R; }
+const zz = t =&gt; BigInt('0x' + hex(sha256o(bof(t)))) % Nc;
+// Le nonce est DÉRIVÉ du message et de la clé — jamais écrit en dur (leçon 4, RFC 6979).
+const signer = (d, t) =&gt; { const k = mod(BigInt('0x' + hex(sha256o(bof('nonce|' + d.toString(16) + '|' + t)))), Nc);
+  const r = mod(mulP(k, G)[0], Nc); return [r, mod(inv(k, Nc) * (zz(t) + r * d), Nc)]; };
+function verifier(pub, t, sig){ const [r, s] = sig; if (r &lt;= 0n || r &gt;= Nc || s &lt;= 0n || s &gt;= Nc) return false;
+  const w = inv(s, Nc), X = addP(mulP(mod(zz(t) * w, Nc), G), mulP(mod(r * w, Nc), pub));
+  return X !== null &amp;&amp; mod(X[0], Nc) === r; }
+// --- Diffie-Hellman, groupe 14 de la RFC 3526 ---------------------------------------
+const p = BigInt('0x' + 'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF');
+const g = 2n;
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+// -----------------------------------------------------------------------------------
+
+// C'est le SERVEUR qui possède une clé de longue durée, et c'est LUI qui signe :
+// le client, lui, n'a rien à prouver — c'est la répartition de TLS.
+const cleServeur = 0x9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08n % Nc;
+const pubServeur = mulP(cleServeur, G);     // le client la connaît déjà (leçon 6 : comment)
+
+// Le client ouvre la session : il tire un aléa, et une part éphémère.
+const aleaClient = 'session-2f9c41ab';
+const x = 0x3f5c1b9e77a0d4e2c8b1069f4d3a72e58c0fb631d9a24578e6c3b1f0a9d78452n;
+const X = expmod(g, x, p);
+
+// Le serveur répond : sa part éphémère, signée AVEC l'aléa que le client vient d'envoyer.
+const y = 0x7d2e94af0b613c85d7f2a04e6198bc35720ade91f4c6d803b5e7192af06c3d84n;
+const Y = expmod(g, y, p);
+const texteServeur = 'part=' + Y.toString(16) + '|session=' + aleaClient + '|role=serveur';
+const sigServeur = signer(cleServeur, texteServeur);
+
+// --- CE QUE LE CLIENT VÉRIFIE, AVANT DE CALCULER QUOI QUE CE SOIT -------------------
+function accepterPart(texte, sig, aleaAttendu){
+  if (!verifier(pubServeur, texte, sig)) return 'signature invalide';
+  const alea = (texte.split('|').find(c =&gt; c.startsWith('session=')) || '').slice(8);
+  if (alea !== aleaAttendu) return 'signature valide, mais pour la session « ' + alea +' »';
+  return 'acceptée';
+}
+console.log('Le client reçoit une part et une signature. Il vérifie AVANT de calculer :');
+console.log('  part reçue : ' + Y.toString(16).slice(0, 24) + '…');
+console.log('  verdict : ' + accepterPart(texteServeur, sigServeur, aleaClient));
+console.log('');
+
+// --- Tentative 1 : Mallory glisse SA part, en gardant la signature du serveur ------
+const m = 0x11f3a7c95e08b6d240372ac1e95b8f0463d7a1902cf5e83b746d0912ab5c37e8n;
+const M = expmod(g, m, p);
+const substitue = 'part=' + M.toString(16) + '|session=' + aleaClient + '|role=serveur';
+console.log('Mallory remplace la part du serveur par la sienne, signature inchangée :');
+console.log('  → ' + accepterPart(substitue, sigServeur, aleaClient));
+let acceptees = 0;
+for (let i = 1; i &lt;= 12; i++) {
+  const Mi = expmod(g, m + BigInt(i), p);
+  if (accepterPart('part=' + Mi.toString(16) + '|session=' + aleaClient + '|role=serveur', sigServeur, aleaClient) === 'acceptée') acceptees++;
+}
+console.log('  12 autres parts substituées : ' + acceptees + ' acceptée(s).');
+console.log('');
+
+// --- Tentative 2 : un VRAI rejeu. Mallory a enregistré une session d'HIER ----------
+// La signature d'hier est authentique, et elle porte sur le texte d'hier : rien n'est truqué.
+const aleaHier = 'session-01d3f7c9';
+const yHier = 0x5c2a1e94b7360f8d2ea4197c6bf05138n;
+const Yhier = expmod(g, yHier, p);
+const texteHier = 'part=' + Yhier.toString(16) + '|session=' + aleaHier + '|role=serveur';
+const sigHier = signer(cleServeur, texteHier);          // signature authentique d'hier
+console.log('Mallory rejoue la part signée d\'hier, telle quelle :');
+console.log('  la signature d\'hier est-elle valide en soi ? ' + (verifier(pubServeur, texteHier, sigHier) ? 'OUI' : 'NON'));
+console.log('  → ' + accepterPart(texteHier, sigHier, aleaClient));
+console.log('  C\'est la comparaison de l\'aléa qui l\'arrête, pas la signature : celle-ci est');
+console.log('  parfaitement authentique. Sans ce contrôle, une part d\'hier vaudrait aujourd\'hui.');
+console.log('');
+
+// --- Session honnête ---------------------------------------------------------------
+const secret = expmod(Y, x, p);
+console.log('Session honnête, secret établi : ' + secret.toString(16).slice(0, 32) + '…');
+console.log('Mallory ne peut plus se placer au milieu : elle devrait signer au nom du serveur.');
+console.log('Le client, lui, n\'est pas authentifié — le serveur ignore à qui il parle. C\'est le');
+console.log('cas ordinaire du web : le contenu reste confidentiel, et l\'identité du visiteur');
+console.log('se traite plus tard, par un mot de passe ou un jeton (module 3).');</code></pre></figure>
+<figure class="code-block" data-file="dh-signe.txt"><pre><code class="language-plaintext">Le client reçoit une part et une signature. Il vérifie AVANT de calculer :
+  part reçue : c81223066315f52b319ed35f…
+  verdict : acceptée
+
+Mallory remplace la part du serveur par la sienne, signature inchangée :
+  → signature invalide
+  12 autres parts substituées : 0 acceptée(s).
+
+Mallory rejoue la part signée d'hier, telle quelle :
+  la signature d'hier est-elle valide en soi ? OUI
+  → signature valide, mais pour la session « session-01d3f7c9 »
+  C'est la comparaison de l'aléa qui l'arrête, pas la signature : celle-ci est
+  parfaitement authentique. Sans ce contrôle, une part d'hier vaudrait aujourd'hui.
+
+Session honnête, secret établi : bef90e179ccdfd34b443c528c04c7157…
+Mallory ne peut plus se placer au milieu : elle devrait signer au nom du serveur.
+Le client, lui, n'est pas authentifié — le serveur ignore à qui il parle. C'est le
+cas ordinaire du web : le contenu reste confidentiel, et l'identité du visiteur
+se traite plus tard, par un mot de passe ou un jeton (module 3).</code></pre></figure>
+<p>Treize substitutions, zéro acceptée&nbsp;: dès lors que la part est couverte par une signature, Mallory ne peut plus glisser la sienne, faute de pouvoir signer au nom du serveur. Remarquez ensuite le second essai, plus subtil&nbsp;: Mallory rejoue une part signée <em>d'hier</em>, avec la signature authentique d'hier. Rien n'y est truqué, et la signature vérifie. Ce qui l'arrête, c'est que le texte signé contient <strong>l'aléa de la session</strong>, et que le client compare cet aléa au sien. Sans cette comparaison — qui ne relève pas de la cryptographie mais du protocole —, une part d'hier vaudrait aujourd'hui, et l'exposant correspondant a eu tout le temps de fuir.</p>
+<p>Notez surtout ce que fait la clé de longue durée, car c'est la clef de voûte de tout ce qui suit&nbsp;: <strong>elle ne chiffre rien du tout, elle signe</strong>. Le secret de session, lui, naît et meurt avec la session. Cette séparation n'est pas une élégance d'architecture&nbsp;: elle a une conséquence mesurable, et c'est le chapitre suivant.</p>
+
+<h2>Pourquoi «&nbsp;éphémère&nbsp;»&nbsp;: la confidentialité persistante</h2>
+<p>Comparons maintenant deux façons d'établir la clé d'une session, du point de vue d'un adversaire patient&nbsp;: quelqu'un qui enregistre tout le trafic chiffré aujourd'hui, sans pouvoir le lire, et qui obtiendra la clé privée du serveur dans six mois — par une sauvegarde mal protégée, une réquisition judiciaire, un employé, une vulnérabilité.</p>
+<figure class="code-block" data-file="confidentialite-persistante.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- Deux façons d'établir une clé de session, et un espion patient ----------------
+let graine = 20240813n;
+function alea(bits){ let v = 0n; for (let i = 0; i &lt; bits; i += 32) { graine = (graine * 6364136223846793005n + 1442695040888963407n) &amp; ((1n &lt;&lt; 64n) - 1n); v = (v &lt;&lt; 32n) | ((graine &gt;&gt; 17n) &amp; 0xffffffffn); } return v &amp; ((1n &lt;&lt; BigInt(bits)) - 1n); }
+function expmod(b, e, m){ let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; }
+function estPremier(n){ if (n &lt; 2n) return false; for (const q of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { if (n % q === 0n) return n === q; } let d = n - 1n, r = 0n; while (d % 2n === 0n) { d /= 2n; r++; } for (const a of [2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]) { let x = expmod(a, d, n); if (x === 1n || x === n - 1n) continue; let ok = false; for (let i = 1n; i &lt; r; i++) { x = x * x % n; if (x === n - 1n) { ok = true; break; } } if (!ok) return false; } return true; }
+function premierDe(bits){ for (;;) { const c = alea(bits) | (1n &lt;&lt; BigInt(bits - 1)) | 1n; if (estPremier(c)) return c; } }
+function inverse(a, m){ let [an, ap] = [a % m, m], [x, xp] = [1n, 0n]; while (an &gt; 1n) { const q = an / ap; [an, ap] = [ap, an - q * ap]; [x, xp] = [xp, x - q * xp]; } return (x % m + m) % m; }
+const pgcd = (x, y) =&gt; { while (y) { [x, y] = [y, x % y]; } return x; };
+
+// La clé LONGUE DURÉE du serveur : celle de son certificat, valable des mois.
+// Elle est ici volontairement courte — environ 1024 bits — pour que la page calcule
+// vite ; en production on emploie 2048 ou 3072 bits. La démonstration n'en dépend pas.
+const pr = premierDe(512), qr = premierDe(512), nr = pr * qr, er = 65537n;
+const dr = inverse(er, (pr - 1n) * (qr - 1n) / pgcd(pr - 1n, qr - 1n));
+// Le groupe d'échange : celui de la RFC 3526, groupe 14, 2048 bits.
+const pdh = BigInt('0x' + 'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF');
+const gdh = 2n;
+
+const sessions = 20;
+const journal = [];                                  // ce que l'espion enregistre
+
+// --- Protocole A : transport de clé. Le client chiffre la clé avec la clé publique --
+for (let i = 0; i &lt; sessions; i++) {
+  const cleSession = alea(200) | 1n;                 // tirée par le client
+  journal.push({ type: 'A', enveloppe: expmod(cleSession, er, nr), cleSession });
+}
+// --- Protocole B : Diffie-Hellman éphémère. La clé longue durée SIGNE, ne chiffre pas
+for (let i = 0; i &lt; sessions; i++) {
+  const a = alea(256) | 1n, b = alea(256) | 1n;      // jetés à la fin de la session
+  const A = expmod(gdh, a, pdh), B = expmod(gdh, b, pdh);
+  journal.push({ type: 'B', A, B, cleSession: expmod(B, a, pdh) });
+}
+console.log(journal.length + ' sessions enregistrées par l\'espion : ' + sessions + ' en transport de clé, ' + sessions + ' en Diffie-Hellman éphémère.');
+console.log('Module RSA du serveur : ' + nr.toString(2).length + ' bits · groupe d\'échange : ' + pdh.toString(2).length + ' bits.');
+console.log('Pendant des mois, il ne peut rien en faire.');
+console.log('');
+
+// --- Six mois plus tard : la clé privée du serveur fuit ----------------------------
+console.log('Puis la clé privée longue durée du serveur est compromise.');
+let lisiblesA = 0, lisiblesB = 0;
+for (const s of journal) {
+  if (s.type === 'A') {
+    if (expmod(s.enveloppe, dr, nr) === s.cleSession) lisiblesA++;   // il ouvre l'enveloppe
+  } else {
+    // Il applique la clé volée à tout ce qu'il possède de la session. Rien ne colle :
+    // A et B ne sont pas des chiffrés RSA, ce sont des éléments d'un autre groupe.
+    const tentatives = [expmod(s.A, dr, nr), expmod(s.B, dr, nr), expmod(s.A, dr, pdh), expmod(s.B, dr, pdh)];
+    if (tentatives.some(t =&gt; t === s.cleSession)) lisiblesB++;
+  }
+}
+console.log('  Sessions en transport de clé désormais lisibles : ' + lisiblesA + ' / ' + sessions);
+console.log('  Sessions en Diffie-Hellman éphémère lisibles    : ' + lisiblesB + ' / ' + sessions);
+console.log('');
+
+// --- La SEULE voie qui lui reste : le logarithme discret. Elle marche — quand elle marche.
+// Pas de bébé, pas de géant, écrit à la leçon précédente, appliqué ici pour de vrai.
+function logDiscret(cible, bornBits){
+  const m = 1n &lt;&lt; BigInt(Math.ceil(bornBits / 2));
+  const table = new Map();
+  let bebe = 1n;
+  for (let j = 0n; j &lt; m; j++) { table.set(bebe.toString(), j); bebe = bebe * gdh % pdh; }
+  const facteur = expmod(expmod(gdh, pdh - 2n, pdh), m, pdh);
+  let geant = cible, ops = Number(m);
+  for (let i = 0n; i &lt; m; i++) {
+    const j = table.get(geant.toString());
+    ops++;
+    if (j !== undefined) return { x: i * m + j, ops };
+    geant = geant * facteur % pdh;
+  }
+  return { x: null, ops };
+}
+// Mêmes sessions, mais avec des exposants de 20 bits — une configuration fautive.
+let cassees = 0, opsTotal = 0;
+for (let i = 0; i &lt; 6; i++) {
+  const a = alea(20) | 1n, b = alea(20) | 1n;
+  const A = expmod(gdh, a, pdh), B = expmod(gdh, b, pdh);
+  const vrai = expmod(B, a, pdh);
+  const r = logDiscret(A, 20);
+  opsTotal += r.ops;
+  if (r.x !== null &amp;&amp; expmod(B, r.x, pdh) === vrai) cassees++;      // clé de session retrouvée
+}
+console.log('Exposants de 20 bits (configuration fautive) : ' + cassees + ' / 6 sessions déchiffrées,');
+console.log('  ' + opsTotal.toLocaleString('fr-FR') + ' opérations au total, soit ' + Math.round(opsTotal / 6).toLocaleString('fr-FR') + ' par session.');
+console.log('Exposants de 256 bits (ceux employés plus haut) : la même méthode demande environ');
+console.log('  2^128 opérations par session, soit ' + (2n ** 128n).toString() + '.');
+console.log('');
+console.log('La clé volée ouvre TOUTES les enveloppes du protocole A, y compris celles');
+console.log('d\'il y a six mois : chacune contient la clé de session, telle quelle.');
+console.log('Dans le protocole B, elle ne servait qu\'à signer des parts publiques. Les');
+console.log('exposants privés ont été effacés à la fin de chaque session, et sans eux');
+console.log('l\'enregistrement ne vaut rien : c\'est la CONFIDENTIALITÉ PERSISTANTE.');
+console.log('');
+console.log('Ce que la clé volée permet quand même : se faire passer pour le serveur À PARTIR');
+console.log('DE MAINTENANT. Le passé est protégé, l\'avenir ne l\'est pas.');</code></pre></figure>
+<figure class="code-block" data-file="confidentialite-persistante.txt"><pre><code class="language-plaintext">40 sessions enregistrées par l'espion : 20 en transport de clé, 20 en Diffie-Hellman éphémère.
+Module RSA du serveur : 1023 bits · groupe d'échange : 2048 bits.
+Pendant des mois, il ne peut rien en faire.
+
+Puis la clé privée longue durée du serveur est compromise.
+  Sessions en transport de clé désormais lisibles : 20 / 20
+  Sessions en Diffie-Hellman éphémère lisibles    : 0 / 20
+
+Exposants de 20 bits (configuration fautive) : 6 / 6 sessions déchiffrées,
+  8 887 opérations au total, soit 1 481 par session.
+Exposants de 256 bits (ceux employés plus haut) : la même méthode demande environ
+  2^128 opérations par session, soit 340282366920938463463374607431768211456.
+
+La clé volée ouvre TOUTES les enveloppes du protocole A, y compris celles
+d'il y a six mois : chacune contient la clé de session, telle quelle.
+Dans le protocole B, elle ne servait qu'à signer des parts publiques. Les
+exposants privés ont été effacés à la fin de chaque session, et sans eux
+l'enregistrement ne vaut rien : c'est la CONFIDENTIALITÉ PERSISTANTE.
+
+Ce que la clé volée permet quand même : se faire passer pour le serveur À PARTIR
+DE MAINTENANT. Le passé est protégé, l'avenir ne l'est pas.</code></pre></figure>
+<p>Vingt sessions sur vingt deviennent lisibles dans le premier cas, aucune dans le second. La différence n'est pas une question de solidité d'algorithme&nbsp;: dans le protocole&nbsp;A, l'enveloppe chiffrée <em>contient</em> la clé de session et voyage sur le réseau&nbsp;; qui obtient la clé privée un jour ouvre toutes les enveloppes de toutes les sessions passées. Dans le protocole&nbsp;B, la clé de longue durée n'a jamais servi qu'à signer&nbsp;: rien de ce qui a été enregistré ne se déchiffre avec elle.</p>
+<p>Cette seconde ligne appelle une précaution, parce qu'un compteur à zéro ne prouve pas grand-chose par lui-même&nbsp;: il dit seulement que les quatre calculs tentés avec la clé volée ne tombent pas juste. Le programme va donc plus loin et fait la <em>vraie</em> attaque, celle du chapitre précédent&nbsp;: le logarithme discret. Sur des exposants de 20&nbsp;bits — une configuration fautive, mais qui existe —, il retrouve <strong>6&nbsp;clés de session sur 6</strong>, à environ 1&nbsp;481&nbsp;opérations chacune. Avec les exposants de 256&nbsp;bits réellement employés, la même méthode en demanderait 2<sup>128</sup> par session. La confidentialité persistante n'est donc pas une propriété magique&nbsp;: c'est la difficulté d'un problème précis, sur un groupe de taille suffisante.</p>
+<p>Cette propriété s'appelle la <strong>confidentialité persistante</strong> — <em>forward secrecy</em>, parfois traduite par «&nbsp;confidentialité future&nbsp;», ce qui prête à confusion&nbsp;: c'est le <em>passé</em> qu'elle protège. Elle explique à elle seule pourquoi <strong>TLS&nbsp;1.3 a purement et simplement supprimé le transport de clé par RSA</strong> en 2018&nbsp;: non parce que RSA serait cassé, mais parce que ce mode d'emploi rendait chaque session tributaire d'un secret conservé des années.</p>
+<div class="callout callout--astuce"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Ce que la confidentialité persistante ne fait pas</p><p>Elle protège les sessions <em>déjà terminées</em>, à trois conditions qu'on oublie souvent. <strong>Un&nbsp;:</strong> les exposants éphémères doivent être réellement effacés — un serveur qui garde ses clés de session en mémoire pendant des heures, ou qui les journalise pour déboguer, annule tout le bénéfice. <strong>Deux&nbsp;:</strong> la reprise de session (<em>session resumption</em>) réintroduit un secret de longue durée si elle est mal configurée&nbsp;; les clés de ticket TLS doivent tourner souvent. <strong>Trois&nbsp;:</strong> l'avenir n'est pas protégé. Avec la clé de longue durée, l'attaquant peut se faire passer pour le serveur dès maintenant — c'est une attaque active, plus risquée pour lui, mais parfaitement réalisable.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Comparaison entre le transport de clé et l'échange éphémère face au vol ultérieur de la clé longue durée. En haut, le transport de clé : la clé de session voyage chiffrée par la clé publique du serveur, donc la clé privée volée plus tard ouvre toutes les sessions enregistrées. En bas, l'échange éphémère : la clé longue durée ne fait que signer les parts publiques, les exposants privés sont effacés à la fin de chaque session, et la clé volée n'ouvre rien.">
+    <text class="d-label" x="90" y="34" text-anchor="middle" font-size="11">transport de clé</text>
+    <rect class="d-box" x="176" y="20" width="150" height="30" rx="5" /><text class="d-text" x="251" y="40" text-anchor="middle" font-size="10">clé de session chiffrée</text>
+    <path class="d-line" d="M326 35 H392" />
+    <rect class="d-box" x="392" y="20" width="110" height="30" rx="5" /><text class="d-text" x="447" y="40" text-anchor="middle" font-size="10">enregistrée</text>
+    <path class="d-line" d="M502 35 H556 V64" />
+    <rect class="d-accent" x="472" y="64" width="168" height="30" rx="5" /><text class="d-text" x="556" y="84" text-anchor="middle" font-size="10">20 / 20 lisibles</text>
+    <path class="d-line" d="M24 110 H616" stroke-dasharray="4 4" />
+    <text class="d-label" x="90" y="140" text-anchor="middle" font-size="11">échange éphémère</text>
+    <rect class="d-box" x="176" y="126" width="150" height="30" rx="5" /><text class="d-text" x="251" y="146" text-anchor="middle" font-size="10">parts publiques signées</text>
+    <path class="d-line" d="M326 141 H392" />
+    <rect class="d-box" x="392" y="126" width="110" height="30" rx="5" /><text class="d-text" x="447" y="146" text-anchor="middle" font-size="10">enregistrée</text>
+    <path class="d-line" d="M502 141 H556 V170" />
+    <rect class="d-accent" x="472" y="170" width="168" height="26" rx="5" /><text class="d-text" x="556" y="188" text-anchor="middle" font-size="10">0 / 20 lisibles</text>
+    <text class="d-mut" x="320" y="118" text-anchor="middle" font-size="9">dans les deux cas, la clé privée du serveur a été volée six mois plus tard</text>
+  </svg>
+  <figcaption>Le même vol, deux conséquences&nbsp;: tout le passé, ou rien du passé.</figcaption>
+</figure>
+
+<h2>Le secret brut n'est pas une clé</h2>
+<p>Il reste une dernière étape, souvent expédiée, et pourtant nécessaire. Ce que Diffie-Hellman produit est un <em>élément du groupe</em>&nbsp;: un très grand nombre, dont les bits ne sont pas uniformément répartis, et dont on n'a qu'un seul exemplaire. Or une session a besoin de <em>plusieurs</em> clés — au minimum une par direction, souvent quatre ou plus. On emploie pour cela une <strong>fonction de dérivation de clé</strong>&nbsp;; la plus répandue est HKDF, décrite par la RFC&nbsp;5869.</p>
+<figure class="code-block" data-file="hkdf.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- HMAC-SHA-256, puis HKDF (RFC 5869) : extraire, puis étendre --------------------
+function hmac(cle, msg){ let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice(); while (k.length &lt; 64) k.push(0);
+  return sha256o([...k.map(b =&gt; b ^ 0x5c), ...sha256o([...k.map(b =&gt; b ^ 0x36), ...msg])]); }
+function hkdfExtract(sel, materiel){ return hmac(sel, materiel); }        // PRK = HMAC(sel, IKM)
+function hkdfExpand(prk, info, n){
+  const sortie = []; let t = [];
+  for (let i = 1; sortie.length &lt; n; i++) { t = hmac(prk, [...t, ...info, i]); sortie.push(...t); }
+  return sortie.slice(0, n);
+}
+const octets = h =&gt; h.match(/../g).map(x =&gt; parseInt(x, 16));
+
+// --- Contrôle : le vecteur de test n° 1 de la RFC 5869 ------------------------------
+const ikm  = octets('0b'.repeat(22));
+const sel  = octets('000102030405060708090a0b0c');
+const info = octets('f0f1f2f3f4f5f6f7f8f9');
+const prk  = hkdfExtract(sel, ikm);
+const okm  = hkdfExpand(prk, info, 42);
+const PRK_ATTENDU = '077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5';
+const OKM_ATTENDU = '3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865';
+console.log('Vecteur de test n° 1 de la RFC 5869 :');
+console.log('  PRK obtenu  : ' + hex(prk));
+console.log('  PRK attendu : ' + PRK_ATTENDU + '  → ' + (hex(prk) === PRK_ATTENDU ? 'CONFORME' : 'ÉCART'));
+console.log('  OKM obtenu  : ' + hex(okm));
+console.log('  OKM attendu : ' + OKM_ATTENDU + '  → ' + (hex(okm) === OKM_ATTENDU ? 'CONFORME' : 'ÉCART'));
+console.log('');
+
+// --- Ce que Diffie-Hellman rend, et pourquoi on ne s'en sert pas tel quel -----------
+// Refaisons l'échange du premier bloc, sur le vrai groupe 14, et regardons sa sortie.
+const pdh = BigInt('0x' + 'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF');
+const expmod = (b, e, m) =&gt; { let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; };
+const xPriv = 0x3f5c1b9e77a0d4e2c8b1069f4d3a72e58c0fb631d9a24578e6c3b1f0a9d78452n;
+const yPriv = 0x7d2e94af0b613c85d7f2a04e6198bc35720ade91f4c6d803b5e7192af06c3d84n;
+const secretDH = expmod(expmod(2n, yPriv, pdh), xPriv, pdh);
+const secretBrut = octets(secretDH.toString(16).padStart(512, '0'));   // 256 octets, tels quels
+console.log('Secret brut sorti de Diffie-Hellman : ' + hex(secretBrut).slice(0, 32) + '… (' + secretBrut.length + ' octets)');
+console.log("On n'en fait JAMAIS une clé directement : c'est un élément du groupe, pas une suite");
+console.log("d'octets bien répartis — et il n'y en a qu'un, là où une session réclame plusieurs");
+console.log('clés. On le passe donc dans HKDF, avec un sel et une étiquette par usage :');
+// Le sel : dans TLS 1.3, c'est l'état courant du calendrier de clés, pas les aléas ;
+// les aléas, eux, entrent par le condensé du transcript passé à l'étape « étendre ».
+const prkSession = hkdfExtract(octets('a1b2c3d4e5f60718293a4b5c6d7e8f90'), secretBrut);
+const clefs = {};
+for (const usage of ['client→serveur, chiffrement', 'serveur→client, chiffrement', 'client→serveur, nonce', 'serveur→client, nonce']) {
+  clefs[usage] = hkdfExpand(prkSession, bof('tls13 ' + usage), 32);
+  console.log('  ' + usage.padEnd(30) + ' : ' + hex(clefs[usage]).slice(0, 32) + '…');
+}
+const distinctes = new Set(Object.values(clefs).map(hex));
+console.log('  → ' + distinctes.size + ' clés distinctes tirées du même secret.');
+console.log('');
+
+// Deux étiquettes qui ne diffèrent que d'un caractère donnent des clés sans rapport.
+const k1 = hkdfExpand(prkSession, bof('tls13 clé de trafic 1'), 32);
+const k2 = hkdfExpand(prkSession, bof('tls13 clé de trafic 2'), 32);
+let differents = 0;
+for (let i = 0; i &lt; 32; i++) { let x = k1[i] ^ k2[i]; while (x) { differents += x &amp; 1; x &gt;&gt;= 1; } }
+console.log('Étiquettes « …trafic 1 » et « …trafic 2 » : ' + differents + ' bits diffèrent sur 256.');
+console.log('');
+
+// Et le sel : deux sessions, même secret (cas absurde mais instructif), sels différents.
+const s1 = hex(hkdfExtract(octets('0000000000000001'), secretBrut));
+const s2 = hex(hkdfExtract(octets('0000000000000002'), secretBrut));
+console.log('Même secret, deux sels différents → clés maîtresses identiques ? ' + (s1 === s2 ? 'OUI' : 'NON'));
+console.log('C\'est ce qui empêche deux sessions de partager quoi que ce soit, même par accident.');</code></pre></figure>
+<figure class="code-block" data-file="hkdf.txt"><pre><code class="language-plaintext">Vecteur de test n° 1 de la RFC 5869 :
+  PRK obtenu  : 077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5
+  PRK attendu : 077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5  → CONFORME
+  OKM obtenu  : 3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865
+  OKM attendu : 3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865  → CONFORME
+
+Secret brut sorti de Diffie-Hellman : bef90e179ccdfd34b443c528c04c7157… (256 octets)
+On n'en fait JAMAIS une clé directement : c'est un élément du groupe, pas une suite
+d'octets bien répartis — et il n'y en a qu'un, là où une session réclame plusieurs
+clés. On le passe donc dans HKDF, avec un sel et une étiquette par usage :
+  client→serveur, chiffrement    : 1ae45208b64cab3cb668ecbee0badff2…
+  serveur→client, chiffrement    : 4f261ef0f6f3d4934bd7fbf9b782feb8…
+  client→serveur, nonce          : 7300464a0302ae01e709aefaf39c62ee…
+  serveur→client, nonce          : 9165c8c2cd43f296a69b23ef41e7c18c…
+  → 4 clés distinctes tirées du même secret.
+
+Étiquettes « …trafic 1 » et « …trafic 2 » : 137 bits diffèrent sur 256.
+
+Même secret, deux sels différents → clés maîtresses identiques ? NON
+C'est ce qui empêche deux sessions de partager quoi que ce soit, même par accident.</code></pre></figure>
+<p>HKDF procède en deux temps, et ce découpage a un sens précis. <strong>Extraire</strong> concentre l'entropie du matériel brut en une clé pseudo-aléatoire de 256&nbsp;bits, à l'aide d'un <em>sel</em> public. <strong>Étendre</strong> tire ensuite de cette clé le nombre d'octets voulu — jusqu'à 255&nbsp;fois la taille de l'empreinte, soit 8&nbsp;160&nbsp;octets pour SHA-256 —, chaque sortie étant liée à une <em>étiquette d'usage</em>. Deux étiquettes qui ne diffèrent que d'un caractère donnent 137&nbsp;bits différents sur 256&nbsp;: les clés obtenues sont sans rapport.</p>
+<p>Un mot sur le sel, car l'analogie est vite fausse. Dans TLS&nbsp;1.3, le sel des trois extractions successives n'est <em>pas</em> constitué des aléas échangés&nbsp;: c'est l'état courant du calendrier de clés — zéro, puis le secret précédent (RFC&nbsp;8446, §7.1). Les aléas, eux, entrent par une autre porte&nbsp;: le condensé du <em>transcript</em>, passé en contexte à l'étape «&nbsp;étendre&nbsp;». Le résultat est le même — les clés d'une session ne valent que pour elle — mais le mécanisme n'est pas celui qu'on suppose.</p>
+<p>Notre implémentation est conforme au vecteur de test n°&nbsp;1 de la RFC&nbsp;5869, et elle a été confrontée hors de la page à celle de Node.js&nbsp;: <strong>200&nbsp;comparaisons avec <code>crypto.hkdfSync</code>, zéro écart</strong>, sur des matériels, sels, étiquettes et longueurs variés.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Employer la même clé dans les deux sens. On tire un secret, on en fait une clé, et le client comme le serveur chiffrent avec elle. Le résultat est prévisible&nbsp;: les compteurs de nonce des deux côtés partent de zéro et se répètent — la faute exacte de la leçon&nbsp;2, avec ses 46&nbsp;octets sur 46. Une clé par direction, et des nonces qui ne se croisent pas&nbsp;: c'est le premier service que rend une fonction de dérivation, et il ne coûte qu'une étiquette différente.</p></div></div>
+<p>Et le post-quantique&nbsp;? Le logarithme discret, comme la factorisation, tombe devant l'algorithme de Shor si une machine quantique de taille suffisante voit le jour. C'est la raison pour laquelle les navigateurs ont adopté un <strong>échange hybride</strong>&nbsp;: <code>X25519MLKEM768</code> combine un échange sur courbe elliptique classique et le mécanisme d'encapsulation post-quantique ML-KEM-768 normalisé par le FIPS&nbsp;203, le secret final étant dérivé des <em>deux</em>. Si l'un des deux tombe, l'autre tient encore. Chrome a d'abord activé une version antérieure à la normalisation dans sa version&nbsp;124 (avril&nbsp;2024), puis <code>X25519MLKEM768</code> à partir de la 131&nbsp;; Firefox l'active depuis la 132. Le document de l'IETF qui le décrit s'intitule <em>Post-quantum hybrid ECDHE-MLKEM Key Agreement for TLSv1.3</em>. Le motif de menace qui justifie cette hâte porte un nom&nbsp;: <em>enregistrer maintenant, déchiffrer plus tard</em> — et c'est exactement l'adversaire patient du chapitre précédent.</p>
+
+<h2>Cas réel</h2>
+<p>En mai&nbsp;2015, une équipe de quatorze chercheurs — David Adrian, Karthikeyan Bhargavan, Zakir Durumeric et leurs coauteurs — publie <em>Imperfect Forward Secrecy: How Diffie-Hellman Fails in Practice</em>, présenté à la conférence ACM&nbsp;CCS en octobre de la même année, où il reçoit le prix du meilleur article. L'attaque porte un nom&nbsp;: <strong>Logjam</strong>.</p>
+<p>Le premier volet est un rétrogradage. Pour se conformer aux restrictions américaines à l'exportation des années 1990, TLS avait conservé des suites dites <em>export</em> limitées à 512&nbsp;bits. Un attaquant placé au milieu pouvait forcer une connexion moderne à retomber sur l'une d'elles, casser le logarithme discret sur 512&nbsp;bits, et lire toute la session. Les mesures publiées par les auteurs&nbsp;: <strong>8,4&nbsp;% du million de domaines les plus fréquentés</strong> étaient vulnérables, et jusqu'à 14,8&nbsp;% des serveurs de courrier scannés sur l'ensemble de l'espace d'adressage.</p>
+<p>Le second volet est plus profond, et c'est celui qui nous intéresse. Le crible de corps de nombres, appliqué au logarithme discret, se découpe en deux phases&nbsp;: un précalcul très coûteux qui ne dépend <em>que du nombre premier</em>, puis une résolution rapide pour chaque connexion. Or des millions de serveurs partageaient les <em>mêmes</em> nombres premiers, souvent ceux fournis en exemple dans les documentations. Les auteurs estiment qu'un précalcul sur un seul premier de 1024&nbsp;bits — à la portée d'un État — permettrait l'écoute passive de <strong>17,9&nbsp;% des domaines HTTPS du premier million</strong>, de 25,7&nbsp;% des serveurs SSH scannés et de 66,1&nbsp;% des passerelles IPsec.</p>
+<p>La leçon est inconfortable&nbsp;: chaque connexion était irréprochable prise séparément, et l'ensemble était fragile parce qu'il partageait un paramètre public. Les correctifs ont été immédiats — abandon des suites <em>export</em>, refus des groupes de moins de 1024&nbsp;bits par les navigateurs, puis migration vers les courbes elliptiques, où le partage de paramètres ne présente pas cette faiblesse. C'est aussi ce qui explique la préférence actuelle pour <code>X25519</code>&nbsp;: un groupe fixe, choisi et scruté publiquement, sur lequel aucun précalcul de ce type n'est connu.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Se mettre d'accord sur une clé&nbsp;: qui garantit quoi</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Diffie-Hellman</td><td>Deux inconnus construisent le même secret en n’échangeant que des valeurs publiques. Protège d’un espion <em>passif</em>, et de lui seul.</td></tr>
+      <tr><td>Logarithme discret</td><td>Le problème sur lequel tout repose. Sur 32&nbsp;bits&nbsp;: 107&nbsp;014&nbsp;opérations comptées. Sur 2048&nbsp;bits&nbsp;: hors d’atteinte publique — le record public est de 795&nbsp;bits, fin&nbsp;2019.</td></tr>
+      <tr><td>Paramètres</td><td><code>p</code> premier, sous-groupe d’ordre premier, part reçue validée (jamais 0, 1 ou <code>p−1</code>). Trois contrôles, souvent absents du code maison.</td></tr>
+      <tr><td>Homme du milieu</td><td>Sans authentification, un intermédiaire établit deux secrets et lit tout&nbsp;: 3&nbsp;messages sur 3 dans le programme. Ce n’est pas un défaut de l’algorithme.</td></tr>
+      <tr><td>Parts signées</td><td>Le serveur signe sa part, le client vérifie — et compare l’aléa de session écrit dans le texte signé. 13&nbsp;substitutions&nbsp;: 0&nbsp;acceptée&nbsp;; une part authentique d’hier&nbsp;: rejetée.</td></tr>
+      <tr><td>Éphémère</td><td>Les exposants privés naissent et meurent avec la session. C’est ce qui donne la confidentialité persistante&nbsp;: 0&nbsp;session lisible sur 20 après vol de la clé longue durée — à condition que le groupe soit assez grand&nbsp;: sur des exposants de 20&nbsp;bits, 6&nbsp;sur 6 tombent.</td></tr>
+      <tr><td>Transport de clé RSA</td><td>La clé de session voyage chiffrée&nbsp;: 20&nbsp;sessions sur 20 déchiffrées après le vol. Supprimé de TLS&nbsp;1.3 en 2018.</td></tr>
+      <tr><td>Dérivation (HKDF)</td><td>Extraire puis étendre, au plus 255&nbsp;fois la taille de l’empreinte. Un secret brut n’est jamais une clé&nbsp;; une étiquette d’usage par clé, une clé par direction.</td></tr>
+      <tr><td>Aujourd’hui</td><td>X25519 pour l’échange, ou l’hybride X25519MLKEM768 face à «&nbsp;enregistrer maintenant, déchiffrer plus tard&nbsp;».</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Accord de clé</dt><dd>Procédé par lequel deux parties obtiennent un secret commun sans qu’aucune ne le transmette. À distinguer du transport de clé, où l’une l’envoie à l’autre.</dd>
+<dt>Diffie-Hellman</dt><dd>Accord de clé fondé sur l’exponentiation modulaire, publié en 1976. Chacun publie <em>g</em> élevé à son exposant privé, et élève la valeur reçue au sien.</dd>
+<dt>Logarithme discret</dt><dd>Problème consistant à retrouver l’exposant <em>a</em> connaissant <em>g</em>, <em>p</em> et <em>g<sup>a</sup> mod p</em>. Sa difficulté fonde la sécurité de l’accord de clé.</dd>
+<dt>Pas de bébé, pas de géant</dt><dd>Méthode générique de logarithme discret coûtant environ la racine carrée de la taille du groupe, en temps comme en mémoire.</dd>
+<dt>Homme du milieu</dt><dd>Attaquant capable d’intercepter et de remplacer les messages. Il établit un secret distinct avec chaque partie, qui croient se parler directement.</dd>
+<dt>Clé éphémère</dt><dd>Exposant privé tiré pour une seule session et effacé ensuite. Le «&nbsp;E&nbsp;» de DHE et d’ECDHE.</dd>
+<dt>Confidentialité persistante</dt><dd>Propriété selon laquelle la compromission ultérieure d’une clé de longue durée ne permet pas de déchiffrer les sessions passées.</dd>
+<dt>Transport de clé</dt><dd>Mode où le client tire la clé de session et l’envoie chiffrée avec la clé publique du serveur. Sans confidentialité persistante, retiré de TLS&nbsp;1.3.</dd>
+<dt>HKDF</dt><dd>Fonction de dérivation en deux temps — extraire puis étendre — qui transforme un secret brut en autant de clés indépendantes que nécessaire (RFC&nbsp;5869).</dd>
+<dt>Échange hybride</dt><dd>Combinaison d’un échange classique et d’un mécanisme post-quantique, dont le secret final dépend des deux&nbsp;: X25519MLKEM768.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<p>Diffie-Hellman construit un secret commun à partir de valeurs entièrement publiques&nbsp;: 100&nbsp;sessions tirées séparément donnent 100&nbsp;secrets distincts, et un espion qui ne tient que quatre nombres. Sa sécurité est celle du logarithme discret&nbsp;: 107&nbsp;014&nbsp;opérations comptées sur un groupe de 32&nbsp;bits, 1,79&nbsp;·&nbsp;10<sup>308</sup>&nbsp;dans le pire cas de la même méthode sur 2048&nbsp;bits. Il ne dit rien de l'identité du correspondant&nbsp;: un intrus au milieu lit 3&nbsp;messages sur 3 et en réécrit un. Faire signer sa part par le serveur, et comparer l'aléa de session, ramène les substitutions à 0&nbsp;sur&nbsp;13 et rejette une part authentique d'hier. Rendre les exposants éphémères donne la confidentialité persistante&nbsp;: après vol de la clé de longue durée, 20&nbsp;sessions sur 20 lisibles en transport de clé, 0&nbsp;sur&nbsp;20 en éphémère — mais 6&nbsp;sur 6 retrouvées par logarithme discret si les exposants ne font que 20&nbsp;bits. Enfin le secret brut se dérive avant emploi&nbsp;: HKDF, conforme au vecteur de la RFC&nbsp;5869, en tire 4&nbsp;clés distinctes.</p>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un service maison implémente Diffie-Hellman et accepte toute part reçue telle quelle. Quelles trois valeurs un correspondant malveillant peut-il envoyer, et qu'obtient-il&nbsp;?</li>
+<li>Une équipe protège son interface de programmation en TLS et conserve la clé privée du serveur dans un coffre depuis quatre ans. Un adversaire a enregistré tout le trafic pendant cette période. Sous quelle condition ce trafic est-il en danger, et sous quelle condition il ne l'est pas&nbsp;?</li>
+<li>Pourquoi Logjam a-t-il conduit à préférer les courbes elliptiques, alors que l'attaque ne portait pas sur la solidité de l'exponentiation modulaire elle-même&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Un espion enregistre p, g, A et B lors d'un échange Diffie-Hellman sur le groupe 14 de la RFC 3526. De quoi aurait-il besoin en plus pour obtenir le secret partagé ?","a":["De l'un des deux exposants privés, qui n'a jamais été transmis : les extraire de A ou de B est le problème du logarithme discret, hors d'atteinte sur 2048 bits","De la clé privée du serveur, qui déchiffrerait A et B et lui donnerait directement le secret que les deux parties ont calculé","Du nonce employé pour chiffrer les messages qui suivent, sans lequel il ne peut pas régénérer le flux à partir des valeurs publiques","D'un troisième message de l'échange, car deux parts publiques ne suffisent pas mathématiquement à déterminer un secret commun"],"correct":0,"exp":"Aucune clé privée n'intervient dans un échange Diffie-Hellman brut, et le secret est parfaitement déterminé par A et B — mais seulement pour qui connaît a ou b. Tout tient au logarithme discret."},
+  {"q":"Le programme de l'homme du milieu montre qu'Alice et Bob n'ont PAS le même secret, et que Mallory en partage un avec chacun. Que faut-il en conclure sur Diffie-Hellman ?","a":["Qu'il protège d'un espion passif mais ne dit rien de l'identité du correspondant : il faut authentifier les parts publiques par une signature ou un certificat","Que le groupe employé était trop petit, et qu'un groupe de 4096 bits aurait empêché Mallory d'établir deux secrets distincts","Que l'implémentation avait un défaut : un Diffie-Hellman correct détecte l'incohérence entre les deux secrets et interrompt l'échange","Que le chiffrement appliqué ensuite était en cause, un mode authentifié comme AES-GCM rendant l'attaque impossible"],"correct":0,"exp":"Aucune taille de groupe et aucun mode de chiffrement n'y changent rien : Mallory a établi honnêtement deux échanges. Le protocole n'a jamais demandé à qui appartenait la part reçue."},
+  {"q":"Un adversaire a enregistré six mois de trafic, puis obtient la clé privée longue durée du serveur. Le programme mesure 20 sessions sur 20 lisibles dans un cas, 0 sur 20 dans l'autre. Qu'est-ce qui fait la différence ?","a":["L'usage fait de la clé longue durée : elle déchiffre les enveloppes contenant les clés de session dans le premier cas, elle ne fait que signer des parts éphémères dans le second","La taille des clés de session, tirées sur 256 bits dans un cas et sur 2048 bits dans l'autre, ce qui met les secondes hors de portée d'une recherche exhaustive","Le fait que le second protocole chiffre deux fois, une première avec la clé de session et une seconde avec la clé longue durée du serveur","La présence d'un code d'authentification de message dans le second protocole, qui empêche l'adversaire de rejouer les sessions enregistrées"],"correct":0,"exp":"C'est l'emploi de la clé longue durée qui décide de tout : chiffrer un secret qui voyage, ou signer une part publique. Le second usage ne laisse rien à déchiffrer plus tard."},
+  {"q":"Logjam a montré que des millions de serveurs partageaient les mêmes nombres premiers Diffie-Hellman. Pourquoi ce partage est-il grave, alors que chaque connexion tire bien de nouveaux exposants ?","a":["Parce que la phase la plus coûteuse du crible de corps de nombres ne dépend que du nombre premier : une fois payée, chaque connexion se casse rapidement","Parce que deux serveurs qui partagent le même nombre premier calculent nécessairement le même secret partagé pour deux connexions distinctes","Parce que le nombre premier fait office de clé secrète commune, et que sa divulgation revient à publier la clé privée de tous ces serveurs","Parce que le partage d'un même premier provoque des collisions de nonce entre serveurs, comme le vecteur d'initialisation trop court de WEP"],"correct":0,"exp":"Le premier est public par construction, et les secrets restent distincts. Le danger vient du découpage de l'attaque : un précalcul énorme mais amorti sur toutes les connexions qui emploient ce premier — 17,9 % du premier million de domaines HTTPS pour un seul d'entre eux."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["la confidentialité persistante","confidentialité persistante","forward secrecy","la forward secrecy","confidentialite persistante"],"placeholder":"la propriété qui protège les sessions passées d'un vol futur de la clé","hints":["Elle est la raison pour laquelle TLS 1.3 a supprimé le transport de clé par RSA.","Son nom anglais est trompeur : c'est le passé qu'elle protège, pas l'avenir.","Deux mots en français, dont un adjectif."],"link":{"href":"lecon-05.html","label":"Revoir « Pourquoi éphémère : la confidentialité persistante »"}},
+  {"type":"code","run":{"expect":"mallory partage les deux secrets : OUI"},"placeholder":"le résultat d'une attaque de l'homme du milieu sur un échange non authentifié","hints":["Mallory envoie SA part publique aux deux, et garde son exposant privé.","Vérifie les trois choses à la fois : les deux secrets de Mallory, et le fait qu'Alice et Bob n'ont pas le même.","Affiche exactement : « mallory partage les deux secrets : OUI »."],"link":{"href":"lecon-05.html","label":"Revoir « L'angle mort : personne n'a dit à qui l'on parlait »"}},
+  {"type":"code","run":{"expect":"PRK conforme à la RFC 5869 : OUI"},"placeholder":"le résultat du vecteur de test n° 1 de la RFC 5869 sur HKDF-Extract","hints":["HKDF-Extract est un simple HMAC : PRK = HMAC(sel, matériel).","Le matériel est 0x0b répété 22 fois, le sel vaut 000102030405060708090a0b0c.","Affiche exactement : « PRK conforme à la RFC 5869 : OUI »."],"link":{"href":"lecon-05.html","label":"Revoir « Le secret brut n'est pas une clé »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une équipe met en place un canal chiffré entre deux services internes. Elle implémente Diffie-Hellman, dérive une clé AES-GCM du secret obtenu, et considère le canal sûr «&nbsp;puisque personne ne peut calculer le logarithme discret&nbsp;». En trois phrases, dis ce qui est effectivement protégé, ce qui ne l'est pas, et la question qu'il aurait fallu poser avant d'écrire la première ligne de code.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-exo1.txt"><pre><code class="language-plaintext">Ce qui est protégé : le contenu, face à un adversaire qui se contente
+d'écouter. Il enregistre p, g, A, B et du trafic chiffré, et il n'en tirera
+rien — à condition que le groupe soit assez grand et que la part reçue soit
+validée.
+
+Ce qui ne l'est pas : l'identité du correspondant. Rien dans l'échange ne
+dit que la part reçue vient du service attendu. Un intermédiaire — un
+routeur compromis, un service de nommage détourné, un conteneur voisin —
+établit deux secrets et lit tout, sans jamais toucher au logarithme discret.
+
+La question qu'il fallait poser : « comment chacun des deux services
+reconnaît-il l'autre ? ». La réponse est une clé de longue durée connue à
+l'avance, qui SIGNE les parts publiques : un certificat interne, une clé
+publique épinglée dans la configuration, ou une infrastructure de service à
+service. C'est le seul point qui ne peut pas être déduit du calcul.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris le programme de l'attaque de l'homme du milieu&nbsp;: Alice, Bob et Mallory tirent chacun un exposant privé, Mallory envoie sa propre part publique aux deux. Le programme doit établir que Mallory partage bien un secret avec chacun <em>et</em> qu'Alice et Bob n'ont pas le même, puis afficher exactement <code>mallory partage les deux secrets : OUI</code>.</p><details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo2.js"><pre><code class="language-javascript">// Groupe jouet suffisant : l'attaque ne casse aucun calcul.
+const p = 0x1000000000000000000000000000000000000000000000000000000000003832fn; // premier sûr, 257 bits
+const g = 2n;
+const expmod = (b, e, m) =&gt; { let r = 1n; b %= m; while (e &gt; 0n) { if (e &amp; 1n) r = r * b % m; b = b * b % m; e &gt;&gt;= 1n; } return r; };
+
+const a = 0x3f5c1b9e77a0d4e2c8b1069fn;   // Alice
+const b = 0x7d2e94af0b613c85d7f2a04en;   // Bob
+const m = 0x11f3a7c95e08b6d240372ac1n;   // Mallory, au milieu
+
+const M = expmod(g, m, p);               // ce que Mallory envoie AUX DEUX
+const secretAlice = expmod(M, a, p);     // Alice croit parler à Bob
+const secretBob   = expmod(M, b, p);     // Bob croit parler à Alice
+const cote1 = expmod(expmod(g, a, p), m, p);   // Mallory, côté Alice
+const cote2 = expmod(expmod(g, b, p), m, p);   // Mallory, côté Bob
+
+console.log('mallory partage les deux secrets : ' + (cote1 === secretAlice &amp;&amp; cote2 === secretBob &amp;&amp; secretAlice !== secretBob ? 'OUI' : 'NON'));</code></pre></figure>
+<figure class="code-block" data-file="solution-exo2.txt"><pre><code class="language-plaintext">mallory partage les deux secrets : OUI</code></pre></figure>
+<p>Le contrôle porte sur trois égalités à la fois, et la troisième compte autant que les deux autres&nbsp;: si Alice et Bob avaient le même secret, il n'y aurait pas d'attaque, seulement un échange honnête auquel Mallory assisterait sans rien comprendre. Ce que le programme démontre, c'est la <em>coexistence</em> de deux canaux là où les participants en croient un seul.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Aller plus loin</span></div><p>Implémente <code>HKDF-Extract</code> et confronte-le au vecteur de test n°&nbsp;1 de la RFC&nbsp;5869&nbsp;: matériel <code>0x0b</code> répété 22&nbsp;fois, sel <code>000102030405060708090a0b0c</code>. Le programme doit afficher exactement <code>PRK conforme à la RFC 5869 : OUI</code>. Puis explique en une phrase pourquoi un vecteur de test officiel vaut mieux qu'un contrôle de cohérence interne.</p><details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo3.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+// --- HMAC-SHA-256 puis HKDF-Extract (RFC 5869) --------------------------------------
+function hmac(cle, msg){ let k = cle.length &gt; 64 ? sha256o(cle) : cle.slice(); while (k.length &lt; 64) k.push(0);
+  return sha256o([...k.map(b =&gt; b ^ 0x5c), ...sha256o([...k.map(b =&gt; b ^ 0x36), ...msg])]); }
+const octets = h =&gt; h.match(/../g).map(x =&gt; parseInt(x, 16));
+
+// Vecteur de test n° 1 de la RFC 5869.
+const ikm = octets('0b'.repeat(22));
+const sel = octets('000102030405060708090a0b0c');
+const prk = hmac(sel, ikm);                       // PRK = HMAC(sel, matériel)
+const ATTENDU = '077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5';
+console.log('PRK conforme à la RFC 5869 : ' + (hex(prk) === ATTENDU ? 'OUI' : 'NON'));</code></pre></figure>
+<figure class="code-block" data-file="solution-exo3.txt"><pre><code class="language-plaintext">PRK conforme à la RFC 5869 : OUI</code></pre></figure>
+<p>Un contrôle de cohérence interne — «&nbsp;mes deux appels donnent le même résultat&nbsp;», «&nbsp;ma sortie change quand l'entrée change&nbsp;» — passe aussi bien sur une implémentation correcte que sur une implémentation fausse de la même façon des deux côtés. Un vecteur officiel, lui, vient d'ailleurs&nbsp;: il confronte votre code à une valeur que vous n'avez pas produite. C'est la seule sorte de test qui puisse contredire une erreur de compréhension, et non seulement une erreur de frappe — c'est aussi pour cela que les trois primitives du module&nbsp;1 ont été confrontées à des implémentations de référence, et non seulement à elles-mêmes.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

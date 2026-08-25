@@ -196,13 +196,20 @@ function estUnFragment(vu) {
       await cx.evaluer('(()=>{const f=document.querySelectorAll("figure.code-block")[' + b.i + '];' +
         'window.__f=f;const o=f.querySelector(".runner-output");if(o)o.remove();' +
         'f.querySelector(".code-block__try").click();return 1})()');
+      /* On attend la FIN de l'exécution, et pas la première sortie visible : runner.js
+         retire la classe « is-running » du bouton « Exécuter » dans son end() — le
+         bouton « Tester » d'origine, lui, a disparu au premier clic. Sans ce contrôle, un
+         programme qui met plus de 400 ms était lu A MOITIE, et son début — pourtant
+         juste — se lisait comme une divergence. Constaté sur crypto/lecon-05. */
       var vu = '';
       for (var w = 0; w < 25; w++) {
         await attendre(400);
+        var enCours = await cx.evaluer('(()=>{const f=document.querySelectorAll("figure.code-block")[' + b.i + '];' +
+          'return f.querySelector("button.is-running")?1:0})()');
         vu = await cx.evaluer('(()=>{const o=window.__f.querySelector(".runner-output");if(!o)return "";' +
           'const l=[...o.querySelectorAll(".runner-output__line")];if(!l.length)return "";' +
           'return l.map(x=>x.textContent).join("\\n")})()') || '';
-        if (vu && !/Exécution|en cours/i.test(vu)) break;
+        if (!enCours && vu && !/Exécution|en cours/i.test(vu)) break;
       }
       var attendu = await cx.evaluer('(()=>{const f=document.querySelectorAll("figure.code-block")[' + b.i + '];' +
         'let n=f.nextElementSibling,c=0;while(n&&c++<4){' +
