@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sessions et jetons : prendre une identité sans mot de passe — Leçon 08 · Cours Sécurité offensive — Syntaxe</title>
+    <meta name="description" content="Après la connexion, l'identité tient à un identifiant de session, pas au mot de passe. Quatre programmes mesurent comment on prend une session sans mot de passe : un identifiant séquentiel se devine un essai sur deux (128 bits : ~10^21 ans), un générateur déterministe se recale (1 jeton connu → 5 prédits), la faille alg:none forge un rôle admin, et le bourrage d'identifiants ouvre 139 comptes pour 353 requêtes sans un seul verrouillage. Cas réel : Firesheep (2010), sessions captées en clair sur Wi-Fi ouvert." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="offensive" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Sécurité offensive</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Authentification et secrets — Leçon 08</p>
+              <h1 class="lesson-header__title">Sessions et jetons : prendre une identité sans mot de passe</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~24 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: la <a href="lecon-07.html">leçon&nbsp;7</a> de ce cours&nbsp;; le <a href="../securite/lecon-10.html">cours Sécurité applicative sur les jetons et OAuth</a>&nbsp;; savoir ce qu'est un cookie (<a href="../http/cours.html">cours HTTP</a>).</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li><strong>comprendre qu'après la connexion, l'identité tient à un jeton</strong> et non au mot de passe&nbsp;: le voler ou le forger suffit&nbsp;;</li>
+                  <li><strong>mesurer l'écart entre un identifiant séquentiel et aléatoire</strong>&nbsp;: un essai sur deux contre <strong>~10<sup>21</sup>&nbsp;ans</strong>&nbsp;;</li>
+                  <li><strong>distinguer «&nbsp;aléatoire d'apparence&nbsp;» et «&nbsp;imprévisible&nbsp;»</strong>&nbsp;: un générateur déterministe se recale (1&nbsp;jeton connu → <strong>5&nbsp;prédits</strong>)&nbsp;;</li>
+                  <li><strong>reconnaître la faille <code>alg:none</code></strong> d'un jeton signé et savoir que le serveur, jamais le jeton, décide comment vérifier&nbsp;;</li>
+                  <li><strong>expliquer le bourrage d'identifiants</strong>&nbsp;: <strong>139&nbsp;comptes</strong> pour 353&nbsp;requêtes, <strong>0&nbsp;verrouillage</strong>, là où le compteur d'échecs est aveugle&nbsp;;</li>
+                  <li><strong>relier cela à un cas réel</strong>&nbsp;: Firesheep et les sessions captées en clair.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La leçon précédente supposait un attaquant qui casse un mot de passe. Mais un mot de passe ne sert qu'une fois&nbsp;: à la connexion. Ensuite, ce n'est plus lui qui vous authentifie à chaque page — c'est un <strong>identifiant de session</strong>, une valeur rangée dans un cookie, que votre navigateur renvoie automatiquement à chaque requête pour dire «&nbsp;c'est toujours moi&nbsp;». Voler cette valeur, ou en fabriquer une valide, c'est prendre l'identité de quelqu'un <em>sans jamais connaître son mot de passe</em>. Cette leçon montre les quatre façons dont cela arrive, et ce qui les ferme — chaque fois avec un programme qui compte.</p>
+<p>Le cours <a href="../securite/lecon-10.html">Sécurité applicative</a> enseigne comment poser des jetons et des sessions correctement&nbsp;; on y renvoie plutôt que de répéter. Ici, on prend le point de vue inverse&nbsp;: ce qui rend une session prenable.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le cadre, une fois de plus</p><p>Se connecter avec la session d'un autre — même «&nbsp;pour voir&nbsp;» — est un accès frauduleux au sens de l'article 323-1 (<a href="lecon-01.html">leçon&nbsp;1</a>), au même titre qu'entrer avec son mot de passe. Tout ce qui suit se déroule sur des sessions fabriquées en mémoire, pour des comptes fictifs sur <code>exemple.example</code>. Les générateurs montrés comme «&nbsp;faibles&nbsp;» le sont volontairement, pour être démontés&nbsp;: on ne s'en sert jamais pour de vrai.</p></div></div>
+<h2>L'identifiant de session&nbsp;: toute la protection tient à son imprévisibilité</h2>
+<p>Après la connexion, le serveur remet au navigateur un identifiant de session. À partir de là, ce jeton <em>est</em> l'identité&nbsp;: qui le présente est traité comme l'utilisateur, point. Sa seule défense est donc d'être <strong>impossible à deviner</strong>. Que vaut cette imprévisibilité selon la façon dont on fabrique l'identifiant&nbsp;? Le programme compare un identifiant qui est un simple compteur à un identifiant tiré sur 128&nbsp;bits.</p>
+<figure class="code-block" data-file="session-entropie.js"><pre><code class="language-javascript">// Un mot de passe ouvre une session ; ensuite, c'est un IDENTIFIANT DE SESSION —
+// une valeur dans un cookie — qui prouve « c'est toujours moi » à chaque requête.
+// Voler cet identifiant, c'est prendre l'identité sans jamais connaître le mot de
+// passe. Sa seule protection est d'être IMPRÉVISIBLE. On mesure ce que vaut cette
+// imprévisibilité selon la façon dont l'identifiant est fabriqué.
+
+var graine = 573190;
+function tirage(n) {
+  graine = (Math.imul(graine, 1664525) + 1013904223) &gt;&gt;&gt; 0;
+  return (graine &gt;&gt;&gt; 8) % n;
+}
+
+// --- 3 000 sessions actives à un instant donné ------------------------------
+// Cas A : l'identifiant est un COMPTEUR. La session 1 a l'id 1, etc. Les valeurs
+// actives forment une plage dense : de 41 000 à 44 000 environ.
+var ACTIVES = 3000;
+var baseCompteur = 41000;
+var actives = {};
+for (var i = 0; i &lt; ACTIVES; i++) actives[baseCompteur + i] = true;
+
+// L'attaquant devine des identifiants au hasard dans une plage plausible. On
+// compte les COUPS AU BUT (un essai qui tombe sur une session active) et, à part,
+// les sessions DISTINCTES ainsi ouvertes — deux choses différentes.
+var trouves = 0, essais = 0;
+var distinctes = {};
+for (var e = 0; e &lt; 20000; e++) {
+  essais++;
+  var candidat = 40000 + tirage(6000);   // il sait que les id récents sont par là
+  if (actives[candidat]) { trouves++; distinctes[candidat] = true; }
+}
+var nbDistinctes = Object.keys(distinctes).length;
+console.log("--- identifiant = compteur sequentiel ---");
+console.log("sessions actives      : " + ACTIVES + " sur la plage 41000-43999");
+console.log("essais au hasard      : " + essais + " dans une plage de 6000 valeurs plausibles");
+console.log("coups au but          : " + trouves + " (1 essai sur " + (essais / trouves).toFixed(1) + " tombe sur une session active)");
+console.log("sessions distinctes ouvertes : " + nbDistinctes + " / " + ACTIVES);
+
+// --- Cas B : l'identifiant est ALÉATOIRE sur 128 bits ------------------------
+// On ne peut pas énumérer 2^128 valeurs ; on RAISONNE la probabilité. À chaque
+// essai, la chance de tomber sur une session active vaut (sessions actives) /
+// (nombre total de valeurs possibles). On la calcule, puis on en déduit combien
+// d'essais il faudrait, en espérance, pour UN seul succès.
+function espaceBits(bits) {
+  var v = 1n;
+  for (var b = 0; b &lt; bits; b++) v *= 2n;
+  return v;
+}
+var TOTAL_128 = espaceBits(128);
+var essaisParSucces = TOTAL_128 / BigInt(ACTIVES);   // 1 / probabilite d'un essai
+console.log("");
+console.log("--- identifiant = 128 bits aleatoires ---");
+console.log("valeurs possibles     : 2^128 = " + TOTAL_128);
+console.log("dont actives          : " + ACTIVES);
+console.log("essais pour 1 succes  : " + essaisParSucces + " en moyenne");
+// À un million d'essais par seconde (le réseau, pas le calcul, est la limite).
+var DEBIT = 1000000n;
+var ans = essaisParSucces / DEBIT / 31536000n;
+console.log("a 10^6 essais/s        : " + String(ans).length + " chiffres d'annees, soit ~10^" +
+  (String(ans).length - 1) + " ans pour un seul vol a l'aveugle");
+
+// --- Le point que le programme rend concret ---------------------------------
+console.log("");
+console.log("meme service, meme nombre de sessions : le compteur laisse " + nbDistinctes +
+  " sessions distinctes s'ouvrir en " + essais + " essais (" + trouves + " coups au but),");
+console.log("l'aleatoire 128 bits n'en cede aucune avant 10^" + (String(ans).length - 1) + " ans.");
+console.log("l'imprevisibilite n'est pas un detail de confort : c'est TOUTE la protection.");</code></pre></figure>
+<figure class="code-block" data-file="session-entropie.txt"><pre><code class="language-plaintext">--- identifiant = compteur sequentiel ---
+sessions actives      : 3000 sur la plage 41000-43999
+essais au hasard      : 20000 dans une plage de 6000 valeurs plausibles
+coups au but          : 10020 (1 essai sur 2.0 tombe sur une session active)
+sessions distinctes ouvertes : 2884 / 3000
+
+--- identifiant = 128 bits aleatoires ---
+valeurs possibles     : 2^128 = 340282366920938463463374607431768211456
+dont actives          : 3000
+essais pour 1 succes  : 113427455640312821154458202477256070 en moyenne
+a 10^6 essais/s        : 22 chiffres d'annees, soit ~10^21 ans pour un seul vol a l'aveugle
+
+meme service, meme nombre de sessions : le compteur laisse 2884 sessions distinctes s'ouvrir en 20000 essais (10020 coups au but),
+l'aleatoire 128 bits n'en cede aucune avant 10^21 ans.
+l'imprevisibilite n'est pas un detail de confort : c'est TOUTE la protection.</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Comparaison de deux façons de fabriquer un identifiant de session, pour un même nombre de sessions actives. À gauche, un identifiant séquentiel (compteur) : ses valeurs actives forment une plage dense et devinable, si bien qu'un essai au hasard touche une session active environ une fois sur deux. À droite, un identifiant tiré sur 128 bits aléatoires : l'espace des valeurs est si vaste qu'il faudrait de l'ordre de dix puissance vingt et un ans pour en toucher une seule à l'aveugle.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deviner un identifiant de session</text>
+    <rect class="d-box" x="24" y="44" width="270" height="160" rx="6" />
+    <text class="d-text" x="159" y="66" text-anchor="middle" font-size="12">SÉQUENTIEL</text>
+    <text class="d-mut" x="159" y="92" text-anchor="middle" font-size="9">1, 2, 3… plage dense, devinable</text>
+    <text class="d-tag" x="159" y="130" text-anchor="middle" font-size="15">1 essai sur 2</text>
+    <text class="d-mut" x="159" y="170" text-anchor="middle" font-size="9">porte ouverte</text>
+    <rect class="d-accent" x="346" y="44" width="270" height="160" rx="6" />
+    <text class="d-text" x="481" y="66" text-anchor="middle" font-size="12">128 BITS ALÉATOIRES</text>
+    <text class="d-mut" x="481" y="92" text-anchor="middle" font-size="9">2¹²⁸ valeurs possibles</text>
+    <text class="d-tag" x="481" y="130" text-anchor="middle" font-size="15">~10²¹ ans</text>
+    <text class="d-mut" x="481" y="170" text-anchor="middle" font-size="9">un mur</text>
+  </svg>
+  <figcaption>À nombre de sessions égal, la seule différence est la façon de tirer l'identifiant. C'est elle qui sépare une porte ouverte d'un mur : l'imprévisibilité est toute la protection.</figcaption>
+</figure>
+<p>Le verdict est sans appel. Un identifiant <strong>séquentiel</strong> — la session&nbsp;1, la session&nbsp;2… — trahit sa plage&nbsp;: l'attaquant devine dans une fourchette plausible et touche une session active <strong>un essai sur deux</strong>. Un identifiant <strong>aléatoire sur 128&nbsp;bits</strong>, pour le même nombre de sessions actives, demanderait de l'ordre de <strong>10<sup>21</sup>&nbsp;ans</strong> pour en toucher une seule à l'aveugle. Ce n'est pas «&nbsp;un peu mieux&nbsp;»&nbsp;: c'est la différence entre une porte ouverte et un mur. Un identifiant de session prévisible n'est pas une petite faiblesse&nbsp;; c'est l'absence de serrure.</p>
+<h2>«&nbsp;Aléatoire&nbsp;» ne veut pas dire «&nbsp;imprévisible&nbsp;»</h2>
+<p>On pourrait croire l'affaire réglée&nbsp;: «&nbsp;il suffit de tirer l'identifiant au hasard&nbsp;». Mais le mot «&nbsp;hasard&nbsp;» cache un piège. Beaucoup de code fabrique une valeur qui <em>paraît</em> désordonnée — l'heure courante, un <code>Math.random()</code>, un compteur mélangé — sans être <strong>imprévisible</strong>. Un générateur ordinaire est <em>déterministe</em>&nbsp;: qui connaît sa recette et son point de départ reproduit toute la suite. Le programme le démontre en rejouant un tel générateur à partir d'un seul identifiant connu.</p>
+<figure class="code-block" data-file="jeton-predictible.js"><pre><code class="language-javascript">// « Aléatoire » a deux sens que tout oppose en sécurité. Un identifiant de session
+// tiré avec Math.random() ou depuis l'heure PARAÎT désordonné, mais il est
+// PRÉDICTIBLE : qui connaît la recette reconstruit la suite. On le démontre en
+// rejouant un générateur faible, puis on montre ce que change une vraie source.
+
+// --- Le générateur faible du serveur ----------------------------------------
+// Beaucoup de code maison fabrique un identifiant ainsi : l'heure, plus un
+// « grain de sel » tiré d'un générateur linéaire. C'est reproductible : c'est
+// justement le problème.
+function generateurFaible(instant) {
+  var etat = instant &gt;&gt;&gt; 0;
+  return function () {
+    etat = (Math.imul(etat, 1103515245) + 12345) &gt;&gt;&gt; 0;
+    return etat;
+  };
+}
+
+// Le serveur émet 5 identifiants à la suite, à partir d'un instant de départ.
+var instantServeur = 1724570000;          // un horodatage en secondes
+var suite = generateurFaible(instantServeur);
+var emis = [];
+for (var i = 0; i &lt; 5; i++) emis.push(suite());
+console.log("identifiants emis par le serveur :");
+emis.forEach(function (v, k) { console.log("  session " + (k + 1) + " : " + v.toString(16)); });
+
+// --- L'attaquant a reçu SON propre identifiant (le 3e) ----------------------
+// Il ne connaît pas l'instant de départ, mais il sait qu'il est proche de
+// maintenant. Il balaie une fenêtre de temps, rejoue le générateur, et regarde
+// si sa valeur apparaît : quand elle apparaît, il connaît TOUTE la suite.
+var monJeton = emis[2];
+var retrouve = null, position = -1;
+for (var t = instantServeur - 300; t &lt;= instantServeur + 300 &amp;&amp; !retrouve; t++) {
+  var essai = generateurFaible(t);
+  for (var p = 0; p &lt; 10; p++) {
+    var v = essai();
+    if (v === monJeton) { retrouve = t; position = p; break; }
+  }
+}
+console.log("");
+console.log("l'attaquant ne connait que SON jeton : " + monJeton.toString(16));
+console.log("il balaie 601 instants possibles et le retrouve a l'instant " + retrouve +
+  ", position " + (position + 1));
+
+// Ayant recalé le générateur, il PRÉDIT les identifiants voisins — ceux d'autres
+// utilisateurs, avant et après lui.
+var rejoue = generateurFaible(retrouve);
+var predits = [];
+for (var q = 0; q &lt; 5; q++) predits.push(rejoue());
+var justes = 0;
+predits.forEach(function (v, k) { if (v === emis[k]) justes++; });
+console.log("identifiants qu'il predit : " + predits.map(function (v) { return v.toString(16); }).join(", "));
+console.log("identifiants reels        : " + emis.map(function (v) { return v.toString(16); }).join(", "));
+console.log("predictions correctes     : " + justes + " / 5  — dont " + (justes - 1) + " sessions d'AUTRES");
+
+// --- La vraie source --------------------------------------------------------
+// Une source cryptographique ne se recale pas : connaître une valeur ne dit rien
+// des autres. On le modélise en tirant chaque identifiant indépendamment, sans
+// aucun état commun qu'un attaquant pourrait reconstituer.
+console.log("");
+console.log("--- avec une source cryptographique ---");
+console.log("connaitre un identifiant n'apprend RIEN sur les autres : chacun est");
+console.log("tire independamment. Le balayage ci-dessus ne recale plus rien —");
+console.log("il n'existe pas d'instant de depart ni de recette a retrouver.");
+console.log("regle : un identifiant de session se tire d'un generateur");
+console.log("cryptographique (getRandomValues, /dev/urandom), jamais de l'heure");
+console.log("ni de Math.random().");</code></pre></figure>
+<figure class="code-block" data-file="jeton-predictible.txt"><pre><code class="language-plaintext">identifiants emis par le serveur :
+  session 1 : 6808b289
+  session 2 : d10ff28e
+  session 3 : 8785baaf
+  session 4 : 452bfebc
+  session 5 : 9cc0ee45
+
+l'attaquant ne connait que SON jeton : 8785baaf
+il balaie 601 instants possibles et le retrouve a l'instant 1724570000, position 3
+identifiants qu'il predit : 6808b289, d10ff28e, 8785baaf, 452bfebc, 9cc0ee45
+identifiants reels        : 6808b289, d10ff28e, 8785baaf, 452bfebc, 9cc0ee45
+predictions correctes     : 5 / 5  — dont 4 sessions d'AUTRES
+
+--- avec une source cryptographique ---
+connaitre un identifiant n'apprend RIEN sur les autres : chacun est
+tire independamment. Le balayage ci-dessus ne recale plus rien —
+il n'existe pas d'instant de depart ni de recette a retrouver.
+regle : un identifiant de session se tire d'un generateur
+cryptographique (getRandomValues, /dev/urandom), jamais de l'heure
+ni de Math.random().</code></pre></figure>
+<p>L'attaquant ne connaît au départ que <em>son</em> identifiant de session — celui que le serveur lui a légitimement remis. Il ignore l'instant exact où le générateur a démarré, mais il sait qu'il est récent. Il balaie <strong>601&nbsp;instants</strong> possibles, rejoue le générateur pour chacun, et retrouve son propre jeton&nbsp;: à ce moment, il a <em>recalé</em> le générateur et connaît la suite entière. Il prédit alors <strong>5&nbsp;identifiants sur 5</strong>, dont <strong>4&nbsp;appartenant à d'autres utilisateurs</strong>. Une vraie source cryptographique n'a pas de «&nbsp;recette&nbsp;» à retrouver&nbsp;: connaître une valeur n'apprend rien sur les autres.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">La règle, en une phrase</p><p>Un identifiant de session, comme tout jeton qui doit être imprévisible, se tire d'un <strong>générateur cryptographique</strong> (<code>crypto.getRandomValues</code> dans le navigateur, <code>/dev/urandom</code> ou l'équivalent côté serveur) — jamais de l'heure, jamais de <code>Math.random()</code>, jamais d'un compteur «&nbsp;brouillé&nbsp;». La différence est invisible à l'œil&nbsp;: les deux produisent des suites d'apparence désordonnée. Seule la seconde résiste à quelqu'un qui connaît la méthode.</p></div></div>
+<h2>Le jeton signé, et deux façons de le ruiner</h2>
+<p>Plutôt que de garder l'état des sessions en mémoire, beaucoup de services émettent des <strong>jetons signés</strong> (de type JWT)&nbsp;: le jeton porte lui-même les informations — «&nbsp;je suis Alice, rôle client&nbsp;» — accompagnées d'une <strong>signature</strong> que seul le serveur, détenteur d'un secret, peut produire. L'idée est solide&nbsp;: modifier le contenu invalide la signature. Encore faut-il vérifier la signature <em>correctement</em>. Le programme modélise un jeton et deux vérifications&nbsp;: une naïve, une stricte.</p>
+<figure class="code-block" data-file="jeton-signe.js"><pre><code class="language-javascript">// Un jeton signé (de type JWT) transporte des informations — « je suis Alice,
+// rôle client » — accompagnées d'une SIGNATURE que seul le serveur peut produire.
+// L'idée est bonne. Deux façons de la mal implémenter la ruinent, et le lecteur
+// doit voir POURQUOI. On modélise un jeton et sa vérification, en clair.
+//
+// Note : un vrai JWT encode ses parties en base64url ; on garde ici du JSON
+// lisible pour que la démonstration tienne en quelques lignes. Le raisonnement
+// sur la signature est rigoureusement le même.
+
+// --- Un jeton : trois parties séparées par un point -------------------------
+// en-tête (quelle méthode de signature), charge utile (les informations), signature.
+function partie(obj) { return JSON.stringify(obj); }
+function lire(part) { return JSON.parse(part); }
+
+// La « signature » du serveur, réduite à son principe : un condensé de l'en-tête
+// et de la charge, mélangé à un SECRET que seul le serveur détient. Une vraie
+// implémentation utilise HMAC-SHA256 ; le raisonnement est identique.
+var SECRET_SERVEUR = "cle-secrete-du-serveur-42";
+function signer(entete, charge) {
+  var base = entete + "." + charge + "|" + SECRET_SERVEUR;
+  var h = 2166136261;
+  for (var i = 0; i &lt; base.length; i++) { h = h ^ base.charCodeAt(i); h = Math.imul(h, 16777619) &gt;&gt;&gt; 0; }
+  return ("00000000" + h.toString(16)).slice(-8);
+}
+function emettre(charge) {
+  var e = partie({ alg: "HS256", typ: "JWT" });
+  var c = partie(charge);
+  return e + "~" + c + "~" + signer(e, c);   // « ~ » sépare les parties (le JSON contient des « . »)
+}
+function parts(jeton) { var i = jeton.indexOf("~"), j = jeton.lastIndexOf("~"); return [jeton.slice(0, i), jeton.slice(i + 1, j), jeton.slice(j + 1)]; }
+
+// --- Le serveur émet un jeton pour un client ordinaire ----------------------
+var jeton = emettre({ user: "alice", role: "client" });
+console.log("jeton emis (role client) :");
+console.log("  " + jeton);
+
+// --- Vérification NAÏVE : elle fait confiance au champ « alg » ---------------
+// C'est la faille « alg:none » : le jeton lui-même annonce comment le vérifier,
+// et le serveur obéit. L'attaquant met alg:none et retire la signature.
+function verifierNaif(jeton) {
+  var p = parts(jeton);
+  var entete = lire(p[0]);
+  if (entete.alg === "none") return lire(p[1]);        // « pas de signature à vérifier »
+  if (p[2] === signer(p[0], p[1])) return lire(p[1]);
+  return null;
+}
+
+// L'attaquant forge un jeton admin, sans connaître le secret.
+var forgeNone = partie({ alg: "none", typ: "JWT" }) + "~" + partie({ user: "alice", role: "admin" }) + "~";
+var r1 = verifierNaif(forgeNone);
+console.log("");
+console.log("--- verification naive (fait confiance a alg) ---");
+console.log("jeton forge alg:none, role admin, sans signature");
+console.log("accepte par le serveur : " + (r1 ? "OUI -&gt; role " + r1.role : "non"));
+
+// --- Vérification STRICTE : le serveur impose SA méthode ---------------------
+// Il ne lit pas « alg » dans le jeton ; il exige HS256 et recalcule la signature
+// avec son secret. Le jeton forgé n'a pas la bonne signature : rejeté.
+function verifierStrict(jeton) {
+  var p = parts(jeton);
+  var entete = lire(p[0]);
+  if (entete.alg !== "HS256") return null;             // méthode imposée, pas négociée
+  if (p[2] !== signer(p[0], p[1])) return null;
+  return lire(p[1]);
+}
+var r2 = verifierStrict(forgeNone);
+var r3 = verifierStrict(jeton);
+console.log("");
+console.log("--- verification stricte (methode imposee + signature) ---");
+console.log("jeton forge alg:none  : " + (r2 ? "accepte (role " + r2.role + ")" : "REJETE"));
+console.log("vrai jeton du serveur : " + (r3 ? "accepte (role " + r3.role + ")" : "rejete"));
+
+// --- Et si l'attaquant modifie la charge d'un vrai jeton ? ------------------
+var p = parts(jeton);
+var altere = p[0] + "~" + partie({ user: "alice", role: "admin" }) + "~" + p[2];
+console.log("");
+console.log("charge d'un vrai jeton passee a role:admin, ancienne signature conservee");
+console.log("verification stricte  : " + (verifierStrict(altere) ? "accepte" : "REJETE") +
+  " — la signature ne correspond plus a la charge modifiee");</code></pre></figure>
+<figure class="code-block" data-file="jeton-signe.txt"><pre><code class="language-plaintext">jeton emis (role client) :
+  {"alg":"HS256","typ":"JWT"}~{"user":"alice","role":"client"}~0814f75f
+
+--- verification naive (fait confiance a alg) ---
+jeton forge alg:none, role admin, sans signature
+accepte par le serveur : OUI -&gt; role admin
+
+--- verification stricte (methode imposee + signature) ---
+jeton forge alg:none  : REJETE
+vrai jeton du serveur : accepte (role client)
+
+charge d'un vrai jeton passee a role:admin, ancienne signature conservee
+verification stricte  : REJETE — la signature ne correspond plus a la charge modifiee</code></pre></figure>
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Deux façons de vérifier un jeton signé, face au même jeton forgé par un attaquant qui a écrit « méthode : aucune » et retiré la signature. La vérification naïve lit la méthode inscrite dans le jeton et lui obéit : ne trouvant « aucune méthode », elle ne vérifie plus rien et accepte le jeton, promouvant l'attaquant administrateur. La vérification stricte impose sa propre méthode et recalcule la signature avec le secret du serveur : le jeton forgé, dépourvu de signature valide, est rejeté.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Jeton forgé « alg:none, rôle admin, sans signature »</text>
+    <rect class="d-box" x="24" y="44" width="270" height="160" rx="6" />
+    <text class="d-text" x="159" y="66" text-anchor="middle" font-size="12">VÉRIF NAÏVE</text>
+    <text class="d-mut" x="159" y="92" text-anchor="middle" font-size="9">lit la méthode DANS le jeton</text>
+    <text class="d-mut" x="159" y="112" text-anchor="middle" font-size="9">« aucune » → ne vérifie rien</text>
+    <text class="d-tag" x="159" y="150" text-anchor="middle" font-size="14">accepté : admin</text>
+    <rect class="d-accent" x="346" y="44" width="270" height="160" rx="6" />
+    <text class="d-text" x="481" y="66" text-anchor="middle" font-size="12">VÉRIF STRICTE</text>
+    <text class="d-mut" x="481" y="92" text-anchor="middle" font-size="9">impose HS256, recalcule</text>
+    <text class="d-mut" x="481" y="112" text-anchor="middle" font-size="9">signature invalide</text>
+    <text class="d-tag" x="481" y="150" text-anchor="middle" font-size="14">rejeté</text>
+  </svg>
+  <figcaption>Le serveur, jamais le jeton, décide comment vérifier. Toute la faille tient à qui choisit la méthode de vérification.</figcaption>
+</figure>
+<p>La vérification <strong>naïve</strong> commet la faute classique dite «&nbsp;<code>alg:none</code>&nbsp;»&nbsp;: elle lit dans le jeton <em>lui-même</em> la méthode à employer pour le vérifier. L'attaquant n'a qu'à écrire «&nbsp;méthode&nbsp;: aucune&nbsp;», retirer la signature, et se déclarer administrateur&nbsp;: <strong>accepté</strong>. La vérification <strong>stricte</strong> ne négocie rien&nbsp;: elle <em>impose</em> sa méthode et recalcule la signature avec son secret. Le même jeton forgé est <strong>rejeté</strong>, et modifier le rôle d'un vrai jeton (en gardant l'ancienne signature) l'est aussi, car la signature ne correspond plus au contenu. La leçon&nbsp;: <strong>le serveur, jamais le jeton, décide comment vérifier</strong>.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que le jeton signé ne fait pas</p><p>Un jeton signé garantit l'<em>intégrité</em> (le contenu n'a pas été altéré), pas la <em>confidentialité</em>&nbsp;: son contenu est lisible par quiconque l'intercepte — on n'y met donc jamais de secret. Et il ne s'<em>annule pas</em> tout seul&nbsp;: tant qu'il n'a pas expiré, un jeton volé reste valide. C'est pourquoi on leur donne une durée de vie courte et un moyen de révocation — sujet du dernier module.</p></div></div>
+<h2>Le mot de passe cassé ailleurs&nbsp;: le bourrage d'identifiants</h2>
+<p>Il existe une attaque plus simple que tout ce qui précède, et c'est aujourd'hui la plus courante&nbsp;: réutiliser des mots de passe déjà cassés <em>ailleurs</em>. Les gens emploient le même mot de passe sur plusieurs sites&nbsp;; quand l'un tombe, les couples (adresse, mot de passe) circulent. L'attaquant les «&nbsp;bourre&nbsp;» sur d'autres services&nbsp;: un seul essai par compte, sous le seuil de verrouillage. Le programme oppose cette attaque à la force brute classique.</p>
+<figure class="code-block" data-file="bourrage.js"><pre><code class="language-javascript">// Les attaques précédentes visaient soit un mot de passe (le casser), soit une
+// session (deviner ou forger son identifiant). Il en existe une plus simple, qui
+// n'exige aucun cassage : réutiliser ailleurs des mots de passe déjà cassés
+// quelque part. On l'appelle le BOURRAGE D'IDENTIFIANTS, et c'est aujourd'hui la
+// façon la plus courante de perdre un compte.
+
+var graine = 990117;
+function tirage(n) {
+  graine = (Math.imul(graine, 1664525) + 1013904223) &gt;&gt;&gt; 0;
+  return (graine &gt;&gt;&gt; 8) % n;
+}
+
+// --- Ce que l'attaquant possède : une fuite déjà cassée ---------------------
+// 200 couples (adresse, mot de passe en clair) provenant d'un site fictif tombé
+// il y a deux ans. Rien d'illégal à les avoir : ils circulent librement. Tout
+// l'usage qui suit, lui, est un accès frauduleux (article 323-1).
+var MOTS = ["soleil", "chocolat", "guitare", "montagne", "renard", "lavande", "horizon", "cerise"];
+var fuite = [];
+for (var i = 0; i &lt; 200; i++) {
+  fuite.push({ adresse: "usager" + i + "@ancien.example", clair: MOTS[tirage(MOTS.length)] + tirage(100) });
+}
+var connus = {};
+fuite.forEach(function (c) { connus[c.adresse] = c.clair; });
+
+// --- La cible : 500 comptes sur un autre service ----------------------------
+// 180 de ses usagers avaient aussi un compte sur le site tombé. Parmi eux, la
+// moitié a REPRIS le même mot de passe, un quart l'a légèrement modifié.
+var cible = [];
+for (var j = 0; j &lt; 500; j++) cible.push({ adresse: "client" + j + "@nouveau.example", clair: "unique" + tirage(1000000), echecs: 0 });
+for (var k = 0; k &lt; 180; k++) {
+  var source = fuite[k];
+  var compte = cible[k];
+  compte.adresse = source.adresse;               // même personne, même adresse
+  var sort = tirage(4);
+  if (sort &lt; 2) compte.clair = source.clair;                    // identique
+  else if (sort === 2) compte.clair = source.clair + "!";       // variante
+  else compte.clair = "autre" + tirage(1000000);                // mot de passe propre
+}
+
+// --- Le serveur, avec son garde-fou classique -------------------------------
+// Cinq échecs sur un compte et il se verrouille. C'est la défense que tout le
+// monde a. On mesure ce qu'elle arrête.
+var SEUIL = 5;
+var requetes = 0;
+function tenter(compte, motDePasse) {
+  requetes++;
+  if (compte.echecs &gt;= SEUIL) return "verrouille";
+  if (compte.clair === motDePasse) return "ouvert";
+  compte.echecs++;
+  return "refuse";
+}
+
+// --- Attaque 1 : la force brute sur UN compte -------------------------------
+var victime = cible[0];
+var brute = 0, ouvertParBrute = 0;
+for (var b = 0; b &lt; 5000; b++) {
+  brute++;
+  if (tenter(victime, "essai" + b) === "ouvert") { ouvertParBrute = 1; break; }
+}
+console.log("--- force brute sur un seul compte ---");
+console.log("essais envoyes      : " + brute);
+console.log("etat du compte      : verrouille apres " + SEUIL + " echecs");
+console.log("comptes ouverts     : " + ouvertParBrute);
+
+// --- Attaque 2 : le bourrage, un seul essai par compte ----------------------
+cible.forEach(function (c) { c.echecs = 0; });
+requetes = 0;
+var ouverts = 0, essayes = 0, maxEchecs = 0;
+cible.forEach(function (c) {
+  var connu = connus[c.adresse];
+  if (!connu) return;                    // l'attaquant n'a rien sur ce compte
+  essayes++;
+  if (tenter(c, connu) === "ouvert") ouverts++;
+});
+cible.forEach(function (c) { if (c.echecs &gt; maxEchecs) maxEchecs = c.echecs; });
+
+console.log("");
+console.log("--- bourrage d'identifiants ---");
+console.log("comptes reconnus dans la fuite : " + essayes + " / " + cible.length);
+console.log("requetes envoyees              : " + requetes);
+console.log("comptes ouverts                : " + ouverts);
+console.log("echecs maximum sur un compte   : " + maxEchecs + " (seuil de verrouillage : " + SEUIL + ")");
+console.log("comptes verrouilles            : " +
+  cible.filter(function (c) { return c.echecs &gt;= SEUIL; }).length);
+
+// --- Attaque 3 : avec les variantes evidentes -------------------------------
+cible.forEach(function (c) { c.echecs = 0; });
+requetes = 0;
+var ouverts3 = 0;
+cible.forEach(function (c) {
+  var connu = connus[c.adresse];
+  if (!connu) return;
+  var essais = [connu, connu + "!", connu + "1", connu.charAt(0).toUpperCase() + connu.slice(1)];
+  for (var v = 0; v &lt; essais.length; v++) {
+    if (tenter(c, essais[v]) === "ouvert") { ouverts3++; break; }
+  }
+});
+console.log("");
+console.log("--- bourrage + 4 variantes par compte ---");
+console.log("requetes envoyees              : " + requetes);
+console.log("comptes ouverts                : " + ouverts3);
+console.log("comptes verrouilles            : " +
+  cible.filter(function (c) { return c.echecs &gt;= SEUIL; }).length +
+  "  (4 essais restent sous le seuil de " + SEUIL + ")");
+console.log("");
+console.log("rendement : " + ouverts3 + " comptes pour " + requetes + " requetes, soit 1 succes tous les " +
+  (requetes / ouverts3).toFixed(1) + " essais.");
+console.log("la force brute, elle, a consomme " + brute + " essais pour 0 succes.");</code></pre></figure>
+<figure class="code-block" data-file="bourrage.txt"><pre><code class="language-plaintext">--- force brute sur un seul compte ---
+essais envoyes      : 5000
+etat du compte      : verrouille apres 5 echecs
+comptes ouverts     : 0
+
+--- bourrage d'identifiants ---
+comptes reconnus dans la fuite : 180 / 500
+requetes envoyees              : 180
+comptes ouverts                : 89
+echecs maximum sur un compte   : 1 (seuil de verrouillage : 5)
+comptes verrouilles            : 0
+
+--- bourrage + 4 variantes par compte ---
+requetes envoyees              : 353
+comptes ouverts                : 139
+comptes verrouilles            : 0  (4 essais restent sous le seuil de 5)
+
+rendement : 139 comptes pour 353 requetes, soit 1 succes tous les 2.5 essais.
+la force brute, elle, a consomme 5000 essais pour 0 succes.</code></pre></figure>
+<p>Regarde les deux rendements. La <strong>force brute</strong> sur un compte&nbsp;: <strong>5000&nbsp;essais</strong>, le compte se verrouille après 5&nbsp;échecs, <strong>0&nbsp;compte ouvert</strong>. Le <strong>bourrage</strong>&nbsp;: un seul essai par compte reconnu, aucun verrouillage déclenché (1&nbsp;échec maximum), et <strong>89&nbsp;comptes ouverts</strong> d'emblée. En ajoutant quatre variantes évidentes par compte (le mot de passe, plus «&nbsp;!&nbsp;», «&nbsp;1&nbsp;», la majuscule), on monte à <strong>139&nbsp;comptes</strong> pour <strong>353&nbsp;requêtes</strong> — <em>un succès tous les 2,5&nbsp;essais</em>, sans jamais franchir le seuil de 5. Le verrouillage de compte, conçu contre la force brute, ne voit pas passer le bourrage&nbsp;: chaque compte ne reçoit qu'une poignée d'essais.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce qui arrête réellement le bourrage</p><p>Puisque le compteur d'échecs par compte est aveugle à cette attaque, la défense se joue ailleurs&nbsp;: repérer qu'une <em>même origine</em> essaie des <em>milliers de comptes différents</em> (là est l'anomalie), et surtout ajouter un <strong>deuxième facteur</strong> — un code à usage unique, une clé — qui rend le mot de passe seul insuffisant. Le programme le montre en creux&nbsp;: 139&nbsp;mots de passe justes n'ouvrent rien si une seconde preuve est exigée.</p></div></div>
+<h2>Ce que le défenseur en retient</h2>
+<p>Prendre une session, c'est contourner le mot de passe. Les quatre chemins ont une parade&nbsp;:</p>
+<ul>
+  <li><strong>Un identifiant de session imprévisible</strong>, tiré d'une source cryptographique et assez long&nbsp;: 128&nbsp;bits ferment la devinette à l'aveugle.</li>
+  <li><strong>Jamais <code>Math.random()</code> ni l'heure</strong> pour fabriquer un jeton&nbsp;: un générateur déterministe se recale et livre les jetons voisins.</li>
+  <li><strong>La méthode de vérification imposée par le serveur</strong>, pas lue dans le jeton&nbsp;: rejeter <code>alg:none</code>, recalculer la signature.</li>
+  <li><strong>Une durée de vie courte et un moyen de révocation</strong>&nbsp;: un jeton signé volé reste valide jusqu'à expiration.</li>
+  <li><strong>Un deuxième facteur et la détection d'anomalies</strong> contre le bourrage&nbsp;: le verrouillage par compte n'y suffit pas.</li>
+</ul>
+<h2>Pièges fréquents</h2>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><ul>
+<li><strong>Croire qu'un identifiant «&nbsp;qui a l'air aléatoire&nbsp;» l'est.</strong> L'apparence de désordre ne dit rien&nbsp;: seul compte l'imprévisibilité pour qui connaît la méthode de génération.</li>
+<li><strong>Faire confiance au champ «&nbsp;méthode&nbsp;» d'un jeton.</strong> C'est laisser l'attaquant choisir comment on le vérifie. Le serveur impose sa méthode.</li>
+<li><strong>Mettre un secret dans un jeton signé.</strong> Signé ne veut pas dire chiffré&nbsp;: le contenu est lisible par qui l'intercepte.</li>
+<li><strong>Compter sur le verrouillage de compte contre le bourrage.</strong> Un essai par compte ne déclenche aucun seuil&nbsp;; l'anomalie est du côté de l'origine, pas du compte.</li>
+<li><strong>Oublier d'invalider une session à la déconnexion.</strong> Un jeton qui survit à la déconnexion, ou qui ne change pas après connexion, ouvre la fixation de session.</li>
+</ul></div></div>
+<h2>Cas réel</h2>
+<p>Le 24&nbsp;octobre 2010, à la conférence Toorcon de San Diego, le développeur <strong>Eric Butler</strong> publie <strong>Firesheep</strong>, une extension pour le navigateur Firefox. Son principe est d'une simplicité gênante&nbsp;: sur un réseau Wi-Fi ouvert, elle écoute le trafic et récupère les <strong>identifiants de session</strong> que les sites — Facebook, Twitter et d'autres — envoyaient alors <em>en clair</em> après une connexion pourtant chiffrée. L'extension affichait dans une barre latérale le nom et la photo des personnes connectées autour de soi&nbsp;; un double-clic, et l'on prenait leur session. Aucun mot de passe cassé, aucune compétence requise&nbsp;: juste un identifiant de session capté au vol.</p>
+<p>C'est exactement la faiblesse du premier programme, mais par un autre bout&nbsp;: peu importe que l'identifiant soit imprévisible s'il voyage en clair et qu'on peut l'<em>écouter</em>. Butler assumait un geste militant&nbsp;: «&nbsp;les sites ont la responsabilité de protéger les gens qui dépendent d'eux, et l'ignorent depuis trop longtemps&nbsp;». L'effet fut réel et rapide&nbsp;: l'Electronic Frontier Foundation, dont l'extension <em>HTTPS Everywhere</em> circulait déjà en version d'essai depuis juin&nbsp;2010, en intensifie la promotion, et les grands sites basculent tout le trafic en HTTPS — Facebook achève de le rendre le défaut pour tous ses usagers en août&nbsp;2013. Firesheep n'a pas cassé de chiffrement&nbsp;; il a rendu <em>visible</em> que l'identité, après la connexion, tenait à un cookie qu'on laissait passer à découvert. La leçon tient&nbsp;: un identifiant de session doit être imprévisible <em>et</em> transporté à l'abri.</p>
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Prendre une identité sans le mot de passe — mémo de la leçon 8</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Identifiant de session</td><td>Valeur dans un cookie qui prouve « c'est moi » à chaque requête. Qui la présente EST l'utilisateur : toute sa défense est son imprévisibilité.</td></tr>
+      <tr><td>Séquentiel vs aléatoire</td><td>Un compteur se devine (1 essai sur 2 mesuré) ; 128 bits aléatoires demandent ~10^21 ans à l'aveugle. Porte ouverte vs mur.</td></tr>
+      <tr><td>Aléatoire ≠ imprévisible</td><td>Math.random() et l'heure PARAISSENT désordonnés mais se recalent : 1 jeton connu → 5 prédits, dont 4 d'autres. Source cryptographique obligatoire.</td></tr>
+      <tr><td>Jeton signé (JWT)</td><td>Porte ses infos + une signature du serveur. Garantit l'intégrité, PAS la confidentialité (contenu lisible), et ne s'annule pas seul.</td></tr>
+      <tr><td>Faille alg:none</td><td>Le serveur lit la méthode DANS le jeton → l'attaquant met « aucune » et se déclare admin. Parade : méthode imposée + signature recalculée.</td></tr>
+      <tr><td>Bourrage d'identifiants</td><td>Réutiliser des couples déjà fuités : 1 essai/compte, sous le seuil. 89 comptes d'emblée, 139 avec variantes, pour 0 verrouillage.</td></tr>
+      <tr><td>Limite du verrouillage</td><td>Le compteur d'échecs par compte est aveugle au bourrage (1 essai/compte). Défense : 2e facteur + détection d'une origine touchant mille comptes.</td></tr>
+      <tr><td>Firesheep (2010)</td><td>Identifiants de session captés en clair sur Wi-Fi ouvert : sessions prises sans casser de mot de passe. A précipité le HTTPS partout.</td></tr>
+    </tbody>
+  </table>
+</figure>
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Identifiant de session</dt><dd>Valeur remise par le serveur après connexion, rangée dans un cookie et renvoyée à chaque requête pour prouver l'identité. Le voler suffit à usurper la session.</dd>
+<dt>Session</dt><dd>État côté serveur ou porté par un jeton qui maintient un utilisateur « connecté » entre deux requêtes, sans redemander le mot de passe à chaque page.</dd>
+<dt>Générateur cryptographique</dt><dd>Source de nombres imprévisibles même pour qui en connaît le fonctionnement (crypto.getRandomValues, /dev/urandom). Seule source acceptable pour un jeton de sécurité.</dd>
+<dt>Générateur déterministe</dt><dd>Générateur (Math.random, congruentiel linéaire) qui produit une suite reproductible à partir d'un état de départ. D'apparence aléatoire, mais prévisible pour qui retrouve cet état.</dd>
+<dt>Recalage</dt><dd>Fait de retrouver l'état interne d'un générateur déterministe à partir d'une ou quelques valeurs observées, ce qui permet ensuite de prédire toutes les autres.</dd>
+<dt>Jeton signé (JWT)</dt><dd>Jeton qui transporte des informations accompagnées d'une signature calculée avec un secret du serveur. Toute modification du contenu invalide la signature.</dd>
+<dt>Signature</dt><dd>Empreinte du contenu mêlée à un secret, que seul le détenteur du secret peut produire et que tout le monde peut vérifier. Prouve que le contenu n'a pas été altéré.</dd>
+<dt>Faille « alg:none »</dt><dd>Vulnérabilité où le serveur lit dans le jeton la méthode de vérification à employer ; l'attaquant déclare « aucune méthode », retire la signature et forge un contenu arbitraire.</dd>
+<dt>Intégrité</dt><dd>Garantie que des données n'ont pas été modifiées. Ce qu'assure une signature — à distinguer de la confidentialité, qui cache le contenu.</dd>
+<dt>Fixation de session</dt><dd>Attaque où l'on impose à la victime un identifiant de session connu de l'attaquant, qui en hérite une fois la victime connectée. Parade : régénérer l'identifiant à la connexion.</dd>
+<dt>Bourrage d'identifiants</dt><dd>Essai automatisé, sur un service, de couples (adresse, mot de passe) issus d'autres fuites, en pariant sur la réutilisation des mots de passe. Un seul essai par compte, sous les seuils.</dd>
+<dt>Deuxième facteur</dt><dd>Preuve d'identité supplémentaire au mot de passe (code à usage unique, clé physique). Rend inopérant un mot de passe seul, donc le bourrage.</dd>
+<dt>Verrouillage de compte</dt><dd>Blocage d'un compte après un nombre d'échecs. Efficace contre la force brute sur un compte, inefficace contre le bourrage qui n'essaie qu'une fois par compte.</dd>
+<dt>Cookie</dt><dd>Petite donnée que le navigateur stocke pour un site et renvoie automatiquement à chaque requête vers lui. Support habituel de l'identifiant de session, d'où son envoi automatique — que le CSRF exploite et que le vol de session vise.</dd>
+<dt>Force brute</dt><dd>Essai systématique de toutes les valeurs possibles d'un secret. Sur une connexion, elle est arrêtée par le verrouillage de compte ; d'où le recours des attaquants au bourrage, qui ne répète pas les essais sur un même compte.</dd>
+<dt>Attaque en ligne</dt><dd>Attaque menée à travers le serveur, requête après requête (bourrage, force brute de connexion). Le serveur peut la voir et la ralentir, à condition de regarder l'origine et pas seulement le compte visé.</dd>
+</dl>
+<h2>Récap et vérification</h2>
+<p>Après la connexion, l'identité tient à un jeton&nbsp;: le deviner, le prédire, le forger ou réutiliser un mot de passe fuité permet de prendre une session sans mot de passe. La défense&nbsp;: un identifiant imprévisible tiré d'une source cryptographique, une vérification de signature imposée par le serveur, une durée de vie courte avec révocation, et un deuxième facteur contre le bourrage que le verrouillage ne voit pas. Vérifie ta compréhension&nbsp;:</p>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi un identifiant de session doit-il être imprévisible, alors que le mot de passe est déjà protégé ?","a":["Pour éviter à l'utilisateur d'avoir à le retenir ou à le saisir de nouveau à chaque page qu'il ouvre sur le site","Parce qu'après la connexion, c'est cet identifiant — et non le mot de passe — qui prouve l'identité à chaque requête : le deviner suffit à usurper la session","Parce que le serveur compare cet identifiant au mot de passe de l'utilisateur à chaque page, et qu'un identifiant faible affaiblirait cette comparaison","Parce qu'un identifiant trop court ralentit le serveur, qui doit alors le compléter et le vérifier plus souvent à chaque requête entrante"],"correct":1,"explain":"Le mot de passe ne sert qu'à la connexion. Ensuite, l'identifiant de session EST l'identité : qui le présente est traité comme l'utilisateur. Le programme mesure qu'un identifiant séquentiel se devine un essai sur deux, là où 128 bits aléatoires demandent ~10^21 ans."},
+  {"q":"Un serveur génère ses identifiants avec Math.random(). En quoi est-ce dangereux, puisque les valeurs semblent aléatoires ?","a":["Math.random() est trop lent pour un serveur très chargé, ce qui l'oblige à réutiliser d'anciennes valeurs et crée des collisions d'identifiants","Il n'y a aucun danger réel tant que les valeurs produites paraissent désordonnées et ne se répètent pas à l'œil d'un observateur","Un générateur déterministe se recale à partir d'une valeur connue : l'attaquant retrouve l'état et prédit les identifiants des autres (5/5 dans le programme)","Math.random() produit parfois deux fois la même valeur, ce qui permet à deux utilisateurs de se retrouver par hasard sur la même session"],"correct":2,"explain":"« Aléatoire d'apparence » n'est pas « imprévisible ». Un générateur déterministe reproduit sa suite à partir de son état ; en balayant les instants de départ, l'attaquant recale le générateur sur son propre jeton et prédit les voisins, dont ceux d'autres utilisateurs. D'où l'obligation d'une source cryptographique."},
+  {"q":"Dans la faille « alg:none », qu'est-ce qui permet à l'attaquant de se déclarer administrateur sans connaître le secret du serveur ?","a":["Il devine le secret du serveur par force brute, puis recalcule lui-même une signature valide pour un jeton où il s'est attribué le rôle admin","La vérification lit la méthode DANS le jeton et obéit à « aucune méthode », donc ne vérifie plus aucune signature","Il intercepte sur le réseau la signature d'un vrai jeton d'administrateur et la recopie telle quelle sur son propre jeton forgé","Le secret du serveur était trop court, ce qui a permis de le retrouver à partir de quelques jetons légitimes observés"],"correct":1,"explain":"La vérification naïve fait confiance au champ « méthode » du jeton lui-même. L'attaquant écrit « méthode : aucune », retire la signature et met role:admin : accepté. La parade est que le serveur IMPOSE sa méthode (HS256) et recalcule la signature — le jeton forgé est alors rejeté."},
+  {"q":"Le bourrage d'identifiants ouvre 139 comptes pour 353 requêtes sans déclencher un seul verrouillage. Pourquoi le compteur d'échecs (5 max) est-il inefficace ici ?","a":["Le verrouillage après cinq échecs était tout simplement désactivé sur ce serveur, ce qui a laissé passer l'ensemble des tentatives sans aucune limite","Parce que l'attaque n'envoie qu'une poignée d'essais PAR COMPTE (le vrai mot de passe fuité + quelques variantes), toujours sous le seuil","Parce que le bourrage devine les mots de passe bien plus vite que le serveur n'incrémente son compteur d'échecs, gagnant la course à chaque compte","Parce que les comptes visés par le bourrage étaient tous des comptes administrateurs, exemptés du verrouillage pour ne pas bloquer l'exploitation"],"correct":1,"explain":"Le verrouillage compte les échecs par compte ; le bourrage n'essaie qu'une fois (ou quatre) par compte, jamais cinq. L'anomalie n'est pas sur un compte mais sur l'origine, qui touche des milliers de comptes différents. La vraie parade est un deuxième facteur, qui rend le mot de passe seul insuffisant."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["un générateur cryptographique","générateur cryptographique","source cryptographique","crypto.getRandomValues","getRandomValues","/dev/urandom","csprng"],"placeholder":"la seule source acceptable pour tirer un identifiant de session","hints":["Ni l'heure, ni Math.random() : ils se recalent.","Dans le navigateur, la fonction s'appelle crypto.getRandomValues ; côté système, /dev/urandom.","Deux mots : un générateur ..."],"link":{"href":"lecon-08.html","label":"Revoir « Aléatoire ne veut pas dire imprévisible »"}},
+  {"type":"code","run":{"expect":"bourrage : 300 comptes touchés en 300 requêtes, 0 verrouillage (seuil 5)"},"placeholder":"nombre de comptes touchés et de requêtes pour un bourrage d'un essai sur 300 comptes","hints":["300 comptes reconnus, un seul essai par compte : le nombre de requêtes égale le nombre de comptes.","Un seul échec éventuel par compte reste sous le seuil de 5, donc 0 verrouillage.","Affiche exactement : « bourrage : 300 comptes touchés en 300 requêtes, 0 verrouillage (seuil 5) »."],"link":{"href":"lecon-08.html","label":"Revoir « Le bourrage d'identifiants »"}},
+  {"type":"code","run":{"expect":"jeton forgé alg:none accepté par la vérif naïve, REJETÉ par la stricte"},"placeholder":"le sort d'un jeton alg:none selon la vérification (naïve puis stricte)","hints":["La vérif naïve lit la méthode dans le jeton et accepte « aucune ».","La vérif stricte impose HS256 et recalcule la signature : le jeton forgé n'a pas de signature valide.","Affiche exactement : « jeton forgé alg:none accepté par la vérif naïve, REJETÉ par la stricte »."],"link":{"href":"lecon-08.html","label":"Revoir « Le jeton signé »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un développeur fabrique ses identifiants de session ainsi&nbsp;: <code>id = Date.now() + "-" + Math.floor(Math.random()*1000)</code>. En une ou deux phrases, explique les <em>deux</em> raisons pour lesquelles cet identifiant est prévisible, et ce qu'il faut employer à la place.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo1.txt"><pre><code class="language-plaintext">Deux faiblesses cumulées :
+1) Date.now() est connu à la seconde près (c'est l'heure), donc
+   devinable dans une petite fenêtre ;
+2) Math.random() est un générateur déterministe : il se recale et
+   ne fournit que ~1000 valeurs ici (0 à 999), trivialement énumérables.
+
+À la place : crypto.getRandomValues sur au moins 128 bits, qui ne se
+recale pas et n'a pas de recette à retrouver.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Modifie l'exemple du jeton signé pour qu'un attaquant tente de changer le rôle en <code>admin</code> tout en <strong>gardant l'ancienne signature</strong> d'un vrai jeton. Écris le programme qui vérifie ce jeton avec la fonction stricte et affiche le résultat.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo2.js"><pre><code class="language-javascript">// Exercice 2 — altérer le contenu en gardant l'ancienne signature.
+function partie(o){return JSON.stringify(o);}
+function lire(p){return JSON.parse(p);}
+var SECRET="cle-secrete-du-serveur-42";
+function signer(e,c){var b=e+"."+c+"|"+SECRET,h=2166136261;for(var i=0;i&lt;b.length;i++){h=h^b.charCodeAt(i);h=Math.imul(h,16777619)&gt;&gt;&gt;0;}return("00000000"+h.toString(16)).slice(-8);}
+var e=partie({alg:"HS256",typ:"JWT"}), c=partie({user:"alice",role:"client"});
+var vrai=e+"~"+c+"~"+signer(e,c);           // vrai jeton, role client
+var p=vrai.split("~");
+var altere=p[0]+"~"+partie({user:"alice",role:"admin"})+"~"+p[2];  // role change, signature gardee
+function strict(j){var q=j.split("~");if(lire(q[0]).alg!=="HS256")return null;if(q[2]!==signer(q[0],q[1]))return null;return lire(q[1]);}
+console.log("jeton altere en role admin, ancienne signature : "+(strict(altere)?"accepte":"REJETE"));</code></pre></figure>
+<figure class="code-block" data-file="solution-exo2.txt"><pre><code class="language-plaintext">jeton altere en role admin, ancienne signature : REJETE</code></pre></figure>
+<p>La signature était calculée sur l'ancien contenu (rôle client). En changeant le rôle sans pouvoir recalculer la signature — ce qui exige le secret du serveur —, le jeton devient incohérent&nbsp;: la vérification stricte le rejette. C'est précisément ce que la signature protège.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un site subit une vague de bourrage&nbsp;: des milliers de comptes reçoivent chacun une ou deux tentatives depuis des origines variées. Le verrouillage par compte ne se déclenche pas. Propose, en trois points, une stratégie de détection et de défense qui, elle, verrait passer l'attaque.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-exo3.txt"><pre><code class="language-plaintext">1) Détecter côté ORIGINE, pas côté compte : une même source (ou un
+   petit groupe) qui touche des centaines de comptes DIFFÉRENTS est
+   l'anomalie ; le taux d'échec global grimpe aussi d'un coup.
+
+2) Exiger un deuxième facteur (code à usage unique, clé) : 139 mots
+   de passe justes n'ouvrent rien sans la seconde preuve.
+
+3) Ralentir/défier les connexions suspectes (délai progressif,
+   épreuve anti-robot) et comparer les mots de passe à des listes de
+   fuites connues pour refuser d'emblée ceux déjà compromis.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
