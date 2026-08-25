@@ -36,7 +36,11 @@
   // ou propres à Node.js — ces blocs ne tournent pas dans le worker. On vise des
   // marqueurs SPÉCIFIQUES de Node (pas les mots communs « module »/« global ») pour
   // ne pas masquer « Tester » sur du JavaScript pur des autres cours.
-  var BROWSER_ONLY = /\b(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename)\b|require\s*\(|module\.exports|\bexports\.|\bglobalThis\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts/;
+  // ⚠ Les frontières \b de JavaScript ignorent les lettres accentuées : « confirmées »
+  // dans un commentaire FRANÇAIS satisfaisait \bconfirm\b, et le bloc perdait son
+  // bouton « Tester » en silence (3 blocs du site mesurés ainsi le 2026-08-25). On borne
+  // donc explicitement sur les lettres accentuées plutôt que sur \b.
+  var BROWSER_ONLY = /(?:^|[^\w$À-ɏ])(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename)(?![\w$À-ɏ])|require\s*\(|module\.exports|\bexports\.|\bglobalThis\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts/;
 
   // Enveloppe de base pour l'aperçu d'un FRAGMENT HTML (style minimal lisible)
   var PREVIEW_PRE =

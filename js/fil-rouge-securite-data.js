@@ -1,24 +1,32 @@
 /* =============================================================================
    fil-rouge-securite-data.js — FIL ROUGE « Sécuriser une application ».
    UNE application qu'on rend sûre de bout en bout : on AUDITE et corrige ses
-   failles (securite), on PROTÈGE l'API exposée (api), on DURCIT le transport et
-   les en-têtes (http), puis on VERROUILLE par des tests (tests) :
-   securite → api → http → tests.
+   failles (securite), on l'ATTAQUE soi-même pour voir ce qui reste (offensive),
+   on PROTÈGE l'API exposée (api), on DURCIT le transport et les en-têtes (http),
+   puis on VERROUILLE par des tests (tests) :
+   securite → offensive → api → http → tests.
    Définit window.FIL_ROUGE → moteur générique js/fil-rouge.js.
    Page : pages/fil-rouge-securite.html. 100 % file://.
    ============================================================================= */
 window.FIL_ROUGE = {
   id: "securite",
   titre: "Sécuriser une application",
-  sousTitre: "Prends une application qui marche et rends-la sûre, couche par couche : failles applicatives, API, transport, puis tests.",
+  sousTitre: "Prends une application qui marche et rends-la sûre, couche par couche : failles applicatives, audit offensif, API, transport, puis tests.",
   intro:
     "<p>Une application « qui fonctionne » n'est pas une application <strong>sûre</strong>. La sécurité ne s'ajoute pas à " +
     "la fin : elle se construit en <strong>couches</strong>, du code jusqu'au transport. Ce fil rouge prend une application " +
     "existante et la durcit méthodiquement, en suivant la logique de la <strong>défense en profondeur</strong>.</p>" +
-    "<p>On commence par <strong>repérer et corriger</strong> les failles applicatives, puis on <strong>protège l'API</strong> " +
-    "exposée, on <strong>durcit le transport</strong> et les en-têtes du navigateur, et on <strong>verrouille</strong> le tout " +
-    "par des tests qui empêchent les failles de revenir. Chaque étape s'appuie sur la précédente : aucune couche ne suffit " +
-    "seule, mais ensemble elles forment une vraie protection.</p>",
+    "<p>On commence par <strong>repérer et corriger</strong> les failles applicatives. Puis on change de camp : on " +
+    "<strong>attaque sa propre application</strong> méthodiquement, parce que corriger ce qu'on savait chercher ne prouve " +
+    "rien sur le reste — et parce qu'une faille isolée se corrige quand c'est un <em>chemin</em> qu'il faut fermer. On " +
+    "<strong>protège</strong> ensuite l'API exposée, on <strong>durcit le transport</strong> et les en-têtes du navigateur, " +
+    "et on <strong>verrouille</strong> le tout par des tests qui empêchent les failles de revenir. Chaque étape s'appuie sur " +
+    "la précédente : aucune couche ne suffit seule, mais ensemble elles forment une vraie protection.</p>",
+  /* Renumérotation V13-E5 (cf. migrerStore dans js/fil-rouge.js) : le fil
+     enchaînait securite=1, api=2, http=3, tests=4. Le cours « offensive »
+     s'intercale en 2, les trois suivants glissent d'un rang. */
+  remapVersion: 1,
+  remap: { "2": 3, "3": 4, "4": 5 },
   etapes: [
     {
       n: 1,
@@ -50,6 +58,40 @@ window.FIL_ROUGE = {
     },
     {
       n: 2,
+      course: "offensive",
+      courseTitle: "Sécurité offensive",
+      dir: "offensive",
+      accent: "offensive",
+      phase: "Attaquer",
+      titre: "Attaquer sa propre application, méthodiquement",
+      depart: "L'application de l'étape 1, dont les failles évidentes sont corrigées — et dont personne n'a encore vérifié qu'il n'en reste pas.",
+      objectif:
+        "<p>Corriger ce qu'on savait chercher ne prouve rien sur le reste. Cette étape retourne le point de vue : " +
+        "mener sur sa propre application un <strong>audit méthodique</strong>, dans l'ordre — écrire le " +
+        "<strong>périmètre</strong>, recenser la <strong>surface d'attaque</strong> (y compris les en-têtes, cookies et " +
+        "noms de fichiers, qui n'apparaissent dans aucune URL), <strong>sonder puis reconfirmer</strong> chaque alerte, " +
+        "<strong>chaîner</strong> les trouvailles en chemins d'accès, et rédiger un rapport qui se rejoue sans toi.</p>" +
+        "<p>Le point qui change tout : une faille isolée se corrige, un <strong>chemin</strong> se ferme. Corriger la " +
+        "trouvaille la plus grave laisse souvent un second chemin grand ouvert — il faut calculer le plus petit lot de " +
+        "correctifs qui les coupe <em>tous</em>.</p>",
+      ajoute: [
+        "Un <strong>périmètre écrit</strong> : ce que tu t'autorises à tester, et ce que tu t'interdis (les services tiers, l'hébergeur, le prestataire de paiement).",
+        "Un <strong>inventaire des points d'entrée</strong>, en-têtes et cookies compris, avec ceux qui répondent sans authentification.",
+        "Des <strong>trouvailles reconfirmées</strong> par un second test, et les faux positifs écartés par écrit.",
+        "Un <strong>arbre d'attaque</strong> qui relie les trouvailles, et le <strong>lot minimal de correctifs</strong> qui ferme tous les chemins.",
+        "Un <strong>rapport reproductible</strong> : pour chaque faille, les étapes exactes, l'observation chiffrée, le correctif et son délai.",
+      ],
+      criteres: [
+        "Le <strong>périmètre est écrit avant la première requête</strong>, et il exclut nommément ce qui ne t'appartient pas.",
+        "L'inventaire recense les points d'entrée <strong>invisibles dans une URL</strong> (en-tête journalisé, cookie, nom de fichier téléversé).",
+        "Chaque alerte est passée à un <strong>second test discriminant</strong> ; celles qui n'y survivent pas ne figurent pas au rapport.",
+        "Un <strong>chemin complet</strong> d'un visiteur anonyme jusqu'à un compte privilégié est documenté, ou son absence est justifiée.",
+        "Chaque fiche contient au moins une <strong>valeur littérale</strong> (adresse, paramètre, charge, nombre) : une autre personne la rejoue sans t'appeler.",
+      ],
+      livrable: "Un rapport d'audit de ta propre application : les trouvailles prouvées, classées par risque réel, et le plus petit lot de correctifs qui ferme tous les chemins.",
+    },
+    {
+      n: 3,
       course: "api",
       courseTitle: "API REST",
       dir: "api",
@@ -76,7 +118,7 @@ window.FIL_ROUGE = {
       livrable: "Une API qui authentifie, autorise, valide ses entrées et n'expose rien d'inutile.",
     },
     {
-      n: 3,
+      n: 4,
       course: "http",
       courseTitle: "HTTP",
       dir: "http",
@@ -104,7 +146,7 @@ window.FIL_ROUGE = {
       livrable: "Une application servie en HTTPS, avec des en-têtes de sécurité qui durcissent le navigateur.",
     },
     {
-      n: 4,
+      n: 5,
       course: "tests",
       courseTitle: "Tests & qualité",
       dir: "tests",
