@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ordonner sans horloge : causalité et compteurs — Leçon 05 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Le temps physique ne peut pas ordonner un système réparti : seuls les messages le peuvent. La relation « précède », l'horloge de Lamport et sa limite mesurée — 4 ordres inventés sur 5 paires concurrentes, 0 contre-exemple sur les 31 ordonnées —, l'ordre total identique sur les 3 machines, les horloges vectorielles qui détectent vraiment la concurrence, leur coût de 24 octets à 78,1 Kio, et pourquoi détecter un conflit n'est pas le résoudre." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-05.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 05</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · S'accorder — Leçon 05</p>
+              <h1 class="lesson-header__title">Ordonner sans horloge&nbsp;: causalité et compteurs</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~73 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: la <a href="lecon-04.html">leçon&nbsp;4</a> de ce module, dont celle-ci est la suite directe. Savoir lire une boucle, un tableau et une fonction en JavaScript suffit&nbsp;; aucune notion d'algèbre des ordres n'est supposée.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>énoncer les <strong>trois règles</strong> de la relation «&nbsp;précède&nbsp;» et dire ce que signifie exactement <strong>concurrent</strong>&nbsp;;</li>
+                  <li>calculer une <strong>horloge de Lamport</strong> à la main, et dire ce qu'elle garantit — et dans quel sens seulement&nbsp;;</li>
+                  <li>chiffrer sa limite&nbsp;: sur <strong>5</strong> paires concurrentes, elle prononce <strong>4</strong> ordres que rien ne justifie&nbsp;;</li>
+                  <li>construire un <strong>ordre total</strong> identique sur toutes les machines, sans violer un seul des <strong>8</strong> liens causaux directs&nbsp;;</li>
+                  <li>comparer deux <strong>horloges vectorielles</strong> et en déduire «&nbsp;précède&nbsp;», «&nbsp;suit&nbsp;» ou «&nbsp;concurrent&nbsp;»&nbsp;;</li>
+                  <li>chiffrer leur coût&nbsp;: <strong>24 octets</strong> à trois machines, <strong>78,1&nbsp;Kio</strong> à dix mille&nbsp;;</li>
+                  <li>distinguer <strong>détecter</strong> un conflit de le <strong>résoudre</strong>, et dire pourquoi l'union ressuscite ce qu'on avait retiré.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-04.html">leçon&nbsp;4</a> s'achève sur un constat désagréable&nbsp;: le temps physique ne peut pas ordonner les événements d'un système réparti. Les horloges dérivent, les corrections sautent, et l'écart entre deux machines en parfait état atteint <strong>3,84&nbsp;ms</strong> — de quoi inverser des dizaines d'événements. Un journal fusionné y montrait un débit bancaire <strong>13&nbsp;ms avant</strong> la requête qui l'avait déclenché.</p>
+<p>Il faut pourtant bien ordonner quelque chose. Décider quelle version d'un document est la plus récente, savoir si une mise à jour en écrase une autre ou complète une autre, reconstituer le déroulé d'un incident, détecter qu'une opération a été faite deux fois&nbsp;: toutes ces questions demandent un ordre. La question de cette leçon est donc&nbsp;: <em>quel ordre peut-on établir sans lire une seule horloge&nbsp;?</em></p>
+<p>La réponse tient en une observation que Leslie Lamport a publiée en 1978, et qui n'a pas pris une ride&nbsp;: dans un système réparti, la seule chose dont on soit certain, c'est <strong>ce qui a pu causer quoi</strong>. Un événement ne peut avoir influencé un autre que si une chaîne d'étapes locales et de messages les relie. Cette relation-là ne dépend d'aucune horloge&nbsp;: elle se lit dans les messages eux-mêmes, et elle est vraie quelles que soient les dérives.</p>
+<p>Cette leçon construit deux instruments à partir de cette idée. Le premier, l'<strong>horloge de Lamport</strong>, tient dans un entier&nbsp;: on verra qu'il fabrique un ordre total identique sur les trois machines qui le calculent, sans qu'aucune ne se trompe de sens sur les <strong>31</strong> paires réellement ordonnées — mais qu'il invente un ordre sur <strong>4</strong> des <strong>5</strong> paires qui n'en avaient pas. Le second, l'<strong>horloge vectorielle</strong>, corrige ce défaut au prix d'un compteur par machine&nbsp;: <strong>24 octets</strong> pour trois répliques, <strong>78,1&nbsp;Kio</strong> pour dix mille. Et l'on finira par ce que ni l'un ni l'autre ne sait faire&nbsp;: choisir.</p>
+<h2>La seule chose dont on soit sûr&nbsp;: ce qui a causé quoi</h2>
+<p>Posons le vocabulaire, parce que tout le reste en découle. Un <strong>événement</strong> est quelque chose qui arrive sur une machine&nbsp;: un calcul, l'envoi d'un message, la réception d'un message. On dit qu'un événement <em>a</em> <strong>précède</strong> un événement <em>b</em>, et on note <em>a</em>&nbsp;→&nbsp;<em>b</em>, lorsque l'une de ces trois situations se présente.</p>
+<p><strong>Règle 1 — même machine.</strong> Si <em>a</em> et <em>b</em> ont lieu sur la même machine et que <em>a</em> arrive avant <em>b</em> dans l'exécution de son programme, alors <em>a</em>&nbsp;→&nbsp;<em>b</em>. C'est le seul endroit où l'on se fie à un ordre local, et on peut s'y fier&nbsp;: une machine exécute ses propres instructions dans un ordre qu'elle connaît, sans avoir besoin de savoir l'heure.</p>
+<p><strong>Règle 2 — un message.</strong> Si <em>a</em> est l'envoi d'un message et <em>b</em> sa réception, alors <em>a</em>&nbsp;→&nbsp;<em>b</em>. Là encore, aucune horloge n'intervient&nbsp;: un message ne peut pas être reçu avant d'avoir été envoyé, quel que soit le désaccord entre les montres des deux machines.</p>
+<p><strong>Règle 3 — transitivité.</strong> Si <em>a</em>&nbsp;→&nbsp;<em>b</em> et <em>b</em>&nbsp;→&nbsp;<em>c</em>, alors <em>a</em>&nbsp;→&nbsp;<em>c</em>. C'est cette règle qui donne sa portée à l'ensemble&nbsp;: en enchaînant des étapes locales et des messages, l'influence se propage à travers tout le système.</p>
+<p>Et voici le point qui change tout&nbsp;: cette relation n'ordonne <em>pas</em> tous les couples d'événements. Quand ni <em>a</em>&nbsp;→&nbsp;<em>b</em> ni <em>b</em>&nbsp;→&nbsp;<em>a</em>, on dit que les deux événements sont <strong>concurrents</strong>. Ce mot ne veut pas dire «&nbsp;simultanés&nbsp;» — ils ont pu se produire à une heure d'intervalle. Il veut dire quelque chose de plus fort et de plus utile&nbsp;: <em>aucun des deux n'a pu influencer l'autre</em>, parce qu'aucune chaîne de messages ne va de l'un à l'autre. Deux événements concurrents sont, du point de vue du système, deux histoires indépendantes.</p>
+<p>La relation → est donc un <strong>ordre partiel</strong>&nbsp;: elle range certains couples et laisse les autres côte à côte, sans les départager. C'est une propriété, pas une faiblesse. Elle décrit exactement ce que le système sait&nbsp;; tout ordre plus fin ajouterait de l'information qui n'existe pas.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Diagramme espace-temps de trois machines. Trois lignes horizontales représentent les machines A, B et C, le temps s'écoulant de la gauche vers la droite sans qu'aucune graduation ne soit donnée. Sur la ligne de A figurent trois points nommés a1, a2 et a3 ; sur celle de B, trois points nommés b1, b2 et b3 ; sur celle de C, trois points nommés c1, c2 et c3. Trois flèches obliques traversent les lignes : la première va de a2 vers b1 et porte l'étiquette m1, la deuxième va de b3 vers c2 et porte l'étiquette m2, la troisième va de c3 vers a3 et porte l'étiquette m3. Une bande inférieure séparée par un trait en pointillés énumère deux exemples. Le premier indique que a1 précède a3 en suivant la chaîne a1, a2, m1, b1, b2, b3, m2, c2, c3, m3, a3. Le second indique que a1 et c1 sont concurrents parce qu'aucune chaîne de flèches ne relie l'un à l'autre, ni dans un sens ni dans l'autre.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Trois machines, neuf événements, trois messages</text>
+
+    <path class="d-line" d="M60 66 L600 66" fill="none" stroke-width="2" />
+    <text class="d-label" x="34" y="70" text-anchor="middle" font-size="11">A</text>
+    <path class="d-line" d="M60 136 L600 136" fill="none" stroke-width="2" />
+    <text class="d-label" x="34" y="140" text-anchor="middle" font-size="11">B</text>
+    <path class="d-line" d="M60 206 L600 206" fill="none" stroke-width="2" />
+    <text class="d-label" x="34" y="210" text-anchor="middle" font-size="11">C</text>
+
+    <circle class="d-dot" cx="100" cy="66" r="4" /><text class="d-text" x="100" y="54" text-anchor="middle" font-size="9">a1</text>
+    <circle class="d-dot" cx="170" cy="66" r="4" /><text class="d-text" x="170" y="54" text-anchor="middle" font-size="9">a2</text>
+    <circle class="d-dot" cx="560" cy="66" r="4" /><text class="d-text" x="560" y="54" text-anchor="middle" font-size="9">a3</text>
+
+    <circle class="d-dot" cx="250" cy="136" r="4" /><text class="d-text" x="250" y="158" text-anchor="middle" font-size="9">b1</text>
+    <circle class="d-dot" cx="300" cy="136" r="4" /><text class="d-text" x="300" y="158" text-anchor="middle" font-size="9">b2</text>
+    <circle class="d-dot" cx="350" cy="136" r="4" /><text class="d-text" x="350" y="158" text-anchor="middle" font-size="9">b3</text>
+
+    <circle class="d-dot" cx="130" cy="206" r="4" /><text class="d-text" x="130" y="228" text-anchor="middle" font-size="9">c1</text>
+    <circle class="d-dot" cx="430" cy="206" r="4" /><text class="d-text" x="430" y="228" text-anchor="middle" font-size="9">c2</text>
+    <circle class="d-dot" cx="480" cy="206" r="4" /><text class="d-text" x="480" y="228" text-anchor="middle" font-size="9">c3</text>
+
+    <path class="d-line" d="M170 66 L246 132" fill="none" />
+    <path class="d-line" d="M233 124 L246 132 L244 118" fill="none" />
+    <text class="d-tag" x="196" y="106" text-anchor="middle" font-size="9">m1</text>
+
+    <path class="d-line" d="M350 136 L426 202" fill="none" />
+    <path class="d-line" d="M413 194 L426 202 L424 188" fill="none" />
+    <text class="d-tag" x="376" y="176" text-anchor="middle" font-size="9">m2</text>
+
+    <path class="d-line" d="M480 206 L556 70" fill="none" />
+    <path class="d-line" d="M544 80 L556 70 L555 85" fill="none" />
+    <text class="d-tag" x="530" y="146" text-anchor="middle" font-size="9">m3</text>
+
+    <path class="d-line" d="M14 248 L626 248" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="14" y="266" text-anchor="start" font-size="9">a1 → a3&#160;: en suivant a1, a2, m1, b1, b2, b3, m2, c2, c3, m3, a3 — une chaîne existe</text>
+    <text class="d-mut" x="14" y="286" text-anchor="start" font-size="9">a1 ∥ c1&#160;: aucune chaîne de flèches ne va de l'un à l'autre, ni dans un sens ni dans l'autre — ils sont concurrents</text>
+  </svg>
+  <figcaption>Le temps s'écoule vers la droite, mais aucune graduation n'est donnée&nbsp;: seules les flèches comptent. Ce dessin ne suppose aucune horloge synchronisée.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">«&nbsp;Concurrent&nbsp;» ne veut pas dire «&nbsp;au même moment&nbsp;»</p><p>Le mot est piégeux, en français comme en anglais. Deux événements concurrents peuvent avoir eu lieu à une semaine d'intervalle&nbsp;: ce qui les rend concurrents, c'est qu'aucune information n'a circulé de l'un vers l'autre. À l'inverse, deux événements séparés d'une microseconde peuvent être parfaitement ordonnés si un message les relie. La relation → ne parle pas du temps qui passe&nbsp;: elle parle de ce qui a pu se savoir. Retiens la formulation qui évite tous les malentendus&nbsp;: <em>a et b sont concurrents si, au moment de b, personne ne pouvait avoir entendu parler de a — et réciproquement.</em></p></div></div>
+<p>Une conséquence pratique mérite d'être dite tout de suite, parce qu'elle justifie tout ce qui suit. Si deux écritures sont <em>ordonnées</em>, il n'y a pas de conflit&nbsp;: la seconde a été faite en connaissance de la première, donc elle la remplace légitimement. Si elles sont <em>concurrentes</em>, il y a conflit&nbsp;: chacune a été faite sans connaître l'autre, et rien dans le système ne dit laquelle doit l'emporter. Toute la valeur des instruments qui suivent tient là&nbsp;: <strong>ils permettent de distinguer un remplacement d'un conflit</strong>. La leçon&nbsp;4 montrait ce qui arrive quand on ne fait pas cette distinction&nbsp;: 22&nbsp;700 écritures effacées sur 100&nbsp;000, en silence.</p>
+<h2>L'horloge de Lamport&nbsp;: un compteur et deux règles</h2>
+<p>Comment donner un numéro à chaque événement, de telle façon que les numéros respectent la relation → sans qu'aucune machine n'ait besoin de connaître l'état des autres&nbsp;? La construction de Lamport est d'une simplicité surprenante. Chaque machine tient un compteur entier, initialement à zéro, et applique deux règles.</p>
+<p><strong>Première règle.</strong> Avant tout événement local, et avant tout envoi de message, la machine incrémente son compteur de un. L'événement porte la valeur obtenue. Quand elle envoie un message, elle y joint cette valeur.</p>
+<p><strong>Seconde règle.</strong> À la réception d'un message portant la valeur <em>v</em>, la machine pose son compteur à <code>max(compteur, v) + 1</code>, et l'événement de réception porte la valeur obtenue. Le <code>max</code> fait rattraper l'expéditeur si celui-ci était plus avancé&nbsp;; le <code>+1</code> garantit que la réception est strictement postérieure à l'envoi.</p>
+<p>C'est tout. Aucune horloge, aucune coordination, aucun message supplémentaire&nbsp;: la valeur voyage dans les messages qui existaient déjà. Faisons tourner ces deux règles sur le scénario du schéma.</p>
+<figure class="code-block" data-file="horloge-de-lamport.js"><pre><code class="language-javascript">// L'horloge de Lamport : un simple compteur par machine, et deux règles.
+// (1) avant tout événement local ou tout envoi, incrémenter son compteur ;
+// (2) à la réception, compteur = max(le mien, celui reçu) + 1.
+const SCENARIO = [
+  ['A', 'local',   'ouverture du panier'],
+  ['A', 'envoi',   'm1 : réserver le stock', 'B'],
+  ['B', 'reception', 'm1'],
+  ['B', 'local',   'stock réservé'],
+  ['B', 'envoi',   'm2 : demander le paiement', 'C'],
+  ['C', 'local',   'C prépare son journal'],
+  ['C', 'reception', 'm2'],
+  ['C', 'envoi',   'm3 : paiement accepté', 'A'],
+  ['A', 'reception', 'm3'],
+];
+
+const compteur = { A: 0, B: 0, C: 0 };
+const enVol = {};                       // message -&gt; estampille portée
+const evenements = [];
+
+for (const [noeud, type, texte, destinataire] of SCENARIO) {
+  if (type === 'reception') {
+    compteur[noeud] = Math.max(compteur[noeud], enVol[texte]) + 1;
+  } else {
+    compteur[noeud] += 1;
+    if (type === 'envoi') enVol[texte.split(' :')[0]] = compteur[noeud];
+  }
+  evenements.push({ noeud, texte, L: compteur[noeud] });
+  const suffixe = type === 'reception' ? 'réception de ' + texte
+                : type === 'envoi' ? 'envoi vers ' + destinataire + ' — ' + texte
+                : texte;
+  console.log(noeud + '  L=' + String(compteur[noeud]).padStart(2) + '   ' + suffixe);
+}
+
+console.log('');
+// La garantie de Lamport, et sa limite.
+const a1 = evenements[0];               // A ouvre le panier
+const a2 = evenements[1];               // A envoie m1
+const c1 = evenements[5];               // C prépare son journal
+console.log('a1 « ' + a1.texte +' » sur A a L=' + a1.L);
+console.log('a2 « ' + a2.texte + ' » sur A a L=' + a2.L);
+console.log('c1 « ' + c1.texte + ' » a L=' + c1.L);
+console.log('');
+console.log('a1 précède a2, et de fait L(a1) &lt; L(a2) : ' + (a1.L &lt; a2.L));
+console.log('L(c1) &lt; L(a2) : ' + (c1.L &lt; a2.L) + '  -&gt; un lecteur en déduirait que c1 précède a2');
+console.log('L(a1) = L(c1) : ' + (a1.L === c1.L) + '  -&gt; et ici Lamport ne tranche même pas');
+console.log('or aucun message ne relie c1 aux événements de A : c1 est CONCURRENT des deux');</code></pre></figure>
+<figure class="code-block" data-file="horloge-de-lamport.txt"><pre><code class="language-plaintext">A  L= 1   ouverture du panier
+A  L= 2   envoi vers B — m1 : réserver le stock
+B  L= 3   réception de m1
+B  L= 4   stock réservé
+B  L= 5   envoi vers C — m2 : demander le paiement
+C  L= 1   C prépare son journal
+C  L= 6   réception de m2
+C  L= 7   envoi vers A — m3 : paiement accepté
+A  L= 8   réception de m3
+
+a1 « ouverture du panier » sur A a L=1
+a2 « m1 : réserver le stock » sur A a L=2
+c1 « C prépare son journal » a L=1
+
+a1 précède a2, et de fait L(a1) &lt; L(a2) : true
+L(c1) &lt; L(a2) : true  -&gt; un lecteur en déduirait que c1 précède a2
+L(a1) = L(c1) : true  -&gt; et ici Lamport ne tranche même pas
+or aucun message ne relie c1 aux événements de A : c1 est CONCURRENT des deux
+</code></pre></figure>
+<p>Suis les valeurs ligne par ligne. A part de zéro et compte 1 puis 2. B reçoit m1 qui porte 2&nbsp;: il pose <code>max(0, 2) + 1 = 3</code>, alors même qu'il n'avait rien fait auparavant. Il continue à 4, puis 5 en envoyant m2. C, qui n'avait encore parlé à personne, en est toujours à 1 pour son premier événement local&nbsp;; en recevant m2 qui porte 5, il saute à <strong>6</strong>. Puis 7 à l'envoi de m3, et A repart à <strong>8</strong> en le recevant.</p>
+<p>Observe le saut de C, de 1 à 6&nbsp;: c'est la marque de fabrique de ces compteurs. Ils ne mesurent pas un temps, ils mesurent une <em>profondeur de chaîne causale</em>. Le nombre 6 signifie&nbsp;: «&nbsp;il existe une suite d'au moins six événements enchaînés qui aboutit ici&nbsp;». Rien de plus, et surtout rien qui ressemble à une durée.</p>
+<p>La propriété que cette construction garantit s'écrit en une ligne&nbsp;: <strong>si <em>a</em>&nbsp;→&nbsp;<em>b</em>, alors L(a)&nbsp;&lt;&nbsp;L(b)</strong>. Elle se vérifie sur les deux règles. Sur une même machine, le compteur ne fait que croître, donc la règle&nbsp;1 est respectée&nbsp;; entre un envoi et sa réception, le <code>max</code> puis le <code>+1</code> garantissent la stricte croissance, donc la règle&nbsp;2 aussi&nbsp;; et la transitivité suit toute seule.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 290" role="img" aria-label="Le même diagramme espace-temps que précédemment, mais chaque événement porte cette fois sa valeur de compteur de Lamport. Sur la ligne de la machine A, les trois événements portent les valeurs 1, 2 et 8. Sur celle de B, les valeurs 3, 4 et 5. Sur celle de C, les valeurs 1, 6 et 7. Chaque flèche de message est annotée avec la valeur qu'elle transporte : m1 transporte 2, m2 transporte 5, m3 transporte 7. Une mention placée sous la ligne de C signale que son compteur saute de 1 à 6 en recevant m2. Une bande inférieure séparée par un trait en pointillés rappelle les deux règles : avant un événement local ou un envoi, on incrémente son compteur ; à la réception, on pose le compteur au maximum entre le sien et celui reçu, puis on ajoute un. Elle rappelle enfin que la garantie porte dans un seul sens : si a précède b alors L de a est strictement inférieur à L de b, mais l'inverse n'est pas vrai.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Les mêmes événements, numérotés par Lamport</text>
+
+    <path class="d-line" d="M60 66 L600 66" fill="none" stroke-width="2" />
+    <text class="d-label" x="34" y="70" text-anchor="middle" font-size="11">A</text>
+    <path class="d-line" d="M60 136 L600 136" fill="none" stroke-width="2" />
+    <text class="d-label" x="34" y="140" text-anchor="middle" font-size="11">B</text>
+    <path class="d-line" d="M60 206 L600 206" fill="none" stroke-width="2" />
+    <text class="d-label" x="34" y="210" text-anchor="middle" font-size="11">C</text>
+
+    <rect class="d-accent" x="86" y="52" width="28" height="28" rx="8" /><text class="d-text" x="100" y="71" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="156" y="52" width="28" height="28" rx="8" /><text class="d-text" x="170" y="71" text-anchor="middle" font-size="10">2</text>
+    <rect class="d-accent" x="546" y="52" width="28" height="28" rx="8" /><text class="d-text" x="560" y="71" text-anchor="middle" font-size="10">8</text>
+
+    <rect class="d-accent" x="236" y="122" width="28" height="28" rx="8" /><text class="d-text" x="250" y="141" text-anchor="middle" font-size="10">3</text>
+    <rect class="d-accent" x="286" y="122" width="28" height="28" rx="8" /><text class="d-text" x="300" y="141" text-anchor="middle" font-size="10">4</text>
+    <rect class="d-accent" x="336" y="122" width="28" height="28" rx="8" /><text class="d-text" x="350" y="141" text-anchor="middle" font-size="10">5</text>
+
+    <rect class="d-accent" x="116" y="192" width="28" height="28" rx="8" /><text class="d-text" x="130" y="211" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="416" y="192" width="28" height="28" rx="8" /><text class="d-text" x="430" y="211" text-anchor="middle" font-size="10">6</text>
+    <rect class="d-accent" x="466" y="192" width="28" height="28" rx="8" /><text class="d-text" x="480" y="211" text-anchor="middle" font-size="10">7</text>
+
+    <path class="d-line" d="M184 70 L232 126" fill="none" />
+    <path class="d-line" d="M219 119 L232 126 L230 112" fill="none" />
+    <text class="d-tag" x="196" y="106" text-anchor="middle" font-size="9">m1 porte 2</text>
+
+    <path class="d-line" d="M364 140 L412 196" fill="none" />
+    <path class="d-line" d="M399 189 L412 196 L410 182" fill="none" />
+    <text class="d-tag" x="376" y="176" text-anchor="middle" font-size="9">m2 porte 5</text>
+
+    <path class="d-line" d="M494 196 L544 78" fill="none" />
+    <path class="d-line" d="M533 87 L544 78 L544 92" fill="none" />
+    <text class="d-tag" x="536" y="146" text-anchor="middle" font-size="9">m3 porte 7</text>
+
+    <text class="d-mut" x="430" y="236" text-anchor="middle" font-size="8.5">C saute de 1 à 6</text>
+
+    <path class="d-line" d="M14 250 L626 250" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="14" y="268" text-anchor="start" font-size="9">local ou envoi&#160;: compteur + 1&#160;·&#160;réception&#160;: max(le mien, celui reçu) + 1</text>
+    <text class="d-tag" x="14" y="286" text-anchor="start" font-size="9.5">GARANTIE À SENS UNIQUE&#160;: a → b IMPLIQUE L(a) &lt; L(b) — LA RÉCIPROQUE EST FAUSSE</text>
+  </svg>
+  <figcaption>Un compteur de Lamport ne mesure pas une durée&nbsp;: il mesure la longueur de la plus longue chaîne causale qui aboutit à l'événement.</figcaption>
+</figure>
+<h2>Ce que Lamport ne peut pas dire</h2>
+<p>La garantie est à sens unique, et c'est là que se joue la compréhension de toute la leçon. <strong>a&nbsp;→&nbsp;b implique L(a)&nbsp;&lt;&nbsp;L(b).</strong> La réciproque — L(a)&nbsp;&lt;&nbsp;L(b) implique a&nbsp;→&nbsp;b — est <em>fausse</em>.</p>
+<p>La fin du programme précédent en donne l'exemple. L'événement c1, «&nbsp;C prépare son journal&nbsp;», porte <strong>1</strong>. L'événement a2, l'envoi de m1 par A, porte <strong>2</strong>. Un lecteur qui trierait par compteur placerait c1 avant a2 et croirait avoir appris quelque chose. Il n'a rien appris&nbsp;: aucun message ne relie ces deux événements, ils sont concurrents. Le compteur les a rangés parce qu'il est fait pour ranger, pas parce que l'ordre existe.</p>
+<p>Pire&nbsp;: a1 et c1 portent tous deux <strong>1</strong>. Ici, le compteur ne tranche même pas — il annonce une égalité entre deux événements qui n'ont rien à voir l'un avec l'autre. Comptons maintenant l'ampleur du phénomène sur le scénario complet.</p>
+<figure class="code-block" data-file="compter-les-paires.js"><pre><code class="language-javascript">// Sur le MÊME scénario, on calcule les deux horloges et on compte les paires
+// d'événements : combien sont réellement ordonnées, combien sont concurrentes,
+// et sur combien Lamport prononce un ordre que rien ne justifie.
+const NOEUDS = ['A', 'B', 'C'];
+const SCENARIO = [
+  ['A', 'local', 'a1'], ['A', 'envoi', 'm1'], ['B', 'reception', 'm1'],
+  ['B', 'local', 'b2'], ['B', 'envoi', 'm2'], ['C', 'local', 'c1'],
+  ['C', 'reception', 'm2'], ['C', 'envoi', 'm3'], ['A', 'reception', 'm3'],
+];
+
+const L = { A: 0, B: 0, C: 0 };
+const V = { A: [0, 0, 0], B: [0, 0, 0], C: [0, 0, 0] };
+const volL = {}, volV = {};
+const ev = [];
+
+for (const [n, type, texte] of SCENARIO) {
+  if (type === 'reception') {
+    L[n] = Math.max(L[n], volL[texte]) + 1;
+    V[n] = V[n].map((v, i) =&gt; Math.max(v, volV[texte][i]));
+  } else {
+    L[n] += 1;
+  }
+  V[n] = V[n].slice();
+  V[n][NOEUDS.indexOf(n)] += 1;
+  if (type === 'envoi') { volL[texte] = L[n]; volV[texte] = V[n].slice(); }
+  ev.push({ n, L: L[n], V: V[n].slice() });
+}
+
+const precede = (x, y) =&gt; x.every((v, i) =&gt; v &lt;= y[i]) &amp;&amp; x.some((v, i) =&gt; v &lt; y[i]);
+
+let ordonnees = 0, concurrentes = 0, lamportAbusif = 0, lamportEgal = 0;
+for (let i = 0; i &lt; ev.length; i++) {
+  for (let j = i + 1; j &lt; ev.length; j++) {
+    const causal = precede(ev[i].V, ev[j].V) || precede(ev[j].V, ev[i].V);
+    if (causal) { ordonnees++; continue; }
+    concurrentes++;
+    if (ev[i].L === ev[j].L) lamportEgal++; else lamportAbusif++;
+  }
+}
+
+const total = ev.length * (ev.length - 1) / 2;
+console.log(ev.length + ' événements, ' + total + ' paires');
+console.log('  ordonnées    — une chaîne les relie (étapes locales, messages) : ' + ordonnees);
+console.log('  concurrentes — aucune chaîne, dans aucun sens                 : ' + concurrentes);
+console.log('');
+console.log('sur ces ' + concurrentes + ' paires concurrentes, Lamport :');
+console.log('  prononce un ordre strict que rien ne justifie : ' + lamportAbusif);
+console.log('  donne deux compteurs égaux, donc ne tranche pas : ' + lamportEgal);
+console.log('');
+// L'implication de Lamport, elle, n'est jamais prise en défaut.
+let contreExemples = 0;
+for (let i = 0; i &lt; ev.length; i++)
+  for (let j = 0; j &lt; ev.length; j++)
+    if (i !== j &amp;&amp; precede(ev[i].V, ev[j].V) &amp;&amp; !(ev[i].L &lt; ev[j].L)) contreExemples++;
+console.log('paires causalement ordonnées où Lamport se trompe de sens : ' + contreExemples);</code></pre></figure>
+<figure class="code-block" data-file="compter-les-paires.txt"><pre><code class="language-plaintext">9 événements, 36 paires
+  ordonnées    — une chaîne les relie (étapes locales, messages) : 31
+  concurrentes — aucune chaîne, dans aucun sens                 : 5
+
+sur ces 5 paires concurrentes, Lamport :
+  prononce un ordre strict que rien ne justifie : 4
+  donne deux compteurs égaux, donc ne tranche pas : 1
+
+paires causalement ordonnées où Lamport se trompe de sens : 0
+</code></pre></figure>
+<p>Neuf événements font <strong>36</strong> paires. <strong>31</strong> d'entre elles sont réellement ordonnées&nbsp;: une chaîne faite d'étapes locales et de messages relie les deux événements. Neuf de ces trente et une le sont par la seule règle&nbsp;1, sans qu'aucun message n'intervienne — deux événements successifs d'une même machine. <strong>5</strong> sont concurrentes. Sur ces cinq, Lamport prononce un ordre strict dans <strong>4</strong> cas — un ordre que rien ne justifie — et donne deux compteurs égaux dans le dernier, où il ne tranche pas.</p>
+<p>La dernière ligne est la vérification qui compte&nbsp;: sur les paires <em>causalement ordonnées</em>, le nombre de fois où Lamport se trompe de sens vaut <strong>0</strong>. L'instrument ne ment jamais dans le sens où il promet quelque chose. Il ment seulement quand on lui fait dire ce qu'il n'a pas promis.</p>
+<p>Formulons-le comme une règle d'emploi, parce que c'est la faute la plus fréquente dans le code réel&nbsp;: un compteur de Lamport plus grand <em>n'autorise pas</em> à conclure qu'un événement est postérieur. Il autorise seulement la conclusion inverse — un compteur plus <em>grand ou égal</em> interdit d'avoir causé l'autre. Autrement dit&nbsp;: <strong>L(a)&nbsp;≥&nbsp;L(b) prouve que a n'a pas causé b</strong>. C'est une information négative, et c'est déjà utile&nbsp;; ce n'est pas un ordre.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le raccourci qui coûte des données</p><p>On voit régulièrement du code comparer deux compteurs de Lamport pour décider quelle version d'un enregistrement garder. C'est exactement l'erreur de la <a href="lecon-04.html">leçon&nbsp;4</a> avec un autre nombre&nbsp;: on a remplacé un horodatage faux par un compteur qui, lui, ne prétend rien. Sur les <strong>5</strong> paires concurrentes du scénario, un tel code prendrait <strong>4</strong> décisions arbitraires en croyant les fonder. Le remplacement d'un horodatage par un compteur logique corrige un problème — la dérive — et n'en corrige pas un autre&nbsp;: la <em>détection</em> du conflit. Pour détecter, il faut l'instrument de la section suivante.</p></div></div>
+<h2>Fabriquer un ordre total, et savoir ce qu'il vaut</h2>
+<p>Il existe pourtant un usage parfaitement légitime, et très courant, du compteur de Lamport&nbsp;: fabriquer un <strong>ordre total</strong> sur lequel toutes les machines tombent d'accord. Il suffit de départager les égalités par un critère fixe et connu de tous — l'identifiant de la machine, par exemple. Deux événements sont alors comparés d'abord par leur compteur, ensuite par le nom de leur machine.</p>
+<p>Cet ordre a deux propriétés qu'il faut bien distinguer. Il est <strong>déterministe</strong>&nbsp;: n'importe quelle machine qui connaît les mêmes événements calcule la même séquence, sans échanger un seul message supplémentaire. Et il est <strong>compatible avec la causalité</strong>&nbsp;: il ne place jamais un effet avant sa cause. Vérifions les deux.</p>
+<figure class="code-block" data-file="ordre-total.js"><pre><code class="language-javascript">// Lamport ne suffit pas à détecter la concurrence, mais il suffit à FABRIQUER
+// un ordre total sur lequel toutes les machines tombent d'accord — à condition
+// de départager les égalités par un identifiant, arbitraire mais fixe.
+const EVENEMENTS = [
+  { nom: 'a1', noeud: 'A', L: 1 }, { nom: 'a2', noeud: 'A', L: 2 },
+  { nom: 'b1', noeud: 'B', L: 3 }, { nom: 'b2', noeud: 'B', L: 4 },
+  { nom: 'b3', noeud: 'B', L: 5 }, { nom: 'c1', noeud: 'C', L: 1 },
+  { nom: 'c2', noeud: 'C', L: 6 }, { nom: 'c3', noeud: 'C', L: 7 },
+  { nom: 'a3', noeud: 'A', L: 8 },
+];
+
+function ordonner(liste) {
+  return liste.slice().sort((x, y) =&gt;
+    x.L !== y.L ? x.L - y.L : (x.noeud &lt; y.noeud ? -1 : 1));
+}
+
+// Trois machines reçoivent ces mêmes événements dans trois ordres d'arrivée différents.
+const arrivees = [
+  EVENEMENTS,
+  EVENEMENTS.slice().reverse(),
+  [4, 0, 8, 2, 6, 1, 5, 3, 7].map((i) =&gt; EVENEMENTS[i]),
+];
+
+const resultats = arrivees.map((a) =&gt; ordonner(a).map((e) =&gt; e.nom).join(' &lt; '));
+resultats.forEach((r, i) =&gt; console.log('machine ' + (i + 1) + ' : ' + r));
+console.log('');
+console.log('les trois obtiennent le même ordre : '
+            + (resultats[0] === resultats[1] &amp;&amp; resultats[1] === resultats[2]));
+
+// Et cet ordre respecte-t-il la causalité ? Les paires causales du scénario.
+const CAUSALES = [['a1', 'a2'], ['a2', 'b1'], ['b1', 'b2'], ['b2', 'b3'],
+                  ['b3', 'c2'], ['c1', 'c2'], ['c2', 'c3'], ['c3', 'a3']];
+const rang = {};
+ordonner(EVENEMENTS).forEach((e, i) =&gt; { rang[e.nom] = i; });
+const violations = CAUSALES.filter(([x, y]) =&gt; rang[x] &gt;= rang[y]);
+console.log('paires causales violées par cet ordre : ' + violations.length
+            + ' sur ' + CAUSALES.length);
+console.log('');
+console.log('c1 est placé avant a2 alors que rien ne les relie : '
+            + (rang['c1'] &lt; rang['a2']));
+console.log('l\'ordre est total, identique partout, et compatible avec la causalité —');
+console.log('mais il invente un ordre là où il n\'y en avait pas.');</code></pre></figure>
+<figure class="code-block" data-file="ordre-total.txt"><pre><code class="language-plaintext">machine 1 : a1 &lt; c1 &lt; a2 &lt; b1 &lt; b2 &lt; b3 &lt; c2 &lt; c3 &lt; a3
+machine 2 : a1 &lt; c1 &lt; a2 &lt; b1 &lt; b2 &lt; b3 &lt; c2 &lt; c3 &lt; a3
+machine 3 : a1 &lt; c1 &lt; a2 &lt; b1 &lt; b2 &lt; b3 &lt; c2 &lt; c3 &lt; a3
+
+les trois obtiennent le même ordre : true
+paires causales violées par cet ordre : 0 sur 8
+
+c1 est placé avant a2 alors que rien ne les relie : true
+l'ordre est total, identique partout, et compatible avec la causalité —
+mais il invente un ordre là où il n'y en avait pas.
+</code></pre></figure>
+<p>Les trois machines reçoivent ces neuf événements dans trois ordres d'arrivée différents — le troisième est délibérément mélangé — et produisent la <em>même</em> séquence&nbsp;: <strong>true</strong>. Sur les <strong>8</strong> <em>liens causaux directs</em> du scénario — les huit arêtes dont les 31 paires ordonnées découlent par transitivité —, le nombre de paires violées vaut <strong>0</strong>&nbsp;: aucun effet n'est placé avant sa cause.</p>
+<p>Et la dernière ligne rappelle le prix&nbsp;: c1 est placé avant a2, alors que rien ne les relie. L'ordre total est une <em>convention</em> plaquée sur un ordre partiel. Elle est licite tant qu'on sait que c'est une convention.</p>
+<p>C'est très exactement l'usage auquel cet instrument est destiné, et pour lequel il est irremplaçable&nbsp;: quand plusieurs machines doivent appliquer les mêmes opérations dans le même ordre — répliquer une machine à états, sérialiser des demandes de verrou, ranger des entrées dans un journal partagé —, il faut <em>un</em> ordre commun, et peu importe lequel, pourvu qu'il ne contredise pas la causalité. Lamport le fournit pour le prix d'un entier joint à chaque message.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Deux questions pour choisir son instrument</p><p><strong>Ai-je besoin que tout le monde applique les choses dans le même ordre&nbsp;?</strong> Alors un compteur de Lamport avec départage suffit, et c'est la solution la moins chère. <strong>Ai-je besoin de savoir si deux opérations se sont ignorées&nbsp;?</strong> Alors il faut une horloge vectorielle, parce que c'est une question à laquelle un entier ne peut structurellement pas répondre. Les deux besoins sont différents et se confondent facilement&nbsp;: le premier veut <em>décider</em>, le second veut <em>détecter</em>.</p></div></div>
+<h2>L'horloge vectorielle&nbsp;: un compteur par machine</h2>
+<p>D'où vient l'incapacité de Lamport à détecter la concurrence&nbsp;? D'un écrasement d'information. Le <code>max</code> de la seconde règle fusionne deux histoires en un seul nombre, et un seul nombre ne peut pas garder trace de <em>qui</em> a fait avancer le compteur. L'horloge vectorielle refuse cette fusion&nbsp;: chaque machine tient un compteur <strong>par machine</strong> du système.</p>
+<p>Les règles se transposent presque mot pour mot. Avant un événement local ou un envoi, la machine incrémente <em>sa propre case</em> et laisse les autres. Elle joint le vecteur entier au message. À la réception, elle prend le <strong>maximum case par case</strong> entre son vecteur et celui reçu, puis incrémente sa propre case.</p>
+<p>La comparaison, elle, change de nature. Un vecteur X précède un vecteur Y si <em>toutes</em> les cases de X sont inférieures ou égales à celles de Y, <em>et</em> qu'au moins une est strictement inférieure. Si ni X ne précède Y ni Y ne précède X, les deux événements sont concurrents — et cette fois, c'est une conclusion, pas une convention.</p>
+<figure class="code-block" data-file="horloge-vectorielle.js"><pre><code class="language-javascript">// L'horloge vectorielle : chaque machine tient un compteur PAR machine.
+// (1) avant un événement local ou un envoi, elle incrémente SA case ;
+// (2) à la réception, elle prend le maximum case par case, puis incrémente la sienne.
+const NOEUDS = ['A', 'B', 'C'];
+const SCENARIO = [
+  ['A', 'local',     'ouverture du panier'],
+  ['A', 'envoi',     'm1', 'B'],
+  ['B', 'reception', 'm1'],
+  ['B', 'local',     'stock réservé'],
+  ['B', 'envoi',     'm2', 'C'],
+  ['C', 'local',     'C prépare son journal'],
+  ['C', 'reception', 'm2'],
+  ['C', 'envoi',     'm3', 'A'],
+  ['A', 'reception', 'm3'],
+];
+
+const V = { A: [0, 0, 0], B: [0, 0, 0], C: [0, 0, 0] };
+const enVol = {};
+const evenements = [];
+const idx = (n) =&gt; NOEUDS.indexOf(n);
+
+for (const [noeud, type, texte] of SCENARIO) {
+  if (type === 'reception') {
+    const recu = enVol[texte];
+    V[noeud] = V[noeud].map((v, i) =&gt; Math.max(v, recu[i]));
+  }
+  V[noeud] = V[noeud].slice();
+  V[noeud][idx(noeud)] += 1;
+  if (type === 'envoi') enVol[texte] = V[noeud].slice();
+  const nom = noeud.toLowerCase() + (evenements.filter((e) =&gt; e.noeud === noeud).length + 1);
+  evenements.push({ nom, noeud, texte, V: V[noeud].slice() });
+  console.log(nom + '  ' + noeud + '  [' + V[noeud].join(',') + ']   ' + texte);
+}
+
+// Comparer deux vecteurs : X précède Y si X ≤ Y case par case ET X ≠ Y.
+function precede(x, y) {
+  return x.every((v, i) =&gt; v &lt;= y[i]) &amp;&amp; x.some((v, i) =&gt; v &lt; y[i]);
+}
+function relation(x, y) {
+  if (precede(x, y)) return 'précède';
+  if (precede(y, x)) return 'suit';
+  return 'CONCURRENT';
+}
+
+console.log('');
+const paires = [['a1', 'c1'], ['a2', 'b3'], ['b1', 'c1'], ['a1', 'a3'], ['c3', 'a3']];
+for (const [g, d] of paires) {
+  const eg = evenements.find((e) =&gt; e.nom === g);
+  const ed = evenements.find((e) =&gt; e.nom === d);
+  console.log(g + ' [' + eg.V.join(',') + '] ' + relation(eg.V, ed.V).padEnd(10)
+              + ' ' + d + ' [' + ed.V.join(',') + ']');
+}</code></pre></figure>
+<figure class="code-block" data-file="horloge-vectorielle.txt"><pre><code class="language-plaintext">a1  A  [1,0,0]   ouverture du panier
+a2  A  [2,0,0]   m1
+b1  B  [2,1,0]   m1
+b2  B  [2,2,0]   stock réservé
+b3  B  [2,3,0]   m2
+c1  C  [0,0,1]   C prépare son journal
+c2  C  [2,3,2]   m2
+c3  C  [2,3,3]   m3
+a3  A  [3,3,3]   m3
+
+a1 [1,0,0] CONCURRENT c1 [0,0,1]
+a2 [2,0,0] précède    b3 [2,3,0]
+b1 [2,1,0] CONCURRENT c1 [0,0,1]
+a1 [1,0,0] précède    a3 [3,3,3]
+c3 [2,3,3] précède    a3 [3,3,3]
+</code></pre></figure>
+<p>Lis les vecteurs. a1 vaut <code>[1,0,0]</code>&nbsp;: A a fait un événement, et ne sait rien de B ni de C. b1 vaut <code>[2,1,0]</code>&nbsp;: en recevant m1, B a appris que A en était à 2, puis a compté son propre événement. c1 vaut <code>[0,0,1]</code>&nbsp;: C n'a encore parlé à personne. Et a3 vaut <code>[3,3,3]</code>&nbsp;: par la chaîne m1, m2, m3, A a fini par tout savoir.</p>
+<p>Les cinq comparaisons du bas donnent le verdict. a1 et c1 sont <strong>concurrents</strong>&nbsp;: <code>[1,0,0]</code> et <code>[0,0,1]</code> ne se comparent pas, la première case penche d'un côté, la troisième de l'autre. C'est exactement la paire sur laquelle Lamport annonçait une égalité trompeuse. b1 et c1 sont concurrents aussi. En revanche a2 précède b3, a1 précède a3, c3 précède a3&nbsp;: dans les trois cas, une chaîne de messages existe, et le vecteur la retrouve.</p>
+<p>Ce que l'instrument gagne se dit en une phrase&nbsp;: il ne se contente plus de <em>respecter</em> la relation →, il la <strong>restitue exactement</strong>. Comparer deux vecteurs, c'est répondre à la question «&nbsp;<em>l'un de ces deux événements a-t-il pu influencer l'autre&nbsp;?</em>&nbsp;» — et la réponse «&nbsp;non&nbsp;» est aussi informative que la réponse «&nbsp;oui&nbsp;».</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi le maximum, et pas la somme</p><p>La règle de fusion prend le maximum case par case, jamais la somme. La raison tient à ce que représente une case&nbsp;: «&nbsp;<em>le nombre d'événements de la machine&nbsp;i dont j'ai connaissance</em>&nbsp;». Si j'apprends la même chose deux fois, par deux chemins différents, ma connaissance ne double pas. Le maximum est idempotent — l'appliquer deux fois donne le même résultat qu'une fois — et c'est cette propriété qui rend la fusion sûre dans un réseau qui duplique les messages, comme le montrait le module&nbsp;1. Une somme, elle, compterait deux fois le même événement et casserait tout.</p></div></div>
+<h2>Un usage direct&nbsp;: ne jamais montrer la réponse avant la question</h2>
+<p>Les vecteurs ne servent pas qu'à arbitrer des écritures après coup. Ils permettent aussi d'empêcher un désordre <em>avant</em> qu'il ne soit visible, et c'est l'usage le plus parlant de la leçon.</p>
+<p>Le décor&nbsp;: trois personnes dans une conversation de groupe. Alice publie «&nbsp;il pleut à Lyon&nbsp;». Bob le lit et répond «&nbsp;tout à fait d'accord&nbsp;!&nbsp;». Ces deux messages sont <em>ordonnés</em>&nbsp;: la réponse de Bob a été écrite en connaissance du message d'Alice, il y a bien une chaîne causale. Mais les deux messages voyagent par des chemins différents jusqu'à Carole, et rien ne garantit qu'ils arriveront dans l'ordre — le réseau réordonne, ce qui est rangé sous la <em>première</em> des huit illusions du <a href="lecon-01.html">module&nbsp;1</a>.</p>
+<figure class="code-block" data-file="diffusion-causale.js"><pre><code class="language-javascript">// Le réseau ne garantit pas l'ordre d'arrivée. Alice publie un message, Bob y
+// répond, et Carole reçoit la réponse EN PREMIER. Que doit-elle afficher ?
+const NOEUDS = ['Alice', 'Bob', 'Carole'];
+const idx = (n) =&gt; NOEUDS.indexOf(n);
+
+// Deux messages, avec le vecteur de leur auteur au moment de l'envoi.
+const RESEAU = [
+  { de: 'Bob',   V: [1, 1, 0], texte: 'Bob : « tout à fait d\'accord ! »' },
+  { de: 'Alice', V: [1, 0, 0], texte: 'Alice : « il pleut à Lyon »' },
+];
+
+// Livraison NAÏVE : on affiche dans l'ordre d'arrivée.
+console.log('livraison naïve, dans l\'ordre d\'arrivée');
+for (const m of RESEAU) console.log('  ' + m.texte);
+
+// Livraison CAUSALE : on n'affiche un message que si tout ce que son auteur
+// avait vu a déjà été affiché ici.
+function livrable(m, vu) {
+  const i = idx(m.de);
+  if (m.V[i] !== vu[i] + 1) return false;          // il manque un message de l'auteur
+  return m.V.every((v, j) =&gt; j === i || v &lt;= vu[j]); // et rien d'autre ne manque
+}
+
+console.log('');
+console.log('livraison causale, chez Carole');
+const attente = RESEAU.slice();
+const vu = [0, 0, 0];
+let progres = true, tours = 0;
+while (attente.length &amp;&amp; progres) {
+  progres = false;
+  tours++;
+  for (let k = 0; k &lt; attente.length; k++) {
+    if (!livrable(attente[k], vu)) continue;
+    const m = attente.splice(k, 1)[0];
+    vu[idx(m.de)] += 1;
+    console.log('  ' + m.texte);
+    progres = true;
+    k--;
+  }
+}
+console.log('  messages encore en attente : ' + attente.length);
+console.log('  passages nécessaires : ' + tours);
+console.log('');
+console.log('le message de Bob est arrivé le premier et affiché le second :');
+console.log('sa case Alice vaut 1, or Carole n\'avait rien vu d\'Alice.');</code></pre></figure>
+<figure class="code-block" data-file="diffusion-causale.txt"><pre><code class="language-plaintext">livraison naïve, dans l'ordre d'arrivée
+  Bob : « tout à fait d'accord ! »
+  Alice : « il pleut à Lyon »
+
+livraison causale, chez Carole
+  Alice : « il pleut à Lyon »
+  Bob : « tout à fait d'accord ! »
+  messages encore en attente : 0
+  passages nécessaires : 2
+
+le message de Bob est arrivé le premier et affiché le second :
+sa case Alice vaut 1, or Carole n'avait rien vu d'Alice.
+</code></pre></figure>
+<p>La livraison naïve affiche ce qui arrive quand ça arrive&nbsp;: Carole lit «&nbsp;tout à fait d'accord&nbsp;!&nbsp;» avant de savoir de quoi il s'agit. Ce n'est pas une panne, et rien n'est perdu&nbsp;— le message d'Alice arrivera. C'est simplement incompréhensible pendant un instant, et franchement absurde si l'écart dure.</p>
+<p>La livraison causale ajoute une condition avant d'afficher. Un message est <strong>livrable</strong> si deux choses sont vraies&nbsp;: sa case d'auteur vaut exactement un de plus que ce que le destinataire avait déjà reçu de cet auteur — donc aucun message de lui ne manque —, et toutes ses autres cases sont inférieures ou égales à ce que le destinataire a déjà vu — donc rien de ce que l'auteur connaissait ne manque non plus. Sinon, le message attend dans un tampon.</p>
+<p>Sur ce scénario, le message de Bob porte <code>[1,1,0]</code>&nbsp;: sa case Alice vaut 1, alors que Carole n'a encore rien reçu d'Alice. Il n'est donc pas livrable, et il attend. Le message d'Alice arrive ensuite, passe le test, est affiché&nbsp;; le tampon est réexaminé, Bob passe à son tour. Le programme le confirme&nbsp;: <strong>0</strong> message reste en attente, et il aura fallu <strong>2</strong> passages sur le tampon.</p>
+<p>Deux remarques pour ne pas surestimer ce mécanisme. D'abord, il ne rend pas le système plus rapide&nbsp;: il retarde délibérément un message déjà arrivé. C'est une garantie qu'on achète avec de la latence, et l'échange est explicite. Ensuite, il ne règle que les désordres <em>causaux</em>&nbsp;: si Alice et Bob écrivent deux messages sans se lire, ces messages sont concurrents, et l'ordre dans lequel Carole les voit reste arbitraire. Aucun mécanisme ne peut faire mieux, puisqu'il n'y a rien à respecter.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Schéma de la livraison causale d'un message. À gauche, une colonne intitulée arrivée chez Carole montre deux messages dans leur ordre d'arrivée : d'abord celui de Bob portant le vecteur crochet un virgule un virgule zéro, ensuite celui d'Alice portant le vecteur crochet un virgule zéro virgule zéro. Au centre, une boîte accentuée intitulée test de livrabilité énonce les deux conditions : la case de l'auteur doit valoir exactement un de plus que ce qui a déjà été reçu de lui, et toutes les autres cases doivent être inférieures ou égales à ce qui a déjà été vu. À droite, une colonne intitulée affichage montre l'ordre final : d'abord Alice, ensuite Bob. Une flèche mène chacun des deux messages vers la boîte de test, une autre descend de cette boîte vers un rectangle intitulé tampon d'attente, et une troisième remonte du tampon vers la colonne d'affichage, après le message d'Alice. Tous les tracés sont des segments droits. Une bande basse séparée par un trait en pointillés indique que le message de Bob a été retenu parce que sa case Alice valait un alors que Carole n'avait encore rien reçu d'Alice, que zéro message reste en attente à la fin et que deux passages sur le tampon ont été nécessaires.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Retenir un message jusqu'à ce qu'il devienne compréhensible</text>
+
+    <text class="d-label" x="20" y="52" text-anchor="start" font-size="10">ARRIVÉE CHEZ CAROLE</text>
+    <rect class="d-box" x="20" y="62" width="170" height="38" rx="7" />
+    <text class="d-text" x="105" y="78" text-anchor="middle" font-size="9">1. Bob</text>
+    <text class="d-mut" x="105" y="92" text-anchor="middle" font-size="8.5">[1,1,0]</text>
+    <rect class="d-box" x="20" y="112" width="170" height="38" rx="7" />
+    <text class="d-text" x="105" y="128" text-anchor="middle" font-size="9">2. Alice</text>
+    <text class="d-mut" x="105" y="142" text-anchor="middle" font-size="8.5">[1,0,0]</text>
+
+    <rect class="d-accent" x="228" y="56" width="184" height="100" rx="8" />
+    <text class="d-label" x="320" y="76" text-anchor="middle" font-size="10">TEST DE LIVRABILITÉ</text>
+    <text class="d-mut" x="320" y="98" text-anchor="middle" font-size="8.5">case de l'auteur = déjà reçu + 1</text>
+    <text class="d-mut" x="320" y="116" text-anchor="middle" font-size="8.5">et</text>
+    <text class="d-mut" x="320" y="134" text-anchor="middle" font-size="8.5">autres cases ≤ déjà vu</text>
+    <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8.5">sinon&#160;: au tampon</text>
+
+    <path class="d-line" d="M190 81 L224 96" fill="none" /><path class="d-line" d="M212 87 L224 96 L211 98" fill="none" />
+    <path class="d-line" d="M190 131 L224 118" fill="none" /><path class="d-line" d="M211 113 L224 118 L212 127" fill="none" />
+
+    <rect class="d-box" x="228" y="176" width="184" height="34" rx="7" />
+    <text class="d-text" x="320" y="197" text-anchor="middle" font-size="9">tampon d'attente</text>
+    <path class="d-line" d="M300 156 L300 172" fill="none" /><path class="d-line" d="M295 167 L300 172 L305 167" fill="none" />
+    <path class="d-line" d="M412 193 L470 193 L470 152" fill="none" /><path class="d-line" d="M465 157 L470 152 L475 157" fill="none" />
+
+    <text class="d-label" x="450" y="52" text-anchor="start" font-size="10">AFFICHAGE</text>
+    <rect class="d-box" x="450" y="62" width="170" height="38" rx="7" />
+    <text class="d-text" x="535" y="78" text-anchor="middle" font-size="9">1. Alice</text>
+    <text class="d-mut" x="535" y="92" text-anchor="middle" font-size="8.5">«&#160;il pleut à Lyon&#160;»</text>
+    <rect class="d-box" x="450" y="112" width="170" height="38" rx="7" />
+    <text class="d-text" x="535" y="128" text-anchor="middle" font-size="9">2. Bob</text>
+    <text class="d-mut" x="535" y="142" text-anchor="middle" font-size="8.5">«&#160;tout à fait d'accord&#160;!&#160;»</text>
+
+    <path class="d-line" d="M14 236 L626 236" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="14" y="254" text-anchor="start" font-size="9">Bob est retenu&#160;: sa case Alice vaut 1, or Carole n'avait encore rien reçu d'Alice</text>
+    <text class="d-mut" x="14" y="272" text-anchor="start" font-size="9">à la fin&#160;: 0 message en attente, 2 passages sur le tampon</text>
+    <text class="d-mut" x="14" y="290" text-anchor="start" font-size="9">le mécanisme achète une garantie avec de la latence — et ne range rien de ce qui est concurrent</text>
+  </svg>
+  <figcaption>La condition ne demande pas «&nbsp;ce message est-il le plus ancien&nbsp;?&nbsp;» mais «&nbsp;ai-je déjà tout ce que son auteur avait sous les yeux&nbsp;?&nbsp;».</figcaption>
+</figure>
+<h2>Ce que ça coûte</h2>
+<p>Un vecteur porte une case par machine. Cette phrase contient tout le problème&nbsp;: sa taille croît avec le système, et elle voyage dans chaque message.</p>
+<figure class="code-block" data-file="cout-des-vecteurs.js"><pre><code class="language-javascript">// Ce que coûte la précision : un scalaire ne grossit pas, un vecteur si.
+const OCTETS_PAR_CASE = 8;       // un entier sur 64 bits par machine suivie
+const TAILLES = [3, 10, 100, 1000, 10000];
+
+console.log('machines | Lamport | vecteur   | vecteur / message de 200 octets');
+for (const n of TAILLES) {
+  const vecteur = n * OCTETS_PAR_CASE;
+  console.log(
+    String(n).padStart(8) + ' | ' +
+    (OCTETS_PAR_CASE + ' o').padStart(7) + ' | ' +
+    (vecteur &gt;= 1024 ? (vecteur / 1024).toFixed(1) + ' Kio' : vecteur + ' o').padStart(9) + ' | ' +
+    '×' + (1 + vecteur / 200).toFixed(2)
+  );
+}
+
+console.log('');
+// Le cas qui rend la chose gérable : ce ne sont pas les machines qu'on suit,
+// ce sont les ÉCRIVAINS d'une même donnée.
+const REPLIQUES = 3;
+console.log('un panier répliqué sur ' + REPLIQUES + ' serveurs : vecteur de '
+            + REPLIQUES * OCTETS_PAR_CASE + ' octets, quel que soit le nombre de clients');
+console.log('mille clients, mais toujours ' + REPLIQUES + ' cases : '
+            + REPLIQUES * OCTETS_PAR_CASE + ' octets');</code></pre></figure>
+<figure class="code-block" data-file="cout-des-vecteurs.txt"><pre><code class="language-plaintext">machines | Lamport | vecteur   | vecteur / message de 200 octets
+       3 |     8 o |      24 o | ×1.12
+      10 |     8 o |      80 o | ×1.40
+     100 |     8 o |     800 o | ×5.00
+    1000 |     8 o |   7.8 Kio | ×41.00
+   10000 |     8 o |  78.1 Kio | ×401.00
+
+un panier répliqué sur 3 serveurs : vecteur de 24 octets, quel que soit le nombre de clients
+mille clients, mais toujours 3 cases : 24 octets
+</code></pre></figure>
+<p>À trois machines, le vecteur pèse <strong>24 octets</strong>&nbsp;: il alourdit un message de 200 octets de <strong>12&nbsp;%</strong>, ce qui ne se discute pas. À cent machines, <strong>800 octets</strong>&nbsp;: le message quintuple. À dix mille, <strong>78,1&nbsp;Kio</strong> pour transporter 200 octets utiles&nbsp;— le message part multiplié par <strong>401</strong>. La donnée disparaît sous sa propre traçabilité. La dernière colonne compare bien le message <em>gonflé</em> au message d'origine&nbsp;: c'est ce qui passe sur le câble, pas le seul vecteur.</p>
+<p>La seconde partie du programme donne l'issue, et elle est moins évidente qu'il n'y paraît. On ne suit pas les <em>machines du système</em>&nbsp;: on suit les <strong>écrivains d'une même donnée</strong>. Un panier répliqué sur trois serveurs a un vecteur de trois cases, que mille clients ou un million s'y connectent&nbsp;: les clients n'écrivent pas, ils demandent à un serveur d'écrire. Le vecteur reste à <strong>24 octets</strong>.</p>
+<p>C'est ce déplacement qui rend l'instrument utilisable en pratique. Une base répartie ne met pas une case par client&nbsp;; elle en met une par réplique, et les répliques se comptent en unités ou en dizaines. Les vecteurs ne deviennent ingérables que dans les systèmes où <em>chaque participant écrit sous son propre nom</em> — un réseau pair-à-pair, une application collaborative hors ligne où chaque appareil est un auteur.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le problème que le tableau ne montre pas</p><p>Une case ne disparaît jamais toute seule. Une machine qui a écrit une fois, puis qui est retirée du service, laisse sa case dans tous les vecteurs qui la contiennent — et on ne peut pas la supprimer sans risquer de déclarer ordonnés des événements qui étaient concurrents. Le vecteur ne croît donc pas avec le nombre de machines <em>actuelles</em>, mais avec le nombre de machines <em>ayant jamais écrit</em>. Les systèmes réels gèrent cela par des mécanismes d'oubli explicites&nbsp;: retirer une case une fois qu'on est certain que tout le monde a vu tout ce que cette machine avait écrit. C'est faisable, ce n'est pas gratuit, et c'est une source classique de bugs subtils.</p></div></div>
+<h2>Détecter un conflit, ce n'est pas le résoudre</h2>
+<p>Voici la limite qu'il faut avoir en tête avant de considérer le problème réglé. Une horloge vectorielle répond à une question, et à une seule&nbsp;: <em>ces deux versions se sont-elles ignorées&nbsp;?</em> Elle ne répond pas à la suivante&nbsp;: <em>laquelle faut-il garder&nbsp;?</em> Cette seconde question n'a pas de réponse générique, et c'est démontrable en une simulation.</p>
+<figure class="code-block" data-file="conflit-de-panier.js"><pre><code class="language-javascript">// Le cas d'école : un panier répliqué sur deux serveurs, un client qui ajoute
+// un article depuis son téléphone pendant qu'il en retire un depuis son ordinateur.
+const precede = (x, y) =&gt; x.every((v, i) =&gt; v &lt;= y[i]) &amp;&amp; x.some((v, i) =&gt; v &lt; y[i]);
+const concurrents = (x, y) =&gt; !precede(x, y) &amp;&amp; !precede(y, x) &amp;&amp; x.join() !== y.join();
+
+// État commun avant la séparation : le panier contient deux articles.
+const commun = { V: [1, 1], articles: ['clavier', 'souris'] };
+
+// R1 reçoit « ajouter un casque », R2 reçoit « retirer la souris ». Sans se voir.
+const r1 = { V: [2, 1], articles: ['clavier', 'souris', 'casque'] };
+const r2 = { V: [1, 2], articles: ['clavier'] };
+
+console.log('avant   [' + commun.V + ']  ' + commun.articles.join(', '));
+console.log('R1      [' + r1.V + ']  ' + r1.articles.join(', '));
+console.log('R2      [' + r2.V + ']  ' + r2.articles.join(', '));
+console.log('');
+console.log('R1 précède R2 ? ' + precede(r1.V, r2.V));
+console.log('R2 précède R1 ? ' + precede(r2.V, r1.V));
+console.log('concurrents ?   ' + concurrents(r1.V, r2.V));
+console.log('');
+
+// Politique 1 : la dernière écriture gagne. Il faut choisir, donc perdre.
+console.log('« dernière écriture gagne », si R1 arrive en dernier : '
+            + r1.articles.join(', ') + '   (le retrait de la souris est perdu)');
+console.log('« dernière écriture gagne », si R2 arrive en dernier : '
+            + r2.articles.join(', ') + '   (l\'ajout du casque est perdu)');
+console.log('');
+
+// Politique 2 : garder les deux versions, et les fusionner selon une règle métier.
+const fusion = Array.from(new Set(r1.articles.concat(r2.articles))).sort();
+console.log('deux versions conservées, fusion par union : ' + fusion.join(', '));
+console.log('vecteur de la version fusionnée : ['
+            + r1.V.map((v, i) =&gt; Math.max(v, r2.V[i])).join(',') + ']');
+console.log('');
+console.log('l\'union ne perd aucun ajout, mais ressuscite l\'article retiré : '
+            + (fusion.indexOf('souris') !== -1));
+console.log('aucune règle générique ne devine l\'intention : c\'est une décision métier');</code></pre></figure>
+<figure class="code-block" data-file="conflit-de-panier.txt"><pre><code class="language-plaintext">avant   [1,1]  clavier, souris
+R1      [2,1]  clavier, souris, casque
+R2      [1,2]  clavier
+
+R1 précède R2 ? false
+R2 précède R1 ? false
+concurrents ?   true
+
+« dernière écriture gagne », si R1 arrive en dernier : clavier, souris, casque   (le retrait de la souris est perdu)
+« dernière écriture gagne », si R2 arrive en dernier : clavier   (l'ajout du casque est perdu)
+
+deux versions conservées, fusion par union : casque, clavier, souris
+vecteur de la version fusionnée : [2,2]
+
+l'union ne perd aucun ajout, mais ressuscite l'article retiré : true
+aucune règle générique ne devine l'intention : c'est une décision métier
+</code></pre></figure>
+<p>Un panier contient un clavier et une souris. Le client ajoute un casque depuis son téléphone, qui parle à la réplique R1&nbsp;; il retire la souris depuis son ordinateur, qui parle à R2. Les deux vecteurs, <code>[2,1]</code> et <code>[1,2]</code>, sont incomparables&nbsp;: <strong>concurrents</strong>. Le conflit est détecté, ce qui est déjà infiniment mieux que la situation de la leçon&nbsp;4 où il passait inaperçu.</p>
+<p>Maintenant, que faire&nbsp;? La règle «&nbsp;la dernière écriture gagne&nbsp;» oblige à choisir, donc à perdre&nbsp;: garder R1 perd le retrait de la souris, garder R2 perd l'ajout du casque. Le programme affiche les deux issues, et aucune des deux n'est correcte.</p>
+<p>La seconde politique conserve les deux versions et les fusionne par union. Elle ne perd aucun <em>ajout</em> — le casque est là — mais la dernière ligne dit le prix&nbsp;: la souris <strong>ressuscite</strong>. Du point de vue de l'union, un retrait n'est rien, juste une absence, et une absence ne survit pas à une réunion. L'utilisateur retrouve dans son panier un article qu'il avait explicitement enlevé.</p>
+<p>Ce n'est pas un défaut de l'union&nbsp;: c'est la preuve qu'aucune règle générique ne peut deviner l'intention. Pour que le retrait survive, il faut le <em>représenter</em> — enregistrer «&nbsp;la souris a été retirée&nbsp;» comme un fait, et non comme l'absence d'un fait. C'est le principe des structures conçues pour fusionner. La <a href="lecon-06.html">leçon&nbsp;6</a> en montre le cas le plus simple — un compteur qui ne fait que monter, fusionné sans coordination — et pose précisément la limite&nbsp;: un retrait ne s'y ramène pas tout seul. Le représenter comme un fait, et non comme une absence, relève du module&nbsp;3.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Schéma d'un conflit de panier détecté par une horloge vectorielle. En haut, une boîte accentuée représente l'état commun avant la séparation : vecteur crochet un virgule un, contenu clavier et souris. Deux flèches en descendent vers deux boîtes placées côte à côte. Celle de gauche, la réplique R1, porte le vecteur crochet deux virgule un et le contenu clavier, souris, casque, avec la mention ajout d'un casque depuis le téléphone. Celle de droite, la réplique R2, porte le vecteur crochet un virgule deux et le contenu clavier, avec la mention retrait de la souris depuis l'ordinateur. Entre les deux, une étiquette porte sur deux lignes la mention vecteurs incomparables. Une bande basse séparée par un trait en pointillés compare trois issues : garder R1 perd le retrait, garder R2 perd l'ajout, et l'union rend clavier, souris et casque, ce qui ne perd aucun ajout mais ressuscite l'article retiré. Une dernière ligne indique que la détection est automatique mais que la résolution est une décision métier.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Détecté par le vecteur, pas résolu par lui</text>
+
+    <rect class="d-accent" x="220" y="36" width="200" height="42" rx="8" />
+    <text class="d-text" x="320" y="54" text-anchor="middle" font-size="9.5">[1,1] — état commun</text>
+    <text class="d-mut" x="320" y="70" text-anchor="middle" font-size="8.5">clavier, souris</text>
+
+    <path class="d-line" d="M280 78 L170 112" fill="none" /><path class="d-line" d="M184 106 L170 112 L182 120" fill="none" />
+    <path class="d-line" d="M360 78 L470 112" fill="none" /><path class="d-line" d="M456 106 L470 112 L458 120" fill="none" />
+
+    <rect class="d-box" x="40" y="118" width="230" height="56" rx="8" />
+    <text class="d-text" x="155" y="138" text-anchor="middle" font-size="9.5">R1 — [2,1]</text>
+    <text class="d-mut" x="155" y="153" text-anchor="middle" font-size="8.5">clavier, souris, casque</text>
+    <text class="d-mut" x="155" y="167" text-anchor="middle" font-size="8">ajout d'un casque, depuis le téléphone</text>
+
+    <rect class="d-box" x="370" y="118" width="230" height="56" rx="8" />
+    <text class="d-text" x="485" y="138" text-anchor="middle" font-size="9.5">R2 — [1,2]</text>
+    <text class="d-mut" x="485" y="153" text-anchor="middle" font-size="8.5">clavier</text>
+    <text class="d-mut" x="485" y="167" text-anchor="middle" font-size="8">retrait de la souris, depuis l'ordinateur</text>
+
+    <text class="d-tag" x="320" y="142" text-anchor="middle" font-size="9">VECTEURS</text>
+    <text class="d-tag" x="320" y="158" text-anchor="middle" font-size="9">INCOMPARABLES</text>
+
+    <path class="d-line" d="M14 194 L626 194" fill="none" stroke-dasharray="4 3" />
+    <text class="d-label" x="14" y="212" text-anchor="start" font-size="9.5">TROIS ISSUES, AUCUNE NEUTRE</text>
+    <text class="d-mut" x="14" y="234" text-anchor="start" font-size="9">· garder R1 → clavier, souris, casque — le retrait est perdu</text>
+    <text class="d-mut" x="14" y="252" text-anchor="start" font-size="9">· garder R2 → clavier — l'ajout est perdu</text>
+    <text class="d-mut" x="14" y="270" text-anchor="start" font-size="9">· union → casque, clavier, souris — aucun ajout perdu, mais l'article retiré ressuscite</text>
+    <text class="d-mut" x="320" y="292" text-anchor="middle" font-size="9">la détection est automatique&#160;; la résolution est une décision métier</text>
+  </svg>
+  <figcaption>L'instrument fait ce qu'il promet&nbsp;: il dit qu'il y a conflit. Ce qu'il faut en faire n'est pas une question technique.</figcaption>
+</figure>
+<h2>Où l'on croise ces compteurs sans les nommer</h2>
+<p>Ces constructions ont l'air théoriques. Elles sont pourtant sous les doigts de tout le monde, souvent sous d'autres noms.</p>
+<p><strong>Un numéro de version dans une base.</strong> Une table qui porte une colonne <code>version</code> incrémentée à chaque écriture, et une mise à jour conditionnelle du genre «&nbsp;écris ceci <em>si</em> la version vaut encore 7&nbsp;», implémente un compteur logique à une seule case. Le mécanisme s'appelle verrouillage optimiste, et il détecte exactement une chose&nbsp;: qu'une autre écriture s'est glissée entre la lecture et l'écriture. C'est une horloge vectorielle à une case, suffisante parce qu'il n'y a qu'un seul écrivain — la base elle-même.</p>
+<p><strong>Les en-têtes conditionnels de HTTP.</strong> Un serveur renvoie une étiquette de version avec une ressource&nbsp;; le client la renvoie dans sa requête de modification, et le serveur refuse si l'étiquette ne correspond plus. Le principe est identique. Le cours <a href="../http/cours.html">HTTP</a> détaille ces en-têtes&nbsp;; ce qu'ils font, c'est transformer une écriture aveugle en écriture <em>informée de ce qu'elle remplace</em>.</p>
+<p><strong>Un gestionnaire de versions.</strong> L'historique d'un dépôt est un graphe de causalité au sens exact de cette leçon&nbsp;: chaque révision cite celle ou celles dont elle procède. Deux révisions dont aucune ne descend de l'autre sont concurrentes&nbsp;— c'est très précisément ce qu'on appelle des branches divergentes, et l'outil refuse alors de choisir tout seul&nbsp;: il demande une fusion. Le parallèle est complet, y compris sur la conclusion de la section précédente&nbsp;: l'outil <em>détecte</em>, l'humain <em>résout</em>. Le cours <a href="../git/cours.html">Git</a> travaille ce graphe pour lui-même.</p>
+<p><strong>Un numéro de séquence dans un protocole.</strong> Les numéros que TCP attache à ses segments servent à remettre en ordre et à repérer les manques&nbsp;: c'est un compteur logique sur un seul canal, entre deux participants. Le cours <a href="../reseaux/cours.html">Réseaux</a> l'étudie à ce titre&nbsp;; on peut le relire ici comme le cas le plus simple d'ordre causal — un seul expéditeur, donc aucune concurrence possible, donc un scalaire suffit.</p>
+<p>Ce que ces quatre exemples ont en commun mérite d'être formulé, parce que c'est le vrai enseignement de la leçon&nbsp;: <strong>ils font porter à l'écriture la connaissance de ce qu'elle remplace</strong>. Une écriture qui dit seulement «&nbsp;mets cette valeur&nbsp;» est aveugle et ne permet aucun arbitrage. Une écriture qui dit «&nbsp;mets cette valeur, sachant que j'ai vu celle-là&nbsp;» rend le conflit détectable. Le reste — un entier, un vecteur, une étiquette — n'est que la forme que prend cette connaissance.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Trois prolongements naturels. Les <strong>horloges vectorielles à version</strong>, employées par plusieurs bases réparties, associent une case non pas à une machine mais à un <em>contexte d'écriture</em>, ce qui limite la croissance du vecteur. Les <strong>horloges hybrides</strong> déjà citées à la <a href="lecon-04.html">leçon&nbsp;4</a> combinent un compteur logique et l'heure murale&nbsp;: on obtient un nombre lisible par un humain et fiable pour la causalité, au prix d'une hypothèse bornée sur l'écart des horloges. Enfin, l'article fondateur de Lamport de 1978, <em>Time, Clocks, and the Ordering of Events in a Distributed System</em>, est remarquablement court et se lit encore aujourd'hui sans difficulté&nbsp;: il contient tout ce que cette leçon développe, plus la construction d'un algorithme d'exclusion mutuelle bâti dessus.</p></div></div>
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Lire un compteur de Lamport comme un ordre.</strong> La garantie ne va que dans un sens. Mesuré sur le scénario&nbsp;: sur <strong>5</strong> paires concurrentes, le compteur prononce <strong>4</strong> ordres stricts qu'aucune chaîne de messages ne justifie. Ce qu'un compteur plus grand autorise à conclure est <em>négatif</em>&nbsp;: L(a)&nbsp;≥&nbsp;L(b) prouve que a n'a pas causé b. Rien de plus.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'un compteur logique remplace un horodatage partout.</strong> Il ne dit pas <em>quand</em>. Il ne sert ni à dater une facture, ni à expirer un jeton, ni à répondre à «&nbsp;montre-moi ce qui s'est passé mardi&nbsp;». Les deux instruments ne se remplacent pas&nbsp;: l'horodatage informe un humain, le compteur ordonne des écritures. Beaucoup de systèmes transportent les deux, et c'est la bonne réponse.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre détecter et résoudre.</strong> Une horloge vectorielle signale qu'il y a conflit&nbsp;; elle ne dit jamais quoi garder. Mesuré sur le panier&nbsp;: garder R1 perd un retrait, garder R2 perd un ajout, et l'union — qui a l'air d'être la solution neutre — <strong>ressuscite l'article retiré</strong>. Le choix appartient au métier, et il doit être écrit quelque part explicitement, faute de quoi il sera fait par défaut, donc au hasard.</p></div></div>
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une application de prise de notes fonctionne hors ligne&nbsp;: chaque appareil garde une copie complète des notes et se synchronise avec le serveur dès qu'il retrouve du réseau. La synchronisation compare les dates de modification et garde la plus récente. Le produit marche bien depuis dix-huit mois.<br /><br />Les premiers signalements sont diffus, et c'est ce qui rend l'affaire longue&nbsp;: «&nbsp;j'ai perdu un paragraphe&nbsp;», «&nbsp;mes modifications d'hier ont disparu&nbsp;», «&nbsp;la note est revenue à une ancienne version&nbsp;». Aucun n'est reproductible sur commande. Le support répond d'abord que l'utilisateur a dû se tromper d'appareil. Les taux d'erreur du serveur sont à zéro, la synchronisation ne signale aucun échec, et le nombre de notes est correct — seul leur <em>contenu</em> perd des morceaux.<br /><br />La cause tient en deux phrases. D'abord, les appareils mobiles ont des horloges qui dérivent bien plus que celles des serveurs&nbsp;: écran éteint, réveil rare, économie d'énergie, et parfois plusieurs jours sans synchronisation avec le réseau. Ensuite, et surtout, la question posée n'était pas la bonne&nbsp;: en comparant deux dates, l'application demandait «&nbsp;<em>laquelle est la plus récente&nbsp;?</em>&nbsp;» alors que la seule question utile était «&nbsp;<em>l'une de ces deux versions a-t-elle été écrite en connaissant l'autre&nbsp;?</em>&nbsp;». Quand la réponse est oui, écraser est le bon comportement&nbsp;; quand elle est non, écraser détruit du travail.<br /><br />Le correctif n'a pas consisté à mieux synchroniser les horloges des téléphones — cela n'aurait fait que raréfier le symptôme. Chaque note porte désormais un vecteur avec une case par appareil ayant jamais écrit dedans, et la synchronisation compare les vecteurs. Trois cas apparaissent alors là où il n'y en avait qu'un&nbsp;: la version reçue <em>descend</em> de la locale, on remplace&nbsp;; elle est <em>ancêtre</em> de la locale, on ignore&nbsp;; elle est <em>concurrente</em>, et là seulement il se passe quelque chose de nouveau — l'application conserve les deux textes et affiche une comparaison à l'utilisateur.<br /><br />Deux enseignements en sont ressortis, et ils dépassent l'application. Le premier&nbsp;: le nombre de conflits réellement concurrents s'est révélé <em>très faible</em> — de l'ordre de quelques cas par millier de synchronisations — alors que le mécanisme précédent en détruisait silencieusement bien davantage, parce qu'il traitait comme des conflits arbitrables des situations qui n'en étaient pas. Le second&nbsp;: la fonctionnalité la plus appréciée n'a pas été la détection, mais l'écran de comparaison. Détecter ne servait à rien tant que personne ne pouvait décider&nbsp;; c'est en donnant la décision à celui qui connaît l'intention — l'auteur — que le problème a été réglé.</p></div></div>
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Causalité et compteurs — mémo de la leçon 5</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Relation a&nbsp;→&nbsp;b</td><td>Trois règles&nbsp;: même machine dans l'ordre du programme&nbsp;; envoi avant réception&nbsp;; transitivité. Aucune horloge.</td></tr>
+      <tr><td>Concurrents</td><td>Ni a&nbsp;→&nbsp;b ni b&nbsp;→&nbsp;a. Ne veut pas dire «&nbsp;simultanés&nbsp;»&nbsp;: veut dire «&nbsp;aucun n'a pu influencer l'autre&nbsp;».</td></tr>
+      <tr><td>Ordre partiel</td><td>La relation → laisse des couples non rangés. C'est exact, pas incomplet&nbsp;: le système n'en sait pas plus.</td></tr>
+      <tr><td>Lamport — règles</td><td>Local ou envoi&nbsp;: <code>c = c + 1</code>. Réception&nbsp;: <code>c = max(c, reçu) + 1</code>. La valeur voyage dans les messages existants.</td></tr>
+      <tr><td>Lamport — garantie</td><td>a&nbsp;→&nbsp;b <strong>implique</strong> L(a)&nbsp;&lt;&nbsp;L(b). Vérifié&nbsp;: <strong>0</strong> contre-exemple sur le scénario.</td></tr>
+      <tr><td>Lamport — limite</td><td>La réciproque est fausse. Sur <strong>5</strong> paires concurrentes&nbsp;: <strong>4</strong> ordres inventés, <strong>1</strong> égalité. Ce qu'on peut conclure&nbsp;: L(a)&nbsp;≥&nbsp;L(b) prouve que a n'a pas causé b.</td></tr>
+      <tr><td>Ordre total</td><td>Départager par (compteur, identifiant)&nbsp;: les 3 machines obtiennent la <em>même</em> séquence, <strong>0</strong> violation sur les 8 liens causaux directs. Convention licite, à condition de le savoir.</td></tr>
+      <tr><td>Vecteur — règles</td><td>Incrémenter <em>sa</em> case&nbsp;; à la réception, <code>max</code> case par case puis incrémenter sa case. Jamais de somme&nbsp;: le max est idempotent.</td></tr>
+      <tr><td>Vecteur — comparaison</td><td>X précède Y si X&nbsp;≤&nbsp;Y partout et X&nbsp;&lt;&nbsp;Y quelque part. Ni l'un ni l'autre&nbsp;: concurrents, et c'est une conclusion.</td></tr>
+      <tr><td>Coût</td><td>3 machines&nbsp;: <strong>24 o</strong> (×1,12 sur un message de 200&nbsp;o). 100&nbsp;: 800&nbsp;o (×5,00). 10&nbsp;000&nbsp;: <strong>78,1&nbsp;Kio</strong> (×401).</td></tr>
+      <tr><td>Une case par quoi</td><td>Par <em>écrivain</em>, pas par client. Un panier sur 3 répliques&nbsp;: 24 octets, que mille clients s'y connectent ou non.</td></tr>
+      <tr><td>Détecter ≠ résoudre</td><td>Panier&nbsp;: <code>[2,1]</code> et <code>[1,2]</code> concurrents. Garder R1 perd un retrait, garder R2 perd un ajout, l'union <strong>ressuscite</strong> la souris.</td></tr>
+      <tr><td>Diffusion causale</td><td>Livrer un message seulement si sa case d'auteur = déjà reçu + 1 <em>et</em> ses autres cases ≤ déjà vu. Mesuré&nbsp;: <strong>0</strong> en attente, <strong>2</strong> passages sur le tampon.</td></tr>
+      <tr><td>Sous d'autres noms</td><td>Colonne <code>version</code> et écriture conditionnelle&nbsp;; en-têtes conditionnels HTTP&nbsp;; branches divergentes d'un dépôt&nbsp;; numéros de séquence TCP.</td></tr>
+      <tr><td>Le principe commun</td><td>Faire porter à l'écriture la connaissance de ce qu'elle remplace. Une écriture aveugle n'autorise aucun arbitrage.</td></tr>
+    </tbody>
+  </table>
+</figure>
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Événement</dt><dd>Ce qui arrive sur une machine&nbsp;: un calcul local, l'envoi d'un message, la réception d'un message. Unité de base de tout raisonnement causal, et seule chose qu'un système réparti sait situer sans horloge.</dd>
+  <dt>Relation «&nbsp;précède&nbsp;» (a&nbsp;→&nbsp;b)</dt><dd>Relation engendrée par trois règles&nbsp;: l'ordre du programme sur une même machine, l'antériorité d'un envoi sur sa réception, et la transitivité. Elle ne dépend d'aucune horloge et reste vraie quelles que soient les dérives.</dd>
+  <dt>Concurrents</dt><dd>Se dit de deux événements dont aucun ne précède l'autre. Ils n'ont pas pu s'influencer, ce qui n'a rien à voir avec le fait d'avoir eu lieu au même moment.</dd>
+  <dt>Ordre partiel</dt><dd>Ordre qui range certains couples et laisse les autres côte à côte. La relation → en est un&nbsp;: elle décrit exactement ce que le système sait, ni plus ni moins.</dd>
+  <dt>Horloge de Lamport</dt><dd>Compteur entier par machine, incrémenté avant chaque événement et recalé par un maximum à la réception. Garantit que a&nbsp;→&nbsp;b implique L(a)&nbsp;&lt;&nbsp;L(b), sans garantir la réciproque.</dd>
+  <dt>Ordre total de Lamport</dt><dd>Ordre obtenu en comparant d'abord les compteurs puis, en cas d'égalité, un identifiant fixe. Toutes les machines calculent la même séquence, et cette séquence ne contredit jamais la causalité — mais elle range des couples qui ne l'étaient pas.</dd>
+  <dt>Horloge vectorielle</dt><dd>Tableau d'un compteur par machine, fusionné par maximum case par case. Restitue exactement la relation →&nbsp;: deux vecteurs incomparables signalent des événements réellement concurrents.</dd>
+  <dt>Comparaison de vecteurs</dt><dd>X précède Y si toutes les cases de X sont inférieures ou égales à celles de Y et qu'au moins une est strictement inférieure. Si ni X ni Y ne précède l'autre, les événements sont concurrents.</dd>
+  <dt>Idempotence de la fusion</dt><dd>Propriété du maximum case par case&nbsp;: appliquer deux fois la même fusion donne le même résultat qu'une fois. C'est elle qui rend la fusion sûre sur un réseau qui duplique les messages.</dd>
+  <dt>Verrouillage optimiste</dt><dd>Écriture conditionnée à la valeur d'un numéro de version lu auparavant. Cas particulier d'horloge logique à une seule case, suffisant quand il n'y a qu'un écrivain de référence.</dd>
+  <dt>Écriture informée</dt><dd>Écriture qui porte la version qu'elle prétend remplacer, par opposition à une écriture aveugle qui se contente d'une valeur. Seule la première rend un conflit détectable.</dd>
+  <dt>Résolution de conflit</dt><dd>Décision de ce qu'il faut conserver quand deux versions sont concurrentes. Elle ne se déduit d'aucun compteur&nbsp;: le choix relève du métier, et l'union naïve ressuscite les suppressions.</dd>
+  <dt>Diffusion causale</dt><dd>Règle de livraison qui retient un message tant que tout ce que son auteur avait vu n'a pas été livré au destinataire. Elle achète une garantie de lisibilité au prix d'une attente, et ne range jamais ce qui est concurrent.</dd>
+  <dt>Traînée de cases</dt><dd>Croissance d'un vecteur due aux machines qui ont écrit puis disparu&nbsp;: leur case ne peut être retirée sans risquer de déclarer ordonnés des événements concurrents.</dd>
+</dl>
+<h2>Récap et vérification</h2>
+<ul>
+<li>La seule relation fiable dans un système réparti est <strong>a&nbsp;→&nbsp;b</strong>, engendrée par trois règles&nbsp;: l'ordre local, l'envoi avant la réception, la transitivité. Aucune horloge n'y intervient.</li>
+<li>Quand ni a&nbsp;→&nbsp;b ni b&nbsp;→&nbsp;a, les deux événements sont <strong>concurrents</strong>&nbsp;: aucun n'a pu influencer l'autre. Le mot ne parle pas de simultanéité.</li>
+<li>L'<strong>horloge de Lamport</strong> tient en deux règles&nbsp;: <code>+1</code> avant un événement local ou un envoi, <code>max(le mien, le reçu) + 1</code> à la réception.</li>
+<li>Sa garantie va dans un seul sens&nbsp;: a&nbsp;→&nbsp;b implique L(a)&nbsp;&lt;&nbsp;L(b), vérifié avec <strong>0</strong> contre-exemple. Mais sur <strong>36</strong> paires, <strong>5</strong> sont concurrentes, et le compteur en range <strong>4</strong> sans raison.</li>
+<li>Départagé par un identifiant, il fabrique un <strong>ordre total</strong> que les <strong>3</strong> machines calculent à l'identique, avec <strong>0</strong> violation sur les <strong>8</strong> liens causaux directs. C'est une convention utile, pas une découverte.</li>
+<li>L'<strong>horloge vectorielle</strong> garde un compteur par machine et fusionne par <code>max</code> case par case. Elle restitue exactement la relation →&nbsp;: <code>[1,0,0]</code> et <code>[0,0,1]</code> sont déclarés concurrents.</li>
+<li>Elle coûte&nbsp;: <strong>24 octets</strong> à 3 machines — soit <strong>×1,12</strong> sur un message de 200 octets — mais <strong>78,1&nbsp;Kio</strong> et <strong>×401</strong> à dix mille. On compte les <em>écrivains</em>, pas les clients&nbsp;: un panier sur 3 répliques reste à 24 octets.</li>
+<li>Le même vecteur sert à <strong>livrer dans l'ordre</strong>&nbsp;: un message n'est affiché que si sa case d'auteur vaut «&nbsp;déjà reçu +&nbsp;1&nbsp;» et que ses autres cases sont couvertes. Sur le scénario&nbsp;: <strong>0</strong> message en attente, <strong>2</strong> passages sur le tampon.</li>
+<li>Détecter n'est pas résoudre. Sur le panier, <code>[2,1]</code> et <code>[1,2]</code> sont concurrents&nbsp;; garder R1 perd un retrait, garder R2 perd un ajout, et l'union <strong>ressuscite</strong> la souris. Aucune règle générique ne devine l'intention.</li>
+<li>Ces compteurs circulent partout sous d'autres noms&nbsp;: colonne <code>version</code>, en-têtes conditionnels, branches divergentes d'un dépôt, numéros de séquence. Le principe commun&nbsp;: <strong>faire porter à l'écriture la connaissance de ce qu'elle remplace</strong>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue propose de remplacer les horodatages d'une base répliquée par des compteurs de Lamport, «&nbsp;puisque les horloges ne sont pas fiables&nbsp;». Qu'est-ce que ce changement corrige, et qu'est-ce qu'il laisse exactement en l'état&nbsp;?</li>
+<li>Explique, sans citer de chiffre, pourquoi un seul entier ne peut structurellement pas détecter la concurrence, alors qu'un tableau d'entiers le peut.</li>
+<li>Une équipe veut fusionner automatiquement les conflits «&nbsp;pour ne rien perdre&nbsp;», en prenant l'union des deux versions. Quelles questions poses-tu avant d'accepter, et quel cas concret cites-tu&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Deux événements sont dits concurrents. Qu'est-ce que cela signifie ?","a":["Qu'aucune chaîne de messages ne va de l'un à l'autre : aucun n'a pu influencer l'autre","Qu'ils ont eu lieu au même instant, à la précision de mesure des horloges des deux machines près","Qu'ils portent le même compteur de Lamport, ce qui empêche de les départager","Qu'ils ont été exécutés par deux machines différentes, sans autre condition"],"correct":0,"explain":"Le mot ne parle pas de simultanéité : deux événements concurrents peuvent être séparés d'une semaine. Ce qui les définit est l'absence de chaîne causale. Sur le scénario de la page, a1 et c1 sont concurrents et portent bien tous deux le compteur 1 — mais l'égalité des compteurs est une conséquence possible, pas la définition : b1 et c1 sont concurrents avec des compteurs 3 et 1."},
+  {"q":"Que garantit exactement une horloge de Lamport ?","a":["Que si a précède b, alors L(a) est strictement inférieur à L(b) — et rien dans l'autre sens","Que deux événements sont ordonnés si et seulement si leurs compteurs sont différents","Que deux compteurs égaux signalent deux événements concurrents, et deux compteurs différents deux événements ordonnés","Que le compteur d'un événement mesure le nombre de millisecondes écoulées depuis le premier"],"correct":0,"explain":"Mesuré sur le scénario : 0 contre-exemple sur les 31 paires causalement ordonnées, mais 4 ordres inventés sur les 5 paires concurrentes, plus une égalité. Un compteur plus grand n'autorise donc aucune conclusion positive ; ce qu'il autorise est négatif : L(a) supérieur ou égal à L(b) prouve que a n'a pas causé b."},
+  {"q":"Pourquoi une horloge vectorielle détecte-t-elle la concurrence là où un entier échoue ?","a":["Parce qu'elle garde une case par machine : deux vecteurs peuvent pencher chacun d'un côté","Parce qu'elle est mise à jour plus souvent, donc plus précise sur les événements rapprochés","Parce qu'elle transporte l'heure de chaque machine en plus de son compteur d'événements","Parce qu'elle additionne les compteurs reçus au lieu d'en prendre le maximum"],"correct":0,"explain":"Le max d'un entier écrase l'information de provenance. Un vecteur la conserve : [1,0,0] et [0,0,1] sont incomparables, la première case penchant d'un côté et la troisième de l'autre. Et la fusion prend bien le maximum, jamais la somme — apprendre deux fois la même chose ne double pas la connaissance, et c'est cette idempotence qui rend la fusion sûre sur un réseau qui duplique."},
+  {"q":"Un vecteur signale deux versions concurrentes d'un panier. Que faut-il en conclure ?","a":["Qu'il y a conflit, et que la règle de résolution relève du métier, pas du compteur","Qu'il faut prendre l'union des deux versions, seule solution qui ne perde aucune donnée","Qu'il faut garder la version portant le plus grand vecteur, comme pour un horodatage","Qu'une des deux répliques est en panne et que sa version doit être écartée"],"correct":0,"explain":"Mesuré sur le panier : garder R1 perd le retrait de la souris, garder R2 perd l'ajout du casque, et l'union rend clavier, souris et casque — elle ne perd aucun ajout mais ressuscite l'article retiré. Aucune règle générique ne devine l'intention. Et la concurrence n'est le signe d'aucune panne : les deux répliques ont fait exactement leur travail."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["concurrents","concurrent","ils sont concurrents","événements concurrents","concurrentes"],"placeholder":"deux événements que rien ne relie sont dits ...","hints":["Le mot est celui qu'emploie la leçon pour deux événements dont aucun ne précède l'autre.","Attention au faux ami : il ne veut pas dire « simultanés », et deux événements séparés d'une semaine peuvent l'être.","C'est un adjectif au pluriel, de onze lettres, employé aussi pour deux branches divergentes d'un dépôt."],"link":{"href":"lecon-05.html","label":"Revoir « La seule chose dont on soit sûr »"}},
+  {"type":"code","run":{"expect":"9 10"},"placeholder":"le compteur de l'envoi de m4, puis celui de sa réception, un par ligne","hints":["Reprends le scénario de la page et ajoute deux événements à la fin : A envoie m4 vers B, puis B le reçoit.","A vient de recevoir m3 et son compteur vaut 8 : l'envoi de m4 applique la première règle, celle du plus un.","B en était resté à 5. À la réception, c'est max(le mien, celui reçu) plus un qu'il faut appliquer."],"link":{"href":"lecon-05.html","label":"Revoir « L'horloge de Lamport »"}},
+  {"type":"code","run":{"expect":"66 32"},"placeholder":"le nombre total de paires, puis le nombre de paires concurrentes, un par ligne","hints":["Ajoute une quatrième machine D au scénario, avec trois événements locaux et aucun message échangé.","Les vecteurs passent à quatre cases ; la comparaison, elle, ne change pas d'un iota.","Douze événements font 66 paires ; les trois événements de D sont concurrents de tout le reste, mais ordonnés entre eux."],"link":{"href":"lecon-05.html","label":"Revoir « L'horloge vectorielle »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Sur le diagramme de la leçon, aucune chaîne de flèches ne va de a1 vers c1, ni de c1 vers a1. Comment appelle-t-on deux événements dans cette situation, et qu'est-ce que ce mot dit exactement&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">CONCURRENTS.
+
+Deux événements sont concurrents quand aucun des deux ne précède
+l'autre au sens de la relation a -> b : aucune chaîne faite d'étapes
+locales et de messages ne relie l'un à l'autre, ni dans un sens ni
+dans l'autre.
+
+Ce que le mot dit :
+  aucun des deux n'a pu influencer l'autre.
+
+Ce que le mot NE dit PAS :
+  qu'ils ont eu lieu au même moment.
+
+Deux événements concurrents peuvent être séparés d'une semaine ; deux
+événements séparés d'une microseconde peuvent être parfaitement
+ordonnés si un message va de l'un à l'autre.
+
+Conséquence pratique :
+  deux écritures ORDONNÉES     -> la seconde remplace, sans conflit
+  deux écritures CONCURRENTES  -> conflit réel, à arbitrer
+</code></pre></figure>
+<p>C'est cette distinction qui manquait à la <a href="lecon-04.html">leçon&nbsp;4</a>&nbsp;: en comparant des horodatages, on répond toujours «&nbsp;l'une est plus récente&nbsp;», même quand la vraie réponse est «&nbsp;elles se sont ignorées&nbsp;». Un système qui ne sait pas dire «&nbsp;concurrentes&nbsp;» est condamné à trancher au hasard, et 22&nbsp;700 fois sur 100&nbsp;000 il tranche mal.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Prolonge le scénario de la leçon&nbsp;: après avoir reçu m3, la machine A envoie un message <strong>m4</strong> à B, qui le reçoit. Rien d'autre ne change. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le compteur de Lamport de l'<em>envoi</em> de m4, puis celui de sa <em>réception</em>.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// On prolonge le scénario : après avoir reçu m3, A envoie un message m4 à B.
+// Rien d'autre ne change. Quels compteurs de Lamport portent ces deux événements ?
+const SCENARIO = [
+  ['A', 'local'],      ['A', 'envoi', 'm1'], ['B', 'reception', 'm1'],
+  ['B', 'local'],      ['B', 'envoi', 'm2'], ['C', 'local'],
+  ['C', 'reception', 'm2'], ['C', 'envoi', 'm3'], ['A', 'reception', 'm3'],
+  ['A', 'envoi', 'm4'],     ['B', 'reception', 'm4'],
+];
+
+const L = { A: 0, B: 0, C: 0 };
+const enVol = {};
+let envoiM4 = 0, receptionM4 = 0;
+
+for (const [noeud, type, message] of SCENARIO) {
+  if (type === 'reception') L[noeud] = Math.max(L[noeud], enVol[message]) + 1;
+  else L[noeud] += 1;
+  if (type === 'envoi') enVol[message] = L[noeud];
+  if (type === 'envoi' &amp;&amp; message === 'm4') envoiM4 = L[noeud];
+  if (type === 'reception' &amp;&amp; message === 'm4') receptionM4 = L[noeud];
+}
+
+console.log(envoiM4);       // affiche : 9
+console.log(receptionM4);   // affiche : 10</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">9
+10
+</code></pre></figure>
+<p>L'envoi porte <strong>9</strong>, ce qui n'a rien de surprenant&nbsp;: A était à 8 et applique la première règle. La réception porte <strong>10</strong>, et c'est là que la seconde règle se voit à l'œuvre&nbsp;: B en était resté à <strong>5</strong> depuis l'envoi de m2, et il saute directement à 10. Ce bond de cinq unités est la trace d'une histoire à laquelle B n'a pas participé — le voyage de m2 jusqu'à C, puis de m3 jusqu'à A — et dont il hérite d'un coup en recevant m4. C'est exactement ce que le compteur mesure&nbsp;: la profondeur de la plus longue chaîne causale qui aboutit ici, jamais une durée.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une quatrième machine <strong>D</strong> rejoint le système et exécute <strong>trois</strong> événements locaux, sans jamais envoyer ni recevoir le moindre message. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le nombre total de paires d'événements, puis le nombre de paires <em>concurrentes</em>, calculé avec des horloges vectorielles.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// Une quatrième machine D rejoint le système et exécute trois événements locaux,
+// sans jamais envoyer ni recevoir le moindre message. Combien de paires
+// d'événements deviennent concurrentes ?
+const NOEUDS = ['A', 'B', 'C', 'D'];
+const SCENARIO = [
+  ['A', 'local'], ['A', 'envoi', 'm1'], ['B', 'reception', 'm1'],
+  ['B', 'local'], ['B', 'envoi', 'm2'], ['C', 'local'],
+  ['C', 'reception', 'm2'], ['C', 'envoi', 'm3'], ['A', 'reception', 'm3'],
+  ['D', 'local'], ['D', 'local'], ['D', 'local'],
+];
+
+const V = { A: [0, 0, 0, 0], B: [0, 0, 0, 0], C: [0, 0, 0, 0], D: [0, 0, 0, 0] };
+const enVol = {};
+const ev = [];
+
+for (const [n, type, message] of SCENARIO) {
+  if (type === 'reception') V[n] = V[n].map((v, i) =&gt; Math.max(v, enVol[message][i]));
+  V[n] = V[n].slice();
+  V[n][NOEUDS.indexOf(n)] += 1;
+  if (type === 'envoi') enVol[message] = V[n].slice();
+  ev.push(V[n].slice());
+}
+
+const precede = (x, y) =&gt; x.every((v, i) =&gt; v &lt;= y[i]) &amp;&amp; x.some((v, i) =&gt; v &lt; y[i]);
+
+let concurrentes = 0;
+for (let i = 0; i &lt; ev.length; i++)
+  for (let j = i + 1; j &lt; ev.length; j++)
+    if (!precede(ev[i], ev[j]) &amp;&amp; !precede(ev[j], ev[i])) concurrentes++;
+
+console.log(ev.length * (ev.length - 1) / 2);   // affiche : 66
+console.log(concurrentes);                      // affiche : 32</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">66
+32
+</code></pre></figure>
+<p>Douze événements font <strong>66</strong> paires, et <strong>32</strong> sont concurrentes. Le compte se retrouve à la main&nbsp;: les <strong>5</strong> paires concurrentes du scénario d'origine, plus les <strong>27</strong> paires formées d'un événement de D et d'un événement des trois autres machines — 3&nbsp;×&nbsp;9. Les trois événements de D sont, eux, parfaitement ordonnés entre eux par la première règle&nbsp;: ils ont lieu sur la même machine.</p>
+<p>Le résultat mérite qu'on s'y arrête, parce qu'il est contre-intuitif. Ajouter <em>trois</em> événements a fait passer les paires concurrentes de 5 à 32, soit une multiplication par <strong>6,4</strong>. La raison est mécanique&nbsp;: une machine muette est concurrente de tout. Et le corollaire est une règle de conception&nbsp;: dans un système réparti, <em>c'est la communication qui crée l'ordre</em>. Moins les machines se parlent, plus il reste de couples que rien ne départage — et plus il faudra de conflits à arbitrer plus tard.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

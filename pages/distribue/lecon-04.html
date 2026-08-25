@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le temps n'existe pas : horloges et dérive — Leçon 04 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Une machine ne connaît pas l'heure : elle en tient une estimation qui dérive de 108,0 ms par heure et qu'un ajustement peut faire reculer, au point qu'une durée de 250 ms se mesure -250 ms. Ce que valent vraiment un quartz à 30 ppm, un intervalle NTP large de 60 ms, un horodatage comme arbitre — 22 700 écritures perdues sur 100 000 — et un journal fusionné où le débit apparaît 13 ms avant la requête qui l'a déclenché." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-04.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 04</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 2 · S'accorder — Leçon 04</p>
+              <h1 class="lesson-header__title">Le temps n'existe pas&nbsp;: horloges et dérive</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~79 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: le <a href="cours.html">module&nbsp;1</a> de ce cours, en particulier la <a href="lecon-02.html">leçon&nbsp;2</a> sur la latence. Savoir lire une boucle et une fonction en JavaScript suffit&nbsp;; aucune notion d'horlogerie n'est supposée.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer l'horloge <strong>murale</strong> de l'horloge <strong>monotone</strong>, et dire laquelle mesure une durée&nbsp;;</li>
+                  <li>chiffrer la <strong>dérive</strong> d'un quartz ordinaire&nbsp;: <strong>108,0&nbsp;ms</strong> par heure, <strong>15,77&nbsp;min</strong> par an&nbsp;;</li>
+                  <li>expliquer pourquoi une synchronisation ne donne jamais un instant mais un <strong>intervalle</strong>, large ici de <strong>60&nbsp;ms</strong>&nbsp;;</li>
+                  <li>montrer que «&nbsp;la dernière écriture gagne&nbsp;» perd des données&nbsp;: <strong>22&nbsp;700</strong> écritures écrasées sur <strong>100&nbsp;000</strong>&nbsp;;</li>
+                  <li>lire un journal fusionné sans le croire&nbsp;: un débit y apparaît <strong>13&nbsp;ms avant</strong> la requête qui l'a déclenché&nbsp;;</li>
+                  <li>énoncer ce qu'un horodatage a le droit de servir à faire, et ce qu'il ne peut pas arbitrer.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Il y a une phrase qu'on écrit sans y penser, dans à peu près tous les programmes&nbsp;: <code>const debut = Date.now();</code>. Elle a l'air de demander l'heure à la machine comme on la demanderait à quelqu'un. Elle ne fait rien de tel. Elle lit un compteur que la machine entretient elle-même, qu'elle corrige de temps en temps en interrogeant une autre machine, et qui, entre deux corrections, s'éloigne du temps réel à une vitesse mesurable. Ce compteur n'est pas l'heure&nbsp;: c'est <em>l'opinion de cette machine sur l'heure</em>.</p>
+<p>Sur une seule machine, cette nuance n'a aucune conséquence visible, et c'est pour cela qu'on ne l'apprend jamais. Tous les horodatages d'un programme local viennent de la même opinion&nbsp;: ils sont comparables entre eux, ordonnés entre eux, cohérents entre eux. L'illusion tient parfaitement. Elle se brise à la seconde où deux machines écrivent dans le même journal, dans la même base, ou dans le même fichier de traces.</p>
+<p>Cette leçon mesure l'écart entre l'opinion et le fait. Un quartz ordinaire dérive de <strong>108,0&nbsp;ms</strong> par heure et de <strong>15,77&nbsp;min</strong> par an&nbsp;; deux machines qui dérivent en sens contraire s'écartent de <strong>3,84&nbsp;ms</strong> entre deux resynchronisations, même quand tout va bien. Une correction d'horloge fera afficher à un chronomètre une durée de <strong>−250&nbsp;ms</strong> pour un traitement qui a réellement duré 250&nbsp;ms. Un arbitrage «&nbsp;la dernière écriture gagne&nbsp;» détruira <strong>22&nbsp;700</strong> écritures sur <strong>100&nbsp;000</strong>, sans lever la moindre erreur. Et un journal fusionné, trié par horodatage, montrera un débit bancaire <strong>13&nbsp;ms avant</strong> la requête qui l'a déclenché.</p>
+<p>Deux mises au point avant de commencer. La première&nbsp;: cette leçon ne cherche pas à mieux synchroniser les horloges. Elle cherche à établir ce qu'on ne peut pas leur faire dire, quelle que soit la qualité de la synchronisation — parce que c'est de cette impossibilité que naît tout le module&nbsp;2. La seconde&nbsp;: la sortie de ce problème s'appelle l'<strong>ordre logique</strong>, et elle est <em>annoncée</em> ici, pas traitée. Elle occupe la <a href="lecon-05.html">leçon&nbsp;5</a> entière.</p>
+<h2>Deux horloges dans chaque machine, et une seule qu'on regarde</h2>
+<p>Toute machine ordinaire entretient <em>deux</em> compteurs de temps, qui ne servent pas à la même chose et qui ne se comportent pas de la même façon. Le premier s'appelle l'horloge <strong>murale</strong> — <em>wall clock</em> dans la documentation anglophone. Il prétend donner l'heure qu'il est&nbsp;: une date, une heure, un fuseau. C'est ce que rendent <code>Date.now()</code> en JavaScript, <code>time.time()</code> en Python, <code>System.currentTimeMillis()</code> en Java. C'est la seule des deux qu'on peut comparer entre deux machines, parce que c'est la seule qui prétende désigner le même instant pour tout le monde.</p>
+<p>Le second s'appelle l'horloge <strong>monotone</strong>. Il ne prétend rien du tout&nbsp;: il compte le temps écoulé depuis un point de départ arbitraire, souvent l'allumage de la machine. Le nombre qu'il rend n'a aucun sens en soi — il ne désigne aucune date — et il est parfaitement inutile pour se comparer à une autre machine. En échange, il possède une propriété que la murale n'a pas&nbsp;: il n'avance jamais qu'en avançant. Personne ne le recale, personne ne le remet à l'heure, il ne recule jamais. C'est <code>performance.now()</code> en JavaScript, <code>time.monotonic()</code> en Python, <code>System.nanoTime()</code> en Java.</p>
+<p>Pourquoi cette séparation existe-t-elle&nbsp;? Parce que la murale est corrigée. Un démon de synchronisation la compare régulièrement à une référence extérieure, constate un écart, et le rattrape. Deux façons de le faire&nbsp;: en <strong>glissant</strong>, c'est-à-dire en accélérant ou en ralentissant très légèrement l'horloge jusqu'à ce que l'écart se résorbe, ou en <strong>sautant</strong>, c'est-à-dire en écrivant d'un coup la nouvelle valeur. Le saut est brutal mais parfois nécessaire&nbsp;: quand l'écart atteint plusieurs secondes, le glissement mettrait des heures. Et un saut peut aller <em>en arrière</em>.</p>
+<p>Voilà exactement ce que ça donne quand un saut tombe au milieu d'une mesure de durée. Le programme ci-dessous simule les deux horloges d'une machine — on ne les lit pas pour de vrai, on les fabrique, ce qui permet de placer la correction au moment précis où elle fait mal.</p>
+<figure class="code-block" data-file="deux-horloges.js"><pre><code class="language-javascript">// Deux horloges cohabitent dans toute machine, et elles ne servent pas à la même chose.
+// Ici on les simule : une horloge MURALE, qu'un ajustement peut déplacer, et une
+// horloge MONOTONE, qui ne fait que compter le temps écoulé depuis l'allumage.
+function machine() {
+  let ecoule = 0;          // ce que compte l'horloge monotone, en ms
+  let mural = 1772000000000; // ce qu'affiche l'horloge murale, en ms depuis 1970
+  return {
+    avancer(ms) { ecoule += ms; mural += ms; },
+    ajuster(ms) { mural += ms; },      // NTP recale l'heure : la monotone ne bouge pas
+    maintenant() { return mural; },    // Date.now()
+    depuisAllumage() { return ecoule; }, // performance.now()
+  };
+}
+
+const m = machine();
+
+// Un traitement dure réellement 250 ms. Au milieu, le démon de temps s'aperçoit
+// que la machine avançait de 500 ms et la recale : l'heure murale RECULE.
+const departMural = m.maintenant();
+const departMonotone = m.depuisAllumage();
+
+m.avancer(120);
+m.ajuster(-500);          // le recalage arrive ici, invisible pour le programme
+m.avancer(130);
+
+const finMural = m.maintenant();
+const finMonotone = m.depuisAllumage();
+
+console.log('durée mesurée à l\'horloge murale   : ' + (finMural - departMural) + ' ms');
+console.log('durée mesurée à l\'horloge monotone : ' + (finMonotone - departMonotone) + ' ms');
+console.log('durée réelle du traitement          : 250 ms');
+console.log('');
+
+// Ce que le code de garde en tire, s'il a été écrit sans y penser.
+const duree = finMural - departMural;
+console.log('if (duree &gt; 200) alerte lenteur  -&gt; ' + (duree &gt; 200));
+console.log('if (duree &lt; 0) impossible        -&gt; ' + (duree &lt; 0));
+console.log('délai restant sur un budget de 1000 ms : ' + (1000 - duree) + ' ms');</code></pre></figure>
+<figure class="code-block" data-file="deux-horloges.txt"><pre><code class="language-plaintext">durée mesurée à l'horloge murale   : -250 ms
+durée mesurée à l'horloge monotone : 250 ms
+durée réelle du traitement          : 250 ms
+
+if (duree &gt; 200) alerte lenteur  -&gt; false
+if (duree &lt; 0) impossible        -&gt; true
+délai restant sur un budget de 1000 ms : 1250 ms
+</code></pre></figure>
+<p>Le traitement a duré 250&nbsp;ms. L'horloge monotone le dit&nbsp;: <strong>250&nbsp;ms</strong>. L'horloge murale annonce <strong>−250&nbsp;ms</strong>, parce que le recalage de 500&nbsp;ms en arrière est arrivé entre les deux lectures et qu'elle n'a aucun moyen de le signaler&nbsp;: elle rend un nombre, pas un récit.</p>
+<p>Regarde les trois lignes suivantes, qui sont le vrai sujet. Le test de lenteur <code>duree &gt; 200</code> rend <strong>false</strong>&nbsp;: l'alerte ne se déclenche pas, alors que le traitement a bien dépassé le seuil. Le test <code>duree &lt; 0</code>, qu'aucun développeur n'écrirait parce qu'il paraît absurde, rend <strong>true</strong>. Et le budget restant, calculé par soustraction, passe à <strong>1250&nbsp;ms</strong> sur un budget initial de 1000&nbsp;: le code s'accorde 250&nbsp;ms de plus qu'il n'en avait le droit. Aucune de ces trois anomalies ne produit d'erreur. Elles produisent des <em>décisions</em>, prises sur une durée fausse.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Mesurer une durée avec l'horloge murale</p><p>C'est le bug le plus répandu de cette leçon, et il traverse tous les langages. <code>Date.now()</code>, <code>time.time()</code>, <code>System.currentTimeMillis()</code>&nbsp;: aucun de ces trois appels ne convient à un chronomètre. Ils conviennent à un <em>horodatage</em> — «&nbsp;cet événement a eu lieu à telle date&nbsp;» — et à rien d'autre. Pour une durée, pour un délai d'attente, pour un intervalle entre deux réessais, pour une limitation de débit&nbsp;: horloge <strong>monotone</strong>, toujours. La règle tient en une phrase&nbsp;: <em>la murale répond à «&nbsp;quand&nbsp;»</em>, <em>la monotone répond à «&nbsp;combien de temps&nbsp;»</em>.</p></div></div>
+<p>Un mot sur ce que le saut arrière n'est pas. Ce n'est pas une panne, ni un réglage exotique&nbsp;: c'est le fonctionnement normal d'une machine dont l'horloge avait pris de l'avance. Une machine qui redémarre après un arrêt long, une machine virtuelle qui reprend après une suspension, un conteneur qui migre d'un hôte à un autre, une machine dont le démon de temps vient d'être relancé&nbsp;: dans les quatre cas, l'heure murale peut faire un bond, dans un sens ou dans l'autre, sans prévenir personne.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Les secondes intercalaires, et le lissage qu'elles ont imposé</p><p>Le temps civil est parfois corrigé d'une seconde pour rester accroché à la rotation de la Terre, qui n'est pas régulière&nbsp;: on parle de <em>seconde intercalaire</em>. Le 31&nbsp;décembre 2016, la dernière minute de l'année a compté <strong>61</strong>&nbsp;secondes. Beaucoup de programmes n'ont pas survécu à un <code>23:59:60</code> ou à une seconde qui se répète, et plusieurs incidents publics de 2012 et 2015 s'y rattachent. La parade adoptée par les grands exploitants consiste à <em>lisser</em> la correction sur plusieurs heures — chaque seconde dure alors imperceptiblement plus longtemps. Conséquence à connaître&nbsp;: pendant ce lissage, deux machines réglées sur deux serveurs de temps différents peuvent s'écarter <strong>de plusieurs centaines de millisecondes</strong> tout en se croyant parfaitement synchronisées, chacune ayant appliqué un lissage différent.</p></div></div>
+<h2>La dérive&nbsp;: ce que vaut vraiment un quartz</h2>
+<p>Sous l'horloge murale, il y a un composant physique&nbsp;: un cristal de quartz qui vibre. On compte ses vibrations, et on en déduit le temps écoulé. La fréquence de cette vibration dépend de la taille du cristal, de la façon dont il a été taillé, et surtout de sa <strong>température</strong>. Elle n'est donc jamais exactement celle qu'on attendait, et l'écart s'exprime en <em>parties par million</em>, en abrégé <strong>ppm</strong>.</p>
+<p>Un quartz de machine ordinaire est donné pour ±30&nbsp;ppm dans sa plage de température de fonctionnement. Trente millionièmes&nbsp;: dit comme ça, c'est rassurant. Mettons-le en heures.</p>
+<figure class="code-block" data-file="derive-du-quartz.js"><pre><code class="language-javascript">// La dérive d'un quartz, en chiffres. Une horloge à quartz ordinaire est donnée
+// pour ±30 ppm : trente millionièmes d'écart par unité de temps écoulée.
+const PPM = 30;                        // parts par million, valeur courante
+const DUREES = [
+  ['une minute',              60],
+  ['une heure',             3600],
+  ['un jour',              86400],
+  ['trente jours',       2592000],
+  ['une année (365 j)', 31536000],
+];
+
+function decalage(secondes, ppm) {     // écart accumulé, en millisecondes
+  return secondes * (ppm / 1e6) * 1000;
+}
+
+function lisible(millisecondes) {
+  if (millisecondes &lt; 1000) return millisecondes.toFixed(1) + ' ms';
+  if (millisecondes &lt; 60000) return (millisecondes / 1000).toFixed(2) + ' s';
+  return (millisecondes / 60000).toFixed(2) + ' min';
+}
+
+console.log('quartz donné pour ±' + PPM + ' ppm');
+console.log('durée écoulée      | une machine | deux machines opposées');
+for (const [nom, s] of DUREES) {
+  console.log(
+    nom.padEnd(18) + ' | ' +
+    lisible(decalage(s, PPM)).padStart(11) + ' | ' +
+    lisible(decalage(s, 2 * PPM)).padStart(14)   // l'une avance, l'autre retarde
+  );
+}
+
+// Et la question qui compte vraiment : entre deux resynchronisations.
+const INTERVALLE = 64;                 // secondes, cadence usuelle d'un client NTP
+console.log('');
+console.log('resynchronisation toutes les ' + INTERVALLE + ' s :');
+console.log('  une machine dérive au plus de   ' + decalage(INTERVALLE, PPM).toFixed(2) + ' ms');
+console.log('  deux machines, l\'une de l\'autre ' + decalage(INTERVALLE, 2 * PPM).toFixed(2) + ' ms');</code></pre></figure>
+<figure class="code-block" data-file="derive-du-quartz.txt"><pre><code class="language-plaintext">quartz donné pour ±30 ppm
+durée écoulée      | une machine | deux machines opposées
+une minute         |      1.8 ms |         3.6 ms
+une heure          |    108.0 ms |       216.0 ms
+un jour            |      2.59 s |         5.18 s
+trente jours       |    1.30 min |       2.59 min
+une année (365 j)  |   15.77 min |      31.54 min
+
+resynchronisation toutes les 64 s :
+  une machine dérive au plus de   1.92 ms
+  deux machines, l'une de l'autre 3.84 ms
+</code></pre></figure>
+<p>Une machine seule dérive de <strong>108,0&nbsp;ms</strong> en une heure, de <strong>2,59&nbsp;s</strong> en un jour, et de <strong>15,77&nbsp;min</strong> en un an. Deux machines qui dérivent en sens contraire — l'une avance, l'autre retarde — s'écartent deux fois plus vite&nbsp;: <strong>216,0&nbsp;ms</strong> par heure, <strong>31,54&nbsp;min</strong> par an. Une salle machine où l'on aurait oublié de synchroniser pendant un mois verrait ses deux extrêmes séparés de <strong>2,59&nbsp;min</strong>.</p>
+<p>Mais ce n'est pas ce chiffre-là qui compte, parce que personne ne laisse dériver un mois&nbsp;: un client de synchronisation interroge son serveur toutes les 64&nbsp;secondes environ. La bonne question est donc&nbsp;: <em>de combien deux machines peuvent-elles s'écarter entre deux corrections</em>&nbsp;? La réponse est en bas du programme&nbsp;: <strong>1,92&nbsp;ms</strong> pour une machine, <strong>3,84&nbsp;ms</strong> entre deux machines opposées.</p>
+<p>Retiens ce nombre, il est le cœur de la leçon. <strong>3,84&nbsp;ms</strong>, c'est l'écart que deux machines <em>en parfait état de marche, correctement synchronisées, dans la même salle</em>, peuvent avoir entre leurs horloges. Ce n'est pas un cas dégradé&nbsp;: c'est le régime nominal. Et 3,84&nbsp;ms, à l'échelle d'un système qui traite des milliers de requêtes par seconde, c'est une éternité&nbsp;: des dizaines d'événements y tiennent.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Graphique montrant deux horloges qui s'éloignent du temps réel. L'axe horizontal représente le temps écoulé, gradué de zéro à une heure. L'axe vertical représente l'écart avec le temps réel, gradué de moins 120 millisecondes à plus 120 millisecondes, avec une ligne horizontale accentuée au niveau zéro portant la mention temps réel. Deux droites partent de l'origine : celle du haut, montante, est étiquetée machine A, quartz plus 30 ppm, et atteint plus 108 millisecondes au bout d'une heure ; celle du bas, descendante, est étiquetée machine B, quartz moins 30 ppm, et atteint moins 108 millisecondes. Un trait vertical en pointillés, sans pointe, joint les extrémités des deux droites à l'extrême droite du graphique et porte l'étiquette 216,0 millisecondes d'écart. Une bande basse séparée par un trait en pointillés rappelle qu'avec une resynchronisation toutes les 64 secondes, l'écart accumulé retombe à 1,92 milliseconde par machine et 3,84 millisecondes entre les deux, et qu'aucune de ces deux machines n'est en panne.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Deux quartz honnêtes, une heure de fonctionnement</text>
+
+    <path class="d-line" d="M70 150 L570 150" fill="none" />
+    <text class="d-tag" x="70" y="143" text-anchor="start" font-size="9">TEMPS RÉEL</text>
+    <path class="d-line" d="M70 46 L70 254" fill="none" />
+    <text class="d-mut" x="62" y="50" text-anchor="end" font-size="8.5">+120 ms</text>
+    <text class="d-mut" x="62" y="154" text-anchor="end" font-size="8.5">0</text>
+    <text class="d-mut" x="62" y="258" text-anchor="end" font-size="8.5">−120 ms</text>
+    <text class="d-mut" x="70" y="272" text-anchor="start" font-size="8.5">0</text>
+    <text class="d-mut" x="320" y="272" text-anchor="middle" font-size="8.5">30 min</text>
+    <text class="d-mut" x="570" y="272" text-anchor="middle" font-size="8.5">1 h</text>
+
+    <path class="d-line" d="M70 150 L570 56" fill="none" stroke-width="2" />
+    <text class="d-label" x="330" y="96" text-anchor="middle" font-size="9.5">machine A — quartz +30 ppm</text>
+    <text class="d-text" x="576" y="52" text-anchor="start" font-size="9">+108,0</text>
+
+    <path class="d-line" d="M70 150 L570 244" fill="none" stroke-width="2" />
+    <text class="d-label" x="330" y="216" text-anchor="middle" font-size="9.5">machine B — quartz −30 ppm</text>
+    <text class="d-text" x="576" y="248" text-anchor="start" font-size="9">−108,0</text>
+
+    <path class="d-line" d="M556 56 L556 244" fill="none" stroke-dasharray="3 3" />
+    <text class="d-tag" x="546" y="152" text-anchor="end" font-size="9.5">216,0 ms d'écart</text>
+
+    <path class="d-line" d="M14 282 L626 282" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="296" text-anchor="middle" font-size="9">avec une resynchronisation toutes les 64 s&#160;: 1,92 ms par machine, 3,84 ms entre les deux — et aucune n'est en panne</text>
+  </svg>
+  <figcaption>La dérive n'est pas un défaut&nbsp;: c'est une caractéristique, écrite sur la fiche du composant. Toute la question est de savoir à quelle fréquence on la rattrape.</figcaption>
+</figure>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi 30 ppm, et pas mieux</p><p>On sait fabriquer bien plus précis&nbsp;: un oscillateur thermostaté descend sous 0,1&nbsp;ppm, une horloge atomique au rubidium sous 0,001&nbsp;ppm. Personne n'en met dans une machine ordinaire, pour deux raisons&nbsp;: le prix, et surtout l'inutilité apparente. Une machine qui se resynchronise toutes les minutes n'a pas besoin d'un meilleur quartz — le réseau lui apporte la correction bien avant que la dérive ne devienne visible. C'est une décision d'ingénierie parfaitement raisonnable, et elle explique pourquoi le problème est <em>structurel</em> et non accidentel&nbsp;: le matériel qu'on achète est conçu en supposant que la synchronisation par le réseau fera le travail.</p></div></div>
+<h2>Régler son heure sur celle d'un autre, et pourquoi ça donne un intervalle</h2>
+<p>La correction vient du réseau. Une machine interroge un serveur de temps, obtient une réponse, et en déduit de combien elle doit se recaler. Le protocole s'appelle NTP, et son principe tient en quatre estampilles.</p>
+<p>Le client note l'heure de son départ, <strong>t1</strong>, lue sur <em>sa</em> montre. Le serveur note l'heure d'arrivée, <strong>t2</strong>, lue sur <em>la sienne</em>. Il note aussi l'heure à laquelle il renvoie sa réponse, <strong>t3</strong>, toujours sur la sienne. Le client note enfin l'heure de retour, <strong>t4</strong>, sur la sienne. Les deux montres n'étant pas d'accord, on ne peut soustraire directement t1 à t2&nbsp;: on obtiendrait un mélange du temps de trajet et du désaccord entre les montres.</p>
+<p>La formule de NTP sépare les deux, en faisant une hypothèse&nbsp;: elle suppose que l'aller et le retour durent <em>la même chose</em>. Le temps total de la conversation, traitement du serveur déduit, vaut <code>(t4 − t1) − (t3 − t2)</code>&nbsp;; si les deux sens sont symétriques, chacun en vaut la moitié, et le désaccord entre les montres s'obtient par <code>((t2 − t1) + (t3 − t4)) / 2</code>.</p>
+<p>Cette hypothèse est fausse presque partout. Le routage n'est pas symétrique, les files d'attente ne se remplissent pas des deux côtés en même temps, et un lien peut être saturé dans un sens seulement. Mesurons ce que ça coûte.</p>
+<figure class="code-block" data-file="estimer-son-ecart.js"><pre><code class="language-javascript">// Comment une machine règle son heure sur une autre, et pourquoi elle ne peut pas
+// faire mieux qu'un intervalle. Quatre estampilles : t1 départ client, t2 arrivée
+// serveur, t3 départ serveur, t4 retour client.
+function interroger(ecartVrai, allerMs, retourMs, traitementMs) {
+  const t1 = 0;
+  const t2 = t1 + allerMs + ecartVrai;                  // lu sur l'horloge du serveur
+  const t3 = t2 + traitementMs;                         // idem
+  const t4 = t3 - ecartVrai + retourMs;                 // relu sur l'horloge du client
+  const allerRetour = (t4 - t1) - (t3 - t2);            // délai réseau, traitement retiré
+  const ecartEstime = ((t2 - t1) + (t3 - t4)) / 2;      // la formule de NTP
+  return { allerRetour, ecartEstime, incertitude: allerRetour / 2 };
+}
+
+const CAS = [
+  ['chemin symétrique      ', 0, 30, 30, 5],
+  ['retour deux fois plus long', 0, 20, 40, 5],
+  ['aller deux fois plus long ', 0, 40, 20, 5],
+  ['symétrique, client en retard de 80 ms', 80, 30, 30, 5],
+];
+
+console.log('écart vrai | estimé   | erreur   | aller-retour | intervalle garanti');
+for (const [nom, vrai, aller, retour, t] of CAS) {
+  const r = interroger(vrai, aller, retour, t);
+  const bas = r.ecartEstime - r.incertitude;
+  const haut = r.ecartEstime + r.incertitude;
+  console.log(
+    (vrai + ' ms').padStart(10) + ' | ' +
+    (r.ecartEstime.toFixed(1) + ' ms').padStart(8) + ' | ' +
+    ((r.ecartEstime - vrai).toFixed(1) + ' ms').padStart(8) + ' | ' +
+    (r.allerRetour + ' ms').padStart(12) + ' | ' +
+    '[' + bas.toFixed(1) + ' ; ' + haut.toFixed(1) + '] ms   ' + nom.trim()
+  );
+}
+
+console.log('');
+console.log('l\'écart vrai est-il toujours DANS l\'intervalle ?');
+for (const [nom, vrai, aller, retour, t] of CAS) {
+  const r = interroger(vrai, aller, retour, t);
+  const dedans = vrai &gt;= r.ecartEstime - r.incertitude &amp;&amp; vrai &lt;= r.ecartEstime + r.incertitude;
+  console.log('  ' + (dedans ? 'oui' : 'NON') + '  ' + nom.trim());
+}</code></pre></figure>
+<figure class="code-block" data-file="estimer-son-ecart.txt"><pre><code class="language-plaintext">écart vrai | estimé   | erreur   | aller-retour | intervalle garanti
+      0 ms |   0.0 ms |   0.0 ms |        60 ms | [-30.0 ; 30.0] ms   chemin symétrique
+      0 ms | -10.0 ms | -10.0 ms |        60 ms | [-40.0 ; 20.0] ms   retour deux fois plus long
+      0 ms |  10.0 ms |  10.0 ms |        60 ms | [-20.0 ; 40.0] ms   aller deux fois plus long
+     80 ms |  80.0 ms |   0.0 ms |        60 ms | [50.0 ; 110.0] ms   symétrique, client en retard de 80 ms
+
+l'écart vrai est-il toujours DANS l'intervalle ?
+  oui  chemin symétrique
+  oui  retour deux fois plus long
+  oui  aller deux fois plus long
+  oui  symétrique, client en retard de 80 ms
+</code></pre></figure>
+<p>Première ligne&nbsp;: chemin symétrique, l'estimation est exacte, erreur <strong>0,0&nbsp;ms</strong>. Deuxième et troisième&nbsp;: le même aller-retour de <strong>60&nbsp;ms</strong>, mais réparti 20/40 puis 40/20. L'estimation se trompe de <strong>−10,0&nbsp;ms</strong> puis de <strong>+10,0&nbsp;ms</strong>.</p>
+<p>Et voici pourquoi le client ne peut rien y faire. Les quatre estampilles du cas 20/40 valent <code>0, 20, 25, 65</code>&nbsp;; or ce sont <em>exactement</em> celles que produirait un chemin parfaitement symétrique 30/30 avec un client réellement en avance de 10&nbsp;ms. Une asymétrie de trajet et un vrai désaccord d'horloge donnent les mêmes quatre nombres&nbsp;: le client n'a aucun moyen de les distinguer, et il attribuera toujours l'écart à son horloge. C'est le même phénomène qu'au module&nbsp;1&nbsp;: une seule observation, plusieurs mondes possibles derrière.</p>
+<p>Alors NTP ne prétend pas donner l'heure. Il donne une <strong>estimation</strong> et une <strong>borne d'erreur</strong>. L'asymétrie ne pouvant pas dépasser l'aller-retour lui-même, l'erreur ne peut pas dépasser la moitié de l'aller-retour&nbsp;: ici <strong>±30&nbsp;ms</strong>. Regarde la dernière colonne du programme, puis la vérification en dessous&nbsp;: dans les quatre cas, y compris quand l'estimation ponctuelle se trompe de 10&nbsp;ms, l'écart vrai est <strong>dans</strong> l'intervalle. C'est tout ce que le protocole garantit, et c'est déjà beaucoup&nbsp;: il ne dit pas «&nbsp;il est telle heure&nbsp;», il dit «&nbsp;il est entre telle heure et telle heure&nbsp;».</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 320" role="img" aria-label="Schéma des quatre estampilles d'un échange de synchronisation. Deux lignes horizontales figurent les deux machines : en haut la ligne du client, en bas celle du serveur, chacune étiquetée avec sa propre montre. Une flèche descend de la ligne du client vers celle du serveur : elle part du point t1 et arrive au point t2, et porte l'étiquette aller. Une seconde flèche remonte de la ligne du serveur vers celle du client : elle part du point t3 et arrive au point t4, et porte l'étiquette retour. Entre t2 et t3, un rectangle accentué posé juste sous la ligne du serveur est étiqueté traitement. Sous le schéma, une bande séparée par un trait en pointillés donne les deux formules : l'aller-retour vaut t4 moins t1, moins la parenthèse t3 moins t2, et l'écart estimé vaut la moitié de la somme de t2 moins t1 et de t3 moins t4. Une dernière ligne indique que la seconde formule suppose l'aller et le retour de même durée, et que l'erreur qui en résulte ne peut pas dépasser la moitié de l'aller-retour, soit plus ou moins 30 millisecondes pour un aller-retour de 60 millisecondes.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Quatre estampilles, deux montres qui ne sont pas d'accord</text>
+
+    <path class="d-line" d="M60 70 L600 70" fill="none" stroke-width="2" />
+    <text class="d-label" x="60" y="58" text-anchor="start" font-size="10">CLIENT — sa montre à lui</text>
+    <path class="d-line" d="M60 226 L600 226" fill="none" stroke-width="2" />
+    <text class="d-label" x="60" y="248" text-anchor="start" font-size="10">SERVEUR — sa montre à lui</text>
+
+    <circle class="d-dot" cx="130" cy="70" r="4" />
+    <text class="d-text" x="130" y="58" text-anchor="middle" font-size="10">t1</text>
+    <circle class="d-dot" cx="300" cy="226" r="4" />
+    <text class="d-text" x="300" y="214" text-anchor="middle" font-size="10">t2</text>
+    <circle class="d-dot" cx="370" cy="226" r="4" />
+    <text class="d-text" x="370" y="214" text-anchor="middle" font-size="10">t3</text>
+    <circle class="d-dot" cx="540" cy="70" r="4" />
+    <text class="d-text" x="540" y="58" text-anchor="middle" font-size="10">t4</text>
+
+    <path class="d-line" d="M130 70 L296 222" fill="none" />
+    <path class="d-line" d="M283 213 L296 222 L294 207" fill="none" />
+    <text class="d-mut" x="196" y="152" text-anchor="middle" font-size="9">aller</text>
+
+    <path class="d-line" d="M370 226 L536 74" fill="none" />
+    <path class="d-line" d="M523 83 L536 74 L534 89" fill="none" />
+    <text class="d-mut" x="470" y="152" text-anchor="middle" font-size="9">retour</text>
+
+    <rect class="d-accent" x="300" y="234" width="70" height="20" rx="6" />
+    <text class="d-text" x="335" y="248" text-anchor="middle" font-size="8.5">traitement</text>
+
+    <path class="d-line" d="M14 268 L626 268" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="14" y="286" text-anchor="start" font-size="9.5">ALLER-RETOUR = (t4 − t1) − (t3 − t2)</text>
+    <text class="d-tag" x="336" y="286" text-anchor="start" font-size="9.5">ÉCART ESTIMÉ = ((t2 − t1) + (t3 − t4)) / 2</text>
+    <text class="d-mut" x="320" y="306" text-anchor="middle" font-size="9">la seconde suppose l'aller et le retour de même durée&#160;: l'erreur qui en découle vaut au plus la moitié de l'aller-retour, ici ±30 ms</text>
+  </svg>
+  <figcaption>Le protocole ne rend pas un instant. Il rend un centre et un rayon, et le rayon ne descend jamais sous la moitié de l'aller-retour.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Trois questions à poser à une horloge avant de s'y fier</p><p><strong>1.</strong> Quelle est son incertitude annoncée&nbsp;? Un client NTP la publie&nbsp;; sur les systèmes courants, <code>ntpq -p</code> ou <code>chronyc tracking</code> affichent l'écart estimé et la dispersion. Une valeur inconnue n'est pas une valeur petite. <strong>2.</strong> Quand a-t-elle été corrigée pour la dernière fois&nbsp;? Une machine coupée du réseau depuis une heure a dérivé de 108&nbsp;ms, silencieusement. <strong>3.</strong> Est-ce que je compare deux horodatages venus de deux machines&nbsp;? Si oui, la différence que j'observe doit être plus grande que la somme des deux incertitudes, faute de quoi elle ne signifie rien.</p></div></div>
+<h2>Ce que l'incertitude interdit</h2>
+<p>Puisqu'une horloge donne un intervalle et non un instant, deux événements ne sont ordonnables par leurs horodatages que si leurs deux intervalles <em>ne se chevauchent pas</em>. Si les intervalles se recouvrent, dire lequel est arrivé le premier n'est pas une déduction&nbsp;: c'est un tirage au sort déguisé en calcul.</p>
+<p>Appelons ε l'incertitude d'une horloge&nbsp;: l'instant vrai est quelque part dans [t − ε, t + ε]. Deux événements estampillés à t et t′ sont ordonnables si et seulement si leur écart dépasse <strong>2ε</strong>. En dessous, l'ordre est indéterminé, quelle que soit la précision apparente des nombres affichés.</p>
+<figure class="code-block" data-file="incertitude.js"><pre><code class="language-javascript">// Puisqu'une horloge ne donne jamais l'instant mais un INTERVALLE, deux événements
+// ne sont ordonnables que si leurs intervalles ne se chevauchent pas.
+function ordonnables(ecartMs, epsilonMs) {
+  return ecartMs &gt; 2 * epsilonMs;      // les deux intervalles sont disjoints
+}
+
+const EPSILONS = [
+  ['horloge atomique + GPS, cas soigné', 0.5],
+  ['NTP en salle machine, jour ordinaire', 3.5],
+  ['NTP par l\'internet public',          100],
+  ['machine mal synchronisée',            250],
+];
+
+console.log('incertitude ε | attente à payer | écritures liées par seconde');
+for (const [nom, eps] of EPSILONS) {
+  const attente = 2 * eps;             // pour garantir qu'un horodatage est passé partout
+  console.log(
+    ('±' + eps + ' ms').padStart(13) + ' | ' +
+    (attente + ' ms').padStart(15) + ' | ' +
+    (1000 / attente).toFixed(2).padStart(10) + '   ' + nom
+  );
+}
+
+console.log('');
+console.log('deux événements séparés de 5 ms sont-ils ordonnables ?');
+for (const [nom, eps] of EPSILONS) {
+  console.log('  ' + (ordonnables(5, eps) ? 'oui' : 'non') + '  ε = ±' + eps + ' ms   ' + nom);
+}</code></pre></figure>
+<figure class="code-block" data-file="incertitude.txt"><pre><code class="language-plaintext">incertitude ε | attente à payer | écritures liées par seconde
+      ±0.5 ms |            1 ms |    1000.00   horloge atomique + GPS, cas soigné
+      ±3.5 ms |            7 ms |     142.86   NTP en salle machine, jour ordinaire
+      ±100 ms |          200 ms |       5.00   NTP par l'internet public
+      ±250 ms |          500 ms |       2.00   machine mal synchronisée
+
+deux événements séparés de 5 ms sont-ils ordonnables ?
+  oui  ε = ±0.5 ms   horloge atomique + GPS, cas soigné
+  non  ε = ±3.5 ms   NTP en salle machine, jour ordinaire
+  non  ε = ±100 ms   NTP par l'internet public
+  non  ε = ±250 ms   machine mal synchronisée
+</code></pre></figure>
+<p>Lis la seconde partie d'abord. Deux événements séparés de <strong>5&nbsp;ms</strong> — ce qui est énorme à l'échelle d'un service — ne sont ordonnables qu'avec une horloge à ±0,5&nbsp;ms, c'est-à-dire une machine équipée d'une référence matérielle. Avec une synchronisation NTP ordinaire en salle machine, à ±3,5&nbsp;ms, la réponse est <strong>non</strong>. Avec une machine réglée par l'internet public, à ±100&nbsp;ms, la question ne se pose même plus.</p>
+<p>La première partie du tableau donne l'autre face du problème. Si l'on veut vraiment se servir des horodatages pour ordonner, il faut <em>attendre</em> que l'incertitude soit passée avant de rendre une écriture visible&nbsp;: attendre 2ε garantit qu'aucune machine ne pourra plus estampiller un événement postérieur avec un nombre inférieur. Cette attente coûte&nbsp;: à ±3,5&nbsp;ms, une suite d'écritures dépendantes plafonne à <strong>142,86</strong> par seconde. À ±100&nbsp;ms, elle plafonne à <strong>5</strong>. C'est le calcul qui explique pourquoi les rares bases qui empruntent cette voie commencent par installer des horloges atomiques et des récepteurs satellite dans leurs salles machines&nbsp;: elles n'achètent pas de la précision pour le plaisir, elles achètent du <em>débit</em>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 296" role="img" aria-label="Schéma comparant deux situations d'ordonnancement par horodatage. Un axe horizontal figure l'écoulement du temps, sans aucune graduation chiffrée. Dans la partie haute, intitulée intervalles disjoints, deux barres accentuées représentent les intervalles d'incertitude de deux événements : celle de l'événement X s'étend autour de son horodatage, celle de l'événement Y s'étend plus loin, et un espace vide sépare les deux barres. Une annotation indique que l'ordre X puis Y est certain. Dans la partie basse, intitulée intervalles qui se chevauchent, les deux mêmes barres sont plus larges et se recouvrent sur une portion hachurée. Une annotation indique que l'ordre est indéterminé et que les deux horodatages ne prouvent rien. Une bande finale, séparée par un trait en pointillés, rappelle la règle : deux événements ne sont ordonnables que si leur écart dépasse deux fois epsilon, et donne trois valeurs mesurées, une milliseconde pour une horloge à plus ou moins 0,5 milliseconde, sept millisecondes pour plus ou moins 3,5 millisecondes, deux cents millisecondes pour plus ou moins cent millisecondes.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Ordonnable, ou pas&#160;: la question du chevauchement</text>
+
+    <text class="d-label" x="20" y="48" text-anchor="start" font-size="10">INTERVALLES DISJOINTS</text>
+    <path class="d-line" d="M20 96 L620 96" fill="none" />
+    <rect class="d-accent" x="90" y="62" width="120" height="26" rx="6" />
+    <text class="d-text" x="150" y="79" text-anchor="middle" font-size="9">X ± ε</text>
+    <rect class="d-accent" x="330" y="62" width="120" height="26" rx="6" />
+    <text class="d-text" x="390" y="79" text-anchor="middle" font-size="9">Y ± ε</text>
+    <path class="d-line" d="M210 75 L330 75" fill="none" stroke-dasharray="3 3" />
+    <text class="d-mut" x="270" y="110" text-anchor="middle" font-size="8.5">espace libre</text>
+    <text class="d-tag" x="470" y="79" text-anchor="start" font-size="9.5">X PUIS Y, CERTAIN</text>
+
+    <text class="d-label" x="20" y="160" text-anchor="start" font-size="10">INTERVALLES QUI SE CHEVAUCHENT</text>
+    <path class="d-line" d="M20 208 L620 208" fill="none" />
+    <rect class="d-accent" x="90" y="174" width="200" height="26" rx="6" />
+    <text class="d-text" x="150" y="191" text-anchor="middle" font-size="9">X ± ε</text>
+    <rect class="d-accent" x="230" y="174" width="200" height="26" rx="6" />
+    <text class="d-text" x="370" y="191" text-anchor="middle" font-size="9">Y ± ε</text>
+    <path class="d-line" d="M230 174 L290 200" fill="none" stroke-dasharray="2 2" />
+    <path class="d-line" d="M230 200 L290 174" fill="none" stroke-dasharray="2 2" />
+    <text class="d-mut" x="260" y="222" text-anchor="middle" font-size="8.5">recouvrement</text>
+    <text class="d-tag" x="470" y="191" text-anchor="start" font-size="9.5">ORDRE INDÉTERMINÉ</text>
+
+    <path class="d-line" d="M14 244 L626 244" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="14" y="262" text-anchor="start" font-size="9.5">ORDONNABLE SI L'ÉCART DÉPASSE 2ε</text>
+    <text class="d-mut" x="14" y="282" text-anchor="start" font-size="9">ε = ±0,5 ms → 1 ms&#160;·&#160;ε = ±3,5 ms → 7 ms&#160;·&#160;ε = ±100 ms → 200 ms — en dessous, l'ordre affiché est un tirage au sort</text>
+  </svg>
+  <figcaption>La précision d'affichage n'a rien à voir avec la précision de mesure&nbsp;: un horodatage à la microseconde issu d'une horloge à ±100&nbsp;ms reste une horloge à ±100&nbsp;ms.</figcaption>
+</figure>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège de la précision affichée</p><p>Un horodatage <code>2026-03-14T09:30:00.123456Z</code> affiche six décimales. Elles sont vraies au sens où la machine a bien lu ce nombre-là dans son compteur&nbsp;; elles sont dénuées de sens au sens où l'incertitude sur l'instant réel se compte en millisecondes, parfois en dizaines. Confondre les deux est exactement l'erreur qu'on apprend à éviter en physique en première année&nbsp;: <em>la résolution d'un instrument n'est pas son exactitude</em>. Une règle graduée au dixième de millimètre ne mesure pas au dixième de millimètre si on la pose de travers.</p></div></div>
+<h2>«&nbsp;La dernière écriture gagne&nbsp;»&nbsp;: la dernière selon qui&nbsp;?</h2>
+<p>Voici maintenant l'usage le plus dangereux d'un horodatage, parce que c'est le plus répandu et qu'il ne produit jamais d'erreur visible. Deux serveurs écrivent la même donnée. Il faut départager. On compare les horodatages, on garde le plus grand&nbsp;: c'est la règle dite <em>last write wins</em>, «&nbsp;la dernière écriture gagne&nbsp;». Elle est le comportement par défaut d'un grand nombre de systèmes de stockage répartis, et elle a l'immense mérite de ne demander aucune coordination.</p>
+<p>Le problème tient en une question&nbsp;: la dernière <em>selon quelle horloge</em>&nbsp;? Si le serveur A avance de 45&nbsp;ms sur le serveur B, toute écriture de B faite <em>dans les 45&nbsp;ms qui suivent</em> une écriture de A portera une estampille inférieure à elle — et sera donc écrasée par une écriture antérieure.</p>
+<figure class="code-block" data-file="derniere-ecriture.js"><pre><code class="language-javascript">// « La dernière écriture gagne » — mais la dernière selon QUI ?
+// Deux serveurs écrivent dans la même base. Le serveur A avance de 45 ms sur B.
+const AVANCE_A = 45;   // ms d'avance de l'horloge de A sur celle de B
+
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+// Un cas concret d'abord, pour voir le mécanisme.
+const ecritureA = { valeur: 'Marie',        instantReel: 100, horodatage: 100 + AVANCE_A };
+const ecritureB = { valeur: 'Marie Dupont', instantReel: 120, horodatage: 120 };
+const gagnante = ecritureA.horodatage &gt;= ecritureB.horodatage ? ecritureA : ecritureB;
+const plusRecente = ecritureA.instantReel &gt;= ecritureB.instantReel ? ecritureA : ecritureB;
+
+console.log('A écrit "' + ecritureA.valeur + '" à l\'instant réel ' + ecritureA.instantReel
+            + ' ms, estampillé ' + ecritureA.horodatage);
+console.log('B écrit "' + ecritureB.valeur + '" à l\'instant réel ' + ecritureB.instantReel
+            + ' ms, estampillé ' + ecritureB.horodatage);
+console.log('la base garde     : "' + gagnante.valeur + '"');
+console.log('la dernière écrite: "' + plusRecente.valeur + '"');
+console.log('valeur perdue sans aucune erreur, sans aucun conflit signalé : '
+            + (gagnante !== plusRecente));
+console.log('');
+
+// Maintenant la fréquence. 100 000 paires d'écritures, l'écart réel entre les deux
+// tiré au hasard entre 0 et 200 ms, A toujours en avance de 45 ms sur B.
+const alea = semer(2025);
+const ESSAIS = 100000;
+let perdues = 0;
+for (let i = 0; i &lt; ESSAIS; i++) {
+  const ecart = alea() * 200;              // B écrit ce nombre de ms APRÈS A
+  if (100 + AVANCE_A &gt;= 100 + ecart) perdues++;  // A gagne alors qu'il a écrit avant
+}
+console.log(ESSAIS + ' paires, B écrivant 0 à 200 ms après A :');
+console.log('  écritures de B écrasées par une écriture antérieure : ' + perdues
+            + ' (' + (100 * perdues / ESSAIS).toFixed(2) + ' %)');
+console.log('  attendu si l\'écart est uniforme sur 0-200 ms       : 22.50 %');</code></pre></figure>
+<figure class="code-block" data-file="derniere-ecriture.txt"><pre><code class="language-plaintext">A écrit "Marie" à l'instant réel 100 ms, estampillé 145
+B écrit "Marie Dupont" à l'instant réel 120 ms, estampillé 120
+la base garde     : "Marie"
+la dernière écrite: "Marie Dupont"
+valeur perdue sans aucune erreur, sans aucun conflit signalé : true
+
+100000 paires, B écrivant 0 à 200 ms après A :
+  écritures de B écrasées par une écriture antérieure : 22700 (22.70 %)
+  attendu si l'écart est uniforme sur 0-200 ms       : 22.50 %
+</code></pre></figure>
+<p>Le cas concret d'abord. A écrit «&nbsp;Marie&nbsp;» à l'instant réel 100&nbsp;ms, et l'estampille <strong>145</strong>. B écrit «&nbsp;Marie Dupont&nbsp;» vingt millisecondes plus tard, à l'instant réel 120, et l'estampille <strong>120</strong>. La base garde <strong>«&nbsp;Marie&nbsp;»</strong>&nbsp;: la valeur écrite <em>en premier</em>. La correction du nom est perdue. Aucune exception n'est levée, aucun conflit n'est signalé, aucune trace n'est écrite. L'utilisateur qui a corrigé son nom le verra revenir à l'ancienne valeur en rechargeant la page, et personne ne saura pourquoi.</p>
+<p>La seconde partie donne la fréquence. Cent mille paires d'écritures, B écrivant systématiquement <em>après</em> A, avec un délai réel tiré au hasard entre 0 et 200&nbsp;ms&nbsp;: <strong>22&nbsp;700</strong> écritures de B sont écrasées par une écriture antérieure, soit <strong>22,70&nbsp;%</strong>. La valeur théorique est 45/200, soit 22,50&nbsp;%&nbsp;; le tirage donne 22,70&nbsp;%, l'écart étant celui qu'on attend d'un échantillon de cette taille. Plus d'une écriture sur cinq est détruite en silence, par une règle qui a l'air d'un arbitrage.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Schéma en deux registres montrant une écriture perdue par la règle de la dernière écriture. Le registre du haut, intitulé ce qui s'est réellement passé, présente un axe du temps réel sur lequel deux marques apparaissent dans l'ordre : à cent millisecondes, le serveur A écrit la valeur Marie ; à cent vingt millisecondes, le serveur B écrit la valeur Marie Dupont. Une flèche indique que B a écrit après A. Le registre du bas, intitulé ce que la base compare, présente les mêmes deux écritures avec leurs horodatages : celui de A vaut cent quarante-cinq parce que son horloge avance de quarante-cinq millisecondes, celui de B vaut cent vingt. Un trait coudé relie la boîte de l'horodatage le plus grand, celui de A, à une boîte accentuée indiquant que la base conserve la valeur Marie. Une bande finale séparée par un trait en pointillés rappelle qu'aucune erreur n'est levée, que la correction du nom est perdue en silence, et que sur cent mille paires simulées vingt-deux mille sept cents écritures sont ainsi écrasées par une écriture antérieure, soit vingt-deux virgule sept pour cent.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Une avance de 45 ms suffit à effacer la correction</text>
+
+    <text class="d-label" x="20" y="48" text-anchor="start" font-size="10">CE QUI S'EST RÉELLEMENT PASSÉ</text>
+    <path class="d-line" d="M20 92 L620 92" fill="none" />
+    <circle class="d-dot" cx="180" cy="92" r="4" />
+    <text class="d-text" x="180" y="80" text-anchor="middle" font-size="9">100 ms — A écrit «&#160;Marie&#160;»</text>
+    <circle class="d-dot" cx="420" cy="92" r="4" />
+    <text class="d-text" x="420" y="80" text-anchor="middle" font-size="9">120 ms — B écrit «&#160;Marie Dupont&#160;»</text>
+    <path class="d-line" d="M190 106 L410 106" fill="none" /><path class="d-line" d="M401 101 L410 106 L401 111" fill="none" />
+    <text class="d-mut" x="300" y="122" text-anchor="middle" font-size="8.5">B a écrit après A</text>
+
+    <text class="d-label" x="20" y="160" text-anchor="start" font-size="10">CE QUE LA BASE COMPARE</text>
+    <rect class="d-box" x="90" y="174" width="180" height="40" rx="7" />
+    <text class="d-text" x="180" y="190" text-anchor="middle" font-size="9">A → horodatage 145</text>
+    <text class="d-mut" x="180" y="206" text-anchor="middle" font-size="8.5">horloge en avance de 45 ms</text>
+    <rect class="d-box" x="330" y="174" width="180" height="40" rx="7" />
+    <text class="d-text" x="420" y="190" text-anchor="middle" font-size="9">B → horodatage 120</text>
+    <text class="d-mut" x="420" y="206" text-anchor="middle" font-size="8.5">horloge juste</text>
+    <path class="d-line" d="M180 218 L180 234 L300 234" fill="none" />
+    <rect class="d-accent" x="300" y="220" width="230" height="28" rx="8" />
+    <text class="d-text" x="415" y="238" text-anchor="middle" font-size="9">la base garde «&#160;Marie&#160;»</text>
+
+    <path class="d-line" d="M14 262 L626 262" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="280" text-anchor="middle" font-size="9">aucune erreur levée, aucun conflit signalé&#160;: la correction est perdue en silence</text>
+    <text class="d-tag" x="320" y="296" text-anchor="middle" font-size="9.5">100 000 PAIRES SIMULÉES → 22 700 ÉCRITURES ÉCRASÉES PAR UNE ÉCRITURE ANTÉRIEURE (22,70 %)</text>
+  </svg>
+  <figcaption>La règle ne se trompe pas de calcul&nbsp;: elle compare correctement deux nombres. C'est le sens de ces nombres qui n'existe pas.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que «&nbsp;dernière écriture gagne&nbsp;» veut vraiment dire</p><p>Traduis mentalement cette expression par&nbsp;: «&nbsp;<strong>l'écriture portant le plus grand nombre gagne</strong>&nbsp;». La formulation devient laide, et c'est tant mieux&nbsp;: elle cesse de promettre une chronologie qu'elle ne peut pas tenir. Il reste des cas où la règle est acceptable — une donnée dont on se moque de perdre une version, un compteur de dernière connexion, un cache. Il y en a où elle ne l'est pas&nbsp;: un panier, un solde, un état de commande, une liste de droits. La question à poser devant une configuration de base de données n'est pas «&nbsp;est-ce que ça résout les conflits&nbsp;?&nbsp;» mais «&nbsp;<em>qu'est-ce que j'accepte de perdre&nbsp;?</em>&nbsp;».</p></div></div>
+<h2>Un jeton valide ici, expiré là&nbsp;: l'écart d'horloge comme faille</h2>
+<p>L'arbitrage entre écritures n'est pas le seul endroit où un horodatage prend une décision. Il y en a un autre, plus discret et bien plus répandu&nbsp;: l'<strong>expiration</strong>. Un jeton d'accès porte une date d'émission et une durée de vie&nbsp;; le service qui le reçoit compare cette date à son heure à lui, et accepte ou refuse. Deux machines, deux horloges, une décision binaire.</p>
+<p>Notons δ l'avance de l'horloge du <em>vérificateur</em> sur celle de l'<em>émetteur</em>. Si δ est positif, le vérificateur croit qu'il est plus tard qu'il n'est&nbsp;: le jeton lui paraît plus vieux, et il l'invalide trop tôt. Si δ est négatif, le vérificateur croit qu'il est plus tôt&nbsp;: le jeton lui paraît venir du futur, et beaucoup de bibliothèques refusent alors carrément de le lire. Mesurons les deux effets sur un jeton d'une minute.</p>
+<figure class="code-block" data-file="jeton-expire.js"><pre><code class="language-javascript">// Un jeton d'accès est émis à un instant et vaut 60 secondes. Émetteur et
+// vérificateur sont deux machines : leurs horloges ne sont pas d'accord.
+const VIE = 60;                    // secondes de validité annoncées
+
+// δ : de combien l'horloge du VÉRIFICATEUR avance sur celle de l'ÉMETTEUR.
+function fenetre(delta, tolerance) {
+  // Le vérificateur croit qu'il est (t + δ) quand il est réellement t.
+  // Il accepte tant que (t + δ) &lt;= emission + VIE + tolérance,
+  // et refuse ce qui lui semble venir du futur : (t + δ) &gt;= emission - tolérance.
+  return { debut: -delta - tolerance, fin: VIE - delta + tolerance };
+}
+
+const CAS = [-90, -30, -3.84, -0.00384, 0, 0.00384, 3.84, 30, 90];
+
+console.log('tolérance = 0 s');
+console.log('  δ, en s | jeton accepté de … à …    | durée utile');
+for (const d of CAS) {
+  const f = fenetre(d, 0);
+  const utile = Math.max(0, Math.min(VIE, f.fin) - Math.max(0, f.debut));
+  console.log('  ' + (d + ' s').padStart(14) + ' | '
+              + (f.debut.toFixed(3) + ' s → ' + f.fin.toFixed(3) + ' s').padStart(26) + ' | '
+              + utile.toFixed(3) + ' s');
+}
+
+console.log('');
+console.log('tolérance = 30 s (valeur usuelle des bibliothèques de jetons)');
+for (const d of CAS) {
+  const f = fenetre(d, 30);
+  const utile = Math.max(0, Math.min(VIE, f.fin) - Math.max(0, f.debut));
+  console.log('  ' + (d + ' s').padStart(14) + ' | '
+              + (f.debut.toFixed(3) + ' s → ' + f.fin.toFixed(3) + ' s').padStart(26) + ' | '
+              + utile.toFixed(3) + ' s');
+}
+
+console.log('');
+const sansTol = fenetre(90, 0), avecTol = fenetre(90, 30);
+console.log('avec 90 s d\'avance et aucune tolérance, le jeton est refusé dès son émission : '
+            + (sansTol.fin &lt;= 0));
+console.log('la tolérance de 30 s ne suffit pas non plus à le sauver : ' + (avecTol.fin &lt;= 0));
+const seule = fenetre(0, 30);
+const large = fenetre(-30, 30);
+console.log('');
+console.log('la tolérance SEULE porte déjà la vie du jeton à ' + seule.fin.toFixed(2) + ' s : '
+            + (seule.fin / VIE).toFixed(1) + ' fois la durée annoncée ;');
+console.log('avec en plus un vérificateur qui retarde de 30 s, elle va jusqu\'à '
+            + large.fin.toFixed(2) + ' s : ' + (large.fin / VIE).toFixed(1) + ' fois.');</code></pre></figure>
+<figure class="code-block" data-file="jeton-expire.txt"><pre><code class="language-plaintext">tolérance = 0 s
+  δ, en s | jeton accepté de … à …    | durée utile
+           -90 s |       90.000 s → 150.000 s | 0.000 s
+           -30 s |        30.000 s → 90.000 s | 30.000 s
+         -3.84 s |         3.840 s → 63.840 s | 56.160 s
+      -0.00384 s |         0.004 s → 60.004 s | 59.996 s
+             0 s |         0.000 s → 60.000 s | 60.000 s
+       0.00384 s |        -0.004 s → 59.996 s | 59.996 s
+          3.84 s |        -3.840 s → 56.160 s | 56.160 s
+            30 s |       -30.000 s → 30.000 s | 30.000 s
+            90 s |      -90.000 s → -30.000 s | 0.000 s
+
+tolérance = 30 s (valeur usuelle des bibliothèques de jetons)
+           -90 s |       60.000 s → 180.000 s | 0.000 s
+           -30 s |        0.000 s → 120.000 s | 60.000 s
+         -3.84 s |       -26.160 s → 93.840 s | 60.000 s
+      -0.00384 s |       -29.996 s → 90.004 s | 60.000 s
+             0 s |       -30.000 s → 90.000 s | 60.000 s
+       0.00384 s |       -30.004 s → 89.996 s | 60.000 s
+          3.84 s |       -33.840 s → 86.160 s | 60.000 s
+            30 s |       -60.000 s → 60.000 s | 60.000 s
+            90 s |       -120.000 s → 0.000 s | 0.000 s
+
+avec 90 s d'avance et aucune tolérance, le jeton est refusé dès son émission : true
+la tolérance de 30 s ne suffit pas non plus à le sauver : true
+
+la tolérance SEULE porte déjà la vie du jeton à 90.00 s : 1.5 fois la durée annoncée ;
+avec en plus un vérificateur qui retarde de 30 s, elle va jusqu'à 120.00 s : 2.0 fois.
+</code></pre></figure>
+<p>Attention à l'unité, parce que c'est exactement le genre de glissement que ce cours traque&nbsp;: ce programme raisonne en <strong>secondes</strong>, quand la dérive de la section précédente se comptait en millisecondes. La ligne du régime nominal est donc <strong>0,00384&nbsp;s</strong> — les 3,84&nbsp;ms mesurées plus haut — et elle ne coûte presque rien&nbsp;: la durée utile tombe de 60,000 à <strong>59,996&nbsp;s</strong>, soit <strong>0,0064&nbsp;%</strong> de perte. Personne ne s'en aperçoit, et c'est bien le problème&nbsp;: ce cas-là ne prépare pas aux autres.</p>
+<p>Les lignes suivantes montrent ce qui arrive dès qu'on quitte ce régime. À <strong>3,84&nbsp;s</strong> d'écart — mille fois le nominal, soit une machine qui n'a plus été corrigée depuis une trentaine d'heures —, la durée utile tombe à <strong>56,160&nbsp;s</strong>, soit <strong>6,4&nbsp;%</strong> de perte. À <strong>30&nbsp;s</strong>, le jeton ne vaut plus que la moitié de sa vie annoncée. À <strong>90&nbsp;s</strong>, elle tombe à <strong>0,000&nbsp;s</strong>&nbsp;: le jeton est refusé dès son émission, dans les deux sens de l'écart et pour deux raisons opposées — trop vieux d'un côté, venu du futur de l'autre.</p>
+<p>D'où la tolérance que presque toutes les bibliothèques de jetons appliquent par défaut, souvent 30 ou 60&nbsp;secondes&nbsp;: on accepte un jeton qui semble expiré depuis peu, ou émis dans un futur proche. Le second tableau montre ce qu'elle achète, et ce qu'elle coûte. Elle rétablit la durée utile pleine — <strong>60,000&nbsp;s</strong> — sur toute la plage de ±30&nbsp;s. Elle ne sauve toujours pas le cas à 90&nbsp;s. Et elle a un prix, écrit dans les deux dernières lignes&nbsp;: la tolérance <em>à elle seule</em> porte déjà la vie du jeton à <strong>90,00&nbsp;s</strong>, soit <strong>1,5&nbsp;fois</strong> la durée annoncée&nbsp;; combinée à un vérificateur qui retarde de 30&nbsp;s, elle la porte à <strong>120,00&nbsp;s</strong>, soit <strong>2,0&nbsp;fois</strong>.</p>
+<p>Ces deux facteurs méritent qu'on s'y arrête, parce qu'ils retournent l'argument de sécurité qui justifie les jetons courts. Réduire la durée de vie d'un jeton sert à limiter la fenêtre pendant laquelle un jeton volé reste exploitable. Une tolérance de 30&nbsp;s allonge cette fenêtre de moitié sur un jeton de 60&nbsp;s, et la double si le vérificateur retarde de 30&nbsp;s&nbsp;; sur un jeton de <strong>15&nbsp;s</strong>, la même tolérance la <em>triple</em> à elle seule, et la quintuple avec le retard. La tolérance n'est donc pas un réglage neutre&nbsp;: c'est un arbitrage entre la <em>disponibilité</em> du service — refuser des jetons légitimes est une panne — et la <em>durée d'exposition</em> après un vol. Le régler sans le savoir, c'est le régler quand même.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">La tolérance ne remplace pas la synchronisation</p><p>Une tolérance de 30&nbsp;s masque les écarts d'horloge jusqu'à 30&nbsp;s. Ce n'est pas une bonne nouvelle&nbsp;: c'est un <em>détecteur désarmé</em>. Une machine qui dérive lentement traversera la zone masquée sans qu'aucune alerte ne parte, puis franchira le seuil un jour donné — et l'incident apparaîtra alors comme un problème d'authentification soudain, sans lien visible avec l'horloge. Deux gestes vont ensemble&nbsp;: régler une tolérance <em>petite</em>, du même ordre que l'écart réellement observé, et surveiller cet écart pour lui-même. Le cours <a href="../securite/cours.html">Sécurité</a> traite du contenu des jetons&nbsp;; ce qui se joue ici est la fiabilité de l'horloge qui les juge.</p></div></div>
+<h2>Le journal fusionné qui raconte l'histoire à l'envers</h2>
+<p>Dernier usage à examiner, et le plus quotidien&nbsp;: l'enquête après incident. Trois services ont participé à une requête, chacun a écrit ses lignes de journal, on rassemble le tout et on trie par horodatage pour reconstituer la séquence. Ce geste est si naturel qu'on ne le remarque plus. Il suppose pourtant que les trois horloges soient d'accord.</p>
+<figure class="code-block" data-file="journal-fusionne.js"><pre><code class="language-javascript">// Le geste le plus banal du métier : rassembler les journaux de plusieurs machines
+// et les trier par horodatage pour reconstituer ce qui s'est passé.
+// Trois services, chacun avec son décalage d'horloge, en millisecondes.
+const DECALAGE = { passerelle: 0, panier: +40, paiement: -25 };
+
+// Ce qui s'est RÉELLEMENT passé, dans l'ordre, avec l'instant réel de chaque événement.
+const REEL = [
+  [100, 'passerelle', 'requête reçue : payer la commande 7412'],
+  [104, 'panier',     'commande 7412 verrouillée'],
+  [112, 'paiement',   'débit de 30 € demandé'],
+  [148, 'paiement',   'débit de 30 € accepté'],
+  [155, 'panier',     'commande 7412 marquée payée'],
+  [160, 'passerelle', 'réponse 200 envoyée'],
+];
+
+// Ce que chaque machine ÉCRIT dans son journal : son heure à elle.
+const journal = REEL.map(([t, service, texte]) =&gt; ({
+  ecrit: t + DECALAGE[service], reel: t, service, texte,
+}));
+
+console.log('l\'histoire réelle');
+for (const e of REEL) console.log('  ' + String(e[0]).padStart(4) + ' ms  ' + e[1].padEnd(11) + e[2]);
+
+console.log('');
+console.log('le journal fusionné, trié par horodatage — ce que l\'enquêteur lit');
+const trie = journal.slice().sort((a, b) =&gt; a.ecrit - b.ecrit);
+for (const e of trie) console.log('  ' + String(e.ecrit).padStart(4) + ' ms  ' + e.service.padEnd(11) + e.texte);
+
+// Combien de paires ont été inversées par rapport à la réalité ?
+let inversions = 0;
+for (let i = 0; i &lt; trie.length; i++)
+  for (let j = i + 1; j &lt; trie.length; j++)
+    if (trie[i].reel &gt; trie[j].reel) inversions++;
+
+console.log('');
+console.log('paires d\'événements présentées dans le mauvais ordre : ' + inversions
+            + ' sur ' + (trie.length * (trie.length - 1) / 2));
+const debit = trie.findIndex((e) =&gt; e.texte === 'débit de 30 € demandé');
+const verrou = trie.findIndex((e) =&gt; e.texte === 'commande 7412 verrouillée');
+console.log('le débit apparaît avant le verrouillage du panier : ' + (debit &lt; verrou));
+const requete = trie.findIndex((e) =&gt; e.texte.indexOf('requête reçue') === 0);
+console.log('le débit apparaît ' + (trie[requete].ecrit - trie[debit].ecrit)
+            + ' ms AVANT la requête qui l\'a déclenché');</code></pre></figure>
+<figure class="code-block" data-file="journal-fusionne.txt"><pre><code class="language-plaintext">l'histoire réelle
+   100 ms  passerelle requête reçue : payer la commande 7412
+   104 ms  panier     commande 7412 verrouillée
+   112 ms  paiement   débit de 30 € demandé
+   148 ms  paiement   débit de 30 € accepté
+   155 ms  panier     commande 7412 marquée payée
+   160 ms  passerelle réponse 200 envoyée
+
+le journal fusionné, trié par horodatage — ce que l'enquêteur lit
+    87 ms  paiement   débit de 30 € demandé
+   100 ms  passerelle requête reçue : payer la commande 7412
+   123 ms  paiement   débit de 30 € accepté
+   144 ms  panier     commande 7412 verrouillée
+   160 ms  passerelle réponse 200 envoyée
+   195 ms  panier     commande 7412 marquée payée
+
+paires d'événements présentées dans le mauvais ordre : 4 sur 15
+le débit apparaît avant le verrouillage du panier : true
+le débit apparaît 13 ms AVANT la requête qui l'a déclenché
+</code></pre></figure>
+<p>Compare les deux listes. La réalité est limpide&nbsp;: la passerelle reçoit la requête, le panier se verrouille, le paiement est demandé puis accepté, le panier est marqué payé, la réponse part. Le journal fusionné raconte autre chose. Il commence par «&nbsp;<em>débit de 30&nbsp;€ demandé</em>&nbsp;» à 87&nbsp;ms — soit <strong>13&nbsp;ms avant</strong> la ligne «&nbsp;requête reçue&nbsp;» qui a déclenché toute l'affaire. Il place ensuite l'acceptation du débit <em>avant</em> le verrouillage du panier. Sur les 15 paires d'événements, <strong>4</strong> sont présentées dans le mauvais ordre.</p>
+<p>Les décalages employés ici sont modestes&nbsp;: +40&nbsp;ms et −25&nbsp;ms, soit 65&nbsp;ms d'écart entre les deux extrêmes. C'est l'ordre de grandeur d'une machine réglée par l'internet public, ou d'une machine dont le démon de temps vient de redémarrer. Rien d'extraordinaire.</p>
+<p>Ce qui rend cette situation redoutable, c'est qu'elle ne ressemble pas à un bug d'horloge. Elle ressemble à un bug applicatif — et à un bug spectaculaire&nbsp;: «&nbsp;le paiement part avant la requête&nbsp;», «&nbsp;le panier se verrouille après le débit&nbsp;». Des équipes entières ont passé des journées à chercher une condition de course qui n'existait pas, dans du code parfaitement correct, parce que leur reconstitution était fausse. Le premier réflexe devant une séquence impossible n'est pas de suspecter le code&nbsp;: c'est de vérifier l'écart entre les horloges des machines qui ont écrit ces lignes.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Rendre un journal réparti lisible</p><p>Trois habitudes qui coûtent peu et changent tout. <strong>Un identifiant de requête</strong> propagé de bout en bout&nbsp;: il permet de rassembler les lignes d'une même histoire sans jamais les trier par le temps. <strong>Un numéro d'étape</strong> porté par la requête et incrémenté à chaque saut&nbsp;: l'ordre devient explicite au lieu d'être déduit. <strong>Les durées plutôt que les instants</strong>&nbsp;: «&nbsp;cette étape a pris 36&nbsp;ms&nbsp;» est mesuré à l'horloge monotone locale et reste vrai&nbsp;; «&nbsp;cette étape a eu lieu à 09:30:00,148&nbsp;» dépend d'une horloge qu'on ne contrôle pas. C'est exactement ce que formalise la notion de trace répartie, détaillée dans le cours <a href="../observabilite/cours.html">Observabilité</a>.</p></div></div>
+<h2>Ce qu'un horodatage a le droit de faire</h2>
+<p>Après sept sections à démolir, il faut reconstruire. L'horloge murale n'est pas inutile&nbsp;: elle est simplement mal employée. Voici le partage.</p>
+<p><strong>Ce qu'un horodatage fait bien.</strong> Dater un événement pour un humain&nbsp;: une facture, un message, un article. Trier des choses dont l'ordre exact n'a aucune conséquence&nbsp;: une liste de notifications, un fil d'actualité. Décider d'une <em>expiration</em> grossière&nbsp;: un jeton valable une heure, un cache gardé un jour — à condition que la marge soit très supérieure à l'incertitude. Servir d'indice de recherche&nbsp;: «&nbsp;montre-moi ce qui s'est passé mardi&nbsp;».</p>
+<p><strong>Ce qu'un horodatage ne peut pas faire.</strong> Arbitrer entre deux écritures concurrentes. Décider qui détient un verrou. Établir qu'un événement a causé un autre. Ordonner deux lignes de journal venues de deux machines quand l'écart est du même ordre que l'incertitude. Prouver qu'un délai n'est pas expiré, du côté de celui qui a intérêt à ce qu'il ne le soit pas.</p>
+<p>La frontière entre les deux listes n'est pas une question de goût&nbsp;: c'est la question de savoir si une <em>décision</em> dépend de la comparaison. Dater pour informer, oui. Dater pour trancher, non.</p>
+<p>Reste alors une question ouverte, et c'est celle qui ouvre la leçon suivante&nbsp;: si le temps physique ne peut pas ordonner les événements d'un système réparti, qu'est-ce qui le peut&nbsp;? La réponse est déjà présente dans le programme du journal fusionné, sans qu'on l'ait dite&nbsp;: ce qui ordonne réellement ces six événements, ce n'est pas leur date, c'est le fait que chacun a été <em>provoqué</em> par le précédent, par un message. La <a href="lecon-05.html">leçon&nbsp;5</a> construit un ordre à partir de ces messages seuls, sans jamais lire une horloge — et montre au passage ce qu'un tel ordre peut, et ce qu'il ne peut pas.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Trois pistes, dans l'ordre de difficulté. Les <strong>horloges hybrides</strong> combinent un compteur logique et l'heure murale&nbsp;: elles gardent la lisibilité d'une date tout en garantissant l'ordre causal, et plusieurs bases répandues les emploient. Les systèmes à <strong>incertitude explicite</strong>, à l'image de ce que fait la base <em>Spanner</em>, exposent l'intervalle au lieu de le cacher et paient l'attente de 2ε mesurée plus haut&nbsp;: c'est la seule voie connue pour ordonner par le temps physique avec une garantie. Enfin, la question de savoir <em>si</em> l'on peut se passer de toute hypothèse temporelle est un sujet théorique classique&nbsp;: un résultat célèbre montre qu'en supposant les délais totalement imprévisibles <em>et qu'une seule machine puisse tomber en panne</em>, aucun protocole déterministe ne peut garantir l'accord en un temps fini — l'asynchronisme seul ne suffit pas, c'est la conjonction des deux qui bloque — c'est ce qui explique que tous les protocoles réels réintroduisent une hypothèse de temps quelque part, ne serait-ce qu'un délai d'attente. Côté pratique, le cours <a href="../linux/cours.html">Linux</a> montre comment lire l'état réel du service de temps d'une machine.</p></div></div>
+<h2>Superviser l'écart, puisqu'on ne peut pas l'annuler</h2>
+<p>Une chose frappe dans le cas réel raconté plus bas, et dans presque tous ceux du même genre&nbsp;: l'écart d'horloge n'était mesuré nulle part. La supervision surveillait le processeur, la mémoire, le disque, le taux d'erreur et la latence — c'est-à-dire tout ce qui bouge quand une machine souffre — mais pas la seule grandeur dont dépendaient les décisions d'arbitrage. Ce n'est pas un oubli isolé&nbsp;: c'est le défaut par défaut, parce qu'une horloge qui dérive ne ralentit rien, ne consomme rien et ne lève aucune erreur.</p>
+<p>Trois grandeurs valent la peine d'être relevées, et elles ne se remplacent pas.</p>
+<p><strong>L'écart estimé par le client de temps.</strong> C'est le plus facile&nbsp;: le démon le publie déjà. Sur les systèmes courants, <code>chronyc tracking</code> ou <code>ntpq -p</code> affichent l'écart courant, la dispersion et la date de la dernière correction réussie. Un seuil d'alerte de l'ordre de <strong>100&nbsp;ms</strong> est raisonnable pour une salle machine&nbsp;: il est très au-dessus des <strong>3,84&nbsp;ms</strong> du régime nominal, donc il ne crie pas au loup, et très en dessous des écarts qui commencent à casser des choses.</p>
+<p><strong>La date de la dernière synchronisation réussie.</strong> C'est le signal qui manquait dans le cas réel. Une machine coupée de son serveur de temps continue d'afficher un écart estimé rassurant — celui de sa dernière correction — tout en dérivant librement. La métrique utile n'est pas «&nbsp;quel écart&nbsp;?&nbsp;» mais «&nbsp;<em>depuis combien de temps n'a-t-elle rien appris&nbsp;?</em>&nbsp;». Une heure de silence vaut 108&nbsp;ms de dérive&nbsp;; un jour en vaut 2,59&nbsp;s. Cette métrique-là se surveille sans rien connaître du réseau.</p>
+<p><strong>L'écart <em>observé</em> entre deux machines qui se parlent.</strong> C'est la plus honnête des trois, parce qu'elle ne fait confiance à personne. Quand un service reçoit une requête portant l'heure d'émission de l'appelant, il peut comparer cette heure à la sienne et publier la différence. Cette différence mélange le temps de trajet et l'écart d'horloge, et on ne sait pas les séparer&nbsp;— c'est exactement le problème de NTP. Mais elle a une propriété précieuse&nbsp;: elle ne peut pas être plus petite que la vérité de beaucoup, et si elle grandit régulièrement sur une paire de machines alors que la latence, elle, ne bouge pas, la cause n'est pas le réseau.</p>
+<p>Un dernier conseil de méthode, qui vaut au-delà des horloges. Quand une reconstitution d'incident produit une séquence <em>impossible</em> — une réponse avant sa requête, un effet avant sa cause —, la bonne réaction n'est pas de chercher plus fort dans le code&nbsp;: c'est de se demander <em>d'où vient l'ordre affiché</em>. S'il vient d'un tri par horodatage sur plusieurs machines, il ne prouve rien, et toute l'enquête bâtie dessus est à reprendre. Le seul ordre auquel on peut se fier est celui que les messages eux-mêmes établissent — et c'est précisément ce que la leçon suivante apprend à construire.</p>
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Mesurer une durée avec l'horloge murale.</strong> Le programme de la première section le chiffre&nbsp;: une correction de 500&nbsp;ms en arrière transforme 250&nbsp;ms de traitement en <strong>−250&nbsp;ms</strong> mesurées, désarme l'alerte de lenteur, et gonfle le budget restant de 1000 à <strong>1250&nbsp;ms</strong>. Le remède est mécanique&nbsp;: partout où le code soustrait deux instants pour obtenir une durée, l'appel doit être monotone. Une recherche de <code>Date.now()</code> dans un projet en trouve presque toujours au moins un mal placé.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'une horloge bien synchronisée règle le problème.</strong> Elle le réduit, elle ne le supprime jamais. Même en régime nominal, deux machines correctement réglées gardent <strong>3,84&nbsp;ms</strong> d'écart possible entre deux corrections, et l'estimation elle-même porte une erreur pouvant atteindre la moitié de l'aller-retour, soit <strong>±30&nbsp;ms</strong> dans l'exemple mesuré. Un raisonnement qui ne tient que si l'écart est nul est un raisonnement faux&nbsp;: il ne tient jamais.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Faire confiance à une heure fournie par le client.</strong> L'horodatage envoyé par un navigateur, un téléphone ou un objet connecté n'est pas une mesure&nbsp;: c'est une <em>déclaration</em>. Elle peut être fausse par dérive, par fuseau mal réglé, par machine éteinte trois jours — ou parce que quelqu'un l'a modifiée exprès. Un serveur qui accepte «&nbsp;cette commande a été passée à 9&nbsp;h&nbsp;» sur la seule parole du client vient de déléguer une décision métier à une valeur qu'il ne contrôle pas. La règle est simple&nbsp;: les horodatages qui engagent quelque chose sont posés par le serveur, à la réception.</p></div></div>
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une plateforme de vente de billets exploite deux salles machines et réplique sa base entre les deux. Les conflits d'écriture sont réglés par la règle par défaut du moteur&nbsp;: la dernière écriture gagne, l'horodatage étant posé par le serveur qui reçoit la requête. Le système tourne depuis deux ans sans incident notable.<br /><br />Un mardi, le service client reçoit une série de réclamations qui ne se ressemblent pas&nbsp;: des clients ayant modifié l'adresse de livraison de leur commande la voient revenir à l'ancienne&nbsp;; un organisateur ayant réduit la jauge d'une salle la retrouve à sa valeur initiale&nbsp;; un agent ayant annulé un billet le voit réapparaître comme valide. Aucun message d'erreur nulle part. Les journaux d'application ne montrent que des écritures réussies, avec des codes 200 partout.<br /><br />L'enquête met trois jours, pour une raison qui devrait maintenant sauter aux yeux&nbsp;: les enquêteurs reconstituent la séquence en triant les journaux des deux salles par horodatage, et cette reconstitution montre les modifications <em>avant</em> les valeurs qu'elles étaient censées remplacer. Ils cherchent donc un défaut de logique applicative — un ordre d'exécution inversé, une transaction rejouée — dans du code qui n'en contient aucun.<br /><br />La cause est ailleurs. Le serveur de temps d'une des deux salles était injoignable depuis une modification de règles de filtrage passée trois semaines plus tôt. Les machines de cette salle avaient donc dérivé librement pendant vingt et un jours. À 30&nbsp;ppm, cela fait environ <strong>54&nbsp;s</strong> d'écart accumulé — et le sens de la dérive faisait <em>avancer</em> ces machines. Tout ce qu'elles écrivaient portait donc une estampille supérieure à ce que l'autre salle écrivait pendant les cinquante-quatre secondes suivantes. Une modification enregistrée dans la salle B était systématiquement écrasée par n'importe quelle écriture de la salle A datant de la même minute.<br /><br />Trois choses méritent d'être retenues de cet incident. D'abord, il n'y a eu <em>aucune panne</em>&nbsp;: les deux salles fonctionnaient, la réplication fonctionnait, la base faisait exactement ce qu'on lui avait demandé. Ensuite, la supervision surveillait le processeur, la mémoire, le disque, la latence et le taux d'erreur — mais pas l'écart d'horloge, qui n'apparaissait sur aucun tableau de bord. Enfin, la correction durable n'a pas consisté à mieux synchroniser&nbsp;: rétablir le serveur de temps supprimait ce symptôme, pas la faille. Le vrai correctif a été de cesser d'arbitrer par l'horodatage sur les données qui n'admettent pas de perte, et de faire porter à chaque écriture la version qu'elle prétend remplacer — c'est le mécanisme construit à la <a href="lecon-05.html">leçon&nbsp;5</a>. L'écart d'horloge, lui, est devenu une métrique supervisée, avec un seuil d'alerte à 100&nbsp;ms.</p></div></div>
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Horloges et dérive — mémo de la leçon 4</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Horloge murale</td><td>Répond à «&nbsp;<em>quand</em>&nbsp;». Comparable entre machines, mais corrigée, et donc capable de reculer. <code>Date.now()</code>.</td></tr>
+      <tr><td>Horloge monotone</td><td>Répond à «&nbsp;<em>combien de temps</em>&nbsp;». Ne recule jamais, incomparable entre machines. <code>performance.now()</code>.</td></tr>
+      <tr><td>Saut arrière</td><td>Mesuré&nbsp;: 250&nbsp;ms de traitement deviennent <strong>−250&nbsp;ms</strong>, l'alerte de lenteur ne part pas, le budget passe de 1000 à <strong>1250&nbsp;ms</strong>.</td></tr>
+      <tr><td>Dérive d'un quartz</td><td>±30&nbsp;ppm&nbsp;: <strong>108,0&nbsp;ms</strong>/h, <strong>2,59&nbsp;s</strong>/jour, <strong>15,77&nbsp;min</strong>/an. Deux machines opposées&nbsp;: le double.</td></tr>
+      <tr><td>Écart en régime normal</td><td>Resynchronisation toutes les 64&nbsp;s → <strong>1,92&nbsp;ms</strong> par machine, <strong>3,84&nbsp;ms</strong> entre deux. Aucune panne requise.</td></tr>
+      <tr><td>Formule NTP</td><td>aller-retour = (t4−t1)−(t3−t2)&nbsp;; écart = ((t2−t1)+(t3−t4))/2, en supposant les deux sens symétriques.</td></tr>
+      <tr><td>Asymétrie</td><td>Aller-retour 60&nbsp;ms réparti 20/40&nbsp;: erreur <strong>−10,0&nbsp;ms</strong>. Réparti 40/20&nbsp;: <strong>+10,0&nbsp;ms</strong>. Ses estampilles <code>0, 20, 25, 65</code> sont celles d'un chemin symétrique avec un client en avance de 10&nbsp;ms&nbsp;: indiscernables.</td></tr>
+      <tr><td>Ce que NTP garantit</td><td>Un intervalle, pas un instant&nbsp;: erreur au plus la moitié de l'aller-retour, ici <strong>±30&nbsp;ms</strong>. Vérifié sur les 4 cas.</td></tr>
+      <tr><td>Ordonnable</td><td>Deux événements ne le sont que si leur écart dépasse <strong>2ε</strong>. À ±3,5&nbsp;ms, 5&nbsp;ms d'écart ne suffisent pas.</td></tr>
+      <tr><td>Prix de l'attente 2ε</td><td>±0,5&nbsp;ms → 1&nbsp;ms → 1&nbsp;000 écritures liées/s&nbsp;; ±3,5&nbsp;ms → 7&nbsp;ms → <strong>142,86</strong>/s&nbsp;; ±100&nbsp;ms → 200&nbsp;ms → <strong>5</strong>/s.</td></tr>
+      <tr><td>Dernière écriture gagne</td><td>Lire&nbsp;: «&nbsp;<em>le plus grand nombre gagne</em>&nbsp;». Avance de 45&nbsp;ms → <strong>22&nbsp;700</strong> écritures perdues sur <strong>100&nbsp;000</strong> (22,70&nbsp;%).</td></tr>
+      <tr><td>Jeton d'une minute</td><td>Écart 3,84&nbsp;<strong>ms</strong> (régime nominal)&nbsp;: <strong>59,996&nbsp;s</strong> utiles, 0,0064&nbsp;% de perte. Écart 3,84&nbsp;<strong>s</strong>&nbsp;: 56,160&nbsp;s. 30&nbsp;s&nbsp;: 30,000&nbsp;s. 90&nbsp;s&nbsp;: <strong>0,000&nbsp;s</strong>, refusé dès l'émission.</td></tr>
+      <tr><td>Tolérance d'horloge</td><td>30&nbsp;s de tolérance rendent 60,000&nbsp;s utiles sur ±30&nbsp;s d'écart, mais pas à 90&nbsp;s. Prix&nbsp;: le jeton vit <strong>90,00&nbsp;s</strong> (×1,5) par la tolérance seule, <strong>120,00&nbsp;s</strong> (×2,0) avec un vérificateur qui retarde de 30&nbsp;s.</td></tr>
+      <tr><td>Journal fusionné</td><td>Décalages +40/−25&nbsp;ms&nbsp;: <strong>4</strong> paires sur 15 inversées, le débit apparaît <strong>13&nbsp;ms avant</strong> la requête.</td></tr>
+      <tr><td>À superviser</td><td>L'écart estimé (seuil ~100&nbsp;ms), la <em>date</em> de la dernière synchronisation réussie, et l'écart observé entre deux machines qui se parlent.</td></tr>
+      <tr><td>Usage légitime</td><td>Dater pour informer, expirer avec une grosse marge, indexer une recherche. Jamais&nbsp;: arbitrer, verrouiller, prouver une causalité.</td></tr>
+      <tr><td>Heure du client</td><td>Une déclaration, pas une mesure. Les horodatages qui engagent sont posés par le serveur, à la réception.</td></tr>
+    </tbody>
+  </table>
+</figure>
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Horloge murale</dt><dd>Compteur qui prétend donner l'heure civile. Seul type d'horloge comparable d'une machine à l'autre, et seul type qu'un démon de synchronisation corrige — donc seul type capable de reculer.</dd>
+  <dt>Horloge monotone</dt><dd>Compteur du temps écoulé depuis un point de départ arbitraire. Ne recule jamais et n'est jamais recalé, mais sa valeur ne désigne aucune date et n'a aucun sens hors de la machine qui l'a lue.</dd>
+  <dt>Dérive</dt><dd>Vitesse à laquelle une horloge s'éloigne du temps réel, exprimée en parties par million. Un quartz ordinaire est donné pour ±30&nbsp;ppm, soit 108,0&nbsp;ms par heure.</dd>
+  <dt>ppm (partie par million)</dt><dd>Unité de l'écart relatif d'un oscillateur&nbsp;: 1&nbsp;ppm vaut un millionième, soit 3,6&nbsp;ms par heure. La valeur dépend fortement de la température du composant.</dd>
+  <dt>Écart d'horloge</dt><dd>Différence instantanée entre les heures affichées par deux machines. En régime nominal, avec une resynchronisation toutes les 64&nbsp;s, il peut atteindre 3,84&nbsp;ms sans qu'aucune machine soit en défaut.</dd>
+  <dt>Saut d'horloge</dt><dd>Correction appliquée d'un coup à l'horloge murale, par opposition au lissage progressif. Il peut aller en arrière, et rien n'en avertit le programme en cours d'exécution.</dd>
+  <dt>Lissage</dt><dd>Correction étalée sur une longue durée, obtenue en faisant légèrement accélérer ou ralentir l'horloge. Évite les sauts, mais deux machines lissant différemment peuvent s'écarter de plusieurs centaines de millisecondes.</dd>
+  <dt>Seconde intercalaire</dt><dd>Seconde ajoutée au temps civil pour suivre la rotation de la Terre. Le 31 décembre 2016, la dernière minute de l'année en a compté 61 — un cas que beaucoup de programmes ne savent pas représenter.</dd>
+  <dt>NTP</dt><dd>Protocole de synchronisation fondé sur quatre estampilles. Il rend une estimation de l'écart et une borne d'erreur, jamais un instant certain&nbsp;: son hypothèse de symétrie entre l'aller et le retour est presque toujours fausse.</dd>
+  <dt>Incertitude d'horloge (ε)</dt><dd>Demi-largeur de l'intervalle dans lequel se trouve l'instant réel. Deux événements ne sont ordonnables par leurs horodatages que si leur écart dépasse 2ε.</dd>
+  <dt>Attente de validation</dt><dd>Délai de 2ε observé avant de rendre une écriture visible, pour garantir que son horodatage est déjà passé partout. Coût mesuré&nbsp;: 142,86 écritures liées par seconde à ε&nbsp;=&nbsp;±3,5&nbsp;ms, 5 à ±100&nbsp;ms.</dd>
+  <dt>Dernière écriture gagne</dt><dd>Règle d'arbitrage qui conserve la version portant le plus grand horodatage. Ne demande aucune coordination, et détruit silencieusement toute écriture dont l'horloge retardait&nbsp;: 22,70&nbsp;% des cas mesurés ici.</dd>
+  <dt>Tolérance d'horloge</dt><dd>Marge accordée par un vérificateur de jeton pour absorber l'écart entre son horloge et celle de l'émetteur. Elle rétablit la durée utile, mais allonge d'autant la vie réelle du jeton&nbsp;: 30&nbsp;s de tolérance portent un jeton de 60&nbsp;s à 90&nbsp;s par elles seules, et à 120&nbsp;s si le vérificateur retarde de 30&nbsp;s.</dd>
+  <dt>Journal fusionné</dt><dd>Assemblage des lignes de journal de plusieurs machines, ordinairement trié par horodatage. L'ordre obtenu n'est fiable que si les écarts d'horloge sont petits devant les écarts entre événements&nbsp;: ici, 4 paires sur 15 sont inversées.</dd>
+</dl>
+<h2>Récap et vérification</h2>
+<ul>
+<li>Une machine ne connaît pas l'heure&nbsp;: elle en tient une <strong>estimation</strong>. Deux horloges cohabitent — la <strong>murale</strong> répond à «&nbsp;quand&nbsp;», la <strong>monotone</strong> à «&nbsp;combien de temps&nbsp;».</li>
+<li>Un saut arrière de 500&nbsp;ms transforme 250&nbsp;ms de traitement en <strong>−250&nbsp;ms</strong> mesurées&nbsp;: l'alerte de lenteur ne part pas, et le budget restant passe de 1000 à <strong>1250&nbsp;ms</strong>. Aucune erreur n'est levée.</li>
+<li>Un quartz à ±30&nbsp;ppm dérive de <strong>108,0&nbsp;ms</strong> par heure, <strong>2,59&nbsp;s</strong> par jour, <strong>15,77&nbsp;min</strong> par an. Deux machines opposées&nbsp;: le double.</li>
+<li>Avec une resynchronisation toutes les 64&nbsp;s, l'écart entre deux machines <em>en parfait état</em> atteint <strong>3,84&nbsp;ms</strong>. C'est le régime nominal, pas un cas dégradé.</li>
+<li>NTP rend un <strong>intervalle</strong>. Sur un aller-retour de 60&nbsp;ms, une asymétrie 20/40 fausse l'estimation de <strong>10,0&nbsp;ms</strong>, et ses estampilles <code>0, 20, 25, 65</code> sont celles d'un chemin symétrique avec un client en avance d'autant&nbsp;: les deux causes sont indiscernables. La garantie porte sur <strong>±30&nbsp;ms</strong>, et elle tient dans les quatre cas mesurés.</li>
+<li>Deux événements ne sont ordonnables que si leur écart dépasse <strong>2ε</strong>. À ε&nbsp;=&nbsp;±3,5&nbsp;ms, 5&nbsp;ms ne suffisent pas&nbsp;; et payer l'attente de 2ε plafonne les écritures liées à <strong>142,86</strong> par seconde, ou <strong>5</strong> à ±100&nbsp;ms.</li>
+<li>«&nbsp;La dernière écriture gagne&nbsp;» signifie «&nbsp;le plus grand nombre gagne&nbsp;». Avec 45&nbsp;ms d'avance, <strong>22&nbsp;700</strong> écritures sur <strong>100&nbsp;000</strong> sont écrasées par une écriture <em>antérieure</em>, soit <strong>22,70&nbsp;%</strong>, sans le moindre signalement.</li>
+<li>Un jeton d'une minute ne perd presque rien au régime nominal — <strong>59,996&nbsp;s</strong> utiles pour 3,84&nbsp;<strong>ms</strong> d'écart, soit <strong>0,0064&nbsp;%</strong> — mais <strong>56,160&nbsp;s</strong> à 3,84&nbsp;<strong>s</strong>, <strong>30,000&nbsp;s</strong> à 30&nbsp;s et <strong>0,000&nbsp;s</strong> à 90&nbsp;s. La tolérance usuelle de 30&nbsp;s le sauve <em>sur la plage ±30&nbsp;s seulement</em>, au prix d'une vie réelle de <strong>90,00&nbsp;s</strong> par elle-même, et jusqu'à <strong>120,00&nbsp;s</strong> avec un vérificateur qui retarde.</li>
+<li>Un journal fusionné trié par horodatage présente <strong>4</strong> paires sur 15 dans le mauvais ordre pour des décalages de +40 et −25&nbsp;ms&nbsp;: le débit y apparaît <strong>13&nbsp;ms avant</strong> la requête qui l'a déclenché.</li>
+<li>Dater pour <em>informer</em>, oui&nbsp;; dater pour <em>trancher</em>, non. Ce qui ordonne réellement des événements répartis, ce sont les <strong>messages</strong> échangés — sujet de la <a href="lecon-05.html">leçon&nbsp;5</a>.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue propose de résoudre le problème en installant «&nbsp;une meilleure synchronisation&nbsp;». Explique-lui, sans citer de chiffre, ce que cela améliore réellement et ce que cela laisse intact.</li>
+<li>Une trace montre qu'une réponse a été envoyée avant que la requête ne soit reçue. Quelles vérifications fais-tu, et dans quel ordre, avant de suspecter le code&nbsp;?</li>
+<li>On te demande de choisir la règle d'arbitrage d'une base répliquée. Quelles questions poses-tu au métier pour décider si «&nbsp;la dernière écriture gagne&nbsp;» est acceptable&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Quelle horloge faut-il lire pour mesurer la durée d'un traitement ?","a":["La monotone : elle ne recule jamais et n'est jamais recalée par un démon de temps","La murale, seule capable de rendre une valeur comparable d'une machine à l'autre","L'une ou l'autre, l'écart entre les deux restant très inférieur à la milliseconde","La murale, à condition de la lire deux fois et de garder la plus grande des deux valeurs"],"correct":0,"explain":"Mesuré dans la page : une correction de 500 ms en arrière fait rendre -250 ms à la murale pour un traitement de 250 ms, désarme le test duree > 200 et gonfle le budget restant de 1000 à 1250 ms. La monotone rend 250 ms. La murale sert à dater, pas à chronométrer."},
+  {"q":"De combien deux machines correctement synchronisées peuvent-elles s'écarter en régime normal ?","a":["3,84 ms, soit la dérive de deux quartz opposés entre deux resynchronisations espacées de 64 s","De rien du tout : c'est précisément ce que la synchronisation par le réseau garantit","De 108 ms, qui est la dérive horaire d'un quartz ordinaire donné pour plus ou moins 30 parties par million","D'une valeur imprévisible, aucune borne ne pouvant être établie sur un réseau réel"],"correct":0,"explain":"À ±30 ppm et 64 s entre deux corrections, une machine dérive de 1,92 ms et deux machines opposées de 3,84 ms. Les 108 ms sont la dérive d'une heure entière, donc d'une machine qui n'aurait pas été corrigée. Et l'écart est bien borné, sinon aucune synchronisation ne servirait à rien."},
+  {"q":"Que garantit exactement une synchronisation NTP ?","a":["Un intervalle : l'écart vrai est dans l'estimation plus ou moins la moitié de l'aller-retour","L'heure exacte, à la précision d'affichage des estampilles échangées près","L'heure exacte tant que l'aller et le retour empruntent le même chemin physique","Que deux machines réglées sur le même serveur de temps affichent exactement la même valeur au même instant"],"correct":0,"explain":"La formule suppose l'aller et le retour de même durée. Mesuré : sur un aller-retour de 60 ms réparti 20/40, l'estimation se trompe de 10,0 ms — et ses quatre estampilles (0, 20, 25, 65) sont exactement celles d'un chemin symétrique avec un client en avance de 10 ms. Asymétrie et désaccord d'horloge sont indiscernables. Le protocole ne peut donc promettre qu'une borne, ici ±30 ms — vérifiée sur les quatre cas de la page."},
+  {"q":"Pourquoi « la dernière écriture gagne » perd-elle des données ?","a":["Parce qu'elle compare des horodatages : la machine en avance gagne, même si elle a écrit avant","Parce qu'elle ne conserve qu'une version sur deux, choisie au hasard parmi celles qui sont en conflit","Parce qu'elle exige une coordination entre les répliques, laquelle échoue dès qu'un lien tombe","Parce que les horodatages sont arrondis à la seconde, ce qui rend les égalités très fréquentes"],"correct":0,"explain":"Mesuré : avec 45 ms d'avance sur une machine, 22 700 écritures sur 100 000 sont écrasées par une écriture antérieure, soit 22,70 % — pour une valeur théorique de 22,50 %. La règle compare correctement deux nombres ; c'est le sens de ces nombres comme chronologie qui n'existe pas. Et elle ne demande justement aucune coordination : c'est tout son intérêt, et tout son danger."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["monotone","l'horloge monotone","horloge monotone","la monotone","monotonique","l'horloge monotonique"],"placeholder":"pour mesurer une durée, on lit l'horloge ...","hints":["Deux horloges cohabitent dans la machine : l'une prétend donner l'heure, l'autre compte le temps écoulé.","Celle qu'il faut ici n'est jamais corrigée par le démon de temps, donc ne peut pas reculer au milieu d'une mesure.","Le mot est un adjectif d'un seul tenant, qui décrit une suite qui ne fait que croître."],"link":{"href":"lecon-04.html","label":"Revoir « Deux horloges dans chaque machine »"}},
+  {"type":"code","run":{"expect":"16 166"},"placeholder":"la cadence pour rester sous 1 ms, puis sous 10 ms, un nombre par ligne","hints":["Deux quartz à ±30 ppm s'écartent l'un de l'autre à 60 ppm : c'est la valeur relative qu'il faut employer.","60 ppm valent 60 millionièmes de seconde par seconde ; convertis le seuil en secondes avant de diviser.","Arrondis à l'entier inférieur avec Math.floor : on resynchronise AVANT d'atteindre le seuil, pas après."],"link":{"href":"lecon-04.html","label":"Revoir « La dérive : ce que vaut vraiment un quartz »"}},
+  {"type":"code","run":{"expect":"-20 30"},"placeholder":"l'écart estimé, puis l'erreur maximale possible, un nombre par ligne","hints":["Reprends les quatre estampilles du programme de la section NTP, avec un aller de 10 ms, un retour de 50 ms et 5 ms de traitement.","L'écart vrai vaut zéro : tout ce que l'estimation affiche d'autre que zéro est son erreur.","L'erreur maximale est la moitié de l'aller-retour, et l'aller-retour se calcule en retirant le traitement du temps total."],"link":{"href":"lecon-04.html","label":"Revoir « Régler son heure sur celle d'un autre »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un programme doit mesurer combien de temps a duré un appel réseau, pour décider s'il faut alerter. Quelle horloge doit-il lire, et pourquoi l'autre ne convient-elle pas&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">L'HORLOGE MONOTONE.
+
+Elle compte le temps écoulé depuis un point de départ arbitraire et
+n'est jamais corrigée : personne ne la recale, elle ne recule jamais.
+Une différence entre deux de ses lectures est donc toujours la durée
+réellement écoulée.
+
+L'horloge murale, elle, est corrigée par le démon de temps. Une
+correction tombée entre les deux lectures est indiscernable dans le
+résultat : le programme de la leçon mesure -250 ms pour un traitement
+de 250 ms, et le budget restant passe de 1000 à 1250 ms.
+
+Le partage tient en deux questions :
+  « quand ? »            -> horloge murale   (Date.now)
+  « combien de temps ? » -> horloge monotone (performance.now)
+</code></pre></figure>
+<p>La conséquence pratique dépasse le chronomètre&nbsp;: tout ce qui se calcule par soustraction de deux instants relève de la monotone — délais d'attente, intervalles entre réessais, limitation de débit, mesure de performance. Et cette règle vaut aussi sur une machine unique&nbsp;: le saut d'horloge n'a rien de distribué, il suffit d'un démon de temps et d'une machine qui avait pris de l'avance.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Deux machines portent chacune un quartz à ±30&nbsp;ppm, l'une avançant et l'autre retardant. À quelle cadence faut-il les resynchroniser pour que leur écart mutuel reste sous un seuil donné&nbsp;? Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: la cadence en secondes entières pour un seuil de <strong>1&nbsp;ms</strong>, puis pour un seuil de <strong>10&nbsp;ms</strong>.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// Deux machines à ±30 ppm s'écartent l'une de l'autre de 60 ppm au pire.
+// On cherche la durée au bout de laquelle cet écart atteint un seuil donné.
+const PPM_RELATIF = 60;                      // 30 d'un côté, 30 de l'autre
+
+function cadence(seuilMs) {
+  const secondes = (seuilMs / 1000) / (PPM_RELATIF / 1e6);
+  return Math.floor(secondes);               // on resynchronise AVANT d'atteindre le seuil
+}
+
+console.log(cadence(1));    // affiche : 16
+console.log(cadence(10));   // affiche : 166</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">16
+166
+</code></pre></figure>
+<p>Deux tiers de seconde de plus, et deux machines de qualité ordinaire dépassent la milliseconde d'écart&nbsp;: le seuil est franchi à <strong>16,67&nbsp;s</strong> exactement, d'où la cadence entière <strong>16&nbsp;s</strong>. Pour tenir 10&nbsp;ms, <strong>166&nbsp;s</strong> suffisent, ce qui est plus confortable que la cadence usuelle de 64&nbsp;s. Le calcul dit donc deux choses. D'abord que la cadence de 64&nbsp;s a été choisie pour un objectif de l'ordre de quelques millisecondes, pas de la microseconde. Ensuite que descendre sous la milliseconde par ce moyen demanderait d'interroger le serveur de temps toutes les seize secondes — quatre fois plus de trafic pour un gain qui reste, lui, borné par l'incertitude de la mesure elle-même.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un client interroge un serveur de temps. L'aller dure <strong>10&nbsp;ms</strong>, le retour <strong>50&nbsp;ms</strong>, le serveur met <strong>5&nbsp;ms</strong> à répondre, et les deux horloges sont en réalité parfaitement d'accord. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: l'écart que le client va estimer, puis l'erreur maximale que la borne du protocole autorise.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// L'estimation de NTP suppose que l'aller et le retour durent autant.
+// Quand c'est faux, l'erreur vaut la moitié de l'asymétrie.
+function estimer(ecartVrai, aller, retour, traitement) {
+  const t1 = 0;
+  const t2 = t1 + aller + ecartVrai;
+  const t3 = t2 + traitement;
+  const t4 = t3 - ecartVrai + retour;
+  return { ecart: ((t2 - t1) + (t3 - t4)) / 2, allerRetour: (t4 - t1) - (t3 - t2) };
+}
+
+const r = estimer(0, 10, 50, 5);
+console.log(r.ecart);                 // affiche : -20
+console.log(r.allerRetour / 2);       // affiche : 30</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">-20
+30
+</code></pre></figure>
+<p>Le client, dont l'horloge est <em>juste</em>, conclut qu'il <strong>avance de 20&nbsp;ms</strong> — la convention du programme principal, où un écart positif désigne un client en retard, donne bien ce sens à une estimation négative — et il recule son horloge d'autant, s'éloignant ainsi de la vérité. C'est le résultat le plus contre-intuitif de la leçon&nbsp;: la synchronisation peut dégrader une horloge déjà correcte. La borne, elle, tient&nbsp;: l'erreur réelle vaut 20&nbsp;ms pour un maximum autorisé de <strong>30&nbsp;ms</strong>. Et l'asymétrie employée ici — un rapport de un à cinq entre les deux sens — n'a rien d'extravagant sur un réseau public&nbsp;: le routage retour emprunte fréquemment un chemin différent de l'aller.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
