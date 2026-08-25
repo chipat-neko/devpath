@@ -649,7 +649,7 @@ window.SITE_DATA = (function () {
     {
       id: "distribue", dir: "distribue", title: "Systèmes distribués : quand le programme n'est plus sur une seule machine",
       glyph: "⇄", language: "Systèmes distribués", level: "avance", status: "apercu",
-      accent: "#2f4b7c", lessons: 9, hours: 12,
+      accent: "#2f4b7c", lessons: 11, hours: 15,
       tagline: "Le site enseigne partout les conséquences — réplication, latence, cohérence — sans jamais poser les fondations. Ce cours les pose. Dès qu'un programme s'étale sur deux machines, la moitié de ce que tu sais devient faux : un appel peut ne jamais répondre sans qu'on sache s'il a été exécuté, et la lumière elle-même impose un plancher de temps. Chaque affirmation y est chiffrée par un programme qui tourne dans la page.",
       tags: ["Transversal", "Architecture", "Distribué"],
     },
@@ -1553,8 +1553,8 @@ window.SITE_DATA = (function () {
         {
           num: "04", title: "En pratique", sub: "idempotence, reprise, files de messages", level: "avance",
           lessons: [
-            { num: "10", title: "Idempotence : réessayer sans dégât", file: "#", status: "bientot" },
-            { num: "11", title: "Files de messages et livraison « au moins une fois »", file: "#", status: "bientot" },
+            { num: "10", title: "Idempotence : réessayer sans dégât", file: "lecon-10.html", status: "complet" },
+            { num: "11", title: "Files de messages et livraison « au moins une fois »", file: "lecon-11.html", status: "complet" },
           ],
         },
         {
@@ -5993,7 +5993,7 @@ window.SITE_DATA = (function () {
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
-    "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77},
+    "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
     "cobol": {"lecon-01.html":44,"lecon-02.html":50,"lecon-03.html":55,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":45,"lecon-10.html":48,"lecon-11.html":46,"lecon-12.html":46,"lecon-13.html":44,"lecon-14.html":50},

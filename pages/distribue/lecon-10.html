@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Idempotence : réessayer sans dégât — Leçon 10 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Un appel sans réponse est indiscernable d'un appel exécuté : il faut donc réessayer, et le réessai duplique. Mesuré : 1 990 débits fantômes si l'on n'ose pas, 2 069 débits en trop si l'on ose. La clé d'idempotence ramène 4 222 débits en trop à 0 — à condition d'être posée de façon indivisible, faute de quoi 18 entrelacements sur 20 débitent deux fois. Plus l'attente exponentielle et son aléa (pic de 350 à 90 requêtes par seconde), l'amplification x27 le long d'une chaîne, le disjoncteur, et pourquoi « exactement une fois » ne décrit jamais le monde." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-10.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 10</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 4 · En pratique — Leçon 10</p>
+              <h1 class="lesson-header__title">Idempotence&nbsp;: réessayer sans dégât</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~94 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: la <a href="lecon-03.html">leçon&nbsp;3</a> pour la panne partielle, qui rend le réessai obligatoire. Savoir lire une boucle et une fonction en JavaScript suffit&nbsp;; aucune notion de probabilités n'est supposée.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>chiffrer les deux conduites naïves&nbsp;: <strong>1&nbsp;990</strong> débits fantômes contre <strong>2&nbsp;069</strong> débits en trop&nbsp;;</li>
+                  <li>reconnaître une opération rejouable à un seul critère&nbsp;: dépend-elle de l'état précédent&nbsp;?</li>
+                  <li>poser une <strong>clé d'idempotence</strong> au bon endroit — sur l'intention, jamais sur la tentative&nbsp;;</li>
+                  <li>expliquer pourquoi vérifier puis appliquer en trois étapes casse dans <strong>18</strong> entrelacements sur <strong>20</strong>&nbsp;;</li>
+                  <li>régler une fenêtre de rétention sur le <em>retard maximal</em> du système, et non sur son coût&nbsp;;</li>
+                  <li>réessayer sans achever le service&nbsp;: attente exponentielle, <strong>aléa</strong>, budget, disjoncteur&nbsp;;</li>
+                  <li>dire ce que garantit vraiment «&nbsp;exactement une fois&nbsp;», et où la garantie s'arrête.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-03.html">leçon&nbsp;3</a> a laissé une question ouverte, et c'est la plus embarrassante de tout ce cours. Un appel réseau qui ne répond pas ne dit <em>rien</em> de ce qui s'est passé sur l'autre machine&nbsp;: la requête a pu se perdre à l'aller, être exécutée puis voir sa réponse se perdre au retour, ou être en train de s'exécuter pendant que le client abandonne. Ces trois mondes sont <strong>indiscernables</strong> depuis l'appelant, et il n'existe aucun moyen de les distinguer après coup — c'est un résultat, pas une lacune d'outillage.</p>
+<p>Le client doit pourtant décider quelque chose. Deux conduites s'offrent à lui&nbsp;: abandonner, ou recommencer. On croit souvent qu'abandonner est l'option prudente. On va mesurer que non&nbsp;: sur <strong>100&nbsp;000</strong> achats avec <strong>4&nbsp;%</strong> d'appels muets, ne pas réessayer laisse <strong>1&nbsp;990</strong> clients débités à qui l'on affiche une erreur. L'inaction a un coût, et il est du même ordre que celui de l'action.</p>
+<p>La sortie de ce piège tient en un mot, et ce mot est le sujet de la leçon&nbsp;: rendre l'opération <strong>idempotente</strong> — c'est-à-dire faire en sorte que l'exécuter deux fois donne exactement le même résultat que l'exécuter une fois. Alors, et alors seulement, le réessai devient sans danger, et l'ambiguïté du réseau cesse d'être un problème métier pour redevenir un simple problème de performance.</p>
+<p>On va donc mesurer, dans l'ordre&nbsp;: ce que coûtent les deux conduites naïves&nbsp;; quelles opérations survivent au rejeu et lesquelles n'y survivent pas&nbsp;; comment une <strong>clé d'idempotence</strong> ramène à <strong>0</strong> les <strong>4&nbsp;222</strong> débits en trop que produit un serveur qui traite <em>toujours</em>&nbsp;; pourquoi le registre de clés doit être écrit dans la même transaction que l'effet — <strong>18</strong> entrelacements sur <strong>20</strong> cassent sinon&nbsp;; comment réessayer sans achever le service qu'on réessaie&nbsp;; et pourquoi «&nbsp;exactement une fois&nbsp;» est une expression qui ne décrit jamais le monde.</p>
+
+<h2>Deux conduites, deux dégâts</h2>
+<p>Commençons par chiffrer le dilemme, parce qu'il est presque toujours discuté sans chiffres. Le programme ci-dessous simule <strong>100&nbsp;000</strong> achats. Quatre pour cent des appels ne rendent aucune réponse&nbsp;; parmi ces appels muets, la moitié ont malgré tout été exécutés côté serveur — c'est le cas «&nbsp;la requête est passée, la réponse s'est perdue&nbsp;».</p>
+<figure class="code-block" data-file="reessayer-ou-pas.js"><pre><code class="language-javascript">// Le dilemme fondateur du réessai, chiffré. La leçon 3 a montré qu'un appel
+// sans réponse est INDISCERNABLE d'un appel exécuté : le client ne sait pas.
+// Deux conduites sont possibles, et aucune n'est neutre.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const APPELS = 100000;
+const SANS_REPONSE = 0.04;   // 4 % des appels n'obtiennent aucune réponse
+const DEJA_APPLIQUE = 0.5;   // dont la moitié ont pourtant été exécutés
+const TENTATIVES = 3;
+
+// Une tentative : rend 'ok', ou 'muet-applique', ou 'muet-perdu'.
+function tentative(alea) {
+  if (alea() &gt;= SANS_REPONSE) return 'ok';
+  return alea() &lt; DEJA_APPLIQUE ? 'muet-applique' : 'muet-perdu';
+}
+
+function conduite(maxTentatives) {
+  const alea = semer(7391);
+  let debits = 0;          // débits réellement appliqués au compte
+  let clientsEnErreur = 0; // clients à qui l'on a rendu une erreur
+  let debitsFantomes = 0;  // erreur rendue ALORS QUE le débit a eu lieu
+  let doublesDebits = 0;   // le même achat débité plus d'une fois
+  for (let i = 0; i &lt; APPELS; i++) {
+    let appliques = 0;
+    let repondu = false;
+    for (let t = 0; t &lt; maxTentatives &amp;&amp; !repondu; t++) {
+      const r = tentative(alea);
+      if (r === 'ok') { appliques++; repondu = true; }
+      else if (r === 'muet-applique') appliques++;
+    }
+    debits += appliques;
+    if (!repondu) {
+      clientsEnErreur++;
+      if (appliques &gt; 0) debitsFantomes++;
+    }
+    if (appliques &gt; 1) doublesDebits++;
+  }
+  return { debits, clientsEnErreur, debitsFantomes, doublesDebits };
+}
+
+const sans = conduite(1);
+const avec = conduite(TENTATIVES);
+
+console.log(APPELS + ' achats, ' + (SANS_REPONSE * 100).toFixed(0) + ' % d\'appels sans réponse');
+console.log('(la moitié des appels muets ont pourtant été exécutés côté serveur)');
+console.log('');
+function ligne(lib, a, b) {
+  console.log(lib.padEnd(26) + '| ' + String(a).padStart(16) + ' | ' + String(b).padStart(16));
+}
+ligne('', 'ne pas réessayer', 'réessayer 3 fois');
+ligne('clients en erreur', sans.clientsEnErreur, avec.clientsEnErreur);
+ligne('  dont débités quand même', sans.debitsFantomes, avec.debitsFantomes);
+ligne('achats débités 2 fois ou +', sans.doublesDebits, avec.doublesDebits);
+ligne('débits EN TROP', sans.debits - APPELS + sans.clientsEnErreur - sans.debitsFantomes,
+      avec.debits - APPELS + avec.clientsEnErreur - avec.debitsFantomes);
+ligne('débits appliqués au total', sans.debits, avec.debits);
+console.log('');
+console.log('taux d\'erreur vu par le client : ' +
+  (100 * sans.clientsEnErreur / APPELS).toFixed(2) + ' %  -&gt;  ' +
+  (100 * avec.clientsEnErreur / APPELS).toFixed(3) + ' %');
+console.log('taux de double débit          : ' +
+  (100 * sans.doublesDebits / APPELS).toFixed(2) + ' %  -&gt;  ' +
+  (100 * avec.doublesDebits / APPELS).toFixed(2) + ' %');
+console.log('');
+console.log('Le réessai divise les erreurs par ' + (sans.clientsEnErreur / avec.clientsEnErreur).toFixed(0) +
+  ' et débite ' + avec.doublesDebits + " achats plus d'une fois.");
+console.log('Ne pas réessayer n\'est PAS l\'option prudente : elle laisse déjà');
+console.log(sans.debitsFantomes + ' clients débités à qui l\'on a affiché une erreur.');</code></pre></figure>
+<figure class="code-block" data-file="reessayer-ou-pas.txt"><pre><code class="language-plaintext">100000 achats, 4 % d'appels sans réponse
+(la moitié des appels muets ont pourtant été exécutés côté serveur)
+
+                          | ne pas réessayer | réessayer 3 fois
+clients en erreur         |             4055 |                6
+  dont débités quand même |             1990 |                6
+achats débités 2 fois ou +|                0 |             2022
+débits EN TROP            |                0 |             2069
+débits appliqués au total |            97935 |           102069
+
+taux d'erreur vu par le client : 4.05 %  -&gt;  0.006 %
+taux de double débit          : 0.00 %  -&gt;  2.02 %
+
+Le réessai divise les erreurs par 676 et débite 2022 achats plus d'une fois.
+Ne pas réessayer n'est PAS l'option prudente : elle laisse déjà
+1990 clients débités à qui l'on a affiché une erreur.
+</code></pre></figure>
+<p>Les deux colonnes disent la même chose sous deux angles. <strong>Ne pas réessayer</strong> laisse <strong>4&nbsp;055</strong> clients devant un message d'erreur, dont <strong>1&nbsp;990</strong> ont pourtant été débités&nbsp;: pour ceux-là, l'affichage ment. <strong>Réessayer trois fois</strong> ramène les erreurs à <strong>6</strong> — une division par <strong>676</strong> — mais débite <strong>2&nbsp;022</strong> achats plus d'une fois, pour <strong>2&nbsp;069</strong> débits en trop.</p>
+<p>Il faut regarder ces deux nombres côte à côte, parce que la conclusion habituelle («&nbsp;réessayer, c'est risqué&nbsp;») s'appuie sur un seul des deux. Les deux conduites produisent un dégât du même ordre de grandeur&nbsp;: <strong>1&nbsp;990</strong> débits fantômes d'un côté, <strong>2&nbsp;069</strong> débits en trop de l'autre. La différence n'est pas la quantité, c'est la <em>visibilité</em>&nbsp;: le double débit se voit sur le relevé du client, le débit fantôme ne se voit que quand le client appelle le service après-vente.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">«&nbsp;Ne pas réessayer&nbsp;» n'est pas une décision neutre</p><p>C'est le biais le plus répandu sur ce sujet&nbsp;: on compare une action à une inaction, comme si l'inaction n'avait pas de conséquence. Elle en a une, et elle est <em>chiffrable</em>&nbsp;: <strong>1&nbsp;990</strong> clients sur 100&nbsp;000 voient une erreur alors que leur compte a été débité. Le vrai choix n'est pas entre «&nbsp;risquer un doublon&nbsp;» et «&nbsp;ne rien risquer&nbsp;», mais entre deux répartitions de dégâts. Et une troisième voie existe, qui est l'objet de cette leçon.</p></div></div>
+<p>Une remarque de méthode sur ce programme, parce qu'elle vaut pour toute la leçon&nbsp;: la moitié des appels muets sont supposés exécutés. Ce «&nbsp;<strong>50&nbsp;%</strong>&nbsp;» n'est pas une constante universelle — il dépend de l'endroit où la coupure survient, et donc de la durée relative de l'aller, du traitement et du retour. Un traitement long devant le réseau pousse ce taux vers le bas&nbsp;; un traitement court le pousse vers le haut, car la coupure a alors surtout des chances de tomber pendant le retour. Ce qui ne dépend d'aucun réglage, en revanche, c'est que ce taux n'est <em>jamais</em> nul, et que le client ne peut <em>jamais</em> le connaître pour un appel donné.</p>
+
+<h2>Ce qui survit au rejeu</h2>
+<p>Avant de chercher un remède, il faut regarder de près l'opération elle-même. Certaines supportent le rejeu sans le moindre aménagement, et l'on peut alors réessayer autant qu'on veut. Le programme rejoue six opérations courantes une fois, puis trois fois, sur le même état de départ.</p>
+<figure class="code-block" data-file="idempotent-ou-pas.js"><pre><code class="language-javascript">// Quelles opérations survivent au rejeu, et lesquelles n'y survivent pas.
+// Chaque opération est appliquée UNE fois, puis TROIS fois, sur le même état
+// de départ. Si les deux états finaux diffèrent, l'opération n'est pas
+// idempotente — et un réessai la casse.
+const OPERATIONS = [
+  {
+    nom: 'solde += 100',
+    depart: () =&gt; ({ solde: 500 }),
+    appliquer: (e) =&gt; { e.solde += 100; },
+    lire: (e) =&gt; 'solde = ' + e.solde,
+  },
+  {
+    nom: 'solde = 600',
+    depart: () =&gt; ({ solde: 500 }),
+    appliquer: (e) =&gt; { e.solde = 600; },
+    lire: (e) =&gt; 'solde = ' + e.solde,
+  },
+  {
+    nom: 'lignes.push(achat)',
+    depart: () =&gt; ({ lignes: [] }),
+    appliquer: (e) =&gt; { e.lignes.push('A-42'); },
+    lire: (e) =&gt; 'lignes = [' + e.lignes.join(', ') + ']',
+  },
+  {
+    nom: 'lignes[A-42] = achat',
+    depart: () =&gt; ({ lignes: {} }),
+    appliquer: (e) =&gt; { e.lignes['A-42'] = 1; },
+    lire: (e) =&gt; 'lignes = {' + Object.keys(e.lignes).join(', ') + '}',
+  },
+  {
+    nom: 'supprimer(A-42)',
+    depart: () =&gt; ({ lignes: { 'A-42': 1, 'B-7': 1 } }),
+    appliquer: (e) =&gt; { delete e.lignes['A-42']; },
+    lire: (e) =&gt; 'lignes = {' + Object.keys(e.lignes).join(', ') + '}',
+  },
+  {
+    nom: 'stock -= 1',
+    depart: () =&gt; ({ stock: 3 }),
+    appliquer: (e) =&gt; { e.stock -= 1; },
+    lire: (e) =&gt; 'stock = ' + e.stock,
+  },
+];
+
+function apres(op, fois) {
+  const e = op.depart();
+  for (let i = 0; i &lt; fois; i++) op.appliquer(e);
+  return op.lire(e);
+}
+
+console.log('opération            | après 1 fois     | après 3 fois                | rejouable');
+console.log('---------------------+------------------+-----------------------------+----------');
+let idem = 0;
+for (const op of OPERATIONS) {
+  const un = apres(op, 1), trois = apres(op, 3);
+  const ok = un === trois;
+  if (ok) idem++;
+  console.log(op.nom.padEnd(21) + '| ' + un.padEnd(17) + '| ' + trois.padEnd(28) + '| ' + (ok ? 'oui' : 'NON'));
+}
+console.log('');
+console.log(idem + ' opérations sur ' + OPERATIONS.length + ' supportent le rejeu.');
+console.log('');
+console.log('La ligne de partage n\'est pas le verbe (écrire, supprimer), c\'est');
+console.log('la question : le résultat dépend-il de l\'état PRÉCÉDENT ?');
+console.log('  « = 600 » ne le regarde pas          -&gt; rejouable');
+console.log('  « += 100 » part de ce qu\'il y a      -&gt; non rejouable');
+console.log('  supprimer une clé nommée             -&gt; rejouable (déjà absente = rien à faire)');
+console.log('  ajouter en fin de liste              -&gt; non rejouable (la place est nouvelle)');</code></pre></figure>
+<figure class="code-block" data-file="idempotent-ou-pas.txt"><pre><code class="language-plaintext">opération            | après 1 fois     | après 3 fois                | rejouable
+---------------------+------------------+-----------------------------+----------
+solde += 100         | solde = 600      | solde = 800                 | NON
+solde = 600          | solde = 600      | solde = 600                 | oui
+lignes.push(achat)   | lignes = [A-42]  | lignes = [A-42, A-42, A-42] | NON
+lignes[A-42] = achat | lignes = {A-42}  | lignes = {A-42}             | oui
+supprimer(A-42)      | lignes = {B-7}   | lignes = {B-7}              | oui
+stock -= 1           | stock = 2        | stock = 0                   | NON
+
+3 opérations sur 6 supportent le rejeu.
+
+La ligne de partage n'est pas le verbe (écrire, supprimer), c'est
+la question : le résultat dépend-il de l'état PRÉCÉDENT ?
+  « = 600 » ne le regarde pas          -&gt; rejouable
+  « += 100 » part de ce qu'il y a      -&gt; non rejouable
+  supprimer une clé nommée             -&gt; rejouable (déjà absente = rien à faire)
+  ajouter en fin de liste              -&gt; non rejouable (la place est nouvelle)
+</code></pre></figure>
+<p>La ligne de partage n'est pas celle qu'on attend. Ce n'est ni le verbe («&nbsp;écrire&nbsp;» contre «&nbsp;supprimer&nbsp;»), ni le fait de modifier ou non l'état&nbsp;: <code>solde&nbsp;=&nbsp;600</code> modifie l'état et se rejoue parfaitement, tandis que <code>solde&nbsp;+=&nbsp;100</code> le modifie aussi et ne se rejoue pas. La question, la seule, est&nbsp;: <strong>le résultat dépend-il de l'état précédent&nbsp;?</strong></p>
+<p>Une affectation ne regarde pas ce qu'il y avait avant, donc elle est rejouable. Un incrément part de ce qu'il y a, donc il ne l'est pas. Une suppression par clé nommée est rejouable — la deuxième fois, il n'y a rien à supprimer, et c'est très bien. Un ajout en fin de liste ne l'est pas, parce que la place occupée est chaque fois nouvelle&nbsp;; le même ajout dans un dictionnaire, à une clé fixée, l'est. On peut résumer d'une phrase&nbsp;: <em>nommer la place rend l'écriture rejouable, laisser le système la choisir ne le rend pas</em>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Schéma en deux colonnes comparant deux formes d écriture. La colonne de gauche, intitulée le résultat dépend de l état précédent, contient trois cadres portant solde plus égale cent, lignes point push achat, et stock moins égale un ; sous ces cadres, une flèche descendante mène à l étiquette rejouer casse. La colonne de droite, intitulée le résultat ne dépend que de la demande, contient trois cadres accentués portant solde égale six cents, lignes crochet A tiret quarante-deux égale achat, et supprimer A tiret quarante-deux ; sous ces cadres, une flèche descendante mène à l étiquette rejouer ne change rien. Une bande basse, séparée par un trait en pointillés, porte une seule phrase : trois opérations sur six supportent le rejeu, et la question qui les sépare est de savoir si le résultat dépend de l état précédent.">
+    <text class="d-label" x="160" y="22" text-anchor="middle" font-size="11">le résultat dépend de l'état précédent</text>
+    <text class="d-label" x="480" y="22" text-anchor="middle" font-size="11">le résultat ne dépend que de la demande</text>
+
+    <rect class="d-box" x="40" y="38" width="240" height="30" rx="4" /><text class="d-text" x="160" y="58" text-anchor="middle" font-size="10">solde += 100</text>
+    <rect class="d-box" x="40" y="78" width="240" height="30" rx="4" /><text class="d-text" x="160" y="98" text-anchor="middle" font-size="10">lignes.push(achat)</text>
+    <rect class="d-box" x="40" y="118" width="240" height="30" rx="4" /><text class="d-text" x="160" y="138" text-anchor="middle" font-size="10">stock -= 1</text>
+
+    <rect class="d-accent" x="360" y="38" width="240" height="30" rx="4" /><text class="d-text" x="480" y="58" text-anchor="middle" font-size="10">solde = 600</text>
+    <rect class="d-accent" x="360" y="78" width="240" height="30" rx="4" /><text class="d-text" x="480" y="98" text-anchor="middle" font-size="10">lignes["A-42"] = achat</text>
+    <rect class="d-accent" x="360" y="118" width="240" height="30" rx="4" /><text class="d-text" x="480" y="138" text-anchor="middle" font-size="10">supprimer("A-42")</text>
+
+    <path class="d-line" d="M160 154 L160 178" fill="none" /><path class="d-line" d="M154 172 L160 180 L166 172" fill="none" />
+    <path class="d-line" d="M480 154 L480 178" fill="none" /><path class="d-line" d="M474 172 L480 180 L486 172" fill="none" />
+    <text class="d-tag" x="160" y="196" text-anchor="middle" font-size="10">rejouer casse</text>
+    <text class="d-tag" x="480" y="196" text-anchor="middle" font-size="10">rejouer ne change rien</text>
+
+    <path class="d-line" d="M14 214 L626 214" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="234" text-anchor="middle" font-size="9">3 opérations sur 6 supportent le rejeu&#160;·&#160;la question qui les sépare&#160;: le résultat dépend-il de l'état précédent&#160;?</text>
+  </svg>
+  <figcaption>Le critère n'est pas le verbe employé&nbsp;: c'est la dépendance à ce qui existait avant.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Idempotent sur l'état, pas forcément sur la réponse</p><p>Une suppression rejouée laisse le même état — mais elle ne rend pas la même <em>réponse</em>&nbsp;: la première fois «&nbsp;supprimé&nbsp;», la seconde «&nbsp;introuvable&nbsp;». Les deux sont correctes, et pourtant un client qui traite le second cas comme une erreur transformera une opération parfaitement rejouable en échec. C'est l'un des pièges les plus fréquents de cette leçon&nbsp;: <strong>l'idempotence porte sur l'effet, et il faut décider séparément de ce qu'on rend au client quand il n'y avait plus rien à faire</strong>. La bonne réponse est presque toujours&nbsp;: le même succès que la première fois.</p></div></div>
+<p>Dans la vraie vie, la plupart des opérations métier tombent du mauvais côté&nbsp;: «&nbsp;débiter&nbsp;», «&nbsp;réserver une place&nbsp;», «&nbsp;incrémenter un compteur&nbsp;», «&nbsp;ajouter une ligne&nbsp;» dépendent toutes de l'état précédent. On peut parfois les récrire du bon côté — remplacer «&nbsp;débiter de 100&nbsp;» par «&nbsp;porter le solde à 400&nbsp;», ce qui suppose de connaître le solde de départ et de refuser l'écriture s'il a changé&nbsp;; c'est exactement le mécanisme de la <em>mise à jour conditionnelle</em>, que la <a href="lecon-05.html">leçon&nbsp;5</a> introduisait sous la forme «&nbsp;écris ceci si la version vaut encore 7&nbsp;». Mais cette réécriture n'est pas toujours possible, et c'est là que la clé d'idempotence entre en scène.</p>
+
+<h2>La clé d'idempotence&nbsp;: nommer l'intention</h2>
+<p>Le remède général ne consiste pas à rendre l'opération rejouable — on vient de voir que c'est souvent impossible — mais à donner au serveur le moyen de <em>reconnaître</em> qu'il a déjà vu cette demande-là. Pour cela, le client colle un identifiant sur son <strong>intention</strong>, avant la première tentative, et le réutilise à l'identique pour tous ses réessais. Le serveur tient un registre&nbsp;: si la clé y figure déjà, il ne refait rien et rend la réponse d'origine.</p>
+<p>Le programme compare trois façons de s'en servir, sur <strong>100&nbsp;000</strong> achats dont <strong>4&nbsp;%</strong> des réponses se perdent. Cette fois, on suppose que le serveur a <em>toujours</em> traité la demande — c'est le pire cas, celui qui isole l'effet de la clé et rien d'autre.</p>
+<figure class="code-block" data-file="cle-idempotence.js"><pre><code class="language-javascript">// La clé d'idempotence : le client colle un identifiant sur SON intention,
+// avant la première tentative, et le réutilise à l'identique pour tous ses
+// réessais. Le serveur tient un registre : clé déjà vue = ne rien refaire,
+// rendre la réponse d'origine.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const APPELS = 100000, SANS_REPONSE = 0.04, TENTATIVES = 3;
+
+// Le serveur : un compte, et un registre clé -&gt; réponse déjà rendue.
+function serveur() {
+  return { solde: 0, registre: new Map(), debits: 0, rejouees: 0 };
+}
+function debiter(srv, cle, montant) {
+  if (cle !== null &amp;&amp; srv.registre.has(cle)) {   // même intention, déjà traitée
+    srv.rejouees++;
+    return srv.registre.get(cle);
+  }
+  srv.solde -= montant;                          // l'effet, une seule fois
+  srv.debits++;
+  const reponse = 'solde=' + srv.solde;
+  if (cle !== null) srv.registre.set(cle, reponse);
+  return reponse;
+}
+
+// 'aucune' : pas de clé. 'par-achat' : une clé par intention (le bon usage).
+// 'par-tentative' : une clé neuve à chaque réessai (l'erreur classique).
+function campagne(mode) {
+  const alea = semer(7391);
+  const srv = serveur();
+  let erreurs = 0;
+  for (let i = 0; i &lt; APPELS; i++) {
+    const cleAchat = 'achat-' + i;
+    let repondu = false;
+    for (let t = 0; t &lt; TENTATIVES &amp;&amp; !repondu; t++) {
+      let cle = null;
+      if (mode === 'par-achat') cle = cleAchat;
+      if (mode === 'par-tentative') cle = cleAchat + '-essai-' + t;
+      const perdu = alea() &lt; SANS_REPONSE;       // la réponse se perd ou non
+      debiter(srv, cle, 10);                     // le serveur, lui, a traité
+      if (!perdu) repondu = true;
+    }
+    if (!repondu) erreurs++;
+  }
+  return { srv, erreurs };
+}
+
+console.log(APPELS + ' achats de 10 €, ' + (SANS_REPONSE * 100).toFixed(0) +
+  ' % de réponses perdues, ' + TENTATIVES + ' tentatives au plus');
+console.log('');
+console.log('clé fournie      | débits appliqués | rejeux reconnus | solde final');
+console.log('-----------------+------------------+-----------------+------------');
+for (const mode of ['aucune', 'par-tentative', 'par-achat']) {
+  const r = campagne(mode);
+  console.log(
+    mode.padEnd(17) + '| ' + String(r.srv.debits).padStart(16) + ' | ' +
+    String(r.srv.rejouees).padStart(15) + ' | ' + String(r.srv.solde).padStart(11)
+  );
+}
+console.log('');
+const bon = campagne('par-achat');
+console.log('attendu si chaque achat n\'est débité qu\'une fois : ' + (-10 * APPELS));
+console.log('obtenu avec une clé par achat                    : ' + bon.srv.solde);
+console.log('débits en trop                                   : ' +
+  (bon.srv.debits - APPELS));
+console.log('');
+console.log('La clé par TENTATIVE ne déduplique rien : chaque réessai porte une');
+console.log('clé neuve, donc le serveur ne peut pas voir que c\'est la même');
+console.log('intention. C\'est l\'erreur la plus fréquente, et elle est muette :');
+console.log('le code a bien un « en-tête d\'idempotence », il ne sert à rien.');</code></pre></figure>
+<figure class="code-block" data-file="cle-idempotence.txt"><pre><code class="language-plaintext">100000 achats de 10 €, 4 % de réponses perdues, 3 tentatives au plus
+
+clé fournie      | débits appliqués | rejeux reconnus | solde final
+-----------------+------------------+-----------------+------------
+aucune           |           104222 |               0 |    -1042220
+par-tentative    |           104222 |               0 |    -1042220
+par-achat        |           100000 |            4222 |    -1000000
+
+attendu si chaque achat n'est débité qu'une fois : -1000000
+obtenu avec une clé par achat                    : -1000000
+débits en trop                                   : 0
+
+La clé par TENTATIVE ne déduplique rien : chaque réessai porte une
+clé neuve, donc le serveur ne peut pas voir que c'est la même
+intention. C'est l'erreur la plus fréquente, et elle est muette :
+le code a bien un « en-tête d'idempotence », il ne sert à rien.
+</code></pre></figure>
+<p>Sans clé, <strong>104&nbsp;222</strong> débits sont appliqués pour <strong>100&nbsp;000</strong> achats&nbsp;: <strong>4&nbsp;222</strong> de trop, et le solde final se trompe de <strong>42&nbsp;220&nbsp;€</strong>. Avec une clé par achat, le serveur reconnaît <strong>4&nbsp;222</strong> rejeux, applique <strong>100&nbsp;000</strong> débits exactement, et le solde tombe juste. La colonne du milieu est la plus instructive&nbsp;: la clé <em>par tentative</em> ne déduplique <strong>rien</strong> — mêmes 104&nbsp;222 débits que sans clé du tout.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">L'erreur qui ressemble le plus à une bonne implémentation</p><p>Générer la clé <em>au moment d'émettre la requête</em> paraît naturel — c'est là qu'on construit l'appel. Mais un réessai émet une requête, donc il génère une clé neuve, donc le serveur voit une intention neuve. Le code a bien un en-tête d'idempotence, la documentation est respectée, la revue de code passe&nbsp;: et le mécanisme est <strong>entièrement inopérant</strong>, ce que <em>rien</em> ne signale. Mesuré ci-dessus&nbsp;: <strong>0</strong> rejeu reconnu sur <strong>4&nbsp;222</strong>. La clé doit naître avec l'<em>intention</em>, en amont de la boucle de réessai — idéalement dans l'interface, quand l'utilisateur clique.</p></div></div>
+<p>D'où vient cette clé&nbsp;? Trois sources, par ordre de solidité décroissante. La meilleure est une <strong>clé naturelle</strong> déjà portée par le métier&nbsp;: un numéro de commande, un identifiant de virement, une référence de mandat. Elle a l'avantage d'être stable même si le client change d'application. Vient ensuite un <strong>identifiant aléatoire tiré par le client</strong> et conservé pendant toute la durée de vie de l'intention&nbsp;; c'est ce que font les interfaces de paiement qui demandent un en-tête dédié. Vient enfin, en dernier recours, une <strong>empreinte du contenu</strong> de la requête — pratique, mais fragile&nbsp;: deux achats identiques et légitimes du même article, à la même seconde, se confondent alors en un seul.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Schéma d une requête traitée deux fois avec une clé d idempotence. En haut à gauche, un cadre client émet deux flèches horizontales vers la droite, l une étiquetée première tentative avec clé K, l autre étiquetée réessai avec la même clé K. Ces deux flèches aboutissent à un cadre serveur au centre. Sous le serveur, un cadre registre des clés contient la mention clé K puis réponse mémorisée. Une flèche descendante part du serveur vers ce cadre registre, puis une flèche horizontale mène du registre à un cadre effet, débiter, marqué appliqué une seule fois. Une flèche de retour part du registre vers le client et porte l étiquette réponse d origine rendue à l identique. Une bande basse séparée par un trait en pointillés porte la mention : quatre mille deux cent vingt-deux rejeux reconnus, zéro débit en trop, solde exact.">
+    <rect class="d-box" x="24" y="46" width="110" height="40" rx="6" /><text class="d-text" x="79" y="70" text-anchor="middle" font-size="10">client</text>
+    <rect class="d-box" x="250" y="46" width="130" height="40" rx="6" /><text class="d-text" x="315" y="70" text-anchor="middle" font-size="10">serveur</text>
+
+    <path class="d-line" d="M134 58 L244 58" fill="none" /><path class="d-line" d="M238 53 L246 58 L238 63" fill="none" />
+    <text class="d-mut" x="189" y="50" text-anchor="middle" font-size="8.5">1re tentative, clé K</text>
+    <path class="d-line" d="M134 78 L244 78" fill="none" /><path class="d-line" d="M238 73 L246 78 L238 83" fill="none" />
+    <text class="d-mut" x="189" y="94" text-anchor="middle" font-size="8.5">réessai, MÊME clé K</text>
+
+    <path class="d-line" d="M315 86 L315 116" fill="none" /><path class="d-line" d="M309 110 L315 118 L321 110" fill="none" />
+    <rect class="d-accent" x="230" y="118" width="170" height="42" rx="6" /><text class="d-text" x="315" y="134" text-anchor="middle" font-size="9.5">registre des clés</text><text class="d-text" x="315" y="150" text-anchor="middle" font-size="9">K → réponse mémorisée</text>
+
+    <path class="d-line" d="M400 139 L470 139" fill="none" /><path class="d-line" d="M464 134 L472 139 L464 144" fill="none" />
+    <rect class="d-box" x="472" y="118" width="140" height="42" rx="6" /><text class="d-text" x="542" y="134" text-anchor="middle" font-size="9.5">effet&#160;: débiter</text><text class="d-text" x="542" y="150" text-anchor="middle" font-size="9">appliqué UNE seule fois</text>
+
+    <path class="d-line" d="M230 139 L79 139 L79 92" fill="none" /><path class="d-line" d="M74 98 L79 90 L84 98" fill="none" />
+    <text class="d-mut" x="150" y="154" text-anchor="middle" font-size="8.5">réponse d'origine, rendue à l'identique</text>
+
+    <path class="d-line" d="M14 196 L626 196" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="216" text-anchor="middle" font-size="9">100 000 achats, 4 % de réponses perdues&#160;·&#160;4 222 rejeux reconnus&#160;·&#160;0 débit en trop&#160;·&#160;solde exact</text>
+  </svg>
+  <figcaption>La clé ne protège pas la requête&nbsp;: elle nomme l'intention, ce qui permet au serveur de reconnaître deux requêtes comme une seule.</figcaption>
+</figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Et si la même clé revient avec un contenu différent&nbsp;?</p><p>La <a href="lecon-03.html">leçon&nbsp;3</a> laissait cette question ouverte, et elle n'a rien d'anecdotique&nbsp;: c'est le cas d'un client qui réutilise une clé par erreur — une variable mal réinitialisée, une clé dérivée du numéro de panier plutôt que de la commande. Le serveur voit alors la clé <em>K</em>, déjà connue, sur une demande qui n'est pas la même. Rendre la réponse mémorisée serait un mensonge&nbsp;: le client croirait son second achat effectué alors qu'il ne l'est pas. Appliquer l'effet serait pire encore&nbsp;: la clé ne protégerait plus rien.<br /><br />La seule conduite sûre est de <strong>refuser explicitement</strong>. Le registre mémorise donc, à côté de la clé et de la réponse, une <em>empreinte de la demande</em> — un condensé des champs qui décrivent l'intention (montant, bénéficiaire, article). À la deuxième réception, le serveur compare&nbsp;: empreinte identique, il rend la réponse d'origine&nbsp;; empreinte différente, il répond par un conflit, et cette erreur-là ne doit surtout pas être réessayée. C'est exactement ce que font les interfaces de paiement qui renvoient un code dédié quand une clé est «&nbsp;réutilisée avec des paramètres différents&nbsp;». Un service qui ne stocke pas cette empreinte ne peut pas distinguer le réessai légitime de la collision de clés, et il choisira toujours mal.</p></div></div>
+<p>Un détail du programme mérite d'être souligné, parce qu'il est souvent oublié dans les implémentations&nbsp;: le registre ne mémorise pas seulement la clé, il mémorise la <strong>réponse</strong>. Un réessai reçoit donc exactement ce qu'aurait reçu la première tentative — même identifiant de transaction, même solde, même code de retour. Un registre qui ne garderait que la clé et répondrait «&nbsp;déjà traité&nbsp;» obligerait le client à gérer un cas de plus, et il le gérerait mal&nbsp;: du point de vue du client, «&nbsp;déjà traité&nbsp;» est un succès, mais il ne contient pas le résultat qu'il attendait.</p>
+
+<h2>Vérifier et appliquer doivent être indivisibles</h2>
+<p>Voilà donc un registre de clés. On pourrait croire le problème réglé&nbsp;; il ne l'est pas, et ce qui suit est la faute la plus subtile de la leçon. Le serveur naïf procède en trois étapes&nbsp;: <em>lire le registre</em>, <em>appliquer l'effet</em>, <em>écrire la clé</em>. Or deux tentatives de la même intention peuvent parfaitement se chevaucher — c'est même le cas normal, puisqu'un réessai part précisément quand la première tentative n'a pas répondu, donc quand elle est peut-être encore en cours d'exécution.</p>
+<p>Plutôt que de simuler un cas particulier, énumérons <em>tous</em> les entrelacements possibles de deux tentatives de trois étapes chacune. Il y en a exactement vingt.</p>
+<figure class="code-block" data-file="verifier-et-appliquer.js"><pre><code class="language-javascript">// Le registre de clés ne suffit pas : encore faut-il que « vérifier la clé »
+// et « appliquer l'effet » soient INDIVISIBLES. Sinon deux tentatives de la
+// même intention peuvent regarder le registre avant que l'une des deux ne
+// l'ait rempli — et débiter deux fois.
+// On énumère ici TOUS les entrelacements possibles de deux tentatives.
+
+// Un entrelacement = une façon de mêler les étapes de A et de B en gardant
+// l'ordre propre à chacune. Avec 3 étapes chacune : 20 entrelacements.
+function entrelacements(nA, nB) {
+  const out = [];
+  (function marcher(a, b, chemin) {
+    if (a === nA &amp;&amp; b === nB) { out.push(chemin.slice()); return; }
+    if (a &lt; nA) { chemin.push('A' + (a + 1)); marcher(a + 1, b, chemin); chemin.pop(); }
+    if (b &lt; nB) { chemin.push('B' + (b + 1)); marcher(a, b + 1, chemin); chemin.pop(); }
+  })(0, 0, []);
+  return out;
+}
+
+// Version NAÏVE, en trois étapes séparées :
+//   1 lire le registre   2 appliquer le débit   3 écrire la clé
+function joueNaif(ordre) {
+  const etat = { registre: false, debits: 0 };
+  const vu = { A: null, B: null };
+  for (const pas of ordre) {
+    const qui = pas[0], num = +pas[1];
+    if (num === 1) vu[qui] = etat.registre;          // lecture du registre
+    else if (num === 2) { if (!vu[qui]) etat.debits++; }  // débit si clé inconnue
+    else if (num === 3) { if (!vu[qui]) etat.registre = true; }
+  }
+  return etat.debits;
+}
+
+// Version ATOMIQUE : « poser la clé si absente » est UNE seule étape
+// indivisible (une insertion protégée par une contrainte d'unicité, ou un
+// UPDATE conditionnel). Les trois étapes du serveur deviennent :
+//   1 poser la clé si absente (indivisible)   2 appliquer   3 rendre la réponse
+function joueAtomique(ordre) {
+  const etat = { registre: false, debits: 0 };
+  const gagne = { A: false, B: false };
+  for (const pas of ordre) {
+    const qui = pas[0], num = +pas[1];
+    if (num === 1) {                                  // test-et-pose indivisible
+      if (!etat.registre) { etat.registre = true; gagne[qui] = true; }
+    } else if (num === 2) { if (gagne[qui]) etat.debits++; }
+  }
+  return etat.debits;
+}
+
+const ORDRES = entrelacements(3, 3);
+let naifKO = 0, atomKO = 0;
+const surs = [];
+for (const o of ORDRES) {
+  const dn = joueNaif(o), da = joueAtomique(o);
+  if (dn &gt; 1) naifKO++; else surs.push(o.join(' '));
+  if (da &gt; 1) atomKO++;
+}
+
+console.log(ORDRES.length + ' entrelacements possibles de deux tentatives de la MÊME intention');
+console.log('');
+console.log('A1 = A lit le registre   A2 = A débite   A3 = A écrit la clé');
+console.log('');
+console.log('registre lu puis rempli en 3 étapes  : ' + naifKO + ' entrelacements débitent deux fois');
+console.log('clé posée en une étape indivisible   : ' + atomKO + ' entrelacement débite deux fois');
+console.log('');
+console.log('les ' + surs.length + ' seuls entrelacements sûrs de la version en 3 étapes :');
+for (const e of surs) console.log('  ' + e);
+console.log('');
+console.log('Ce sont exactement les deux ordres où une tentative a TOUT fini');
+console.log("avant que l'autre ne commence — donc les deux seuls qui ne sont");
+console.log('pas vraiment des entrelacements.');
+console.log('');
+console.log('Part des entrelacements qui cassent : ' +
+  (100 * naifKO / ORDRES.length).toFixed(1) + ' %');
+console.log('Un registre de clés lu puis rempli plus tard ne protège que dans');
+console.log("le cas où l'on n'avait besoin de personne : dès que les deux");
+console.log("tentatives se chevauchent, ne serait-ce que d'une étape, il échoue.");</code></pre></figure>
+<figure class="code-block" data-file="verifier-et-appliquer.txt"><pre><code class="language-plaintext">20 entrelacements possibles de deux tentatives de la MÊME intention
+
+A1 = A lit le registre   A2 = A débite   A3 = A écrit la clé
+
+registre lu puis rempli en 3 étapes  : 18 entrelacements débitent deux fois
+clé posée en une étape indivisible   : 0 entrelacement débite deux fois
+
+les 2 seuls entrelacements sûrs de la version en 3 étapes :
+  A1 A2 A3 B1 B2 B3
+  B1 B2 B3 A1 A2 A3
+
+Ce sont exactement les deux ordres où une tentative a TOUT fini
+avant que l'autre ne commence — donc les deux seuls qui ne sont
+pas vraiment des entrelacements.
+
+Part des entrelacements qui cassent : 90.0 %
+Un registre de clés lu puis rempli plus tard ne protège que dans
+le cas où l'on n'avait besoin de personne : dès que les deux
+tentatives se chevauchent, ne serait-ce que d'une étape, il échoue.
+</code></pre></figure>
+<p>Le résultat est brutal&nbsp;: <strong>18</strong> entrelacements sur <strong>20</strong>, soit <strong>90&nbsp;%</strong>, débitent deux fois. Et les deux qui s'en sortent sont <em>A1 A2 A3 B1 B2 B3</em> et <em>B1 B2 B3 A1 A2 A3</em> — c'est-à-dire les deux ordres où une tentative a entièrement terminé avant que l'autre ne commence. Autrement dit&nbsp;: <strong>le registre en trois étapes ne protège que dans les cas où l'on n'avait besoin de personne</strong>.</p>
+<p>La correction ne consiste pas à ajouter un verrou par-dessus, mais à changer l'étape&nbsp;1&nbsp;: au lieu de <em>lire</em> le registre, on y <strong>pose la clé si elle est absente</strong>, en une seule opération indivisible. Une insertion protégée par une contrainte d'unicité fait exactement cela&nbsp;: la seconde tentative échoue à insérer, et cet échec est l'information qu'elle attendait. Résultat mesuré&nbsp;: <strong>0</strong> entrelacement fautif sur les vingt.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Trois façons de rendre la pose indivisible, et une qui n'en est pas une</p><p><strong>Une contrainte d'unicité</strong> sur la colonne de la clé, dans la même base que l'effet&nbsp;: c'est la plus simple et la plus solide. <strong>Une insertion conditionnelle</strong> du type «&nbsp;insérer si absent&nbsp;», que toutes les bases exposent sous un nom ou un autre. <strong>Une transaction</strong> qui englobe la lecture, l'effet et l'écriture — à condition que son niveau d'isolation empêche réellement deux transactions de lire simultanément l'absence de la clé, ce qui n'est pas garanti par défaut partout. Et la fausse solution&nbsp;: <em>un verrou pris dans un service séparé</em>, un cache ou un coordinateur. Le verrou est alors dans un système, l'effet dans un autre&nbsp;; le premier peut expirer pendant que le second travaille, et l'on rouvre alors exactement la fenêtre de la version en trois étapes — avec, en prime, une pièce de plus qui peut tomber en panne. Le programme ne mesure pas ce cas&nbsp;: il énumère les entrelacements d'une version <em>sans</em> exclusion mutuelle. Un verrou correctement détenu protège&nbsp;; ce qu'on ignore, c'est s'il l'est encore.</p></div></div>
+<p>Une conséquence pratique en découle, et elle a le mérite d'être simple à retenir&nbsp;: <strong>le registre de clés doit vivre dans la même base que l'effet</strong>. Le tenir dans un cache rapide et l'effet dans une base relationnelle, c'est réintroduire deux systèmes qui peuvent diverger — et l'on retombe sur le problème que la clé était censée résoudre, un cran plus bas. Ce n'est pas une question de performance, c'est une question d'atomicité&nbsp;: une seule transaction doit contenir la pose de la clé <em>et</em> l'effet, sans quoi il existe un instant où l'un des deux existe sans l'autre.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Schéma comparant deux séquences de traitement de la même clé par deux tentatives A et B. En haut, la version en trois étapes séparées : une ligne du temps horizontale porte quatre marques successives étiquetées A lit le registre vide, B lit le registre vide, A débite, B débite ; une étiquette à droite indique deux débits, dix-huit entrelacements sur vingt. En bas, la version indivisible : la même ligne du temps porte trois marques successives étiquetées A pose la clé et gagne, B tente de poser la clé et échoue, A débite ; une étiquette à droite indique un seul débit, zéro entrelacement fautif sur vingt. Une bande basse séparée par un trait en pointillés rappelle que les deux seuls entrelacements sûrs de la version en trois étapes sont ceux où une tentative finit avant que l autre commence.">
+    <text class="d-label" x="20" y="24" text-anchor="start" font-size="11">registre lu, puis rempli plus tard — 3 étapes</text>
+    <path class="d-line" d="M30 56 L520 56" fill="none" />
+    <rect class="d-box" x="40" y="42" width="96" height="28" rx="4" /><text class="d-text" x="88" y="60" text-anchor="middle" font-size="8.5">A lit&#160;: vide</text>
+    <rect class="d-box" x="150" y="42" width="96" height="28" rx="4" /><text class="d-text" x="198" y="60" text-anchor="middle" font-size="8.5">B lit&#160;: vide</text>
+    <rect class="d-box" x="260" y="42" width="96" height="28" rx="4" /><text class="d-text" x="308" y="60" text-anchor="middle" font-size="8.5">A débite</text>
+    <rect class="d-box" x="370" y="42" width="96" height="28" rx="4" /><text class="d-text" x="418" y="60" text-anchor="middle" font-size="8.5">B débite</text>
+    <text class="d-tag" x="530" y="54" text-anchor="start" font-size="9.5">2 débits</text>
+    <text class="d-mut" x="530" y="68" text-anchor="start" font-size="8.5">18 cas sur 20</text>
+
+    <text class="d-label" x="20" y="128" text-anchor="start" font-size="11">pose de la clé indivisible — 1 étape</text>
+    <path class="d-line" d="M30 160 L520 160" fill="none" />
+    <rect class="d-accent" x="40" y="146" width="96" height="28" rx="4" /><text class="d-text" x="88" y="164" text-anchor="middle" font-size="8.5">A pose K&#160;: gagne</text>
+    <rect class="d-box" x="150" y="146" width="96" height="28" rx="4" /><text class="d-text" x="198" y="164" text-anchor="middle" font-size="8.5">B pose K&#160;: échoue</text>
+    <rect class="d-accent" x="260" y="146" width="96" height="28" rx="4" /><text class="d-text" x="308" y="164" text-anchor="middle" font-size="8.5">A débite</text>
+    <text class="d-tag" x="530" y="158" text-anchor="start" font-size="9.5">1 débit</text>
+    <text class="d-mut" x="530" y="172" text-anchor="start" font-size="8.5">0 cas sur 20</text>
+
+    <path class="d-line" d="M14 200 L626 200" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="220" text-anchor="middle" font-size="9">les 2 seuls entrelacements sûrs de la version en 3 étapes&#160;: ceux où une tentative finit avant que l'autre commence</text>
+  </svg>
+  <figcaption>Sur les vingt ordres possibles, deux seulement épargnent la version en trois étapes — et ce sont ceux où les deux tentatives ne se chevauchent pas du tout.</figcaption>
+</figure>
+
+<h2>Une clé ne vit pas éternellement</h2>
+<p>Le registre grossit à chaque requête. Aucun système ne le garde indéfiniment&nbsp;: il porte une <strong>durée de rétention</strong>, au-delà de laquelle les clés sont effacées. Et là se cache un défaut qui ne se manifeste jamais en test, parce qu'il demande à la fois un réessai <em>et</em> beaucoup de temps&nbsp;: si un réessai arrive après l'expiration de sa clé, le serveur le voit comme une intention neuve, et l'effet a lieu une seconde fois.</p>
+<p>La question n'est donc pas «&nbsp;ai-je une clé&nbsp;?&nbsp;» mais «&nbsp;ma fenêtre couvre-t-elle le retard le plus long que mon système sait produire&nbsp;?&nbsp;». Le programme mesure les deux côtés de l'arbitrage&nbsp;: les doublons qui passent, et la mémoire qu'il faut y consacrer.</p>
+<figure class="code-block" data-file="fenetre-de-retention.js"><pre><code class="language-javascript">// Une clé d'idempotence n'est pas gardée éternellement : le registre a une
+// durée de rétention. Tout réessai qui arrive APRÈS l'expiration de sa clé
+// est vu comme une intention neuve — et l'effet a lieu une seconde fois.
+// La question n'est donc pas « ai-je une clé ? » mais « ma fenêtre couvre-t-elle
+// le retard le plus long que mon système sait produire ? »
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const ACHATS = 200000;
+const DEBIT = 500;              // achats par seconde en régime de croisière
+const OCTETS_PAR_CLE = 120;     // clé + réponse mémorisée + horodatage
+
+// Délai, en secondes, entre la première tentative et le dernier réessai.
+// Trois régimes, mesurés dans cet ordre de grandeur sur des systèmes réels :
+//   96,5 % : réessai immédiat, moins de 30 s
+//    3,0 % : la file de reprise a du retard, de 30 s à 2 h
+//    0,5 % : reprise après incident ou rejeu manuel, de 2 h à 5 jours
+function delaiReessai(alea) {
+  const u = alea();
+  if (u &lt; 0.965) return 0.2 + 29.8 * alea();
+  if (u &lt; 0.995) return 30 + (7200 - 30) * alea();
+  return 7200 + (5 * 86400 - 7200) * alea();
+}
+
+const FENETRES = [
+  { nom: '5 minutes', s: 300 },
+  { nom: '1 heure', s: 3600 },
+  { nom: '24 heures', s: 86400 },
+  { nom: '7 jours', s: 7 * 86400 },
+];
+
+const delais = [];
+{
+  const alea = semer(4177);
+  for (let i = 0; i &lt; ACHATS; i++) delais.push(delaiReessai(alea));
+}
+
+console.log(ACHATS + ' achats réessayés au moins une fois, ' + DEBIT + ' achats/s');
+console.log('');
+console.log('rétention  | réessais hors fenêtre | pour 1 M de réessais | clés stockées | mémoire');
+console.log('-----------+-----------------------+----------------------+---------------+--------');
+for (const f of FENETRES) {
+  let hors = 0;
+  for (const d of delais) if (d &gt; f.s) hors++;
+  const pourMillion = Math.round(1000000 * hors / ACHATS);
+  const cles = DEBIT * f.s;
+  const mo = cles * OCTETS_PAR_CLE / 1e6;
+  console.log(
+    f.nom.padEnd(11) + '| ' + String(hors).padStart(21) + ' | ' +
+    String(pourMillion).padStart(20) + ' | ' +
+    (cles &gt;= 1e6 ? (cles / 1e6).toFixed(1) + ' M' : (cles / 1000).toFixed(0) + ' k').padStart(13) + ' | ' +
+    (mo &gt;= 1000 ? (mo / 1000).toFixed(1) + ' Go' : mo.toFixed(0) + ' Mo').padStart(7)
+  );
+}
+
+let max = 0;
+for (const d of delais) if (d &gt; max) max = d;
+console.log('');
+console.log('retard le plus long observé : ' + (max / 3600).toFixed(1) + ' h');
+console.log('');
+console.log("La fenêtre de 7 jours ne rend 0 que parce qu'elle dépasse ce retard");
+console.log('maximal. Elle coûte 7 fois la mémoire de celle de 24 heures, qui');
+console.log('laisse déjà passer 793 réessais sur ' + ACHATS + ', soit 0,40 %.');
+console.log('Le bon raisonnement ne part pas du coût : il part du RETARD MAXIMAL');
+console.log('que le système sait produire — la file de rebut de la leçon 11, le');
+console.log('rejeu manuel après incident — et la fenêtre le couvre, ou ne le');
+console.log('couvre pas.');</code></pre></figure>
+<figure class="code-block" data-file="fenetre-de-retention.txt"><pre><code class="language-plaintext">200000 achats réessayés au moins une fois, 500 achats/s
+
+rétention  | réessais hors fenêtre | pour 1 M de réessais | clés stockées | mémoire
+-----------+-----------------------+----------------------+---------------+--------
+5 minutes  |                  6812 |                34060 |         150 k |   18 Mo
+1 heure    |                  4072 |                20360 |         1.8 M |  216 Mo
+24 heures  |                   793 |                 3965 |        43.2 M |  5.2 Go
+7 jours    |                     0 |                    0 |       302.4 M | 36.3 Go
+
+retard le plus long observé : 119.9 h
+
+La fenêtre de 7 jours ne rend 0 que parce qu'elle dépasse ce retard
+maximal. Elle coûte 7 fois la mémoire de celle de 24 heures, qui
+laisse déjà passer 793 réessais sur 200000, soit 0,40 %.
+Le bon raisonnement ne part pas du coût : il part du RETARD MAXIMAL
+que le système sait produire — la file de rebut de la leçon 11, le
+rejeu manuel après incident — et la fenêtre le couvre, ou ne le
+couvre pas.
+</code></pre></figure>
+<p>Les délais de réessai obéissent à trois régimes bien distincts, et c'est ce qui rend la lecture intéressante. La quasi-totalité — <strong>96,5&nbsp;%</strong> — repart en moins de trente secondes&nbsp;: une fenêtre de cinq minutes couvre déjà l'essentiel, et pourtant elle laisse passer <strong>6&nbsp;812</strong> réessais sur 200&nbsp;000. Une fenêtre de vingt-quatre heures en laisse encore <strong>793</strong>, soit <strong>0,40&nbsp;%</strong>. Et une fenêtre de sept jours n'en laisse aucun — non par magie, mais parce qu'elle dépasse le retard maximal que ce modèle sait produire, <strong>119,9&nbsp;h</strong>.</p>
+<p>C'est le bon raisonnement, et il ne part pas du coût&nbsp;: <em>de quel retard mon système est-il capable&nbsp;?</em> Une file de rebut vidée à la main le lundi matin, un rejeu après incident, une reprise de sauvegarde — la <a href="lecon-11.html">leçon&nbsp;11</a> montrera qu'un rattrapage peut durer <strong>15&nbsp;h</strong> pour trois heures d'arriéré, soit <strong>18&nbsp;h</strong> entre la première tentative d'un message et son rejeu. Une rétention de vingt-quatre heures couvre <em>tout juste</em> ce cas&nbsp;; une rétention d'une heure, non. Et une file de rebut reprise le lundi matin après un incident du vendredi soir dépasse les deux. La mémoire, elle, se calcule sans difficulté&nbsp;: à 500 achats par seconde et 120 octets par entrée, sept jours pèsent <strong>36,3&nbsp;Go</strong> — beaucoup pour une mémoire rapide, très peu pour une table sur disque.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">La rétention est un contrat, et il doit être écrit</p><p>Les interfaces de paiement publiques annoncent leur fenêtre — vingt-quatre heures chez les unes, plusieurs jours chez les autres. Ce n'est pas un détail d'implémentation, c'est une clause&nbsp;: <em>au-delà de cette durée, votre réessai sera traité comme une demande neuve</em>. Un intégrateur qui rejoue un fichier d'ordres vieux de trois jours contre une fenêtre de vingt-quatre heures n'a pas rencontré un bogue&nbsp;: il a dépassé le contrat. La règle symétrique vaut pour votre propre service&nbsp;: si vous annoncez une fenêtre, tout réessai plus tardif doit être <strong>refusé explicitement</strong> plutôt que traité en silence — un refus se voit, un doublon non.</p></div></div>
+
+<h2>Réessayer sans achever le service</h2>
+<p>Jusqu'ici, on a rendu le réessai <em>sûr</em> pour les données. Reste à le rendre sûr pour le service. Car un réessai n'est pas gratuit&nbsp;: c'est une requête de plus, envoyée précisément au moment où le service en difficulté en a le moins besoin. Et comme tous les clients rencontrent la panne au même moment, ils réessaient au même moment.</p>
+<p>Le programme met mille clients devant une panne de trente secondes. Au retour, le service accepte <strong>200</strong> requêtes par seconde&nbsp;; au-delà, il refuse — et un refus est un échec de plus, donc un réessai de plus.</p>
+<figure class="code-block" data-file="tempete-de-reessais.js"><pre><code class="language-javascript">// Réessayer est nécessaire ; réessayer TOUS EN MÊME TEMPS achève le service.
+// 1000 clients butent sur une panne de 30 s. Au retour, le service accepte
+// 200 requêtes par seconde ; au-delà, il refuse — et un refus est un échec
+// de plus, donc un réessai de plus.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const CLIENTS = 1000, PANNE = 30, CAPACITE = 200, PAS = 0.1, FIN = 120;
+
+// Trois politiques de réessai. k = numéro de la tentative déjà échouée.
+const POLITIQUES = {
+  'fixe 1 s': (k, alea) =&gt; 1,
+  'exponentiel': (k, alea) =&gt; Math.min(Math.pow(2, k), 60),
+  'exponentiel + aléa': (k, alea) =&gt; alea() * Math.min(Math.pow(2, k), 60),
+};
+
+function simuler(nom) {
+  const alea = semer(9013);
+  const politique = POLITIQUES[nom];
+  // Chaque client émet sa première requête entre 0 et 5 s (pendant la panne).
+  const clients = [];
+  for (let i = 0; i &lt; CLIENTS; i++) clients.push({ prochain: 5 * alea(), essais: 0, fini: false });
+
+  let envoyees = 0, refusees = 0, pic = 0, tPic = 0, servis = 0, tFin = 0;
+  for (let t = 0; t &lt; FIN; t += PAS) {
+    // Requêtes émises pendant cette tranche
+    const partants = [];
+    for (const c of clients) if (!c.fini &amp;&amp; c.prochain &lt;= t + PAS &amp;&amp; c.prochain &gt; t) partants.push(c);
+    envoyees += partants.length;
+    const quota = Math.round(CAPACITE * PAS);          // ce que le service absorbe
+    let accepte = 0;
+    for (const c of partants) {
+      c.essais++;
+      const serviceDebout = t &gt;= PANNE;
+      if (serviceDebout &amp;&amp; accepte &lt; quota) { accepte++; c.fini = true; servis++; tFin = t + PAS; }
+      else {
+        if (serviceDebout) refusees++;
+        c.prochain = t + PAS + politique(c.essais, alea);
+      }
+    }
+    if (t &gt;= PANNE &amp;&amp; partants.length &gt; pic) { pic = partants.length; tPic = t; }
+  }
+  const parSeconde = pic / PAS;
+  let essaisMax = 0, essaisTot = 0;
+  for (const c of clients) { essaisTot += c.essais; if (c.essais &gt; essaisMax) essaisMax = c.essais; }
+  return { envoyees, refusees, pic: parSeconde, tPic, servis, tFin, essaisTot, essaisMax };
+}
+
+console.log(CLIENTS + ' clients, panne de ' + PANNE + ' s, capacité ' + CAPACITE + ' requêtes/s au retour');
+console.log('');
+console.log('politique          | requêtes émises | refusées après le retour | pic (req/s) | tous servis à');
+console.log('-------------------+-----------------+--------------------------+-------------+--------------');
+for (const nom of Object.keys(POLITIQUES)) {
+  const r = simuler(nom);
+  console.log(
+    nom.padEnd(19) + '| ' + String(r.envoyees).padStart(15) + ' | ' +
+    String(r.refusees).padStart(24) + ' | ' + r.pic.toFixed(0).padStart(11) + ' | ' +
+    (r.servis === CLIENTS ? r.tFin.toFixed(1) + ' s' : 'jamais (' + r.servis + ')').padStart(13)
+  );
+}
+console.log('');
+const fixe = simuler('fixe 1 s'), exp = simuler('exponentiel'), jit = simuler('exponentiel + aléa');
+console.log('requêtes inutiles pendant la panne : ' + (fixe.envoyees - CLIENTS) + ' (fixe) contre ' +
+  (exp.envoyees - CLIENTS) + ' (exponentiel)');
+console.log('pic au retour                      : ' + fixe.pic.toFixed(0) + ' contre ' +
+  exp.pic.toFixed(0) + ' contre ' + jit.pic.toFixed(0) + ' requêtes/s');
+console.log('capacité du service                : ' + CAPACITE + ' requêtes/s');
+console.log('');
+console.log("L'exponentiel seul divise les requêtes inutiles par " +
+  ((fixe.envoyees - CLIENTS) / (exp.envoyees - CLIENTS)).toFixed(1) + ", mais il");
+console.log("SYNCHRONISE les clients : ils repartent tous aux mêmes instants,");
+console.log("1, 2, 4, 8, 16 s après leur échec. Son pic reste au-dessus de la");
+console.log("capacité (" + exp.pic.toFixed(0) + " contre " + CAPACITE + "), et " + exp.refusees + " requêtes sont refusées");
+console.log("APRÈS le retour du service — donc par un service en bonne santé.");
+console.log("");
+console.log("L'aléa, lui, passe sous la capacité : " + jit.pic.toFixed(0) + " requêtes/s, " + jit.refusees + " refus.");
+console.log("Il se paie : le dernier client est servi à " + jit.tFin.toFixed(1) + " s au lieu de " + exp.tFin.toFixed(1) + " s.");
+console.log("Étaler, c'est attendre un peu plus pour ne rejeter personne.");</code></pre></figure>
+<figure class="code-block" data-file="tempete-de-reessais.txt"><pre><code class="language-plaintext">1000 clients, panne de 30 s, capacité 200 requêtes/s au retour
+
+politique          | requêtes émises | refusées après le retour | pic (req/s) | tous servis à
+-------------------+-----------------+--------------------------+-------------+--------------
+fixe 1 s           |           30491 |                     2478 |        2030 |        40.2 s
+exponentiel        |            5102 |                      102 |         350 |        67.1 s
+exponentiel + aléa |            6432 |                        0 |          90 |        88.9 s
+
+requêtes inutiles pendant la panne : 29491 (fixe) contre 4102 (exponentiel)
+pic au retour                      : 2030 contre 350 contre 90 requêtes/s
+capacité du service                : 200 requêtes/s
+
+L'exponentiel seul divise les requêtes inutiles par 7.2, mais il
+SYNCHRONISE les clients : ils repartent tous aux mêmes instants,
+1, 2, 4, 8, 16 s après leur échec. Son pic reste au-dessus de la
+capacité (350 contre 200), et 102 requêtes sont refusées
+APRÈS le retour du service — donc par un service en bonne santé.
+
+L'aléa, lui, passe sous la capacité : 90 requêtes/s, 0 refus.
+Il se paie : le dernier client est servi à 88.9 s au lieu de 67.1 s.
+Étaler, c'est attendre un peu plus pour ne rejeter personne.
+</code></pre></figure>
+<p>Trois enseignements, dans l'ordre de leur importance. Le premier&nbsp;: le réessai à intervalle fixe émet <strong>29&nbsp;491</strong> requêtes inutiles sur toute la simulation, contre <strong>4&nbsp;102</strong> pour l'attente exponentielle — un facteur <strong>7,2</strong>. Restreint aux trente secondes de panne, l'écart est du même ordre&nbsp;: <strong>27&nbsp;013</strong> requêtes contre <strong>4&nbsp;000</strong>, soit <strong>6,8</strong>. C'est le bénéfice évident, et c'est le moins intéressant.</p>
+<p>Le second est plus subtil&nbsp;: l'attente exponentielle <em>seule</em> ne suffit pas. Son pic au retour du service atteint <strong>350</strong> requêtes par seconde pour une capacité de <strong>200</strong>, et <strong>102</strong> requêtes sont refusées <em>après</em> le retour — donc par un service en parfaite santé. La raison est que le doublement synchronise les clients&nbsp;: tous ceux qui ont échoué au même instant repartent à 1, 2, 4, 8, 16 secondes, exactement ensemble. Doubler l'attente écarte les vagues, mais ne les <em>étale</em> pas.</p>
+<p>Le troisième&nbsp;: l'aléa, lui, les étale. Tirer le délai au hasard entre zéro et la borne exponentielle fait tomber le pic à <strong>90</strong> requêtes par seconde, sous la capacité, et <strong>0</strong> requête n'est refusée. Cela se paie&nbsp;: le dernier client est servi à <strong>88,9&nbsp;s</strong> au lieu de <strong>67,1&nbsp;s</strong>. Étaler, c'est attendre un peu plus longtemps pour ne rejeter personne.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Trois lignes du temps horizontales, sans graduation, couvrant la même durée après le retour du service, et portant des traits verticaux de hauteur identique qui marquent chacun le départ d une vague de réessais. Seule leur répartition est significative, pas leur position exacte. La première ligne, réessai à intervalle fixe, porte quatre traits très rapprochés au tout début de la ligne, suivis de rien. La deuxième ligne, attente exponentielle, porte quatre traits isolés, de plus en plus espacés vers la droite. La troisième ligne, exponentielle avec aléa, porte douze traits répartis irrégulièrement sur toute la largeur. Chaque ligne porte à droite deux étiquettes : deux mille trente requêtes par seconde au pic et deux mille quatre cent soixante-dix-huit refusées pour la première, trois cent cinquante et cent deux pour la deuxième, quatre-vingt-dix et zéro pour la troisième. Une bande basse séparée par un trait en pointillés rappelle que la capacité du service est de deux cents requêtes par seconde, et que seule la troisième politique reste au-dessous.">
+    <text class="d-mut" x="16" y="18" text-anchor="start" font-size="9">instants de départ des réessais, après le retour du service</text>
+
+    <text class="d-label" x="16" y="44" text-anchor="start" font-size="10">fixe 1 s</text>
+    <path class="d-line" d="M16 66 L470 66" fill="none" />
+    <path class="d-line" d="M24 52 L24 66" fill="none" /><path class="d-line" d="M30 52 L30 66" fill="none" />
+    <path class="d-line" d="M36 52 L36 66" fill="none" /><path class="d-line" d="M42 52 L42 66" fill="none" />
+    <text class="d-tag" x="482" y="58" text-anchor="start" font-size="9">pic 2030 req/s</text>
+    <text class="d-mut" x="482" y="71" text-anchor="start" font-size="8.5">2 478 refusées</text>
+
+    <text class="d-label" x="16" y="112" text-anchor="start" font-size="10">exponentiel</text>
+    <path class="d-line" d="M16 134 L470 134" fill="none" />
+    <path class="d-line" d="M24 120 L24 134" fill="none" /><path class="d-line" d="M78 120 L78 134" fill="none" />
+    <path class="d-line" d="M186 120 L186 134" fill="none" /><path class="d-line" d="M402 120 L402 134" fill="none" />
+    <text class="d-tag" x="482" y="126" text-anchor="start" font-size="9">pic 350 req/s</text>
+    <text class="d-mut" x="482" y="139" text-anchor="start" font-size="8.5">102 refusées</text>
+
+    <text class="d-label" x="16" y="180" text-anchor="start" font-size="10">exponentiel + aléa</text>
+    <path class="d-line" d="M16 202 L470 202" fill="none" />
+    <path class="d-line" d="M22 188 L22 202" fill="none" /><path class="d-line" d="M57 188 L57 202" fill="none" />
+    <path class="d-line" d="M94 188 L94 202" fill="none" /><path class="d-line" d="M121 188 L121 202" fill="none" />
+    <path class="d-line" d="M163 188 L163 202" fill="none" /><path class="d-line" d="M198 188 L198 202" fill="none" />
+    <path class="d-line" d="M226 188 L226 202" fill="none" /><path class="d-line" d="M271 188 L271 202" fill="none" />
+    <path class="d-line" d="M309 188 L309 202" fill="none" /><path class="d-line" d="M348 188 L348 202" fill="none" />
+    <path class="d-line" d="M399 188 L399 202" fill="none" /><path class="d-line" d="M441 188 L441 202" fill="none" />
+    <text class="d-tag" x="482" y="194" text-anchor="start" font-size="9">pic 90 req/s</text>
+    <text class="d-mut" x="482" y="207" text-anchor="start" font-size="8.5">0 refusée</text>
+
+    <path class="d-line" d="M14 220 L626 220" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="238" text-anchor="middle" font-size="9">capacité du service&#160;: 200 req/s&#160;·&#160;seule la troisième politique reste au-dessous</text>
+  </svg>
+  <figcaption>Chaque trait marque le départ d'une vague de réessais&nbsp;: le doublement écarte les vagues, seul l'aléa les étale.</figcaption>
+</figure>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Le réglage complet, en quatre nombres</p><p>Une politique de réessai se décrit entièrement par&nbsp;: un <strong>délai de base</strong> (l'ordre de grandeur de l'aller-retour normal, pas moins)&nbsp;; un <strong>facteur</strong>, deux dans presque tous les cas&nbsp;; un <strong>plafond</strong> — à une seconde de base et un facteur deux, la sixième tentative attend déjà <strong>32&nbsp;s</strong>, et la douzième plus d'une heure&nbsp;; et surtout un <strong>aléa</strong>, tiré uniformément entre zéro et le délai courant. Ce dernier est le seul dont on mesure ici qu'il change la nature du résultat, et c'est le seul qui manque le plus souvent. À quoi s'ajoute une <strong>limite du nombre de tentatives</strong>&nbsp;: réessayer indéfiniment ne rend pas le service plus disponible, cela transforme seulement une erreur en attente sans fin.</p></div></div>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pourquoi la leçon 3 était encore plus sévère</p><p>La <a href="lecon-03.html">leçon&nbsp;3</a> a mesuré le même phénomène et conclut que doubler l'attente «&nbsp;ne change pas la pointe d'un iota&nbsp;» — <strong>1&nbsp;000</strong> requêtes dans la même tranche de 100&nbsp;ms, exactement comme avec une attente fixe, et <strong>147</strong> seulement avec un tirage au hasard. Ici, le doublement fait tout de même tomber le pic de <strong>2&nbsp;030</strong> à <strong>350</strong>. Les deux mesures sont justes, et leur écart est instructif&nbsp;: là-bas, les mille clients échouent <em>au même instant</em> et ne font que deux tentatives, si bien que leurs vagues restent parfaitement alignées&nbsp;; ici, ils sont entrés dans la panne étalés sur cinq secondes et réessaient plusieurs fois, ce qui brouille un peu l'alignement. <strong>Plus les clients ont échoué en même temps, moins le doublement seul les sépare</strong> — et une panne franche, qui est le cas courant, les fait échouer exactement en même temps. La conclusion commune aux deux leçons est la même&nbsp;: seul l'aléa étale.</p></div></div>
+<p>Un mot sur ce qui se cache derrière ces trois lignes&nbsp;: on parle ici d'un phénomène de synchronisation, pas de volume. Les mille clients de la simulation étaient pourtant <em>désynchronisés</em> au départ — leur première requête part à un instant tiré au hasard entre 0 et 5&nbsp;secondes. C'est la panne elle-même qui les a alignés, parce qu'ils ont tous échoué à la même seconde. Une panne est une machine à synchroniser les clients&nbsp;; l'aléa du réessai est la machine à les désynchroniser à nouveau.</p>
+
+<h2>Le réessai se multiplie le long de la chaîne</h2>
+<p>Il reste un piège, et c'est celui qui transforme un incident local en panne générale. Une requête d'utilisateur ne traverse presque jamais un seul service&nbsp;: elle traverse une chaîne. Si chaque maillon réessaie, les réessais se <em>multiplient</em>.</p>
+<figure class="code-block" data-file="amplification.js"><pre><code class="language-javascript">// Le réessai se MULTIPLIE le long de la chaîne d'appels. Chaque étage qui
+// réessaie trois fois multiplie par trois ce que voit l'étage suivant. Quand
+// le service du fond est en difficulté, ce sont ses clients qui l'achèvent.
+function espace(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+const ETAGES = ['passerelle -&gt; commandes', 'commandes -&gt; stock', 'stock -&gt; base'];
+const TENTATIVES = 3;
+const TRAFIC = 1000;          // requêtes utilisateur par seconde
+const BUDGET = 0.10;          // au plus 10 % de réessais en plus des requêtes
+
+console.log(TRAFIC + ' requêtes utilisateur/s traversent ' + ETAGES.length + ' appels réseau.');
+console.log('Le service du fond répond en erreur : chaque étage réessaie.');
+console.log('');
+console.log('étage                    | réessais | requêtes/s reçues par le suivant');
+console.log('-------------------------+----------+---------------------------------');
+let charge = TRAFIC;
+for (const e of ETAGES) {
+  charge *= TENTATIVES;
+  console.log(e.padEnd(25) + '| ' + ('x' + TENTATIVES).padStart(8) + ' | ' + String(charge).padStart(32));
+}
+console.log('');
+console.log('amplification totale : x' + Math.pow(TENTATIVES, ETAGES.length) +
+  '  (' + TENTATIVES + ' puissance ' + ETAGES.length + ')');
+console.log('');
+console.log('quatre politiques, la même panne :');
+console.log('');
+const politiques = [
+  { nom: 'réessai à chaque étage', facteur: Math.pow(TENTATIVES, ETAGES.length) },
+  { nom: 'réessai au seul étage du haut', facteur: TENTATIVES },
+  { nom: 'réessai au seul étage du bas', facteur: TENTATIVES },
+  { nom: 'budget de 10 % par étage', facteur: Math.pow(1 + BUDGET, ETAGES.length) },
+];
+console.log('politique                     | amplification | requêtes/s au fond');
+console.log('------------------------------+---------------+-------------------');
+for (const p of politiques) {
+  console.log(
+    p.nom.padEnd(30) + '| ' + ('x' + p.facteur.toFixed(3)).padStart(13) + ' | ' +
+    espace(Math.round(TRAFIC * p.facteur)).padStart(18)
+  );
+}
+console.log('');
+console.log('Le budget est la seule politique qui garde une VRAIE tolérance aux');
+console.log('pannes transitoires à chaque étage tout en bornant la charge : un');
+console.log('étage réessaie librement tant que les réessais restent sous 10 % de');
+console.log('son trafic, et cesse au-delà. Quand la panne est générale, tous les');
+console.log('étages sont au plafond en même temps, et le fond reçoit ' +
+  Math.round(TRAFIC * Math.pow(1 + BUDGET, ETAGES.length)) + ' au lieu de ' +
+  (TRAFIC * Math.pow(TENTATIVES, ETAGES.length)) + '.');
+console.log('');
+console.log('Rapport entre les deux : x' +
+  (Math.pow(TENTATIVES, ETAGES.length) / Math.pow(1 + BUDGET, ETAGES.length)).toFixed(1));</code></pre></figure>
+<figure class="code-block" data-file="amplification.txt"><pre><code class="language-plaintext">1000 requêtes utilisateur/s traversent 3 appels réseau.
+Le service du fond répond en erreur : chaque étage réessaie.
+
+étage                    | réessais | requêtes/s reçues par le suivant
+-------------------------+----------+---------------------------------
+passerelle -&gt; commandes  |       x3 |                             3000
+commandes -&gt; stock       |       x3 |                             9000
+stock -&gt; base            |       x3 |                            27000
+
+amplification totale : x27  (3 puissance 3)
+
+quatre politiques, la même panne :
+
+politique                     | amplification | requêtes/s au fond
+------------------------------+---------------+-------------------
+réessai à chaque étage        |       x27.000 |             27 000
+réessai au seul étage du haut |        x3.000 |              3 000
+réessai au seul étage du bas  |        x3.000 |              3 000
+budget de 10 % par étage      |        x1.331 |              1 331
+
+Le budget est la seule politique qui garde une VRAIE tolérance aux
+pannes transitoires à chaque étage tout en bornant la charge : un
+étage réessaie librement tant que les réessais restent sous 10 % de
+son trafic, et cesse au-delà. Quand la panne est générale, tous les
+étages sont au plafond en même temps, et le fond reçoit 1331 au lieu de 27000.
+
+Rapport entre les deux : x20.3
+</code></pre></figure>
+<p>Trois appels réseau, trois tentatives chacun&nbsp;: le service du fond reçoit <strong>27&nbsp;000</strong> requêtes par seconde pour <strong>1&nbsp;000</strong> requêtes d'utilisateur. Ce n'est pas une addition, c'est une puissance — <strong>3<sup>3</sup></strong> —, et la chaîne compte souvent plus de trois maillons. Le service qui répondait mal reçoit alors vingt-sept fois sa charge normale, ce qui garantit qu'il ne répondra plus du tout.</p>
+<p>Le tableau des politiques donne les remèdes. Réessayer à un seul étage ramène le facteur à <strong>3</strong>, mais il faut choisir lequel&nbsp;: <em>en haut</em>, on couvre toutes les pannes de la chaîne d'un seul mécanisme, au prix de refaire tout le travail déjà accompli en aval&nbsp;; <em>en bas</em>, on ne refait que le strict nécessaire, mais on ne couvre que les pannes du dernier maillon. Le <strong>budget de réessais</strong> est la seule politique qui conserve une vraie tolérance à chaque étage tout en bornant la charge&nbsp;: chaque service s'autorise à réessayer tant que les réessais restent sous <strong>10&nbsp;%</strong> de son trafic sortant, et cesse au-delà. Amplification mesurée&nbsp;: <strong>×1,331</strong>, soit <strong>1&nbsp;331</strong> requêtes par seconde au fond au lieu de 27&nbsp;000 — un rapport de <strong>20,3</strong>.</p>
+<p>La comparaison entre «&nbsp;trois tentatives&nbsp;» et «&nbsp;budget de 10&nbsp;%&nbsp;» mérite qu'on s'y arrête, parce que les deux réglages n'ont pas la même nature. Le premier est <em>local</em>&nbsp;: il décrit ce que fait une requête isolée, et il ne sait rien du nombre de requêtes en cours. Le second est <em>global</em>&nbsp;: il décrit une proportion du trafic, donc il se dégrade proprement quand tout le monde échoue en même temps. En régime normal, où seule une requête sur mille échoue, le budget ne limite rien du tout et les trois tentatives ont lieu&nbsp;; en panne générale, il ferme le robinet. C'est exactement le comportement souhaité, et c'est un réglage qu'aucune bibliothèque ne fournit par défaut.</p>
+
+<h2>Cesser d'appeler ce qui ne répond plus</h2>
+<p>Le budget borne le volume, il ne borne pas la <em>durée</em>. Or un appel vers un service mort ne coûte pas seulement une requête&nbsp;: il occupe une connexion pendant tout le délai de garde. Et quand il n'y a plus de connexion libre, l'appelant tombe à son tour — y compris pour les requêtes qui n'avaient rien à voir avec le service en panne.</p>
+<figure class="code-block" data-file="disjoncteur.js"><pre><code class="language-javascript">// Réessayer un service MORT ne le ressuscite pas : cela consomme les ressources
+// de l'appelant. Chaque appel en attente occupe une connexion pendant tout le
+// délai de garde — et quand il n'y en a plus, l'appelant tombe à son tour,
+// y compris pour les requêtes qui n'avaient rien à voir.
+const TRAFIC = 200;        // requêtes/s vers le service en panne
+const GARDE = 2;           // délai de garde : 2 s avant d'abandonner un appel
+const CONNEXIONS = 100;    // vivier de connexions sortantes de l'appelant
+const PANNE_DEBUT = 5, PANNE_FIN = 65, FIN = 90, PAS = 0.1;
+const SEUIL = 20;          // échecs consécutifs avant ouverture du disjoncteur
+const REPOS = 5;           // le disjoncteur laisse passer un essai toutes les 5 s
+
+function simuler(avecDisjoncteur) {
+  let occupees = [];         // instants de libération des connexions prises
+  let envoyees = 0, envoyeesPanne = 0, refuseesFauteDeConnexion = 0, echecsSuite = 0;
+  let ouvert = false, prochainEssai = 0, picOccupees = 0;
+  let sature = 0, detecte = -1;
+  for (let t = 0; t &lt; FIN; t += PAS) {
+    occupees = occupees.filter((fin) =&gt; fin &gt; t);
+    const enPanne = t &gt;= PANNE_DEBUT &amp;&amp; t &lt; PANNE_FIN;
+    let aEmettre = Math.round(TRAFIC * PAS);
+    for (let k = 0; k &lt; aEmettre; k++) {
+      if (avecDisjoncteur &amp;&amp; ouvert) {
+        if (t &lt; prochainEssai) continue;          // échec immédiat, 0 connexion
+        prochainEssai = t + REPOS;                // un seul essai de sondage
+      }
+      if (occupees.length &gt;= CONNEXIONS) { refuseesFauteDeConnexion++; continue; }
+      envoyees++;
+      if (enPanne) {
+        envoyeesPanne++;
+        occupees.push(t + GARDE);                 // l'appel attend le délai plein
+        echecsSuite++;
+        if (avecDisjoncteur &amp;&amp; echecsSuite &gt;= SEUIL) { ouvert = true; prochainEssai = t + REPOS; }
+      } else {
+        occupees.push(t + 0.02);                  // réponse normale en 20 ms
+        echecsSuite = 0;
+        if (ouvert) { ouvert = false; if (detecte &lt; 0 &amp;&amp; t &gt;= PANNE_FIN) detecte = t - PANNE_FIN; }
+        if (!avecDisjoncteur &amp;&amp; detecte &lt; 0 &amp;&amp; t &gt;= PANNE_FIN) detecte = t - PANNE_FIN;
+      }
+    }
+    if (occupees.length &gt; picOccupees) picOccupees = occupees.length;
+    if (occupees.length &gt;= CONNEXIONS) sature += PAS;
+  }
+  return { envoyees, envoyeesPanne, refuseesFauteDeConnexion, picOccupees, sature, detecte };
+}
+
+const sans = simuler(false), avec = simuler(true);
+function ligne(lib, a, b) {
+  console.log(lib.padEnd(38) + '| ' + String(a).padStart(16) + ' | ' + String(b).padStart(16));
+}
+console.log('Panne totale de ' + (PANNE_FIN - PANNE_DEBUT) + ' s, ' + TRAFIC +
+  ' requêtes/s, délai de garde ' + GARDE + ' s, ' + CONNEXIONS + ' connexions');
+console.log('');
+ligne('', 'sans disjoncteur', 'avec');
+console.log('-'.repeat(38) + '+' + '-'.repeat(18) + '+' + '-'.repeat(18));
+ligne('requêtes émises vers le service mort', sans.envoyeesPanne, avec.envoyeesPanne);
+ligne('connexions occupées au pic', sans.picOccupees, avec.picOccupees);
+ligne('temps passé à court de connexions', sans.sature.toFixed(1) + ' s', avec.sature.toFixed(1) + ' s');
+ligne('requêtes bloquées faute de connexion', sans.refuseesFauteDeConnexion, avec.refuseesFauteDeConnexion);
+ligne('retour du service détecté après', sans.detecte.toFixed(1) + ' s', avec.detecte.toFixed(1) + ' s (max ' + REPOS + ')');
+console.log('');
+console.log('Sans disjoncteur, il faudrait ' + (TRAFIC * GARDE) + ' connexions pour absorber ' +
+  TRAFIC + ' requêtes/s');
+console.log('qui mettent ' + GARDE + ' s à échouer. Il y en a ' + CONNEXIONS + ' : le vivier est vide en');
+console.log('permanence, et TOUTES les requêtes sortantes de ce service attendent,');
+console.log('y compris celles destinées à des services en parfaite santé.');
+console.log('');
+console.log("Le disjoncteur ne répare rien. Il transforme un échec LENT en échec");
+console.log("RAPIDE — et c'est cette différence, pas la panne, qui décide si la");
+console.log("panne d'un service en emporte trois autres.");</code></pre></figure>
+<figure class="code-block" data-file="disjoncteur.txt"><pre><code class="language-plaintext">Panne totale de 60 s, 200 requêtes/s, délai de garde 2 s, 100 connexions
+
+                                      | sans disjoncteur |             avec
+--------------------------------------+------------------+------------------
+requêtes émises vers le service mort  |             3000 |               31
+connexions occupées au pic            |              100 |               20
+temps passé à court de connexions     |           60.3 s |            0.0 s
+requêtes bloquées faute de connexion  |             9120 |                0
+retour du service détecté après       |            0.7 s |    0.4 s (max 5)
+
+Sans disjoncteur, il faudrait 400 connexions pour absorber 200 requêtes/s
+qui mettent 2 s à échouer. Il y en a 100 : le vivier est vide en
+permanence, et TOUTES les requêtes sortantes de ce service attendent,
+y compris celles destinées à des services en parfaite santé.
+
+Le disjoncteur ne répare rien. Il transforme un échec LENT en échec
+RAPIDE — et c'est cette différence, pas la panne, qui décide si la
+panne d'un service en emporte trois autres.
+</code></pre></figure>
+<p>Le calcul du bas de la sortie est celui qu'il faut retenir&nbsp;: absorber <strong>200</strong> requêtes par seconde qui mettent <strong>2&nbsp;s</strong> à échouer demande <strong>400</strong> connexions simultanées. Il y en a <strong>100</strong>. Le vivier est donc vide en permanence pendant <strong>60,3&nbsp;s</strong>, et <strong>9&nbsp;120</strong> requêtes sont bloquées faute de connexion. Le programme ne simule qu'une seule destination, donc ces 9&nbsp;120 requêtes visent toutes le service mort&nbsp;; mais dans un service réel le vivier est <em>partagé</em>, et ce sont alors aussi les appels vers des services parfaitement sains qui attendent. La panne d'un service en emporte un autre, sans que celui-ci ait le moindre défaut.</p>
+<p>Le disjoncteur coupe cette transmission. Après vingt échecs consécutifs, il s'ouvre&nbsp;: les appels suivants échouent <em>immédiatement</em>, sans consommer de connexion, et une seule requête de sondage passe toutes les cinq secondes pour tester le retour. Mesuré&nbsp;: <strong>31</strong> requêtes émises vers le service mort au lieu de <strong>3&nbsp;000</strong>, <strong>20</strong> connexions occupées au pic au lieu de <strong>100</strong>, <strong>0&nbsp;s</strong> de saturation, <strong>0</strong> requête bloquée.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que le disjoncteur coûte, et qu'on oublie de dire</p><p>Il retarde la détection du retour&nbsp;: tant qu'il est ouvert, il ne laisse passer qu'un sondage toutes les cinq secondes, donc le service peut être debout jusqu'à <strong>5&nbsp;s</strong> avant qu'on s'en aperçoive — <strong>0,4&nbsp;s</strong> dans la mesure ci-dessus, mais c'est le fruit de l'alignement des instants. Il introduit surtout un risque propre&nbsp;: <em>s'ouvrir à tort</em>. Un seuil trop bas transforme une salve de trois erreurs sans importance en coupure de plusieurs secondes, et cette coupure-là n'a aucune cause extérieure. D'où la règle&nbsp;: le seuil se mesure sur un <strong>taux</strong> observé pendant une fenêtre glissante, jamais sur un compte d'erreurs consécutives — et l'on n'ouvre pas un disjoncteur sur un volume trop faible pour être significatif.</p></div></div>
+<p>Les trois mécanismes de cette leçon forment donc une pile, et il faut les distinguer nettement&nbsp;: le <strong>réessai</strong> traite l'échec passager d'<em>une</em> requête&nbsp;; le <strong>budget</strong> empêche que la somme des réessais ne dépasse une part du trafic&nbsp;; le <strong>disjoncteur</strong> arrête d'appeler ce qui est manifestement mort, et rend la main tout de suite. Aucun ne remplace les autres, et les trois combinés ne servent à rien si l'opération n'est pas idempotente — puisque c'est cette dernière propriété, et elle seule, qui rend le premier acceptable.</p>
+
+<h2>«&nbsp;Exactement une fois&nbsp;» n'existe pas</h2>
+<p>Il faut maintenant démolir une expression qu'on lit partout. La clé d'idempotence protège ce que <em>votre base</em> sait dédupliquer. Elle ne protège pas un effet qui sort du système&nbsp;: un courriel parti est parti, un appel à un prestataire est passé, une impression est imprimée. Le programme mesure les trois places possibles pour un envoi de courriel autour de la transaction.</p>
+<figure class="code-block" data-file="effet-externe.js"><pre><code class="language-javascript">// Une clé d'idempotence protège ce que TA base sait annuler. Elle ne protège
+// pas un effet qui sort du système : un courriel parti est parti. On mesure
+// ici les trois places possibles pour un envoi de courriel autour de la
+// transaction — et ce que chacune casse.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const COMMANDES = 100000;
+const INTERRUPTION = 0.04;    // 4 % des tentatives sont coupées en plein vol
+const COUPURE_POSTE = 0.005;  // l'expéditeur de la boîte coupé entre poster et marquer
+
+// Où se coupe la tentative ? Uniformément entre deux étapes consécutives.
+function simuler(placement) {
+  const alea = semer(3517);
+  let courriels = 0, enDouble = 0, sansCourriel = 0, enregistrees = 0;
+  for (let i = 0; i &lt; COMMANDES; i++) {
+    let enregistree = false, envoye = 0;
+    for (let essai = 0; essai &lt; 3 &amp;&amp; !enregistree; essai++) {
+      const coupe = alea() &lt; INTERRUPTION ? alea() : 2;   // &lt; 1 = coupure, et où
+      if (placement === 'avant') {
+        envoye++;                                   // 1. courriel
+        if (coupe &lt; 0.5) continue;                  // coupé avant la base
+        enregistree = true;                         // 2. transaction (clé + effet)
+      } else if (placement === 'apres') {
+        if (coupe &lt; 0.5) continue;                  // coupé avant la base
+        enregistree = true;                         // 1. transaction
+        if (coupe &lt; 1) break;                       // coupé après : plus de courriel
+        envoye++;                                   // 2. courriel
+      } else {                                      // boîte d'envoi (outbox)
+        if (coupe &lt; 0.5) continue;
+        enregistree = true;             // 1. transaction : effet ET courriel à poster
+        envoye++;                       // 2. l'expéditeur le poste, plus tard
+        if (alea() &lt; COUPURE_POSTE) envoye++;  // coupé entre poster et marquer : reposté
+      }
+    }
+    if (enregistree) {
+      enregistrees++;
+      if (envoye === 0) sansCourriel++;
+    }
+    if (envoye &gt; 1) enDouble++;
+    courriels += envoye;
+  }
+  return { courriels, enDouble, sansCourriel, enregistrees };
+}
+
+console.log(COMMANDES + ' commandes, ' + (INTERRUPTION * 100).toFixed(0) +
+  ' % de tentatives coupées en plein vol, 3 tentatives au plus');
+console.log('La commande elle-même est protégée par une clé d\'idempotence :');
+console.log('elle est enregistrée exactement une fois, quoi qu\'il arrive.');
+console.log('');
+console.log('place de l\'envoi du courriel | courriels envoyés | en double | AUCUN courriel');
+console.log('-----------------------------+-------------------+-----------+---------------');
+for (const p of [['avant', 'avant la transaction'], ['apres', 'après la transaction'], ['outbox', 'boîte d\'envoi']]) {
+  const r = simuler(p[0]);
+  console.log(
+    p[1].padEnd(29) + '| ' + String(r.courriels).padStart(17) + ' | ' +
+    String(r.enDouble).padStart(9) + ' | ' + String(r.sansCourriel).padStart(14)
+  );
+}
+console.log('');
+console.log('Aucune des trois places ne rend « exactement une fois ».');
+console.log('  avant  : le client reçoit deux courriels pour une seule commande ;');
+console.log('  après  : certaines commandes passent SANS que le client soit prévenu ;');
+console.log('  boîte  : le courriel est écrit dans la même transaction que la');
+console.log('           commande, donc jamais perdu — mais son envoi effectif');
+console.log('           reste « au moins une fois », et un doublon reste possible');
+console.log('           si l\'expéditeur est coupé entre l\'envoi et sa marque.');
+console.log('');
+const a = simuler("avant"), b = simuler("apres"), c = simuler("outbox");
+console.log("");
+console.log("La boîte d'envoi ne supprime pas les doublons : elle les fait passer");
+console.log("de " + a.enDouble + " à " + c.enDouble + " (x" + (a.enDouble / c.enDouble).toFixed(1) + ") tout en ramenant à 0 les " + b.sansCourriel + " commandes");
+console.log("silencieuses. C'est un déplacement du défaut, pas sa disparition.");
+console.log("");
+console.log('L\'expression « exactement une fois » ne décrit donc jamais le monde :');
+console.log('elle décrit un EFFET observable dans un magasin qui sait dédupliquer.');
+console.log('Tout ce qui sort de ce magasin — courriel, SMS, appel à un tiers,');
+console.log('impression — est au mieux « au plus une fois » ou « au moins une fois ».');</code></pre></figure>
+<figure class="code-block" data-file="effet-externe.txt"><pre><code class="language-plaintext">100000 commandes, 4 % de tentatives coupées en plein vol, 3 tentatives au plus
+La commande elle-même est protégée par une clé d'idempotence :
+elle est enregistrée exactement une fois, quoi qu'il arrive.
+
+place de l'envoi du courriel | courriels envoyés | en double | AUCUN courriel
+-----------------------------+-------------------+-----------+---------------
+avant la transaction         |            101994 |      1960 |              0
+après la transaction         |             97993 |         0 |           2005
+boîte d'envoi                |            100483 |       485 |              0
+
+Aucune des trois places ne rend « exactement une fois ».
+  avant  : le client reçoit deux courriels pour une seule commande ;
+  après  : certaines commandes passent SANS que le client soit prévenu ;
+  boîte  : le courriel est écrit dans la même transaction que la
+           commande, donc jamais perdu — mais son envoi effectif
+           reste « au moins une fois », et un doublon reste possible
+           si l'expéditeur est coupé entre l'envoi et sa marque.
+
+
+La boîte d'envoi ne supprime pas les doublons : elle les fait passer
+de 1960 à 485 (x4.0) tout en ramenant à 0 les 2005 commandes
+silencieuses. C'est un déplacement du défaut, pas sa disparition.
+
+L'expression « exactement une fois » ne décrit donc jamais le monde :
+elle décrit un EFFET observable dans un magasin qui sait dédupliquer.
+Tout ce qui sort de ce magasin — courriel, SMS, appel à un tiers,
+impression — est au mieux « au plus une fois » ou « au moins une fois ».
+</code></pre></figure>
+<p>Aucune des trois ne rend «&nbsp;exactement une fois&nbsp;». <strong>Avant</strong> la transaction&nbsp;: <strong>1&nbsp;960</strong> commandes déclenchent plus d'un courriel — <strong>101&nbsp;994</strong> partent pour <strong>99&nbsp;998</strong> commandes enregistrées, soit <strong>1&nbsp;996</strong> de trop —, et aucune commande n'est silencieuse. <strong>Après</strong>&nbsp;: plus aucun doublon, mais <strong>2&nbsp;005</strong> commandes sont enregistrées <em>sans que le client soit prévenu</em>. La <strong>boîte d'envoi</strong> — écrire le courriel à poster dans la même transaction que la commande, un expéditeur le postant ensuite — supprime les commandes silencieuses et ramène les doublons de 1&nbsp;960 à <strong>485</strong>, un facteur <strong>4,0</strong>.</p>
+<p>Ces 485 restants ne sont pas un défaut d'implémentation&nbsp;: ils sont irréductibles. L'expéditeur poste le courriel, puis marque la ligne comme envoyée&nbsp;; s'il meurt entre les deux, il repostera. Inverser l'ordre — marquer d'abord, poster ensuite — remplace les doublons par des courriels jamais envoyés. C'est exactement le choix de la <a href="lecon-11.html">leçon&nbsp;11</a> entre accuser avant ou après le traitement, et il n'a pas de troisième terme.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que veut dire «&nbsp;exactement une fois&nbsp;» quand un produit l'annonce</p><p>Jamais «&nbsp;le message ne circulera qu'une fois&nbsp;». Toujours&nbsp;: «&nbsp;<em>l'effet observable dans un magasin que nous contrôlons</em> sera appliqué une fois&nbsp;», ce qui suppose une livraison au moins une fois plus une déduplication à l'arrivée. Dès que l'effet sort de ce magasin — courriel, SMS, virement chez un tiers, ouverture d'une porte —, la garantie s'arrête net à la frontière. La question à poser devant toute promesse de ce genre est donc&nbsp;: <strong>dans quel magasin, et qui l'écrit&nbsp;?</strong> Si l'effet et la marque de déduplication ne sont pas écrits par la même transaction, la promesse est fausse, quel que soit le nom du produit.</p></div></div>
+<p>La conséquence pratique est apaisante, une fois qu'on l'a acceptée&nbsp;: puisqu'on ne peut pas empêcher la deuxième exécution, on la rend <em>inoffensive</em>. C'est un déplacement complet de l'effort. On cesse de chercher le protocole qui garantirait l'unicité de la livraison — il n'existe pas — et l'on investit dans deux choses beaucoup plus modestes&nbsp;: une clé posée à l'endroit où naît l'intention, et une transaction qui contient à la fois la marque et l'effet.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Engendrer la clé d'idempotence dans la fonction qui émet la requête.</strong> Chaque réessai en produit alors une neuve, et le serveur ne peut plus reconnaître deux requêtes comme une seule intention. Mesuré&nbsp;: <strong>0</strong> rejeu reconnu, <strong>104&nbsp;222</strong> débits pour 100&nbsp;000 achats — exactement le résultat obtenu <em>sans aucune clé</em>. Le code paraît pourtant correct, et rien ne le signale.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Lire le registre, puis appliquer l'effet, puis écrire la clé.</strong> Les trois étapes sont correctes prises séparément, et l'ensemble est faux&nbsp;: sur les <strong>20</strong> entrelacements possibles de deux tentatives, <strong>18</strong> débitent deux fois. Les <strong>2</strong> qui tiennent sont ceux où une tentative se termine avant que l'autre commence — donc les deux seuls qui n'entrelacent rien. Il faut une pose de clé <em>indivisible</em>, dans la même transaction que l'effet.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Réessayer avec une attente qui double, et s'arrêter là.</strong> L'attente exponentielle divise bien les requêtes inutiles par <strong>7,2</strong>, mais elle <em>synchronise</em> les clients&nbsp;: son pic au retour du service atteint <strong>350</strong> requêtes par seconde pour une capacité de <strong>200</strong>, et <strong>102</strong> requêtes sont refusées par un service redevenu sain. Sans aléa, le doublement déplace la vague&nbsp;; il ne l'étale pas.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'un service «&nbsp;exactement une fois&nbsp;» dispense d'être idempotent.</strong> La garantie s'arrête à la frontière du magasin qui déduplique. Un rejeu de rattrapage traverse <strong>7&nbsp;884&nbsp;000</strong> messages déjà traités dans la <a href="lecon-11.html">leçon&nbsp;11</a>&nbsp;: sans clé, ce sont autant de courriels et de prélèvements refaits. La promesse était tenue&nbsp;; elle ne portait simplement pas sur ce qu'on croyait.</p></div></div>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une plateforme de billetterie encaisse environ <strong>500</strong> paiements par seconde en période de vente. Le parcours est classique&nbsp;: l'application appelle un service de commande, qui appelle un prestataire de paiement, qui rend un identifiant de transaction. L'équipe a fait les choses dans l'ordre&nbsp;: chaque commande porte une clé d'idempotence, le prestataire en accepte une, la table des clés est protégée par une contrainte d'unicité. En dix-huit mois, aucun double prélèvement.<br /><br />Un soir de mise en vente, le prestataire ralentit&nbsp;: ses réponses passent de 80&nbsp;ms à plus de deux secondes, sans jamais tomber en panne. Le service de commande, dont le délai de garde est à deux secondes, se met à abandonner puis à réessayer — trois tentatives, attente doublée à chaque fois, sans aléa. Le prestataire reçoit alors <strong>trois fois</strong> le trafic, ce qui le ralentit davantage&nbsp;; la boucle est amorcée. En quatre minutes, il ne répond plus du tout.<br /><br />Personne n'est prélevé deux fois&nbsp;: la clé d'idempotence fait son travail, et c'est ce qui rend l'incident intéressant. Ce qui se casse est ailleurs. Le vivier de connexions sortantes du service de commande compte <strong>100</strong> emplacements&nbsp;; à 500 requêtes par seconde bloquées deux secondes, il en faudrait <strong>1&nbsp;000</strong>. Le vivier est vide en permanence, et le service de commande cesse de répondre — <em>y compris pour consulter un panier ou afficher un plan de salle</em>, opérations qui n'appellent aucun prestataire. La panne d'un tiers vient de rendre le site entier indisponible.<br /><br />La reprise a duré quarante minutes, et pas parce que le prestataire tardait à revenir&nbsp;: il était sain depuis dix minutes. Les clients accumulés réessayaient tous aux mêmes instants, par vagues de plusieurs milliers, et chaque vague resaturait le service qui venait à peine de se relever.<br /><br />Trois corrections ont été apportées, et une quatrième a été explicitement écartée. D'abord un <strong>disjoncteur</strong> sur l'appel au prestataire, ouvert sur un taux d'erreur observé plutôt que sur un compte d'échecs consécutifs&nbsp;: les appels échouent dès lors en une milliseconde au lieu de deux secondes, et le vivier reste disponible pour tout le reste. Ensuite un <strong>aléa</strong> sur l'attente entre deux tentatives, tiré uniformément entre zéro et la borne exponentielle — c'est la modification d'une seule ligne, et c'est elle qui a supprimé les vagues. Enfin un <strong>budget de réessais</strong> à 10&nbsp;% du trafic sortant, qui borne l'amplification quelle que soit la profondeur de la chaîne.<br /><br />Ce qui a été écarté&nbsp;: augmenter le vivier de connexions à 1&nbsp;000. C'était la correction la plus évidente et la plus rapide, et elle aurait été la pire — elle aurait permis d'envoyer 1&nbsp;000 requêtes simultanées à un prestataire déjà à genoux, en transformant une indisponibilité de quarante minutes en incident chez un tiers.<br /><br />La phrase qui résume l'incident&nbsp;: <strong>l'idempotence a protégé les données, elle n'a rien protégé du tout côté disponibilité</strong>. Ce sont deux problèmes distincts, et les résoudre demande deux mécanismes distincts.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Idempotence et réessai — mémo de la leçon 10</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Le dilemme</td><td>Ne pas réessayer&nbsp;: <strong>4&nbsp;055</strong> erreurs dont <strong>1&nbsp;990</strong> débits fantômes. Réessayer&nbsp;: <strong>6</strong> erreurs, <strong>2&nbsp;069</strong> débits en trop. Aucune conduite n'est neutre.</td></tr>
+      <tr><td>Idempotent</td><td>Exécuter deux fois donne le même résultat qu'une fois. Critère&nbsp;: <em>le résultat dépend-il de l'état précédent&nbsp;?</em> <strong>3</strong> opérations sur <strong>6</strong> passent.</td></tr>
+      <tr><td>Rejouable</td><td><code>x = 600</code>, <code>lignes["A-42"] = …</code>, <code>supprimer("A-42")</code>. <strong>Pas</strong> rejouable&nbsp;: <code>x += 100</code>, <code>push(…)</code>, <code>stock -= 1</code>.</td></tr>
+      <tr><td>Clé d'idempotence</td><td>Identifiant de l'<em>intention</em>, créé <strong>avant</strong> la première tentative et réutilisé par tous les réessais. <strong>4&nbsp;222</strong> rejeux reconnus, <strong>0</strong> débit en trop.</td></tr>
+      <tr><td>Clé par tentative</td><td>L'erreur qui ne se voit pas&nbsp;: <strong>0</strong> déduplication, résultat identique à l'absence de clé.</td></tr>
+      <tr><td>Atomicité</td><td>Lire, appliquer, écrire en 3 étapes&nbsp;: <strong>18</strong> entrelacements sur <strong>20</strong> débitent deux fois. Pose indivisible&nbsp;: <strong>0</strong>.</td></tr>
+      <tr><td>Où vit le registre</td><td>Dans la <em>même base</em> que l'effet, écrit par la <em>même transaction</em>. Un verrou <em>externe</em> rouvre la fenêtre dès qu'il expire — et l'on ne sait pas quand.</td></tr>
+      <tr><td>Rétention</td><td>5&nbsp;min&nbsp;: <strong>6&nbsp;812</strong> réessais hors fenêtre. 24&nbsp;h&nbsp;: <strong>793</strong> (0,40&nbsp;%). 7&nbsp;j&nbsp;: <strong>0</strong>, pour <strong>36,3&nbsp;Go</strong>. Se règle sur le <em>retard maximal</em>, pas sur le coût.</td></tr>
+      <tr><td>Attente exponentielle</td><td>Divise les requêtes inutiles par <strong>7,2</strong>. Mais synchronise&nbsp;: pic à <strong>350</strong> req/s pour <strong>200</strong> de capacité.</td></tr>
+      <tr><td>Aléa</td><td>Pic à <strong>90</strong> req/s, <strong>0</strong> refus. Coût&nbsp;: dernier client servi à <strong>88,9&nbsp;s</strong> au lieu de 67,1.</td></tr>
+      <tr><td>Amplification</td><td>3 tentatives à chacun des 3 étages&nbsp;: <strong>3<sup>3</sup>&nbsp;=&nbsp;×27</strong>, soit <strong>27&nbsp;000</strong> req/s au fond. Budget de 10&nbsp;%&nbsp;: <strong>1,10<sup>3</sup>&nbsp;=&nbsp;×1,331</strong>, soit <strong>1&nbsp;331</strong>.</td></tr>
+      <tr><td>Disjoncteur</td><td>Transforme un échec <em>lent</em> en échec <em>rapide</em>. <strong>3&nbsp;000</strong> → <strong>31</strong> requêtes, <strong>60,3&nbsp;s</strong> → <strong>0&nbsp;s</strong> de saturation, <strong>9&nbsp;120</strong> → <strong>0</strong> requête bloquée.</td></tr>
+      <tr><td>Effet externe</td><td>Avant la transaction&nbsp;: <strong>1&nbsp;960</strong> doublons. Après&nbsp;: <strong>2&nbsp;005</strong> commandes silencieuses. Boîte d'envoi&nbsp;: <strong>485</strong> doublons, <strong>0</strong> silence.</td></tr>
+      <tr><td>«&nbsp;Exactement une fois&nbsp;»</td><td>Décrit un <em>effet</em> dans un magasin qui déduplique, jamais une livraison. Question à poser&nbsp;: dans quel magasin, et qui l'écrit&nbsp;?</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Idempotence</dt><dd>Propriété d'une opération dont l'exécution répétée produit le même état final qu'une exécution unique. Elle porte sur l'<em>effet</em>&nbsp;; la réponse rendue peut différer, et il faut décider séparément de ce qu'on rend au client quand il n'y avait plus rien à faire.</dd>
+  <dt>Clé d'idempotence</dt><dd>Identifiant attaché à une <em>intention</em>, créé par le client avant sa première tentative et réutilisé à l'identique par tous ses réessais. Le serveur s'en sert pour reconnaître deux requêtes comme une seule demande.</dd>
+  <dt>Registre de déduplication</dt><dd>Table associant chaque clé déjà traitée à la réponse rendue la première fois. Il doit vivre dans la même base que l'effet&nbsp;: c'est la seule façon d'écrire les deux dans une même transaction.</dd>
+  <dt>Fenêtre de rétention</dt><dd>Durée pendant laquelle une clé reste dans le registre. Tout réessai plus tardif est vu comme une intention neuve&nbsp;: la fenêtre doit couvrir le retard maximal que le système sait produire, et non le retard habituel.</dd>
+  <dt>Entrelacement</dt><dd>Ordre d'exécution mêlant les étapes de deux traitements concurrents, chacun gardant son ordre propre. Deux traitements de trois étapes en admettent vingt&nbsp;; la version naïve de la déduplication en casse dix-huit.</dd>
+  <dt>Pose indivisible</dt><dd>Opération qui teste l'absence d'une clé et l'insère en un seul geste, sans qu'aucune autre exécution puisse s'intercaler. Une contrainte d'unicité ou une insertion conditionnelle la fournissent.</dd>
+  <dt>Attente exponentielle</dt><dd>Politique de réessai dont le délai double à chaque tentative, jusqu'à un plafond. Elle réduit fortement le volume des réessais, mais synchronise les clients qui ont échoué au même instant.</dd>
+  <dt>Aléa de réessai</dt><dd>Tirage au sort du délai entre zéro et la borne exponentielle. C'est le seul mécanisme qui <em>étale</em> les redémarrages&nbsp;: pic de 90 requêtes par seconde au lieu de 350, et aucun refus.</dd>
+  <dt>Amplification des réessais</dt><dd>Multiplication du nombre de requêtes le long d'une chaîne d'appels dont chaque maillon réessaie. Trois étages à trois tentatives donnent un facteur vingt-sept, et non neuf.</dd>
+  <dt>Budget de réessais</dt><dd>Plafond exprimé en proportion du trafic sortant — dix pour cent par exemple — au-delà duquel un service cesse de réessayer. Contrairement à un nombre de tentatives, il se dégrade proprement quand tout échoue en même temps.</dd>
+  <dt>Disjoncteur</dt><dd>Mécanisme qui, après un taux d'échec jugé anormal, fait échouer immédiatement les appels vers un service donné et laisse passer un sondage périodique. Il ne répare rien&nbsp;: il transforme un échec lent en échec rapide.</dd>
+  <dt>Épuisement du vivier</dt><dd>Saturation des connexions sortantes d'un service, chacune bloquée par un appel qui attend son délai de garde. Elle propage la panne d'un service à tous les appels de l'appelant, y compris ceux qui visaient des services sains.</dd>
+  <dt>Boîte d'envoi</dt><dd>Table dans laquelle un message à émettre est écrit par la même transaction que l'effet métier, un expéditeur le postant ensuite. Elle supprime les effets silencieux&nbsp;; elle ne supprime pas les doublons, elle les ramène de 1&nbsp;960 à 485.</dd>
+  <dt>Effet exactement une fois</dt><dd>Combinaison d'une livraison au moins une fois et d'une déduplication à l'arrivée. La garantie s'arrête à la frontière du magasin qui déduplique&nbsp;: aucun courriel, aucun virement chez un tiers n'en bénéficie.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Les deux conduites naïves coûtent autant l'une que l'autre&nbsp;: <strong>1&nbsp;990</strong> débits fantômes sans réessai, <strong>2&nbsp;069</strong> débits en trop avec. La différence est la <em>visibilité</em> du dégât, pas sa taille.</li>
+<li>Une opération est rejouable si son résultat ne dépend pas de l'état précédent&nbsp;: <strong>3</strong> des <strong>6</strong> formes testées le sont. Nommer la place rend l'écriture rejouable&nbsp;; laisser le système la choisir ne le rend pas.</li>
+<li>La <strong>clé d'idempotence</strong> nomme l'intention et non la requête&nbsp;: <strong>4&nbsp;222</strong> rejeux reconnus, <strong>0</strong> débit en trop. Engendrée par tentative, elle ne déduplique <strong>rien</strong>.</li>
+<li>Vérifier puis appliquer en trois étapes casse dans <strong>18</strong> entrelacements sur <strong>20</strong>. La pose de la clé doit être <em>indivisible</em> et vivre dans la même transaction que l'effet.</li>
+<li>La <strong>fenêtre de rétention</strong> se règle sur le retard maximal, pas sur le coût&nbsp;: <strong>793</strong> réessais hors fenêtre à 24&nbsp;h, <strong>0</strong> à 7 jours pour <strong>36,3&nbsp;Go</strong>.</li>
+<li>L'attente exponentielle divise les requêtes inutiles par <strong>7,2</strong> mais synchronise&nbsp;: <strong>350</strong> req/s de pic pour <strong>200</strong> de capacité. L'<strong>aléa</strong> ramène le pic à <strong>90</strong> et les refus à <strong>0</strong>.</li>
+<li>Le réessai se multiplie&nbsp;: <strong>×27</strong> sur trois étages, <strong>×1,331</strong> avec un budget de 10&nbsp;% — un rapport de <strong>20,3</strong> sur la charge du service du fond.</li>
+<li>Le <strong>disjoncteur</strong> protège d'abord l'appelant — sans lui, <strong>9&nbsp;120</strong> requêtes sont bloquées faute de connexion — et soulage aussi l'appelé, dont la charge tombe de <strong>3&nbsp;000</strong> à <strong>31</strong> requêtes.</li>
+<li>«&nbsp;Exactement une fois&nbsp;» décrit un effet dans un magasin qui déduplique, jamais une livraison. Hors de ce magasin&nbsp;: <strong>1&nbsp;960</strong> courriels en double, ou <strong>2&nbsp;005</strong> commandes silencieuses, ou <strong>485</strong> doublons avec une boîte d'envoi.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue affirme qu'il ne réessaie jamais les écritures, «&nbsp;pour ne pas risquer de doublon&nbsp;». Quelle mesure lui opposes-tu, et que lui proposes-tu à la place&nbsp;?</li>
+<li>Explique, sans citer de chiffre, pourquoi un registre de clés lu au début du traitement et rempli à la fin ne protège presque jamais.</li>
+<li>On te demande de rendre idempotentes trois opérations&nbsp;: «&nbsp;créditer un compte de 50&nbsp;€&nbsp;», «&nbsp;envoyer un courriel de confirmation&nbsp;» et «&nbsp;supprimer un fichier&nbsp;». Que proposes-tu pour chacune, et laquelle résiste&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Qu'est-ce qui distingue une opération rejouable d'une opération qui ne l'est pas ?","a":["Le fait que son résultat dépende ou non de l'état qui existait avant elle","Le fait qu'elle modifie l'état du système plutôt que de se contenter de le lire","Le fait qu'elle soit exécutée à l'intérieur d'une transaction de base de données","Le fait qu'elle porte sur une seule ligne de la base plutôt que sur plusieurs à la fois"],"correct":0,"explain":"Mesuré sur six formes : 3 sur 6 supportent le rejeu. Modifier l'état n'est pas le critère — « solde = 600 » modifie l'état et se rejoue parfaitement, « solde += 100 » le modifie aussi et casse. Une transaction ne change rien à l'affaire : trois exécutions transactionnelles d'un incrément donnent trois incréments."},
+  {"q":"Une équipe engendre la clé d'idempotence au moment d'émettre chaque requête. Que mesure-t-on ?","a":["Zéro rejeu reconnu : le résultat est identique à celui obtenu sans aucune clé","Une déduplication partielle, qui laisse passer les réessais les plus tardifs uniquement","Une déduplication correcte, à condition que la clé soit engendrée de façon aléatoire","Un doublement du nombre d'entrées du registre, mais aucune conséquence sur les débits"],"correct":0,"explain":"Un réessai émet une requête, donc il produit une clé neuve, donc le serveur voit une intention neuve. Mesuré : 104 222 débits pour 100 000 achats, exactement comme sans clé, et 0 rejeu reconnu. La clé doit naître avec l'intention, en amont de la boucle de réessai."},
+  {"q":"Le serveur lit le registre, applique l'effet, puis écrit la clé. Combien des 20 entrelacements de deux tentatives débitent deux fois ?","a":["18, et les 2 restants sont ceux où une tentative se termine avant que l'autre commence","2 seulement, ce qui explique que ce défaut ne se manifeste qu'exceptionnellement en production","10, soit exactement la moitié : les entrelacements se répartissent également entre les deux cas","0, dès lors que les trois étapes sont enveloppées dans une transaction, quel que soit son niveau d'isolation"],"correct":0,"explain":"Les 20 entrelacements ont été énumérés : 18 débitent deux fois. Les deux qui tiennent sont A1 A2 A3 B1 B2 B3 et son symétrique — donc les deux seuls qui n'entrelacent rien. Le remède n'est pas une transaction quelconque — au niveau d'isolation par défaut de la plupart des bases, deux transactions peuvent parfaitement lire l'absence de la clé en même temps — mais une pose indivisible : test et insertion en un seul geste, ce qui rend 0 cas fautif."},
+  {"q":"L'attente exponentielle sans aléa suffit-elle à protéger un service au retour d'une panne ?","a":["Non : son pic atteint 350 requêtes par seconde pour une capacité de 200, et 102 requêtes sont refusées","Oui, puisqu'elle divise par 7,2 le nombre de requêtes inutiles émises pendant la panne elle-même","Oui, à condition que le nombre de tentatives soit plafonné à trois par client, ce qui borne le volume total","Non, mais uniquement lorsque les clients ont commencé leurs requêtes exactement au même instant"],"correct":0,"explain":"Le doublement écarte les vagues sans les étaler : tous les clients qui ont échoué au même instant repartent ensemble à 1, 2, 4, 8, 16 s. Les 1000 clients de la mesure étaient pourtant désynchronisés au départ — c'est la panne qui les a alignés. Avec un aléa, le pic tombe à 90 requêtes par seconde et 0 requête n'est refusée."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["idempotente","idempotent","idempotence"],"placeholder":"une opération qu'on peut rejouer sans changer le résultat est dite ...","hints":["Le mot donne son titre à la leçon.","Il vient du latin : « la même puissance » — élever à la puissance ne change plus rien.","Adjectif féminin de onze lettres, commençant par « idem »."],"link":{"href":"lecon-10.html","label":"Revoir « Ce qui survit au rejeu »"}},
+  {"type":"code","run":{"expect":"53180 50000"},"placeholder":"recharges appliquées sans clé, puis avec clé","hints":["Sans clé, le serveur traite chaque tentative : compte le nombre total de tentatives émises.","La k-ième tentative n'a lieu que si les k précédentes ont perdu leur réponse : sa part vaut p puissance k.","Somme de k = 0 à 2, arrondie ; puis le nombre de demandes, une seule fois chacune."],"link":{"href":"lecon-10.html","label":"Revoir « La clé d'idempotence : nommer l'intention »"}},
+  {"type":"code","run":{"expect":"5 1.024e-7"},"placeholder":"tentatives nécessaires, puis taux d'échec résiduel","hints":["Chaque tentative échoue indépendamment 4 fois sur 100 : après k tentatives, il reste 0,04 puissance k.","Cherche le plus petit k qui fait passer ce résiduel sous un pour un million.","Affiche k, puis le résiduel en notation exponentielle à trois décimales."],"link":{"href":"lecon-10.html","label":"Revoir « Deux conduites, deux dégâts »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Trois opérations sont proposées pour un service de réservation&nbsp;: <code>places_restantes -= 1</code>, <code>reservations["R-77"] = client</code> et <code>reservations.push(client)</code>. Lesquelles peut-on réessayer sans dégât, et sur quel critère décide-t-on&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">UNE SEULE EST REJOUABLE : reservations["R-77"] = client
+
+Le critère n'est pas le verbe employé, ni le fait de modifier l'état :
+c'est de savoir si le RÉSULTAT DÉPEND DE L'ÉTAT PRÉCÉDENT.
+
+  places_restantes -= 1        part de ce qu'il y a  -> NON rejouable
+  reservations["R-77"] = ...   écrit à une place nommée -> rejouable
+  reservations.push(client)    la place est nouvelle à chaque fois -> NON
+
+Ce que cela donne en pratique :
+
+  · l'affectation à une clé nommée se rejoue telle quelle ;
+  · l'ajout en fin de liste se corrige en NOMMANT la place, c'est-à-dire
+    en donnant un identifiant à la réservation ("R-77") et en écrivant à
+    cette clé — c'est la même opération, rendue rejouable par son adresse ;
+  · le décrément ne se corrige pas de la même façon. Deux voies :
+    - une mise à jour CONDITIONNELLE : "passer de 12 à 11 places, et
+      refuser si ce n'est plus 12" — le réessai échoue alors sans dégât ;
+    - une clé d'idempotence : l'effet reste un décrément, mais le serveur
+      reconnaît qu'il l'a déjà appliqué pour cette intention-là.
+
+Attention au piège de la réponse : la deuxième écriture de "R-77" ne
+change rien à l'état, mais le service doit tout de même rendre un SUCCÈS,
+et non "déjà réservé" traité comme une erreur par l'appelant.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un service reçoit <strong>50&nbsp;000</strong> demandes de recharge. <strong>6&nbsp;%</strong> des réponses se perdent — le serveur, lui, traite toujours la demande — et chaque client réessaie jusqu'à <strong>3</strong> tentatives. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le nombre de recharges réellement appliquées <em>sans</em> clé d'idempotence, puis <em>avec</em> une clé par demande.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// Sans clé d'idempotence, le serveur traite CHAQUE tentative. Le nombre de
+// recharges appliquées est donc le nombre total de tentatives émises.
+const DEMANDES = 50000, PERTE = 0.06, TENTATIVES = 3;
+
+let appliquees = 0;
+for (let k = 0; k &lt; TENTATIVES; k++) {
+  appliquees += DEMANDES * Math.pow(PERTE, k);   // la k-ième tentative n'a lieu
+}                                                // que si les k précédentes ont
+                                                 // perdu leur réponse
+console.log(Math.round(appliquees));
+console.log(DEMANDES);                           // avec une clé par demande</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">53180
+50000
+</code></pre></figure>
+<p>La première tentative a toujours lieu&nbsp;: <strong>50&nbsp;000</strong>. La deuxième n'a lieu que pour les 6&nbsp;% dont la réponse s'est perdue&nbsp;: <strong>3&nbsp;000</strong>. La troisième, pour 6&nbsp;% de ceux-là&nbsp;: <strong>180</strong>. Total <strong>53&nbsp;180</strong>, soit <strong>3&nbsp;180</strong> recharges en trop — <strong>6,4&nbsp;%</strong> de plus que demandé. Avec une clé par demande, le registre reconnaît les 3&nbsp;180 rejeux et le compte tombe exactement à 50&nbsp;000.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Chaque tentative d'un appel échoue indépendamment <strong>4</strong> fois sur <strong>100</strong>. Combien de tentatives faut-il pour que le taux d'échec résiduel passe sous <strong>un pour un million</strong>&nbsp;? Affiche <strong>deux valeurs, une par ligne</strong>&nbsp;: le nombre de tentatives, puis le taux résiduel obtenu, en notation exponentielle à <strong>trois décimales</strong>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// Chaque tentative échoue indépendamment 4 fois sur 100. Après k tentatives,
+// il reste p^k d'échecs — on cherche le plus petit k qui passe sous 1e-6.
+const p = 0.04, CIBLE = 1e-6;
+let k = 0, residuel = 1;
+while (residuel &gt;= CIBLE) { k++; residuel *= p; }
+console.log(k);
+console.log(residuel.toExponential(3));</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">5
+1.024e-7
+</code></pre></figure>
+<p>Le résiduel après <em>k</em> tentatives vaut <strong>0,04<sup>k</sup></strong>&nbsp;: 4&nbsp;% puis 0,16&nbsp;% puis 0,0064&nbsp;%, et l'on passe sous un pour un million à la <strong>cinquième</strong> — <strong>1,024×10<sup>−7</sup></strong>, la quatrième rendant encore 2,56×10<sup>−6</sup>. Deux remarques valent plus que le calcul. D'abord, ce raisonnement suppose les tentatives <em>indépendantes</em>&nbsp;: si le service est simplement en panne, les cinq échouent ensemble et la formule ne vaut plus rien. Ensuite, cinq tentatives multiplient par cinq la charge en cas de panne générale&nbsp;— c'est exactement l'amplification mesurée dans la leçon, et c'est pourquoi on borne par un budget plutôt que par un compte.</p></details></div>
+
+<nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
