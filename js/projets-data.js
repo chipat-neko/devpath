@@ -3568,6 +3568,60 @@ window.PROJETS = [
       "pour l'analyse lexicale&nbsp;; l'<a href=\"../algo/cours.html\">algorithmique</a>, pour les parcours d'arbre.</p>",
   },
   {
+    id: "distribue-caisse",
+    course: "distribue",
+    courseTitle: "Systèmes distribués",
+    dir: "distribue",
+    accent: "distribue",
+    type: "Simulateur de réseau capricieux",
+    niveau: "Avancé",
+    titre: "Un client de paiement qui ne débite jamais deux fois",
+    contexte:
+      "<p>Une caisse envoie chaque paiement à un service distant. Neuf fois sur dix tout va bien&nbsp;; " +
+      "la dixième, la réponse n'arrive jamais. Le code actuel réessaie, et le service d'assistance reçoit " +
+      "des clients <strong>débités deux fois</strong>. L'équipe a déjà tenté de «&nbsp;réessayer moins&nbsp;»&nbsp;: " +
+      "les paiements perdus ont remplacé les paiements doublés. On te demande de traiter la cause, pas le symptôme.</p>" +
+      "<p>Contrainte&nbsp;: il n'y a <strong>aucun serveur à installer</strong>. Tu écris toi-même le service " +
+      "distant, sous forme de fonction, et tu lui ajoutes un <strong>réseau simulé</strong> qui perd, retarde, " +
+      "double et réordonne les messages — avec un générateur semé, pour que chaque incident soit rejouable.</p>",
+    objectif:
+      "<p>Écrire un client dont on peut <strong>prouver par la mesure</strong> qu'il ne produit jamais de double " +
+      "débit, quelle que soit la façon dont le réseau se comporte. La clé est l'<strong>idempotence</strong>&nbsp;: " +
+      "le client attache à chaque paiement un identifiant qu'il ne change pas en réessayant, et le service " +
+      "reconnaît une demande déjà traitée au lieu de la refaire.</p>",
+    livrable: "Un programme unique, sans dépendance, qui joue N paiements à travers un réseau simulé et imprime un rapport : demandes émises, messages perdus, réessais, doublons détectés, doublons effectivement appliqués — cette dernière colonne devant rester à zéro.",
+    fonctionnalites: [
+      "Un <strong>réseau simulé</strong> paramétrable&nbsp;: taux de perte, retard, duplication, réordonnancement — et une <strong>graine</strong> qui rend chaque exécution reproductible.",
+      "Un <strong>service</strong> qui applique un paiement et tient un journal des identifiants déjà traités.",
+      "Un <strong>client</strong> qui réessaie sur délai dépassé, avec une attente qui augmente et un <strong>tirage au hasard</strong> pour ne pas synchroniser tous les clients.",
+      "Une <strong>clé d'idempotence</strong> par paiement, stable d'un réessai à l'autre, distincte à chaque nouveau paiement.",
+      "Un <strong>rapport chiffré</strong> en fin d'exécution, et un <strong>mode comparaison</strong> qui rejoue le même scénario sans la clé d'idempotence.",
+      "Un <strong>compteur des trois issues</strong> d'un appel&nbsp;: réponse reçue, échec connu, délai dépassé.",
+    ],
+    criteres: [
+      "Sur <strong>10&nbsp;000 paiements</strong> et un réseau qui perd 5&nbsp;% des réponses, le total débité est <strong>exactement</strong> la somme des paiements demandés.",
+      "Le même scénario, <strong>sans</strong> clé d'idempotence, produit un total <strong>supérieur</strong>&nbsp;: l'écart est affiché en euros, pas seulement en nombre de doublons.",
+      "Deux exécutions avec la <strong>même graine</strong> donnent le <strong>même rapport</strong>, au caractère près.",
+      "Le rapport distingue les <strong>échecs connus</strong> des <strong>délais dépassés</strong>, et ne confond jamais les deux.",
+      "Aucun paiement n'est <strong>perdu</strong>&nbsp;: le nombre de paiements appliqués égale le nombre de paiements demandés.",
+      "L'attente entre deux réessais est <strong>tracée</strong>, et la pointe de requêtes par seconde est mesurée avec et sans tirage au hasard.",
+      "<strong>Aucune dépendance</strong>&nbsp;: le programme tourne avec le seul interpréteur du langage.",
+    ],
+    pistes:
+      "<p>Commence par le <strong>réseau simulé</strong>, avant le client&nbsp;: tant que tu ne sais pas provoquer " +
+      "une perte à volonté, tu ne peux pas vérifier que ton client la gère. Un bon premier test est le plus " +
+      "brutal&nbsp;: perte de 100&nbsp;% des réponses alors que le service applique tout. Le client doit alors " +
+      "réessayer indéfiniment sans jamais doubler le débit.</p>" +
+      "<p>Sépare bien deux choses qu'on confond&nbsp;: la <strong>réponse perdue</strong> (le travail a eu lieu) et " +
+      "la <strong>demande perdue</strong> (il n'a pas eu lieu). Ton client ne peut pas les distinguer — c'est " +
+      "exactement le sujet de la leçon&nbsp;3 —, et c'est pour cela que la clé d'idempotence est côté " +
+      "<em>service</em>, pas côté client.</p>" +
+      "<p>Pour aller plus loin&nbsp;: fais expirer les entrées du journal du service au bout d'un certain temps, " +
+      "et mesure à partir de quel délai des doublons réapparaissent. Le cours " +
+      "<a href=\"../reseaux/cours.html\">réseaux</a> éclaire ce qui se passe sous l'appel&nbsp;; " +
+      "<a href=\"../observabilite/cours.html\">observabilité</a>, la façon de voir ces incidents en production.</p>",
+  },
+  {
     id: "neurones-chiffres",
     course: "neurones",
     courseTitle: "Réseaux de neurones",

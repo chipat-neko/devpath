@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La panne partielle : ni réponse, ni erreur — Leçon 03 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Un appel local a deux issues, un appel réseau en a trois : succès, échec connu, et cette absence de réponse qui ne dit rien. Sur 10 000 appels simulés, 534 restent muets et 326 d'entre eux avaient pourtant été exécutés, soit 9 780 € de doublons. La tempête de réessais mesurée, le tirage au hasard qui divise la pointe par 6,8, le problème des deux généraux, et l'idempotence comme seule sortie." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-03.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 03</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 1 · Pourquoi c'est difficile — Leçon 03</p>
+              <h1 class="lesson-header__title">La panne partielle&nbsp;: ni réponse, ni erreur</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~86 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: les <a href="lecon-01.html">leçons&nbsp;1</a> et <a href="lecon-02.html">2</a> de ce module, et savoir lire une boucle et une fonction en JavaScript. Aucune notion de tolérance aux pannes n'est supposée.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>énoncer les <strong>trois issues</strong> d'un appel réseau et dire, pour chacune, ce que le client a le droit d'en conclure&nbsp;;</li>
+                  <li>expliquer ce qu'est une <strong>panne partielle</strong> et pourquoi elle n'existe pas sur une machine unique&nbsp;;</li>
+                  <li>défendre l'idée qu'un <strong>délai dépassé est une décision du client</strong>, pas une information sur le serveur&nbsp;;</li>
+                  <li>chiffrer ce que coûte un réessai naïf&nbsp;: sur <strong>534</strong> appels muets, <strong>326</strong> doublons, soit <strong>9&nbsp;780&nbsp;€</strong>&nbsp;;</li>
+                  <li>montrer pourquoi doubler l'attente ne désynchronise rien, et pourquoi le <strong>tirage au hasard</strong> divise la pointe par <strong>6,8</strong>&nbsp;;</li>
+                  <li>énoncer le <strong>problème des deux généraux</strong> sans confondre «&nbsp;accord certain impossible&nbsp;» et «&nbsp;impossible en pratique&nbsp;».</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Écris <code>const total = calculerTotal(panier);</code> dans un programme qui tient sur une machine, et il ne peut se produire que deux choses. Soit la fonction rend une valeur, soit elle lève une exception. Il n'y a pas de troisième cas, pas d'état intermédiaire, pas de «&nbsp;peut-être&nbsp;»&nbsp;: la ligne suivante s'exécute avec, dans les deux cas, une information complète sur ce qui vient de se passer. Toute la programmation qu'on apprend d'abord repose sur cette certitude, au point qu'on ne la remarque même plus.</p>
+<p>Fais maintenant traverser un réseau à cet appel. Il en a <strong>trois</strong>. Succès&nbsp;: une réponse arrive. Échec <em>connu</em>&nbsp;: quelque chose te dit explicitement que l'appel n'est pas passé — connexion refusée, nom introuvable. Et la troisième, celle qui fait exister ce cours&nbsp;: <strong>rien</strong>. Aucune réponse, aucune erreur, aucun message. Ce silence ne dit ni que le travail a eu lieu, ni qu'il n'a pas eu lieu. Il ne dit rien du tout, et il faut pourtant décider quoi faire.</p>
+<p>Cette leçon mesure ce que ce rien coûte. Une simulation de <strong>10&nbsp;000</strong> appels laissera <strong>534</strong> appels sans réponse&nbsp;; parmi eux, <strong>326</strong> avaient bel et bien été exécutés côté serveur, soit <strong>61,0&nbsp;%</strong>, et les réessayer sans précaution vaudrait <strong>9&nbsp;780&nbsp;€</strong> de doublons sur un débit de 30&nbsp;€. Une seconde simulation montrera que mille clients qui tentent trois fois envoient <strong>3&nbsp;000</strong> requêtes à un service déjà à genoux, et — c'est le résultat qui surprend tout le monde — que <em>doubler l'attente entre deux tentatives ne change pas la pointe d'un iota</em>&nbsp;: <strong>1&nbsp;000</strong> requêtes dans la même tranche de 100&nbsp;ms, exactement comme avec une attente fixe. Seul un tirage au hasard la fait tomber à <strong>147</strong>.</p>
+<p>Deux mises au point avant de commencer. La première&nbsp;: cette leçon ne présente <strong>aucune technologie</strong> — pas de bibliothèque de réessai, pas de maillage de services, pas de disjoncteur nommé. Elle décrit un phénomène, et les outils qui l'affrontent sont dans les cours <a href="../cloud/cours.html">Cloud</a> et <a href="../archi/cours.html">Architecture</a>. La seconde&nbsp;: la sortie de ce piège s'appelle l'<strong>idempotence</strong>, et elle est <em>annoncée</em> ici, pas traitée. Elle a sa leçon entière au module&nbsp;4. Ce qui se joue ici, c'est de comprendre exactement <em>pourquoi</em> elle est nécessaire.</p>
+
+<h2>Deux issues d'un côté, trois de l'autre</h2>
+<p>Commençons par regarder d'où vient la certitude de l'appel local, parce qu'on ne se débarrasse pas d'une intuition qu'on n'a pas nommée.</p>
+<p>Quand une fonction en appelle une autre dans le même programme, les deux partagent la même mémoire, la même pile d'exécution et le même processus. L'appelée écrit son résultat à un endroit que l'appelante lit ensuite&nbsp;; si elle échoue, elle dépose une exception que l'appelante récupère. Dans les deux cas, l'information circule par un canal qui ne peut pas perdre de messages, pour une raison simple&nbsp;: ce n'est pas un canal, c'est de la mémoire.</p>
+<p>Et si le processus meurt au milieu&nbsp;? Alors l'appelante meurt avec lui. Elle ne survit pas pour observer un troisième cas. C'est le point essentiel, et il vaut la peine de le formuler à l'envers&nbsp;: <strong>le troisième cas n'est pas impossible sur une machine unique, il est simplement inobservable</strong>, parce qu'il n'y a personne pour l'observer. Tout tombe ensemble.</p>
+<p>Le réseau casse exactement cela. L'appelante et l'appelée sont maintenant dans deux processus, sur deux machines, reliés par un canal qui, lui, perd des messages, les retarde, les duplique et les réordonne — c'est la première des huit illusions de la <a href="lecon-01.html">leçon&nbsp;1</a>. Et surtout&nbsp;: quand l'appelée meurt, l'appelante <em>survit</em>. Elle est là, vivante, avec une question sans réponse.</p>
+<p>D'où les trois issues, qu'il faut nommer précisément parce que le vocabulaire courant les mélange&nbsp;:</p>
+<ul>
+<li><strong>Le succès.</strong> Une réponse est revenue. Le client sait que sa demande a été reçue, traitée, et il connaît le résultat. C'est le seul cas où le raisonnement local reste valable.</li>
+<li><strong>L'échec connu.</strong> Quelque chose est revenu, mais ce quelque chose est une erreur qui <em>prouve</em> que le travail n'a pas eu lieu&nbsp;: connexion refusée par le port distant, nom de machine introuvable, réseau injoignable, certificat rejeté avant l'envoi de la requête. Ces erreurs arrivent <em>avant</em> que le serveur n'ait pu agir. Elles sont une bonne nouvelle&nbsp;: réessayer ne risque strictement aucun doublon — ce qui ne veut pas dire que réessayer soit gratuit, comme le montrera la tempête de réessais plus bas.</li>
+<li><strong>Le délai dépassé.</strong> Rien n'est revenu avant que le client ne cesse d'attendre. Ce n'est pas un message d'erreur, c'est une <em>absence</em> de message. Et une absence ne se lit pas.</li>
+</ul>
+<p>Insistons sur la nature du troisième cas, parce que c'est là que le métier se joue. Le silence est compatible avec au moins six réalités différentes, que le client ne peut pas distinguer&nbsp;: la requête n'est jamais partie de la machine cliente&nbsp;; elle s'est perdue en chemin&nbsp;; le serveur l'a reçue puis est tombé avant d'agir&nbsp;; le serveur a agi puis est tombé avant de répondre&nbsp;; le serveur a agi, a répondu, et c'est la réponse qui s'est perdue&nbsp;; le serveur travaille encore et répondra bien après que le client a renoncé.</p>
+<p>Dans les trois premières, le travail n'a pas eu lieu. Dans les trois dernières, il a eu lieu ou aura lieu. Attention&nbsp;: cette symétrie de comptage est un accident de présentation, pas une probabilité — ces six situations ne sont pas également fréquentes, et rien dans le silence n'indique laquelle s'est produite. C'est précisément ce «&nbsp;rien&nbsp;» qui est le sujet de la leçon.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 368" role="img" aria-label="Schéma en deux panneaux comparant un appel local et un appel réseau. Le panneau de gauche, intitulé « appel local, deux issues », part d'une boîte accentuée portant l'appel total égale calculerTotal de panier ; une flèche descend puis se divise en deux branches qui aboutissent à deux boîtes, l'une portant « une valeur », l'autre « une exception ». Une note rappelle que dans les deux cas le client sait si le travail a eu lieu. Le panneau de droite, intitulé « appel réseau, trois issues », part d'une boîte accentuée portant l'appel total égale await calculer de panier ; la flèche se divise cette fois en trois branches qui aboutissent à trois boîtes : succès, échec connu, et délai dépassé. Une note rappelle que la troisième ne dit rien. Sous les deux panneaux, une bande séparée par un trait en pointillés est intitulée « un seul silence, six réalités possibles » et se partage en deux colonnes. La colonne de gauche, « le travail n'a pas eu lieu », énumère trois cas : la requête n'est jamais partie, elle s'est perdue en chemin, le serveur est tombé avant d'agir. La colonne de droite, « le travail a eu lieu », en énumère trois autres : il a agi puis est tombé, il a agi et sa réponse s'est perdue, il travaille encore et répondra trop tard. Une ligne finale précise que le client voit exactement la même chose dans les six cas.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Deux issues d'un côté, trois de l'autre</text>
+
+    <rect class="d-frame" x="14" y="38" width="292" height="164" rx="6" />
+    <text class="d-label" x="160" y="60" text-anchor="middle" font-size="10">APPEL LOCAL — deux issues</text>
+    <rect class="d-accent" x="44" y="72" width="232" height="30" rx="8" />
+    <text class="d-text" x="160" y="92" text-anchor="middle" font-size="9.5">total = calculerTotal(panier)</text>
+    <path class="d-line" d="M160 102 L160 126" fill="none" />
+    <path class="d-line" d="M80 126 L240 126" fill="none" />
+    <path class="d-line" d="M80 126 L80 142" fill="none" /><path class="d-line" d="M75 137 L80 142 L85 137" fill="none" />
+    <path class="d-line" d="M240 126 L240 142" fill="none" /><path class="d-line" d="M235 137 L240 142 L245 137" fill="none" />
+    <rect class="d-box" x="28" y="142" width="104" height="38" rx="7" /><text class="d-text" x="80" y="166" text-anchor="middle" font-size="9.5">une valeur</text>
+    <rect class="d-box" x="188" y="142" width="104" height="38" rx="7" /><text class="d-text" x="240" y="166" text-anchor="middle" font-size="9.5">une exception</text>
+    <text class="d-mut" x="160" y="195" text-anchor="middle" font-size="8.5">dans les deux cas, le client sait</text>
+
+    <rect class="d-frame" x="334" y="38" width="292" height="164" rx="6" />
+    <text class="d-label" x="480" y="60" text-anchor="middle" font-size="10">APPEL RÉSEAU — trois issues</text>
+    <rect class="d-accent" x="364" y="72" width="232" height="30" rx="8" />
+    <text class="d-text" x="480" y="92" text-anchor="middle" font-size="9.5">total = await calculer(panier)</text>
+    <path class="d-line" d="M480 102 L480 126" fill="none" />
+    <path class="d-line" d="M389 126 L577 126" fill="none" />
+    <path class="d-line" d="M389 126 L389 142" fill="none" /><path class="d-line" d="M384 137 L389 142 L394 137" fill="none" />
+    <path class="d-line" d="M483 126 L483 142" fill="none" /><path class="d-line" d="M478 137 L483 142 L488 137" fill="none" />
+    <path class="d-line" d="M577 126 L577 142" fill="none" /><path class="d-line" d="M572 137 L577 142 L582 137" fill="none" />
+    <rect class="d-box" x="346" y="142" width="86" height="38" rx="7" /><text class="d-text" x="389" y="166" text-anchor="middle" font-size="9">succès</text>
+    <rect class="d-box" x="440" y="142" width="86" height="38" rx="7" /><text class="d-text" x="483" y="166" text-anchor="middle" font-size="9">échec connu</text>
+    <rect class="d-box" x="534" y="142" width="86" height="38" rx="7" /><text class="d-text" x="577" y="166" text-anchor="middle" font-size="9">délai dépassé</text>
+    <text class="d-mut" x="480" y="195" text-anchor="middle" font-size="8.5">la troisième ne dit rien</text>
+
+    <path class="d-line" d="M14 216 L626 216" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="14" y="238" text-anchor="start" font-size="10">UN SEUL SILENCE, SIX RÉALITÉS POSSIBLES</text>
+
+    <path class="d-line" d="M318 250 L318 332" fill="none" stroke-dasharray="4 3" />
+    <text class="d-label" x="14" y="264" text-anchor="start" font-size="9.5">le travail n'a pas eu lieu</text>
+    <text class="d-mut" x="14" y="286" text-anchor="start" font-size="8.5">· la requête n'est jamais partie</text>
+    <text class="d-mut" x="14" y="304" text-anchor="start" font-size="8.5">· elle s'est perdue en chemin</text>
+    <text class="d-mut" x="14" y="322" text-anchor="start" font-size="8.5">· le serveur est tombé avant d'agir</text>
+
+    <text class="d-label" x="332" y="264" text-anchor="start" font-size="9.5">le travail a eu lieu</text>
+    <text class="d-mut" x="332" y="286" text-anchor="start" font-size="8.5">· il a agi, puis est tombé</text>
+    <text class="d-mut" x="332" y="304" text-anchor="start" font-size="8.5">· il a agi, sa réponse s'est perdue</text>
+    <text class="d-mut" x="332" y="322" text-anchor="start" font-size="8.5">· il travaille encore, il répondra trop tard</text>
+
+    <text class="d-mut" x="320" y="354" text-anchor="middle" font-size="9">le client voit exactement la même chose dans les six cas</text>
+  </svg>
+  <figcaption>La troisième issue n'est pas une quatrième sorte d'erreur&nbsp;: c'est l'absence de toute information, et six histoires différentes la produisent.</figcaption>
+</figure>
+
+<p>Un mot sur le vocabulaire, qui trahit souvent la confusion. On entend couramment «&nbsp;l'appel a échoué&nbsp;» pour désigner un délai dépassé. C'est faux, et cette phrase-là a coûté beaucoup d'argent&nbsp;: elle transforme une <em>absence d'information</em> en <em>information négative</em>. Le vocabulaire honnête est «&nbsp;l'appel n'a pas répondu&nbsp;», ou «&nbsp;l'état de l'appel est inconnu&nbsp;». Ce n'est pas de la coquetterie&nbsp;: le code écrit derrière ces deux phrases n'est pas le même.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le piège de la traduction en exception</p><p>La plupart des bibliothèques clientes rendent les trois issues sous <em>deux</em> formes seulement&nbsp;: une valeur, ou une exception. Le délai dépassé arrive donc dans le même <code>catch</code> que la connexion refusée, et quantité de code écrit alors <code>catch (e) { reessayer(); }</code> sans regarder de quel <code>e</code> il s'agit. La distinction que la leçon vient de poser existe dans la réalité&nbsp;; elle a été effacée par la forme du langage. Premier réflexe à prendre&nbsp;: dans un <code>catch</code> autour d'un appel réseau, la première question est toujours «&nbsp;<em>sait-on si le travail a eu lieu&nbsp;?</em>&nbsp;», jamais «&nbsp;faut-il réessayer&nbsp;?&nbsp;».</p></div></div>
+
+<h2>La panne partielle&nbsp;: chaque moitié croit que c'est l'autre qui est tombée</h2>
+<p>Le phénomène qui donne son titre à cette leçon porte un nom précis&nbsp;: la <strong>panne partielle</strong>. Une partie du système fonctionne pendant qu'une autre est en panne ou injoignable. Dit comme cela, ça paraît anodin. Ce qui ne l'est pas, c'est ce que chaque partie en déduit.</p>
+<p>Reprends le programme sur une machine unique&nbsp;: il n'a pas de moitiés. Si le processus s'arrête, toutes ses fonctions s'arrêtent au même instant, et aucune ne reste là à s'interroger sur les autres. Il n'existe pas d'état où «&nbsp;la moitié gauche du programme marche&nbsp;». C'est pour cela que l'expérience acquise en local ne transfère pas&nbsp;: elle a été construite dans un monde où ce cas n'existait pas.</p>
+<p>Sur deux machines, il existe — et il est <em>symétrique</em>. Appelons-les A et B. A envoie une requête à B, n'obtient rien, et conclut&nbsp;: «&nbsp;B est tombé&nbsp;». Pendant ce temps B, qui ne reçoit plus rien de A, conclut&nbsp;: «&nbsp;A est tombé&nbsp;». Les deux sont vivantes. C'est le lien entre elles qui est coupé, et ni l'une ni l'autre n'a le moyen de s'en apercevoir&nbsp;: le seul instrument dont elles disposent, ce sont des messages, et l'absence de message est exactement ce que produisent les trois hypothèses à la fois.</p>
+<p>Trois causes, un seul symptôme. B est réellement en panne&nbsp;; B est vivante mais le lien est coupé&nbsp;; B est vivante et joignable, mais si lente qu'elle répond après le délai que A s'est fixé. Du point de vue de A, ces trois mondes sont rigoureusement indiscernables. Et A doit quand même décider quelque chose.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 336" role="img" aria-label="Schéma symétrique d'une panne partielle. À gauche, un cadre intitulé « moitié A » contient deux boîtes, service A1 et service A2, sous lesquelles une note indique que tout y fonctionne. À droite, un cadre intitulé « moitié B » contient de même service B1 et service B2, avec la même note : tout y fonctionne. Entre les deux cadres, une ligne brisée en pointillés figure la coupure du lien, annotée « lien coupé ». Sous chaque cadre, une bulle accentuée donne la conclusion de la moitié correspondante : celle de gauche affirme « B est tombée », celle de droite affirme « A est tombée ». Entre les deux bulles, une note rappelle que les deux se trompent. La partie basse du schéma, séparée par un trait en pointillés, est intitulée « trois causes, un seul symptôme » et énumère : B est réellement en panne ; B est vivante, mais le lien entre A et B est coupé ; B est vivante et joignable, mais trop lente pour répondre à temps. Une dernière ligne rappelle que A ne dispose que de messages et que, dans les trois cas, il n'en reçoit aucun.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une panne partielle, vue des deux côtés</text>
+
+    <rect class="d-frame" x="18" y="40" width="252" height="100" rx="6" />
+    <text class="d-label" x="144" y="60" text-anchor="middle" font-size="10">MOITIÉ A</text>
+    <rect class="d-box" x="36" y="70" width="100" height="34" rx="7" /><text class="d-text" x="86" y="92" text-anchor="middle" font-size="9">service A1</text>
+    <rect class="d-box" x="152" y="70" width="100" height="34" rx="7" /><text class="d-text" x="202" y="92" text-anchor="middle" font-size="9">service A2</text>
+    <text class="d-mut" x="144" y="126" text-anchor="middle" font-size="8.5">tout y fonctionne</text>
+
+    <rect class="d-frame" x="370" y="40" width="252" height="100" rx="6" />
+    <text class="d-label" x="496" y="60" text-anchor="middle" font-size="10">MOITIÉ B</text>
+    <rect class="d-box" x="388" y="70" width="100" height="34" rx="7" /><text class="d-text" x="438" y="92" text-anchor="middle" font-size="9">service B1</text>
+    <rect class="d-box" x="504" y="70" width="100" height="34" rx="7" /><text class="d-text" x="554" y="92" text-anchor="middle" font-size="9">service B2</text>
+    <text class="d-mut" x="496" y="126" text-anchor="middle" font-size="8.5">tout y fonctionne</text>
+
+    <path class="d-line" d="M320 42 L308 70 L332 96 L308 122 L322 148" fill="none" stroke-dasharray="5 3" />
+    <text class="d-tag" x="320" y="168" text-anchor="middle" font-size="10">LIEN COUPÉ</text>
+
+    <rect class="d-accent" x="52" y="180" width="184" height="32" rx="8" /><text class="d-text" x="144" y="201" text-anchor="middle" font-size="9.5">«&#160;B est tombée&#160;»</text>
+    <rect class="d-accent" x="404" y="180" width="184" height="32" rx="8" /><text class="d-text" x="496" y="201" text-anchor="middle" font-size="9.5">«&#160;A est tombée&#160;»</text>
+    <text class="d-mut" x="320" y="201" text-anchor="middle" font-size="8.5">les deux se trompent</text>
+
+    <path class="d-line" d="M18 228 L622 228" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="18" y="250" text-anchor="start" font-size="10">TROIS CAUSES, UN SEUL SYMPTÔME</text>
+    <text class="d-mut" x="18" y="272" text-anchor="start" font-size="9">· B est réellement en panne</text>
+    <text class="d-mut" x="18" y="290" text-anchor="start" font-size="9">· B est vivante, mais le lien entre A et B est coupé</text>
+    <text class="d-mut" x="18" y="308" text-anchor="start" font-size="9">· B est vivante et joignable, mais trop lente pour répondre à temps</text>
+    <text class="d-mut" x="320" y="330" text-anchor="middle" font-size="9">A ne dispose que de messages&#160;: dans les trois cas, il n'en reçoit aucun</text>
+  </svg>
+  <figcaption>La coupure est au milieu, mais chaque moitié la lit comme une panne de l'autre. Aucune des deux ne peut trancher depuis l'intérieur.</figcaption>
+</figure>
+
+<p>Le cas le plus dangereux est celui où les deux moitiés décident d'<em>agir</em> sur leur conclusion. Si chacune est configurée pour «&nbsp;prendre le relais quand l'autre tombe&nbsp;», la coupure du lien produit deux systèmes qui se croient tous deux seuls maîtres, écrivent tous deux, et divergent. Le remède n'est pas de mieux détecter la panne — on vient de voir que c'est impossible depuis l'intérieur — mais de subordonner l'action à un accord majoritaire&nbsp;: c'est le <strong>quorum</strong>, et c'est la leçon&nbsp;9 de ce cours, au module&nbsp;3. Retiens seulement l'enchaînement&nbsp;: la panne partielle rend la détection ambiguë, et l'ambiguïté de la détection est ce qui rend le quorum nécessaire.</p>
+<p>Une variante mérite d'être nommée tout de suite parce qu'elle est plus fréquente que la panne franche&nbsp;: la <strong>panne grise</strong>. La machine n'est pas tombée. Elle répond à une requête sur cinq, ou elle répond en trente secondes, ou elle accepte les connexions mais ne traite plus rien. Elle est pire qu'une machine morte, parce que tous les contrôles de santé passent au vert&nbsp;: elle répond au petit message «&nbsp;es-tu vivante&nbsp;?&nbsp;», qui ne coûte rien, tout en étant incapable de faire le vrai travail. La détecter demande de regarder les <em>vraies</em> requêtes, ce qui est le sujet du cours <a href="../observabilite/cours.html">Observabilité</a>.</p>
+<p>Un dernier point, souvent mal compris&nbsp;: une panne totale est <em>plus facile</em> qu'une panne partielle. Quand tout s'arrête, rien n'avance à moitié, aucune donnée ne se retrouve écrite d'un côté et pas de l'autre, et la reprise consiste à tout redémarrer. La panne partielle, elle, laisse le système dans un état que personne n'a conçu&nbsp;: une commande enregistrée sans son paiement, un stock décrémenté sans sa commande, un message consommé sans son accusé. Ces états-là ne figurent dans aucun schéma, et pourtant ils existent.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">La définition qui tient en une contrainte</p><p>On définit souvent un système distribué par une liste de propriétés — plusieurs machines, un service unique, de la coordination. La définition utile tient en une seule contrainte&nbsp;: <strong>aucune machine n'a de vue instantanée de l'état des autres</strong>. Tout ce qu'elle sait leur concernant lui est arrivé par un message, donc du passé, donc peut-être déjà faux. La panne partielle n'est que la conséquence la plus visible de cette contrainte, et la <a href="lecon-02.html">leçon&nbsp;2</a> en donne l'ordre de grandeur&nbsp;: une nouvelle venue de New York a au minimum <strong>28,57&nbsp;ms</strong> d'âge à son arrivée à Paris.</p></div></div>
+
+<h2>Le délai dépassé est une décision du client</h2>
+<p>Voici la phrase à retenir de toute la leçon, et celle qu'il faut être capable de défendre devant quelqu'un qui n'y croit pas&nbsp;: <strong>un délai dépassé n'est pas un événement qui se produit sur le serveur, c'est une décision que prend le client</strong>.</p>
+<p>Un délai d'attente, c'est un nombre. Quelqu'un l'a écrit&nbsp;: toi, un collègue, ou la valeur par défaut d'une bibliothèque que personne n'a lue. Passé ce nombre de millisecondes, le client arrête d'attendre et déclare l'appel perdu. Le serveur, lui, n'a rien vu. Il n'a reçu aucune notification, il n'a rien annulé, il continue tranquillement son travail s'il en avait un. Rien, absolument rien, ne s'est produit de son côté à cet instant.</p>
+<p>Ce n'est pas une subtilité de vocabulaire, et le programme qui suit le montre sans discussion. Un seul serveur, une seule série de <strong>2&nbsp;000</strong> appels, tous exécutés jusqu'au bout&nbsp;: <em>le serveur ne perd rien et n'échoue jamais</em>. Seule sa durée de réponse varie — neuf appels sur dix sont rapides, le dixième traîne. On fait ensuite regarder cette même série par quatre clients qui ne diffèrent que par un nombre&nbsp;: le délai qu'ils acceptent d'attendre.</p>
+
+<figure class="code-block" data-file="delai-du-client.js"><pre><code class="language-javascript">// Le délai dépassé n'est PAS un événement du serveur : c'est une décision du client.
+// Preuve : un seul serveur, une seule série d'appels, quatre clients qui ne
+// diffèrent QUE par le délai qu'ils acceptent d'attendre.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const alea = semer(2025);
+const N = 2000;
+
+// Le serveur exécute le travail À TOUS LES COUPS. Seule sa durée varie :
+// 90 % des appels sont rapides, 10 % traînent.
+const durees = [];
+for (let i = 0; i &lt; N; i++) {
+  durees.push(alea() &lt; 0.9 ? 5 + alea() * 45 : 200 + alea() * 2800);
+}
+const pire = Math.max.apply(null, durees);
+
+function client(limite) {
+  let depasses = 0, attente = 0;
+  for (const d of durees) {
+    if (d &gt; limite) depasses++;          // le client renonce : « délai dépassé »
+    attente += Math.min(d, limite);      // ce qu'il a passé à attendre, utile ou non
+  }
+  return { limite: limite, depasses: depasses, attente: attente };
+}
+
+console.log(N + " appels, tous exécutés par le serveur, durée la plus longue "
+  + pire.toFixed(0) + " ms");
+console.log("");
+console.log("  délai du client | échecs déclarés | dont exécutés | attente totale");
+console.log("  ----------------|-----------------|---------------|---------------");
+const mesures = [100, 300, 1000, 3000].map(client);
+for (const m of mesures) {
+  console.log("  " + (String(m.limite) + " ms").padStart(15)
+    + " |" + String(m.depasses).padStart(16)
+    + " |" + (m.depasses === 0 ? "  aucun" : String(m.depasses) + " (tous)").padStart(14)
+    + " |" + (m.attente / 1000).toFixed(1).padStart(14) + " s");
+}
+const patient = mesures[mesures.length - 1], presse = mesures[0];
+console.log("");
+console.log("du plus pressé au plus patient : " + presse.depasses + " échecs déclarés deviennent "
+  + patient.depasses + ",");
+console.log("au prix de " + (patient.attente / presse.attente).toFixed(1) + " fois plus d'attente.");
+console.log("le plus pressé annonce " + (presse.depasses / N * 100).toFixed(1)
+  + " % d'échecs, le plus patient " + (patient.depasses / N * 100).toFixed(1) + " %.");
+console.log("Le serveur, lui, n'a pas bougé d'un appel à l'autre.");</code></pre></figure>
+<figure class="code-block" data-file="delai-du-client.txt"><pre><code class="language-plaintext">2000 appels, tous exécutés par le serveur, durée la plus longue 2956 ms
+
+  délai du client | échecs déclarés | dont exécutés | attente totale
+  ----------------|-----------------|---------------|---------------
+           100 ms |             184 |    184 (tous) |          67.8 s
+           300 ms |             178 |    178 (tous) |         104.4 s
+          1000 ms |             134 |    134 (tous) |         212.5 s
+          3000 ms |               0 |         aucun |         335.0 s
+
+du plus pressé au plus patient : 184 échecs déclarés deviennent 0,
+au prix de 4.9 fois plus d'attente.
+le plus pressé annonce 9.2 % d'échecs, le plus patient 0.0 %.
+Le serveur, lui, n'a pas bougé d'un appel à l'autre.
+</code></pre></figure>
+
+<p>Lis la deuxième colonne de haut en bas&nbsp;: <strong>184</strong>, <strong>178</strong>, <strong>134</strong>, puis <strong>0</strong>. Quatre clients, quatre comptes d'échecs différents, et pas une seule ligne de code changée côté serveur. La troisième colonne enfonce le clou&nbsp;: chacun de ces prétendus échecs correspond à un travail que le serveur a mené à son terme. Le client qui accepte d'attendre 100&nbsp;ms rapportera «&nbsp;9,2&nbsp;% d'échecs&nbsp;» à sa direction&nbsp;; celui qui attend 3&nbsp;s rapportera «&nbsp;aucun incident&nbsp;». Les deux regardent le même serveur, et les deux disent vrai sur ce qu'ils ont mesuré. C'est bien la preuve que ce qu'ils mesurent n'est pas le serveur.</p>
+<p>La quatrième colonne empêche d'en tirer la mauvaise conclusion. Passer de 100&nbsp;ms à 3&nbsp;000&nbsp;ms de patience fait bien disparaître les <strong>184</strong> faux échecs, mais multiplie l'attente totale par <strong>4,9</strong>&nbsp;: de <strong>67,8&nbsp;s</strong> à <strong>335,0&nbsp;s</strong> cumulées sur les 2&nbsp;000 appels. Ce temps n'est pas gratuit&nbsp;: pendant qu'un client attend, il occupe une connexion, un fil d'exécution, de la mémoire, et souvent une place dans une file. Allonger un délai, c'est acheter de la certitude avec de la ressource.</p>
+<p>Une honnêteté nécessaire sur cette simulation&nbsp;: <strong>aucune durée ne dépasse 3&nbsp;000&nbsp;ms parce que nous l'avons écrite ainsi</strong> — la durée la plus longue mesurée est de <strong>2&nbsp;956&nbsp;ms</strong>. Un vrai serveur n'a pas ce plafond. Il n'existe pas de délai assez grand pour garantir zéro délai dépassé&nbsp;; il existe seulement des délais assez grands pour que ce soit rare, et assez petits pour que l'attente reste supportable. Le zéro de la dernière ligne est un artefact de notre modèle, pas une propriété du monde.</p>
+<p>Reste la question pratique&nbsp;: comment choisir ce nombre&nbsp;? Pas au hasard, et surtout pas en le prenant «&nbsp;confortable&nbsp;». Trois contraintes le bornent. D'abord, il doit être plus grand que la durée normale du service&nbsp;: si tu coupes au-dessous de ce que le service met à répondre en temps ordinaire, tu fabriques des échecs à la chaîne. Ensuite, il doit être plus <em>petit</em> que le délai de celui qui t'appelle&nbsp;: sinon tu continues à travailler pour un appelant qui a déjà renoncé, et tu consommes de la ressource pour rien. Enfin, il ne peut pas être infini&nbsp;: «&nbsp;pas de délai&nbsp;» n'est pas la prudence, c'est le pire des réglages, celui où une seule requête bloquée immobilise un fil d'exécution pendant des dizaines de minutes, le seul garde-fou restant étant celui de la pile TCP, bien plus long que tout ce qu'un appelant accepte d'attendre.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Trois questions avant d'écrire un délai</p><p><strong>1.</strong> Quelle est la durée habituelle de cet appel, et sa durée dans les mauvais jours&nbsp;? Un délai se règle sur une mesure, pas sur une impression. <strong>2.</strong> Quel délai s'est fixé celui qui m'appelle&nbsp;? Le mien doit lui laisser de la marge, sans quoi je travaille pour personne. <strong>3.</strong> Que fera mon code quand ce délai sera dépassé&nbsp;? Si la réponse est «&nbsp;réessayer&nbsp;», la suite de cette leçon dit exactement ce que ça coûte&nbsp;; si la réponse est «&nbsp;déclarer l'échec&nbsp;», relis la section précédente.</p></div></div>
+
+<h2>Dix mille appels, et ce que le silence coûte</h2>
+<p>Passons à la mesure centrale de la leçon. Nous allons simuler <strong>10&nbsp;000</strong> appels vers un service qui, comme tous les services, se trompe parfois — et compter ce que le client peut en dire.</p>
+<p>Le modèle tient en trois nombres, et il faut être clair sur leur statut&nbsp;: <strong>ce sont des hypothèses, pas des mesures</strong>. Deux pour cent des appels échouent de façon connue. Cinq pour cent restent sans réponse. Et parmi ces derniers, soixante pour cent avaient tout de même été exécutés côté serveur. Ces trois valeurs sont plausibles pour un service sous tension&nbsp;; elles ne décrivent aucun système réel en particulier. Ce que la simulation démontre, c'est un <em>mécanisme</em>&nbsp;: le fait qu'une part importante des appels muets correspond à du travail effectué. Les taux, eux, se mesurent chez toi et nulle part ailleurs.</p>
+<p>Le générateur est <strong>semé</strong> avec la graine 2025&nbsp;: le tirage est le même à chaque exécution, chez toi comme ici. Clique sur «&nbsp;Tester&nbsp;» autant de fois que tu veux, les nombres ne bougeront pas.</p>
+
+<figure class="code-block" data-file="trois-issues.js"><pre><code class="language-javascript">// Un appel local a DEUX issues : il rend une valeur, ou il lève une exception.
+// Un appel réseau en a TROIS. Comptons-les sur 10 000 appels avec un générateur
+// SEMÉ : les mêmes chiffres sortiront chez toi, et à chaque exécution.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const alea = semer(2025);
+const N = 10000;
+
+let succes = 0, connu = 0, muet = 0, muetFait = 0;
+
+for (let i = 0; i &lt; N; i++) {
+  const d = alea();
+  if (d &lt; 0.02) { connu++; continue; }   // 2 % : échec CONNU, le travail n'a PAS eu lieu
+  if (d &lt; 0.07) {                        // 5 % : AUCUNE réponse, état inconnu
+    muet++;
+    if (alea() &lt; 0.6) muetFait++;        // ... et 60 % avaient quand même été exécutés
+    continue;
+  }
+  succes++;                              // le reste : une réponse est arrivée
+}
+
+console.log("sur " + N + " appels");
+console.log("  succès, réponse reçue ........... " + succes);
+console.log("  échec CONNU (2 %) ............... " + connu);
+console.log("  AUCUNE réponse (5 %) ............ " + muet);
+console.log("  total ........................... " + (succes + connu + muet));
+console.log("");
+console.log("ce que le client sait faire");
+console.log("  agir sans hésiter ............... " + (succes + connu));
+console.log("  décider sans savoir ............. " + muet
+  + "   soit " + (muet / N * 100).toFixed(2) + " % des appels");
+console.log("");
+console.log("ce qu'un tableau de bord client appellerait des « échecs »");
+console.log("  échecs connus + appels muets .... " + (connu + muet)
+  + "   soit " + ((connu + muet) / N * 100).toFixed(2) + " % des appels");
+console.log("");
+console.log("ce qui s'est vraiment passé parmi les " + muet + " appels muets");
+console.log("  exécuté quand même .............. " + muetFait
+  + "   soit " + (muetFait / muet * 100).toFixed(1) + " %");
+console.log("  jamais exécuté .................. " + (muet - muetFait)
+  + "   soit " + ((muet - muetFait) / muet * 100).toFixed(1) + " %");</code></pre></figure>
+<figure class="code-block" data-file="trois-issues.txt"><pre><code class="language-plaintext">sur 10000 appels
+  succès, réponse reçue ........... 9258
+  échec CONNU (2 %) ............... 208
+  AUCUNE réponse (5 %) ............ 534
+  total ........................... 10000
+
+ce que le client sait faire
+  agir sans hésiter ............... 9466
+  décider sans savoir ............. 534   soit 5.34 % des appels
+
+ce qu'un tableau de bord client appellerait des « échecs »
+  échecs connus + appels muets .... 742   soit 7.42 % des appels
+
+ce qui s'est vraiment passé parmi les 534 appels muets
+  exécuté quand même .............. 326   soit 61.0 %
+  jamais exécuté .................. 208   soit 39.0 %
+</code></pre></figure>
+
+<p>Prenons ces résultats ligne par ligne. Sur <strong>10&nbsp;000</strong> appels, <strong>9&nbsp;258</strong> ont reçu une réponse et <strong>208</strong> ont échoué de façon connue&nbsp;: dans ces <strong>9&nbsp;466</strong> cas — plus de neuf appels sur dix — le client sait quoi faire, et le raisonnement local reste applicable. Restent <strong>534</strong> appels, soit <strong>5,34&nbsp;%</strong>, où il faut décider sans savoir.</p>
+<p>Et voilà le chiffre qui compte&nbsp;: parmi ces 534 silences, <strong>326</strong> recouvrent un travail bel et bien exécuté, soit <strong>61,0&nbsp;%</strong>. Autrement dit, dans la majorité des cas, «&nbsp;pas de réponse&nbsp;» signifiait «&nbsp;c'est fait, mais tu ne le sauras pas&nbsp;». Le réflexe naturel — pas de réponse, donc ça n'a pas marché, donc je recommence — est faux six fois sur dix dans ce modèle.</p>
+<p>Un détail à noter pour ne pas se faire piéger&nbsp;: les <strong>208</strong> appels muets qui n'avaient rien exécuté tombent sur le même nombre que les 208 échecs connus. C'est une <strong>coïncidence du tirage</strong>, rien d'autre&nbsp;: ces deux comptes sont produits par des mécanismes indépendants et n'ont aucune raison d'être égaux. Change la graine, et l'égalité disparaît. On le signale parce qu'une coïncidence non signalée finit toujours par être lue comme une loi.</p>
+<p>Maintenant, l'addition. Reprenons exactement les mêmes 10&nbsp;000 appels, en supposant que l'opération demandée est un débit de 30&nbsp;€ sur le compte d'un client, et comparons trois politiques de réessai, appliquées aux seuls appels restés muets — les échecs annoncés, eux, se réessaient sans risque. Ne réessayer aucun de ces muets&nbsp;; tous les réessayer sans précaution&nbsp;; tout réessayer en accompagnant chaque requête d'une clé qui permet au serveur de reconnaître un doublon.</p>
+
+<figure class="code-block" data-file="cout-du-reessai.js"><pre><code class="language-javascript">// Les MÊMES 10 000 appels, et ce que coûte chaque politique de réessai.
+// L'opération simulée : un débit de 30 € sur le compte d'un client.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const alea = semer(2025);
+const N = 10000, MONTANT = 30;
+
+const muets = [];                    // pour chaque appel muet : exécuté, oui ou non ?
+for (let i = 0; i &lt; N; i++) {
+  const d = alea();
+  if (d &lt; 0.02) continue;            // échec connu : rien n'a eu lieu, le réessai est sans risque
+  if (d &lt; 0.07) muets.push(alea() &lt; 0.6);
+}
+
+const executes = muets.filter(Boolean).length;   // ceux que le réessai DUPLIQUE
+const perdus = muets.length - executes;          // ceux que le non-réessai PERD
+
+function ligne(etiquette, valeur) {
+  console.log("      " + (etiquette + " ").padEnd(22, ".") + " "
+    + String(valeur).padStart(3) + "  =  " + String(valeur * MONTANT).padStart(5) + " €");
+}
+function politique(nom, doublons, manquants) {
+  console.log("  " + nom);
+  ligne("doublons créés", doublons);
+  ligne("opérations perdues", manquants);
+}
+
+console.log(muets.length + " appels sans réponse, dont " + executes + " déjà exécutés côté serveur");
+console.log("");
+console.log("trois politiques, le même incident, un débit de " + MONTANT + " €");
+politique("A. ne réessayer aucun muet", 0, perdus);
+politique("B. tout réessayer, sans précaution", executes, 0);
+politique("C. tout réessayer, avec une clé d'idempotence", 0, 0);
+console.log("");
+console.log("la politique B débite " + executes * MONTANT + " € en trop, soit "
+  + (executes * MONTANT / (N / 1000)) + " € par tranche de mille appels.");
+console.log("la politique A en oublie " + perdus * MONTANT + " €.");
+console.log("Aucune des deux ne sait laquelle des deux fautes elle est en train de commettre :");
+console.log("le client ne voit qu'un silence, et un silence ne se lit pas.");</code></pre></figure>
+<figure class="code-block" data-file="cout-du-reessai.txt"><pre><code class="language-plaintext">534 appels sans réponse, dont 326 déjà exécutés côté serveur
+
+trois politiques, le même incident, un débit de 30 €
+  A. ne réessayer aucun muet
+      doublons créés .......   0  =      0 €
+      opérations perdues ... 208  =   6240 €
+  B. tout réessayer, sans précaution
+      doublons créés ....... 326  =   9780 €
+      opérations perdues ...   0  =      0 €
+  C. tout réessayer, avec une clé d'idempotence
+      doublons créés .......   0  =      0 €
+      opérations perdues ...   0  =      0 €
+
+la politique B débite 9780 € en trop, soit 978 € par tranche de mille appels.
+la politique A en oublie 6240 €.
+Aucune des deux ne sait laquelle des deux fautes elle est en train de commettre :
+le client ne voit qu'un silence, et un silence ne se lit pas.
+</code></pre></figure>
+
+<p>Le tableau se lit comme un choix impossible, et c'est bien de cela qu'il s'agit. La politique <strong>A</strong> — ne réessayer aucun de ces silences — ne crée aucun doublon, mais laisse <strong>208</strong> opérations sur le carreau, soit <strong>6&nbsp;240&nbsp;€</strong> jamais encaissés. La politique <strong>B</strong> — tout réessayer — ne perd rien, mais fabrique <strong>326</strong> doublons, soit <strong>9&nbsp;780&nbsp;€</strong> débités en trop, c'est-à-dire <strong>978&nbsp;€</strong> par tranche de mille appels. Et la politique <strong>C</strong>, qui met les deux colonnes à zéro, exige que le serveur sache reconnaître une requête déjà traitée&nbsp;: c'est tout le sujet de la dernière section.</p>
+<p>Le plus déplaisant n'est pas le montant. C'est que le client, au moment de choisir, <strong>ne sait pas laquelle des deux erreurs il est en train de commettre</strong>. Il voit un silence, et le silence recouvre les deux cas. Les politiques A et B ne sont pas «&nbsp;prudente&nbsp;» et «&nbsp;téméraire&nbsp;»&nbsp;: ce sont deux paris sur une information qu'on n'a pas.</p>
+<p>Et les deux erreurs ne se valent pas selon l'opération. Débiter deux fois un client est un incident visible, réclamé, remboursable, qui abîme la confiance. Ne pas débiter du tout est un manque à gagner silencieux qu'on découvre à la comptabilité. Envoyer deux fois un courriel de confirmation est bénin&nbsp;; envoyer deux fois un ordre de virement ne l'est pas. La bonne question n'est donc jamais «&nbsp;faut-il réessayer&nbsp;?&nbsp;» mais «&nbsp;<em>quelle est, pour cette opération précise, la moins mauvaise des deux erreurs&nbsp;?</em>&nbsp;» — et, mieux, «&nbsp;puis-je faire en sorte qu'aucune des deux ne se produise&nbsp;?&nbsp;».</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Lire un taux d'échec sans se tromper</p><p>Le tableau de bord d'un client affichera ici <strong>7,42&nbsp;%</strong> d'appels «&nbsp;en échec&nbsp;» — les 208 échecs connus plus les 534 sans réponse, sur 10&nbsp;000. Celui du serveur, qui ne compte que ce qu'il a refusé de traiter, en affichera bien moins. Les deux chiffres sont exacts et ils ne mesurent pas la même chose&nbsp;: l'un compte des demandes non satisfaites <em>du point de vue de l'appelant</em>, l'autre des traitements ratés <em>du point de vue de l'appelé</em>. Quand deux équipes s'accusent mutuellement de mentir sur un taux d'erreur, c'est presque toujours cet écart-là qu'elles ont sous les yeux&nbsp;; le cours <a href="../observabilite/cours.html">Observabilité</a> montre comment instrumenter les deux bouts pour le réconcilier.</p></div></div>
+
+<h2>La tempête de réessais</h2>
+<p>Le réessai n'est pas une opération neutre qui se contenterait de rattraper une perte. C'est <strong>du trafic supplémentaire</strong>, et il arrive exactement au moment où le service en a le moins besoin&nbsp;: juste après un incident.</p>
+<p>L'arithmétique est immédiate. Mille clients appellent un service. Le service faiblit. Chacun réessaie deux fois. Le service reçoit donc <strong>3&nbsp;000</strong> requêtes au lieu de 1&nbsp;000, soit <strong>3&nbsp;fois</strong> sa charge nominale, alors qu'il est précisément en train de ne plus tenir sa charge nominale. Si cette charge le fait tomber pour de bon, les clients qui réessayaient échouent à nouveau, réessaient encore, et l'incident s'auto-entretient. C'est la <strong>tempête de réessais</strong>&nbsp;: un service qui ne se relève plus, non pas à cause de la panne initiale, mais à cause de la réaction à la panne.</p>
+<p>La parade que tout le monde connaît s'appelle l'<strong>attente exponentielle</strong>&nbsp;: au lieu d'attendre une seconde avant chaque nouvelle tentative, on double — une seconde, puis deux, puis quatre. L'idée paraît excellente. Mesurons-la.</p>
+<p>Le programme qui suit compte, tranche de 100&nbsp;ms par tranche de 100&nbsp;ms, combien de réessais arrivent en même temps, pour trois stratégies&nbsp;: attente fixe, attente doublée, et attente doublée à laquelle on ajoute un <strong>tirage au hasard</strong> — chaque client attend une durée tirée entre zéro et son palier, au lieu du palier exact.</p>
+<p>Une précision méthodologique importante, à lire avant les résultats&nbsp;: <strong>on ne compte ici que les réessais</strong>, pas la première vague. Cette première vague est synchronisée par l'incident lui-même — les clients découvrent tous le problème au même moment, puisque c'est le même problème — et <em>aucune</em> stratégie d'attente ne peut l'étaler, par construction&nbsp;: l'attente commence après le premier échec. Mélanger les deux dans le même compte donnerait une pointe dominée par un phénomène sur lequel on n'a aucune prise, et masquerait ce qu'on veut voir.</p>
+
+<figure class="code-block" data-file="tempete-de-reessais.js"><pre><code class="language-javascript">// Un service tombe. 1000 clients s'en aperçoivent, et chacun réessaie deux fois.
+// Question : à quel moment ces réessais arrivent-ils ?
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const CLIENTS = 1000, REESSAIS = 2, TRANCHE = 0.1;   // tranches de 100 ms
+
+// On ne compte QUE les réessais : la première vague, elle, est synchronisée par
+// l'incident lui-même, et aucune stratégie d'attente ne l'étale.
+function mesurer(mode) {
+  const alea = semer(2025);                    // même graine pour les trois modes
+  const seaux = new Map();
+  for (let c = 0; c &lt; CLIENTS; c++) {
+    let t = 0;                                 // secondes écoulées depuis l'incident
+    for (let e = 1; e &lt;= REESSAIS; e++) {
+      const palier = Math.pow(2, e - 1);       // 1 s, puis 2 s
+      t += mode === "fixe" ? 1                 // attente FIXE ........ 1 s, puis 1 s
+        : mode === "double" ? palier           // attente DOUBLÉE ..... 1 s, puis 2 s
+        : palier * alea();                     // doublée + HASARD .... entre 0 et le palier
+      const seau = Math.floor(t / TRANCHE);
+      seaux.set(seau, (seaux.get(seau) || 0) + 1);
+    }
+  }
+  const compte = Array.from(seaux.values());
+  return { pointe: Math.max.apply(null, compte), tranches: seaux.size };
+}
+
+console.log("charge totale : " + CLIENTS + " clients x " + (1 + REESSAIS) + " tentatives = "
+  + CLIENTS * (1 + REESSAIS) + " requêtes,");
+console.log("soit " + (1 + REESSAIS) + " fois la charge nominale, adressées à un service déjà en difficulté.");
+console.log("");
+console.log("sur les " + CLIENTS * REESSAIS + " RÉESSAIS seuls, par tranche de 100 ms");
+console.log("");
+console.log("  stratégie d'attente          |  pointe  |  tranches occupées");
+console.log("  -----------------------------|----------|-------------------");
+const modes = [["attente fixe (1 s, 1 s)", "fixe"],
+               ["attente doublée (1 s, 2 s)", "double"],
+               ["doublée + tirage au hasard", "hasard"]];
+const res = {};
+for (const paire of modes) {
+  const m = mesurer(paire[1]);
+  res[paire[1]] = m;
+  console.log("  " + paire[0].padEnd(28) + " |" + String(m.pointe).padStart(8)
+    + "  |" + String(m.tranches).padStart(13));
+}
+console.log("");
+console.log("doubler l'attente ne change RIEN à la pointe : " + res.fixe.pointe
+  + " contre " + res.double.pointe + ".");
+console.log("le tirage au hasard la divise par " + (res.double.pointe / res.hasard.pointe).toFixed(1)
+  + ", et occupe " + (res.hasard.tranches / res.double.tranches).toFixed(0) + " fois plus de tranches.");
+
+// Dernier effet, celui qu'on ne voit jamais venir : plusieurs couches qui
+// réessaient chacune trois fois, sans savoir que la couche voisine le fait aussi.
+console.log("");
+console.log("une requête, trois couches qui réessaient chacune 3 fois");
+let requetes = 1;
+for (let couche = 1; couche &lt;= 3; couche++) {
+  requetes *= 3;
+  console.log("  après la couche " + couche + " ... " + String(requetes).padStart(2) + " requêtes");
+}</code></pre></figure>
+<figure class="code-block" data-file="tempete-de-reessais.txt"><pre><code class="language-plaintext">charge totale : 1000 clients x 3 tentatives = 3000 requêtes,
+soit 3 fois la charge nominale, adressées à un service déjà en difficulté.
+
+sur les 2000 RÉESSAIS seuls, par tranche de 100 ms
+
+  stratégie d'attente          |  pointe  |  tranches occupées
+  -----------------------------|----------|-------------------
+  attente fixe (1 s, 1 s)      |    1000  |            2
+  attente doublée (1 s, 2 s)   |    1000  |            2
+  doublée + tirage au hasard   |     147  |           30
+
+doubler l'attente ne change RIEN à la pointe : 1000 contre 1000.
+le tirage au hasard la divise par 6.8, et occupe 15 fois plus de tranches.
+
+une requête, trois couches qui réessaient chacune 3 fois
+  après la couche 1 ...  3 requêtes
+  après la couche 2 ...  9 requêtes
+  après la couche 3 ... 27 requêtes
+</code></pre></figure>
+
+<p>Regarde les deux premières lignes du tableau, et relis-les. <strong>1&nbsp;000</strong> contre <strong>1&nbsp;000</strong>&nbsp;: l'attente doublée produit exactement la même pointe que l'attente fixe. Pas «&nbsp;presque la même&nbsp;», la même. Le nombre de tranches occupées est identique lui aussi&nbsp;: <strong>2</strong> dans les deux cas.</p>
+<p>La raison est d'une simplicité gênante&nbsp;: <strong>tous les clients doublent en même temps</strong>. Ils ont tous démarré au même instant, ils suivent tous la même suite de paliers — une seconde, puis deux —, donc ils se retrouvent tous ensemble à la seconde&nbsp;1, puis tous ensemble à la seconde&nbsp;3. L'attente exponentielle déplace la foule&nbsp;; elle ne la disperse pas. Elle règle un problème réel — le nombre total de requêtes envoyées pendant un incident long — mais elle ne règle pas celui-ci, et on lui prête très souvent ce pouvoir qu'elle n'a pas.</p>
+<p>La troisième ligne montre ce qui disperse réellement&nbsp;: le hasard. Avec un délai tiré au sort entre zéro et le palier, la pointe tombe à <strong>147</strong>, soit une division par <strong>6,8</strong>, et les réessais s'étalent sur <strong>30</strong> tranches de 100&nbsp;ms au lieu de 2 — <strong>15&nbsp;fois</strong> plus de tranches occupées. Le hasard n'est pas ici un aveu d'ignorance&nbsp;: c'est le seul mécanisme qui casse une symétrie que rien d'autre ne casse. Mille clients qui exécutent le même code au même moment feront toujours la même chose au même moment, sauf si on introduit une différence, et le tirage au sort est la façon la moins chère d'en introduire une.</p>
+<p>Les trois dernières lignes du programme ajoutent l'effet le plus insidieux, celui qu'on ne voit jamais venir&nbsp;: l'empilement. Une requête traverse trois couches — la bibliothèque cliente, une passerelle, le service appelé —, et chacune réessaie trois fois sans savoir que sa voisine le fait aussi. Résultat&nbsp;: <strong>3</strong> requêtes après la première couche, <strong>9</strong> après la deuxième, <strong>27</strong> après la troisième. Personne n'a écrit «&nbsp;27&nbsp;» nulle part&nbsp;; le nombre est le produit de trois décisions raisonnables prises séparément.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le réessai que tu n'as pas écrit</p><p>Avant d'ajouter une boucle de réessai, cherche celles qui existent déjà. Beaucoup de bibliothèques clientes réessaient <em>par défaut</em>, sans le dire dans leur exemple de démarrage&nbsp;; les passerelles et les répartiteurs de charge en font autant&nbsp;; et une file de messages qui garantit la livraison «&nbsp;au moins une fois&nbsp;» réessaie par définition. Le calcul ci-dessus montre ce que devient une requête quand trois couches s'y mettent&nbsp;: <strong>27</strong>. La règle pratique est de n'autoriser le réessai qu'à <em>un seul</em> étage, choisi exprès, et de le désactiver partout ailleurs.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 318" role="img" aria-label="Diagramme à barres horizontales comparant trois stratégies d'attente sur les deux mille réessais de la simulation. La première barre, intitulée attente fixe, va jusqu'au bout de l'échelle et porte la valeur mille : mille réessais tombent dans la même tranche de cent millisecondes. La deuxième barre, intitulée attente doublée, a exactement la même longueur et porte la même valeur, mille. La troisième barre, intitulée doublée plus tirage au hasard, est beaucoup plus courte, un peu plus d'un septième des précédentes, et porte la valeur cent quarante-sept. Une légende sous les barres précise qu'elles comptent le nombre de réessais tombant dans la même tranche de cent millisecondes, et une annotation indique que la pointe est divisée par six virgule huit. Sous un trait en pointillés, trois remarques closent le schéma : les mille clients doublent tous en même temps, donc la pointe ne bouge pas ; seul le tirage au hasard décale les clients les uns des autres ; les tranches de cent millisecondes occupées sont au nombre de deux, puis deux, puis trente.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">2 000 réessais, trois stratégies d'attente</text>
+
+    <path class="d-line" d="M176 44 L176 192" fill="none" />
+
+    <rect class="d-accent" x="176" y="52" width="400" height="32" rx="4" />
+    <text class="d-mut" x="168" y="72" text-anchor="end" font-size="9">attente fixe</text>
+    <text class="d-text" x="584" y="72" text-anchor="start" font-size="10">1 000</text>
+
+    <rect class="d-accent" x="176" y="98" width="400" height="32" rx="4" />
+    <text class="d-mut" x="168" y="118" text-anchor="end" font-size="9">attente doublée</text>
+    <text class="d-text" x="584" y="118" text-anchor="start" font-size="10">1 000</text>
+
+    <rect class="d-accent" x="176" y="144" width="59" height="32" rx="4" />
+    <text class="d-mut" x="168" y="164" text-anchor="end" font-size="9">doublée + hasard</text>
+    <text class="d-text" x="243" y="164" text-anchor="start" font-size="10">147</text>
+
+    <text class="d-mut" x="176" y="206" text-anchor="start" font-size="8.5">réessais tombant dans la même tranche de 100 ms</text>
+    <text class="d-tag" x="176" y="232" text-anchor="start" font-size="10">POINTE DIVISÉE PAR 6,8</text>
+
+    <path class="d-line" d="M18 250 L622 250" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="18" y="272" text-anchor="start" font-size="9">· les 1 000 clients doublent tous en même temps&#160;: la pointe ne bouge pas</text>
+    <text class="d-mut" x="18" y="290" text-anchor="start" font-size="9">· seul le tirage au hasard décale les clients les uns des autres</text>
+    <text class="d-mut" x="18" y="308" text-anchor="start" font-size="9">· tranches de 100 ms occupées&#160;: 2, puis 2, puis 30</text>
+  </svg>
+  <figcaption>Les deux premières barres sont identiques&nbsp;: doubler l'attente déplace la foule sans la disperser. La troisième montre ce que fait le hasard.</figcaption>
+</figure>
+
+<p>Deux limites de cette mesure, pour ne pas la faire dire plus qu'elle ne dit. D'abord, elle porte sur deux réessais&nbsp;; avec davantage de paliers, l'attente doublée répartirait le trafic <em>total</em> sur une durée plus longue, mais <strong>rien de plus</strong>&nbsp;: en portant le nombre de réessais à 3, 5 puis 10, la pointe reste <strong>1&nbsp;000</strong> à chaque fois, seul le nombre de tranches occupées suit. Des clients partis ensemble et qui doublent ensemble restent ensemble, indéfiniment. Ensuite, le tirage au hasard tel qu'écrit ici tire entre zéro et le palier&nbsp;; d'autres formes existent, et elles n'ont pas toutes le même effet. Ce qui est démontré, c'est la <em>direction</em>&nbsp;: sans hasard, pas de dispersion.</p>
+<p>Reste enfin la question qu'on oublie de poser&nbsp;: faut-il réessayer du tout&nbsp;? Un réessai n'a de sens que si l'échec est <em>passager</em> et si l'opération peut être répétée sans dégât. Pour un service saturé, la vraie réponse est souvent de renvoyer l'échec à l'appelant plus vite, de limiter le nombre total de tentatives que l'ensemble des clients s'autorise, ou de cesser d'appeler pendant quelques secondes un service qu'on sait à terre. Ces mécanismes sont l'affaire des cours <a href="../cloud/cours.html">Cloud</a> et <a href="../archi/cours.html">Architecture</a>&nbsp;; ce qu'il faut emporter d'ici, c'est que le réessai est une charge, et qu'une charge se budgète.</p>
+
+<h2>Les deux généraux&nbsp;: ce qui est vraiment impossible</h2>
+<p>Arrivé là, une question s'impose&nbsp;: pourquoi ne pas simplement échanger assez de messages pour lever le doute&nbsp;? Si une réponse peut se perdre, envoyons un accusé de réception. S'il peut se perdre aussi, accusons réception de l'accusé. Il doit bien exister un nombre de messages au bout duquel les deux parties sont d'accord.</p>
+<p>Non. Et c'est un résultat, pas une opinion. Il porte le nom de <strong>problème des deux généraux</strong>, et il se raconte ainsi.</p>
+<p>Deux armées campent sur deux collines qui encadrent une vallée. Dans la vallée, l'ennemi. Les deux généraux doivent attaquer <em>en même temps</em>&nbsp;: attaquer ensemble, ils gagnent&nbsp;; attaquer seul, on est écrasé. Le seul moyen de communiquer est d'envoyer un messager à travers la vallée, où il peut être capturé.</p>
+<p>Le général A envoie&nbsp;: «&nbsp;attaque à l'aube&nbsp;». Attaque-t-il&nbsp;? Il ne peut pas&nbsp;: son messager a pu être pris, et B n'a peut-être rien reçu. Il lui faut donc un accusé de réception. B le reçoit et renvoie&nbsp;: «&nbsp;bien reçu&nbsp;». Attaque-t-il&nbsp;? Il ne peut pas non plus&nbsp;: <em>son</em> messager a pu être pris, et dans ce cas A, sans confirmation, n'attaquera pas — B se retrouverait seul. Il faut donc que A accuse réception de l'accusé. Et A, à son tour, ne peut pas attaquer sans savoir que ce troisième message est arrivé.</p>
+<p>À chaque étape, le dernier message envoyé est le seul dont l'expéditeur ignore le sort, et c'est justement de celui-là que dépend sa décision. Le raisonnement ne s'arrête jamais.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 334" role="img" aria-label="Schéma du problème des deux généraux. En haut à gauche, une boîte porte « général A, colline ouest » ; en haut à droite, une boîte porte « général B, colline est ». Entre les deux, un cadre représente la vallée tenue par l'ennemi, où chaque messager peut être capturé. Quatre flèches horizontales figurent les messages successifs : la première va de A vers B et porte « attaque à l'aube » ; la deuxième revient de B vers A et porte « bien reçu » ; la troisième repart de A vers B et porte « j'ai reçu ton accusé » ; la quatrième, tracée en pointillés, revient de B vers A et porte « j'ai reçu ton accusé de réception ». Une note sous ces flèches indique que la suite se prolonge sans fin. Sous un trait en pointillés, une section intitulée « ce que cela interdit » énonce qu'aucun protocole à nombre fini de messages ne rend l'accord certain, parce que l'expéditeur du dernier message ne saura jamais s'il est arrivé.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le dernier message n'est jamais confirmé</text>
+
+    <rect class="d-box" x="16" y="44" width="124" height="52" rx="7" />
+    <text class="d-text" x="78" y="68" text-anchor="middle" font-size="9.5">GÉNÉRAL A</text>
+    <text class="d-mut" x="78" y="86" text-anchor="middle" font-size="8.5">colline ouest</text>
+
+    <rect class="d-box" x="500" y="44" width="124" height="52" rx="7" />
+    <text class="d-text" x="562" y="68" text-anchor="middle" font-size="9.5">GÉNÉRAL B</text>
+    <text class="d-mut" x="562" y="86" text-anchor="middle" font-size="8.5">colline est</text>
+
+    <rect class="d-frame" x="156" y="44" width="328" height="52" rx="6" />
+    <text class="d-mut" x="320" y="66" text-anchor="middle" font-size="9">la vallée, tenue par l'ennemi</text>
+    <text class="d-mut" x="320" y="84" text-anchor="middle" font-size="8.5">chaque messager peut être capturé</text>
+
+    <text class="d-mut" x="320" y="116" text-anchor="middle" font-size="9">1. «&#160;attaque à l'aube&#160;»</text>
+    <path class="d-line" d="M140 124 L500 124" fill="none" /><path class="d-line" d="M492 119 L500 124 L492 129" fill="none" />
+
+    <text class="d-mut" x="320" y="148" text-anchor="middle" font-size="9">2. «&#160;bien reçu&#160;»</text>
+    <path class="d-line" d="M500 156 L140 156" fill="none" /><path class="d-line" d="M148 151 L140 156 L148 161" fill="none" />
+
+    <text class="d-mut" x="320" y="180" text-anchor="middle" font-size="9">3. «&#160;j'ai reçu ton accusé&#160;»</text>
+    <path class="d-line" d="M140 188 L500 188" fill="none" /><path class="d-line" d="M492 183 L500 188 L492 193" fill="none" />
+
+    <text class="d-mut" x="320" y="212" text-anchor="middle" font-size="9">4. «&#160;j'ai reçu ton accusé de réception&#160;»</text>
+    <path class="d-line" d="M500 220 L140 220" fill="none" stroke-dasharray="5 3" /><path class="d-line" d="M148 215 L140 220 L148 225" fill="none" />
+
+    <text class="d-mut" x="320" y="242" text-anchor="middle" font-size="9">… et ainsi de suite, sans fin</text>
+
+    <path class="d-line" d="M16 258 L624 258" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="16" y="280" text-anchor="start" font-size="10">CE QUE CELA INTERDIT</text>
+    <text class="d-mut" x="16" y="302" text-anchor="start" font-size="9">aucun protocole à nombre FINI de messages ne rend l'accord CERTAIN&#160;:</text>
+    <text class="d-mut" x="16" y="320" text-anchor="start" font-size="9">l'expéditeur du dernier message ne saura jamais s'il est arrivé</text>
+  </svg>
+  <figcaption>Chaque accusé de réception a besoin du sien. La conversation ne converge jamais&nbsp;: elle se contente de rendre le doute plus petit.</figcaption>
+</figure>
+
+<p>La démonstration formelle tient en trois phrases, et elle vaut la peine d'être suivie parce qu'elle est courte. Supposons qu'il existe un protocole qui garantit l'accord et qui utilise un nombre fini de messages&nbsp;; parmi tous ces protocoles, prenons-en un qui utilise le <em>plus petit</em> nombre de messages possible. Ce protocole a un dernier message&nbsp;; or son expéditeur ne saura jamais s'il est arrivé, donc il doit pouvoir décider sans lui, et le destinataire — qui ne l'a peut-être pas reçu — aussi. Ce dernier message est donc inutile&nbsp;: en le retirant, on obtient un protocole correct plus court, ce qui contredit l'hypothèse qu'on avait pris le plus court. Aucun protocole fini ne garantit l'accord.</p>
+<p>Maintenant, mesurons le contre-sens le plus répandu, celui qui consiste à dire «&nbsp;envoyons plus de messages, on sera plus sûrs&nbsp;». Sur un canal qui perd 10&nbsp;% de ce qu'on lui confie, quelle est la probabilité que <em>tous</em> les messages d'un protocole arrivent&nbsp;?</p>
+
+<figure class="code-block" data-file="deux-generaux.js"><pre><code class="language-javascript">// « Envoyons plus de messages, on sera plus sûrs. » Mesurons cette intuition.
+// Le canal perd 10 % des messages, indépendamment les uns des autres.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const PERTE = 0.1;
+const ARRIVE = 1 - PERTE;
+
+console.log("probabilité que TOUS les messages d'un protocole arrivent");
+console.log("");
+console.log("  messages échangés |  tous arrivent");
+console.log("  ------------------|---------------");
+for (const k of [1, 2, 3, 5, 10, 20]) {
+  console.log("  " + String(k).padStart(17) + " |"
+    + (Math.pow(ARRIVE, k) * 100).toFixed(2).padStart(13) + " %");
+}
+
+// Vérification par tirage : on rejoue 100 000 protocoles de 10 messages.
+const alea = semer(2025);
+const ESSAIS = 100000, K = 10;
+let complets = 0;
+for (let i = 0; i &lt; ESSAIS; i++) {
+  let tousArrives = true;
+  for (let m = 0; m &lt; K; m++) if (alea() &lt; PERTE) tousArrives = false;
+  if (tousArrives) complets++;
+}
+console.log("");
+console.log("vérification par tirage, " + ESSAIS + " protocoles de " + K + " messages :");
+console.log("  calculé ..... " + (Math.pow(ARRIVE, K) * 100).toFixed(2) + " %");
+console.log("  mesuré ...... " + (complets / ESSAIS * 100).toFixed(2) + " %");
+console.log("");
+console.log("Ajouter des messages fait BAISSER la probabilité qu'ils arrivent tous.");
+console.log("Le protocole ne devient pas plus sûr : il devient plus fragile.");</code></pre></figure>
+<figure class="code-block" data-file="deux-generaux.txt"><pre><code class="language-plaintext">probabilité que TOUS les messages d'un protocole arrivent
+
+  messages échangés |  tous arrivent
+  ------------------|---------------
+                  1 |        90.00 %
+                  2 |        81.00 %
+                  3 |        72.90 %
+                  5 |        59.05 %
+                 10 |        34.87 %
+                 20 |        12.16 %
+
+vérification par tirage, 100000 protocoles de 10 messages :
+  calculé ..... 34.87 %
+  mesuré ...... 34.99 %
+
+Ajouter des messages fait BAISSER la probabilité qu'ils arrivent tous.
+Le protocole ne devient pas plus sûr : il devient plus fragile.
+</code></pre></figure>
+
+<p>La colonne de droite descend au lieu de monter. Avec un seul message, <strong>90,00&nbsp;%</strong> de chances qu'il arrive. Avec dix, <strong>34,87&nbsp;%</strong>. Avec vingt, <strong>12,16&nbsp;%</strong>. Chaque message ajouté est une occasion de plus de perdre quelque chose, et les occasions se multiplient au lieu de s'additionner — c'est la composition des fiabilités de la <a href="lecon-01.html">leçon&nbsp;1</a>, appliquée ici à des messages plutôt qu'à des services. Le protocole bavard n'est pas plus sûr&nbsp;: il est plus fragile. La vérification par tirage, en bas de la sortie, confirme le calcul&nbsp;: <strong>34,99&nbsp;%</strong> mesurés sur 100&nbsp;000 protocoles de dix messages, contre <strong>34,87&nbsp;%</strong> calculés.</p>
+<p>Il faut maintenant faire une distinction que beaucoup d'exposés escamotent, et qui change tout dans la pratique.</p>
+<p>Ce qui est démontré impossible, c'est l'accord <strong>certain</strong> en un nombre <strong>fini</strong> de messages. Ce n'est pas la même chose que «&nbsp;on n'y arrive jamais&nbsp;». En pratique, on retransmet&nbsp;: chaque tentative a sa propre chance d'aboutir, et la probabilité qu'aucune n'aboutisse décroît à chaque fois. On peut la rendre aussi petite qu'on veut — un sur un million, un sur un milliard — mais jamais nulle, et jamais avec une garantie donnée à l'avance sur le nombre de messages. Les protocoles réels vivent exactement là&nbsp;: dans le «&nbsp;aussi petit qu'on veut&nbsp;», jamais dans le zéro.</p>
+<p>Deuxième précision, sur ce que le programme mesure exactement&nbsp;: il calcule la probabilité que tous les messages d'<em>une</em> exécution arrivent, pas la probabilité d'atteindre l'accord. Un protocole qui retransmet peut très bien aboutir alors que des messages ont été perdus. Ce que la table établit, c'est qu'<em>allonger</em> une conversation sans retransmission la rend moins fiable, ce qui suffit à démolir l'intuition du départ.</p>
+<p>Enfin, la conséquence qui nous ramène au sujet&nbsp;: puisqu'on ne peut pas rendre l'accord certain, il ne sert à rien de chercher le protocole qui supprimerait l'incertitude sur «&nbsp;l'appel a-t-il eu lieu&nbsp;?&nbsp;». Ce protocole n'existe pas. La seule voie qui reste est de changer de question.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le problème des deux généraux concerne un canal qui <em>perd</em> des messages entre deux participants honnêtes. Il en existe une version bien plus dure, où certains participants peuvent mentir ou se contredire&nbsp;: on parle alors de pannes byzantines, et les protocoles qui y résistent sont d'un autre ordre de complexité. Ce cours ne les traite pas. Côté réseau, la manière dont TCP se débat avec la perte — accusés, retransmissions, fenêtres — est détaillée dans le cours <a href="../reseaux/cours.html">Réseaux</a>&nbsp;; et la façon dont une API expose ces garanties à ses appelants relève du cours <a href="../api/cours.html">API REST</a>.</p></div></div>
+
+<h2>La sortie&nbsp;: rendre l'incertitude inoffensive</h2>
+<p>Récapitulons la situation, qui a l'air désespérée&nbsp;: le client ne peut pas savoir si son appel a été exécuté&nbsp;; aucun protocole fini ne le lui apprendra&nbsp;; réessayer duplique, ne pas réessayer perd. Il n'y a pas d'issue de ce côté-là.</p>
+<p>Alors on change d'objectif. <strong>On ne supprime pas l'incertitude, on la rend inoffensive.</strong> Le déplacement est le suivant&nbsp;: au lieu de chercher à savoir si l'opération a eu lieu, on fait en sorte que la refaire ne change rien. Si appliquer deux fois donne le même résultat qu'appliquer une fois, la question «&nbsp;a-t-elle eu lieu&nbsp;?&nbsp;» perd son importance. On peut réessayer autant qu'on veut&nbsp;: le doute reste entier, mais il ne coûte plus rien.</p>
+<p>Cette propriété s'appelle l'<strong>idempotence</strong>. Certaines opérations la possèdent naturellement. «&nbsp;Mettre le solde à 70&nbsp;€&nbsp;» est idempotente&nbsp;: l'appliquer dix fois laisse 70. «&nbsp;Retirer 30&nbsp;€&nbsp;» ne l'est pas&nbsp;: l'appliquer dix fois retire 300. «&nbsp;Supprimer l'élément 4711&nbsp;» est idempotente&nbsp;; «&nbsp;ajouter un élément à la liste&nbsp;» ne l'est pas. La différence tient à la formulation&nbsp;: une opération qui décrit un <em>état visé</em> est presque toujours idempotente, une opération qui décrit un <em>changement relatif</em> ne l'est presque jamais.</p>
+<p>Quand l'opération ne l'est pas — et un débit ne l'est pas —, on la rend idempotente en lui attachant une <strong>clé</strong>. Le client fabrique un identifiant unique <em>avant</em> le premier envoi, le joint à la requête, et le réutilise tel quel à chaque réessai. Le serveur retient les clés déjà traitées&nbsp;: s'il en revoit une, il ne refait pas le travail, il renvoie le résultat qu'il avait rendu la première fois. Voici l'idée dans sa forme la plus courte.</p>
+
+<figure class="code-block" data-file="cle-idempotence.js"><pre><code class="language-javascript">// On ne supprime pas l'incertitude : on la rend inoffensive.
+// Deux serveurs, la même panne, le même réessai.
+
+function serveurNaif() {
+  let solde = 100;
+  return {
+    debiter: function (montant) { solde -= montant; return solde; },
+    solde: function () { return solde; },
+  };
+}
+
+function serveurIdempotent() {
+  let solde = 100;
+  const dejaTraite = new Map();          // clé d'idempotence -&gt; résultat déjà rendu
+  return {
+    debiter: function (cle, montant) {
+      if (dejaTraite.has(cle)) return dejaTraite.get(cle);   // même clé : même réponse
+      solde -= montant;
+      dejaTraite.set(cle, solde);
+      return solde;
+    },
+    solde: function () { return solde; },
+  };
+}
+
+console.log("solde de départ : 100 €, un débit de 30 € dont la réponse se perd");
+console.log("");
+
+const naif = serveurNaif();
+console.log("SANS clé — le serveur ne peut pas distinguer un réessai d'un nouveau débit");
+console.log("  envoi   -&gt; solde " + naif.debiter(30) + " €   (la réponse n'arrive jamais au client)");
+console.log("  réessai -&gt; solde " + naif.debiter(30) + " €   &lt;- débité DEUX fois");
+
+const sur = serveurIdempotent();
+console.log("");
+console.log("AVEC une clé portée par la requête, ici « paiement-4711 »");
+console.log("  envoi   -&gt; solde " + sur.debiter("paiement-4711", 30) + " €   (la réponse n'arrive jamais au client)");
+console.log("  réessai -&gt; solde " + sur.debiter("paiement-4711", 30) + " €   &lt;- déjà traité, rien de plus");
+
+let dernier = 0;
+for (let i = 0; i &lt; 5; i++) dernier = sur.debiter("paiement-4711", 30);
+console.log("  5 réessais de plus -&gt; solde " + dernier + " €");
+console.log("");
+console.log("Le client ignore toujours si son premier envoi a abouti : l'incertitude");
+console.log("est intacte. Ce qui a changé, c'est qu'elle ne coûte plus rien.");</code></pre></figure>
+<figure class="code-block" data-file="cle-idempotence.txt"><pre><code class="language-plaintext">solde de départ : 100 €, un débit de 30 € dont la réponse se perd
+
+SANS clé — le serveur ne peut pas distinguer un réessai d'un nouveau débit
+  envoi   -&gt; solde 70 €   (la réponse n'arrive jamais au client)
+  réessai -&gt; solde 40 €   &lt;- débité DEUX fois
+
+AVEC une clé portée par la requête, ici « paiement-4711 »
+  envoi   -&gt; solde 70 €   (la réponse n'arrive jamais au client)
+  réessai -&gt; solde 70 €   &lt;- déjà traité, rien de plus
+  5 réessais de plus -&gt; solde 70 €
+
+Le client ignore toujours si son premier envoi a abouti : l'incertitude
+est intacte. Ce qui a changé, c'est qu'elle ne coûte plus rien.
+</code></pre></figure>
+
+<p>Compare les deux moitiés de la sortie. Sans clé, le solde tombe de 100 à <strong>70</strong>, puis à <strong>40</strong>&nbsp;: le serveur, incapable de distinguer un réessai d'un nouveau débit, a fait ce qu'on lui demandait, deux fois. Avec la clé, il passe à <strong>70</strong> et y reste — cinq réessais supplémentaires ne le font pas bouger. C'est exactement la définition&nbsp;: appliquer <em>n</em> fois donne le même résultat qu'appliquer une fois.</p>
+<p>Note bien ce qui n'a <em>pas</em> changé. Le client ignore toujours si son premier envoi a abouti&nbsp;; il n'a reçu aucune information supplémentaire&nbsp;; le silence est toujours aussi muet. Ce qui a changé, c'est que ce silence ne coûte plus rien. On n'a pas résolu le problème des deux généraux — personne ne le résout —, on a rendu sa conséquence indolore.</p>
+<p>Cette section s'arrête ici volontairement, parce que la mise en œuvre honnête soulève une série de questions qui méritent leur propre leçon&nbsp;: combien de temps faut-il conserver les clés, sachant qu'une clé oubliée rouvre la porte au doublon&nbsp;? Que se passe-t-il si deux copies de la même requête arrivent au même instant sur deux machines différentes&nbsp;? Que doit faire le serveur si la même clé revient avec un contenu différent&nbsp;? Qui fabrique la clé, et pourquoi une clé engendrée au moment du réessai serait-elle inutile&nbsp;? Chacune de ces questions a une réponse, et elles sont l'objet de la <strong>leçon&nbsp;10</strong>, «&nbsp;Idempotence&nbsp;: réessayer sans dégât&nbsp;», au module&nbsp;4.</p>
+<p>Une dernière remarque de cadrage. L'idempotence n'est pas la seule sortie, elle est la plus économique. Quand une opération ne peut pas être rendue idempotente à un coût raisonnable, il reste la <em>réconciliation</em> — comparer après coup les deux côtés et corriger les écarts — et la <em>compensation</em> — exécuter une opération inverse quand on découvre un doublon. Ces deux voies coûtent plus cher parce qu'elles supposent un traitement supplémentaire et un délai avant que l'état ne redevienne juste. On les garde pour les cas où la première ne s'applique pas.</p>
+
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Traiter un délai dépassé comme un échec.</strong> C'est la faute qui produit les doublons, et elle est presque toujours involontaire&nbsp;: le langage la favorise, puisque les trois issues arrivent sous deux formes seulement, une valeur ou une exception. Dans la simulation, cette confusion vaut <strong>326</strong> doublons sur 534 silences, soit <strong>9&nbsp;780&nbsp;€</strong>. La correction ne consiste pas à réessayer moins&nbsp;: elle consiste à distinguer, dans le <code>catch</code>, les erreurs qui prouvent que rien n'a eu lieu de celles qui ne prouvent rien.</p></div></div>
+<ul>
+<li><strong>Croire qu'un délai dépassé annule la requête</strong> — le serveur n'a été prévenu de rien&nbsp;: il continue son travail, et il le terminera. Le programme des quatre clients le montre&nbsp;: entre <strong>184</strong> et <strong>0</strong> «&nbsp;échecs&nbsp;» selon la seule patience du client, alors que le serveur a exécuté chaque appel.</li>
+<li><strong>Attendre d'une attente doublée qu'elle désynchronise</strong> — elle ne désynchronise pas&nbsp;: <strong>1&nbsp;000</strong> de pointe avec une attente fixe, <strong>1&nbsp;000</strong> avec une attente doublée. Le tirage au hasard, lui, descend à <strong>147</strong>. Doubler change la date de la foule, pas le fait qu'il y ait une foule.</li>
+<li><strong>Ajouter des messages pour «&nbsp;être plus sûr&nbsp;»</strong> — sur un canal qui perd 10&nbsp;%, la probabilité que tous arrivent passe de <strong>90,00&nbsp;%</strong> à un message à <strong>12,16&nbsp;%</strong> à vingt. Un protocole bavard est un protocole fragile.</li>
+<li><strong>Empiler les réessais sans le savoir</strong> — bibliothèque cliente, passerelle, service&nbsp;: trois couches à trois tentatives font <strong>27</strong> requêtes pour une seule demande. Le réessai doit être autorisé à un seul étage, choisi exprès.</li>
+<li><strong>Confondre «&nbsp;accord certain impossible&nbsp;» et «&nbsp;impossible en pratique&nbsp;»</strong> — les deux généraux interdisent la <em>certitude</em> en un nombre <em>fini</em> de messages, pas la fiabilité. On rend le risque aussi petit qu'on veut&nbsp;; on ne le rend jamais nul, et c'est pour cela qu'on rend l'opération inoffensive au lieu de la rendre sûre.</li>
+<li><strong>Prendre les taux de la simulation pour des mesures</strong> — 2&nbsp;%, 5&nbsp;% et 60&nbsp;% sont des hypothèses du modèle. Ce que la simulation démontre est un mécanisme&nbsp;; les taux de ton système, eux, se mesurent chez toi.</li>
+</ul>
+
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une boutique en ligne encaisse les paiements par un prestataire extérieur. Le code du tunnel de commande est sobre&nbsp;: il appelle le prestataire, attend la confirmation, puis marque la commande comme payée. Le délai d'attente vaut deux secondes&nbsp;— une valeur qui n'a jamais été discutée, c'était celle de l'exemple de la documentation. Autour, un <code>catch</code> unique&nbsp;: en cas d'erreur, on réessaie une fois, puis on affiche «&nbsp;paiement refusé, merci de recommencer&nbsp;».<br /><br />Un soir de forte affluence, le prestataire ralentit. Il n'échoue pas&nbsp;: il répond en trois à cinq secondes au lieu de quelques centaines de millisecondes. Du côté de la boutique, le délai de deux secondes est franchi&nbsp;; le <code>catch</code> se déclenche&nbsp;; la requête part une seconde fois. Le prestataire, lui, reçoit deux demandes de paiement distinctes, parfaitement valides, et les honore toutes les deux. Certains clients, voyant le message d'échec, cliquent une troisième fois.<br /><br />Le lendemain, le service après-vente déborde&nbsp;: des clients débités deux fois, parfois trois. Et le tableau de bord de la boutique affiche un taux de refus anormal pendant la soirée, alors que celui du prestataire affiche zéro refus. Les deux chiffres sont exacts&nbsp;: la boutique comptait ses délais dépassés comme des échecs, le prestataire comptait ses traitements, qui avaient tous réussi. Deux tableaux de bord, deux vérités, un seul incident.<br /><br />La correction tient en deux gestes. Le premier est immédiat&nbsp;: cesser de traiter un délai dépassé comme un refus. Le message affiché devient «&nbsp;paiement en cours de vérification&nbsp;», et l'état de la commande reste indéterminé jusqu'à ce qu'une consultation du prestataire tranche. Le second est structurel&nbsp;: le tunnel engendre une clé d'idempotence au moment où le client clique, une seule fois, et la joint à chaque tentative — y compris aux tentatives déclenchées par un clic supplémentaire de l'acheteur. Le prestataire reconnaît la clé et renvoie le résultat du premier paiement au lieu d'en créer un second. L'incertitude sur le premier appel, elle, n'a pas disparu&nbsp;: elle est simplement devenue sans conséquence.<br /><br />La leçon à emporter dépasse le paiement. Le bug n'était pas dans le réessai, ni dans le délai de deux secondes, ni chez le prestataire. Il était dans une ligne de traduction&nbsp;: quelque part, «&nbsp;je n'ai pas eu de réponse&nbsp;» est devenu «&nbsp;ça a échoué&nbsp;». Tout le reste en découle.</p></div></div>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>La panne partielle — mémo de la leçon 3</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Appel local</td><td><strong>Deux</strong> issues&nbsp;: une valeur, ou une exception. Le troisième cas n'est pas impossible, il est inobservable — tout tombe ensemble.</td></tr>
+      <tr><td>Appel réseau</td><td><strong>Trois</strong> issues&nbsp;: succès, échec connu, délai dépassé. La troisième ne dit rien.</td></tr>
+      <tr><td>Échec connu</td><td>Connexion refusée, nom introuvable&nbsp;: le travail n'a pas eu lieu. Seul cas où réessayer ne risque rien.</td></tr>
+      <tr><td>Délai dépassé</td><td>Décision du <em>client</em>, pas événement du serveur. Mesuré&nbsp;: 184 / 178 / 134 / 0 «&nbsp;échecs&nbsp;» selon la seule patience, tous exécutés.</td></tr>
+      <tr><td>Prix de la patience</td><td>De 100&nbsp;ms à 3&nbsp;000&nbsp;ms&nbsp;: 184 faux échecs en moins, mais 4,9&nbsp;fois plus d'attente (67,8&nbsp;s → 335,0&nbsp;s).</td></tr>
+      <tr><td>Panne partielle</td><td>Une moitié marche, l'autre est injoignable, et chacune croit que c'est l'autre qui est tombée. N'existe pas sur une machine unique.</td></tr>
+      <tr><td>Panne grise</td><td>Ni morte ni vivante&nbsp;: répond au contrôle de santé, pas aux vraies requêtes. Pire qu'une panne franche.</td></tr>
+      <tr><td>10&nbsp;000 appels</td><td>9&nbsp;258 succès · 208 échecs connus · 534 muets (5,34&nbsp;%), dont <strong>326 exécutés</strong> soit 61,0&nbsp;%.</td></tr>
+      <tr><td>Prix du réessai naïf</td><td>326 doublons = <strong>9&nbsp;780&nbsp;€</strong> (978&nbsp;€ par millier d'appels). Ne réessayer aucun muet&nbsp;: 208 pertes = 6&nbsp;240&nbsp;€.</td></tr>
+      <tr><td>Tempête de réessais</td><td>1&nbsp;000 clients × 3 tentatives = <strong>3&nbsp;000</strong> requêtes, soit 3&nbsp;fois la charge nominale.</td></tr>
+      <tr><td>Attente doublée</td><td>Ne désynchronise pas&nbsp;: pointe <strong>1&nbsp;000</strong> comme l'attente fixe, 2 tranches occupées dans les deux cas.</td></tr>
+      <tr><td>Tirage au hasard</td><td>Pointe à <strong>147</strong>, divisée par <strong>6,8</strong>, étalée sur 30 tranches — 15&nbsp;fois plus.</td></tr>
+      <tr><td>Réessais empilés</td><td>3 couches × 3 tentatives = <strong>27</strong> requêtes pour une demande. Un seul étage doit réessayer.</td></tr>
+      <tr><td>Deux généraux</td><td>Aucun protocole <em>fini</em> ne rend l'accord <em>certain</em>&nbsp;: le dernier message n'est jamais confirmé. À 10&nbsp;% de perte&nbsp;: 90,00&nbsp;% à 1 message, 34,87&nbsp;% à 10, 12,16&nbsp;% à 20.</td></tr>
+      <tr><td>Idempotence</td><td>Appliquer deux fois = appliquer une fois. Clé portée par la requête, fabriquée <em>avant</em> le premier envoi. Traitée au module&nbsp;4.</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Panne partielle</dt><dd>Situation où une partie du système fonctionne pendant qu'une autre est en panne ou injoignable. Elle n'a pas d'équivalent sur une machine unique, où l'arrêt d'un processus emporte tout ce qu'il contient.</dd>
+  <dt>Échec connu</dt><dd>Erreur qui prouve que le travail demandé n'a pas eu lieu&nbsp;: connexion refusée, nom introuvable, réseau injoignable. C'est la seule des trois issues où réessayer ne peut créer aucun doublon.</dd>
+  <dt>Délai dépassé</dt><dd>Instant où le client cesse d'attendre une réponse, fixé par un nombre qu'il a choisi. Ce n'est pas une information sur le serveur&nbsp;: rien ne s'est produit de son côté, et il peut très bien être en train de terminer le travail.</dd>
+  <dt>Panne grise</dt><dd>Défaillance partielle d'une machine qui reste joignable&nbsp;: elle répond aux contrôles de santé mais traite mal ou lentement les vraies requêtes. Plus difficile à détecter qu'un arrêt franc, et plus contagieuse.</dd>
+  <dt>Réessai</dt><dd>Nouvelle tentative après une issue jugée mauvaise. Utile contre les défaillances passagères, dangereux sur deux plans&nbsp;: il duplique les opérations non idempotentes, et il ajoute de la charge au moment où le service en a le moins.</dd>
+  <dt>Tempête de réessais</dt><dd>Amplification de charge provoquée par des clients qui réessaient tous ensemble après un même incident. Mesurée ici&nbsp;: 3&nbsp;000 requêtes pour 1&nbsp;000 demandes, avec une pointe de 1&nbsp;000 requêtes dans la même tranche de 100&nbsp;ms.</dd>
+  <dt>Attente exponentielle</dt><dd>Stratégie consistant à doubler le délai entre deux tentatives. Elle réduit le trafic sur la durée d'un incident long, mais ne disperse pas les clients&nbsp;: tous doublent au même moment, donc tous reviennent au même moment.</dd>
+  <dt>Tirage au hasard</dt><dd>Ajout d'une part aléatoire au délai d'attente, pour que deux clients exécutant le même code ne repartent pas au même instant. C'est le seul mécanisme mesuré ici qui abaisse la pointe&nbsp;: de 1&nbsp;000 à 147.</dd>
+  <dt>Problème des deux généraux</dt><dd>Résultat établissant qu'aucun protocole à nombre fini de messages ne rend l'accord certain sur un canal qui peut perdre des messages, le dernier message envoyé n'étant jamais confirmé.</dd>
+  <dt>Idempotence</dt><dd>Propriété d'une opération que l'on peut appliquer plusieurs fois sans changer le résultat au-delà de la première. Elle ne lève pas l'incertitude&nbsp;: elle la rend sans conséquence.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<ul>
+<li>Un appel <strong>local</strong> a <strong>deux</strong> issues, un appel <strong>réseau</strong> en a <strong>trois</strong>&nbsp;: succès, échec <em>connu</em>, et absence de réponse. La troisième ne dit ni que le travail a eu lieu, ni qu'il n'a pas eu lieu.</li>
+<li>Une <strong>panne partielle</strong> est symétrique&nbsp;: A croit que B est tombée, B croit que A est tombée, et les deux sont vivantes. Trois causes — panne, lien coupé, lenteur — produisent le même silence.</li>
+<li>Un <strong>délai dépassé est une décision du client</strong>. Mesuré sur 2&nbsp;000 appels tous exécutés&nbsp;: <strong>184</strong>, <strong>178</strong>, <strong>134</strong> puis <strong>0</strong> «&nbsp;échecs&nbsp;» déclarés selon la seule patience, au prix de <strong>4,9&nbsp;fois</strong> plus d'attente.</li>
+<li>Sur <strong>10&nbsp;000</strong> appels&nbsp;: <strong>9&nbsp;258</strong> succès, <strong>208</strong> échecs connus, <strong>534</strong> muets — soit <strong>5,34&nbsp;%</strong> — dont <strong>326</strong> avaient été exécutés, soit <strong>61,0&nbsp;%</strong>.</li>
+<li>Les réessayer sans précaution crée <strong>326</strong> doublons, soit <strong>9&nbsp;780&nbsp;€</strong> sur un débit de 30&nbsp;€&nbsp;; ne réessayer aucun de ces silences perd <strong>208</strong> opérations, soit <strong>6&nbsp;240&nbsp;€</strong>. Le client ne sait pas laquelle des deux fautes il commet.</li>
+<li>Mille clients qui tentent trois fois envoient <strong>3&nbsp;000</strong> requêtes, soit <strong>3&nbsp;fois</strong> la charge nominale. Sur les réessais seuls, l'attente fixe et l'attente doublée donnent la <em>même</em> pointe, <strong>1&nbsp;000</strong>&nbsp;; seul le tirage au hasard l'abaisse à <strong>147</strong>, soit une division par <strong>6,8</strong>. La première vague, elle, reste synchronisée par l'incident&nbsp;: aucune attente ne l'étale.</li>
+<li>Les <strong>deux généraux</strong> interdisent l'accord <em>certain</em> en un nombre <em>fini</em> de messages. Et allonger la conversation la fragilise&nbsp;: à 10&nbsp;% de perte, <strong>90,00&nbsp;%</strong> à un message, <strong>34,87&nbsp;%</strong> à dix, <strong>12,16&nbsp;%</strong> à vingt.</li>
+<li>La sortie n'est pas de supprimer l'incertitude mais de la rendre <strong>inoffensive</strong>&nbsp;: une opération idempotente, ou une <strong>clé</strong> fabriquée avant le premier envoi et rejouée à chaque tentative. Le solde reste à <strong>70</strong> quel que soit le nombre de réessais. Traitée pour elle-même au module&nbsp;4.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue affiche un tableau de bord montrant «&nbsp;3&nbsp;% d'échecs&nbsp;» sur un appel sortant, et en conclut que le service appelé est défaillant. Quelles questions lui poses-tu avant d'accepter cette conclusion&nbsp;?</li>
+<li>Explique, sans citer de chiffre, pourquoi l'attente doublée ne fait pas baisser la pointe alors que le tirage au hasard, lui, la fait baisser. Que faudrait-il changer pour que l'attente doublée aide vraiment&nbsp;?</li>
+<li>On te propose d'ajouter un quatrième message au protocole d'un service «&nbsp;pour être sûr que l'autre a bien reçu&nbsp;». Quelles sont les deux objections à faire, l'une théorique et l'autre chiffrée&nbsp;?</li>
+</ol></div>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que sait un client dont l'appel a dépassé le délai d'attente ?","a":["Rien de plus qu'avant l'appel : le travail a pu être fait, ou pas","Que le serveur est tombé, puisque aucune réponse n'est revenue","Que le travail n'a pas eu lieu, comme pour un refus de connexion","Que la requête s'est perdue avant même d'atteindre le serveur"],"correct":0,"explain":"Le délai dépassé est une absence de message, pas un message d'erreur. Il est compatible avec six réalités au moins, dont trois où le travail a eu lieu ou aura lieu. Dans la simulation, 326 des 534 appels muets avaient été exécutés, soit 61,0 %."},
+  {"q":"Sur les 10 000 appels simulés, que valent les 534 restés sans réponse ?","a":["326 avaient été exécutés côté serveur, soit 61,0 % d'entre eux","Aucun n'avait été exécuté : le silence signale un travail non fait","Tous avaient été exécutés, seules les réponses s'étaient perdues","208 avaient été exécutés, autant que le nombre d'échecs connus"],"correct":0,"explain":"La sortie du programme donne 9 258 succès, 208 échecs connus, 534 sans réponse, dont 326 exécutés soit 61,0 %. Les 208 muets non exécutés tombent par coïncidence sur le même nombre que les échecs connus : deux mécanismes indépendants."},
+  {"q":"Pourquoi doubler l'attente entre deux réessais ne suffit-il pas ?","a":["Parce que tous les clients doublent ensemble : la pointe reste à 1 000","Parce que le doublement rallonge trop l'attente pour rester utilisable","Parce qu'il faut au moins trois réessais pour que le doublement agisse","Parce que la première vague de requêtes est elle aussi désynchronisée"],"correct":0,"explain":"Mesuré sur les réessais seuls, par tranches de 100 ms : attente fixe, pointe 1 000 ; attente doublée, pointe 1 000 également, et 2 tranches occupées dans les deux cas. Seul le tirage au hasard descend à 147, soit une division par 6,8."},
+  {"q":"Qu'interdit exactement le problème des deux généraux ?","a":["Qu'un protocole à nombre fini de messages rende l'accord certain","Que deux machines séparées échangent des messages de façon fiable","Qu'on atteigne un accord en pratique sur un canal qui perd 10 % des messages","Qu'un message envoyé sur un canal non fiable arrive à son destinataire"],"correct":0,"explain":"Le dernier message envoyé n'est jamais confirmé : en le retirant, on obtiendrait un protocole correct plus court, ce qui contredit la minimalité. Cela n'interdit pas la fiabilité pratique — on retransmet, et le risque devient aussi petit qu'on veut, jamais nul."}
+]
+</script>
+
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["l'échec connu","échec connu","un échec connu","echec connu","l'echec connu","un echec connu","le second : l'échec connu","l'échec connu (connexion refusée)"],"placeholder":"l'issue qui rend le réessai sans danger est ...","hints":["Des trois issues, deux apportent une information et une n'en apporte aucune : commence par écarter celle qui ne dit rien.","Cherche celle qui PROUVE que le serveur n'a pas pu agir : l'erreur est arrivée avant qu'il ne reçoive la demande.","Connexion refusée, nom introuvable, réseau injoignable : ces trois erreurs appartiennent toutes à la même issue, en deux mots."],"link":{"href":"lecon-03.html","label":"Revoir « Deux issues d'un côté, trois de l'autre »"}},
+  {"type":"code","run":{"expect":"326 432"},"placeholder":"le nombre de doublons à 60 %, puis à 80 %, un nombre par ligne","hints":["Reprends la boucle de la simulation : graine 2025, 10 000 tours, seuil 0,02 pour l'échec connu et 0,07 pour le silence.","L'ordre des tirages doit rester le même : le second appel au générateur n'a lieu QUE dans la branche des appels muets.","Écris une fonction qui prend la part exécutée en paramètre et rend le compte, puis appelle-la deux fois : avec 0.6, puis avec 0.8."],"link":{"href":"lecon-03.html","label":"Revoir « Dix mille appels, et ce que le silence coûte »"}},
+  {"type":"code","run":{"expect":"7 22"},"placeholder":"le premier nombre de messages sous 50 %, puis sous 10 %, un par ligne","hints":["La probabilité que k messages arrivent tous vaut 0,9 élevé à la puissance k : c'est la table du programme des deux généraux.","Tu n'as pas besoin de résoudre une équation : pars de k = 1 et incrémente tant que la probabilité reste au-dessus du seuil.","Le premier des deux nombres est inférieur à 10, le second est compris entre 20 et 25."],"link":{"href":"lecon-03.html","label":"Revoir « Les deux généraux : ce qui est vraiment impossible »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un appel réseau a trois issues. Une seule d'entre elles autorise un réessai <strong>sans le moindre risque de doublon</strong>. Laquelle, et pourquoi&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">L'ÉCHEC CONNU.
+
+Les trois issues, et ce que chacune apprend au client :
+
+  succès .......... le travail a eu lieu, et on connaît le résultat
+  échec connu ..... le travail n'a PAS eu lieu  -> réessai sans risque
+  délai dépassé ... on ne sait pas             -> réessai = pari
+
+L'échec connu regroupe les erreurs qui surviennent AVANT que le
+serveur ait pu agir : connexion refusée par le port distant, nom
+de machine introuvable, réseau injoignable, certificat rejeté.
+Elles reviennent parce que quelque chose a répondu — et ce qui a
+répondu prouve que la demande n'est pas passée.
+
+Le délai dépassé, lui, n'est pas une erreur : c'est une absence.
+Dans la simulation, 326 des 534 silences recouvraient un travail
+déjà exécuté, soit 61,0 %.</code></pre></figure>
+<p>Retiens la formulation plutôt que la liste d'erreurs&nbsp;: est-ce que quelque chose <em>est revenu</em> pour me dire que la demande n'est pas passée&nbsp;? Si oui, réessaie. Si rien n'est revenu, tu paries.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Reprends la simulation des 10&nbsp;000 appels. Elle suppose que <strong>60&nbsp;%</strong> des appels muets avaient tout de même été exécutés&nbsp;: c'est une hypothèse, et une hypothèse se fait varier. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le nombre de doublons que produirait un réessai systématique avec 60&nbsp;%, puis avec <strong>80&nbsp;%</strong>. Garde la graine 2025 et le même ordre de tirages.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+// Une seule chose change : la part des appels muets qui avaient QUAND MÊME été
+// exécutés passe de 60 % à 80 %. Le tirage, lui, est identique — même graine,
+// mêmes seuils, même ordre des appels au générateur.
+function doublons(part) {
+  const alea = semer(2025);
+  let faits = 0;
+  for (let i = 0; i &lt; 10000; i++) {
+    const d = alea();
+    if (d &lt; 0.02) continue;                  // échec connu : aucun doublon possible
+    if (d &lt; 0.07 &amp;&amp; alea() &lt; part) faits++;  // muet ET déjà exécuté : un doublon de plus
+  }
+  return faits;
+}
+
+console.log(doublons(0.6));  // affiche : 326
+console.log(doublons(0.8));  // affiche : 432</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">326
+432
+</code></pre></figure>
+<p>Le premier nombre est celui de la leçon, <strong>326</strong>&nbsp;; le second monte à <strong>432</strong>, soit <strong>106</strong> doublons de plus pour le même nombre d'appels muets. Le point à retenir n'est pas l'écart&nbsp;: c'est que le client ne connaît <em>jamais</em> cette proportion. Elle dépend de l'endroit où le serveur tombe, et rien dans le silence ne la révèle. C'est bien pour cela qu'on ne peut pas «&nbsp;calculer&nbsp;» s'il faut réessayer.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sur un canal qui perd <strong>10&nbsp;%</strong> des messages, la table de la leçon montre que la probabilité que tous arrivent s'effondre quand le protocole s'allonge. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le plus petit nombre de messages pour lequel cette probabilité tombe sous <strong>50&nbsp;%</strong>, puis sous <strong>10&nbsp;%</strong>.</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// Sur un canal qui perd 10 % des messages, la probabilité que TOUS arrivent
+// est 0,9 élevé à la puissance k. On cherche le premier k passant sous un seuil.
+function premierSous(seuil) {
+  let k = 1;
+  while (Math.pow(0.9, k) &gt;= seuil) k++;
+  return k;
+}
+
+console.log(premierSous(0.5));  // affiche : 7
+console.log(premierSous(0.1));  // affiche : 22</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">7
+22
+</code></pre></figure>
+<p>Sept messages suffisent à faire passer la conversation sous une chance sur deux, et vingt-deux sous une chance sur dix. Compare avec la table de la leçon&nbsp;: <strong>90,00&nbsp;%</strong> à un message, <strong>12,16&nbsp;%</strong> à vingt. Un protocole qui multiplie les confirmations pour «&nbsp;être sûr&nbsp;» achète une certitude qu'il ne peut pas obtenir, avec une fiabilité qu'il perd réellement.</p></details></div>
+
+<script type="application/json" data-quiz-bilan="Bilan du module 1 — Pourquoi c'est difficile">
+[
+  {"q":"Dix services affichant chacun 99,9 % sont traversés par la même requête. Que vaut la disponibilité du chemin ?","a":["99,0045 % : les disponibilités se multiplient, et deux neufs remplacent les trois de départ","99,9 % : le chemin ne vaut ni plus ni moins que le service le plus faible qu'il traverse","99,99 % : dix exemplaires du même niveau de qualité renforcent le chemin plutôt qu'ils ne l'affaiblissent","Impossible à dire sans connaître le débit de la liaison qui relie ces dix services"],"correct":0,"explain":"0,999 à la puissance 10 vaut 0,990045, soit 99,0045 % — 9 955 requêtes perdues par million au lieu de 1 000. Le calcul est une multiplication, jamais une moyenne, et il ne dépend d'aucune caractéristique du réseau : seulement du nombre de maillons nécessaires."},
+  {"q":"Une équipe ajoute une seconde machine, dont la réponse est elle aussi indispensable, à un service à 99 %. Que devient la disponibilité ?","a":["Elle descend à 98,0100 % : deux éléments tous deux nécessaires font une série, pas une redondance","99,9 % : le chemin ne vaut ni plus ni moins que le service le plus faible qu'il traverse, les autres n'y ajoutant rien","99,99 % : dix exemplaires du même niveau de qualité renforcent le chemin plutôt qu'ils ne l'affaiblissent, comme dix cordes tressées","Impossible à dire sans connaître le débit de la liaison qui relie ces dix services et la charge qu'ils supportent"],"correct":0,"explain":"Ajouter une machine n'améliore la disponibilité que si UNE SEULE suffit (99,9900 %). Si les DEUX doivent répondre, on a construit une série, et 0,99 × 0,99 = 98,0100 % : le système est moins disponible qu'avec une seule machine. C'est la question à poser devant toute architecture : ce maillon supplémentaire est-il un secours ou une condition ?"},
+  {"q":"Un engagement de 99,99 % de disponibilité autorise combien de temps d'indisponibilité par an ?","a":["52,56 minutes","8,76 heures par an","5,26 minutes par an","3,65 jours par an"],"correct":0,"explain":"Une année de 365 jours compte 525 600 minutes ; 0,01 % de ce total fait 52,56 minutes. Les voisins encadrent la valeur : 99,9 % en autorise dix fois plus (8,76 heures) et 99,999 % dix fois moins (5,26 minutes). À 52 minutes par AN, la reprise ne peut plus être humaine : le temps de recevoir l'alerte et d'ouvrir une session, la moitié du budget annuel est dépensée."},
+  {"q":"Un objet qui contient une date, un ensemble (Set), un champ à undefined et une méthode part vers une autre machine en JSON. Que reçoit-elle ?","a":["Une chaîne pour la date, un objet vide pour l'ensemble, et ni le champ à undefined ni la méthode","Le même objet, à ceci près que les nombres décimaux perdent leurs dernières décimales","Le même objet, la méthode comprise, puisque JSON transporte le code des fonctions sous forme de texte","Une erreur : un objet contenant une méthode ne peut pas être converti en JSON"],"correct":0,"explain":"Mesuré dans la page : la date devient la chaîne \"2026-03-14T09:30:00.000Z\", le Set devient {}, remise et recalculer disparaissent purement et simplement. Deux champs qui pointaient le même objet en pointent deux après le voyage. Ce qui traverse n'est pas l'objet : c'est ce qu'il en reste une fois écrit en texte."},
+  {"q":"Latence et débit : lequel des deux s'achète ?","a":["Le débit. La latence, elle, se raccourcit en réduisant la distance ou le nombre d'échanges","La latence, en souscrivant une liaison de meilleure qualité auprès du fournisseur qui exploite le câble","Les deux, puisque l'un et l'autre figurent noir sur blanc au contrat d'une liaison et se paient au mois","Aucun des deux : ils dépendent uniquement de la charge du service au moment de la mesure"],"correct":0,"explain":"Doubler le débit divise par deux le temps de transfert et ne change rien au délai. Élargir le tuyau ne fait pas arriver l'eau plus tôt : entre Paris et New York, la lumière dans une fibre impose 57,14 ms d'aller-retour, et aucun contrat ne descend sous ce nombre."},
+  {"q":"Avant le premier octet utile d'une réponse HTTPS servie depuis New York, combien de temps s'est-il écoulé, et pourquoi ?","a":["171,43 ms : trois allers-retours — TCP, TLS 1.3, puis la requête — pendant lesquels rien d'utile ne circule","57,14 ms : un seul aller-retour, la connexion et la requête voyageant ensemble dans le même échange","0,008 ms : le temps de transférer une petite réponse de 1 Kio sur une liaison à 1 Gb/s, transport compris","Cela dépend uniquement de la taille de la réponse et du débit souscrit, une connexion s'ouvrant sans délai"],"correct":0,"explain":"Trois allers-retours à 57,14 ms font 171,43 ms, et 228,58 ms si le serveur est resté en TLS 1.2 — la version coûte à elle seule 25,0 % du total. Une architecture qui ouvre une connexion neuve à chaque appel repaie cette somme à chaque appel, sans que rien dans son code ne le laisse voir."},
+  {"q":"Une réponse de 1 Mio est servie depuis New York. On multiplie le débit par dix : que gagne-t-on sur le temps total ?","a":["4,2 % — l'attente d'établissement, qui domine, n'a pas bougé d'une milliseconde","90 %, le temps de transfert étant divisé par dix comme le débit a été multiplié par dix","50 %, le transfert et l'attente pesant chacun la moitié du total sur une réponse de cette taille","Rien, le débit n'entrant dans aucun calcul de temps de réponse tant qu'une connexion reste ouverte"],"correct":0,"explain":"Le transfert tombe de 8,389 ms à 0,839 ms, mais les 171,43 ms d'établissement restent : le total passe de 179,82 ms à 172,27 ms. Sur une réponse de 1 Kio, le gain tombe à 0,0 %. Le point de bascule — transfert égal à l'attente — n'arrive qu'à 20,44 Mio par réponse à 1 Gb/s."},
+  {"q":"Mille lectures faites une par une plutôt qu'en une seule requête groupée : quel est le surcoût ?","a":["Un facteur 1 000, identique dans une salle machine et d'un continent à l'autre","Un facteur qui dépend du débit de la liaison, donc bien plus élevé sur une liaison lente","Un surcoût négligeable, les mille lectures voyageant ensemble dans le même paquet","Un facteur 40, celui du nombre d'appels d'une page ordinaire"],"correct":0,"explain":"500,00 ms contre 0,50 ms dans la salle machine, 57 144,85 ms contre 57,14 ms vers New York : le rapport vaut 1 000 dans les deux cas. Le débit n'apparaît nulle part dans ce calcul — seul compte le nombre d'allers-retours. C'est pourquoi un N+1 passe inaperçu sur un poste de développement et devient intenable une fois le service déployé loin."},
+  {"q":"Un client n'a reçu aucune réponse à sa requête. Que sait-il de ce qui s'est passé côté serveur ?","a":["Rien : le silence est compatible avec six réalités, dont « le travail a eu lieu » et « il n'a pas eu lieu »","Que le travail n'a pas eu lieu, sans quoi une réponse quelconque, même tardive, serait revenue jusqu'à lui","Que le travail a eu lieu, la perte n'ayant touché que la réponse : c'est le cas de très loin le plus fréquent","Que le serveur est tombé, un serveur vivant finissant toujours par répondre quelque chose, ne serait-ce qu'une erreur"],"correct":0,"explain":"La requête n'est peut-être jamais partie ; elle s'est perdue en chemin ; le serveur est tombé avant d'agir ; il a agi puis est tombé ; il a agi, a répondu, et c'est la réponse qui s'est perdue ; il travaille encore. Le client ne peut distinguer aucune de ces six situations. C'est la panne partielle : ni réponse, ni erreur, et aucune information."},
+  {"q":"Sur 10 000 appels, la simulation compte 534 silences dont 326 avaient été exécutés côté serveur. Que coûtent les deux politiques naïves ?","a":["Réessayer sans précaution : 326 doublons, 9 780 € ; ne rien réessayer : 208 pertes, 6 240 €","Réessayer sans précaution : rien du tout, un doublon étant toujours détecté et écarté par le serveur qui reçoit","Ne rien réessayer : rien du tout, un appel resté muet n'ayant par définition jamais abouti côté serveur","Les deux coûtent exactement la même chose, puisque ce sont les mêmes 534 opérations qui sont en jeu de part et d'autre"],"correct":0,"explain":"À 30 € l'opération, les deux fautes sont réelles et le client ne sait pas laquelle il commet — c'est ce qui rend le choix impossible. La sortie n'est pas de choisir : c'est de rendre le réessai sans conséquence, en joignant une clé d'idempotence que le serveur reconnaît. La simulation le montre : trois envois de la même opération avec une clé laissent le solde à 70, contre 40 sans clé."},
+  {"q":"Mille clients réessaient au même instant après une panne. Quelle stratégie d'attente étale réellement la vague ?","a":["Le tirage au hasard : la pointe tombe de 1 000 à 147, divisée par 6,8","L'attente doublée : chaque palier repousse un peu plus les clients les uns des autres","L'attente fixe, à condition qu'elle soit assez longue pour laisser le service se remettre","Aucune : la charge totale étant la même, la pointe l'est aussi"],"correct":0,"explain":"Attente fixe et attente doublée donnent exactement la même pointe — 1 000 requêtes dans la même tranche de 100 ms — parce que des clients partis ensemble et qui doublent ensemble restent ensemble. Mesuré jusqu'à dix réessais : la pointe ne bouge pas. Seul le hasard désynchronise. Le doublement sert à autre chose : espacer les tentatives d'un même client."},
+  {"q":"Que retenir de l'ensemble de ce module sur la façon d'écrire un programme réparti ?","a":["Chaque appel ajouté sur un chemin critique est une décision de disponibilité, prise au moment où l'on écrit quoi faire en cas d'échec","Qu'il faut choisir des services très fiables : au-delà de 99,9 % par service, les problèmes de chaîne disparaissent d'eux-mêmes","Que la bonne architecture consiste à multiplier les machines, la redondance corrigeant les défauts de chaque pièce prise à part","Que ces phénomènes relèvent de l'exploitation et non du code, qui n'a donc pas à s'en préoccuper au moment où on l'écrit"],"correct":0,"explain":"Cent services excellents font un système médiocre (90,4792 %) ; une machine ajoutée peut dégrader (98,0100 %) ; un appel de plus coûte un aller-retour incompressible ; et un silence ne se lit pas. Aucun de ces faits ne se corrige après coup : ils se décident à l'écriture, en choisissant ce qui est nécessaire au chemin et ce qui ne l'est pas."}
+]
+</script>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

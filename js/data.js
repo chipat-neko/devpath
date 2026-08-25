@@ -646,6 +646,13 @@ window.SITE_DATA = (function () {
       tagline: "Ce qu'il y a vraiment sous un « réseau de neurones » : une addition, une décision, et beaucoup de répétitions. On part du neurone formel, on mesure pourquoi un seul ne suffit pas, puis on empile des couches — chaque calcul étant refait dans la page, jamais admis. Tous les exemples sont en JavaScript et s'exécutent d'un clic.",
       tags: ["IA", "Données", "Transversal"],
     },
+    {
+      id: "distribue", dir: "distribue", title: "Systèmes distribués : quand le programme n'est plus sur une seule machine",
+      glyph: "⇄", language: "Systèmes distribués", level: "avance", status: "apercu",
+      accent: "#2f4b7c", lessons: 3, hours: 4,
+      tagline: "Le site enseigne partout les conséquences — réplication, latence, cohérence — sans jamais poser les fondations. Ce cours les pose. Dès qu'un programme s'étale sur deux machines, la moitié de ce que tu sais devient faux : un appel peut ne jamais répondre sans qu'on sache s'il a été exécuté, et la lumière elle-même impose un plancher de temps. Chaque affirmation y est chiffrée par un programme qui tourne dans la page.",
+      tags: ["Transversal", "Architecture", "Distribué"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -974,6 +981,7 @@ window.SITE_DATA = (function () {
         { course: "docker", note: "Le cloud héberge souvent des conteneurs : Docker est un socle utile." },
         { course: "kubernetes", note: "Beaucoup de fournisseurs proposent un Kubernetes géré." },
         { course: "cicd", note: "On déploie vers le cloud depuis un pipeline CI/CD." },
+        { course: "distribue", note: "Les raisons derrière les objets du cloud : régions, zones et réplicas existent parce que le réseau tombe, et ce cours mesure exactement ce que ça implique." },
       ],
       modules: [
         {
@@ -1069,6 +1077,7 @@ window.SITE_DATA = (function () {
         { course: "nosql", note: "Le choix de la persistance fait partie des décisions d'architecture." },
         { course: "bdd", note: "Le schéma d'une base est une décision d'architecture à part entière : entités, normalisation, index, transactions engagent tout le système." },
         { course: "equipe", note: "Les décisions d'architecture se prennent et se documentent à plusieurs ; ce cours en traite la face humaine : tracer un choix, nommer et traiter la dette technique, se mettre d'accord." },
+        { course: "distribue", note: "Découper en services transforme des appels de fonction en appels réseau. Le prix de ce changement y est chiffré, aller-retour par aller-retour." },
       ],
       modules: [
         {
@@ -1209,6 +1218,7 @@ window.SITE_DATA = (function () {
         { course: "linux", note: "Les serveurs qu'on relie tournent le plus souvent sous Linux." },
         { course: "securite", note: "TLS, ports et pare-feu sont au cœur de la sécurité réseau." },
         { course: "cloud", note: "Le cloud, c'est aussi du réseau : régions, adresses, routage." },
+        { course: "distribue", note: "L'étage au-dessus : ce que ces paquets et ces connexions coûtent à un programme réparti sur plusieurs machines, chiffres à l'appui." },
       ],
       modules: [
         {
@@ -1306,6 +1316,7 @@ window.SITE_DATA = (function () {
         { course: "cicd", note: "Métriques et alertes complètent un pipeline de livraison continue." },
         { course: "securite", note: "Les journaux sont aussi essentiels pour détecter les incidents de sécurité." },
         { course: "data-eng", note: "Un pipeline de données se surveille comme un service : fraîcheur, volumétrie, taux d'échec, lignage. Les mêmes métriques et alertes s'y appliquent." },
+        { course: "distribue", note: "Ce qu'il y a à voir : pannes partielles, appels sans réponse, horloges qui divergent. Ce cours nomme les phénomènes que les traces révèlent." },
       ],
       modules: [
         {
@@ -1499,6 +1510,57 @@ window.SITE_DATA = (function () {
           num: "05", title: "Le projet", sub: "un réseau entraîné de bout en bout, à la main", level: "avance",
           lessons: [
             { num: "12", title: "Projet — un réseau qui apprend, du premier poids au dernier", file: "lecon-12.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+    distribue: {
+      id: "distribue", dir: "distribue", title: "Systèmes distribués : quand le programme n'est plus sur une seule machine",
+      glyph: "⇄", accent: "#2f4b7c", overview: "cours.html",
+      related: [
+        { course: "reseaux", note: "Ce que ce cours suppose connu : ce qu'est un paquet, une adresse, un port, une connexion TCP. Ici on ne redéfinit pas le réseau, on mesure ce qu'il coûte à un programme." },
+        { course: "cloud", note: "Le cours qui donne les outils — régions, zones, services managés. Celui-ci donne les raisons : pourquoi ces objets existent, et ce qu'ils ne peuvent pas garantir." },
+        { course: "observabilite", note: "On ne voit une panne partielle qu'à travers des traces et des métriques. Ce cours explique ce qu'il y a à voir, celui-là comment le regarder." },
+        { course: "nosql", note: "ACID, BASE et le théorème CAP y sont posés du point de vue des bases. Ici, ils sont repris depuis le réseau qui les rend nécessaires." },
+        { course: "archi", note: "Découper un système en services, c'est transformer des appels de fonction en appels réseau. Ce cours mesure ce que ce changement coûte." },
+        { course: "http", note: "Chaque aller-retour HTTP est un aller-retour réseau : le module 1 chiffre ce que valent une poignée de main TCP et une poignée de main TLS en millisecondes." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Pourquoi c'est difficile", sub: "les illusions du réseau, latence et débit, pannes partielles", level: "avance",
+          lessons: [
+            { num: "01", title: "Le réseau est fiable, et sept autres illusions", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Latence et débit : deux choses qu'on confond", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "La panne partielle : ni réponse, ni erreur", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "S'accorder", sub: "horloges, ordre des événements, CAP, cohérence", level: "avance",
+          lessons: [
+            { num: "04", title: "Le temps n'existe pas : horloges et dérive", file: "#", status: "bientot" },
+            { num: "05", title: "Ordonner sans horloge : causalité et compteurs", file: "#", status: "bientot" },
+            { num: "06", title: "Le théorème CAP, énoncé correctement", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "03", title: "Répliquer et partitionner", sub: "copies, partitionnement, hachage cohérent, quorum", level: "avance",
+          lessons: [
+            { num: "07", title: "Répliquer : plusieurs copies, un seul état", file: "#", status: "bientot" },
+            { num: "08", title: "Partitionner : découper les données", file: "#", status: "bientot" },
+            { num: "09", title: "Le quorum : décider à plusieurs", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "04", title: "En pratique", sub: "idempotence, reprise, files de messages", level: "avance",
+          lessons: [
+            { num: "10", title: "Idempotence : réessayer sans dégât", file: "#", status: "bientot" },
+            { num: "11", title: "Files de messages et livraison « au moins une fois »", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "05", title: "Le projet", sub: "un magasin de clés-valeurs répliqué, de bout en bout", level: "avance",
+          lessons: [
+            { num: "12", title: "Projet — un magasin répliqué qui survit à une partition", file: "#", status: "bientot" },
           ],
         },
       ],
@@ -3112,6 +3174,7 @@ window.SITE_DATA = (function () {
         { course: "api", note: "Une API sert souvent des données issues d'une base NoSQL document." },
         { course: "data-eng", note: "Files d'événements, documents JSON, stockage objet : un pipeline de données puise et déverse dans des bases non relationnelles autant que dans un entrepôt." },
         { course: "bdd", note: "Avant de choisir le NoSQL, il faut savoir concevoir en relationnel : entités, relations, normalisation. Ce cours pose ces fondations et compare les deux modèles." },
+        { course: "distribue", note: "ACID, BASE et CAP repris depuis leur cause : le réseau. Le théorème y est énoncé dans sa forme exacte, pas dans sa version simplifiée." },
       ],
       modules: [
         {
@@ -3324,6 +3387,7 @@ window.SITE_DATA = (function () {
         { course: "api", note: "Une API REST échange ces mêmes requêtes HTTP, avec un corps en JSON." },
         { course: "securite", note: "Cookies, HTTPS et CORS sont au cœur de la sécurité web." },
         { course: "html", note: "Le HTML voyage justement dans le corps des réponses HTTP." },
+        { course: "distribue", note: "Sous chaque requête HTTP, un aller-retour physique : ce cours calcule le plancher imposé par la vitesse de la lumière et ce que coûte une poignée de main." },
       ],
       modules: [
         {
@@ -5748,7 +5812,7 @@ window.SITE_DATA = (function () {
       title: "Exploitation & SRE",
       glyph: "SRE",
       tagline: "Faire tourner un service en production, de la machine aux métriques.",
-      courses: ["linux", "reseaux", "os", "docker", "cloud", "observabilite"],
+      courses: ["linux", "reseaux", "os", "distribue", "docker", "cloud", "observabilite"],
     },
     {
       id: "fondamentaux",
@@ -5929,6 +5993,7 @@ window.SITE_DATA = (function () {
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
+    "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},
     "cobol": {"lecon-01.html":44,"lecon-02.html":50,"lecon-03.html":55,"lecon-04.html":50,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":50,"lecon-09.html":45,"lecon-10.html":48,"lecon-11.html":46,"lecon-12.html":46,"lecon-13.html":44,"lecon-14.html":50},
