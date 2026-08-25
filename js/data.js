@@ -663,7 +663,7 @@ window.SITE_DATA = (function () {
     {
       id: "crypto", dir: "crypto", title: "Cryptographie appliquée : ce que chaque outil garantit, et ce qu'il ne garantit pas",
       glyph: "⊕", language: "Cryptographie", level: "avance", status: "apercu",
-      accent: "#1d7a5f", lessons: 6, hours: 4,
+      accent: "#1d7a5f", lessons: 9, hours: 5,
       tagline: "Les cours Sécurité applicative et HTTP emploient le chiffrement sans jamais l'expliquer. Ce cours ouvre la boîte : chaque primitive y est écrite en entier, exécutée dans la page, vérifiée contre les vecteurs de test de sa norme — puis cassée, parce que c'est en la cassant qu'on comprend ce qu'elle protégeait. La règle qui traverse tout : on n'écrit jamais sa propre cryptographie, on choisit le bon outil avec les bons paramètres.",
       tags: ["Transversal", "Sécurité", "Fondamentaux"],
     },
@@ -1608,9 +1608,9 @@ window.SITE_DATA = (function () {
         {
           num: "03", title: "En pratique", sub: "mots de passe, données au repos, gestion des clés", level: "avance",
           lessons: [
-            { num: "07", title: "Stocker un mot de passe", file: "#", status: "bientot" },
-            { num: "08", title: "Chiffrer des données au repos", file: "#", status: "bientot" },
-            { num: "09", title: "Gérer des clés : les créer, les ranger, les remplacer", file: "#", status: "bientot" },
+            { num: "07", title: "Stocker un mot de passe", file: "lecon-07.html", status: "complet" },
+            { num: "08", title: "Chiffrer des données au repos", file: "lecon-08.html", status: "complet" },
+            { num: "09", title: "Gérer des clés : les créer, les ranger, les remplacer", file: "lecon-09.html", status: "complet" },
           ],
         },
         {
@@ -6106,7 +6106,7 @@ window.SITE_DATA = (function () {
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
-    "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34,"lecon-04.html":34,"lecon-05.html":33,"lecon-06.html":35},
+    "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34,"lecon-04.html":34,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":35},
     "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24,"lecon-12.html":30},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},

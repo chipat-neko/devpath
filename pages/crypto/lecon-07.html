@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stocker un mot de passe — Leçon 07 · Cours Cryptographie appliquée — Syntaxe</title>
+    <meta name="description" content="Ce qu'un fichier de mots de passe hachés donne à celui qui le vole, le sel et le poivre mesurés, PBKDF2 écrit en entier et vérifié contre la RFC 7914, le facteur de coût converti en durées d'attaque, la dureté en mémoire, et l'attaque temporelle sur une comparaison naïve. Cours Cryptographie appliquée, module 3." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="crypto" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cryptographie appliquée</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · En pratique</p>
+              <h1 class="lesson-header__title">Stocker un mot de passe</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~34 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 1 à 6 de ce cours</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Mesurer ce que vaut un fichier de mots de passe hachés sans autre précaution</li>
+                  <li>Distinguer le sel du poivre, et dire exactement ce que chacun apporte</li>
+                  <li>Écrire PBKDF2, le vérifier contre le vecteur de sa norme, et compter son travail</li>
+                  <li>Convertir un facteur de coût en durée d’attaque à partir d’un banc d’essai public</li>
+                  <li>Expliquer ce que « dur en mémoire » ajoute à « lent », et pourquoi cela vise le matériel</li>
+                  <li>Reconnaître une comparaison qui fuit, et la corriger</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Les six leçons précédentes ont ouvert des fonctions. Celle-ci en ferme une&nbsp;: à partir d'ici, le cours ne demande plus «&nbsp;comment ça marche&nbsp;?&nbsp;» mais «&nbsp;qu'est-ce que j'écris, moi, dans mon service&nbsp;?&nbsp;». Et la première réponse du module tient en une phrase qu'il faut prendre au sérieux&nbsp;: <strong>on n'écrit pas sa propre cryptographie</strong>. Tous les programmes de cette leçon existent pour montrer <em>pourquoi</em> un réglage est ce qu'il est — pas pour être recopiés dans un service.</p>
+<p>Le stockage des mots de passe est le meilleur endroit pour commencer, parce que c'est le seul cas où l'on sait, dès la conception, que <strong>le fichier finira volé</strong>. Toute la question est de savoir ce qu'il vaudra ce jour-là.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord ce qu'un fichier de mots de passe correctement hachés — au sens de la leçon&nbsp;1 — donne à celui qui le vole, en menant l'attaque. Ensuite les deux corrections, dans l'ordre où elles ont été inventées&nbsp;: le <strong>sel</strong>, qui supprime la mutualisation, puis le <strong>facteur de coût</strong>, qui rend chaque essai cher. On écrit PBKDF2 en entier, on le vérifie contre le vecteur de sa norme, et on convertit son réglage en durées d'attaque à partir d'un banc d'essai public. Puis pourquoi «&nbsp;lent&nbsp;» ne suffit plus, et ce que «&nbsp;dur en mémoire&nbsp;» ajoute vraiment. Enfin la dernière ligne de la vérification, celle qui rend un secret de 128&nbsp;bits lisible en cent mille requêtes.</p></div></div>
+
+<h2>Ce que vaut un fichier volé</h2>
+<p>Le point de départ est un service qui fait déjà tout bien au sens de la leçon&nbsp;1&nbsp;: il ne stocke aucun mot de passe en clair, il stocke des empreintes SHA-256. Un fichier fuite. Que vaut-il&nbsp;?</p>
+<p>Le programme construit une population de 600&nbsp;comptes dont les mots de passe suivent une distribution réaliste — une majorité tirée d'une tête de liste très courte, une part construite sur le modèle «&nbsp;un prénom ou un lieu, suivi de deux à quatre chiffres&nbsp;», et une minorité de vraies chaînes aléatoires. Puis il joue l'attaque.</p>
+<figure class="code-block" data-file="hachage-nu.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// Un fichier de comptes volé, et ce qu'un attaquant en tire quand les mots de passe
+// ont été hachés « comme il faut » : SHA-256, sans rien d'autre.
+
+// -- Une population de comptes réaliste, tirée de façon reproductible --------------
+let _g = 20260825 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+
+const COURANTS = ['123456','password','azerty','123456789','qwerty','motdepasse','soleil','loulou',
+  'admin','111111','marseille','iloveyou','000000','chouchou','bonjour','doudou','jetaime','coucou',
+  'nicolas','sophie','abc123','1234567890','dragon','football','monkey','letmein','princesse',
+  'liverpool','superman','trustno1'];
+const RACINES = ['julie','thomas','maxime','camille','antoine','manon','lucas','emma','hugo','clara',
+  'paris','lyon','nantes','toulouse','rennes','bordeaux','chat','chien','lapin','tigre','soleil',
+  'etoile','banane','fraise','chocolat','vacances','montagne','bretagne','normandie','provence'];
+const ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+
+function motDePasseDUnHumain(){
+  const d = alea();
+  // 60 % : un mot de passe de la tête de liste. Tirage biaisé vers le début (loi de Zipf).
+  if (d &lt; 0.60) return COURANTS[Math.floor(Math.pow(alea(), 2.2) * COURANTS.length)];
+  // 30 % : une racine + deux à quatre chiffres, la construction la plus répandue.
+  if (d &lt; 0.90) {
+    const r = RACINES[Math.floor(alea() * RACINES.length)];
+    const n = [2, 3, 4][Math.floor(alea() * 3)];
+    let s = ''; for (let i = 0; i &lt; n; i++) s += Math.floor(alea() * 10);
+    return r + s;
+  }
+  // 10 % : seize caractères tirés au sort, tels qu'un gestionnaire de mots de passe en produit.
+  let s = ''; for (let i = 0; i &lt; 16; i++) s += ALPHABET[Math.floor(alea() * ALPHABET.length)];
+  return s;
+}
+
+const COMPTES = [];
+for (let i = 0; i &lt; 600; i++) COMPTES.push({ id: 'u' + (1000 + i), mdp: motDePasseDUnHumain() });
+
+// -- Le fichier tel qu'il est volé : un identifiant, une empreinte. ----------------
+let hachagesFaits = 0;
+const H = s =&gt; { hachagesFaits++; return hex(sha256o(bof(s))); };
+const fr = x =&gt; String(x).replace('.', ',');          // les nombres s'écrivent avec une virgule
+const mil = n =&gt; String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');   // 30030 -&gt; 30 030
+const FICHIER = COMPTES.map(c =&gt; ({ id: c.id, empreinte: H(c.mdp) }));
+console.log('Fichier volé : ' + FICHIER.length + ' comptes.');
+console.log('  ' + FICHIER[0].id + '  ' + FICHIER[0].empreinte);
+console.log('  ' + FICHIER[1].id + '  ' + FICHIER[1].empreinte);
+console.log('');
+
+// -- Première lecture, sans hacher quoi que ce soit : les empreintes se répètent. --
+const parEmpreinte = new Map();
+for (const l of FICHIER) parEmpreinte.set(l.empreinte, (parEmpreinte.get(l.empreinte) || 0) + 1);
+const groupes = [...parEmpreinte.values()].filter(n =&gt; n &gt; 1);
+console.log('Sans hacher un seul candidat, la seule structure du fichier dit déjà :');
+console.log('  empreintes distinctes ......... ' + parEmpreinte.size + ' pour ' + FICHIER.length + ' comptes');
+console.log('  comptes qui en partagent une .. ' + groupes.reduce((a, b) =&gt; a + b, 0));
+console.log('  plus gros groupe .............. ' + Math.max(...groupes) + ' comptes, donc le même mot de passe');
+console.log('');
+
+// -- L'attaque : un dictionnaire, haché une seule fois. ----------------------------
+hachagesFaits = 0;
+const table = new Map();                      // empreinte -&gt; candidat
+for (const c of COURANTS) table.set(H(c), c);
+for (const r of RACINES) for (let n = 0; n &lt; 1000; n++) table.set(H(r + n), r + n);
+const coutTable = hachagesFaits;
+
+let casses = 0;
+for (const l of FICHIER) if (table.has(l.empreinte)) casses++;   // aucune empreinte de plus
+
+console.log('Attaque par dictionnaire :');
+console.log('  candidats hachés .............. ' + mil(coutTable));
+console.log('  comptes ouverts ............... ' + casses + ' sur ' + FICHIER.length
+  + '  (' + fr((100 * casses / FICHIER.length).toFixed(1)) + ' %)');
+console.log('  hachages par compte ouvert .... ' + fr((coutTable / casses).toFixed(1)));
+console.log('');
+console.log('Le point à retenir n\'est pas le pourcentage, c\'est le COÛT : ' + coutTable + ' hachages');
+console.log('ont ouvert ' + casses + ' comptes. La table ne dépend pas du fichier ; la même sert');
+console.log('pour le prochain vol. Multiplier le nombre de comptes ne coûte rien à l\'attaquant.');</code></pre></figure>
+<figure class="code-block" data-file="hachage-nu.txt"><pre><code class="language-plaintext">Fichier volé : 600 comptes.
+  u1000  110812f67fa1e1f0117f6f3d70241c1a42a7b07711a93c2477cc516d9042f9db
+  u1001  6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090
+
+Sans hacher un seul candidat, la seule structure du fichier dit déjà :
+  empreintes distinctes ......... 248 pour 600 comptes
+  comptes qui en partagent une .. 383
+  plus gros groupe .............. 93 comptes, donc le même mot de passe
+
+Attaque par dictionnaire :
+  candidats hachés .............. 30 030
+  comptes ouverts ............... 482 sur 600  (80,3 %)
+  hachages par compte ouvert .... 62,3
+
+Le point à retenir n'est pas le pourcentage, c'est le COÛT : 30030 hachages
+ont ouvert 482 comptes. La table ne dépend pas du fichier ; la même sert
+pour le prochain vol. Multiplier le nombre de comptes ne coûte rien à l'attaquant.</code></pre></figure>
+<p>Deux enseignements, et le second est le plus important.</p>
+<p>Le premier est visible <em>avant même de hacher quoi que ce soit</em>&nbsp;: 600&nbsp;comptes ne donnent que <strong>248&nbsp;empreintes distinctes</strong>. Une fonction de hachage est déterministe — c'est sa raison d'être —, donc deux personnes qui ont choisi le même mot de passe ont la même ligne dans le fichier. <strong>383&nbsp;comptes</strong> appartiennent à un groupe, et le plus gros en compte <strong>93</strong>. L'attaquant sait donc quels comptes attaquer en priorité, et un seul mot de passe retrouvé en ouvre quatre-vingt-treize.</p>
+<p>Le second tient au coût. <strong>30&nbsp;030&nbsp;hachages</strong> — moins d'un millième de seconde sur une carte graphique — ont ouvert <strong>482&nbsp;comptes sur 600</strong>, soit 80,3&nbsp;%. Et ce nombre ne dépend pas du fichier&nbsp;: la table produite sert telle quelle pour le vol suivant. Un service qui compte cent millions de comptes ne coûte pas plus cher à attaquer qu'un service qui en compte six cents. C'est cette mutualisation qui fait toute la valeur du fichier volé.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le pourcentage n'est pas la mesure intéressante</p><p>80,3&nbsp;% dépend entièrement de la population choisie&nbsp;: c'est une distribution simulée, pas une statistique du monde réel. Ce qui, lui, ne dépend d'aucune hypothèse, c'est le <strong>coût par compte ouvert</strong>&nbsp;: 62,3&nbsp;hachages. Sur un matériel qui en fait 22&nbsp;milliards par seconde, la question du «&nbsp;combien de temps&nbsp;» ne se pose pas.</p></div></div>
+
+<h2>Le sel&nbsp;: supprimer la mutualisation</h2>
+<p>La première correction ne rend aucun mot de passe plus solide. Elle interdit à l'attaquant de payer une fois pour tout le monde. On ajoute à chaque compte une valeur tirée au sort, différente pour chacun, et l'on hache le sel <em>et</em> le mot de passe.</p>
+<p>Une confusion à lever tout de suite&nbsp;: <strong>le sel n'est pas un secret</strong>. Il est stocké en clair, dans la même table, souvent dans la même colonne que l'empreinte. Il fuite avec elle, et c'est prévu. Son rôle n'est pas de cacher, c'est d'être différent.</p>
+<figure class="code-block" data-file="sel.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// --- La même population qu'au programme précédent, repliée ------------------------
+let _g = 20260825 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+
+const COURANTS = ['123456','password','azerty','123456789','qwerty','motdepasse','soleil','loulou',
+  'admin','111111','marseille','iloveyou','000000','chouchou','bonjour','doudou','jetaime','coucou',
+  'nicolas','sophie','abc123','1234567890','dragon','football','monkey','letmein','princesse',
+  'liverpool','superman','trustno1'];
+const RACINES = ['julie','thomas','maxime','camille','antoine','manon','lucas','emma','hugo','clara',
+  'paris','lyon','nantes','toulouse','rennes','bordeaux','chat','chien','lapin','tigre','soleil',
+  'etoile','banane','fraise','chocolat','vacances','montagne','bretagne','normandie','provence'];
+const ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+
+function motDePasseDUnHumain(){
+  const d = alea();
+  // 60 % : un mot de passe de la tête de liste. Tirage biaisé vers le début (loi de Zipf).
+  if (d &lt; 0.60) return COURANTS[Math.floor(Math.pow(alea(), 2.2) * COURANTS.length)];
+  // 30 % : une racine + deux à quatre chiffres, la construction la plus répandue.
+  if (d &lt; 0.90) {
+    const r = RACINES[Math.floor(alea() * RACINES.length)];
+    const n = [2, 3, 4][Math.floor(alea() * 3)];
+    let s = ''; for (let i = 0; i &lt; n; i++) s += Math.floor(alea() * 10);
+    return r + s;
+  }
+  // 10 % : seize caractères tirés au sort, tels qu'un gestionnaire de mots de passe en produit.
+  let s = ''; for (let i = 0; i &lt; 16; i++) s += ALPHABET[Math.floor(alea() * ALPHABET.length)];
+  return s;
+}
+// -----------------------------------------------------------------------------------
+
+const COMPTES = [];
+for (let i = 0; i &lt; 600; i++) COMPTES.push({ id: 'u' + (1000 + i), mdp: motDePasseDUnHumain() });
+
+let hachagesFaits = 0;
+const H = s =&gt; { hachagesFaits++; return hex(sha256o(bof(s))); };
+const fr = x =&gt; String(x).replace('.', ',');
+const mil = n =&gt; String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');   // 18018000 -&gt; 18 018 000
+
+// -- Un sel par compte : seize octets tirés au sort, stockés EN CLAIR à côté. -------
+// Le sel n'est pas un secret. Son seul rôle est d'être DIFFÉRENT pour chaque compte.
+const selAleatoire = () =&gt; { let s = ''; for (let i = 0; i &lt; 16; i++) s += Math.floor(alea() * 256).toString(16).padStart(2, '0'); return s; };
+const FICHIER = COMPTES.map(c =&gt; { const sel = selAleatoire(); return { id: c.id, sel, empreinte: H(sel + c.mdp) }; });
+hachagesFaits = 0;
+
+console.log('Le fichier volé porte maintenant trois colonnes :');
+console.log('  ' + FICHIER[0].id + '  ' + FICHIER[0].sel + '  ' + FICHIER[0].empreinte.slice(0, 24) + '…');
+console.log('  ' + FICHIER[1].id + '  ' + FICHIER[1].sel + '  ' + FICHIER[1].empreinte.slice(0, 24) + '…');
+console.log('');
+
+// -- Ce que la structure du fichier ne dit plus. -----------------------------------
+const distinctes = new Set(FICHIER.map(l =&gt; l.empreinte)).size;
+console.log('Empreintes distinctes : ' + distinctes + ' pour ' + FICHIER.length + ' comptes.');
+const memeMdp = COMPTES.filter(c =&gt; c.mdp === COMPTES[0].mdp).length;
+console.log('Pourtant ' + memeMdp + ' comptes ont exactement le mot de passe de ' + COMPTES[0].id + '.');
+console.log('Les groupes ont disparu de la vue sans que rien n\'ait changé côté humains.');
+console.log('');
+
+// -- La table pré-calculée du programme précédent, resservie telle quelle. ----------
+const table = new Map();
+for (const c of COURANTS) table.set(H(c), c);
+for (const r of RACINES) for (let n = 0; n &lt; 1000; n++) table.set(H(r + n), r + n);
+const coutTable = hachagesFaits;
+let trouves = 0;
+for (const l of FICHIER) if (table.has(l.empreinte)) trouves++;
+console.log('La table de ' + mil(coutTable) + ' entrées, rejouée sur ce fichier : ' + trouves + ' compte ouvert.');
+console.log('Elle n\'est pas « moins bonne » : elle ne répond plus à la question posée.');
+console.log('');
+
+// -- Il faut donc la refaire, pour chaque compte. ----------------------------------
+// On mène l'attaque en entier sur les 20 premiers comptes, et on compte les hachages.
+const ECHANTILLON = 20;
+hachagesFaits = 0;
+let ouverts = 0;
+for (let i = 0; i &lt; ECHANTILLON; i++) {
+  const l = FICHIER[i];
+  let trouve = null;
+  for (const c of COURANTS) { if (H(l.sel + c) === l.empreinte) { trouve = c; break; } }
+  if (!trouve) {
+    boucle: for (const r of RACINES) for (let n = 0; n &lt; 1000; n++) {
+      if (H(l.sel + r + n) === l.empreinte) { trouve = r + n; break boucle; }
+    }
+  }
+  if (trouve) ouverts++;
+}
+const coutEchantillon = hachagesFaits;
+console.log('Attaque refaite compte par compte, sur ' + ECHANTILLON + ' comptes :');
+console.log('  hachages réellement comptés ... ' + mil(coutEchantillon));
+console.log('  comptes ouverts ............... ' + ouverts + ' sur ' + ECHANTILLON);
+console.log('  hachages par compte ........... ' + mil(Math.round(coutEchantillon / ECHANTILLON))
+  + '  (moins que ' + mil(coutTable) + ' : la recherche s\'arrête dès qu\'elle trouve)');
+console.log('');
+const pire = coutTable * FICHIER.length;
+console.log('Pour les ' + FICHIER.length + ' comptes, au pire : ' + mil(coutTable) + ' × ' + FICHIER.length
+  + ' = ' + pire.toLocaleString('fr-FR').replace(/ | /g, ' ') + ' hachages,');
+console.log('contre ' + mil(coutTable) + ' sans sel. Le sel ne rend aucun mot de passe plus solide :');
+console.log('il supprime la MUTUALISATION. Chaque compte se paie séparément.');
+console.log('');
+
+// -- Le poivre : une valeur secrète, la même pour tous, rangée AILLEURS. ------------
+// Si seule la base fuit, l'attaquant n'a pas ce qu'il faut pour tester un candidat.
+const POIVRE = 'cle-de-service-rangee-hors-de-la-base-de-donnees';
+const FICHIER2 = COMPTES.map((c, i) =&gt; ({ id: c.id, sel: FICHIER[i].sel, empreinte: H(POIVRE + FICHIER[i].sel + c.mdp) }));
+let ouverts2 = 0;
+for (let i = 0; i &lt; ECHANTILLON; i++) {
+  const l = FICHIER2[i];
+  for (const c of COURANTS) if (H(l.sel + c) === l.empreinte) { ouverts2++; break; }
+}
+// Contre-épreuve indispensable : le même attaquant, mais qui A le poivre.
+// Sans elle, « 0 sur 20 » ne prouverait rien — un test qui échoue toujours n'est pas une mesure.
+let ouverts3 = 0;
+for (let i = 0; i &lt; ECHANTILLON; i++) {
+  const l = FICHIER2[i];
+  let ok = false;
+  for (const c of COURANTS) if (H(POIVRE + l.sel + c) === l.empreinte) { ok = true; break; }
+  if (!ok) { boucle2: for (const r of RACINES) for (let n = 0; n &lt; 1000; n++)
+    if (H(POIVRE + l.sel + r + n) === l.empreinte) { ok = true; break boucle2; } }
+  if (ok) ouverts3++;
+}
+console.log('Mêmes comptes, mais un poivre secret ajouté avant le hachage :');
+console.log('  attaquant réduit à la base seule ...... ' + ouverts2 + ' sur ' + ECHANTILLON);
+console.log('  le même, avec le poivre ............... ' + ouverts3 + ' sur ' + ECHANTILLON
+  + '  (les mots de passe sont les mêmes)');
+console.log('Le poivre ne remplace ni le sel ni le facteur de coût : il ajoute une condition,');
+console.log('celle que l\'attaquant obtienne AUSSI le secret du service. Une fuite de sauvegarde');
+console.log('de base la remplit rarement ; un serveur compromis en entier, toujours.');</code></pre></figure>
+<figure class="code-block" data-file="sel.txt"><pre><code class="language-plaintext">Le fichier volé porte maintenant trois colonnes :
+  u1000  e3e0aa0c7f4665476f91be0c4cc45528  cf8937c8473a53e545ed9df1…
+  u1001  f76b90d3b736f894967be9f7280b5292  fa3e629543c08e5d7124d9bf…
+
+Empreintes distinctes : 600 pour 600 comptes.
+Pourtant 6 comptes ont exactement le mot de passe de u1000.
+Les groupes ont disparu de la vue sans que rien n'ait changé côté humains.
+
+La table de 30 030 entrées, rejouée sur ce fichier : 0 compte ouvert.
+Elle n'est pas « moins bonne » : elle ne répond plus à la question posée.
+
+Attaque refaite compte par compte, sur 20 comptes :
+  hachages réellement comptés ... 133 905
+  comptes ouverts ............... 17 sur 20
+  hachages par compte ........... 6 695  (moins que 30 030 : la recherche s'arrête dès qu'elle trouve)
+
+Pour les 600 comptes, au pire : 30 030 × 600 = 18 018 000 hachages,
+contre 30 030 sans sel. Le sel ne rend aucun mot de passe plus solide :
+il supprime la MUTUALISATION. Chaque compte se paie séparément.
+
+Mêmes comptes, mais un poivre secret ajouté avant le hachage :
+  attaquant réduit à la base seule ...... 0 sur 20
+  le même, avec le poivre ............... 17 sur 20  (les mots de passe sont les mêmes)
+Le poivre ne remplace ni le sel ni le facteur de coût : il ajoute une condition,
+celle que l'attaquant obtienne AUSSI le secret du service. Une fuite de sauvegarde
+de base la remplit rarement ; un serveur compromis en entier, toujours.</code></pre></figure>
+<p>Trois choses ont changé, mesurées&nbsp;: les <strong>600&nbsp;comptes ont 600&nbsp;empreintes distinctes</strong> alors que six d'entre eux ont toujours le même mot de passe&nbsp;; la table pré-calculée de 30&nbsp;030&nbsp;entrées n'ouvre plus <strong>aucun compte</strong>&nbsp;; et refaire l'attaque coûte désormais <strong>30&nbsp;030&nbsp;×&nbsp;600 = 18&nbsp;018&nbsp;000&nbsp;hachages</strong> au lieu de 30&nbsp;030.</p>
+<p>Le facteur est exactement le nombre de comptes. C'est peu, et c'est énorme&nbsp;: peu, parce qu'un facteur 600 se rattrape en achetant six cents fois plus de matériel&nbsp;; énorme, parce que ce facteur croît avec la taille du service, et que c'est le seul mécanisme du métier dont le coût pour l'attaquant augmente quand la cible grossit.</p>
+<p>La dernière partie du programme montre le <strong>poivre</strong>, souvent confondu avec le sel&nbsp;: une valeur secrète, la même pour tous les comptes, rangée <em>ailleurs</em> que dans la base — dans la configuration du service, ou mieux, dans un module matériel. L'attaquant qui n'a que la base ouvre <strong>0 compte sur 20</strong>. Le même, muni du poivre, en ouvre <strong>17 sur 20</strong>&nbsp;: c'est la contre-épreuve, et elle est indispensable. Sans elle, «&nbsp;0 sur 20&nbsp;» ne prouverait rien — un test qui échoue toujours n'est pas une mesure.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que le poivre ne fait pas</p><p>Il ne remplace ni le sel ni le facteur de coût, et il ne protège que d'un seul scénario&nbsp;: la fuite de la base <em>seule</em> — sauvegarde égarée, injection SQL, réplica mal fermé. Un serveur compromis en entier livre le poivre avec le reste. L'OWASP le classe pour ce qu'il est&nbsp;: une défense en profondeur, qui n'apporte «&nbsp;aucune propriété de sécurité à elle seule&nbsp;». Son vrai coût est ailleurs&nbsp;: le jour où il faut le changer, aucune empreinte existante ne peut être recalculée, puisque personne ne connaît les mots de passe.</p></div></div>
+
+<h2>Rendre un essai cher&nbsp;: PBKDF2</h2>
+<p>Le sel a supprimé la mutualisation&nbsp;; il n'a pas rendu un essai plus cher. Sur une carte graphique, 18&nbsp;millions de hachages tiennent toujours dans un millième de seconde. La seconde correction s'attaque à ce point-là, et elle est d'une simplicité désarmante&nbsp;: on répète.</p>
+<p><strong>PBKDF2</strong> — <em>Password-Based Key Derivation Function 2</em>, normalisée par la RFC&nbsp;8018 — enchaîne un grand nombre de HMAC, chacun prenant le résultat du précédent, et combine tous les résultats intermédiaires par XOR. La voici écrite en entier, vérifiée contre le vecteur de test publié dans la RFC&nbsp;7914.</p>
+<figure class="code-block" data-file="pbkdf2.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// PBKDF2 : rendre UN essai coûteux, en répétant HMAC un grand nombre de fois.
+// Norme : RFC 8018 (PKCS #5 v2.1). Vecteurs de test employés ici : RFC 7914, §11.
+
+// On compte les blocs de 64 octets réellement passés dans la fonction de compression
+// de SHA-256 : c'est l'unité de travail que l'attaquant paiera, lui aussi.
+let compressions = 0;
+const SHA = o =&gt; { compressions += Math.ceil((o.length + 9) / 64); return sha256o(o); };
+function HMAC(cle, msg){
+  let k = cle.length &gt; 64 ? SHA(cle) : cle.slice();
+  while (k.length &lt; 64) k.push(0);
+  return SHA([...k.map(b =&gt; b ^ 0x5c), ...SHA([...k.map(b =&gt; b ^ 0x36), ...msg])]);
+}
+
+function pbkdf2(mdp, sel, iterations, longueur){
+  const dk = [];
+  for (let bloc = 1; dk.length &lt; longueur; bloc++){
+    // U1 = HMAC(mot de passe, sel ‖ numéro du bloc sur 4 octets, gros-boutiste)
+    let u = HMAC(mdp, [...sel, (bloc &gt;&gt;&gt; 24) &amp; 255, (bloc &gt;&gt;&gt; 16) &amp; 255, (bloc &gt;&gt;&gt; 8) &amp; 255, bloc &amp; 255]);
+    const t = u.slice();
+    // Ui = HMAC(mot de passe, Ui-1), et T = U1 XOR U2 XOR … XOR Uc
+    for (let i = 1; i &lt; iterations; i++){
+      u = HMAC(mdp, u);
+      for (let j = 0; j &lt; 32; j++) t[j] ^= u[j];
+    }
+    dk.push(...t);
+  }
+  return dk.slice(0, longueur);
+}
+
+// --- Conformité : le premier vecteur de la RFC 7914, §11 --------------------------
+const attendu = '55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc'
+              + '49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783';
+const obtenu = hex(pbkdf2(bof('passwd'), bof('salt'), 1, 64));
+console.log('Vecteur RFC 7914 §11 — P="passwd", S="salt", c=1, dkLen=64');
+console.log('  attendu : ' + attendu.slice(0, 32) + '…');
+console.log('  obtenu  : ' + obtenu.slice(0, 32) + '…');
+console.log('  ' + (obtenu === attendu ? 'IDENTIQUE' : 'DIFFÉRENT'));
+console.log('');
+
+// --- Ce que coûte un essai, selon le nombre d'itérations --------------------------
+const mil = n =&gt; String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const fr = x =&gt; String(x).replace('.', ',');
+console.log('Travail pour UN essai de mot de passe (dérivation de 32 octets) :');
+console.log('  itérations |   blocs de 64 octets comprimés');
+let base = 0;
+for (const it of [1, 1000, 10000, 100000]) {
+  compressions = 0;
+  pbkdf2(bof('correct-cheval-batterie-agrafe'), bof('0123456789abcdef'), it, 32);
+  if (it === 1) base = compressions;
+  console.log('  ' + String(mil(it)).padStart(10) + ' |   ' + mil(compressions).padStart(12)
+    + '   (× ' + mil(Math.round(compressions / base)) + ' par rapport à 1 itération)');
+}
+console.log('');
+
+// La relation est linéaire et exacte : 4 compressions par itération, plus l'amorce.
+const c100k = (() =&gt; { compressions = 0; pbkdf2(bof('a'), bof('b'), 100000, 32); return compressions; })();
+const parIteration = (c100k - base) / (100000 - 1);
+console.log('Coût marginal mesuré : ' + fr(parIteration.toFixed(2)) + ' compressions par itération.');
+console.log('Un HMAC coûte deux hachages ; chacun tient sur deux blocs de 64 octets, clé comprise.');
+console.log('');
+const recommande = 600000;
+const cRecommande = Math.round(base + parIteration * (recommande - 1));
+console.log('Extrapolation exacte pour le réglage recommandé par l\'OWASP (' + mil(recommande) + ' itérations) :');
+console.log('  ' + mil(cRecommande) + ' compressions par essai,');
+console.log('  contre ' + mil(1) + ' pour un SHA-256 sur un mot de passe court : un rapport de '
+  + mil(cRecommande) + '.');
+console.log('');
+console.log('C\'est TOUT ce que fait PBKDF2 : le même HMAC, répété. Il n\'ajoute aucune');
+console.log('difficulté mathématique — il achète du temps, et il l\'achète au même prix');
+console.log('pour le serveur que pour l\'attaquant. D\'où la seule question qui vaille :');
+console.log('combien de temps le serveur peut-il se permettre de payer, à chaque connexion ?');</code></pre></figure>
+<figure class="code-block" data-file="pbkdf2.txt"><pre><code class="language-plaintext">Vecteur RFC 7914 §11 — P="passwd", S="salt", c=1, dkLen=64
+  attendu : 55ac046e56e3089fec1691c22544b605…
+  obtenu  : 55ac046e56e3089fec1691c22544b605…
+  IDENTIQUE
+
+Travail pour UN essai de mot de passe (dérivation de 32 octets) :
+  itérations |   blocs de 64 octets comprimés
+           1 |              4   (× 1 par rapport à 1 itération)
+       1 000 |          4 000   (× 1 000 par rapport à 1 itération)
+      10 000 |         40 000   (× 10 000 par rapport à 1 itération)
+     100 000 |        400 000   (× 100 000 par rapport à 1 itération)
+
+Coût marginal mesuré : 4,00 compressions par itération.
+Un HMAC coûte deux hachages ; chacun tient sur deux blocs de 64 octets, clé comprise.
+
+Extrapolation exacte pour le réglage recommandé par l'OWASP (600 000 itérations) :
+  2 400 000 compressions par essai,
+  contre 1 pour un SHA-256 sur un mot de passe court : un rapport de 2 400 000.
+
+C'est TOUT ce que fait PBKDF2 : le même HMAC, répété. Il n'ajoute aucune
+difficulté mathématique — il achète du temps, et il l'achète au même prix
+pour le serveur que pour l'attaquant. D'où la seule question qui vaille :
+combien de temps le serveur peut-il se permettre de payer, à chaque connexion ?</code></pre></figure>
+<p>Le vecteur passe&nbsp;: l'implémentation est conforme. Le reste du programme mesure la seule chose qui compte, le <strong>travail</strong>&nbsp;: <strong>4,00&nbsp;compressions de SHA-256 par itération</strong>, exactement, et donc <strong>2&nbsp;400&nbsp;000&nbsp;compressions</strong> pour le réglage recommandé de 600&nbsp;000&nbsp;itérations, contre <strong>1</strong> pour un SHA-256 posé sur un mot de passe court.</p>
+<p>Quatre compressions par itération, et non deux&nbsp;: un HMAC coûte deux hachages — l'intérieur et l'extérieur —, et chacun porte sur 64&nbsp;octets de clé préparée suivis de 32&nbsp;octets de données, soit deux blocs de 64&nbsp;octets une fois le bourrage de longueur ajouté. Le détail a son importance pratique&nbsp;: c'est lui qui explique que le coût de PBKDF2 soit rigoureusement proportionnel au nombre d'itérations, donc parfaitement extrapolable.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le facteur de coût se paie des deux côtés</p><p>PBKDF2 n'ajoute aucune difficulté mathématique&nbsp;: c'est le même HMAC, répété. Il achète du temps, et il l'achète <strong>au même prix pour le serveur que pour l'attaquant</strong>. D'où la seule question de réglage qui vaille&nbsp;: combien de millisecondes le serveur peut-il dépenser à chaque connexion&nbsp;? Un réglage trop ambitieux ne rend pas le service plus sûr, il le rend indisponible — un formulaire de connexion qui coûte une seconde de calcul par requête est une cible de déni de service à lui tout seul.</p></div></div>
+
+<h2>Ce que le réglage achète, en temps</h2>
+<p>Les compressions ne parlent à personne. Le programme suivant les convertit en durées, à partir d'un banc d'essai <em>public et daté</em>&nbsp;: hashcat&nbsp;6.2.6 sur une seule carte NVIDIA RTX&nbsp;4090, mesuré le 14&nbsp;octobre 2022. Les quatre débits sont repris tels quels&nbsp;; tout le reste du programme est de l'arithmétique sur ces quatre nombres.</p>
+<figure class="code-block" data-file="facteur-cout.js"><pre><code class="language-javascript">// Ce que le facteur de coût achète, converti en temps d'attaque.
+// Les débits ci-dessous ne sont PAS mesurés ici : ils viennent d'un banc d'essai public
+// et daté — hashcat 6.2.6 sur une seule carte NVIDIA RTX 4090, 14 octobre 2022.
+// Tout le reste de ce programme est de l'arithmétique sur ces quatre nombres.
+
+const BANC = [
+  { nom: 'SHA-256 nu',         court: 'SHA-256', reglageMesure: 1,     debit: 21975.5e6, unite: 'mode 1400' },
+  { nom: 'PBKDF2-HMAC-SHA256', court: 'PBKDF2',  reglageMesure: 999,   debit: 8865.7e3,  unite: 'mode 10900' },
+  { nom: 'bcrypt',             court: 'bcrypt',  reglageMesure: 32,    debit: 184.0e3,   unite: 'mode 3200, coût 5' },
+  { nom: 'scrypt',             court: 'scrypt',  reglageMesure: 16384, debit: 7126,      unite: 'mode 8900, N=2^14' },
+];
+// Le réglage recommandé aujourd'hui par l'OWASP, exprimé dans la même unité que le banc.
+const CIBLE = { 'SHA-256 nu': 1, 'PBKDF2-HMAC-SHA256': 600000, 'bcrypt': 4096, 'scrypt': 131072 };
+const LIBELLE = { 'SHA-256 nu': 'aucun réglage', 'PBKDF2-HMAC-SHA256': '600 000 itérations',
+                  'bcrypt': 'coût 12', 'scrypt': 'N=2^17' };
+
+const mil = n =&gt; String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const fr = x =&gt; String(x).replace('.', ',');
+function duree(secondes){
+  if (secondes &lt; 0.001) return "moins de 1 ms";
+  if (secondes &lt; 1) return fr((secondes * 1000).toFixed(1)) + ' ms';
+  if (secondes &lt; 90) return fr(secondes.toFixed(1)) + ' s';
+  if (secondes &lt; 5400) return fr((secondes / 60).toFixed(1)) + ' min';
+  if (secondes &lt; 172800) return fr((secondes / 3600).toFixed(1)) + ' h';
+  if (secondes &lt; 63072000) return fr((secondes / 86400).toFixed(1)) + ' jours';
+  const ans = secondes / 31557600;
+  return ans &gt; 1e6 ? fr(ans.toExponential(2)) + ' ans' : mil(ans) + ' ans';
+}
+
+const ESPACES = [
+  { nom: 'le dictionnaire du premier programme', taille: 30030 },
+  { nom: '8 caractères, minuscules et chiffres', taille: Math.pow(36, 8) },
+  { nom: 'quatre mots tirés d\'une liste de 7 776', taille: Math.pow(7776, 4) },
+];
+
+console.log('Débit d\'attaque, une seule carte graphique, réglage recommandé :');
+console.log('');
+const debits = {};
+for (const b of BANC) {
+  const facteur = CIBLE[b.nom] / b.reglageMesure;          // le coût est linéaire en itérations
+  const d = b.debit / facteur;
+  debits[b.nom] = d;
+  console.log('  ' + b.nom.padEnd(20) + ' ' + LIBELLE[b.nom].padEnd(20)
+    + mil(d).padStart(16) + ' essais/s');
+  console.log('    ' + ('banc : ' + mil(b.debit) + ' essais/s à ' + b.unite).padEnd(52)
+    + '÷ ' + fr(facteur.toFixed(facteur &lt; 10 ? 2 : 0)));
+}
+console.log('');
+console.log('Rapport entre le premier et le dernier : × '
+  + mil(debits['SHA-256 nu'] / debits['scrypt']) + '.');
+console.log('');
+
+console.log('Temps pour épuiser un espace de recherche, avec cette seule carte :');
+console.log('');
+console.log('  ' + ' '.repeat(10) + BANC.map(b =&gt; b.court.padStart(15)).join(''));
+for (const e of ESPACES) {
+  console.log('  ' + e.nom + ' — ' + mil(e.taille) + ' candidats');
+  console.log('  ' + ' '.repeat(10) + BANC.map(b =&gt; duree(e.taille / debits[b.nom]).padStart(15)).join(''));
+}
+console.log('');
+console.log('Ce que ce tableau ne dit pas, et qui compte autant :');
+console.log('  · un attaquant n\'épuise jamais un espace, il commence par les mots de passe');
+console.log('    les plus probables — le premier programme en a ouvert 482 sur 600 avec '
+  + mil(30030) + ' candidats ;');
+console.log('  · ces chiffres datent d\'octobre 2022 et valent pour UNE carte ; un parc de');
+console.log('    cent cartes divise chaque durée par cent, et le matériel a progressé depuis ;');
+console.log('  · l\'extrapolation est linéaire, ce qui est exact pour PBKDF2 et bcrypt. Pour');
+console.log('    scrypt elle est OPTIMISTE pour l\'attaquant : passer de 16 à 128 Mio par essai');
+console.log('    réduit aussi le nombre d\'essais qui tiennent en mémoire sur la carte.');
+console.log('');
+console.log('La conclusion tient en une ligne : le facteur de coût ne rend pas « 123456 »');
+console.log('inattaquable — rien ne le rendra. Il rend attaquable une part beaucoup plus');
+console.log('petite de la population, et il donne le temps de réagir à une fuite.');</code></pre></figure>
+<figure class="code-block" data-file="facteur-cout.txt"><pre><code class="language-plaintext">Débit d'attaque, une seule carte graphique, réglage recommandé :
+
+  SHA-256 nu           aucun réglage         21 975 500 000 essais/s
+    banc : 21 975 500 000 essais/s à mode 1400          ÷ 1,00
+  PBKDF2-HMAC-SHA256   600 000 itérations            14 761 essais/s
+    banc : 8 865 700 essais/s à mode 10900              ÷ 601
+  bcrypt               coût 12                        1 438 essais/s
+    banc : 184 000 essais/s à mode 3200, coût 5         ÷ 128
+  scrypt               N=2^17                           891 essais/s
+    banc : 7 126 essais/s à mode 8900, N=2^14           ÷ 8,00
+
+Rapport entre le premier et le dernier : × 24 670 783.
+
+Temps pour épuiser un espace de recherche, avec cette seule carte :
+
+                    SHA-256         PBKDF2         bcrypt         scrypt
+  le dictionnaire du premier programme — 30 030 candidats
+              moins de 1 ms          2,0 s         20,9 s         33,7 s
+  8 caractères, minuscules et chiffres — 2 821 109 907 456 candidats
+                    2,1 min          6 ans         62 ans        100 ans
+  quatre mots tirés d'une liste de 7 776 — 3 656 158 440 062 976 candidats
+                     46,2 h      7 849 ans     80 596 ans    130 066 ans
+
+Ce que ce tableau ne dit pas, et qui compte autant :
+  · un attaquant n'épuise jamais un espace, il commence par les mots de passe
+    les plus probables — le premier programme en a ouvert 482 sur 600 avec 30 030 candidats ;
+  · ces chiffres datent d'octobre 2022 et valent pour UNE carte ; un parc de
+    cent cartes divise chaque durée par cent, et le matériel a progressé depuis ;
+  · l'extrapolation est linéaire, ce qui est exact pour PBKDF2 et bcrypt. Pour
+    scrypt elle est OPTIMISTE pour l'attaquant : passer de 16 à 128 Mio par essai
+    réduit aussi le nombre d'essais qui tiennent en mémoire sur la carte.
+
+La conclusion tient en une ligne : le facteur de coût ne rend pas « 123456 »
+inattaquable — rien ne le rendra. Il rend attaquable une part beaucoup plus
+petite de la population, et il donne le temps de réagir à une fuite.</code></pre></figure>
+<p>Une seule carte, sortie en 2022, essaie <strong>21,98&nbsp;milliards</strong> de SHA-256 par seconde. Le même matériel, contre PBKDF2 réglé à 600&nbsp;000&nbsp;itérations, tombe à <strong>14&nbsp;761&nbsp;essais par seconde</strong>&nbsp;; contre bcrypt de coût&nbsp;12, à <strong>1&nbsp;438</strong>&nbsp;; contre scrypt à N=2<sup>17</sup>, à <strong>891</strong>. Le rapport entre la première ligne et la dernière est de <strong>24,7&nbsp;millions</strong>.</p>
+<p>Traduit en durées, le dictionnaire de 30&nbsp;030&nbsp;candidats du premier programme passe de <em>moins d'une milliseconde</em> à <strong>33,7&nbsp;secondes</strong>, et un espace de huit caractères alphanumériques minuscules de <strong>2,1&nbsp;minutes</strong> à <strong>cent ans</strong>.</p>
+<p>Trois précautions, que le programme énonce lui-même parce qu'elles font partie du résultat. Ces chiffres valent pour <strong>une</strong> carte de 2022&nbsp;: un parc de cent divise chaque durée par cent. Un attaquant <em>n'épuise jamais</em> un espace — il commence par les candidats probables, et le premier programme a montré ce que cela donne. Enfin, l'extrapolation linéaire est exacte pour PBKDF2 et bcrypt, dont le coût est proportionnel au nombre d'itérations, mais <em>optimiste pour l'attaquant</em> dans le cas de scrypt, où augmenter le paramètre augmente aussi la mémoire par essai.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 210" role="img" aria-label="La même attaque par dictionnaire, menée contre trois stockages successifs. En haut, des empreintes SHA-256 sans sel : 30 030 candidats suffisent pour ouvrir 482 comptes sur 600, en 1,37 microseconde sur une carte RTX 4090. Au milieu, les mêmes empreintes salées : le dictionnaire doit être refait pour chacun des 600 comptes, soit 18 018 000 essais, en 0,82 milliseconde. En bas, les mêmes empreintes salées et dérivées par PBKDF2 réglé à 600 000 itérations : les mêmes 18 018 000 essais demandent 20,3 minutes. Le sel multiplie le travail par le nombre de comptes, le facteur de coût multiplie le prix de chaque essai.">
+    <text class="d-label" x="76" y="30" text-anchor="middle" font-size="11">SHA-256 nu</text>
+    <rect class="d-box" x="152" y="16" width="180" height="28" rx="5" /><text class="d-text" x="242" y="35" text-anchor="middle" font-size="10">30 030 essais</text>
+    <path class="d-line" d="M332 30 H400" />
+    <rect class="d-accent" x="400" y="16" width="150" height="28" rx="5" /><text class="d-text" x="475" y="35" text-anchor="middle" font-size="10">1,37 µs</text>
+    <text class="d-mut" x="596" y="35" text-anchor="middle" font-size="9">482 / 600</text>
+    <text class="d-mut" x="320" y="62" text-anchor="middle" font-size="9">+ un sel unique par compte : le dictionnaire est à refaire 600 fois</text>
+    <text class="d-label" x="76" y="94" text-anchor="middle" font-size="11">+ sel</text>
+    <rect class="d-box" x="152" y="80" width="180" height="28" rx="5" /><text class="d-text" x="242" y="99" text-anchor="middle" font-size="10">18 018 000 essais</text>
+    <path class="d-line" d="M332 94 H400" />
+    <rect class="d-accent" x="400" y="80" width="150" height="28" rx="5" /><text class="d-text" x="475" y="99" text-anchor="middle" font-size="10">0,82 ms</text>
+    <text class="d-mut" x="596" y="99" text-anchor="middle" font-size="9">× 600</text>
+    <text class="d-mut" x="320" y="126" text-anchor="middle" font-size="9">+ PBKDF2 à 600 000 itérations : chaque essai coûte 2 400 000 compressions</text>
+    <text class="d-label" x="76" y="158" text-anchor="middle" font-size="11">+ coût</text>
+    <rect class="d-box" x="152" y="144" width="180" height="28" rx="5" /><text class="d-text" x="242" y="163" text-anchor="middle" font-size="10">18 018 000 essais</text>
+    <path class="d-line" d="M332 158 H400" />
+    <rect class="d-accent" x="400" y="144" width="150" height="28" rx="5" /><text class="d-text" x="475" y="163" text-anchor="middle" font-size="10">20,3 min</text>
+    <text class="d-mut" x="596" y="163" text-anchor="middle" font-size="9">× 1 488 715</text>
+    <text class="d-mut" x="320" y="196" text-anchor="middle" font-size="9">une seule carte RTX 4090, banc hashcat 2022 — le nombre d’essais ne change pas, leur prix, si</text>
+  </svg>
+  <figcaption>Le sel multiplie le <em>nombre</em> d'essais&nbsp;; le facteur de coût multiplie le <em>prix</em> de chacun. Les deux sont nécessaires, et ils ne se remplacent pas.</figcaption>
+</figure>
+
+<h2>Lent ne suffit plus&nbsp;: dur en mémoire</h2>
+<p>Ce dernier point n'est pas un détail de calcul&nbsp;: c'est la raison d'être des fonctions modernes. PBKDF2 est lent, mais il est lent <em>de la même façon</em> pour un processeur généraliste et pour un circuit spécialisé. Or l'attaquant, lui, choisit son matériel. Un algorithme qui n'exige qu'un état de quelques centaines d'octets se recopie autant de fois qu'il y a de cœurs.</p>
+<p>La réponse s'appelle la <strong>dureté en mémoire</strong>&nbsp;: exiger que chaque essai occupe une quantité de mémoire non négligeable, et l'occupe vraiment. Le cœur de scrypt s'appelle ROMix. En voici une version jouet, complète, écrite deux fois — la version normale, puis la même avec moins de mémoire.</p>
+<figure class="code-block" data-file="memoire-dure.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// Pourquoi « dur en mémoire » change la nature du problème.
+// Le cœur de scrypt s'appelle ROMix. En voici une version jouet, complète et exécutable,
+// avec un bloc de 32 octets au lieu des 1 024 de la vraie fonction.
+
+let melanges = 0;
+const melange = b =&gt; { melanges++; return sha256o(b); };
+const entier = b =&gt; ((b[0] &lt;&lt; 8) | b[1]) &gt;&gt;&gt; 0;      // « integerify » : de quoi choisir un indice
+
+// ROMix, écrit deux fois : la version normale, puis la même avec MOINS de mémoire.
+// Le paramètre « garde » dit qu'on ne conserve qu'un bloc sur « garde ».
+function romix(depart, N, garde){
+  const V = [];                                       // la mémoire réellement occupée
+  let X = depart.slice();
+  for (let i = 0; i &lt; N; i++) {
+    if (i % garde === 0) V.push(X.slice());           // on ne garde qu'un jalon sur « garde »
+    X = melange(X);
+  }
+  for (let i = 0; i &lt; N; i++) {
+    const j = entier(X) % N;
+    let Vj = V[Math.floor(j / garde)].slice();        // le jalon le plus proche, en dessous
+    for (let r = j % garde; r &gt; 0; r--) Vj = melange(Vj);   // …puis on RECALCULE la différence
+    X = melange(X.map((b, k) =&gt; b ^ Vj[k]));
+  }
+  return { sortie: hex(X), blocs: V.length, melanges };
+}
+
+const mil = n =&gt; String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const fr = x =&gt; String(x).replace('.', ',');
+const N = 1024;
+const depart = sha256o(bof('un-mot-de-passe et son sel'));
+
+console.log('ROMix jouet, N = ' + mil(N) + ' blocs de 32 octets.');
+console.log('');
+console.log('  gardé  |  blocs en mémoire  |  mélanges  |  surcoût  |  sortie');
+let reference = null, coutRef = 0;
+for (const garde of [1, 2, 4, 16, 64, 256, 1024]) {
+  melanges = 0;
+  const r = romix(depart, N, garde);
+  if (garde === 1) { reference = r.sortie; coutRef = r.melanges; }
+  console.log('  1 / ' + String(garde).padEnd(4) + ' | '
+    + String(mil(r.blocs) + ' × 32 o').padStart(17) + '  | '
+    + mil(r.melanges).padStart(10) + ' | '
+    + ('× ' + fr((r.melanges / coutRef).toFixed(2))).padStart(9) + ' | '
+    + (r.sortie === reference ? 'identique' : 'DIFFÉRENTE'));
+}
+console.log('');
+console.log('Toutes les lignes calculent la MÊME sortie : rendre la mémoire plus petite est');
+console.log('toujours possible. Ce n\'est pas interdit, c\'est facturé — et la facture est');
+console.log('en calcul. C\'est exactement ce qu\'on appelle un compromis temps-mémoire.');
+console.log('');
+
+// --- Ce que cela change pour un attaquant, qui n'a pas une machine mais mille -----
+// Une carte graphique n'est pas limitée par ses cœurs mais par sa mémoire embarquée.
+const MEMOIRE_CARTE = 24 * 1024;                                 // 24 Gio, en Mio
+const PROFILS = [
+  { nom: 'PBKDF2-HMAC-SHA256', memoireParEssai: 1 / 1024 },      // un état de HMAC : de l'ordre du Kio
+  { nom: 'bcrypt, coût 12',    memoireParEssai: 4 / 1024 },      // les tables de Blowfish : 4 Kio, quel que soit le coût
+  { nom: 'scrypt N=2^14',      memoireParEssai: 16 },
+  { nom: 'scrypt N=2^17',      memoireParEssai: 128 },
+  { nom: 'Argon2id 19 Mio',    memoireParEssai: 19 },
+];
+console.log('Essais SIMULTANÉS que permet la mémoire d\'une carte de ' + (MEMOIRE_CARTE / 1024) + ' Gio :');
+console.log('');
+for (const p of PROFILS) {
+  console.log('  ' + p.nom.padEnd(22) + fr(p.memoireParEssai &lt; 1 ? (p.memoireParEssai * 1024) + ' Kio' : p.memoireParEssai + ' Mio').padStart(9) + '/essai   → '
+    + mil(MEMOIRE_CARTE / p.memoireParEssai).padStart(12) + ' essais de front');
+}
+console.log('');
+console.log('Cette colonne mérite une nuance pour bcrypt : ses 4 Kio tiennent mille fois dans');
+console.log('la mémoire de la carte, mais ce sont 4 Kio LUS AU HASARD à chaque tour. Ils doivent');
+console.log('donc rester dans la mémoire rapide du multiprocesseur, qui se compte en dizaines de');
+console.log("Kio — pas dans les 24 Gio. Voilà ce qui ramène bcrypt à 184 000 essais/s là où");
+console.log("SHA-256 en fait 22 milliards, alors qu'aucune des deux ne remplit la carte.");
+console.log('');
+console.log('Une RTX 4090 aligne 16 384 cœurs de calcul. Avec PBKDF2, la mémoire ne limite');
+console.log('rien : les cœurs travaillent tous. Avec scrypt à N=2^17, la carte n\'en tient plus');
+console.log('que ' + mil(MEMOIRE_CARTE / 128) + ' à la fois — moins que son nombre de cœurs. Le reste du silicium attend.');
+console.log('');
+console.log('Voilà la vraie différence entre « lent » et « dur en mémoire ». PBKDF2 est lent');
+console.log('pour tout le monde, donc autant pour le serveur que pour l\'attaquant, et il laisse');
+console.log('intact l\'avantage du matériel spécialisé. scrypt et Argon2 attaquent cet avantage');
+console.log('lui-même : ils rendent le parallélisme coûteux en silicium, pas seulement en temps.');</code></pre></figure>
+<figure class="code-block" data-file="memoire-dure.txt"><pre><code class="language-plaintext">ROMix jouet, N = 1 024 blocs de 32 octets.
+
+  gardé  |  blocs en mémoire  |  mélanges  |  surcoût  |  sortie
+  1 / 1    |      1 024 × 32 o  |      2 048 |    × 1,00 | identique
+  1 / 2    |        512 × 32 o  |      2 559 |    × 1,25 | identique
+  1 / 4    |        256 × 32 o  |      3 595 |    × 1,76 | identique
+  1 / 16   |         64 × 32 o  |      9 715 |    × 4,74 | identique
+  1 / 64   |         16 × 32 o  |     33 603 |   × 16,41 | identique
+  1 / 256  |          4 × 32 o  |    130 115 |   × 63,53 | identique
+  1 / 1024 |          1 × 32 o  |    518 979 |  × 253,41 | identique
+
+Toutes les lignes calculent la MÊME sortie : rendre la mémoire plus petite est
+toujours possible. Ce n'est pas interdit, c'est facturé — et la facture est
+en calcul. C'est exactement ce qu'on appelle un compromis temps-mémoire.
+
+Essais SIMULTANÉS que permet la mémoire d'une carte de 24 Gio :
+
+  PBKDF2-HMAC-SHA256        1 Kio/essai   →   25 165 824 essais de front
+  bcrypt, coût 12           4 Kio/essai   →    6 291 456 essais de front
+  scrypt N=2^14            16 Mio/essai   →        1 536 essais de front
+  scrypt N=2^17           128 Mio/essai   →          192 essais de front
+  Argon2id 19 Mio          19 Mio/essai   →        1 293 essais de front
+
+Cette colonne mérite une nuance pour bcrypt : ses 4 Kio tiennent mille fois dans
+la mémoire de la carte, mais ce sont 4 Kio LUS AU HASARD à chaque tour. Ils doivent
+donc rester dans la mémoire rapide du multiprocesseur, qui se compte en dizaines de
+Kio — pas dans les 24 Gio. Voilà ce qui ramène bcrypt à 184 000 essais/s là où
+SHA-256 en fait 22 milliards, alors qu'aucune des deux ne remplit la carte.
+
+Une RTX 4090 aligne 16 384 cœurs de calcul. Avec PBKDF2, la mémoire ne limite
+rien : les cœurs travaillent tous. Avec scrypt à N=2^17, la carte n'en tient plus
+que 192 à la fois — moins que son nombre de cœurs. Le reste du silicium attend.
+
+Voilà la vraie différence entre « lent » et « dur en mémoire ». PBKDF2 est lent
+pour tout le monde, donc autant pour le serveur que pour l'attaquant, et il laisse
+intact l'avantage du matériel spécialisé. scrypt et Argon2 attaquent cet avantage
+lui-même : ils rendent le parallélisme coûteux en silicium, pas seulement en temps.</code></pre></figure>
+<p>La première leçon du tableau est qu'<strong>on peut toujours économiser la mémoire</strong>&nbsp;: toutes les lignes calculent la même sortie. Ce n'est pas interdit, c'est <em>facturé</em> — diviser la mémoire par 1&nbsp;024 multiplie le calcul par <strong>253</strong>. C'est ce qu'on appelle un compromis temps-mémoire, et une bonne fonction de dérivation est précisément une fonction dont ce compromis est défavorable.</p>
+<p>La seconde leçon est dans la seconde partie. Une carte graphique n'est pas limitée par ses cœurs, mais par sa mémoire. Avec PBKDF2, la mémoire ne limite rien&nbsp;: <strong>25&nbsp;millions</strong> d'essais tiendraient de front dans 24&nbsp;Gio, bien plus que les 16&nbsp;384&nbsp;cœurs de la carte. Avec scrypt à N=2<sup>17</sup>, elle n'en tient plus que <strong>192</strong> — moins que son nombre de cœurs. Le reste du silicium attend.</p>
+<p>Le programme ajoute une nuance pour bcrypt, et elle est instructive&nbsp;: ses 4&nbsp;Kio d'état tiennent des millions de fois dans la mémoire de la carte, mais ce sont 4&nbsp;Kio <em>lus au hasard à chaque tour</em>. Ils doivent donc résider dans la mémoire rapide du multiprocesseur, qui se compte en dizaines de kilo-octets. C'est ce qui ramène bcrypt à 184&nbsp;000&nbsp;essais par seconde là où SHA-256 en fait 22&nbsp;milliards, alors qu'aucun des deux ne remplit la carte. bcrypt, conçu en 1999, était déjà «&nbsp;dur en mémoire&nbsp;» sans que le mot existe.</p>
+
+<h2>La dernière ligne&nbsp;: comparer sans rien dire</h2>
+<p>Tout ce qui précède peut être parfait et se perdre sur la ligne qui compare. Précisons d'abord le sujet, parce qu'on le formule souvent de travers&nbsp;: ce n'est <em>pas</em> l'empreinte du mot de passe qui est en jeu. Elle est imprévisible, l'attaquant ne peut pas la viser caractère par caractère. Le sujet, ce sont les <strong>jetons</strong> — jeton de réinitialisation reçu par courriel, clé d'interface de programmation, code de vérification —, que le service compare tels quels à une valeur reçue.</p>
+<figure class="code-block" data-file="temps-constant.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// La dernière ligne de la vérification, celle qu'on écrit sans y penser.
+// Le sujet n'est PAS le mot de passe : son empreinte est imprévisible, l'attaquant ne
+// peut pas la viser octet par octet. Le sujet, ce sont les JETONS — jeton de
+// réinitialisation, clé d'interface de programmation, code de vérification —, que le
+// service compare tels quels à une valeur reçue.
+
+let _g = 7654321 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+const mil = n =&gt; String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const fr = x =&gt; String(x).replace('.', ',');
+
+const HEXA = '0123456789abcdef';
+const JETON = hex(sha256o(bof('jeton-de-reinitialisation-du-compte-u1042'))).slice(0, 32);
+
+// -- Le vérificateur naïf : il s'arrête au premier caractère qui diffère. ----------
+// Ce que l'attaquant observe n'est pas ce compteur, c'est le TEMPS de réponse ;
+// on le modélise ici par le nombre de comparaisons faites, plus un bruit.
+function comparerNaif(recu, attendu){
+  let comparaisons = 0;
+  if (recu.length !== attendu.length) return { egal: false, cout: 1 };
+  for (let i = 0; i &lt; attendu.length; i++) {
+    comparaisons++;
+    if (recu[i] !== attendu[i]) return { egal: false, cout: comparaisons };
+  }
+  return { egal: true, cout: comparaisons };
+}
+
+// -- Le vérificateur en temps constant : il regarde TOUT, toujours. ----------------
+function comparerConstant(recu, attendu){
+  let comparaisons = 0, difference = recu.length ^ attendu.length;
+  const n = Math.max(recu.length, attendu.length);
+  for (let i = 0; i &lt; n; i++) {
+    comparaisons++;
+    difference |= (recu.charCodeAt(i) || 0) ^ (attendu.charCodeAt(i) || 0);   // aucun arrêt anticipé
+  }
+  return { egal: difference === 0, cout: comparaisons };
+}
+
+// -- L'attaquant : il ne voit qu'une durée bruitée, et il moyenne. -----------------
+const BRUIT = 6;                       // le réseau ajoute de 0 à 6 unités, au hasard
+const REPETITIONS = 200;               // combien de fois l'attaquant redemande, par candidat
+let requetes = 0;
+function mesurer(recu, comparer){
+  requetes++;
+  return comparer(recu, JETON).cout + Math.floor(alea() * (BRUIT + 1));
+}
+
+function reconstituer(comparer){
+  requetes = 0;
+  let prefixe = '';
+  for (let position = 0; position &lt; JETON.length - 1; position++) {
+    let meilleur = null, meilleurTemps = -1;
+    for (const c of HEXA) {
+      const essai = (prefixe + c).padEnd(JETON.length, '0');
+      let total = 0;
+      for (let r = 0; r &lt; REPETITIONS; r++) total += mesurer(essai, comparer);
+      const moyenne = total / REPETITIONS;
+      if (moyenne &gt; meilleurTemps) { meilleurTemps = moyenne; meilleur = c; }
+    }
+    prefixe += meilleur;
+  }
+  // Le DERNIER caractère n'a pas de signal temporel : juste ou faux, la comparaison
+  // parcourt les 32 positions. Mais il n'en a pas besoin — le service répond « accepté ».
+  // Seize essais suffisent, contre n'importe quel vérificateur.
+  let dernier = HEXA[0];
+  for (const c of HEXA) { requetes++; if (comparer(prefixe + c, JETON).egal) { dernier = c; break; } }
+  return prefixe + dernier;
+}
+
+console.log('Jeton visé : ' + JETON);
+console.log('');
+
+const trouveNaif = reconstituer(comparerNaif);
+const requetesNaif = requetes;
+let justesNaif = 0;
+for (let i = 0; i &lt; JETON.length; i++) if (trouveNaif[i] === JETON[i]) justesNaif++;
+console.log('Vérificateur naïf (arrêt au premier écart) :');
+console.log('  reconstitué : ' + trouveNaif);
+console.log('  caractères justes : ' + justesNaif + ' sur ' + JETON.length);
+console.log('  requêtes envoyées : ' + mil(requetesNaif));
+console.log('  jeton retrouvé en entier : ' + (trouveNaif === JETON ? 'OUI' : 'non'));
+console.log('');
+
+const trouveConstant = reconstituer(comparerConstant);
+const requetesConstant = requetes;
+let justesConstant = 0;
+for (let i = 0; i &lt; JETON.length; i++) if (trouveConstant[i] === JETON[i]) justesConstant++;
+console.log('Vérificateur en temps constant, MÊME attaque, MÊME budget :');
+console.log('  reconstitué : ' + trouveConstant);
+console.log('  caractères justes : ' + justesConstant + ' sur ' + JETON.length
+  + '  (le hasard en donnerait ' + fr((JETON.length / 16).toFixed(1)) + ')');
+console.log('  requêtes envoyées : ' + mil(requetesConstant));
+console.log('');
+
+// -- Ce que l'attaque a coûté, comparé à la recherche exhaustive. ------------------
+const exhaustif = Math.pow(16, JETON.length);
+console.log('Coût de l\'attaque : ' + mil(requetesNaif) + ' requêtes.');
+console.log('Coût de la recherche exhaustive : 16^' + JETON.length + ' = '
+  + fr(exhaustif.toExponential(2)) + ' essais.');
+console.log('Rapport : ' + fr((exhaustif / requetesNaif).toExponential(2)) + '.');
+console.log('');
+console.log('Le jeton n\'a pas été deviné, il a été LU — caractère par caractère, chacun');
+console.log('payé ' + mil(requetesNaif / JETON.length) + ' requêtes. Une comparaison qui s\'arrête tôt transforme un secret');
+console.log('de 128 bits en 32 petits secrets de 4 bits, qui se cassent l\'un après l\'autre.');
+console.log('');
+console.log('Le bruit ne protège pas, il fait payer des répétitions : ici ' + REPETITIONS + ' par candidat');
+console.log('pour un bruit de 0 à ' + BRUIT + ' unités. Sur un vrai réseau il en faut beaucoup plus,');
+console.log('et c\'est tout. La parade ne consiste jamais à « ajouter du hasard » : elle consiste');
+console.log('à ne pas produire l\'information — comparer les deux valeurs en entier, à chaque fois.');</code></pre></figure>
+<figure class="code-block" data-file="temps-constant.txt"><pre><code class="language-plaintext">Jeton visé : b7de01bb495aadc27e8201d4cafa13e2
+
+Vérificateur naïf (arrêt au premier écart) :
+  reconstitué : b7de01bb495aadc27e8201d4cafa13e2
+  caractères justes : 32 sur 32
+  requêtes envoyées : 99 203
+  jeton retrouvé en entier : OUI
+
+Vérificateur en temps constant, MÊME attaque, MÊME budget :
+  reconstitué : 1b809bed2c759c3e17444321611c1110
+  caractères justes : 1 sur 32  (le hasard en donnerait 2,0)
+  requêtes envoyées : 99 216
+
+Coût de l'attaque : 99 203 requêtes.
+Coût de la recherche exhaustive : 16^32 = 3,40e+38 essais.
+Rapport : 3,43e+33.
+
+Le jeton n'a pas été deviné, il a été LU — caractère par caractère, chacun
+payé 3 100 requêtes. Une comparaison qui s'arrête tôt transforme un secret
+de 128 bits en 32 petits secrets de 4 bits, qui se cassent l'un après l'autre.
+
+Le bruit ne protège pas, il fait payer des répétitions : ici 200 par candidat
+pour un bruit de 0 à 6 unités. Sur un vrai réseau il en faut beaucoup plus,
+et c'est tout. La parade ne consiste jamais à « ajouter du hasard » : elle consiste
+à ne pas produire l'information — comparer les deux valeurs en entier, à chaque fois.</code></pre></figure>
+<p>Le jeton n'a pas été deviné, il a été <strong>lu</strong>&nbsp;: 32&nbsp;caractères sur 32, en <strong>99&nbsp;203&nbsp;requêtes</strong>, là où la recherche exhaustive en demanderait 3,40·10<sup>38</sup>. Une comparaison qui s'arrête au premier écart transforme un secret de 128&nbsp;bits en trente-deux petits secrets de 4&nbsp;bits, qui tombent l'un après l'autre. Le même budget contre la comparaison en temps constant donne <strong>1 caractère juste sur 32</strong>, moins que le hasard.</p>
+<p>Deux détails du programme méritent d'être notés, parce qu'ils sont vrais et rarement dits. Le premier&nbsp;: le <strong>bruit ne protège pas</strong>. Il fait payer des répétitions — 200 par candidat ici, davantage sur un vrai réseau — et c'est tout. La parade ne consiste jamais à ajouter du hasard, mais à <em>ne pas produire l'information</em>. Le second&nbsp;: le <strong>dernier caractère n'a aucun signal temporel</strong>. Juste ou faux, la comparaison parcourt les 32&nbsp;positions. Il n'en a pas besoin&nbsp;: le service répond «&nbsp;accepté&nbsp;», et seize essais suffisent — contre n'importe quel vérificateur.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0-3 11v3h6v-3a6 6 0 0 0-3-11Z" /><path d="M10 21h4" /></svg><div class="callout__body"><p class="callout__title">Est-ce mesurable sur un vrai réseau&nbsp;?</p><p>Oui, et c'est démontré depuis longtemps. Le travail de référence est celui de Crosby, Wallach et Riedi (<em>Opportunities and Limits of Remote Timing Attacks</em>, 2009), qui mesure des écarts de l'ordre de la <strong>microseconde</strong> sur un réseau local et de la <strong>dizaine de microsecondes</strong> à travers l'internet, à condition de répéter et de moyenner. La conclusion pratique est la même&nbsp;: ne pariez pas sur le bruit. En pratique, on n'écrit pas cette boucle soi-même — les bibliothèques standard fournissent une comparaison en temps constant, et l'on hache les deux valeurs avec une clé aléatoire avant de comparer quand on veut s'épargner la question.</p></div></div>
+
+<h2>Ce qu'on choisit, et ce qu'on n'écrit pas</h2>
+<p>Voilà le moment de reposer le capot. Les six programmes précédents servaient à comprendre les réglages, pas à fournir du code. Dans un service réel, on appelle une bibliothèque éprouvée, et le seul travail restant est le <strong>choix de la fonction et de ses paramètres</strong>. L'OWASP en donne l'ordre de préférence.</p>
+<figure class="cheat-table">
+  <table>
+    <caption>Le choix, dans l'ordre de préférence de l'OWASP</caption>
+    <thead><tr><th scope="col">Fonction</th><th scope="col">Réglage recommandé</th><th scope="col">Quand la choisir</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Argon2id</strong></td><td>19&nbsp;Mio de mémoire, 2&nbsp;itérations, 1&nbsp;degré de parallélisme — ou l'un des couples équivalents&nbsp;: 47&nbsp;104&nbsp;Kio et 1&nbsp;itération, 12&nbsp;288&nbsp;Kio et 3, 9&nbsp;216&nbsp;Kio et 4, 7&nbsp;168&nbsp;Kio et 5.</td><td>Par défaut, pour tout service neuf. Vainqueur du concours de fonctions de hachage de mots de passe en 2015, normalisé par la RFC&nbsp;9106.</td></tr>
+      <tr><td><strong>scrypt</strong></td><td>N=2<sup>17</sup>, r=8, p=1 (soit 128&nbsp;Mio) — ou 2<sup>16</sup>/8/2, 2<sup>15</sup>/8/3, 2<sup>14</sup>/8/5, 2<sup>13</sup>/8/10.</td><td>Quand Argon2 n'est pas disponible dans la plateforme. Dur en mémoire lui aussi.</td></tr>
+      <tr><td><strong>bcrypt</strong></td><td>Facteur de travail de 10 ou plus, et une limite d'entrée de 72&nbsp;octets.</td><td>Pour les systèmes existants qui l'emploient déjà. Toujours honorable, mais plafonné par sa limite d'entrée.</td></tr>
+      <tr><td><strong>PBKDF2</strong></td><td>600&nbsp;000&nbsp;itérations ou plus, avec HMAC-SHA-256 à l'intérieur.</td><td>Quand la conformité FIPS-140 est exigée. C'est le seul des quatre à être approuvé par le NIST, et le plus faible des quatre face à du matériel spécialisé.</td></tr>
+    </tbody>
+  </table>
+</figure>
+<p>Un piège mérite d'être détaillé, parce qu'il se présente sous les apparences d'une bonne idée. <strong>bcrypt ignore tout ce qui dépasse 72&nbsp;octets</strong> dans la plupart des implémentations. La réaction naturelle est de pré-hacher le mot de passe — le passer dans SHA-256, puis donner le résultat à bcrypt. L'OWASP qualifie cette manœuvre de <em>dangereuse</em>, pour deux raisons distinctes.</p>
+<p>La première&nbsp;: la sortie brute d'un SHA-256 peut contenir un <strong>octet nul</strong>, et plusieurs implémentations de bcrypt, écrites en C, s'arrêtent là. Le mot de passe effectif se réduit alors à ce qui précède le premier zéro — parfois quelques octets. La seconde est plus retorse et porte un nom, le <em>password shucking</em>&nbsp;: si le pré-hachage est un simple SHA-256 non salé, et qu'une autre fuite quelque part contient la même empreinte SHA-256 non salée, l'attaquant n'a plus à casser bcrypt du tout&nbsp;— il essaie directement les empreintes qu'il possède déjà comme s'il s'agissait de mots de passe. Le facteur de coût est intégralement contourné. Si l'on doit pré-hacher, on encode le résultat en base64 et l'on fait entrer une clé dans le pré-hachage — autrement dit, on n'improvise pas.</p>
+
+<h2>Ce qui n'est pas de la cryptographie, et qui compte davantage</h2>
+<p>Un service qui hacherait parfaitement des mots de passe tous mauvais serait mal protégé. Les règles ci-dessous viennent de la publication <strong>NIST&nbsp;SP&nbsp;800-63B révision&nbsp;4</strong>, publiée le 31&nbsp;juillet 2025, et plusieurs vont à rebours de ce que l'on croit savoir.</p>
+<ul>
+  <li><strong>Longueur d'abord.</strong> Le NIST exige au minimum <strong>15&nbsp;caractères</strong> pour un mot de passe employé comme facteur unique, 8 lorsqu'il est associé à un second facteur, et impose d'en accepter au moins <strong>64</strong>. Le tableau des durées, plus haut, dit pourquoi&nbsp;: la longueur est le seul paramètre qui fasse croître l'espace de recherche de façon exponentielle.</li>
+  <li><strong>Aucune règle de composition.</strong> Le texte est explicite&nbsp;: les vérificateurs «&nbsp;<em>ne doivent pas</em>&nbsp;» imposer de mélange de types de caractères. Ces règles produisent des mots de passe prévisibles — un mot, une majuscule initiale, un chiffre et un point d'exclamation à la fin — que les outils d'attaque connaissent par cœur.</li>
+  <li><strong>Aucun changement périodique.</strong> Là encore, «&nbsp;ne doivent pas&nbsp;». Le changement forcé n'est exigé que s'il existe une preuve de compromission. La rotation trimestrielle produit des suites de mots de passe qui s'incrémentent, et rien d'autre.</li>
+  <li><strong>Une liste de blocage.</strong> Le mot de passe proposé doit être comparé à une liste de mots de passe courants, attendus ou déjà compromis, y compris ceux issus de fuites antérieures. C'est la mesure qui aurait supprimé les 93&nbsp;comptes du plus gros groupe du premier programme.</li>
+  <li><strong>Ni indice, ni question secrète.</strong> Le NIST interdit de stocker un indice accessible sans authentification, et d'imposer des questions de type «&nbsp;connaissance personnelle&nbsp;». La réponse à «&nbsp;nom de jeune fille de votre mère&nbsp;» est publique.</li>
+  <li><strong>Un sel d'au moins 32&nbsp;bits</strong>, et un schéma de dérivation adapté dont le coût est relevé au fil du temps. En pratique on prend 16&nbsp;octets, comme dans le deuxième programme.</li>
+</ul>
+<p>À quoi s'ajoutent deux mesures qui ne concernent pas le stockage mais l'accès&nbsp;: <strong>limiter le débit</strong> des tentatives — l'attaque en ligne n'a rien à voir avec l'attaque hors ligne, et cent essais par heure suffisent à la rendre inutile — et proposer un <strong>second facteur</strong>, qui reste la seule mesure dont l'effet ne dépend pas de la qualité du mot de passe choisi.</p>
+
+<h2>Cas réel</h2>
+<p><strong>LinkedIn, juin 2012.</strong> Le 5&nbsp;juin, environ <strong>6,5&nbsp;millions</strong> d'empreintes de mots de passe apparaissent en ligne. L'analyse est immédiate&nbsp;: <strong>SHA-1, sans sel</strong>. Sans sel, les tables pré-calculées publiques s'appliquent directement, et l'essentiel du fichier est retrouvé en quelques jours — exactement le scénario du premier programme de cette leçon, à ceci près qu'il ne s'agissait pas de 600&nbsp;comptes simulés.</p>
+<p>L'histoire ne s'arrête pas là, et c'est sa seconde moitié qui instruit. En mai&nbsp;2016, un vendeur propose le contenu complet du même vol&nbsp;: non pas 6,5&nbsp;millions de comptes, mais plus de <strong>117&nbsp;millions</strong>. Le service de recherche LeakedSource, qui a analysé le fichier, relève que <strong>50&nbsp;mots de passe faciles à deviner couvraient à eux seuls plus de 2,2&nbsp;millions</strong> de ces 117&nbsp;millions de comptes. La concentration mesurée dans le premier programme — 93&nbsp;comptes pour une seule empreinte — n'était pas une exagération pédagogique.</p>
+<p>Quatre ans se sont écoulés entre le vol et la mesure de son ampleur. Pendant ces quatre ans, la question n'était pas «&nbsp;le fichier va-t-il fuiter&nbsp;?&nbsp;» — il avait déjà fuité — mais «&nbsp;combien de temps le contenu résiste-t-il&nbsp;?&nbsp;». Avec SHA-1 sans sel, la réponse était&nbsp;: quelques jours. Avec le sel et un facteur de coût, elle se compte en années, et ces années sont précisément ce qu'il faut pour prévenir les personnes concernées et forcer un changement. LinkedIn a ajouté un sel à sa fonction de hachage après 2012 — ce qui n'a évidemment rien changé pour les comptes dont le mot de passe n'a jamais été modifié depuis.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Stocker un mot de passe&nbsp;: ce que chaque mesure apporte</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Hachage nu</td><td>Insuffisant, et de très loin. 30&nbsp;030&nbsp;hachages ouvrent 482&nbsp;comptes sur 600, et la table resservira au vol suivant. En prime, les empreintes identiques révèlent les mots de passe partagés&nbsp;: 248&nbsp;empreintes pour 600&nbsp;comptes, le plus gros groupe en comptant 93.</td></tr>
+      <tr><td>Sel</td><td>Une valeur <strong>publique</strong>, unique par compte, de 16&nbsp;octets. Il ne renforce aucun mot de passe&nbsp;: il supprime la mutualisation. Coût de l'attaque multiplié par le nombre de comptes — 30&nbsp;030 → 18&nbsp;018&nbsp;000 ici.</td></tr>
+      <tr><td>Poivre</td><td>Une valeur <strong>secrète</strong>, commune, rangée hors de la base. 0&nbsp;compte ouvert sur 20 sans elle, 17 avec. Ne protège que de la fuite de la base seule, et complique la rotation.</td></tr>
+      <tr><td>Facteur de coût</td><td>Rend un essai cher, pour l'attaquant <em>et</em> pour le serveur. PBKDF2&nbsp;: 4,00&nbsp;compressions par itération, 2&nbsp;400&nbsp;000 pour 600&nbsp;000&nbsp;itérations.</td></tr>
+      <tr><td>Débits mesurés</td><td>Une seule RTX&nbsp;4090 (banc hashcat, 2022)&nbsp;: 21,98&nbsp;milliards de SHA-256/s, 14&nbsp;761&nbsp;PBKDF2 à 600&nbsp;000&nbsp;itérations, 1&nbsp;438&nbsp;bcrypt de coût&nbsp;12, 891&nbsp;scrypt à N=2<sup>17</sup>.</td></tr>
+      <tr><td>Dureté en mémoire</td><td>Économiser la mémoire reste toujours possible, mais se facture&nbsp;: mémoire divisée par 1&nbsp;024 = calcul multiplié par 253. Ce qui plafonne l'attaquant, c'est le nombre d'essais qui tiennent de front&nbsp;: 25&nbsp;millions avec PBKDF2, 192 avec scrypt à N=2<sup>17</sup>.</td></tr>
+      <tr><td>Le choix</td><td>Argon2id (19&nbsp;Mio, 2&nbsp;itérations, p=1) &gt; scrypt (N=2<sup>17</sup>) &gt; bcrypt (coût&nbsp;10+) &gt; PBKDF2 (600&nbsp;000&nbsp;itérations), et jamais rien d'écrit à la main.</td></tr>
+      <tr><td>Piège bcrypt</td><td>72&nbsp;octets d'entrée au maximum. Pré-hacher en SHA-256 brut est <em>dangereux</em>&nbsp;: octet nul qui tronque, et <em>password shucking</em> qui contourne tout le facteur de coût.</td></tr>
+      <tr><td>Comparaison</td><td>En temps constant, toujours — pour les jetons plus encore que pour les empreintes. 99&nbsp;203&nbsp;requêtes suffisent à LIRE un jeton de 128&nbsp;bits sur une comparaison qui s'arrête au premier écart&nbsp;; 1&nbsp;caractère sur 32 avec la bonne comparaison.</td></tr>
+      <tr><td>Le reste (NIST SP 800-63B-4)</td><td>15&nbsp;caractères minimum, 64 acceptés, <strong>aucune</strong> règle de composition, <strong>aucun</strong> changement périodique, liste de blocage des mots de passe compromis, ni indice ni question secrète. Plus la limitation de débit et un second facteur.</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Fonction de dérivation de clé à mot de passe</dt><dd>Fonction qui transforme un mot de passe en une valeur de taille fixe en consommant volontairement du temps et de la mémoire. PBKDF2, bcrypt, scrypt et Argon2 en sont les représentants courants.</dd>
+<dt>Sel</dt><dd>Valeur publique, unique par compte, mêlée au mot de passe avant le hachage. Elle interdit à l'attaquant de mutualiser son travail entre les comptes et entre les fuites.</dd>
+<dt>Poivre</dt><dd>Valeur secrète commune à tous les comptes, stockée hors de la base. Défense en profondeur contre la fuite de la base seule&nbsp;; sans effet si le serveur entier est compromis.</dd>
+<dt>Facteur de coût</dt><dd>Paramètre qui fixe la quantité de travail d'une dérivation&nbsp;: nombre d'itérations pour PBKDF2, exposant pour bcrypt, mémoire et passes pour Argon2. Il se paie autant côté serveur que côté attaquant.</dd>
+<dt>Dureté en mémoire</dt><dd>Propriété d'une fonction dont chaque évaluation exige une quantité de mémoire notable. Elle vise le parallélisme du matériel spécialisé, non le temps de calcul.</dd>
+<dt>Compromis temps-mémoire</dt><dd>Possibilité de réduire la mémoire employée en recalculant ce qu'on n'a pas gardé. Il existe toujours&nbsp;; une bonne fonction le rend simplement très coûteux.</dd>
+<dt>Table pré-calculée</dt><dd>Correspondance entre des candidats et leurs empreintes, calculée une fois et réutilisée à volonté. Le sel la rend inutilisable, puisqu'il faudrait une table par compte.</dd>
+<dt>Attaque temporelle</dt><dd>Attaque qui déduit un secret de la durée d'une opération. La comparaison qui s'arrête au premier écart en est l'exemple canonique.</dd>
+<dt>Comparaison en temps constant</dt><dd>Comparaison dont la durée ne dépend pas des valeurs comparées, parce qu'elle les parcourt entièrement dans tous les cas.</dd>
+<dt>Password shucking</dt><dd>Contournement d'un pré-hachage non salé&nbsp;: l'attaquant présente une empreinte obtenue ailleurs comme s'il s'agissait du mot de passe, et n'a plus à payer le facteur de coût.</dd>
+<dt>Liste de blocage</dt><dd>Ensemble de mots de passe courants ou déjà compromis, refusés à l'inscription. Seule mesure qui agisse sur la <em>distribution</em> des mots de passe plutôt que sur leur stockage.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<p>Un fichier de mots de passe hachés sans plus de précaution ne vaut rien&nbsp;: 30&nbsp;030&nbsp;hachages ouvrent 482&nbsp;comptes sur 600, et la structure même du fichier révèle les mots de passe partagés — 248&nbsp;empreintes pour 600&nbsp;comptes, dont un groupe de 93. Le sel, qui est public, supprime la mutualisation&nbsp;: 600&nbsp;empreintes distinctes, table pré-calculée inutile, coût multiplié par le nombre de comptes. Le facteur de coût rend un essai cher, et il se paie des deux côtés&nbsp;: PBKDF2 demande 4,00&nbsp;compressions par itération, soit 2&nbsp;400&nbsp;000 pour le réglage recommandé, ce qui ramène une RTX&nbsp;4090 de 21,98&nbsp;milliards d'essais par seconde à 14&nbsp;761. La dureté en mémoire vise autre chose que le temps&nbsp;: le nombre d'essais menés de front, 25&nbsp;millions avec PBKDF2 contre 192 avec scrypt à N=2<sup>17</sup>. Et tout cela se perd sur une comparaison qui s'arrête trop tôt&nbsp;: 99&nbsp;203&nbsp;requêtes lisent un jeton de 128&nbsp;bits, contre 1&nbsp;caractère sur 32 avec une comparaison en temps constant. Le reste — longueur minimale, liste de blocage, ni composition ni rotation — ne relève pas de la cryptographie et pèse au moins autant.</p>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une équipe stocke des empreintes SHA-256 salées, sans facteur de coût, et affirme que «&nbsp;le sel rend l'attaque par dictionnaire impossible&nbsp;». Corrige la phrase en une ligne, en donnant le facteur exact que le sel apporte.</li>
+<li>Un service veut passer de bcrypt à Argon2id. Il ne connaît aucun mot de passe de ses utilisateurs. Comment procède-t-il&nbsp;? Et pourquoi la même question se pose-t-elle, en pire, pour un changement de poivre&nbsp;?</li>
+<li>Un développeur propose d'ajouter un délai aléatoire de 0 à 50&nbsp;ms avant chaque réponse d'échec, pour «&nbsp;masquer les temps de calcul&nbsp;». Explique ce que cela coûte à l'attaquant, et pourquoi ce n'est pas la parade.</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Le premier programme trouve 248 empreintes distinctes pour 600 comptes, avant d'avoir haché le moindre candidat. D'où vient cette information ?","a":["Du déterminisme de la fonction de hachage : deux personnes ayant choisi le même mot de passe produisent exactement la même empreinte, et l'attaquant n'a qu'à regrouper les lignes identiques","D'une faiblesse de SHA-256 sur les entrées courtes, qui produit des collisions dès quelques centaines de valeurs et regroupe artificiellement des mots de passe différents","Du fait que les mots de passe courants sont plus courts, ce qui raccourcit l'empreinte et rend les valeurs plus faciles à confondre entre elles","D'une fuite du sel : sans sel les empreintes sont plus courtes, donc le nombre de valeurs possibles est réduit à quelques centaines"],"correct":0,"exp":"Aucune collision n'intervient ici : SHA-256 fait exactement son travail. C'est précisément parce que la fonction est déterministe que le fichier trahit les mots de passe partagés — d'où le sel, dont c'est le premier effet."},
+  {"q":"Le sel est stocké en clair dans la même table que l'empreinte, et il fuite avec elle. Pourquoi sert-il encore à quelque chose ?","a":["Parce que son rôle n'est pas de cacher mais d'être différent : il oblige l'attaquant à refaire son dictionnaire pour chaque compte, ce qui multiplie le coût par le nombre de comptes","Parce qu'il est trop long pour être testé : 16 octets ajoutés au mot de passe portent l'entrée au-delà de ce qu'une carte graphique peut traiter en un tour","Parce que l'attaquant ne sait pas dans quel ordre le sel et le mot de passe sont concaténés, ce qui lui laisse deux possibilités à tester par candidat","Parce qu'il est mis à jour à chaque connexion, ce qui invalide toute table calculée avant la fuite"],"correct":0,"exp":"Le sel est public par construction, et l'ordre de concaténation aussi : le code du service est supposé connu (Kerckhoffs). Ce que le sel supprime, c'est la MUTUALISATION — mesurée ici à un facteur 600, soit le nombre de comptes."},
+  {"q":"Le programme sur ROMix montre qu'en divisant la mémoire par 1 024, on multiplie le calcul par 253, et que toutes les variantes donnent la même sortie. Que faut-il en conclure sur la dureté en mémoire ?","a":["Qu'elle n'interdit rien : elle rend l'économie de mémoire coûteuse en calcul, et c'est ce compromis défavorable qui limite le nombre d'essais menés de front sur une carte","Qu'elle est illusoire, puisqu'un attaquant peut toujours ramener la mémoire à un seul bloc et retrouver la même sortie sans surcoût significatif","Qu'elle repose sur une propriété mathématique de SHA-256, laquelle rend le recalcul impossible au-delà d'un certain nombre de blocs omis","Qu'elle ne concerne que les processeurs généralistes, les cartes graphiques disposant d'assez de mémoire pour ne jamais avoir à faire ce compromis"],"correct":0,"exp":"Le compromis temps-mémoire existe toujours et n'est jamais interdit : il est facturé. C'est le prix de la facture qui fait la qualité de la fonction, et c'est lui qui ramène une carte de 24 Gio à 192 essais simultanés contre scrypt à N=2^17."},
+  {"q":"Un service compare ses jetons de réinitialisation avec un simple test d'égalité de chaînes, qui s'arrête au premier caractère différent. Le programme retrouve un jeton de 32 caractères hexadécimaux en 99 203 requêtes. Quelle est la bonne lecture de ce chiffre ?","a":["Le secret n'a pas été deviné mais lu position par position : la comparaison transforme un secret de 128 bits en 32 secrets de 4 bits, résolus l'un après l'autre","Le jeton était trop court : 32 caractères hexadécimaux ne font que 128 bits, ce qui est à portée d'une recherche exhaustive sur du matériel courant","Le générateur de jetons était prévisible, et c'est cette prévisibilité, non la comparaison, que l'attaque a exploitée pour retrouver la valeur","L'attaque n'a fonctionné que parce que le programme mesure un compteur exact ; avec du bruit réseau, la fuite d'information disparaît complètement"],"correct":0,"exp":"Le programme ajoute justement du bruit, et l'attaquant le neutralise en moyennant sur 200 répétitions — c'est le coût, pas un obstacle. 3,40·10^38 candidats pour une recherche exhaustive, 99 203 requêtes par la fuite temporelle : le rapport dit tout."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["le sel","un sel","sel","le sel unique par compte","un sel par compte"],"placeholder":"la valeur publique qui empêche l'attaquant de payer une seule fois pour tous les comptes","hints":["Elle est stockée en clair, à côté de l'empreinte, et fuite avec elle.","Elle ne rend aucun mot de passe plus solide : elle supprime la mutualisation.","Trois lettres."],"link":{"href":"lecon-07.html","label":"Revoir « Le sel : supprimer la mutualisation »"}},
+  {"type":"code","run":{"expect":"4 compressions par itération"},"placeholder":"le coût marginal d'une itération de PBKDF2-HMAC-SHA256, en blocs de 64 octets","hints":["Compte les blocs de 64 octets passés dans la compression, pas les appels de fonction.","Un HMAC coûte deux hachages, et chacun porte sur deux blocs une fois la clé préparée et le bourrage ajouté.","Affiche exactement : « 4 compressions par itération »."],"link":{"href":"lecon-07.html","label":"Revoir « Rendre un essai cher : PBKDF2 »"}},
+  {"type":"code","run":{"expect":"32 caractères justes sur 32"},"placeholder":"le résultat de la reconstitution d'un jeton face à une comparaison qui s'arrête au premier écart","hints":["Pour chaque position, le bon caractère est celui qui fait durer la comparaison le plus longtemps.","Le dernier caractère n'a pas de signal temporel : il se trouve en essayant les 16 valeurs.","Affiche exactement : « 32 caractères justes sur 32 »."],"link":{"href":"lecon-07.html","label":"Revoir « La dernière ligne : comparer sans rien dire »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une équipe migre son service de SHA-256 salé vers Argon2id. Quelqu'un fait remarquer qu'il est impossible de recalculer les empreintes, puisque personne ne connaît les mots de passe des utilisateurs, et propose de forcer tout le monde à en choisir un nouveau. En trois phrases, dis pourquoi cette proposition est mauvaise, décris la méthode employée en pratique, et explique ce qu'elle coûte.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l7-exo1.txt"><pre><code class="language-plaintext">Pourquoi forcer un changement général est une mauvaise réponse : cela transfère
+le coût de la migration sur les utilisateurs, provoque une vague de mots de passe
+réinitialisés à la hâte — donc plus faibles —, et surtout cela ne migre RIEN tant
+que la personne ne revient pas. Un service a toujours une longue traîne de comptes
+inactifs : ce sont eux qui resteraient sous l'ancien schéma, et ce sont précisément
+les comptes qu'on ne surveille pas.
+
+La méthode employée en pratique : on migre À LA CONNEXION. La table gagne une
+colonne qui dit avec quel schéma chaque empreinte a été produite. À la connexion,
+le service vérifie avec l'ancien schéma ; si cela passe, il tient le mot de passe
+en clair pendant quelques microsecondes — le seul moment où c'est le cas — et il
+en recalcule l'empreinte avec Argon2id avant de répondre. Le compte est migré sans
+que personne ne s'en aperçoive. Certains services enveloppent en plus l'ancienne
+empreinte dans la nouvelle fonction, ce qui permet de migrer les comptes inactifs
+immédiatement, au prix d'un schéma composé à maintenir.
+
+Ce qu'elle coûte : une colonne de schéma, un chemin de code par ancienne fonction,
+et une décision de calendrier — au bout de combien de temps refuse-t-on les comptes
+non migrés ? Sans cette date, l'ancien schéma vit indéfiniment.
+
+Le changement de POIVRE pose le même problème en pire. Le poivre entre dans le
+calcul de l'empreinte, mais il est commun à tous les comptes : le remplacer exige,
+lui aussi, de connaître le mot de passe, donc d'attendre chaque connexion. Sauf
+qu'ici il n'y a pas de « nouveau schéma » à faire cohabiter avec l'ancien — il y a
+DEUX secrets à conserver en parallèle, dont l'ancien, celui qu'on voulait retirer.
+C'est la raison pour laquelle un poivre se range dans un module matériel ou un
+service de gestion de clés qui sait faire de la rotation, et non dans un fichier
+de configuration.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un programme qui compte le travail réel d'une itération de PBKDF2-HMAC-SHA256, en blocs de 64&nbsp;octets passés dans la fonction de compression. Instrumente SHA-256, dérive une clé de 32&nbsp;octets avec 1&nbsp;itération puis avec 1&nbsp;001, et déduis le coût marginal d'une itération. Le programme doit afficher <code>4 compressions par itération</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l7-exo2.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// Le coût marginal d'une itération de PBKDF2-HMAC-SHA256, compté en blocs de 64 octets.
+
+let compressions = 0;
+const SHA = o =&gt; { compressions += Math.ceil((o.length + 9) / 64); return sha256o(o); };
+function HMAC(cle, msg){
+  let k = cle.length &gt; 64 ? SHA(cle) : cle.slice();
+  while (k.length &lt; 64) k.push(0);
+  return SHA([...k.map(b =&gt; b ^ 0x5c), ...SHA([...k.map(b =&gt; b ^ 0x36), ...msg])]);
+}
+function pbkdf2(mdp, sel, iterations, longueur){
+  const dk = [];
+  for (let bloc = 1; dk.length &lt; longueur; bloc++){
+    let u = HMAC(mdp, [...sel, (bloc &gt;&gt;&gt; 24) &amp; 255, (bloc &gt;&gt;&gt; 16) &amp; 255, (bloc &gt;&gt;&gt; 8) &amp; 255, bloc &amp; 255]);
+    const t = u.slice();
+    for (let i = 1; i &lt; iterations; i++){ u = HMAC(mdp, u); for (let j = 0; j &lt; 32; j++) t[j] ^= u[j]; }
+    dk.push(...t);
+  }
+  return dk.slice(0, longueur);
+}
+
+const mesurer = it =&gt; { compressions = 0; pbkdf2(bof('mot de passe'), bof('sel-de-seize-octets'), it, 32); return compressions; };
+const a = mesurer(1), b = mesurer(1001);
+console.log('1 itération      : ' + a + ' compressions');
+console.log('1 001 itérations : ' + b + ' compressions');
+console.log('différence       : ' + (b - a) + ' pour ' + (1001 - 1) + ' itérations de plus');
+console.log('');
+console.log((b - a) / (1001 - 1) + ' compressions par itération');</code></pre></figure><figure class="code-block" data-file="solution-l7-exo2.txt"><pre><code class="language-plaintext">1 itération      : 4 compressions
+1 001 itérations : 4004 compressions
+différence       : 4000 pour 1000 itérations de plus
+
+4 compressions par itération</code></pre></figure><p>Le coût marginal se lit sur la <em>différence</em> entre deux mesures, jamais sur une mesure isolée&nbsp;: l'amorce du premier bloc — le HMAC initial sur le sel et le numéro de bloc — ne se répète pas, et la compter reviendrait à surestimer chaque itération. La différence l'élimine.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Approfondissement</span></div><p>Écris l'attaque temporelle sur une comparaison naïve, sans bruit cette fois, pour en isoler le mécanisme. Le service compare un jeton de 32&nbsp;caractères hexadécimaux et s'arrête au premier écart&nbsp;; l'attaquant observe le nombre de comparaisons faites. Reconstitue le jeton position par position, et n'oublie pas le dernier caractère. Le programme doit afficher <code>32 caractères justes sur 32</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l7-exo3.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction écrite en entier dans la leçon 1, repliée ici) ------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// L'attaque temporelle réduite à son mécanisme : pas de bruit, pas de répétitions.
+
+const HEXA = '0123456789abcdef';
+const JETON = hex(sha256o(bof('jeton-de-reinitialisation-du-compte-u1042'))).slice(0, 32);
+
+let requetes = 0;
+function comparer(recu, attendu){          // le service, qui s'arrête au premier écart
+  requetes++;
+  let n = 0;
+  for (let i = 0; i &lt; attendu.length; i++) { n++; if (recu[i] !== attendu[i]) return { egal: false, cout: n }; }
+  return { egal: recu.length === attendu.length, cout: n };
+}
+
+let prefixe = '';
+for (let position = 0; position &lt; JETON.length - 1; position++) {
+  let meilleur = HEXA[0], plusLong = -1;
+  for (const c of HEXA) {
+    const cout = comparer((prefixe + c).padEnd(JETON.length, '0'), JETON).cout;
+    if (cout &gt; plusLong) { plusLong = cout; meilleur = c; }
+  }
+  prefixe += meilleur;
+}
+// Dernière position : aucun signal temporel, mais le service dit « accepté ».
+let dernier = HEXA[0];
+for (const c of HEXA) if (comparer(prefixe + c, JETON).egal) { dernier = c; break; }
+const trouve = prefixe + dernier;
+
+let justes = 0;
+for (let i = 0; i &lt; JETON.length; i++) if (trouve[i] === JETON[i]) justes++;
+console.log('jeton visé   : ' + JETON);
+console.log('reconstitué  : ' + trouve);
+console.log('requêtes     : ' + requetes);
+console.log('');
+console.log(justes + ' caractères justes sur ' + JETON.length);</code></pre></figure><figure class="code-block" data-file="solution-l7-exo3.txt"><pre><code class="language-plaintext">jeton visé   : b7de01bb495aadc27e8201d4cafa13e2
+reconstitué  : b7de01bb495aadc27e8201d4cafa13e2
+requêtes     : 499
+
+32 caractères justes sur 32</code></pre></figure><p>Sans bruit, l'attaque coûte au plus 16&nbsp;requêtes par position, soit <strong>499 en tout</strong> pour un jeton de 128&nbsp;bits — 496 pour les trente et une premières positions, et 3 seulement pour la dernière, la boucle s'arrêtant dès que le service accepte. Le bruit du programme de la leçon multiplie ce coût par le nombre de répétitions nécessaires — 200 ici, davantage sur un vrai réseau —, mais ne change ni le mécanisme ni le résultat. C'est exactement pourquoi «&nbsp;ajouter un délai aléatoire&nbsp;» n'est pas une parade&nbsp;: cela fixe un prix, cela ne ferme pas la porte.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

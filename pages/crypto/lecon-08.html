@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chiffrer des données au repos — Leçon 08 · Cours Cryptographie appliquée — Syntaxe</title>
+    <meta name="description" content="Modèle de menace calculé pour le chiffrement de volume, de base et de champ ; l'attaque de déplacement et les données associées ; ce que le chiffrement déterministe laisse voir, les limites de l'index aveugle, les bornes de nonce, et les copies claires qui survivent dans les journaux. Cours Cryptographie appliquée, module 3." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="crypto" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cryptographie appliquée</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · En pratique</p>
+              <h1 class="lesson-header__title">Chiffrer des données au repos</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~35 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : leçons 1 à 7 de ce cours</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Dire ce que couvre exactement chaque niveau de chiffrement, et ce qu’aucun ne couvre</li>
+                  <li>Reconnaître l’attaque de déplacement, et la fermer avec des données associées</li>
+                  <li>Mesurer ce qu’un chiffrement déterministe laisse lire sans aucune clé</li>
+                  <li>Situer l’index aveugle : ce qu’il rend possible, et sur quels champs il échoue</li>
+                  <li>Calculer combien de messages une clé supporte, selon la taille du nonce</li>
+                  <li>Faire l’inventaire des endroits où la donnée existe encore en clair</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>«&nbsp;Nos données sont chiffrées au repos.&nbsp;» La phrase figure dans à peu près tous les documents de conformité, et elle ne veut presque rien dire tant qu'on n'a pas répondu à deux questions&nbsp;: <em>chiffrées où</em>, et <em>contre qui</em>.</p>
+<p>Cette leçon répond aux deux, en mesurant. Elle commence par un tableau qui n'est pas récité mais <strong>calculé</strong>&nbsp;: sept manières d'entrer, trois endroits où chiffrer, et la liste de ce qui reste lisible dans chaque cas. Puis elle descend dans le seul niveau qui protège vraiment la donnée — le champ — et montre les trois façons de s'y tromper.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord le modèle de menace, déduit et non affirmé&nbsp;: ce que couvre le chiffrement de volume, celui de la base, celui du champ, et ce qu'aucun des trois ne couvre. Ensuite le chiffrement d'un champ, avec l'attaque qui survit à un chiffrement parfait — le <strong>déplacement</strong> — et la parade, les données associées. Puis le compromis le plus mal compris du sujet&nbsp;: chercher dans une colonne chiffrée, ce que le déterminisme coûte, et jusqu'où l'index aveugle rattrape le coup. Enfin deux questions de comptage&nbsp;: combien de messages une clé supporte, et combien de copies claires de la donnée traînent ailleurs.</p></div></div>
+
+<h2>Chiffré au repos, oui&nbsp;: mais où&nbsp;?</h2>
+<p>Il existe trois endroits où l'on peut chiffrer, et on les confond constamment. Le <strong>volume</strong> — le disque entier, par le système&nbsp;: BitLocker, FileVault, LUKS. La <strong>base</strong> — les fichiers du moteur, par le moteur lui-même&nbsp;: c'est ce qu'on appelle le chiffrement transparent. Le <strong>champ</strong> — la valeur, par l'application, avant même d'atteindre la base.</p>
+<p>Le programme ne dit pas lequel est le bon. Il modélise ce qu'un attaquant obtient selon la façon dont il est entré, ce que chaque protection exige pour tenir, et il en <em>déduit</em> la lisibilité de chaque case.</p>
+<figure class="code-block" data-file="menace-au-repos.js"><pre><code class="language-javascript">// « Nos données sont chiffrées au repos. » Contre quoi, exactement ?
+// Le programme ne récite pas un tableau : il DÉDUIT la lisibilité de chaque scénario
+// à partir des capacités que l'attaquant obtient, et de ce que chaque protection exige.
+
+// Ce qu'un attaquant peut avoir en main, selon la façon dont il est entré.
+const SCENARIOS = [
+  { nom: 'portable volé, éteint',              capacites: ['fichiers'] },
+  { nom: 'disque mis au rebut',                capacites: ['fichiers'] },
+  { nom: 'sauvegarde de base égarée',          capacites: ['fichiers'] },
+  { nom: 'injection SQL sur le service',       capacites: ['moteur', 'volume-monte'] },
+  { nom: 'administration de la base',          capacites: ['fichiers', 'volume-monte', 'moteur'] },
+  { nom: 'instantané de volume à chaud',       capacites: ['fichiers', 'volume-monte'] },
+  { nom: 'exécution de code dans le service',  capacites: ['fichiers', 'volume-monte', 'moteur', 'cle-appli'] },
+];
+
+// Ce qui suffit à contourner chaque protection. Une protection ne « protège » pas dans
+// l'absolu : elle exige une condition, et cette condition est parfois déjà remplie.
+const PROTECTIONS = [
+  { nom: 'chiffrement de volume', contournee: ['volume-monte'],
+    pourquoi: 'le système déchiffre à la volée dès que le volume est monté' },
+  { nom: 'chiffrement de base',   contournee: ['moteur', 'volume-monte'],
+    pourquoi: 'le moteur déchiffre pour répondre aux requêtes, sans rien demander' },
+  { nom: 'chiffrement de champ',  contournee: ['cle-appli'],
+    pourquoi: 'seul le service qui détient la clé peut lire la valeur' },
+];
+
+const lisible = (scenario, protection) =&gt; protection.contournee.some(c =&gt; scenario.capacites.includes(c));
+
+console.log('Un « x » signifie que la donnée reste LISIBLE malgré la protection.');
+console.log('');
+console.log('  scénario                          ' + PROTECTIONS.map(p =&gt; p.nom.replace('chiffrement de ', '').padStart(10)).join(' '));
+for (const s of SCENARIOS) {
+  console.log('  ' + s.nom.padEnd(34)
+    + PROTECTIONS.map(p =&gt; (lisible(s, p) ? 'x' : '.').padStart(10)).join(' '));
+}
+console.log('');
+for (const p of PROTECTIONS) {
+  const perces = SCENARIOS.filter(s =&gt; lisible(s, p)).length;
+  console.log('  ' + p.nom.padEnd(24) + 'percée dans ' + perces + ' scénario(s) sur ' + SCENARIOS.length
+    + '  — ' + p.pourquoi);
+}
+console.log('');
+
+// Contre-épreuve : combien de scénarios une absence de protection laisse-t-elle lisibles ?
+const rien = { nom: 'aucune protection', contournee: ['fichiers', 'moteur'] };
+console.log('  ' + rien.nom.padEnd(24) + 'percée dans '
+  + SCENARIOS.filter(s =&gt; lisible(s, rien)).length + ' scénario(s) sur ' + SCENARIOS.length);
+console.log('');
+
+// Combien de scénarios chaque COMBINAISON de protections couvre-t-elle réellement ?
+console.log('Scénarios où la donnée reste illisible, selon les protections activées :');
+console.log('');
+for (let masque = 0; masque &lt; 8; masque++) {
+  const actives = PROTECTIONS.filter((_, i) =&gt; masque &amp; (1 &lt;&lt; i));
+  // Il SUFFIT qu'une seule couche tienne pour que la donnée reste illisible.
+  const couverts = SCENARIOS.filter(s =&gt; actives.some(p =&gt; !lisible(s, p)));
+  const restants = SCENARIOS.filter(s =&gt; !couverts.includes(s));
+  const nom = actives.length ? actives.map(p =&gt; p.nom.replace('chiffrement de ', '')).join(' + ') : '(aucune)';
+  console.log('  ' + nom.padEnd(30) + (couverts.length + ' / ' + SCENARIOS.length).padStart(6));
+  console.log('      reste lisible : ' + restants.map(s =&gt; s.nom).join(' · '));
+}
+console.log('');
+console.log('Trois lectures, et aucune n\'est rassurante.');
+console.log('');
+console.log('1. Le chiffrement de volume ne couvre QUE la machine éteinte. C\'est déjà');
+console.log('   beaucoup — c\'est le seul qui protège un portable volé ou un disque au rebut —');
+console.log('   mais il ne fait rien contre quoi que ce soit qui arrive à un serveur en marche.');
+console.log('2. Le chiffrement de base ne couvre PAS l\'injection SQL ni l\'administrateur :');
+console.log('   ils passent tous deux par le moteur, qui déchiffre pour eux. Il couvre la');
+console.log('   sauvegarde et le fichier, ce qui est exactement son objet.');
+console.log('3. Aucune protection ne couvre le scénario où le service lui-même est compromis,');
+console.log('   puisque c\'est lui qui détient les clés. Chiffrer au repos ne remplace donc');
+console.log('   jamais le fait d\'empêcher l\'exécution de code — cela réduit ce qu\'un vol');
+console.log('   de fichiers rapporte, et c\'est déjà la moitié des cas de ce tableau.');</code></pre></figure>
+<figure class="code-block" data-file="menace-au-repos.txt"><pre><code class="language-plaintext">Un « x » signifie que la donnée reste LISIBLE malgré la protection.
+
+  scénario                              volume       base      champ
+  portable volé, éteint                      .          .          .
+  disque mis au rebut                        .          .          .
+  sauvegarde de base égarée                  .          .          .
+  injection SQL sur le service               x          x          .
+  administration de la base                  x          x          .
+  instantané de volume à chaud               x          x          .
+  exécution de code dans le service          x          x          x
+
+  chiffrement de volume   percée dans 4 scénario(s) sur 7  — le système déchiffre à la volée dès que le volume est monté
+  chiffrement de base     percée dans 4 scénario(s) sur 7  — le moteur déchiffre pour répondre aux requêtes, sans rien demander
+  chiffrement de champ    percée dans 1 scénario(s) sur 7  — seul le service qui détient la clé peut lire la valeur
+
+  aucune protection       percée dans 7 scénario(s) sur 7
+
+Scénarios où la donnée reste illisible, selon les protections activées :
+
+  (aucune)                       0 / 7
+      reste lisible : portable volé, éteint · disque mis au rebut · sauvegarde de base égarée · injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  volume                         3 / 7
+      reste lisible : injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  base                           3 / 7
+      reste lisible : injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  volume + base                  3 / 7
+      reste lisible : injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  champ                          6 / 7
+      reste lisible : exécution de code dans le service
+  volume + champ                 6 / 7
+      reste lisible : exécution de code dans le service
+  base + champ                   6 / 7
+      reste lisible : exécution de code dans le service
+  volume + base + champ          6 / 7
+      reste lisible : exécution de code dans le service
+
+Trois lectures, et aucune n'est rassurante.
+
+1. Le chiffrement de volume ne couvre QUE la machine éteinte. C'est déjà
+   beaucoup — c'est le seul qui protège un portable volé ou un disque au rebut —
+   mais il ne fait rien contre quoi que ce soit qui arrive à un serveur en marche.
+2. Le chiffrement de base ne couvre PAS l'injection SQL ni l'administrateur :
+   ils passent tous deux par le moteur, qui déchiffre pour eux. Il couvre la
+   sauvegarde et le fichier, ce qui est exactement son objet.
+3. Aucune protection ne couvre le scénario où le service lui-même est compromis,
+   puisque c'est lui qui détient les clés. Chiffrer au repos ne remplace donc
+   jamais le fait d'empêcher l'exécution de code — cela réduit ce qu'un vol
+   de fichiers rapporte, et c'est déjà la moitié des cas de ce tableau.</code></pre></figure>
+<p>Le tableau se lit vite, et il désigne exactement les malentendus courants.</p>
+<p>Le <strong>chiffrement de volume</strong> couvre <strong>3 scénarios sur 7</strong>&nbsp;: le portable volé, le disque au rebut, la sauvegarde égarée. C'est considérable — ce sont les incidents les plus fréquents, et la protection est presque gratuite — mais il ne fait <em>rien</em> contre quoi que ce soit qui arrive à une machine allumée. Le noyau déchiffre à la volée&nbsp;: c'est tout son objet.</p>
+<p>Le <strong>chiffrement de base</strong> couvre les mêmes trois, et pas un de plus. Il ne protège ni de l'injection SQL ni de l'administrateur, qui passent tous deux par le moteur — lequel déchiffre pour eux sans rien demander. C'est un outil de conformité et de protection des fichiers, pas un contrôle d'accès.</p>
+<p>Le <strong>chiffrement de champ</strong> couvre <strong>6 scénarios sur 7</strong>, parce que seul le service qui détient la clé peut lire. Et le septième, celui qu'aucune des trois protections ne couvre, est l'exécution de code dans le service lui-même&nbsp;: c'est lui qui a les clés. Chiffrer au repos ne remplace donc jamais le fait d'empêcher un attaquant d'exécuter du code — cela réduit ce qu'un vol de <em>fichiers</em> rapporte, ce qui est déjà l'essentiel des cas.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Une addition qui n'en est pas une</p><p>Le programme calcule la couverture d'une <em>combinaison</em> de protections en considérant qu'il suffit qu'<strong>une seule couche tienne</strong> — et non que toutes tiennent. La différence n'est pas anodine&nbsp;: avec la seconde lecture, ajouter une protection ferait <em>baisser</em> la couverture, ce qui est absurde. C'est exactement le genre de raisonnement à l'envers qui produit des tableaux de conformité rassurants et faux. La conséquence pratique se lit dans la sortie&nbsp;: «&nbsp;volume + base&nbsp;» couvre 3 scénarios sur 7, «&nbsp;champ&nbsp;» seul en couvre 6.</p></div></div>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 230" role="img" aria-label="Les trois niveaux où l'on peut chiffrer, empilés du disque vers l'application, avec le point où chacun déchiffre. Le chiffrement de volume déchiffre dès que le système monte le disque, donc tout ce qui est au-dessus voit les données en clair. Le chiffrement de base déchiffre dans le moteur, donc toute requête, légitime ou injectée, reçoit du clair. Le chiffrement de champ déchiffre dans le service applicatif, qui est le seul à détenir la clé. Un attaquant entré au niveau du disque est arrêté par les trois ; entré par le moteur, seul le chiffrement de champ le retient ; entré dans le service, aucun ne le retient.">
+    <rect class="d-box" x="24" y="20" width="592" height="34" rx="6" /><text class="d-text" x="320" y="42" text-anchor="middle" font-size="11">service applicatif — détient la clé du CHAMP</text>
+    <rect class="d-box" x="24" y="74" width="592" height="34" rx="6" /><text class="d-text" x="320" y="96" text-anchor="middle" font-size="11">moteur de base — détient la clé de la BASE</text>
+    <rect class="d-box" x="24" y="128" width="592" height="34" rx="6" /><text class="d-text" x="320" y="150" text-anchor="middle" font-size="11">système — détient la clé du VOLUME</text>
+    <rect class="d-accent" x="24" y="182" width="592" height="30" rx="6" /><text class="d-text" x="320" y="202" text-anchor="middle" font-size="11">disque</text>
+    <path class="d-line" d="M600 165 V182" />
+    <text class="d-mut" x="612" y="177" text-anchor="end" font-size="9">clair au-dessus de cette ligne</text>
+    <text class="d-label" x="40" y="16" text-anchor="start" font-size="10">entrée par le service : 0 protection sur 3 tient</text>
+    <text class="d-label" x="40" y="70" text-anchor="start" font-size="10">entrée par le moteur : seul le chiffrement de champ tient</text>
+    <text class="d-label" x="40" y="124" text-anchor="start" font-size="10">entrée par le disque : les trois tiennent</text>
+  </svg>
+  <figcaption>Chaque niveau déchiffre pour tout ce qui se trouve au-dessus de lui. La question n'est donc jamais «&nbsp;est-ce chiffré&nbsp;?&nbsp;» mais «&nbsp;par où l'attaquant entre-t-il&nbsp;?&nbsp;».</figcaption>
+</figure>
+
+<h2>Chiffrer un champ, et ce qui reste possible</h2>
+<p>Descendons donc au champ. Le mécanisme est celui de la leçon&nbsp;2&nbsp;: on chiffre, et on ajoute une marque d'authenticité — sans quoi le chiffré est modifiable. Voici une table de paie, avec la colonne des salaires chiffrée. Rien n'est lisible. Et pourtant.</p>
+<figure class="code-block" data-file="champ-aead.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
+// Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
+// plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+function hmac(cle,msg){let k=cle.length&gt;64?sha256o(cle):cle.slice();while(k.length&lt;64)k.push(0);
+  return sha256o([...k.map(b=&gt;b^0x5c),...sha256o([...k.map(b=&gt;b^0x36),...msg])]);}
+const rotl=(x,n)=&gt;((x&lt;&lt;n)|(x&gt;&gt;&gt;(32-n)))&gt;&gt;&gt;0;
+function blocChaCha(c,n,v){const e=[0x61707865,0x3320646e,0x79622d32,0x6b206574],m=(t,i)=&gt;(t[i]|(t[i+1]&lt;&lt;8)|(t[i+2]&lt;&lt;16)|(t[i+3]&lt;&lt;24))&gt;&gt;&gt;0;
+ const s=[e[0],e[1],e[2],e[3]];for(let i=0;i&lt;8;i++)s.push(m(c,4*i));s.push(n&gt;&gt;&gt;0);for(let i=0;i&lt;3;i++)s.push(m(v,4*i));
+ const x=s.slice(),q=(a,b,cc,d)=&gt;{x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],16);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],12);x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],8);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],7);};
+ for(let i=0;i&lt;10;i++){q(0,4,8,12);q(1,5,9,13);q(2,6,10,14);q(3,7,11,15);q(0,5,10,15);q(1,6,11,12);q(2,7,8,13);q(3,4,9,14);}
+ const o=[];for(let i=0;i&lt;16;i++){const v2=(x[i]+s[i])&gt;&gt;&gt;0;o.push(v2&amp;0xff,(v2&gt;&gt;&gt;8)&amp;0xff,(v2&gt;&gt;&gt;16)&amp;0xff,(v2&gt;&gt;&gt;24)&amp;0xff);}return o;}
+function chacha20(cle,nonce,octets,c0){const o=[];let c=c0;for(let i=0;i&lt;octets.length;i+=64){const f=blocChaCha(cle,c++,nonce);
+ for(let j=0;j&lt;64&amp;&amp;i+j&lt;octets.length;j++)o.push(octets[i+j]^f[j]);}return o;}
+// -----------------------------------------------------------------------------------
+
+// Chiffrer un champ, et l'attaque qui reste possible quand on le fait mal.
+// Le chiffrement est le ChaCha20 de la leçon 2, suivi d'une marque HMAC-SHA-256
+// (« chiffrer puis authentifier »). Dans un vrai service : AES-GCM ou
+// ChaCha20-Poly1305, en une ligne de bibliothèque.
+
+const CLE = sha256o(bof('clé de chiffrement des champs — service de paie'));
+const CLE_MARQUE = sha256o(bof('clé de la marque — service de paie'));
+let compteurNonce = 0;
+const nonceSuivant = () =&gt; { compteurNonce++; return [compteurNonce &amp; 255, (compteurNonce &gt;&gt; 8) &amp; 255, (compteurNonce &gt;&gt; 16) &amp; 255, 0, 0, 0, 0, 0, 0, 0, 0, 0]; };
+
+// « associees » = ce que le chiffré doit être le seul à pouvoir accompagner.
+function sceller(valeur, associees){
+  const nonce = nonceSuivant();
+  const chiffre = chacha20(CLE, nonce, bof(valeur), 1);
+  const marque = hmac(CLE_MARQUE, [...bof(associees), 0, ...nonce, ...chiffre]);
+  return { nonce, chiffre, marque: hex(marque).slice(0, 32) };
+}
+function ouvrir(paquet, associees){
+  const attendue = hex(hmac(CLE_MARQUE, [...bof(associees), 0, ...paquet.nonce, ...paquet.chiffre])).slice(0, 32);
+  if (attendue !== paquet.marque) return null;                 // la marque ne colle pas : on refuse
+  return String.fromCharCode(...chacha20(CLE, paquet.nonce, paquet.chiffre, 1));
+}
+
+const EMPLOYES = [
+  { id: 101, nom: 'Amina',   salaire: '31200' },
+  { id: 102, nom: 'Bruno',   salaire: '28400' },
+  { id: 103, nom: 'Chloé',   salaire: '45900' },
+  { id: 104, nom: 'Damien',  salaire: '33100' },
+  { id: 105, nom: 'Élodie',  salaire: '52700' },
+  { id: 106, nom: 'Farid',   salaire: '29800' },
+  { id: 107, nom: 'Gaëlle',  salaire: '118000' },
+  { id: 108, nom: 'Hugo',    salaire: '30500' },
+];
+
+// --- Version 1 : la marque ne couvre QUE la valeur. -------------------------------
+const sansLien = EMPLOYES.map(e =&gt; ({ id: e.id, nom: e.nom, paie: sceller(e.salaire, '') }));
+console.log('Table « paie », colonne salaire chiffrée. Ce que voit un lecteur de la base :');
+for (const l of sansLien.slice(0, 3))
+  console.log('  ' + l.id + '  ' + l.nom.padEnd(8) + hex(l.paie.chiffre) + '  ' + l.paie.marque);
+console.log('  …');
+console.log('');
+console.log('Aucun salaire n\'est lisible : les valeurs sont bien chiffrées.');
+console.log('');
+
+// L'attaque : on ne déchiffre rien, on DÉPLACE. Un attaquant qui écrit dans la base
+// (injection SQL, sauvegarde restaurée, accès d'administration) copie la ligne d'un
+// autre dans la sienne, puis lit sa propre fiche de paie dans l'application.
+let acceptesSans = 0, essais = 0;
+for (const cible of sansLien) for (const source of sansLien) {
+  if (cible.id === source.id) continue;
+  essais++;
+  const vole = ouvrir(source.paie, '');            // le service lit la ligne de « cible »…
+  if (vole !== null) acceptesSans++;               // …et y trouve la valeur de « source »
+}
+console.log('Déplacements tentés : ' + essais + ' (chaque chiffré posé sur chaque autre ligne).');
+console.log('  acceptés par le service : ' + acceptesSans + ' sur ' + essais);
+console.log('  exemple : la ligne ' + sansLien[0].id + ' (' + sansLien[0].nom + ') reçoit le chiffré de la ligne '
+  + sansLien[6].id + ' → le service affiche ' + ouvrir(sansLien[6].paie, '') + ' €');
+console.log('');
+console.log('Le chiffrement a parfaitement tenu. C\'est la LIAISON qui manquait : rien');
+console.log('n\'attachait ce chiffré à cette ligne-là.');
+console.log('');
+
+// --- Version 2 : la marque couvre aussi le contexte. ------------------------------
+// Le contexte, ici : la table, la colonne, et l'identifiant de la ligne.
+const contexte = id =&gt; 'paie|salaire|' + id;
+const avecLien = EMPLOYES.map(e =&gt; ({ id: e.id, nom: e.nom, paie: sceller(e.salaire, contexte(e.id)) }));
+
+let acceptesAvec = 0;
+for (const cible of avecLien) for (const source of avecLien) {
+  if (cible.id === source.id) continue;
+  if (ouvrir(source.paie, contexte(cible.id)) !== null) acceptesAvec++;   // lu SOUS le contexte de la cible
+}
+let lecturesNormales = 0;
+for (const l of avecLien) if (ouvrir(l.paie, contexte(l.id)) === EMPLOYES.find(e =&gt; e.id === l.id).salaire) lecturesNormales++;
+
+console.log('Mêmes données, mais le contexte « ' + contexte('&lt;id&gt;') + ' » entre dans la marque :');
+console.log('  déplacements acceptés ..... ' + acceptesAvec + ' sur ' + essais);
+console.log('  lectures normales réussies  ' + lecturesNormales + ' sur ' + avecLien.length
+  + '   (contre-épreuve : le service lit toujours ses propres lignes)');
+console.log('');
+console.log('Ce champ supplémentaire porte un nom dans les normes : les DONNÉES ASSOCIÉES');
+console.log('du chiffrement authentifié — le « AD » de AEAD. Elles ne sont pas chiffrées,');
+console.log('elles sont seulement authentifiées : le déchiffrement échoue si le chiffré');
+console.log('est présenté dans un autre contexte que celui où il a été produit.');
+console.log('');
+console.log('Le choix de ce qu\'on y met est une décision de conception, pas un détail :');
+console.log('mettre l\'identifiant de ligne interdit le déplacement entre lignes, mettre');
+console.log('le nom de la colonne interdit le déplacement entre colonnes, mettre un numéro');
+console.log('de version interdit de faire revenir une ancienne valeur à la place de la neuve.');</code></pre></figure>
+<figure class="code-block" data-file="champ-aead.txt"><pre><code class="language-plaintext">Table « paie », colonne salaire chiffrée. Ce que voit un lecteur de la base :
+  101  Amina   e9d26d1985  d2ab97defca073b35f36113c8d85248e
+  102  Bruno   4886a45b24  5f093a9a32feb959bcba6b7a10cd1c3a
+  103  Chloé   faad0fa9f1  28833cf6a56f0e5cb15536644dc7cc47
+  …
+
+Aucun salaire n'est lisible : les valeurs sont bien chiffrées.
+
+Déplacements tentés : 56 (chaque chiffré posé sur chaque autre ligne).
+  acceptés par le service : 56 sur 56
+  exemple : la ligne 101 (Amina) reçoit le chiffré de la ligne 107 → le service affiche 118000 €
+
+Le chiffrement a parfaitement tenu. C'est la LIAISON qui manquait : rien
+n'attachait ce chiffré à cette ligne-là.
+
+Mêmes données, mais le contexte « paie|salaire|&lt;id&gt; » entre dans la marque :
+  déplacements acceptés ..... 0 sur 56
+  lectures normales réussies  8 sur 8   (contre-épreuve : le service lit toujours ses propres lignes)
+
+Ce champ supplémentaire porte un nom dans les normes : les DONNÉES ASSOCIÉES
+du chiffrement authentifié — le « AD » de AEAD. Elles ne sont pas chiffrées,
+elles sont seulement authentifiées : le déchiffrement échoue si le chiffré
+est présenté dans un autre contexte que celui où il a été produit.
+
+Le choix de ce qu'on y met est une décision de conception, pas un détail :
+mettre l'identifiant de ligne interdit le déplacement entre lignes, mettre
+le nom de la colonne interdit le déplacement entre colonnes, mettre un numéro
+de version interdit de faire revenir une ancienne valeur à la place de la neuve.</code></pre></figure>
+<p><strong>56&nbsp;déplacements tentés, 56&nbsp;acceptés.</strong> L'attaquant n'a rien déchiffré&nbsp;: il a copié le chiffré d'une ligne dans une autre, et le service a affiché le salaire du voisin sans broncher. Le chiffrement a parfaitement tenu&nbsp;; la marque aussi. Ce qui manquait, c'est la <strong>liaison</strong>&nbsp;: rien n'attachait ce chiffré à <em>cette</em> ligne-là.</p>
+<p>La correction porte un nom dans les normes&nbsp;: les <strong>données associées</strong>, le «&nbsp;AD&nbsp;» de AEAD. On fait entrer dans le calcul de la marque un contexte qui n'est pas chiffré, seulement authentifié — ici la table, la colonne et l'identifiant de ligne. Le déchiffrement échoue alors dès que le chiffré est présenté ailleurs&nbsp;: <strong>0 déplacement accepté sur 56</strong>, pour <strong>8 lectures normales réussies sur 8</strong>. Cette seconde mesure est la contre-épreuve&nbsp;; sans elle, «&nbsp;0 sur 56&nbsp;» pourrait simplement vouloir dire que plus rien ne fonctionne.</p>
+<p>Le choix de ce qu'on met dans les données associées est une décision de conception, et il se raisonne&nbsp;: l'identifiant de ligne interdit le déplacement entre lignes, le nom de la colonne interdit le déplacement entre colonnes, un numéro de version interdit de faire revenir une ancienne valeur à la place de la neuve. Ce qu'on n'y met pas reste libre de bouger.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que le programme fait, et ce qu'il faut faire</p><p>Le programme chiffre avec ChaCha20 puis authentifie avec HMAC-SHA-256, parce que ces deux fonctions ont été écrites dans les leçons précédentes et se relisent. Dans un service, on appelle <strong>AES-GCM</strong> ou <strong>ChaCha20-Poly1305</strong> — un seul appel, qui fait les deux, et qui accepte un paramètre pour les données associées. La construction «&nbsp;chiffrer puis authentifier&nbsp;» est correcte quand elle est faite ainsi, mais elle laisse trois occasions de se tromper&nbsp;: authentifier avant de chiffrer, oublier le nonce dans la marque, comparer les marques avec un test qui s'arrête au premier écart. La leçon précédente a mesuré ce que coûte la troisième.</p></div></div>
+
+<h2>Le compromis le plus mal compris&nbsp;: chercher</h2>
+<p>Une colonne chiffrée ne se cherche plus. C'est la vraie difficulté du chiffrement de champ, et c'est là que les projets dérapent, parce que la solution qui vient à l'esprit fonctionne — au sens où la recherche remarche.</p>
+<p>Cette solution consiste à chiffrer de façon <strong>déterministe</strong>&nbsp;: même valeur, même chiffré. On peut alors comparer les chiffrés, donc indexer, donc chercher. Voyons ce que cela rend visible.</p>
+<figure class="code-block" data-file="deterministe.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
+// Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
+// plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+function hmac(cle,msg){let k=cle.length&gt;64?sha256o(cle):cle.slice();while(k.length&lt;64)k.push(0);
+  return sha256o([...k.map(b=&gt;b^0x5c),...sha256o([...k.map(b=&gt;b^0x36),...msg])]);}
+const rotl=(x,n)=&gt;((x&lt;&lt;n)|(x&gt;&gt;&gt;(32-n)))&gt;&gt;&gt;0;
+function blocChaCha(c,n,v){const e=[0x61707865,0x3320646e,0x79622d32,0x6b206574],m=(t,i)=&gt;(t[i]|(t[i+1]&lt;&lt;8)|(t[i+2]&lt;&lt;16)|(t[i+3]&lt;&lt;24))&gt;&gt;&gt;0;
+ const s=[e[0],e[1],e[2],e[3]];for(let i=0;i&lt;8;i++)s.push(m(c,4*i));s.push(n&gt;&gt;&gt;0);for(let i=0;i&lt;3;i++)s.push(m(v,4*i));
+ const x=s.slice(),q=(a,b,cc,d)=&gt;{x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],16);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],12);x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],8);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],7);};
+ for(let i=0;i&lt;10;i++){q(0,4,8,12);q(1,5,9,13);q(2,6,10,14);q(3,7,11,15);q(0,5,10,15);q(1,6,11,12);q(2,7,8,13);q(3,4,9,14);}
+ const o=[];for(let i=0;i&lt;16;i++){const v2=(x[i]+s[i])&gt;&gt;&gt;0;o.push(v2&amp;0xff,(v2&gt;&gt;&gt;8)&amp;0xff,(v2&gt;&gt;&gt;16)&amp;0xff,(v2&gt;&gt;&gt;24)&amp;0xff);}return o;}
+function chacha20(cle,nonce,octets,c0){const o=[];let c=c0;for(let i=0;i&lt;octets.length;i+=64){const f=blocChaCha(cle,c++,nonce);
+ for(let j=0;j&lt;64&amp;&amp;i+j&lt;octets.length;j++)o.push(octets[i+j]^f[j]);}return o;}
+// -----------------------------------------------------------------------------------
+
+// « Il faut bien pouvoir chercher. » La tentation, et son prix.
+// Pour répondre à WHERE motif = '…', on chiffre de façon DÉTERMINISTE : même valeur,
+// même chiffré. La recherche redevient possible. Et la fréquence redevient lisible.
+
+let _g = 424242 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+const fr = x =&gt; String(x).replace('.', ',');
+
+// Un champ sensible à faible cardinalité : douze motifs, très inégalement répartis.
+const MOTIFS = [
+  ['suivi de grossesse', 0.19], ['renouvellement', 0.17], ['douleur dorsale', 0.13],
+  ['vaccination', 0.11], ['bilan sanguin', 0.09], ['dermatologie', 0.08],
+  ['trouble du sommeil', 0.07], ['dépistage', 0.055], ['suivi diabète', 0.045],
+  ['santé mentale', 0.035], ['addictologie', 0.02], ['séropositivité', 0.01],
+];
+const cumul = []; { let c = 0; for (const [, p] of MOTIFS) { c += p; cumul.push(c); } }
+const tirerMotif = () =&gt; { const u = alea() * cumul[cumul.length - 1]; return MOTIFS[cumul.findIndex(c =&gt; u &lt;= c)][0]; };
+
+const CLE = sha256o(bof('clé de chiffrement déterministe'));
+// Déterministe : pas de nonce, ou — ce qui revient au même — un nonce dérivé de la valeur.
+const chiffrerDet = v =&gt; hex(chacha20(CLE, [0,0,0,0,0,0,0,0,0,0,0,0], bof(v), 1)).slice(0, 24);
+
+const DOSSIERS = [];
+for (let i = 0; i &lt; 3000; i++) DOSSIERS.push({ id: i, motif: tirerMotif() });
+const TABLE = DOSSIERS.map(d =&gt; ({ id: d.id, motif: chiffrerDet(d.motif) }));
+
+console.log('Table de 3 000 dossiers, colonne « motif » chiffrée de façon déterministe :');
+for (const l of TABLE.slice(0, 3)) console.log('  ' + String(l.id).padStart(4) + '  ' + l.motif);
+console.log('  …');
+const distincts = new Set(TABLE.map(l =&gt; l.motif));
+console.log('');
+console.log('Valeurs chiffrées distinctes : ' + distincts.size + ' pour 3 000 lignes.');
+console.log('La recherche par égalité fonctionne — et c\'est exactement ce qu\'on voulait.');
+console.log('');
+
+// --- L'attaquant n'a que la colonne chiffrée. Il compte. --------------------------
+const compte = new Map();
+for (const l of TABLE) compte.set(l.motif, (compte.get(l.motif) || 0) + 1);
+const observe = [...compte.entries()].sort((a, b) =&gt; b[1] - a[1]);
+console.log('Ce qu\'il obtient en comptant, sans aucune clé :');
+console.log('  rang | occurrences | part observée | chiffré');
+for (let i = 0; i &lt; 4; i++)
+  console.log('  ' + String(i + 1).padStart(4) + ' | ' + String(observe[i][1]).padStart(11)
+    + ' | ' + (fr((100 * observe[i][1] / 3000).toFixed(1)) + ' %').padStart(13) + ' | ' + observe[i][0]);
+console.log('  …');
+console.log('');
+
+// Il connaît par ailleurs la distribution des motifs — un rapport public suffit.
+const attendu = MOTIFS.slice().sort((a, b) =&gt; b[1] - a[1]);
+let justes = 0, lignesJustes = 0;
+const hypothese = new Map();
+for (let i = 0; i &lt; observe.length; i++) hypothese.set(observe[i][0], attendu[i][0]);
+for (const [chiffre, devine] of hypothese) {
+  const vrai = DOSSIERS.find(d =&gt; chiffrerDet(d.motif) === chiffre).motif;
+  if (vrai === devine) justes++;
+}
+for (const d of DOSSIERS) if (hypothese.get(chiffrerDet(d.motif)) === d.motif) lignesJustes++;
+
+console.log('Il apparie les rangs observés aux rangs publiés, et rien de plus :');
+console.log('  motifs correctement identifiés ... ' + justes + ' sur ' + MOTIFS.length);
+console.log('  dossiers correctement étiquetés ... ' + lignesJustes + ' sur ' + DOSSIERS.length
+  + '  (' + fr((100 * lignesJustes / DOSSIERS.length).toFixed(1)) + ' %)');
+console.log('');
+// --- Et la fréquence n'est pas la seule fuite : la LONGUEUR en est une autre. -----
+// Un chiffrement à flot rend un chiffré exactement aussi long que le clair.
+const parLongueur = new Map();
+for (const [m] of MOTIFS) { const L = bof(m).length; parLongueur.set(L, (parLongueur.get(L) || 0) + 1); }
+const uniques = [...MOTIFS].filter(([m]) =&gt; parLongueur.get(bof(m).length) === 1).length;
+console.log('  motifs que leur seule LONGUEUR distingue ... ' + uniques + ' sur ' + MOTIFS.length
+  + '   (le chiffré fait la taille du clair)');
+console.log('');
+console.log('Les erreurs se concentrent là où deux motifs ont des parts voisines : le rang');
+console.log('s\'y inverse par simple fluctuation d\'échantillon. Partout où l\'écart est net,');
+console.log('l\'appariement tombe juste. Et l\'attaquant n\'a besoin ni de clé, ni de calcul.');
+console.log('');
+
+// --- Ce que le nonce change, et ce qu'il coûte. ------------------------------------
+const chiffrerAlea = v =&gt; { const n = []; for (let i = 0; i &lt; 12; i++) n.push(Math.floor(alea() * 256));
+  return hex(n) + hex(chacha20(CLE, n, bof(v), 1)); };
+const TABLE2 = DOSSIERS.map(d =&gt; ({ id: d.id, motif: chiffrerAlea(d.motif) }));
+console.log('La même colonne avec un nonce tiré au sort à chaque écriture :');
+console.log('  valeurs chiffrées distinctes ...... ' + new Set(TABLE2.map(l =&gt; l.motif)).size + ' pour 3 000 lignes');
+const compte2 = new Map();
+for (const l of TABLE2) compte2.set(l.motif, (compte2.get(l.motif) || 0) + 1);
+console.log('  occurrences du chiffré le plus fréquent ... ' + Math.max(...compte2.values())
+  + '   (contre ' + observe[0][1] + ' plus haut)');
+console.log('  ce que la recherche par égalité devient ... impossible sans tout déchiffrer');
+console.log('');
+console.log('Voilà le vrai compromis, et il n\'a pas de solution gratuite : le déterminisme');
+console.log('achète la recherche en vendant la fréquence. Les deux mesures ci-dessus sont');
+console.log('les deux faces d\'un même choix — 12 valeurs distinctes contre 3 000.');</code></pre></figure>
+<figure class="code-block" data-file="deterministe.txt"><pre><code class="language-plaintext">Table de 3 000 dossiers, colonne « motif » chiffrée de façon déterministe :
+     0  301976c235cda39d773f3cf3
+     1  301976c235cda39d773f3cf3
+     2  350d7cd73583a68c3e3720
+  …
+
+Valeurs chiffrées distinctes : 12 pour 3 000 lignes.
+La recherche par égalité fonctionne — et c'est exactement ce qu'on voulait.
+
+Ce qu'il obtient en comptant, sans aucune clé :
+  rang | occurrences | part observée | chiffré
+     1 |         592 |        19,7 % | 301976c235cda39d773f3cf3
+     2 |         520 |        17,3 % | 310971db299ba2943b3d23f9
+     3 |         361 |        12,0 % | 27036ad83998b5d833373cef
+     4 |         341 |        11,4 % | 350d7cd73583a68c3e3720
+  …
+
+Il apparie les rangs observés aux rangs publiés, et rien de plus :
+  motifs correctement identifiés ... 10 sur 12
+  dossiers correctement étiquetés ... 2536 sur 3000  (84,5 %)
+
+  motifs que leur seule LONGUEUR distingue ... 5 sur 12   (le chiffré fait la taille du clair)
+
+Les erreurs se concentrent là où deux motifs ont des parts voisines : le rang
+s'y inverse par simple fluctuation d'échantillon. Partout où l'écart est net,
+l'appariement tombe juste. Et l'attaquant n'a besoin ni de clé, ni de calcul.
+
+La même colonne avec un nonce tiré au sort à chaque écriture :
+  valeurs chiffrées distinctes ...... 3000 pour 3 000 lignes
+  occurrences du chiffré le plus fréquent ... 1   (contre 592 plus haut)
+  ce que la recherche par égalité devient ... impossible sans tout déchiffrer
+
+Voilà le vrai compromis, et il n'a pas de solution gratuite : le déterminisme
+achète la recherche en vendant la fréquence. Les deux mesures ci-dessus sont
+les deux faces d'un même choix — 12 valeurs distinctes contre 3 000.</code></pre></figure>
+<p>Trois mille dossiers, douze valeurs chiffrées distinctes. L'attaquant compte les occurrences, apparie les rangs à une distribution publiée, et obtient <strong>10&nbsp;motifs correctement identifiés sur 12</strong> — soit <strong>2&nbsp;536&nbsp;dossiers correctement étiquetés sur 3&nbsp;000</strong>, 84,5&nbsp;%. Sans clé, sans calcul, en comptant.</p>
+<p>Les deux erreurs se logent là où deux motifs ont des parts voisines&nbsp;: le rang s'y inverse par simple fluctuation d'échantillon. Partout où l'écart est net, l'appariement tombe juste — et ce sont précisément les valeurs les plus fréquentes, donc celles qui concernent le plus de personnes.</p>
+<p>Le programme mesure au passage une seconde fuite, qui <em>ne disparaît pas</em> avec le nonce&nbsp;: la <strong>longueur</strong>. Un chiffrement à flot rend un chiffré exactement aussi long que le clair, et <strong>5&nbsp;motifs sur 12</strong> ont ici une longueur unique. Un mode par blocs arrondit au bloc supérieur, ce qui atténue sans supprimer. La parade est ailleurs&nbsp;: compléter les valeurs à une longueur fixe avant de chiffrer.</p>
+<p>Avec un nonce tiré au sort à chaque écriture, la fréquence disparaît complètement — <strong>3&nbsp;000&nbsp;chiffrés distincts</strong>, le plus fréquent apparaissant <strong>1&nbsp;fois</strong> contre 592 auparavant — et la recherche par égalité devient impossible sans tout déchiffrer. Il n'y a pas d'option gratuite&nbsp;: le déterminisme achète la recherche en vendant la fréquence.</p>
+
+<h2>L'index aveugle, et là où il cesse d'aider</h2>
+<p>Il existe une voie moyenne, et elle mérite d'être comprise avec ses limites. On chiffre la valeur avec un vrai nonce, et l'on range <em>à côté</em> une empreinte à clé de cette valeur, volontairement <strong>tronquée</strong>. La recherche filtre sur cette empreinte, puis déchiffre les quelques candidats restants pour trancher.</p>
+<figure class="code-block" data-file="index-aveugle.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
+// Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
+// plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+function hmac(cle,msg){let k=cle.length&gt;64?sha256o(cle):cle.slice();while(k.length&lt;64)k.push(0);
+  return sha256o([...k.map(b=&gt;b^0x5c),...sha256o([...k.map(b=&gt;b^0x36),...msg])]);}
+const rotl=(x,n)=&gt;((x&lt;&lt;n)|(x&gt;&gt;&gt;(32-n)))&gt;&gt;&gt;0;
+function blocChaCha(c,n,v){const e=[0x61707865,0x3320646e,0x79622d32,0x6b206574],m=(t,i)=&gt;(t[i]|(t[i+1]&lt;&lt;8)|(t[i+2]&lt;&lt;16)|(t[i+3]&lt;&lt;24))&gt;&gt;&gt;0;
+ const s=[e[0],e[1],e[2],e[3]];for(let i=0;i&lt;8;i++)s.push(m(c,4*i));s.push(n&gt;&gt;&gt;0);for(let i=0;i&lt;3;i++)s.push(m(v,4*i));
+ const x=s.slice(),q=(a,b,cc,d)=&gt;{x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],16);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],12);x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],8);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],7);};
+ for(let i=0;i&lt;10;i++){q(0,4,8,12);q(1,5,9,13);q(2,6,10,14);q(3,7,11,15);q(0,5,10,15);q(1,6,11,12);q(2,7,8,13);q(3,4,9,14);}
+ const o=[];for(let i=0;i&lt;16;i++){const v2=(x[i]+s[i])&gt;&gt;&gt;0;o.push(v2&amp;0xff,(v2&gt;&gt;&gt;8)&amp;0xff,(v2&gt;&gt;&gt;16)&amp;0xff,(v2&gt;&gt;&gt;24)&amp;0xff);}return o;}
+function chacha20(cle,nonce,octets,c0){const o=[];let c=c0;for(let i=0;i&lt;octets.length;i+=64){const f=blocChaCha(cle,c++,nonce);
+ for(let j=0;j&lt;64&amp;&amp;i+j&lt;octets.length;j++)o.push(octets[i+j]^f[j]);}return o;}
+// -----------------------------------------------------------------------------------
+
+// Chercher sans chiffrement déterministe : l'index aveugle.
+// À côté de la valeur chiffrée avec un vrai nonce, on range une empreinte À CLÉ de la
+// valeur, volontairement TRONQUÉE. La recherche filtre là-dessus, puis déchiffre les
+// quelques candidats restants pour trancher.
+
+let _g = 987654321 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+const fr = x =&gt; String(x).replace('.', ',');
+const CLE_INDEX = sha256o(bof('clé de l\u2019index aveugle'));
+
+// L'index : HMAC de la valeur normalisée, gardé sur « bits » bits seulement.
+function index(valeur, bits){
+  const h = hmac(CLE_INDEX, bof(valeur.trim().toLowerCase()));
+  let v = 0;
+  for (let i = 0; i &lt; 4; i++) v = v * 256 + h[i];
+  return v % Math.pow(2, bits);
+}
+
+// 5 000 adresses toutes différentes.
+const ADRESSES = [];
+for (let i = 0; i &lt; 5000; i++)
+  ADRESSES.push('client' + Math.floor(alea() * 1e9).toString(36) + i + '@fournisseur.example');
+
+console.log('5 000 adresses distinctes, un index aveugle de largeur variable.');
+console.log('');
+console.log('  bits |  valeurs distinctes |  lignes rendues par recherche | faux positifs');
+for (const bits of [8, 12, 16, 20, 24]) {
+  const groupes = new Map();
+  for (const a of ADRESSES) { const k = index(a, bits); groupes.set(k, (groupes.get(k) || 0) + 1); }
+  // Une recherche rend toutes les lignes qui partagent l'index de la valeur cherchée.
+  let rendues = 0;
+  for (const a of ADRESSES) rendues += groupes.get(index(a, bits));
+  const moyenne = rendues / ADRESSES.length;
+  console.log('  ' + String(bits).padStart(4) + ' | ' + String(groupes.size).padStart(19)
+    + ' | ' + fr(moyenne.toFixed(2)).padStart(29) + ' | ' + fr((moyenne - 1).toFixed(2)).padStart(13));
+}
+console.log('');
+console.log('Les faux positifs ne sont pas un défaut, ce sont LE mécanisme : ils coûtent');
+console.log('quelques déchiffrements de plus à la recherche, et ils brouillent ce que');
+console.log('l\'index laisse voir. À 24 bits, il n\'y en a presque plus — et l\'index');
+console.log('redevient un chiffrement déterministe, avec la même fuite de fréquence.');
+console.log('');
+
+// --- Le cas qui compte vraiment : un champ à faible cardinalité. -------------------
+// Douze motifs, 3 000 dossiers. Est-ce que la troncature sauve la fréquence ?
+const MOTIFS = ['suivi de grossesse','renouvellement','douleur dorsale','vaccination','bilan sanguin',
+  'dermatologie','trouble du sommeil','dépistage','suivi diabète','santé mentale','addictologie','séropositivité'];
+const POIDS = [0.19, 0.17, 0.13, 0.11, 0.09, 0.08, 0.07, 0.055, 0.045, 0.035, 0.02, 0.01];
+const cumul = []; { let c = 0; for (const p of POIDS) { c += p; cumul.push(c); } }
+const DOSSIERS = [];
+for (let i = 0; i &lt; 3000; i++) { const u = alea() * cumul[cumul.length - 1]; DOSSIERS.push(MOTIFS[cumul.findIndex(c =&gt; u &lt;= c)]); }
+
+console.log('Même index aveugle sur un champ à DOUZE valeurs possibles, 3 000 dossiers :');
+console.log('');
+console.log('  bits | groupes visibles | plus gros groupe | motifs isolés dans leur groupe');
+let pireGroupe = 0;
+for (const bits of [2, 3, 4, 8, 16]) {
+  const g = new Map();
+  for (const m of DOSSIERS) { const k = index(m, bits); g.set(k, (g.get(k) || 0) + 1); }
+  const parIndex = new Map();
+  for (const m of MOTIFS) { const k = index(m, bits); parIndex.set(k, (parIndex.get(k) || new Set()).add(m)); }
+  const isoles = [...parIndex.values()].filter(s =&gt; s.size === 1).length;
+  if (bits === 2) pireGroupe = Math.max(...g.values());
+  console.log('  ' + String(bits).padStart(4) + ' | ' + String(g.size).padStart(16)
+    + ' | ' + String(Math.max(...g.values())).padStart(16) + ' | ' + String(isoles).padStart(6) + ' sur 12');
+}
+console.log('');
+console.log('C\'est ici que l\'index aveugle montre sa vraie limite. Sur 5 000 valeurs toutes');
+console.log('différentes, tronquer suffit à noyer chacune dans un groupe. Sur douze valeurs,');
+console.log("il faut descendre si bas qu'une recherche rend jusqu'à " + pireGroupe + ' dossiers sur 3 000,');
+console.log('soit ' + fr((100 * pireGroupe / 3000).toFixed(0)) + ' % de la table — et même là, un motif reste seul dans son groupe.');
+console.log('');
+console.log('La règle qui en sort n\'est pas cryptographique, elle est de conception :');
+console.log('un index aveugle convient aux champs à FORTE cardinalité — une adresse, un');
+console.log('identifiant, un numéro. Sur un champ à douze valeurs, aucune largeur ne donne');
+console.log('à la fois une recherche utile et une fréquence muette. Il faut alors accepter');
+console.log('de ne pas chercher sur ce champ, ou le sortir de la base chiffrée.');</code></pre></figure>
+<figure class="code-block" data-file="index-aveugle.txt"><pre><code class="language-plaintext">5 000 adresses distinctes, un index aveugle de largeur variable.
+
+  bits |  valeurs distinctes |  lignes rendues par recherche | faux positifs
+     8 |                 256 |                         20,46 |         19,46
+    12 |                2887 |                          2,22 |          1,22
+    16 |                4818 |                          1,08 |          0,08
+    20 |                4993 |                          1,00 |          0,00
+    24 |                5000 |                          1,00 |          0,00
+
+Les faux positifs ne sont pas un défaut, ce sont LE mécanisme : ils coûtent
+quelques déchiffrements de plus à la recherche, et ils brouillent ce que
+l'index laisse voir. À 24 bits, il n'y en a presque plus — et l'index
+redevient un chiffrement déterministe, avec la même fuite de fréquence.
+
+Même index aveugle sur un champ à DOUZE valeurs possibles, 3 000 dossiers :
+
+  bits | groupes visibles | plus gros groupe | motifs isolés dans leur groupe
+     2 |                4 |             1262 |      1 sur 12
+     3 |                6 |              721 |      2 sur 12
+     4 |                8 |              721 |      4 sur 12
+     8 |               11 |              557 |     10 sur 12
+    16 |               12 |              557 |     12 sur 12
+
+C'est ici que l'index aveugle montre sa vraie limite. Sur 5 000 valeurs toutes
+différentes, tronquer suffit à noyer chacune dans un groupe. Sur douze valeurs,
+il faut descendre si bas qu'une recherche rend jusqu'à 1262 dossiers sur 3 000,
+soit 42 % de la table — et même là, un motif reste seul dans son groupe.
+
+La règle qui en sort n'est pas cryptographique, elle est de conception :
+un index aveugle convient aux champs à FORTE cardinalité — une adresse, un
+identifiant, un numéro. Sur un champ à douze valeurs, aucune largeur ne donne
+à la fois une recherche utile et une fréquence muette. Il faut alors accepter
+de ne pas chercher sur ce champ, ou le sortir de la base chiffrée.</code></pre></figure>
+<p>Sur 5&nbsp;000 valeurs toutes différentes, le mécanisme fonctionne exactement comme prévu&nbsp;: à 8&nbsp;bits, une recherche rend <strong>20,46&nbsp;lignes</strong> en moyenne pour une seule vraie&nbsp;; à 12&nbsp;bits, <strong>2,22</strong>&nbsp;; à 20&nbsp;bits, plus aucun faux positif — et l'index est alors redevenu un chiffrement déterministe, avec la même fuite. Les faux positifs ne sont pas un défaut&nbsp;: ils sont le mécanisme. Ils coûtent quelques déchiffrements de plus, et ils brouillent ce que l'index laisse voir.</p>
+<p>La seconde moitié du programme est celle qu'on ne trouve pas dans les billets de blog. Sur un champ à <strong>douze</strong> valeurs possibles, il faut descendre à 2&nbsp;bits pour que les groupes se mélangent — et une recherche rend alors <strong>1&nbsp;262&nbsp;dossiers sur 3&nbsp;000</strong>, 42&nbsp;% de la table. Même là, un motif reste seul dans son groupe. À 8&nbsp;bits, ils sont <strong>10 sur 12</strong> à être isolés, ce qui rend la fréquence lisible à nouveau.</p>
+<p>La règle qui en sort n'est pas cryptographique, elle est de conception&nbsp;: un index aveugle convient aux champs à <strong>forte cardinalité</strong> — une adresse, un numéro, un identifiant. Sur un champ à faible cardinalité, aucune largeur ne donne à la fois une recherche utile et une fréquence muette. Il faut alors accepter de ne pas chercher sur ce champ, ou le sortir de la base chiffrée.</p>
+
+<h2>Combien de messages une clé supporte-t-elle&nbsp;?</h2>
+<p>La leçon&nbsp;2 a montré ce que coûte un nonce répété&nbsp;: la lecture complète du second message. Reste à savoir à partir de quand la répétition devient probable — et c'est une question de comptage, pas d'opinion.</p>
+<figure class="code-block" data-file="nonce-borne.js"><pre><code class="language-javascript">// Combien de messages une clé peut-elle chiffrer ? La réponse est un nombre, et il
+// se calcule. La leçon 2 a montré ce que coûte un nonce répété : ici, on compte à
+// partir de quand la répétition devient probable.
+
+let _g = 13579 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+const fr = x =&gt; String(x).replace('.', ',');
+const mil = n =&gt; String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+// --- D'abord vérifier la formule sur un nonce assez court pour être simulé. -------
+const BITS = 20, ESPACE = Math.pow(2, BITS), ESSAIS = 400;
+let total = 0, mini = Infinity, maxi = 0;
+for (let e = 0; e &lt; ESSAIS; e++) {
+  const vus = new Set();
+  let n = 0;
+  for (;;) {
+    n++;
+    const nonce = Math.floor(alea() * ESPACE);
+    if (vus.has(nonce)) break;
+    vus.add(nonce);
+  }
+  total += n; mini = Math.min(mini, n); maxi = Math.max(maxi, n);
+}
+const mesure = total / ESSAIS;
+const prevu = Math.sqrt(Math.PI / 2) * Math.sqrt(ESPACE);
+console.log('Nonce de ' + BITS + ' bits (' + mil(ESPACE) + ' valeurs), ' + ESSAIS + ' essais :');
+console.log('  premier nonce répété au message n° ... ' + fr(mesure.toFixed(1)) + ' en moyenne');
+console.log('  prédit par la formule √(π/2)·2^(n/2) .. ' + fr(prevu.toFixed(1)));
+console.log('  écart ................................ ' + fr((100 * (mesure - prevu) / prevu).toFixed(1)) + ' %');
+console.log('  minimum ' + mini + ', maximum ' + maxi + ' sur les ' + ESSAIS + ' essais');
+console.log('');
+console.log('La formule tient. On peut donc l\'appliquer là où la simulation est hors');
+console.log('de portée — c\'est-à-dire aux vraies tailles.');
+console.log('');
+
+// --- Combien de messages avant que la répétition ne devienne « probable » ? -------
+// Le seuil usuel n'est pas 50 % : c'est une probabilité NÉGLIGEABLE, par exemple 2^-32.
+// Pour q messages tirés dans 2^n valeurs, la probabilité de collision vaut environ
+// q² / 2^(n+1). On renverse : q = √(2^(n+1) · p).
+const messagesPour = (bitsNonce, p) =&gt; Math.sqrt(Math.pow(2, bitsNonce + 1) * p);
+const CIBLE = Math.pow(2, -32);
+console.log('Messages chiffrables avec UNE clé et un nonce TIRÉ AU SORT,');
+console.log('pour une probabilité de répétition inférieure à 2^-32 :');
+console.log('');
+console.log('  taille du nonce | messages         | exemple concret');
+const EXEMPLES = {
+  32: 'un nonce de 4 octets : hors de question',
+  64: 'le nonce court de certaines interfaces',
+  96: 'la taille normale de AES-GCM et ChaCha20-Poly1305',
+  192: 'la taille étendue de XChaCha20',
+};
+for (const bits of [32, 64, 96, 192]) {
+  const q = messagesPour(bits, CIBLE);
+  console.log('  ' + (bits + ' bits').padStart(15) + ' | '
+    + (q &gt; 1e12 ? fr(q.toExponential(2)) : mil(q)).padStart(16) + ' | ' + EXEMPLES[bits]);
+}
+console.log('');
+console.log('Le chiffre de 96 bits — ' + mil(messagesPour(96, CIBLE)) + ' messages, soit environ 2^32,5 — est la borne');
+console.log('couramment citée pour AES-GCM avec un nonce aléatoire. Elle paraît immense, et');
+console.log('elle l\'est pour un service ordinaire. Elle ne l\'est plus pour une colonne de');
+console.log('base réécrite en continu, ni pour une clé partagée par un parc de machines.');
+console.log('');
+
+// --- Le compteur : zéro collision garantie… tant que l'état tient. -----------------
+// Deux machines, la même clé, chacune son compteur qui part de zéro.
+const machines = 2, parMachine = 500;
+const emis = new Map();
+let repetitions = 0;
+for (let m = 0; m &lt; machines; m++)
+  for (let c = 1; c &lt;= parMachine; c++) {
+    const nonce = 'compteur:' + c;                 // le nonce ne dépend que du compteur
+    if (emis.has(nonce)) repetitions++;
+    emis.set(nonce, (emis.get(nonce) || 0) + 1);
+  }
+console.log('Compteur, ' + machines + ' machines partageant la même clé, ' + parMachine + ' messages chacune :');
+console.log('  nonces émis .......... ' + (machines * parMachine));
+console.log('  nonces distincts ..... ' + emis.size);
+console.log('  RÉPÉTITIONS .......... ' + repetitions + '  — soit ' + fr((100 * repetitions / (machines * parMachine)).toFixed(0)) + ' % des messages');
+console.log('');
+// La correction : réserver des plages, ou préfixer par un identifiant de machine.
+const emis2 = new Set();
+let repetitions2 = 0;
+for (let m = 0; m &lt; machines; m++)
+  for (let c = 1; c &lt;= parMachine; c++) {
+    const nonce = 'machine' + m + ':' + c;
+    if (emis2.has(nonce)) repetitions2++;
+    emis2.add(nonce);
+  }
+console.log('Même chose avec un identifiant de machine dans le nonce :');
+console.log('  RÉPÉTITIONS .......... ' + repetitions2 + ' sur ' + (machines * parMachine));
+console.log('');
+console.log('Ces deux mesures résument le choix. Le compteur ne répète JAMAIS, à une');
+console.log('condition : que l\'état soit unique et survive aux redémarrages. Une machine');
+console.log('clonée, une sauvegarde restaurée, un conteneur relancé — et le compteur');
+console.log('repart de zéro avec la même clé. Le tirage au sort, lui, ne demande aucun');
+console.log('état, et se paie en bornes : ' + mil(messagesPour(96, CIBLE)) + ' messages pour 96 bits de nonce.');
+console.log('');
+console.log('D\'où la troisième voie, la plus employée aujourd\'hui dans les bases : ne pas');
+console.log('choisir. On tire une clé NEUVE par enregistrement ou par lot — la leçon 9');
+console.log('montre comment —, et la question du nombre de messages par clé disparaît.');</code></pre></figure>
+<figure class="code-block" data-file="nonce-borne.txt"><pre><code class="language-plaintext">Nonce de 20 bits (1 048 576 valeurs), 400 essais :
+  premier nonce répété au message n° ... 1249,2 en moyenne
+  prédit par la formule √(π/2)·2^(n/2) .. 1283,4
+  écart ................................ -2,7 %
+  minimum 23, maximum 3770 sur les 400 essais
+
+La formule tient. On peut donc l'appliquer là où la simulation est hors
+de portée — c'est-à-dire aux vraies tailles.
+
+Messages chiffrables avec UNE clé et un nonce TIRÉ AU SORT,
+pour une probabilité de répétition inférieure à 2^-32 :
+
+  taille du nonce | messages         | exemple concret
+          32 bits |                1 | un nonce de 4 octets : hors de question
+          64 bits |           92 682 | le nonce court de certaines interfaces
+          96 bits |    6 074 001 000 | la taille normale de AES-GCM et ChaCha20-Poly1305
+         192 bits |         1,71e+24 | la taille étendue de XChaCha20
+
+Le chiffre de 96 bits — 6 074 001 000 messages, soit environ 2^32,5 — est la borne
+couramment citée pour AES-GCM avec un nonce aléatoire. Elle paraît immense, et
+elle l'est pour un service ordinaire. Elle ne l'est plus pour une colonne de
+base réécrite en continu, ni pour une clé partagée par un parc de machines.
+
+Compteur, 2 machines partageant la même clé, 500 messages chacune :
+  nonces émis .......... 1000
+  nonces distincts ..... 500
+  RÉPÉTITIONS .......... 500  — soit 50 % des messages
+
+Même chose avec un identifiant de machine dans le nonce :
+  RÉPÉTITIONS .......... 0 sur 1000
+
+Ces deux mesures résument le choix. Le compteur ne répète JAMAIS, à une
+condition : que l'état soit unique et survive aux redémarrages. Une machine
+clonée, une sauvegarde restaurée, un conteneur relancé — et le compteur
+repart de zéro avec la même clé. Le tirage au sort, lui, ne demande aucun
+état, et se paie en bornes : 6 074 001 000 messages pour 96 bits de nonce.
+
+D'où la troisième voie, la plus employée aujourd'hui dans les bases : ne pas
+choisir. On tire une clé NEUVE par enregistrement ou par lot — la leçon 9
+montre comment —, et la question du nombre de messages par clé disparaît.</code></pre></figure>
+<p>La formule est d'abord vérifiée là où elle est vérifiable&nbsp;: sur un nonce de 20&nbsp;bits, la première répétition survient en moyenne au message n°&nbsp;<strong>1&nbsp;249,2</strong>, contre <strong>1&nbsp;283,4</strong> prédits — <strong>2,7&nbsp;% d'écart</strong> sur 400&nbsp;essais, avec un minimum à 23 et un maximum à 3&nbsp;770. On peut donc l'appliquer aux vraies tailles.</p>
+<p>Avec un nonce de <strong>96&nbsp;bits</strong> tiré au sort — la taille normale d'AES-GCM et de ChaCha20-Poly1305 —, une clé supporte environ <strong>6&nbsp;074&nbsp;001&nbsp;000&nbsp;messages</strong> avant que la probabilité de répétition n'atteigne 2<sup>−32</sup>. Le <strong>NIST SP&nbsp;800-38D</strong>, §8.3, énonce la même contrainte arrondie à la puissance de deux inférieure&nbsp;: pas plus de <strong>2<sup>32</sup>&nbsp;invocations</strong> avec une même clé lorsque le vecteur d'initialisation est tiré au sort. Avec un nonce de <strong>64&nbsp;bits</strong>, en revanche, la borne tombe à <strong>92&nbsp;682&nbsp;messages</strong> — un chiffre qu'une colonne de base atteint dans la semaine.</p>
+<p>L'autre solution est le <strong>compteur</strong>, qui ne répète jamais… tant que son état est unique et survit aux redémarrages. Le programme montre ce qu'il advient sinon&nbsp;: deux machines partageant la même clé, chacune avec son compteur parti de zéro, produisent <strong>500&nbsp;répétitions sur 1&nbsp;000&nbsp;messages</strong>. Un identifiant de machine dans le nonce ramène le compte à <strong>0</strong>. Une machine clonée, une sauvegarde restaurée, un conteneur relancé&nbsp;: ce sont là les incidents ordinaires d'une exploitation, et le compteur y est exposé.</p>
+<p>D'où la troisième voie, la plus employée aujourd'hui, et qui fait la transition avec la leçon suivante&nbsp;: <strong>ne pas choisir</strong>. On tire une clé neuve par enregistrement ou par lot, et la question du nombre de messages par clé disparaît — au prix d'une question nouvelle, celle de la gestion de toutes ces clés.</p>
+
+<h2>La donnée est chiffrée. Ses copies ne le sont pas.</h2>
+<p>Reste le point qui fait échouer le plus de projets de chiffrement applicatif, et qui n'a rien de cryptographique. Une valeur qui entre dans un service ne va pas seulement dans la colonne&nbsp;: elle passe par un journal, un cache, un index, un message d'erreur, un export. Le programme suivant simule un service ordinaire et cherche, dans chaque trace, les valeurs qu'on croyait chiffrées.</p>
+<figure class="code-block" data-file="chemins-annexes.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
+// Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
+// plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+function hmac(cle,msg){let k=cle.length&gt;64?sha256o(cle):cle.slice();while(k.length&lt;64)k.push(0);
+  return sha256o([...k.map(b=&gt;b^0x5c),...sha256o([...k.map(b=&gt;b^0x36),...msg])]);}
+const rotl=(x,n)=&gt;((x&lt;&lt;n)|(x&gt;&gt;&gt;(32-n)))&gt;&gt;&gt;0;
+function blocChaCha(c,n,v){const e=[0x61707865,0x3320646e,0x79622d32,0x6b206574],m=(t,i)=&gt;(t[i]|(t[i+1]&lt;&lt;8)|(t[i+2]&lt;&lt;16)|(t[i+3]&lt;&lt;24))&gt;&gt;&gt;0;
+ const s=[e[0],e[1],e[2],e[3]];for(let i=0;i&lt;8;i++)s.push(m(c,4*i));s.push(n&gt;&gt;&gt;0);for(let i=0;i&lt;3;i++)s.push(m(v,4*i));
+ const x=s.slice(),q=(a,b,cc,d)=&gt;{x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],16);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],12);x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],8);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],7);};
+ for(let i=0;i&lt;10;i++){q(0,4,8,12);q(1,5,9,13);q(2,6,10,14);q(3,7,11,15);q(0,5,10,15);q(1,6,11,12);q(2,7,8,13);q(3,4,9,14);}
+ const o=[];for(let i=0;i&lt;16;i++){const v2=(x[i]+s[i])&gt;&gt;&gt;0;o.push(v2&amp;0xff,(v2&gt;&gt;&gt;8)&amp;0xff,(v2&gt;&gt;&gt;16)&amp;0xff,(v2&gt;&gt;&gt;24)&amp;0xff);}return o;}
+function chacha20(cle,nonce,octets,c0){const o=[];let c=c0;for(let i=0;i&lt;octets.length;i+=64){const f=blocChaCha(cle,c++,nonce);
+ for(let j=0;j&lt;64&amp;&amp;i+j&lt;octets.length;j++)o.push(octets[i+j]^f[j]);}return o;}
+// -----------------------------------------------------------------------------------
+
+// Le champ est chiffré. La valeur, elle, se promène.
+// Ce programme est une SIMULATION d'un service ordinaire : il exécute des opérations,
+// et il conserve tout ce que ces opérations laissent derrière elles. Puis il cherche
+// les valeurs sensibles dans chaque trace, exactement comme le ferait quelqu'un qui a
+// obtenu une copie du disque.
+
+let _g = 31415926 &gt;&gt;&gt; 0;
+const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
+const fr = x =&gt; String(x).replace('.', ',');
+
+const CLE = sha256o(bof('clé applicative'));
+let n = 0;
+const chiffrer = v =&gt; { n++; const nonce = [n &amp; 255, (n &gt;&gt; 8) &amp; 255, 0,0,0,0,0,0,0,0,0,0];
+  return hex(nonce) + ':' + hex(chacha20(CLE, nonce, bof(v), 1)); };
+
+// 400 numéros de sécurité sociale, la donnée que l'on a décidé de chiffrer.
+const SECRETS = [];
+for (let i = 0; i &lt; 400; i++) {
+  let s = '1'; for (let k = 0; k &lt; 12; k++) s += Math.floor(alea() * 10);
+  SECRETS.push(s);
+}
+
+// Les endroits où un service laisse des traces. Chacun est une simple liste de lignes.
+const traces = { 'table chiffrée': [], 'journal applicatif': [], 'requêtes lentes': [],
+  'index de recherche': [], 'cache disque': [], 'export de support': [] };
+
+function creerDossier(secret, masquer){
+  traces['table chiffrée'].push('INSERT dossier(nir_chiffre) VALUES (' + chiffrer(secret) + ')');
+  // 1. Le journal applicatif trace la requête reçue, paramètres compris.
+  traces['journal applicatif'].push('POST /dossiers ' + JSON.stringify({ nir: masquer ? '***masqué***' : secret }));
+  // 2. Une requête sur trois est lente, et le moteur la journalise AVEC ses paramètres.
+  //    Le paramètre lié est déjà chiffré : le moteur ne voit jamais la valeur claire.
+  if (alea() &lt; 0.33) traces['requêtes lentes'].push('slow 812 ms — INSERT dossier(nir_chiffre) VALUES (' + chiffrer(secret) + ')');
+  // 3. L'index de recherche, alimenté par l'application AVANT chiffrement — sauf si on
+  //    lui donne l'index aveugle de la section précédente au lieu de la valeur.
+  traces['index de recherche'].push('doc ' + traces['table chiffrée'].length + ' : '
+    + (masquer ? hex(hmac(CLE, bof(secret))).slice(0, 4) : secret));
+  // 4. Le cache mémoire, sérialisé sur disque à l'arrêt.
+  if (alea() &lt; 0.25) traces['cache disque'].push('dossier:' + traces['table chiffrée'].length + '=' + (masquer ? chiffrer(secret) : secret));
+  // 5. Une erreur sur cinquante remonte le contexte complet au support.
+  if (alea() &lt; 0.02) traces['export de support'].push('ERREUR validation nir=' + (masquer ? '***masqué***' : secret));
+}
+
+function mesurer(titre, masquer){
+  for (const k of Object.keys(traces)) traces[k] = [];
+  n = 0; _g = 31415926 &gt;&gt;&gt; 0;
+  for (const s of SECRETS) creerDossier(s, masquer);
+  console.log(titre);
+  let totalDistincts = new Set();
+  for (const [nom, lignes] of Object.entries(traces)) {
+    const texte = lignes.join('\n');
+    const trouves = SECRETS.filter(s =&gt; texte.includes(s));
+    trouves.forEach(s =&gt; totalDistincts.add(s));
+    console.log('  ' + nom.padEnd(22) + String(lignes.length).padStart(5) + ' ligne(s)   '
+      + String(trouves.length).padStart(4) + ' numéro(s) en clair');
+  }
+  console.log('  ' + '—'.repeat(56));
+  console.log('  ' + 'valeurs distinctes retrouvables'.padEnd(22) + ' '.repeat(13)
+    + String(totalDistincts.size).padStart(4) + ' sur ' + SECRETS.length
+    + '  (' + fr((100 * totalDistincts.size / SECRETS.length).toFixed(1)) + ' %)');
+  console.log('');
+  return totalDistincts.size;
+}
+
+const avant = mesurer('400 dossiers créés, colonne chiffrée, service écrit sans précaution :', false);
+const apres = mesurer('Les mêmes 400 dossiers, après avoir traité chaque chemin :', true);
+
+console.log('Ce que le second passage a changé, chemin par chemin : le journal applicatif');
+console.log('masque le champ, l\'index de recherche ne reçoit plus qu\'une empreinte à clé');
+console.log('tronquée — celle de la section précédente —, le cache ne range que la forme');
+console.log('chiffrée, et le message d\'erreur ne recopie plus la valeur qui l\'a provoqué.');
+console.log('Le journal des requêtes lentes, lui, n\'a rien eu à changer :');
+console.log('le moteur ne voit jamais que le chiffré, puisque le service chiffre AVANT');
+console.log('d\'écrire. C\'est le seul chemin qui était déjà correct.');
+console.log('');
+console.log('Bilan : ' + avant + ' valeurs sur ' + SECRETS.length + ' retrouvables sans clé, puis ' + apres + '.');
+console.log('');
+console.log('Le chiffrement de la colonne n\'a jamais été en cause : il a fonctionné dans');
+console.log('les deux passages. Ce qui change, c\'est le nombre d\'endroits où la valeur');
+console.log('existe encore en clair. Chiffrer un champ n\'est pas une ligne de code, c\'est');
+console.log('un INVENTAIRE — et cet inventaire ne se fait pas à la fin, il se fait avant.');</code></pre></figure>
+<figure class="code-block" data-file="chemins-annexes.txt"><pre><code class="language-plaintext">400 dossiers créés, colonne chiffrée, service écrit sans précaution :
+  table chiffrée          400 ligne(s)      0 numéro(s) en clair
+  journal applicatif      400 ligne(s)    400 numéro(s) en clair
+  requêtes lentes         140 ligne(s)      0 numéro(s) en clair
+  index de recherche      400 ligne(s)    400 numéro(s) en clair
+  cache disque            103 ligne(s)    103 numéro(s) en clair
+  export de support        10 ligne(s)     10 numéro(s) en clair
+  ————————————————————————————————————————————————————————
+  valeurs distinctes retrouvables              400 sur 400  (100,0 %)
+
+Les mêmes 400 dossiers, après avoir traité chaque chemin :
+  table chiffrée          400 ligne(s)      0 numéro(s) en clair
+  journal applicatif      400 ligne(s)      0 numéro(s) en clair
+  requêtes lentes         140 ligne(s)      0 numéro(s) en clair
+  index de recherche      400 ligne(s)      0 numéro(s) en clair
+  cache disque            103 ligne(s)      0 numéro(s) en clair
+  export de support        10 ligne(s)      0 numéro(s) en clair
+  ————————————————————————————————————————————————————————
+  valeurs distinctes retrouvables                0 sur 400  (0,0 %)
+
+Ce que le second passage a changé, chemin par chemin : le journal applicatif
+masque le champ, l'index de recherche ne reçoit plus qu'une empreinte à clé
+tronquée — celle de la section précédente —, le cache ne range que la forme
+chiffrée, et le message d'erreur ne recopie plus la valeur qui l'a provoqué.
+Le journal des requêtes lentes, lui, n'a rien eu à changer :
+le moteur ne voit jamais que le chiffré, puisque le service chiffre AVANT
+d'écrire. C'est le seul chemin qui était déjà correct.
+
+Bilan : 400 valeurs sur 400 retrouvables sans clé, puis 0.
+
+Le chiffrement de la colonne n'a jamais été en cause : il a fonctionné dans
+les deux passages. Ce qui change, c'est le nombre d'endroits où la valeur
+existe encore en clair. Chiffrer un champ n'est pas une ligne de code, c'est
+un INVENTAIRE — et cet inventaire ne se fait pas à la fin, il se fait avant.</code></pre></figure>
+<p><strong>400&nbsp;valeurs sur 400</strong> retrouvables sans clé, alors que la colonne, elle, n'en laisse fuiter <em>aucune</em>. Le journal applicatif les a toutes&nbsp;; l'index de recherche aussi, parce qu'il est alimenté avant chiffrement&nbsp;; le cache en garde 103&nbsp;; dix remontent au support dans un message d'erreur.</p>
+<p>Après traitement de chaque chemin — masquage dans le journal, empreinte à clé tronquée dans l'index, forme chiffrée dans le cache, message d'erreur sans la valeur —, le compte tombe à <strong>0 sur 400</strong>. Un seul chemin n'a rien eu à changer&nbsp;: le journal des requêtes lentes du moteur, qui ne voit jamais que le chiffré, puisque le service chiffre <em>avant</em> d'écrire. C'est la contre-épreuve interne du programme&nbsp;: il n'a pas «&nbsp;tout masqué&nbsp;», il a masqué ce qui fuyait.</p>
+<p>Chiffrer un champ n'est donc pas une ligne de code&nbsp;: c'est un <strong>inventaire</strong>. Et l'inventaire ne se fait pas à la fin — il se fait avant, quand on décide quel champ chiffrer, parce qu'il détermine combien d'endroits il faudra corriger.</p>
+
+<h2>Cas réel</h2>
+<p><strong>Adobe, octobre 2013.</strong> Environ <strong>153&nbsp;millions</strong> de comptes sont exposés. Chaque enregistrement contient un identifiant, une adresse électronique, le mot de passe <em>chiffré</em> — et l'indice de mot de passe, <strong>en clair</strong>.</p>
+<p>Trois décisions se sont additionnées, et la leçon en a examiné deux. Première décision&nbsp;: les mots de passe étaient <strong>chiffrés</strong> et non hachés — ce que la leçon&nbsp;7 a traité. Deuxième&nbsp;: le chiffrement employait le Triple DES en mode <strong>ECB</strong>, c'est-à-dire un chiffrement <em>déterministe</em>, avec la <strong>même clé pour tout le monde</strong>. Deux personnes ayant choisi le même mot de passe portaient donc, octet pour octet, le même chiffré — la situation exacte du troisième programme de cette leçon, à ceci près qu'il s'agissait de 153&nbsp;millions de lignes. Troisième&nbsp;: l'indice de mot de passe voyageait en clair à côté, ce qui est le cas d'école du chemin annexe du dernier programme.</p>
+<p>Jeremi Gosney, du Stricture Consulting Group, a mis <strong>environ trois heures</strong> à établir les cent mots de passe les plus fréquents. La méthode ne comportait aucune cryptanalyse&nbsp;: il a regroupé les enregistrements par chiffré identique — le mode ECB s'en chargeait —, lu les milliers d'indices attachés à chaque groupe, et constaté qu'un nombre considérable d'utilisateurs avaient tout simplement écrit leur mot de passe dans l'indice. Le décompte sur les 38&nbsp;millions de comptes actifs donne <strong>1&nbsp;911&nbsp;938&nbsp;utilisateurs</strong> pour <code>123456</code>, <strong>446&nbsp;162</strong> pour <code>123456789</code>, <strong>345&nbsp;834</strong> pour <code>password</code>.</p>
+<p>Ce qu'il faut en retenir tient en une phrase, et elle vaut pour tout ce chapitre&nbsp;: <strong>le Triple DES n'a pas été cassé.</strong> La clé n'a jamais été retrouvée. C'est le <em>déterminisme</em> qui a groupé, et un <em>chemin annexe</em> qui a nommé les groupes. Aucune des deux failles n'est une faiblesse d'algorithme.</p>
+
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Chiffrer au repos&nbsp;: ce que chaque niveau couvre, et ce qu'il coûte</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Chiffrement de volume</td><td>Couvre <strong>3&nbsp;scénarios sur 7</strong>&nbsp;: machine éteinte, disque au rebut, sauvegarde égarée. Aucun effet sur une machine allumée — le noyau déchiffre à la volée, c'est son objet. Presque gratuit&nbsp;: à activer partout.</td></tr>
+      <tr><td>Chiffrement de base</td><td>Les mêmes 3 sur 7. Ne protège ni de l'injection SQL ni de l'administration&nbsp;: le moteur déchiffre pour eux sans rien demander.</td></tr>
+      <tr><td>Chiffrement de champ</td><td><strong>6&nbsp;sur 7.</strong> Seul le service qui a la clé peut lire. Le septième — l'exécution de code dans le service — n'est couvert par aucun des trois.</td></tr>
+      <tr><td>Déplacement</td><td>L'attaque qui survit à un chiffrement parfait&nbsp;: <strong>56&nbsp;chiffrés déplacés sur 56 acceptés</strong> sans liaison. Avec l'identifiant de ligne en <strong>données associées</strong>&nbsp;: 0 sur 56, et 8 lectures normales sur 8.</td></tr>
+      <tr><td>Déterminisme</td><td>Rend la recherche possible et la fréquence lisible&nbsp;: <strong>10&nbsp;valeurs identifiées sur 12</strong>, <strong>2&nbsp;536&nbsp;dossiers étiquetés sur 3&nbsp;000</strong>, sans clé. Le nonce aléatoire supprime la fuite et la recherche en même temps.</td></tr>
+      <tr><td>Longueur</td><td>Fuite qui survit au nonce&nbsp;: un chiffrement à flot conserve la taille, et <strong>5&nbsp;motifs sur 12</strong> se distinguent par elle seule. Parade&nbsp;: compléter à une longueur fixe avant de chiffrer.</td></tr>
+      <tr><td>Index aveugle</td><td>Empreinte à clé <em>tronquée</em>, rangée à côté. Sur 5 000 valeurs distinctes&nbsp;: 20,46&nbsp;lignes rendues à 8&nbsp;bits, 2,22 à 12&nbsp;bits, 1,00 à 20&nbsp;bits — et à 20&nbsp;bits l'index est redevenu déterministe.</td></tr>
+      <tr><td>Faible cardinalité</td><td>La limite de l'index aveugle&nbsp;: sur 12&nbsp;valeurs, il faut 2&nbsp;bits pour mélanger, et la recherche rend alors <strong>1&nbsp;262&nbsp;dossiers sur 3&nbsp;000</strong>. À 8&nbsp;bits, <strong>10&nbsp;motifs sur 12</strong> sont déjà seuls dans leur groupe.</td></tr>
+      <tr><td>Bornes de nonce</td><td>Nonce tiré au sort, pour une probabilité de répétition sous 2<sup>−32</sup>&nbsp;: <strong>92&nbsp;682&nbsp;messages</strong> à 64&nbsp;bits, <strong>6,07·10<sup>9</sup></strong> à 96&nbsp;bits (le NIST SP 800-38D §8.3 dit 2<sup>32</sup>), 1,71·10<sup>24</sup> à 192&nbsp;bits.</td></tr>
+      <tr><td>Compteur</td><td>Zéro répétition — tant que l'état est unique et survit. Deux machines, même clé, compteurs partis de zéro&nbsp;: <strong>500&nbsp;répétitions sur 1&nbsp;000</strong>. Un identifiant de machine dans le nonce&nbsp;: 0.</td></tr>
+      <tr><td>Chemins annexes</td><td>La colonne ne fuit rien, le reste fuit tout&nbsp;: <strong>400&nbsp;valeurs sur 400</strong> retrouvables dans les journaux, l'index, le cache et un message d'erreur. Après traitement&nbsp;: 0. Chiffrer un champ est un <strong>inventaire</strong>.</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Chiffrement au repos</dt><dd>Chiffrement des données stockées, par opposition au chiffrement en transit. Propriété d'un support à un moment donné, jamais d'une donnée en général.</dd>
+<dt>Chiffrement transparent de base</dt><dd>Chiffrement des fichiers du moteur, assuré par le moteur lui-même. Invisible pour l'application, et sans effet contre quiconque passe par le moteur.</dd>
+<dt>Chiffrement applicatif</dt><dd>Chiffrement effectué par le service avant l'écriture. Seul niveau qui protège d'un attaquant ayant accès à la base, au prix de la recherche et des jointures.</dd>
+<dt>Données associées</dt><dd>Contexte non chiffré mais authentifié, entrant dans le calcul de la marque d'un chiffrement AEAD. C'est ce qui attache un chiffré à l'endroit exact où il a été produit.</dd>
+<dt>Attaque de déplacement</dt><dd>Recopie d'un chiffré valide à un autre emplacement, sans le déchiffrer. Elle réussit contre un chiffrement parfait tant qu'aucun contexte n'est authentifié avec la valeur.</dd>
+<dt>Chiffrement déterministe</dt><dd>Chiffrement rendant toujours le même chiffré pour la même valeur. Il permet la comparaison et l'indexation, et rend la distribution des valeurs lisible.</dd>
+<dt>Analyse de fréquence</dt><dd>Déduction du clair à partir du nombre d'occurrences de chaque valeur chiffrée, comparée à une distribution connue par ailleurs. Ne demande ni clé ni calcul.</dd>
+<dt>Index aveugle</dt><dd>Empreinte à clé, tronquée, rangée à côté de la valeur chiffrée pour permettre la recherche par égalité. Sa largeur règle le compromis entre faux positifs et fuite de fréquence.</dd>
+<dt>Cardinalité</dt><dd>Nombre de valeurs distinctes que peut prendre un champ. Elle décide de tout ici&nbsp;: un index aveugle protège un champ à forte cardinalité, jamais un champ à douze valeurs.</dd>
+<dt>Borne d'anniversaire</dt><dd>Nombre de tirages au-delà duquel une répétition devient probable, de l'ordre de la racine carrée du nombre de valeurs possibles. Elle fixe combien de messages une clé supporte.</dd>
+<dt>Chemin annexe</dt><dd>Tout endroit où une valeur sensible existe encore en clair une fois la colonne chiffrée&nbsp;: journaux, caches, index, exports, messages d'erreur.</dd>
+</dl>
+
+<h2>Récap et vérification</h2>
+<p>Chiffrer au repos n'est pas une propriété de la donnée mais d'un support à un moment&nbsp;: le chiffrement de volume et celui de la base couvrent 3&nbsp;scénarios sur 7 — la machine éteinte, le disque au rebut, la sauvegarde égarée —, le chiffrement de champ en couvre 6, et aucun ne couvre l'exécution de code dans le service, qui détient les clés. Au niveau du champ, un chiffrement parfait laisse encore passer le déplacement&nbsp;: 56&nbsp;chiffrés recopiés d'une ligne à l'autre, 56&nbsp;acceptés — et 0 dès que l'identifiant de ligne entre dans les données associées, pour 8&nbsp;lectures normales sur 8. Chercher dans une colonne chiffrée n'a pas de solution gratuite&nbsp;: le déterminisme rend 10&nbsp;valeurs sur 12 identifiables par la seule fréquence, et l'index aveugle ne rattrape le coup que sur les champs à forte cardinalité — sur douze valeurs, il faut rendre 1&nbsp;262&nbsp;dossiers sur 3&nbsp;000 pour brouiller les groupes. Une clé ne chiffre pas un nombre illimité de messages&nbsp;: 92&nbsp;682 avec un nonce de 64&nbsp;bits, 6,07·10<sup>9</sup> avec 96&nbsp;bits, et un compteur mal isolé produit 500&nbsp;répétitions sur 1&nbsp;000. Enfin, la colonne chiffrée ne fuit rien pendant que les journaux, l'index et le cache livrent 400&nbsp;valeurs sur 400&nbsp;: le vrai travail est l'inventaire des copies.</p>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un rapport de conformité affirme&nbsp;: «&nbsp;les données sont chiffrées au repos par BitLocker, donc protégées en cas de fuite de la base&nbsp;». Où est l'erreur, et quel scénario précis la rend fausse&nbsp;?</li>
+<li>Une équipe chiffre la colonne «&nbsp;numéro de compte bancaire&nbsp;» sans données associées, en gardant l'identifiant de ligne à côté. Décris l'attaque la moins coûteuse pour un administrateur de base malveillant, et la ligne à changer.</li>
+<li>On veut chercher par égalité sur une colonne «&nbsp;pays&nbsp;» (environ 200&nbsp;valeurs) chiffrée. Un collègue propose un index aveugle sur 16&nbsp;bits. Explique ce que cela donne, et propose autre chose.</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Le programme du modèle de menace place un « x » (donnée lisible) pour le chiffrement de base face à l'injection SQL. Pourquoi ?","a":["Parce que l'injection passe par le moteur, et que le moteur déchiffre lui-même pour répondre aux requêtes : la protection porte sur les fichiers, pas sur l'accès","Parce que le chiffrement transparent de base utilise une clé plus courte que le chiffrement de volume, ce qui le rend cassable en ligne","Parce que l'injection SQL permet de lire la clé de chiffrement stockée dans une table système du moteur, puis de déchiffrer les colonnes","Parce que le chiffrement de base ne s'applique qu'aux sauvegardes, les fichiers de données courants restant en clair sur le disque"],"correct":0,"exp":"Le chiffrement transparent protège les FICHIERS. Quiconque passe par le moteur — requête légitime, injection, administrateur — reçoit des données déchiffrées, puisque c'est exactement le service que rend le moteur."},
+  {"q":"56 chiffrés de salaires sont déplacés d'une ligne à l'autre dans la table de paie, et le service les accepte tous les 56. Que faut-il en conclure ?","a":["Que le chiffrement et la marque ont tenu, mais que rien ne liait un chiffré à sa ligne : il manque un contexte authentifié, pas un algorithme plus solide","Que la marque d'authenticité était trop courte, 32 caractères hexadécimaux ne suffisant pas à empêcher une falsification par recherche exhaustive","Que le chiffrement à flot employé est malléable, et qu'un mode par blocs aurait rendu le déplacement impossible","Que le nonce était réutilisé entre les lignes, ce qui permet de recomposer un chiffré valide pour n'importe quelle valeur"],"correct":0,"exp":"Rien n'a été falsifié ni déchiffré : les chiffrés déplacés sont authentiques, et c'est le problème. La parade est d'attacher le contexte — table, colonne, identifiant de ligne — à la marque, ce qui ramène le compte à 0 sur 56."},
+  {"q":"Une colonne « motif » à douze valeurs est chiffrée de façon déterministe sur 3 000 dossiers. Sans aucune clé, 2 536 dossiers sont correctement étiquetés. Quel est le mécanisme ?","a":["L'attaquant compte les occurrences de chaque chiffré, trie par fréquence, et apparie ces rangs à ceux d'une distribution publiée par ailleurs","L'attaquant exploite une faiblesse de ChaCha20 sur les messages courts, qui laisse filtrer les premiers octets du clair dans le chiffré","L'attaquant retrouve la clé par recherche exhaustive sur les douze valeurs possibles, l'espace étant trop petit pour résister","L'attaquant utilise les identifiants de ligne, qui sont attribués dans l'ordre d'arrivée et donc corrélés au motif de consultation"],"correct":0,"exp":"Aucune cryptanalyse n'intervient : le déterminisme préserve la distribution, et une distribution connue par ailleurs suffit à nommer les groupes. Les deux erreurs portent sur des motifs de fréquences voisines, dont les rangs s'inversent."},
+  {"q":"Un service chiffre correctement un numéro sensible dans sa colonne, mais le programme retrouve les 400 valeurs en clair ailleurs. Quelle est la bonne lecture ?","a":["La valeur existe dans plusieurs endroits que le chiffrement de la colonne ne touche pas : journal applicatif, index de recherche, cache, message d'erreur","Le chiffrement de la colonne a échoué sur ces 400 valeurs, probablement à cause d'un nonce répété qui a rendu les chiffrés déchiffrables","Le programme a utilisé la clé pour déchiffrer les traces, ce qui montre seulement que la clé était accessible depuis le même service","La colonne n'était pas réellement chiffrée : le service écrivait la valeur claire et le chiffré côte à côte, par erreur de conception"],"correct":0,"exp":"La colonne, elle, ne laisse fuiter aucune valeur — le programme le mesure dans les deux passages. Ce sont les copies qui parlent, et le journal des requêtes lentes du moteur est le seul chemin qui n'ait rien eu à changer, parce que le service chiffre avant d'écrire."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["les données associées","données associées","les donnees associees","donnees associees","le contexte authentifié","les données authentifiées additionnelles"],"placeholder":"le champ non chiffré mais authentifié qui attache un chiffré à son emplacement","hints":["C'est le « AD » de AEAD.","On y met la table, la colonne, l'identifiant de la ligne, parfois un numéro de version.","Deux mots, au pluriel."],"link":{"href":"lecon-08.html","label":"Revoir « Chiffrer un champ, et ce qui reste possible »"}},
+  {"type":"code","run":{"expect":"56 déplacements acceptés sur 56"},"placeholder":"le nombre de chiffrés déplaçables d'une ligne à l'autre quand la marque ne couvre que la valeur","hints":["Huit lignes, chaque chiffré essayé sur les sept autres.","Rien n'est déchiffré par l'attaquant : c'est le service qui déchiffre pour lui.","Affiche exactement : « 56 déplacements acceptés sur 56 »."],"link":{"href":"lecon-08.html","label":"Revoir « Chiffrer un champ, et ce qui reste possible »"}},
+  {"type":"code","run":{"expect":"92 682 messages"},"placeholder":"le nombre de messages qu'une clé supporte avec un nonce aléatoire de 64 bits","hints":["Pour q tirages parmi 2^n valeurs, la probabilité de collision vaut environ q² / 2^(n+1).","On veut cette probabilité sous 2^-32 : renverse la formule.","Affiche exactement : « 92 682 messages » (avec une espace comme séparateur de milliers)."],"link":{"href":"lecon-08.html","label":"Revoir « Combien de messages une clé supporte-t-elle ? »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une équipe présente son architecture&nbsp;: «&nbsp;les disques sont chiffrés, donc les données sont protégées&nbsp;». En trois paragraphes, dis ce que cette protection couvre réellement, cite trois situations courantes où elle ne sert à rien, et formule la question qu'il aurait fallu poser à la place.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l8-exo1.txt"><pre><code class="language-plaintext">Ce que le chiffrement de volume protège vraiment : le disque quand la machine est
+ÉTEINTE. Un portable volé dans un train, un disque renvoyé au fournisseur, une
+baie mise au rebut. Dès que le système a démarré et monté le volume, le noyau
+déchiffre à la volée pour tout ce qui lit le fichier — donc pour le service, pour
+l'administrateur, pour l'intrus qui exécute du code sur la machine, et pour la
+sauvegarde que l'on prend depuis cette machine.
+
+Ce qu'il ne protège pas, et que l'équipe a en tête sans le dire : l'export de la
+base envoyé au prestataire d'analyse, l'instantané de volume pris depuis la console
+du fournisseur — qui est déchiffré, sinon il serait inutilisable —, la réplique de
+lecture, le journal de transactions répliqué, et bien sûr le service lui-même.
+
+La question à poser, et elle tient en une phrase : « contre QUELLE défaillance
+cette protection nous couvre-t-elle ? » Si la réponse est « le vol du matériel »,
+le chiffrement de volume est exactement le bon outil, et il est presque gratuit.
+Si la réponse est « le vol des données », il ne suffit pas — il faut descendre au
+niveau où la donnée voyage, c'est-à-dire au champ.
+
+Le piège de langage est là : « chiffré au repos » n'est pas une propriété de la
+donnée, c'est une propriété d'un SUPPORT à un MOMENT. La même donnée est chiffrée
+sur le disque, en clair dans la mémoire du moteur, en clair dans le journal
+applicatif, chiffrée dans la sauvegarde, en clair dans l'export. Dire « nos données
+sont chiffrées au repos » sans préciser lequel de ces états on décrit, c'est
+décrire une seule case d'un tableau qui en compte une dizaine.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris le programme minimal qui démontre l'attaque de déplacement. Huit lignes, une valeur chiffrée par ligne, une marque d'authenticité qui ne couvre <em>que</em> le nonce et le chiffré. Essaie chaque chiffré sur chacune des sept autres lignes et compte les acceptations. Le programme doit afficher <code>56 déplacements acceptés sur 56</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l8-exo2.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
+// Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
+// plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256o(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  const o8=[];for(let i=0;i&lt;8;i++){const v=h[i]&gt;&gt;&gt;0;o8.push((v&gt;&gt;&gt;24)&amp;0xff,(v&gt;&gt;&gt;16)&amp;0xff,(v&gt;&gt;&gt;8)&amp;0xff,v&amp;0xff);}
+  return o8;}
+const hex=a=&gt;a.map(x=&gt;x.toString(16).padStart(2,'0')).join('');
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+function hmac(cle,msg){let k=cle.length&gt;64?sha256o(cle):cle.slice();while(k.length&lt;64)k.push(0);
+  return sha256o([...k.map(b=&gt;b^0x5c),...sha256o([...k.map(b=&gt;b^0x36),...msg])]);}
+const rotl=(x,n)=&gt;((x&lt;&lt;n)|(x&gt;&gt;&gt;(32-n)))&gt;&gt;&gt;0;
+function blocChaCha(c,n,v){const e=[0x61707865,0x3320646e,0x79622d32,0x6b206574],m=(t,i)=&gt;(t[i]|(t[i+1]&lt;&lt;8)|(t[i+2]&lt;&lt;16)|(t[i+3]&lt;&lt;24))&gt;&gt;&gt;0;
+ const s=[e[0],e[1],e[2],e[3]];for(let i=0;i&lt;8;i++)s.push(m(c,4*i));s.push(n&gt;&gt;&gt;0);for(let i=0;i&lt;3;i++)s.push(m(v,4*i));
+ const x=s.slice(),q=(a,b,cc,d)=&gt;{x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],16);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],12);x[a]=(x[a]+x[b])&gt;&gt;&gt;0;x[d]=rotl(x[d]^x[a],8);x[cc]=(x[cc]+x[d])&gt;&gt;&gt;0;x[b]=rotl(x[b]^x[cc],7);};
+ for(let i=0;i&lt;10;i++){q(0,4,8,12);q(1,5,9,13);q(2,6,10,14);q(3,7,11,15);q(0,5,10,15);q(1,6,11,12);q(2,7,8,13);q(3,4,9,14);}
+ const o=[];for(let i=0;i&lt;16;i++){const v2=(x[i]+s[i])&gt;&gt;&gt;0;o.push(v2&amp;0xff,(v2&gt;&gt;&gt;8)&amp;0xff,(v2&gt;&gt;&gt;16)&amp;0xff,(v2&gt;&gt;&gt;24)&amp;0xff);}return o;}
+function chacha20(cle,nonce,octets,c0){const o=[];let c=c0;for(let i=0;i&lt;octets.length;i+=64){const f=blocChaCha(cle,c++,nonce);
+ for(let j=0;j&lt;64&amp;&amp;i+j&lt;octets.length;j++)o.push(octets[i+j]^f[j]);}return o;}
+// -----------------------------------------------------------------------------------
+
+// L'attaque de déplacement, réduite à l'essentiel : rien n'est déchiffré, tout est déplacé.
+
+const CLE = sha256o(bof('clé de chiffrement des champs'));
+const CLE_MARQUE = sha256o(bof('clé de la marque'));
+let c = 0;
+const sceller = v =&gt; { c++; const nonce = [c &amp; 255, (c &gt;&gt; 8) &amp; 255, 0,0,0,0,0,0,0,0,0,0];
+  const chiffre = chacha20(CLE, nonce, bof(v), 1);
+  return { nonce, chiffre, marque: hex(hmac(CLE_MARQUE, [...nonce, ...chiffre])).slice(0, 32) }; };
+const ouvrir = p =&gt; hex(hmac(CLE_MARQUE, [...p.nonce, ...p.chiffre])).slice(0, 32) === p.marque
+  ? String.fromCharCode(...chacha20(CLE, p.nonce, p.chiffre, 1)) : null;
+
+const LIGNES = [101, 102, 103, 104, 105, 106, 107, 108].map((id, i) =&gt; ({ id, paie: sceller(String(28000 + 3000 * i)) }));
+
+let acceptes = 0, tentes = 0;
+for (const cible of LIGNES) for (const source of LIGNES) {
+  if (cible.id === source.id) continue;
+  tentes++;
+  if (ouvrir(source.paie) !== null) acceptes++;      // le chiffré d'un autre, lu sans broncher
+}
+console.log('la marque ne couvre que la valeur, jamais la ligne où elle est rangée');
+console.log('');
+console.log(acceptes + ' déplacements acceptés sur ' + tentes);</code></pre></figure><figure class="code-block" data-file="solution-l8-exo2.txt"><pre><code class="language-plaintext">la marque ne couvre que la valeur, jamais la ligne où elle est rangée
+
+56 déplacements acceptés sur 56</code></pre></figure><p>Le point à saisir est que le service n'a commis <em>aucune</em> erreur de vérification&nbsp;: la marque est juste, le déchiffrement réussit, la valeur rendue est authentique. Elle appartient simplement à quelqu'un d'autre. Ajouter l'identifiant de ligne dans le calcul de la marque suffit à ramener le compte à zéro — et c'est une modification d'une ligne.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Approfondissement</span></div><p>Calcule le nombre de messages qu'une clé supporte avec un nonce aléatoire de 64&nbsp;bits, si l'on exige que la probabilité de répétition reste sous 2<sup>−32</sup>. Pars de l'approximation q²/2<sup>n+1</sup> et renverse-la. Affiche le résultat au format <code>92 682 messages</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l8-exo3.js"><pre><code class="language-javascript">// Combien de messages une clé peut-elle chiffrer avec un nonce de 64 bits tiré au sort,
+// si l'on veut que la probabilité de répétition reste sous 2^-32 ?
+
+// Pour q valeurs tirées parmi 2^n, la probabilité qu'au moins deux coïncident vaut
+// environ q² / 2^(n+1). On veut q² / 2^(n+1) ≤ p, donc q ≤ √(2^(n+1) · p).
+const messagesPour = (bits, p) =&gt; Math.sqrt(Math.pow(2, bits + 1) * p);
+
+const q = messagesPour(64, Math.pow(2, -32));
+const mil = n =&gt; String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+console.log('nonce de 64 bits, probabilité visée 2^-32');
+console.log('q = √(2^65 × 2^-32) = √(2^33)');
+console.log('');
+console.log(mil(q) + ' messages');</code></pre></figure><figure class="code-block" data-file="solution-l8-exo3.txt"><pre><code class="language-plaintext">nonce de 64 bits, probabilité visée 2^-32
+q = √(2^65 × 2^-32) = √(2^33)
+
+92 682 messages</code></pre></figure><p>Le résultat vaut exactement √(2<sup>33</sup>), soit 2<sup>16,5</sup>. Un ordre de grandeur utile à garder en tête&nbsp;: <strong>doubler la taille du nonce ne double pas la borne, il l'élève au carré</strong>. C'est la raison d'être de XChaCha20 et de ses 192&nbsp;bits, qui permettent de tirer le nonce au sort sans jamais avoir à compter.</p></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
