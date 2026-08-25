@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Preuve sql.js en file://</title>
+</head>
+<body>
+<pre id="sortie">… en cours</pre>
+<script src="../../assets/vendor/sqljs/sql-wasm-base64.js"></script>
+<script src="../../assets/vendor/sqljs/sql-wasm.js"></script>
+<script src="../../assets/vendor/sqljs/sql-charge.js"></script>
+<script>
+(function () {
+  var lignes = [];
+  function dire(s) { lignes.push(s); document.getElementById("sortie").textContent = lignes.join("\n"); }
+
+  window.__RESULTAT = null;
+  dire("protocole            : " + location.protocol);
+  dire("disponible()         : " + window.SQLLocal.disponible());
+  dire("poids base64         : " + window.SQLLocal.poidsBase64() + " caracteres");
+
+  window.onerror = function (m) { dire("onerror             : " + m); window.__RESULTAT = "ECHEC"; };
+  window.addEventListener("unhandledrejection", function (e) {
+    dire("rejet non traite    : " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+    window.__RESULTAT = "ECHEC";
+  });
+  var _err = console.error;
+  console.error = function () { dire("console.error       : " + Array.prototype.join.call(arguments, " ")); _err.apply(console, arguments); };
+
+  var t0 = Date.now();
+  window.SQLLocal.pret().then(function (SQL) {
+    dire("initSqlJs           : OK en " + (Date.now() - t0) + " ms");
+    var db = new SQL.Database();
+    db.run("CREATE TABLE eleve (id INTEGER PRIMARY KEY, nom TEXT, note INTEGER);");
+    db.run("INSERT INTO eleve (nom, note) VALUES ('Ada', 18), ('Alan', 15), ('Grace', 20), ('Linus', 12);");
+    var r = db.exec("SELECT nom, note FROM eleve WHERE note >= 15 ORDER BY note DESC;");
+    dire("colonnes            : " + r[0].columns.join(", "));
+    r[0].values.forEach(function (v) { dire("  " + v[0] + " -> " + v[1]); });
+    var agg = db.exec("SELECT COUNT(*) AS n, AVG(note) AS moyenne FROM eleve;");
+    dire("COUNT(*)            : " + agg[0].values[0][0]);
+    dire("AVG(note)           : " + agg[0].values[0][1]);
+    var ver = db.exec("SELECT sqlite_version();");
+    dire("sqlite_version()    : " + ver[0].values[0][0]);
+    /* une erreur SQL doit remonter proprement : c'est ce que verra l'apprenant */
+    try { db.exec("SELECT * FROM table_absente;"); }
+    catch (e) { dire("erreur attendue     : " + e.message); }
+    db.close();
+    dire("VERDICT             : SQL EXECUTE EN FILE:// SANS SERVEUR");
+    window.__RESULTAT = "OK";
+  }).catch(function (e) {
+    dire("ECHEC               : " + e.message);
+    window.__RESULTAT = "ECHEC";
+  });
+})();
+</script>
+</body>
+</html>

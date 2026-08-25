@@ -93,7 +93,28 @@ L'ordre compte : SQL d'abord parce qu'il est petit et que le besoin est massif (
 
   **Recommandation d'ordre pour la suite** : A2 reste en tête parce que c'est une mesure de faisabilité peu coûteuse (sql.js se charge-t-il vraiment en `file://` ?), mais **en phase B, B3 et B4 passent avant B1 et B2** : ils portent 1 073 des 1 535 exercices convertibles, ne dépendent d'aucun préalable, et n'ajoutent aucun octet.
 
-- [ ] **A2 · SQL en local.** Embarquer sql.js (SQLite compilé en WebAssembly) dans `assets/vendor/`. **Vérifier d'abord** : poids réel du `.wasm`, et surtout **chargement en `file://`** — un `fetch()` vers un fichier local échoue dans Chrome, il faudra sans doute encoder le binaire en base64 dans un `.js`. **Si ça ne marche pas, le dire et passer à A4** : mieux vaut un constat net qu'une demi-solution.
+- [x] **A2 · SQL en local.** ✅ **2026-08-26. Ça marche, et c'est prouvé dans les conditions de l'apprenant.**
+
+  **Verdict mesuré : SQLite 3.49.1 s'exécute en `file://`, sans serveur, DNS coupé, en 411 ms — 0 requête distante.**
+
+  L'intuition du plan était la bonne : `fetch()` vers un `.wasm` local est refusé par Chrome (origine opaque), le binaire doit être porté **dans** un script. Emscripten honore une option `wasmBinary` : quand on lui donne le binaire déjà en mémoire, il n'émet plus une seule requête.
+
+  Livré dans `assets/vendor/sqljs/` — **909,4 Ko, soit +1,14 %** sur un dépôt de 77,90 Mo :
+
+  | fichier | rôle | poids |
+  |---|---|---:|
+  | `sql-wasm.js` | module Emscripten de sql.js 1.14.2 (MIT), tel quel | 45,4 Ko |
+  | `sql-wasm-base64.js` | le `.wasm` (658 410 octets) encodé en base64, **+33,4 %** | 858,0 Ko |
+  | `sql-charge.js` | adaptateur maison : décode, contrôle le nombre magique, initialise | 3,3 Ko |
+  | `LICENSE` + `README.md` | provenance et piège documenté | 2,7 Ko |
+
+  **Outil neuf `tools/preuve-hors-reseau.js`, et c'est lui qui fait la valeur du point.** Une démonstration qui « marche » ne prouve rien si elle triche sur les conditions. Il ouvre la page en `file://`, **sans `--allow-file-access-from-files`** — le drapeau qu'emploie `tools/verif-clic.js`, et qui aurait rendu la preuve fausse puisque aucun apprenant n'ouvre son navigateur avec —, **avec `--host-resolver-rules="MAP * ~NOTFOUND"`**, et il lit le **journal réseau de Chrome** pour compter les requêtes sortantes. Preuve rejouable : `node tools/preuve-hors-reseau.js tools/preuves/sqljs.html`.
+
+  Mesuré par cette page : `CREATE TABLE` + `INSERT`, `SELECT … WHERE … ORDER BY` (3 lignes justes), `COUNT(*)` = 4, `AVG(note)` = 16.25, `sqlite_version()` = 3.49.1, et une erreur SQL qui remonte proprement (`no such table: table_absente` — c'est ce que verra l'apprenant qui se trompe). **4 requêtes au total, toutes en `file:`, 0 distante.**
+
+  **⚠️ Le piège qui a coûté deux essais, et qui vaut d'être retenu : `locateFile` est appelé (avec « sql-wasm.wasm ») MÊME quand `wasmBinary` est fourni.** Emscripten calcule le chemin avant de constater qu'il n'en a pas besoin — puis n'émet aucune requête. Un premier jet y levait une exception « pour détecter une régression vers le réseau » : Emscripten l'avale, **la promesse ne se résout jamais, et pas un message n'apparaît** — ni `onerror`, ni `unhandledrejection`, ni `console.error`. Le garde-fou fabriquait la panne qu'il prétendait surveiller. C'est le diagnostic pas-à-pas, pas la lecture du code, qui l'a montré. La preuve « aucun octet ne part » se fait donc au journal réseau, pas par un piège dans le code.
+
+  Contrôles : `sql-wasm.js` ne contient **aucune** URL de CDN (son unique `https://` est un lien de commentaire vers un ticket GitHub, inerte) et **n'est pas un module ES** (0 `export`/`import`), donc compatible avec la contrainte fondatrice. `node tools/build-sqljs.js` régénère le base64 et, sans argument, contrôle son intégrité (658 410 octets redécodés, `\0asm` présent). `verif-html` 0/0, `verif-donnees` 0 erreur.
 
 - [ ] **A3 · Le bouton « Tester » pour SQL.** Une fois A2 prouvé : étendre `runner.js` aux blocs `language-sql`, avec une base d'exemple créée à la volée. L'apprenant écrit une requête, la lance, voit le résultat. **21 cours** en bénéficient (`sql`, `bdd`, `nosql`, `data-eng`, `pandas`…).
 
