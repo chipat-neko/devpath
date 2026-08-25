@@ -653,6 +653,13 @@ window.SITE_DATA = (function () {
       tagline: "Le site enseigne partout les conséquences — réplication, latence, cohérence — sans jamais poser les fondations. Ce cours les pose. Dès qu'un programme s'étale sur deux machines, la moitié de ce que tu sais devient faux : un appel peut ne jamais répondre sans qu'on sache s'il a été exécuté, et la lumière elle-même impose un plancher de temps. Chaque affirmation y est chiffrée par un programme qui tourne dans la page.",
       tags: ["Transversal", "Architecture", "Distribué"],
     },
+    {
+      id: "offensive", dir: "offensive", title: "Sécurité offensive : comprendre l'attaque pour savoir défendre",
+      glyph: "◎", language: "Sécurité offensive", level: "avance", status: "apercu",
+      accent: "#943f1a", lessons: 3, hours: 4,
+      tagline: "Le cours Sécurité applicative enseigne les défenses. Celui-ci enseigne ce contre quoi elles défendent — parce qu'on ne protège correctement que ce dont on a compris l'attaque. Cadre strict : tout y est fait sur des cibles fictives, avec l'autorisation écrite comme premier chapitre, et la loi française citée article par article. Chaque affirmation est chiffrée par un programme qui tourne dans la page.",
+      tags: ["Transversal", "Sécurité", "Web"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -1219,6 +1226,7 @@ window.SITE_DATA = (function () {
         { course: "securite", note: "TLS, ports et pare-feu sont au cœur de la sécurité réseau." },
         { course: "cloud", note: "Le cloud, c'est aussi du réseau : régions, adresses, routage." },
         { course: "distribue", note: "L'étage au-dessus : ce que ces paquets et ces connexions coûtent à un programme réparti sur plusieurs machines, chiffres à l'appui." },
+        { course: "offensive", note: "Les mêmes objets — noms, adresses, ports, bannières — vus comme un inventaire de portes. La reconnaissance commence là, et ce cours en chiffre le rendement." },
       ],
       modules: [
         {
@@ -1510,6 +1518,55 @@ window.SITE_DATA = (function () {
           num: "05", title: "Le projet", sub: "un réseau entraîné de bout en bout, à la main", level: "avance",
           lessons: [
             { num: "12", title: "Projet — un réseau qui apprend, du premier poids au dernier", file: "lecon-12.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+    offensive: {
+      id: "offensive", dir: "offensive", title: "Sécurité offensive : comprendre l'attaque pour savoir défendre",
+      glyph: "◎", accent: "#943f1a", overview: "cours.html",
+      related: [
+        { course: "securite", note: "Le cours jumeau, et le prérequis : il enseigne les défenses — validation des entrées, requêtes préparées, en-têtes, contrôle d'accès. Celui-ci enseigne ce contre quoi elles défendent. On y renvoie plutôt que de le répéter." },
+        { course: "http", note: "Une attaque web est une requête HTTP comme une autre. Méthodes, en-têtes, cookies, codes de retour : ce cours les pose, celui-ci s'en sert." },
+        { course: "reseaux", note: "La reconnaissance commence par le réseau : noms, adresses, ports, ce qu'un service annonce de lui-même. Ce cours explique les objets que la surface d'attaque recense." },
+        { course: "equipe", note: "Un rapport de faille est d'abord un texte lu par quelqu'un d'autre. Revue, ton, reproductibilité : ce que ce cours enseigne sert directement à la divulgation." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Penser comme un attaquant", sub: "cadre légal, surface d'attaque, chaînage et gravité", level: "avance",
+          lessons: [
+            { num: "01", title: "Ce qui sépare un test d'une intrusion", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "La surface d'attaque : tout ce qui accepte une entrée", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Enchaîner : l'arbre d'attaque et la note de gravité", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Les failles du web", sub: "injection, XSS, CSRF, contrôle d'accès", level: "avance",
+          lessons: [
+            { num: "04", title: "L'injection, vue du côté de celui qui la déclenche", file: "#", status: "bientot" },
+            { num: "05", title: "XSS : exécuter du code dans le navigateur d'un autre", file: "#", status: "bientot" },
+            { num: "06", title: "Contrôle d'accès défaillant et requêtes forcées", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "03", title: "Authentification et secrets", sub: "mots de passe, sessions, jetons, fuites", level: "avance",
+          lessons: [
+            { num: "07", title: "Mots de passe : ce que coûte vraiment une attaque hors ligne", file: "#", status: "bientot" },
+            { num: "08", title: "Sessions et jetons : prendre une identité sans mot de passe", file: "#", status: "bientot" },
+            { num: "09", title: "Les secrets qui fuient : dépôts, journaux, sauvegardes", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "04", title: "Chaîne d'approvisionnement et outillage", sub: "dépendances, intégrité, limites de l'automatique", level: "avance",
+          lessons: [
+            { num: "10", title: "La dépendance comme porte d'entrée", file: "#", status: "bientot" },
+            { num: "11", title: "Ce qu'un outil automatique trouve, et ce qu'il ne trouvera jamais", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "05", title: "Le projet", sub: "un audit méthodique, de bout en bout", level: "avance",
+          lessons: [
+            { num: "12", title: "Projet : auditer une application fictive", file: "#", status: "bientot" },
           ],
         },
       ],
@@ -2924,6 +2981,7 @@ window.SITE_DATA = (function () {
         { course: "api", note: "Une API exposée doit être sécurisée : authentification, validation, CORS." },
         { course: "php", note: "Le cours PHP applique ces principes : sessions, injections, sécurité web." },
         { course: "sql", note: "Comprendre le SQL aide à saisir l'injection SQL et les requêtes préparées." },
+        { course: "offensive", note: "Le cours jumeau, pris par l'autre bout : ce que ces défenses arrêtent, comment on cadre un test légalement, et comment trois failles jugées mineures s'enchaînent en une compromission." },
       ],
       modules: [
         {
@@ -3388,6 +3446,7 @@ window.SITE_DATA = (function () {
         { course: "securite", note: "Cookies, HTTPS et CORS sont au cœur de la sécurité web." },
         { course: "html", note: "Le HTML voyage justement dans le corps des réponses HTTP." },
         { course: "distribue", note: "Sous chaque requête HTTP, un aller-retour physique : ce cours calcule le plancher imposé par la vitesse de la lumière et ce que coûte une poignée de main." },
+        { course: "offensive", note: "Une attaque web n'est qu'une requête HTTP écrite exprès. Ce cours montre ce qu'un en-tête, un cookie ou un code de retour révèlent à qui les lit avec cette intention." },
       ],
       modules: [
         {
@@ -4504,6 +4563,7 @@ window.SITE_DATA = (function () {
         { course: "tests", note: "Les tests donnent la confiance qui rend une revue rapide et une fusion sereine. Ce cours les suppose acquis et montre leur rôle dans le processus collectif : relire, livrer, gérer un incident sans tout casser." },
         { course: "archi", note: "L'architecture décide des structures qui durent ; ce cours en traite la face humaine : documenter les décisions, nommer et traiter la dette technique, se mettre d'accord à plusieurs sur ce qui compte." },
         { course: "cicd", note: "L'intégration continue automatise le style, les tests et le déploiement dont ce cours parle côté équipe : brancher le formatage sur la CI, relire vite, et gérer les incidents que la mise en production révèle." },
+        { course: "offensive", note: "Signaler une faille est un exercice d'écriture avant d'être un exercice technique : un rapport reproductible, daté, sans esbroufe, adressé à quelqu'un qui devra le corriger." },
       ],
       modules: [
         {
@@ -5923,7 +5983,7 @@ window.SITE_DATA = (function () {
       title: "Concevoir un logiciel robuste",
       glyph: "◇",
       tagline: "Structurer, tester, sécuriser un code qui dure — et le porter à plusieurs.",
-      courses: ["patterns", "archi", "tests", "securite", "equipe"],
+      courses: ["patterns", "archi", "tests", "securite", "offensive", "equipe"],
     },
     {
       id: "outils",
@@ -5993,6 +6053,7 @@ window.SITE_DATA = (function () {
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
+    "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
     "clojure": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":50,"lecon-04.html":55,"lecon-05.html":55,"lecon-06.html":50,"lecon-07.html":55,"lecon-08.html":55,"lecon-09.html":45,"lecon-10.html":50,"lecon-11.html":50,"lecon-12.html":50,"lecon-13.html":36,"lecon-14.html":38,"lecon-15.html":35,"lecon-16.html":37,"lecon-17.html":40},

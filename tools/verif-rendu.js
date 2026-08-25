@@ -150,7 +150,11 @@ function unePageParCours() {
     var c = d.content[id];
     var fichiers = [];
     (c.modules || []).forEach(function (m) {
-      (m.lessons || []).forEach(function (l) { if (l && l.file) fichiers.push(l.file); });
+      /* « # » est le marqueur d'une lecon annoncee mais pas encore ecrite : ce n'est
+         pas un fichier. L'ouvrir revient a demander a Chrome le LISTING du dossier,
+         qui deborde et bavarde en console — 175 fausses erreurs mesurees le 2026-08-25
+         sur le cours « offensive », dont le module 1 seul etait redige. */
+      (m.lessons || []).forEach(function (l) { if (l && l.file && l.file !== "#") fichiers.push(l.file); });
     });
     if (fichiers.length) out.push("pages/" + (c.dir || id) + "/" + fichiers[Math.floor(fichiers.length / 2)]);
   });

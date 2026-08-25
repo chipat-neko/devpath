@@ -3622,6 +3622,62 @@ window.PROJETS = [
       "<a href=\"../observabilite/cours.html\">observabilité</a>, la façon de voir ces incidents en production.</p>",
   },
   {
+    id: "offensive-carnet",
+    course: "offensive",
+    courseTitle: "Sécurité offensive",
+    dir: "offensive",
+    accent: "offensive",
+    type: "Outil d'audit sous mandat",
+    niveau: "Avancé",
+    titre: "Un carnet d'audit qui refuse de sortir du périmètre",
+    contexte:
+      "<p>Une équipe te confie l'audit d'une application, avec un mandat écrit&nbsp;: trois hôtes, une fenêtre " +
+      "de cinq jours, quatre familles d'actions interdites. Le risque n'est pas de manquer une faille&nbsp;: " +
+      "c'est de <strong>sortir du cadre sans s'en apercevoir</strong>, parce qu'un motif de périmètre a été lu " +
+      "trop largement ou parce qu'une action a eu lieu un samedi. Hors mandat, la même commande relève de " +
+      "l'article&nbsp;323-1 du code pénal.</p>" +
+      "<p>On te demande donc un outil qui <em>t'empêche</em> de te tromper&nbsp;: il tient le carnet de bord du " +
+      "test, refuse toute action hors périmètre ou hors fenêtre, et produit à la fin le rapport que le client " +
+      "attend. Contrainte&nbsp;: il ne se connecte à <strong>rien</strong>. Les cibles sont fictives, décrites " +
+      "dans un fichier de données que tu écris toi-même — c'est un outil de méthode, pas un outil d'attaque.</p>",
+    objectif:
+      "<p>Écrire un programme qui prend un <strong>mandat</strong> et un <strong>journal d'actions</strong>, et " +
+      "qui rend trois choses&nbsp;: la liste des actions <strong>refusées</strong> avec leur motif, le " +
+      "<strong>dénombrement</strong> de la surface déclarée, et un <strong>rapport de gravité</strong> qui note " +
+      "chaque découverte puis calcule ce que vaut leur <strong>chaînage</strong>.</p>",
+    livrable: "Un programme unique, sans dépendance, qui lit un mandat et un journal de test, refuse ce qui sort du cadre, et imprime un rapport chiffré : actions conformes et refusées, surface dénombrée, score CVSS de chaque découverte et score de la chaîne.",
+    fonctionnalites: [
+      "Un <strong>contrôle de périmètre</strong> qui lit un motif à joker correctement&nbsp;: le domaine nu n'est pas couvert par son propre joker, un suffixe n'est pas un domaine, la casse et le point final sont ignorés.",
+      "Un <strong>contrôle de fenêtre</strong> sur des horodatages, et un <strong>contrôle des actions interdites</strong> déclarées dans le mandat.",
+      "Un <strong>dénombrement de surface</strong>&nbsp;: couples (route, méthode, rôle) à essayer, contrôles d'accès à vérifier, points d'entrée de données.",
+      "Un <strong>calculateur CVSS&nbsp;v3.1</strong> pour le score de base, avec l'arrondi au dixième supérieur de la spécification.",
+      "Un <strong>banc d'essai</strong> qui confronte ce calculateur à au moins dix vecteurs dont le score est publié, et qui refuse de rendre un rapport si l'un d'eux échoue.",
+      "Un <strong>calcul de chaîne</strong> qui combine les métriques d'exploitabilité les moins restrictives et les impacts les plus forts, et affiche l'écart avec la découverte la plus grave prise seule.",
+    ],
+    criteres: [
+      "Le programme <strong>refuse</strong> toute action hors périmètre, hors fenêtre ou interdite, et donne pour chacune le <strong>motif exact</strong> du refus.",
+      "Le contrôle de périmètre est testé sur au moins <strong>douze hôtes</strong> dont une moitié piégée&nbsp;: aucune erreur, dans aucun des deux sens.",
+      "Le banc d'essai CVSS reproduit <strong>tous</strong> les vecteurs de référence&nbsp;; en cas d'échec, le programme s'arrête au lieu de publier un score.",
+      "Le rapport affiche le score de <strong>chaque</strong> découverte, celui de la <strong>chaîne</strong>, et l'écart entre les deux.",
+      "Deux exécutions sur les mêmes données donnent le <strong>même rapport</strong>, au caractère près&nbsp;: aucune horloge courante, aucun tirage au hasard non semé.",
+      "Le rapport se lit dans l'ordre qui fait corriger&nbsp;: ce qui a été obtenu, comment le reproduire, ce que ça permet, ce qui corrige — la note en dernier.",
+      "<strong>Aucune dépendance</strong>, et <strong>aucun accès réseau</strong>&nbsp;: toutes les cibles sont décrites dans tes propres fichiers de données.",
+    ],
+    pistes:
+      "<p>Commence par le <strong>contrôle de périmètre</strong>, avant tout le reste&nbsp;: c'est la partie où " +
+      "une erreur ne se rattrape pas. Écris d'abord les douze cas de test, y compris ceux qui doivent être " +
+      "<em>refusés</em>, puis la fonction qui les satisfait tous. Si tu commences par la fonction, tu écriras " +
+      "les cas qui lui donnent raison.</p>" +
+      "<p>Pour le calculateur de gravité, la même discipline&nbsp;: le <strong>banc d'essai avant la formule</strong>. " +
+      "Chaque score attendu doit venir d'une source publiée, jamais d'un souvenir — c'est exactement l'erreur " +
+      "racontée dans la leçon&nbsp;3, où un attendu écrit de mémoire accusait à tort un programme juste.</p>" +
+      "<p>Pour aller plus loin&nbsp;: ajoute au carnet une <strong>horloge de divulgation</strong> qui, à partir de " +
+      "la date de signalement, calcule l'accusé de réception attendu, l'échéance et la rallonge éventuelle. " +
+      "Le cours <a href=\"../securite/cours.html\">sécurité applicative</a> donne la contrepartie défensive de " +
+      "chaque découverte que ton rapport listera&nbsp;; <a href=\"../equipe/cours.html\">travailler à plusieurs</a> " +
+      "aide à écrire un rapport qu'on a envie de lire.</p>",
+  },
+  {
     id: "neurones-chiffres",
     course: "neurones",
     courseTitle: "Réseaux de neurones",
