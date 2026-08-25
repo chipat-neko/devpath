@@ -1234,6 +1234,7 @@ window.SITE_DATA = (function () {
         { course: "cloud", note: "Le cloud, c'est aussi du réseau : régions, adresses, routage." },
         { course: "distribue", note: "L'étage au-dessus : ce que ces paquets et ces connexions coûtent à un programme réparti sur plusieurs machines, chiffres à l'appui." },
         { course: "offensive", note: "Les mêmes objets — noms, adresses, ports, bannières — vus comme un inventaire de portes. La reconnaissance commence là, et ce cours en chiffre le rendement." },
+        { course: "crypto", note: "La leçon 5 pose la poignée de main TLS et la leçon 11 les tunnels chiffrés, sans ouvrir ce qui les fait tenir. Ce cours-là écrit les primitives en entier : ce que chacune garantit, et où elle cède." },
       ],
       modules: [
         {

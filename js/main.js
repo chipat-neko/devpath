@@ -229,12 +229,12 @@
     "home.kicker": "The school of code",
     "home.title": "Learn to code <em>in depth</em>, not on the surface.",
     "home.lead":
-      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>88 courses</strong>, 87 of them fully written, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
+      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>88 courses</strong>, all of them fully written, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
     "home.meta.courses": "<strong>88</strong> courses in the catalogue",
     "home.meta.lessons": "<strong>1523</strong> written lessons",
-    "home.meta.langs": "<strong>79</strong> languages &amp; tech",
+    "home.meta.langs": "<strong>80</strong> languages &amp; tech",
   };
 
   function getLang() {
@@ -274,7 +274,7 @@
      ne traduisait que ~13 libellés de navigation sur un contenu resté français —
      une seule page (l'accueil) portait 8 éléments instrumentés, tout le reste de
      son propre contenu compris. Il promettait un bilinguisme inexistant, alors
-     que traduire les 1476 leçons n'est pas à l'ordre du jour. On assume donc le
+     que traduire les 1523 leçons n'est pas à l'ordre du jour. On assume donc le
      site comme francophone et on force l'affichage FR, même si une ancienne
      préférence « en » traîne encore dans localStorage. La fondation i18n
      (getLang, applyI18n, tables) est conservée, dormante, pour une éventuelle
@@ -933,7 +933,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1523 leçons et 63 pages du site.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1523 leçons et 64 pages du site.</li>';
         return;
       }
       items = doSearch(tk);

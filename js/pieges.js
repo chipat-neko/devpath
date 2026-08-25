@@ -2,7 +2,7 @@
    pieges.js — Les pièges du code, rassemblés PAR COURS.
 
    POURQUOI (point V12-D1). Le site s'est donné une convention éditoriale forte —
-   1 773 encadrés « Piège fréquent » (et « Erreur fréquente ») sur 949 leçons et
+   1 893 encadrés « Piège fréquent » (et « Erreur fréquente ») sur 1 057 leçons et
    65 cours — et aucune page ne les rassemblait. Or un piège est exactement le
    matériau qu'on veut relire avant un exercice : une prédiction vérifiable, pas
    une définition. Zéro contenu nouveau : tout est déjà écrit dans les leçons.
@@ -46,7 +46,7 @@
     return String(s == null ? "" : s).replace(/<[^>]+>/g, " ");
   }
 
-  /* Index de texte, construit paresseusement : 1 773 entrées, inutile de le
+  /* Index de texte, construit paresseusement : 1 893 entrées, inutile de le
      payer si l'apprenant ne cherche rien. */
   var indexed = false;
   function ensureIndex() {
@@ -149,7 +149,7 @@
         return p._txt.indexOf(m) !== -1;
       });
     });
-    /* On plafonne l'affichage : 1 773 cartes d'un coup ne servent personne et
+    /* On plafonne l'affichage : 1 893 cartes d'un coup ne servent personne et
        coûtent cher à rendre. */
     var LIMITE = 120;
     rendreListe(items.slice(0, LIMITE), true);

@@ -522,7 +522,7 @@
   }
 
   /* ---- Lien « antisèche du cours » (référence rapide) -----------------
-     Les 83 cours ont au moins une antisèche (vérifié : 0 cours sans fiche).
+     Les 88 cours ont au moins une antisèche (vérifié : 0 cours sans fiche).
      On passe le DOSSIER du cours en ancre : pages/antiseches.html indexe ses
      fiches par dossier (js, pas javascript) et s'ouvre directement dessus.
      N'ajoute aucune donnée sur la page (les 1,2 Mo d'antiseches-data.js ne sont
