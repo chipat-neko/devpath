@@ -64,6 +64,15 @@ var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               '/usr/bin/google-chrome', '/usr/bin/chromium'].find(function (p) { return fs.existsSync(p); });
 if (!CHROME) { console.log('verif-clic.js — Chrome introuvable, rien de mesuré.'); process.exit(0); }
 
+/* Un echec TECHNIQUE (Chrome qui meurt, socket coupee) ne doit pas rendre le meme
+   code de sortie qu une DIVERGENCE reelle : sinon un plantage se lit comme une
+   verification faite, ou l inverse. 1 = divergence, 2 = l outil n a pas pu mesurer. */
+process.on('uncaughtException', function (e) {
+  console.log("");
+  console.log("verif-clic.js — ECHEC TECHNIQUE, rien n a pu etre mesure : " + (e && e.message ? e.message : e));
+  process.exit(2);
+});
+
 /* ------------------------------------------------------------ choix des pages --- */
 function lecons() {
   var out = [];
@@ -99,6 +108,11 @@ function connecter(wsUrl) {
       'Connection: Upgrade\r\nSec-WebSocket-Key: ' + key + '\r\nSec-WebSocket-Version: 13\r\n\r\n');
   });
   var buf = Buffer.alloc(0), hs = false, id = 0, attentes = {};
+  /* Chrome coupe la socket a la fermeture : sans ce gestionnaire, Node leve une
+     exception non capturee (ECONNRESET), le resume n est jamais imprime et le
+     processus sort en erreur — exactement comme s il avait trouve une divergence.
+     Le controle etait donc muet ET indistinguable d un echec reel (V13-F1). */
+  sock.on('error', function () { /* fermeture brutale de Chrome : sans effet */ });
   sock.on('data', function (chunk) {
     buf = Buffer.concat([buf, chunk]);
     if (!hs) { var i = buf.indexOf('\r\n\r\n'); if (i < 0) return; hs = true; buf = buf.slice(i + 4); }
@@ -225,5 +239,5 @@ function estUnFragment(vu) {
   console.log('  fragments (rien produit / erreur) ... ' + fragments + '  (dépendent d un bloc précédent : non jugés)');
   if (divergents) console.log('\n  pages à corriger : ' + pagesKO.join(', '));
   else console.log('\n  Ce que la page imprime et ce que l\'apprenant obtient au clic concordent partout.');
-  process.exit(divergents ? 1 : 0);
+  process.exit(divergents ? 1 : 0);   /* 1 = divergence ; un plantage technique sort en 2, cf. plus bas */
 })();

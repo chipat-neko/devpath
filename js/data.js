@@ -660,6 +660,13 @@ window.SITE_DATA = (function () {
       tagline: "Le cours Sécurité applicative enseigne les défenses. Celui-ci enseigne ce contre quoi elles défendent — parce qu'on ne protège correctement que ce dont on a compris l'attaque. Cadre strict : tout y est fait sur des cibles fictives, avec l'autorisation écrite comme premier chapitre, et la loi française citée article par article. Chaque affirmation est chiffrée par un programme qui tourne dans la page.",
       tags: ["Transversal", "Sécurité", "Web"],
     },
+    {
+      id: "crypto", dir: "crypto", title: "Cryptographie appliquée : ce que chaque outil garantit, et ce qu'il ne garantit pas",
+      glyph: "⊕", language: "Cryptographie", level: "avance", status: "apercu",
+      accent: "#1d7a5f", lessons: 3, hours: 2,
+      tagline: "Les cours Sécurité applicative et HTTP emploient le chiffrement sans jamais l'expliquer. Ce cours ouvre la boîte : chaque primitive y est écrite en entier, exécutée dans la page, vérifiée contre les vecteurs de test de sa norme — puis cassée, parce que c'est en la cassant qu'on comprend ce qu'elle protégeait. La règle qui traverse tout : on n'écrit jamais sa propre cryptographie, on choisit le bon outil avec les bons paramètres.",
+      tags: ["Transversal", "Sécurité", "Fondamentaux"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -1530,6 +1537,7 @@ window.SITE_DATA = (function () {
         { course: "http", note: "Une attaque web est une requête HTTP comme une autre. Méthodes, en-têtes, cookies, codes de retour : ce cours les pose, celui-ci s'en sert." },
         { course: "reseaux", note: "La reconnaissance commence par le réseau : noms, adresses, ports, ce qu'un service annonce de lui-même. Ce cours explique les objets que la surface d'attaque recense." },
         { course: "equipe", note: "Un rapport de faille est d'abord un texte lu par quelqu'un d'autre. Revue, ton, reproductibilité : ce que ce cours enseigne sert directement à la divulgation." },
+        { course: "crypto", note: "Les mots de passe, les jetons et les secrets de ce cours reposent tous sur des primitives cryptographiques. Le cours Cryptographie appliquée explique ce que chacune garantit — et ce qu'elle ne garantit pas." },
       ],
       modules: [
         {
@@ -1567,6 +1575,49 @@ window.SITE_DATA = (function () {
           num: "05", title: "Le projet", sub: "un audit méthodique, de bout en bout", level: "avance",
           lessons: [
             { num: "12", title: "Projet : auditer une application fictive", file: "lecon-12.html", status: "complet" },
+          ],
+        },
+      ],
+    },
+    crypto: {
+      id: "crypto", dir: "crypto", title: "Cryptographie appliquée : ce que chaque outil garantit, et ce qu'il ne garantit pas",
+      glyph: "⊕", accent: "#1d7a5f", overview: "cours.html",
+      related: [
+        { course: "securite", note: "La leçon 8 y distingue hacher, chiffrer et signer en quelques paragraphes, et répond à « lequel employer ». Ce cours répond à « pourquoi celui-là tient, et où il cède ». On y renvoie plutôt que de le répéter." },
+        { course: "http", note: "HTTPS y est expliqué du point de vue du protocole : en-têtes, certificats, redirections. Ici, on ouvre les primitives qui le font tenir." },
+        { course: "offensive", note: "Le point de vue de l'attaquant sur les mots de passe, les sessions et les jetons. Ce cours-ci donne les fondations que ces attaques exploitent." },
+        { course: "reseaux", note: "Ce qui voyage sur un réseau, et qui écoute. Le chiffrement de transport ne se comprend qu'une fois le trajet d'un paquet posé." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Les primitives", sub: "empreintes, chiffrement symétrique, chiffrement asymétrique", level: "avance",
+          lessons: [
+            { num: "01", title: "L’empreinte : à sens unique, et ce que cela ne veut pas dire", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Le chiffrement symétrique : une clé, et deux garanties qu’on confond", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Deux clés au lieu d’une : ce que l’asymétrique permet, et ce qu’il coûte", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Les assembler", sub: "signature, échange de clés, certificats, TLS", level: "avance",
+          lessons: [
+            { num: "04", title: "Signer et authentifier : prouver l’origine", file: "#", status: "bientot" },
+            { num: "05", title: "S’accorder sur un secret devant témoin", file: "#", status: "bientot" },
+            { num: "06", title: "Certificats et chaîne de confiance, jusqu’à TLS", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "03", title: "En pratique", sub: "mots de passe, données au repos, gestion des clés", level: "avance",
+          lessons: [
+            { num: "07", title: "Stocker un mot de passe", file: "#", status: "bientot" },
+            { num: "08", title: "Chiffrer des données au repos", file: "#", status: "bientot" },
+            { num: "09", title: "Gérer des clés : les créer, les ranger, les remplacer", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "04", title: "Le projet", sub: "un coffre local, de bout en bout", level: "avance",
+          lessons: [
+            { num: "10", title: "Auditer l’usage de la cryptographie dans un projet", file: "#", status: "bientot" },
+            { num: "11", title: "Projet : un coffre de notes chiffré et vérifiable", file: "#", status: "bientot" },
           ],
         },
       ],
@@ -2982,6 +3033,7 @@ window.SITE_DATA = (function () {
         { course: "php", note: "Le cours PHP applique ces principes : sessions, injections, sécurité web." },
         { course: "sql", note: "Comprendre le SQL aide à saisir l'injection SQL et les requêtes préparées." },
         { course: "offensive", note: "Le cours jumeau, pris par l'autre bout : ce que ces défenses arrêtent, comment on cadre un test légalement, et comment trois failles jugées mineures s'enchaînent en une compromission." },
+        { course: "crypto", note: "La leçon 8 de ce cours distingue hacher, chiffrer et signer. Le cours Cryptographie appliquée ouvre les trois fonctions, les exécute et montre où chacune cède." },
       ],
       modules: [
         {
@@ -3447,6 +3499,7 @@ window.SITE_DATA = (function () {
         { course: "html", note: "Le HTML voyage justement dans le corps des réponses HTTP." },
         { course: "distribue", note: "Sous chaque requête HTTP, un aller-retour physique : ce cours calcule le plancher imposé par la vitesse de la lumière et ce que coûte une poignée de main." },
         { course: "offensive", note: "Une attaque web n'est qu'une requête HTTP écrite exprès. Ce cours montre ce qu'un en-tête, un cookie ou un code de retour révèlent à qui les lit avec cette intention." },
+        { course: "crypto", note: "HTTPS repose sur des primitives que ce cours emploie sans les expliquer : empreintes, chiffrement symétrique et asymétrique, signatures. Le cours Cryptographie appliquée les pose." },
       ],
       modules: [
         {
@@ -6053,6 +6106,7 @@ window.SITE_DATA = (function () {
     "c": {"lecon-01.html":31,"lecon-02.html":33,"lecon-03.html":30,"lecon-04.html":32,"lecon-05.html":36,"lecon-06.html":34,"lecon-07.html":36,"lecon-08.html":34,"lecon-09.html":32,"lecon-10.html":33,"lecon-11.html":35,"lecon-12.html":33,"lecon-13.html":35,"lecon-14.html":36,"lecon-15.html":34,"lecon-16.html":36,"lecon-17.html":34,"lecon-18.html":37,"lecon-19.html":35,"lecon-20.html":38,"lecon-21.html":40},
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
+    "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34},
     "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24,"lecon-12.html":30},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},

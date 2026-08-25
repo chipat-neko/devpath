@@ -229,11 +229,11 @@
     "home.kicker": "The school of code",
     "home.title": "Learn to code <em>in depth</em>, not on the surface.",
     "home.lead":
-      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>87 courses</strong>, all fully written, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
+      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>88 courses</strong>, 87 of them fully written, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
-    "home.meta.courses": "<strong>87</strong> courses in the catalogue",
-    "home.meta.lessons": "<strong>1512</strong> written lessons",
+    "home.meta.courses": "<strong>88</strong> courses in the catalogue",
+    "home.meta.lessons": "<strong>1515</strong> written lessons",
     "home.meta.langs": "<strong>79</strong> languages &amp; tech",
   };
 
@@ -933,7 +933,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1512 leçons et 63 pages du site.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1515 leçons et 63 pages du site.</li>';
         return;
       }
       items = doSearch(tk);

@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>L’empreinte : à sens unique, et ce que cela ne veut pas dire — Leçon 01 · Cours Cryptographie appliquée — Syntaxe</title>
+    <meta name="description" content="Fonctions de hachage : SHA-256 écrite et exécutée en entier, effet avalanche mesuré, paradoxe des anniversaires, et ce qu’une empreinte ne cache pas. Cours Cryptographie appliquée, module 1." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="crypto" data-lesson="lecon-01.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Cryptographie appliquée</a></li>
+            <li aria-current="page">Leçon 01</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 1 · Les primitives</p>
+              <h1 class="lesson-header__title">L’empreinte : à sens unique, et ce que cela ne veut pas dire</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~32 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis : Sécurité applicative, leçon 8</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>Lire une fonction de hachage de bout en bout et la vérifier contre les vecteurs de test de sa norme</li>
+                  <li>Mesurer l’effet avalanche, et en tirer pourquoi deux empreintes ne se « ressemblent » jamais</li>
+                  <li>Calculer le coût réel d’une collision — la racine carrée, et non le nombre de valeurs</li>
+                  <li>Reconnaître les emplois d’une empreinte qui ne tiennent pas : anonymiser, authentifier, protéger un mot de passe</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Trois mots reviennent sans cesse dès qu'on parle de sécurité&nbsp;: <em>hacher</em>, <em>chiffrer</em>, <em>signer</em>. On les emploie souvent l'un pour l'autre, et cette confusion coûte cher&nbsp;: elle produit des systèmes qui protègent quelque chose, mais pas ce qu'on croyait. Ce module reprend les trois briques une par une. On commence par la plus simple à décrire — et la plus mal comprise.</p>
+<p>Une <strong>fonction de hachage</strong> transforme n'importe quelle suite d'octets en une empreinte de taille fixe. Un mot, un roman, une image de trois gigaoctets&nbsp;: la sortie fait toujours 256&nbsp;bits avec SHA-256. Cette leçon ne se contente pas de l'affirmer&nbsp;: la fonction est écrite en entier ci-dessous, elle tourne dans la page, et chaque chiffre annoncé sort d'une exécution.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que cette leçon suppose lu</p><p>La leçon <a href="../securite/lecon-08.html">Cryptographie appliquée</a> du cours Sécurité applicative distingue déjà les trois outils en quelques paragraphes. Elle répond à «&nbsp;lequel dois-je employer&nbsp;?&nbsp;». Celle-ci répond à «&nbsp;pourquoi celui-là tient-il, et où cède-t-il&nbsp;?&nbsp;» — avec des programmes qui mesurent. Les deux se lisent dans cet ordre.</p></div></div>
+<h2>Une fonction de hachage, en entier</h2>
+<p>SHA-256 n'est pas une boîte noire. C'est une cinquantaine de lignes&nbsp;: on complète le message pour tomber sur un multiple de 64&nbsp;octets, on part de huit nombres fixes, et on brasse le tout en 64&nbsp;tours d'additions, de rotations et de XOR. Les constantes elles-mêmes n'ont rien de mystérieux&nbsp;: ce sont les décimales des racines cubiques des 64&nbsp;premiers nombres premiers — un choix public, fait précisément pour que personne ne puisse soupçonner l'auteur d'avoir caché une trappe dans des valeurs arbitraires.</p>
+<figure class="code-block" data-file="sha256.js"><pre><code class="language-javascript">// SHA-256, écrite ici en entier pour qu'on puisse la REGARDER tourner.
+// (En production on ne réécrit jamais une primitive : on appelle celle du système.)
+const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+           0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+           0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+           0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+           0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+           0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+           0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+           0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+
+const rotr = (x, n) =&gt; (x &gt;&gt;&gt; n) | (x &lt;&lt; (32 - n));
+
+function sha256(octets) {
+  // 1. Bourrage : un bit 1, des zéros, puis la longueur en BITS sur 64 bits.
+  const long = octets.length;
+  const bloc = [...octets, 0x80];
+  while (bloc.length % 64 !== 56) bloc.push(0);
+  const bits = long * 8;
+  for (let i = 7; i &gt;= 0; i--) bloc.push(Math.floor(bits / 2 ** (8 * i)) &amp; 0xff);
+
+  // 2. État initial : 8 mots de 32 bits.
+  const h = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+
+  // 3. On avale le message par blocs de 64 octets.
+  for (let d = 0; d &lt; bloc.length; d += 64) {
+    const w = new Array(64);
+    for (let i = 0; i &lt; 16; i++) {
+      w[i] = (bloc[d+4*i] &lt;&lt; 24) | (bloc[d+4*i+1] &lt;&lt; 16) | (bloc[d+4*i+2] &lt;&lt; 8) | bloc[d+4*i+3];
+    }
+    for (let i = 16; i &lt; 64; i++) {         // on étale 16 mots en 64
+      const s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15] &gt;&gt;&gt; 3);
+      const s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2] &gt;&gt;&gt; 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    let [a,b,c,dd,e,f,g,hh] = h;
+    for (let i = 0; i &lt; 64; i++) {          // 64 tours de brassage
+      const S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+      const ch = (e &amp; f) ^ (~e &amp; g);
+      const t1 = (hh + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+      const maj = (a &amp; b) ^ (a &amp; c) ^ (b &amp; c);
+      const t2 = (S0 + maj) | 0;
+      hh = g; g = f; f = e; e = (dd + t1) | 0;
+      dd = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    const t = [a,b,c,dd,e,f,g,hh];
+    for (let i = 0; i &lt; 8; i++) h[i] = (h[i] + t[i]) | 0;
+  }
+  return h.map(x =&gt; (x &gt;&gt;&gt; 0).toString(16).padStart(8, '0')).join('');
+}
+
+const bof = (s) =&gt; [...unescape(encodeURIComponent(s))].map(c =&gt; c.charCodeAt(0));
+
+// Les trois premiers sont les vecteurs de test officiels du NIST pour SHA-256
+// (page « Example Algorithms » — ils étaient jadis en annexe de FIPS 180-2).
+// Les six suivants encadrent les FRONTIÈRES DE BLOC : 55 et 56 octets, 63 et 64,
+// 119 et 120. C'est là qu'une implémentation se trompe, parce que le bourrage
+// doit alors ajouter un bloc entier. Leurs valeurs de référence viennent de la
+// bibliothèque standard de Node.js.
+const VECTEURS = [
+  ['', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
+  ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
+  ['abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
+   '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1'],
+  ['a'.repeat(55), '9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318'],
+  ['a'.repeat(56), 'b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a'],
+  ['a'.repeat(63), '7d3e74a05d7db15bce4ad9ec0658ea98e3f06eeecf16b4c6fff2da457ddc2f34'],
+  ['a'.repeat(64), 'ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb'],
+  ['a'.repeat(119), '31eba51c313a5c08226adf18d4a359cfdfd8d2e816b13f4af952f7ea6584dcfb'],
+  ['a'.repeat(120), '2f3d335432c70b580af0e8e1b3674a7c020d683aa5f73aaaedfdc55af904c21c'],
+];
+
+let bons = 0;
+for (const [msg, attendu] of VECTEURS) {
+  const obtenu = sha256(bof(msg));
+  const ok = obtenu === attendu;
+  if (ok) bons++;
+  const etiq = msg.length &gt; 12 ? JSON.stringify(msg.slice(0, 6)).slice(0, -1) + '…" (' + msg.length + ' o.)' : JSON.stringify(msg);
+  console.log((ok ? 'OK  ' : 'FAUX') + ' ' + etiq.padEnd(22) + ' -&gt; ' + obtenu.slice(0, 32) + '…');
+}
+console.log('Vecteurs de référence : ' + bons + '/' + VECTEURS.length + ' conformes');
+
+// Trois messages du quotidien, pour voir la taille de la sortie.
+for (const m of ['bonjour', 'Bonjour', 'bonjour ']) {
+  console.log(JSON.stringify(m).padEnd(11) + ' -&gt; ' + sha256(bof(m)));
+}
+console.log('Entrée de longueur quelconque, sortie TOUJOURS de 64 chiffres hexadécimaux = 256 bits.');</code></pre></figure>
+<figure class="code-block" data-file="sha256.txt"><pre><code class="language-plaintext">OK   ""                     -&gt; e3b0c44298fc1c149afbf4c8996fb924…
+OK   "abc"                  -&gt; ba7816bf8f01cfea414140de5dae2223…
+OK   "abcdbc…" (56 o.)      -&gt; 248d6a61d20638b8e5c026930c3e6039…
+OK   "aaaaaa…" (55 o.)      -&gt; 9f4390f8d30c2dd92ec9f095b65e2b9a…
+OK   "aaaaaa…" (56 o.)      -&gt; b35439a4ac6f0948b6d6f9e3c6af0f5f…
+OK   "aaaaaa…" (63 o.)      -&gt; 7d3e74a05d7db15bce4ad9ec0658ea98…
+OK   "aaaaaa…" (64 o.)      -&gt; ffe054fe7ae0cb6dc65c3af9b61d5209…
+OK   "aaaaaa…" (119 o.)     -&gt; 31eba51c313a5c08226adf18d4a359cf…
+OK   "aaaaaa…" (120 o.)     -&gt; 2f3d335432c70b580af0e8e1b3674a7c…
+Vecteurs de référence : 9/9 conformes
+"bonjour"   -&gt; 2cb4b1431b84ec15d35ed83bb927e27e8967d75f4bcd9cc4b25c8d879ae23e18
+"Bonjour"   -&gt; 9172e8eec99f144f72eca9a568759580edadb2cfd154857f07e657569493bc44
+"bonjour "  -&gt; e0770080ea0bda10fcfd714361fa7ca451fa65375a73424c7895c8f57166a10a
+Entrée de longueur quelconque, sortie TOUJOURS de 64 chiffres hexadécimaux = 256 bits.</code></pre></figure>
+<p>Les trois premiers messages sont des <strong>vecteurs de test officiels du NIST</strong> pour SHA-256&nbsp;: «&nbsp;abc&nbsp;» et le message de 448&nbsp;bits figuraient jadis en annexe de FIPS&nbsp;180-2 et ont depuis été déplacés vers la page <em>Example Algorithms</em> du NIST — la norme FIPS&nbsp;180-4 elle-même ne les contient plus. Ils servent exactement à cela&nbsp;: vérifier qu'une implémentation neuve rend bien ce qui est prescrit.</p>
+<p>Les six suivants sont plus intéressants encore, et leurs valeurs de référence viennent de la bibliothèque standard de Node.js. Ils encadrent les <strong>frontières de bloc</strong>&nbsp;: 55 et 56&nbsp;octets, 63 et 64, 119 et 120. C'est là qu'une implémentation se trompe, parce que le bourrage doit alors ajouter un bloc entier de 64&nbsp;octets. Une fonction de hachage juste sur «&nbsp;abc&nbsp;» et fausse sur 56&nbsp;octets n'est pas rare&nbsp;; c'est même l'erreur classique. Ici&nbsp;: <strong>9 vecteurs sur 9</strong>.</p>
+<p>Regarde les trois dernières lignes. <code>"bonjour"</code>, <code>"Bonjour"</code> et <code>"bonjour&nbsp;"</code> sont trois messages presque identiques&nbsp;; leurs empreintes n'ont rien en commun. C'est le comportement attendu, et le programme suivant le chiffre.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Une fonction de hachage ramène toute entrée, quelle que soit sa taille, à une sortie de taille fixe. À gauche, trois entrées : un mot de sept octets, un texte de quarante mille octets, une image de trois milliards d'octets. Au centre, la fonction SHA-256. À droite, trois empreintes de 256 bits chacune, soit 64 chiffres hexadécimaux, quelle que soit l'entrée. Le sens de lecture ne va que dans un sens : on ne remonte pas de l'empreinte au message par calcul — l'énumération, elle, reste possible quand le domaine des messages est petit, comme la suite de la leçon le mesure.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Entrée de taille quelconque, sortie de taille fixe</text>
+    <rect class="d-box" x="18" y="44" width="170" height="40" rx="6" /><text class="d-text" x="103" y="69" text-anchor="middle" font-size="11">7 octets</text>
+    <rect class="d-box" x="18" y="100" width="170" height="40" rx="6" /><text class="d-text" x="103" y="125" text-anchor="middle" font-size="11">40 000 octets</text>
+    <rect class="d-box" x="18" y="156" width="170" height="40" rx="6" /><text class="d-text" x="103" y="181" text-anchor="middle" font-size="11">3 000 000 000 octets</text>
+    <rect class="d-accent" x="248" y="86" width="144" height="68" rx="6" /><text class="d-text" x="320" y="114" text-anchor="middle" font-size="12">SHA-256</text>
+    <text class="d-mut" x="320" y="134" text-anchor="middle" font-size="9">64 tours de brassage</text>
+    <path class="d-line" d="M188 64 H248 M188 120 H248 M188 176 H248" />
+    <path class="d-line" d="M392 120 H452" />
+    <rect class="d-box" x="452" y="44" width="170" height="40" rx="6" /><text class="d-text" x="537" y="69" text-anchor="middle" font-size="11">256 bits</text>
+    <rect class="d-box" x="452" y="100" width="170" height="40" rx="6" /><text class="d-text" x="537" y="125" text-anchor="middle" font-size="11">256 bits</text>
+    <rect class="d-box" x="452" y="156" width="170" height="40" rx="6" /><text class="d-text" x="537" y="181" text-anchor="middle" font-size="11">256 bits</text>
+    <text class="d-mut" x="537" y="212" text-anchor="middle" font-size="9">64 chiffres hexadécimaux, toujours</text>
+  </svg>
+  <figcaption>Le sens unique n'est pas une figure de style&nbsp;: 3&nbsp;milliards d'octets entrent, 32&nbsp;en sortent. L'information est détruite, pas cachée.</figcaption>
+</figure>
+<h2>L'effet avalanche, mesuré</h2>
+<p>Une bonne fonction de hachage doit se comporter, vue de l'extérieur, comme un tirage au sort&nbsp;: deux messages voisins doivent donner deux empreintes sans lien visible. Cette propriété porte un nom, l'<strong>effet avalanche</strong>, et elle se mesure. Le programme prend un ordre de virement de 34&nbsp;octets, retourne <em>un seul</em> de ses 272&nbsp;bits, et compte combien de bits changent dans l'empreinte.</p>
+<figure class="code-block" data-file="avalanche.js"><pre><code class="language-javascript">// --- SHA-256 (même fonction qu'au bloc précédent, repliée pour tenir en un écran) ---
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  return h.map(x=&gt;(x&gt;&gt;&gt;0).toString(16).padStart(8,'0')).join('');}
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// Combien de bits de l'empreinte changent quand on change UN SEUL bit du message ?
+function bitsDifferents(hexA, hexB) {
+  let n = 0;
+  for (let i = 0; i &lt; hexA.length; i++) {
+    let x = parseInt(hexA[i], 16) ^ parseInt(hexB[i], 16);
+    while (x) { n += x &amp; 1; x &gt;&gt;= 1; }
+  }
+  return n;
+}
+
+const base = bof('Virement de 100 euros au compte 42');
+let total = 0, mini = 256, maxi = 0, essais = 0;
+const h0 = sha256(base);
+
+for (let octet = 0; octet &lt; base.length; octet++) {
+  for (let bit = 0; bit &lt; 8; bit++) {
+    const modifie = base.slice();
+    modifie[octet] ^= 1 &lt;&lt; bit;          // on retourne exactement un bit
+    const n = bitsDifferents(h0, sha256(modifie));
+    total += n; essais++;
+    if (n &lt; mini) mini = n;
+    if (n &gt; maxi) maxi = n;
+  }
+}
+
+console.log('Message de ' + base.length + ' octets = ' + (base.length * 8) + ' bits.');
+console.log('On retourne chacun de ces bits, un par un : ' + essais + ' messages voisins.');
+console.log('Bits changés dans l\'empreinte (sur 256) : min ' + mini + ' · max ' + maxi
+          + ' · moyenne ' + (total / essais).toFixed(2));
+console.log('Soit ' + ((total / essais) / 256 * 100).toFixed(1) + ' % des bits pour UN bit changé.');
+console.log('');
+console.log('Deux voisins immédiats, côte à côte :');
+console.log('  original  ' + h0.slice(0, 40) + '…');
+const v = base.slice(); v[0] ^= 1;
+console.log('  1 bit off ' + sha256(v).slice(0, 40) + '…');
+console.log('Aucune ressemblance : l\'empreinte ne dit RIEN de la proximité des messages.');</code></pre></figure>
+<figure class="code-block" data-file="avalanche.txt"><pre><code class="language-plaintext">Message de 34 octets = 272 bits.
+On retourne chacun de ces bits, un par un : 272 messages voisins.
+Bits changés dans l'empreinte (sur 256) : min 106 · max 145 · moyenne 127.34
+Soit 49.7 % des bits pour UN bit changé.
+
+Deux voisins immédiats, côte à côte :
+  original  88238d4881f06584cc54c71e344ed2e31d92014c…
+  1 bit off 8361408b4070e27d87a06dfda9599599487a5006…
+Aucune ressemblance : l'empreinte ne dit RIEN de la proximité des messages.</code></pre></figure>
+<p><strong>127,34&nbsp;bits sur 256</strong> en moyenne, soit <strong>49,7&nbsp;%</strong>. C'est exactement ce qu'on veut&nbsp;: la moitié. Pas plus — une fonction qui retournerait toujours tous les bits serait aussi régulière, donc aussi exploitable — et pas moins. Le minimum observé sur les 272&nbsp;essais est de 106&nbsp;bits, le maximum de 145&nbsp;: aucun message voisin ne produit d'empreinte voisine.</p>
+<div class="callout callout--astuce"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">La conséquence pratique</p><p>Comparer deux empreintes ne dit jamais «&nbsp;ces fichiers se ressemblent&nbsp;». Deux empreintes sont soit <strong>identiques</strong>, soit <strong>différentes</strong>&nbsp;; le degré de différence ne veut rien dire. Pour mesurer une ressemblance entre deux fichiers, il faut un tout autre outil (une empreinte perceptuelle, une distance d'édition) — jamais SHA-256.</p></div></div>
+<h2>Deux messages, une empreinte&nbsp;: le paradoxe des anniversaires</h2>
+<p>Une sortie de 256&nbsp;bits, cela fait 2<sup>256</sup> valeurs possibles pour une infinité de messages&nbsp;: des <strong>collisions</strong> existent forcément. La question n'est donc pas «&nbsp;y en a-t-il&nbsp;?&nbsp;» mais «&nbsp;combien d'essais faut-il pour en trouver une&nbsp;?&nbsp;». L'intuition répond «&nbsp;2<sup>256</sup>&nbsp;»&nbsp;; elle se trompe, et l'écart est colossal.</p>
+<p>Le programme ci-dessous tronque l'empreinte à 12 puis à 16&nbsp;bits — la seule façon d'<em>observer</em> une collision, personne n'en ayant jamais exhibé sur les 256&nbsp;bits complets — et compte les essais avant que deux messages se rencontrent. Cent tirages par taille, puis la formule appliquée aux tailles hors de portée de la mesure.</p>
+<figure class="code-block" data-file="anniversaire.js"><pre><code class="language-javascript">// --- SHA-256 (même fonction que plus haut, repliée) ---------------------------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  return h.map(x=&gt;(x&gt;&gt;&gt;0).toString(16).padStart(8,'0')).join('');}
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// Un tirage reproductible : même graine, mêmes nombres, à chaque exécution.
+function alea(graine) {
+  let x = graine | 0;
+  return () =&gt; { x ^= x &lt;&lt; 13; x ^= x &gt;&gt;&gt; 17; x ^= x &lt;&lt; 5; return (x &gt;&gt;&gt; 0) / 4294967296; };
+}
+
+// On TRONQUE l'empreinte à k bits, puis on cherche deux messages qui donnent la
+// même valeur tronquée. C'est le seul moyen d'OBSERVER une collision : sur les
+// 256 bits complets, personne n'en a jamais exhibé une seule.
+function essaisAvantCollision(k, graine) {
+  const rnd = alea(graine);
+  const vus = new Set();
+  for (let n = 1; ; n++) {
+    // Le numéro n rend chaque message UNIQUE : sans lui, deux tirages pourraient
+    // donner le même message, et une répétition n'est pas une collision.
+    const msg = 'message-' + n + '-' + Math.floor(rnd() * 1e9);
+    const tronque = sha256(bof(msg)).slice(0, k / 4);
+    if (vus.has(tronque)) return n;    // k bits = k/4 chiffres hexadécimaux
+    vus.add(tronque);
+  }
+}
+
+// La théorie dit : pour une sortie de k bits, il faut environ racine(pi/2) x 2^(k/2)
+// essais — la RACINE du nombre de valeurs possibles, pas ce nombre lui-même.
+const predit = (k) =&gt; Math.sqrt(Math.PI / 2) * 2 ** (k / 2);
+
+console.log('  k | valeurs possibles |  mesuré (100 tirages) |    min |    max |  prédit');
+for (const k of [12, 16]) {
+  let somme = 0, mini = Infinity, maxi = 0;
+  for (let g = 1; g &lt;= 100; g++) {
+    const n = essaisAvantCollision(k, g * 7919);
+    somme += n; if (n &lt; mini) mini = n; if (n &gt; maxi) maxi = n;
+  }
+  const moy = somme / 100, p = predit(k);
+  console.log(String(k).padStart(3) + ' | ' + String(2 ** k).padStart(17) + ' | '
+    + moy.toFixed(1).padStart(21) + ' | ' + String(mini).padStart(6) + ' | '
+    + String(maxi).padStart(6) + ' | ' + p.toFixed(1).padStart(7));
+}
+
+console.log('');
+console.log('Sur 16 bits : 65 536 valeurs possibles, et il suffit d\'environ 300 essais.');
+console.log('La formule tient. On l\'applique donc là où la mesure est hors de portée :');
+// Trois paliers, et non deux : 2,3 x 10^19 essais N'EST PAS hors de portée.
+// Un parc de mille cartes graphiques à 10 milliards de hachages par seconde en
+// vient à bout en moins d'un mois — c'est pour cela que 128 bits ne suffisent plus.
+const CADENCE = 1e13;                    // 1000 cartes x 10 GH/s, ordre de grandeur
+for (const k of [20, 24, 32, 64, 128, 256]) {
+  const essais = predit(k);
+  const jours = essais / CADENCE / 86400;
+  const verdict = jours &lt; 1 / 86400 ? '(calcul immédiat sur ce parc)'
+    : jours &lt; 1 ? '(quelques heures sur un parc de machines)'
+    : jours &lt; 3650 ? '(' + Math.round(jours) + ' jours sur ce parc : un gros budget suffit)'
+    : '(hors de portée)';
+  console.log('  ' + String(k).padStart(3) + ' bits -&gt; ' + essais.toExponential(2) + ' essais   ' + verdict);
+}
+// SHA-1 rend 160 bits. Comparons l'attaque GÉNÉRIQUE ci-dessus à la collision
+// réellement publiée en 2017 (voir le cas réel de cette leçon).
+const generique = predit(160);
+const shattered = 9223372036854775808;   // calculs SHA-1 annoncés par l'équipe
+console.log('');
+console.log('SHA-1 (160 bits) : attaque générique ' + generique.toExponential(2) + ' essais,');
+console.log('  collision réellement publiée en 2017 : ' + shattered.toExponential(2) + ' calculs,');
+console.log("  soit environ 10^" + Math.round(Math.log10(generique / shattered))
+          + " fois moins. Une faiblesse de la fonction bat toujours la force brute.");
+console.log("  (les deux termes sont des ordres de grandeur : ne retiens pas de chiffres");
+console.log("   significatifs sur un rapport de ce genre.)");
+console.log('');
+console.log("Doubler la taille de l'empreinte n'ajoute pas le double d'effort : cela");
+console.log("ÉLÈVE AU CARRÉ le nombre d'essais. D'où 256 bits par défaut aujourd'hui.");</code></pre></figure>
+<figure class="code-block" data-file="anniversaire.txt"><pre><code class="language-plaintext">  k | valeurs possibles |  mesuré (100 tirages) |    min |    max |  prédit
+ 12 |              4096 |                  84.6 |      9 |    194 |    80.2
+ 16 |             65536 |                 329.2 |     21 |    819 |   320.8
+
+Sur 16 bits : 65 536 valeurs possibles, et il suffit d'environ 300 essais.
+La formule tient. On l'applique donc là où la mesure est hors de portée :
+   20 bits -&gt; 1.28e+3 essais   (calcul immédiat sur ce parc)
+   24 bits -&gt; 5.13e+3 essais   (calcul immédiat sur ce parc)
+   32 bits -&gt; 8.21e+4 essais   (calcul immédiat sur ce parc)
+   64 bits -&gt; 5.38e+9 essais   (calcul immédiat sur ce parc)
+  128 bits -&gt; 2.31e+19 essais   (27 jours sur ce parc : un gros budget suffit)
+  256 bits -&gt; 4.26e+38 essais   (hors de portée)
+
+SHA-1 (160 bits) : attaque générique 1.52e+24 essais,
+  collision réellement publiée en 2017 : 9.22e+18 calculs,
+  soit environ 10^5 fois moins. Une faiblesse de la fonction bat toujours la force brute.
+  (les deux termes sont des ordres de grandeur : ne retiens pas de chiffres
+   significatifs sur un rapport de ce genre.)
+
+Doubler la taille de l'empreinte n'ajoute pas le double d'effort : cela
+ÉLÈVE AU CARRÉ le nombre d'essais. D'où 256 bits par défaut aujourd'hui.</code></pre></figure>
+<p>Sur 16&nbsp;bits, il y a <strong>65&nbsp;536</strong> empreintes possibles, et il suffit en moyenne de <strong>329,2</strong>&nbsp;essais. La formule théorique en prédit 320,8&nbsp;: elle tient à 3&nbsp;% près. Et regarde les extrêmes&nbsp;: de 21 à 819&nbsp;essais selon le tirage. La moyenne est solide, un tirage isolé ne l'est pas.</p>
+<p>Attention à la formule exacte&nbsp;: ce n'est pas la racine carrée toute seule (qui vaudrait 256), mais <strong>√(π/2)&nbsp;× 2<sup>n/2</sup></strong>, soit 1,2533&nbsp;fois cette racine. L'ordre de grandeur, lui, est bien celui de la racine.</p>
+<p>Ce que dit cette formule&nbsp;: chercher une collision coûte la <strong>racine carrée</strong> du nombre d'empreintes possibles, et non ce nombre. Une empreinte de <em>n</em>&nbsp;bits n'offre donc que <em>n</em>/2&nbsp;bits de résistance aux collisions. C'est la raison pour laquelle 128&nbsp;bits ne suffisent plus (2,3&nbsp;×&nbsp;10<sup>19</sup>&nbsp;essais, à portée d'un gros budget) et pourquoi 256&nbsp;bits est devenu la taille par défaut.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Résistance aux collisions et résistance à la préimage ne sont pas la même chose</p><p>Trouver <em>deux messages quelconques</em> de même empreinte (une collision) coûte 2<sup>n/2</sup>. Trouver <em>un message quelconque</em> ayant une empreinte <em>imposée</em> (une préimage) coûte 2<sup>n</sup> — beaucoup plus. Attention à la formulation&nbsp;: ce n'est pas «&nbsp;retrouver le message d'origine&nbsp;». Quand le message vient d'un petit ensemble, on le retrouve pour bien moins que 2<sup>n</sup>, comme la section suivante le mesure. C'est aussi pourquoi une fonction cassée pour les collisions, comme SHA-1, ne l'est pas pour autant en préimage, alors même qu'on doit l'abandonner. Confondre les deux fait conclure trop vite, dans un sens comme dans l'autre.</p></div></div>
+<h2>Ce qu'une empreinte ne cache pas</h2>
+<p>«&nbsp;On a anonymisé le fichier&nbsp;: les dates de naissance sont remplacées par leur empreinte SHA-256.&nbsp;» Cette phrase se dit souvent, de bonne foi. Elle repose sur une confusion&nbsp;: le sens unique protège du <em>calcul inverse</em>, il ne protège pas de l'<em>énumération</em>. Si le nombre de valeurs possibles est petit, il suffit de toutes les hacher.</p>
+<figure class="code-block" data-file="devinette.js"><pre><code class="language-javascript">// --- SHA-256 (même fonction que plus haut, repliée) ---------------------------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  return h.map(x=&gt;(x&gt;&gt;&gt;0).toString(16).padStart(8,'0')).join('');}
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+
+// « On a anonymisé le fichier : les dates de naissance sont remplacées par leur
+// empreinte SHA-256. » Voyons ce que vaut cette phrase.
+
+function alea(graine) {
+  let x = graine | 0;
+  return () =&gt; { x ^= x &lt;&lt; 13; x ^= x &gt;&gt;&gt; 17; x ^= x &lt;&lt; 5; return (x &gt;&gt;&gt; 0) / 4294967296; };
+}
+
+// Le DOMAINE : toutes les dates de naissance plausibles, du 1er janvier 1930 au
+// 31 décembre 2009. C'est fini, et c'est petit.
+const domaine = [];
+for (let t = Date.UTC(1930, 0, 1); t &lt;= Date.UTC(2009, 11, 31); t += 86400000) {
+  domaine.push(new Date(t).toISOString().slice(0, 10));
+}
+console.log('Dates possibles : ' + domaine.length + ' (80 ans).');
+
+// Le fichier « anonymisé » : 500 personnes, dont on ne publie que l'empreinte.
+const rnd = alea(20260825);
+const fichier = [];
+for (let i = 0; i &lt; 500; i++) {
+  const vraie = domaine[Math.floor(rnd() * domaine.length)];
+  fichier.push({ id: 'A' + (1000 + i), empreinte: sha256(bof(vraie)), _vraie: vraie });
+}
+console.log('Fichier publié : ' + fichier.length + ' lignes, aucune date en clair.');
+console.log('Exemple de ligne :  ' + fichier[0].id + '  ' + fichier[0].empreinte.slice(0, 24) + '…');
+
+// L'attaque : on hache TOUT le domaine une fois, et on lit la table à l'envers.
+const table = new Map();
+for (const d of domaine) table.set(sha256(bof(d)), d);
+
+let retrouves = 0;
+for (const ligne of fichier) if (table.get(ligne.empreinte) === ligne._vraie) retrouves++;
+console.log('');
+console.log('Coût de l\'attaque : ' + domaine.length + ' hachages, UNE seule fois pour tout le fichier.');
+console.log('Dates retrouvées : ' + retrouves + ' / ' + fichier.length
+          + ' (' + (retrouves / fichier.length * 100).toFixed(0) + ' %).');
+console.log('  ' + fichier[0].id + ' est né le ' + table.get(fichier[0].empreinte));
+console.log('  ' + fichier[7].id + ' est né le ' + table.get(fichier[7].empreinte));
+
+// Deuxième dégât : une empreinte est STABLE, donc elle relie deux fichiers.
+const autre = [];
+const rnd2 = alea(777);
+for (let i = 0; i &lt; 300; i++) {
+  const source = i &lt; 180 ? fichier[i]._vraie : domaine[Math.floor(rnd2() * domaine.length)];
+  autre.push({ id: 'B' + (2000 + i), empreinte: sha256(bof(source)), attendu: i &lt; 180 ? fichier[i].id : null });
+}
+const parEmpreinte = new Map();
+for (const l of fichier) parEmpreinte.set(l.empreinte, l.id);
+let lies = 0, justes = 0, homonymes = 0, fortuits = 0;
+for (const l of autre) {
+  const trouve = parEmpreinte.get(l.empreinte);
+  if (trouve === undefined) continue;
+  lies++;
+  if (trouve === l.attendu) justes++;           // la bonne personne
+  else if (l.attendu !== null) homonymes++;     // quelqu'un né le même jour
+  else fortuits++;                              // personne du second fichier seulement
+}
+console.log('');
+console.log('Un second fichier « anonymisé » de la même façon : ' + autre.length + ' lignes,');
+console.log('dont ' + autre.filter(l =&gt; l.attendu !== null).length + ' concernent des personnes déjà présentes dans le premier.');
+console.log('Lignes appariées entre les deux fichiers, sans rien casser : ' + lies + '.');
+console.log('  dont ' + justes + ' pointant la BONNE personne,');
+console.log("      " + homonymes + " pointant quelqu'un né le même jour,");
+console.log('      ' + fortuits + ' rapprochant une personne absente du premier fichier.');
+console.log('Ces derniers sont la limite honnête de la méthode : la date, et non');
+console.log("la personne, est ce que l'empreinte identifie. Cela ne sauve personne.");
+console.log('');
+console.log('Une empreinte n\'est PAS un chiffrement. Elle ne cache rien quand le');
+console.log('domaine des valeurs possibles est énumérable — et il l\'est presque toujours :');
+console.log('dates, codes postaux, numéros de téléphone, adresses de courriel connues.');</code></pre></figure>
+<figure class="code-block" data-file="devinette.txt"><pre><code class="language-plaintext">Dates possibles : 29220 (80 ans).
+Fichier publié : 500 lignes, aucune date en clair.
+Exemple de ligne :  A1000  18d8ba517aaa9732543d87f8…
+
+Coût de l'attaque : 29220 hachages, UNE seule fois pour tout le fichier.
+Dates retrouvées : 500 / 500 (100 %).
+  A1000 est né le 1938-10-04
+  A1007 est né le 1930-05-05
+
+Un second fichier « anonymisé » de la même façon : 300 lignes,
+dont 180 concernent des personnes déjà présentes dans le premier.
+Lignes appariées entre les deux fichiers, sans rien casser : 181.
+  dont 180 pointant la BONNE personne,
+      0 pointant quelqu'un né le même jour,
+      1 rapprochant une personne absente du premier fichier.
+Ces derniers sont la limite honnête de la méthode : la date, et non
+la personne, est ce que l'empreinte identifie. Cela ne sauve personne.
+
+Une empreinte n'est PAS un chiffrement. Elle ne cache rien quand le
+domaine des valeurs possibles est énumérable — et il l'est presque toujours :
+dates, codes postaux, numéros de téléphone, adresses de courriel connues.</code></pre></figure>
+<p><strong>29&nbsp;220</strong> hachages — le travail d'une fraction de seconde — et les <strong>500 dates sont retrouvées, toutes</strong>. Aucune faiblesse de SHA-256 n'a été exploitée&nbsp;: la fonction a fait exactement son travail. C'est le <em>domaine</em> qui était minuscule.</p>
+<p>Le second effet est plus sournois. Une empreinte est stable&nbsp;: la même valeur donne toujours la même sortie. Deux fichiers «&nbsp;anonymisés&nbsp;» séparément deviennent donc <strong>appariables</strong>&nbsp;: 181&nbsp;lignes rapprochées ici, dont <strong>180 désignent bien la même personne</strong> et une rapproche quelqu'un qui n'était pas dans le premier fichier. Cette dernière est la limite honnête de la méthode&nbsp;: ce que l'empreinte identifie, c'est la <em>date</em>, pas la personne — deux personnes nées le même jour portent la même empreinte. Le recoupement est exactement ce que l'anonymisation était censée empêcher.</p>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">La question à se poser, à chaque fois</p><p>Avant de publier une empreinte, demande-toi&nbsp;: <strong>combien de valeurs différentes le message peut-il prendre&nbsp;?</strong> Une date de naissance&nbsp;: 30&nbsp;000. Un code postal&nbsp;: 100&nbsp;000. Un numéro de mobile français&nbsp;: 2&nbsp;×&nbsp;10<sup>8</sup> (les préfixes 06 et 07), et 9&nbsp;×&nbsp;10<sup>8</sup> pour tout le plan de numérotation — quelques minutes de calcul dans les deux cas. Une adresse de courriel figurant dans une fuite publique&nbsp;: déjà dans une liste. Dans tous ces cas, hacher ne cache rien.</p><p>La réponse correcte n'est pas «&nbsp;une meilleure fonction&nbsp;». C'est un <strong>code d'authentification de message</strong> — HMAC-SHA-256 —, qui mêle une clé secrète au message d'une façon précise. Et surtout pas un simple <code>SHA-256(clé + message)</code>&nbsp;: SHA-256 étant une construction dite de Merkle–Damgård, son état interne <em>est</em> sa sortie, si bien qu'un tiers connaissant <code>H(clé + message)</code> peut en calculer le prolongement <code>H(clé + message + suite)</code> <strong>sans jamais avoir la clé</strong>. C'est l'attaque par extension de longueur, et c'est la raison d'être de HMAC. Le module&nbsp;2 le construit. Plus simplement encore&nbsp;: ne pas publier la donnée.</p></div></div>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Confondre «&nbsp;le message est long&nbsp;» et «&nbsp;le message est imprévisible&nbsp;». Une date de naissance s'écrit sur dix caractères et ne vaut pourtant que 29&nbsp;220&nbsp;possibilités&nbsp;; une clé de trente-deux octets en vaut 2<sup>256</sup>. Ce qui protège une empreinte n'est jamais la taille de l'entrée, c'est le nombre de valeurs que cette entrée peut prendre. La même erreur explique qu'une adresse de courriel hachée ne soit pas anonyme, et qu'un mot de passe de douze lettres tiré d'un dictionnaire ne vaille pas un secret de douze octets tiré au sort.</p></div></div>
+<h2>Intégrité n'est pas authenticité</h2>
+<p>Une empreinte publiée à côté d'un fichier permet de vérifier que le fichier téléchargé est bien celui qui a été haché. Elle détecte donc l'<strong>altération accidentelle</strong>&nbsp;: un octet abîmé par le réseau ou le disque. Contre un <em>adversaire</em>, en revanche, elle ne vaut que ce que vaut le canal par lequel l'empreinte est arrivée.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 240" role="img" aria-label="Deux situations comparées. En haut, l'empreinte est publiée sur la même page que le fichier : un attaquant qui remplace le fichier remplace aussi l'empreinte, et la vérification réussit sur un fichier falsifié. En bas, l'empreinte est signée avec une clé que l'attaquant n'a pas : remplacer le fichier ne suffit plus, car la signature ne suivra pas. La différence n'est pas la fonction de hachage, identique dans les deux cas, mais l'origine de l'empreinte.">
+    <text class="d-label" x="320" y="18" text-anchor="middle" font-size="12">La même empreinte, deux valeurs très différentes</text>
+    <rect class="d-box" x="20" y="38" width="600" height="82" rx="6" />
+    <text class="d-text" x="36" y="58" font-size="11">Empreinte publiée SUR LA MÊME PAGE que le fichier</text>
+    <rect class="d-box" x="36" y="68" width="150" height="38" rx="4" /><text class="d-mut" x="111" y="92" text-anchor="middle" font-size="10">fichier remplacé</text>
+    <path class="d-line" d="M186 87 H246" />
+    <rect class="d-box" x="246" y="68" width="170" height="38" rx="4" /><text class="d-mut" x="331" y="92" text-anchor="middle" font-size="10">empreinte remplacée aussi</text>
+    <path class="d-line" d="M416 87 H476" />
+    <rect class="d-accent" x="476" y="68" width="128" height="38" rx="4" /><text class="d-text" x="540" y="92" text-anchor="middle" font-size="11">« vérifié »</text>
+    <rect class="d-box" x="20" y="136" width="600" height="82" rx="6" />
+    <text class="d-text" x="36" y="156" font-size="11">Empreinte SIGNÉE avec une clé que l'attaquant n'a pas</text>
+    <rect class="d-box" x="36" y="166" width="150" height="38" rx="4" /><text class="d-mut" x="111" y="190" text-anchor="middle" font-size="10">fichier remplacé</text>
+    <path class="d-line" d="M186 185 H246" />
+    <rect class="d-box" x="246" y="166" width="170" height="38" rx="4" /><text class="d-mut" x="331" y="190" text-anchor="middle" font-size="10">signature non refaisable</text>
+    <path class="d-line" d="M416 185 H476" />
+    <rect class="d-accent" x="476" y="166" width="128" height="38" rx="4" /><text class="d-text" x="540" y="190" text-anchor="middle" font-size="11">REFUSÉ</text>
+  </svg>
+  <figcaption>L'empreinte ne prouve rien par elle-même. Elle prouve quelque chose quand elle arrive par un chemin que l'attaquant ne contrôle pas.</figcaption>
+</figure>
+<p>Retiens la formulation exacte&nbsp;: une empreinte garantit l'<strong>intégrité</strong> — «&nbsp;ce fichier est bien celui dont voici l'empreinte&nbsp;» — et jamais l'<strong>authenticité</strong> — «&nbsp;cette empreinte vient bien de l'éditeur&nbsp;». Passer de l'une à l'autre demande un secret&nbsp;: une clé partagée (un code d'authentification de message) ou une clé privée (une signature). Les deux sont l'objet du module&nbsp;2.</p>
+<h2>Les fautes qu'on voit passer</h2>
+<div class="callout callout--attention"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Quatre emplois d’une empreinte qui ne tiennent pas</p><ul><li><strong>Hacher un mot de passe avec SHA-256.</strong> La fonction est faite pour être <em>rapide</em>&nbsp;: c'est précisément le défaut ici. Il faut une fonction volontairement lente et salée. La leçon <a href="../offensive/lecon-07.html">Mots de passe&nbsp;: ce que coûte vraiment une attaque hors ligne</a> du cours Sécurité offensive chiffre l'écart&nbsp;; le module&nbsp;3 y reviendra du côté de la défense.</li><li><strong>Publier une empreinte pour «&nbsp;anonymiser&nbsp;».</strong> Mesuré ci-dessus&nbsp;: 500&nbsp;dates sur 500&nbsp;retrouvées.</li><li><strong>Comparer une valeur <em>secrète</em> — un code d'authentification, un jeton — avec un test qui s'arrête au premier écart.</strong> Le temps de réponse laisse alors fuir le nombre d'octets déjà justes. La précision compte&nbsp;: comparer une empreinte <em>publique</em> ne fuit rien, puisque l'attaquant la connaît déjà. Le module&nbsp;2 mesure cette fuite.</li><li><strong>Employer encore SHA-1 ou MD5 pour de la sécurité.</strong> Les collisions y sont un fait établi, pas une hypothèse — voir ci-dessous.</li></ul></div></div>
+<h2>Cas réel</h2>
+<p>Le 23&nbsp;février 2017, une équipe du <strong>CWI d'Amsterdam</strong> et de <strong>Google</strong> a annoncé la première collision sur SHA-1 complet, sous le nom de <strong>SHAttered</strong>. La démonstration prend la forme de deux fichiers PDF au contenu visiblement différent qui partagent exactement la même empreinte SHA-1. SHA-1 était alors encore employé par des systèmes de gestion de versions, des certificats et des dispositifs de signature.</p>
+<p>Le coût annoncé donne la mesure de l'effort&nbsp;: <strong>9&nbsp;223&nbsp;372&nbsp;036&nbsp;854&nbsp;775&nbsp;808</strong> calculs de SHA-1, soit environ 6&nbsp;500&nbsp;années de calcul processeur pour la première phase et 110&nbsp;années de calcul graphique pour la seconde, pour un budget de l'ordre de <strong>110&nbsp;000&nbsp;dollars</strong> sur une infrastructure louée. C'est énorme pour un particulier, et parfaitement à portée d'un État ou d'une grande entreprise.</p>
+<p>Le chiffre à retenir est ailleurs. SHA-1 rend 160&nbsp;bits&nbsp;; l'attaque générique du paradoxe des anniversaires y demanderait 1,52&nbsp;×&nbsp;10<sup>24</sup>&nbsp;essais, comme le calcule le programme de cette leçon. L'attaque publiée en a demandé 9,22&nbsp;×&nbsp;10<sup>18</sup>&nbsp;: environ <strong>10<sup>5</sup>&nbsp;fois moins</strong> — les deux termes étant des ordres de grandeur, il serait absurde d'en retenir des chiffres significatifs. Autrement dit, ce n'est pas la taille de l'empreinte qui a cédé, c'est la <em>construction</em> de la fonction. Une faiblesse structurelle bat toujours la force brute, et elle ne s'annonce pas&nbsp;: c'est pourquoi on abandonne une fonction de hachage <em>avant</em> qu'elle soit cassée, et non après.</p>
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>L’empreinte : ce qu’elle promet et ce qu’elle ne promet pas</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Taille de sortie</td><td>Toujours la même, quelle que soit l’entrée. SHA-256&nbsp;: 256&nbsp;bits, 64&nbsp;chiffres hexadécimaux.</td></tr>
+      <tr><td>Effet avalanche</td><td>Un bit changé dans le message change environ la moitié des bits de l’empreinte. Mesuré ici&nbsp;: 127,34 / 256, soit 49,7&nbsp;%.</td></tr>
+      <tr><td>Résistance aux collisions</td><td>2<sup>n/2</sup> essais, et non 2<sup>n</sup>. SHA-256&nbsp;: 2<sup>128</sup>. C’est pourquoi 128&nbsp;bits de sortie ne suffisent plus.</td></tr>
+      <tr><td>Résistance à la préimage</td><td>2<sup>n</sup> essais — bien plus dur qu’une collision. Les deux propriétés cèdent séparément.</td></tr>
+      <tr><td>Ce qu’elle garantit</td><td>L’intégrité&nbsp;: «&nbsp;ce contenu est bien celui qui a été haché&nbsp;».</td></tr>
+      <tr><td>Ce qu’elle ne garantit pas</td><td>L’authenticité (il faut une clé), la confidentialité (le domaine est souvent énumérable), la lenteur (nécessaire pour un mot de passe).</td></tr>
+      <tr><td>Petit domaine</td><td>Énumérable = lisible. 29&nbsp;220&nbsp;dates hachées suffisent à lire 500&nbsp;dates «&nbsp;anonymisées&nbsp;».</td></tr>
+      <tr><td>À employer aujourd’hui</td><td>SHA-256, SHA-512, SHA-3, BLAKE2 ou BLAKE3. À ne plus employer pour la sécurité&nbsp;: MD5, SHA-1.</td></tr>
+      <tr><td>Extension de longueur</td><td>SHA-256 étant une construction de Merkle–Damgård, <code>H(clé + message)</code> se prolonge sans la clé. Pour authentifier avec une clé, on emploie <strong>HMAC</strong>, jamais une concaténation.</td></tr>
+    </tbody>
+  </table>
+</figure>
+<h2>Glossaire</h2>
+<dl class="glossary">
+<dt>Fonction de hachage</dt><dd>Fonction qui transforme une suite d’octets de taille quelconque en une empreinte de taille fixe, sans clé, et sans moyen pratique de revenir en arrière.</dd>
+<dt>Empreinte (condensat)</dt><dd>La sortie d’une fonction de hachage. Deux messages identiques donnent la même empreinte&nbsp;; deux messages différents en donnent, en pratique, deux différentes.</dd>
+<dt>Effet avalanche</dt><dd>Propriété selon laquelle le moindre changement dans l’entrée modifie environ la moitié des bits de sortie, sans relation visible avec le changement opéré.</dd>
+<dt>Collision</dt><dd>Deux messages différents ayant la même empreinte. Il en existe forcément&nbsp;; toute la question est le coût pour en trouver une.</dd>
+<dt>Préimage</dt><dd>Un message ayant une empreinte donnée. En trouver un est bien plus coûteux que trouver une collision.</dd>
+<dt>Paradoxe des anniversaires</dt><dd>Fait qu’une collision apparaît après environ la racine carrée du nombre de valeurs possibles, et non après ce nombre. Une empreinte de <em>n</em>&nbsp;bits ne résiste qu’à hauteur de <em>n</em>/2&nbsp;bits.</dd>
+<dt>Vecteur de test</dt><dd>Couple (entrée, sortie attendue) publié avec une norme, qui permet de vérifier qu’une implémentation neuve est conforme.</dd>
+<dt>Intégrité</dt><dd>Garantie que le contenu n’a pas changé depuis qu’on en a pris l’empreinte.</dd>
+<dt>Authenticité</dt><dd>Garantie que le contenu vient bien de qui l’on croit. Elle exige un secret&nbsp;: une empreinte seule ne l’apporte jamais.</dd>
+<dt>Extension de longueur</dt><dd>Attaque qui prolonge un message haché sans connaître la clé, en repartant de l’empreinte comme état interne. Elle vise les constructions de Merkle–Damgård, dont SHA-256, et interdit d’authentifier par simple concaténation.</dd>
+</dl>
+<h2>Récap et vérification</h2>
+<p>Une fonction de hachage réduit toute entrée à une empreinte de taille fixe, en détruisant l'information plutôt qu'en la cachant. Elle est bâtie pour qu'un bit changé en modifie la moitié, ce qui rend les empreintes incomparables autrement que par l'égalité. Elle ne résiste aux collisions qu'à hauteur de la moitié de ses bits — le paradoxe des anniversaires — et elle ne cache rien d'un message tiré d'un petit ensemble. Enfin, elle prouve l'intégrité, jamais l'origine.</p>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une équipe publie l'empreinte SHA-256 du numéro de client sur chaque ligne d'un jeu de données ouvert. Quelle question poses-tu avant d'accepter que ce jeu soit «&nbsp;anonymisé&nbsp;», et quel chiffre te faut-il pour trancher&nbsp;?</li>
+<li>Un collègue affirme&nbsp;: «&nbsp;SHA-1 est cassé, donc nos empreintes SHA-1 de fichiers ne valent plus rien&nbsp;». Que faut-il distinguer avant de lui donner raison — ou tort&nbsp;?</li>
+<li>Le programme mesure 127,34&nbsp;bits changés sur 256. Cite deux choses que ce nombre ne dit pas, et une conclusion pratique qu'on peut en tirer.</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Le programme mesure 127,34 bits changés sur 256 quand on retourne UN bit du message. Pourquoi viser exactement la moitié, et non le maximum ?","a":["Parce que la moitié correspond au comportement d'un tirage au sort : chaque bit de sortie bascule une fois sur deux, indépendamment. Un taux systématiquement plus élevé serait une régularité exploitable, tout autant qu'un taux plus faible","Parce que changer plus de la moitié des bits coûterait trop de temps de calcul à la fonction, et SHA-256 est optimisée pour la vitesse","Parce que la norme FIPS 180-4 impose une valeur comprise entre 127 et 129 bits, et les implémentations sont testées sur ce critère précis","Parce qu'au-delà de la moitié, l'empreinte ne tiendrait plus dans 256 bits et il faudrait passer à SHA-512 pour la ranger"],"correct":0,"exp":"On veut une empreinte indistinguable d'un tirage au sort. « Tous les bits changent à chaque fois » serait une relation aussi exploitable que « presque aucun ne change » : dans les deux cas, la sortie révélerait quelque chose de l'entrée."},
+  {"q":"Sur 16 bits d'empreinte il y a 65 536 valeurs possibles, et le programme trouve une collision en 329,2 essais en moyenne. Quel principe cela illustre-t-il ?","a":["Le paradoxe des anniversaires : une collision apparaît après un nombre d'essais de l'ordre de la racine carrée du nombre de valeurs — précisément racine(pi/2) fois cette racine —, donc une empreinte de n bits ne résiste qu'à hauteur de n/2 bits","Que la troncature à 16 bits casse SHA-256, alors que la fonction complète n'aurait pas ce défaut de conception dans sa construction interne","Que le générateur de nombres aléatoires du programme est trop faible et produit des messages qui finissent par se répéter à l'identique","Que 65 536 est un nombre trop rond, et qu'une taille d'empreinte qui n'est pas une puissance de deux résisterait sensiblement mieux"],"correct":0,"exp":"Attention : la racine carrée seule vaut 256. La formule exacte est racine(pi/2) fois 2 puissance 8, soit 320,8 — et la mesure à 329,2 tombe dessus à 3 % près. C'est la raison pour laquelle on double la taille de sortie qu'on croit nécessaire."},
+  {"q":"Un service publie l'empreinte SHA-256 de la date de naissance de chaque abonné, « pour anonymiser ». Le programme retrouve les 500 dates avec 29 220 hachages. Où est l'erreur de raisonnement ?","a":["Le sens unique empêche de calculer le message à partir de l'empreinte, mais pas de hacher toutes les valeurs possibles et de comparer : quand le domaine est énumérable, la fonction ne cache rien","SHA-256 est une fonction trop ancienne pour cet usage, et SHA-3 aurait résisté à cette énumération complète du domaine des dates","Le service aurait dû tronquer les empreintes à 128 bits, ce qui aurait rendu les comparaisons impossibles à mener jusqu'au bout","L'erreur est d'avoir publié 500 lignes d'un coup : sous une centaine de lignes, l'énumération ne serait plus rentable pour un attaquant"],"correct":0,"exp":"Aucune faiblesse de SHA-256 n'est en cause : la fonction a fait exactement son travail. Le problème est le domaine, ici 29 220 dates. Le remède est un code d'authentification de message (HMAC), et non un simple SHA-256(clé + message) — ou, plus simplement, l'abandon de la publication."},
+  {"q":"Une page de téléchargement affiche un fichier et, juste en dessous, son empreinte SHA-256. Que garantit exactement cette empreinte ?","a":["Que le fichier téléchargé est identique à celui qui a été haché — donc contre une altération accidentelle. Rien contre un attaquant qui contrôle la page, puisqu'il remplace le fichier ET l'empreinte","Que le fichier vient bien de l'éditeur officiel, puisque lui seul connaît le contenu exact qui produit cette empreinte-là et personne d'autre","Que le fichier n'a pas été modifié depuis sa publication, y compris par quelqu'un qui aurait pris le contrôle du serveur qui l'héberge","Que le fichier ne contient pas de code malveillant, l'empreinte étant calculée après le passage de l'analyse antivirus de l'éditeur"],"correct":0,"exp":"Intégrité, oui ; authenticité, non. L'empreinte ne vaut que ce que vaut le canal qui l'apporte. Pour aller plus loin il faut un secret : un code d'authentification de message, ou une signature."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["l'intégrité","integrite","l'integrite","intégrité","l'intégrité du contenu"],"placeholder":"ce qu'une empreinte publiée à côté d'un fichier garantit, en un mot","hints":["Ce n'est pas l'origine du fichier.","C'est la propriété « le contenu n'a pas changé depuis qu'on en a pris l'empreinte ».","Un seul mot, qui commence par « int »."],"link":{"href":"lecon-01.html","label":"Revoir « Intégrité n'est pas authenticité »"}},
+  {"type":"code","run":{"expect":"29220 dates possibles ; 500/500 retrouvees"},"placeholder":"le nombre de dates du domaine et le nombre de dates retrouvées sur 500","hints":["Le domaine compte 29 220 dates : 80 ans, du 1er janvier 1930 au 31 décembre 2009.","Le fichier compte 500 lignes, et l'énumération les retrouve toutes.","Affiche exactement : « 29220 dates possibles ; 500/500 retrouvees »."],"link":{"href":"lecon-01.html","label":"Revoir « Ce qu'une empreinte ne cache pas »"}},
+  {"type":"code","run":{"expect":"16 bits -> 65536 valeurs, collision vers 321 essais"},"placeholder":"le nombre de valeurs possibles sur 16 bits, et la prédiction du paradoxe des anniversaires arrondie à l'entier","hints":["2 puissance 16 vaut 65 536.","La prédiction vaut racine(pi/2) multiplié par 2 puissance (16/2), arrondi à l'entier le plus proche.","Affiche exactement : « 16 bits -> 65536 valeurs, collision vers 321 essais »."],"link":{"href":"lecon-01.html","label":"Revoir « Le paradoxe des anniversaires »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une équipe veut repérer les doublons dans une base de photos. Elle propose de comparer les empreintes SHA-256 des fichiers, et d'estimer que «&nbsp;deux photos dont les empreintes se ressemblent à 90&nbsp;% sont probablement la même image recadrée&nbsp;». En deux phrases, explique pourquoi la seconde partie de la proposition ne peut pas fonctionner, et ce que la première détecte réellement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-exo1.txt"><pre><code class="language-plaintext">La comparaison d'empreintes ne détecte que les fichiers RIGOUREUSEMENT identiques,
+octet pour octet : deux exports du même cliché à des qualités différentes ont des
+empreintes sans aucun rapport entre elles.
+
+« Se ressembler à 90 % » n'a aucun sens pour une empreinte : l'effet avalanche fait
+qu'un seul bit changé en modifie déjà la moitié (127,34 sur 256 mesurés dans cette
+leçon). Deux empreintes sont soit égales, soit différentes ; le degré de différence
+ne porte aucune information.
+
+Pour un recadrage, il faut une empreinte PERCEPTUELLE (pHash, dHash) ou une
+comparaison de descripteurs d'image — un outil fait, lui, pour mesurer une
+ressemblance. Une fonction de hachage cryptographique est faite pour l'inverse.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Une administration publie, en libre accès, un fichier de statistiques où chaque ligne porte l'empreinte SHA-256 du code postal du foyer, «&nbsp;pour ne pas révéler la commune&nbsp;». Écris le programme qui montre combien de hachages suffisent à relocaliser tout le fichier, et ce que l'attaquant obtient au passage. Puis dis quelle correction tu proposerais.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-exo2.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction de la leçon, repliée) -------------------------------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  return h.map(x=&gt;(x&gt;&gt;&gt;0).toString(16).padStart(8,'0')).join('');}
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+function alea(g){let x=g|0;return()=&gt;{x^=x&lt;&lt;13;x^=x&gt;&gt;&gt;17;x^=x&lt;&lt;5;return (x&gt;&gt;&gt;0)/4294967296;};}
+
+// Le fichier publié : 400 foyers, code postal remplacé par son empreinte.
+const rnd = alea(51100);
+const COMMUNES = ['06000','13006','21000','29200','31000','31200','33000','35000','44000','38000'];
+const publie = [];
+for (let i = 0; i &lt; 400; i++) {
+  const cp = COMMUNES[Math.floor(rnd() * COMMUNES.length)];
+  publie.push({ ligne: i, empreinte: sha256(bof(cp)), _cp: cp });
+}
+console.log('Fichier publié : ' + publie.length + ' lignes, aucun code postal en clair.');
+console.log('Exemple : ligne 0 -&gt; ' + publie[0].empreinte.slice(0, 24) + '…');
+
+// L'attaque : hacher les combinaisons de cinq chiffres, dans l'ordre, jusqu'à
+// ce que toutes les lignes du fichier soient résolues.
+const cherche = new Set(publie.map(l =&gt; l.empreinte));
+const table = new Map();
+let hachages = 0;
+for (let n = 0; n &lt; 100000 &amp;&amp; table.size &lt; cherche.size; n++) {
+  const cp = String(n).padStart(5, '0');
+  const h = sha256(bof(cp));
+  hachages++;
+  if (cherche.has(h)) table.set(h, cp);
+}
+let retrouves = 0;
+const compte = new Map();
+for (const l of publie) {
+  const cp = table.get(l.empreinte);
+  if (cp === l._cp) retrouves++;
+  compte.set(cp, (compte.get(cp) || 0) + 1);
+}
+console.log('');
+console.log('Hachages nécessaires : ' + hachages + ' sur les 100 000 possibles —');
+console.log('une seule fois pour tout le fichier, pas une fois par ligne.');
+console.log('Codes postaux retrouvés : ' + retrouves + ' / ' + publie.length
+          + ' (' + (retrouves / publie.length * 100).toFixed(0) + ' %).');
+console.log('Communes distinctes reconstituées : ' + compte.size + '.');
+const top = [...compte.entries()].sort((a, b) =&gt; b[1] - a[1]).slice(0, 3);
+top.forEach(([cp, k]) =&gt; console.log('  ' + cp + ' : ' + k + ' foyers'));
+console.log('');
+console.log('Et la liste réelle des codes postaux est bien plus courte que 100 000 :');
+console.log('l\'attaquant sérieux part de cette liste, et le coût baisse encore.');</code></pre></figure><figure class="code-block" data-file="solution-exo2.txt"><pre><code class="language-plaintext">Fichier publié : 400 lignes, aucun code postal en clair.
+Exemple : ligne 0 -&gt; a414ac7eeaac133b08fed20b…
+
+Hachages nécessaires : 44001 sur les 100 000 possibles —
+une seule fois pour tout le fichier, pas une fois par ligne.
+Codes postaux retrouvés : 400 / 400 (100 %).
+Communes distinctes reconstituées : 10.
+  31000 : 51 foyers
+  13006 : 45 foyers
+  33000 : 44 foyers
+
+Et la liste réelle des codes postaux est bien plus courte que 100 000 :
+l'attaquant sérieux part de cette liste, et le coût baisse encore.</code></pre></figure><p>La correction n'est pas «&nbsp;une meilleure fonction de hachage&nbsp;»&nbsp;: aucune n'y changerait rien. Deux voies existent. Calculer un <strong>code d'authentification de message</strong> (HMAC-SHA-256) avec une clé que le public n'a pas — et non un simple <code>SHA-256(clé + code postal)</code>, prolongeable sans la clé&nbsp;: l'énumération devient impossible sans la clé, mais l'appariement entre deux fichiers publiés avec la même clé reste possible. Ou, plus honnêtement, <strong>agréger</strong>&nbsp;: publier le département plutôt que la commune, ou un décompte par tranche. La cryptographie ne rattrape pas une donnée qu'on n'aurait pas dû publier.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Aller plus loin</span></div><p>Reprends le programme des anniversaires et fais-lui mesurer autre chose&nbsp;: à partir de combien d'essais la probabilité d'avoir <em>au moins une</em> collision sur 16&nbsp;bits dépasse 50&nbsp;%. Compare cette valeur médiane à la moyenne de 329,2&nbsp;essais déjà mesurée, et explique ce que la comparaison montre — et ce qu'elle ne montre pas encore, à 100&nbsp;tirages.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-exo3.js"><pre><code class="language-javascript">// --- SHA-256 (la fonction de la leçon, repliée) -------------------------------------
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const rotr=(x,n)=&gt;(x&gt;&gt;&gt;n)|(x&lt;&lt;(32-n));
+function sha256(o){const b=[...o,0x80];while(b.length%64!==56)b.push(0);const L=o.length*8;
+  for(let i=7;i&gt;=0;i--)b.push(Math.floor(L/2**(8*i))&amp;0xff);
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  for(let d=0;d&lt;b.length;d+=64){const w=[];
+    for(let i=0;i&lt;16;i++)w[i]=(b[d+4*i]&lt;&lt;24)|(b[d+4*i+1]&lt;&lt;16)|(b[d+4*i+2]&lt;&lt;8)|b[d+4*i+3];
+    for(let i=16;i&lt;64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]&gt;&gt;&gt;3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]&gt;&gt;&gt;10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+    let [a,B,c,D,e,f,g,H]=h;
+    for(let i=0;i&lt;64;i++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&amp;f)^(~e&amp;g),t1=(H+S1+ch+K[i]+w[i])|0,
+      S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&amp;B)^(a&amp;c)^(B&amp;c),t2=(S0+mj)|0;
+      H=g;g=f;f=e;e=(D+t1)|0;D=c;c=B;B=a;a=(t1+t2)|0;}
+    const t=[a,B,c,D,e,f,g,H];for(let i=0;i&lt;8;i++)h[i]=(h[i]+t[i])|0;}
+  return h.map(x=&gt;(x&gt;&gt;&gt;0).toString(16).padStart(8,'0')).join('');}
+const bof=s=&gt;[...unescape(encodeURIComponent(s))].map(c=&gt;c.charCodeAt(0));
+// -----------------------------------------------------------------------------------
+function alea(g){let x=g|0;return()=&gt;{x^=x&lt;&lt;13;x^=x&gt;&gt;&gt;17;x^=x&lt;&lt;5;return (x&gt;&gt;&gt;0)/4294967296;};}
+
+// Même expérience que dans la leçon, mais on garde TOUS les résultats pour
+// pouvoir en tirer la médiane, et pas seulement la moyenne.
+function essaisAvantCollision(k, graine) {
+  const rnd = alea(graine), vus = new Set();
+  for (let n = 1; ; n++) {
+    const t = sha256(bof('message-' + n + '-' + Math.floor(rnd() * 1e9))).slice(0, k / 4);
+    if (vus.has(t)) return n;
+    vus.add(t);
+  }
+}
+const mesures = [];
+for (let g = 1; g &lt;= 100; g++) mesures.push(essaisAvantCollision(16, g * 7919));
+mesures.sort((a, b) =&gt; a - b);
+const moyenne = mesures.reduce((a, b) =&gt; a + b, 0) / mesures.length;
+const mediane = (mesures[49] + mesures[50]) / 2;
+
+// La théorie, sans aucune mesure : probabilité d'AU MOINS une collision après k tirages.
+const N = 65536;
+let p = 1, seuil = 0;
+for (let k = 1; k &lt;= 2000; k++) {
+  p *= (N - (k - 1)) / N;                 // probabilité de n'en avoir toujours aucune
+  if (1 - p &gt; 0.5) { seuil = k; break; }
+}
+
+console.log('100 tirages sur une empreinte tronquée à 16 bits (65 536 valeurs) :');
+console.log('  moyenne mesurée .......... ' + moyenne.toFixed(1) + ' essais');
+console.log('  médiane mesurée .......... ' + mediane.toFixed(1) + ' essais');
+console.log('  minimum / maximum ........ ' + mesures[0] + ' / ' + mesures[99]);
+console.log('');
+console.log('Théorie, calculée sans tirage :');
+console.log('  franchissement de 50 % de probabilité à ... ' + seuil + ' tirages');
+console.log('  approximation racine(2 N ln 2) ............ ' + Math.sqrt(2 * N * Math.LN2).toFixed(1));
+console.log('  approximation racine(pi N / 2) (moyenne) .. ' + Math.sqrt(Math.PI * N / 2).toFixed(1));
+console.log('');
+console.log("La THÉORIE sépare nettement les deux : médiane 301,4 contre moyenne 320,8.");
+console.log("La distribution est asymétrique — une poignée de tirages malchanceux (ici");
+console.log("jusqu'à " + mesures[99] + " essais) tire la moyenne vers le haut, alors que la moitié");
+console.log("des tirages aboutit avant " + mediane + " essais.");
+console.log("");
+console.log("Mais regarde le rapport MESURÉ : " + (moyenne / mediane).toFixed(3) + ", contre "
+          + (Math.sqrt(Math.PI * N / 2) / Math.sqrt(2 * N * Math.LN2)).toFixed(3) + " attendu.");
+console.log("Sur 100 tirages, l'écart entre médiane et moyenne n'est pas encore visible :");
+console.log("les deux estimations bougent encore de plusieurs dizaines d'essais d'un");
+console.log("échantillon à l'autre. C'est la vraie leçon de l'exercice.");
+console.log("");
+console.log("Retenir : « environ 2^(n/2) essais » décrit un ORDRE DE GRANDEUR, jamais une garantie.");</code></pre></figure><figure class="code-block" data-file="solution-exo3.txt"><pre><code class="language-plaintext">100 tirages sur une empreinte tronquée à 16 bits (65 536 valeurs) :
+  moyenne mesurée .......... 329.2 essais
+  médiane mesurée .......... 325.5 essais
+  minimum / maximum ........ 21 / 819
+
+Théorie, calculée sans tirage :
+  franchissement de 50 % de probabilité à ... 302 tirages
+  approximation racine(2 N ln 2) ............ 301.4
+  approximation racine(pi N / 2) (moyenne) .. 320.8
+
+La THÉORIE sépare nettement les deux : médiane 301,4 contre moyenne 320,8.
+La distribution est asymétrique — une poignée de tirages malchanceux (ici
+jusqu'à 819 essais) tire la moyenne vers le haut, alors que la moitié
+des tirages aboutit avant 325.5 essais.
+
+Mais regarde le rapport MESURÉ : 1.011, contre 1.064 attendu.
+Sur 100 tirages, l'écart entre médiane et moyenne n'est pas encore visible :
+les deux estimations bougent encore de plusieurs dizaines d'essais d'un
+échantillon à l'autre. C'est la vraie leçon de l'exercice.
+
+Retenir : « environ 2^(n/2) essais » décrit un ORDRE DE GRANDEUR, jamais une garantie.</code></pre></figure></details></div>
+
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

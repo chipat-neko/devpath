@@ -3678,6 +3678,61 @@ window.PROJETS = [
       "aide à écrire un rapport qu'on a envie de lire.</p>",
   },
   {
+    id: "crypto-garanties",
+    course: "crypto",
+    courseTitle: "Cryptographie appliquée",
+    dir: "crypto",
+    accent: "crypto",
+    type: "Outil d'analyse",
+    niveau: "Avancé",
+    titre: "Le détecteur de garanties manquantes",
+    contexte:
+      "<p>Dans une équipe, personne n'écrit de cryptographie&nbsp;: on <em>choisit</em>. Un mode ici, une " +
+      "taille de nonce là, une fonction de hachage pour les mots de passe, un bourrage pour une signature. " +
+      "Et c'est précisément là que les systèmes cèdent&nbsp;: aucune des attaques du module&nbsp;1 ne vise un " +
+      "algorithme, toutes visent un <strong>assemblage</strong>.</p>" +
+      "<p>Ces choix sont pourtant écrits quelque part&nbsp;: dans un fichier de configuration, dans une fiche " +
+      "d'architecture, dans un tableau de champs chiffrés. On te demande l'outil qui les <strong>relit à ta " +
+      "place</strong>&nbsp;: il prend cette description, et rend la liste des <em>garanties absentes</em> — pas " +
+      "des algorithmes «&nbsp;faibles&nbsp;», ce qui ne veut rien dire hors contexte, mais des promesses que " +
+      "personne ne tient dans la chaîne décrite.</p>",
+    objectif:
+      "<p>Écrire un programme qui lit une <strong>description de système</strong> — une liste d'usages " +
+      "cryptographiques, chacun avec son algorithme, son mode, sa taille de nonce, sa source de clé et ce " +
+      "qu'il prétend garantir — et qui rend, pour chaque usage, les <strong>garanties réellement obtenues</strong>, " +
+      "celles qui <strong>manquent</strong>, et le <strong>chiffre</strong> qui le prouve.</p>",
+    livrable: "Un programme unique, sans dépendance, qui lit une description de système et imprime un rapport : garanties obtenues, garanties manquantes, et pour chaque manque la mesure qui le démontre.",
+    fonctionnalites: [
+      "Une <strong>table des garanties</strong> par mécanisme&nbsp;: confidentialité, intégrité, authenticité, non-rejeu. Un mode AEAD en apporte trois&nbsp;; un chiffrement seul, une.",
+      "Un <strong>calcul de collision de nonce</strong>&nbsp;: à partir de la taille du nonce et du nombre de messages attendus par jour, la date probable de la première répétition, par la formule du paradoxe des anniversaires.",
+      "Un <strong>test d'énumérabilité</strong>&nbsp;: pour une empreinte publiée, le nombre de valeurs possibles du domaine déclaré, et le temps qu'il faut pour toutes les hacher.",
+      "Un <strong>contrôle de bourrage</strong> pour les usages asymétriques&nbsp;: chiffrement sans OAEP et signature sans PSS sont signalés, avec la conséquence exacte (déterminisme, malléabilité).",
+      "Un <strong>contrôle de dérivation de clé</strong>&nbsp;: une même clé employée pour deux usages distincts, ou une clé lue dans un fichier de configuration, est relevée.",
+      "Un <strong>rapport ordonné par ce qui casse en premier</strong>, chaque ligne portant la mesure qui la justifie et la correction d'une ligne qui la lève.",
+    ],
+    criteres: [
+      "Le rapport distingue <strong>garantie absente</strong> et <strong>algorithme obsolète</strong>&nbsp;: ce ne sont pas les mêmes défauts, et ils ne se corrigent pas de la même façon.",
+      "Chaque manque signalé est accompagné d'un <strong>nombre calculé par le programme</strong>, jamais d'un avis&nbsp;: nombre de messages avant collision de nonce, taille du domaine énumérable, nombre d'octets à modifier pour une falsification.",
+      "Le calcul de collision est <strong>vérifié</strong> sur au moins un cas mesurable&nbsp;: une empreinte tronquée où l'on observe vraiment la répétition, et où le programme compare la mesure à sa propre prédiction.",
+      "Un usage <strong>correct</strong> ne déclenche aucune alerte&nbsp;: la description d'un système bien construit doit sortir un rapport vide. Un outil qui crie toujours n'est plus lu.",
+      "Le programme traite au moins <strong>six usages</strong> de natures différentes&nbsp;: transport, données au repos, mots de passe, jetons, signatures, pseudonymisation.",
+      "Deux exécutions sur la même description donnent le <strong>même rapport</strong>, au caractère près&nbsp;: aucune horloge courante, aucun tirage au hasard non semé.",
+      "<strong>Aucune dépendance</strong>, et aucune primitive réécrite pour être employée&nbsp;: si le programme hache, c'est pour <em>mesurer</em>, jamais pour protéger quoi que ce soit.",
+    ],
+    pistes:
+      "<p>Commence par la <strong>table des garanties</strong>, avant toute analyse&nbsp;: écris noir sur blanc, " +
+      "pour chaque mécanisme, ce qu'il apporte et ce qu'il n'apporte pas. La moitié du travail est là, et " +
+      "c'est la moitié qui se discute en réunion.</p>" +
+      "<p>Pour la collision de nonce, résiste à la tentation de coder un seuil arbitraire du genre " +
+      "«&nbsp;moins de 64&nbsp;bits, c'est mauvais&nbsp;». Calcule&nbsp;: racine(pi/2) fois 2 puissance (n/2) " +
+      "messages, divisé par le débit annoncé, donne une <em>date</em>. Une date se discute&nbsp;; un seuil, non.</p>" +
+      "<p>Pour aller plus loin&nbsp;: fais lire à ton outil un vrai fichier de configuration — une section " +
+      "de serveur web, un fichier de chiffrement de base — plutôt qu'une description que tu as écrite toi-même. " +
+      "Le cours <a href=\"../securite/cours.html\">sécurité applicative</a> donne la contrepartie défensive de " +
+      "chaque manque relevé&nbsp;; <a href=\"../offensive/cours.html\">sécurité offensive</a> montre ce qu'un " +
+      "attaquant fait du premier trou trouvé.</p>",
+  },
+  {
     id: "neurones-chiffres",
     course: "neurones",
     courseTitle: "Réseaux de neurones",
