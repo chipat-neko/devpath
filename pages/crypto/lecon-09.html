@@ -100,7 +100,7 @@
 
             <article class="prose">
 <p>Les deux leçons précédentes ont supposé une clé disponible, secrète et correcte. Cette leçon-là traite de ce qui reste, et qui n'est jamais mathématique&nbsp;: <em>d'où vient cette clé, où vit-elle, combien de choses en dépendent, et que se passe-t-il le jour où elle fuite&nbsp;?</em></p>
-<p>C'est le sujet le moins spectaculaire du cours et, très probablement, celui qui décide de tout. Aucune des fuites racontées dans ce cours n'a demandé de casser un algorithme. Presque toutes ont commencé par une clé mal rangée.</p>
+<p>C'est le sujet le moins spectaculaire du cours et, très probablement, celui qui décide de tout. Les incidents racontés dans les leçons précédentes se répartissent en trois familles&nbsp;: un <em>algorithme périmé</em> (SHA-1 chez LinkedIn, RC4 dans WEP), un <em>paramètre trop faible ou mal employé</em> (Diffie-Hellman à 512&nbsp;bits pour Logjam, le mode ECB chez Adobe, le nonce répété de la PlayStation&nbsp;3), et une <em>clé mal rangée</em>. Cette leçon traite de la troisième famille — la seule qu'aucun changement de bibliothèque ne corrige.</p>
 <div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord l'endroit où une clé ne doit jamais être, et pourquoi l'en retirer ne suffit pas. Ensuite la structure qui rend tout le reste possible — le <strong>chiffrement en enveloppe</strong> —, mesurée sur le seul critère qui compte&nbsp;: ce que coûte un changement de clé. Puis la rotation elle-même, avec l'identifiant de clé qui la rend praticable et la mesure de ce qu'elle laisse derrière. Puis la règle «&nbsp;une clé, un usage&nbsp;», démontrée par l'attaque qu'elle empêche. Enfin deux questions de survie&nbsp;: comment ne pas perdre une clé sans la confier à une seule personne, et ce qui se répare — ou non — après une fuite.</p></div></div>
 
 <h2>Là où une clé ne doit jamais être</h2>
@@ -157,24 +157,31 @@ console.log('');
 
 // --- Et si on réécrivait l'historique ? ------------------------------------------
 // Un dépôt n'existe jamais en un seul exemplaire. Comptons les copies.
+// ⚠ Cette liste est un inventaire ÉCRIT À LA MAIN, pas une mesure : elle décrit un
+// dépôt d'équipe ordinaire. Ce que le programme calcule, c'est le nombre de COPIES
+// qu'elle représente, qui n'est pas le nombre de lignes.
 const COPIES = [
-  { nom: 'le dépôt principal',                 reecrivable: true },
-  { nom: 'les clones sur les postes (× 6)',    reecrivable: false },
-  { nom: 'les bifurcations chez des tiers',    reecrivable: false },
-  { nom: 'le cache de la forge (demandes de fusion)', reecrivable: false },
-  { nom: 'les archives de la chaîne de construction', reecrivable: false },
-  { nom: 'la sauvegarde nocturne, 30 jours',   reecrivable: false },
+  { nom: 'le dépôt principal',                        exemplaires: 1, reecrivable: true },
+  { nom: "les clones sur les postes de l'équipe",     exemplaires: 6, reecrivable: false },
+  { nom: 'les bifurcations chez des tiers',           exemplaires: 2, reecrivable: false },
+  { nom: 'le cache de la forge (demandes de fusion)', exemplaires: 1, reecrivable: false },
+  { nom: 'les archives de la chaîne de construction', exemplaires: 1, reecrivable: false },
+  { nom: 'les sauvegardes nocturnes, 30 jours',       exemplaires: 30, reecrivable: false },
 ];
-const reecrivables = COPIES.filter(c =&gt; c.reecrivable).length;
+const total = COPIES.reduce((n, c) =&gt; n + c.exemplaires, 0);
+const reecrivables = COPIES.filter(c =&gt; c.reecrivable).reduce((n, c) =&gt; n + c.exemplaires, 0);
 console.log('Endroits où cet historique existe, et où la réécriture atteint :');
-for (const c of COPIES) console.log('  ' + (c.reecrivable ? '[réécrivable] ' : '[hors portée] ') + c.nom);
+for (const c of COPIES) console.log('  ' + (c.reecrivable ? '[réécrivable] ' : '[hors portée] ')
+  + String(c.exemplaires).padStart(2) + ' × ' + c.nom);
 console.log('');
-console.log('  atteints par une réécriture : ' + reecrivables + ' sur ' + COPIES.length);
+console.log("  exemplaires de l'historique : " + total);
+console.log('  atteints par une réécriture : ' + reecrivables);
 console.log('');
 console.log('D\'où la seule conclusion opérationnelle, et elle n\'est pas technique :');
 console.log('UN SECRET COMMIS EST UN SECRET BRÛLÉ. On ne le nettoie pas, on le RÉVOQUE');
 console.log('et on en émet un neuf. La réécriture d\'historique est un travail de propreté,');
-console.log('utile, mais elle ne rend pas au secret sa valeur — la rotation, si.');</code></pre></figure>
+console.log("utile, mais elle ne rend rien : le secret est sorti. La révocation, elle, rend");
+console.log("à l'organisation le CONTRÔLE de ce secret, en le dévaluant définitivement.");</code></pre></figure>
 <figure class="code-block" data-file="secret-commis.txt"><pre><code class="language-plaintext">Historique du dépôt : 8 révisions.
 
   rév. | message                                   | la clé y est
@@ -201,26 +208,28 @@ Elle a fait exactement ce qu'elle annonce — pour l'AVENIR. Le passé, lui, est
 conservé par construction : c'est la raison d'être d'un système de versions.
 
 Endroits où cet historique existe, et où la réécriture atteint :
-  [réécrivable] le dépôt principal
-  [hors portée] les clones sur les postes (× 6)
-  [hors portée] les bifurcations chez des tiers
-  [hors portée] le cache de la forge (demandes de fusion)
-  [hors portée] les archives de la chaîne de construction
-  [hors portée] la sauvegarde nocturne, 30 jours
+  [réécrivable]  1 × le dépôt principal
+  [hors portée]  6 × les clones sur les postes de l'équipe
+  [hors portée]  2 × les bifurcations chez des tiers
+  [hors portée]  1 × le cache de la forge (demandes de fusion)
+  [hors portée]  1 × les archives de la chaîne de construction
+  [hors portée] 30 × les sauvegardes nocturnes, 30 jours
 
-  atteints par une réécriture : 1 sur 6
+  exemplaires de l'historique : 41
+  atteints par une réécriture : 1
 
 D'où la seule conclusion opérationnelle, et elle n'est pas technique :
 UN SECRET COMMIS EST UN SECRET BRÛLÉ. On ne le nettoie pas, on le RÉVOQUE
 et on en émet un neuf. La réécriture d'historique est un travail de propreté,
-utile, mais elle ne rend pas au secret sa valeur — la rotation, si.</code></pre></figure>
+utile, mais elle ne rend rien : le secret est sorti. La révocation, elle, rend
+à l'organisation le CONTRÔLE de ce secret, en le dévaluant définitivement.</code></pre></figure>
 <p>La révision&nbsp;7 s'appelle «&nbsp;la clé sort du code&nbsp;» et elle a été acceptée en revue. Elle a fait exactement ce qu'elle annonce — <em>pour l'avenir</em>. Le passé, lui, est conservé par construction&nbsp;: c'est la raison d'être d'un système de versions. La clé figure encore dans <strong>5&nbsp;révisions sur 8</strong>, dans <strong>2&nbsp;fichiers distincts</strong>, et une simple recherche du motif la retrouve.</p>
-<p>Vient alors la question suivante&nbsp;: réécrire l'historique&nbsp;? Le programme compte les endroits où cet historique existe. Une réécriture en atteint <strong>1 sur 6</strong>. Les clones sur les postes, les bifurcations chez des tiers, le cache de la forge — qui conserve souvent les révisions référencées par une demande de fusion, même après une réécriture forcée —, les artefacts de la chaîne de construction et les sauvegardes ne sont pas concernés.</p>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un secret commis est un secret brûlé</p><p>La conclusion opérationnelle n'est pas technique&nbsp;: on ne <em>nettoie</em> pas un secret commis, on le <strong>révoque</strong> et on en émet un neuf. La réécriture d'historique est un travail de propreté, utile pour ne pas redéclencher les alertes à chaque analyse&nbsp;; elle ne rend pas au secret sa valeur. Le seul indicateur qui compte, et qu'il faut avoir mesuré <em>avant</em> l'incident, est le temps qu'il faut à l'organisation pour remplacer une clé donnée.</p></div></div>
-<p>Où faut-il donc la ranger&nbsp;? Par ordre croissant d'exigence&nbsp;: une <strong>variable d'environnement</strong> injectée au démarrage — mieux que le code, mais visible dans la table des processus et souvent recopiée dans les journaux de plantage&nbsp;; un <strong>fichier monté</strong> par l'orchestrateur, avec des droits restreints&nbsp;; un <strong>service de gestion de secrets</strong>, qui les distribue à l'exécution, les fait tourner et journalise chaque accès&nbsp;; un <strong>module matériel</strong>, où la clé ne sort jamais — on lui envoie les données, il rend le résultat. Le bon choix dépend de ce que vaut ce que la clé protège, et la question à se poser est celle du programme suivant&nbsp;: combien de choses en dépendent&nbsp;?</p>
+<p>Vient alors la question suivante&nbsp;: réécrire l'historique&nbsp;? Le programme dresse l'inventaire des endroits où cet historique existe pour une équipe ordinaire — inventaire écrit à la main, mais dont il compte les <em>exemplaires</em>&nbsp;: <strong>41 copies</strong>, dont une seule est atteinte par la réécriture. Les six clones sur les postes, les bifurcations chez des tiers, le cache de la forge — qui conserve souvent les révisions référencées par une demande de fusion, même après une réécriture forcée —, les artefacts de la chaîne de construction et les trente sauvegardes nocturnes ne sont pas concernés.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Un secret commis est un secret brûlé</p><p>La conclusion opérationnelle n'est pas technique&nbsp;: on ne <em>nettoie</em> pas un secret commis, on le <strong>révoque</strong> et on en émet un neuf. La réécriture d'historique est un travail de propreté, utile pour ne pas redéclencher les alertes à chaque analyse&nbsp;; elle ne rend rien, puisque le secret est déjà sorti. C'est la révocation qui rend à l'organisation le <em>contrôle</em> de ce secret, en le dévaluant définitivement. Le seul indicateur qui compte, et qu'il faut avoir mesuré <em>avant</em> l'incident, est le temps qu'il faut à l'organisation pour remplacer une clé donnée.</p></div></div>
+<p>Où faut-il donc la ranger&nbsp;? Par ordre croissant d'exigence&nbsp;: une <strong>variable d'environnement</strong> injectée au démarrage — mieux que le code, mais lisible par tout processus du même utilisateur, héritée par tous les processus fils, et souvent recopiée telle quelle dans les journaux de plantage et les traces de débogage&nbsp;; (à ne pas confondre avec un secret passé en <em>argument de ligne de commande</em>, qui, lui, est visible de tout le monde dans la table des processus)&nbsp;; un <strong>fichier monté</strong> par l'orchestrateur, avec des droits restreints&nbsp;; un <strong>service de gestion de secrets</strong>, qui les distribue à l'exécution, les fait tourner et journalise chaque accès&nbsp;; un <strong>module matériel</strong>, où la clé ne sort jamais — on lui envoie les données, il rend le résultat. Le bon choix dépend de ce que vaut ce que la clé protège, et la question à se poser est celle du programme suivant&nbsp;: combien de choses en dépendent&nbsp;?</p>
 
 <h2>Chiffrer la clé, pas la donnée</h2>
-<p>Une clé se change. Ce n'est pas une éventualité&nbsp;: c'est une exigence de toutes les politiques de sécurité, une obligation dans plusieurs référentiels, et une nécessité le jour d'une fuite. Toute la conception d'un système de clés se juge donc sur une seule question&nbsp;: <em>combien coûte un changement&nbsp;?</em></p>
+<p>Une clé se change. Ce n'est pas une éventualité&nbsp;: la notion de <em>cryptopériode</em> — la durée pendant laquelle une clé donnée reste en service — est au cœur du NIST&nbsp;SP&nbsp;800-57 partie&nbsp;1, plusieurs référentiels sectoriels en font une obligation, et c'est de toute façon une nécessité le jour d'une fuite. Toute la conception d'un système de clés se juge donc sur une seule question&nbsp;: <em>combien coûte un changement&nbsp;?</em></p>
 <figure class="code-block" data-file="enveloppe.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
 // Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
 // plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
@@ -328,9 +337,9 @@ console.log('');
 
 // --- Ce que cela donne à l'échelle d'un vrai service. -----------------------------
 const REEL = 10000000;                                    // dix millions de pièces
-console.log('À l\'échelle de ' + mil(REEL) + ' pièces de 4 Kio (' + fr((REEL * TAILLE / 1e9).toFixed(1)) + ' Go de données) :');
-console.log('  rotation, une seule clé ... ' + fr((REEL * rotation1 / N / 1e9).toFixed(1)) + ' Go à relire et réécrire');
-console.log('  rotation, enveloppe ....... ' + fr((REEL * rotation2 / N / 1e9).toFixed(2)) + ' Go');
+console.log('À l\'échelle de ' + mil(REEL) + ' pièces de 4 Kio (' + fr((REEL * TAILLE / 1024 / 1024 / 1024).toFixed(1)) + ' Gio de données) :');
+console.log('  rotation, une seule clé ... ' + fr((REEL * rotation1 / N / 1024 / 1024 / 1024).toFixed(1)) + ' Gio à relire et réécrire');
+console.log('  rotation, enveloppe ....... ' + fr((REEL * rotation2 / N / 1024 / 1024 / 1024).toFixed(2)) + ' Gio');
 console.log('');
 console.log('Le rapport ne dépend pas du nombre de pièces : il vaut la taille d\'une pièce');
 console.log('divisée par la taille d\'une clé. Une pièce de 4 Kio pour une clé de 32 octets');
@@ -350,9 +359,9 @@ console.log('la donnée. La rotation de la clé maîtresse ne touche alors jamai
   rapport sur la rotation : × 128,0
   pièces relues correctement après rotation : 200 sur 200
 
-À l'échelle de 10 000 000 pièces de 4 Kio (41,0 Go de données) :
-  rotation, une seule clé ... 81,9 Go à relire et réécrire
-  rotation, enveloppe ....... 0,64 Go
+À l'échelle de 10 000 000 pièces de 4 Kio (38,1 Gio de données) :
+  rotation, une seule clé ... 76,3 Gio à relire et réécrire
+  rotation, enveloppe ....... 0,60 Gio
 
 Le rapport ne dépend pas du nombre de pièces : il vaut la taille d'une pièce
 divisée par la taille d'une clé. Une pièce de 4 Kio pour une clé de 32 octets
@@ -364,7 +373,8 @@ marché fonctionnent ainsi. Ils ne chiffrent jamais vos données : ils chiffrent
 vos clés de données, qui font 32 octets, et vous rendez la clé enveloppée avec
 la donnée. La rotation de la clé maîtresse ne touche alors jamais au volume.</code></pre></figure>
 <p>Avec une clé unique, changer de clé oblige à <strong>relire et réécrire toutes les données</strong>&nbsp;: 1&nbsp;638&nbsp;400&nbsp;octets pour 200&nbsp;pièces de 4&nbsp;Kio, soit deux passages sur le volume entier. Avec le <strong>chiffrement en enveloppe</strong>, chaque pièce a sa propre clé de données, et seule cette clé de 32&nbsp;octets est chiffrée par la clé maîtresse&nbsp;: la rotation coûte <strong>12&nbsp;800&nbsp;octets</strong>, soit <strong>128&nbsp;fois moins</strong>. Et les <strong>200&nbsp;pièces sur 200</strong> se relisent correctement après l'opération.</p>
-<p>Le rapport ne dépend pas du nombre de pièces&nbsp;: il vaut la taille d'une pièce divisée par la taille d'une clé. Pour des pièces de 400&nbsp;Kio, il monte à <strong>12&nbsp;800</strong>. C'est la raison — la seule — pour laquelle tous les services de gestion de clés du marché fonctionnent ainsi&nbsp;: ils ne chiffrent jamais vos données, ils chiffrent vos <em>clés de données</em>, que vous rangez à côté de la donnée sous leur forme enveloppée.</p>
+<p>Le rapport ne dépend pas du nombre de pièces&nbsp;: il vaut la taille d'une pièce divisée par la taille d'une clé. Pour des pièces de 400&nbsp;Kio, il monte à <strong>12&nbsp;800</strong>. C'est l'une des raisons pour lesquelles les services de gestion de clés fonctionnent ainsi&nbsp;: ils ne chiffrent jamais vos données, ils chiffrent vos <em>clés de données</em>, que vous rangez à côté de la donnée sous leur forme enveloppée.</p>
+<p>Une précision, parce qu'elle change la lecture du tableau&nbsp;: ces services ne <em>réenveloppent</em> généralement rien du tout lors d'une rotation. Ils conservent les anciennes versions du matériel de clé et choisissent automatiquement la bonne au déchiffrement&nbsp;— le coût est alors nul, mais les anciennes versions restent vivantes. Le réenveloppement effectif, celui que mesure le programme, sert quand on veut <em>vraiment</em> se débarrasser d'une clé&nbsp;: après un départ, après une fuite, ou pour clore une version. Les deux modèles coexistent, et c'est le second qui a un prix.</p>
 <p>Cette structure apporte au passage la réponse à la question laissée ouverte par la leçon&nbsp;8&nbsp;: une clé par pièce, c'est une poignée de messages par clé, et la question des bornes de nonce disparaît.</p>
 
 <figure class="diagram">
@@ -390,7 +400,8 @@ la donnée. La rotation de la clé maîtresse ne touche alors jamais au volume.<
 </figure>
 
 <h2>La rotation, et ce qu'elle laisse derrière</h2>
-<p>Reste à savoir comment plusieurs clés cohabitent. La réponse tient dans un champ, rangé <em>en clair</em> dans le chiffré lui-même&nbsp;: l'<strong>identifiant de clé</strong>. Il ne révèle rien, et sans lui aucune rotation n'est possible — on ne saurait pas quelle clé essayer.</p>
+<p>Reste à savoir comment plusieurs clés cohabitent. La réponse tient dans un champ, rangé <em>en clair</em> dans le chiffré lui-même&nbsp;: l'<strong>identifiant de clé</strong>. Sans lui, aucune rotation n'est possible — on ne saurait pas quelle clé essayer.</p>
+<p>Deux précautions, que le programme met en œuvre. La première&nbsp;: cet identifiant ne révèle rien <em>du contenu</em>, mais il révèle ce qu'on met dedans. Ceux du programme s'appellent <code>2026-01</code>, <code>2026-02</code>, <code>2026-03</code>&nbsp;: ils trahissent donc le mois d'écriture de chaque ligne, et permettent de regrouper les enregistrements par période. Pour un identifiant vraiment muet, on emploie un compteur ou une valeur opaque, et l'on garde la correspondance ailleurs. La seconde&nbsp;: «&nbsp;en clair&nbsp;» ne veut pas dire «&nbsp;libre&nbsp;». L'identifiant entre dans les <strong>données associées</strong> de la marque, exactement comme l'identifiant de ligne à la leçon&nbsp;8 — sans quoi un attaquant le remplacerait à sa guise. Contre-épreuve du programme&nbsp;: <strong>0 identifiant falsifié accepté sur 100</strong>, et <strong>0 chiffré déplacé sur 100</strong>.</p>
 <figure class="code-block" data-file="rotation-cle.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
 // Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
 // plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
@@ -436,14 +447,24 @@ const trousseau = new Map();
 let kidActif = null;
 function creerCle(kid){ trousseau.set(kid, sha256o(bof('clé ' + kid))); kidActif = kid; }
 
-// Le format d'enveloppe. Le kid est EN CLAIR : il ne révèle rien, et sans lui on ne
-// saurait pas quoi essayer. Le numéro de version permettra de changer de format un jour.
-function sceller(valeur){
+// Le format d'enveloppe. Le kid voyage EN CLAIR — il ne dit rien du contenu, et sans
+// lui on ne saurait pas quelle clé essayer. Mais « en clair » ne veut pas dire « libre »
+// : il entre dans les DONNÉES ASSOCIÉES de la marque, exactement comme l'identifiant de
+// ligne à la leçon 8. Sans cela, un attaquant le remplacerait, et le service tenterait
+// de déchiffrer avec une autre clé — au mieux du charabia, au pire une valeur choisie.
+const CLE_MARQUE = sha256o(bof('clé de marque du trousseau'));
+const contexteDe = (p, id) =&gt; 'v' + p.v + '|' + p.kid + '|' + id;
+function sceller(valeur, id){
   const cle = trousseau.get(kidActif);
   const nonce = []; for (let i = 0; i &lt; 12; i++) nonce.push(Math.floor(alea() * 256));
-  return { v: 1, kid: kidActif, nonce, corps: chacha20(cle, nonce, bof(valeur), 1) };
+  const corps = chacha20(cle, nonce, bof(valeur), 1);
+  const p = { v: 1, kid: kidActif, nonce, corps };
+  p.marque = hex(hmac(CLE_MARQUE, [...bof(contexteDe(p, id)), 0, ...nonce, ...corps])).slice(0, 32);
+  return p;
 }
-function ouvrir(paquet){
+function ouvrir(paquet, id){
+  const attendue = hex(hmac(CLE_MARQUE, [...bof(contexteDe(paquet, id)), 0, ...paquet.nonce, ...paquet.corps])).slice(0, 32);
+  if (attendue !== paquet.marque) return null;              // kid modifié, corps modifié, ligne changée
   const cle = trousseau.get(paquet.kid);
   if (!cle) return null;                                    // la clé a été retirée du trousseau
   return String.fromCharCode(...chacha20(cle, paquet.nonce, paquet.corps, 1));
@@ -452,14 +473,14 @@ function ouvrir(paquet){
 // --- Trois mois d'activité, une rotation par mois. --------------------------------
 const base = [];
 creerCle('2026-01');
-for (let i = 0; i &lt; 400; i++) base.push({ id: i, mois: '2026-01', paquet: sceller('valeur-' + i) });
+for (let i = 0; i &lt; 400; i++) base.push({ id: i, mois: '2026-01', paquet: sceller('valeur-' + i, i) });
 creerCle('2026-02');
-for (let i = 400; i &lt; 700; i++) base.push({ id: i, mois: '2026-02', paquet: sceller('valeur-' + i) });
+for (let i = 400; i &lt; 700; i++) base.push({ id: i, mois: '2026-02', paquet: sceller('valeur-' + i, i) });
 creerCle('2026-03');
-for (let i = 700; i &lt; 900; i++) base.push({ id: i, mois: '2026-03', paquet: sceller('valeur-' + i) });
+for (let i = 700; i &lt; 900; i++) base.push({ id: i, mois: '2026-03', paquet: sceller('valeur-' + i, i) });
 
 const parKid = () =&gt; { const m = new Map(); for (const l of base) m.set(l.paquet.kid, (m.get(l.paquet.kid) || 0) + 1); return m; };
-const lisibles = () =&gt; base.filter(l =&gt; ouvrir(l.paquet) === 'valeur-' + l.id).length;
+const lisibles = () =&gt; base.filter(l =&gt; ouvrir(l.paquet, l.id) === 'valeur-' + l.id).length;
 
 console.log('Base de ' + base.length + ' enregistrements, une clé par mois :');
 for (const [kid, n] of parKid()) console.log('  ' + kid + '  ' + String(n).padStart(4) + ' enregistrements');
@@ -476,6 +497,22 @@ console.log('La clé de janvier est retirée du trousseau (fin de sa durée de v
 console.log('  enregistrements lisibles : ' + lisibles() + ' sur ' + base.length);
 console.log('  perdus ................. ' + (base.length - lisibles()));
 console.log('');
+// Contre-épreuve du format : le kid étant authentifié, un attaquant qui le remplace
+// est arrêté — et un chiffré déplacé d'une ligne à l'autre aussi.
+trousseau.set('2026-01', sha256o(bof('clé 2026-01')));
+let kidFalsifies = 0, deplacements = 0;
+for (let i = 0; i &lt; 100; i++) {
+  const l = base[i];
+  const faux = { v: l.paquet.v, kid: '2026-03', nonce: l.paquet.nonce, corps: l.paquet.corps, marque: l.paquet.marque };
+  if (ouvrir(faux, l.id) !== null) kidFalsifies++;
+  if (ouvrir(base[i + 500].paquet, l.id) !== null) deplacements++;
+}
+trousseau.delete('2026-01');
+console.log('Contre-épreuve sur 100 lignes, le kid étant authentifié :');
+console.log('  identifiants de clé falsifiés acceptés ... ' + kidFalsifies + ' sur 100');
+console.log('  chiffrés déplacés vers une autre ligne ... ' + deplacements + ' sur 100');
+console.log('');
+
 console.log('C\'est le vrai coût d\'une rotation, et il ne se voit pas le jour de la rotation :');
 console.log('une clé ne peut pas être jetée tant qu\'un seul enregistrement en dépend.');
 console.log('');
@@ -487,8 +524,8 @@ trousseau.set('2026-01', sha256o(bof('clé 2026-01')));
 let convertis = 0, lectures = 0;
 function lire(l){
   lectures++;
-  const clair = ouvrir(l.paquet);
-  if (clair !== null &amp;&amp; l.paquet.kid !== kidActif) { l.paquet = sceller(clair); convertis++; }
+  const clair = ouvrir(l.paquet, l.id);
+  if (clair !== null &amp;&amp; l.paquet.kid !== kidActif) { l.paquet = sceller(clair, l.id); convertis++; }
   return clair;
 }
 // Un mois d'activité : chaque enregistrement a sa propre probabilité d'être lu.
@@ -509,6 +546,29 @@ console.log('');
 console.log('  encore sous une ancienne clé : ' + vieux + ' sur ' + base.length
   + '  (' + fr((100 * vieux / base.length).toFixed(1)) + ' %)');
 console.log('');
+// Ce pourcentage n'est PAS une constante du procédé : il dépend entièrement du profil
+// de lecture du service. Refaisons la mesure avec trois profils différents.
+function residuel(chances){
+  const copie = base.map(l =&gt; ({ id: l.id, mois: l.mois, paquet: l.paquet }));
+  let convertis2 = 0;
+  const clonesLus = new Map();
+  for (let jour = 0; jour &lt; 30; jour++) for (const l of copie) {
+    const c = chances[l.mois];
+    if (alea() &lt; c) { clonesLus.set(l.id, true); if (l.mois !== '2026-03') convertis2++; }
+  }
+  // Un enregistrement converti est un enregistrement lu au moins une fois.
+  let anciens = 0;
+  for (const l of copie) if (l.mois !== '2026-03' &amp;&amp; !clonesLus.has(l.id)) anciens++;
+  return 100 * anciens / copie.length;
+}
+console.log('Le résiduel dépend du PROFIL de lecture, pas du procédé :');
+for (const [nom, ch] of [
+  ['archives peu relues          ', { '2026-01': 0.002, '2026-02': 0.01, '2026-03': 0.25 }],
+  ['profil ci-dessus, autre tirage', { '2026-01': 0.01,  '2026-02': 0.06, '2026-03': 0.25 }],
+  ['tout est relu souvent        ', { '2026-01': 0.20,  '2026-02': 0.30, '2026-03': 0.40 }],
+]) console.log('  ' + nom + ' → ' + fr(residuel(ch).toFixed(1)) + ' % encore sous une ancienne clé après 30 jours');
+console.log('');
+
 console.log('La conversion suit l\'usage, et l\'usage ne couvre jamais tout : la queue des');
 console.log('enregistrements jamais relus ne se convertira pas d\'elle-même. Le rechiffrement');
 console.log('à la lecture traite le gros du volume sans interruption de service, et il faut');
@@ -530,6 +590,10 @@ La clé de janvier est retirée du trousseau (fin de sa durée de vie) :
   enregistrements lisibles : 500 sur 900
   perdus ................. 400
 
+Contre-épreuve sur 100 lignes, le kid étant authentifié :
+  identifiants de clé falsifiés acceptés ... 0 sur 100
+  chiffrés déplacés vers une autre ligne ... 0 sur 100
+
 C'est le vrai coût d'une rotation, et il ne se voit pas le jour de la rotation :
 une clé ne peut pas être jetée tant qu'un seul enregistrement en dépend.
 
@@ -543,6 +607,11 @@ Un mois d'exploitation avec rechiffrement à la lecture :
 
   encore sous une ancienne clé : 329 sur 900  (36,6 %)
 
+Le résiduel dépend du PROFIL de lecture, pas du procédé :
+  archives peu relues           → 66,6 % encore sous une ancienne clé après 30 jours
+  profil ci-dessus, autre tirage → 40,6 % encore sous une ancienne clé après 30 jours
+  tout est relu souvent         → 0,0 % encore sous une ancienne clé après 30 jours
+
 La conversion suit l'usage, et l'usage ne couvre jamais tout : la queue des
 enregistrements jamais relus ne se convertira pas d'elle-même. Le rechiffrement
 à la lecture traite le gros du volume sans interruption de service, et il faut
@@ -551,7 +620,8 @@ retirer l'ancienne clé. Un service qui n'a jamais mesuré ce 36,6 % ne sait pas
 s'il peut retirer sa clé, et ne la retire donc jamais.</code></pre></figure>
 <p>Trois mois d'activité, une clé par mois&nbsp;: <strong>900 enregistrements sur 900</strong> restent lisibles sans qu'une seule ligne ait été rechiffrée. Puis vient le moment que l'on n'anticipe pas&nbsp;: <em>retirer</em> l'ancienne clé. Le trousseau perd la clé de janvier, et <strong>400&nbsp;enregistrements deviennent illisibles</strong>. Voilà le vrai coût d'une rotation, et il ne se voit pas le jour de la rotation&nbsp;: une clé ne peut pas être jetée tant qu'un seul enregistrement en dépend.</p>
 <p>La parade est le <strong>rechiffrement à la lecture</strong>&nbsp;: chaque enregistrement lu est réécrit sous la clé active, sans campagne ni fenêtre de maintenance. Un mois d'exploitation, avec des données récentes lues souvent et des anciennes presque jamais, donne <strong>2&nbsp;195&nbsp;lectures</strong> et <strong>371&nbsp;enregistrements convertis</strong>. Mais <strong>329 sur 900</strong> — 36,6&nbsp;% — portent encore une ancienne clé, parce que personne ne les a relus.</p>
-<p>Cette queue-là ne se convertira pas d'elle-même. Le rechiffrement à la lecture traite le gros du volume sans interruption de service&nbsp;; il faut l'accompagner d'une campagne de fond pour le reste, puis, <em>seulement alors</em>, retirer l'ancienne clé. Un service qui n'a jamais mesuré ce pourcentage ne sait pas s'il peut retirer sa clé — et ne la retire donc jamais.</p>
+<p>Ce 36,6&nbsp;% n'est pas une constante du procédé, et le programme le montre en refaisant la mesure avec trois profils de lecture&nbsp;: <strong>66,6&nbsp;%</strong> pour des archives peu relues, <strong>0,0&nbsp;%</strong> si tout est relu souvent. Le résiduel dépend entièrement de l'usage du service — ce qui est précisément la raison de le mesurer <em>chez soi</em> plutôt que de recopier un chiffre.</p>
+<p>Cette queue-là ne se convertira pas d'elle-même. Le rechiffrement à la lecture traite le gros du volume sans interruption de service&nbsp;; il faut l'accompagner d'une campagne de fond pour le reste, puis, <em>seulement alors</em>, retirer l'ancienne clé. Un service qui n'a jamais mesuré son propre résiduel ne sait pas s'il peut retirer sa clé — et ne la retire donc jamais.</p>
 
 <h2>Une clé, un usage</h2>
 <p>La règle a l'air d'une convention d'écriture. Elle empêche une attaque précise, et voici laquelle. Un service emploie une empreinte à clé pour deux choses&nbsp;: l'index aveugle de la leçon&nbsp;8, rangé en base pour pouvoir chercher par adresse&nbsp;; et le jeton du lien de connexion envoyé par courriel, qui vaut mot de passe. Avec la même clé.</p>
@@ -686,7 +756,8 @@ c'est une discipline — nommer l'usage, y mettre une version, et ne jamais
 réemployer une clé « parce qu'on en a déjà une sous la main ».</code></pre></figure>
 <p><strong>50 connexions usurpées sur 50</strong>, à partir de la seule colonne d'index. Rien n'a été cassé&nbsp;: HMAC a fait son travail, la clé n'a pas fuité. Deux usages ont partagé une fonction et une clé, et l'un est devenu l'<em>oracle</em> de l'autre — une colonne consultable en lecture s'est transformée en trousseau.</p>
 <p>La correction ne coûte rien&nbsp;: on garde une seule racine, et l'on en <strong>dérive</strong> une clé par usage avec HKDF et une étiquette explicite. Même attaque, <strong>0 usurpation sur 50</strong>, et <strong>50 connexions légitimes sur 50</strong> — la contre-épreuve, sans laquelle «&nbsp;0 sur 50&nbsp;» pourrait simplement signifier que le service est cassé.</p>
-<p>Deux étiquettes qui ne diffèrent que par <code>v1</code> et <code>v2</code> donnent des clés séparées par <strong>123&nbsp;bits sur 256</strong>, soit 48,0&nbsp;%. Aucune ne se déduit de l'autre, aucune ne permet de remonter à la racine. Ce que la <strong>séparation de domaine</strong> coûte, ce n'est donc pas du calcul&nbsp;: c'est une discipline — nommer l'usage, y mettre un numéro de version, et ne jamais réemployer une clé «&nbsp;parce qu'on en a déjà une sous la main&nbsp;».</p>
+<p>Deux étiquettes qui ne diffèrent que par <code>v1</code> et <code>v2</code> donnent des clés séparées par <strong>123&nbsp;bits sur 256</strong>, soit 48,0&nbsp;%. Cette mesure illustre&nbsp;: elle ne <em>démontre</em> rien — une distance de Hamming, si grande soit-elle, ne dit pas qu'une clé ne se déduit pas de l'autre. Ce qui le garantit, c'est la propriété de HMAC-SHA-256 d'être une bonne fonction pseudo-aléatoire&nbsp;: sans la racine, aucune des deux sorties n'aide à prédire l'autre. Ce que la <strong>séparation de domaine</strong> coûte n'est donc pas du calcul&nbsp;: c'est une discipline — nommer l'usage, y mettre un numéro de version, et ne jamais réemployer une clé «&nbsp;parce qu'on en a déjà une sous la main&nbsp;».</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce que cette correction ne corrige pas</p><p>La séparation de domaine ferme la confusion d'usage, et rien d'autre. Le jeton de connexion de la version&nbsp;2 reste <code>HMAC(clé, adresse)</code>&nbsp;: une valeur <em>permanente</em>, identique à chaque demande, sans date d'expiration, sans usage unique, et impossible à révoquer pour un seul compte. Un bon jeton de lien de connexion est <strong>tiré au hasard</strong>, à usage unique, daté, et stocké haché côté serveur — la leçon&nbsp;7 explique pourquoi cette dernière précaution compte. Corriger une faille ne dispense jamais de regarder ce qui reste autour.</p></div></div>
 <div class="callout callout--astuce"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">Le numéro de version dans l'étiquette</p><p>Il paraît superflu, et c'est celui qu'on oublie. Il sert le jour où il faut changer <em>la manière</em> de dériver — parce qu'un algorithme a vieilli, parce qu'un paramètre était trop faible, parce qu'on a découvert que deux usages se recouvraient. Sans lui, il n'existe aucun moyen de faire cohabiter l'ancienne dérivation et la nouvelle, donc aucun moyen de migrer progressivement&nbsp;: la même impasse que celle d'un chiffré sans identifiant de clé, une section plus haut.</p></div></div>
 
 <h2>Ne pas perdre la clé la plus haute</h2>
@@ -725,7 +796,12 @@ const EXP = new Array(512), LOG = new Array(256);
 const mul = (a, b) =&gt; (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]];
 const div = (a, b) =&gt; (a === 0) ? 0 : EXP[(LOG[a] - LOG[b] + 255) % 255];
 
+// ⚠ Générateur de DÉMONSTRATION : 32 bits d'état, graine écrite en clair juste en
+// dessous, pour que ce programme donne toujours le même résultat. Il ne convient PAS
+// à un vrai partage — la dernière partie de ce programme le prouve en cassant celui-ci.
+// Un partage réel tire ses coefficients d'une source cryptographique.
 let _g = 112358 &gt;&gt;&gt; 0;
+const GRAINE = 112358;
 const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
 
 // --- Partager : un polynôme de degré k-1 dont le terme constant EST le secret. ----
@@ -796,32 +872,69 @@ console.log('  reconstitutions exactes .. ' + justes + ' sur ' + paires.length);
 console.log('');
 
 // --- Et ces deux parts ne réduisent même pas l'espace de recherche. ---------------
-// Pour un octet du secret et deux parts fixées, essayons chaque valeur candidate :
-// existe-t-il, pour chacune, un polynôme de degré 2 qui passe par les deux parts ?
-const p1 = parts[0], p2 = parts[1];
-let candidatsPossibles = 0;
-for (let candidat = 0; candidat &lt; 256; candidat++) {
-  // Un polynôme de degré 2 a trois coefficients ; le premier est le candidat, et les
-  // deux points connus donnent deux équations à deux inconnues : il y a une solution.
-  // On la construit, et on vérifie qu'elle redonne bien les deux parts observées.
-  const x1 = p1.x, x2 = p2.x, y2 = p2.octets[0];
-  // y = c0 + c1·x + c2·x²  →  on résout le système 2×2 en (c1, c2).
-  const b1 = p1.octets[0] ^ candidat, b2 = y2 ^ candidat;
-  const d = mul(x1, mul(x2, x2)) ^ mul(x2, mul(x1, x1));
-  if (d === 0) continue;
-  const c1 = div(mul(b1, mul(x2, x2)) ^ mul(b2, mul(x1, x1)), d);
-  const c2 = div(mul(x1, b2) ^ mul(x2, b1), d);
-  const en = x =&gt; candidat ^ mul(c1, x) ^ mul(c2, mul(x, x));
-  if (en(x1) === p1.octets[0] &amp;&amp; en(x2) === p2.octets[0]) candidatsPossibles++;
+// Pour le premier octet du secret et deux parts connues, on ÉNUMÈRE tous les polynômes
+// possibles du degré voulu, et l'on compte les termes constants — c'est-à-dire les
+// valeurs du secret — qui restent compatibles avec ce que l'on observe.
+// La mesure est faite pour DEUX seuils, sinon elle ne prouverait rien : au seuil 2,
+// deux parts suffisent, et le compteur doit tomber à 1.
+function candidatsPossibles(p1, p2, seuil){
+  const possibles = new Set();
+  const enumerer = (coeffs) =&gt; {
+    if (coeffs.length === seuil) {
+      const en = x =&gt; { let y = 0; for (let i = coeffs.length - 1; i &gt;= 0; i--) y = mul(y, x) ^ coeffs[i]; return y; };
+      if (en(p1.x) === p1.y &amp;&amp; en(p2.x) === p2.y) possibles.add(coeffs[0]);
+      return;
+    }
+    for (let c = 0; c &lt; 256; c++) enumerer([...coeffs, c]);
+  };
+  enumerer([]);
+  return possibles.size;
 }
-console.log('Premier octet du secret, vu par le détenteur de deux parts :');
-console.log('  valeurs encore possibles : ' + candidatsPossibles + ' sur 256');
+console.log('Premier octet du secret, vu par le détenteur de DEUX parts :');
+for (const seuil of [2, 3]) {
+  const ps = partager([SECRET[0]], N, seuil);
+  const a = { x: ps[0].x, y: ps[0].octets[0] }, b = { x: ps[1].x, y: ps[1].octets[0] };
+  const n = candidatsPossibles(a, b, seuil);
+  console.log('  partage de seuil ' + seuil + ' : ' + n + ' valeur(s) encore possible(s) sur 256'
+    + (seuil === 2 ? '   (deux parts suffisent : le secret est déterminé)' : '   (une de moins que le seuil)'));
+}
 console.log('');
 console.log('Deux parts ne donnent pas « une partie » du secret : elles n\'en donnent RIEN.');
 console.log('Pour chacune des 256 valeurs possibles de cet octet, il existe un polynôme qui');
 console.log('passe par les deux parts observées — donc rien ne les départage. C\'est ce que');
 console.log('l\'on appelle un partage à sécurité parfaite, au sens de Shannon.');
 console.log('');
+// --- La condition que « sécurité parfaite » suppose, et qu'on oublie ---------------
+// Tout ce qui précède ne vaut que si les coefficients sont IMPRÉVISIBLES. Ceux de ce
+// programme viennent d'un générateur de démonstration dont la graine est écrite dans
+// le code, deux écrans plus haut. Rejouons-le, et voyons ce qu'UNE SEULE part donne.
+const puissance = (x, n) =&gt; { let r = 1; for (let i = 0; i &lt; n; i++) r = mul(r, x); return r; };
+let _h = GRAINE &gt;&gt;&gt; 0;
+const rejouer = () =&gt; { _h ^= _h &lt;&lt; 13; _h &gt;&gt;&gt;= 0; _h ^= _h &gt;&gt;&gt; 17; _h ^= _h &lt;&lt; 5; _h &gt;&gt;&gt;= 0; return _h / 4294967296; };
+const part1 = parts[0];
+const retrouve = [];
+for (let o = 0; o &lt; SECRET.length; o++) {
+  // Le partage a consommé, pour cet octet, (SEUIL - 1) tirages, dans cet ordre.
+  const coeffs = [];
+  for (let i = 1; i &lt; SEUIL; i++) coeffs.push(Math.floor(rejouer() * 256));
+  // y = c0 XOR c1·x XOR c2·x² … : tout est connu sauf c0, qui EST le secret.
+  let reste = 0;
+  for (let i = 1; i &lt; SEUIL; i++) reste ^= mul(coeffs[i - 1], puissance(part1.x, i));
+  retrouve.push(part1.octets[o] ^ reste);
+}
+console.log('Avec la graine du générateur et UNE SEULE part :');
+console.log('  secret partagé  : ' + hex(SECRET).slice(0, 40) + '…');
+console.log('  secret retrouvé : ' + hex(retrouve).slice(0, 40) + '…');
+console.log('  identique : ' + (hex(retrouve) === hex(SECRET) ? 'OUI' : 'non'));
+console.log('');
+console.log("Voilà pourquoi « sécurité parfaite » n'est pas une propriété du schéma seul :");
+console.log("c'est une propriété du schéma ET de la source d'aléa. Un partage de Shamir dont");
+console.log("les coefficients sortent d'un générateur prévisible ne vaut RIEN — pas même la");
+console.log("sécurité calculatoire d'un chiffrement ordinaire. Dans un vrai programme, ces");
+console.log("coefficients viennent du générateur cryptographique de la plateforme, jamais");
+console.log("d'un xorshift de démonstration comme celui de cette page.");
+console.log('');
+
 console.log('En pratique, un tel partage sert à la clé la plus haute d\'une hiérarchie :');
 console.log('celle qui ne doit tenir dans la tête ni dans le coffre d\'une seule personne,');
 console.log('et qu\'on ne sort qu\'à plusieurs, pour une opération exceptionnelle. Le prix à');
@@ -847,13 +960,26 @@ Toutes les combinaisons de 2 parts (une de moins que le seuil) :
   résultats distincts ...... 10
   reconstitutions exactes .. 0 sur 10
 
-Premier octet du secret, vu par le détenteur de deux parts :
-  valeurs encore possibles : 256 sur 256
+Premier octet du secret, vu par le détenteur de DEUX parts :
+  partage de seuil 2 : 1 valeur(s) encore possible(s) sur 256   (deux parts suffisent : le secret est déterminé)
+  partage de seuil 3 : 256 valeur(s) encore possible(s) sur 256   (une de moins que le seuil)
 
 Deux parts ne donnent pas « une partie » du secret : elles n'en donnent RIEN.
 Pour chacune des 256 valeurs possibles de cet octet, il existe un polynôme qui
 passe par les deux parts observées — donc rien ne les départage. C'est ce que
 l'on appelle un partage à sécurité parfaite, au sens de Shannon.
+
+Avec la graine du générateur et UNE SEULE part :
+  secret partagé  : 681971160a7485fea1779cdfae83e9bb513c386c…
+  secret retrouvé : 681971160a7485fea1779cdfae83e9bb513c386c…
+  identique : OUI
+
+Voilà pourquoi « sécurité parfaite » n'est pas une propriété du schéma seul :
+c'est une propriété du schéma ET de la source d'aléa. Un partage de Shamir dont
+les coefficients sortent d'un générateur prévisible ne vaut RIEN — pas même la
+sécurité calculatoire d'un chiffrement ordinaire. Dans un vrai programme, ces
+coefficients viennent du générateur cryptographique de la plateforme, jamais
+d'un xorshift de démonstration comme celui de cette page.
 
 En pratique, un tel partage sert à la clé la plus haute d'une hiérarchie :
 celle qui ne doit tenir dans la tête ni dans le coffre d'une seule personne,
@@ -862,7 +988,8 @@ payer est organisationnel : 5 porteurs à choisir, à former, à remplacer quand
 ils partent — et un exercice de reconstitution à faire tourner régulièrement,
 sans quoi personne ne découvrira qu'une part est illisible le jour utile.</code></pre></figure>
 <p>Cinq parts, seuil trois&nbsp;: les <strong>10 combinaisons de 3&nbsp;parts</strong> reconstituent le secret exactement, <strong>10 fois sur 10</strong>. Les <strong>10 combinaisons de 2&nbsp;parts</strong> donnent <strong>10&nbsp;résultats distincts</strong>, dont <strong>0 correct</strong>.</p>
-<p>Le dernier calcul est le plus important, et il va plus loin qu'«&nbsp;échouer&nbsp;». Pour le premier octet du secret, vu par le détenteur de deux parts, <strong>256&nbsp;valeurs sur 256 restent possibles</strong>&nbsp;: pour chacune, il existe un polynôme de degré&nbsp;2 qui passe par les deux parts observées. Deux parts ne donnent donc pas «&nbsp;une partie&nbsp;» du secret — elles n'en donnent <em>rien</em>. C'est ce qu'on appelle une sécurité parfaite au sens de Shannon, et c'est une propriété très rare&nbsp;: elle ne repose sur aucune hypothèse de difficulté calculatoire, donc aucun progrès du matériel ne l'entame.</p>
+<p>Le calcul suivant va plus loin qu'«&nbsp;échouer&nbsp;», et il est fait <em>deux fois</em> pour qu'il prouve quelque chose. Pour le premier octet du secret, on énumère tous les polynômes possibles et l'on compte les valeurs encore compatibles avec les deux parts observées. Au seuil&nbsp;3&nbsp;: <strong>256 sur 256</strong> — deux parts ne donnent pas «&nbsp;une partie&nbsp;» du secret, elles n'en donnent <em>rien</em>. Au seuil&nbsp;2, avec les mêmes deux parts&nbsp;: <strong>1 sur 256</strong>, le secret est entièrement déterminé. Sans cette seconde mesure, le «&nbsp;256 sur 256&nbsp;» ne prouverait rien&nbsp;; avec elle, il devient une mesure. C'est ce qu'on appelle une sécurité parfaite au sens de Shannon, et c'est une propriété rare&nbsp;: elle ne repose sur aucune hypothèse de difficulté calculatoire, donc aucun progrès du matériel ne l'entame.</p>
+<p>Sous une condition, que la dernière partie du programme met à l'épreuve sans indulgence&nbsp;: les coefficients doivent être <strong>imprévisibles</strong>. Ceux de cette page viennent d'un générateur de démonstration à 32&nbsp;bits d'état, dont la graine est écrite dans le code pour que la sortie soit stable. En rejouant ce générateur, <strong>une seule part suffit à retrouver le secret entier</strong> — le programme le fait, et l'affiche. La «&nbsp;sécurité parfaite&nbsp;» n'est donc pas une propriété du schéma seul, mais du schéma <em>et</em> de sa source d'aléa. Dans un vrai partage, les coefficients viennent du générateur cryptographique de la plateforme.</p>
 <p>Le prix est organisationnel. Cinq porteurs à choisir, à former, à remplacer quand ils partent&nbsp;; des parts à ranger dans des endroits vraiment distincts&nbsp;; et un <strong>exercice de reconstitution</strong> à faire tourner régulièrement — sans quoi personne ne découvrira qu'une part est illisible le jour où elle sera utile.</p>
 
 <h2>Après la fuite</h2>
@@ -885,7 +1012,8 @@ const PORTEES = [
   { nom: 'une clé, depuis toujours',  cleDe: () =&gt; 'unique' },
   { nom: 'une clé par an',            cleDe: e =&gt; 'an-' + Math.floor(e.mois / 12) },
   { nom: 'une clé par mois',          cleDe: e =&gt; 'mois-' + e.mois },
-  { nom: 'une clé par enregistrement', cleDe: (e, i) =&gt; 'enr-' + i },
+  { nom: 'enveloppe : clé de données', cleDe: (e, i) =&gt; 'enr-' + i },
+  { nom: 'enveloppe : clé MAÎTRESSE',   cleDe: () =&gt; 'maitresse' },
 ];
 const MOIS_DE_LA_FUITE = 21;                    // la clé qui fuite est celle en service ce mois-là
 
@@ -900,9 +1028,15 @@ for (const p of PORTEES) {
 }
 console.log('');
 console.log('La portée de la clé n\'est pas une préférence de style : c\'est le RAYON DU');
-console.log('CRATÈRE, décidé le jour de la conception. La dernière ligne est celle du');
-console.log('chiffrement en enveloppe du deuxième programme — et c\'est la même mécanique');
-console.log('qui rend la rotation quasi gratuite et la fuite quasi bénigne.');
+console.log('CRATÈRE, décidé le jour de la conception.');
+console.log('');
+console.log('Et il faut lire les DEUX dernières lignes ensemble. Le chiffrement en enveloppe');
+console.log('ne réduit la portée à un enregistrement que pour une clé de DONNÉES. La clé');
+console.log("MAÎTRESSE, elle — celle que le deuxième programme fait tourner, celle qu'on range");
+console.log('dans un service de gestion de clés — ouvre la totalité du coffre. Le chiffrement');
+console.log('en enveloppe ne supprime donc pas le risque : il le DÉPLACE vers une clé unique,');
+console.log('bien mieux protégée, et souvent enfermée dans un module matériel dont elle ne');
+console.log("sort jamais. C'est tout son intérêt, et c'est aussi sa limite.");
 console.log('');
 
 // --- Ce que le délai de détection ajoute. -----------------------------------------
@@ -944,7 +1078,9 @@ const ACTIONS = [
   { quoi: 'empêcher le déchiffrement d\'une copie faite avant la rotation', repare: false },
   { quoi: 'savoir avec certitude ce qui a été copié', repare: false },
 ];
-console.log('Après la rotation, action par action :');
+// ⚠ Ce dernier tableau n'est PAS une mesure : c'est un récapitulatif de doctrine,
+// écrit à la main, que le programme se contente de recompter. Rien n'y est simulé.
+console.log('Après la rotation, action par action (récapitulatif, non mesuré) :');
 for (const a of ACTIONS) console.log('  ' + (a.repare ? '[fait]      ' : '[impossible]') + ' ' + a.quoi);
 console.log('');
 console.log('  actions qui réparent : ' + ACTIONS.filter(a =&gt; a.repare).length + ' sur ' + ACTIONS.length);
@@ -962,12 +1098,19 @@ Une seule clé est dérobée, celle en service au mois 21 :
   une clé, depuis toujours        21 600 sur 21 600   (100,0 %)
   une clé par an                  10 800 sur 21 600   (50,0 %)
   une clé par mois                   900 sur 21 600   (4,2 %)
-  une clé par enregistrement           1 sur 21 600   (0,0 %)
+  enveloppe : clé de données           1 sur 21 600   (0,0 %)
+  enveloppe : clé MAÎTRESSE       21 600 sur 21 600   (100,0 %)
 
 La portée de la clé n'est pas une préférence de style : c'est le RAYON DU
-CRATÈRE, décidé le jour de la conception. La dernière ligne est celle du
-chiffrement en enveloppe du deuxième programme — et c'est la même mécanique
-qui rend la rotation quasi gratuite et la fuite quasi bénigne.
+CRATÈRE, décidé le jour de la conception.
+
+Et il faut lire les DEUX dernières lignes ensemble. Le chiffrement en enveloppe
+ne réduit la portée à un enregistrement que pour une clé de DONNÉES. La clé
+MAÎTRESSE, elle — celle que le deuxième programme fait tourner, celle qu'on range
+dans un service de gestion de clés — ouvre la totalité du coffre. Le chiffrement
+en enveloppe ne supprime donc pas le risque : il le DÉPLACE vers une clé unique,
+bien mieux protégée, et souvent enfermée dans un module matériel dont elle ne
+sort jamais. C'est tout son intérêt, et c'est aussi sa limite.
 
 Clé dérobée au premier jour du mois 21, et personne ne le sait encore.
 
@@ -988,7 +1131,7 @@ Voilà le second effet de la rotation, et le moins cité : elle ne sert pas
 seulement à réagir à une fuite constatée, elle borne les dégâts d'une fuite
 QU'ON N'A PAS ENCORE VUE — c'est-à-dire du cas normal.
 
-Après la rotation, action par action :
+Après la rotation, action par action (récapitulatif, non mesuré) :
   [fait]       émettre une clé neuve et la mettre en service
   [fait]       rechiffrer les enregistrements sous la clé neuve
   [fait]       retirer l'ancienne clé du trousseau
@@ -1005,14 +1148,15 @@ du problème. Une rotation protège l'AVENIR ; elle ne reprend rien au passé.
 C'est pourquoi tout le travail utile se fait avant : réduire la portée des clés,
 raccourcir leur durée de vie, et surveiller leur usage — parce que ces trois
 décisions-là sont les seules qui agissent encore le jour de la fuite.</code></pre></figure>
-<p>La première décision est la <strong>portée</strong> de la clé. Le même vol expose <strong>100&nbsp;% de la base</strong> avec une clé unique, <strong>50&nbsp;%</strong> avec une clé par an, <strong>4,2&nbsp;%</strong> avec une clé par mois, et <strong>un seul enregistrement</strong> avec le chiffrement en enveloppe du deuxième programme. Ce n'est pas une préférence de style&nbsp;: c'est le rayon du cratère, fixé le jour de la conception.</p>
+<p>La première décision est la <strong>portée</strong> de la clé. Le même vol expose <strong>100&nbsp;% de la base</strong> avec une clé unique, <strong>50&nbsp;%</strong> avec une clé par an, <strong>4,2&nbsp;%</strong> avec une clé par mois, et <strong>un seul enregistrement</strong> si ce qui fuite est une clé de <em>données</em> du chiffrement en enveloppe. Ce n'est pas une préférence de style&nbsp;: c'est le rayon du cratère, fixé le jour de la conception.</p>
+<p>Mais la dernière ligne du tableau est celle qu'il ne faut pas sauter&nbsp;: si c'est la <strong>clé maîtresse</strong> qui fuite — celle que le deuxième programme fait tourner, celle qu'on range dans un service de gestion de clés —, on retombe à <strong>100&nbsp;%</strong>. L'enveloppe ne supprime pas le risque, elle le <em>déplace</em> vers une clé unique, bien mieux protégée, souvent enfermée dans un module matériel dont elle ne sort jamais. C'est tout son intérêt, et c'est aussi sa limite.</p>
 <p>La seconde est la <strong>durée de vie</strong>. La clé est dérobée, et personne ne le sait encore — le cas normal. Avec une rotation mensuelle programmée, le butin cesse de croître au trentième jour et se fige à 900&nbsp;enregistrements, <em>sans que personne n'ait rien remarqué</em>. Sans rotation, il part déjà de <strong>18&nbsp;900</strong> et continue de monter tant que la fuite n'est pas détectée&nbsp;: <strong>24&nbsp;900</strong> au deux-centième jour. C'est le second effet de la rotation, et le moins cité&nbsp;: elle ne sert pas seulement à réagir à une fuite constatée, elle borne les dégâts d'une fuite qu'on n'a pas encore vue.</p>
-<p>Le dernier tableau est le plus honnête du cours. Sur huit actions envisageables après la fuite, <strong>5 réparent</strong> quelque chose et <strong>3 sont impossibles</strong>&nbsp;: reprendre les données déjà copiées, empêcher le déchiffrement d'une copie faite avant la rotation, savoir avec certitude ce qui a été pris. Une rotation protège l'avenir&nbsp;; elle ne reprend rien au passé. Tout le travail utile se fait donc avant — réduire la portée, raccourcir la durée de vie, surveiller l'usage —, parce que ces trois décisions-là sont les seules qui agissent encore le jour de la fuite.</p>
+<p>Le dernier tableau n'est pas une mesure, et le programme le dit&nbsp;: c'est un récapitulatif de doctrine, écrit à la main, que le programme se contente de recompter. Il vaut pour ce qu'il énumère, pas pour son total. Sur huit actions envisageables après la fuite, cinq réparent quelque chose et <strong>trois sont impossibles</strong>&nbsp;: reprendre les données déjà copiées, empêcher le déchiffrement d'une copie faite avant la rotation, savoir avec certitude ce qui a été pris. Une rotation protège l'avenir&nbsp;; elle ne reprend rien au passé. Tout le travail utile se fait donc avant — réduire la portée, raccourcir la durée de vie, surveiller l'usage —, parce que ces trois décisions-là sont les seules qui agissent encore le jour de la fuite.</p>
 
 <h2>Cas réel</h2>
-<p><strong>Uber, 2016.</strong> En septembre, deux personnes accèdent à un dépôt de code <em>privé</em> de l'entreprise et y trouvent les identifiants d'un compte d'hébergement. Avec ces identifiants, elles téléchargent les données personnelles de <strong>57&nbsp;millions</strong> de passagers et de conducteurs — noms, adresses électroniques, numéros de téléphone, et les numéros de permis de conduire d'environ <strong>600&nbsp;000&nbsp;conducteurs</strong> aux États-Unis.</p>
+<p><strong>Uber, 2016.</strong> En octobre, deux personnes accèdent à un dépôt de code <em>privé</em> de l'entreprise et y trouvent les identifiants d'un compte d'hébergement. Avec ces identifiants, elles téléchargent les données personnelles de <strong>57&nbsp;millions</strong> de passagers et de conducteurs — noms, adresses électroniques, numéros de téléphone, et les numéros de permis de conduire d'environ <strong>600&nbsp;000&nbsp;conducteurs</strong> aux États-Unis.</p>
 <p>Chaque étape de cette histoire figure dans les programmes de cette leçon. Le dépôt était privé, ce qui ne change rien&nbsp;: une clé dans un dépôt est une clé partagée avec tous ceux qui y accèdent, aujourd'hui et pour toujours — c'est la mesure «&nbsp;5 révisions sur 8&nbsp;» du premier programme. La clé donnait accès à l'ensemble des données, sans portée restreinte&nbsp;: la première ligne du dernier tableau, <strong>100&nbsp;%</strong>. Rien n'indique qu'elle ait eu une durée de vie&nbsp;; sans rotation, le butin ne cesse jamais de croître.</p>
-<p>La suite appartient à un autre chapitre, mais elle mérite d'être dite. En novembre&nbsp;2016, l'entreprise verse <strong>100&nbsp;000&nbsp;dollars</strong> aux auteurs du vol pour qu'ils détruisent les données, et ne prévient ni les autorités ni les personnes concernées. L'affaire ne devient publique qu'en <strong>novembre&nbsp;2017</strong>, plus d'un an après les faits&nbsp;; le directeur de la sécurité de l'entreprise et l'un de ses adjoints quittent l'organisation pour leur rôle dans cette dissimulation.</p>
+<p>La suite appartient à un autre chapitre, mais elle mérite d'être dite. Les auteurs du vol prennent contact à la <strong>mi-novembre&nbsp;2016</strong>&nbsp;; le <strong>8&nbsp;décembre 2016</strong>, l'entreprise leur verse <strong>100&nbsp;000&nbsp;dollars</strong> par l'intermédiaire d'une plateforme de prime aux bogues, en le faisant passer pour une prime, contre un engagement de destruction des données. Ni les autorités ni les personnes concernées ne sont prévenues. L'affaire ne devient publique qu'en <strong>novembre&nbsp;2017</strong>, plus d'un an après les faits&nbsp;; le directeur de la sécurité de l'entreprise et l'un de ses adjoints quittent l'organisation pour leur rôle dans cette dissimulation.</p>
 <p>Le dernier tableau du dernier programme dit pourquoi ce paiement n'avait aucune chance de réparer quoi que ce soit&nbsp;: «&nbsp;reprendre les données déjà copiées par l'attaquant&nbsp;» et «&nbsp;savoir avec certitude ce qui a été copié&nbsp;» y figurent tous deux dans la colonne <em>impossible</em>. Aucune somme d'argent ne déplace une ligne d'une colonne à l'autre.</p>
 
 <h2>Antisèche</h2>
@@ -1021,17 +1165,17 @@ décisions-là sont les seules qui agissent encore le jour de la fuite.</code></
     <caption>Gérer des clés&nbsp;: les décisions, et ce qu'elles coûtent</caption>
     <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
     <tbody>
-      <tr><td>Secret commis</td><td>Retiré du code, il reste dans l'historique&nbsp;: <strong>5&nbsp;révisions sur 8</strong>. Une réécriture atteint <strong>1&nbsp;copie sur 6</strong>. Un secret commis est un secret <strong>brûlé</strong>&nbsp;: on le révoque, on ne le nettoie pas.</td></tr>
+      <tr><td>Secret commis</td><td>Retiré du code, il reste dans l'historique&nbsp;: <strong>5&nbsp;révisions sur 8</strong>. Une réécriture atteint <strong>1&nbsp;exemplaire sur les 41</strong> d'une équipe ordinaire. Un secret commis est un secret <strong>brûlé</strong>&nbsp;: on le révoque, on ne le nettoie pas.</td></tr>
       <tr><td>Où ranger une clé</td><td>Par exigence croissante&nbsp;: variable d'environnement, fichier monté par l'orchestrateur, service de gestion de secrets, module matériel où la clé ne sort jamais.</td></tr>
       <tr><td>Chiffrement en enveloppe</td><td>Une clé par pièce, chiffrée par une clé maîtresse. Rotation&nbsp;: <strong>12&nbsp;800&nbsp;octets contre 1&nbsp;638&nbsp;400</strong>, soit <strong>128&nbsp;fois moins</strong> — le rapport vaut taille de la pièce ÷ taille de la clé.</td></tr>
-      <tr><td>Identifiant de clé</td><td>Rangé en clair dans le chiffré. Il ne révèle rien, et sans lui aucune rotation n'est possible. À accompagner d'un numéro de version de format.</td></tr>
+      <tr><td>Identifiant de clé</td><td>Rangé en clair dans le chiffré&nbsp;: sans lui, aucune rotation n'est possible. Il doit être <strong>authentifié</strong> (0&nbsp;falsification acceptée sur 100), et choisi muet — un identifiant daté trahit l'âge de l'enregistrement. À accompagner d'un numéro de version de format.</td></tr>
       <tr><td>Coût réel de la rotation</td><td>Il n'est pas dans l'ajout d'une clé mais dans le <strong>retrait</strong> de l'ancienne&nbsp;: <strong>400&nbsp;enregistrements sur 900</strong> perdus si on la jette trop tôt.</td></tr>
-      <tr><td>Rechiffrement à la lecture</td><td>Convertit sans interruption de service, mais suit l'usage&nbsp;: après un mois, <strong>329&nbsp;enregistrements sur 900</strong> (36,6&nbsp;%) portent encore l'ancienne clé. La queue exige une campagne de fond.</td></tr>
+      <tr><td>Rechiffrement à la lecture</td><td>Convertit sans interruption de service, mais suit l'usage&nbsp;: après un mois, <strong>329&nbsp;sur 900</strong> (36,6&nbsp;%) portent encore l'ancienne clé — et de 0&nbsp;% à 66,6&nbsp;% selon le profil de lecture. Chiffre à mesurer chez soi&nbsp;; la queue exige une campagne de fond.</td></tr>
       <tr><td>Séparation de domaine</td><td>Une racine, une étiquette par usage, HKDF. Sans elle&nbsp;: <strong>50&nbsp;connexions usurpées sur 50</strong> à partir d'une colonne d'index. Avec&nbsp;: 0 sur 50, et 50&nbsp;connexions légitimes sur 50.</td></tr>
-      <tr><td>Partage de Shamir</td><td>5&nbsp;parts, seuil&nbsp;3&nbsp;: <strong>10&nbsp;reconstitutions exactes sur 10</strong> avec 3&nbsp;parts, <strong>0 sur 10</strong> avec 2 — et <strong>256&nbsp;valeurs sur 256</strong> restent possibles pour le premier octet. Sécurité parfaite, coût organisationnel.</td></tr>
-      <tr><td>Portée d'une clé</td><td>Le rayon du cratère&nbsp;: le même vol expose <strong>100&nbsp;%</strong> de la base avec une clé unique, <strong>4,2&nbsp;%</strong> avec une clé par mois, <strong>1&nbsp;enregistrement</strong> avec l'enveloppe.</td></tr>
+      <tr><td>Partage de Shamir</td><td>5&nbsp;parts, seuil&nbsp;3&nbsp;: <strong>10&nbsp;reconstitutions exactes sur 10</strong> avec 3&nbsp;parts, <strong>0 sur 10</strong> avec 2 — et <strong>256&nbsp;valeurs sur 256</strong> encore possibles pour le premier octet, contre <strong>1</strong> au seuil&nbsp;2. Sécurité parfaite&nbsp;: à condition que les coefficients soient imprévisibles — avec le générateur de démonstration de la page, <em>une seule part</em> rend le secret.</td></tr>
+      <tr><td>Portée d'une clé</td><td>Le rayon du cratère&nbsp;: le même vol expose <strong>100&nbsp;%</strong> de la base avec une clé unique, <strong>4,2&nbsp;%</strong> avec une clé par mois, <strong>1&nbsp;enregistrement</strong> pour une clé de données d'enveloppe — mais <strong>100&nbsp;%</strong> si c'est la clé maîtresse qui fuite.</td></tr>
       <tr><td>Durée de vie</td><td>Elle borne une fuite <em>non détectée</em>&nbsp;: rotation mensuelle, le butin se fige à 900&nbsp;; sans rotation, il part de 18&nbsp;900 et atteint <strong>24&nbsp;900</strong> au 200<sup>e</sup>&nbsp;jour.</td></tr>
-      <tr><td>Après la fuite</td><td><strong>5&nbsp;actions réparent, 3 sont impossibles</strong>&nbsp;: reprendre les données copiées, empêcher le déchiffrement d'une copie antérieure, savoir ce qui a été pris. Tout le travail utile se fait avant.</td></tr>
+      <tr><td>Après la fuite</td><td>Trois choses restent <strong>impossibles</strong>, quoi qu'on fasse&nbsp;: reprendre les données copiées, empêcher le déchiffrement d'une copie antérieure, savoir ce qui a été pris. Tout le travail utile se fait avant.</td></tr>
     </tbody>
   </table>
 </figure>
@@ -1052,7 +1196,7 @@ décisions-là sont les seules qui agissent encore le jour de la fuite.</code></
 </dl>
 
 <h2>Récap et vérification</h2>
-<p>Une clé écrite dans le code y reste&nbsp;: retirée à la révision&nbsp;7, elle figure encore dans 5&nbsp;révisions sur 8, et réécrire l'historique n'atteint qu'une copie du dépôt sur six — un secret commis se révoque, il ne se nettoie pas. Toute la conception d'un système de clés se juge sur le coût d'un changement&nbsp;: 1&nbsp;638&nbsp;400&nbsp;octets à relire et réécrire avec une clé unique, 12&nbsp;800 avec le chiffrement en enveloppe, soit 128&nbsp;fois moins, pour 200&nbsp;pièces relues correctement sur 200. La rotation se pratique grâce à l'identifiant de clé rangé en clair&nbsp;; son vrai coût n'est pas d'ajouter une clé mais de retirer l'ancienne — 400&nbsp;enregistrements perdus sur 900 si on la jette trop tôt, et 36,6&nbsp;% encore sous l'ancienne clé après un mois de rechiffrement à la lecture. Une clé ne sert qu'à un usage&nbsp;: la partager entre un index de recherche et des jetons de connexion donne 50&nbsp;usurpations sur 50, que deux étiquettes HKDF ramènent à 0 sans rien casser. La clé la plus haute se partage en 5&nbsp;parts de seuil&nbsp;3&nbsp;: 10&nbsp;reconstitutions exactes sur 10, et 256&nbsp;valeurs sur 256 encore possibles pour qui n'en détient que deux. Enfin, la portée et la durée de vie décident de l'ampleur d'une fuite bien avant qu'elle n'arrive&nbsp;: 100&nbsp;% de la base avec une clé unique contre 4,2&nbsp;% avec une clé par mois, et trois actions sur huit restent impossibles quoi qu'on fasse.</p>
+<p>Une clé écrite dans le code y reste&nbsp;: retirée à la révision&nbsp;7, elle figure encore dans 5&nbsp;révisions sur 8, et réécrire l'historique n'atteint qu'un exemplaire sur les 41 d'une équipe ordinaire — un secret commis se révoque, il ne se nettoie pas. Toute la conception d'un système de clés se juge sur le coût d'un changement&nbsp;: 1&nbsp;638&nbsp;400&nbsp;octets à relire et réécrire avec une clé unique, 12&nbsp;800 avec le chiffrement en enveloppe, soit 128&nbsp;fois moins, pour 200&nbsp;pièces relues correctement sur 200. La rotation se pratique grâce à l'identifiant de clé rangé en clair&nbsp;; son vrai coût n'est pas d'ajouter une clé mais de retirer l'ancienne — 400&nbsp;enregistrements perdus sur 900 si on la jette trop tôt, et 36,6&nbsp;% encore sous l'ancienne clé après un mois de rechiffrement à la lecture, un résiduel qui va de 0 à 66,6&nbsp;% selon le profil de lecture. Une clé ne sert qu'à un usage&nbsp;: la partager entre un index de recherche et des jetons de connexion donne 50&nbsp;usurpations sur 50, que deux étiquettes HKDF ramènent à 0 sans rien casser — sans faire pour autant un bon jeton, qui doit rester tiré au hasard, daté et à usage unique. La clé la plus haute se partage en 5&nbsp;parts de seuil&nbsp;3&nbsp;: 10&nbsp;reconstitutions exactes sur 10, et 256&nbsp;valeurs sur 256 encore possibles pour qui n'en détient que deux — contre 1 au seuil&nbsp;2, ce qui rend la mesure discriminante, et à la seule condition que les coefficients soient imprévisibles. Enfin, la portée et la durée de vie décident de l'ampleur d'une fuite bien avant qu'elle n'arrive&nbsp;: 100&nbsp;% de la base avec une clé unique contre 4,2&nbsp;% avec une clé par mois, et trois actions sur huit restent impossibles quoi qu'on fasse.</p>
 <div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
 <li>Une analyse de dépôt signale une clé d'interface de programmation commise il y a deux ans, retirée depuis. L'équipe propose de réécrire l'historique et de clore l'incident. Que réponds-tu, et dans quel ordre agis-tu&nbsp;?</li>
 <li>Un service chiffre 12&nbsp;To de fichiers avec une clé unique. La politique impose une rotation annuelle, jamais faite. Explique le lien entre les deux faits, et ce qui aurait dû être décidé à la conception.</li>
@@ -1060,16 +1204,16 @@ décisions-là sont les seules qui agissent encore le jour de la fuite.</code></
 </ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"Une clé commise il y a deux ans est retirée du code, et l'historique du dépôt est réécrit. Le programme montre qu'une réécriture atteint 1 copie sur 6. Quelle est la bonne conclusion ?","a":["La réécriture est du rangement, pas une mesure de sécurité : seule la révocation de la clé et l'émission d'une neuve rendent le contrôle du secret","La réécriture suffit dès lors qu'elle est faite sur le dépôt principal, les autres copies se synchronisant automatiquement lors du prochain rapatriement","Il faut d'abord réécrire l'historique, puis attendre que les clones expirent, et ne révoquer la clé que si une utilisation suspecte est constatée","Le problème vient du fait que le dépôt était public : dans un dépôt privé, le secret n'est visible que par l'équipe et la réécriture est inutile"],"correct":0,"exp":"Les clones sur les postes, les bifurcations, le cache de la forge, les artefacts de construction et les sauvegardes ne sont pas touchés par une réécriture. Uber a d'ailleurs perdu 57 millions d'enregistrements à partir d'un dépôt PRIVÉ."},
-  {"q":"Le chiffrement en enveloppe ramène la rotation de 1 638 400 octets à 12 800, soit un rapport de 128. D'où vient exactement ce 128 ?","a":["De la taille d'une pièce divisée par la taille d'une clé : 4 096 octets pour 32 octets. Le rapport ne dépend donc pas du nombre de pièces, mais de leur taille","Du nombre de pièces traitées, 200, arrondi à la puissance de deux la plus proche par le mécanisme d'enveloppement","Du fait que la clé maîtresse est utilisée 128 fois moins souvent que la clé de données pendant l'écriture initiale","Du rapport entre la taille de la clé maîtresse et celle du nonce, qui fixe le coût de chaque opération d'enveloppement"],"correct":0,"exp":"C'est pourquoi l'enveloppe gagne d'autant plus que les données sont grosses : pour des pièces de 400 Kio, le rapport passe à 12 800. La rotation ne touche jamais au volume, seulement aux clés de 32 octets."},
-  {"q":"Après un mois de rechiffrement à la lecture, 329 enregistrements sur 900 portent encore l'ancienne clé. Que faut-il en faire ?","a":["Mener une campagne de fond sur la queue des enregistrements jamais relus, puis seulement retirer l'ancienne clé du trousseau","Retirer l'ancienne clé immédiatement : les 329 enregistrements concernés n'ayant jamais été relus, personne ne s'apercevra de leur perte","Augmenter la fréquence des lectures applicatives jusqu'à ce que la totalité des enregistrements soit convertie par l'usage normal","Conserver l'ancienne clé indéfiniment : c'est le fonctionnement prévu d'un trousseau, qui accumule les clés au fil des rotations"],"correct":0,"exp":"Retirer la clé détruirait ces 329 enregistrements — le programme le mesure : 400 perdus sur 900 quand la clé de janvier est jetée. Et garder la clé indéfiniment revient à ne jamais terminer la rotation, donc à ne jamais la faire."},
-  {"q":"Une seule clé HMAC sert à l'index aveugle d'une colonne et aux jetons de connexion. Le programme forge 50 connexions sur 50 à partir de la colonne d'index. Quelle est la nature de la faille ?","a":["Une confusion de domaine : deux usages partagent une fonction et une clé, donc la valeur publiée par l'un est exactement le secret attendu par l'autre","Une faiblesse de HMAC-SHA-256 sur les entrées courtes, qui permet de retrouver la clé à partir de quelques valeurs observées","Une fuite de la clé racine, qui a été employée directement au lieu d'être passée dans une fonction de dérivation avant utilisation","Un défaut du générateur d'aléa, les jetons de connexion étant produits sans entropie propre et donc prévisibles"],"correct":0,"exp":"HMAC n'est pas en cause et la clé n'a pas fuité : la colonne d'index CONTIENT la valeur qui sert de jeton. Deux étiquettes HKDF distinctes suffisent, et donnent des clés séparées par 123 bits sur 256."}
+  {"q":"Une clé commise il y a deux ans est retirée du code, et l'historique du dépôt est réécrit. Le programme montre qu'une réécriture atteint 1 copie sur 6. Quelle est la bonne conclusion ?","a":["La réécriture est du rangement, pas une mesure de sécurité : seule la révocation de la clé et l'émission d'une neuve rendent le contrôle du secret","La réécriture suffit dès lors qu'elle est faite sur le dépôt principal, les autres copies se synchronisant automatiquement lors du prochain rapatriement","Il faut d'abord réécrire l'historique, puis attendre que les clones expirent, et ne révoquer la clé que si une utilisation suspecte est constatée","Le problème vient du fait que le dépôt était public : dans un dépôt privé, le secret n'est visible que par l'équipe et la réécriture est inutile"],"correct":0,"explain":"Les clones sur les postes, les bifurcations, le cache de la forge, les artefacts de construction et les sauvegardes ne sont pas touchés par une réécriture. Uber a d'ailleurs perdu 57 millions d'enregistrements à partir d'un dépôt PRIVÉ."},
+  {"q":"Le chiffrement en enveloppe ramène la rotation de 1 638 400 octets à 12 800, soit un rapport de 128. D'où vient exactement ce 128 ?","a":["De la taille d'une pièce divisée par la taille d'une clé : 4 096 octets pour 32 octets. Le rapport ne dépend donc pas du nombre de pièces, mais de leur taille","Du nombre de pièces traitées, 200, arrondi à la puissance de deux la plus proche par le mécanisme d'enveloppement","Du fait que la clé maîtresse est utilisée 128 fois moins souvent que la clé de données pendant l'écriture initiale","Du rapport entre la taille de la clé maîtresse et celle du nonce, qui fixe le coût de chaque opération d'enveloppement"],"correct":0,"explain":"C'est pourquoi l'enveloppe gagne d'autant plus que les données sont grosses : pour des pièces de 400 Kio, le rapport passe à 12 800. La rotation ne touche jamais au volume, seulement aux clés de 32 octets."},
+  {"q":"Après un mois de rechiffrement à la lecture, 329 enregistrements sur 900 portent encore l'ancienne clé. Que faut-il en faire ?","a":["Mener une campagne de fond sur la queue des enregistrements jamais relus, puis seulement retirer l'ancienne clé du trousseau","Retirer l'ancienne clé immédiatement : les 329 enregistrements concernés n'ayant jamais été relus, personne ne s'apercevra de leur perte","Augmenter la fréquence des lectures applicatives jusqu'à ce que la totalité des enregistrements soit convertie par l'usage normal","Conserver l'ancienne clé indéfiniment : c'est le fonctionnement prévu d'un trousseau, qui accumule les clés au fil des rotations"],"correct":0,"explain":"Retirer la clé détruirait ces 329 enregistrements — le programme le mesure : 400 perdus sur 900 quand la clé de janvier est jetée. Et garder la clé indéfiniment revient à ne jamais terminer la rotation, donc à ne jamais la faire."},
+  {"q":"Une seule clé HMAC sert à l'index aveugle d'une colonne et aux jetons de connexion. Le programme forge 50 connexions sur 50 à partir de la colonne d'index. Quelle est la nature de la faille ?","a":["Une confusion de domaine : deux usages partagent une fonction et une clé, donc la valeur publiée par l'un est exactement le secret attendu par l'autre","Une faiblesse de HMAC-SHA-256 sur les entrées courtes, qui permet de retrouver la clé à partir de quelques valeurs observées","Une fuite de la clé racine, qui a été employée directement au lieu d'être passée dans une fonction de dérivation avant utilisation","Un défaut du générateur d'aléa, les jetons de connexion étant produits sans entropie propre et donc prévisibles"],"correct":0,"explain":"HMAC n'est pas en cause et la clé n'a pas fuité : la colonne d'index CONTIENT la valeur qui sert de jeton. Deux étiquettes HKDF distinctes suffisent, et donnent des clés séparées par 123 bits sur 256."}
 ]
 </script>
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["la révoquer","révoquer la clé","la révocation","révocation","révoquer","la remplacer","rotation","la rotation"],"placeholder":"la seule action qui rende sa valeur à un secret trouvé dans un historique de dépôt","hints":["Ce n'est pas un nettoyage : le secret est déjà sorti.","Elle se fait auprès du service qui a émis la clé, et s'accompagne d'une émission neuve.","Un verbe, ou le nom qui en dérive."],"link":{"href":"lecon-09.html","label":"Revoir « Là où une clé ne doit jamais être »"}},
+  {"type":"text","accept":["la révoquer","révoquer la clé","la révocation","révocation","révoquer","la remplacer","rotation","la rotation"],"placeholder":"la seule action qui rende à l'organisation le contrôle d'un secret trouvé dans un historique de dépôt","hints":["Ce n'est pas un nettoyage : le secret est déjà sorti.","Elle se fait auprès du service qui a émis la clé, et s'accompagne d'une émission neuve.","Un verbe, ou le nom qui en dérive."],"link":{"href":"lecon-09.html","label":"Revoir « Là où une clé ne doit jamais être »"}},
   {"type":"code","run":{"expect":"rapport de 128"},"placeholder":"le rapport entre le coût d'une rotation avec une clé unique et avec une enveloppe","hints":["Compte les octets réellement passés dans le chiffrement, dans les deux stratégies.","Une rotation, c'est un déchiffrement suivi d'un rechiffrement : les octets comptent deux fois.","Affiche exactement : « rapport de 128 »."],"link":{"href":"lecon-09.html","label":"Revoir « Chiffrer la clé, pas la donnée »"}},
   {"type":"code","run":{"expect":"10 reconstitutions exactes sur 10"},"placeholder":"le résultat du partage de Shamir sur toutes les combinaisons de 3 parts parmi 5","hints":["Le corps fini à 256 éléments : addition par XOR, multiplication modulo 0x11b.","Le secret est le terme constant du polynôme ; on le retrouve en évaluant Lagrange en zéro.","Affiche exactement : « 10 reconstitutions exactes sur 10 »."],"link":{"href":"lecon-09.html","label":"Revoir « Ne pas perdre la clé la plus haute »"}}
 ]
@@ -1102,7 +1246,7 @@ pendant des années.
 La formule à retenir : UN SECRET COMMIS EST UN SECRET BRÛLÉ. La question n'est pas
 « qui l'a vu ? » mais « combien de temps faut-il pour le remplacer ? » — et c'est
 cette durée-là qu'il faut avoir mesurée avant l'incident, pas pendant.</code></pre></figure></details></div>
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un programme qui compare le coût d'une rotation de clé selon deux stratégies&nbsp;: une clé unique pour tout, et le chiffrement en enveloppe. Compte les octets réellement passés dans la fonction de chiffrement — une rotation étant un déchiffrement suivi d'un rechiffrement. Le programme doit afficher <code>rapport de 128</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l9-exo2.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un programme qui compare le coût d'une rotation de clé selon deux stratégies&nbsp;: une clé unique pour tout, et le chiffrement en enveloppe. Prends 200&nbsp;pièces de 4&nbsp;096&nbsp;octets et des clés de 32&nbsp;octets, et compte les octets réellement passés dans la fonction de chiffrement — une rotation étant un déchiffrement suivi d'un rechiffrement. Le programme doit afficher <code>rapport de 128</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l9-exo2.js"><pre><code class="language-javascript">// --- Socle replié : SHA-256 et HMAC (leçons 1 et 2), ChaCha20 (leçon 2) -------------
 // Ne recopie JAMAIS ce socle dans un vrai projet : appelle la bibliothèque de ta
 // plateforme, qui te donnera AES-GCM ou ChaCha20-Poly1305 en une ligne.
 const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];

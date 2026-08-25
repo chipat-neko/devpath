@@ -703,6 +703,17 @@
   var EXO_HINT_STEPS = [2, 5, 8];
   var EXO_LINK_STEP = 10;
 
+  /* Vrai si l'une des lignes de la sortie est EXACTEMENT la valeur attendue.
+     Les énoncés du site disent « le programme doit afficher X » : un programme qui
+     affiche X parmi d'autres lignes répond donc à la consigne. La comparaison reste
+     stricte — c'est une égalité de ligne entière, pas une inclusion. */
+  function uneLigneEgale(sortie, attendu) {
+    var lignes = String(sortie == null ? "" : sortie).split(/\r?\n/);
+    var cible = normExo(attendu);
+    for (var i = 0; i < lignes.length; i++) if (normExo(lignes[i]) === cible) return true;
+    return false;
+  }
+
   function normExo(s) {
     s = s == null ? "" : String(s);
     s = s
@@ -912,7 +923,13 @@
             if (output == null) {
               pass = (entry.accept || []).some(function (a) { return normExo(a) === normExo(val); });
             } else {
-              pass = normExo(output) === normExo(expect);
+              /* Le programme de l'apprenant affiche presque toujours du contexte autour
+                 de sa conclusion — et les solutions officielles du site en affichent
+                 aussi. On accepte donc DEUX formes, toutes deux strictes : la sortie
+                 entière égale à l'attendu, ou l'UNE DE SES LIGNES égale à l'attendu.
+                 Mesuré avant ce correctif : 19 des 35 solutions publiées du site étaient
+                 déclarées en échec alors qu'elles répondaient juste. */
+              pass = normExo(output) === normExo(expect) || uneLigneEgale(output, expect);
             }
             if (pass) succeed(); else fail();
           });

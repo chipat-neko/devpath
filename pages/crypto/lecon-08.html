@@ -100,7 +100,7 @@
 
             <article class="prose">
 <p>«&nbsp;Nos données sont chiffrées au repos.&nbsp;» La phrase figure dans à peu près tous les documents de conformité, et elle ne veut presque rien dire tant qu'on n'a pas répondu à deux questions&nbsp;: <em>chiffrées où</em>, et <em>contre qui</em>.</p>
-<p>Cette leçon répond aux deux, en mesurant. Elle commence par un tableau qui n'est pas récité mais <strong>calculé</strong>&nbsp;: sept manières d'entrer, trois endroits où chiffrer, et la liste de ce qui reste lisible dans chaque cas. Puis elle descend dans le seul niveau qui protège vraiment la donnée — le champ — et montre les trois façons de s'y tromper.</p>
+<p>Cette leçon répond aux deux, en mesurant. Elle commence par un tableau qui n'est pas récité mais <strong>calculé</strong>&nbsp;: huit manières d'entrer, trois endroits où chiffrer, et la liste de ce qui reste lisible dans chaque cas. Puis elle descend dans le seul niveau qui protège vraiment la donnée — le champ — et montre les trois façons de s'y tromper.</p>
 <div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que ce chapitre démontre, et dans quel ordre</p><p>D'abord le modèle de menace, déduit et non affirmé&nbsp;: ce que couvre le chiffrement de volume, celui de la base, celui du champ, et ce qu'aucun des trois ne couvre. Ensuite le chiffrement d'un champ, avec l'attaque qui survit à un chiffrement parfait — le <strong>déplacement</strong> — et la parade, les données associées. Puis le compromis le plus mal compris du sujet&nbsp;: chercher dans une colonne chiffrée, ce que le déterminisme coûte, et jusqu'où l'index aveugle rattrape le coup. Enfin deux questions de comptage&nbsp;: combien de messages une clé supporte, et combien de copies claires de la donnée traînent ailleurs.</p></div></div>
 
 <h2>Chiffré au repos, oui&nbsp;: mais où&nbsp;?</h2>
@@ -114,7 +114,8 @@
 const SCENARIOS = [
   { nom: 'portable volé, éteint',              capacites: ['fichiers'] },
   { nom: 'disque mis au rebut',                capacites: ['fichiers'] },
-  { nom: 'sauvegarde de base égarée',          capacites: ['fichiers'] },
+  { nom: 'sauvegarde chiffrée égarée',         capacites: ['fichiers'] },
+  { nom: 'export de base envoyé à un tiers',   capacites: ['fichiers', 'export-clair'] },
   { nom: 'injection SQL sur le service',       capacites: ['moteur', 'volume-monte'] },
   { nom: 'administration de la base',          capacites: ['fichiers', 'volume-monte', 'moteur'] },
   { nom: 'instantané de volume à chaud',       capacites: ['fichiers', 'volume-monte'] },
@@ -124,10 +125,10 @@ const SCENARIOS = [
 // Ce qui suffit à contourner chaque protection. Une protection ne « protège » pas dans
 // l'absolu : elle exige une condition, et cette condition est parfois déjà remplie.
 const PROTECTIONS = [
-  { nom: 'chiffrement de volume', contournee: ['volume-monte'],
-    pourquoi: 'le système déchiffre à la volée dès que le volume est monté' },
-  { nom: 'chiffrement de base',   contournee: ['moteur', 'volume-monte'],
-    pourquoi: 'le moteur déchiffre pour répondre aux requêtes, sans rien demander' },
+  { nom: 'chiffrement de volume', contournee: ['volume-monte', 'export-clair'],
+    pourquoi: 'le système déchiffre à la volée dès que le volume est monté, et tout ce qui SORT de la machine en sort en clair' },
+  { nom: 'chiffrement de base',   contournee: ['moteur', 'volume-monte', 'export-clair'],
+    pourquoi: "le moteur déchiffre pour répondre aux requêtes, sans rien demander — et son trousseau vit sur le même volume, donc un instantané l'emporte avec les données" },
   { nom: 'chiffrement de champ',  contournee: ['cle-appli'],
     pourquoi: 'seul le service qui détient la clé peut lire la valeur' },
 ];
@@ -150,7 +151,7 @@ for (const p of PROTECTIONS) {
 console.log('');
 
 // Contre-épreuve : combien de scénarios une absence de protection laisse-t-elle lisibles ?
-const rien = { nom: 'aucune protection', contournee: ['fichiers', 'moteur'] };
+const rien = { nom: 'aucune protection', contournee: ['fichiers', 'moteur', 'export-clair'] };
 console.log('  ' + rien.nom.padEnd(24) + 'percée dans '
   + SCENARIOS.filter(s =&gt; lisible(s, rien)).length + ' scénario(s) sur ' + SCENARIOS.length);
 console.log('');
@@ -185,35 +186,36 @@ console.log('   de fichiers rapporte, et c\'est déjà la moitié des cas de ce 
   scénario                              volume       base      champ
   portable volé, éteint                      .          .          .
   disque mis au rebut                        .          .          .
-  sauvegarde de base égarée                  .          .          .
+  sauvegarde chiffrée égarée                 .          .          .
+  export de base envoyé à un tiers           x          x          .
   injection SQL sur le service               x          x          .
   administration de la base                  x          x          .
   instantané de volume à chaud               x          x          .
   exécution de code dans le service          x          x          x
 
-  chiffrement de volume   percée dans 4 scénario(s) sur 7  — le système déchiffre à la volée dès que le volume est monté
-  chiffrement de base     percée dans 4 scénario(s) sur 7  — le moteur déchiffre pour répondre aux requêtes, sans rien demander
-  chiffrement de champ    percée dans 1 scénario(s) sur 7  — seul le service qui détient la clé peut lire la valeur
+  chiffrement de volume   percée dans 5 scénario(s) sur 8  — le système déchiffre à la volée dès que le volume est monté, et tout ce qui SORT de la machine en sort en clair
+  chiffrement de base     percée dans 5 scénario(s) sur 8  — le moteur déchiffre pour répondre aux requêtes, sans rien demander — et son trousseau vit sur le même volume, donc un instantané l'emporte avec les données
+  chiffrement de champ    percée dans 1 scénario(s) sur 8  — seul le service qui détient la clé peut lire la valeur
 
-  aucune protection       percée dans 7 scénario(s) sur 7
+  aucune protection       percée dans 8 scénario(s) sur 8
 
 Scénarios où la donnée reste illisible, selon les protections activées :
 
-  (aucune)                       0 / 7
-      reste lisible : portable volé, éteint · disque mis au rebut · sauvegarde de base égarée · injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
-  volume                         3 / 7
-      reste lisible : injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
-  base                           3 / 7
-      reste lisible : injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
-  volume + base                  3 / 7
-      reste lisible : injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
-  champ                          6 / 7
+  (aucune)                       0 / 8
+      reste lisible : portable volé, éteint · disque mis au rebut · sauvegarde chiffrée égarée · export de base envoyé à un tiers · injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  volume                         3 / 8
+      reste lisible : export de base envoyé à un tiers · injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  base                           3 / 8
+      reste lisible : export de base envoyé à un tiers · injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  volume + base                  3 / 8
+      reste lisible : export de base envoyé à un tiers · injection SQL sur le service · administration de la base · instantané de volume à chaud · exécution de code dans le service
+  champ                          7 / 8
       reste lisible : exécution de code dans le service
-  volume + champ                 6 / 7
+  volume + champ                 7 / 8
       reste lisible : exécution de code dans le service
-  base + champ                   6 / 7
+  base + champ                   7 / 8
       reste lisible : exécution de code dans le service
-  volume + base + champ          6 / 7
+  volume + base + champ          7 / 8
       reste lisible : exécution de code dans le service
 
 Trois lectures, et aucune n'est rassurante.
@@ -229,10 +231,10 @@ Trois lectures, et aucune n'est rassurante.
    jamais le fait d'empêcher l'exécution de code — cela réduit ce qu'un vol
    de fichiers rapporte, et c'est déjà la moitié des cas de ce tableau.</code></pre></figure>
 <p>Le tableau se lit vite, et il désigne exactement les malentendus courants.</p>
-<p>Le <strong>chiffrement de volume</strong> couvre <strong>3 scénarios sur 7</strong>&nbsp;: le portable volé, le disque au rebut, la sauvegarde égarée. C'est considérable — ce sont les incidents les plus fréquents, et la protection est presque gratuite — mais il ne fait <em>rien</em> contre quoi que ce soit qui arrive à une machine allumée. Le noyau déchiffre à la volée&nbsp;: c'est tout son objet.</p>
-<p>Le <strong>chiffrement de base</strong> couvre les mêmes trois, et pas un de plus. Il ne protège ni de l'injection SQL ni de l'administrateur, qui passent tous deux par le moteur — lequel déchiffre pour eux sans rien demander. C'est un outil de conformité et de protection des fichiers, pas un contrôle d'accès.</p>
-<p>Le <strong>chiffrement de champ</strong> couvre <strong>6 scénarios sur 7</strong>, parce que seul le service qui détient la clé peut lire. Et le septième, celui qu'aucune des trois protections ne couvre, est l'exécution de code dans le service lui-même&nbsp;: c'est lui qui a les clés. Chiffrer au repos ne remplace donc jamais le fait d'empêcher un attaquant d'exécuter du code — cela réduit ce qu'un vol de <em>fichiers</em> rapporte, ce qui est déjà l'essentiel des cas.</p>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Une addition qui n'en est pas une</p><p>Le programme calcule la couverture d'une <em>combinaison</em> de protections en considérant qu'il suffit qu'<strong>une seule couche tienne</strong> — et non que toutes tiennent. La différence n'est pas anodine&nbsp;: avec la seconde lecture, ajouter une protection ferait <em>baisser</em> la couverture, ce qui est absurde. C'est exactement le genre de raisonnement à l'envers qui produit des tableaux de conformité rassurants et faux. La conséquence pratique se lit dans la sortie&nbsp;: «&nbsp;volume + base&nbsp;» couvre 3 scénarios sur 7, «&nbsp;champ&nbsp;» seul en couvre 6.</p></div></div>
+<p>Le <strong>chiffrement de volume</strong> couvre <strong>3 scénarios sur 8</strong>&nbsp;: le portable volé, le disque au rebut, la sauvegarde écrite sur un support lui-même chiffré. C'est considérable — ce sont les incidents les plus fréquents, et la protection est presque gratuite — mais il ne fait <em>rien</em> contre quoi que ce soit qui arrive à une machine allumée. Le noyau déchiffre à la volée&nbsp;: c'est tout son objet. Et il ne fait rien non plus contre ce qui <em>sort</em> de la machine&nbsp;: un export de base part en clair, quel que soit le chiffrement du disque qui l'a produit.</p>
+<p>Le <strong>chiffrement de base</strong> couvre les mêmes trois, et pas un de plus. Il ne protège ni de l'injection SQL ni de l'administrateur, qui passent tous deux par le moteur — lequel déchiffre pour eux sans rien demander —, ni de l'export, pour la même raison. C'est un outil de conformité et de protection des fichiers, pas un contrôle d'accès. Le modèle le fait tomber aussi sur l'instantané de volume pris à chaud, et cela mérite d'être dit explicitement&nbsp;: le trousseau du moteur vit d'ordinaire sur le même volume que les données, donc l'instantané l'emporte avec elles.</p>
+<p>Le <strong>chiffrement de champ</strong> couvre <strong>7 scénarios sur 8</strong>, parce que seul le service qui détient la clé peut lire. Et le huitième, celui qu'aucune des trois protections ne couvre, est l'exécution de code dans le service lui-même&nbsp;: c'est lui qui a les clés. Chiffrer au repos ne remplace donc jamais le fait d'empêcher un attaquant d'exécuter du code — cela réduit ce qu'un vol de <em>fichiers</em> rapporte, soit trois des huit scénarios, et les plus fréquents en pratique.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Une addition qui n'en est pas une</p><p>Le programme calcule la couverture d'une <em>combinaison</em> de protections en considérant qu'il suffit qu'<strong>une seule couche tienne</strong> — et non que toutes tiennent. La différence n'est pas anodine, et elle se lit sur une ligne précise du tableau&nbsp;: «&nbsp;volume + champ&nbsp;» couvre <strong>7 scénarios sur 8</strong>. Avec la lecture fautive — «&nbsp;toutes doivent tenir&nbsp;» —, la même ligne retomberait à 3, c'est-à-dire qu'<em>ajouter</em> le chiffrement de volume ferait <em>perdre</em> quatre scénarios. C'est exactement le genre de raisonnement à l'envers qui produit des tableaux de conformité rassurants et faux.</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 230" role="img" aria-label="Les trois niveaux où l'on peut chiffrer, empilés du disque vers l'application, avec le point où chacun déchiffre. Le chiffrement de volume déchiffre dès que le système monte le disque, donc tout ce qui est au-dessus voit les données en clair. Le chiffrement de base déchiffre dans le moteur, donc toute requête, légitime ou injectée, reçoit du clair. Le chiffrement de champ déchiffre dans le service applicatif, qui est le seul à détenir la clé. Un attaquant entré au niveau du disque est arrêté par les trois ; entré par le moteur, seul le chiffrement de champ le retient ; entré dans le service, aucun ne le retient.">
@@ -305,6 +307,11 @@ function ouvrir(paquet, associees){
   if (attendue !== paquet.marque) return null;                 // la marque ne colle pas : on refuse
   return String.fromCharCode(...chacha20(CLE, paquet.nonce, paquet.chiffre, 1));
 }
+// La version fautive du service : elle reçoit le contexte de la ligne… et ne s'en sert pas.
+// C'est exactement la ligne de code qui manque dans les vrais services, et rien d'autre.
+function ouvrirSansLien(paquet, contexteDeLaLigne){
+  return ouvrir(paquet, '');                                   // le paramètre est là, ignoré
+}
 
 const EMPLOYES = [
   { id: 101, nom: 'Amina',   salaire: '31200' },
@@ -316,6 +323,10 @@ const EMPLOYES = [
   { id: 107, nom: 'Gaëlle',  salaire: '118000' },
   { id: 108, nom: 'Hugo',    salaire: '30500' },
 ];
+
+// Le contexte d'une ligne : la table, la colonne, l'identifiant. On l'écrit tout de
+// suite, parce que les deux versions le RECEVRONT — seule la seconde s'en servira.
+const contexte = id =&gt; 'paie|salaire|' + id;
 
 // --- Version 1 : la marque ne couvre QUE la valeur. -------------------------------
 const sansLien = EMPLOYES.map(e =&gt; ({ id: e.id, nom: e.nom, paie: sceller(e.salaire, '') }));
@@ -334,21 +345,23 @@ let acceptesSans = 0, essais = 0;
 for (const cible of sansLien) for (const source of sansLien) {
   if (cible.id === source.id) continue;
   essais++;
-  const vole = ouvrir(source.paie, '');            // le service lit la ligne de « cible »…
-  if (vole !== null) acceptesSans++;               // …et y trouve la valeur de « source »
+  const vole = ouvrirSansLien(source.paie, contexte(cible.id));   // le service lit la ligne « cible »…
+  if (vole !== null) acceptesSans++;                             // …et y trouve la valeur de « source »
 }
 console.log('Déplacements tentés : ' + essais + ' (chaque chiffré posé sur chaque autre ligne).');
 console.log('  acceptés par le service : ' + acceptesSans + ' sur ' + essais);
 console.log('  exemple : la ligne ' + sansLien[0].id + ' (' + sansLien[0].nom + ') reçoit le chiffré de la ligne '
-  + sansLien[6].id + ' → le service affiche ' + ouvrir(sansLien[6].paie, '') + ' €');
+  + sansLien[6].id + ' → le service affiche ' + ouvrirSansLien(sansLien[6].paie, contexte(sansLien[0].id)) + ' €');
+let normalesSans = 0;
+for (const l of sansLien) if (ouvrirSansLien(l.paie, contexte(l.id)) === EMPLOYES.find(e =&gt; e.id === l.id).salaire) normalesSans++;
+console.log('  lectures normales réussies : ' + normalesSans + ' sur ' + sansLien.length
+  + "   (le service marche parfaitement — c'est bien le problème)");
 console.log('');
 console.log('Le chiffrement a parfaitement tenu. C\'est la LIAISON qui manquait : rien');
 console.log('n\'attachait ce chiffré à cette ligne-là.');
 console.log('');
 
 // --- Version 2 : la marque couvre aussi le contexte. ------------------------------
-// Le contexte, ici : la table, la colonne, et l'identifiant de la ligne.
-const contexte = id =&gt; 'paie|salaire|' + id;
 const avecLien = EMPLOYES.map(e =&gt; ({ id: e.id, nom: e.nom, paie: sceller(e.salaire, contexte(e.id)) }));
 
 let acceptesAvec = 0;
@@ -384,6 +397,7 @@ Aucun salaire n'est lisible : les valeurs sont bien chiffrées.
 Déplacements tentés : 56 (chaque chiffré posé sur chaque autre ligne).
   acceptés par le service : 56 sur 56
   exemple : la ligne 101 (Amina) reçoit le chiffré de la ligne 107 → le service affiche 118000 €
+  lectures normales réussies : 8 sur 8   (le service marche parfaitement — c'est bien le problème)
 
 Le chiffrement a parfaitement tenu. C'est la LIAISON qui manquait : rien
 n'attachait ce chiffré à cette ligne-là.
@@ -402,9 +416,10 @@ mettre l'identifiant de ligne interdit le déplacement entre lignes, mettre
 le nom de la colonne interdit le déplacement entre colonnes, mettre un numéro
 de version interdit de faire revenir une ancienne valeur à la place de la neuve.</code></pre></figure>
 <p><strong>56&nbsp;déplacements tentés, 56&nbsp;acceptés.</strong> L'attaquant n'a rien déchiffré&nbsp;: il a copié le chiffré d'une ligne dans une autre, et le service a affiché le salaire du voisin sans broncher. Le chiffrement a parfaitement tenu&nbsp;; la marque aussi. Ce qui manquait, c'est la <strong>liaison</strong>&nbsp;: rien n'attachait ce chiffré à <em>cette</em> ligne-là.</p>
-<p>La correction porte un nom dans les normes&nbsp;: les <strong>données associées</strong>, le «&nbsp;AD&nbsp;» de AEAD. On fait entrer dans le calcul de la marque un contexte qui n'est pas chiffré, seulement authentifié — ici la table, la colonne et l'identifiant de ligne. Le déchiffrement échoue alors dès que le chiffré est présenté ailleurs&nbsp;: <strong>0 déplacement accepté sur 56</strong>, pour <strong>8 lectures normales réussies sur 8</strong>. Cette seconde mesure est la contre-épreuve&nbsp;; sans elle, «&nbsp;0 sur 56&nbsp;» pourrait simplement vouloir dire que plus rien ne fonctionne.</p>
+<p>Notez la façon dont le programme modélise le défaut&nbsp;: la version fautive du service <em>reçoit</em> le contexte de la ligne qu'elle est en train de lire — et ne s'en sert pas. C'est littéralement la ligne de code qui manque dans les vrais services, et rien d'autre. Ses lectures normales réussissent d'ailleurs toutes, <strong>8 sur 8</strong>&nbsp;: le service fonctionne parfaitement, c'est bien le problème.</p>
+<p>La correction porte un nom dans les normes&nbsp;: les <strong>données associées</strong>, le «&nbsp;AD&nbsp;» de AEAD. On fait entrer dans le calcul de la marque un contexte qui n'est pas chiffré, seulement authentifié — ici la table, la colonne et l'identifiant de ligne. Le déchiffrement échoue alors dès que le chiffré est présenté ailleurs&nbsp;: <strong>0 déplacement accepté sur 56</strong>, pour <strong>8 lectures normales réussies sur 8</strong>. Les deux mesures ensemble font la démonstration&nbsp;: 56 puis 0 avec le même code de test, et le service qui continue de lire ses propres lignes.</p>
 <p>Le choix de ce qu'on met dans les données associées est une décision de conception, et il se raisonne&nbsp;: l'identifiant de ligne interdit le déplacement entre lignes, le nom de la colonne interdit le déplacement entre colonnes, un numéro de version interdit de faire revenir une ancienne valeur à la place de la neuve. Ce qu'on n'y met pas reste libre de bouger.</p>
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que le programme fait, et ce qu'il faut faire</p><p>Le programme chiffre avec ChaCha20 puis authentifie avec HMAC-SHA-256, parce que ces deux fonctions ont été écrites dans les leçons précédentes et se relisent. Dans un service, on appelle <strong>AES-GCM</strong> ou <strong>ChaCha20-Poly1305</strong> — un seul appel, qui fait les deux, et qui accepte un paramètre pour les données associées. La construction «&nbsp;chiffrer puis authentifier&nbsp;» est correcte quand elle est faite ainsi, mais elle laisse trois occasions de se tromper&nbsp;: authentifier avant de chiffrer, oublier le nonce dans la marque, comparer les marques avec un test qui s'arrête au premier écart. La leçon précédente a mesuré ce que coûte la troisième.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que le programme fait, et ce qu'il faut faire</p><p>Le programme chiffre avec ChaCha20 puis authentifie avec HMAC-SHA-256, parce que ces deux fonctions ont été écrites dans les leçons précédentes et se relisent. Dans un service, on appelle <strong>AES-GCM</strong> ou <strong>ChaCha20-Poly1305</strong> — un seul appel, qui fait les deux, et qui accepte un paramètre pour les données associées. La construction «&nbsp;chiffrer puis authentifier&nbsp;» est correcte quand elle est faite ainsi, mais elle laisse trois occasions de se tromper&nbsp;: authentifier avant de chiffrer, oublier le nonce dans la marque, comparer les marques avec un test qui s'arrête au premier écart. La leçon précédente a mesuré ce que coûte la troisième — et le programme ci-dessus la commet, volontairement, pour rester lisible&nbsp;: sa comparaison de marques est un simple <code>!==</code> sur des chaînes. Dans un service, on emploie la comparaison en temps constant de la leçon&nbsp;7, ou l'on appelle un AEAD qui s'en charge.</p></div></div>
 
 <h2>Le compromis le plus mal compris&nbsp;: chercher</h2>
 <p>Une colonne chiffrée ne se cherche plus. C'est la vraie difficulté du chiffrement de champ, et c'est là que les projets dérapent, parce que la solution qui vient à l'esprit fonctionne — au sens où la recherche remarche.</p>
@@ -461,7 +476,9 @@ const tirerMotif = () =&gt; { const u = alea() * cumul[cumul.length - 1]; return
 
 const CLE = sha256o(bof('clé de chiffrement déterministe'));
 // Déterministe : pas de nonce, ou — ce qui revient au même — un nonce dérivé de la valeur.
-const chiffrerDet = v =&gt; hex(chacha20(CLE, [0,0,0,0,0,0,0,0,0,0,0,0], bof(v), 1)).slice(0, 24);
+// Pas de troncature : un chiffrement à flot rend un chiffré EXACTEMENT aussi long que
+// le clair, et c'est une fuite à part entière — mesurée plus bas.
+const chiffrerDet = v =&gt; hex(chacha20(CLE, [0,0,0,0,0,0,0,0,0,0,0,0], bof(v), 1));
 
 const DOSSIERS = [];
 for (let i = 0; i &lt; 3000; i++) DOSSIERS.push({ id: i, motif: tirerMotif() });
@@ -509,8 +526,10 @@ console.log('');
 const parLongueur = new Map();
 for (const [m] of MOTIFS) { const L = bof(m).length; parLongueur.set(L, (parLongueur.get(L) || 0) + 1); }
 const uniques = [...MOTIFS].filter(([m]) =&gt; parLongueur.get(bof(m).length) === 1).length;
+// Contrôle : la longueur du CHIFFRÉ est bien celle du clair (deux caractères hexadécimaux par octet).
+const memeLongueur = MOTIFS.every(([m]) =&gt; chiffrerDet(m).length === 2 * bof(m).length);
 console.log('  motifs que leur seule LONGUEUR distingue ... ' + uniques + ' sur ' + MOTIFS.length
-  + '   (le chiffré fait la taille du clair)');
+  + '   (chiffré aussi long que le clair : ' + (memeLongueur ? 'vérifié' : 'NON') + ')');
 console.log('');
 console.log('Les erreurs se concentrent là où deux motifs ont des parts voisines : le rang');
 console.log('s\'y inverse par simple fluctuation d\'échantillon. Partout où l\'écart est net,');
@@ -533,8 +552,8 @@ console.log('Voilà le vrai compromis, et il n\'a pas de solution gratuite : le 
 console.log('achète la recherche en vendant la fréquence. Les deux mesures ci-dessus sont');
 console.log('les deux faces d\'un même choix — 12 valeurs distinctes contre 3 000.');</code></pre></figure>
 <figure class="code-block" data-file="deterministe.txt"><pre><code class="language-plaintext">Table de 3 000 dossiers, colonne « motif » chiffrée de façon déterministe :
-     0  301976c235cda39d773f3cf3
-     1  301976c235cda39d773f3cf3
+     0  301976c235cda39d773f3cf31cea50a5c83b
+     1  301976c235cda39d773f3cf31cea50a5c83b
      2  350d7cd73583a68c3e3720
   …
 
@@ -543,9 +562,9 @@ La recherche par égalité fonctionne — et c'est exactement ce qu'on voulait.
 
 Ce qu'il obtient en comptant, sans aucune clé :
   rang | occurrences | part observée | chiffré
-     1 |         592 |        19,7 % | 301976c235cda39d773f3cf3
-     2 |         520 |        17,3 % | 310971db299ba2943b3d23f9
-     3 |         361 |        12,0 % | 27036ad83998b5d833373cef
+     1 |         592 |        19,7 % | 301976c235cda39d773f3cf31cea50a5c83b
+     2 |         520 |        17,3 % | 310971db299ba2943b3d23f901ed
+     3 |         361 |        12,0 % | 27036ad83998b5d833373cef0ef550
      4 |         341 |        11,4 % | 350d7cd73583a68c3e3720
   …
 
@@ -553,7 +572,7 @@ Il apparie les rangs observés aux rangs publiés, et rien de plus :
   motifs correctement identifiés ... 10 sur 12
   dossiers correctement étiquetés ... 2536 sur 3000  (84,5 %)
 
-  motifs que leur seule LONGUEUR distingue ... 5 sur 12   (le chiffré fait la taille du clair)
+  motifs que leur seule LONGUEUR distingue ... 5 sur 12   (chiffré aussi long que le clair : vérifié)
 
 Les erreurs se concentrent là où deux motifs ont des parts voisines : le rang
 s'y inverse par simple fluctuation d'échantillon. Partout où l'écart est net,
@@ -716,8 +735,8 @@ un index aveugle convient aux champs à FORTE cardinalité — une adresse, un
 identifiant, un numéro. Sur un champ à douze valeurs, aucune largeur ne donne
 à la fois une recherche utile et une fréquence muette. Il faut alors accepter
 de ne pas chercher sur ce champ, ou le sortir de la base chiffrée.</code></pre></figure>
-<p>Sur 5&nbsp;000 valeurs toutes différentes, le mécanisme fonctionne exactement comme prévu&nbsp;: à 8&nbsp;bits, une recherche rend <strong>20,46&nbsp;lignes</strong> en moyenne pour une seule vraie&nbsp;; à 12&nbsp;bits, <strong>2,22</strong>&nbsp;; à 20&nbsp;bits, plus aucun faux positif — et l'index est alors redevenu un chiffrement déterministe, avec la même fuite. Les faux positifs ne sont pas un défaut&nbsp;: ils sont le mécanisme. Ils coûtent quelques déchiffrements de plus, et ils brouillent ce que l'index laisse voir.</p>
-<p>La seconde moitié du programme est celle qu'on ne trouve pas dans les billets de blog. Sur un champ à <strong>douze</strong> valeurs possibles, il faut descendre à 2&nbsp;bits pour que les groupes se mélangent — et une recherche rend alors <strong>1&nbsp;262&nbsp;dossiers sur 3&nbsp;000</strong>, 42&nbsp;% de la table. Même là, un motif reste seul dans son groupe. À 8&nbsp;bits, ils sont <strong>10 sur 12</strong> à être isolés, ce qui rend la fréquence lisible à nouveau.</p>
+<p>Sur 5&nbsp;000 valeurs toutes différentes, le mécanisme fonctionne exactement comme prévu&nbsp;: à 8&nbsp;bits, une recherche rend <strong>20,46&nbsp;lignes</strong> en moyenne pour une seule vraie&nbsp;; à 12&nbsp;bits, <strong>2,22</strong>&nbsp;; à 20&nbsp;bits, <strong>1,00</strong> — soit un reste de collisions que l'arrondi à deux décimales masque, et qu'il faut 24&nbsp;bits pour faire disparaître tout à fait. L'index est alors redevenu un chiffrement déterministe&nbsp;: il ne rend plus de faux positif, mais il rend l'égalité lisible — et, sur un champ dont les valeurs se répètent, la fréquence avec. Les faux positifs ne sont pas un défaut&nbsp;: ils sont le mécanisme. Ils coûtent quelques déchiffrements de plus, et ils brouillent ce que l'index laisse voir.</p>
+<p>La seconde moitié du programme est celle qu'on ne trouve pas dans les billets de blog. Sur un champ à <strong>douze</strong> valeurs possibles, les groupes commencent à se mélanger dès 4&nbsp;bits — 8&nbsp;groupes, mais <strong>4&nbsp;motifs encore seuls</strong> dans le leur —, et il faut descendre à <strong>2&nbsp;bits</strong> pour n'en laisser qu'un seul isolé. À ce réglage, le plus gros groupe compte <strong>1&nbsp;262&nbsp;dossiers sur 3&nbsp;000</strong>&nbsp;: une recherche portant sur le motif le plus fréquent en rend 42&nbsp;% de la table. À 8&nbsp;bits, <strong>10&nbsp;motifs sur 12</strong> sont à nouveau seuls dans leur groupe, et la fréquence redevient lisible.</p>
 <p>La règle qui en sort n'est pas cryptographique, elle est de conception&nbsp;: un index aveugle convient aux champs à <strong>forte cardinalité</strong> — une adresse, un numéro, un identifiant. Sur un champ à faible cardinalité, aucune largeur ne donne à la fois une recherche utile et une fréquence muette. Il faut alors accepter de ne pas chercher sur ce champ, ou le sortir de la base chiffrée.</p>
 
 <h2>Combien de messages une clé supporte-t-elle&nbsp;?</h2>
@@ -753,8 +772,26 @@ console.log('  prédit par la formule √(π/2)·2^(n/2) .. ' + fr(prevu.toFixed
 console.log('  écart ................................ ' + fr((100 * (mesure - prevu) / prevu).toFixed(1)) + ' %');
 console.log('  minimum ' + mini + ', maximum ' + maxi + ' sur les ' + ESSAIS + ' essais');
 console.log('');
-console.log('La formule tient. On peut donc l\'appliquer là où la simulation est hors');
-console.log('de portée — c\'est-à-dire aux vraies tailles.');
+console.log('');
+// Cette première mesure valide l'espérance du RANG de la première répétition. Or ce
+// n'est PAS la formule qu'on applique ensuite : celle-là donne, pour q messages, la
+// PROBABILITÉ qu'une répétition survienne (environ q²/2^(n+1)). Vérifions-la aussi.
+const q = Math.round(Math.sqrt(Math.pow(2, BITS + 1) * Math.pow(2, -6)));   // p visé : 2^-6
+let avecCollision = 0;
+const TIRAGES = 8000;
+for (let e = 0; e &lt; TIRAGES; e++) {
+  const vus = new Set();
+  let collision = false;
+  for (let i = 0; i &lt; q; i++) { const n2 = Math.floor(alea() * ESPACE); if (vus.has(n2)) { collision = true; break; } vus.add(n2); }
+  if (collision) avecCollision++;
+}
+console.log("Et la formule que l'on APPLIQUE ensuite, q = \u221a(2^(n+1)\u00b7p), sur le même nonce :");
+console.log('  pour p visé = 2^-6 = ' + fr(Math.pow(2, -6).toFixed(4)) + ', elle donne q = ' + mil(q) + ' messages');
+console.log('  collisions observées sur ' + mil(TIRAGES) + ' séries de ' + mil(q) + ' messages : '
+  + avecCollision + ', soit ' + fr((avecCollision / TIRAGES).toFixed(4)));
+console.log('');
+console.log('Les deux formules tiennent — la seconde majore légèrement, comme prévu.');
+console.log("On peut donc l'appliquer là où la simulation est hors de portée : aux vraies tailles.");
 console.log('');
 
 // --- Combien de messages avant que la répétition ne devienne « probable » ? -------
@@ -813,11 +850,27 @@ for (let m = 0; m &lt; machines; m++)
 console.log('Même chose avec un identifiant de machine dans le nonce :');
 console.log('  RÉPÉTITIONS .......... ' + repetitions2 + ' sur ' + (machines * parMachine));
 console.log('');
-console.log('Ces deux mesures résument le choix. Le compteur ne répète JAMAIS, à une');
-console.log('condition : que l\'état soit unique et survive aux redémarrages. Une machine');
-console.log('clonée, une sauvegarde restaurée, un conteneur relancé — et le compteur');
-console.log('repart de zéro avec la même clé. Le tirage au sort, lui, ne demande aucun');
-console.log('état, et se paie en bornes : ' + mil(messagesPour(96, CIBLE)) + ' messages pour 96 bits de nonce.');
+// Et le cas que le remède NE corrige pas : la machine 1 est clonée pour absorber une
+// pointe de charge. Le clone porte le même identifiant, et son compteur repart de zéro.
+const emis3 = new Set();
+let repetitions3 = 0;
+for (const id of ['machine0', 'machine1', 'machine1-clone-portant-le-meme-identifiant']) {
+  const etiquette = id.startsWith('machine1') ? 'machine1' : id;      // le clone hérite de l'identifiant
+  for (let c = 1; c &lt;= parMachine; c++) {
+    const nonce = etiquette + ':' + c;
+    if (emis3.has(nonce)) repetitions3++;
+    emis3.add(nonce);
+  }
+}
+console.log('La panne que ce remède NE corrige pas — une machine clonée, même identifiant :');
+console.log('  RÉPÉTITIONS .......... ' + repetitions3 + ' sur ' + (3 * parMachine));
+console.log('');
+console.log('Ces trois mesures résument le choix. Le compteur ne répète JAMAIS, à deux');
+console.log("conditions : que son état survive aux redémarrages, ET qu'aucune machine ne");
+console.log("porte le même identifiant qu'une autre. Une machine clonée, une sauvegarde");
+console.log('restaurée, un conteneur relancé — et le compteur repart de zéro avec la même');
+console.log('clé. Le tirage au sort, lui, ne demande aucun état, et se paie en bornes :');
+console.log('  ' + mil(messagesPour(96, CIBLE)) + ' messages pour 96 bits de nonce.');
 console.log('');
 console.log('D\'où la troisième voie, la plus employée aujourd\'hui dans les bases : ne pas');
 console.log('choisir. On tire une clé NEUVE par enregistrement ou par lot — la leçon 9');
@@ -828,8 +881,13 @@ console.log('montre comment —, et la question du nombre de messages par clé d
   écart ................................ -2,7 %
   minimum 23, maximum 3770 sur les 400 essais
 
-La formule tient. On peut donc l'appliquer là où la simulation est hors
-de portée — c'est-à-dire aux vraies tailles.
+
+Et la formule que l'on APPLIQUE ensuite, q = √(2^(n+1)·p), sur le même nonce :
+  pour p visé = 2^-6 = 0,0156, elle donne q = 181 messages
+  collisions observées sur 8 000 séries de 181 messages : 108, soit 0,0135
+
+Les deux formules tiennent — la seconde majore légèrement, comme prévu.
+On peut donc l'appliquer là où la simulation est hors de portée : aux vraies tailles.
 
 Messages chiffrables avec UNE clé et un nonce TIRÉ AU SORT,
 pour une probabilité de répétition inférieure à 2^-32 :
@@ -853,18 +911,22 @@ Compteur, 2 machines partageant la même clé, 500 messages chacune :
 Même chose avec un identifiant de machine dans le nonce :
   RÉPÉTITIONS .......... 0 sur 1000
 
-Ces deux mesures résument le choix. Le compteur ne répète JAMAIS, à une
-condition : que l'état soit unique et survive aux redémarrages. Une machine
-clonée, une sauvegarde restaurée, un conteneur relancé — et le compteur
-repart de zéro avec la même clé. Le tirage au sort, lui, ne demande aucun
-état, et se paie en bornes : 6 074 001 000 messages pour 96 bits de nonce.
+La panne que ce remède NE corrige pas — une machine clonée, même identifiant :
+  RÉPÉTITIONS .......... 500 sur 1500
+
+Ces trois mesures résument le choix. Le compteur ne répète JAMAIS, à deux
+conditions : que son état survive aux redémarrages, ET qu'aucune machine ne
+porte le même identifiant qu'une autre. Une machine clonée, une sauvegarde
+restaurée, un conteneur relancé — et le compteur repart de zéro avec la même
+clé. Le tirage au sort, lui, ne demande aucun état, et se paie en bornes :
+  6 074 001 000 messages pour 96 bits de nonce.
 
 D'où la troisième voie, la plus employée aujourd'hui dans les bases : ne pas
 choisir. On tire une clé NEUVE par enregistrement ou par lot — la leçon 9
 montre comment —, et la question du nombre de messages par clé disparaît.</code></pre></figure>
-<p>La formule est d'abord vérifiée là où elle est vérifiable&nbsp;: sur un nonce de 20&nbsp;bits, la première répétition survient en moyenne au message n°&nbsp;<strong>1&nbsp;249,2</strong>, contre <strong>1&nbsp;283,4</strong> prédits — <strong>2,7&nbsp;% d'écart</strong> sur 400&nbsp;essais, avec un minimum à 23 et un maximum à 3&nbsp;770. On peut donc l'appliquer aux vraies tailles.</p>
+<p>Deux formules interviennent, et le programme vérifie les deux — parce qu'elles ne disent pas la même chose. La première donne l'espérance du <em>rang</em> de la première répétition&nbsp;: sur un nonce de 20&nbsp;bits, elle survient en moyenne au message n°&nbsp;<strong>1&nbsp;249,2</strong>, contre <strong>1&nbsp;283,4</strong> prédits — <strong>2,7&nbsp;% d'écart</strong> sur 400&nbsp;essais, avec un minimum à 23 et un maximum à 3&nbsp;770. La seconde, celle qu'on applique ensuite, donne la <em>probabilité</em> qu'une répétition survienne au bout de q messages&nbsp;: elle annonce 0,0156 pour 181&nbsp;messages sur ce même nonce, et l'on en observe <strong>0,0135</strong> sur 8&nbsp;000&nbsp;séries — elle majore légèrement, ce qui est la propriété attendue d'une borne. On peut donc l'appliquer aux vraies tailles.</p>
 <p>Avec un nonce de <strong>96&nbsp;bits</strong> tiré au sort — la taille normale d'AES-GCM et de ChaCha20-Poly1305 —, une clé supporte environ <strong>6&nbsp;074&nbsp;001&nbsp;000&nbsp;messages</strong> avant que la probabilité de répétition n'atteigne 2<sup>−32</sup>. Le <strong>NIST SP&nbsp;800-38D</strong>, §8.3, énonce la même contrainte arrondie à la puissance de deux inférieure&nbsp;: pas plus de <strong>2<sup>32</sup>&nbsp;invocations</strong> avec une même clé lorsque le vecteur d'initialisation est tiré au sort. Avec un nonce de <strong>64&nbsp;bits</strong>, en revanche, la borne tombe à <strong>92&nbsp;682&nbsp;messages</strong> — un chiffre qu'une colonne de base atteint dans la semaine.</p>
-<p>L'autre solution est le <strong>compteur</strong>, qui ne répète jamais… tant que son état est unique et survit aux redémarrages. Le programme montre ce qu'il advient sinon&nbsp;: deux machines partageant la même clé, chacune avec son compteur parti de zéro, produisent <strong>500&nbsp;répétitions sur 1&nbsp;000&nbsp;messages</strong>. Un identifiant de machine dans le nonce ramène le compte à <strong>0</strong>. Une machine clonée, une sauvegarde restaurée, un conteneur relancé&nbsp;: ce sont là les incidents ordinaires d'une exploitation, et le compteur y est exposé.</p>
+<p>L'autre solution est le <strong>compteur</strong>, qui ne répète jamais… sous deux conditions, et le programme les mesure toutes les deux. D'abord l'unicité&nbsp;: deux machines partageant la même clé, chacune avec son compteur parti de zéro, produisent <strong>500&nbsp;répétitions sur 1&nbsp;000&nbsp;messages</strong>&nbsp;; un identifiant de machine dans le nonce ramène le compte à <strong>0</strong>. Ensuite la persistance — et c'est là que le remède précédent <em>ne suffit plus</em>&nbsp;: qu'une des machines soit clonée pour absorber une pointe de charge, et le clone porte le même identifiant avec un compteur reparti de zéro. Mesuré&nbsp;: <strong>500&nbsp;répétitions sur 1&nbsp;500&nbsp;messages</strong>, malgré l'identifiant. Une machine clonée, une sauvegarde restaurée, un conteneur relancé&nbsp;: ce sont là les incidents ordinaires d'une exploitation, et le compteur y est exposé.</p>
 <p>D'où la troisième voie, la plus employée aujourd'hui, et qui fait la transition avec la leçon suivante&nbsp;: <strong>ne pas choisir</strong>. On tire une clé neuve par enregistrement ou par lot, et la question du nombre de messages par clé disparaît — au prix d'une question nouvelle, celle de la gestion de toutes ces clés.</p>
 
 <h2>La donnée est chiffrée. Ses copies ne le sont pas.</h2>
@@ -911,7 +973,12 @@ let _g = 31415926 &gt;&gt;&gt; 0;
 const alea = () =&gt; { _g ^= _g &lt;&lt; 13; _g &gt;&gt;&gt;= 0; _g ^= _g &gt;&gt;&gt; 17; _g ^= _g &lt;&lt; 5; _g &gt;&gt;&gt;= 0; return _g / 4294967296; };
 const fr = x =&gt; String(x).replace('.', ',');
 
-const CLE = sha256o(bof('clé applicative'));
+// Deux clés, deux usages — jamais une seule pour les deux. C'est la règle de la
+// leçon 9, et elle s'applique dès ici : la clé qui chiffre ne doit pas être celle qui
+// calcule l'index, sans quoi l'index publié devient un oracle sur le chiffrement.
+const RACINE = bof('racine du service');
+const CLE = sha256o([...RACINE, ...bof('|chiffrement des champs|v1')]);
+const CLE_INDEX = sha256o([...RACINE, ...bof('|index aveugle|v1')]);
 let n = 0;
 const chiffrer = v =&gt; { n++; const nonce = [n &amp; 255, (n &gt;&gt; 8) &amp; 255, 0,0,0,0,0,0,0,0,0,0];
   return hex(nonce) + ':' + hex(chacha20(CLE, nonce, bof(v), 1)); };
@@ -937,7 +1004,7 @@ function creerDossier(secret, masquer){
   // 3. L'index de recherche, alimenté par l'application AVANT chiffrement — sauf si on
   //    lui donne l'index aveugle de la section précédente au lieu de la valeur.
   traces['index de recherche'].push('doc ' + traces['table chiffrée'].length + ' : '
-    + (masquer ? hex(hmac(CLE, bof(secret))).slice(0, 4) : secret));
+    + (masquer ? hex(hmac(CLE_INDEX, bof(secret))).slice(0, 4) : secret));
   // 4. Le cache mémoire, sérialisé sur disque à l'arrêt.
   if (alea() &lt; 0.25) traces['cache disque'].push('dossier:' + traces['table chiffrée'].length + '=' + (masquer ? chiffrer(secret) : secret));
   // 5. Une erreur sur cinquante remonte le contexte complet au support.
@@ -1023,7 +1090,7 @@ un INVENTAIRE — et cet inventaire ne se fait pas à la fin, il se fait avant.<
 <h2>Cas réel</h2>
 <p><strong>Adobe, octobre 2013.</strong> Environ <strong>153&nbsp;millions</strong> de comptes sont exposés. Chaque enregistrement contient un identifiant, une adresse électronique, le mot de passe <em>chiffré</em> — et l'indice de mot de passe, <strong>en clair</strong>.</p>
 <p>Trois décisions se sont additionnées, et la leçon en a examiné deux. Première décision&nbsp;: les mots de passe étaient <strong>chiffrés</strong> et non hachés — ce que la leçon&nbsp;7 a traité. Deuxième&nbsp;: le chiffrement employait le Triple DES en mode <strong>ECB</strong>, c'est-à-dire un chiffrement <em>déterministe</em>, avec la <strong>même clé pour tout le monde</strong>. Deux personnes ayant choisi le même mot de passe portaient donc, octet pour octet, le même chiffré — la situation exacte du troisième programme de cette leçon, à ceci près qu'il s'agissait de 153&nbsp;millions de lignes. Troisième&nbsp;: l'indice de mot de passe voyageait en clair à côté, ce qui est le cas d'école du chemin annexe du dernier programme.</p>
-<p>Jeremi Gosney, du Stricture Consulting Group, a mis <strong>environ trois heures</strong> à établir les cent mots de passe les plus fréquents. La méthode ne comportait aucune cryptanalyse&nbsp;: il a regroupé les enregistrements par chiffré identique — le mode ECB s'en chargeait —, lu les milliers d'indices attachés à chaque groupe, et constaté qu'un nombre considérable d'utilisateurs avaient tout simplement écrit leur mot de passe dans l'indice. Le décompte sur les 38&nbsp;millions de comptes actifs donne <strong>1&nbsp;911&nbsp;938&nbsp;utilisateurs</strong> pour <code>123456</code>, <strong>446&nbsp;162</strong> pour <code>123456789</code>, <strong>345&nbsp;834</strong> pour <code>password</code>.</p>
+<p>Jeremi Gosney, du Stricture Consulting Group, a mis <strong>environ trois heures</strong> à établir les cent mots de passe les plus fréquents. La méthode ne comportait aucune cryptanalyse&nbsp;: il a regroupé les enregistrements par chiffré identique — le mode ECB s'en chargeait —, lu les milliers d'indices attachés à chaque groupe, et constaté qu'un nombre considérable d'utilisateurs avaient tout simplement écrit leur mot de passe dans l'indice. Le décompte, établi sur les <strong>130&nbsp;324&nbsp;429&nbsp;enregistrements</strong> analysés, donne <strong>1&nbsp;911&nbsp;938&nbsp;utilisateurs</strong> pour <code>123456</code>, <strong>446&nbsp;162</strong> pour <code>123456789</code>, <strong>345&nbsp;834</strong> pour <code>password</code>.</p>
 <p>Ce qu'il faut en retenir tient en une phrase, et elle vaut pour tout ce chapitre&nbsp;: <strong>le Triple DES n'a pas été cassé.</strong> La clé n'a jamais été retrouvée. C'est le <em>déterminisme</em> qui a groupé, et un <em>chemin annexe</em> qui a nommé les groupes. Aucune des deux failles n'est une faiblesse d'algorithme.</p>
 
 <h2>Antisèche</h2>
@@ -1032,16 +1099,16 @@ un INVENTAIRE — et cet inventaire ne se fait pas à la fin, il se fait avant.<
     <caption>Chiffrer au repos&nbsp;: ce que chaque niveau couvre, et ce qu'il coûte</caption>
     <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
     <tbody>
-      <tr><td>Chiffrement de volume</td><td>Couvre <strong>3&nbsp;scénarios sur 7</strong>&nbsp;: machine éteinte, disque au rebut, sauvegarde égarée. Aucun effet sur une machine allumée — le noyau déchiffre à la volée, c'est son objet. Presque gratuit&nbsp;: à activer partout.</td></tr>
-      <tr><td>Chiffrement de base</td><td>Les mêmes 3 sur 7. Ne protège ni de l'injection SQL ni de l'administration&nbsp;: le moteur déchiffre pour eux sans rien demander.</td></tr>
-      <tr><td>Chiffrement de champ</td><td><strong>6&nbsp;sur 7.</strong> Seul le service qui a la clé peut lire. Le septième — l'exécution de code dans le service — n'est couvert par aucun des trois.</td></tr>
+      <tr><td>Chiffrement de volume</td><td>Couvre <strong>3&nbsp;scénarios sur 8</strong>&nbsp;: machine éteinte, disque au rebut, sauvegarde écrite sur un support chiffré. Aucun effet sur une machine allumée — le noyau déchiffre à la volée —, ni sur ce qui sort de la machine&nbsp;: un export part en clair. Presque gratuit&nbsp;: à activer partout.</td></tr>
+      <tr><td>Chiffrement de base</td><td>Les mêmes 3 sur 8. Ne protège ni de l'injection SQL, ni de l'administration, ni de l'export&nbsp;: le moteur déchiffre pour eux sans rien demander. Et son trousseau vit d'ordinaire sur le même volume que les données.</td></tr>
+      <tr><td>Chiffrement de champ</td><td><strong>7&nbsp;sur 8.</strong> Seul le service qui a la clé peut lire. Le huitième — l'exécution de code dans le service — n'est couvert par aucun des trois.</td></tr>
       <tr><td>Déplacement</td><td>L'attaque qui survit à un chiffrement parfait&nbsp;: <strong>56&nbsp;chiffrés déplacés sur 56 acceptés</strong> sans liaison. Avec l'identifiant de ligne en <strong>données associées</strong>&nbsp;: 0 sur 56, et 8 lectures normales sur 8.</td></tr>
       <tr><td>Déterminisme</td><td>Rend la recherche possible et la fréquence lisible&nbsp;: <strong>10&nbsp;valeurs identifiées sur 12</strong>, <strong>2&nbsp;536&nbsp;dossiers étiquetés sur 3&nbsp;000</strong>, sans clé. Le nonce aléatoire supprime la fuite et la recherche en même temps.</td></tr>
       <tr><td>Longueur</td><td>Fuite qui survit au nonce&nbsp;: un chiffrement à flot conserve la taille, et <strong>5&nbsp;motifs sur 12</strong> se distinguent par elle seule. Parade&nbsp;: compléter à une longueur fixe avant de chiffrer.</td></tr>
-      <tr><td>Index aveugle</td><td>Empreinte à clé <em>tronquée</em>, rangée à côté. Sur 5 000 valeurs distinctes&nbsp;: 20,46&nbsp;lignes rendues à 8&nbsp;bits, 2,22 à 12&nbsp;bits, 1,00 à 20&nbsp;bits — et à 20&nbsp;bits l'index est redevenu déterministe.</td></tr>
-      <tr><td>Faible cardinalité</td><td>La limite de l'index aveugle&nbsp;: sur 12&nbsp;valeurs, il faut 2&nbsp;bits pour mélanger, et la recherche rend alors <strong>1&nbsp;262&nbsp;dossiers sur 3&nbsp;000</strong>. À 8&nbsp;bits, <strong>10&nbsp;motifs sur 12</strong> sont déjà seuls dans leur groupe.</td></tr>
+      <tr><td>Index aveugle</td><td>Empreinte à clé <em>tronquée</em>, rangée à côté. Sur 5 000 valeurs distinctes&nbsp;: 20,46&nbsp;lignes rendues en moyenne à 8&nbsp;bits, 2,22 à 12&nbsp;bits, 1,00 à 20&nbsp;bits — et l'index est alors redevenu déterministe, l'égalité redevenant lisible.</td></tr>
+      <tr><td>Faible cardinalité</td><td>La limite de l'index aveugle&nbsp;: sur 12&nbsp;valeurs, les groupes se mélangent dès 4&nbsp;bits mais 4&nbsp;motifs y restent seuls&nbsp;; à 2&nbsp;bits il n'en reste qu'un, et le plus gros groupe compte alors <strong>1&nbsp;262&nbsp;dossiers sur 3&nbsp;000</strong>. À 8&nbsp;bits, <strong>10&nbsp;motifs sur 12</strong> sont déjà seuls dans leur groupe.</td></tr>
       <tr><td>Bornes de nonce</td><td>Nonce tiré au sort, pour une probabilité de répétition sous 2<sup>−32</sup>&nbsp;: <strong>92&nbsp;682&nbsp;messages</strong> à 64&nbsp;bits, <strong>6,07·10<sup>9</sup></strong> à 96&nbsp;bits (le NIST SP 800-38D §8.3 dit 2<sup>32</sup>), 1,71·10<sup>24</sup> à 192&nbsp;bits.</td></tr>
-      <tr><td>Compteur</td><td>Zéro répétition — tant que l'état est unique et survit. Deux machines, même clé, compteurs partis de zéro&nbsp;: <strong>500&nbsp;répétitions sur 1&nbsp;000</strong>. Un identifiant de machine dans le nonce&nbsp;: 0.</td></tr>
+      <tr><td>Compteur</td><td>Zéro répétition — sous DEUX conditions. Deux machines, même clé, compteurs partis de zéro&nbsp;: <strong>500&nbsp;répétitions sur 1&nbsp;000</strong>&nbsp;; un identifiant de machine dans le nonce&nbsp;: 0. Mais une machine <em>clonée</em> avec le même identifiant&nbsp;: <strong>500 sur 1&nbsp;500</strong>, malgré l'identifiant.</td></tr>
       <tr><td>Chemins annexes</td><td>La colonne ne fuit rien, le reste fuit tout&nbsp;: <strong>400&nbsp;valeurs sur 400</strong> retrouvables dans les journaux, l'index, le cache et un message d'erreur. Après traitement&nbsp;: 0. Chiffrer un champ est un <strong>inventaire</strong>.</td></tr>
     </tbody>
   </table>
@@ -1063,7 +1130,7 @@ un INVENTAIRE — et cet inventaire ne se fait pas à la fin, il se fait avant.<
 </dl>
 
 <h2>Récap et vérification</h2>
-<p>Chiffrer au repos n'est pas une propriété de la donnée mais d'un support à un moment&nbsp;: le chiffrement de volume et celui de la base couvrent 3&nbsp;scénarios sur 7 — la machine éteinte, le disque au rebut, la sauvegarde égarée —, le chiffrement de champ en couvre 6, et aucun ne couvre l'exécution de code dans le service, qui détient les clés. Au niveau du champ, un chiffrement parfait laisse encore passer le déplacement&nbsp;: 56&nbsp;chiffrés recopiés d'une ligne à l'autre, 56&nbsp;acceptés — et 0 dès que l'identifiant de ligne entre dans les données associées, pour 8&nbsp;lectures normales sur 8. Chercher dans une colonne chiffrée n'a pas de solution gratuite&nbsp;: le déterminisme rend 10&nbsp;valeurs sur 12 identifiables par la seule fréquence, et l'index aveugle ne rattrape le coup que sur les champs à forte cardinalité — sur douze valeurs, il faut rendre 1&nbsp;262&nbsp;dossiers sur 3&nbsp;000 pour brouiller les groupes. Une clé ne chiffre pas un nombre illimité de messages&nbsp;: 92&nbsp;682 avec un nonce de 64&nbsp;bits, 6,07·10<sup>9</sup> avec 96&nbsp;bits, et un compteur mal isolé produit 500&nbsp;répétitions sur 1&nbsp;000. Enfin, la colonne chiffrée ne fuit rien pendant que les journaux, l'index et le cache livrent 400&nbsp;valeurs sur 400&nbsp;: le vrai travail est l'inventaire des copies.</p>
+<p>Chiffrer au repos n'est pas une propriété de la donnée mais d'un support à un moment&nbsp;: le chiffrement de volume et celui de la base couvrent 3&nbsp;scénarios sur 8 — la machine éteinte, le disque au rebut, la sauvegarde écrite sur un support chiffré —, le chiffrement de champ en couvre 7, et aucun ne couvre l'exécution de code dans le service, qui détient les clés. Au niveau du champ, un chiffrement parfait laisse encore passer le déplacement&nbsp;: 56&nbsp;chiffrés recopiés d'une ligne à l'autre, 56&nbsp;acceptés — et 0 dès que l'identifiant de ligne entre dans les données associées, pour 8&nbsp;lectures normales sur 8. Chercher dans une colonne chiffrée n'a pas de solution gratuite&nbsp;: le déterminisme rend 10&nbsp;valeurs sur 12 identifiables par la seule fréquence, et l'index aveugle ne rattrape le coup que sur les champs à forte cardinalité — sur douze valeurs, il faut descendre à 2&nbsp;bits pour ne laisser qu'un motif isolé, et le plus gros groupe compte alors 1&nbsp;262&nbsp;dossiers sur 3&nbsp;000. Une clé ne chiffre pas un nombre illimité de messages&nbsp;: 92&nbsp;682 avec un nonce de 64&nbsp;bits, 6,07·10<sup>9</sup> avec 96&nbsp;bits, et un compteur mal isolé produit 500&nbsp;répétitions sur 1&nbsp;000 — 500 sur 1&nbsp;500 même avec un identifiant de machine, dès qu'une machine est clonée. Enfin, la colonne chiffrée ne fuit rien pendant que les journaux, l'index et le cache livrent 400&nbsp;valeurs sur 400&nbsp;: le vrai travail est l'inventaire des copies.</p>
 <div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
 <li>Un rapport de conformité affirme&nbsp;: «&nbsp;les données sont chiffrées au repos par BitLocker, donc protégées en cas de fuite de la base&nbsp;». Où est l'erreur, et quel scénario précis la rend fausse&nbsp;?</li>
 <li>Une équipe chiffre la colonne «&nbsp;numéro de compte bancaire&nbsp;» sans données associées, en gardant l'identifiant de ligne à côté. Décris l'attaque la moins coûteuse pour un administrateur de base malveillant, et la ligne à changer.</li>
@@ -1071,10 +1138,10 @@ un INVENTAIRE — et cet inventaire ne se fait pas à la fin, il se fait avant.<
 </ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"Le programme du modèle de menace place un « x » (donnée lisible) pour le chiffrement de base face à l'injection SQL. Pourquoi ?","a":["Parce que l'injection passe par le moteur, et que le moteur déchiffre lui-même pour répondre aux requêtes : la protection porte sur les fichiers, pas sur l'accès","Parce que le chiffrement transparent de base utilise une clé plus courte que le chiffrement de volume, ce qui le rend cassable en ligne","Parce que l'injection SQL permet de lire la clé de chiffrement stockée dans une table système du moteur, puis de déchiffrer les colonnes","Parce que le chiffrement de base ne s'applique qu'aux sauvegardes, les fichiers de données courants restant en clair sur le disque"],"correct":0,"exp":"Le chiffrement transparent protège les FICHIERS. Quiconque passe par le moteur — requête légitime, injection, administrateur — reçoit des données déchiffrées, puisque c'est exactement le service que rend le moteur."},
-  {"q":"56 chiffrés de salaires sont déplacés d'une ligne à l'autre dans la table de paie, et le service les accepte tous les 56. Que faut-il en conclure ?","a":["Que le chiffrement et la marque ont tenu, mais que rien ne liait un chiffré à sa ligne : il manque un contexte authentifié, pas un algorithme plus solide","Que la marque d'authenticité était trop courte, 32 caractères hexadécimaux ne suffisant pas à empêcher une falsification par recherche exhaustive","Que le chiffrement à flot employé est malléable, et qu'un mode par blocs aurait rendu le déplacement impossible","Que le nonce était réutilisé entre les lignes, ce qui permet de recomposer un chiffré valide pour n'importe quelle valeur"],"correct":0,"exp":"Rien n'a été falsifié ni déchiffré : les chiffrés déplacés sont authentiques, et c'est le problème. La parade est d'attacher le contexte — table, colonne, identifiant de ligne — à la marque, ce qui ramène le compte à 0 sur 56."},
-  {"q":"Une colonne « motif » à douze valeurs est chiffrée de façon déterministe sur 3 000 dossiers. Sans aucune clé, 2 536 dossiers sont correctement étiquetés. Quel est le mécanisme ?","a":["L'attaquant compte les occurrences de chaque chiffré, trie par fréquence, et apparie ces rangs à ceux d'une distribution publiée par ailleurs","L'attaquant exploite une faiblesse de ChaCha20 sur les messages courts, qui laisse filtrer les premiers octets du clair dans le chiffré","L'attaquant retrouve la clé par recherche exhaustive sur les douze valeurs possibles, l'espace étant trop petit pour résister","L'attaquant utilise les identifiants de ligne, qui sont attribués dans l'ordre d'arrivée et donc corrélés au motif de consultation"],"correct":0,"exp":"Aucune cryptanalyse n'intervient : le déterminisme préserve la distribution, et une distribution connue par ailleurs suffit à nommer les groupes. Les deux erreurs portent sur des motifs de fréquences voisines, dont les rangs s'inversent."},
-  {"q":"Un service chiffre correctement un numéro sensible dans sa colonne, mais le programme retrouve les 400 valeurs en clair ailleurs. Quelle est la bonne lecture ?","a":["La valeur existe dans plusieurs endroits que le chiffrement de la colonne ne touche pas : journal applicatif, index de recherche, cache, message d'erreur","Le chiffrement de la colonne a échoué sur ces 400 valeurs, probablement à cause d'un nonce répété qui a rendu les chiffrés déchiffrables","Le programme a utilisé la clé pour déchiffrer les traces, ce qui montre seulement que la clé était accessible depuis le même service","La colonne n'était pas réellement chiffrée : le service écrivait la valeur claire et le chiffré côte à côte, par erreur de conception"],"correct":0,"exp":"La colonne, elle, ne laisse fuiter aucune valeur — le programme le mesure dans les deux passages. Ce sont les copies qui parlent, et le journal des requêtes lentes du moteur est le seul chemin qui n'ait rien eu à changer, parce que le service chiffre avant d'écrire."}
+  {"q":"Le programme du modèle de menace place un « x » (donnée lisible) pour le chiffrement de base face à l'injection SQL. Pourquoi ?","a":["Parce que l'injection passe par le moteur, et que le moteur déchiffre lui-même pour répondre aux requêtes : la protection porte sur les fichiers, pas sur l'accès","Parce que le chiffrement transparent de base utilise une clé plus courte que le chiffrement de volume, ce qui le rend cassable en ligne","Parce que l'injection SQL permet de lire la clé de chiffrement stockée dans une table système du moteur, puis de déchiffrer les colonnes","Parce que le chiffrement de base ne s'applique qu'aux sauvegardes, les fichiers de données courants restant en clair sur le disque"],"correct":0,"explain":"Le chiffrement transparent protège les FICHIERS. Quiconque passe par le moteur — requête légitime, injection, administrateur — reçoit des données déchiffrées, puisque c'est exactement le service que rend le moteur."},
+  {"q":"56 chiffrés de salaires sont déplacés d'une ligne à l'autre dans la table de paie, et le service les accepte tous les 56. Que faut-il en conclure ?","a":["Que le chiffrement et la marque ont tenu, mais que rien ne liait un chiffré à sa ligne : il manque un contexte authentifié, pas un algorithme plus solide","Que la marque d'authenticité était trop courte, 32 caractères hexadécimaux ne suffisant pas à empêcher une falsification par recherche exhaustive","Que le chiffrement à flot employé est malléable, et qu'un mode par blocs aurait rendu le déplacement impossible","Que le nonce était réutilisé entre les lignes, ce qui permet de recomposer un chiffré valide pour n'importe quelle valeur"],"correct":0,"explain":"Rien n'a été falsifié ni déchiffré : les chiffrés déplacés sont authentiques, et c'est le problème. La parade est d'attacher le contexte — table, colonne, identifiant de ligne — à la marque, ce qui ramène le compte à 0 sur 56."},
+  {"q":"Une colonne « motif » à douze valeurs est chiffrée de façon déterministe sur 3 000 dossiers. Sans aucune clé, 2 536 dossiers sont correctement étiquetés. Quel est le mécanisme ?","a":["L'attaquant compte les occurrences de chaque chiffré, trie par fréquence, et apparie ces rangs à ceux d'une distribution publiée par ailleurs","L'attaquant exploite une faiblesse de ChaCha20 sur les messages courts, qui laisse filtrer les premiers octets du clair dans le chiffré","L'attaquant retrouve la clé par recherche exhaustive sur les douze valeurs possibles, l'espace étant trop petit pour résister","L'attaquant utilise les identifiants de ligne, qui sont attribués dans l'ordre d'arrivée et donc corrélés au motif de consultation"],"correct":0,"explain":"Aucune cryptanalyse n'intervient : le déterminisme préserve la distribution, et une distribution connue par ailleurs suffit à nommer les groupes. Les deux erreurs portent sur des motifs de fréquences voisines, dont les rangs s'inversent."},
+  {"q":"Un service chiffre correctement un numéro sensible dans sa colonne, mais le programme retrouve les 400 valeurs en clair ailleurs. Quelle est la bonne lecture ?","a":["La valeur existe dans plusieurs endroits que le chiffrement de la colonne ne touche pas : journal applicatif, index de recherche, cache, message d'erreur","Le chiffrement de la colonne a échoué sur ces 400 valeurs, probablement à cause d'un nonce répété qui a rendu les chiffrés déchiffrables","Le programme a utilisé la clé pour déchiffrer les traces, ce qui montre seulement que la clé était accessible depuis le même service","La colonne n'était pas réellement chiffrée : le service écrivait la valeur claire et le chiffré côte à côte, par erreur de conception"],"correct":0,"explain":"La colonne, elle, ne laisse fuiter aucune valeur — le programme le mesure dans les deux passages. Ce sont les copies qui parlent, et le journal des requêtes lentes du moteur est le seul chemin qui n'ait rien eu à changer, parce que le service chiffre avant d'écrire."}
 ]
 </script>
 <h2>Exercices</h2>
@@ -1093,9 +1160,12 @@ l'administrateur, pour l'intrus qui exécute du code sur la machine, et pour la
 sauvegarde que l'on prend depuis cette machine.
 
 Ce qu'il ne protège pas, et que l'équipe a en tête sans le dire : l'export de la
-base envoyé au prestataire d'analyse, l'instantané de volume pris depuis la console
-du fournisseur — qui est déchiffré, sinon il serait inutilisable —, la réplique de
-lecture, le journal de transactions répliqué, et bien sûr le service lui-même.
+base envoyé au prestataire d'analyse — le moteur l'écrit en clair, quel que soit le
+chiffrement du disque —, la réplique de lecture, le journal de transactions répliqué,
+et bien sûr le service lui-même. L'instantané de volume mérite une nuance : s'il est
+pris sous le chiffrement (BitLocker, LUKS), il reste chiffré et ne donne rien sans la
+clé ; ce qui l'emporte, c'est qu'il embarque aussi le TROUSSEAU du moteur quand celui-ci
+vit sur le même volume.
 
 La question à poser, et elle tient en une phrase : « contre QUELLE défaillance
 cette protection nous couvre-t-elle ? » Si la réponse est « le vol du matériel »,
@@ -1164,7 +1234,7 @@ console.log('la marque ne couvre que la valeur, jamais la ligne où elle est ran
 console.log('');
 console.log(acceptes + ' déplacements acceptés sur ' + tentes);</code></pre></figure><figure class="code-block" data-file="solution-l8-exo2.txt"><pre><code class="language-plaintext">la marque ne couvre que la valeur, jamais la ligne où elle est rangée
 
-56 déplacements acceptés sur 56</code></pre></figure><p>Le point à saisir est que le service n'a commis <em>aucune</em> erreur de vérification&nbsp;: la marque est juste, le déchiffrement réussit, la valeur rendue est authentique. Elle appartient simplement à quelqu'un d'autre. Ajouter l'identifiant de ligne dans le calcul de la marque suffit à ramener le compte à zéro — et c'est une modification d'une ligne.</p></details></div>
+56 déplacements acceptés sur 56</code></pre></figure><p>Le point à saisir est que le service n'a commis <em>aucune</em> erreur de vérification&nbsp;: la marque est juste, le déchiffrement réussit, la valeur rendue est authentique. Elle appartient simplement à quelqu'un d'autre. Ajouter l'identifiant de ligne dans le calcul de la marque suffit à ramener le compte à zéro — cinq lignes à toucher dans ce programme d'école, une seule dans un service qui appelle déjà AES-GCM, puisqu'il n'y a qu'à renseigner le paramètre des données associées.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Approfondissement</span></div><p>Calcule le nombre de messages qu'une clé supporte avec un nonce aléatoire de 64&nbsp;bits, si l'on exige que la probabilité de répétition reste sous 2<sup>−32</sup>. Pars de l'approximation q²/2<sup>n+1</sup> et renverse-la. Affiche le résultat au format <code>92 682 messages</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-l8-exo3.js"><pre><code class="language-javascript">// Combien de messages une clé peut-elle chiffrer avec un nonce de 64 bits tiré au sort,
 // si l'on veut que la probabilité de répétition reste sous 2^-32 ?
 
@@ -1181,7 +1251,7 @@ console.log('');
 console.log(mil(q) + ' messages');</code></pre></figure><figure class="code-block" data-file="solution-l8-exo3.txt"><pre><code class="language-plaintext">nonce de 64 bits, probabilité visée 2^-32
 q = √(2^65 × 2^-32) = √(2^33)
 
-92 682 messages</code></pre></figure><p>Le résultat vaut exactement √(2<sup>33</sup>), soit 2<sup>16,5</sup>. Un ordre de grandeur utile à garder en tête&nbsp;: <strong>doubler la taille du nonce ne double pas la borne, il l'élève au carré</strong>. C'est la raison d'être de XChaCha20 et de ses 192&nbsp;bits, qui permettent de tirer le nonce au sort sans jamais avoir à compter.</p></details></div>
+92 682 messages</code></pre></figure><p>Le résultat vaut exactement √(2<sup>33</sup>), soit 2<sup>16,5</sup>. Attention à l'ordre de grandeur, qui se dit souvent de travers&nbsp;: la borne est proportionnelle à 2<sup>n/2</sup>, donc <strong>doubler la taille du nonce multiplie la borne par 2<sup>n/2</sup></strong>, il ne l'élève pas au carré. De 64 à 128&nbsp;bits, on passe de 92&nbsp;682 à 3,98·10<sup>14</sup>&nbsp;messages — et non à 92&nbsp;682², qui vaudrait 8,6·10<sup>9</sup>. Ce qui est élevé au carré, c'est le <em>nombre de nonces possibles</em>, pas la borne. C'est la raison d'être de XChaCha20 et de ses 192&nbsp;bits, qui permettent de tirer le nonce au sort sans jamais avoir à compter.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
