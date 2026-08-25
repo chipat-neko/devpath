@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Partitionner : découper les données — Leçon 08 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Le partitionnement est le seul mécanisme qui fait croître le débit d'écriture — 100 000 contre 9 174 écritures par seconde à cent machines. Découper par plage ou par empreinte (×1,62 contre ×1,00), l'équilibre des clés qui n'est pas celui du trafic (une partition sur seize à 32,8 %), le reste de la division qui déplace 88,85 % des clés là où 11,11 % suffiraient, le hachage cohérent et ses points virtuels, et la requête diffusée dont la médiane passe de 10,3 à 286,4 ms." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-08.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 08</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Répliquer et partitionner — Leçon 08</p>
+              <h1 class="lesson-header__title">Partitionner&nbsp;: découper les données</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~74 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: la <a href="lecon-07.html">leçon&nbsp;7</a> de ce module, dont celle-ci est la suite directe, et la <a href="lecon-01.html">leçon&nbsp;1</a> pour la disponibilité en série. Savoir lire une boucle et une fonction en JavaScript suffit.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>dire pourquoi seul le partitionnement fait croître le débit d'écriture&nbsp;: <strong>9&nbsp;174</strong> contre <strong>100&nbsp;000</strong>&nbsp;;</li>
+                  <li>choisir entre découpage <strong>par plage</strong> et <strong>par empreinte</strong> selon la requête à servir&nbsp;;</li>
+                  <li>distinguer l'équilibre des <em>clés</em> de celui du <em>trafic</em>&nbsp;: <strong>×1,00</strong> contre <strong>×5,24</strong>&nbsp;;</li>
+                  <li>chiffrer le coût d'un rééquilibrage&nbsp;: <strong>88,85&nbsp;%</strong> des clés déplacées pour <strong>11,11&nbsp;%</strong> nécessaires&nbsp;;</li>
+                  <li>expliquer le <strong>hachage cohérent</strong> et dire à quoi servent les <strong>points virtuels</strong>&nbsp;;</li>
+                  <li>arbitrer entre index <strong>local</strong> et <strong>global</strong>, et dire pourquoi le second est mis à jour de façon asynchrone&nbsp;;</li>
+                  <li>montrer qu'une <strong>requête diffusée</strong> se dégrade avec le nombre de partitions&nbsp;: <strong>10,3</strong> → <strong>286,4&nbsp;ms</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>La <a href="lecon-07.html">leçon&nbsp;7</a> se termine sur un mur&nbsp;: avec 10&nbsp;% d'écritures, mille copies d'une même donnée ne rendent que <strong>×9,91</strong>, parce que chaque copie doit appliquer toutes les écritures. La réplication ne franchit pas ce mur — jamais, quel que soit le budget. Le partitionnement, lui, le franchit, et c'est sa seule raison d'être&nbsp;: <em>chaque machine ne reçoit plus que les écritures de sa part des données</em>.</p>
+<p>Le prix se paie ailleurs, et cette leçon le chiffre. Découper par plages de clés laisse une partition à <strong>40&nbsp;603</strong> clés quand une autre en a <strong>13&nbsp;587</strong>&nbsp;; découper par empreinte équilibre parfaitement — <strong>25&nbsp;074</strong> contre <strong>24&nbsp;905</strong> — et détruit toute notion de voisinage. Équilibrer les <em>clés</em> ne suffit d'ailleurs pas&nbsp;: sur un trafic très concentré, une partition sur seize encaisse <strong>32,8&nbsp;%</strong> du total, et le service entier plafonne à la capacité de celle-là.</p>
+<p>On mesurera surtout deux pièges dont l'un coûte une nuit d'exploitation et l'autre une refonte. Le premier&nbsp;: choisir la partition par un simple reste de division fait déménager <strong>88,85&nbsp;%</strong> des clés quand on passe de 8 à 9 machines, là où <strong>11,11&nbsp;%</strong> suffiraient — et <strong>99,00&nbsp;%</strong> pour un passage de 100 à 101. Le second&nbsp;: une requête qui doit interroger toutes les partitions attend la plus lente, si bien que la médiane passe de <strong>10,3&nbsp;ms</strong> à une partition à <strong>286,4&nbsp;ms</strong> à deux cent cinquante-six.</p>
+<p>Un mot de vocabulaire avant de commencer, parce qu'il change d'un produit à l'autre&nbsp;: ce qu'on appelle ici <strong>partition</strong> se nomme ailleurs <em>shard</em>, <em>region</em>, <em>tablet</em> ou <em>bucket</em> — et le <em>point virtuel</em> de la fin de leçon s'appelle <em>vnode</em> chez plusieurs éditeurs, ce qui ajoute à la confusion. Le mécanisme est le même, et c'est lui qu'on mesure.</p>
+<h2>Le mur que la réplication ne franchit pas</h2>
+<p>Reprenons le calcul de la leçon précédente et posons-le à côté de son alternative. Une machine encaisse 10&nbsp;000 opérations par seconde&nbsp;; le service en compte 10&nbsp;% d'écritures. Que rendent N machines, selon qu'on les emploie comme copies ou comme partitions&nbsp;?</p>
+<figure class="code-block" data-file="pourquoi-partitionner.js"><pre><code class="language-javascript">// La leçon 7 a montré le mur : à 10 % d'écritures, la réplication plafonne à
+// dix fois une machine. Le partitionnement, lui, ne plafonne pas — parce que
+// chaque machine ne reçoit que les écritures de SA part des données.
+const CAPACITE = 10000;        // opérations par seconde et par machine
+const PART_ECRITURE = 0.10;
+
+const replique = (n) =&gt; CAPACITE / (PART_ECRITURE + (1 - PART_ECRITURE) / n);
+const partitionne = (n) =&gt; CAPACITE * n;      // chaque partition est indépendante
+
+console.log('machines | réplication seule | partitionnement seul | rapport');
+for (const n of [1, 2, 5, 10, 50, 100, 1000]) {
+  console.log(
+    String(n).padStart(8) + ' | ' + replique(n).toFixed(0).padStart(17) + ' | ' +
+    partitionne(n).toFixed(0).padStart(20) + ' | ×' +
+    (partitionne(n) / replique(n)).toFixed(1)
+  );
+}
+
+console.log('');
+console.log('écritures par seconde absorbées :');
+for (const n of [1, 10, 100]) {
+  console.log('  ' + String(n).padStart(4) + ' machines — répliquées : '
+              + (replique(n) * PART_ECRITURE).toFixed(0).padStart(6)
+              + '   partitionnées : ' + (partitionne(n) * PART_ECRITURE).toFixed(0));
+}
+
+console.log('');
+console.log('la réplication plafonne à ' + (CAPACITE / PART_ECRITURE).toFixed(0)
+            + ' opérations/s, quel que soit le nombre de machines ;');
+console.log('le partitionnement ne plafonne pas — il déplace le problème ailleurs,');
+console.log('et le reste de la leçon dit exactement où.');</code></pre></figure>
+<figure class="code-block" data-file="pourquoi-partitionner.txt"><pre><code class="language-plaintext">machines | réplication seule | partitionnement seul | rapport
+       1 |             10000 |                10000 | ×1.0
+       2 |             18182 |                20000 | ×1.1
+       5 |             35714 |                50000 | ×1.4
+      10 |             52632 |               100000 | ×1.9
+      50 |             84746 |               500000 | ×5.9
+     100 |             91743 |              1000000 | ×10.9
+    1000 |             99108 |             10000000 | ×100.9
+
+écritures par seconde absorbées :
+     1 machines — répliquées :   1000   partitionnées : 1000
+    10 machines — répliquées :   5263   partitionnées : 10000
+   100 machines — répliquées :   9174   partitionnées : 100000
+
+la réplication plafonne à 100000 opérations/s, quel que soit le nombre de machines ;
+le partitionnement ne plafonne pas — il déplace le problème ailleurs,
+et le reste de la leçon dit exactement où.
+</code></pre></figure>
+<p>À deux machines, l'écart est négligeable&nbsp;: <strong>18&nbsp;182</strong> contre <strong>20&nbsp;000</strong>. À dix, il devient net&nbsp;: <strong>52&nbsp;632</strong> contre <strong>100&nbsp;000</strong>, presque le double. À cent, <strong>×10,9</strong>. À mille, <strong>×100,9</strong>. Et la ligne des écritures dit tout&nbsp;: cent machines répliquées absorbent <strong>9&nbsp;174</strong> écritures par seconde — moins que la capacité d'une seule machine —, cent machines partitionnées en absorbent <strong>100&nbsp;000</strong>.</p>
+<p>Cette différence n'est pas quantitative, elle est de nature. La réplication a un plafond&nbsp;: <strong>100&nbsp;000</strong> opérations par seconde, atteint asymptotiquement, et qu'aucune dépense ne dépasse. Le partitionnement n'en a pas — au sens où le débit croît linéairement avec les machines.</p>
+<p>«&nbsp;Pas de plafond&nbsp;» ne veut évidemment pas dire «&nbsp;pas de coût&nbsp;». Le partitionnement transforme un problème de <em>capacité</em> en une famille de problèmes nouveaux&nbsp;: comment décider quelle machine détient quelle donnée, que faire quand ce découpage devient inégal, que faire quand il faut ajouter une machine, et que faire des requêtes qui ne savent pas où chercher. Le reste de la leçon traite ces quatre questions dans l'ordre.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">On partitionne ET on réplique</p><p>Les deux mécanismes ne s'opposent pas&nbsp;: ils répondent à deux limites différentes. Dans un système réel, on découpe d'abord la donnée en <em>P</em> partitions, puis on réplique <em>chaque partition</em> sur <em>R</em> machines — ce qui donne P&nbsp;×&nbsp;R machines au total, chaque enregistrement vivant sur R d'entre elles. Le partitionnement traite le mur d'écritures, la réplication traite les pannes. Une base qui ne fait que l'un des deux a laissé un problème entier de côté, et c'est presque toujours celui qui se manifeste en premier.</p></div></div>
+<h2>Par plage ou par empreinte&nbsp;: deux découpages, deux propriétés</h2>
+<p>Première question&nbsp;: comment décider quelle machine détient quelle clé. Deux familles de réponses existent, et le choix entre elles n'est pas une question de performance&nbsp;— c'est une question de <em>ce qu'on veut pouvoir demander</em>.</p>
+<p>Le découpage <strong>par plage</strong> attribue à chaque partition un intervalle de clés&nbsp;: les noms de A à F ici, de G à L là. Sa propriété est le <em>voisinage</em>&nbsp;: deux clés proches sont sur la même machine, donc un parcours ordonné — «&nbsp;tous les noms entre Dupont et Durand&nbsp;», «&nbsp;toutes les mesures de mardi&nbsp;» — ne touche qu'une partition ou deux.</p>
+<p>Le découpage <strong>par empreinte</strong> calcule un nombre à partir de la clé et s'en sert pour choisir la partition. Sa propriété est l'<em>uniformité</em>&nbsp;: deux clés voisines atterrissent n'importe où, donc les partitions se remplissent également. Mesurons les deux sur des noms de famille français, dont la première lettre est très inégalement répartie.</p>
+<figure class="code-block" data-file="plage-ou-empreinte.js"><pre><code class="language-javascript">// Deux façons de décider quelle machine détient quelle clé. Sur des noms de
+// famille français, dont la première lettre est très inégalement répartie.
+const FREQ = {                 // fréquence approximative de la 1re lettre, en %
+  A: 4.5, B: 12.0, C: 9.5, D: 7.5, E: 1.5, F: 4.0, G: 6.5, H: 2.5, I: 0.6,
+  J: 1.4, K: 1.0, L: 9.0, M: 8.5, N: 2.0, O: 0.8, P: 6.5, Q: 0.2, R: 5.0,
+  S: 4.5, T: 3.5, U: 0.1, V: 3.5, W: 0.6, X: 0.05, Y: 0.2, Z: 0.6,
+};
+const LETTRES = Object.keys(FREQ);
+const TOTAL = LETTRES.reduce((s, l) =&gt; s + FREQ[l], 0);
+const PARTITIONS = 4;
+
+// Découpage par PLAGE : l'alphabet coupé en quatre tranches égales.
+const BORNES = ['F', 'L', 'R'];          // A-F | G-L | M-R | S-Z
+function parPlage(lettre) {
+  let p = 0;
+  for (const b of BORNES) if (lettre &gt; b) p++;
+  return p;
+}
+
+// Découpage par HACHAGE : un entier tiré du nom, puis un reste.
+function hacher(mot) {
+  let h = 2166136261;                          // FNV-1a, 32 bits
+  for (let i = 0; i &lt; mot.length; i++) {
+    h ^= mot.charCodeAt(i);
+    h = Math.imul(h, 16777619) &gt;&gt;&gt; 0;
+  }
+  // Brassage final : sans lui, deux chaînes voisines rendent deux empreintes
+  // voisines, et les points se rassemblent au lieu de se répartir.
+  h ^= h &gt;&gt;&gt; 16; h = Math.imul(h, 0x85ebca6b) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 13; h = Math.imul(h, 0xc2b2ae35) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 16;
+  return h &gt;&gt;&gt; 0;
+}
+
+const plage = new Array(PARTITIONS).fill(0);
+const hachage = new Array(PARTITIONS).fill(0);
+let cles = 0;
+for (const l of LETTRES) {
+  const combien = Math.round(100000 * FREQ[l] / TOTAL);
+  cles += combien;
+  plage[parPlage(l)] += combien;
+  // Les noms d'une même lettre se dispersent : on hache le nom entier.
+  for (let i = 0; i &lt; combien; i++) hachage[hacher(l + '-' + i) % PARTITIONS]++;
+}
+
+function ecart(t) {
+  const moyenne = t.reduce((a, b) =&gt; a + b, 0) / t.length;
+  return { max: Math.max(...t), min: Math.min(...t), rapport: Math.max(...t) / moyenne };
+}
+
+console.log(cles + ' clés, ' + PARTITIONS + ' partitions');
+console.log('');
+console.log('partition | par plage (A-F | G-L | M-R | S-Z) | par hachage');
+for (let p = 0; p &lt; PARTITIONS; p++) {
+  console.log('        ' + p + ' | ' + plage[p].toString().padStart(34) + ' | '
+              + hachage[p].toString().padStart(11));
+}
+
+const ep = ecart(plage), eh = ecart(hachage);
+console.log('');
+console.log('par plage   : plus chargée ' + ep.max + ', moins chargée ' + ep.min
+            + ', soit ' + ep.rapport.toFixed(2) + ' fois la moyenne');
+console.log('par hachage : plus chargée ' + eh.max + ', moins chargée ' + eh.min
+            + ', soit ' + eh.rapport.toFixed(2) + ' fois la moyenne');
+console.log('');
+console.log('le découpage par plage garde les clés VOISINES ensemble — ce qui rend');
+console.log('les parcours ordonnés efficaces, et fabrique le déséquilibre ci-dessus.');
+console.log('le hachage équilibre, et détruit toute notion de voisinage.');</code></pre></figure>
+<figure class="code-block" data-file="plage-ou-empreinte.txt"><pre><code class="language-plaintext">100000 clés, 4 partitions
+
+partition | par plage (A-F | G-L | M-R | S-Z) | par hachage
+        0 |                              40603 |       25074
+        1 |                              21864 |       24905
+        2 |                              23946 |       24982
+        3 |                              13587 |       25039
+
+par plage   : plus chargée 40603, moins chargée 13587, soit 1.62 fois la moyenne
+par hachage : plus chargée 25074, moins chargée 24905, soit 1.00 fois la moyenne
+
+le découpage par plage garde les clés VOISINES ensemble — ce qui rend
+les parcours ordonnés efficaces, et fabrique le déséquilibre ci-dessus.
+le hachage équilibre, et détruit toute notion de voisinage.
+</code></pre></figure>
+<p>Le découpage par plage donne <strong>40&nbsp;603</strong> clés à la première partition et <strong>13&nbsp;587</strong> à la dernière&nbsp;: un rapport de <strong>trois</strong>, et une partition qui porte <strong>1,62&nbsp;fois</strong> sa part. Rien n'est mal fait&nbsp;— l'alphabet a été coupé en quatre tranches égales. Ce sont les noms qui ne sont pas répartis également dans l'alphabet, et aucun découpage <em>a priori</em> ne peut le deviner.</p>
+<p>Le découpage par empreinte donne <strong>25&nbsp;074</strong> et <strong>24&nbsp;905</strong>&nbsp;: <strong>1,00&nbsp;fois</strong> la moyenne. L'équilibre est parfait, et il ne dépend d'aucune connaissance des données — c'est la propriété d'une bonne fonction de hachage.</p>
+<p>Le prix de cette perfection est écrit dans la dernière ligne du programme&nbsp;: <strong>le hachage détruit le voisinage</strong>. «&nbsp;Tous les noms entre Dupont et Durand&nbsp;» devient une requête qui doit interroger toutes les partitions, parce que rien ne dit où sont les clés voisines. Sur un jeu de données horodaté — le cas le plus fréquent —, l'effet est encore plus net&nbsp;: par plage, «&nbsp;les mesures de mardi&nbsp;» touchent une partition&nbsp;; par empreinte, elles touchent toutes les partitions, et il faut les interroger toutes.</p>
+<p>Un compromis existe, et il est très employé&nbsp;: une <strong>clé composée</strong>, dont une première part est hachée et une seconde reste ordonnée. On hache l'identifiant du capteur et on garde la date en ordre&nbsp;; les mesures d'un capteur donné restent alors groupées et parcourables, tandis que les capteurs se répartissent uniformément. La règle générale&nbsp;: <em>hacher ce sur quoi on veut de l'équilibre, ordonner ce sur quoi on veut parcourir</em>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 292" role="img" aria-label="Schéma comparant deux découpages de clés en quatre partitions. Le registre du haut, intitulé par plage, montre quatre boîtes portant les intervalles A à F, G à L, M à R et S à Z, dont les hauteurs sont proportionnelles au nombre de clés : la première est la plus haute avec quarante mille six cent trois clés, la dernière la plus basse avec treize mille cinq cent quatre-vingt-sept. Une note indique que les clés voisines restent ensemble et que le rapport à la moyenne atteint un virgule soixante-deux. Le registre du bas, intitulé par empreinte, montre quatre boîtes de hauteur identique portant les nombres vingt-cinq mille soixante-quatorze, vingt-quatre mille neuf cent cinq, vingt-quatre mille neuf cent quatre-vingt-deux et vingt-cinq mille trente-neuf, avec une note indiquant que le rapport à la moyenne vaut un virgule zéro zéro et que le voisinage est détruit. Une bande basse séparée par un trait en pointillés donne la règle : hacher ce sur quoi on veut de l équilibre, ordonner ce sur quoi on veut parcourir, et rappelle que la clé composée fait les deux.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le même jeu de clés, deux découpages</text>
+
+    <text class="d-label" x="18" y="44" text-anchor="start" font-size="10">PAR PLAGE — les clés voisines restent ensemble</text>
+    <path class="d-line" d="M60 122 L600 122" fill="none" />
+    <rect class="d-accent" x="80" y="54" width="100" height="68" rx="4" />
+    <text class="d-text" x="130" y="86" text-anchor="middle" font-size="9">A – F</text>
+    <text class="d-text" x="130" y="102" text-anchor="middle" font-size="8.5">40 603</text>
+    <rect class="d-accent" x="200" y="86" width="100" height="36" rx="4" />
+    <text class="d-text" x="250" y="100" text-anchor="middle" font-size="9">G – L</text>
+    <text class="d-text" x="250" y="114" text-anchor="middle" font-size="8.5">21 864</text>
+    <rect class="d-accent" x="320" y="82" width="100" height="40" rx="4" />
+    <text class="d-text" x="370" y="98" text-anchor="middle" font-size="9">M – R</text>
+    <text class="d-text" x="370" y="112" text-anchor="middle" font-size="8.5">23 946</text>
+    <rect class="d-accent" x="440" y="99" width="100" height="23" rx="4" />
+    <text class="d-text" x="490" y="108" text-anchor="middle" font-size="9">S – Z</text>
+    <text class="d-text" x="490" y="119" text-anchor="middle" font-size="8">13 587</text>
+    <text class="d-tag" x="600" y="86" text-anchor="end" font-size="9.5">×1,62 LA MOYENNE</text>
+
+    <text class="d-label" x="18" y="164" text-anchor="start" font-size="10">PAR EMPREINTE — les partitions se remplissent également</text>
+    <path class="d-line" d="M60 232 L600 232" fill="none" />
+    <rect class="d-box" x="80" y="190" width="100" height="42" rx="4" />
+    <text class="d-text" x="130" y="216" text-anchor="middle" font-size="8.5">25 074</text>
+    <rect class="d-box" x="200" y="190" width="100" height="42" rx="4" />
+    <text class="d-text" x="250" y="216" text-anchor="middle" font-size="8.5">24 905</text>
+    <rect class="d-box" x="320" y="190" width="100" height="42" rx="4" />
+    <text class="d-text" x="370" y="216" text-anchor="middle" font-size="8.5">24 982</text>
+    <rect class="d-box" x="440" y="190" width="100" height="42" rx="4" />
+    <text class="d-text" x="490" y="216" text-anchor="middle" font-size="8.5">25 039</text>
+    <text class="d-tag" x="600" y="212" text-anchor="end" font-size="9.5">×1,00 LA MOYENNE</text>
+    <text class="d-mut" x="320" y="250" text-anchor="middle" font-size="8.5">mais le voisinage est détruit&#160;: «&#160;de Dupont à Durand&#160;» touche les quatre partitions</text>
+
+    <path class="d-line" d="M14 260 L626 260" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="320" y="278" text-anchor="middle" font-size="9.5">HACHER CE QU'ON VEUT ÉQUILIBRER, ORDONNER CE QU'ON VEUT PARCOURIR</text>
+    <text class="d-mut" x="320" y="290" text-anchor="middle" font-size="8.5">une clé composée fait les deux&#160;: empreinte du capteur, puis date en ordre</text>
+  </svg>
+  <figcaption>Aucun des deux découpages n'est meilleur&nbsp;: ils donnent des propriétés différentes, et c'est la requête qu'on veut servir qui tranche.</figcaption>
+</figure>
+<h2>L'équilibre des clés n'est pas l'équilibre du trafic</h2>
+<p>Le hachage répartit les clés à la perfection. Il ne répartit pas le <em>trafic</em>, et ce sont deux choses différentes&nbsp;: un million de comptes également distribués sur seize partitions ne dit rien du nombre de requêtes que chacun reçoit.</p>
+<p>Or le trafic réel n'est jamais uniforme. Une poignée d'articles fait l'essentiel des ventes, une poignée de comptes fait l'essentiel des appels, une poignée de vidéos fait l'essentiel des vues. On modélise cela par une loi dite de <em>Zipf</em>&nbsp;: la clé de rang <em>k</em> reçoit une part proportionnelle à 1&nbsp;/&nbsp;<em>k</em>ˢ, où <em>s</em> mesure la concentration. À <em>s</em>&nbsp;=&nbsp;0 le trafic est uniforme&nbsp;; au-delà de 1, il se concentre violemment.</p>
+<figure class="code-block" data-file="point-chaud.js"><pre><code class="language-javascript">// Le hachage équilibre les CLÉS. Il n'équilibre pas le TRAFIC — parce que
+// le trafic ne se répartit pas uniformément sur les clés.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+function hacher(mot) {
+  let h = 2166136261;                          // FNV-1a, 32 bits
+  for (let i = 0; i &lt; mot.length; i++) {
+    h ^= mot.charCodeAt(i);
+    h = Math.imul(h, 16777619) &gt;&gt;&gt; 0;
+  }
+  // Brassage final : sans lui, deux chaînes voisines rendent deux empreintes
+  // voisines, et les points se rassemblent au lieu de se répartir.
+  h ^= h &gt;&gt;&gt; 16; h = Math.imul(h, 0x85ebca6b) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 13; h = Math.imul(h, 0xc2b2ae35) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 16;
+  return h &gt;&gt;&gt; 0;
+}
+
+const CLES = 1000000;          // un million de comptes
+const PARTITIONS = 16;
+const CAPACITE = 10000;        // op/s par machine — la même qu'en section 1
+const REQUETES = PARTITIONS * CAPACITE;   // requêtes reçues en UNE SECONDE
+
+// Loi de Zipf : la k-ième clé la plus demandée reçoit une part en 1/k^s.
+// s = 0 donne un trafic uniforme, s = 1 la forme observée sur les vrais services.
+// On tire le rang par inversion exacte de la loi continue sur [1, CLES].
+function rang(u, s) {
+  if (s === 1) return Math.min(CLES, Math.ceil(Math.pow(CLES, u)));
+  const a = Math.pow(CLES, 1 - s);
+  return Math.min(CLES, Math.ceil(Math.pow((a - 1) * u + 1, 1 / (1 - s))));
+}
+function simuler(s) {
+  const alea = semer(2025);
+  const charge = new Array(PARTITIONS).fill(0);
+  for (let i = 0; i &lt; REQUETES; i++) {
+    charge[hacher('compte-' + rang(alea(), s)) % PARTITIONS]++;
+  }
+  return charge;
+}
+
+console.log(REQUETES + ' requêtes en une seconde sur ' + CLES + ' clés, '
+            + PARTITIONS + ' partitions de ' + CAPACITE + ' op/s');
+console.log('');
+console.log('concentration | partition la + chargée | la - chargée | rapport à la moyenne');
+for (const s of [0, 0.5, 1, 1.5]) {
+  const c = simuler(s);
+  const moyenne = REQUETES / PARTITIONS;
+  console.log(
+    ('s = ' + s).padStart(13) + ' | ' + Math.max(...c).toString().padStart(22) + ' | ' +
+    Math.min(...c).toString().padStart(12) + ' | ×' + (Math.max(...c) / moyenne).toFixed(2)
+  );
+}
+
+console.log('');
+const chaud = simuler(1.5);
+const moyenne = REQUETES / PARTITIONS;
+console.log('à s = 1.5, une partition sur ' + PARTITIONS + ' encaisse '
+            + (100 * Math.max(...chaud) / REQUETES).toFixed(1) + ' % du trafic total,');
+console.log('soit ' + (Math.max(...chaud) / moyenne).toFixed(1)
+            + ' fois ce qu\'elle devrait — et le service entier plafonne à SA capacité.');
+console.log('');
+console.log(PARTITIONS + ' machines à ' + CAPACITE + ' op/s annoncent '
+            + (PARTITIONS * CAPACITE) + ' requêtes/s ;');
+console.log('la capacité réelle vaut ' + (PARTITIONS * CAPACITE / (Math.max(...chaud) / moyenne)).toFixed(0)
+            + ' — la partition chaude sature en premier,');
+console.log('et le service ne va pas plus vite que sa partie la plus lente.');</code></pre></figure>
+<figure class="code-block" data-file="point-chaud.txt"><pre><code class="language-plaintext">160000 requêtes en une seconde sur 1000000 clés, 16 partitions de 10000 op/s
+
+concentration | partition la + chargée | la - chargée | rapport à la moyenne
+        s = 0 |                  10140 |         9779 | ×1.01
+      s = 0.5 |                  10272 |         9832 | ×1.03
+        s = 1 |                  17079 |         6943 | ×1.71
+      s = 1.5 |                  52411 |         1480 | ×5.24
+
+à s = 1.5, une partition sur 16 encaisse 32.8 % du trafic total,
+soit 5.2 fois ce qu'elle devrait — et le service entier plafonne à SA capacité.
+
+16 machines à 10000 op/s annoncent 160000 requêtes/s ;
+la capacité réelle vaut 30528 — la partition chaude sature en premier,
+et le service ne va pas plus vite que sa partie la plus lente.
+</code></pre></figure>
+<p>À <em>s</em>&nbsp;=&nbsp;0 et <em>s</em>&nbsp;=&nbsp;0,5, le hachage tient sa promesse&nbsp;: <strong>×1,01</strong> et <strong>×1,03</strong>. À <em>s</em>&nbsp;=&nbsp;1, la partition la plus chargée reçoit <strong>×1,71</strong> sa part. À <em>s</em>&nbsp;=&nbsp;1,5, elle en reçoit <strong>×5,24</strong>, soit <strong>32,8&nbsp;%</strong> du trafic total à elle seule — pour un seizième des clés.</p>
+<p>Les dernières lignes donnent la conséquence économique, et c'est elle qu'il faut retenir. Seize machines à <strong>10&nbsp;000</strong> opérations par seconde — la capacité posée en première section — annoncent <strong>160&nbsp;000</strong> requêtes par seconde&nbsp;; la capacité réelle du système vaut <strong>30&nbsp;528</strong>, parce que la partition chaude sature en premier et que le service ne va pas plus vite que sa partie la plus lente. <em>On a payé seize machines et on en exploite l'équivalent de trois.</em></p>
+<p>Le pire cas n'est même pas dans le tableau. Il arrive quand une <em>seule</em> clé devient brûlante&nbsp;: une célébrité dont tout le monde consulte le profil le même soir, un article mis en avant, un identifiant de compte technique employé par tout un service. Aucune fonction de hachage ne divise une clé unique&nbsp;: elle atterrit sur une partition, et cette partition prend tout. Le partitionnement, par construction, ne descend pas plus fin que la clé.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Trois façons de casser une clé brûlante</p><p><strong>1. Ajouter du sel.</strong> Écrire sous <code>article-42#0</code> à <code>article-42#9</code> au hasard répartit la clé sur dix partitions&nbsp;; en échange, toute lecture doit interroger les dix et recoller les morceaux. On échange un point chaud contre une requête diffusée — la section «&nbsp;La requête qui interroge tout le monde&nbsp;» en chiffre le prix. <strong>2. Mettre en cache devant.</strong> Une clé très lue est aussi une clé très facile à mettre en cache&nbsp;: c'est souvent la réponse la moins chère, et elle ne touche pas au partitionnement. <strong>3. Traiter les clés chaudes à part.</strong> Détecter les quelques clés qui dépassent un seuil et les servir par un chemin dédié. Plus complexe, mais c'est la seule des trois qui s'adapte toute seule quand la clé brûlante change — et elle change tout le temps.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 280" role="img" aria-label="Graphique en barres montrant la charge de seize partitions sous deux régimes de trafic. Chaque registre repose sur un simple trait horizontal, sans graduation ni étiquette de position. Dans le registre du haut, intitulé trafic uniforme, les seize barres ont toutes sensiblement la même hauteur, et une ligne horizontale en pointillés marquant la moyenne les traverse au sommet. Dans le registre du bas, intitulé trafic concentré, une barre est nettement plus haute que les autres et dépasse largement la ligne de moyenne, tandis que plusieurs barres sont très basses. Un crochet vertical tracé à droite de la barre la plus haute en souligne toute la hauteur et porte la mention cinq virgule deux fois la moyenne, trente-deux virgule huit pour cent du trafic à elle seule. Les hauteurs sont proportionnelles aux charges réellement mesurées. Une bande basse séparée par un trait en pointillés indique que seize machines à dix mille opérations par seconde annoncent cent soixante mille requêtes par seconde, mais que la capacité réelle vaut trente mille cinq cent vingt-huit, la partition chaude saturant en premier.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Seize partitions, deux régimes de trafic</text>
+
+    <text class="d-label" x="18" y="42" text-anchor="start" font-size="10">TRAFIC UNIFORME</text>
+    <path class="d-line" d="M60 96 L600 96" fill="none" />
+    <path class="d-line" d="M60 82 L600 82" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="604" y="85" text-anchor="start" font-size="8">moy.</text>
+    <rect class="d-accent" x="66" y="82" width="24" height="14" />
+    <rect class="d-accent" x="99" y="82" width="24" height="14" />
+    <rect class="d-accent" x="132" y="82" width="24" height="14" />
+    <rect class="d-accent" x="165" y="82" width="24" height="14" />
+    <rect class="d-accent" x="198" y="82" width="24" height="14" />
+    <rect class="d-accent" x="231" y="82" width="24" height="14" />
+    <rect class="d-accent" x="264" y="82" width="24" height="14" />
+    <rect class="d-accent" x="297" y="82" width="24" height="14" />
+    <rect class="d-accent" x="330" y="82" width="24" height="14" />
+    <rect class="d-accent" x="363" y="82" width="24" height="14" />
+    <rect class="d-accent" x="396" y="82" width="24" height="14" />
+    <rect class="d-accent" x="429" y="82" width="24" height="14" />
+    <rect class="d-accent" x="462" y="82" width="24" height="14" />
+    <rect class="d-accent" x="495" y="82" width="24" height="14" />
+    <rect class="d-accent" x="528" y="82" width="24" height="14" />
+    <rect class="d-accent" x="561" y="82" width="24" height="14" />
+
+    <text class="d-label" x="18" y="132" text-anchor="start" font-size="10">TRAFIC CONCENTRÉ</text>
+    <path class="d-line" d="M60 216 L600 216" fill="none" />
+    <path class="d-line" d="M60 202 L600 202" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="604" y="205" text-anchor="start" font-size="8">moy.</text>
+    <rect class="d-accent" x="66" y="203" width="24" height="13" />
+    <rect class="d-accent" x="99" y="184" width="24" height="32" />
+    <rect class="d-accent" x="132" y="190" width="24" height="26" />
+    <rect class="d-accent" x="165" y="210" width="24" height="6" />
+    <rect class="d-accent" x="198" y="214" width="24" height="2" />
+    <rect class="d-accent" x="231" y="201" width="24" height="15" />
+    <rect class="d-accent" x="264" y="213" width="24" height="3" />
+    <rect class="d-accent" x="297" y="212" width="24" height="4" />
+    <rect class="d-accent" x="330" y="204" width="24" height="12" />
+    <rect class="d-accent" x="363" y="210" width="24" height="6" />
+    <rect class="d-accent" x="396" y="143" width="24" height="73" />
+    <rect class="d-accent" x="429" y="205" width="24" height="11" />
+    <rect class="d-accent" x="462" y="211" width="24" height="5" />
+    <rect class="d-accent" x="495" y="214" width="24" height="2" />
+    <rect class="d-accent" x="528" y="213" width="24" height="3" />
+    <rect class="d-accent" x="561" y="204" width="24" height="12" />
+    <path class="d-line" d="M424 143 L436 143 L436 216 L424 216" fill="none" />
+    <text class="d-tag" x="442" y="155" text-anchor="start" font-size="9">×5,2 LA MOYENNE</text>
+    <text class="d-mut" x="442" y="169" text-anchor="start" font-size="8.5">32,8 % du trafic à elle seule</text>
+
+    <path class="d-line" d="M14 240 L626 240" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="258" text-anchor="middle" font-size="9">16 machines à 10 000 op/s annoncent 160 000 requêtes/s&#160;…</text>
+    <text class="d-mut" x="320" y="274" text-anchor="middle" font-size="9">… la capacité réelle vaut 30 528&#160;: la partition chaude sature en premier, et le service ne va pas plus vite qu'elle</text>
+  </svg>
+  <figcaption>Les seize partitions détiennent le même nombre de clés dans les deux registres. C'est le trafic qui diffère, et c'est lui qui fixe la capacité.</figcaption>
+</figure>
+<h2>Le jour où l'on ajoute une machine</h2>
+<p>Un service qui grandit finit par ajouter des partitions. C'est là que le choix de la fonction qui associe une clé à une partition se révèle — et que la solution la plus évidente se révèle catastrophique.</p>
+<p>La solution évidente&nbsp;: calculer une empreinte de la clé, puis prendre le <em>reste de la division</em> par le nombre de partitions. Elle est simple, rapide, sans état, et parfaitement uniforme. Comptons ce qui se passe quand le nombre de partitions change.</p>
+<figure class="code-block" data-file="reste-de-la-division.js"><pre><code class="language-javascript">// Le hachage équilibre. Mais que se passe-t-il le jour où l'on ajoute
+// une machine ? La façon la plus évidente de choisir une partition —
+// le reste de la division — a une propriété désastreuse.
+function hacher(mot) {
+  let h = 2166136261;                          // FNV-1a, 32 bits
+  for (let i = 0; i &lt; mot.length; i++) {
+    h ^= mot.charCodeAt(i);
+    h = Math.imul(h, 16777619) &gt;&gt;&gt; 0;
+  }
+  // Brassage final : sans lui, deux chaînes voisines rendent deux empreintes
+  // voisines, et les points se rassemblent au lieu de se répartir.
+  h ^= h &gt;&gt;&gt; 16; h = Math.imul(h, 0x85ebca6b) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 13; h = Math.imul(h, 0xc2b2ae35) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 16;
+  return h &gt;&gt;&gt; 0;
+}
+
+const CLES = 1000000;
+const empreintes = [];
+for (let i = 0; i &lt; CLES; i++) empreintes.push(hacher('compte-' + i));
+
+function deplacees(avant, apres) {
+  let bougent = 0;
+  for (const h of empreintes) if (h % avant !== h % apres) bougent++;
+  return bougent;
+}
+
+console.log(CLES + ' clés, choix de la partition par « empreinte modulo N »');
+console.log('');
+console.log('N devient | clés déplacées | part du total | part idéale');
+for (const [avant, apres] of [[4, 5], [5, 6], [8, 9], [10, 11], [100, 101]]) {
+  const d = deplacees(avant, apres);
+  console.log(
+    (avant + ' → ' + apres).padStart(9) + ' | ' + d.toString().padStart(14) + ' | ' +
+    (100 * d / CLES).toFixed(2).padStart(12) + ' % | ' +
+    (100 / apres).toFixed(2) + ' %'
+  );
+}
+
+console.log('');
+const d = deplacees(4, 5);
+console.log('passer de 4 à 5 machines devrait déplacer ' + (100 / 5).toFixed(0)
+            + ' % des clés — une machine neuve prend sa part.');
+console.log('le reste de la division en déplace ' + (100 * d / CLES).toFixed(2) + ' %, soit '
+            + (d / (CLES / 5)).toFixed(1) + ' fois trop.');
+console.log('');
+console.log('pendant ce déplacement, les données voyagent : à 1 Kio par clé,');
+console.log('c\'est ' + (d / 1024).toFixed(0) + ' Mio à recopier au lieu de '
+            + (CLES / 5 / 1024).toFixed(0) + ' Mio — sur un service qui tourne.');</code></pre></figure>
+<figure class="code-block" data-file="reste-de-la-division.txt"><pre><code class="language-plaintext">1000000 clés, choix de la partition par « empreinte modulo N »
+
+N devient | clés déplacées | part du total | part idéale
+    4 → 5 |         799307 |        79.93 % | 20.00 %
+    5 → 6 |         832684 |        83.27 % | 16.67 %
+    8 → 9 |         888510 |        88.85 % | 11.11 %
+  10 → 11 |         908418 |        90.84 % | 9.09 %
+100 → 101 |         990013 |        99.00 % | 0.99 %
+
+passer de 4 à 5 machines devrait déplacer 20 % des clés — une machine neuve prend sa part.
+le reste de la division en déplace 79.93 %, soit 4.0 fois trop.
+
+pendant ce déplacement, les données voyagent : à 1 Kio par clé,
+c'est 781 Mio à recopier au lieu de 195 Mio — sur un service qui tourne.
+</code></pre></figure>
+<p>Passer de 4 à 5 machines devrait déplacer <strong>20&nbsp;%</strong> des clés&nbsp;: la machine neuve prend sa part, les autres gardent le reste. Le reste de la division en déplace <strong>79,93&nbsp;%</strong>, soit <strong>4,0&nbsp;fois</strong> trop. Et la situation empire à mesure que le système grandit&nbsp;: de 8 à 9, <strong>88,85&nbsp;%</strong>&nbsp;; de 100 à 101, <strong>99,00&nbsp;%</strong> — la quasi-totalité des données change de machine pour l'ajout d'une seule.</p>
+<p>La raison est arithmétique et vaut la peine d'être comprise&nbsp;: <code>h % 4</code> et <code>h % 5</code> n'ont aucune raison de coïncider. Le reste ne conserve rien d'une valeur de N à la suivante&nbsp;; il n'y a pas de continuité, seulement deux fonctions indépendantes.</p>
+<p>La dernière ligne traduit en octets ce que cela signifie pour l'exploitation. À un kibioctet par clé, un passage de 4 à 5 machines fait circuler <strong>781&nbsp;Mio</strong> au lieu des <strong>195&nbsp;Mio</strong> nécessaires — et ce déménagement a lieu <em>pendant que le service tourne</em>, sur le même réseau et les mêmes disques que le trafic réel. Sur un jeu de données de plusieurs téraoctets, la différence entre 20&nbsp;% et 99&nbsp;% se compte en jours d'exploitation dégradée.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le rééquilibrage qui déclenche l'incident</p><p>Un déménagement de données est un travail de fond, et il entre en concurrence avec le trafic. Trois précautions valent d'être prises avant d'en lancer un. <strong>Le brider</strong>&nbsp;: limiter le débit du transfert, quitte à ce qu'il dure plus longtemps — un rééquilibrage qui prend trois jours sans se faire remarquer vaut mieux qu'un rééquilibrage de trois heures qui double les temps de réponse. <strong>Le rendre reprenable</strong>&nbsp;: il sera interrompu, et le reprendre au début serait ruineux. <strong>Ne jamais le déclencher automatiquement sur détection de panne</strong>&nbsp;: une machine qui ne répond pas n'est pas forcément morte — c'est la <a href="lecon-03.html">leçon&nbsp;3</a> — et lancer un déménagement de plusieurs téraoctets en réaction à un délai dépassé est le moyen le plus sûr de transformer un incident en panne générale.</p></div></div>
+<h2>Le hachage cohérent, et à quoi servent les points virtuels</h2>
+<p>La parade porte un nom&nbsp;: le <strong>hachage cohérent</strong>. L'idée tient en une image. Au lieu de calculer un reste, on imagine un cercle qui porte toutes les valeurs d'empreinte possibles. On y place les <em>machines</em> — chacune à la position que donne l'empreinte de son nom — et on y place les <em>clés</em> de la même façon. Chaque clé appartient à la première machine rencontrée en tournant dans un sens fixé.</p>
+<p>Ajouter une machine revient alors à poser un point de plus sur le cercle. Ce point capture les clés situées juste avant lui&nbsp;— celles qui appartenaient à son voisin —, et <em>rien d'autre ne bouge</em>. C'est exactement la continuité qui manquait au reste de la division.</p>
+<p>Une difficulté surgit aussitôt&nbsp;: avec peu de machines, les positions tirées au hasard sur le cercle laissent des arcs très inégaux, donc des partitions très inégales. La parade s'appelle les <strong>points virtuels</strong>&nbsp;: chaque machine dépose non pas un point, mais plusieurs dizaines ou centaines, sous des noms dérivés. Mesurons ce que ça change.</p>
+<figure class="code-block" data-file="hachage-coherent.js"><pre><code class="language-javascript">// Le hachage cohérent : au lieu de calculer un reste, on place les machines
+// ET les clés sur un même cercle de valeurs, et chaque clé va à la première
+// machine rencontrée en tournant. Ajouter une machine ne déplace alors que
+// les clés situées juste avant elle.
+function hacher(mot) {
+  let h = 2166136261;                          // FNV-1a, 32 bits
+  for (let i = 0; i &lt; mot.length; i++) {
+    h ^= mot.charCodeAt(i);
+    h = Math.imul(h, 16777619) &gt;&gt;&gt; 0;
+  }
+  // Brassage final : sans lui, deux chaînes voisines rendent deux empreintes
+  // voisines, et les points se rassemblent au lieu de se répartir.
+  h ^= h &gt;&gt;&gt; 16; h = Math.imul(h, 0x85ebca6b) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 13; h = Math.imul(h, 0xc2b2ae35) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 16;
+  return h &gt;&gt;&gt; 0;
+}
+
+const CLES = 60000;
+const empreintes = [];
+for (let i = 0; i &lt; CLES; i++) empreintes.push(hacher('compte-' + i));
+
+// Un anneau : chaque machine y dépose VIRTUELS points.
+function anneau(machines, virtuels, sel) {
+  const points = [];
+  for (let m = 0; m &lt; machines; m++)
+    for (let v = 0; v &lt; virtuels; v++)
+      points.push([hacher('sel' + sel + '/machine-' + m + '#' + v), m]);
+  points.sort((a, b) =&gt; a[0] - b[0]);
+  return points;
+}
+
+function proprietaire(points, h) {
+  let bas = 0, haut = points.length - 1;
+  if (h &gt; points[haut][0]) return points[0][1];      // on repasse par zéro
+  while (bas &lt; haut) {
+    const mil = (bas + haut) &gt;&gt; 1;
+    if (points[mil][0] &lt; h) bas = mil + 1; else haut = mil;
+  }
+  return points[bas][1];
+}
+
+function mesurer(machines, virtuels, sel) {
+  const a = anneau(machines, virtuels, sel);
+  const b = anneau(machines + 1, virtuels, sel);
+  const charge = new Array(machines).fill(0);
+  let bougent = 0;
+  for (const h of empreintes) {
+    const avant = proprietaire(a, h);
+    charge[avant]++;
+    if (avant !== proprietaire(b, h)) bougent++;
+  }
+  const moyenne = CLES / machines;
+  return {
+    bougent, part: 100 * bougent / CLES,
+    desequilibre: Math.max(...charge) / moyenne,
+  };
+}
+
+console.log(CLES + ' clés, 8 machines, on en ajoute une neuvième');
+console.log('');
+console.log('points par machine | clés déplacées | idéal | partition la + chargée');
+// Un seul anneau donne un chiffre bruité : on en tire vingt et on moyenne.
+const TIRAGES = 20;
+function moyenne(virtuels) {
+  let part = 0, des = 0;
+  for (let sel = 0; sel &lt; TIRAGES; sel++) {
+    const m = mesurer(8, virtuels, sel);
+    part += m.part; des += m.desequilibre;
+  }
+  return { part: part / TIRAGES, desequilibre: des / TIRAGES };
+}
+for (const v of [1, 4, 16, 64, 256]) {
+  const m = moyenne(v);
+  console.log(
+    String(v).padStart(17) + ' | ' + (m.part.toFixed(2) + ' %').padStart(14) + ' | ' +
+    (100 / 9).toFixed(2) + ' % | ×' + m.desequilibre.toFixed(2)
+  );
+}
+
+console.log('');
+console.log('à comparer aux 88,85 % que déplace le reste de la division pour 8 → 9.');
+const bon = moyenne(256);
+console.log('avec 256 points par machine : ' + bon.part.toFixed(2) + ' % de clés déplacées,');
+console.log('et la partition la plus chargée n\'excède la moyenne que de '
+            + (100 * (bon.desequilibre - 1)).toFixed(1) + ' %.');
+console.log('');
+console.log('un seul point par machine suffit pour la propriété de déplacement,');
+console.log('mais pas pour l\'équilibre : c\'est à cela que servent les points virtuels.');</code></pre></figure>
+<figure class="code-block" data-file="hachage-coherent.txt"><pre><code class="language-plaintext">60000 clés, 8 machines, on en ajoute une neuvième
+
+points par machine | clés déplacées | idéal | partition la + chargée
+                1 |        11.27 % | 11.11 % | ×2.68
+                4 |        12.47 % | 11.11 % | ×1.80
+               16 |        10.77 % | 11.11 % | ×1.39
+               64 |        11.01 % | 11.11 % | ×1.19
+              256 |        11.38 % | 11.11 % | ×1.09
+
+à comparer aux 88,85 % que déplace le reste de la division pour 8 → 9.
+avec 256 points par machine : 11.38 % de clés déplacées,
+et la partition la plus chargée n'excède la moyenne que de 8.9 %.
+
+un seul point par machine suffit pour la propriété de déplacement,
+mais pas pour l'équilibre : c'est à cela que servent les points virtuels.
+</code></pre></figure>
+<p>Deux colonnes, deux enseignements distincts. Le nombre de clés déplacées reste autour de l'idéal <strong>11,11&nbsp;%</strong> dans tous les cas — <strong>11,27&nbsp;%</strong> avec un seul point par machine, <strong>11,38&nbsp;%</strong> avec 256. La propriété de continuité tient donc dès le premier point, et c'est elle qu'on est venu chercher&nbsp;: à comparer aux <strong>88,85&nbsp;%</strong> du reste de la division pour le même passage de 8 à 9.</p>
+<p>L'équilibre, lui, dépend entièrement du nombre de points. Avec un seul point par machine, la partition la plus chargée porte <strong>×2,68</strong> sa part — un anneau tiré au hasard est très irrégulier. Avec 4 points&nbsp;: <strong>×1,80</strong>. Avec 16&nbsp;: <strong>×1,39</strong>. Avec 64&nbsp;: <strong>×1,19</strong>. Avec 256&nbsp;: <strong>×1,09</strong>, soit <strong>8,9&nbsp;%</strong> au-dessus de la moyenne.</p>
+<p>Les points virtuels apportent d'ailleurs une seconde propriété, moins évidente et tout aussi utile. Quand une machine tombe, ses points disparaissent du cercle&nbsp;; ses clés sont récupérées par les <em>voisins de chacun de ses points</em>, c'est-à-dire par <em>toutes</em> les autres machines, un peu chacune. Avec un seul point par machine, sa charge entière retomberait sur un unique voisin, qui saturerait aussitôt — et ferait tomber le suivant. Les points virtuels transforment donc une panne en un supplément de charge réparti, au lieu d'un effet domino.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le chiffre moyenné, et pourquoi</p><p>Un seul anneau donne un résultat très bruité&nbsp;: les positions sont tirées d'une empreinte, donc chaque configuration est un échantillon particulier. Le programme en tire <strong>vingt</strong> et fait la moyenne. Mesuré&nbsp;: avec un seul anneau, la colonne des clés déplacées irait de <strong>19,90&nbsp;%</strong> à <strong>10,72&nbsp;%</strong> au lieu de rester collée aux <strong>11,11&nbsp;%</strong> attendus — c'est <em>elle</em> qui est bruitée au point de masquer l'idéal, et la moyenne sert à la révéler, pas à inventer un effet. C'est une précaution générale devant toute mesure aléatoire&nbsp;: <em>une valeur qui varie d'un tirage à l'autre ne se compare pas à une autre valeur d'un seul tirage</em>. Le brassage final de la fonction de hachage relève de la même exigence&nbsp;: sans lui, deux noms voisins comme <code>sel0/machine-0#0</code> et <code>sel0/machine-0#1</code> rendent des empreintes distantes d'exactement 16&nbsp;777&nbsp;619 — le nombre premier de la fonction —, soit <strong>0,391&nbsp;%</strong> de l'anneau&nbsp;: les points se regroupent. Mesuré sans le brassage&nbsp;: l'équilibre plafonne à <strong>×1,33</strong> avec 256 points, au lieu de <strong>×1,09</strong>.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Schéma en deux parties illustrant le hachage cohérent. À gauche, un grand cercle représente l espace des empreintes. Huit points marqués A à H sont posés sur le cercle à des positions franchement inégales : les arcs qui les séparent vont de vingt à cent vingt degrés, le plus grand valant près de trois fois la moyenne. Une note indique que chaque clé appartient à la première machine rencontrée en tournant dans le sens des aiguilles d une montre. Un neuvième point, accentué et marqué I, est posé sur le cercle au milieu du plus grand arc, celui qui va de H à A ; la portion de cercle comprise entre H et I est tracée en trait épais, et une note précise que seules les clés de cet arc changent de machine. À droite, cinq lignes de texte récapitulent les mesures : pour un point par machine, onze virgule vingt-sept pour cent de clés déplacées et un déséquilibre de deux virgule soixante-huit ; pour quatre points, douze virgule quarante-sept pour cent et un virgule quatre-vingts ; pour seize points, dix virgule soixante-dix-sept pour cent et un virgule trente-neuf ; pour soixante-quatre points, onze virgule zéro un pour cent et un virgule dix-neuf ; pour deux cent cinquante-six points, onze virgule trente-huit pour cent et un virgule zéro neuf. Une bande basse séparée par un trait en pointillés rappelle que le reste de la division déplacerait quatre-vingt-huit virgule quatre-vingt-cinq pour cent des clés pour le même passage de huit à neuf machines.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Un cercle d'empreintes, et un point de plus</text>
+
+    <circle cx="150" cy="150" r="86" class="d-frame" fill="none" />
+    <path class="d-line" d="M75.5 193 A86 86 0 0 1 75.5 107" fill="none" stroke-width="3.5" />
+    <circle class="d-dot" cx="150" cy="64" r="5" /><text class="d-text" x="150" y="52" text-anchor="middle" font-size="9">A</text>
+    <circle class="d-dot" cx="193" cy="75.5" r="5" /><text class="d-text" x="205" y="64" text-anchor="middle" font-size="9">B</text>
+    <circle class="d-dot" cx="215.9" cy="94.7" r="5" /><text class="d-text" x="231" y="88" text-anchor="middle" font-size="9">C</text>
+    <circle class="d-dot" cx="234.7" cy="135.1" r="5" /><text class="d-text" x="249" y="132" text-anchor="middle" font-size="9">D</text>
+    <circle class="d-dot" cx="234.7" cy="164.9" r="5" /><text class="d-text" x="249" y="170" text-anchor="middle" font-size="9">E</text>
+    <circle class="d-dot" cx="215.9" cy="205.3" r="5" /><text class="d-text" x="231" y="214" text-anchor="middle" font-size="9">F</text>
+    <circle class="d-dot" cx="193" cy="224.5" r="5" /><text class="d-text" x="205" y="238" text-anchor="middle" font-size="9">G</text>
+    <circle class="d-dot" cx="75.5" cy="193" r="5" /><text class="d-text" x="60" y="204" text-anchor="middle" font-size="9">H</text>
+
+    <circle class="d-accent" cx="75.5" cy="107" r="7" />
+    <text class="d-text" x="60" y="100" text-anchor="middle" font-size="9">I</text>
+    <text class="d-mut" x="150" y="146" text-anchor="middle" font-size="8.5">on ajoute I sur l'anneau&#160;: seules</text>
+    <text class="d-mut" x="150" y="160" text-anchor="middle" font-size="8.5">les clés de l'arc épais, entre H</text>
+    <text class="d-mut" x="150" y="174" text-anchor="middle" font-size="8.5">et I, changent de machine</text>
+
+    <text class="d-label" x="300" y="52" text-anchor="start" font-size="10">POINTS PAR MACHINE</text>
+    <text class="d-mut" x="300" y="74" text-anchor="start" font-size="9">1&#160;point&#160;&#160;&#160;&#160;→ 11,27 % déplacées&#160;·&#160;×2,68</text>
+    <text class="d-mut" x="300" y="96" text-anchor="start" font-size="9">4&#160;points&#160;&#160;→ 12,47 % déplacées&#160;·&#160;×1,80</text>
+    <text class="d-mut" x="300" y="118" text-anchor="start" font-size="9">16&#160;points&#160;→ 10,77 % déplacées&#160;·&#160;×1,39</text>
+    <text class="d-mut" x="300" y="140" text-anchor="start" font-size="9">64&#160;points&#160;→ 11,01 % déplacées&#160;·&#160;×1,19</text>
+    <text class="d-mut" x="300" y="162" text-anchor="start" font-size="9">256&#160;points → 11,38 % déplacées&#160;·&#160;×1,09</text>
+    <text class="d-tag" x="300" y="190" text-anchor="start" font-size="9">IDÉAL DE DÉPLACEMENT&#160;: 11,11 %</text>
+    <text class="d-mut" x="300" y="212" text-anchor="start" font-size="8.5">les points virtuels ne changent pas le déplacement&#160;:</text>
+    <text class="d-mut" x="300" y="226" text-anchor="start" font-size="8.5">ils changent l'équilibre.</text>
+
+    <path class="d-line" d="M14 256 L626 256" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="320" y="276" text-anchor="middle" font-size="9.5">LE RESTE DE LA DIVISION DÉPLACERAIT 88,85 % DES CLÉS POUR LE MÊME PASSAGE DE 8 À 9</text>
+  </svg>
+  <figcaption>Le cercle n'existe nulle part dans la machine&nbsp;: c'est une façon de choisir une fonction qui change peu quand N change.</figcaption>
+</figure>
+<h2>Chercher par autre chose que la clé</h2>
+<p>Tout ce qui précède suppose qu'on connaît la clé. Le partitionnement rend alors la recherche triviale&nbsp;: on calcule, on va voir, on a fini. Les ennuis commencent quand la question ne porte pas sur la clé — «&nbsp;toutes les voitures rouges&nbsp;» alors que les voitures sont réparties par immatriculation, «&nbsp;toutes les commandes de ce client&nbsp;» alors que les commandes sont réparties par numéro.</p>
+<p>Deux réponses existent, et elles ont des coûts opposés. L'<strong>index local</strong>&nbsp;: chaque partition indexe ce qu'elle détient, et rien d'autre. L'<strong>index global</strong>&nbsp;: l'index lui-même est partitionné, mais par <em>terme</em> — toutes les voitures rouges du système sont référencées au même endroit, quel que soit l'endroit où elles vivent.</p>
+<figure class="code-block" data-file="index-secondaires.js"><pre><code class="language-javascript">// Partitionner par clé primaire est facile. Les ennuis commencent quand on
+// veut chercher par autre chose : « toutes les voitures rouges », alors que
+// les voitures sont réparties par numéro d'immatriculation.
+const PARTITIONS = 32;
+const TERMES = 3;              // champs secondaires indexés par enregistrement
+
+// Index LOCAL : chaque partition indexe ce qu'elle détient.
+//   lecture  -&gt; il faut interroger TOUTES les partitions
+//   écriture -&gt; une seule partition est touchée
+const local = { lecture: PARTITIONS, ecriture: 1 };
+
+// Index GLOBAL : l'index lui-même est partitionné, par terme.
+//   lecture  -&gt; une seule partition d'index détient le terme cherché
+//   écriture -&gt; l'enregistrement, plus une partition d'index par terme
+const global = { lecture: 1, ecriture: 1 + TERMES };
+
+console.log(PARTITIONS + ' partitions, ' + TERMES + ' champs secondaires indexés');
+console.log('');
+console.log('opération | index local | index global');
+console.log('lecture   | ' + String(local.lecture).padStart(11) + ' | '
+            + String(global.lecture).padStart(12) + '   partitions touchées');
+console.log('écriture  | ' + String(local.ecriture).padStart(11) + ' | '
+            + String(global.ecriture).padStart(12) + '   partitions touchées');
+
+console.log('');
+console.log('part de lectures | travail total, index local | index global | meilleur');
+for (const p of [0.5, 0.9, 0.99, 0.999]) {
+  const l = p * local.lecture + (1 - p) * local.ecriture;
+  const g = p * global.lecture + (1 - p) * global.ecriture;
+  console.log(
+    ((100 * p).toFixed(1) + ' %').padStart(16) + ' | ' + l.toFixed(2).padStart(26) + ' | ' +
+    g.toFixed(2).padStart(12) + ' | ' + (l &lt; g ? 'local' : 'global')
+  );
+}
+
+console.log('');
+const bascule = (global.ecriture - local.ecriture)
+              / (local.lecture - global.lecture + global.ecriture - local.ecriture);
+console.log('les deux se valent à ' + (100 * bascule).toFixed(2) + ' % de lectures :');
+console.log('en dessous, l\'index local coûte moins cher ; au-dessus, l\'index global.');
+console.log('');
+console.log('mais le tableau ne dit pas tout : l\'index global exige d\'écrire dans '
+            + global.ecriture + ' partitions');
+console.log('à la fois, ce qui n\'est pas une écriture mais une transaction répartie.');
+console.log('c\'est pourquoi il est presque toujours mis à jour de façon ASYNCHRONE —');
+console.log('et donc pourquoi une recherche peut ne pas trouver ce qui vient d\'être écrit.');</code></pre></figure>
+<figure class="code-block" data-file="index-secondaires.txt"><pre><code class="language-plaintext">32 partitions, 3 champs secondaires indexés
+
+opération | index local | index global
+lecture   |          32 |            1   partitions touchées
+écriture  |           1 |            4   partitions touchées
+
+part de lectures | travail total, index local | index global | meilleur
+          50.0 % |                      16.50 |         2.50 | global
+          90.0 % |                      28.90 |         1.30 | global
+          99.0 % |                      31.69 |         1.03 | global
+          99.9 % |                      31.97 |         1.00 | global
+
+les deux se valent à 8.82 % de lectures :
+en dessous, l'index local coûte moins cher ; au-dessus, l'index global.
+
+mais le tableau ne dit pas tout : l'index global exige d'écrire dans 4 partitions
+à la fois, ce qui n'est pas une écriture mais une transaction répartie.
+c'est pourquoi il est presque toujours mis à jour de façon ASYNCHRONE —
+et donc pourquoi une recherche peut ne pas trouver ce qui vient d'être écrit.
+</code></pre></figure>
+<p>L'index local touche <strong>32</strong> partitions en lecture et <strong>1</strong> en écriture&nbsp;: écrire est aussi bon marché que sans index, chercher coûte une requête diffusée. L'index global inverse exactement&nbsp;: <strong>1</strong> partition en lecture, <strong>4</strong> en écriture — l'enregistrement, plus une partition d'index par champ indexé.</p>
+<p>La bascule se situe à <strong>8,82&nbsp;%</strong> de lectures&nbsp;: en dessous, l'index local coûte moins cher&nbsp;; au-dessus, l'index global. Autant dire que dans presque tous les services réels — où les lectures dominent largement —, l'index global gagne le calcul haut la main&nbsp;: à 99&nbsp;% de lectures, <strong>1,03</strong> partition touchée en moyenne contre <strong>31,69</strong>.</p>
+<p>Et pourtant l'index local reste très employé. La raison est dans les trois dernières lignes du programme, et elle ne figure dans aucune colonne&nbsp;: mettre à jour un index global demande d'écrire dans <strong>4</strong> partitions <em>à la fois</em>. Ce n'est plus une écriture, c'est une transaction répartie — avec tout ce que le module&nbsp;2 a montré du coût de se mettre d'accord entre machines. En pratique, les index globaux sont donc mis à jour de façon <strong>asynchrone</strong>, et l'on retombe sur la cohérence à terme de la <a href="lecon-06.html">leçon&nbsp;6</a>&nbsp;: une recherche peut ne pas trouver ce qui vient d'être écrit.</p>
+<h2>La requête qui interroge tout le monde</h2>
+<p>Reste le coût que le partitionnement introduit et qui surprend le plus, parce qu'il ne se voit pas sur une petite installation&nbsp;: la <strong>requête diffusée</strong>. Quand une requête ne sait pas dans quelle partition chercher — index local, parcours sans clé, agrégat sur tout le jeu de données —, il faut interroger toutes les partitions et attendre <em>la plus lente</em>.</p>
+<p>Attendre la plus lente n'est pas attendre la moyenne. Chaque partition a sa propre distribution de temps de réponse, avec une queue&nbsp;: un ramasse-miettes, un disque occupé, un voisin bruyant. Plus il y a de partitions, plus il est probable qu'au moins une soit dans un mauvais jour au moment précis de la requête.</p>
+<figure class="code-block" data-file="requete-diffusee.js"><pre><code class="language-javascript">// Ce que le partitionnement coûte : une requête qui ne connaît pas sa clé doit
+// interroger TOUTES les partitions et attendre la plus lente. Plus il y a de
+// partitions, plus il est probable qu'au moins une soit dans un mauvais jour.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+// Une partition répond en 5 à 15 ms dans 95 % des cas, en 50 à 300 ms sinon.
+function partition(alea) {
+  return alea() &lt; 0.95 ? 5 + 10 * alea() : 50 + 250 * alea();
+}
+
+const TIRAGES = 20000;
+function centiles(n) {
+  const alea = semer(2025);
+  const v = [];
+  for (let i = 0; i &lt; TIRAGES; i++) {
+    let pire = 0;
+    for (let p = 0; p &lt; n; p++) pire = Math.max(pire, partition(alea));
+    v.push(pire);
+  }
+  v.sort((a, b) =&gt; a - b);
+  return {
+    med: v[Math.floor(TIRAGES * 0.5)],
+    p95: v[Math.floor(TIRAGES * 0.95)],
+    p99: v[Math.floor(TIRAGES * 0.99)],
+    lentes: v.filter((x) =&gt; x &gt; 50).length / TIRAGES,
+  };
+}
+
+console.log('une partition répond en 5-15 ms (95 %) ou 50-300 ms (5 %)');
+console.log('');
+console.log('partitions | médiane | 95e centile | 99e centile | requêtes &gt; 50 ms');
+const mesures = {};
+for (const n of [1, 2, 4, 16, 64, 256]) {
+  const c = mesures[n] = centiles(n);
+  console.log(
+    String(n).padStart(10) + ' | ' + (c.med.toFixed(1) + ' ms').padStart(7) + ' | ' +
+    (c.p95.toFixed(1) + ' ms').padStart(11) + ' | ' + (c.p99.toFixed(1) + ' ms').padStart(11) +
+    ' | ' + (100 * c.lentes).toFixed(1) + ' %'
+  );
+}
+
+console.log('');
+const un = mesures[1], seize = mesures[16], gros = mesures[256];
+console.log('la médiane passe de ' + un.med.toFixed(1) + ' ms à ' + seize.med.toFixed(1)
+            + ' ms à 16 partitions, et à ' + gros.med.toFixed(1) + ' ms à 256 :');
+console.log('sur une requête diffusée, le cas TYPIQUE devient le cas RARE d\'une partition.');
+console.log('');
+console.log('probabilité qu\'aucune des 256 ne soit lente : '
+            + (100 * Math.pow(0.95, 256)).toFixed(4) + ' %');</code></pre></figure>
+<figure class="code-block" data-file="requete-diffusee.txt"><pre><code class="language-plaintext">une partition répond en 5-15 ms (95 %) ou 50-300 ms (5 %)
+
+partitions | médiane | 95e centile | 99e centile | requêtes &gt; 50 ms
+         1 | 10.3 ms |     50.5 ms |    252.0 ms | 5.0 %
+         2 | 12.5 ms |    175.7 ms |    277.0 ms | 10.0 %
+         4 | 13.9 ms |    236.8 ms |    288.7 ms | 18.6 %
+        16 | 88.7 ms |    284.6 ms |    297.1 ms | 56.0 %
+        64 | 245.0 ms |    296.1 ms |    299.3 ms | 96.4 %
+       256 | 286.4 ms |    299.0 ms |    299.8 ms | 100.0 %
+
+la médiane passe de 10.3 ms à 88.7 ms à 16 partitions, et à 286.4 ms à 256 :
+sur une requête diffusée, le cas TYPIQUE devient le cas RARE d'une partition.
+
+probabilité qu'aucune des 256 ne soit lente : 0.0002 %
+</code></pre></figure>
+<p>Une seule partition&nbsp;: médiane <strong>10,3&nbsp;ms</strong>, et <strong>5,0&nbsp;%</strong> des requêtes au-delà de 50&nbsp;ms. Seize partitions&nbsp;: médiane <strong>88,7&nbsp;ms</strong>, et <strong>56,0&nbsp;%</strong> des requêtes lentes. Deux cent cinquante-six&nbsp;: médiane <strong>286,4&nbsp;ms</strong> et <strong>100,0&nbsp;%</strong> de requêtes lentes.</p>
+<p>Lis la dernière ligne, elle explique tout le tableau&nbsp;: la probabilité qu'<em>aucune</em> des 256 partitions ne soit lente vaut <strong>0,0002&nbsp;%</strong>. Autrement dit, sur une requête diffusée à grande échelle, <strong>le cas rare d'une partition devient le cas certain du système</strong>. C'est la même arithmétique que la disponibilité en série du module&nbsp;1, appliquée non plus à la panne mais à la lenteur.</p>
+<p>Conséquence de conception, et elle est sévère&nbsp;: <em>partitionner davantage dégrade les requêtes diffusées</em>. On partitionne pour encaisser plus d'écritures, et l'on paie ce gain sur toutes les requêtes qui ne connaissent pas leur clé. Un système qui grandit voit donc ses requêtes par clé rester rapides et ses requêtes diffusées s'effondrer — ce qui ressemble de l'extérieur à une régression inexplicable, et qui n'est qu'une conséquence arithmétique du nombre de partitions.</p>
+<p>Deux parades, connues et employées partout. La première&nbsp;: <strong>ne pas diffuser</strong>, en organisant les données pour que les requêtes fréquentes connaissent leur partition — c'est ce que fait un index global, et c'est la raison de son succès malgré son coût d'écriture. La seconde&nbsp;: <strong>ne pas attendre les traînards</strong>, en répondant avec les partitions qui ont répondu et en signalant que le résultat est partiel, ou en relançant la requête sur une autre copie de la partition lente au bout d'un court délai. Cette dernière technique — relancer, pas répondre partiellement — porte un nom, la <em>requête doublée</em>, et elle coûte du trafic supplémentaire pour raccourcir la queue. À ne pas confondre avec la «&nbsp;requête couverte&nbsp;» du cours <a href="../nosql/cours.html">Bases NoSQL</a>, qui désigne tout autre chose&nbsp;: une requête entièrement servie par un index.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 288" role="img" aria-label="Schéma d une requête diffusée. En haut, une boîte accentuée représente le coordinateur. Un trait en descend jusqu à une barre horizontale, d où partent huit branches verticales sans pointe vers huit boîtes représentant des partitions, chacune portant son temps de réponse : sept d entre elles portent des valeurs comprises entre six et quatorze millisecondes, la huitième porte deux cent trente et une millisecondes et elle est accentuée. Une seule flèche de retour est tracée, celle de la partition lente : elle contourne le schéma par le bas et remonte vers le coordinateur, avec l étiquette c est elle qui fixe la réponse. Sous le schéma, une bande séparée par un trait en pointillés donne la progression mesurée de la médiane selon le nombre de partitions : dix virgule trois millisecondes pour une partition, treize virgule neuf pour quatre, quatre-vingt-huit virgule sept pour seize, deux cent quarante-cinq pour soixante-quatre, deux cent quatre-vingt-six virgule quatre pour deux cent cinquante-six. Une dernière ligne indique que la probabilité qu aucune des deux cent cinquante-six partitions ne soit lente vaut zéro virgule zéro zéro zéro deux pour cent.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Attendre la plus lente, ce n'est pas attendre la moyenne</text>
+
+    <rect class="d-accent" x="252" y="36" width="136" height="28" rx="8" />
+    <text class="d-text" x="320" y="55" text-anchor="middle" font-size="9.5">coordinateur</text>
+
+    <path class="d-line" d="M320 64 L320 84" fill="none" />
+    <path class="d-line" d="M44 84 L596 84" fill="none" />
+    <path class="d-line" d="M44 84 L44 104" fill="none" /><path class="d-line" d="M123 84 L123 104" fill="none" />
+    <path class="d-line" d="M202 84 L202 104" fill="none" /><path class="d-line" d="M281 84 L281 104" fill="none" />
+    <path class="d-line" d="M359 84 L359 104" fill="none" /><path class="d-line" d="M438 84 L438 104" fill="none" />
+    <path class="d-line" d="M517 84 L517 104" fill="none" /><path class="d-line" d="M596 84 L596 104" fill="none" />
+
+    <rect class="d-box" x="16" y="104" width="56" height="26" rx="6" /><text class="d-text" x="44" y="121" text-anchor="middle" font-size="8">8,1 ms</text>
+    <rect class="d-box" x="95" y="104" width="56" height="26" rx="6" /><text class="d-text" x="123" y="121" text-anchor="middle" font-size="8">11,4 ms</text>
+    <rect class="d-box" x="174" y="104" width="56" height="26" rx="6" /><text class="d-text" x="202" y="121" text-anchor="middle" font-size="8">6,3 ms</text>
+    <rect class="d-box" x="253" y="104" width="56" height="26" rx="6" /><text class="d-text" x="281" y="121" text-anchor="middle" font-size="8">13,9 ms</text>
+    <rect class="d-box" x="331" y="104" width="56" height="26" rx="6" /><text class="d-text" x="359" y="121" text-anchor="middle" font-size="8">9,2 ms</text>
+    <rect class="d-box" x="410" y="104" width="56" height="26" rx="6" /><text class="d-text" x="438" y="121" text-anchor="middle" font-size="8">7,7 ms</text>
+    <rect class="d-box" x="489" y="104" width="56" height="26" rx="6" /><text class="d-text" x="517" y="121" text-anchor="middle" font-size="8">12,6 ms</text>
+    <rect class="d-accent" x="568" y="104" width="56" height="26" rx="6" /><text class="d-text" x="596" y="121" text-anchor="middle" font-size="8">231 ms</text>
+
+    <path class="d-line" d="M596 130 L596 160 L320 160 L320 72" fill="none" stroke-width="2" />
+    <path class="d-line" d="M315 80 L320 72 L325 80" fill="none" stroke-width="2" />
+    <text class="d-tag" x="450" y="176" text-anchor="middle" font-size="9.5">C'EST ELLE QUI FIXE LA RÉPONSE</text>
+
+    <path class="d-line" d="M14 200 L626 200" fill="none" stroke-dasharray="4 3" />
+    <text class="d-label" x="14" y="218" text-anchor="start" font-size="9.5">MÉDIANE DE LA RÉPONSE, SELON LE NOMBRE DE PARTITIONS</text>
+    <text class="d-mut" x="14" y="240" text-anchor="start" font-size="9">1&#160;→ 10,3 ms&#160;·&#160;4&#160;→ 13,9 ms&#160;·&#160;16&#160;→ 88,7 ms&#160;·&#160;64&#160;→ 245,0 ms&#160;·&#160;256&#160;→ 286,4 ms</text>
+    <text class="d-mut" x="14" y="262" text-anchor="start" font-size="9">probabilité qu'AUCUNE des 256 ne soit lente&#160;: 0,0002 %</text>
+    <text class="d-mut" x="14" y="282" text-anchor="start" font-size="9">partitionner davantage améliore les écritures et dégrade toutes les requêtes qui ne connaissent pas leur clé</text>
+  </svg>
+  <figcaption>Sept partitions sur huit répondent en moins de 14&nbsp;ms. La requête, elle, met 231&nbsp;ms.</figcaption>
+</figure>
+<h2>Ce que le partitionnement rend difficile</h2>
+<p>Trois choses qui allaient de soi sur une machine unique deviennent des chantiers dès que les données sont réparties. Il vaut mieux les connaître avant de découper, parce que le découpage se choisit largement pour les éviter.</p>
+<p><strong>Les transactions qui touchent deux partitions.</strong> Débiter un compte et créditer un autre est trivial sur une machine&nbsp;: une transaction, deux lignes, terminé. Si les deux comptes sont sur deux partitions, il faut un protocole d'accord entre machines — et le module&nbsp;2 a montré ce que se mettre d'accord coûte, en latence comme en disponibilité. La parade habituelle consiste à <em>choisir la clé de partition pour que les données qui changent ensemble vivent ensemble</em>&nbsp;: partitionner par client plutôt que par commande, par conversation plutôt que par message.</p>
+<p><strong>Les jointures.</strong> Rapprocher deux tables réparties différemment demande de faire circuler des données entre machines pendant l'exécution de la requête. C'est faisable, c'est ce que font les moteurs analytiques, et c'est cher. Le contournement classique consiste à <em>dupliquer</em> les petites tables sur toutes les partitions — un catalogue de codes postaux, une liste de devises — pour que la jointure reste locale.</p>
+<p><strong>L'unicité.</strong> «&nbsp;Cette adresse électronique ne doit exister qu'une fois&nbsp;» est une contrainte globale. Si la partition est choisie sur l'identifiant de compte, rien n'empêche deux partitions d'accepter la même adresse en même temps. La parade la plus employée est de <em>faire de la valeur unique une clé de partition à part entière</em>&nbsp;: une table dont la clé est l'adresse, où l'insertion échoue si elle existe déjà. L'unicité redevient alors locale à une partition, donc gratuite.</p>
+<p>Ces trois parades ont un point commun, et c'est la conclusion de la leçon&nbsp;: <strong>le choix de la clé de partition est une décision de modélisation, pas un réglage d'exploitation</strong>. Elle détermine ce qui sera trivial et ce qui sera coûteux, pour toute la vie du système. Et elle est très difficile à changer après coup&nbsp;: on l'a vu, un simple changement du nombre de partitions déplace déjà l'essentiel des données&nbsp;; changer le <em>critère</em> les déplace toutes, et invalide au passage tous les index et toutes les requêtes écrites autour.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Trois prolongements. Le <strong>partitionnement dynamique</strong>&nbsp;: plutôt que de fixer le nombre de partitions, on laisse chacune se scinder quand elle dépasse une taille et fusionner quand elle passe sous une autre — c'est ce que font plusieurs bases orientées plages, et cela répond au déséquilibre mesuré ici sans rééquilibrage global. Le <strong>partitionnement à nombre fixe et élevé</strong>&nbsp;: on crée d'emblée mille partitions logiques pour dix machines, et l'on déplace des partitions entières lorsqu'on ajoute une machine — l'unité de déménagement devient la partition, pas la clé. Enfin, la <strong>répartition des requêtes</strong>&nbsp;: comment un client sait vers quelle machine envoyer sa requête (annuaire, service de routage, ou client qui connaît la carte) est un sujet à part entière, traité côté infrastructure dans le cours <a href="../cloud/cours.html">Cloud</a> et côté trafic dans le cours <a href="../reseaux/cours.html">Réseaux</a>.</p></div></div>
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Choisir la partition par un reste de division.</strong> C'est simple, uniforme, rapide — et cela déplace <strong>88,85&nbsp;%</strong> des clés quand on passe de 8 à 9 machines, <strong>99,00&nbsp;%</strong> de 100 à 101, là où <strong>11,11&nbsp;%</strong> et <strong>0,99&nbsp;%</strong> suffiraient. Le défaut ne se voit pas tant qu'on n'ajoute pas de machine, c'est-à-dire tant que tout va bien.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre l'équilibre des clés et l'équilibre du trafic.</strong> Le hachage garantit le premier — <strong>×1,00</strong> mesuré — et ne dit rien du second&nbsp;: sur un trafic très concentré, une partition sur seize prend <strong>32,8&nbsp;%</strong> du total, et la capacité réelle de seize machines tombe de <strong>160&nbsp;000</strong> à <strong>30&nbsp;528</strong> requêtes par seconde. Superviser la taille des partitions ne révèle jamais ce déséquilibre-là&nbsp;: il faut superviser leur <em>charge</em>.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Partitionner davantage en espérant que tout aille plus vite.</strong> Les requêtes par clé, oui&nbsp;; les requêtes diffusées, non — elles se dégradent. Mesuré&nbsp;: la médiane passe de <strong>10,3&nbsp;ms</strong> à une partition à <strong>286,4&nbsp;ms</strong> à 256, et la probabilité qu'aucune ne soit lente tombe à <strong>0,0002&nbsp;%</strong>. Avant d'ajouter des partitions, il faut savoir quelle proportion des requêtes connaît sa clé.</p></div></div>
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service de messagerie d'entreprise stocke les messages dans une base partitionnée. La clé de partition est l'identifiant du message, choisi trois ans plus tôt parce qu'il était unique et bien distribué&nbsp;: le hachage donnait un équilibre parfait, et il l'a toujours donné.<br /><br />Le produit grandit, et l'équipe passe de 16 à 24 partitions. Le mécanisme est un reste de division. Le rééquilibrage déplace <strong>deux clés sur trois</strong> — <strong>66,73&nbsp;%</strong> mesurés, pour <strong>33,33&nbsp;%</strong> nécessaires, l'écart étant ici seulement de deux parce que 16 et 24 partagent le diviseur 8 —, sature le réseau interne pendant deux jours, et double les temps de réponse pendant tout ce temps. L'incident est absorbé — c'est un week-end — et personne n'en tire de conclusion, sinon qu'il faudra «&nbsp;prévoir plus large la prochaine fois&nbsp;».<br /><br />Six mois plus tard, un client grand compte migre trois mille salariés sur le service. Les temps de réponse de l'affichage d'une conversation s'effondrent, sur ce client et sur lui seul — les autres ne voient rien. La supervision montre vingt-quatre partitions parfaitement équilibrées <em>en taille</em>, et aucune anomalie de charge <em>moyenne</em>.<br /><br />La cause tient au choix de la clé, et pas du tout au nombre de partitions. Les messages étant répartis par identifiant de message, les messages d'une <em>même conversation</em> sont dispersés sur toutes les partitions. Afficher une conversation, c'est donc une requête diffusée&nbsp;: on interroge les vingt-quatre et l'on attend la plus lente. Tant que les conversations comptaient quelques dizaines de messages, la chose passait&nbsp;; les conversations du nouveau client en comptaient des milliers, et chaque affichage payait la queue de vingt-quatre distributions à la fois.<br /><br />La correction a été une <strong>reprise de modélisation</strong>, pas un réglage. La clé de partition est devenue l'identifiant de <em>conversation</em>&nbsp;: tous les messages d'un fil vivent désormais sur la même partition, et l'affichage d'une conversation ne touche plus qu'une machine. Le mécanisme de choix est passé au hachage cohérent avec 128 points par machine, ce qui a rendu les ajouts de capacité à peu près indolores. Et une clé composée — empreinte de la conversation, puis date en ordre — a rendu le parcours «&nbsp;les cinquante derniers messages&nbsp;» local et ordonné.<br /><br />Deux choses méritent d'être retenues. La première&nbsp;: <em>l'équilibre parfait affiché par la supervision était vrai et sans rapport avec le problème</em> — on mesurait la taille des partitions, quand le problème était le nombre de partitions touchées par requête. Le premier incident portait d'ailleurs la même signature&nbsp;: personne n'avait mesuré ce que déplace un rééquilibrage avant de le lancer. La seconde&nbsp;: la clé de partition avait été choisie sur un critère technique — «&nbsp;bien distribuée&nbsp;» — alors que c'est un choix de <strong>modélisation</strong>, qui doit se faire sur la question «&nbsp;<em>qu'est-ce qu'on lira ensemble&nbsp;?</em>&nbsp;».</p></div></div>
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Partitionner — mémo de la leçon 8</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Pourquoi partitionner</td><td>La réplication plafonne à <strong>100&nbsp;000</strong> op/s ici&nbsp;; le partitionnement croît linéairement. 100 machines&nbsp;: <strong>9&nbsp;174</strong> écritures/s répliquées contre <strong>100&nbsp;000</strong> partitionnées.</td></tr>
+      <tr><td>Par plage</td><td>Garde le <em>voisinage</em>&nbsp;: les parcours ordonnés restent locaux. Déséquilibre mesuré&nbsp;: <strong>40&nbsp;603</strong> contre <strong>13&nbsp;587</strong> clés, <strong>×1,62</strong> la moyenne.</td></tr>
+      <tr><td>Par empreinte</td><td>Équilibre parfait&nbsp;: <strong>×1,00</strong>. Détruit le voisinage&nbsp;: «&nbsp;de Dupont à Durand&nbsp;» touche toutes les partitions.</td></tr>
+      <tr><td>Clé composée</td><td>Hacher ce qu'on veut équilibrer, ordonner ce qu'on veut parcourir. Empreinte du capteur, puis date en ordre.</td></tr>
+      <tr><td>Point chaud</td><td>Clés équilibrées ≠ trafic équilibré. À <em>s</em>&nbsp;=&nbsp;1,5&nbsp;: <strong>×5,24</strong> sur une partition, <strong>32,8&nbsp;%</strong> du trafic, capacité réelle <strong>30&nbsp;528</strong> au lieu de <strong>160&nbsp;000</strong>.</td></tr>
+      <tr><td>Clé brûlante unique</td><td>Aucune fonction de hachage ne divise une clé. Parades&nbsp;: saler, mettre en cache, traiter à part.</td></tr>
+      <tr><td>Reste de la division</td><td>4→5&nbsp;: <strong>79,93&nbsp;%</strong> déplacées pour 20&nbsp;% nécessaires. 8→9&nbsp;: <strong>88,85&nbsp;%</strong>. 100→101&nbsp;: <strong>99,00&nbsp;%</strong>.</td></tr>
+      <tr><td>Hachage cohérent</td><td>Machines et clés sur un même cercle&nbsp;; une clé va à la première machine rencontrée. 8→9&nbsp;: <strong>11,27&nbsp;%</strong> déplacées, pour un idéal de <strong>11,11&nbsp;%</strong>.</td></tr>
+      <tr><td>Points virtuels</td><td>Ne changent pas le déplacement, changent l'équilibre&nbsp;: <strong>×2,68</strong> à 1 point, <strong>×1,39</strong> à 16, <strong>×1,09</strong> à 256. Et ils répartissent la charge d'une machine tombée.</td></tr>
+      <tr><td>Index local</td><td><strong>32</strong> partitions en lecture, <strong>1</strong> en écriture. Bon marché à écrire, requête diffusée à lire.</td></tr>
+      <tr><td>Index global</td><td><strong>1</strong> en lecture, <strong>4</strong> en écriture. Gagne dès <strong>8,82&nbsp;%</strong> de lectures — mais écrire dans 4 partitions est une transaction répartie, d'où la mise à jour asynchrone.</td></tr>
+      <tr><td>Requête diffusée</td><td>Médiane&nbsp;: <strong>10,3&nbsp;ms</strong> à 1 partition, <strong>88,7&nbsp;ms</strong> à 16, <strong>286,4&nbsp;ms</strong> à 256. Probabilité qu'aucune des 256 ne soit lente&nbsp;: <strong>0,0002&nbsp;%</strong>.</td></tr>
+      <tr><td>Ce qui devient dur</td><td>Transactions à deux partitions, jointures, unicité globale. Parades&nbsp;: colocaliser, dupliquer les petites tables, faire de la valeur unique une clé.</td></tr>
+      <tr><td>La vraie décision</td><td>La clé de partition est un choix de <strong>modélisation</strong>&nbsp;: «&nbsp;qu'est-ce qu'on lira ensemble&nbsp;?&nbsp;», jamais «&nbsp;qu'est-ce qui est bien distribué&nbsp;?&nbsp;».</td></tr>
+    </tbody>
+  </table>
+</figure>
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Partitionnement</dt><dd>Répartition de données <em>différentes</em> sur plusieurs machines, chacune ne recevant que les requêtes de sa part. C'est le seul mécanisme qui fait croître le débit d'écriture d'un système.</dd>
+  <dt>Partition</dt><dd>Sous-ensemble des données confié à une machine. Selon les produits, le même objet s'appelle <em>shard</em>, <em>region</em>, <em>tablet</em> ou <em>bucket</em>.</dd>
+  <dt>Clé de partition</dt><dd>Champ dont la valeur détermine la partition d'un enregistrement. Son choix décide de ce qui sera trivial et de ce qui sera coûteux pour toute la vie du système, et il est très difficile à changer après coup.</dd>
+  <dt>Découpage par plage</dt><dd>Attribution d'un intervalle de clés à chaque partition. Conserve le voisinage, donc les parcours ordonnés&nbsp;; produit un déséquilibre quand les clés ne sont pas réparties uniformément, ici ×1,62.</dd>
+  <dt>Découpage par empreinte</dt><dd>Attribution fondée sur une valeur calculée à partir de la clé. Équilibre les partitions à ×1,00 et détruit toute notion de clés voisines.</dd>
+  <dt>Clé composée</dt><dd>Clé dont une part est hachée et une autre reste ordonnée. Elle donne l'équilibre sur la première et le parcours sur la seconde.</dd>
+  <dt>Point chaud</dt><dd>Partition qui reçoit une part de trafic très supérieure à sa part de clés. Mesuré ici&nbsp;: ×5,24 la moyenne, soit 32,8&nbsp;% du trafic pour un seizième des clés.</dd>
+  <dt>Loi de Zipf</dt><dd>Loi décrivant un trafic concentré&nbsp;: la clé de rang <em>k</em> reçoit une part proportionnelle à 1/<em>k</em>ˢ. Elle décrit assez bien les consultations réelles de contenus, de comptes ou de produits.</dd>
+  <dt>Salage</dt><dd>Ajout d'un suffixe variable à une clé brûlante pour la répartir sur plusieurs partitions. Le trafic d'écriture se disperse, mais toute lecture devient une requête diffusée.</dd>
+  <dt>Rééquilibrage</dt><dd>Déménagement de données consécutif à un changement du nombre de partitions. Il se produit pendant que le service tourne&nbsp;: le brider et le rendre reprenable importe plus que sa vitesse.</dd>
+  <dt>Hachage cohérent</dt><dd>Méthode plaçant machines et clés sur un même cercle d'empreintes, chaque clé revenant à la première machine rencontrée. Ajouter une machine ne déplace que 11,27&nbsp;% des clés, contre 88,85&nbsp;% pour un reste de division.</dd>
+  <dt>Point virtuel</dt><dd>Position supplémentaire déposée par une machine sur le cercle. Sans effet sur le nombre de clés déplacées, décisive pour l'équilibre&nbsp;: ×2,68 avec un point, ×1,09 avec 256.</dd>
+  <dt>Index local</dt><dd>Index secondaire que chaque partition tient sur ce qu'elle détient. Écriture bon marché — une partition —, lecture diffusée à toutes.</dd>
+  <dt>Index global</dt><dd>Index secondaire partitionné par terme. Lecture sur une seule partition, écriture sur autant de partitions qu'il y a de champs indexés — d'où sa mise à jour asynchrone, et le fait qu'une recherche peut ne pas trouver ce qui vient d'être écrit.</dd>
+  <dt>Requête diffusée</dt><dd>Requête envoyée à toutes les partitions faute de connaître la bonne. Sa durée est celle de la plus lente&nbsp;: la médiane passe de 10,3 à 286,4&nbsp;ms entre 1 et 256 partitions.</dd>
+</dl>
+<h2>Récap et vérification</h2>
+<ul>
+<li>Le partitionnement est le <em>seul</em> mécanisme qui fait croître le débit d'écriture&nbsp;: à 100 machines, <strong>9&nbsp;174</strong> écritures/s en réplication contre <strong>100&nbsp;000</strong> en partitionnement.</li>
+<li>Découper <strong>par plage</strong> conserve le voisinage et déséquilibre&nbsp;: <strong>40&nbsp;603</strong> contre <strong>13&nbsp;587</strong> clés, <strong>×1,62</strong>. Découper <strong>par empreinte</strong> équilibre à <strong>×1,00</strong> et détruit le voisinage. Une <strong>clé composée</strong> fait les deux.</li>
+<li>Équilibrer les clés n'équilibre pas le trafic&nbsp;: sur un trafic très concentré (<em>s</em>&nbsp;=&nbsp;1,5), une partition sur seize prend <strong>32,8&nbsp;%</strong> du total et la capacité réelle tombe de <strong>160&nbsp;000</strong> à <strong>30&nbsp;528</strong> requêtes/s.</li>
+<li>Aucune fonction de hachage ne divise une <strong>clé unique</strong> brûlante. Trois parades&nbsp;: saler, mettre en cache, traiter à part.</li>
+<li>Choisir la partition par un <strong>reste de division</strong> déplace <strong>79,93&nbsp;%</strong> des clés de 4 à 5 machines, <strong>88,85&nbsp;%</strong> de 8 à 9, <strong>99,00&nbsp;%</strong> de 100 à 101 — pour un idéal de 20&nbsp;%, 11,11&nbsp;% et 0,99&nbsp;%.</li>
+<li>Le <strong>hachage cohérent</strong> ramène le déplacement à <strong>11,27&nbsp;%</strong>. Les <strong>points virtuels</strong> ne changent pas ce chiffre&nbsp;; ils changent l'équilibre&nbsp;: <strong>×2,68</strong> à 1 point, <strong>×1,09</strong> à 256.</li>
+<li>Un <strong>index local</strong> coûte 1 partition en écriture et 32 en lecture&nbsp;; un <strong>index global</strong>, 4 et 1. Le second gagne dès <strong>8,82&nbsp;%</strong> de lectures, mais écrire dans 4 partitions est une transaction répartie — d'où sa mise à jour asynchrone.</li>
+<li>Une <strong>requête diffusée</strong> attend la plus lente&nbsp;: médiane <strong>10,3&nbsp;ms</strong> à 1 partition, <strong>88,7&nbsp;ms</strong> à 16, <strong>286,4&nbsp;ms</strong> à 256, et <strong>0,0002&nbsp;%</strong> de chances qu'aucune des 256 ne soit lente.</li>
+<li>Partitionner rend difficiles les <strong>transactions croisées</strong>, les <strong>jointures</strong> et l'<strong>unicité globale</strong>. Les trois parades reviennent à choisir la clé pour que ce qui va ensemble vive ensemble.</li>
+<li>La clé de partition est une décision de <strong>modélisation</strong>&nbsp;: la question est «&nbsp;qu'est-ce qu'on lira ensemble&nbsp;?&nbsp;», jamais «&nbsp;qu'est-ce qui est bien distribué&nbsp;?&nbsp;».</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une équipe montre un tableau de bord où les seize partitions ont exactement la même taille et conclut que le partitionnement est sain. Que demandes-tu à voir en plus, et pourquoi&nbsp;?</li>
+<li>Explique, sans citer de chiffre, pourquoi ajouter des partitions améliore certaines requêtes et en dégrade d'autres.</li>
+<li>On te demande de choisir la clé de partition d'un service de commandes. Quelles questions poses-tu au métier, et dans quel ordre&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Pourquoi partitionner plutôt que d'ajouter des copies ?","a":["Parce que chaque partition ne reçoit qu'une part des écritures, là où chaque copie les reçoit toutes","Parce qu'une partition tolère mieux les pannes qu'une copie, n'ayant pas à se synchroniser avec les autres","Parce que le partitionnement protège des pannes, ce que la réplication ne sait pas faire correctement","Parce que les copies coûtent plus cher que les partitions à nombre de machines égal et matériel identique"],"correct":0,"explain":"Mesuré : à 100 machines, la réplication absorbe 9 174 écritures par seconde — moins qu'une seule machine — et le partitionnement 100 000. La réplication plafonne à 100 000 opérations/s au total ; le partitionnement croît linéairement. Et c'est bien la réplication qui protège des pannes : les deux mécanismes traitent deux limites différentes, et on emploie les deux."},
+  {"q":"Le hachage équilibre parfaitement les clés. Qu'est-ce qu'il n'équilibre pas ?","a":["Le trafic : une partition sur seize peut prendre 32,8 % des requêtes","Rien d'autre : équilibrer les clés suffit à équilibrer un système de bout en bout","La latence du réseau entre le client et la partition, qui dépend de l'empreinte de la clé","Le nombre de partitions, qui doit rester une puissance de deux pour que le hachage fonctionne"],"correct":0,"explain":"Mesuré sur un trafic très concentré (s = 1,5) : ×5,24 la moyenne sur la partition la plus chargée, soit 32,8 % du total pour un seizième des clés. Seize machines à 10 000 op/s annoncent 160 000 requêtes/s ; la capacité réelle vaut 30 528, la partition chaude saturant en premier. Superviser la taille des partitions ne révèle jamais ce déséquilibre-là."},
+  {"q":"On passe de 8 à 9 partitions. Combien de clés déménagent ?","a":["11,27 % en hachage cohérent, 88,85 % avec un simple reste de division","11,11 % dans les deux cas, une partition neuve prenant sa part et rien de plus","88,85 % dans les deux cas, tout changement du nombre de partitions redistribuant l'ensemble des clés","Un nombre impossible à prévoir, qui dépend de la répartition réelle des clés dans le jeu de données"],"correct":0,"explain":"L'idéal est 11,11 % — une partition sur neuf. Le hachage cohérent l'atteint pratiquement ; le reste de la division en déplace huit fois trop, parce que h modulo 8 et h modulo 9 n'ont aucune raison de coïncider. À 100 partitions, l'écart devient caricatural : 99,00 % déplacées pour 0,99 % nécessaires."},
+  {"q":"Quel est l'effet du nombre de partitions sur une requête qui les interroge toutes ?","a":["Il la ralentit : la médiane passe de 10,3 ms à une partition à 286,4 ms à 256","Il l'accélère, le travail étant réparti sur d'autant plus de machines qu'il y a de partitions","Il ne change rien, les partitions répondant toutes en parallèle et non les unes après les autres","Il l'accélère jusqu'à seize partitions, au-delà desquelles le gain devient négligeable mais reste positif"],"correct":0,"explain":"Les partitions répondent bien en parallèle, mais la requête attend la PLUS LENTE. Chaque partition étant lente 5 fois sur 100, la probabilité qu'aucune des 256 ne le soit vaut 0,0002 % : le cas rare d'une partition devient le cas certain du système. C'est la même arithmétique que la disponibilité en série du module 1, appliquée à la lenteur."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["par plage","plage","le découpage par plage","découpage par plage","par plages","par intervalle"],"placeholder":"le découpage qui garde les clés voisines ensemble est le découpage ...","hints":["Deux découpages sont opposés dans la leçon : l'un équilibre, l'autre conserve le voisinage.","Celui qu'on cherche attribue un intervalle de clés à chaque partition — A à F, G à L, et ainsi de suite.","Le mot est un nom féminin de cinq lettres, précédé de « par »."],"link":{"href":"lecon-08.html","label":"Revoir « Par plage ou par empreinte »"}},
+  {"type":"code","run":{"expect":"94.11 5.88"},"placeholder":"le pourcentage déplacé par le reste de la division, puis l'idéal","hints":["Reprends la fonction de hachage de la page — FNV-1a suivi du brassage final — et un million de clés nommées « compte-i ».","Une clé déménage si son empreinte modulo 16 diffère de son empreinte modulo 17.","L'idéal est la part d'une partition neuve : 100 divisé par 17. Deux décimales pour les deux nombres."],"link":{"href":"lecon-08.html","label":"Revoir « Le jour où l'on ajoute une machine »"}},
+  {"type":"code","run":{"expect":"55.99 96.25"},"placeholder":"le risque qu'au moins une partition soit lente, à 16 puis à 64","hints":["Une partition est lente 5 fois sur 100, et les partitions sont indépendantes.","Le complément est plus simple à calculer : la probabilité qu'AUCUNE ne soit lente vaut 0,95 élevé à la puissance du nombre de partitions.","Affiche des pourcentages avec deux décimales."],"link":{"href":"lecon-08.html","label":"Revoir « La requête qui interroge tout le monde »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un service veut pouvoir répondre à «&nbsp;toutes les mesures de mardi dernier&nbsp;» sans interroger toutes ses machines. Lequel des deux découpages doit-il employer sur la date, et qu'est-ce qu'il perd en échange&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">LE DÉCOUPAGE PAR PLAGE.
+
+Il attribue un intervalle de clés à chaque partition, donc les clés
+voisines restent ensemble : « toutes les mesures de mardi » ne touche
+qu'une partition, ou deux si la journée est à cheval sur une borne.
+
+Ce qu'il perd :
+
+  l'équilibre.  Mesuré sur des noms de famille, quatre partitions :
+                40 603 clés pour la plus chargée, 13 587 pour la moins
+                chargée, soit x1,62 la moyenne.
+                Par empreinte : 25 074 et 24 905, soit x1,00.
+
+  et sur une DATE, le déséquilibre est bien pire : toutes les mesures
+  du jour arrivent dans la MÊME partition, celle qui détient la plage
+  d'aujourd'hui. Les autres ne reçoivent plus une seule écriture.
+
+La parade est la clé composée :
+  empreinte de l'identifiant du capteur, PUIS date en ordre
+  -> les capteurs se répartissent, et chaque capteur reste parcourable.
+</code></pre></figure>
+<p>Ce cas de la date mérite d'être retenu, parce qu'il est le plus fréquent et le plus contre-intuitif&nbsp;: partitionner par date semble naturel — c'est le champ sur lequel on interroge — et produit le pire point chaud possible, puisque <em>toutes</em> les écritures visent la partition du jour pendant que les autres dorment. Le découpage par plage sur une clé <em>croissante dans le temps</em> est un anti-motif à part entière.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un service passe de <strong>16</strong> à <strong>17</strong> partitions, en choisissant la partition par le reste de la division de l'empreinte. Affiche <strong>deux pourcentages, un par ligne, avec deux décimales</strong>&nbsp;: la part des clés réellement déplacées, puis la part qu'un partage idéal déplacerait.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// Combien de clés change de machine quand on passe de 16 à 17 partitions ?
+function hacher(mot) {
+  let h = 2166136261;
+  for (let i = 0; i &lt; mot.length; i++) {
+    h ^= mot.charCodeAt(i);
+    h = Math.imul(h, 16777619) &gt;&gt;&gt; 0;
+  }
+  h ^= h &gt;&gt;&gt; 16; h = Math.imul(h, 0x85ebca6b) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 13; h = Math.imul(h, 0xc2b2ae35) &gt;&gt;&gt; 0;
+  h ^= h &gt;&gt;&gt; 16;
+  return h &gt;&gt;&gt; 0;
+}
+
+const CLES = 1000000;
+let bougent = 0;
+for (let i = 0; i &lt; CLES; i++) {
+  const h = hacher('compte-' + i);
+  if (h % 16 !== h % 17) bougent++;
+}
+
+console.log((100 * bougent / CLES).toFixed(2));   // le reste de la division
+console.log((100 / 17).toFixed(2));               // le partage idéal</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">94.11
+5.88
+</code></pre></figure>
+<p><strong>94,11&nbsp;%</strong> contre <strong>5,88&nbsp;%</strong> nécessaires&nbsp;: <strong>seize fois trop</strong>. Le rapport n'est pas une coïncidence — il vaut approximativement le nombre de partitions de départ, et il empire donc à mesure que le système grandit. C'est ce qui rend le défaut si sournois&nbsp;: il est invisible sur une petite installation, où l'on passe de 2 à 3 partitions en déplaçant «&nbsp;seulement&nbsp;» deux tiers des clés, et il devient ingérable exactement au moment où le système est trop gros pour qu'on change de mécanisme sans douleur.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une partition répond lentement <strong>5&nbsp;fois sur 100</strong>, indépendamment des autres. Une requête diffusée est lente dès qu'<em>au moins une</em> partition l'est. Affiche <strong>deux pourcentages, un par ligne, avec deux décimales</strong>&nbsp;: le risque qu'une requête soit lente avec <strong>16</strong> partitions, puis avec <strong>64</strong>.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// Une partition est « lente » 5 fois sur 100. Une requête diffusée attend la
+// plus lente : elle est donc lente dès qu'AU MOINS UNE des N l'est.
+const LENTE = 0.05;
+
+function risque(partitions) {
+  return 100 * (1 - Math.pow(1 - LENTE, partitions));
+}
+
+console.log(risque(16).toFixed(2));   // affiche : 55.99
+console.log(risque(64).toFixed(2));   // affiche : 96.25</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">55.99
+96.25
+</code></pre></figure>
+<p><strong>55,99&nbsp;%</strong> à seize partitions, <strong>96,25&nbsp;%</strong> à soixante-quatre. Un défaut qui touche une requête sur vingt sur une machine unique en touche <em>plus d'une sur deux</em> dès qu'on diffuse à seize, et <em>presque toutes</em> à soixante-quatre.</p>
+<p>Retiens la forme du calcul plus que les nombres&nbsp;: c'est un complément de produit, exactement comme la disponibilité en série du <a href="lecon-01.html">module&nbsp;1</a>. Là-bas, dix services à 99,9&nbsp;% donnaient 99,0045&nbsp;%&nbsp;; ici, soixante-quatre partitions à 95&nbsp;% donnent 3,75&nbsp;% de requêtes rapides. <em>Tout ce qui exige que N choses aillent bien en même temps se dégrade de la même façon</em> — et c'est pourquoi la première question devant une architecture répartie est toujours&nbsp;: <em>combien de choses doivent aller bien en même temps pour que cette requête réussisse&nbsp;?</em></p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>

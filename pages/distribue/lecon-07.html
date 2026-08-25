@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Répliquer : plusieurs copies, un seul état — Leçon 07 · Cours Systèmes distribués — Syntaxe</title>
+    <meta name="description" content="Trois copies ne valent 125 000 ans que si rien ne les emporte ensemble : avec 10 % de pannes corrélées, le chiffre retombe à 499 ans et une copie de plus n'y change rien. Le mur de la montée en charge (×9,91 à mille copies), le prix de l'attente (0,50 → 7,40 → 191,00 ms), le retard de réplication vu comme une file (12 000 écritures pour 12 % d'excédent), et un seuil de bascule à 100 ms qui destitue 20 226 meneurs vivants en onze jours." />
+    <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg" />
+
+    <script src="../../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../../css/fonts.css" />
+
+    <link rel="stylesheet" href="../../css/variables.css" />
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="../../css/layout.css" />
+    <link rel="stylesheet" href="../../css/components.css" />
+    <link rel="stylesheet" href="../../css/pages.css" />
+  </head>
+
+  <body data-course="distribue" data-lesson="lecon-07.html">
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container--wide container site-header__inner">
+        <a class="brand" href="../../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../../index.html">Accueil</a>
+          <a href="../catalogue.html">Catalogue</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+
+    <main id="contenu">
+      <div class="container container--wide">
+        <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+          <ol class="breadcrumb">
+            <li><a href="../../index.html">Accueil</a></li>
+            <li><a href="../catalogue.html">Catalogue</a></li>
+            <li><a href="cours.html">Systèmes distribués</a></li>
+            <li aria-current="page">Leçon 07</li>
+          </ol>
+        </nav>
+
+        <div class="lesson-layout">
+          <aside class="lesson-rail lesson-coursenav" data-coursenav-host aria-label="Plan du cours">
+            <button class="coursenav-toggle" data-coursenav-toggle aria-expanded="false">
+              <span>Plan du cours</span>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div class="coursenav-panel"><div data-coursenav></div></div>
+          </aside>
+
+          <div class="lesson-main">
+            <header class="lesson-header">
+              <p class="kicker">Module 3 · Répliquer et partitionner — Leçon 07</p>
+              <h1 class="lesson-header__title">Répliquer&nbsp;: plusieurs copies, un seul état</h1>
+              <div class="meta-row">
+                <span class="duration">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                  ~77 min
+                </span>
+                <span class="dot-sep"><span class="pill pill--avance">Avancé</span></span>
+                <span class="dot-sep">Prérequis&nbsp;: les modules&nbsp;1 et&nbsp;2 de ce cours, en particulier la <a href="lecon-03.html">leçon&nbsp;3</a> sur la panne partielle et la <a href="lecon-06.html">leçon&nbsp;6</a> sur CAP. Savoir lire une boucle et une fonction en JavaScript suffit&nbsp;; aucune expérience d'administration de base de données n'est supposée.</span>
+              </div>
+
+              <div class="objectives">
+                <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
+                <ul>
+                  <li>distinguer les <strong>quatre motifs</strong> de la réplication et dire lequel une architecture donnée sert&nbsp;;</li>
+                  <li>chiffrer ce que valent trois copies&nbsp;: <strong>125&nbsp;000</strong> ans indépendantes, <strong>499</strong> ans avec 10&nbsp;% de corrélation&nbsp;;</li>
+                  <li>montrer qu'au-delà du plancher de corrélation, une copie de plus n'apporte plus rien&nbsp;;</li>
+                  <li>calculer le <strong>mur</strong> de la montée en charge&nbsp;: <strong>×9,91</strong> à mille copies avec 10&nbsp;% d'écritures&nbsp;;</li>
+                  <li>arbitrer entre <strong>0,50</strong>, <strong>7,40</strong> et <strong>191,00&nbsp;ms</strong> par écriture, et dire ce que chacun perd&nbsp;;</li>
+                  <li>expliquer pourquoi le retard de réplication est une <strong>file</strong> et non un délai&nbsp;;</li>
+                  <li>défendre l'idée qu'aucun seuil de bascule n'est bon, et nommer les trois remèdes au <strong>cerveau divisé</strong>.</li>
+                </ul>
+              </div>
+            </header>
+
+            <details class="toc-inline" open>
+              <summary>Sommaire de la leçon</summary>
+              <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+            </details>
+
+            <article class="prose">
+<p>Le module&nbsp;2 s'achève sur un arbitrage&nbsp;: pendant une partition, il faut choisir entre répondre et répondre juste. Ce module-ci descend d'un cran, vers les deux mécanismes qui produisent cet arbitrage — et qu'on emploie tous les jours sans les nommer. <strong>Répliquer</strong>, c'est garder la même donnée sur plusieurs machines. <strong>Partitionner</strong>, c'est répartir des données différentes sur plusieurs machines. Les deux se combinent, et ils ne résolvent pas les mêmes problèmes.</p>
+<p>Cette leçon traite la réplication. On la présente souvent comme une assurance&nbsp;: on met trois copies, et on dort tranquille. Les chiffres disent autre chose. Trois copies indépendantes ramènent une perte tous les 50 ans à une perte tous les <strong>125&nbsp;000</strong> ans — mais si <strong>10&nbsp;%</strong> des pannes frappent les trois à la fois, ce chiffre retombe à <strong>499</strong> ans, c'est-à-dire au-dessous de deux copies vraiment indépendantes. Ce n'est pas le nombre de copies qui protège&nbsp;: c'est ce qu'elles ne partagent pas.</p>
+<p>On mesurera aussi les trois autres arbitrages que la réplication impose, et qui sont tous des échanges, jamais des gains gratuits. Le <strong>mur de la montée en charge</strong>&nbsp;: avec 10&nbsp;% d'écritures, mille copies ne font pas mieux que <strong>×9,91</strong>, parce que chaque copie doit appliquer toutes les écritures. Le <strong>prix de l'attente</strong>&nbsp;: ne rien attendre coûte <strong>0,50&nbsp;ms</strong> par écriture et met de <strong>15</strong> à <strong>382</strong> écritures en danger selon la copie qu'on promeut&nbsp;; tout attendre coûte <strong>191,00&nbsp;ms</strong>, soit <strong>382&nbsp;fois</strong> plus. Et la <strong>bascule</strong>&nbsp;: un seuil de détection à 100&nbsp;ms destitue un meneur parfaitement vivant <strong>20&nbsp;226</strong> fois en onze jours&nbsp;; à 5&nbsp;s, plus jamais — mais chaque vraie panne coûte alors <strong>8,0&nbsp;s</strong> de silence.</p>
+<p>Une mise au point avant de commencer&nbsp;: cette leçon ne présente aucun produit. Les mécanismes décrits ici portent des noms différents selon les bases, et se règlent avec des mots différents. Ce qui ne change pas, ce sont les échanges — et ce sont eux qu'on chiffre.</p>
+<h2>Quatre raisons de répliquer, qui ne se règlent pas pareil</h2>
+<p>On répond souvent «&nbsp;pour la haute disponibilité&nbsp;», et c'est une réponse trop courte pour décider quoi que ce soit. Il y a quatre motifs distincts, et chacun impose des contraintes différentes sur le nombre de copies, sur leur emplacement et sur ce qu'on attend d'elles.</p>
+<p><strong>1. Ne pas perdre les données.</strong> Un disque meurt, une machine brûle, un opérateur efface un volume. Ce motif ne demande pas que les copies soient rapides, ni même joignables en permanence&nbsp;: il demande qu'elles ne meurent pas <em>ensemble</em>. C'est le motif où la corrélation des pannes compte plus que tout le reste.</p>
+<p><strong>2. Rester joignable quand une machine tombe.</strong> Ici, il ne suffit plus que la copie existe&nbsp;: il faut qu'elle puisse prendre le relais, donc qu'elle soit à jour, joignable, et qu'un mécanisme sache la désigner. C'est ce motif qui introduit la bascule, et avec elle la question de savoir qui décide qu'une machine est morte.</p>
+<p><strong>3. Encaisser plus de lectures.</strong> Chaque copie peut servir des lectures. Ce motif-là a un plafond dur, qu'on calculera&nbsp;: la réplication ne monte pas en charge sur les écritures, jamais.</p>
+<p><strong>4. Rapprocher la donnée de celui qui la lit.</strong> Une copie à Paris épargne à un lecteur parisien les <strong>80&nbsp;ms</strong> d'aller-retour vers New York. Ce motif est le seul des quatre qui touche à la <em>latence perçue</em>, et il est aussi celui qui pousse le plus fort vers des copies très éloignées les unes des autres — donc vers des retards de réplication élevés.</p>
+<p>Retiens l'essentiel avant d'entrer dans les chiffres&nbsp;: <strong>ces quatre motifs tirent dans des directions différentes</strong>. Le premier veut des copies isolées&nbsp;; le deuxième les veut à jour&nbsp;; le troisième en veut beaucoup&nbsp;; le quatrième les veut loin. Une architecture qui n'a pas dit lequel des quatre elle sert finit par ne bien servir aucun.</p>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Répliquer et partitionner ne sont pas la même chose</p><p>Deux mots qu'on entend ensemble et qu'on confond parfois. <strong>Répliquer</strong>&nbsp;: la <em>même</em> donnée sur plusieurs machines. <strong>Partitionner</strong>&nbsp;: des données <em>différentes</em> sur plusieurs machines. La réplication répond à «&nbsp;et si cette machine tombe&nbsp;?&nbsp;»&nbsp;; le partitionnement répond à «&nbsp;et si cette machine ne suffit plus&nbsp;?&nbsp;». On les combine presque toujours — chaque partition est elle-même répliquée —, ce qui donne des systèmes où un enregistrement vit sur trois machines parmi cent. Le partitionnement occupe la <a href="lecon-08.html">leçon&nbsp;8</a>, et le mécanisme qui permet à un groupe de copies de décider ensemble, la <a href="lecon-09.html">leçon&nbsp;9</a>.</p></div></div>
+<h2>Ne pas perdre&nbsp;: ce que valent vraiment trois copies</h2>
+<p>Commençons par le motif le plus simple à chiffrer, et par le calcul que tout le monde fait de tête — souvent mal. Une copie a une probabilité de disparaître dans l'année. Trois copies disparaissent toutes les trois seulement si les trois échouent la même année. Si les échecs sont <em>indépendants</em>, on multiplie les probabilités, et le résultat s'effondre très vite.</p>
+<p>Le mot «&nbsp;si&nbsp;» porte tout le poids de cette phrase. Mesurons ce qu'il coûte de le supposer à tort.</p>
+<figure class="code-block" data-file="durabilite.js"><pre><code class="language-javascript">// Première raison de répliquer : ne pas perdre les données. Un disque a une
+// probabilité annuelle de défaillance ; N copies indépendantes les perdent
+// toutes seulement si les N tombent la même année.
+const PANNE = 0.02;              // 2 % de chance qu'une copie soit perdue dans l'année
+
+function perte(copies, correlation) {
+  // correlation = part des pannes qui frappent TOUTES les copies à la fois
+  // (même salle, même lot de disques, même bogue de logiciel, même erreur humaine)
+  const commune = PANNE * correlation;
+  const propre = PANNE - commune;
+  return commune + Math.pow(propre, copies);
+}
+
+console.log('copies | indépendantes | 1 % corrélé | 10 % corrélé');
+for (const n of [1, 2, 3, 4, 5]) {
+  console.log(
+    String(n).padStart(6) + ' | ' +
+    perte(n, 0).toExponential(2).padStart(13) + ' | ' +
+    perte(n, 0.01).toExponential(2).padStart(11) + ' | ' +
+    perte(n, 0.10).toExponential(2).padStart(13)
+  );
+}
+
+console.log('');
+// Combien d'années avant une perte, en espérance ?
+for (const n of [1, 2, 3]) {
+  console.log(n + ' copie(s) indépendante(s) : une perte tous les '
+              + (1 / perte(n, 0)).toFixed(0) + ' ans');
+}
+console.log('');
+console.log('3 copies dont 10 % de pannes corrélées : une perte tous les '
+            + (1 / perte(3, 0.10)).toFixed(0) + ' ans');
+console.log('la corrélation ramène 3 copies au niveau de '
+            + (perte(3, 0.10) &gt; perte(2, 0) ? '2 copies indépendantes ou pire' : 'mieux que 2 copies'));</code></pre></figure>
+<figure class="code-block" data-file="durabilite.txt"><pre><code class="language-plaintext">copies | indépendantes | 1 % corrélé | 10 % corrélé
+     1 |       2.00e-2 |     2.00e-2 |       2.00e-2
+     2 |       4.00e-4 |     5.92e-4 |       2.32e-3
+     3 |       8.00e-6 |     2.08e-4 |       2.01e-3
+     4 |       1.60e-7 |     2.00e-4 |       2.00e-3
+     5 |       3.20e-9 |     2.00e-4 |       2.00e-3
+
+1 copie(s) indépendante(s) : une perte tous les 50 ans
+2 copie(s) indépendante(s) : une perte tous les 2500 ans
+3 copie(s) indépendante(s) : une perte tous les 125000 ans
+
+3 copies dont 10 % de pannes corrélées : une perte tous les 499 ans
+la corrélation ramène 3 copies au niveau de 2 copies indépendantes ou pire
+</code></pre></figure>
+<p>Regarde la première colonne. Avec des pannes parfaitement indépendantes, une copie perd les données <strong>tous les 50 ans</strong>, deux copies <strong>tous les 2&nbsp;500 ans</strong>, trois copies <strong>tous les 125&nbsp;000 ans</strong>. Chaque copie ajoutée divise le risque par cinquante. C'est le calcul qu'on lit partout, et il est juste — sous son hypothèse.</p>
+<p>Maintenant la troisième colonne, où <strong>10&nbsp;%</strong> des pannes frappent toutes les copies à la fois. Trois copies ne rendent plus une perte tous les 125&nbsp;000 ans, mais <strong>tous les 499 ans</strong>. Et surtout, regarde la <em>forme</em> de la colonne&nbsp;: entre trois copies et cinq copies, la probabilité passe de 2,01&nbsp;× 10⁻³ à 2,00&nbsp;× 10⁻³. <strong>Elle ne bouge plus.</strong> Ajouter des copies ne sert plus à rien, parce que le risque restant n'est plus celui qu'on traite.</p>
+<p>C'est le résultat le plus important de la section, et il vaut au-delà des disques&nbsp;: <strong>dès qu'une part des pannes est corrélée, elle devient le plancher du système</strong>, et aucune redondance ne descend en dessous. Multiplier les copies améliore la partie indépendante, qui est déjà négligeable, et laisse intacte la partie commune, qui ne l'est pas.</p>
+<p>Qu'est-ce qui rend des pannes corrélées, concrètement&nbsp;? Un même lot de disques sorti de la même usine la même semaine. Une même alimentation électrique. Un même bogue dans la version du logiciel que les trois copies exécutent. Un même certificat qui expire au même instant. Une même commande, tapée par un même opérateur, sur les trois machines à la fois. Cette dernière est de loin la plus fréquente, et c'est aussi la seule que personne ne met dans son calcul de fiabilité.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Une copie n'est pas une sauvegarde</p><p>La réplication propage <em>tout</em>, y compris ce qu'on ne voulait pas. Une suppression accidentelle, un <code>UPDATE</code> sans clause de sélection, un chiffrement par un intrus&nbsp;: les trois copies reçoivent l'ordre en quelques millisecondes et l'appliquent fidèlement. La réplication protège du <strong>matériel</strong>&nbsp;; elle ne protège de <em>rien</em> d'autre. Ce qui protège d'une erreur logique, c'est une copie <strong>décalée dans le temps</strong> et hors de portée du système en production — une sauvegarde, dont on a vérifié qu'elle se restaure. Le test qui compte n'est pas «&nbsp;la sauvegarde a-t-elle tourné&nbsp;?&nbsp;» mais «&nbsp;quand l'a-t-on restaurée pour de bon, et combien de temps cela a-t-il pris&nbsp;?&nbsp;».</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 288" role="img" aria-label="Graphique en barres comparant la probabilité annuelle de perdre les données selon le nombre de copies, dans deux régimes. Un axe vertical logarithmique porte quatre repères, de dix puissance moins deux en bas à dix puissance moins huit en haut ; plus une barre est haute, plus la probabilité de perte est FAIBLE. Pour chaque nombre de copies, de un à cinq, deux barres sont dessinées côte à côte : la barre de gauche, accentuée, représente le régime de pannes indépendantes et monte régulièrement, de deux fois dix puissance moins deux à une copie jusqu'à trois virgule deux fois dix puissance moins neuf à cinq copies ; la barre de droite, claire, représente le régime où dix pour cent des pannes sont corrélées, et cesse de monter dès la deuxième copie, à deux fois dix puissance moins trois. Une ligne horizontale en pointillés traverse le graphique au niveau de deux fois dix puissance moins trois et porte l'étiquette plancher imposé par les pannes corrélées. Une bande basse séparée par un trait en pointillés rappelle que trois copies indépendantes donnent une perte tous les cent vingt-cinq mille ans, contre une perte tous les quatre cent quatre-vingt-dix-neuf ans avec dix pour cent de corrélation, et que la corrélation devient le plancher du système.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le nombre de copies, et ce qu'il ne peut pas corriger</text>
+
+    <path class="d-line" d="M74 46 L74 214" fill="none" />
+    <path class="d-line" d="M74 214 L604 214" fill="none" />
+    <text class="d-mut" x="66" y="71" text-anchor="end" font-size="8">10⁻⁸</text>
+    <text class="d-mut" x="66" y="116" text-anchor="end" font-size="8">10⁻⁶</text>
+    <text class="d-mut" x="66" y="161" text-anchor="end" font-size="8">10⁻⁴</text>
+    <text class="d-mut" x="66" y="206" text-anchor="end" font-size="8">10⁻²</text>
+    <text class="d-mut" x="66" y="42" text-anchor="end" font-size="7.5">plus haut</text>
+    <text class="d-mut" x="66" y="52" text-anchor="end" font-size="7.5">= plus sûr</text>
+
+    <rect class="d-accent" x="96" y="209" width="22" height="5" /><rect class="d-box" x="122" y="209" width="22" height="5" />
+    <text class="d-mut" x="120" y="230" text-anchor="middle" font-size="9">1 copie</text>
+
+    <rect class="d-accent" x="196" y="171" width="22" height="43" /><rect class="d-box" x="222" y="188" width="22" height="26" />
+    <text class="d-mut" x="220" y="230" text-anchor="middle" font-size="9">2 copies</text>
+
+    <rect class="d-accent" x="296" y="133" width="22" height="81" /><rect class="d-box" x="322" y="187" width="22" height="27" />
+    <text class="d-mut" x="320" y="230" text-anchor="middle" font-size="9">3 copies</text>
+
+    <rect class="d-accent" x="396" y="95" width="22" height="119" /><rect class="d-box" x="422" y="187" width="22" height="27" />
+    <text class="d-mut" x="420" y="230" text-anchor="middle" font-size="9">4 copies</text>
+
+    <rect class="d-accent" x="496" y="57" width="22" height="157" /><rect class="d-box" x="522" y="187" width="22" height="27" />
+    <text class="d-mut" x="520" y="230" text-anchor="middle" font-size="9">5 copies</text>
+
+    <path class="d-line" d="M74 187 L604 187" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="604" y="181" text-anchor="end" font-size="9">PLANCHER DES PANNES CORRÉLÉES</text>
+
+    <path class="d-line" d="M14 248 L626 248" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="14" y="266" text-anchor="start" font-size="9">barre accentuée&#160;: pannes indépendantes&#160;·&#160;barre claire&#160;: 10 % de pannes corrélées</text>
+    <text class="d-mut" x="14" y="284" text-anchor="start" font-size="9">3 copies indépendantes&#160;: une perte tous les 125 000 ans&#160;·&#160;avec 10 % de corrélation&#160;: tous les 499 ans, et ça ne descend plus</text>
+  </svg>
+  <figcaption>La barre accentuée monte indéfiniment — le risque, lui, descend&nbsp;; la barre claire s'arrête au plancher. Ajouter une sixième copie ne change rien à ce plancher-là.</figcaption>
+</figure>
+<h2>Où les mettre&nbsp;: ce que trois copies ne doivent pas partager</h2>
+<p>Si la corrélation est le plancher, alors la vraie décision n'est pas le nombre de copies mais leur <em>placement</em>. Comptons ce à quoi l'on survit à trois niveaux de panne&nbsp;: une baie, une zone — c'est-à-dire un bâtiment avec sa propre alimentation et son propre réseau —, et une région entière.</p>
+<figure class="code-block" data-file="placement.js"><pre><code class="language-javascript">// Trois copies, oui — mais OÙ ? Le nombre de copies ne dit rien tant qu'on n'a
+// pas dit ce qu'elles ne partagent pas. On compte ici ce qui reste debout après
+// la disparition d'une baie, d'une zone, puis d'une région entière.
+const PLACEMENTS = [
+  { nom: '3 copies, même baie',        baies: 1, zones: 1, regions: 1 },
+  { nom: '3 copies, 3 baies, 1 zone',  baies: 3, zones: 1, regions: 1 },
+  { nom: '3 copies, 3 zones, 1 région', baies: 3, zones: 3, regions: 1 },
+  { nom: '3 copies, 3 régions',        baies: 3, zones: 3, regions: 3 },
+];
+const COPIES = 3;
+
+// Une panne qui frappe un niveau emporte toutes les copies qui le partagent.
+function survivantes(p, niveau) {
+  const groupes = p[niveau];                      // en combien de groupes les copies sont réparties
+  const perdues = Math.ceil(COPIES / groupes);    // le plus gros groupe tombe
+  return COPIES - perdues;
+}
+
+console.log('placement                      | 1 baie perdue | 1 zone perdue | 1 région perdue');
+for (const p of PLACEMENTS) {
+  console.log(
+    p.nom.padEnd(30) + ' | ' +
+    (survivantes(p, 'baies') + ' / 3').padStart(13) + ' | ' +
+    (survivantes(p, 'zones') + ' / 3').padStart(13) + ' | ' +
+    (survivantes(p, 'regions') + ' / 3').padStart(15)
+  );
+}
+
+console.log('');
+console.log('avec une majorité stricte de ' + (Math.floor(COPIES / 2) + 1) + ' copies sur ' + COPIES + ' :');
+for (const p of PLACEMENTS) {
+  const q = Math.floor(COPIES / 2) + 1;
+  const noms = { baies: 'une baie', zones: 'une zone', regions: 'une région' };
+  const ok = ['baies', 'zones', 'regions'].filter((n) =&gt; survivantes(p, n) &gt;= q);
+  console.log('  ' + p.nom.padEnd(30) + ' garde un quorum après la perte de : '
+              + (ok.length ? ok.map((n) =&gt; noms[n]).join(', ') : 'aucun de ces trois niveaux'));
+}
+
+console.log('');
+console.log('les quatre lignes annoncent « 3 copies ». Elles ne valent pas la même chose.');
+console.log('la question utile n\'est pas COMBIEN de copies, mais ce qu\'elles NE PARTAGENT PAS :');
+console.log('même alimentation, même commutateur, même salle, même fournisseur, même lot de disques,');
+console.log('même version de logiciel — et surtout, même opérateur qui tape la même commande.');</code></pre></figure>
+<figure class="code-block" data-file="placement.txt"><pre><code class="language-plaintext">placement                      | 1 baie perdue | 1 zone perdue | 1 région perdue
+3 copies, même baie            |         0 / 3 |         0 / 3 |           0 / 3
+3 copies, 3 baies, 1 zone      |         2 / 3 |         0 / 3 |           0 / 3
+3 copies, 3 zones, 1 région    |         2 / 3 |         2 / 3 |           0 / 3
+3 copies, 3 régions            |         2 / 3 |         2 / 3 |           2 / 3
+
+avec une majorité stricte de 2 copies sur 3 :
+  3 copies, même baie            garde un quorum après la perte de : aucun de ces trois niveaux
+  3 copies, 3 baies, 1 zone      garde un quorum après la perte de : une baie
+  3 copies, 3 zones, 1 région    garde un quorum après la perte de : une baie, une zone
+  3 copies, 3 régions            garde un quorum après la perte de : une baie, une zone, une région
+
+les quatre lignes annoncent « 3 copies ». Elles ne valent pas la même chose.
+la question utile n'est pas COMBIEN de copies, mais ce qu'elles NE PARTAGENT PAS :
+même alimentation, même commutateur, même salle, même fournisseur, même lot de disques,
+même version de logiciel — et surtout, même opérateur qui tape la même commande.
+</code></pre></figure>
+<p>Les quatre lignes annoncent toutes «&nbsp;3 copies&nbsp;». Elles ne valent pas la même chose. Trois copies dans la même baie ne survivent à <em>aucun</em> des trois niveaux&nbsp;: elles sont trois exemplaires d'un unique point de défaillance. Trois baies dans une zone survivent à la perte d'une baie mais pas à celle de la zone. Trois zones survivent à la zone, pas à la région. Trois régions survivent aux trois.</p>
+<p>La seconde partie du programme pose la question qui compte réellement pour un système qui doit continuer à <em>décider</em>&nbsp;: reste-t-il une majorité&nbsp;? Avec trois copies, la majorité stricte vaut deux. Chaque placement conserve donc un quorum exactement aux niveaux qu'il tolère — et le tableau se lit alors comme une échelle de garanties, de «&nbsp;aucune&nbsp;» à «&nbsp;toutes&nbsp;».</p>
+<p>Cette échelle a un prix, et il a été chiffré à la <a href="lecon-06.html">leçon&nbsp;6</a>&nbsp;: attendre la majorité de trois régions, c'est attendre la deuxième région la plus proche, et non la plus proche. Le choix du placement n'est donc pas un choix d'exploitation qu'on prendrait après coup&nbsp;: <strong>c'est un choix de latence d'écriture</strong>, et il se paie sur chaque écriture de l'année.</p>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Le niveau de panne que personne ne dessine</p><p>Les schémas d'architecture représentent volontiers les baies, les zones et les régions. Ils ne représentent jamais les deux niveaux de corrélation les plus actifs. Le premier est le <strong>logiciel</strong>&nbsp;: les trois copies exécutent la même version, avec le même bogue, et l'appliquent au même moment. Le second est l'<strong>opérateur</strong>&nbsp;: une commande de déploiement, une règle de filtrage, une purge de configuration atteignent les trois copies en même temps, par construction — c'est exactement à ça que servent les outils de déploiement. Ces deux niveaux-là ne se corrigent pas en ajoutant des copies&nbsp;; ils se corrigent en <em>décalant</em> — déployer par vagues, laisser une copie en retard d'une version, exiger deux paires d'yeux sur les commandes qui touchent tout le monde.</p></div></div>
+<h2>Encaisser plus de lectures — et le mur au bout</h2>
+<p>Troisième motif&nbsp;: le débit. Chaque copie peut servir des lectures, donc N copies servent N fois plus de lectures. C'est vrai, et c'est la moitié de l'histoire. L'autre moitié&nbsp;: <em>chaque copie doit appliquer 100&nbsp;% des écritures</em>, sans exception — c'est la définition même d'une copie. Les écritures, elles, ne se répartissent pas.</p>
+<p>Le calcul est celui d'une ressource partagée dont une part est incompressible. Fixons une machine capable de <strong>10&nbsp;000</strong> opérations par seconde et un service dont <strong>10&nbsp;%</strong> des opérations sont des écritures.</p>
+<figure class="code-block" data-file="mur-des-lectures.js"><pre><code class="language-javascript">// Deuxième raison de répliquer : encaisser plus de lectures. Mais chaque copie
+// ajoutée doit appliquer 100 % des écritures — la réplication ne monte pas en
+// charge sur les écritures, seulement sur les lectures.
+const CAPACITE = 10000;        // opérations par seconde qu'une machine sait traiter
+const PART_ECRITURE = 0.10;    // 10 % des opérations du service sont des écritures
+
+function service(copies) {
+  // Chaque copie applique toutes les écritures du service ; il lui reste
+  // le solde de sa capacité pour servir des lectures.
+  // Écritures E telles que E + lectures/copies &lt;= capacité, avec E = 0,1 × total.
+  // total × 0,1 + total × 0,9 / copies &lt;= capacité × 1  (par copie)
+  const total = CAPACITE / (PART_ECRITURE + (1 - PART_ECRITURE) / copies);
+  return { total, ecritures: total * PART_ECRITURE, lectures: total * (1 - PART_ECRITURE) };
+}
+
+console.log('copies | opérations/s | écritures/s | lectures/s | gain vs 1 copie');
+for (const n of [1, 2, 3, 5, 10, 20, 50, 1000]) {
+  const s = service(n);
+  console.log(
+    String(n).padStart(6) + ' | ' + s.total.toFixed(0).padStart(12) + ' | ' +
+    s.ecritures.toFixed(0).padStart(11) + ' | ' + s.lectures.toFixed(0).padStart(10) + ' | ×' +
+    (s.total / service(1).total).toFixed(2)
+  );
+}
+
+const plafond = CAPACITE / PART_ECRITURE;
+console.log('');
+console.log('plafond, avec une infinité de copies : ' + plafond.toFixed(0) + ' opérations/s');
+console.log('soit ×' + (plafond / service(1).total).toFixed(1) + ' — et pas un de plus,');
+console.log('parce que chaque copie doit appliquer les ' + (plafond * PART_ECRITURE).toFixed(0)
+            + ' écritures, ce qui sature');
+console.log('sa capacité de ' + CAPACITE + ' à elle seule.');
+console.log('');
+console.log('50 copies rendent déjà ' + (100 * service(50).total / plafond).toFixed(1)
+            + ' % du plafond : les 950 suivantes n\'apportent que '
+            + (100 * (service(1000).total - service(50).total) / plafond).toFixed(1) + ' %.');</code></pre></figure>
+<figure class="code-block" data-file="mur-des-lectures.txt"><pre><code class="language-plaintext">copies | opérations/s | écritures/s | lectures/s | gain vs 1 copie
+     1 |        10000 |        1000 |       9000 | ×1.00
+     2 |        18182 |        1818 |      16364 | ×1.82
+     3 |        25000 |        2500 |      22500 | ×2.50
+     5 |        35714 |        3571 |      32143 | ×3.57
+    10 |        52632 |        5263 |      47368 | ×5.26
+    20 |        68966 |        6897 |      62069 | ×6.90
+    50 |        84746 |        8475 |      76271 | ×8.47
+  1000 |        99108 |        9911 |      89197 | ×9.91
+
+plafond, avec une infinité de copies : 100000 opérations/s
+soit ×10.0 — et pas un de plus,
+parce que chaque copie doit appliquer les 10000 écritures, ce qui sature
+sa capacité de 10000 à elle seule.
+
+50 copies rendent déjà 84.7 % du plafond : les 950 suivantes n'apportent que 14.4 %.
+</code></pre></figure>
+<p>Deux copies donnent <strong>×1,82</strong>, ce qui est déjà moins que deux. Trois donnent <strong>×2,50</strong>. Dix donnent <strong>×5,26</strong>. Et mille copies donnent <strong>×9,91</strong> — pas dix, jamais dix. Le plafond vaut <strong>100&nbsp;000</strong> opérations par seconde, et il est atteint quand les écritures seules saturent chaque copie&nbsp;: <strong>10&nbsp;000</strong> écritures, soit exactement la capacité d'une machine.</p>
+<p>Le chiffre à retenir est le dernier&nbsp;: <strong>50</strong> copies rendent déjà <strong>84,7&nbsp;%</strong> du plafond, et les <strong>950</strong> suivantes n'apportent que <strong>14,4&nbsp;%</strong>. Ce n'est pas un détail d'optimisation&nbsp;: c'est la raison pour laquelle une équipe qui ajoute des copies pour tenir la charge finit toujours par constater que ça ne marche plus, et se demande pourquoi.</p>
+<p>La formule qui gouverne cela est celle d'une loi bien connue en calcul parallèle&nbsp;: quand une fraction <em>p</em> du travail ne peut pas être répartie, le gain maximal vaut <strong>1&nbsp;/&nbsp;p</strong>, quel que soit le nombre de machines. Ici <em>p</em> est la part d'écritures, 10&nbsp;%, donc le gain plafonne à <strong>10</strong>. À 2&nbsp;% d'écritures il plafonnerait à 50&nbsp;; à 25&nbsp;%, à 4. C'est l'exercice&nbsp;2 de cette leçon.</p>
+<p>Et voilà pourquoi le partitionnement existe. La réplication ne répartit pas les écritures, par construction&nbsp;; le partitionnement, lui, ne fait que cela — chaque machine ne reçoit que les écritures de sa part de données. Les deux mécanismes ne sont pas concurrents&nbsp;: ils traitent deux limites différentes, et un système à grande échelle a besoin des deux. C'est le sujet de la <a href="lecon-08.html">leçon&nbsp;8</a>.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 280" role="img" aria-label="Graphique montrant le gain de débit en fonction du nombre de copies. L'axe horizontal donne le nombre de copies, avec les repères un, deux, trois, cinq, dix, vingt, cinquante et mille. L'axe vertical donne le gain par rapport à une seule copie, gradué de zéro à dix. Une ligne brisée, faite de segments droits reliant huit points marqués, part du point une copie, gain un, monte rapidement puis s'aplatit : elle passe par un virgule quatre-vingt-deux à deux copies, deux virgule cinquante à trois, trois virgule cinquante-sept à cinq, cinq virgule vingt-six à dix, six virgule quatre-vingt-dix à vingt, huit virgule quarante-sept à cinquante, et neuf virgule quatre-vingt-onze à mille. Une ligne horizontale en pointillés est tracée au niveau dix et porte l'étiquette plafond, égal à un divisé par la part d écritures. Une bande basse séparée par un trait en pointillés indique que cinquante copies rendent déjà quatre-vingt-quatre virgule sept pour cent du plafond, et que les neuf cent cinquante suivantes n apportent que quatorze virgule quatre pour cent.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Le gain de la réplication, et son plafond</text>
+
+    <path class="d-line" d="M74 46 L74 210" fill="none" />
+    <path class="d-line" d="M74 210 L604 210" fill="none" />
+    <text class="d-mut" x="66" y="50" text-anchor="end" font-size="8">×10</text>
+    <text class="d-mut" x="66" y="132" text-anchor="end" font-size="8">×5</text>
+    <text class="d-mut" x="66" y="214" text-anchor="end" font-size="8">×0</text>
+
+    <path class="d-line" d="M74 46 L604 46" fill="none" stroke-dasharray="4 3" />
+    <text class="d-tag" x="604" y="40" text-anchor="end" font-size="9">PLAFOND = 1 / PART D'ÉCRITURES</text>
+
+    <path class="d-line" d="M100 194 L166 180 L232 169 L298 151 L364 124 L430 97 L496 71 L570 48" fill="none" stroke-width="2" />
+    <circle class="d-dot" cx="100" cy="194" r="3.5" /><circle class="d-dot" cx="166" cy="180" r="3.5" />
+    <circle class="d-dot" cx="232" cy="169" r="3.5" /><circle class="d-dot" cx="298" cy="151" r="3.5" />
+    <circle class="d-dot" cx="364" cy="124" r="3.5" /><circle class="d-dot" cx="430" cy="97" r="3.5" />
+    <circle class="d-dot" cx="496" cy="71" r="3.5" /><circle class="d-dot" cx="570" cy="48" r="3.5" />
+
+    <text class="d-text" x="100" y="186" text-anchor="middle" font-size="8">1,00</text>
+    <text class="d-text" x="166" y="172" text-anchor="middle" font-size="8">1,82</text>
+    <text class="d-text" x="232" y="161" text-anchor="middle" font-size="8">2,50</text>
+    <text class="d-text" x="298" y="143" text-anchor="middle" font-size="8">3,57</text>
+    <text class="d-text" x="364" y="116" text-anchor="middle" font-size="8">5,26</text>
+    <text class="d-text" x="430" y="89" text-anchor="middle" font-size="8">6,90</text>
+    <text class="d-text" x="496" y="63" text-anchor="middle" font-size="8">8,47</text>
+    <text class="d-text" x="570" y="40" text-anchor="middle" font-size="8">9,91</text>
+
+    <text class="d-mut" x="100" y="226" text-anchor="middle" font-size="8.5">1</text>
+    <text class="d-mut" x="166" y="226" text-anchor="middle" font-size="8.5">2</text>
+    <text class="d-mut" x="232" y="226" text-anchor="middle" font-size="8.5">3</text>
+    <text class="d-mut" x="298" y="226" text-anchor="middle" font-size="8.5">5</text>
+    <text class="d-mut" x="364" y="226" text-anchor="middle" font-size="8.5">10</text>
+    <text class="d-mut" x="430" y="226" text-anchor="middle" font-size="8.5">20</text>
+    <text class="d-mut" x="496" y="226" text-anchor="middle" font-size="8.5">50</text>
+    <text class="d-mut" x="570" y="226" text-anchor="middle" font-size="8.5">1000</text>
+    <text class="d-mut" x="340" y="242" text-anchor="middle" font-size="8.5">nombre de copies (échelle non linéaire)</text>
+
+    <path class="d-line" d="M14 254 L626 254" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="320" y="272" text-anchor="middle" font-size="9">50 copies rendent déjà 84,7 % du plafond&#160;; les 950 suivantes n'apportent que 14,4 %</text>
+  </svg>
+  <figcaption>La courbe ne monte pas indéfiniment parce qu'une part du travail — les écritures — n'est pas répartie du tout.</figcaption>
+</figure>
+<h2>Attendre les copies, ou pas&nbsp;: l'arbitrage de chaque écriture</h2>
+<p>Voici la décision la plus lourde de conséquences, et la plus souvent laissée par défaut. Quand un client écrit, le meneur enregistre puis répond. La question est&nbsp;: <em>répond-il avant ou après avoir eu la confirmation des copies&nbsp;?</em></p>
+<p>Trois réglages existent. La réplication <strong>asynchrone</strong> répond tout de suite et propage ensuite. La réplication <strong>synchrone</strong> attend toutes les copies. Entre les deux, la <strong>semi-synchrone</strong> attend un nombre choisi de copies — souvent une seule. Chiffrons les deux colonnes qui s'opposent&nbsp;: la latence payée à chaque écriture, et ce qu'on perd si le meneur tombe juste après avoir répondu «&nbsp;c'est enregistré&nbsp;».</p>
+<figure class="code-block" data-file="attendre-ou-pas.js"><pre><code class="language-javascript">// Répliquer, oui — mais l'écriture attend-elle les copies, ou pas ?
+// Deux colonnes qui s'opposent : la latence payée à CHAQUE écriture, et ce qu'on
+// perd si le meneur tombe juste après avoir répondu « c'est enregistré ».
+const LOCAL = 0.5;                    // ms, écrire sur le disque du meneur
+const SUIVEURS = [7.4, 9.8, 191.0];   // ms, aller-retour vers chaque suiveur
+const ECRITURES_PAR_S = 4000;         // débit soutenu du service
+const trie = SUIVEURS.slice().sort((a, b) =&gt; a - b);
+
+// Combien d'écritures un suiveur n'a pas encore reçues, à tout instant : le débit
+// multiplié par la durée du trajet ALLER — une écriture émise il y a moins que
+// ça n'est pas encore arrivée. On prend l'aller-retour divisé par deux, ce qui
+// suppose les deux sens symétriques : la leçon 4 a montré que c'est faux, mais
+// c'est la seule estimation qu'un aller-retour permette.
+const enVol = (allerRetourMs) =&gt; (allerRetourMs / 2000) * ECRITURES_PAR_S;
+
+const CAS = [
+  { nom: 'asynchrone — 0 suiveur attendu', attendus: 0 },
+  { nom: 'semi-synchrone — 1 suiveur', attendus: 1 },
+  { nom: 'synchrone — les 3 suiveurs', attendus: 3 },
+];
+
+console.log('politique                       | latence   | perdues si on promeut…');
+console.log('                                |           | le + à jour | le - à jour');
+for (const c of CAS) {
+  const latence = c.attendus === 0 ? LOCAL : Math.max(LOCAL, trie[c.attendus - 1]);
+  // Le suiveur le plus à jour est celui dont le retard est le plus court.
+  const meilleur = c.attendus &gt;= 1 ? 0 : enVol(trie[0]);
+  // Le moins à jour est le plus lointain — sauf si la politique l'a fait attendre.
+  const pire = c.attendus &gt;= SUIVEURS.length ? 0 : enVol(trie[SUIVEURS.length - 1]);
+  console.log(
+    c.nom.padEnd(31) + ' | ' + (latence.toFixed(2) + ' ms').padStart(9) + ' | ' +
+    meilleur.toFixed(0).padStart(11) + ' | ' + pire.toFixed(0).padStart(11)
+  );
+}
+
+console.log('');
+const lat = CAS.map((c) =&gt; (c.attendus === 0 ? LOCAL : Math.max(LOCAL, trie[c.attendus - 1])));
+console.log('latence : asynchrone → semi-synchrone  ×' + (lat[1] / lat[0]).toFixed(1));
+console.log('latence : asynchrone → synchrone       ×' + (lat[2] / lat[0]).toFixed(1));
+console.log('');
+console.log('à ' + ECRITURES_PAR_S + ' écritures/s, le seul trajet vers le suiveur le plus');
+console.log('rapide (' + (trie[0] / 2).toFixed(2) + ' ms à l\'aller) laisse déjà '
+            + enVol(trie[0]).toFixed(0) + ' écritures en vol ;');
+console.log('celui du plus lointain (' + (trie[2] / 2).toFixed(2) + ' ms), '
+            + enVol(trie[2]).toFixed(0) + '.');
+console.log('et si un suiveur prend 3 s de retard — rattrapage, sauvegarde, pointe — : '
+            + (3 * ECRITURES_PAR_S) + '.');</code></pre></figure>
+<figure class="code-block" data-file="attendre-ou-pas.txt"><pre><code class="language-plaintext">politique                       | latence   | perdues si on promeut…
+                                |           | le + à jour | le - à jour
+asynchrone — 0 suiveur attendu  |   0.50 ms |          15 |         382
+semi-synchrone — 1 suiveur      |   7.40 ms |           0 |         382
+synchrone — les 3 suiveurs      | 191.00 ms |           0 |           0
+
+latence : asynchrone → semi-synchrone  ×14.8
+latence : asynchrone → synchrone       ×382.0
+
+à 4000 écritures/s, le seul trajet vers le suiveur le plus
+rapide (3.70 ms à l'aller) laisse déjà 15 écritures en vol ;
+celui du plus lointain (95.50 ms), 382.
+et si un suiveur prend 3 s de retard — rattrapage, sauvegarde, pointe — : 12000.
+</code></pre></figure>
+<p>Lis d'abord la colonne de latence. L'asynchrone coûte <strong>0,50&nbsp;ms</strong>, la semi-synchrone <strong>7,40&nbsp;ms</strong> — <strong>×14,8</strong> —, la synchrone <strong>191,00&nbsp;ms</strong> — <strong>×382,0</strong>. Ce dernier chiffre n'est pas une anomalie&nbsp;: en attendant toutes les copies, on attend la plus lointaine, et une seule copie à l'autre bout du monde suffit à fixer le rythme de <em>toutes</em> les écritures du service. Les 191&nbsp;ms sont celles de São Paulo depuis Paris, mesurées à la <a href="lecon-06.html">leçon&nbsp;6</a>&nbsp;— à comparer aux 80&nbsp;ms de New York citées plus haut&nbsp;: ce n'est pas le même océan qu'on traverse, c'est un continent de plus.</p>
+<p>Maintenant les deux colonnes de droite, et lis-les ensemble, car c'est là que se cache la faute la plus commune. En asynchrone, promouvoir le suiveur le plus à jour perd <strong>15</strong> écritures&nbsp;; promouvoir le moins à jour en perd <strong>382</strong>. En semi-synchrone, promouvoir le plus à jour n'en perd <strong>aucune</strong> — mais promouvoir le moins à jour en perd toujours <strong>382</strong>.</p>
+<p>Une coïncidence à signaler avant qu'elle ne passe pour une loi&nbsp;: le nombre <strong>382</strong> apparaît deux fois dans cette page pour deux raisons sans rapport. C'est le rapport de latence entre l'asynchrone et le synchrone (191,00&nbsp;/&nbsp;0,50), et c'est aussi le nombre d'écritures en vol vers le suiveur le plus lointain (95,50&nbsp;ms d'aller × 4&nbsp;000 par seconde). Les deux viennent du même 191, mais ils ne mesurent pas la même chose.</p>
+<p>Un mot sur le calcul de ces écritures en vol, parce qu'il repose sur une hypothèse. Ce qui compte est la durée du trajet <em>aller</em>&nbsp;: une écriture émise il y a moins que ça n'est pas encore arrivée. Or on ne connaît qu'un aller-retour, et l'on en prend la moitié — ce qui suppose les deux sens symétriques. La <a href="lecon-04.html">leçon&nbsp;4</a> a montré que cette hypothèse est presque toujours fausse&nbsp;: elle donne la meilleure estimation qu'un aller-retour permette, pas une mesure.</p>
+<p>Autrement dit&nbsp;: <strong>la semi-synchrone ne garantit rien par elle-même</strong>. Elle garantit qu'<em>une</em> copie détient l'écriture. Si la bascule promeut une autre copie, la garantie ne sert à rien. Un réglage de réplication n'a de sens qu'accompagné d'une règle de promotion qui choisit la copie la plus avancée — et d'un moyen de savoir laquelle c'est, ce qui suppose de comparer des positions dans le journal de réplication, pas des horodatages.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Trois questions avant de régler une réplication</p><p><strong>1.</strong> Combien d'écritures accepte-t-on de perdre&nbsp;? Pas «&nbsp;aucune&nbsp;» par réflexe&nbsp;: la réponse «&nbsp;aucune&nbsp;» coûte 191,00&nbsp;ms par écriture dans l'exemple mesuré. Un panier abandonné et un virement bancaire n'ont pas la même réponse. <strong>2.</strong> Qui sera promu, et sur quel critère&nbsp;? Si la réponse est «&nbsp;le premier qui répond&nbsp;», la semi-synchrone ne protège de rien. <strong>3.</strong> Quelle latence d'écriture le service peut-il absorber&nbsp;? Multiplier une écriture par 382 change la nature de l'application, pas seulement son temps de réponse&nbsp;: des choses qui se faisaient en série doivent alors se faire autrement.</p></div></div>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Schéma comparant trois politiques de réplication. Chaque politique occupe une ligne. À gauche figure une boîte accentuée représentant le meneur, à droite trois boîtes représentant les suiveurs à sept virgule quatre, neuf virgule huit et cent quatre-vingt-onze millisecondes. Aucune flèche n est dessinée : les liaisons entre le meneur et ses suiveurs sont de simples traits, pleins quand la politique les attend, en pointillés quand elle ne les attend pas. Pour la ligne asynchrone, les trois traits sont en pointillés et une étiquette à gauche porte la mention répond en zéro virgule cinquante milliseconde. Pour la ligne semi-synchrone, seul le trait vers le suiveur le plus proche est plein, la boîte de ce suiveur est accentuée, et l étiquette porte répond en sept virgule quarante millisecondes. Pour la ligne synchrone, les trois traits sont pleins, les trois boîtes accentuées, et l étiquette porte répond en cent quatre-vingt-onze millisecondes. Une bande basse séparée par un trait en pointillés rappelle les écritures perdues si le meneur tombe, selon que l on promeut la copie la plus à jour ou la moins à jour : quinze ou trois cent quatre-vingt-deux en asynchrone, zéro ou trois cent quatre-vingt-deux en semi-synchrone, zéro dans les deux cas en synchrone.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Trois réglages, trois latences, trois risques</text>
+
+    <text class="d-label" x="18" y="52" text-anchor="start" font-size="9.5">ASYNCHRONE</text>
+    <rect class="d-accent" x="130" y="38" width="86" height="26" rx="7" /><text class="d-text" x="173" y="55" text-anchor="middle" font-size="8.5">meneur</text>
+    <path class="d-line" d="M216 44 L300 44" fill="none" stroke-dasharray="3 3" /><rect class="d-box" x="304" y="34" width="66" height="20" rx="6" /><text class="d-text" x="337" y="48" text-anchor="middle" font-size="7.5">7,4 ms</text>
+    <path class="d-line" d="M216 51 L390 51" fill="none" stroke-dasharray="3 3" /><rect class="d-box" x="394" y="41" width="66" height="20" rx="6" /><text class="d-text" x="427" y="55" text-anchor="middle" font-size="7.5">9,8 ms</text>
+    <path class="d-line" d="M216 58 L480 58" fill="none" stroke-dasharray="3 3" /><rect class="d-box" x="484" y="48" width="66" height="20" rx="6" /><text class="d-text" x="517" y="62" text-anchor="middle" font-size="7.5">191 ms</text>
+    <text class="d-tag" x="18" y="70" text-anchor="start" font-size="9">RÉPOND EN 0,50 ms</text>
+
+    <text class="d-label" x="18" y="120" text-anchor="start" font-size="9.5">SEMI-SYNCHRONE</text>
+    <rect class="d-accent" x="130" y="106" width="86" height="26" rx="7" /><text class="d-text" x="173" y="123" text-anchor="middle" font-size="8.5">meneur</text>
+    <path class="d-line" d="M216 112 L300 112" fill="none" stroke-width="2" /><rect class="d-accent" x="304" y="102" width="66" height="20" rx="6" /><text class="d-text" x="337" y="116" text-anchor="middle" font-size="7.5">7,4 ms</text>
+    <path class="d-line" d="M216 119 L390 119" fill="none" stroke-dasharray="3 3" /><rect class="d-box" x="394" y="109" width="66" height="20" rx="6" /><text class="d-text" x="427" y="123" text-anchor="middle" font-size="7.5">9,8 ms</text>
+    <path class="d-line" d="M216 126 L480 126" fill="none" stroke-dasharray="3 3" /><rect class="d-box" x="484" y="116" width="66" height="20" rx="6" /><text class="d-text" x="517" y="130" text-anchor="middle" font-size="7.5">191 ms</text>
+    <text class="d-tag" x="18" y="138" text-anchor="start" font-size="9">RÉPOND EN 7,40 ms</text>
+
+    <text class="d-label" x="18" y="188" text-anchor="start" font-size="9.5">SYNCHRONE</text>
+    <rect class="d-accent" x="130" y="174" width="86" height="26" rx="7" /><text class="d-text" x="173" y="191" text-anchor="middle" font-size="8.5">meneur</text>
+    <path class="d-line" d="M216 180 L300 180" fill="none" stroke-width="2" /><rect class="d-accent" x="304" y="170" width="66" height="20" rx="6" /><text class="d-text" x="337" y="184" text-anchor="middle" font-size="7.5">7,4 ms</text>
+    <path class="d-line" d="M216 187 L390 187" fill="none" stroke-width="2" /><rect class="d-accent" x="394" y="177" width="66" height="20" rx="6" /><text class="d-text" x="427" y="191" text-anchor="middle" font-size="7.5">9,8 ms</text>
+    <path class="d-line" d="M216 194 L480 194" fill="none" stroke-width="2" /><rect class="d-accent" x="484" y="184" width="66" height="20" rx="6" /><text class="d-text" x="517" y="198" text-anchor="middle" font-size="7.5">191 ms</text>
+    <text class="d-tag" x="18" y="206" text-anchor="start" font-size="9">RÉPOND EN 191,00 ms</text>
+
+    <path class="d-line" d="M14 226 L626 226" fill="none" stroke-dasharray="4 3" />
+    <text class="d-label" x="14" y="244" text-anchor="start" font-size="9.5">ÉCRITURES PERDUES SI LE MENEUR TOMBE — SELON LA COPIE QU'ON PROMEUT</text>
+    <text class="d-mut" x="14" y="264" text-anchor="start" font-size="9">asynchrone&#160;: 15 (la plus à jour) ou 382 (la moins à jour)</text>
+    <text class="d-mut" x="14" y="280" text-anchor="start" font-size="9">semi-synchrone&#160;: 0 (la plus à jour) ou 382 (la moins à jour) — la garantie ne tient que si la promotion choisit bien</text>
+    <text class="d-mut" x="14" y="296" text-anchor="start" font-size="9">synchrone&#160;: 0 dans les deux cas</text>
+  </svg>
+  <figcaption>Les traits pleins sont attendus, les pointillés ne le sont pas. La latence de la réponse est celle du dernier trait plein.</figcaption>
+</figure>
+<h2>Le retard n'est pas une constante&nbsp;: c'est une file d'attente</h2>
+<p>On parle du «&nbsp;retard de réplication&nbsp;» comme d'une caractéristique, à la manière d'une latence réseau&nbsp;: quelques dizaines de millisecondes, disons. Cette façon de le voir est fausse, et elle rend les incidents incompréhensibles.</p>
+<p>Un suiveur reçoit des écritures et les applique. Si le meneur en accepte moins que ce que le suiveur sait appliquer, le retard reste nul. S'il en accepte davantage, ne serait-ce qu'un peu, la différence <em>s'accumule</em>. Le retard n'est pas un délai&nbsp;: c'est la longueur d'une file.</p>
+<figure class="code-block" data-file="retard-de-replication.js"><pre><code class="language-javascript">// Le retard de réplication n'est pas une constante : c'est une file d'attente.
+// Le meneur accepte des écritures à un rythme, le suiveur les applique au sien.
+const APPLIQUE = 5000;         // écritures par seconde qu'un suiveur sait appliquer
+const PALIERS = [              // [durée en s, écritures/s acceptées par le meneur]
+  [10, 3000],                  // régime tranquille
+  [10, 4800],                  // montée en charge
+  [20, 5600],                  // pointe : le meneur dépasse le suiveur
+  [20, 3000],                  // retour au calme, le suiveur rattrape
+];
+
+let attente = 0;               // écritures reçues et pas encore appliquées
+let seconde = 0, pire = 0, pireSeconde = 0, revenu = 0;
+const releves = [];
+
+for (const [duree, arrivee] of PALIERS) {
+  for (let t = 0; t &lt; duree; t++) {
+    attente = Math.max(0, attente + arrivee - APPLIQUE);
+    seconde++;
+    if (attente &gt; pire) { pire = attente; pireSeconde = seconde; }
+    if (seconde % 5 === 0) releves.push([seconde, arrivee, attente]);
+    if (attente === 0 &amp;&amp; pire &gt; 0 &amp;&amp; !revenu) revenu = seconde;
+  }
+}
+
+console.log('suiveur capable de ' + APPLIQUE + ' écritures/s');
+console.log('seconde | arrivées/s | en attente | retard vu par un lecteur');
+for (const [s, a, q] of releves) {
+  console.log(String(s).padStart(7) + ' | ' + String(a).padStart(10) + ' | ' +
+              q.toFixed(0).padStart(10) + ' | ' + (q / APPLIQUE).toFixed(2) + ' s');
+}
+
+console.log('');
+console.log('retard maximal : ' + pire.toFixed(0) + ' écritures, soit '
+            + (pire / APPLIQUE).toFixed(2) + ' s, atteint à la seconde ' + pireSeconde);
+console.log('retard final   : ' + attente.toFixed(0) + ' écritures, revenu à zéro à la seconde ' + revenu);
+console.log('');
+console.log('le meneur n\'a dépassé le suiveur que de '
+            + (5600 - APPLIQUE) + ' écritures/s pendant 20 s,');
+console.log('et le retard a grimpé à ' + (20 * (5600 - APPLIQUE)) + ' écritures :');
+console.log('un retard de réplication ne se lit pas sur l\'écart de débit, il s\'ACCUMULE.');</code></pre></figure>
+<figure class="code-block" data-file="retard-de-replication.txt"><pre><code class="language-plaintext">suiveur capable de 5000 écritures/s
+seconde | arrivées/s | en attente | retard vu par un lecteur
+      5 |       3000 |          0 | 0.00 s
+     10 |       3000 |          0 | 0.00 s
+     15 |       4800 |          0 | 0.00 s
+     20 |       4800 |          0 | 0.00 s
+     25 |       5600 |       3000 | 0.60 s
+     30 |       5600 |       6000 | 1.20 s
+     35 |       5600 |       9000 | 1.80 s
+     40 |       5600 |      12000 | 2.40 s
+     45 |       3000 |       2000 | 0.40 s
+     50 |       3000 |          0 | 0.00 s
+     55 |       3000 |          0 | 0.00 s
+     60 |       3000 |          0 | 0.00 s
+
+retard maximal : 12000 écritures, soit 2.40 s, atteint à la seconde 40
+retard final   : 0 écritures, revenu à zéro à la seconde 46
+
+le meneur n'a dépassé le suiveur que de 600 écritures/s pendant 20 s,
+et le retard a grimpé à 12000 écritures :
+un retard de réplication ne se lit pas sur l'écart de débit, il s'ACCUMULE.
+</code></pre></figure>
+<p>Suis le tableau. Le meneur monte à <strong>5&nbsp;600</strong> écritures par seconde alors que le suiveur en applique <strong>5&nbsp;000</strong>&nbsp;: un écart de <strong>600</strong>, soit <strong>12&nbsp;%</strong>. Pendant les vingt secondes que dure la pointe, ces 600 écritures manquantes par seconde s'empilent, et le retard monte à <strong>12&nbsp;000</strong> écritures, soit <strong>2,40&nbsp;s</strong> pour un lecteur servi par cette copie. Puis la charge redescend, et il faut encore <strong>six secondes</strong> pour revenir à zéro — la seconde 46 après un pic atteint à la seconde 40.</p>
+<p>Trois conséquences pratiques en découlent, et aucune n'est intuitive.</p>
+<p><strong>Un dépassement modeste produit un retard énorme.</strong> 12&nbsp;% de trop pendant vingt secondes rendent 2,4&nbsp;s de retard. À 20&nbsp;% pendant cinq minutes, le retard atteint <strong>une minute pleine</strong> — 300&nbsp;000 écritures accumulées, drainées à 5&nbsp;000 par seconde — et l'application affiche des données vieilles d'une minute, sans qu'aucune erreur ne soit levée nulle part.</p>
+<p><strong>La reprise ne suit pas la vitesse de la montée&nbsp;: elle dépend de la marge, pas de l'excédent.</strong> On accumule à la vitesse de l'excédent, on rattrape à la vitesse du déficit. Si le régime normal est à 3&nbsp;000 pour une capacité de 5&nbsp;000, on rattrape à 2&nbsp;000 par seconde — plus vite qu'on n'a accumulé, ici&nbsp;; mais si le régime normal est proche de la capacité, le rattrapage devient interminable, et un service qui tourne en permanence à 95&nbsp;% de la capacité de ses suiveurs ne se remet jamais vraiment d'une pointe.</p>
+<p><strong>Le retard se mesure en écritures, pas en secondes.</strong> Les deux unités ne sont pas interchangeables&nbsp;: <strong>12&nbsp;000</strong> écritures en retard représentent 2,4&nbsp;s quand le suiveur applique 5&nbsp;000 par seconde, et 12&nbsp;s s'il n'en applique plus que 1&nbsp;000 parce qu'il fait autre chose. Superviser le retard en secondes, c'est superviser un rapport dont les deux termes bougent.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le retard qu'aucun tableau de bord ne montre</p><p>Le piège classique&nbsp;: superviser le retard de réplication <em>tel que le suiveur le rapporte</em>. Un suiveur qui n'a plus de nouvelles du meneur rapporte souvent un retard <strong>nul</strong> — il a tout appliqué de ce qu'il a reçu, et il ne sait pas ce qu'il n'a pas reçu. C'est exactement la panne partielle de la <a href="lecon-03.html">leçon&nbsp;3</a>&nbsp;: une absence de message lue comme une bonne nouvelle. La mesure honnête compare une <em>position</em> chez le meneur et la même position chez le suiveur, ou fait écrire au meneur une marque périodique que le suiveur relit — un battement qui traverse le même chemin que les données.</p></div></div>
+<h2>La bascule&nbsp;: destituer un vivant, ou rester sans meneur</h2>
+<p>Reste le deuxième motif&nbsp;: rester joignable quand le meneur tombe. Il faut donc s'apercevoir qu'il est tombé, puis en désigner un autre. Le premier des deux gestes est le difficile, et la <a href="lecon-03.html">leçon&nbsp;3</a> a déjà dit pourquoi&nbsp;: le seul instrument disponible est un délai d'attente, et un délai dépassé ne prouve rien.</p>
+<p>Un service de surveillance envoie un battement de cœur au meneur, une fois par seconde. Si la réponse tarde au-delà d'un seuil, il déclare le meneur mort et lance l'élection d'un successeur. Toute la question est ce seuil. Mesurons-le sur un meneur qui répond normalement en 5 à 40&nbsp;ms, s'étouffe 200 à 800&nbsp;ms deux fois sur cent, et subit une pause complète de 1 à 4&nbsp;s environ cinq fois par jour.</p>
+<figure class="code-block" data-file="seuil-de-bascule.js"><pre><code class="language-javascript">// La bascule : quand le meneur tombe, quelqu'un doit en désigner un autre.
+// Le seul instrument disponible est un délai d'attente — et le module 1 a montré
+// qu'un délai dépassé ne prouve rien. Voici les deux fautes symétriques.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+// Temps de réponse du meneur au battement de cœur, en millisecondes :
+//   98 %      : 5 à 40 ms       — le cas ordinaire
+//   2 %       : 200 à 800 ms    — un à-coup de réseau ou de disque
+//   0,006 %   : 1 à 4 s         — une pause du ramasse-miettes, environ 5 par jour
+function reponse(alea) {
+  const d = alea();
+  if (d &lt; 0.00006) return 1000 + 3000 * alea();
+  if (d &lt; 0.02006) return 200 + 600 * alea();
+  return 5 + 35 * alea();
+}
+
+const BATTEMENTS = 1000000;                 // un par seconde, soit 11,6 jours
+const HEURES = BATTEMENTS / 3600;
+const PAR_AN = (365 * 24 * 3600) / BATTEMENTS;
+const ELECTION = 3000;                      // ms : élection, promotion, reconnexion
+
+console.log(BATTEMENTS + ' battements de cœur, un par seconde (' + (HEURES / 24).toFixed(1) + ' jours)');
+console.log('');
+console.log('seuil    | destitutions d\'un meneur VIVANT | coût annuel | détection d\'une vraie panne');
+for (const seuil of [100, 300, 500, 1000, 2000, 5000]) {
+  const alea = semer(2025);
+  let fausses = 0;
+  for (let i = 0; i &lt; BATTEMENTS; i++) if (reponse(alea) &gt; seuil) fausses++;
+  const coutAn = fausses * PAR_AN * (seuil + ELECTION) / 1000 / 60;   // minutes par an
+  console.log(
+    (seuil + ' ms').padStart(8) + ' | ' + String(fausses).padStart(31) + ' | ' +
+    (coutAn.toFixed(1) + ' min').padStart(11) + ' | ' +
+    ((seuil + ELECTION) / 1000).toFixed(1) + ' s'
+  );
+}
+
+console.log('');
+const alea = semer(2025);
+let longues = 0, acoups = 0;
+for (let i = 0; i &lt; BATTEMENTS; i++) {
+  const r = reponse(alea);
+  if (r &gt; 1000) longues++; else if (r &gt; 200) acoups++;
+}
+console.log('pauses de plus d\'une seconde : ' + longues + ' (' + (longues / (HEURES / 24)).toFixed(1)
+            + ' par jour)');
+console.log('à-coups de 200 à 800 ms      : ' + acoups + ' (' + (acoups / (HEURES / 24)).toFixed(0)
+            + ' par jour)');
+console.log('');
+console.log('les deux fautes sont symétriques, et aucune mesure ne les départage :');
+console.log('  seuil trop court -&gt; on destitue un meneur vivant, et deux machines écrivent ;');
+console.log('  seuil trop long  -&gt; on reste sans meneur ' + ((5000 + ELECTION) / 1000).toFixed(1)
+            + ' s à chaque vraie panne.');</code></pre></figure>
+<figure class="code-block" data-file="seuil-de-bascule.txt"><pre><code class="language-plaintext">1000000 battements de cœur, un par seconde (11.6 jours)
+
+seuil    | destitutions d'un meneur VIVANT | coût annuel | détection d'une vraie panne
+  100 ms |                           20226 | 32955.4 min | 3.1 s
+  300 ms |                           16845 | 29217.3 min | 3.3 s
+  500 ms |                           10216 | 18793.4 min | 3.5 s
+ 1000 ms |                              62 |   130.3 min | 4.0 s
+ 2000 ms |                              47 |   123.5 min | 5.0 s
+ 5000 ms |                               0 |     0.0 min | 8.0 s
+
+pauses de plus d'une seconde : 62 (5.4 par jour)
+à-coups de 200 à 800 ms      : 20164 (1742 par jour)
+
+les deux fautes sont symétriques, et aucune mesure ne les départage :
+  seuil trop court -&gt; on destitue un meneur vivant, et deux machines écrivent ;
+  seuil trop long  -&gt; on reste sans meneur 8.0 s à chaque vraie panne.
+</code></pre></figure>
+<p>À <strong>100&nbsp;ms</strong>, le surveillant destitue un meneur parfaitement vivant <strong>20&nbsp;226</strong> fois en onze jours&nbsp;: il prend chaque à-coup de réseau pour une mort. Le coût annuel de ces bascules inutiles atteint <strong>32&nbsp;955&nbsp;min</strong>, soit vingt-trois jours d'indisponibilité par an — pour des pannes qui n'ont pas eu lieu.</p>
+<p>À <strong>1&nbsp;000&nbsp;ms</strong>, les à-coups passent sous le radar et il ne reste que les <strong>62</strong> pauses réelles du ramasse-miettes, soit <strong>130,3&nbsp;min</strong> par an. À <strong>5&nbsp;000&nbsp;ms</strong>, plus aucune fausse bascule — mais chaque <em>vraie</em> panne coûte alors <strong>8,0&nbsp;s</strong> de silence, le temps de s'en apercevoir plus celui de l'élection.</p>
+<p>Les deux fautes sont symétriques, et c'est ce qui rend le réglage impossible à «&nbsp;optimiser&nbsp;»&nbsp;: un seuil trop court destitue des vivants, un seuil trop long laisse le service sans meneur. Aucune mesure ne départage les deux, parce que <em>les deux situations produisent exactement la même observation</em> — pas de réponse. C'est le résultat du module&nbsp;1, appliqué à la décision la plus lourde qu'un système réparti prend tout seul.</p>
+<p>Et le cas dangereux n'est pas celui qu'on croit. Destituer un meneur vivant ne serait qu'un gaspillage si le meneur destitué s'arrêtait&nbsp;; le problème est qu'il ne le sait pas. Il sort de sa pause, il se croit toujours meneur, et il continue d'accepter des écritures pendant que le nouveau meneur en accepte d'autres. Deux machines écrivent, chacune persuadée d'être seule. C'est le <strong>cerveau divisé</strong>, et il ne se corrige pas après coup&nbsp;: les deux séries d'écritures sont également valides et personne ne peut dire laquelle garder.</p>
+<figure class="diagram">
+  <svg viewBox="0 0 640 300" role="img" aria-label="Chronologie en trois lignes montrant comment une pause produit un cerveau divisé. La ligne du haut est celle du meneur M1 : elle est pleine jusqu au moment où un rectangle accentué marque une pause de deux secondes, puis reprend, et une mention indique qu à son réveil M1 se croit toujours meneur et continue d accepter des écritures. La ligne du milieu est celle du surveillant : cinq marques rondes ponctuent la ligne, dont trois tombent pendant la pause et restent donc sans réponse ; un trait vertical en pointillés marque ensuite le dépassement du seuil, avec la mention M1 est mort. La ligne du bas est celle du suiveur M2 : une mention indique qu il est promu meneur après une élection, puis il accepte lui aussi des écritures. Deux traits verticaux en pointillés délimitent la portion où M1 et M2 acceptent tous deux des écritures, et une étiquette centrale y porte la mention cerveau divisé. Une bande basse séparée par un trait en pointillés rappelle que M1 n a jamais été en panne, que les deux séries d écritures sont également valides, et que les trois remèdes sont le quorum, le numéro de mandat et le bail — jamais un meilleur seuil.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Comment une pause devient un cerveau divisé</text>
+
+    <text class="d-label" x="18" y="56" text-anchor="start" font-size="9.5">MENEUR M1</text>
+    <path class="d-line" d="M110 62 L250 62" fill="none" stroke-width="2" />
+    <rect class="d-accent" x="250" y="52" width="130" height="20" rx="6" />
+    <text class="d-text" x="315" y="66" text-anchor="middle" font-size="8">pause de 2 s</text>
+    <path class="d-line" d="M380 62 L610 62" fill="none" stroke-width="2" />
+    <text class="d-mut" x="495" y="52" text-anchor="middle" font-size="8">se croit toujours meneur, accepte des écritures</text>
+
+    <text class="d-label" x="18" y="136" text-anchor="start" font-size="9.5">SURVEILLANT</text>
+    <path class="d-line" d="M110 142 L610 142" fill="none" />
+    <circle class="d-dot" cx="150" cy="142" r="3" /><circle class="d-dot" cx="200" cy="142" r="3" />
+    <circle class="d-dot" cx="265" cy="142" r="3" /><circle class="d-dot" cx="310" cy="142" r="3" />
+    <circle class="d-dot" cx="355" cy="142" r="3" />
+    <text class="d-mut" x="310" y="160" text-anchor="middle" font-size="8">3 battements sans réponse</text>
+    <path class="d-line" d="M380 132 L380 152" fill="none" stroke-dasharray="3 2" />
+    <text class="d-tag" x="388" y="138" text-anchor="start" font-size="8.5">SEUIL DÉPASSÉ →&#160;«&#160;M1 EST MORT&#160;»</text>
+
+    <text class="d-label" x="18" y="216" text-anchor="start" font-size="9.5">SUIVEUR M2</text>
+    <path class="d-line" d="M110 222 L400 222" fill="none" stroke-dasharray="4 3" />
+    <path class="d-line" d="M400 222 L610 222" fill="none" stroke-width="2" />
+    <text class="d-mut" x="505" y="212" text-anchor="middle" font-size="8">promu meneur, accepte des écritures</text>
+
+    <path class="d-line" d="M400 46 L400 238" fill="none" stroke-dasharray="2 3" />
+    <path class="d-line" d="M610 46 L610 238" fill="none" stroke-dasharray="2 3" />
+    <text class="d-tag" x="505" y="130" text-anchor="middle" font-size="10">CERVEAU DIVISÉ</text>
+    <text class="d-mut" x="505" y="146" text-anchor="middle" font-size="8.5">M1 et M2 écrivent tous les deux</text>
+
+    <path class="d-line" d="M14 252 L626 252" fill="none" stroke-dasharray="4 3" />
+    <text class="d-mut" x="14" y="270" text-anchor="start" font-size="9">M1 n'a jamais été en panne&#160;: les deux séries d'écritures sont également valides, et personne ne peut dire laquelle garder</text>
+    <text class="d-tag" x="14" y="290" text-anchor="start" font-size="9.5">TROIS REMÈDES&#160;: QUORUM · NUMÉRO DE MANDAT · BAIL — JAMAIS UN MEILLEUR SEUIL</text>
+  </svg>
+  <figcaption>Le seuil ne décide pas si M1 est mort&nbsp;: il décide au bout de combien de temps on <em>parie</em> qu'il l'est. Le pari peut être perdu.</figcaption>
+</figure>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce qui empêche réellement le cerveau divisé</p><p>Pas le réglage du seuil&nbsp;: aucun seuil ne le supprime. Trois mécanismes, qui se combinent. Le <strong>quorum</strong>&nbsp;: un meneur qui n'obtient plus l'accord d'une majorité cesse de servir, de sa propre initiative — c'est le sujet de la <a href="lecon-09.html">leçon&nbsp;9</a>. Le <strong>numéro de mandat</strong>&nbsp;: chaque élection incrémente un compteur, et toute écriture porte le numéro du mandat sous lequel elle a été acceptée&nbsp;; les copies rejettent alors ce qui vient d'un mandat périmé — c'est très exactement une horloge logique au sens de la <a href="lecon-05.html">leçon&nbsp;5</a>. Et le <strong>bail</strong>&nbsp;: le meneur ne détient son titre que pour une durée bornée qu'il doit renouveler, de sorte qu'un meneur coupé du monde perd son titre <em>tout seul</em>, sans que personne n'ait à le lui retirer. Le bail suppose des horloges dont l'écart est borné&nbsp;— on retombe sur la <a href="lecon-04.html">leçon&nbsp;4</a>, et sur la raison pour laquelle sa durée est toujours très supérieure à l'écart mesuré.</p></div></div>
+<h2>Et si tout le monde écrivait&nbsp;?</h2>
+<p>Tout ce qui précède suppose un <strong>meneur unique</strong>&nbsp;: une machine reçoit les écritures, les autres les recopient. C'est de loin la configuration la plus répandue, parce qu'elle donne un ordre gratuitement — l'ordre dans lequel le meneur a accepté les écritures — et qu'elle évite tout conflit par construction.</p>
+<p>Elle a deux défauts, et ils sont réels. Un client lointain paie un aller-retour vers le meneur à chaque écriture. Et la bascule, on vient de le voir, est un mécanisme délicat qu'on préférerait ne pas avoir. D'où l'idée de la réplication <strong>multi-meneurs</strong>&nbsp;: chaque région accepte les écritures localement et les propage aux autres. Plus d'attente lointaine, plus de bascule.</p>
+<p>Le prix se paie ailleurs, et il se compte. Deux écritures sur la même donnée, acceptées de deux côtés avant d'avoir eu le temps de se croiser, sont <em>concurrentes</em> au sens exact de la <a href="lecon-05.html">leçon&nbsp;5</a> — et il faudra les réconcilier.</p>
+<figure class="code-block" data-file="multi-meneurs.js"><pre><code class="language-javascript">// Et si on acceptait les écritures des DEUX côtés ? C'est la réplication
+// multi-meneurs : plus de bascule à faire, plus d'attente inter-région — mais
+// des conflits, qu'il faut compter avant de choisir.
+function semer(graine) {
+  let a = graine &gt;&gt;&gt; 0;
+  return function () {
+    a = (a + 0x6D2B79F5) &gt;&gt;&gt; 0;
+    let t = a;
+    t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+    t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+  };
+}
+
+const CLES = 100000;            // nombre d'enregistrements distincts
+const RETARD = 0.191;           // s : temps de propagation d'un meneur à l'autre
+const ECRITURES = 200000;       // écritures simulées, réparties entre les deux meneurs
+
+// Deux écritures entrent en conflit si elles portent sur la MÊME clé et si la
+// seconde a lieu avant que la première n'ait eu le temps de traverser.
+function conflits(debitParSeconde, partChaude) {
+  const alea = semer(2025);
+  const derniere = new Map();   // clé -&gt; [instant, meneur]
+  let vus = 0;
+  for (let i = 0; i &lt; ECRITURES; i++) {
+    const instant = i / debitParSeconde;
+    // 90 % des écritures se concentrent sur la part « chaude » du jeu de clés.
+    const chaude = alea() &lt; 0.9;
+    const etendue = Math.max(1, Math.floor(CLES * (chaude ? partChaude : 1)));
+    const cle = Math.floor(alea() * etendue);
+    const meneur = alea() &lt; 0.5 ? 'A' : 'B';
+    const avant = derniere.get(cle);
+    if (avant &amp;&amp; avant[1] !== meneur &amp;&amp; instant - avant[0] &lt; RETARD) vus++;
+    derniere.set(cle, [instant, meneur]);
+  }
+  return vus;
+}
+
+console.log('retard entre les deux meneurs : ' + (RETARD * 1000).toFixed(0) + ' ms');
+console.log(ECRITURES + ' écritures sur ' + CLES + ' clés');
+console.log('');
+console.log('débit    | 100 % des clés | 1 % des clés « chaudes » | 0,1 %');
+for (const debit of [100, 1000, 10000]) {
+  console.log(
+    (debit + '/s').padStart(8) + ' | ' +
+    String(conflits(debit, 1)).padStart(14) + ' | ' +
+    String(conflits(debit, 0.01)).padStart(24) + ' | ' +
+    String(conflits(debit, 0.001)).padStart(6)
+  );
+}
+
+console.log('');
+const froid = conflits(10000, 1), chaud = conflits(10000, 0.001);
+console.log('à 10 000 écritures/s, concentrer 90 % du trafic sur 0,1 % des clés');
+console.log('fait passer les conflits de ' + froid + ' à ' + chaud + ' — ×'
+            + (chaud / Math.max(1, froid)).toFixed(0) + '.');
+console.log('');
+console.log('ce qui compte n\'est pas le nombre d\'écritures, mais le nombre de COUPLES');
+console.log('qui se croisent sur la même clé pendant le temps de trajet — d\'où la');
+console.log('double dépendance, au débit ET à la concentration du trafic.');</code></pre></figure>
+<figure class="code-block" data-file="multi-meneurs.txt"><pre><code class="language-plaintext">retard entre les deux meneurs : 191 ms
+200000 écritures sur 100000 clés
+
+débit    | 100 % des clés | 1 % des clés « chaudes » | 0,1 %
+   100/s |             20 |                     1461 |  14026
+  1000/s |            196 |                    14201 |  73504
+ 10000/s |           1906 |                    73746 |  89537
+
+à 10 000 écritures/s, concentrer 90 % du trafic sur 0,1 % des clés
+fait passer les conflits de 1906 à 89537 — ×47.
+
+ce qui compte n'est pas le nombre d'écritures, mais le nombre de COUPLES
+qui se croisent sur la même clé pendant le temps de trajet — d'où la
+double dépendance, au débit ET à la concentration du trafic.
+</code></pre></figure>
+<p>Deux facteurs commandent, et le tableau les sépare. Le <strong>débit</strong>&nbsp;: à 100 écritures par seconde réparties sur toutes les clés, <strong>20</strong> conflits&nbsp;; à 10&nbsp;000, <strong>1&nbsp;906</strong>. La <strong>concentration</strong>&nbsp;: à débit égal, faire porter 90&nbsp;% du trafic sur 0,1&nbsp;% des clés fait passer les conflits de <strong>1&nbsp;906</strong> à <strong>89&nbsp;537</strong> — soit <strong>×47</strong>.</p>
+<p>La leçon de conception est là&nbsp;: le multi-meneurs est confortable quand les écritures sont <em>dispersées</em>, et intenable quand elles sont concentrées. Deux régions qui gèrent chacune ses propres clients, sans recouvrement, ne se marchent jamais dessus. Deux régions qui décrémentent le même stock se marchent dessus en permanence.</p>
+<p>Il existe une troisième configuration, dite <strong>sans meneur</strong>&nbsp;: le client écrit directement à plusieurs copies et lit à plusieurs copies, et c'est le recouvrement entre les deux ensembles qui donne la garantie. Elle supprime la bascule tout en gardant une forme d'ordre, au prix d'un travail supplémentaire à chaque lecture. Elle repose entièrement sur le quorum, et c'est pour cela qu'elle attend la <a href="lecon-09.html">leçon&nbsp;9</a>.</p>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Trois prolongements. La <strong>réplication par journal</strong> — le meneur n'envoie pas les données mais la <em>suite des modifications</em>, ce qui garantit que toutes les copies appliquent la même chose dans le même ordre&nbsp;; c'est le mécanisme réel de la plupart des bases. Aucun cours du site ne détaille ce journal pour l'instant&nbsp;; le cours <a href="../bdd/cours.html">Concevoir une base de données</a> traite en revanche les transactions, dont il est le support. Les <strong>chaînes de réplication</strong>, où chaque copie recopie la suivante au lieu de recopier le meneur&nbsp;: la charge du meneur ne dépend plus du nombre de copies, mais le retard s'additionne le long de la chaîne. Et la <strong>réplication géographique asymétrique</strong>, où une région est meneuse pour ses propres clients et suiveuse pour les autres&nbsp;: c'est le compromis le plus employé en pratique, et il ne fonctionne que si le partitionnement des clients par région est net — ce qui ramène à la <a href="lecon-08.html">leçon&nbsp;8</a>.</p></div></div>
+<h2>Pièges fréquents</h2>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Compter les copies au lieu de compter ce qu'elles ne partagent pas.</strong> Mesuré&nbsp;: trois copies indépendantes rendent une perte tous les <strong>125&nbsp;000</strong> ans, mais <strong>499</strong> ans si 10&nbsp;% des pannes sont communes — et passer de trois à cinq copies ne change alors <em>rien</em> (2,01&nbsp;× 10⁻³ contre 2,00&nbsp;× 10⁻³). Devant une architecture à trois copies, la question n'est jamais «&nbsp;trois, est-ce assez&nbsp;?&nbsp;» mais «&nbsp;qu'est-ce qui peut les emporter toutes les trois en même temps&nbsp;?&nbsp;».</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Ajouter des copies pour tenir la charge en écriture.</strong> Elles ne servent qu'aux lectures, et même là il y a un plafond&nbsp;: avec 10&nbsp;% d'écritures, mille copies donnent <strong>×9,91</strong>, jamais dix, et <strong>50</strong> copies en rendent déjà <strong>84,7&nbsp;%</strong>. Si le mur est en écriture, aucune quantité de copies ne le déplacera&nbsp;: il faut partitionner.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'un réglage semi-synchrone garantit qu'on ne perd rien.</strong> Il garantit qu'<em>une</em> copie détient l'écriture, pas que ce sera celle qu'on promeut. Mesuré&nbsp;: <strong>0</strong> écriture perdue si l'on promeut la copie la plus à jour, <strong>382</strong> si l'on promeut la moins à jour — avec exactement le même réglage. Le réglage de réplication et la règle de promotion se lisent ensemble ou ne se lisent pas.</p></div></div>
+<h2>Cas réel</h2>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une place de marché exploite une base relationnelle avec un meneur et deux suiveurs, en réplication asynchrone. Les suiveurs servent les lectures de catalogue, le meneur encaisse tout le reste. La configuration a été posée trois ans plus tôt et n'a jamais bougé&nbsp;; elle tient sans effort.<br /><br />Le trafic double en dix-huit mois. L'équipe fait ce que tout le monde fait&nbsp;: elle ajoute des suiveurs. Trois, puis cinq, puis huit. Les premiers ajouts améliorent nettement le temps de réponse des pages de catalogue&nbsp;; les suivants n'améliorent plus grand-chose, et à partir du sixième, les temps de réponse <em>se dégradent</em> — y compris sur les lectures, ce que personne n'attendait. On soupçonne le réseau, puis le répartiteur de charge, puis la version de la base.<br /><br />La cause est arithmétique. Chaque suiveur ajouté doit appliquer <em>toutes</em> les écritures, et le meneur doit alimenter un flux de plus. À huit suiveurs — neuf copies —, chaque machine appliquait <strong>5&nbsp;000</strong> écritures par seconde sur les 10&nbsp;000 qu'elle savait traiter&nbsp;: <em>la moitié de sa capacité partait en recopie</em>, et la charge d'émission sur le meneur, elle, avait grandi de façon strictement linéaire. Le calcul du plafond, fait après coup, donnait un maximum théorique de <strong>dix fois</strong> la capacité d'une machine&nbsp;; l'équipe en était à <strong>cinq fois</strong>, soit la moitié du plafond, et chaque suiveur ajouté ne rapportait plus que quelques pour cent — il en aurait fallu <strong>trente-cinq</strong> pour atteindre huit fois.<br /><br />Deuxième incident, deux mois plus tard, et de nature différente. Une opération de maintenance provoque une pointe d'écritures. Le retard des suiveurs, habituellement sous les 50&nbsp;ms, atteint <strong>quarante secondes</strong>. Les pages de catalogue affichent des prix périmés, des articles supprimés réapparaissent, et le tunnel de commande — qui lisait le stock sur un suiveur — accepte des commandes sur des articles épuisés. Aucune alerte ne se déclenche&nbsp;: la supervision affichait le retard rapporté par chaque suiveur, et deux d'entre eux, coupés du meneur pendant la pointe, rapportaient un retard <em>nul</em>.<br /><br />Trois corrections ont suivi, et elles répondent à trois lectures différentes du problème. La première&nbsp;: le stock est passé en lecture sur le meneur — une lecture critique n'a rien à faire sur une copie asynchrone, quel que soit le retard habituel. La deuxième&nbsp;: le retard est désormais mesuré par une marque que le meneur écrit chaque seconde et que chaque suiveur relit, ce qui rend un suiveur muet visible comme un retard qui grandit, et non comme un retard nul. La troisième, la plus lourde&nbsp;: le catalogue a été partitionné, parce que le problème d'origine n'était pas un problème de lecture — c'était un mur d'écritures, et la réplication n'en déplace aucun.<br /><br />Ce qu'il faut retenir dépasse la place de marché. <em>Les trois symptômes — dégradation à huit suiveurs, retard invisible, commandes sur stock épuisé — sont les trois faces d'une même méprise&nbsp;: avoir traité la réplication comme une réserve de capacité, alors que c'est un mécanisme de tolérance aux pannes qui rend des lectures en prime.</em></p></div></div>
+<h2>Antisèche</h2>
+<figure class="cheat-table">
+  <table>
+    <caption>Répliquer — mémo de la leçon 7</caption>
+    <thead><tr><th scope="col">Notion</th><th scope="col">À retenir</th></tr></thead>
+    <tbody>
+      <tr><td>Répliquer ≠ partitionner</td><td>La <em>même</em> donnée sur plusieurs machines, contre des données <em>différentes</em>. «&nbsp;Et si celle-ci tombe&nbsp;?&nbsp;» contre «&nbsp;et si elle ne suffit plus&nbsp;?&nbsp;».</td></tr>
+      <tr><td>Quatre motifs</td><td>Ne pas perdre · rester joignable · plus de lectures · être plus près. Ils tirent dans des directions différentes.</td></tr>
+      <tr><td>Durabilité</td><td>Indépendantes&nbsp;: 1 copie = perte tous les <strong>50 ans</strong>, 2 = <strong>2 500</strong>, 3 = <strong>125 000</strong>. Avec 10&nbsp;% de corrélation&nbsp;: 3 copies = <strong>499 ans</strong>.</td></tr>
+      <tr><td>Plancher de corrélation</td><td>De 3 à 5 copies&nbsp;: 2,01&nbsp;× 10⁻³ → 2,00&nbsp;× 10⁻³. La part commune ne se corrige pas en ajoutant des copies.</td></tr>
+      <tr><td>Copie ≠ sauvegarde</td><td>La réplication propage aussi les erreurs, en quelques millisecondes. Ce qui protège, c'est une copie <em>décalée dans le temps</em>, et restaurée pour de vrai.</td></tr>
+      <tr><td>Placement</td><td>3 copies, même baie&nbsp;: survit à <strong>0</strong> des 3 niveaux. 3 zones&nbsp;: baie et zone. 3 régions&nbsp;: les trois. Même mot, quatre garanties.</td></tr>
+      <tr><td>Mur des lectures</td><td>10&nbsp;% d'écritures&nbsp;: 2 copies ×1,82 · 3 ×2,50 · 10 ×5,26 · 50 ×8,47 · 1 000 <strong>×9,91</strong>. Plafond = <strong>1/part d'écritures</strong>.</td></tr>
+      <tr><td>Rendement décroissant</td><td><strong>50</strong> copies rendent <strong>84,7&nbsp;%</strong> du plafond&nbsp;; les <strong>950</strong> suivantes, <strong>14,4&nbsp;%</strong>.</td></tr>
+      <tr><td>Asynchrone</td><td><strong>0,50&nbsp;ms</strong> par écriture. Perd <strong>15</strong> écritures (meilleure copie) ou <strong>382</strong> (la pire).</td></tr>
+      <tr><td>Semi-synchrone</td><td><strong>7,40&nbsp;ms</strong> (×14,8). Perd <strong>0</strong> ou <strong>382</strong> selon la copie promue&nbsp;: la garantie dépend de la règle de promotion.</td></tr>
+      <tr><td>Synchrone</td><td><strong>191,00&nbsp;ms</strong> (×382,0)&nbsp;: la copie la plus lointaine fixe le rythme de toutes les écritures. Perd <strong>0</strong>.</td></tr>
+      <tr><td>Retard de réplication</td><td>Une <em>file</em>, pas un délai. <strong>12&nbsp;%</strong> de dépassement pendant 20&nbsp;s → <strong>12&nbsp;000</strong> écritures, <strong>2,40&nbsp;s</strong>, et 6&nbsp;s pour revenir.</td></tr>
+      <tr><td>Retard invisible</td><td>Un suiveur coupé rapporte un retard <strong>nul</strong>. Mesurer par une marque écrite par le meneur, pas par ce que le suiveur croit.</td></tr>
+      <tr><td>Seuil de bascule</td><td>100&nbsp;ms → <strong>20 226</strong> destitutions d'un vivant en 11 jours (<strong>32 955 min/an</strong>). 1&nbsp;s → <strong>62</strong>. 5&nbsp;s → <strong>0</strong>, mais <strong>8,0&nbsp;s</strong> par vraie panne.</td></tr>
+      <tr><td>Cerveau divisé</td><td>Le meneur destitué ne le sait pas. Remèdes&nbsp;: quorum, numéro de mandat, bail — jamais un meilleur seuil.</td></tr>
+      <tr><td>Multi-meneurs</td><td>Conflits selon débit <em>et</em> concentration&nbsp;: <strong>1 906</strong> à 10&nbsp;000&nbsp;/s dispersé, <strong>89 537</strong> concentré sur 0,1&nbsp;% des clés (<strong>×47</strong>).</td></tr>
+    </tbody>
+  </table>
+</figure>
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Réplication</dt><dd>Fait de tenir la même donnée sur plusieurs machines. Elle répond aux pannes matérielles et permet de servir plus de lectures&nbsp;; elle ne répartit jamais les écritures.</dd>
+  <dt>Copie (réplique)</dt><dd>Machine détenant un exemplaire complet de la donnée. Elle doit appliquer toutes les écritures du service, ce qui borne le gain de la réplication.</dd>
+  <dt>Panne corrélée</dt><dd>Défaillance qui frappe plusieurs copies à la fois&nbsp;: même alimentation, même lot de matériel, même version de logiciel, même commande d'opérateur. Elle constitue le plancher de fiabilité, qu'aucune copie supplémentaire ne fait descendre.</dd>
+  <dt>Zone, région</dt><dd>Niveaux d'isolement d'une infrastructure&nbsp;: une zone a sa propre alimentation et son propre réseau, une région regroupe plusieurs zones à distance géographique. Répartir les copies sur ces niveaux détermine ce à quoi le système survit.</dd>
+  <dt>Meneur (primaire)</dt><dd>Copie qui reçoit les écritures et les diffuse aux autres. Sa présence donne un ordre unique aux écritures, sans coordination supplémentaire.</dd>
+  <dt>Suiveur (secondaire)</dt><dd>Copie qui applique les écritures reçues du meneur et peut servir des lectures. Son état est, sauf réplication synchrone, en retard sur celui du meneur.</dd>
+  <dt>Réplication asynchrone</dt><dd>Le meneur confirme l'écriture sans attendre aucune copie. Latence minimale — 0,50&nbsp;ms ici — au prix des écritures en vol perdues si le meneur tombe&nbsp;: de 15 à 382 selon la copie promue.</dd>
+  <dt>Réplication semi-synchrone</dt><dd>Le meneur attend un nombre choisi de copies, souvent une. Elle ne garantit l'absence de perte que si la promotion choisit précisément une copie qui avait accusé réception.</dd>
+  <dt>Réplication synchrone</dt><dd>Le meneur attend toutes les copies. Aucune perte, mais la copie la plus lointaine fixe la latence de chaque écriture&nbsp;: 191,00&nbsp;ms dans l'exemple, soit 382 fois l'écriture locale.</dd>
+  <dt>Retard de réplication</dt><dd>Nombre d'écritures reçues par le meneur et pas encore appliquées par une copie. C'est une file d'attente&nbsp;: un excédent de 12&nbsp;% pendant 20&nbsp;s produit 12&nbsp;000 écritures de retard, soit 2,40&nbsp;s.</dd>
+  <dt>Bascule</dt><dd>Promotion d'une copie au rang de meneur après la défaillance présumée du meneur en place. Elle repose sur un délai d'attente, donc sur une observation qui ne prouve rien.</dd>
+  <dt>Cerveau divisé</dt><dd>Situation où deux machines se croient meneuses en même temps et acceptent chacune des écritures. Elle ne se répare pas après coup&nbsp;: les deux séries sont également valides.</dd>
+  <dt>Numéro de mandat</dt><dd>Compteur incrémenté à chaque élection et porté par les écritures. Il permet de rejeter ce qui vient d'un meneur destitué&nbsp;: c'est une horloge logique au sens de la leçon&nbsp;5.</dd>
+  <dt>Bail</dt><dd>Titre de meneur accordé pour une durée bornée, qu'il faut renouveler. Un meneur coupé du monde perd son titre de lui-même, ce qui suppose des horloges dont l'écart est borné.</dd>
+  <dt>Réplication multi-meneurs</dt><dd>Configuration où plusieurs copies acceptent des écritures. Elle supprime l'attente lointaine et la bascule, et produit des écritures concurrentes à réconcilier&nbsp;: jusqu'à 89&nbsp;537 conflits ici quand le trafic est concentré.</dd>
+</dl>
+<h2>Récap et vérification</h2>
+<ul>
+<li>Répliquer sert à <strong>quatre</strong> choses qui ne se règlent pas pareil&nbsp;: ne pas perdre, rester joignable, encaisser plus de lectures, être plus près du lecteur.</li>
+<li>Trois copies <em>indépendantes</em> rendent une perte tous les <strong>125&nbsp;000</strong> ans&nbsp;; avec <strong>10&nbsp;%</strong> de pannes corrélées, tous les <strong>499</strong> ans — et passer de 3 à 5 copies ne change plus rien (2,01 → 2,00&nbsp;× 10⁻³). <strong>La corrélation est le plancher.</strong></li>
+<li>Une copie n'est pas une sauvegarde&nbsp;: la réplication propage les erreurs aussi fidèlement que les données.</li>
+<li>Le <em>placement</em> décide de tout&nbsp;: trois copies dans une même baie survivent à <strong>0</strong> des trois niveaux de panne, trois régions aux <strong>trois</strong>. Même annonce, quatre garanties.</li>
+<li>La réplication ne monte pas en charge sur les écritures. À 10&nbsp;% d'écritures&nbsp;: <strong>×1,82</strong> à 2 copies, <strong>×5,26</strong> à 10, <strong>×9,91</strong> à mille. Plafond&nbsp;: <strong>1 / part d'écritures</strong>, et <strong>50</strong> copies en rendent déjà <strong>84,7&nbsp;%</strong>.</li>
+<li>Attendre les copies&nbsp;: <strong>0,50&nbsp;ms</strong> sans attendre, <strong>7,40&nbsp;ms</strong> pour une copie (×14,8), <strong>191,00&nbsp;ms</strong> pour toutes (×382,0).</li>
+<li>Le semi-synchrone perd <strong>0</strong> écriture si l'on promeut la copie la plus à jour, <strong>382</strong> si l'on promeut la moins à jour&nbsp;: <em>le réglage ne vaut que ce que vaut la règle de promotion</em>.</li>
+<li>Le retard de réplication est une <strong>file</strong>&nbsp;: <strong>12&nbsp;%</strong> d'excédent pendant 20&nbsp;s produisent <strong>12&nbsp;000</strong> écritures de retard, soit <strong>2,40&nbsp;s</strong>, et six secondes pour revenir à zéro.</li>
+<li>Le seuil de détection n'a pas de bon réglage&nbsp;: <strong>100&nbsp;ms</strong> destitue <strong>20&nbsp;226</strong> meneurs vivants en onze jours, <strong>5&nbsp;s</strong> n'en destitue aucun mais coûte <strong>8,0&nbsp;s</strong> à chaque vraie panne. Le cerveau divisé se traite par <strong>quorum</strong>, <strong>mandat</strong> et <strong>bail</strong>, jamais par un meilleur seuil.</li>
+<li>Le multi-meneurs échange la bascule contre des conflits, et leur nombre dépend du débit <em>et</em> de la concentration&nbsp;: <strong>1&nbsp;906</strong> dispersé contre <strong>89&nbsp;537</strong> concentré, à débit égal.</li>
+</ul>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une équipe annonce «&nbsp;nous avons trois copies, nous sommes tranquilles&nbsp;». Quelles questions poses-tu avant d'accepter cette conclusion&nbsp;?</li>
+<li>Explique, sans citer de chiffre, pourquoi ajouter des copies cesse d'améliorer le débit d'un service, et à quelle condition le plafond serait plus haut.</li>
+<li>On te demande de choisir le seuil de détection d'une bascule. Quelles grandeurs mesures-tu avant de proposer un nombre, et que réponds-tu à «&nbsp;mettons 200&nbsp;ms, on sera réactifs&nbsp;»&nbsp;?</li>
+</ol></div>
+<script type="application/json" data-quiz>
+[
+  {"q":"Trois copies au lieu d'une : de combien le risque de perte baisse-t-il ?","a":["D'un facteur 2 500 si les pannes sont indépendantes, de 10 seulement si un dixième est corrélé","D'un facteur 3, une copie sur trois pouvant disparaître sans que les données soient perdues pour autant","D'un facteur qui ne dépend que du taux de panne du matériel employé, jamais de la façon dont les copies sont placées","D'un facteur impossible à établir, la fiabilité d'un disque n'étant pas une grandeur mesurable en pratique"],"correct":0,"explain":"Mesuré : une perte tous les 50 ans avec une copie, tous les 125 000 ans avec trois copies indépendantes — soit 2 500 fois moins. Avec 10 % de pannes corrélées, trois copies ne rendent plus que 499 ans, soit un facteur 10. Et la colonne ne bouge plus ensuite : de 3 à 5 copies, 2,01 × 10⁻³ contre 2,00 × 10⁻³."},
+  {"q":"Avec 10 % d'écritures, que rapportent mille copies par rapport à une seule ?","a":["×9,91 — le plafond vaut 1 divisé par la part d'écritures, soit 10, et il n'est jamais atteint","×1000, chaque copie ajoutant exactement sa propre capacité au service qu'elle rejoint","×900, les 10 % d'écritures étant la seule part du travail que la réplication ne sait pas répartir","×100, la montée en charge d'un service répliqué suivant la racine carrée du nombre de copies"],"correct":0,"explain":"Chaque copie doit appliquer 100 % des écritures : c'est la part incompressible. Mesuré : ×1,82 à 2 copies, ×5,26 à 10, ×8,47 à 50, ×9,91 à mille. 50 copies rendent déjà 84,7 % du plafond, et les 950 suivantes seulement 14,4 %. Si le mur est en écriture, aucune copie ne le déplace : il faut partitionner."},
+  {"q":"Une réplication semi-synchrone attend une copie. Que garantit-elle exactement ?","a":["Qu'une copie détient l'écriture — pas que ce sera celle qu'on promeut à la bascule","Qu'aucune écriture ne sera perdue, quelle que soit la copie promue après la panne","Que toutes les copies sont à jour au moment où le client reçoit sa confirmation d'écriture","Que la latence d'écriture reste celle d'une écriture purement locale sur le meneur"],"correct":0,"explain":"Mesuré avec le même réglage : 0 écriture perdue si l'on promeut la copie la plus à jour, 382 si l'on promeut la moins à jour. La latence, elle, passe de 0,50 à 7,40 ms — ×14,8. Le réglage de réplication et la règle de promotion se lisent ensemble, ou ne veulent rien dire."},
+  {"q":"Quel seuil de détection faut-il choisir pour la bascule d'un meneur ?","a":["Aucun n'est bon : trop court on destitue des vivants, trop long on reste sans meneur","Le plus court possible, la réactivité étant le seul critère qui compte pour la disponibilité","Le temps de réponse moyen du meneur multiplié par deux, ce qui absorbe les variations","Celui que le fournisseur recommande, la valeur dépendant du produit et non de la charge"],"correct":0,"explain":"Mesuré : à 100 ms, 20 226 destitutions d'un meneur vivant en onze jours, soit 32 955 min/an d'indisponibilité pour des pannes qui n'ont pas eu lieu ; à 5 s, aucune, mais 8,0 s de silence à chaque vraie panne. Les deux situations produisent la même observation — pas de réponse — donc aucune mesure ne les départage. Le cerveau divisé se traite par quorum, mandat et bail."}
+]
+</script>
+<h2>Exercices</h2>
+<script type="application/json" data-exos>
+[
+  {"type":"text","accept":["asynchrone","la réplication asynchrone","réplication asynchrone","asynchrone (sans attendre)"],"placeholder":"répondre sans attendre aucune copie, c'est une réplication ...","hints":["Trois réglages existent : un qui n'attend personne, un qui attend une copie, un qui les attend toutes.","Celui qu'on cherche coûte 0,50 ms par écriture et met 30 écritures en danger.","Le mot commence par un « a » privatif et s'oppose à « synchrone »."],"link":{"href":"lecon-07.html","label":"Revoir « Attendre les copies, ou pas »"}},
+  {"type":"code","run":{"expect":"50 4"},"placeholder":"le plafond pour 2 % d'écritures, puis pour 25 %, un nombre par ligne","hints":["Le plafond ne dépend que de la part d'écritures, puisque chaque copie doit les appliquer toutes.","Avec une infinité de copies, la capacité d'une machine est entièrement consommée par les écritures.","Le gain maximal vaut 1 divisé par la part d'écritures. Affiche-le en entier, sans décimale."],"link":{"href":"lecon-07.html","label":"Revoir « Encaisser plus de lectures »"}},
+  {"type":"code","run":{"expect":"6 0"},"placeholder":"le nombre de copies pour tomber sous 1e-9, puis avec 1 % de corrélation","hints":["Reprends la formule de la page : la probabilité de perte vaut la part commune plus la part propre élevée à la puissance du nombre de copies.","Le taux de panne annuel d'une copie vaut 0,02, et la cible est 1e-9.","Avec 1 % de corrélation, la part commune vaut à elle seule 2e-4 : aucun nombre de copies ne passe sous la cible. Affiche 0 dans ce cas."],"link":{"href":"lecon-07.html","label":"Revoir « Ne pas perdre : ce que valent vraiment trois copies »"}}
+]
+</script>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un meneur confirme l'écriture au client <em>sans attendre</em> qu'aucune copie l'ait reçue. Comment appelle-t-on ce réglage, et qu'est-ce qu'il échange contre quoi&nbsp;?</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution-1.txt"><pre><code class="language-plaintext">LA RÉPLICATION ASYNCHRONE.
+
+Elle échange une garantie contre de la latence :
+
+  ce qu'elle gagne   0,50 ms par écriture
+                     (contre 7,40 ms en semi-synchrone, ×14,8,
+                      et 191,00 ms en synchrone, ×382,0)
+
+  ce qu'elle perd    les écritures en vol si le meneur tombe :
+                     15 si l'on promeut la copie la plus à jour,
+                     382 si l'on promeut la moins à jour
+
+Le point à ne pas manquer : ces 15 écritures ne sont pas une
+défaillance du système, c'est le contrat. Le client a reçu
+« c'est enregistré » pour une écriture qu'aucune autre machine
+ne détenait encore.
+</code></pre></figure>
+<p>Le mot «&nbsp;asynchrone&nbsp;» ne décrit donc pas une qualité de mise en œuvre&nbsp;: il décrit une décision, prise à la conception, sur ce qu'on accepte de perdre. Une base réglée ainsi n'a pas un défaut&nbsp;; elle honore exactement ce qu'on lui a demandé. La faute, quand il y en a une, est d'avoir choisi ce réglage sans avoir posé la question — et de découvrir la réponse le jour de la bascule.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Le plafond de la montée en charge par réplication ne dépend que de la <strong>part d'écritures</strong>. Affiche <strong>deux nombres entiers, un par ligne</strong>&nbsp;: le gain maximal par rapport à une seule copie pour un service dont <strong>2&nbsp;%</strong> des opérations sont des écritures, puis pour un service où elles font <strong>25&nbsp;%</strong>.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// Le plafond de la réplication en lecture ne dépend que d'une chose :
+// la PART des opérations qui sont des écritures, puisque chaque copie
+// doit les appliquer toutes.
+const CAPACITE = 10000;        // opérations par seconde et par machine
+
+function plafond(partEcriture) {
+  const uneCopie = CAPACITE / (partEcriture + (1 - partEcriture));   // = CAPACITE
+  const infini = CAPACITE / partEcriture;                            // copies -&gt; l'infini
+  return infini / uneCopie;
+}
+
+console.log(plafond(0.02).toFixed(0));   // affiche : 50
+console.log(plafond(0.25).toFixed(0));   // affiche : 4</code></pre></figure>
+<figure class="code-block" data-file="solution-2.txt"><pre><code class="language-plaintext">50
+4
+</code></pre></figure>
+<p>Un service très majoritairement en lecture — <strong>2&nbsp;%</strong> d'écritures — peut espérer <strong>×50</strong>&nbsp;; un service à <strong>25&nbsp;%</strong> plafonne à <strong>×4</strong> — et il en est encore loin après quelques copies&nbsp;: cinq copies rendent <strong>×2,50</strong>, soit 62,5&nbsp;% du plafond, et vingt copies <strong>×3,48</strong>, soit 87&nbsp;%. L'écart entre les deux est instructif&nbsp;: la réplication est un excellent outil pour un catalogue, un fil d'actualité ou une page de documentation, et un outil médiocre pour une file de commandes ou un compteur d'événements. <em>Ce n'est pas la taille du service qui décide, c'est la forme de son trafic</em> — et cette forme se mesure en une requête sur les journaux, bien avant d'acheter une machine.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On vise une probabilité annuelle de perte inférieure à <strong>10⁻⁹</strong> — une perte par milliard d'années. Affiche <strong>deux nombres, un par ligne</strong>&nbsp;: le nombre de copies nécessaires si les pannes sont parfaitement <em>indépendantes</em>, puis si <strong>1&nbsp;%</strong> d'entre elles sont corrélées. Affiche <strong>0</strong> si aucun nombre de copies n'y suffit.</p>
+<details><summary>Voir une solution</summary>
+<figure class="code-block" data-file="solution-3.js"><pre><code class="language-javascript">// Combien de copies faut-il pour descendre sous une perte par milliard d'années,
+// c'est-à-dire une probabilité annuelle de 1e-9 ?
+const PANNE = 0.02;
+const CIBLE = 1e-9;
+
+function perte(copies, correlation) {
+  const commune = PANNE * correlation;
+  const propre = PANNE - commune;
+  return commune + Math.pow(propre, copies);
+}
+
+function copiesNecessaires(correlation) {
+  for (let n = 1; n &lt;= 50; n++) if (perte(n, correlation) &lt; CIBLE) return n;
+  return 0;                      // 0 : aucun nombre de copies n'y suffit
+}
+
+console.log(copiesNecessaires(0));      // affiche : 6
+console.log(copiesNecessaires(0.01));   // affiche : 0</code></pre></figure>
+<figure class="code-block" data-file="solution-3.txt"><pre><code class="language-plaintext">6
+0
+</code></pre></figure>
+<p><strong>Six</strong> copies indépendantes suffisent. Avec <strong>1&nbsp;%</strong> de pannes corrélées — un centième, ce qui paraît négligeable —, la réponse est <strong>0</strong>&nbsp;: <em>aucun</em> nombre de copies n'atteint la cible, parce que la part commune vaut à elle seule 2&nbsp;× 10⁻⁴, soit deux cent mille fois la cible visée.</p>
+<p>C'est le résultat le plus utile de la leçon, et il vaut d'être formulé en toutes lettres&nbsp;: <strong>une architecture de redondance ne peut pas être meilleure que sa part de défaillances communes</strong>. Devant une exigence de durabilité très élevée, la première question n'est donc jamais «&nbsp;combien de copies&nbsp;?&nbsp;» mais «&nbsp;quelle est la part commune, et comment la réduire&nbsp;?&nbsp;» — répartir les emplacements, décaler les versions, séparer les fournisseurs, exiger deux paires d'yeux sur ce qui touche toutes les copies à la fois.</p></details></div>
+              <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
+                <span>Marquer comme terminée</span>
+              </button>
+
+              <nav class="lesson-nav" data-lesson-nav aria-label="Navigation entre leçons"></nav>
+            </article>
+          </div>
+
+          <aside class="lesson-rail lesson-toc-rail" aria-label="Sommaire">
+            <p class="toc__title">Sur cette page</p>
+            <nav class="toc" aria-label="Sommaire de la leçon"><div data-toc></div></nav>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="cours.html">← Retour au programme du cours</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../../js/data.js" defer></script>
+    <script src="../../js/main.js" defer></script>
+    <script src="../../js/lecon.js" defer></script>
+    <script src="../../js/runner.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-core.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
+  </body>
+</html>
