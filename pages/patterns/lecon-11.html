@@ -313,7 +313,9 @@ histo.refaire();                                        // Aperçu : "Bonjour le
   null,
   {"type":"text","accept":["Command","command","commande","le pattern command"],"placeholder":"le pattern qui encapsule une édition dans un objet executer()/annuler()…","hints":["Il rend l'action stockable et réversible.","On l'empile dans un historique.","« … » (anglais pour « commande »)."],"link":{"href":"lecon-11.html","label":"Revoir « Command »"}},
   {"type":"text","accept":["Memento","memento","le memento","instantané","instantane"],"placeholder":"le pattern qui capture l'état de l'éditeur dans un instantané opaque…","hints":["L'objet se photographie lui-même.","On le restaure pour annuler.","« M… »."],"link":{"href":"lecon-11.html","label":"Revoir « Memento »"}},
-  null
+  null,
+  null,
+  {"type":"code","run":{"expect":"[\"ac\",0]"},"placeholder":"écris Editeur (executer, annuler, refaire), joue le scénario a / b / annuler / c / refaire, puis affiche le JSON de [editeur.texte, editeur.aRefaire.length]","hints":["Une commande sait faire ET défaire : deux méthodes, pas une.","executer vide la pile de rétablissement — sinon on refait un futur qui a été abandonné.","Après « c », il n'y a plus rien à refaire : le refaire final ne change rien."],"link":{"href":"lecon-11.html","label":"Revoir « Un éditeur avec annulation »"}}
 ]
 </script>
 
@@ -386,6 +388,46 @@ meteo.notifier("23 °C");</code></pre></figure></details></div>
   {"q":"Dans un vrai projet (comme notre éditeur undo/redo), les patterns…","a":["Collaborent : Command, Memento et Observer se combinent pour une seule fonctionnalité","Doivent rester isolés l'un de l'autre","S'excluent mutuellement","Ne servent qu'en théorie"],"correct":0,"explain":"La valeur vient de leur assemblage : chacun porte une responsabilité, l'ensemble fait l'outil."}
 ]
 </script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 6</span><span class="exercise__level">Au clavier</span></div><p>Le vrai piège de l'annulation n'est pas <code>annuler</code>&nbsp;: c'est qu'une commande NEUVE doit vider la pile de rétablissement. Écris <code>Editeur</code> avec <code>executer(commande)</code>, <code>annuler()</code> et <code>refaire()</code>, joue « ajoute a », « ajoute b », annuler, « ajoute c », refaire, puis affiche le JSON de <code>[editeur.texte, editeur.aRefaire.length]</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">class Editeur {
+  constructor() {
+    this.texte = '';
+    this.faites = [];
+    this.aRefaire = [];
+  }
+  executer(commande) {
+    commande.appliquer(this);
+    this.faites.push(commande);
+    // Repartir d'un nouvel embranchement : le futur enregistré n'existe plus.
+    this.aRefaire = [];
+  }
+  annuler() {
+    const commande = this.faites.pop();
+    if (!commande) return;
+    commande.defaire(this);
+    this.aRefaire.push(commande);
+  }
+  refaire() {
+    const commande = this.aRefaire.pop();
+    if (!commande) return;
+    commande.appliquer(this);
+    this.faites.push(commande);
+  }
+}
+
+const ajouter = (lettre) =&gt; ({
+  appliquer: (e) =&gt; { e.texte += lettre; },
+  defaire: (e) =&gt; { e.texte = e.texte.slice(0, -lettre.length); },
+});
+
+const editeur = new Editeur();
+editeur.executer(ajouter('a'));
+editeur.executer(ajouter('b'));
+editeur.annuler();
+editeur.executer(ajouter('c'));
+editeur.refaire();
+
+console.log(JSON.stringify([editeur.texte, editeur.aRefaire.length]));</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

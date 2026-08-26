@@ -340,7 +340,35 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **7. Contrôles.** `verif.js --rapide` **tout vert, 5 étapes** (source, données, contenu, exemples, **motifs**). `verif-html` 0/0 sur 1 612 fichiers. `verif-donnees` **0 erreur sur 25 invariants** (le seul avertissement, `zig`, est celui de la phase E du V6). `verif-rendu` **0 erreur / 0 avertissement sur 18 mesures** (3 pages × 3 largeurs × 2 thèmes, réseau coupé). `build-index` : les 5 index dérivés **identiques** — les exercices ne sont pas indexés. 0 URL de CDN.
 
   🔵 **Relevé hors périmètre, coûteux quand on l'ignore** : `tools/verif-rendu.js` **ignore silencieusement les chemins passés nus** et retombe sur son défaut élargi (~229 pages, plusieurs minutes) ; la syntaxe est `--pages=a,b`. Deux lancements perdus avant de le voir.
-- [ ] **B6 · `algo` et `patterns`** — déjà bien dotés, compléter.
+- [x] **B6 · `algo` et `patterns`**. ✅ **2026-08-26. 21 exercices de code neufs, 21 acceptés par le navigateur — et « déjà bien dotés » ne tenait que pour un des deux cours.**
+
+  **1. La mesure d'abord, la case ensuite.** « Déjà bien dotés, compléter » est vrai pour `algo` et **faux pour `patterns`** :
+
+  | cours | leçons | exercices `type:code` | leçons sans aucun exercice exécuté |
+  |---|---:|---:|---:|
+  | `algo` | 28 | 38 | **10** (01, 10, 12, 16, 23, 24, 25, 26, 27, 28) |
+  | `patterns` | 11 | **0** | **11** |
+
+  Et les 10 leçons d'`algo` sans exercice exécuté ne sont pas les moins importantes : ce sont **la complexité, les arbres binaires, les graphes, Dijkstra, le hasard, Fenwick, l'AVL, les flots, le cache LRU et le projet de synthèse**. Un exercice par leçon manquante : **11 + 10 = 21**.
+
+  **2. Le principe éditorial : un patron de conception n'est pas une figure de style, c'est une STRUCTURE dont l'effet se compte.** Chaque exercice fait écrire le patron, puis affiche le chiffre qui prouve qu'il fait ce qu'on lui prête — une seule instance construite, un seul calcul réel, un seul objet de style partagé pour mille particules, un état restauré.
+
+  | cours | leçons | ce que l'apprenant écrit |
+  |---|---|---|
+  | `patterns` | 01 → 11 | la table de stratégies qui remplace un `switch`, **le carré qui viole Liskov** (24 contre 36), le singleton **avec son compteur de constructions**, l'adaptateur, l'observateur **et son désabonnement**, la mémoïsation (5 appels, 2 calculs), le poids-mouche (1 000 particules, 3 styles), la chaîne de responsabilité, l'horloge injectée, le dépôt en mémoire, **la pile de rétablissement qu'une commande neuve doit vider** |
+  | `algo` | 01, 10, 12, 16, 23, 24, 25, 26, 27, 28 | le COMPTE des comparaisons (1 024 contre 11), le parcours infixe d'un ABR, le parcours en largeur, Dijkstra (A→B→C coûte 3, A→C direct coûte 4), **Fisher-Yates avec son hasard injecté**, l'arbre de Fenwick (`i & -i`), le facteur d'équilibre AVL et **le nom de la rotation**, Ford-Fulkerson et ses arêtes résiduelles (flot 13), **le cache LRU où la LECTURE rajeunit**, le tas binaire |
+
+  **3. Ce que l'exécution a corrigé, et que la lecture aurait laissé passer.** L'exercice de la leçon 01 d'`algo` annonçait **10** comparaisons par dichotomie sur 1 024 éléments — le log₂ tombe juste, et c'est faux : la boucle en fait **11**, parce que le tour qui CONFIRME la trouvaille s'ajoute aux dix qui divisent. Corrigé par la mesure, pas par le raisonnement. C'est exactement la faute qui fonde ce chantier, prise à temps.
+
+  **4. Le piège d'insertion, trouvé par la preuve navigateur et par rien d'autre.** `initExos` apparie `data-exos` aux blocs `.exercise` **par INDEX**. Or **deux pages — les deux capstones, `patterns/lecon-11` et `algo/lecon-28` — avaient moins d'entrées que de blocs** (le capstone n'a délibérément pas de champ). Ajouter une entrée à la fin du tableau l'a donc collée **en face de l'avant-dernier bloc**, et la solution du capstone s'est retrouvée jugée contre l'attendu d'un autre exercice. `lecon.js` avertit bien de l'écart, mais du bon côté (« les blocs en excès restent sans champ »), donc l'anomalie ne ressemblait pas à une anomalie. Corrigé en complétant le tableau par des `null` jusqu'à l'avant-dernier rang. **Contrôle passé sur tout le site après coup : 0 page où une entrée `data-exos` est perdue.**
+
+  **5. Troisième trou du garde-fou `BROWSER_ONLY` — et cette fois c'est un IDENTIFIANT LÉGITIME.** Les deux premiers étaient un mot français accentué et le mot « document » dans un commentaire. Ici, un exemple **préexistant** de `patterns/lecon-05` écrivait `constructor(document, texte)` : le paramètre s'appelle `document` au sens « le document texte », il MASQUE le vrai global, et le code est donc parfaitement inoffensif — mais le garde-fou est syntaxique et privait le bloc de son bouton « Tester ». Renommé en `doc`, ce qui lève au passage une ambiguïté pédagogique. **Contrôle, avec la regex EXTRAITE de `js/runner.js` (pas recopiée) : 143 blocs `language-javascript` sur les 21 pages, 0 privé de bouton.**
+
+  **6. Preuve.** `tools/preuves/exos-code.js` dans Chrome, en `file://`, sans `--allow-file-access-from-files` : **21 solutions tapées, 21 acceptées, 0 refusée** (40,6 s cumulées). Contre-mesure indépendante dans `vm`, avec le moteur exact de `lecon.js` (`normExo` + `uneLigneEgale`) : **21/21**, dont 1 seule reprise — celle des 11 comparaisons.
+
+  **7. Mesure avant / après.** Exercices corrigés **par exécution** : **287 → 308** sur 4 493 exercices à champ, soit **6,42 % → 6,86 %**. Cours ayant au moins un exercice exécuté : **19 → 20** (`patterns` entre). Dans `patterns` : **0 → 11 sur 11 leçons**. Dans `algo` : **38 → 48**, et **plus une seule de ses 28 leçons sans exercice exécutable**. **0 octet de moteur ajouté.**
+
+  **8. Contrôles.** `verif.js --rapide` tout vert (5 étapes). `verif-html` 0/0 sur 1 612 fichiers. `verif-donnees` 0 erreur sur 25 invariants. `verif-rendu` 0 erreur / 0 avertissement sur 18 mesures, réseau coupé. `search-index.js` régénéré (43 745 mots) ; quiz, flashcards, antisèches et `search-lite` inchangés. 0 URL de CDN.
 - [ ] **B7 · Les cours de prédiction** (langages non exécutables) — appliquer le format « que produit ce code ? » décidé en A5, sur les cours les plus consultés d'abord.
 
 ---
