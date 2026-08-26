@@ -34,8 +34,8 @@ var MUTATIONS = [
   },
   {
     nom: "UTF-8 : hacher les caracteres, pas les octets",
-    de: "if (c < 0x80) out.push(c);\n      else if (c < 0x800)",
-    a: "if (c < 0x100) out.push(c);\n      else if (c < 0x800)"
+    de: "if (c < 0x80) { out.push(c); continue; }",
+    a: "if (c < 0x100) { out.push(c); continue; }"
   },
   {
     nom: "tri des arbres : oublier le / des repertoires",
@@ -79,8 +79,8 @@ var MUTATIONS = [
   },
   {
     nom: "statut : ignorer les fichiers non suivis",
-    de: 'if (!this.index[chemin]) { suivis.push(chemin); continue; }',
-    a: "if (!this.index[chemin]) { continue; }"
+    de: 'if (!possede(this.index, chemin)) { nonSuivis.push(chemin); continue; }',
+    a: "if (!possede(this.index, chemin)) { continue; }"
   },
   {
     nom: "statut : confondre indexe et modifie",
@@ -94,7 +94,7 @@ var MUTATIONS = [
   },
   {
     nom: "diff d'arbres : oublier les suppressions",
-    de: 'if (!b[chemin]) out.push({ chemin: chemin, etat: "supprimé", avant: a[chemin].oid, apres: null });',
+    de: 'if (!possede(b, chemin)) out.push({ chemin: chemin, etat: "supprimé", avant: a[chemin].oid, apres: null });',
     a: ""
   },
   {
@@ -108,9 +108,64 @@ var MUTATIONS = [
     a: 'corps.length + " ");'
   },
   {
+    nom: "dictionnaires AVEC prototype (un fichier nomme constructor se perd)",
+    de: "var d = Object.create(null);",
+    a: "var d = {};"
+  },
+  {
+    nom: "journal : trier sur la date d'AUTEUR et non de committeur",
+    de: "if (ca.instantCommit !== cb.instantCommit) return cb.instantCommit - ca.instantCommit;\n        return a.rang - b.rang;",
+    a: "if (ca.instant !== cb.instant) return cb.instant - ca.instant;\n        return a.rang - b.rang;"
+  },
+  {
+    nom: "journal : departager les dates egales par l'empreinte",
+    de: "return a.rang - b.rang;",
+    a: "return a.oid < b.oid ? -1 : 1;"
+  },
+  {
+    nom: "commit : ecrire le committeur comme l'auteur",
+    a: 'texte += "committer " + identite + " " + quand + " " + fuseau + "\\n\\n";',
+    de: 'texte += "committer " + committeur + " " + quandCommit + " " + fuseauCommit + "\\n\\n";'
+  },
+  {
+    nom: "index : ne pas resoudre la collision dossier/fichier",
+    de: "this.resoudreCollision(chemin);",
+    a: ""
+  },
+  {
+    nom: "checkout : effacer aussi les fichiers non suivis",
+    de: "if (!possede(ancienIndex, garde) && !possede(plat, garde)) nouveauTravail[garde] = this.travail[garde];",
+    a: ""
+  },
+  {
+    nom: "references : la branche avant l'etiquette",
+    de: 'var pistes = [nom, "refs/" + nom, "refs/tags/" + nom, "refs/heads/" + nom];',
+    a: 'var pistes = [nom, "refs/heads/" + nom, "refs/tags/" + nom];'
+  },
+  {
+    nom: "statut : ne pas comparer les modes",
+    de: "else if (dansTete.oid !== this.index[chemin].oid || dansTete.mode !== this.index[chemin].mode) {",
+    a: "else if (dansTete.oid !== this.index[chemin].oid) {"
+  },
+  {
+    nom: "import : partager les structures au lieu de les copier",
+    de: "for (cle in donnees.refs) if (possede(donnees.refs, cle)) d.refs[cle] = donnees.refs[cle];",
+    a: "d.refs = donnees.refs;"
+  },
+  {
+    nom: "import : perdre une horloge a zero",
+    de: "instant: donnees.instant,",
+    a: "instant: donnees.instant || undefined,"
+  },
+  {
+    nom: "listerArbre : rendre l'ordre d'enumeration de JavaScript",
+    de: "return trierChemins(chemins).map(function (chemin) {",
+    a: "return chemins.map(function (chemin) {"
+  },
+  {
     nom: "export : perdre le dernier octet de chaque objet",
-    de: "objets[oid] = { type: this.objets[oid].type, corps: octetsVersHex(this.objets[oid].corps) };",
-    a: "objets[oid] = { type: this.objets[oid].type, corps: octetsVersHex(this.objets[oid].corps.slice(0, -1)) };"
+    de: "objets[cle] = { type: this.objets[cle].type, corps: octetsVersHex(this.objets[cle].corps) };",
+    a: "objets[cle] = { type: this.objets[cle].type, corps: octetsVersHex(this.objets[cle].corps.slice(0, -1)) };"
   }
 ];
 

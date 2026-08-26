@@ -410,13 +410,17 @@ function etapeGraphe(dir) {
 /* Traduit la sortie du modele au format `git status --porcelain` v1 :
    deux colonnes, index puis repertoire de travail. */
 function porcelaineDuModele(statut) {
-  var lignes = {};
+  /* Object.create(null) : avec un objet ordinaire, un fichier nomme
+     « constructor » ou « __proto__ » se perdait ICI, dans le traducteur, et
+     masquait la faute du modele. Un controle qui reproduit le defaut de ce
+     qu'il controle rend un vert par vacuite. */
+  var lignes = Object.create(null);
   function poser(chemin, x, y) {
-    if (!lignes[chemin]) lignes[chemin] = [" ", " "];
+    if (!Object.prototype.hasOwnProperty.call(lignes, chemin)) lignes[chemin] = [" ", " "];
     if (x) lignes[chemin][0] = x;
     if (y) lignes[chemin][1] = y;
   }
-  var codes = { "nouveau": "A", "modifié": "M", "supprimé": "D" };
+  var codes = { "nouveau": "A", "modifié": "M", "supprimé": "D", "type": "T" };
   statut.indexes.forEach(function (e) { poser(e.chemin, codes[e.etat], null); });
   statut.modifies.forEach(function (c) { poser(c, null, "M"); });
   statut.supprimes.forEach(function (c) { poser(c, null, "D"); });
@@ -568,6 +572,242 @@ function etapeSerialisation(contexte) {
   return 5;
 }
 
+/* --- 8. les noms qui sont des proprietes de Object.prototype ---------------- */
+
+/* Un chemin est une donnee de l'apprenant. Trois passes adversariales ont montre
+   qu'un fichier ou un dossier nomme `constructor`, `toString`, `valueOf`,
+   `hasOwnProperty` ou `__proto__` faisait DISPARAITRE l'entree — ou ARRETAIT le
+   bac a sable sur une exception. Ces noms sont donc controles a chaque passe. */
+var NOMS_PIEGES = ["constructor", "toString", "valueOf", "hasOwnProperty", "isPrototypeOf", "__proto__", "prototype"];
+
+function etapeNomsPieges() {
+  var dir = creerDepotReel();
+  try {
+    var n = 0;
+    NOMS_PIEGES.forEach(function (nom) {
+      /* (a) le nom comme FICHIER a la racine, (b) le nom comme DOSSIER. */
+      [[nom, nom], [nom + "/dedans.txt", nom + "/"]].forEach(function (paire) {
+        var chemin = paire[0];
+        git(dir, ["rm", "-r", "-q", "--cached", "-f", "--ignore-unmatch", "."]);
+        fs.readdirSync(dir).forEach(function (e) {
+          if (e === ".git") return;
+          fs.rmSync(path.join(dir, e), { recursive: true, force: true });
+        });
+        var d = new Depot();
+        ecrire(dir, chemin, "piege\n");
+        ecrire(dir, "temoin.txt", "temoin\n");
+        git(dir, ["add", "--", chemin, "temoin.txt"]);
+        d.ecrireFichier(chemin, "piege\n"); d.indexer(chemin);
+        d.ecrireFichier("temoin.txt", "temoin\n"); d.indexer("temoin.txt");
+        var reel = gitBrut(dir, ["write-tree"]);
+        var mien;
+        try { mien = d.ecrireArbre(); } catch (e) { mien = "EXCEPTION : " + e.message; }
+        compare("nom piege « " + paire[1] + " » : arbre", reel, mien);
+        n++;
+        /* et le statut : le fichier doit exister aux yeux du modele */
+        var reelStatut = git(dir, ["status", "--porcelain", "-uall"]).split(/[\r]?[\n]/).filter(Boolean).sort().join(" | ");
+        var mienStatut;
+        try { mienStatut = porcelaineDuModele(d.statut()).join(" | "); } catch (e2) { mienStatut = "EXCEPTION : " + e2.message; }
+        compare("nom piege « " + paire[1] + " » : statut", reelStatut, mienStatut);
+        n++;
+      });
+    });
+    return n;
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows */ }
+  }
+}
+
+/* --- 9. l'ordre du journal : date de COMMITTEUR, et jamais un ancetre avant --- */
+
+/* Deux regles qu'aucune lecture ne donne : `git log` trie sur la date du
+   COMMITTEUR (un rebase garde la date d'auteur), et il ne sort jamais un commit
+   avant l'un de ses descendants — ce qui se voit uniquement quand les dates sont
+   EGALES, c'est-a-dire tout le temps avec l'horloge deterministe du bac a sable. */
+function etapeOrdreDuJournal() {
+  var dir = creerDepotReel();
+  try {
+    var n = 0;
+    [
+      { nom: "dates de committeur distinctes", auteurs: [0, 60, 120, 180, 12800], commits: [0, 60, 2800, 200, 12800] },
+      { nom: "toutes les dates egales", auteurs: [0, 0, 0, 0, 0], commits: [0, 0, 0, 0, 0] },
+      { nom: "dates d'auteur qui reculent", auteurs: [500, 400, 300, 200, 100], commits: [0, 60, 120, 180, 240] },
+      /* Ici la RACINE est le second parent de la fusion : elle entre en file
+         avant ses propres descendants. Sans garde topologique, elle sort avant
+         eux — ce que git ne fait jamais. Les trois jeux ci-dessus ne le voyaient
+         pas, l'ordre d'insertion suffisait a les rendre justes. */
+      { nom: "fusion avec la racine (exige la garde topologique)", auteurs: [0, 0, 0, 0, 0], commits: [0, 0, 0, 0, 0],
+        parents: [[], [0], [1], [2], [3, 0]] }
+    ].forEach(function (jeu) {
+      var base = 1704067200;
+      ecrire(dir, "f.txt", "x\n");
+      git(dir, ["add", "--", "f.txt"]);
+      var arbre = gitBrut(dir, ["write-tree"]);
+      var d = new Depot();
+      d.ecrireFichier("f.txt", "x\n"); d.indexer("f.txt");
+      var arbreMien = d.ecrireArbre();
+      compare("journal « " + jeu.nom + " » : arbre", arbre, arbreMien); n++;
+
+      var reels = [], miens = [];
+      /* R -> A -> {B, C} -> M : une fusion, donc deux chemins a departager. */
+      var parents = jeu.parents || [[], [0], [1], [1], [2, 3]];
+      for (var i = 0; i < 5; i++) {
+        var env = Object.assign({}, ENV, {
+          GIT_AUTHOR_DATE: (base + jeu.auteurs[i]) + " +0000",
+          GIT_COMMITTER_DATE: (base + jeu.commits[i]) + " +0000"
+        });
+        var args = ["commit-tree", arbre];
+        parents[i].forEach(function (k) { args.push("-p", reels[k]); });
+        reels.push(cp.execFileSync("git", ["-C", dir].concat(args), { env: env, input: "C" + i + "\n", encoding: "utf8" }).replace(/[\r]?[\n]$/, ""));
+        miens.push(d.creerCommit({
+          arbre: arbreMien, parents: parents[i].map(function (k) { return miens[k]; }),
+          message: "C" + i + "\n", instant: base + jeu.auteurs[i], instantCommit: base + jeu.commits[i],
+          identite: IDENTITE, fuseau: "+0000"
+        }));
+      }
+      compare("journal « " + jeu.nom + " » : empreintes", reels.join(","), miens.join(",")); n++;
+      git(dir, ["update-ref", "refs/heads/main", reels[4]]);
+      d.majRef("refs/heads/main", miens[4]);
+      var reel = gitBrut(dir, ["log", "--format=%H", "main"]);
+      var mien = d.journal("main").map(function (c) { return c.oid; }).join("\n");
+      compare("journal « " + jeu.nom + " » : ordre", reel, mien); n++;
+    });
+    return n;
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows */ }
+  }
+}
+
+/* --- 10. references, modes, et l'etat apres un retour en arriere ------------- */
+
+function etapeReferencesEtModes() {
+  var dir = creerDepotReel();
+  try {
+    var n = 0;
+    var d = new Depot();
+    ecrire(dir, "a.txt", "un\n"); git(dir, ["add", "--", "a.txt"]);
+    var arbre = gitBrut(dir, ["write-tree"]);
+    d.ecrireFichier("a.txt", "un\n"); d.indexer("a.txt");
+    var c1 = commitReel(dir, arbre, [], "C1", 1704067200);
+    var m1 = d.creerCommit({ arbre: d.ecrireArbre(), parents: [], message: "C1", instant: 1704067200, identite: IDENTITE, fuseau: "+0000" });
+    compare("refs : commit de base", c1, m1); n++;
+
+    ecrire(dir, "b.txt", "deux\n"); git(dir, ["add", "--", "b.txt"]);
+    var arbre2 = gitBrut(dir, ["write-tree"]);
+    d.ecrireFichier("b.txt", "deux\n"); d.indexer("b.txt");
+    var c2 = commitReel(dir, arbre2, [c1], "C2", 1704067260);
+    var m2 = d.creerCommit({ arbre: d.ecrireArbre(), parents: [m1], message: "C2", instant: 1704067260, identite: IDENTITE, fuseau: "+0000" });
+    compare("refs : deuxieme commit", c2, m2); n++;
+
+    /* Une branche et une ETIQUETTE de meme nom : git donne la priorite a
+       l'etiquette, ce qui n'est pas l'ordre auquel on pense. */
+    git(dir, ["update-ref", "refs/heads/commun", c1]);
+    git(dir, ["update-ref", "refs/tags/commun", c2]);
+    git(dir, ["update-ref", "refs/heads/sujet", c2]);
+    git(dir, ["update-ref", "refs/tags/v1", c1]);
+    git(dir, ["symbolic-ref", "HEAD", "refs/heads/sujet"]);
+    d.majRef("refs/heads/commun", m1);
+    d.majRef("refs/tags/commun", m2);
+    d.majRef("refs/heads/sujet", m2);
+    d.majRef("refs/tags/v1", m1);
+    d.pointerHEAD("refs/heads/sujet");
+    ["commun", "commun~1", "heads/commun", "tags/commun", "heads/sujet", "tags/v1",
+     "HEAD^{commit}", "sujet^{}", "HEAD", "sujet~1"].forEach(function (rev) {
+      var reel;
+      try { reel = gitBrut(dir, ["rev-parse", "--verify", "-q", rev + "^{commit}"]); }
+      catch (e) { reel = "(inexistant)"; }
+      var mien = d.resoudre(rev) || "(inexistant)";
+      compare("rev-parse " + rev, reel, mien); n++;
+    });
+
+    /* pointerHEAD avec un nom COURT doit ATTACHER, pas detacher sur une chaine. */
+    d.pointerHEAD("commun");
+    compare("pointerHEAD nom court : HEAD", m1, d.oidHEAD()); n++;
+    compare("pointerHEAD nom court : detachee", false, d.detachee()); n++;
+    compare("pointerHEAD nom court : branche", "commun", d.brancheCourante()); n++;
+    d.pointerHEAD(m2);
+    compare("pointerHEAD sur un oid : detachee", true, d.detachee()); n++;
+    compare("pointerHEAD sur un oid : HEAD", m2, d.oidHEAD()); n++;
+    d.pointerHEAD("refs/heads/sujet");
+
+    /* Le mode : un fichier rendu executable EST une modification pour git. */
+    git(dir, ["update-index", "--chmod=+x", "a.txt"]);
+    d.indexer("a.txt", GitModele.MODE_EXECUTABLE);
+    compare("mode +x : arbre", gitBrut(dir, ["write-tree"]), d.ecrireArbre()); n++;
+    var reelStatut = git(dir, ["status", "--porcelain", "-uall"]).split(/[\r]?[\n]/).filter(Boolean).sort().join(" | ");
+    compare("mode +x : statut", reelStatut, porcelaineDuModele(d.statut()).join(" | ")); n++;
+
+    /* Un checkout NE DETRUIT PAS les fichiers non suivis. */
+    ecrire(dir, "brouillon.txt", "pas encore suivi\n");
+    d.ecrireFichier("brouillon.txt", "pas encore suivi\n");
+    git(dir, ["read-tree", "-u", "--reset", c1]);
+    d.materialiser(d.lireCommit(m1).arbre);
+    git(dir, ["update-ref", "refs/heads/sujet", c1]);
+    d.majRef("refs/heads/sujet", m1);
+    reelStatut = git(dir, ["status", "--porcelain", "-uall"]).split(/[\r]?[\n]/).filter(Boolean).sort().join(" | ");
+    compare("checkout : le non-suivi survit", reelStatut, porcelaineDuModele(d.statut()).join(" | ")); n++;
+
+    /* Un dossier remplace par un fichier de meme nom : l'index ne doit pas
+       contenir les deux, sinon le vrai git refuse l'arbre. */
+    var d2 = new Depot();
+    d2.ecrireFichier("lib/a.txt", "dans le dossier\n"); d2.indexer("lib/a.txt");
+    d2.supprimerFichier("lib/a.txt");
+    d2.ecrireFichier("lib", "devenu un fichier\n"); d2.indexer("lib");
+    compare("collision dossier/fichier : entrees de l'index", "lib", d2.cheminsIndex().join(",")); n++;
+    var dir2 = creerDepotReel();
+    try {
+      ecrire(dir2, "lib/a.txt", "dans le dossier\n");
+      cp.execFileSync("git", ["-C", dir2, "add", "--", "lib/a.txt"], { env: ENV });
+      fs.rmSync(path.join(dir2, "lib"), { recursive: true, force: true });
+      ecrire(dir2, "lib", "devenu un fichier\n");
+      cp.execFileSync("git", ["-C", dir2, "add", "-A", "--", "lib"], { env: ENV });
+      compare("collision dossier/fichier : arbre", gitBrut(dir2, ["write-tree"]), d2.ecrireArbre()); n++;
+    } finally {
+      try { fs.rmSync(dir2, { recursive: true, force: true }); } catch (e3) { /* Windows */ }
+    }
+
+    /* Deux imports du meme export doivent etre INDEPENDANTS. */
+    var brut = JSON.parse(JSON.stringify(d.exporter()));
+    var copie1 = Depot.importer(brut), copie2 = Depot.importer(brut);
+    copie1.ecrireFichier("intrus.txt", "ecrit dans la copie 1\n");
+    copie1.majRef("refs/heads/ajoutee", m1);
+    compare("import : les copies sont independantes (travail)", "", copie2.cheminsTravail().filter(function (c) { return c === "intrus.txt"; }).join()); n++;
+    compare("import : les copies sont independantes (refs)", "", copie2.branches().filter(function (b) { return b === "ajoutee"; }).join()); n++;
+    compare("import : l'horloge est restauree", d.instant, copie2.instant); n++;
+    compare("import : le fuseau est restaure", d.fuseau, copie2.fuseau); n++;
+
+    /* Une horloge a 0 (1970) doit se restaurer telle quelle. */
+    var zero = new Depot({ instant: 0, fuseau: "+0200", pasHorloge: 3600 });
+    var copieZero = Depot.importer(JSON.parse(JSON.stringify(zero.exporter())));
+    compare("import : instant 0 conserve", 0, copieZero.instant); n++;
+    compare("import : fuseau +0200 conserve", "+0200", copieZero.fuseau); n++;
+    compare("import : pas d'horloge conserve", 3600, copieZero.pasHorloge); n++;
+
+    /* L'ordre d'un `ls-tree` : par octets, jamais l'ordre numerique de
+       JavaScript (« 2 » ne passe pas avant « 10 » chez git). */
+    var dir3 = creerDepotReel();
+    try {
+      var d3 = new Depot();
+      ["0", "1", "2", "10", "11", "100", "a.txt"].forEach(function (nom) {
+        ecrire(dir3, nom, nom + "\n");
+        cp.execFileSync("git", ["-C", dir3, "add", "--", nom], { env: ENV });
+        d3.ecrireFichier(nom, nom + "\n"); d3.indexer(nom);
+      });
+      var arbre3 = gitBrut(dir3, ["write-tree"]);
+      compare("ordre numerique : arbre", arbre3, d3.ecrireArbre()); n++;
+      var reelOrdre = gitBrut(dir3, ["-c", "core.quotePath=false", "ls-tree", "-r", "--name-only", arbre3]).split(/[\r]?[\n]/).join(",");
+      var mienOrdre = d3.listerArbre(d3.ecrireArbre()).map(function (e) { return e.chemin; }).join(",");
+      compare("ordre numerique : listerArbre", reelOrdre, mienOrdre); n++;
+    } finally {
+      try { fs.rmSync(dir3, { recursive: true, force: true }); } catch (e4) { /* Windows */ }
+    }
+
+    return n;
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e5) { /* Windows */ }
+  }
+}
+
 /* --- orchestration -------------------------------------------------------- */
 
 function principal() {
@@ -589,6 +829,9 @@ function principal() {
     var nDiff = etapeDiff(dir, contexte);
     var nSer = etapeSerialisation(contexte);
     var nStatut = etapeStatut(dir);
+    var nPieges = etapeNomsPieges();
+    var nOrdre = etapeOrdreDuJournal();
+    var nRefs = etapeReferencesEtModes();
 
     console.log("verif-git-modele : " + path.relative(path.join(__dirname, ".."), CHEMIN_MODELE).split(String.fromCharCode(92)).join("/") + " confronte au vrai git " +
       cp.execFileSync("git", ["--version"], { encoding: "utf8" }).trim());
@@ -600,6 +843,9 @@ function principal() {
     console.log("  diffs d'arbres  : " + nDiff + " paires");
     console.log("  serialisation   : " + nSer + " controles");
     console.log("  statut          : " + nStatut + " etats compares a git status --porcelain");
+    console.log("  noms pieges     : " + nPieges + " controles (constructor, __proto__, toString... en fichier ET en dossier)");
+    console.log("  ordre du journal: " + nOrdre + " controles (date de committeur, dates egales, topologie)");
+    console.log("  refs et modes   : " + nRefs + " controles (etiquette contre branche, mode +x, checkout, import)");
     console.log("  ------------------------------------------------------------");
     console.log("  " + comparaisons + " comparaisons, " + ecarts.length + " ecart(s), " +
       ((Date.now() - depart) / 1000).toFixed(1) + " s");
