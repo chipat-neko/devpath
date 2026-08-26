@@ -33,9 +33,23 @@
  * PRUDENCE CONTRE LES FAUX POSITIFS (règle du chantier : un motif trop large casse
  * ce qui était juste). La comparaison ignore les espaces non significatifs, de sorte
  * que « [2, 4, 6] » (écrit par l'humain) et « [2,4,6] » (JSON.stringify) sont égaux.
- * Un verdict « divergent » n'est rendu QUE si le nombre de sorties produites égale le
- * nombre de valeurs annoncées ; sinon le bloc est « non vérifié (compte) », pas
- * divergent. On préfère taire un doute que crier une fausse alerte.
+ * Un verdict « divergent » n'est rendu QUE si annonce et sortie ont pu être appariées
+ * SANS AMBIGUÏTÉ. On préfère taire un doute que crier une fausse alerte.
+ *
+ * DEUX APPARIEMENTS, dans cet ordre :
+ *   1. POSITIONNEL — la 1re annonce à la 1re sortie. Exige des comptes égaux.
+ *   2. ANCRAGE PAR LIGNE (2026-08-26) — le recours quand ils ne le sont pas. Chaque
+ *      annonce connaît sa ligne, et chaque sortie la ligne d'où elle a été émise :
+ *      pile d'appels en JavaScript, `f_lineno` en Python (lanceur `runpy`, qui ne
+ *      décale pas la numérotation du bloc). On confronte alors annonce et sortie de
+ *      la MÊME ligne. Motif : un seul affichage non commenté décalait toute la liste
+ *      et rendait le bloc entier non jugeable — 119 blocs du site, dont 89 produisant
+ *      PLUS de sorties qu'ils n'en annoncent. L'ancrage en a rendu 74 confrontables.
+ *      Il ne juge une annonce que si sa ligne a produit EXACTEMENT UNE sortie, et
+ *      renonce si une seule sortie n'a pas de ligne connue. Trois cas sont écartés
+ *      exprès : l'annonce d'un EFFET sur un appel qui renvoie undefined, l'annonce
+ *      d'une PARTIE de la ligne (`print(f"z = {z:.2f}")  # 1.86`), et l'ambiguïté
+ *      d'une ligne affichée plusieurs fois (boucle).
  *
  * EN PLUS (A2) : les RÉPONSES D'EXERCICES. Les blocs data-exos `type:"code"` portent
  * un `run.expect` (sortie attendue). Faute de solution stockée, on rejoue l'ÉNONCÉ —
@@ -229,6 +243,18 @@ function instrumente(code, li) {
   const pre = li.comment;
   const lignes = code.split('\n');
   const attendus = [];
+  /* Numéro de ligne (1-based) de CHAQUE attendu, tableau parallèle à `attendus`.
+     C'est la clé de l'ANCRAGE PAR LIGNE (voir apparieParLigne) : sans lui, un seul
+     affichage non commenté décale toute la liste et rend le bloc entier « non
+     vérifié (compte) ». La boucle ci-dessous conserve les lignes UNE POUR UNE —
+     y compris le cas 3, qui remplace la ligne au lieu d'en ajouter une — donc le
+     numéro reste valable dans le code EXÉCUTÉ. */
+  const lignesAtt = [];
+  /* Cet attendu vient-il du cas 3 (expression pure qu'on ENVELOPPE dans un log) ?
+     Un appel du genre « direBonjour(); // "Bonjour Léa" » annonce ce qui S'AFFICHE,
+     pas ce que l'appel RENVOIE — et l'appel renvoie undefined. Sans ce marqueur,
+     l'ancrage par ligne compare « Bonjour Léa » à « undefined » et crie au loup. */
+  const enveloppes = [];
   const sortie = [];
   for (let i = 0; i < lignes.length; i++) {
     const ligne = lignes[i];
@@ -240,7 +266,7 @@ function instrumente(code, li) {
 
     // 1. marqueur explicite
     const att = attenduDeCommentaire(comment);
-    if (att) { attendus.push(att.valeur); sortie.push(ligne); continue; }
+    if (att) { attendus.push(att.valeur); lignesAtt.push(i + 1); enveloppes.push(false); sortie.push(ligne); continue; }
 
     // 2. et 3. commentaire « nu » : n'est retenu que si c'est une valeur machine
     const valNette = nettoieAttendu(comment);
@@ -249,18 +275,18 @@ function instrumente(code, li) {
         // … mais SEULEMENT si l'affichage a un seul argument. Sinon (« console.log(
         // "Au début :", n); // 3 ») le commentaire documente un argument, pas la
         // ligne entière « Au début : 3 » : ce serait un faux positif.
-        if (afficheMonoArg(codeAvant, li)) { attendus.push(comment.trim()); sortie.push(ligne); continue; }
+        if (afficheMonoArg(codeAvant, li)) { attendus.push(comment.trim()); lignesAtt.push(i + 1); enveloppes.push(false); sortie.push(ligne); continue; }
         sortie.push(ligne); continue;
       }
       if (codeAvant && estExpressionPure(codeAvant)) {  // expr // 42  → on l'affiche
         const indent = (avant.match(/^\s*/) || [''])[0];
         sortie.push(indent + li.wrap(codeAvant.replace(/;\s*$/, '')));
-        attendus.push(comment.trim()); continue;
+        attendus.push(comment.trim()); lignesAtt.push(i + 1); enveloppes.push(true); continue;
       }
     }
     sortie.push(ligne);                                  // commentaire inerte (glose, annotation)
   }
-  return { code: sortie.join('\n'), attendus };
+  return { code: sortie.join('\n'), attendus, lignesAtt, enveloppes };
 }
 
 // Trouve l'index du commentaire de fin de ligne, en évitant les « // » ou « # »
@@ -327,7 +353,23 @@ function executeJs(code) {
   if (NON_DETERMINISTE.test(code)) return { etat: 'skip', motif: 'sortie non déterministe (Date/Math.random)' };
   if (DEPEND_ENV.test(code)) return { etat: 'skip', motif: 'dépend de la locale/ICU (Intl, toLocale*)' };
   const sortie = [];
-  const push = (args) => sortie.push(Array.prototype.slice.call(args).map(fmtJs).join(' '));
+  /* ANCRAGE : ligne du bloc d'où PROVIENT chaque sortie, lue dans la pile d'appels.
+     Le script est compilé sous le nom « exemple.js » et le code exécuté conserve la
+     numérotation du bloc affiché (cf. instrumente), donc `exemple.js:<n>` désigne la
+     ligne que l'apprenant lit. Une frame trop profonde (récursion) sort de la limite
+     de pile : on note alors 0, et cette sortie ne servira à aucun ancrage. */
+  const lignesSortie = [];
+  const limiteAvant = Error.stackTraceLimit;
+  Error.stackTraceLimit = 60;
+  const ligneAppelante = () => {
+    const st = (new Error()).stack || '';
+    const m = /exemple\.js:(\d+):/.exec(st);
+    return m ? Number(m[1]) : 0;
+  };
+  const push = (args) => {
+    lignesSortie.push(ligneAppelante());
+    sortie.push(Array.prototype.slice.call(args).map(fmtJs).join(' '));
+  };
   const noop = function () {};
   const consoleFake = {
     log: function () { push(arguments); },
@@ -347,9 +389,11 @@ function executeJs(code) {
   try {
     const script = new vm.Script(code, { filename: 'exemple.js' });
     script.runInContext(sandbox, { timeout: 2000, displayErrors: false });
-    return { etat: 'ok', sortie };
+    return { etat: 'ok', sortie, lignesSortie };
   } catch (e) {
     return { etat: 'erreur', motif: (e && e.name ? e.name + ': ' + e.message : String(e)), sortie };
+  } finally {
+    Error.stackTraceLimit = limiteAvant;
   }
 }
 
@@ -376,6 +420,77 @@ function trouvePython() {
 // de sortie (« # Dossier contenant a.txt, b.txt »), pas une prédiction. On skippe.
 const PY_NON_VERIFIABLE = /\b(open|input|Path|glob|listdir|scandir|walk|getcwd|mkdir|makedirs|remove|rmdir|rename|urandom|system|popen|getenv|randint|randrange|choice|shuffle|sample|uniform)\s*\(|\bos\.path\b|\bos\.environ\b|\bpathlib\b|\brandom\b|\.is_dir\b|\.is_file\b|\.exists\b|\.now\s*\(|\.today\s*\(|time\.(?:time|perf_counter|process_time|monotonic)\b|\buuid\b|\bsecrets\b|\bsocket\b|\brequests\b|\burllib\b|\bsubprocess\b|\bsys\.argv\b|\bthreading\b|\basyncio\b|\binput\b/;
 
+/* LANCEUR D'ANCRAGE (Python). Le pendant de la pile d'appels JavaScript : il faut
+   savoir de QUELLE LIGNE vient chaque sortie. On n'insère rien dans le bloc — ce
+   serait décaler sa numérotation, donc mentir. On exécute le fichier tel quel par
+   `runpy`, après avoir remplacé `print` par une doublure qui note `f_lineno`. Les
+   couples (ligne, texte) reviennent sur stderr entre deux séparateurs \x1e, hors de
+   la sortie du programme. Si le programme écrit ailleurs que par `print`, la
+   reconstruction ne retombera pas sur stdout et l'ancrage sera abandonné. */
+const PY_LANCEUR = [
+  'import builtins, io, json, runpy, sys',
+  '_caps = []',
+  '_real = builtins.print',
+  'def _print(*a, **k):',
+  '    f = k.get("file", None)',
+  '    if f is not None and f is not sys.stdout:',
+  '        return _real(*a, **k)',
+  '    buf = io.StringIO()',
+  '    k2 = dict(k); k2["file"] = buf; k2.pop("flush", None)',
+  '    _real(*a, **k2)',
+  '    t = buf.getvalue()',
+  '    try:',
+  '        ln = sys._getframe(1).f_lineno',
+  '    except Exception:',
+  '        ln = 0',
+  '    _caps.append([ln, t])',
+  '    sys.stdout.write(t)',
+  'builtins.print = _print',
+  '_code = 0',
+  'try:',
+  '    runpy.run_path(sys.argv[1], run_name="__main__")',
+  'except SystemExit as e:',
+  '    _code = e.code if isinstance(e.code, int) else 0',
+  'except BaseException:',
+  '    import traceback; traceback.print_exc(); _code = 1',
+  'sys.stdout.flush()',
+  'sys.stderr.write("\\x1e" + json.dumps(_caps) + "\\x1e")',
+  'sys.exit(_code)',
+  ''
+].join('\n');
+
+let CHEMIN_LANCEUR = null;
+function lanceurPython() {
+  if (CHEMIN_LANCEUR) return CHEMIN_LANCEUR;
+  CHEMIN_LANCEUR = path.join(os.tmpdir(), 'verif-ex-lanceur-' + process.pid + '.py');
+  fs.writeFileSync(CHEMIN_LANCEUR, PY_LANCEUR, 'utf8');
+  return CHEMIN_LANCEUR;
+}
+
+/* Reconstruit, à partir des couples (ligne, texte), la LIGNE D'ORIGINE de chaque
+   ligne de sortie. On ne s'y fie que si la concaténation des textes redonne
+   EXACTEMENT stdout : sinon quelque chose a écrit hors de `print` et l'appariement
+   serait faux d'un cran — mieux vaut renoncer que se tromper. */
+function ancrePython(captures, stdoutBrut, sortie) {
+  if (!captures) return null;
+  let total = '';
+  for (const c of captures) total += c[1];
+  if (total.replace(/\r/g, '') !== stdoutBrut) return null;
+  const lignes = [], src = [];
+  let courant = '', ligneCourante = 0;
+  for (const c of captures) {
+    const ln = c[0], parts = String(c[1]).replace(/\r/g, '').split('\n');
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) { lignes.push(courant); src.push(ligneCourante || ln); courant = ''; ligneCourante = 0; }
+      if (parts[i] !== '') { courant += parts[i]; if (!ligneCourante) ligneCourante = ln; }
+    }
+  }
+  if (courant !== '') { lignes.push(courant); src.push(ligneCourante); }
+  if (lignes.length !== sortie.length) return null;
+  for (let i = 0; i < lignes.length; i++) if (lignes[i] !== sortie[i]) return null;
+  return src;
+}
+
 function executePython(code) {
   const py = trouvePython();
   if (!py) return { etat: 'skip', motif: 'interpréteur Python absent' };
@@ -384,18 +499,28 @@ function executePython(code) {
   const tmp = path.join(os.tmpdir(), 'verif-ex-' + process.pid + '-' + (compteurTmp++) + '.py');
   try {
     fs.writeFileSync(tmp, code, 'utf8');
-    const r = cp.spawnSync(py, [tmp], {
+    const r = cp.spawnSync(py, [lanceurPython(), tmp], {
       encoding: 'utf8', timeout: 5000,
       env: Object.assign({}, process.env, { PYTHONIOENCODING: 'utf-8' })
     });
     if (r.error) return { etat: 'erreur', motif: String(r.error.message), sortie: [] };
+    /* Le journal d'ancrage voyage sur stderr, encadré de \x1e : on le retire avant
+       toute lecture du message d'erreur, sinon il se lirait comme une trace. */
+    let errBrut = r.stderr || '', captures = null;
+    const mj = /\x1e([\s\S]*)\x1e/.exec(errBrut);
+    if (mj) {
+      errBrut = errBrut.slice(0, mj.index) + errBrut.slice(mj.index + mj[0].length);
+      try { captures = JSON.parse(mj[1]); } catch (e) { captures = null; }
+    }
     if (r.status !== 0) {
-      const err = (r.stderr || '').trim().split('\n').pop() || 'erreur';
+      const err = errBrut.trim().split('\n').pop() || 'erreur';
       return { etat: 'erreur', motif: err, sortie: (r.stdout || '').replace(/\r/g, '').split('\n') };
     }
-    let out = (r.stdout || '').replace(/\r/g, '');
+    const brut = (r.stdout || '').replace(/\r/g, '');
+    let out = brut;
     if (out.endsWith('\n')) out = out.slice(0, -1);
-    return { etat: 'ok', sortie: out === '' ? [] : out.split('\n') };
+    const sortie = out === '' ? [] : out.split('\n');
+    return { etat: 'ok', sortie, lignesSortie: ancrePython(captures, brut, sortie) };
   } catch (e) {
     return { etat: 'erreur', motif: String(e.message), sortie: [] };
   } finally {
@@ -479,7 +604,12 @@ function estValeurMachine(s) {
   if (/^-?\d+(?:[.,]\d+)?(?:e[+-]?\d+)?n?$/i.test(t)) return true;    // nombre (n = BigInt)
   if (/^(true|false|null|undefined|NaN|-?Infinity)$/.test(t)) return true;
   if (/^[[{][\s\S]*[\]}]$/.test(t)) return parseValeurLache(t);       // tableau/objet : doit parser
-  if (/^".*"$/.test(t) || /^'.*'$/.test(t) || /^`.*`$/.test(t)) return true; // chaîne citée
+  /* Chaîne citée — mais UNE SEULE, refermée à la fin. « "21 °C" -> hint "string" »
+     commence et finit par un guillemet sans être une valeur : c'est une valeur SUIVIE
+     d'une glose. L'ancien motif `/^".*"$/` l'acceptait et la comparait telle quelle à
+     « 21 °C », soit une divergence inventée (js/lecon-43, trouvée le 2026-08-26). La
+     ligne voisine, glosée avec « : », était déjà écartée : on aligne les deux. */
+  if (/^"(?:[^"\\]|\\.)*"$/.test(t) || /^'(?:[^'\\]|\\.)*'$/.test(t) || /^`(?:[^`\\]|\\.)*`$/.test(t)) return true;
   return false;                                                       // token nu, phrase → glose
 }
 
@@ -525,6 +655,67 @@ function memeSortie(attendus, produits) {
     if (v === 'glose') glose = true;
   }
   return { verdict: glose ? 'glose' : 'conforme' };
+}
+
+/* ------------------------------------------------------------------ */
+/* ANCRAGE PAR LIGNE — le recours quand les comptes ne tombent pas juste*/
+/* ------------------------------------------------------------------ */
+/*
+ * POURQUOI. `memeSortie` apparie POSITIONNELLEMENT : la 1re annonce à la 1re sortie.
+ * Il suffit donc d'UN affichage non commenté pour que tout se décale, et le bloc
+ * entier devient « non vérifié (compte) » — 119 blocs du site, mesurés le 2026-08-26,
+ * dont 89 où le programme produit PLUS de sorties qu'il n'en annonce. Ces blocs
+ * portent pourtant des affirmations parfaitement confrontables.
+ *
+ * CE QU'ON FAIT. Chaque annonce connaît SA ligne (instrumente) et chaque sortie
+ * connaît la ligne d'où elle a été émise (pile d'appels en JS, `f_lineno` en Python).
+ * On confronte alors annonce et sortie de la MÊME LIGNE, sans se soucier des autres.
+ *
+ * PRUDENCE CONTRE LES FAUX POSITIFS (règle du chantier). On ne juge une annonce que
+ * si sa ligne a produit EXACTEMENT UNE sortie : zéro (l'annonce documente une ligne
+ * qui n'affiche rien) ou plusieurs (un affichage dans une boucle) restent non jugés.
+ * Et l'ancrage n'est tenté que si toutes les sorties portent une ligne connue : une
+ * seule ligne inconnue (frame hors limite de pile) et l'on renonce, plutôt que de
+ * comparer à côté.
+ */
+function apparieParLigne(attendus, lignesAtt, produits, lignesSortie, enveloppes) {
+  if (!lignesAtt || !lignesSortie) return { verdict: 'impossible' };
+  if (lignesAtt.length !== attendus.length) return { verdict: 'impossible' };
+  if (lignesSortie.length !== produits.length) return { verdict: 'impossible' };
+  if (lignesSortie.some(function (n) { return !n; })) return { verdict: 'impossible' };
+
+  const parLigne = {};
+  for (let i = 0; i < produits.length; i++) {
+    (parLigne[lignesSortie[i]] = parLigne[lignesSortie[i]] || []).push(produits[i]);
+  }
+  let juges = 0, glose = 0;
+  for (let i = 0; i < attendus.length; i++) {
+    const cands = parLigne[lignesAtt[i]];
+    if (!cands || cands.length !== 1) continue;       // 0 ou plusieurs : non jugé
+    /* Annonce d'EFFET sur un appel qui ne renvoie rien : « direBonjour(); //
+       "Bonjour Léa" » décrit ce que l'appel AFFICHE. L'enveloppe pose bien un log,
+       mais il imprime la valeur de retour — undefined. Non jugeable par ancrage.
+       Mesuré : 3 des 4 « divergences » du premier jet étaient exactement ce cas. */
+    if (enveloppes && enveloppes[i] && cands[0] === 'undefined'
+        && nettoieAttendu(attendus[i]).trim() !== 'undefined') continue;
+    /* Annonce d'une PARTIE de la ligne. « print(f"z = {z:.2f}")  # 1.86 » documente
+       la valeur interpolée, pas la ligne « z = 1.86 » qui s'affiche. Le garde
+       `afficheMonoArg` ne l'attrape pas : l'appel n'a bien qu'un argument, mais cet
+       argument est une chaîne à texte fixe. Règle retenue, symétrique et sûre : si la
+       sortie réelle CONTIENT l'annonce sans lui être égale, on ne juge pas. Une vraie
+       faute reste détectée, puisqu'alors la valeur annoncée n'apparaît PAS dans le
+       réel. (stats/lecon-15, seule « divergence » Python du premier jet.) */
+    const aNet = nettoieAttendu(retireGuillemets(attendus[i])).trim();
+    if (aNet && cands[0] !== aNet && String(cands[0]).indexOf(aNet) !== -1) continue;
+    const v = comparePaire(attendus[i], cands[0]);
+    if (v === 'divergent') {
+      return { verdict: 'divergent', i: i, attendu: attendus[i], produit: cands[0], ligne: lignesAtt[i] };
+    }
+    if (v === 'glose') { glose++; continue; }
+    juges++;
+  }
+  if (!juges) return { verdict: 'impossible' };       // rien d'ancrable : on ne prétend rien
+  return { verdict: 'conforme', juges: juges, gloses: glose, total: attendus.length };
 }
 
 /* ================================================================== */
@@ -661,7 +852,7 @@ const LANGS = {
 function traite(bloc) {
   const li = LANGS[bloc.lang];
   if (!li) return null;                                  // langage non exécuté ici
-  const { code: codeExec, attendus } = instrumente(bloc.code, li);
+  const { code: codeExec, attendus, lignesAtt, enveloppes } = instrumente(bloc.code, li);
   if (!attendus.length) return null;                     // pas de valeur annoncée → hors périmètre
 
   const res = li.exec(codeExec);
@@ -682,6 +873,20 @@ function traite(bloc) {
     });
   }
   if (cmp.verdict === 'compte') {
+    /* Les comptes ne tombent pas juste : on tente l'ANCRAGE PAR LIGNE avant de
+       renoncer. C'est le seul recours qui confronte réellement l'annonce au réel
+       quand un affichage non commenté décale la liste. */
+    const anc = apparieParLigne(attendus, lignesAtt, res.sortie, res.lignesSortie, enveloppes);
+    if (anc.verdict === 'divergent') {
+      return Object.assign(base, {
+        etat: 'divergent', ancre: true,
+        index: anc.i, attendu: anc.attendu, produit: anc.produit, ligneBloc: anc.ligne,
+        produits: res.sortie, attendusListe: attendus
+      });
+    }
+    if (anc.verdict === 'conforme') {
+      return Object.assign(base, { etat: 'conforme', ancre: true, ancres: anc.juges });
+    }
     return Object.assign(base, {
       etat: 'non-verifie',
       raison: 'compte : ' + res.sortie.length + ' sortie(s) produite(s) pour ' + attendus.length + ' annoncée(s)',
@@ -809,6 +1014,8 @@ function main(argv) {
     console.log('    blocs analysés .................... ' + nBlocs);
     console.log('    dont porteurs d\'une valeur attendue ' + nAvecAttendu);
     console.log('    · conformes ....................... ' + conformes.length);
+    const ancres = conformes.filter(function (r) { return r.ancre; }).length;
+    if (ancres) console.log('      dont ancrés par ligne ........... ' + ancres + '  (comptes inégaux : annonce confrontée à la sortie de SA ligne)');
     console.log('    · DIVERGENTS ...................... ' + divergents.length);
     console.log('    · non vérifiés .................... ' + nonVerifies.length +
       '  (fragments, API, async — ' + (opt.details ? 'détail ci-dessus' : 'voir --details') + ')');

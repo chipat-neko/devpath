@@ -455,6 +455,46 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **7. Mesure avant / après.** Exercices corrigés **par exécution** : **287 → 308** sur 4 493 exercices à champ, soit **6,42 % → 6,86 %**. Cours ayant au moins un exercice exécuté : **19 → 20** (`patterns` entre). Dans `patterns` : **0 → 11 sur 11 leçons**. Dans `algo` : **38 → 48**, et **plus une seule de ses 28 leçons sans exercice exécutable**. **0 octet de moteur ajouté.**
 
   **8. Contrôles.** `verif.js --rapide` tout vert (5 étapes). `verif-html` 0/0 sur 1 612 fichiers. `verif-donnees` 0 erreur sur 25 invariants. `verif-rendu` 0 erreur / 0 avertissement sur 18 mesures, réseau coupé. `search-index.js` régénéré (43 745 mots) ; quiz, flashcards, antisèches et `search-lite` inchangés. 0 URL de CDN.
+- [x] **B6bis · Le préalable que A5 réclamait : lire les sorties annoncées en commentaire.** ✅ **2026-08-26. Le chiffre de A5 était faux — et le vrai gisement était ailleurs : 76 blocs de plus confrontés au réel, sans toucher une seule leçon.**
+
+  A5 concluait : « 1 077 affirmations vérifiables par exécution, jamais vérifiées — cet outil passe avant B7 ». **Reproduire la mesure avant de corriger (règle 2) a démenti la phrase.** `tools/verif-exemples.js` lit ces commentaires **depuis toujours, en JavaScript ET en Python** : `node tools/verif-exemples.js --pas-exos` rendait, avant toute intervention, **1 053 blocs porteurs d'une valeur annoncée, 606 confrontés au réel, 0 divergence, 447 non confrontés**. Ce qui manquait n'était pas l'outil : c'était **la moitié de sa portée**. A5 a regardé `verif-clic.js` (qui, lui, ne compare que des blocs `.txt`, en JavaScript) et en a conclu qu'aucun outil ne lisait les commentaires. Faux, et le point aurait consisté à réécrire ce qui existait.
+
+  **1. Le vrai obstacle, mesuré.** Sur les 447 blocs non confrontés, la première cause n'est ni l'asynchrone ni le navigateur : c'est **l'appariement POSITIONNEL**. `verif-exemples` associe la 1ʳᵉ annonce à la 1ʳᵉ sortie ; **il suffit d'un seul `console.log` non commenté pour que tout se décale**, et le bloc entier devient « non vérifié (compte) ». **119 blocs** dans ce cas (83 JS, 36 Python), dont **89 produisant PLUS de sorties qu'ils n'en annoncent**. Ces blocs portent pourtant des affirmations parfaitement confrontables — elles n'étaient simplement jamais confrontées.
+
+  **2. L'ANCRAGE PAR LIGNE.** Chaque annonce connaît sa ligne, chaque sortie connaît la ligne d'où elle a été émise, et on ne compare que ce qui vient de la **même ligne**. Deux mécaniques, une par langage, et **aucune n'insère quoi que ce soit dans le bloc** — insérer, ce serait décaler la numérotation, donc mentir :
+  - **JavaScript** : la doublure de `console.log` lit la pile d'appels (`exemple.js:<n>`), `Error.stackTraceLimit` porté à 60 le temps de l'exécution ;
+  - **Python** : un **lanceur `runpy`** remplace `print` par une doublure qui note `sys._getframe(1).f_lineno` et renvoie les couples (ligne, texte) sur stderr entre deux `\x1e`. Le fichier de la leçon est exécuté tel quel, donc ses numéros de ligne restent les siens.
+
+  **3. Trois garde-fous, et chacun vient d'un faux positif REL — le premier jet en a crié 4 en JS et 1 en Python, tous faux.**
+
+  | ce que l'outil criait | ce qui se passait vraiment | garde posé |
+  |---|---|---|
+  | `js/lecon-16`, `js/lecon-49` ×2 : « annoncé "Bonjour Léa", réel undefined » | `direBonjourALea(); // "Bonjour Léa"` annonce ce qui **s'affiche**, pas ce que l'appel **renvoie** — et il renvoie `undefined` | une annonce **enveloppée** (cas 3 de `instrumente`) dont la sortie ancrée vaut `undefined` n'est pas jugée |
+  | `js/lecon-43` : « annoncé "21 °C" -> hint "string", réel 21 °C » | `estValeurMachine` acceptait `/^".*"$/` : **une valeur SUIVIE d'une glose** commence et finit par un guillemet. La ligne voisine, glosée avec « : », était déjà écartée | le motif exige **une seule chaîne, refermée à la fin** — les deux lignes sont enfin traitées pareil |
+  | `stats/lecon-15` : « annoncé 1.86, réel z = 1.86 » | `print(f"z = {z:.2f}")  # 1.86` documente la **valeur interpolée**, pas la ligne. `afficheMonoArg` ne l'attrape pas : l'appel n'a bien qu'un argument, mais cet argument est une chaîne à texte fixe | si la sortie réelle **contient** l'annonce sans lui être égale, on ne juge pas — une vraie faute reste vue, puisqu'alors la valeur annoncée n'apparaît **pas** dans le réel |
+
+  S'y ajoutent les règles de base de l'ancrage : on ne juge une annonce que si sa ligne a produit **exactement une** sortie (zéro ou plusieurs — une boucle — restent non jugés), et on renonce entièrement si **une seule** sortie n'a pas de ligne connue. Côté Python, on renonce aussi si la concaténation des `print` ne redonne pas **exactement** stdout : quelque chose a écrit hors de `print`, et l'appariement serait faux d'un cran.
+
+  **4. Mesure avant / après**, `node tools/verif-exemples.js --pas-exos`, 1 612 leçons :
+
+  | | avant | après |
+  |---|---:|---:|
+  | blocs porteurs d'une valeur annoncée | 1 053 | 1 051 |
+  | **confrontés au réel** | **606** | **682** |
+  | dont ancrés par ligne | 0 | **74** |
+  | non confrontés | 447 | **369** |
+  | dont « comptes inégaux » | **119** | **45** |
+  | divergences | 0 | **0** |
+
+  Les 2 annonces disparues sont les gloses que le motif de chaîne citée retenait à tort. **Part des annonces confrontées : 57,6 % → 64,9 %.** Aucune leçon modifiée, aucun octet ajouté au site : le gain est entièrement dans l'outil.
+
+  **5. Non-régression, mesurée par comparaison des verdicts et pas par confiance.** Les deux versions ont été lancées en `--json` et leurs verdicts appariés bloc à bloc : **0 conforme perdu, 76 gagnés**. C'est le contrôle qui manquait aux motifs trop larges du chantier.
+
+  **6. Contre-épreuve — un outil qui ne trouve rien doit prouver qu'il sait trouver.** 0 divergence sur tout le site est un bon résultat, pas une preuve. En faussant **une annonce d'un bloc ancré** (`algo/lecon-03`, `// -1` → `// -2`, un bloc auparavant « non vérifié (compte) » donc jamais jugé) : l'outil rend **1 divergence et sort en code 1** ; après retour en arrière, **0 et code 0**. La ligne faussée était bien de celles que l'ancrage vient de rendre jugeables.
+
+  **7. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (source, données, contenu, exemples, motifs, requêtes, Python) en 27,4 s. `verif-donnees` 0 erreur. 0 URL de CDN dans `tools/`, `js/`, `css/`. Un seul fichier modifié (`tools/verif-exemples.js`, +222/−15) ; **aucune page du site touchée**, donc ni index à régénérer ni rendu à remesurer.
+
+  🔵 **Ce qui reste, et qui ne se règle pas par un motif** : 96 blocs à API navigateur/Node, 64 fragments dépendant d'un bloc précédent (`ReferenceError`), 45 comptes inégaux irréductibles, 42 gloses françaises, 40 dépendants du système, 39 erreurs d'exécution, 32 non déterministes, 11 liés à la locale. Les 64 fragments sont le prochain gisement : les concaténer au bloc précédent de la même page les rendrait exécutables, mais **ce n'est pas ce que fait le site** — `runner.js` exécute chaque bloc seul — et l'outil doit mesurer ce que l'apprenant obtient, pas ce qui serait commode.
 - [ ] **B7 · Les cours de prédiction** (langages non exécutables) — appliquer le format « que produit ce code ? » décidé en A5, sur les cours les plus consultés d'abord.
 
 ---
