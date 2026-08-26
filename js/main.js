@@ -708,6 +708,9 @@
       ["glossaire.html", "Glossaire général"],
       ["antiseches.html", "Antisèches"],
       ["pieges.html", "Les pièges du code"],
+      /* C2 : le décodeur d'erreurs se cherche au moment où l'on bloque, c'est-à-dire
+         depuis une leçon — pas depuis l'accueil. */
+      ["decodeur.html", "Décodeur d'erreurs"],
       ["reference.html", "Fiches de référence"],
       ["carte.html", "Carte des cours"],
     ] },
