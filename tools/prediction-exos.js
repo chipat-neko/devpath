@@ -980,6 +980,223 @@ var LOTS = {
      · `lecon-12` json : la structure encodée est écrite juste au-dessus ; ce qu'on
        demanderait, c'est de recopier un tableau en changeant sa ponctuation. */
     ]
+  },
+
+  /* ===================== B7c-5 — go (2026-08-26) =====================
+     Même forme « bloc » que cpp, rust, java, csharp, c et php. Ni `go` ni `gofmt` sur
+     cette machine (vérifié) : `tools/preuves/rejoue-go.js` transpose les 18 blocs à tête
+     stricte et reproduit ce que Go IMPRIME — `fmt.Println` sépare ses arguments par une
+     espace, `defer` sort en LIFO, `switch` ne traverse pas sauf `fallthrough`, une clé
+     absente d'une map rend la valeur zéro, un channel non bufferisé fait rendez-vous, et
+     `select` prend le cas prêt le plus tôt. 27 lignes comparées, 0 divergence : ce cours
+     n'a PAS de sortie fausse, contrairement à `c` et `php`.
+
+     ⚠️ LE GISEMENT EST PRESQUE TOUT EN TRANSCRIPTION, et c'est le vrai résultat de la
+     mesure : 18 blocs à tête stricte, dont 12 affichent un littéral écrit dans le
+     `fmt.Println` juste au-dessus — le contrôle 5 les refuse tout seul. Trois cibles ont
+     été écrites, DEUX ont été retirées par contradiction (voir la liste plus bas) : il
+     en reste UNE. C'est moins que `php`, qui en avait donné deux, et c'est la mesure —
+     un cours d'introduction montre surtout ce qu'il affiche.
+     ⚠️ Un bloc est NON DÉTERMINISTE et la leçon le dit elle-même (« (souvent rien du
+     tout) », `lecon-07` : main se termine avant sa goroutine). Sa tête est stricte, donc
+     le générateur ne l'écarte pas d'office : c'est le rejeu qui le déclare. */
+  go: {
+    dossier: 'go', langue: 'go', marqueur: '//', forme: 'bloc', fichierCite: 'extrait.go',
+    cibles: [
+  { source: '01', page: '04', bloc: 'strconv.Atoi("42")', ligne: 'le double vaut',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ['La conversion réussit : la branche de secours ne sert donc à rien ici.',
+            "Regarde ce qui est passé à Println : ce n'est pas la valeur convertie telle quelle.",
+            'Println écrit ses arguments les uns après les autres, avec quelque chose entre eux.'],
+    pourquoi: "Atoi rend deux valeurs : le nombre et une erreur. Ici l'erreur vaut nil, donc le programme continue jusqu'au dernier Println, qui reçoit deux arguments — le texte et le double. Println insère toujours un espace entre deux arguments.",
+    label: 'Revoir « Découvrir Go »' },
+
+  /* CIBLES ÉCARTÉES, et pourquoi (le contrôle 5 en refuse la plupart tout seul) :
+     · `lecon-01` bonjour, monde, exporte : la sortie est le littéral du Println.
+     · `lecon-01` println-args (« Noah 25 Go ») : les trois valeurs sont visibles et le
+       commentaire donne la règle d'espacement — c'est de la transcription.
+     · `lecon-02` defer (« début / travail / deuxième / nettoyage ») : la ligne masquée
+       serait le seul des quatre littéraux à ne pas figurer dans la sortie restante, donc
+       la réponse se trouve PAR ÉLIMINATION, sans rien comprendre au LIFO ; et le littéral
+       est écrit dans le code, ce que le contrôle 5 refuse.
+     · `lecon-03` if, switch-valeur, switch-sans-expression, fallthrough, map-ok : chaque
+       sortie est une chaîne littérale du programme. Le cas de `switch-sans-expression`
+       (« Bien ») est le plus tentant — l'exercice serait de choisir la bonne branche —
+       mais la réponse reste écrite en clair quatre lignes plus haut.
+     · `lecon-07` goroutine-nue : NON DÉTERMINISTE, la leçon écrit « (souvent rien du
+       tout) » ; aucun exercice ne peut se bâtir dessus.
+     · `lecon-07` channel (« résultat prêt »), select-abandon, mutex (« 1000 », que la
+       ligne `for i := 0; i < 1000; i++` donne à la lecture) : littéraux ou valeur visible.
+     · `lecon-07` channel-buffer (1, 4, 9, 16, 25) : quatre des cinq lignes restent
+       affichées, et la suite des carrés se DEVINE sans lire le code — écartée pour le
+       même motif que le defer.
+     · `lecon-07` select-timeout (« reçu : rapide ») : ÉCRITE PUIS RETIRÉE. La sortie fait
+       deux lignes, et celle qui reste affichée est « timeout : trop lent » — c'est-à-dire
+       la PARTIE DIFFICILE (le time.After à 500 ms bat le channel à 2 s). Ne restait à
+       trouver que le nom du canal qui gagne au premier tour, et il s'appelle `rapide`.
+       On donnait le raisonnement et on demandait l'étiquette.
+     · `lecon-07` somme-channel (« somme : 15 ») : ÉCRITE PUIS RETIRÉE, pour DEUX motifs.
+       (a) 1+2+3+4+5 se calcule sans lire une ligne de Go, et une version séquentielle
+       afficherait la même chose : les channels ne changent pas la réponse. (b) Surtout,
+       le bloc cité EST LE CORRIGÉ de l'« Exercice 2 » de sa propre leçon source
+       (`pages/go/lecon-07.html`, sous « Voir une solution ») : on demanderait de prédire
+       la sortie d'un programme que l'apprenant vient d'écrire lui-même. Aucun des douze
+       contrôles ne regarde ça ; `scratchpad/v14-b7c5/cite-un-corrige.js` le mesure. */
+    ]
+  },
+
+  /* ===================== B7c-5 — elixir (2026-08-26) =====================
+     ⚠️ CE COURS N'A AUCUNE TÊTE « // Sortie : » : la forme `bloc` ne s'y applique pas du
+     tout. Il annonce ses valeurs à la forme `# => valeur`, et 84 de ses 107 annonces sont
+     sur une LIGNE SEULE — d'où `apres: true` sur presque toutes les cibles, alors que
+     Ruby et Kotlin (B7a, B7b) écrivent surtout leur annonce en fin de ligne de code.
+
+     Ni `elixir`, ni `iex`, ni `erl` sur cette machine (vérifié) :
+     `tools/preuves/rejoue-elixir.js` transpose 40 blocs et reproduit ce qu'`inspect`
+     ÉCRIT — car en Elixir l'annonce n'est pas la valeur, c'est sa GRAPHIE. 77 annonces
+     comparées, et le rejeu a démenti DEUX d'entre elles (voir plus bas).
+
+     ⚠️ LA RÈGLE QUI DÉCIDE DE TOUT : une map s'inspecte CLÉS TRIÉES en ordre de terme,
+     jamais dans l'ordre d'écriture. `%{nom: nom, age: age}` s'affiche `%{age: …, nom: …}`.
+     Le cours l'appliquait déjà dans `lecon-07` et `lecon-13` ; `lecon-05` l'ignorait sur
+     deux lignes, corrigées. ⚠️ Une cible avait été bâtie là-dessus : elle a été RETIRÉE,
+     parce que `lecon-05` enseigne par ailleurs que cet ordre « n'est pas une garantie sur
+     laquelle s'appuyer » — une annonce doit dire ce que la machine affiche, un exercice
+     ne peut pas exiger ce que la leçon déclare non garanti.
+     ⚠️ Et `/` rend TOUJOURS un flottant : `10 / 2` vaut `5.0`, jamais `5`. */
+  elixir: {
+    dossier: 'elixir', langue: 'elixir', marqueur: '#', fichierCite: 'extrait.exs',
+    cibles: [
+  { source: '03', page: '04', bloc: 'defp tva(ht), do: ht * 0.2', cible: 'Prix.ttc(100.0)', apres: true,
+    quoi: 'la valeur de Prix.ttc(100.0)',
+    hints: ['La fonction publique appelle la privée : suis le calcul jusqu\'au bout.',
+            'Le taux est un flottant, et 100.0 aussi.',
+            "Demande-toi comment Elixir ÉCRIT un flottant, et si sa graphie peut être celle d'un entier."],
+    pourquoi: "ttc additionne le prix hors taxes et la TVA calculée par la fonction privée. Les deux opérandes sont des flottants, donc le résultat en est un — et un flottant garde toujours sa décimale à l'affichage, même quand elle vaut zéro.",
+    label: 'Revoir « Fonctions, modules et clauses »' },
+
+  { source: '03', page: '09', bloc: 'def perimetre_arrondi(forme) do',
+    cible: 'Geo.perimetre_arrondi({:cercle, 3})', apres: true,
+    quoi: 'la valeur de perimetre_arrondi({:cercle, 3})',
+    hints: ['Le pipe enchaîne deux fonctions : la seconde reçoit ce que la première rend.',
+            'Le périmètre d\'un cercle de rayon 3, pas son aire.',
+            "La fonction privée n'est pas une troncature."],
+    pourquoi: "Le pipe passe la forme à perimetre, dont le résultat alimente arrondir. La fonction privée arrondit à deux décimales — elle arrondit au plus proche, elle ne coupe pas.",
+    label: 'Revoir « Fonctions, modules et clauses »' },
+
+  /* ⚠️ CIBLE DÉPLACÉE de `filter` vers `map`, et c'est un contradicteur qui l'a exigé :
+     la réponse de `filter` (« [5, 8, 9, 8] ») est un SOUS-ENSEMBLE du littéral affiché
+     deux lignes plus haut — tous ses caractères sont à l'écran, il n'y a qu'à recopier
+     dans l'ordre. `map` produit sept valeurs qui ne figurent NULLE PART dans le bloc,
+     tout en gardant le même point pédagogique : l'ordre est conservé, rien n'est trié
+     ni dédoublonné. */
+  { source: '05', page: '08', bloc: 'nombres = [5, 3, 8, 1, 9, 2, 8]',
+    cible: 'Enum.map(nombres, fn n -> n * 2 end)', apres: true,
+    quoi: 'la valeur de Enum.map(nombres, fn n -> n * 2 end)',
+    /* ⚠️ LES TROIS INDICES DISAIENT LA MÊME CHOSE — « ne trie rien », « l'ordre est
+       conservé », « appliquée à chaque élément » sont trois formulations d'une seule
+       règle : après huit tentatives, l'apprenant n'avait rien appris de neuf. Et le
+       deuxième fondait deux propriétés distinctes en une phrase qui ne veut rien dire
+       (deux 8 identiques n'ont pas d'ordre entre eux). Le troisième porte désormais sur
+       la GRAPHIE, seul autre motif d'échec possible ici. */
+    hints: ['map ne trie rien et ne jette rien : il rend autant d\'éléments qu\'il en reçoit.',
+            "L'ordre de la liste d'origine est conservé, et ses doublons le restent.",
+            'Elixir écrit une liste entre crochets, ses éléments séparés par une virgule et un espace.'],
+    pourquoi: "map applique la fonction à chaque élément et rend une liste de même longueur, dans le même ordre. Rien n'est trié, rien n'est écarté : une valeur présente deux fois donne deux résultats identiques, aux places qu'occupaient les valeurs d'origine.",
+    label: 'Revoir « Récursion, Enum et Stream »' },
+
+  { source: '05', page: '10', bloc: 'for x <- 1..10, rem(x, 2) == 0, do: x * x',
+    cible: 'for x <- 1..10, rem(x, 2) == 0, do: x * x', apres: true,
+    /* ⚠️ « cette compréhension » ne désignait RIEN : le bloc cité porte trois `for`.
+       Et le mot est absent du cours en ce sens — `elixir` écrit « comprehension `for` »,
+       ses 17 « compréhension » étant tous le kicker « Vérifie ta compréhension », qui
+       figure justement sur la page hôte, quelques lignes plus bas. On nomme donc la
+       ligne visée. */
+    quoi: 'la valeur de for x <- 1..10, rem(x, 2) == 0, do: x * x',
+    /* Relu (contrôle des commentaires). LE COMMENTAIRE TRADUIT LE CODE EN FRANÇAIS :
+       « Carré des nombres pairs de 1 à 10 » dit le filtre ET l'opération, donc
+       l'exercice se résolvait sans lire une ligne d'Elixir. Masqué — la ligne de code
+       reste entièrement lisible, et c'est elle qu'il faut savoir lire. */
+    masquer: ['Carré des nombres pairs de 1 à 10'],
+    hints: ["En Elixir, l'intervalle 1..10 comprend ses DEUX bornes.",
+            "Le filtre passe avant le corps : il ne reste qu'une valeur sur deux.",
+            'Le corps transforme chaque valeur retenue, il ne la recopie pas.'],
+    pourquoi: "Une compréhension enchaîne un générateur, des filtres et un corps. L'intervalle est inclusif aux deux bouts, le filtre ne laisse passer que les pairs, et le corps élève chaque valeur retenue au carré.",
+    label: 'Revoir « Récursion, Enum et Stream »' },
+
+  { source: '05', page: '11', bloc: 'Stream.cycle(["rouge", "vert"])',
+    cible: 'Stream.iterate(1, fn n -> n * 2 end) |> Enum.take(5)', apres: true,
+    quoi: 'la valeur de cette première ligne',
+    /* Relu. Le commentaire énonce le mécanisme — « applique une fonction à répétition
+       depuis une graine » — et c'est exactement le point que l'exercice teste (la graine
+       fait-elle partie du résultat ?). Masqué. */
+    masquer: ['Stream.iterate : applique une fonction à répétition depuis une graine'],
+    /* ⚠️ L'indice 1 disait « la graine fait partie du résultat : elle en est le premier
+       élément » — il ÉNONÇAIT le point même de l'exercice. Réécrit en question. */
+    hints: ['Demande-toi si la graine est émise, ou seulement transformée.',
+            "La fonction est appliquée à chaque élément pour produire le suivant.",
+            'take décide combien on en prend, et rien de plus ne sera calculé.'],
+    pourquoi: "Stream.iterate produit la graine, puis l'image de la graine, puis l'image de celle-ci, indéfiniment. Le flux ne calcule que ce qu'on lui demande : take en prélève le nombre voulu, en commençant par la graine elle-même.",
+    label: 'Revoir « Récursion, Enum et Stream »' },
+
+  /* CIBLES ÉCARTÉES, et pourquoi :
+     · `lecon-03` math, carre, anonymes : la réponse est le produit d'une constante par
+       une constante, toutes deux sur la même ligne — il n'y a rien à prédire.
+     · `lecon-03` gardes, categorie : la réponse est l'atome écrit dans la clause
+       (`:positif`, `:enfant`), donc visible ; le contrôle 5 la refuse.
+     · `lecon-03` defaut (« Bonjour, Noah ! ») : assemblage de deux littéraux visibles.
+     · `lecon-03` geometrie (« 314.159 ») : ÉCRITE PUIS RETIRÉE. La clause écrit
+       `3.14159 * r * r` et l'appel passe 10 : multiplier par 100 ne fait que DÉPLACER LE
+       POINT DÉCIMAL, et la suite de chiffres « 314159 » est déjà à l'écran. Aucun chiffre
+       neuf n'est produit — c'est de la transcription avec un point qui bouge.
+     · `lecon-05` filter (« [5, 8, 9, 8] ») : ÉCRITE PUIS DÉPLACÉE vers `map`. Tous les
+       caractères de la réponse figuraient dans le littéral `[5, 3, 8, 1, 9, 2, 8]` deux
+       lignes plus haut : il n'y avait qu'à recopier une partie de la liste dans l'ordre.
+     · `lecon-07` convention (« {42, ""} ») : ÉCRITE PUIS RETIRÉE. RIEN dans le code cité
+       ne permet de DÉDUIRE la forme de retour d'Integer.parse : c'est du rappel de
+       bibliothèque, pas de la prédiction — et le commentaire qui précède la ligne
+       (« Certaines fonctions historiques dérogent à la convention : ») écarte en plus le
+       seul mauvais choix plausible, `{:ok, 42}`.
+     · `lecon-07` compte (« {:ok, %{age: 36, nom: "Ada"}} ») : ÉCRITE PUIS RETIRÉE, et
+       c'est le retrait le plus instructif du lot. (a) La réponse se fabrique par simple
+       SUBSTITUTION : `{:ok, %{nom: nom, age: age}}` et l'appel `%{nom: "Ada", age: 36}`
+       sont tous deux dans le bloc. (b) Le seul discriminant restant est l'ORDRE des clés
+       — or `pages/elixir/lecon-05.html` enseigne mot pour mot qu'« une map Elixir n'est
+       pas ordonnée » et que l'ordre d'affichage « n'est pas une garantie sur laquelle
+       s'appuyer ». On aurait REFUSÉ l'apprenant qui suit la leçon et accepté celui qui
+       devine. (c) La réponse est déjà imprimée dans la leçon source, sous le corrigé de
+       son « Exercice 2 ». ⚠️ Cela ne remet pas en cause la correction faite à `lecon-05`
+       (`inspect` trie bel et bien, et le cours l'applique en `lecon-07` et `lecon-13`) :
+       une annonce doit dire ce que la machine affiche, un EXERCICE ne doit pas reposer
+       sur ce que la leçon déclare non garanti.
+     · `lecon-03` pipe (12.57) : DOUBLON de `lecon-03` perimetre, retenu à sa place — les
+       deux exercices demandent la même chose (π, puis un arrondi à deux décimales), et
+       le périmètre passe en plus par une fonction PRIVÉE.
+     · `lecon-05` somme, longueur, map-maison : la valeur se lit dans les arguments.
+     · `lecon-05` premiers : la réponse est la liste des huit premiers nombres premiers,
+       une connaissance générale plus qu'une lecture de code — et huit nombres à taper.
+     · `lecon-05` doublons : la réponse contient des `=>`, dont les graphies du champ ne
+       couvrent pas l'espacement ; un apprenant juste serait refusé pour une frappe.
+     · `lecon-05` fichier, `lecon-14` task : la « valeur » annoncée est une phrase ou un
+       abrégé par des « ... », pas un terme.
+     · `lecon-07` case, with : la réponse est une phrase assemblée à partir de littéraux
+       tous visibles — c'est le motif qui a fait retirer `java/lecon-13` en B7c-3.
+     · `lecon-07` if-unless : « impair » et « Rupture » sont écrits dans la ligne même.
+     · `lecon-07` diviser (« Résultat : 5.0 ») : ÉCRITE PUIS RETIRÉE, et c'est le contrôle 6
+       qui l'a refusée — la ligne de code qui porte l'annonce est un `end`, présent dans
+       toute page Elixir, donc « la ligne visée figure déjà dans la page hôte » est vrai
+       sans que rien ne soit divulgué. Le contrôle protège de la DIVULGATION ; le corriger
+       pour qu'il distingue une ligne banale d'une ligne parlante reviendrait à
+       l'assouplir au moment précis où il refuse une cible. Elle est donc retirée, et la
+       limite est écrite ici : c'était la meilleure cible du cours (l'opérateur `/` rend
+       un flottant même sur deux entiers, `10 / 2` valant `5.0`).
+     · `lecon-07` fichiers : dépend du disque de qui exécute.
+     · `lecon-13` struct : la réponse fait 46 caractères à taper pour une seule idée.
+     · `lecon-14` agent : la réponse est « 5 », et `total + 5` la donne à la lecture.
+     · `lecon-08`, `09`, `10`, `12`, `15`, `16`, `17` : hors périmètre du rejeu — PID,
+       sessions IEx en commentaire, arbres de syntaxe abrégés, structures Ecto. On ne
+       bâtit pas un exercice sur une valeur qu'aucun rejeu n'a pu confirmer. */
+    ]
   }
 };
 
@@ -1384,7 +1601,14 @@ Object.keys(LOTS).forEach(function (nomLot) {
       if (!attendu) { fautes.push(id + ' : sortie annoncée vide'); return; }
 
       /* 3. le code cité : toutes les annonces de sortie retirées, un « ? » sur la ligne visée */
-      var cite = [];
+      /* ⚠️ `masquer` NE VALAIT QUE POUR LA FORME « bloc », et un contradicteur a montré
+         ce que ça coûte sur la forme « annonce » : `elixir/lecon-05` écrit
+         « # Carré des nombres pairs de 1 à 10 » juste au-dessus de la compréhension
+         qu'on demande d'évaluer — le commentaire TRADUIT le code en français, donc
+         l'exercice se résout sans lire une ligne d'Elixir. Le champ agit désormais dans
+         les deux formes, avec la même exigence : un motif déclaré et introuvable est une
+         FAUTE (on ne masque pas au hasard, on masque ce qu'on a désigné). */
+      var cite = [], masquesA = 0;
       for (var j = 0; j < lignes.length; j++) {
         var l = lignes[j];
         if (RE_ANN_SEULE.test(l)) {
@@ -1392,9 +1616,27 @@ Object.keys(LOTS).forEach(function (nomLot) {
           continue;                                        // sinon : la ligne disparaît
         }
         var nu = l.replace(RE_ANN_FIN, '');
+        if (j !== iAnn) {
+          for (var qa = 0; qa < (t.masquer || []).length; qa++) {
+            var pa = nu.indexOf(t.masquer[qa]);
+            if (pa < 0) continue;
+            var ca = nu.lastIndexOf(lot.marqueur, pa);
+            if (ca < 0) continue;
+            masquesA++;
+            if (COMMENTE.test(nu)) { nu = null; break; }
+            nu = nu.slice(0, ca).replace(/\s+$/, '');
+          }
+          if (nu === null) continue;
+        }
         if (j === iAnn) cite.push(nu + '   ' + lot.marqueur + ' => ?');
         else cite.push(nu);
       }
+      if (masquesA !== (t.masquer || []).length) {
+        fautes.push(id + ' : ' + (t.masquer || []).length + ' commentaire(s) à masquer déclaré(s), ' +
+          masquesA + ' trouvé(s) dans le bloc — un motif ne correspond à rien');
+        return;
+      }
+      if (masquesA) notes.push(id + ' : ' + masquesA + ' commentaire(s) neutralisé(s), ils énonçaient la règle');
       while (cite.length && !cite[cite.length - 1].trim()) cite.pop();
       codeCite = cite.join('\n');
       for (var k2 = 0; k2 < lignes.length; k2++) {
