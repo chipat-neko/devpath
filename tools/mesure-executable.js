@@ -17,6 +17,23 @@ const fs = require("fs");
 const path = require("path");
 
 const RACINE = path.join(__dirname, "..");
+
+/* LA RÈGLE DU SITE, recopiée de `js/lecon.js` (initExos) — et elle a changé depuis
+   que cet outil a été écrit pour A1. À l'époque, seul `type:"code"` portant un champ
+   `run` était exécuté. Les phases B1, B2 et B5 ont ajouté trois moteurs — SQLite,
+   CPython et le juge d'expressions régulières — que cet outil comptait encore parmi
+   les exercices « corrigés par mot-clé » : il annonçait 290 exercices exécutés là où
+   le site en exécutait 354, soit 64 de moins (26 regex, 25 python, 13 sql).
+   ⚠️ UN OUTIL DE MESURE SE PÉRIME QUAND CE QU'IL MESURE ÉVOLUE. Le contrôle qui le
+   révèle : compter les `type` du site (`text`, `code`, `python`, `sql`, `regex`) et
+   vérifier que la somme des types exécutables tombe sur le chiffre annoncé. */
+function executeParLeSite(e) {
+  if (!e) return false;
+  if (e.run) return true;                                   // type:"code" et type:"python"
+  if (e.type === "regex" && e.cases) return true;           // juge d'expressions régulières
+  if (e.type === "sql" && e.attendu) return true;           // requête posée dans SQLite
+  return false;
+}
 const PAGES = path.join(RACINE, "pages");
 
 /* Règle EXACTE de js/runner.js : un bloc JavaScript qui touche une API de page
@@ -150,7 +167,7 @@ for (const item of liste) {
       if (!e) {
         c.exos.nul++;
         totalExosNul++;
-      } else if (e.type === "code" && e.run) {
+      } else if (executeParLeSite(e)) {
         c.exos.code++;
         totalExosCode++;
       } else {
@@ -215,7 +232,7 @@ console.log("\n" + "=".repeat(78));
 console.log("  EXERCICES — correction par EXECUTION contre correction par MOT-CLE");
 console.log("=".repeat(78));
 const totalExos = totalExosCode + totalExosText;
-console.log("exercices executes (type:code + run) : " + totalExosCode);
+console.log("exercices executes (run, regex, sql)   : " + totalExosCode);
 console.log("exercices compares a un mot-cle      : " + totalExosText);
 console.log("entrees null (pas de champ)          : " + totalExosNul);
 console.log(
