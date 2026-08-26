@@ -428,7 +428,8 @@ SET    places_restantes = (
 [
   {"type":"text","accept":["denormalisation","la denormalisation","denormaliser"],"placeholder":"réintroduire volontairement de la redondance pour accélérer la lecture, c'est de la d______________","hints":["C'est le mouvement inverse de la normalisation.","On le fait en dernier recours, sur un problème mesuré.","Le mot commence par « dé » et finit par « ...isation »."],"link":{"href":"lecon-10.html","label":"Revoir « Le compromis fondamental »"}},
   {"type":"text","accept":["snapshot","un snapshot","valeur figee","une valeur figee","instantane"],"placeholder":"prix_paye garde le prix au moment de l'achat : c'est un s________ historique, pas une copie à synchroniser","hints":["Terme anglais pour « instantané », une valeur figée à un moment.","Elle ne doit PAS changer si le tarif évolue ensuite.","On peut aussi dire « valeur figée »."],"link":{"href":"lecon-10.html","label":"Revoir « snapshot n'est pas dénormalisation »"}},
-  {"type":"text","accept":["divergence","la divergence","diverger"],"placeholder":"un compteur dénormalisé qu'on a oublié de maintenir finit par mentir : c'est une d________","hints":["La copie ne correspond plus à la réalité qu'elle résume.","Elle est silencieuse : aucune erreur SQL n'est levée.","Même racine que « diverger » : les deux valeurs s'écartent."],"link":{"href":"lecon-10.html","label":"Revoir « Le risque à assumer »"}}
+  {"type":"text","accept":["divergence","la divergence","diverger"],"placeholder":"un compteur dénormalisé qu'on a oublié de maintenir finit par mentir : c'est une d________","hints":["La copie ne correspond plus à la réalité qu'elle résume.","Elle est silencieuse : aucune erreur SQL n'est levée.","Même racine que « diverger » : les deux valeurs s'écartent."],"link":{"href":"lecon-10.html","label":"Revoir « Le risque à assumer »"}},
+  {"type":"sql","schema":"CREATE TABLE commande (commande_id INTEGER PRIMARY KEY, client_id INTEGER, total NUMERIC);\nCREATE TABLE billet (billet_id INTEGER PRIMARY KEY, commande_id INTEGER, prix_paye NUMERIC);\nINSERT INTO commande VALUES (1,10,50),(2,11,40),(3,12,0),(4,13,15);\nINSERT INTO billet VALUES (1,1,20),(2,1,30),(3,2,25);","attendu":{"colonnes":["commande_id","stocke","reel"],"lignes":[[2,40,25],[4,15,0]]},"ordre":true,"ref":"SELECT c.commande_id, c.total AS stocke, COALESCE(SUM(b.prix_paye), 0) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> COALESCE(SUM(b.prix_paye), 0) ORDER BY c.commande_id;","contre":["SELECT c.commande_id, c.total AS stocke, SUM(b.prix_paye) AS reel FROM commande c JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> SUM(b.prix_paye) ORDER BY c.commande_id;","SELECT c.commande_id, c.total AS stocke, SUM(b.prix_paye) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> SUM(b.prix_paye) ORDER BY c.commande_id;","SELECT c.commande_id, c.total AS stocke, COALESCE(SUM(b.prix_paye), 0) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total ORDER BY c.commande_id;"],"accept":["SELECT c.commande_id, c.total AS stocke, COALESCE(SUM(b.prix_paye), 0) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> COALESCE(SUM(b.prix_paye), 0) ORDER BY c.commande_id;"],"placeholder":"les commandes dont le total stocké diffère de la somme réelle des billets","hints":["Il faut voir TOUTES les commandes, y compris celles qui n'ont aucun billet : LEFT JOIN.","SUM d'un ensemble vide vaut NULL, pas 0 — et NULL <> 15 ne vaut pas « vrai », il vaut « inconnu ».","COALESCE(SUM(...), 0) règle les deux problèmes d'un coup : dans le SELECT et dans le HAVING."],"link":{"href":"lecon-10.html","label":"Revoir « Dénormaliser à bon escient »"}}
 ]
 </script>
 
@@ -497,6 +498,18 @@ EXECUTE FUNCTION ajoute_au_total();
     - un moyen de RÉCONCILIER : recalculer nb_billets_vendus depuis
       COUNT(billet) périodiquement, pour effacer toute divergence.
     Et on documente que c'est une donnée DÉRIVÉE, reconstructible.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>Rideau a dénormalisé&nbsp;: <code>commande.total</code> stocke ce que la somme des billets devrait donner. La leçon prévient que le risque, c'est la divergence — écris la <strong>requête de réconciliation</strong>. Affiche <code>commande_id</code>, le total stocké (alias <code>stocke</code>) et la somme réelle (alias <code>reel</code>) pour les commandes où les deux diffèrent, par commande croissante. Une commande sans aucun billet vaut <code>0</code>, pas <code>NULL</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Deux pièges dans la même requête : la commande SANS billet doit rester
+-- visible (LEFT JOIN), et sa somme vide doit devenir 0 (COALESCE) — sinon la
+-- comparaison avec NULL n'est ni vraie ni fausse, et la ligne disparaît.
+SELECT c.commande_id,
+       c.total AS stocke,
+       COALESCE(SUM(b.prix_paye), 0) AS reel
+FROM commande c
+LEFT JOIN billet b ON b.commande_id = c.commande_id
+GROUP BY c.commande_id, c.total
+HAVING c.total &lt;&gt; COALESCE(SUM(b.prix_paye), 0)
+ORDER BY c.commande_id;</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

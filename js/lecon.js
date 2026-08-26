@@ -817,6 +817,199 @@
       JSON.stringify({ ok: cas.ok || [], ko: cas.ko || [], capte: cas.capte || [], groupes: cas.groupes || [] }) + ");";
   }
 
+  /* ---- Exercices type:"sql" : la requête est CORRIGÉE EN L'EXÉCUTANT --------
+     Même raisonnement que pour les motifs (cf. TEST_REGEX), poussé d'un cran : une
+     requête corrigée par `accept:[…]` compare deux chaînes — elle refuse
+     `WHERE prix>20` faute d'espaces là où elle accepte la graphie notée, alors que
+     SQLite rend le MÊME tableau. On exécute donc la requête de l'apprenant sur un
+     schéma posé par l'exercice, et l'on compare LE RÉSULTAT, ligne à ligne. C'est
+     SQLite qui juge, pas une liste de graphies. Le moteur est celui du dépôt
+     (assets/vendor/sqljs/, cf. A2) : aucune requête réseau.
+     ⚠️ La saisie n'est JAMAIS concaténée au programme du Worker : elle y entre par
+     postMessage, donc comme une donnée. */
+  function JUGE_SQL(res, att, ordre) {
+    function nv(v) {
+      if (v === null || v === undefined) return "NULL";
+      /* Un AVG rend un flottant : on arrondit au millionième pour absorber la
+         représentation binaire sans jamais confondre deux valeurs distinctes. */
+      if (typeof v === "number") return String(Math.round(v * 1e6) / 1e6);
+      if (typeof v === "boolean") return v ? "1" : "0";
+      if (v && v.byteLength !== undefined) return "<binaire>";
+      return String(v).trim();
+    }
+    function lig(l) {
+      var o = [], i;
+      for (i = 0; i < l.length; i++) o.push(nv(l[i]));
+      return o.join(" | ");
+    }
+    function bas(c) { return String(c).trim().toLowerCase(); }
+    if (!res || !res.length) {
+      return "✗ La requête n'a rendu aucun tableau de résultats. L'exercice attend une requête qui RENVOIE des lignes (SELECT, ou WITH … SELECT).";
+    }
+    /* La dernière instruction qui produit des lignes fait foi : un apprenant qui pose
+       d'abord un CREATE ou une vue n'est pas pénalisé pour l'avoir fait. */
+    var jeu = res[res.length - 1];
+    var cols = jeu.columns || [], vals = jeu.values || [];
+    var attL = att.lignes || [];
+    var pb = [], i;
+    if (att.colonnes) {
+      var vus = [], veut = [];
+      for (i = 0; i < cols.length; i++) vus.push(bas(cols[i]));
+      for (i = 0; i < att.colonnes.length; i++) veut.push(bas(att.colonnes[i]));
+      if (vus.join(", ") !== veut.join(", ")) {
+        pb.push("· colonnes attendues (" + att.colonnes.join(", ") + "), obtenues (" + cols.join(", ") + ")");
+      }
+    } else if (attL.length && cols.length !== attL[0].length) {
+      pb.push("· " + attL[0].length + " colonne(s) attendue(s), " + cols.length + " obtenue(s)");
+    }
+    var a = [], b = [];
+    for (i = 0; i < attL.length; i++) a.push(lig(attL[i]));
+    for (i = 0; i < vals.length; i++) b.push(lig(vals[i]));
+    /* Sans ORDER BY, l'ordre des lignes n'est garanti par aucune norme : on ne le
+       compare que si l'exercice le demande explicitement (`ordre: true`). */
+    if (ordre !== true) { a = a.slice().sort(); b = b.slice().sort(); }
+    if (a.length !== b.length) pb.push("· " + a.length + " ligne(s) attendue(s), " + b.length + " obtenue(s)");
+    var n = a.length > b.length ? a.length : b.length, ecarts = 0;
+    for (i = 0; i < n; i++) {
+      if (a[i] !== b[i]) {
+        ecarts++;
+        if (ecarts <= 3) {
+          pb.push("· ligne " + (i + 1) + (ordre === true ? "" : " (comparaison triée)") +
+            " : attendu « " + (a[i] === undefined ? "(aucune)" : a[i]) +
+            " », obtenu « " + (b[i] === undefined ? "(aucune)" : b[i]) + " »");
+        }
+      }
+    }
+    if (ecarts > 3) pb.push("· " + (ecarts - 3) + " autre(s) ligne(s) diffèrent.");
+    if (!pb.length) return "SQL-OK\n" + b.length + " ligne(s), " + cols.length + " colonne(s) : conforme.";
+    return "✗ Le résultat ne correspond pas :\n" + pb.join("\n");
+  }
+
+  /* Racine du site, déduite de l'URL de CE script : un Worker issu d'un Blob n'a
+     aucune base pour résoudre un chemin relatif, il lui faut une URL ABSOLUE
+     (même raisonnement et même mesure que dans js/runner.js). */
+  var MOI_LECON = document.currentScript && document.currentScript.src;
+  var RACINE_EXO = MOI_LECON ? MOI_LECON.replace(/\/js\/lecon\.js(\?.*)?$/, "") : "";
+
+  var EXO_SQL_WORKER_SRC = [
+    "var SQLP = null;",
+    "self.onmessage = function (ev) {",
+    "  var d = ev.data || {};",
+    "  if (d.type === 'load') {",
+    "    try {",
+    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm-base64.js');",
+    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm.js');",
+    "    } catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
+    "    if (typeof initSqlJs !== 'function') { self.postMessage({ type: 'fatal', text: 'initSqlJs absent' }); return; }",
+    "    if (typeof self.SQL_WASM_BASE64 !== 'string') { self.postMessage({ type: 'fatal', text: 'binaire absent' }); return; }",
+    "    var brut = atob(self.SQL_WASM_BASE64), bin = new Uint8Array(brut.length), i;",
+    "    for (i = 0; i < brut.length; i++) bin[i] = brut.charCodeAt(i);",
+    /* locateFile est appelé même avec wasmBinary : il doit rendre le nom sans lever,
+       sinon Emscripten avale l'exception et la promesse ne se résout jamais (cf. A2). */
+    "    SQLP = initSqlJs({ wasmBinary: bin, locateFile: function (f) { return f; } });",
+    "    SQLP.then(function () { self.postMessage({ type: 'ready' }); }, function (e) { self.postMessage({ type: 'fatal', text: String((e && e.message) || e) }); });",
+    "    return;",
+    "  }",
+    "  if (d.type === 'juge') {",
+    "    if (!SQLP) { self.postMessage({ type: 'verdict', id: d.id, texte: '\\u2717 Moteur SQL non chargé.' }); return; }",
+    "    SQLP.then(function (SQL) {",
+    "      var db = new SQL.Database(), res = null;",
+    "      try { db.exec(d.schema); }",
+    "      catch (e) {",
+    "        self.postMessage({ type: 'verdict', id: d.id, texte: \"\\u2717 Le schéma de l'exercice n'a pas pu être créé : \" + ((e && e.message) || e) });",
+    "        try { db.close(); } catch (e0) {} return;",
+    "      }",
+    "      try { res = db.exec(d.requete); }",
+    "      catch (e1) {",
+    "        self.postMessage({ type: 'verdict', id: d.id, texte: '\\u2717 SQLite refuse cette requête : ' + ((e1 && e1.message) || e1) });",
+    "        try { db.close(); } catch (e2) {} return;",
+    "      }",
+    "      var texte;",
+    "      try { texte = (" + JUGE_SQL.toString() + ")(res, d.attendu, d.ordre); }",
+    "      catch (e3) { texte = '\\u2717 Comparaison impossible : ' + ((e3 && e3.message) || e3); }",
+    "      self.postMessage({ type: 'verdict', id: d.id, texte: texte });",
+    "      try { db.close(); } catch (e4) {}",
+    "    });",
+    "  }",
+    "};",
+  ].join("\n");
+
+  /* Un seul Worker pour toute la page : sql.js pèse 909 Ko et met ~0,8 s à
+     s'initialiser — le charger par exercice serait absurde. Les demandes sont
+     numérotées et mises en file tant que le moteur n'est pas prêt, parce que deux
+     exercices d'une même page peuvent être lancés coup sur coup. */
+  var sqlExoWorker = null, sqlExoPret = false, sqlExoId = 0;
+  var sqlExoRappels = {}; // id → rappel de verdict
+  var sqlExoFile = [];    // messages en attente du « ready »
+
+  function sqlExoTousEnEchec(texte) {
+    var k, f;
+    for (k in sqlExoRappels) {
+      if (Object.prototype.hasOwnProperty.call(sqlExoRappels, k)) {
+        f = sqlExoRappels[k];
+        delete sqlExoRappels[k];
+        f(texte);
+      }
+    }
+    sqlExoFile = [];
+  }
+
+  function runExoSql(requete, entry, cb) {
+    if (!window.Worker || !RACINE_EXO) { cb(null); return; }
+    var id = ++sqlExoId, fini = false;
+    var minuteur = setTimeout(function () {
+      if (fini) return;
+      fini = true;
+      delete sqlExoRappels[id];
+      cb("⏱ Exécution interrompue après 15 s.");
+    }, 15000);
+    sqlExoRappels[id] = function (texte) {
+      if (fini) return;
+      fini = true;
+      clearTimeout(minuteur);
+      cb(texte);
+    };
+    var message = {
+      type: "juge",
+      id: id,
+      schema: String(entry.schema || ""),
+      requete: String(requete),
+      attendu: entry.attendu || {},
+      ordre: entry.ordre === true,
+    };
+    if (sqlExoWorker && sqlExoPret) { sqlExoWorker.postMessage(message); return; }
+    sqlExoFile.push(message);
+    if (sqlExoWorker) return;
+    try {
+      var blob = new Blob([EXO_SQL_WORKER_SRC], { type: "application/javascript" });
+      sqlExoWorker = new Worker(URL.createObjectURL(blob));
+    } catch (e) {
+      sqlExoWorker = null;
+      sqlExoTousEnEchec(null);
+      return;
+    }
+    sqlExoWorker.onmessage = function (ev) {
+      var d = ev.data || {}, f;
+      if (d.type === "ready") {
+        sqlExoPret = true;
+        while (sqlExoFile.length) sqlExoWorker.postMessage(sqlExoFile.shift());
+        return;
+      }
+      if (d.type === "fatal") {
+        sqlExoTousEnEchec("✗ SQLite n'a pas pu se charger" + (d.text ? " (" + d.text + ")" : "") +
+          ". Vérifie que le dossier assets/vendor/sqljs/ est bien présent à côté du dossier js/.");
+        return;
+      }
+      if (d.type === "verdict" && sqlExoRappels[d.id]) {
+        f = sqlExoRappels[d.id];
+        delete sqlExoRappels[d.id];
+        f(d.texte);
+      }
+    };
+    sqlExoWorker.onerror = function () { sqlExoTousEnEchec("✗ Erreur du moteur SQL."); };
+    sqlExoWorker.postMessage({ type: "load", base: RACINE_EXO });
+  }
+
   function runExoCode(code, cb) {
     var worker = null, url = null, done = false;
     function finish(res) {
@@ -882,7 +1075,11 @@
       /* type:"regex" — la réponse est un MOTIF, pas un programme : champ d'une ligne
          comme pour type:"text", mais correction par exécution (cf. TEST_REGEX). */
       var isRegex = entry.type === "regex" && entry.cases;
-      var executable = !!entry.run || isRegex;
+      /* type:"sql" — la réponse est une REQUÊTE : champ multiligne comme pour le code,
+         mais correction par exécution dans SQLite (cf. JUGE_SQL). */
+      var isSql = entry.type === "sql" && !!entry.attendu;
+      var executable = !!entry.run || isRegex || isSql;
+      var multiligne = isCode || isSql;
 
       var wrap = document.createElement("div");
       wrap.className = "exo-try";
@@ -896,18 +1093,18 @@
       label.className = "exo-try__label";
       label.setAttribute("for", inputId);
       label.textContent = question
-        ? (isCode ? "Écris le code — " : isRegex ? "Ton motif — " : "Ta réponse — ") + question
-        : (isCode ? "Écris ta réponse (code) :" : isRegex ? "Ton motif :" : "Ta réponse :");
+        ? (isCode ? "Écris le code — " : isSql ? "Écris la requête — " : isRegex ? "Ton motif — " : "Ta réponse — ") + question
+        : (isCode ? "Écris ta réponse (code) :" : isSql ? "Écris ta requête SQL :" : isRegex ? "Ton motif :" : "Ta réponse :");
 
-      var input = document.createElement(isCode ? "textarea" : "input");
+      var input = document.createElement(multiligne ? "textarea" : "input");
       input.className = "exo-try__input";
       input.id = inputId;
       input.spellcheck = false;
-      if (isCode) input.rows = 3;
+      if (multiligne) input.rows = 3;
       else input.type = "text";
       input.setAttribute(
         "placeholder",
-        isCode ? "ton code ici…" : isRegex ? "ton motif ici, avec ou sans les / /…" : "ta réponse ici…"
+        isCode ? "ton code ici…" : isSql ? "ta requête ici…" : isRegex ? "ton motif ici, avec ou sans les / /…" : "ta réponse ici…"
       );
 
       var bar = document.createElement("div");
@@ -1001,24 +1198,32 @@
           btn.disabled = true;
           status.textContent = "… exécution";
           status.classList.remove("is-ok", "is-ko");
-          runExoCode(isRegex ? programmeRegex(val, entry.cases) : val, function (output) {
+          var lancer = isSql
+            ? function (fin) { runExoSql(val, entry, fin); }
+            : function (fin) { runExoCode(isRegex ? programmeRegex(val, entry.cases) : val, fin); };
+          lancer(function (output) {
             btn.disabled = false;
             if (out) {
               out.hidden = false;
               var affiche = output == null ? "(exécution impossible dans ce contexte)" : output;
               /* Le jeton de réussite est un signal interne : l'apprenant lit le compte
-                 de cas passés, pas « REGEX-OK ». */
+                 de cas passés, pas « REGEX-OK » ni « SQL-OK ». */
               if (isRegex) affiche = String(affiche).replace(/^REGEX-OK\s*\n?/, "✓ ");
+              if (isSql) affiche = String(affiche).replace(/^SQL-OK\s*\n?/, "✓ ");
               out.textContent = affiche;
             }
-            var expect = isRegex
-              ? "REGEX-OK"
+            var expect = isRegex || isSql
+              ? isSql ? "SQL-OK" : "REGEX-OK"
               : entry.run.expect != null
               ? entry.run.expect
               : entry.run;
             var pass;
             if (output == null) {
               pass = (entry.accept || []).some(function (a) { return normExo(a) === normExo(val); });
+            } else if (isSql) {
+              /* Ici la comparaison a déjà eu lieu — dans SQLite, sur le RÉSULTAT.
+                 Le verdict est le jeton, pas une égalité de texte. */
+              pass = /^SQL-OK\b/.test(String(output));
             } else {
               /* Le programme de l'apprenant affiche presque toujours du contexte autour
                  de sa conclusion — et les solutions officielles du site en affichent
@@ -1037,7 +1242,7 @@
       });
 
       input.addEventListener("keydown", function (e) {
-        if (!isCode && e.key === "Enter") {
+        if (!multiligne && e.key === "Enter") {
           e.preventDefault();
           btn.click();
         }

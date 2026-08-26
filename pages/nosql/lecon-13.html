@@ -255,13 +255,45 @@ db.produits.aggregate([
 [
   {"type":"text","accept":["embedding","embeddings","vecteur","plongement","un embedding"],"placeholder":"la représentation numérique d'un contenu qui capture son sens","hints":["Produit par un modèle d'IA.","Sens proche ⇒ … proches.","« embedding » ou « vecteur »"],"link":{"href":"lecon-13.html","label":"Revoir « Du mot au sens »"}},
   {"type":"text","accept":["RAG","rag","retrieval augmented generation","génération augmentée par récupération"],"placeholder":"le motif (sigle) où l'on récupère des passages par recherche vectorielle pour nourrir la réponse d'un assistant","hints":["On RÉCUPÈRE d'abord des passages, puis on les donne au modèle.","Sigle de trois lettres.","R… A… G…"],"link":{"href":"lecon-13.html","label":"Revoir « À quoi ça sert : sémantique, reco, RAG »"}},
-  {"type":"text","accept":["similarité cosinus","similarite cosinus","cosinus","similarité cosinus (cosinus)","le cosinus"],"placeholder":"la mesure qui compare l'orientation (l'angle) de deux vecteurs, sans tenir compte de leur longueur","hints":["Elle vaut 1 pour un même sens, 0 sans rapport.","On compare la direction, pas la taille du texte.","similarité …"],"link":{"href":"lecon-13.html","label":"Revoir « Mesurer la similarité »"}}
+  {"type":"text","accept":["similarité cosinus","similarite cosinus","cosinus","similarité cosinus (cosinus)","le cosinus"],"placeholder":"la mesure qui compare l'orientation (l'angle) de deux vecteurs, sans tenir compte de leur longueur","hints":["Elle vaut 1 pour un même sens, 0 sans rapport.","On compare la direction, pas la taille du texte.","similarité …"],"link":{"href":"lecon-13.html","label":"Revoir « Mesurer la similarité »"}},
+  {"type":"code","run":{"expect":"chaton:0.994 | chien:0.930"},"placeholder":"écris cosinus(a, b) et plusProches(produits, requete, k), puis affiche les 2 plus proches sous la forme nom:score","hints":["Le cosinus divise le produit scalaire par le produit des deux normes : sans la division, on mesure une longueur, pas une direction.","Trier par score DÉCROISSANT : plus le cosinus est grand, plus les sens sont proches.","Un vecteur nul n'a pas de direction — il faut s'en protéger avant de diviser."],"link":{"href":"lecon-13.html","label":"Revoir « Les bases vectorielles : la recherche par similarité »"}}
 ]
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un utilisateur cherche «&nbsp;chaussure pour courir&nbsp;» mais tes fiches disent «&nbsp;running&nbsp;», «&nbsp;baskets de sport&nbsp;», «&nbsp;trail&nbsp;». Pourquoi l'index inversé (leçon&nbsp;12) rate-t-il, et comment une base vectorielle réussit-elle&nbsp;?</p><details><summary>Voir une solution</summary><p>L'index inversé cherche des <strong>termes exacts</strong> (après analyse)&nbsp;: «&nbsp;courir&nbsp;» ne partage aucun mot avec «&nbsp;running&nbsp;» ou «&nbsp;baskets&nbsp;», donc rien ne remonte. Une base vectorielle transforme requête et fiches en <strong>embeddings</strong>&nbsp;: «&nbsp;chaussure pour courir&nbsp;» et «&nbsp;baskets de running&nbsp;» ont un <strong>sens proche</strong>, donc des vecteurs proches. La recherche par <strong>similarité</strong> (k plus proches voisins) les rapproche sans mot commun. En pratique, on combine les deux (recherche <strong>hybride</strong>) pour ne rien manquer.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>On veut qu'un assistant réponde aux questions sur la documentation interne de l'entreprise (RAG). Décris, en trois étapes, où intervient la base vectorielle.</p><details><summary>Voir une solution</summary><p><strong>(1) Indexation</strong>&nbsp;: on découpe la doc en passages, on calcule l'<em>embedding</em> de chacun et on les stocke (avec le texte) dans la base vectorielle, indexée en ANN. <strong>(2) Récupération</strong>&nbsp;: à chaque question, on calcule l'embedding de la question et on demande à la base les <em>k plus proches voisins</em> — les passages les plus pertinents. <strong>(3) Génération</strong>&nbsp;: on fournit ces passages au modèle de langage, qui rédige une réponse <em>ancrée</em> dessus (et peut citer ses sources). La base vectorielle est la <strong>mémoire</strong> qui relie la question aux bons documents.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Deux fiches décrivent le même produit&nbsp;: l'une en une ligne, l'autre en un long paragraphe. On veut qu'elles soient jugées <strong>également proches</strong> d'une requête pertinente, sans que la fiche la plus longue soit avantagée. Quelle mesure de similarité utilise-t-on, et pourquoi convient-elle ici&nbsp;?</p><details><summary>Voir une solution</summary><p>On utilise la <strong>similarité cosinus</strong>. Elle compare l'<strong>orientation</strong> (l'angle) des deux vecteurs, pas leur <strong>longueur</strong>&nbsp;: un texte court et un texte long qui parlent de la même chose pointent dans la <em>même direction</em>, donc obtiennent un score proche de <strong>1</strong>, indépendamment de la taille. Une mesure sensible à la magnitude (comme la distance euclidienne brute) pénaliserait ou favoriserait une fiche selon sa longueur&nbsp;; le cosinus, lui, ne retient que le <strong>sens</strong>. C'est pourquoi il est le choix par défaut pour comparer des embeddings de texte.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>Une base vectorielle ne compare pas des mots, elle compare des <strong>directions</strong>. Écris <code>cosinus(a, b)</code> puis <code>plusProches(produits, requete, k)</code> qui rend les <code>k</code> produits les plus proches, du plus proche au moins proche. Affiche <code>nom:score</code> (score à trois décimales) pour <code>k = 2</code>, séparés par «&nbsp;|&nbsp;».</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">const produits = [
+  { nom: 'chaton', embedding: [0.9, 0.1, 0.0] },
+  { nom: 'chien', embedding: [0.8, 0.3, 0.1] },
+  { nom: 'camion', embedding: [0.1, 0.2, 0.9] },
+  { nom: 'voiture', embedding: [0.0, 0.1, 1.0] },
+];
+
+const requete = [1, 0, 0]; // « chat »
+
+function cosinus(a, b) {
+  let produit = 0, normeA = 0, normeB = 0;
+  for (let i = 0; i &lt; a.length; i++) {
+    produit += a[i] * b[i];
+    normeA += a[i] * a[i];
+    normeB += b[i] * b[i];
+  }
+  if (normeA === 0 || normeB === 0) return 0;
+  return produit / (Math.sqrt(normeA) * Math.sqrt(normeB));
+}
+
+function plusProches(produits, requete, k) {
+  return produits
+    .map((p) =&gt; ({ nom: p.nom, score: cosinus(p.embedding, requete) }))
+    .sort((x, y) =&gt; y.score - x.score)
+    .slice(0, k);
+}
+
+console.log(
+  plusProches(produits, requete, 2).map((p) =&gt; p.nom + ':' + p.score.toFixed(3)).join(' | ')
+);</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

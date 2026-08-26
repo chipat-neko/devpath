@@ -400,7 +400,8 @@ for jour in jours(date(2026, 5, 1), date(2026, 5, 31)):
 [
   {"type":"text","accept":["idempotence","l'idempotence","idempotent","idempotente"],"placeholder":"la propriété selon laquelle rejouer une exécution ne change rien au résultat s'appelle l'i__________","hints":["C'est la propriété reine d'un pipeline.","En maths : f(f(x)) = f(x).","Onze lettres : i__________."],"link":{"href":"lecon-08.html","label":"Revoir l'introduction"}},
   {"type":"text","accept":["overwrite de partition","overwrite","remplacer la partition","delete-insert","delete insert","overwrite partition"],"placeholder":"pour rejouer une journée entière sans doublon, on remplace la journée : c'est l'o_________ de partition","hints":["On efface la journée PUIS on la réécrit.","Aussi appelé delete-insert ou write-truncate.","On remplace la partition, on n'y ajoute jamais."],"link":{"href":"lecon-08.html","label":"Revoir « Overwrite de partition »"}},
-  {"type":"text","accept":["backfill","le backfill","un backfill","backfiller"],"placeholder":"rejouer une plage de dates passées pour recalculer l'historique après une correction s'appelle un b_______","hints":["On rejoue le PASSÉ, pas le jour courant.","Sûr uniquement si chaque partition est idempotente.","Huit lettres, terme anglais : b_______."],"link":{"href":"lecon-08.html","label":"Revoir « Backfill »"}}
+  {"type":"text","accept":["backfill","le backfill","un backfill","backfiller"],"placeholder":"rejouer une plage de dates passées pour recalculer l'historique après une correction s'appelle un b_______","hints":["On rejoue le PASSÉ, pas le jour courant.","Sûr uniquement si chaque partition est idempotente.","Huit lettres, terme anglais : b_______."],"link":{"href":"lecon-08.html","label":"Revoir « Backfill »"}},
+  {"type":"sql","schema":"CREATE TABLE bronze_capteurs (event_id TEXT, station_id TEXT, ts TEXT, velos_dispo INTEGER);\nINSERT INTO bronze_capteurs VALUES\n ('E-900001','S-014','2026-05-01T14:00:00',7),\n ('E-900001','S-014','2026-05-01T14:05:00',5),\n ('E-900001','S-014','2026-05-01T14:10:00',4),\n ('E-900002','S-021','2026-05-01T14:02:00',12),\n ('E-900002','S-021','2026-05-01T14:08:00',10),\n ('E-900003','S-007','2026-05-01T14:04:00',3);","attendu":{"colonnes":["event_id","ts","velos_dispo"],"lignes":[["E-900001","2026-05-01T14:10:00",4],["E-900002","2026-05-01T14:08:00",10],["E-900003","2026-05-01T14:04:00",3]]},"ordre":true,"ref":"WITH numerote AS (SELECT event_id, ts, velos_dispo, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ts DESC) AS rang FROM bronze_capteurs) SELECT event_id, ts, velos_dispo FROM numerote WHERE rang = 1 ORDER BY event_id;","contre":["WITH numerote AS (SELECT event_id, ts, velos_dispo, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ts) AS rang FROM bronze_capteurs) SELECT event_id, ts, velos_dispo FROM numerote WHERE rang = 1 ORDER BY event_id;","WITH numerote AS (SELECT event_id, ts, velos_dispo, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ts DESC) AS rang FROM bronze_capteurs) SELECT event_id, ts, velos_dispo FROM numerote ORDER BY event_id;","SELECT DISTINCT event_id, ts, velos_dispo FROM bronze_capteurs ORDER BY event_id;"],"accept":["WITH numerote AS (SELECT event_id, ts, velos_dispo, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ts DESC) AS rang FROM bronze_capteurs) SELECT event_id, ts, velos_dispo FROM numerote WHERE rang = 1 ORDER BY event_id;"],"placeholder":"une seule ligne par event_id, la plus récente : event_id, ts, velos_dispo, par event_id croissant","hints":["Numéroter d'abord, filtrer ensuite : une fonction de fenêtrage ne se filtre pas dans son propre WHERE.","PARTITION BY event_id redémarre la numérotation à chaque événement ; ORDER BY ts DESC met la plus récente au rang 1.","DISTINCT ne sert à rien ici : les copies ne sont pas identiques, elles diffèrent par leur ts."],"link":{"href":"lecon-08.html","label":"Revoir « Idempotence et reprise : rejouer sans doublonner »"}}
 ]
 </script>
 
@@ -448,6 +449,19 @@ Pourquoi c'est sans danger si la boucle casse au 17 mai :
   (aucun doublon), et le traitement reprend au 17. Le backfill
   hérite de l'idempotence de chaque partition : il est lui-même
   rejouable. Aucun total ne peut gonfler.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>Le chargement des capteurs a été rejoué&nbsp;: les mêmes <code>event_id</code> sont arrivés plusieurs fois, avec des <code>ts</code> différents. Écris la déduplication déterministe de la leçon&nbsp;: une seule ligne par <code>event_id</code>, <strong>la plus récente</strong>. Affiche <code>event_id</code>, <code>ts</code> et <code>velos_dispo</code>, par <code>event_id</code> croissant.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Déduplication déterministe : on numérote les copies d'un même événement,
+-- de la plus récente à la plus ancienne, et on ne garde que la première.
+-- Rejouée dix fois, cette requête donne dix fois le même résultat.
+WITH numerote AS (
+  SELECT event_id, ts, velos_dispo,
+         ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ts DESC) AS rang
+  FROM bronze_capteurs
+)
+SELECT event_id, ts, velos_dispo
+FROM numerote
+WHERE rang = 1
+ORDER BY event_id;</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

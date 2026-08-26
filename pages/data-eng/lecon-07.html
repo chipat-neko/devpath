@@ -345,7 +345,8 @@ print(chemin)   #=&gt; lac/silver/trajets/date=2026-05-01/part-00000.parquet</co
 [
   {"type":"text","accept":["pruning","partition pruning","le pruning","le partition pruning","elagage"],"placeholder":"le mécanisme par lequel une requête filtrée sur la date ne lit qu'un dossier au lieu de toute la table s'appelle le partition p______","hints":["C'est le gain décisif du partitionnement.","En français, on parle d'élagage de partitions.","Le moteur « taille » dans l'arborescence : partition p______."],"link":{"href":"lecon-07.html","label":"Revoir « Le partition pruning »"}},
   {"type":"text","accept":["date","la date","par date","le jour","jour"],"placeholder":"la clé de partition qui convient presque toujours (assez de dossiers pour élaguer, pas assez pour émietter) est la d___","hints":["C'est ce sur quoi presque toutes les requêtes filtrent.","Un dossier par jour : date=2026-05-01/.","Quatre lettres : d___."],"link":{"href":"lecon-07.html","label":"Revoir « Bien choisir la clé de partition »"}},
-  {"type":"text","accept":["cardinalite","la cardinalite","forte cardinalite","haute cardinalite"],"placeholder":"la propriété d'une clé (son nombre de valeurs distinctes) qui, si elle est trop haute, provoque le small files problem s'appelle la c__________","hints":["Trop haute = trop de dossiers.","trip_id a une très forte ____.","Onze lettres : c__________."],"link":{"href":"lecon-07.html","label":"Revoir « Bien choisir la clé de partition »"}}
+  {"type":"text","accept":["cardinalite","la cardinalite","forte cardinalite","haute cardinalite"],"placeholder":"la propriété d'une clé (son nombre de valeurs distinctes) qui, si elle est trop haute, provoque le small files problem s'appelle la c__________","hints":["Trop haute = trop de dossiers.","trip_id a une très forte ____.","Onze lettres : c__________."],"link":{"href":"lecon-07.html","label":"Revoir « Bien choisir la clé de partition »"}},
+  {"type":"code","run":{"expect":"3/7 partitions, 36.0 Mo au lieu de 84.0 Mo"},"placeholder":"écris scanner(partitions, debut, fin), puis affiche « x/y partitions, a Mo au lieu de b Mo »","hints":["Une partition est un DOSSIER : on l'ouvre entièrement ou pas du tout. Il n'y a rien à filtrer à l'intérieur.","Les bornes sont incluses : du 2 au 4, cela fait trois jours, pas deux.","Le format ISO (AAAA-MM-JJ) se compare par ordre alphabétique — c'est justement pour cela qu'on l'emploie dans les chemins."],"link":{"href":"lecon-07.html","label":"Revoir « Partitionner et organiser le stockage »"}}
 ]
 </script>
 
@@ -396,6 +397,34 @@ Risque a surveiller : le small files problem un cran plus bas.
   Regle : sous-partitionner seulement si on filtre vraiment sur
   la sous-cle ET que chaque bloc reste gros (&gt;= ~100 Mo).</code></pre></figure></details></div>
 
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>L'élagage de partitions (<em>partition pruning</em>) n'est pas une promesse&nbsp;: c'est un compte. Écris <code>scanner(partitions, debut, fin)</code> qui rend le nombre de partitions ouvertes et le total d'octets lus pour un filtre <code>date BETWEEN debut AND fin</code> (bornes incluses), puis affiche la comparaison avec le scan complet sous la forme <code>3/7 partitions, 36.0 Mo au lieu de 84.0 Mo</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">const partitions = [
+  { date: '2026-05-01', octets: 12000000 },
+  { date: '2026-05-02', octets: 12000000 },
+  { date: '2026-05-03', octets: 12000000 },
+  { date: '2026-05-04', octets: 12000000 },
+  { date: '2026-05-05', octets: 12000000 },
+  { date: '2026-05-06', octets: 12000000 },
+  { date: '2026-05-07', octets: 12000000 },
+];
+
+function scanner(partitions, debut, fin) {
+  // Les dates ISO se comparent comme du texte : c'est tout l'intérêt du format.
+  const lues = partitions.filter((p) =&gt; p.date &gt;= debut &amp;&amp; p.date &lt;= fin);
+  return {
+    lues: lues.length,
+    octets: lues.reduce((somme, p) =&gt; somme + p.octets, 0),
+  };
+}
+
+const mo = (o) =&gt; (o / 1000000).toFixed(1);
+const cible = scanner(partitions, '2026-05-02', '2026-05-04');
+const complet = scanner(partitions, '0000-00-00', '9999-99-99');
+
+console.log(
+  cible.lues + '/' + complet.lues + ' partitions, ' +
+  mo(cible.octets) + ' Mo au lieu de ' + mo(complet.octets) + ' Mo'
+);</code></pre></figure></details></div>
+
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
               </button>
@@ -429,5 +458,7 @@ Risque a surveiller : le small files problem un cran plus bas.
     <script src="../../assets/vendor/prism/prism-bash.min.js" defer></script>
     <script src="../../assets/vendor/prism/prism-sql.min.js" defer></script>
     <script src="../../assets/vendor/prism/prism-python.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-clike.min.js" defer></script>
+    <script src="../../assets/vendor/prism/prism-javascript.min.js" defer></script>
   </body>
 </html>

@@ -68,7 +68,8 @@ function lecons() {
       if (!/^lecon-\d+\.html$/.test(f)) return;
       var h = fs.readFileSync(path.join(dir, f), 'utf8');
       if (h.indexOf('"type":"code"') < 0 && h.indexOf('"type": "code"') < 0 &&
-          h.indexOf('"type":"regex"') < 0 && h.indexOf('"type": "regex"') < 0) return;
+          h.indexOf('"type":"regex"') < 0 && h.indexOf('"type": "regex"') < 0 &&
+          h.indexOf('"type":"sql"') < 0 && h.indexOf('"type": "sql"') < 0) return;
       out.push(path.relative(RACINE, path.join(dir, f)).replace(/\\/g, '/'));
     });
   });
@@ -145,6 +146,12 @@ var SCRIPT = [
   '    if (!champ) continue;',
   '    let reponse = null;',
   '    if (entree && entree.type === "regex") reponse = (CONTRE ? (entree.contre || [])[0] : entree.ref) || null;',
+  /* type:"sql" : la solution publiée est le bloc `language-sql` du <details> — commentaires
+     compris, SQLite les accepte. En passe adversariale, on tape la première contre-requête. */
+  '    else if (entree && entree.type === "sql") {',
+  '      if (CONTRE) reponse = (entree.contre || [])[0] || null;',
+  '      else { const sol = ex.querySelector("details code.language-sql"); reponse = sol ? sol.textContent : null; }',
+  '    }',
   '    else if (CONTRE) continue;',
   '    else { const sol = ex.querySelector("details code.language-javascript"); reponse = sol ? sol.textContent : null; }',
   '    if (reponse == null) { sortie.push({ i: i + 1, etat: "sans-solution" }); continue; }',
@@ -152,7 +159,9 @@ var SCRIPT = [
   '    const statut = ex.querySelector(".exo-try__status");',
   '    ex.querySelector(".exo-try__btn").click();',
   '    let attente = 0;',
-  '    while (attente < 60 && !/^[✓✗]/.test(statut.textContent)) {',
+  /* 15 s, et non 6 : le premier exercice SQL d'une page doit d'abord charger sql.js
+     (909 Ko à décoder) dans son Worker. Les suivants réutilisent le même moteur. */
+  '    while (attente < 150 && !/^[✓✗]/.test(statut.textContent)) {',
   '      await new Promise((r) => setTimeout(r, 100));',
   '      attente++;',
   '    }',

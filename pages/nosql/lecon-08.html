@@ -265,7 +265,8 @@
 [
   {"type":"text","accept":["$group","group","$group"],"placeholder":"l'étape qui regroupe les documents et calcule une valeur par groupe","hints":["Elle utilise une clé _id.","On y met des accumulateurs comme $sum.","« $g… »"],"link":{"href":"lecon-08.html","label":"Revoir « Les étapes essentielles »"}},
   {"type":"text","accept":["$match","match","$match tôt","au début"],"placeholder":"l'étape de filtrage à placer le plus tôt possible","hints":["Mêmes opérateurs que find.","La placer tôt réduit le volume.","« $m… »"],"link":{"href":"lecon-08.html","label":"Revoir « Ordonner les étapes »"}},
-  {"type":"text","accept":["{ $match: { statut: \"payee\" } }","{$match:{statut:\"payee\"}}","{ $match: { statut: 'payee' } }","{$match:{statut:'payee'}}","$match: { statut: \"payee\" }","statut: \"payee\"","{ statut: \"payee\" }"],"placeholder":"écris l'étape qui ne garde que les commandes dont le statut vaut « payee »","hints":["C'est un $match, le filtre du pipeline.","Même syntaxe qu'un critère find : { champ: valeur }.","Forme attendue : { $match: { statut: \"payee\" } }."],"link":{"href":"lecon-08.html","label":"Revoir « Les étapes essentielles »"}}
+  {"type":"text","accept":["{ $match: { statut: \"payee\" } }","{$match:{statut:\"payee\"}}","{ $match: { statut: 'payee' } }","{$match:{statut:'payee'}}","$match: { statut: \"payee\" }","statut: \"payee\"","{ statut: \"payee\" }"],"placeholder":"écris l'étape qui ne garde que les commandes dont le statut vaut « payee »","hints":["C'est un $match, le filtre du pipeline.","Même syntaxe qu'un critère find : { champ: valeur }.","Forme attendue : { $match: { statut: \"payee\" } }."],"link":{"href":"lecon-08.html","label":"Revoir « Les étapes essentielles »"}},
+  {"type":"code","run":{"expect":"[{\"_id\":\"Mobilier\",\"total\":900},{\"_id\":\"Textile\",\"total\":200}]"},"placeholder":"reproduis $match → $group → $sort → $limit sur les ventes 2026 payées, puis affiche le JSON","hints":["Filtrer D'ABORD, grouper ensuite : c'est aussi la règle de performance de la leçon.","Le total d'une ligne n'est pas son prix : c'est prix × qte.","Deux conditions dans le $match — l'année ET le statut. La vente de 2025 est un piège."],"link":{"href":"lecon-08.html","label":"Revoir « Agréger les données »"}}
 ]
 </script>
 
@@ -280,6 +281,29 @@
   { $limit: 3 }                                       // top 3
 ])</code></pre></figure><p>On filtre d'abord l'année (idéalement via un index), on regroupe par catégorie en sommant <code>prix × qte</code>, puis on trie et on tronque. Le <code>$match</code> en tête évite de faire entrer les autres années dans le calcul.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Application</span></div><p>Une collection <code>commandes</code> contient un champ <code>statut</code> (<code>"payee"</code>, <code>"en_attente"</code>, <code>"annulee"</code>). Écris <strong>l'étape de pipeline</strong> qui ne laisse passer que les commandes payées, pour la placer en tête d'une agrégation.</p><details><summary>Voir une solution</summary><p>C'est un <code>$match</code>, avec le même critère qu'un <code>find</code>&nbsp;:</p><figure class="code-block" data-file="etape-match.js"><pre><code class="language-javascript">{ $match: { statut: "payee" } }</code></pre></figure><p>Placée en <strong>première position</strong>, cette étape écarte tout de suite les commandes non payées&nbsp;: les étapes suivantes (un <code>$group</code> qui somme les montants, par exemple) ne travaillent que sur les documents utiles, et le filtre peut s'appuyer sur un <strong>index</strong> sur <code>statut</code>.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>Un pipeline d'agrégation est une <strong>chaîne d'étapes</strong>, et leur ordre décide de tout. Reproduis <code>$match</code> → <code>$group</code> → <code>$sort</code> → <code>$limit</code>&nbsp;: garde les ventes de 2026 au statut <code>payee</code>, groupe par <code>categorie</code> en sommant <code>prix × qte</code> dans <code>total</code>, trie par total décroissant et garde les deux premières. Affiche le JSON du résultat.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">const ventes = [
+  { annee: 2026, categorie: 'Mobilier', prix: 150, qte: 4, statut: 'payee' },
+  { annee: 2026, categorie: 'Papeterie', prix: 12, qte: 10, statut: 'payee' },
+  { annee: 2026, categorie: 'Mobilier', prix: 300, qte: 1, statut: 'payee' },
+  { annee: 2026, categorie: 'Textile', prix: 40, qte: 5, statut: 'payee' },
+  { annee: 2026, categorie: 'Papeterie', prix: 25, qte: 8, statut: 'en_attente' },
+  { annee: 2025, categorie: 'Mobilier', prix: 900, qte: 3, statut: 'payee' },
+];
+
+function agreger(docs) {
+  const gardees = docs.filter((v) =&gt; v.annee === 2026 &amp;&amp; v.statut === 'payee');
+  const paniers = new Map();
+  for (const v of gardees) {
+    paniers.set(v.categorie, (paniers.get(v.categorie) || 0) + v.prix * v.qte);
+  }
+  return [...paniers]
+    .map(([_id, total]) =&gt; ({ _id, total }))
+    .sort((a, b) =&gt; b.total - a.total)
+    .slice(0, 2);
+}
+
+console.log(JSON.stringify(agreger(ventes)));</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

@@ -53,6 +53,12 @@ var ETAPES = [
      mode rapide parce qu'un jeu de cas qui cesse de discriminer ne se voit pas
      autrement — ni a la lecture, ni au rendu. */
   { nom: "motifs ", fichier: "verif-regex-exos.js", args: [], quoi: "exercices de regex : la reference passe, un motif faux echoue" },
+  /* Meme role pour les exercices type:"sql", un cran plus loin : il POSE le schema de
+     chaque exercice dans le SQLite du depot, execute la requete de reference, exige
+     qu'elle rende exactement l'attendu, puis exige que chaque contre-requete ECHOUE.
+     Sans ce dernier point, un jeu de donnees ou toutes les lignes se ressemblent
+     laisserait passer une requete fausse : ce serait un compteur cable. */
+  { nom: "requete", fichier: "verif-sql-exos.js", args: [], quoi: "exercices SQL : la reference passe, une requete fausse echoue" },
 ];
 if (!RAPIDE) {
   ETAPES.push({
