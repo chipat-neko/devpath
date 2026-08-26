@@ -59,6 +59,11 @@ var ETAPES = [
      Sans ce dernier point, un jeu de donnees ou toutes les lignes se ressemblent
      laisserait passer une requete fausse : ce serait un compteur cable. */
   { nom: "requete", fichier: "verif-sql-exos.js", args: [], quoi: "exercices SQL : la reference passe, une requete fausse echoue" },
+  /* Les exercices type:"python" sont juges dans le navigateur par CPython 3.12
+     (Pyodide, ~3 s par page : trop lent pour tourner a chaque passe). Celui-ci rejoue
+     la SOLUTION PUBLIEE avec le CPython de la machine, avec la regle exacte du site.
+     `sautable` : code 2 = aucun interpreteur installe, ce n'est pas un echec. */
+  { nom: "python ", fichier: "verif-python-exos.js", args: [], quoi: "exercices Python : la solution publiee produit son run.expect", sautable: true },
 ];
 if (!RAPIDE) {
   ETAPES.push({
@@ -94,8 +99,9 @@ ETAPES.forEach(function (e) {
   });
   var duree = ((Date.now() - t0) / 1000).toFixed(1);
   var sortie = (r.stdout || "") + (r.stderr || "");
-  resultats.push({ e: e, code: r.status, duree: duree, sortie: sortie });
-  var etat = r.status === 0 ? "OK  " : "SIGNALE";
+  resultats.push({ e: e, code: e.sautable && r.status === 2 ? 0 : r.status, saute: e.sautable && r.status === 2, duree: duree, sortie: sortie });
+  var saute = e.sautable && r.status === 2;
+  var etat = r.status === 0 ? "OK  " : saute ? "SAUTE" : "SIGNALE";
   process.stdout.write("          -> " + etat + "  en " + duree + " s\n\n");
 });
 
@@ -107,7 +113,7 @@ resultats.forEach(function (r) {
   var lignes = r.sortie.split("\n").filter(function (l) {
     return /ERREURS|erreur\(s\)|sous le standard|Aucun probl|aucune erreur|probleme|maigre|redondance|divergen|Aucune divergence/i.test(l) && l.trim();
   });
-  console.log("  " + r.e.nom + "  " + (r.code === 0 ? "OK" : "SIGNALE") + "   (" + r.duree + " s)");
+  console.log("  " + r.e.nom + "  " + (r.saute ? "SAUTE" : r.code === 0 ? "OK" : "SIGNALE") + "   (" + r.duree + " s)");
   lignes.slice(-2).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });
 });
 console.log("=".repeat(70));

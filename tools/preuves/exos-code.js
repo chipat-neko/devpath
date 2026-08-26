@@ -69,7 +69,8 @@ function lecons() {
       var h = fs.readFileSync(path.join(dir, f), 'utf8');
       if (h.indexOf('"type":"code"') < 0 && h.indexOf('"type": "code"') < 0 &&
           h.indexOf('"type":"regex"') < 0 && h.indexOf('"type": "regex"') < 0 &&
-          h.indexOf('"type":"sql"') < 0 && h.indexOf('"type": "sql"') < 0) return;
+          h.indexOf('"type":"sql"') < 0 && h.indexOf('"type": "sql"') < 0 &&
+          h.indexOf('"type":"python"') < 0 && h.indexOf('"type": "python"') < 0) return;
       out.push(path.relative(RACINE, path.join(dir, f)).replace(/\\/g, '/'));
     });
   });
@@ -153,6 +154,8 @@ var SCRIPT = [
   '      else { const sol = ex.querySelector("details code.language-sql"); reponse = sol ? sol.textContent : null; }',
   '    }',
   '    else if (CONTRE) continue;',
+  /* type:"python" : la solution publiée est le bloc `language-python` du <details>. */
+  '    else if (entree && entree.type === "python") { const sol = ex.querySelector("details code.language-python"); reponse = sol ? sol.textContent : null; }',
   '    else { const sol = ex.querySelector("details code.language-javascript"); reponse = sol ? sol.textContent : null; }',
   '    if (reponse == null) { sortie.push({ i: i + 1, etat: "sans-solution" }); continue; }',
   '    champ.value = reponse;',
@@ -161,7 +164,8 @@ var SCRIPT = [
   '    let attente = 0;',
   /* 15 s, et non 6 : le premier exercice SQL d'une page doit d'abord charger sql.js
      (909 Ko à décoder) dans son Worker. Les suivants réutilisent le même moteur. */
-  '    while (attente < 150 && !/^[✓✗]/.test(statut.textContent)) {',
+  /* 40 s : le premier exercice Python d'une page doit charger CPython (8,27 Mo). */
+  '    while (attente < 400 && !/^[✓✗]/.test(statut.textContent)) {',
   '      await new Promise((r) => setTimeout(r, 100));',
   '      attente++;',
   '    }',

@@ -1010,6 +1010,127 @@
     sqlExoWorker.postMessage({ type: "load", base: RACINE_EXO });
   }
 
+  /* ---- Exercices type:"python" : le programme est EXÉCUTÉ par CPython ---------
+     Même dispositif que pour SQL (cf. JUGE_SQL), mais la comparaison est celle,
+     déjà éprouvée, des exercices `type:"code"` : on lit la sortie standard et l'on
+     exige que l'une de ses lignes soit exactement `run.expect`. Le juge n'est donc
+     pas un moteur de plus — c'est CPython 3.12 (Pyodide embarqué, cf. A4) qui
+     exécute vraiment ce que l'apprenant écrit, sans réseau.
+     ⚠️ Pyodide ne se charge QUE dans un Worker, et il pèse 8,27 Mo : le Worker est
+     partagé par la page et les demandes sont sérialisées — une exécution à la fois,
+     parce qu'un interpréteur unique ne peut pas mener deux programmes de front. */
+  var EXO_PY_WORKER_SRC = [
+    "var pret = null;",
+    "self.onmessage = function (ev) {",
+    "  var d = ev.data || {};",
+    "  if (d.type === 'load') {",
+    "    var D = d.base + '/assets/vendor/pyodide';",
+    "    try {",
+    "      importScripts(D + '/pyodide-wasm-gz-b64.js');",
+    "      importScripts(D + '/pyodide-stdlib-b64.js');",
+    "      importScripts(D + '/pyodide-lock-b64.js');",
+    "      importScripts(D + '/pyodide-charge.js');",
+    "    }",
+    "    catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
+    "    if (!self.PythonLocal) { self.postMessage({ type: 'fatal', text: 'pyodide-charge.js absent' }); return; }",
+    "    pret = self.PythonLocal.pret(D);",
+    "    pret.then(function () { self.postMessage({ type: 'ready' }); },",
+    "              function (e) { self.postMessage({ type: 'fatal', text: String((e && e.message) || e) }); });",
+    "    return;",
+    "  }",
+    "  if (d.type === 'run') {",
+    "    Promise.resolve(pret).then(function (py) {",
+    "      var lignes = [];",
+    "      py.setStdout({ batched: function (s) { lignes.push(s); } });",
+    /* stderr entre dans la même sortie : une trace d'erreur Python est le message le
+       plus utile qu'un apprenant puisse lire, et l'exercice doit la lui montrer. */
+    "      py.setStderr({ batched: function (s) { lignes.push(s); } });",
+    "      return py.runPythonAsync(d.code).then(",
+    "        function () { self.postMessage({ type: 'fin', id: d.id, texte: lignes.join('\\n') }); },",
+    "        function (err) {",
+    "          lignes.push((err && err.message) ? String(err.message) : String(err));",
+    "          self.postMessage({ type: 'fin', id: d.id, texte: lignes.join('\\n') });",
+    "        }",
+    "      );",
+    "    });",
+    "  }",
+    "};",
+  ].join("\n");
+
+  var pyExoWorker = null, pyExoPret = false, pyExoId = 0;
+  var pyExoEnCours = null; // { cb, minuteur } — une exécution à la fois
+  var pyExoFile = [];      // demandes en attente
+
+  function pyExoAbandonner(texte) {
+    if (pyExoEnCours) {
+      clearTimeout(pyExoEnCours.minuteur);
+      var cb = pyExoEnCours.cb;
+      pyExoEnCours = null;
+      cb(texte);
+    }
+    while (pyExoFile.length) pyExoFile.shift().cb(texte);
+  }
+
+  function pyExoAvancer() {
+    if (pyExoEnCours || !pyExoFile.length) return;
+    if (!pyExoWorker) { pyExoCreer(); return; }
+    if (!pyExoPret) return;
+    var t = pyExoFile.shift();
+    var id = ++pyExoId;
+    pyExoEnCours = {
+      id: id,
+      cb: t.cb,
+      /* 20 s : le premier programme d'une page attend l'interpréteur (~0,8 s), les
+         suivants non. Un programme qui boucle ne peut pas être interrompu de
+         l'intérieur — on TERMINE le Worker, puis on en recrée un au besoin. */
+      minuteur: setTimeout(function () {
+        try { if (pyExoWorker) pyExoWorker.terminate(); } catch (e) {}
+        pyExoWorker = null;
+        pyExoPret = false;
+        var cb = pyExoEnCours ? pyExoEnCours.cb : null;
+        pyExoEnCours = null;
+        if (cb) cb("⏱ Exécution interrompue après 20 s (boucle infinie ?).");
+        pyExoAvancer();
+      }, 20000),
+    };
+    pyExoWorker.postMessage({ type: "run", id: id, code: t.code });
+  }
+
+  function pyExoCreer() {
+    try {
+      var blob = new Blob([EXO_PY_WORKER_SRC], { type: "application/javascript" });
+      pyExoWorker = new Worker(URL.createObjectURL(blob));
+    } catch (e) {
+      pyExoWorker = null;
+      pyExoAbandonner(null);
+      return;
+    }
+    pyExoWorker.onmessage = function (ev) {
+      var d = ev.data || {};
+      if (d.type === "ready") { pyExoPret = true; pyExoAvancer(); return; }
+      if (d.type === "fatal") {
+        pyExoAbandonner("✗ Python n'a pas pu se charger" + (d.text ? " (" + d.text + ")" : "") +
+          ". Vérifie que le dossier assets/vendor/pyodide/ est bien présent à côté du dossier js/.");
+        return;
+      }
+      if (d.type === "fin" && pyExoEnCours && pyExoEnCours.id === d.id) {
+        clearTimeout(pyExoEnCours.minuteur);
+        var cb = pyExoEnCours.cb;
+        pyExoEnCours = null;
+        cb(d.texte);
+        pyExoAvancer();
+      }
+    };
+    pyExoWorker.onerror = function () { pyExoAbandonner("✗ Erreur de l'interpréteur Python."); };
+    pyExoWorker.postMessage({ type: "load", base: RACINE_EXO });
+  }
+
+  function runExoPython(code, cb) {
+    if (!window.Worker || !RACINE_EXO) { cb(null); return; }
+    pyExoFile.push({ code: String(code), cb: cb });
+    pyExoAvancer();
+  }
+
   function runExoCode(code, cb) {
     var worker = null, url = null, done = false;
     function finish(res) {
@@ -1078,8 +1199,11 @@
       /* type:"sql" — la réponse est une REQUÊTE : champ multiligne comme pour le code,
          mais correction par exécution dans SQLite (cf. JUGE_SQL). */
       var isSql = entry.type === "sql" && !!entry.attendu;
+      /* type:"python" — un PROGRAMME, jugé sur sa sortie standard comme type:"code",
+         mais exécuté par CPython (Pyodide embarqué) au lieu du Worker JavaScript. */
+      var isPython = entry.type === "python" && !!entry.run;
       var executable = !!entry.run || isRegex || isSql;
-      var multiligne = isCode || isSql;
+      var multiligne = isCode || isSql || isPython;
 
       var wrap = document.createElement("div");
       wrap.className = "exo-try";
@@ -1093,8 +1217,8 @@
       label.className = "exo-try__label";
       label.setAttribute("for", inputId);
       label.textContent = question
-        ? (isCode ? "Écris le code — " : isSql ? "Écris la requête — " : isRegex ? "Ton motif — " : "Ta réponse — ") + question
-        : (isCode ? "Écris ta réponse (code) :" : isSql ? "Écris ta requête SQL :" : isRegex ? "Ton motif :" : "Ta réponse :");
+        ? (isCode || isPython ? "Écris le code — " : isSql ? "Écris la requête — " : isRegex ? "Ton motif — " : "Ta réponse — ") + question
+        : (isCode || isPython ? "Écris ta réponse (code) :" : isSql ? "Écris ta requête SQL :" : isRegex ? "Ton motif :" : "Ta réponse :");
 
       var input = document.createElement(multiligne ? "textarea" : "input");
       input.className = "exo-try__input";
@@ -1104,7 +1228,7 @@
       else input.type = "text";
       input.setAttribute(
         "placeholder",
-        isCode ? "ton code ici…" : isSql ? "ta requête ici…" : isRegex ? "ton motif ici, avec ou sans les / /…" : "ta réponse ici…"
+        isCode || isPython ? "ton code ici…" : isSql ? "ta requête ici…" : isRegex ? "ton motif ici, avec ou sans les / /…" : "ta réponse ici…"
       );
 
       var bar = document.createElement("div");
@@ -1200,6 +1324,8 @@
           status.classList.remove("is-ok", "is-ko");
           var lancer = isSql
             ? function (fin) { runExoSql(val, entry, fin); }
+            : isPython
+            ? function (fin) { runExoPython(val, fin); }
             : function (fin) { runExoCode(isRegex ? programmeRegex(val, entry.cases) : val, fin); };
           lancer(function (output) {
             btn.disabled = false;

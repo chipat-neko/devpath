@@ -419,7 +419,8 @@ audit.query("_merge == 'left_only'")[["commande", "client"]]
 [
   {"type":"text","accept":["concat","pd.concat","pd.concat()","concat()"],"placeholder":"la fonction pandas pour EMPILER deux tables de mêmes colonnes (janvier puis février) : …","hints":["On lui passe une LISTE de DataFrames : pd.____([jan, fev]).","axis=0 par défaut ; ajoute ignore_index=True pour renuméroter.","Six lettres, comme « concaténer »."],"link":{"href":"lecon-11.html","label":"Revoir « Empiler des lignes avec concat »"}},
   {"type":"text","accept":["merge","pd.merge","pd.merge()","merge()"],"placeholder":"la fonction pandas qui relie ventes et clients sur la clé 'client' (le JOIN de SQL) : …","hints":["pd.____(ventes, clients, on='client', how='left').","C'est l'équivalent pandas de JOIN en SQL.","Cinq lettres."],"link":{"href":"lecon-11.html","label":"Revoir « La jointure : pd.merge »"}},
-  {"type":"text","accept":["left","how='left'","'left'","how=left"],"placeholder":"la valeur de how qui garde TOUTES les ventes même sans client correspondant (colonnes NaN) : …","hints":["Elle préserve intégralement la table de GAUCHE.","Les non-appariés reçoivent des NaN, pas une suppression.","Quatre lettres, contraire de 'right'."],"link":{"href":"lecon-11.html","label":"Revoir « Les quatre how »"}}
+  {"type":"text","accept":["left","how='left'","'left'","how=left"],"placeholder":"la valeur de how qui garde TOUTES les ventes même sans client correspondant (colonnes NaN) : …","hints":["Elle préserve intégralement la table de GAUCHE.","Les non-appariés reçoivent des NaN, pas une suppression.","Quatre lettres, contraire de 'right'."],"link":{"href":"lecon-11.html","label":"Revoir « Les quatre how »"}},
+  {"type":"python","run":{"expect":"12 lignes, 1 sans client | avec le doublon : 15 lignes"},"placeholder":"écris jointure_gauche(ventes, clients), affiche lignes et orphelines, puis recommence avec un doublon de Chloé","hints":["« Gauche » veut dire : aucune ligne de gauche ne disparaît, même sans correspondance à droite.","Une ligne de gauche qui trouve DEUX correspondances produit deux lignes — la table grossit sans prévenir.","Chloé a trois ventes : la dupliquer côté clients ajoute donc trois lignes, pas une."],"link":{"href":"lecon-11.html","label":"Revoir « Combiner des tables »"}}
 ]
 </script>
 
@@ -487,6 +488,35 @@ except Exception as e:
 # s'apparie aux DEUX lignes Chloe, d'ou des lignes en trop. Sans validate,
 # le total passe de 12 a 15 sans le moindre avertissement -- un CA fausse.
 # validate transforme cette erreur muette en exception immediate.</code></pre></figure></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>Le piège du <code>merge</code> n'est pas la syntaxe&nbsp;: c'est le <strong>nombre de lignes qui en sort</strong>. Écris <code>jointure_gauche(ventes, clients)</code>, applique-la, affiche le nombre de lignes obtenues et le nombre de ventes sans client — puis recommence avec une table clients où Chloé figure <strong>deux fois</strong>, et affiche le nouveau nombre de lignes.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.py"><pre><code class="language-python">ventes = [{"commande": f"C10{i:02d}", "client": c} for i, c in enumerate(
+    ["Chloe", "Hugo", "Chloe", "Karim", "Sofia", "Louis",
+     "Chloe", "Hugo", "Karim", "Sofia", "Louis", "Tom"], start=1)]
+
+clients = [
+    {"client": "Chloe", "segment": "Pro"}, {"client": "Hugo", "segment": "Particulier"},
+    {"client": "Karim", "segment": "Pro"}, {"client": "Sofia", "segment": "Particulier"},
+    {"client": "Louis", "segment": "Pro"},
+]
+
+def jointure_gauche(ventes, clients):
+    sortie = []
+    for v in ventes:
+        correspondances = [c for c in clients if c["client"] == v["client"]]
+        if correspondances:
+            # UNE ligne de sortie PAR correspondance : c'est là que le compte enfle.
+            for c in correspondances:
+                sortie.append({**v, "segment": c["segment"]})
+        else:
+            # Une jointure gauche garde la ligne, sans son complément.
+            sortie.append({**v, "segment": None})
+    return sortie
+
+simple = jointure_gauche(ventes, clients)
+avec_doublon = jointure_gauche(ventes, clients + [{"client": "Chloe", "segment": "Pro"}])
+orphelines = sum(1 for l in simple if l["segment"] is None)
+
+print(f"{len(simple)} lignes, {orphelines} sans client | avec le doublon : {len(avec_doublon)} lignes")</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
