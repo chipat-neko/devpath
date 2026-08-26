@@ -12,6 +12,7 @@
      exemples node tools/verif-exemples.js   sortie annoncee confrontee au reel (execution)
      rendu    node tools/verif-rendu.js      ce que le navigateur affiche
      stockage node tools/verif-stockage.js  l'echec d'ecriture previent l'apprenant
+     gitmodl  node tools/verif-git-modele.js  le modele de depot Git face au vrai git
 
    USAGE
      node tools/verif.js            # les six (le rendu prend plusieurs minutes)
@@ -71,6 +72,13 @@ var ETAPES = [
      chaque correction (elle doit etre muette). Les deux extraits de recursion sont
      sautes par defaut : ils sont lents et --lent les inclut. */
   { nom: "erreurs", fichier: "verif-erreurs.js", args: [], quoi: "decodeur : le message publie est celui que le moteur ecrit" },
+  /* Le bac a sable Git (phase D) simule un depot. Un simulateur est une affirmation
+     permanente — « voila ce que Git ferait » — et rien ne distingue a la lecture un
+     modele juste d'un modele qui a l'air juste. Celui-ci monte le MEME scenario dans
+     un vrai depot git temporaire et compare : empreintes de blobs, d'arbres et de
+     commits, rev-parse, merge-base, et `git status --porcelain`.
+     `sautable` : code 2 = git absent de la machine, ce n'est pas un echec. */
+  { nom: "gitmodl", fichier: "verif-git-modele.js", args: [], quoi: "modele de depot : memes empreintes que le vrai git", sautable: true },
 ];
 if (!RAPIDE) {
   ETAPES.push({

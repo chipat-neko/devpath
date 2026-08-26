@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Le modèle de dépôt Git, exécuté dans le navigateur en file://</title>
+</head>
+<body>
+<pre id="sortie">… en cours</pre>
+
+<!-- POURQUOI CETTE PAGE. `tools/verif-git-modele.js` prouve que js/git-modele.js
+     rend les mêmes empreintes que le vrai git — mais il le prouve DANS NODE. Or le
+     bac à sable tournera chez l'apprenant : dans Chrome, ouvert en file://, sans
+     serveur et sans réseau. Un modèle qui dépendrait d'une API absente de ce
+     contexte (TextEncoder, crypto.subtle, un module ES) passerait dans Node et
+     échouerait chez lui.
+     Cette page rejoue donc un scénario complet dans le navigateur et expose ses
+     empreintes dans window.__RESULTAT ; `tools/preuves/git-modele.js` les compare
+     à celles obtenues dans Node, réseau coupé. -->
+
+<script src="../../js/git-modele.js"></script>
+<script>
+(function () {
+  var res = { ok: false, empreintes: {}, erreur: null };
+  try {
+    var d = new window.GitModele.Depot();
+
+    /* 1. un fichier simple, puis un fichier accentué dans un sous-dossier :
+          l'encodage UTF-8 est le premier endroit où un navigateur pourrait
+          diverger de Node. */
+    d.ecrireFichier("notes.txt", "premiere note\n");
+    d.indexer("notes.txt");
+    res.empreintes.blob1 = d.index["notes.txt"].oid;
+    var c1 = d.creerCommit({ arbre: d.ecrireArbre(), parents: [], message: "Ajoute les notes",
+                             instant: 1704067200, fuseau: "+0000" });
+    d.avancerHEAD(c1);
+    res.empreintes.arbre1 = d.lireCommit(c1).arbre;
+    res.empreintes.commit1 = c1;
+
+    d.ecrireFichier("docs/résumé.md", "# Résumé\n\nÉcrit en français.\n");
+    d.indexer("docs/résumé.md");
+    res.empreintes.blobAccents = d.index["docs/résumé.md"].oid;
+    var c2 = d.creerCommit({ arbre: d.ecrireArbre(), parents: [c1], message: "Corrige l'accès à la clé",
+                             instant: 1704067260, fuseau: "+0000" });
+    d.avancerHEAD(c2);
+    res.empreintes.arbre2 = d.lireCommit(c2).arbre;
+    res.empreintes.commit2 = c2;
+
+    /* 2. une branche, une divergence, une base de fusion. */
+    d.majRef("refs/heads/sujet", c1);
+    d.pointerHEAD("refs/heads/sujet");
+    d.materialiser(d.lireCommit(c1).arbre);
+    d.ecrireFichier("sujet.txt", "sur la branche\n");
+    d.indexer("sujet.txt");
+    var c3 = d.creerCommit({ arbre: d.ecrireArbre(), parents: [c1], message: "Travail sur la branche",
+                             instant: 1704067320, fuseau: "+0000" });
+    d.avancerHEAD(c3);
+    res.empreintes.commit3 = c3;
+    res.empreintes.baseDeFusion = d.baseDeFusion("main", "sujet");
+    res.empreintes.resoudre = d.resoudre("main~1");
+    res.empreintes.journalSujet = d.journal("sujet").map(function (c) { return c.oid; }).join(",");
+    res.empreintes.diff = d.diffArbres(d.lireCommit(c1).arbre, d.lireCommit(c2).arbre)
+      .map(function (e) { return e.chemin + ":" + e.etat; }).join(",");
+
+    /* 3. le statut, avec les trois zones désynchronisées. */
+    d.ecrireFichier("sujet.txt", "modifié après indexation\n");
+    d.ecrireFichier("neuf.txt", "jamais indexé\n");
+    var s = d.statut();
+    res.empreintes.statut = "branche=" + s.branche + " indexes=" + s.indexes.length +
+      " modifies=" + s.modifies.join("|") + " nonSuivis=" + s.nonSuivis.join("|") +
+      " propre=" + s.propre;
+
+    /* 4. aller-retour par la sérialisation (ce que localStorage stockera). */
+    var copie = window.GitModele.Depot.importer(JSON.parse(JSON.stringify(d.exporter())));
+    res.empreintes.apresExport = copie.oidHEAD() + " objets=" + Object.keys(copie.objets).length;
+
+    res.ok = true;
+  } catch (e) {
+    res.erreur = String(e && e.message ? e.message : e);
+  }
+  document.getElementById("sortie").textContent = JSON.stringify(res, null, 1);
+  window.__RESULTAT = res;
+})();
+</script>
+</body>
+</html>
