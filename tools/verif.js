@@ -48,6 +48,11 @@ var ETAPES = [
     quoi: "sortie annoncee confrontee au reel (execution)",
     lent: !RAPIDE,
   },
+  /* Rapide (JS pur, < 0,2 s) : il rejoue chaque exercice type:"regex" dans le moteur
+     du site, EXTRAIT de js/lecon.js, et exige qu'un motif faux echoue. Il est dans le
+     mode rapide parce qu'un jeu de cas qui cesse de discriminer ne se voit pas
+     autrement — ni a la lecture, ni au rendu. */
+  { nom: "motifs ", fichier: "verif-regex-exos.js", args: [], quoi: "exercices de regex : la reference passe, un motif faux echoue" },
 ];
 if (!RAPIDE) {
   ETAPES.push({

@@ -735,6 +735,88 @@
     "};",
   ].join("\n");
 
+  /* ---- Exercices type:"regex" : le motif est CORRIGÉ EN L'EXÉCUTANT ----------
+     Un exercice de regex corrigé par `accept:[…]` compare deux chaînes : il refuse
+     `p.{2}t` là où il accepte `p..t` — les deux répondent pourtant — et il accepte
+     n'importe quelle graphie voisine de la réponse notée, juste ou fausse. On
+     confronte donc ici la RegExp de l'apprenant à des CAS : `ok` (doit matcher),
+     `ko` (ne doit pas matcher), `capte` (résultat exact de `.match()`, groupes
+     compris). Le test part dans le MÊME Worker que les exercices de code, ce qui
+     borne à 3 s un motif à retour arrière explosif — que la page principale
+     subirait sans recours. Le motif de l'apprenant n'est jamais concaténé au
+     programme : il y entre par `JSON.stringify`, donc comme une chaîne.
+     ⚠️ Le corps du test est sérialisé par `Function.prototype.toString()` : cela
+     suppose que le site n'est JAMAIS minifié — c'est une contrainte fondatrice
+     (aucun build), pas un hasard. */
+  function TEST_REGEX(saisie, drapeaux, cas) {
+    /* JSON.stringify suit l'ordre d'insertion : sans tri, deux objets identiques
+       déclarés dans un autre ordre se compareraient différents. */
+    function trier(o) {
+      if (!o) return null;
+      var cles = Object.keys(o).sort(), r = {}, k;
+      for (k = 0; k < cles.length; k++) r[cles[k]] = o[cles[k]];
+      return r;
+    }
+    var s = String(saisie).trim(), fl = String(drapeaux || "");
+    var forme = /^\/([\s\S]*)\/([a-z]*)$/.exec(s);
+    if (forme) { s = forme[1]; fl = forme[2]; }
+    var re, reT;
+    try {
+      re = new RegExp(s, fl);
+      /* `.test()` avec le drapeau g avance `lastIndex` : un même motif répondrait
+         différemment au 2ᵉ appel. On teste donc l'appartenance sans g ni y. */
+      reT = new RegExp(s, fl.replace(/[gy]/g, ""));
+    } catch (e) {
+      console.log("✗ Motif invalide : " + e.message);
+      return;
+    }
+    var pb = [], n = 0, i;
+    for (i = 0; i < (cas.ok || []).length; i++) {
+      n++;
+      if (!reT.test(cas.ok[i])) pb.push("· devrait matcher, et ne matche pas : " + JSON.stringify(cas.ok[i]));
+    }
+    for (i = 0; i < (cas.ko || []).length; i++) {
+      n++;
+      if (reT.test(cas.ko[i])) pb.push("· ne devrait PAS matcher, et matche : " + JSON.stringify(cas.ko[i]));
+    }
+    for (i = 0; i < (cas.capte || []).length; i++) {
+      n++;
+      var p = cas.capte[i], r = null;
+      try { re.lastIndex = 0; r = String(p[0]).match(re); } catch (e2) { r = null; }
+      var eu = r ? Array.prototype.slice.call(r) : null;
+      if (JSON.stringify(eu) !== JSON.stringify(p[1])) {
+        pb.push("· sur " + JSON.stringify(p[0]) + " : attendu " + JSON.stringify(p[1]) + ", obtenu " + JSON.stringify(eu));
+      }
+    }
+    /* `groupes` : un motif à groupes NOMMÉS ne se distingue pas d'un motif à groupes
+       numérotés par le seul tableau de `.match()` — les deux rendent les mêmes
+       tranches. On compare donc `.groups`, seul endroit où le nom existe. */
+    for (i = 0; i < (cas.groupes || []).length; i++) {
+      n++;
+      var g = cas.groupes[i], rg = null;
+      try { re.lastIndex = 0; rg = String(g[0]).match(re); } catch (e3) { rg = null; }
+      var vus = rg && rg.groups ? trier(rg.groups) : null;
+      if (JSON.stringify(vus) !== JSON.stringify(trier(g[1]))) {
+        pb.push("· groupes nommés sur " + JSON.stringify(g[0]) + " : attendu " + JSON.stringify(trier(g[1])) + ", obtenu " + JSON.stringify(vus));
+      }
+    }
+    if (!pb.length) {
+      console.log("REGEX-OK");
+      console.log(n + " cas passent.");
+      return;
+    }
+    console.log("✗ " + pb.length + " cas sur " + n + (pb.length > 1 ? " échouent :" : " échoue :"));
+    for (i = 0; i < pb.length && i < 4; i++) console.log(pb[i]);
+    if (pb.length > 4) console.log("· " + (pb.length - 4) + " autre(s).");
+  }
+
+  function programmeRegex(saisie, cas) {
+    return "(" + TEST_REGEX.toString() + ")(" +
+      JSON.stringify(String(saisie)) + ", " +
+      JSON.stringify(String(cas.flags || "")) + ", " +
+      JSON.stringify({ ok: cas.ok || [], ko: cas.ko || [], capte: cas.capte || [], groupes: cas.groupes || [] }) + ");";
+  }
+
   function runExoCode(code, cb) {
     var worker = null, url = null, done = false;
     function finish(res) {
@@ -797,6 +879,10 @@
       if (!entry || !exercises[i]) return;
       var ex = exercises[i];
       var isCode = entry.type === "code";
+      /* type:"regex" — la réponse est un MOTIF, pas un programme : champ d'une ligne
+         comme pour type:"text", mais correction par exécution (cf. TEST_REGEX). */
+      var isRegex = entry.type === "regex" && entry.cases;
+      var executable = !!entry.run || isRegex;
 
       var wrap = document.createElement("div");
       wrap.className = "exo-try";
@@ -810,8 +896,8 @@
       label.className = "exo-try__label";
       label.setAttribute("for", inputId);
       label.textContent = question
-        ? (isCode ? "Écris le code — " : "Ta réponse — ") + question
-        : (isCode ? "Écris ta réponse (code) :" : "Ta réponse :");
+        ? (isCode ? "Écris le code — " : isRegex ? "Ton motif — " : "Ta réponse — ") + question
+        : (isCode ? "Écris ta réponse (code) :" : isRegex ? "Ton motif :" : "Ta réponse :");
 
       var input = document.createElement(isCode ? "textarea" : "input");
       input.className = "exo-try__input";
@@ -819,7 +905,10 @@
       input.spellcheck = false;
       if (isCode) input.rows = 3;
       else input.type = "text";
-      input.setAttribute("placeholder", isCode ? "ton code ici…" : "ta réponse ici…");
+      input.setAttribute(
+        "placeholder",
+        isCode ? "ton code ici…" : isRegex ? "ton motif ici, avec ou sans les / /…" : "ta réponse ici…"
+      );
 
       var bar = document.createElement("div");
       bar.className = "exo-try__bar";
@@ -834,7 +923,7 @@
       bar.appendChild(status);
 
       var out = null;
-      if (entry.run) {
+      if (executable) {
         out = document.createElement("div");
         out.className = "exo-try__out";
         out.hidden = true;
@@ -908,17 +997,25 @@
           status.classList.add("is-ko");
           return;
         }
-        if (entry.run && window.Worker) {
+        if (executable && window.Worker) {
           btn.disabled = true;
           status.textContent = "… exécution";
           status.classList.remove("is-ok", "is-ko");
-          runExoCode(val, function (output) {
+          runExoCode(isRegex ? programmeRegex(val, entry.cases) : val, function (output) {
             btn.disabled = false;
             if (out) {
               out.hidden = false;
-              out.textContent = output == null ? "(exécution impossible dans ce contexte)" : output;
+              var affiche = output == null ? "(exécution impossible dans ce contexte)" : output;
+              /* Le jeton de réussite est un signal interne : l'apprenant lit le compte
+                 de cas passés, pas « REGEX-OK ». */
+              if (isRegex) affiche = String(affiche).replace(/^REGEX-OK\s*\n?/, "✓ ");
+              out.textContent = affiche;
             }
-            var expect = entry.run.expect != null ? entry.run.expect : entry.run;
+            var expect = isRegex
+              ? "REGEX-OK"
+              : entry.run.expect != null
+              ? entry.run.expect
+              : entry.run;
             var pass;
             if (output == null) {
               pass = (entry.accept || []).some(function (a) { return normExo(a) === normExo(val); });

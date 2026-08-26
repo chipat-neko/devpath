@@ -40,6 +40,11 @@ var RACINE = path.resolve(__dirname, '..', '..');
 var PORT = 9357;
 var args = process.argv.slice(2);
 var TOUT = args.indexOf('--tout') !== -1;
+/* --contre : passe ADVERSARIALE. Pour chaque exercice type:"regex", on tape non pas la
+   réponse de référence mais le premier motif `contre` — plausible et FAUX — et on exige
+   que la page le REFUSE. Prouver qu'une bonne réponse passe ne prouve que la moitié :
+   un correcteur qui accepterait tout passerait aussi ce contrôle-là. */
+var CONTRE = args.indexOf('--contre') !== -1;
 var explicites = args.filter(function (a) { return a.indexOf('--') !== 0; });
 
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -62,7 +67,8 @@ function lecons() {
     fs.readdirSync(dir).forEach(function (f) {
       if (!/^lecon-\d+\.html$/.test(f)) return;
       var h = fs.readFileSync(path.join(dir, f), 'utf8');
-      if (h.indexOf('"type":"code"') < 0 && h.indexOf('"type": "code"') < 0) return;
+      if (h.indexOf('"type":"code"') < 0 && h.indexOf('"type": "code"') < 0 &&
+          h.indexOf('"type":"regex"') < 0 && h.indexOf('"type": "regex"') < 0) return;
       out.push(path.relative(RACINE, path.join(dir, f)).replace(/\\/g, '/'));
     });
   });
@@ -122,15 +128,27 @@ function connecter(wsUrl) {
    repliée du même exercice, clique « Vérifier », et rend le verdict de la page. */
 var SCRIPT = [
   '(async () => {',
+  '  const CONTRE = ' + (CONTRE ? 'true' : 'false') + ';',
   '  const sortie = [];',
   '  const exos = [...document.querySelectorAll(".exercise")];',
+  /* Les exercices type:"regex" n'ont pas de textarea : leur réponse de référence est
+     le champ `ref` du bloc data-exos, dont tools/verif-regex-exos.js prouve par
+     ailleurs qu'il figure LITTÉRALEMENT dans la solution affichée. On tape donc ce
+     motif — c'est bien la réponse publiée, pas une réponse fabriquée pour l'occasion. */
+  '  let donnees = [];',
+  '  try { donnees = JSON.parse(document.querySelector("[data-exos]").textContent); } catch (e) {}',
   '  for (let i = 0; i < exos.length; i++) {',
   '    const ex = exos[i];',
-  '    const champ = ex.querySelector("textarea.exo-try__input");',
+  '    const entree = donnees[i];',
+  '    const champ = ex.querySelector("textarea.exo-try__input") ||',
+  '      (entree && entree.type === "regex" ? ex.querySelector("input.exo-try__input") : null);',
   '    if (!champ) continue;',
-  '    const sol = ex.querySelector("details code.language-javascript");',
-  '    if (!sol) { sortie.push({ i: i + 1, etat: "sans-solution" }); continue; }',
-  '    champ.value = sol.textContent;',
+  '    let reponse = null;',
+  '    if (entree && entree.type === "regex") reponse = (CONTRE ? (entree.contre || [])[0] : entree.ref) || null;',
+  '    else if (CONTRE) continue;',
+  '    else { const sol = ex.querySelector("details code.language-javascript"); reponse = sol ? sol.textContent : null; }',
+  '    if (reponse == null) { sortie.push({ i: i + 1, etat: "sans-solution" }); continue; }',
+  '    champ.value = reponse;',
   '    const statut = ex.querySelector(".exo-try__status");',
   '    ex.querySelector(".exo-try__btn").click();',
   '    let attente = 0;',
@@ -141,7 +159,7 @@ var SCRIPT = [
   '    const boite = ex.querySelector(".exo-try__out");',
   '    sortie.push({',
   '      i: i + 1,',
-  '      etat: statut.textContent.startsWith("✓") ? "juste" : "echec",',
+  '      etat: (statut.textContent.startsWith("✓") !== CONTRE) ? "juste" : "echec",',
   '      statut: statut.textContent,',
   '      produit: boite ? boite.textContent : "",',
   '    });',
@@ -201,8 +219,13 @@ var SCRIPT = [
   }
 
   console.log('\n=== RÉSUMÉ ===');
-  console.log('  solutions acceptées par la page ... ' + justes);
-  console.log('  solutions REFUSÉES ............... ' + echecs);
+  if (CONTRE) {
+    console.log('  contre-motifs bien REFUSÉS ........ ' + justes);
+    console.log('  contre-motifs ACCEPTÉS À TORT ..... ' + echecs);
+  } else {
+    console.log('  solutions acceptées par la page ... ' + justes);
+    console.log('  solutions REFUSÉES ............... ' + echecs);
+  }
   console.log('  exercices sans solution repliée ... ' + sansSolution + '  (non jugés)');
   console.log('  durée ............................. ' + ((Date.now() - debut) / 1000).toFixed(1) + ' s');
   if (echecs) console.log('\n  pages en échec : ' + pagesKO.join(', '));

@@ -296,7 +296,50 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **5. Contrôles.** `verif.js --rapide` tout vert. `verif-html` 0/0 sur 1 612 fichiers, `verif-donnees` 0 erreur sur 25 invariants, `verif-rendu` 0 erreur / 0 avertissement sur 30 mesures, `search-index` régénéré, 0 URL de CDN.
 
   🔵 **Effet de bord à ne pas lire comme une régression** : `verif-contenu.js` signale désormais **1 leçon « maigre », `sass/lecon-09`, qui n'a pas été touchée**. Le critère est une comparaison à la MÉDIANE du cours : enrichir 5 des 14 leçons de `sass` a relevé la médiane, et `lecon-09` est passée sous le seuil sur 4 critères (2 129 mots contre 2 139 de médiane — 10 mots d'écart). Un seuil relatif se déplace quand on améliore le reste ; le contrôle reste non bloquant.
-- [ ] **B5 · `regex`** — cas particulier : entièrement vérifiable en JavaScript, et c'est le cours où « écrire et tester » a le plus de valeur.
+- [x] **B5 · `regex`**. ✅ **2026-08-26. Le motif n'est plus comparé à une liste : il est CONSTRUIT et CONFRONTÉ à des cas. Et la mesure a trouvé, chemin faisant, 8 exercices dont le champ posait une autre question que l'énoncé affiché juste au-dessus.**
+
+  **1. Ce que la case supposait, et ce que la mesure a montré.** « Entièrement vérifiable en JavaScript » est vrai — mais rien dans le site ne le vérifiait : **les 33 exercices du cours étaient en `type:"text"`, corrigés par `accept:[…]`**, c'est-à-dire par une comparaison de chaînes. Deux défauts, et le second est bien pire que le premier :
+
+  | | |
+  |---|---|
+  | Un correcteur par liste **refuse une réponse juste** | `p.{2}t` était refusé là où `p..t` passait |
+  | Il **accepte n'importe quoi qui ressemble à la note** | et surtout : il ne voit pas qu'`accept` répond à un AUTRE exercice |
+
+  **2. Les 8 désappariements, énoncé ⇄ champ.** Le libellé du champ vient du `placeholder` (V12-C9) ; l'énoncé, lui, est dans le bloc `.exercise`. Personne ne compare les deux. Relevé exercice par exercice sur les 33 :
+
+  | leçon | l'énoncé affiché demande… | …et le champ demandait |
+  |---|---|---|
+  | `lecon-07` #3 | pourquoi `"a😀b".length` vaut 4, et comment compter | « la propriété Unicode qui désigne un chiffre » |
+  | `lecon-08` #1 | les groupes nommés **heure** et **minute** de `14:30` | « le groupe nommé **mois** » |
+  | `lecon-08` #3 | `"Dupont, Marie"` → `"Marie Dupont"` | le remplacement d'une **date** `$<jour>/$<mois>/$<annee>` |
+  | `lecon-09` #1 | lequel des deux motifs est à risque | « la version sûre de `^(\d+)+$` » |
+  | `lecon-09` #2 | réécrire `".*"` sans débordement | « le nom du mécanisme de retour arrière » |
+  | `lecon-10` #1 | le motif d'un **slug** | « le motif ancré d'un **code postal** » |
+  | `lecon-10` #2 | le décimal acceptant la **virgule** | « le motif d'une **couleur hex** `#RGB` » |
+  | `lecon-10` #3 | renforcer une date pour rejeter le mois 13 | « une regex valide surtout la ____ » |
+
+  Dans ces 8 cas, **la solution publiée juste au-dessous était REFUSÉE par le champ** : elle répond à l'énoncé, pas à l'`accept`. Même forme de panne que les 5 exercices `offensive` relevés en B3 — un appariement, pas un contenu. Les 8 sont corrigés.
+
+  **3. Le moteur neuf : `type:"regex"` (`js/lecon.js`).** La réponse est un motif, saisi dans un champ d'une ligne ; la correction **construit `new RegExp(…)` et la confronte à un jeu de cas** — `ok` (doit matcher), `ko` (ne doit pas), `capte` (résultat exact de `.match()`, groupes compris), `groupes` (contenu de `.groups`, seul endroit où un nom de groupe existe). Trois décisions, chacune pour une raison mesurée :
+  - **le test part dans le Worker des exercices de code**, donc un motif à retour arrière explosif est coupé à 3 s au lieu de figer l'onglet ;
+  - **le motif de l'apprenant n'est jamais concaténé au programme** : il y entre par `JSON.stringify`, comme une chaîne ;
+  - **`.test()` est joué sans les drapeaux `g`/`y`**, qui avancent `lastIndex` et feraient répondre différemment au deuxième clic.
+  L'apprenant voit désormais **pourquoi** il se trompe : « `· ne devrait PAS matcher, et matche : "ponnt"` ».
+
+  **4. Outil neuf `tools/verif-regex-exos.js`, ajouté aux vérificateurs de `verif.js` (5ᵉ étape, 1,0 s).** Il extrait `TEST_REGEX` de `js/lecon.js` — extraction, pas copie : deux copies divergent — et exige, pour chaque exercice : la **référence passe**, chaque **contre-motif échoue**, `ref` figure **littéralement dans la solution affichée** (testé = montré), `accept` contient `ref` (repli sans Worker), et au moins un cas de rejet. **Mesure : 11 fichiers, 26 exercices, 144 cas, 78 contre-motifs — 0 faute.** Blocage prouvé : en affaiblissant le seul jeu de cas de `lecon-03` #2, l'outil sort en **code 1** avec 3 fautes, et 0 après retour en arrière.
+
+  ⚠️ **Le piège de ce point, et il est exactement celui du chantier : ma première version de l'outil oubliait le champ `groupes`.** Elle mesurait donc **142 cas là où le site en joue 144**, et trois contre-motifs semblaient « passer » des cas qu'ils n'avaient jamais subis. Un contrôle qui teste moins que la chose contrôlée rend un vert par vacuité. Règle : **le jeu transmis par l'outil doit contenir exactement les champs que `programmeRegex` transmet au Worker** — c'est écrit en commentaire au-dessus de la ligne.
+
+  **5. Preuve dans le navigateur, dans les DEUX sens.** `tools/preuves/exos-code.js` étendu au type `regex` (il tape le `ref` du bloc `data-exos`, dont l'invariant ci-dessus prouve qu'il est bien le motif affiché) et doté d'un **mode `--contre`** :
+  - **26 références tapées, 26 acceptées, 0 refusée** (11 pages, 21,8 s) ;
+  - **26 contre-motifs faux tapés, 26 REFUSÉS, 0 accepté à tort** (22,7 s).
+  Prouver qu'une bonne réponse passe ne prouve que la moitié : un correcteur qui accepte tout passerait le premier contrôle. Les deux passes tournent dans Chrome, en `file://`, **sans** `--allow-file-access-from-files`.
+
+  **6. Mesure avant / après.** Exercices corrigés **par exécution** : **261 → 287** sur 4 472 exercices à champ, soit **5,84 % → 6,42 %**. Cours ayant au moins un exercice exécuté : **18 → 19**. Dans le cours `regex` lui-même : **0 → 26 sur 33 (79 %)** — les 7 restants demandent une explication ou du code d'un autre langage, et gardent `type:"text"` avec un `accept` désormais aligné sur leur énoncé. **0 octet de moteur ajouté** : `js/lecon.js` passe de **50 054 à 55 060 octets** (+5 006, mesurés), rien d'autre.
+
+  **7. Contrôles.** `verif.js --rapide` **tout vert, 5 étapes** (source, données, contenu, exemples, **motifs**). `verif-html` 0/0 sur 1 612 fichiers. `verif-donnees` **0 erreur sur 25 invariants** (le seul avertissement, `zig`, est celui de la phase E du V6). `verif-rendu` **0 erreur / 0 avertissement sur 18 mesures** (3 pages × 3 largeurs × 2 thèmes, réseau coupé). `build-index` : les 5 index dérivés **identiques** — les exercices ne sont pas indexés. 0 URL de CDN.
+
+  🔵 **Relevé hors périmètre, coûteux quand on l'ignore** : `tools/verif-rendu.js` **ignore silencieusement les chemins passés nus** et retombe sur son défaut élargi (~229 pages, plusieurs minutes) ; la syntaxe est `--pages=a,b`. Deux lancements perdus avant de le voir.
 - [ ] **B6 · `algo` et `patterns`** — déjà bien dotés, compléter.
 - [ ] **B7 · Les cours de prédiction** (langages non exécutables) — appliquer le format « que produit ce code ? » décidé en A5, sur les cours les plus consultés d'abord.
 
