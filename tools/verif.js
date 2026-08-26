@@ -64,6 +64,13 @@ var ETAPES = [
      la SOLUTION PUBLIEE avec le CPython de la machine, avec la regle exacte du site.
      `sautable` : code 2 = aucun interpreteur installe, ce n'est pas un echec. */
   { nom: "python ", fichier: "verif-python-exos.js", args: [], quoi: "exercices Python : la solution publiee produit son run.expect", sautable: true },
+  /* Le decodeur d'erreurs (phase C) affirme, pour chaque entree, LE MESSAGE EXACT que
+     produit le moteur. Une affirmation que rien n'execute est precisement ce qui a
+     laisse passer cinq exemples faux sous quatre verificateurs verts. Celui-ci
+     reexecute chaque extrait fautif (le message doit tomber au caractere pres) ET
+     chaque correction (elle doit etre muette). Les deux extraits de recursion sont
+     sautes par defaut : ils sont lents et --lent les inclut. */
+  { nom: "erreurs", fichier: "verif-erreurs.js", args: [], quoi: "decodeur : le message publie est celui que le moteur ecrit" },
 ];
 if (!RAPIDE) {
   ETAPES.push({

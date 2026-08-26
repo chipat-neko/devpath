@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Messages d'erreur Python, capturés DANS LE MOTEUR DU SITE</title>
+</head>
+<body>
+<pre id="sortie">… en cours</pre>
+
+<!-- POURQUOI CETTE PAGE. La case C1 exige que chaque message du décodeur soit copié
+     d'une exécution réelle. `tools/preuves/capture-erreurs.js` les capture avec le
+     CPython de la machine — mais le site, lui, exécute PYODIDE 3.12.1. Les messages de
+     CPython changent d'une version à l'autre (suggestions « did you mean », erreurs de
+     syntaxe réécrites en 3.12). Cette page rejoue donc les mêmes extraits DANS LE MOTEUR
+     QUE L'APPRENANT UTILISE, et le pilote compare les deux relevés.
+     Les extraits sont écrits ici en clair, dans un bloc que le navigateur n'exécute pas. -->
+<script type="application/json" id="extraits">
+{
+  "py-name": "total = 10\nprint(totl)",
+  "py-concat": "age = 30\nprint(\"age : \" + age)",
+  "py-indent": "if True:\nprint(\"oui\")",
+  "py-index": "notes = [12, 15, 9]\nprint(notes[3])",
+  "py-key": "personne = {\"nom\": \"Ada\"}\nprint(personne[\"age\"])",
+  "py-attribute": "nombres = [1, 2, 3]\nnombres.push(4)",
+  "py-int": "age = int(\"trente\")",
+  "py-zero": "total, n = 10, 0\nprint(total / n)",
+  "py-str-item": "mot = \"chat\"\nmot[0] = \"r\"",
+  "py-deux-points": "if 3 > 2\n    print(\"oui\")",
+  "py-parenthese": "print(\"bonjour\"\nprint(\"fin\")",
+  "py-module": "import requetes",
+  "py-argument": "def additionner(a, b):\n    return a + b\n\nadditionner(3)",
+  "py-unbound": "compteur = 0\n\ndef incrementer():\n    compteur = compteur + 1\n\nincrementer()",
+  "py-recursion": "def compter(n):\n    return compter(n + 1)\n\ncompter(0)",
+  "py-int-iterable": "for x in 5:\n    print(x)"
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+  var lignes = [];
+  function dire(s) { lignes.push(s); document.getElementById("sortie").textContent = lignes.join("\n"); }
+
+  window.__RESULTAT = null;
+  window.__MESSAGES = null;
+
+  var EXTRAITS = JSON.parse(document.getElementById("extraits").textContent);
+  var RACINE = location.href.replace(/\/tools\/preuves\/[^\/]*$/, "");
+  var DOSSIER = RACINE + "/assets/vendor/pyodide";
+  dire("protocole            : " + location.protocol);
+  dire("dossier du moteur    : " + DOSSIER.replace(RACINE, "<dépôt>"));
+  dire("extraits à rejouer   : " + Object.keys(EXTRAITS).length);
+
+  var SRC = [
+    "var D = " + JSON.stringify(DOSSIER) + ";",
+    "self.onmessage = function (ev) {",
+    "  var extraits = ev.data;",
+    "  try {",
+    "    importScripts(D + '/pyodide-wasm-gz-b64.js', D + '/pyodide-stdlib-b64.js',",
+    "                  D + '/pyodide-lock-b64.js', D + '/pyodide-charge.js');",
+    "  } catch (e) { postMessage({ erreur: 'importScripts : ' + (e && e.message) }); return; }",
+    "  self.PythonLocal.pret(D).then(function (py) {",
+    "    py.setStdout({ batched: function () {} });",
+    "    py.setStderr({ batched: function () {} });",
+    "    var version = '';",
+    "    try { version = py.runPython('import sys; sys.version.split()[0]'); } catch (e) { version = '?'; }",
+    "    var out = {};",
+    "    Object.keys(extraits).forEach(function (cle) {",
+    /* On veut LA DERNIÈRE ligne de la trace : c'est celle que CPython imprime, et donc
+       celle que l'apprenant colle dans un moteur de recherche. */
+    "      try { py.runPython(extraits[cle]); out[cle] = '(AUCUNE ERREUR)'; }",
+    "      catch (e) { out[cle] = String(e).split('\\n').filter(function (x) { return x.trim(); }).pop().trim(); }",
+    "    });",
+    "    postMessage({ version: version, messages: out });",
+    "  }, function (e) { postMessage({ erreur: String(e && e.message || e) }); });",
+    "};"
+  ].join("\n");
+
+  var w;
+  try {
+    w = new Worker(URL.createObjectURL(new Blob([SRC], { type: "text/javascript" })));
+  } catch (e) {
+    dire("Worker impossible    : " + e.message);
+    window.__RESULTAT = "ECHEC";
+    return;
+  }
+  w.onerror = function (e) { dire("worker onerror      : " + e.message); window.__RESULTAT = "ECHEC"; };
+  w.onmessage = function (ev) {
+    var d = ev.data || {};
+    if (d.erreur) { dire("ECHEC               : " + d.erreur); window.__RESULTAT = "ECHEC"; return; }
+    dire("CPython (Pyodide)    : " + d.version);
+    dire("");
+    Object.keys(d.messages).forEach(function (k) { dire("  " + k + "  →  " + d.messages[k]); });
+    window.__MESSAGES = { version: d.version, messages: d.messages };
+    window.__RESULTAT = "OK";
+  };
+  w.postMessage(EXTRAITS);
+})();
+</script>
+</body>
+</html>
