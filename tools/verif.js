@@ -79,6 +79,11 @@ var ETAPES = [
      commits, rev-parse, merge-base, et `git status --porcelain`.
      `sautable` : code 2 = git absent de la machine, ce n'est pas un echec. */
   { nom: "gitmodl", fichier: "verif-git-modele.js", args: [], quoi: "modele de depot : memes empreintes que le vrai git", sautable: true },
+  /* Les COMMANDES (point D2) rendent en plus un TEXTE que l'apprenant va lire et
+     croire. Cette etape rejoue 32 scenarios des deux cotes et compare, apres
+     chaque commande, la sortie, la reussite, `status --porcelain`, HEAD, toutes
+     les refs, le contenu de chaque fichier et l'arbre de HEAD. */
+  { nom: "gitcmd ", fichier: "verif-git-commandes.js", args: [], quoi: "commandes du bac a sable : memes sorties et memes etats que le vrai git", sautable: true },
 ];
 if (!RAPIDE) {
   ETAPES.push({

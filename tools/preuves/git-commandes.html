@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Les commandes du bac à sable Git, exécutées dans le navigateur en file://</title>
+</head>
+<body>
+<pre id="sortie">… en cours</pre>
+
+<!-- POURQUOI CETTE PAGE. `tools/verif-git-commandes.js` prouve que les commandes
+     font ce que fait le vrai git — mais il le prouve DANS NODE. Or le bac à sable
+     tournera chez l'apprenant : dans Chrome, ouvert au double-clic, sans serveur
+     et sans réseau. Une commande qui dépendrait d'une API absente de ce contexte,
+     ou d'un `require`, passerait dans Node et échouerait chez lui.
+     La page rejoue donc une SESSION COMPLÈTE — créer, brancher, fusionner en
+     conflit, résoudre, rebaser — et expose ses résultats dans window.__RESULTAT ;
+     `tools/preuves/git-commandes.js` les compare à ceux obtenus dans Node, DNS
+     coupé. -->
+
+<script src="../../js/git-modele.js"></script>
+<script src="../../js/git-commandes.js"></script>
+<script>
+(function () {
+  var res = { ok: false, valeurs: {}, erreur: null };
+  try {
+    var GC = window.GitCommandes;
+    var d = new window.GitModele.Depot({
+      identite: "Apprenant <apprenant@syntaxe.invalid>",
+      instant: 1704067200, pasHorloge: 0, fuseau: "+0000"
+    });
+
+    function taper(ligne) { return GC.executer(d, ligne); }
+
+    /* 1. le premier commit, avec un nom de fichier accentué : l'encodage est le
+          premier endroit où un navigateur pourrait diverger de Node. */
+    d.ecrireFichier("résumé.txt", "un\ndeux\ntrois\n");
+    taper("git add .");
+    var c1 = taper('git commit -m "premier état"');
+    res.valeurs.commit1 = c1.sortie.join(" / ");
+    res.valeurs.head1 = d.oidHEAD();
+
+    /* 2. deux branches qui modifient la MÊME ligne : le conflit est le cœur du
+          bac à sable, et le seul endroit où le contenu est fabriqué. */
+    taper("git checkout -b sujet");
+    d.ecrireFichier("résumé.txt", "un\nDEUX côté sujet\ntrois\n");
+    taper("git add .");
+    taper('git commit -m "côté sujet"');
+    taper("git checkout main");
+    d.ecrireFichier("résumé.txt", "un\nDEUX côté principal\ntrois\n");
+    taper("git add .");
+    taper('git commit -m "côté principal"');
+
+    var fusion = taper("git merge sujet");
+    res.valeurs.fusionOk = String(fusion.ok);
+    res.valeurs.fusionSortie = fusion.sortie.join(" / ");
+    res.valeurs.fichierEnConflit = d.lireFichier("résumé.txt");
+    res.valeurs.porcelaine = taper("git status --porcelain").sortie.join(" / ");
+
+    /* 3. résoudre, puis conclure la fusion. */
+    d.ecrireFichier("résumé.txt", "un\nDEUX réconcilié\ntrois\n");
+    taper("git add résumé.txt");
+    var fin = taper('git commit -m "Merge branch \'sujet\'"');
+    res.valeurs.commitFusion = fin.sortie.join(" / ");
+    res.valeurs.parentsFusion = d.lireCommit(d.oidHEAD()).parents.join(",");
+
+    /* 4. un rebasage complet, qui RECOPIE des commits : ce sont de nouvelles
+          empreintes, et elles doivent être les mêmes partout. */
+    taper("git checkout -b travaux");
+    d.ecrireFichier("t.txt", "travaux\n");
+    taper("git add .");
+    taper('git commit -m "t1"');
+    taper("git checkout main");
+    d.ecrireFichier("m.txt", "principal\n");
+    taper("git add .");
+    taper('git commit -m "m1"');
+    taper("git checkout travaux");
+    var reb = taper("git rebase main");
+    res.valeurs.rebaseSortie = reb.sortie.join(" / ");
+    res.valeurs.journal = taper("git log --oneline").sortie.join(" / ");
+    res.valeurs.refs = Object.keys(d.refs).sort().map(function (r) { return r + "=" + d.refs[r]; }).join(" ");
+
+    /* 5. reprendre la session là où on l'a laissée : c'est ce dont D4 aura
+          besoin, et cela passe par du texte stockable dans localStorage. */
+    var copie = GC.importer(JSON.parse(JSON.stringify(GC.exporter(d))));
+    res.valeurs.apresExport = copie.oidHEAD() + " objets=" + Object.keys(copie.objets).length;
+    res.valeurs.statutApresExport = GC.commandes.status(copie, ["--porcelain"]).sortie.join(" / ");
+
+    res.ok = true;
+  } catch (e) {
+    res.erreur = (e && e.message) || String(e);
+  }
+  window.__RESULTAT = res;
+  document.getElementById("sortie").textContent = JSON.stringify(res, null, 1);
+})();
+</script>
+</body>
+</html>
