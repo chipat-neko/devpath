@@ -201,7 +201,33 @@ L'ordre compte : SQL d'abord parce qu'il est petit et que le besoin est massif (
 
   ⚠️ **Relevé hors périmètre : `starter/js/runner.js` charge toujours Pyodide ET sql.js depuis `cdn.jsdelivr.net`** (3 URL). Le kit de démarrage livré à l'apprenant n'a donc aucun des deux moteurs hors ligne. L'y embarquer lui coûterait 9,2 Mo — décision à prendre à part, pas dans cette case.
 
-- [ ] **A5 · Ce qui restera non exécutable.** Après A2-A4, dresser la liste des langages qui ne le seront jamais en `file://` (compilés, mobiles, systèmes). Pour ceux-là, l'exercice honnête n'est pas l'exécution mais la **prédiction** : « que produit ce code ? ». Le dire dans l'interface plutôt que de laisser un bouton mort.
+- [x] **A5 · Ce qui restera non exécutable.** ✅ **2026-08-26. La liste est faite — et la mesure a trouvé bien mieux qu'un inventaire : 1 077 sorties affirmées que le site PEUT vérifier dès maintenant, et que personne ne regarde.**
+
+  **1. Il n'y a plus un seul bouton mort.** La consigne « le dire dans l'interface plutôt que de laisser un bouton mort » était déjà satisfaite en arrivant ici : A4 a supprimé `addOfflineBtn` et `showOffline`, et la règle de `runner.js` est désormais uniforme — **un bloc sans moteur n'a pas de bouton**, comme un bloc SQL écrit pour PostgreSQL ou un bloc Python qui importe pandas. Rien à changer. Vérifié : 0 occurrence de `--offline` dans `js/`.
+
+  **2. La liste, mesurée.** Outil neuf `tools/mesure-prediction.js`. **37 langages, 6 978 blocs** ne seront jamais exécutables en `file://` (hors les 4 langages à moteur et hors les formats de données, qui ne « produisent » rien). Les plus gros : `bash` 1 158, `csharp` 247, `ruby` 246, `jsx` 246, `cpp` 232, `java` 230, `kotlin` 230, `c` 229, `swift` 219, `rust` 216.
+
+  **3. Le format retenu, et la règle qui le rend honnête.** L'exercice de prédiction n'a besoin d'aucun mécanisme neuf : `data-exos` en `type:text` suffit. Ce qui compte est la règle de fond, et elle est dictée par la faute qui a fondé ce chantier :
+
+  > **On ne bâtit un exercice de prédiction que sur une sortie DÉJÀ AFFIRMÉE par la leçon.** Jamais on n'invente, dans un exercice, la sortie d'un code qu'on ne peut pas exécuter.
+
+  Sans cette règle, écrire 1 000 exercices de prédiction reviendrait à écrire 1 000 affirmations que rien ne vérifie — précisément ce qui a laissé passer cinq exemples faux sous quatre vérificateurs verts. **Gisement mesuré : 1 056 blocs (15,1 %) affirment déjà leur sortie**, dont `ruby` 186, `kotlin` 151, `cpp` 70, `rust` 65, `elixir` 65, `bash` 65, `c` 62, `php` 50, `java` 40, `csharp` 37.
+
+  **4. LA DÉCOUVERTE DU POINT : ces affirmations sont écrites là où aucun outil ne regarde.** Sur les 1 056, **1 053 sont EN COMMENTAIRE DANS LE CODE** (`// => 42`, `# Sortie :`, `-- affiche`) et **3 seulement** dans un bloc `.txt` attenant. Or `verif-clic.js` — le seul outil qui compare une sortie annoncée à une sortie réelle — **ne compare que des blocs `.txt`, et seulement en JavaScript**. Toute cette classe d'affirmations est hors de portée de l'outillage. C'est exactement la forme sous laquelle était écrit l'exemple de `regex` qui annonçait `true` là où le test rendait `false`.
+
+  **5. Ce qu'il faut faire AVANT B7, et qui n'était pas au plan.** La même mesure, appliquée aux langages qui ONT un moteur, donne le chiffre le plus actionnable de ce point :
+
+  | langage | blocs affirmant leur sortie **en commentaire** | vérifiable ? |
+  |---|---:|---|
+  | JavaScript | 665 | **oui, depuis toujours** |
+  | Python | 342 | **oui, depuis A4** |
+  | HTML / markup | 61 | oui (aperçu) |
+  | SQL | 9 | **oui, depuis A2** |
+  | **total** | **1 077** | **et aucun outil ne les lit** |
+
+  **1 077 affirmations vérifiables par exécution, jamais vérifiées** — c'est plus que le gisement de prédiction lui-même. Étendre `verif-clic.js` aux commentaires de sortie (et à Python) rendrait vraies 1 077 affirmations au lieu d'en ajouter 1 056 sur parole. **Recommandation d'ordre : cet outil passe avant B7.**
+
+  ⚠️ **Deux pièges de motif rencontrés, et c'est la même leçon deux fois.** Le premier appariement cherchait un bloc `.txt` attenant : **3 blocs sur 6 978**, un résultat si improbable qu'il fallait le vérifier — la mesure était fausse, pas le site. Le deuxième acceptait `=>` n'importe où : 1 647 blocs, mais en Ruby `{ 'bonjour' => 'hello' }` est un *hash* et en JSX `() => {}` une fonction. Le resserrer aux seuls mots annonciateurs faisait tomber Ruby de 191 à 4 — faux dans l'autre sens, puisque `# => "Ada"` **est** l'idiome Ruby d'annonce de résultat. Le motif juste exige la flèche **dans un commentaire** : 1 056. **Un chiffre invraisemblable, dans un sens comme dans l'autre, se vérifie sur le contenu avant d'être écrit.**
 
 ---
 
