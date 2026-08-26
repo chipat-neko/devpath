@@ -1704,6 +1704,38 @@
     prose.parentNode.insertBefore(details, prose.nextSibling);
   }
 
+  /* ------------------------------------- Le décodeur d'erreurs (C4)
+     Une leçon qui enseigne une notion dont l'erreur est fréquente doit le dire, et
+     mener au décodeur. La liste vient de `js/erreurs-index.js`, un index DÉRIVÉ du
+     fichier de données et chargé par les seules leçons concernées (31 sur 1 523) : le
+     reste du site ne charge rien. Sans cet index, la fonction ne fait rien du tout. */
+  function initDecodeur() {
+    var index = window.ERREURS_INDEX;
+    if (!index) return;
+    /* La clé est le chemin de la leçon relatif à `pages/` — « js/lecon-02.html ». On le
+       reconstruit depuis l'URL courante plutôt que de l'inscrire dans chaque page. */
+    var parts = location.pathname.split("/").filter(Boolean);
+    var cle = parts.slice(-2).join("/");
+    var liste = index[cle];
+    if (!liste || !liste.length) return;
+    var prose = document.querySelector(".prose");
+    if (!prose) return;
+    /* Profondeur : une leçon vit dans pages/<cours>/, le décodeur dans pages/. */
+    var href = "../decodeur.html";
+    var box = document.createElement("aside");
+    box.className = "lesson-erreurs";
+    box.setAttribute("aria-label", "Erreurs fréquentes sur cette leçon");
+    var items = liste.map(function (e) {
+      return '<li><code>' + String(e.gabarit)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</code></li>";
+    }).join("");
+    box.innerHTML =
+      "<p class=\"lesson-erreurs__titre\">Quand ça casse, ici, c'est souvent&nbsp;:</p>" +
+      '<ul class="lesson-erreurs__liste">' + items + "</ul>" +
+      "<p class=\"lesson-erreurs__lien\"><a href=\"" + href + "\">Ouvrir le décodeur de messages d'erreur →</a></p>";
+    prose.appendChild(box);
+  }
+
   /* ----------------------------------------------- Init */
   recordLast();
   initNotes();
@@ -1719,4 +1751,5 @@
   buildPrevNext();
   buildTOC();
   initReadingProgress();
+  initDecodeur();
 })();

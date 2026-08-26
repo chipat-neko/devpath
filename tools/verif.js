@@ -93,6 +93,18 @@ if (!RAPIDE) {
     quoi: "decodeur : les entrees SQL rejouees dans le moteur du site",
     lent: true,
   });
+  /* L'encart « quand ca casse » des 31 lecons citees par le decodeur est construit A
+     L'EXECUTION par js/lecon.js : rien dans le source des lecons ne le montre, ni
+     verif-html ni verif-donnees ne peuvent le voir. Celui-ci ouvre les 31 pages, compte
+     les erreurs listees, verifie que le lien MENE A UN FICHIER EXISTANT, et controle sur
+     des temoins qu'aucune autre lecon n'en porte. */
+  ETAPES.push({
+    nom: "dec-lec",
+    fichier: "preuves/decodeur-lecons.js",
+    args: [],
+    quoi: "decodeur : l'encart des lecons citees, vu dans le navigateur",
+    lent: true,
+  });
   /* Pilote Chrome lui aussi (~40 s) : hors du mode rapide, comme le rendu. */
   ETAPES.push({
     nom: "stockag",
