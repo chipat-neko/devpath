@@ -1024,7 +1024,34 @@ de recherche, et des renvois depuis les leçons.
   **8. Contrôles.** `verif.js --rapide` **tout vert, 8 étapes** (45,4 s — la nouvelle en pèse 8,2). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `node --check` sur les trois fichiers JavaScript neufs. 0 CRLF, 0 BOM, **0 URL de CDN**. Rien n'est encore affiché à l'apprenant : le rendu est la case **C2**.
 
   **9. Mesure.** Entrées : **31** (15 JavaScript, 16 Python). Messages capturés par exécution : **31**. Messages Python revérifiés dans le moteur du site : **16 sur 16 identiques**. Extraits réexécutés à chaque passe de `verif.js` : **62**. Sabotages détectés : **4 sur 4**. Requêtes distantes : **0**. Liens cassés relevés ailleurs : **38**.
-- [ ] **C2 · La page de recherche.** On colle un message d'erreur, on obtient la cause et le remède. Recherche tolérante : les messages contiennent des noms de variables qui changent d'un cas à l'autre.
+- [x] **C2 · La page de recherche.** ✅ **2026-08-26. On colle la trace entière, on obtient la fiche — et c'est mesuré dans Chrome : 31 messages sur 31 rendent la bonne fiche EN PREMIER, y compris avec d'autres noms de variables.**
+
+  **1. Ce que la page fait.** `pages/decodeur.html` + `js/decodeur.js`. On y colle **la trace entière** — chemins Windows, numéros de ligne, `at Object.<anonymous>`, `Traceback (most recent call last)` — sans rien nettoyer : la page isole la ligne qui porte le message, puis cherche. Trois passes, de la plus sûre à la plus tolérante : **le motif** (l'expression rationnelle qui ignore les noms propres), **les clés** (morceaux de phrase stables), puis **les mots restants**. Le score affiche laquelle a répondu — « correspondance exacte », « probable », « piste » — pour que l'apprenant sache ce qu'on lui propose. Filtre par langage, liste complète des 31 erreurs quand le champ est vide, fiches dépliables.
+
+  **2. L'ÉPREUVE, ET C'EST ELLE QUI COMPTE.** `tools/preuves/decodeur.js`, dans Chrome, en `file://`, DNS coupé. Les épreuves sont construites **à partir du fichier de données lui-même** : aucun message n'est retapé dans le script.
+
+  | épreuve | ce qu'on colle | résultat |
+  |---|---|---|
+  | message exact | les 31 messages publiés, tels quels | **31 / 31** en première position |
+  | trace entière | le même message noyé dans une vraie trace Node ou Python | **31 / 31** |
+  | **autres noms** | le message avec les variables d'un AUTRE programme (`monComtpeur`, `panier.ajouterProduit`, `'code_postal'`, `calculer_moyenne()`…) | **18 / 18** |
+  | contre-épreuve | trois messages inventés de toutes pièces | **3 / 3 REFUSÉS** |
+
+  La troisième ligne est la seule qui compte vraiment : c'est le cas réel, et c'est celui qu'une recherche par mots rate. La quatrième aussi — sans elle, un décodeur qui répondrait « oui » à tout passerait les trois premières. **0 erreur de console, 0 requête distante.**
+
+  **3. DEUX DÉFAUTS TROUVÉS PAR L'ÉPREUVE, que la relecture n'aurait pas vus.**
+  · **Deux motifs peuvent reconnaître le même message, et le plus GÉNÉRAL gagnait par simple ordre d'écriture.** « TypeError: scores.map is not a function » était rendu par la fiche générique « … is not a function » au lieu de la fiche sur `map` appliqué à un objet ; pire, « TypeError: 'int' object is not iterable » — **du Python** — était rendu par la fiche **JavaScript** « … is not iterable ». À score égal, on départage désormais par la **spécificité du motif** : plus il porte de caractères littéraux, moins il est un attrape-tout.
+  · **La troisième passe rattrapait n'importe quoi.** « GraveError: everything is on fire in the datacenter », inventé pour la contre-épreuve, remontait une fiche — parce qu'il partage le mot « the » avec « the top level bodies of modules ». Mots vides ignorés, et **au moins deux mots communs** exigés.
+
+  **4. ⚠️ ET UNE FAUSSE ALERTE, ÉCRITE NOIR SUR BLANC DANS LE CSS.** `verif-rendu.js` mesure la page telle qu'elle se CHARGE, fiches repliées : il ne voit ni les blocs de code, ni la grille à deux colonnes. J'ai donc écrit une sonde qui ouvre les 31 fiches — elle a annoncé **277 px de débordement à 320 px de large**. J'ai corrigé le CSS… puis remesuré : **c'était la sonde qui était fausse**. Elle comptait le bord droit de TOUS les éléments, y compris ceux d'un `pre { overflow-x: auto }`, dont le contenu est évidemment plus large que son conteneur — c'est le principe même d'une zone qui défile. Contre-épreuve faite en retirant le correctif : **le débordement réel du document vaut 0 px avec ou sans lui**. La règle `min-width: 0` est conservée parce qu'elle est juste, **pas parce qu'elle a corrigé quelque chose**, et le commentaire du CSS le dit. C'est le pendant exact de la leçon connue de ce chantier — un contrôle qui ne peut pas échouer rend un vert vide — appliqué dans l'autre sens : **un contrôle mal écrit rend un rouge tout aussi vide, et fait « corriger » ce qui n'était pas cassé.**
+
+  **5. Atteignable, sinon elle n'existe pour personne.** Lien ajouté au pied de l'accueil (colonne « Réviser & référence ») **et au pied de page des 1 523 leçons** (`js/main.js`, `LESSON_FOOTER_COLS`) — c'est là qu'on bloque, donc là qu'on cherche. Aucun fichier de leçon n'a été modifié pour cela.
+
+  **6. Contrôles.** `verif.js --rapide` **tout vert, 8 étapes** (43,3 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur la page : **6 mesures** (3 largeurs × 2 thèmes), **0 erreur, 0 avertissement**. Débordement fiches OUVERTES, sonde corrigée : **0 px** aux trois largeurs, dans les deux thèmes. Aucune couleur en dur dans le CSS neuf : **23 variables employées, 0 non définie**. Accolades équilibrées (1 392 / 1 392). 0 CRLF, 0 BOM, **0 URL de CDN**. `search-index.js` et `search-lite.js` régénérés (**1 587 → 1 588** pages) ; quiz, flashcards et antisèches **identiques**.
+
+  **7. Ce qui reste à faire, et qui est une autre case.** Le décodeur ne renvoie pas encore vers les leçons DEPUIS les leçons : une leçon qui enseigne une notion dont l'erreur est fréquente devrait pointer vers sa fiche, et inversement. C'est **C4**. Et il ne couvre que JavaScript et Python : les autres familles sont **C3**.
+
+  **8. Mesure.** Entrées interrogeables : **31**. Épreuves jouées dans Chrome : **80** (31 exactes + 31 traces + 18 renommées) — **80 réussites**. Messages inventés refusés : **3 sur 3**. Défauts de la recherche trouvés par l'épreuve : **2**, corrigés. Fausse alerte de rendu : **1**, documentée. Requêtes distantes : **0**.
 - [ ] **C3 · Étendre aux autres langages** — un lot par famille, en s'appuyant sur les cours existants.
 - [ ] **C4 · Relier aux leçons.** Une leçon qui enseigne une notion dont l'erreur est fréquente renvoie au décodeur, et inversement.
 
