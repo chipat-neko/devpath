@@ -773,6 +773,213 @@ var LOTS = {
      · `lecon-04` (grille) : sortie CORRIGÉE ce jour, mais ses cinq lignes sont soit
        des dimensions annoncées en commentaire, soit la transcription du littéral. */
     ]
+  },
+
+  /* ===================== B7c-4 — c (2026-08-26) =====================
+     Même forme « bloc » que cpp, rust, java et csharp. Ni `gcc`, ni `cc`, ni `clang`,
+     ni `tcc` sur cette machine (vérifié) : `tools/preuves/rejoue-c.js` transpose les 26
+     programmes du cours qui portent une tête stricte et reproduit ce que C IMPRIME —
+     `printf` écrit dans un FLUX et non en lignes (dix `printf("%d ", …)` puis un
+     `printf("\n")` ne font QU'UNE ligne), `%.2f` arrondit et complète les décimales
+     (15.5 s'imprime « 15.50 »), la première constante d'un `enum` vaut 0, et
+     `ptr->champ = v` modifie l'ORIGINAL. 50 lignes comparées, 0 divergence après la
+     correction ci-dessous.
+
+     ⚠️ CE REJEU A TROUVÉ UNE FAUTE DE PRÉSENTATION dans `lecon-03` : le bloc « 2^10 »
+     plaçait TROIS LIGNES D'EXPLICATION sous sa ligne de sortie, en commentaire et sans
+     rien pour les en séparer. La règle du site — la sortie est la suite contiguë de
+     commentaires qui suit « // Sortie : » — les lisait donc comme de la sortie, et
+     l'apprenant aussi. Elles ont été remontées AVANT la déclaration qu'elles commentent.
+
+     ⚠️ LE GISEMENT TIENT DANS QUATRE LEÇONS (03 : 10 blocs, 07 : 6, 08 : 9, 16 : 1) sur
+     21, et « 28 blocs » annoncé au plan ne se reproduit pas : 26 à la règle exacte.
+     ⚠️ Les commentaires du code de ce cours sont volontairement SANS ACCENTS ; la prose
+     lue par l'apprenant, elle, est accentuée. Elle n'emploie AUCUN accent grave de
+     Markdown : `lecon.js` pose les indices en `textContent` et passe la réponse par
+     `enc()` — un backtick s'affiche tel quel à l'écran. Les 34 exercices de prédiction
+     déjà publiés n'en portent aucun dans leur réponse ; ce lot s'aligne. */
+  c: {
+    dossier: 'c', langue: 'c', marqueur: '//', forme: 'bloc', fichierCite: 'extrait.c',
+    cibles: [
+  { source: '03', page: '04', bloc: 'ignore les impairs', ligne: '2 4 6',
+    quoi: 'la ligne manquante', commentaires: 0,
+    /* Relus un par un (contrôle 11). LES DEUX ÉNONCENT LA RÉPONSE : « arrete des
+       qu'on depasse 6 » donne la borne haute, et « ignore les impairs » donne le
+       filtre — à eux deux, ils dictent « 2 4 6 » sans qu'on ait à lire une ligne de
+       code. Masqués : les deux `if` restent parfaitement lisibles, et c'est
+       précisément ce que l'exercice demande de lire. */
+    masquer: ['ignore les impairs', "arrete des qu'on depasse 6"],
+    hints: ["continue saute le reste du tour, il n'arrête pas la boucle.",
+            "break, lui, l'arrête net — et il est testé APRÈS le filtre des impairs.",
+            'Les valeurs sont écrites sur une seule ligne, séparées par une espace.'],
+    /* ⚠️ « sort dès qu'une valeur dépasse 6 » était INEXACT, et deux contradicteurs
+       l'ont relevé : 7 dépasse 6, mais le `continue` des impairs passe AVANT le test
+       du `break`. C'est donc 8 qui arrête la boucle. */
+    pourquoi: "La boucle irait jusqu'à 10, mais continue écarte tous les impairs avant même que le break soit testé : la boucle ne s'arrête donc qu'à la première valeur PAIRE supérieure à 6, c'est-à-dire 8. Les pairs déjà affichés tiennent sur une même ligne, puisque le format ne contient pas de saut de ligne.",
+    label: 'Revoir « Conditions et boucles »' },
+
+  { source: '07', page: '09', bloc: 'int *t = malloc(5 * sizeof(int));', ligne: '0 1 4 9 16',
+    quoi: 'la ligne manquante', commentaires: 5,
+    hints: ['Les indices vont de 0 à 4 inclus.',
+            "Regarde ce que la première boucle RANGE dans chaque case : ce n'est pas l'indice lui-même.",
+            'Le format ne contient pas de saut de ligne : tout tient sur une ligne.'],
+    pourquoi: "La zone allouée est utilisée comme un tableau : chaque case reçoit le carré de son indice. Le format sans saut de ligne aligne les cinq valeurs sur une seule ligne, séparées par une espace.",
+    label: "Revoir « L'allocation dynamique de mémoire »" },
+
+  { source: '07', page: '10', bloc: 'calloc(4, sizeof *compteurs)', ligne: '0 0 1 0',
+    quoi: 'la ligne manquante', commentaires: 0,
+    /* Relus un par un (contrôle 11). LES DEUX ÉNONCENT LA RÉPONSE : « 4 int, tous à
+       0 » et « les autres restent à 0, garanti » disent ce que l'exercice demande de
+       savoir — que `calloc` remet la zone à zéro. Masqués ; l'appel `calloc` et le
+       `+= 1` suffisent à poser la question. */
+    masquer: ['4 int, tous à 0', 'les autres restent à 0, garanti'],
+    /* ⚠️ L'indice 3 disait « les trois autres gardent la valeur que calloc leur a
+       donnée » : avec l'indice 1, il redonnait la réponse entière. Les indices sont
+       lus EN BLOC — le site les délivre après 2, 5 et 8 tentatives, et une saisie
+       quelconque compte comme tentative. Réécrit en règle, sur malloc. */
+    hints: ["calloc ne se contente pas de réserver de la place : il fait une chose de plus que malloc.",
+            "malloc, lui, ne promet rien du tout sur le contenu de la zone qu'il rend.",
+            'Une seule case est ensuite touchée, et elle est incrémentée, pas affectée.'],
+    pourquoi: "calloc met toute la zone à zéro, c'est garanti par la norme — contrairement à malloc, qui laisse la mémoire dans un état indéterminé. Seule la case d'indice 2 est ensuite incrémentée.",
+    label: "Revoir « L'allocation dynamique de mémoire »" },
+
+  { source: '08', page: '11', bloc: 'char   nom[50];\n    int    age;', ligne: 'moyenne',
+    quoi: 'la ligne manquante', commentaires: 0,
+    /* ⚠️ CIBLE LIMITE, et un contradicteur la voulait supprimée : les trois valeurs et
+       le format sont visibles, donc la ligne se RECOPIE — sauf en un point, celui que
+       l'exercice vise. C'est ce qui la distingue de `java/lecon-13`, retirée en B7c-3 :
+       là, les cinq littéraux se collaient sans qu'aucun ne soit transformé ; ici, une
+       transformation reste à faire, et elle décide seule du verdict. L'indice 2 la
+       DONNAIT (« impose DEUX décimales, même quand la seconde est un zéro ») : il est
+       réécrit en question, pas en règle appliquée. */
+    hints: ['Les trois champs sont affichés dans l\'ordre du format.',
+            "Le format de la moyenne n'est pas un %f nu : regarde ce que le point suivi d'un chiffre impose, et compare-le à la valeur écrite dans l'initialisation.",
+            'Les deux autres champs, eux, se lisent tels quels.'],
+    pourquoi: "afficher() lit la structure à travers un pointeur const et applique le format : la précision demandée arrondit à deux décimales ET complète avec un zéro, là où l'initialisation n'en écrivait qu'une.",
+    label: 'Revoir « Structures, unions et énumérations »' },
+
+  { source: '08', page: '12', bloc: 'dereferencement explicite', ligne: 'p.y',
+    quoi: 'la ligne manquante', commentaires: 3,
+    /* Relus un par un (contrôle 11). DEUX ÉNONÇAIENT LA RÉPONSE : « on modifie p a
+       travers le pointeur » est le raisonnement même de l'exercice, et « ptr pointe
+       vers p » donne l'aliasing, c'est-à-dire le mécanisme testé — un contradicteur a
+       trouvé le second, que mon premier jet avait laissé. Les trois restants portent
+       sur les DEUX PREMIÈRES lignes de sortie (déréférencement explicite contre
+       opérateur flèche), pas sur celle qu'on demande. */
+    masquer: ['on modifie p a travers le pointeur', 'ptr pointe vers p'],
+    /* ⚠️ L'indice 3 disait « la valeur d'origine de y n'existe donc plus au moment de
+       l'affichage » : il ÉNONÇAIT le résultat. Réécrit en règle sur l'adresse. */
+    hints: ['ptr a été obtenu par &p, et & ne fabrique aucune copie.',
+            "Écrire à travers un pointeur, c'est écrire dans la variable pointée.",
+            "Les deux premières lignes de sortie, elles, ne font que LIRE."],
+    pourquoi: "ptr pointe vers p elle-même : écrire à travers la flèche écrit dans p, et non dans une copie. La valeur initiale du champ est donc écrasée avant d'être affichée.",
+    label: 'Revoir « Structures, unions et énumérations »' }
+
+  /* CIBLES ÉCARTÉES, et pourquoi (le contrôle 5 en refuse la plupart tout seul) :
+     · `lecon-03` mentions, court-circuit, flottants, switch : la réponse est une chaîne
+       littérale écrite dans le `printf` juste au-dessus — c'est de la transcription.
+     · `lecon-03` ternaire : « max = 8 » ; le 8 est la valeur de `a`, deux lignes plus haut.
+     · `lecon-03` puissance (« 2^10 = 1024 ») : ÉCRITE PUIS RETIRÉE. La cible passait les
+       douze contrôles, et un contradicteur a trouvé ce qu'aucun ne regarde — la LEÇON
+       SOURCE porte déjà un exercice dont le champ `accept` vaut `["1024"]`. L'apprenant
+       aurait retapé, deux leçons plus loin, la réponse qu'il vient de donner.
+     · `lecon-07` realloc et realloc-6 : les valeurs rangées (« 10 20 30 40 »,
+       « 1 2 3 40 50 60 ») sont écrites en clair dans le code, et deux commentaires les
+       répètent (« // 1 2 3 », « // 40 50 60 »).
+     · `lecon-07` taille-execution : le programme lit une saisie et écrit une invite que
+       la leçon ne transcrit pas — sa « sortie » n'est pas la sortie brute.
+     · `lecon-07` fuites : la réponse est « 0 », et `a[i] = i` la donne à la lecture.
+     · `lecon-08` enum : le commentaire de chaque constante DONNE sa valeur (« // 2 »).
+     · `lecon-08` passage et tri : deux commentaires du code répètent la sortie
+       (« // (1, 1) », « // (6, 4) ») ; et pour le tri, les deux lignes laissées visibles
+       révèlent à elles seules le sens du classement.
+     · `lecon-08` feu : chaque nom d'état est rendu par un `return` littéral.
+     · `lecon-16` verifier (« Bilan : 3 réussis, 0 échoués ») : ÉCRITE PUIS RETIRÉE, pour
+       DEUX raisons trouvées par contradiction. (a) L'ÉNONCÉ ÉTAIT FAUX : le format
+       commence par `\n`, donc le programme affiche une ligne VIDE puis le bilan, et le
+       gabarit « ce programme n'affiche qu'une seule ligne » compte les lignes du
+       COMMENTAIRE, pas celles de la sortie. (b) La réponse se déduisait de cet énoncé
+       même : la macro imprime une ligne « ÉCHEC … » par test raté, donc « une seule
+       ligne » impose zéro échec, et les trois `VERIFIER` sont sous les yeux. */
+    ]
+  },
+
+  /* ===================== B7c-4 — php (2026-08-26) =====================
+     `php` et `php8` : absents de cette machine (vérifié). `tools/preuves/rejoue-php.js`
+     transpose les 15 blocs à tête stricte et reproduit ce que PHP IMPRIME : `echo` d'un
+     flottant de valeur entière n'écrit AUCUNE décimale (« 120 », « 5 »), `round($x, 2)`
+     arrondit, `json_encode` n'insère aucune espace. 17 lignes comparées, 0 divergence.
+
+     ⚠️ UN BLOC ÉTAIT NON DÉTERMINISTE SOUS UNE TÊTE STRICTE : `lecon-09` (trait
+     `Horodatable`) affiche `date("Y-m-d")`, donc la date du jour, et l'annonçait sous
+     « // Sortie : ». Un exercice de prédiction bâti dessus aurait publié une réponse
+     fausse dès le lendemain. Il porte désormais « // Sortie typique : », la tête que le
+     site réserve à ce cas et que la règle STRICTE écarte d'office.
+
+     ⚠️ CE COURS NE DONNE QUE DEUX CIBLES, et c'est le vrai résultat de la mesure : ses
+     blocs à tête stricte affichent presque tous une chaîne écrite en clair quelques
+     lignes plus haut. Trois cibles ont été écrites puis RETIRÉES pour ce motif. Le
+     gisement tient dans trois leçons (02 : 5 blocs, 09 : 9, 12 : 1) sur 21, et
+     « 29 blocs » annoncé au plan ne se reproduit pas : 15 à la règle exacte. */
+  php: {
+    dossier: 'php', langue: 'php', marqueur: '//', forme: 'bloc', fichierCite: 'extrait.php',
+    cibles: [
+  /* ⚠️ HÔTE DÉPLACÉ DE `lecon-04` À `lecon-05`. Un contradicteur a trouvé ce que le
+     contrôle 6 ne regarde pas : il vérifie que la LIGNE VISÉE ne figure pas dans la page
+     hôte, mais `pages/php/lecon-04.html` contient `echo prixTTC(100, $tva); // 120` avec
+     `$tva = 0.20` — c'est-à-dire le MÊME CALCUL et SON RÉSULTAT, 250 lignes au-dessus du
+     champ. La réponse ne s'y lit pas telle quelle, mais tout ce qu'il fallait calculer y
+     est fait. `lecon-05` a été mesurée à son tour avant d'être retenue : 0 occurrence de
+     « TVA », 0 de « 120 », 0 de « Boutique ». */
+  { source: '02', page: '05', bloc: 'define("SITE_NOM", "Ma Boutique");', ligne: 'total',
+    quoi: 'la ligne manquante', commentaires: 0,
+    /* Relu (contrôle 11). LE SEUL COMMENTAIRE DU BLOC EST LA RÉPONSE : `// 120` en
+       fin de la ligne de calcul. Masqué — sans quoi l'exercice se résout en lisant
+       une ligne de code. */
+    masquer: ['120'],
+    hints: ['Le prix hors taxes est multiplié par 1 augmenté du taux.',
+            "Le résultat de cette multiplication est un FLOTTANT : demande-toi ce que echo en écrit quand sa partie décimale est nulle.",
+            'Les deux constantes sont déclarées de deux façons différentes, et s\'emploient pareil.'],
+    pourquoi: "Le calcul donne un flottant dont la partie décimale est nulle : echo l'écrit alors sans point ni zéro, contrairement à ce qu'un langage à virgule fixe afficherait. La concaténation colle le nom du site, le séparateur, puis ce nombre. Le séparateur est un tiret cadratin ; le champ accepte aussi le trait d'union du clavier.",
+    label: 'Revoir « Variables, types et opérateurs »' },
+
+  { source: '09', page: '11', bloc: 'abstract class Forme', ligne: 'Aire',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ['La méthode concrète du parent appelle une méthode que SEULE la fille définit.',
+            'Le rayon vaut 2 : applique la formule avec la constante écrite dans la classe.',
+            "round() n'est pas une troncature."],
+    pourquoi: "La classe abstraite ne sait pas calculer une aire : elle délègue à la méthode que la fille implémente, puis arrondit le résultat à deux décimales avant de le concaténer au libellé.",
+    label: 'Revoir « POO avancée et organisation »' }
+
+  /* CIBLES ÉCARTÉES, et pourquoi :
+     · `lecon-02` interpolation, concaténation, accent : la réponse est l'assemblage de
+       deux littéraux tous deux visibles — de la transcription, pas de la prédiction.
+     · `lecon-02` coalescence (« Bonjour, Invité ! ») : ÉCRITE PUIS RETIRÉE. Le bloc
+       contient DEUX programmes et DEUX têtes « Sortie : », dont la seconde reste
+       affichée en clair (« Bonjour, Léa ! ») et donne le gabarit exact de la réponse ;
+       le littéral « Invité » y figure deux fois ; et surtout `echo` n'émet aucun saut de
+       ligne, donc la sortie réelle du fichier est UNE SEULE ligne physique
+       (« Bonjour, Invité !Bonjour, Léa ! ») — la réponse demandée n'est pas une ligne,
+       et l'énoncé « ce programme n'affiche qu'une seule ligne » était doublement faux.
+     · `lecon-09` trait : NON DÉTERMINISTE (la date du jour), désormais écarté d'office
+       par sa tête « Sortie typique : ».
+     · `lecon-09` namespace et autoload : la réponse est « Noah », l'argument du
+       constructeur, écrit une ligne plus haut.
+     · `lecon-09` parent (« Je suis Rex. Wouf ! ») : ÉCRITE PUIS RETIRÉE. Les trois
+       morceaux — le gabarit du parent, l'ajout de la fille, le nom passé au
+       constructeur — sont tous visibles, et la ligne `return parent::decrire() . " Wouf !"`
+       donne jusqu'à l'ordre d'assemblage. C'est le motif exact qui a fait retirer
+       `java/lecon-13` en B7c-3.
+     · `lecon-09` interfaces (« Stylo;1.5 ») : ÉCRITE PUIS RETIRÉE, même motif — et cette
+       cible contredisait la ligne d'à côté de cette liste, qui écarte `namespace` parce
+       que « la réponse est l'argument du constructeur ». Le critère existait ; il n'avait
+       pas été appliqué à celle-là.
+     · `lecon-09` exceptions : le commentaire `// affiche 5` donne la première ligne, et
+       les deux autres sont les messages écrits en clair dans le `catch` et le `finally`.
+     · `lecon-09` exception-perso et capstone : idem, la phrase est un littéral du code.
+     · `lecon-12` json : la structure encodée est écrite juste au-dessus ; ce qu'on
+       demanderait, c'est de recopier un tableau en changeant sa ponctuation. */
+    ]
   }
 };
 
@@ -884,6 +1091,17 @@ function graphies(v) {
       add(base.replace(/[ \t]*([:;=|])[ \t]*/g, '$1'));           // sans aucune des deux
     });
   }
+  /* ⚠️ ET LE TIRET CADRATIN N'EST PAS AU CLAVIER FRANÇAIS. Trouvé en écrivant le lot
+     `php` (B7c-4) : la sortie de `lecon-02` est « Ma Boutique — total : 120 », avec un
+     tiret CADRATIN (U+2014) — que l'apprenant ne peut taper qu'avec un raccourci qu'il
+     ne connaît pas. L'exercice était donc, tel quel, INFAISABLE au clavier : la seule
+     façon de le valider aurait été de copier-coller la leçon, c'est-à-dire de tricher.
+     Chaque graphie gagne sa jumelle au tiret simple. C'est une tolérance de SAISIE et
+     non de contenu, du même ordre que les espaces ci-dessus : le NOMBRE et les MOTS
+     restent exacts, seul le caractère de ponctuation qu'aucune touche ne produit est
+     libre. On ne touche ni au trait d'union à l'intérieur d'un mot (il est, lui, sur
+     le clavier), ni au point décimal. */
+  if (/[—–]/.test(v)) out.slice().forEach(function (g) { add(g.replace(/[—–]/g, '-')); });
   return out;
 }
 
