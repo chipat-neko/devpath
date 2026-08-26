@@ -244,7 +244,50 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
 > **Ordre révisé par la mesure A1** : traiter **B3 et B4 en premier** (1 073 exercices, aucun préalable,
 > aucun octet ajouté), puis B5, B6, B7, et enfin B1/B2 qui dépendent de A2/A3 et A4.
 
-- [ ] **B1 · Les cours SQL et données** (`sql`, `bdd`, `nosql`, `data-eng`) — dépend de A2/A3.
+- [x] **B1 · Les cours SQL et données** (`sql`, `bdd`, `nosql`, `data-eng`). ✅ **2026-08-26. Une requête n'est plus comparée à une graphie : elle est POSÉE SUR UN SCHÉMA, EXÉCUTÉE, et son résultat comparé ligne à ligne.**
+
+  **1. Ce que la case supposait, et ce que la mesure a trouvé.** « Dépend de A2/A3 » laissait croire que le travail de A3 suffisait. Il ne suffisait pas : **l'exécution SQL vit dans `runner.js` (bouton « ▶ Exécuter »), la correction d'exercices dans `lecon.js` (`initExos`), et les deux ne se parlent pas** — exactement la même architecture en deux morceaux que B4 avait rencontrée pour l'aperçu HTML. `initExos` ne connaissait que trois juges : une liste de chaînes (`accept`), un Worker JavaScript (`type:"code"`) et le moteur de motifs (`type:"regex"`). État de départ mesuré sur les 67 leçons des quatre cours : **0 exercice `type:"code"`, 0 `type:"sql"`, 197 `type:"text"`**.
+
+  **2. Le moteur neuf `type:"sql"`, et pourquoi il fallait l'écrire.** Un exercice de requête corrigé par `accept:[…]` refuse `WHERE prix>20` faute d'espaces, et accepte n'importe quelle variante voisine de la réponse notée — juste ou fausse. Désormais la requête part dans un **Worker qui charge le SQLite du dépôt** (`assets/vendor/sqljs/`, URL `file://` absolue, aucun octet réseau), pose le `schema` de l'exercice, exécute la requête, et **`JUGE_SQL` compare le RÉSULTAT** : nombre et noms de colonnes, nombre de lignes, valeurs ligne à ligne. L'ordre n'est comparé que si l'exercice le demande (`ordre: true`) — sans `ORDER BY`, aucune norme SQL ne garantit l'ordre. Le Worker est **partagé par la page** (sql.js met ~0,8 s à s'initialiser) et les demandes sont **numérotées**, deux exercices pouvant être lancés coup sur coup. La saisie n'est jamais concaténée au programme du Worker : elle y entre par `postMessage`, donc comme une donnée.
+
+  **3. Les 21 exercices, et pourquoi tous ne sont pas du SQL.** `nosql` ne parle pas SQL et `data-eng` pas toujours — mais ce que ces leçons enseignent est de la **logique pure**, que le site sait déjà exécuter.
+
+  | cours | leçons | ce que l'apprenant écrit | juge |
+  |---|---|---|---|
+  | `sql` | 02, 05, 07, 09, 13, 20 | bornes de `BETWEEN`, les trois `COUNT`, l'anti-jointure, une CTE + moyenne des totaux, `ROW_NUMBER` Top-1 par groupe, un pivot `CASE WHEN` | SQLite |
+  | `bdd` | 05, 06, 07, 09, 10 | doublons d'une clé candidate (avec le piège des `NULL` regroupés), lignes orphelines, ce qui violerait un `UNIQUE` composite, la **preuve par les données** d'une dépendance transitive, la réconciliation d'un agrégat dénormalisé | SQLite |
+  | `nosql` | 03, 05, 08, 12, 13 | un motif d'objet (notation pointée, `$gt`), les amis d'amis à deux sauts, un pipeline `$match→$group→$sort→$limit`, un index inversé complet, la similarité cosinus | Worker JS |
+  | `data-eng` | 04, 07, 08, 10, 13 | l'analyse d'une ligne CSV à guillemets, l'élagage de partitions, la **déduplication déterministe** après rejeu, un test de qualité « zéro ligne » à deux familles, la volumétrie annuelle | 2 SQLite, 3 Worker JS |
+
+  Les cinq exercices de `bdd` ont un point commun assumé : ils font **prouver par les données** ce que la leçon énonce en théorie — une clé candidate qui n'en est pas une, une contrainte qui ne passerait pas sur l'existant, une faute de frappe (« Lile ») qui suffit à casser une dépendance fonctionnelle.
+
+  **4. Outil neuf `tools/verif-sql-exos.js` — 6ᵉ étape de `verif.js`.** Il **EXTRAIT `JUGE_SQL` de `js/lecon.js`** (jamais recopié : deux copies divergent, une extraction non), pose chaque schéma dans le sql.js du dépôt, et exige quatre choses : que la référence rende **exactement** l'attendu, que **chaque contre-requête ÉCHOUE**, que l'attendu ne soit pas vide (une requête qui ne trouve rien passerait), et que la référence figure **littéralement dans la solution affichée** — testé = montré. Sans les contre-requêtes, un jeu de données où toutes les lignes se ressemblent laisserait passer une requête fausse : ce serait un compteur câblé, la panne déjà relevée en B5.
+
+  **5. Preuve, en trois endroits.**
+
+  | contrôle | résultat |
+  |---|---|
+  | avant insertion (`vm` + sql.js, moteurs du site) | **21 / 21 conformes, 39 contre-requêtes refusées** |
+  | `tools/verif-sql-exos.js` (depuis les pages écrites) | **13 exercices, 30 lignes comparées, 39 contre-requêtes, 0 faute** |
+  | Chrome, `file://`, **sans** `--allow-file-access-from-files` | **21 solutions acceptées** (39,3 s) |
+  | idem, passe adversariale `--contre` | **13 contre-requêtes REFUSÉES, 0 acceptée à tort** (23,8 s) |
+  | `tools/preuve-hors-reseau.js` (DNS coupé, `MAP * ~NOTFOUND`) | verdict « ✓ Bravo, c'est juste ! » en **820 ms**, **0 requête distante** sur 19 |
+
+  ⚠️ **Deux attendus écrits de tête étaient FAUX, et l'exécution les a corrigés avant insertion** : `nosql/lecon-08` (le top 2 est Mobilier 900 puis **Textile 200**, pas Papeterie 120 — 12 × 10 n'est pas le total le plus proche) et `nosql/lecon-13` (le cosinus de « chien » vaut **0,930**, pas 0,928). C'est exactement la règle du chantier : ne jamais poser un calcul sans le faire tourner.
+
+  ⚠️ **Le contrôle « testé = montré » a d'abord échoué sur 2 exercices sur 11, pour une raison qui n'en est pas une** : la solution repliée écrit `WITH totaux AS (\n  SELECT …` quand `ref` tient sur une ligne. Comparer après simple écrasement des blancs laissait `as ( select` ≠ `as (select`. La normalisation efface désormais aussi les espaces **autour des parenthèses et des virgules**, des deux côtés.
+
+  **6. Mesure avant / après.**
+
+  | | avant | après |
+  |---|---:|---:|
+  | exercices réellement exécutés | 308 / 4 493 — **6,86 %** | **329 / 4 514 — 7,29 %** |
+  | dont `type:"sql"` | 0 | **13** |
+  | cours ayant au moins un exercice exécuté | 20 | **24** |
+
+  **0 octet de moteur ajouté** : SQLite était déjà là depuis A2.
+
+  **7. Contrôles.** `verif.js --rapide` **tout vert, 6 vérificateurs** (source, données, contenu, exemples, motifs, **requêtes**). `verif-rendu` **0 erreur / 0 avertissement sur 24 mesures** (4 pages × 3 largeurs × 2 thèmes). `search-index.js` régénéré (1 587 leçons). **0 URL de CDN**, 0 BOM. La grammaire Prism a été ajoutée à **4 pages** (`clike` puis `javascript`, dans cet ordre — `javascript` en dépend) qui n'avaient jamais eu de bloc JavaScript ; sans elle l'invariant I14 casse et la solution s'affiche sans coloration.
 - [ ] **B2 · Les cours Python** (`python`, `python-avance`, `pandas`, `stats`, `dataviz`, `ml`) — dépend de A4.
 - [x] **B3 · Les cours JavaScript restants** (`typescript`, `nodejs`, `react`, `vue`, `projets-js`). ✅ **2026-08-26. 25 exercices de code neufs, et un outil qui prouve — dans le navigateur — que leur solution passe.**
 
