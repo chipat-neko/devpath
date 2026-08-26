@@ -1,8 +1,9 @@
 /* =============================================================================
-   git-bac.js — L'INTERFACE du bac à sable Git (chantier V14, point D3).
+   git-bac.js — L'INTERFACE du bac à sable Git (chantier V14, points D3 et D4).
    Colle ensemble le modèle (`git-modele.js`), les quinze commandes
-   (`git-commandes.js`) et le graphe (`git-graphe.js`). Script classique, aucune
-   dépendance, aucun réseau : la page tourne en `file://`.
+   (`git-commandes.js`), la coquille (`git-coquille.js`), le graphe
+   (`git-graphe.js`) et les scénarios guidés (`git-scenarios.js`). Script
+   classique, aucune dépendance, aucun réseau : la page tourne en `file://`.
 
    CE QUE LA PAGE MONTRE, ET POURQUOI
    Un terminal seul n'apprend rien : git répond « Fast-forward » et l'apprenant
@@ -16,17 +17,27 @@
      · le graphe, où l'on VOIT le commit apparaître, la branche avancer, HEAD
        se déplacer.
 
-   Les commandes qui ne sont pas git (`echo`, `rm`, `cat`, `ls`) sont là parce
-   qu'il faut bien produire des fichiers à commiter. Elles sont volontairement
-   minces : ce n'est pas un émulateur de shell.
+   Les commandes qui ne sont pas git (`echo`, `rm`, `cat`, `ls`) vivent dans
+   `js/git-coquille.js` — pas ici : les scénarios guidés (D4) montent leur
+   situation avec les mêmes lignes, et `tools/verif-git-scenarios.js` les rejoue
+   contre un vrai dépôt git. Une seconde implémentation quelque part et le
+   contrôle vérifierait sa propre copie.
+
+   D4 AJOUTE LES SCÉNARIOS. Un bac à sable libre n'apprend rien à qui ne sait
+   pas quoi taper. Un scénario monte une situation réelle (« tu as commité sur
+   la mauvaise branche »), énonce un but, et VÉRIFIE l'état du dépôt après
+   chaque commande — jamais la commande tapée : il y a toujours plusieurs
+   chemins, et comparer la ligne à un modèle n'apprendrait qu'à recopier.
    ============================================================================= */
 (function () {
   "use strict";
 
   var GM = window.GitModele, GC = window.GitCommandes, GG = window.GitGraphe;
-  if (!GM || !GC || !GG) return;
+  var GQ = window.GitCoquille, GS = window.GitScenarios;
+  if (!GM || !GC || !GG || !GQ || !GS) return;
 
   var CLE = "syntaxe-git-bac";
+  var CLE_FAITS = "syntaxe-git-scenarios";
   var IDENTITE = "Apprenant <apprenant@syntaxe.invalid>";
   /* Une horloge déterministe, qui avance d'une minute par commit : deux
      apprenants qui tapent la même chose obtiennent les mêmes empreintes, et
@@ -58,7 +69,13 @@
   var stockageSignale = false;
   function sauver() {
     try {
-      localStorage.setItem(CLE, JSON.stringify({ depot: GC.exporter(depot), historique: historique.slice(-60) }));
+      localStorage.setItem(CLE, JSON.stringify({
+        depot: GC.exporter(depot),
+        historique: historique.slice(-60),
+        /* Le scénario en cours fait partie de la session : sans lui, un
+           rechargement laisse l'apprenant devant un dépôt bizarre sans énoncé. */
+        scenario: scenario ? { id: scenario.id, indices: indicesMontres, annonce: reussiAnnonce } : null
+      }));
     } catch (e) {
       if (!stockageSignale && terminal) {
         stockageSignale = true;
@@ -75,6 +92,11 @@
      levait une exception, sans un mot. Juger « l'import a-t-il levé ? » ne
      suffit donc pas : on EXERCE le dépôt relu (statut + graphe complet, ce que
      la page fera de toute façon la seconde d'après) avant de l'accepter. */
+  /* Vrai quand la session enregistrée existait mais n'a pas pu être relue :
+     l'apprenant doit savoir qu'il repart à neuf, sinon il croit avoir perdu son
+     travail sans comprendre pourquoi. */
+  var sessionIllisible = false;
+
   function charger() {
     var brut = null;
     try { brut = localStorage.getItem(CLE); } catch (e) { brut = null; }
@@ -86,9 +108,16 @@
       GG.disposer(relu, { orphelins: true });
       depot = relu;
       historique = Array.isArray(d.historique) ? d.historique.filter(function (l) { return typeof l === "string"; }) : [];
+      /* Un id inconnu (scénario renommé depuis) ne doit pas casser la reprise :
+         on retombe simplement sur le bac à sable libre. */
+      var reprise = d.scenario && GS.parId(d.scenario.id);
+      scenario = reprise || null;
+      indicesMontres = reprise ? (parseInt(d.scenario.indices, 10) || 0) : 0;
+      reussiAnnonce = reprise ? !!d.scenario.annonce : false;
       return true;
     } catch (e) {
       depot = null;
+      sessionIllisible = true;
       return false;
     }
   }
@@ -107,85 +136,22 @@
     for (var i = 0; i < lignes.length; i++) ecrire(lignes[i], classe);
   }
 
-  /* --- les commandes qui ne sont pas git -------------------------------------- */
+  /* --- les commandes qui ne sont pas git --------------------------------------
+     Elles sont dans `js/git-coquille.js`, partagée avec le contrôle. Ici, on ne
+     fait que rendre ses lignes à l'écran. */
 
-  var AIDE = [
-    "Commandes du bac à sable (elles ne sont pas git, elles servent à fabriquer des fichiers) :",
-    "  echo \"texte\" > fichier    écrit un fichier (>> ajoute une ligne)",
-    "  cat fichier                 affiche un fichier",
-    "  ls                          liste les fichiers du répertoire de travail",
-    "  rm fichier                  efface un fichier du répertoire de travail",
-    "  reinitialiser               repart d'un dépôt vide",
-    "  aide                        affiche ceci",
-    "",
-    "Les quinze commandes git simulées : add, rm, commit, status, log, branch, tag,",
-    "checkout, switch, reset, merge, rebase, revert, cherry-pick, diff."
-  ];
-
-  function commandeLocale(mots, brut) {
-    var nom = mots[0];
-
-    if (nom === "aide" || nom === "help" || nom === "?") {
-      ecrireLignes(AIDE, "note");
-      return true;
-    }
-
-    if (nom === "reinitialiser") {
+  function commandeLocale(brut) {
+    var r = GQ.executer(depot, brut);
+    if (!r) return false;
+    for (var i = 0; i < r.lignes.length; i++) ecrire(r.lignes[i].texte, r.lignes[i].classe);
+    if (r.reinit) {
       depot = neuf();
-      ecrire("Dépôt remis à neuf : plus aucun commit, plus aucun fichier.", "note");
-      return true;
+      /* ⚠️ Le dépôt repart à zéro : garder l'énoncé au-dessus annoncerait un but
+         devenu inatteignable — et deux objectifs de « conflit » se cochaient
+         tout seuls sur le dépôt vide (mesuré). */
+      if (scenario) quitterSituation("Dépôt remis à neuf : tu es sorti de la situation guidée.");
     }
-
-    if (nom === "ls") {
-      var f = depot.cheminsTravail();
-      if (!f.length) ecrire("(le répertoire de travail est vide)", "note");
-      else ecrireLignes(f);
-      return true;
-    }
-
-    if (nom === "cat") {
-      if (!mots[1]) { ecrire("cat : indique un fichier.", "erreur"); return true; }
-      var contenu = depot.lireFichier(mots[1]);
-      if (contenu === null || contenu === undefined) { ecrire("cat: " + mots[1] + ": No such file or directory", "erreur"); return true; }
-      ecrireLignes(contenu.replace(/\n$/, "").split("\n"));
-      return true;
-    }
-
-    if (nom === "rm") {
-      /* `rm` tout court efface le fichier du disque ; `git rm` est autre chose,
-         et c'est justement la distinction à faire sentir. */
-      if (mots.length < 2) { ecrire("rm : indique un fichier.", "erreur"); return true; }
-      var efface = 0;
-      for (var i = 1; i < mots.length; i++) {
-        if (depot.lireFichier(mots[i]) !== null) { depot.supprimerFichier(mots[i]); efface++; }
-        else ecrire("rm: cannot remove '" + mots[i] + "': No such file or directory", "erreur");
-      }
-      if (efface) ecrire(efface + " fichier(s) effacé(s) du répertoire de travail — l'index, lui, n'a pas bougé.", "note");
-      return true;
-    }
-
-    if (nom === "echo") {
-      /* `echo "texte" > fichier` : on relit la ligne BRUTE pour retrouver le
-         chevron, que le découpage en mots a déjà avalé.
-         ⚠️ La cible ne peut PAS commencer par un chevron. Sans cette garde,
-         `echo "a" >> ` (sans cible) faisait capter le premier `>` comme
-         redirection et le SECOND comme nom de fichier : le bac à sable créait,
-         puis indexait, puis commitait un fichier nommé « > ».
-         Elle peut en revanche être CITÉE, donc contenir une espace. */
-      var m = /^echo\s+([\s\S]*?)\s*(>>?)\s*("[^"]+"|'[^']+'|[^>\s]\S*)\s*$/.exec(brut);
-      if (!m) {
-        ecrire(mots.slice(1).join(" "));
-        return true;
-      }
-      var texte = GC.decouperLigne(m[1]).join(" ");
-      var cible = GC.decouperLigne(m[3])[0];
-      var avant = m[2] === ">>" ? (depot.lireFichier(cible) || "") : "";
-      depot.ecrireFichier(cible, avant + texte + "\n");
-      ecrire((m[2] === ">>" ? "Ligne ajoutée à " : "Fichier écrit : ") + cible, "note");
-      return true;
-    }
-
-    return false;
+    return true;
   }
 
   /* --- exécuter une ligne ----------------------------------------------------- */
@@ -201,7 +167,7 @@
     var explication = "";
     var traitee;
     try {
-      traitee = commandeLocale(mots, ligne);
+      traitee = commandeLocale(ligne);
     } catch (err) {
       ecrire("Le bac à sable a buté sur cette ligne : " + (err && err.message ? err.message : err), "erreur");
       traitee = true;
@@ -226,6 +192,7 @@
     }
 
     derniereExplication = explication;
+    surveillerScenario();
     afficher(explication);
     sauver();
   }
@@ -386,11 +353,395 @@
     afficherEtat();
     afficherZones();
     afficherGraphe();
+    afficherMission();
     if (explication) {
       expli.textContent = explication;
       expli.hidden = false;
     } else {
       expli.hidden = true;
+    }
+  }
+
+  /* =========================================================================
+     LES SCÉNARIOS GUIDÉS (D4)
+     Un scénario monte sa situation en rejouant des commandes ordinaires — les
+     mêmes que l'apprenant pourrait taper — puis surveille l'ÉTAT du dépôt. Rien
+     n'est comparé à une commande attendue : `tools/verif-git-scenarios.js`
+     prouve d'ailleurs, en les exécutant, que plusieurs chemins mènent au but.
+     ========================================================================= */
+
+  var scenario = null;          // le scénario en cours, ou null
+  var messageDeSortie = "";     // ce qu'il faudra dire une fois le terminal vidé
+  var indicesMontres = 0;
+  var reussiAnnonce = false;
+  var hoteScenarios, hoteMission;
+
+  /* Les scénarios déjà réussis, gardés à part du dépôt : on efface son bac à
+     sable bien plus souvent que sa progression.
+     ⚠️ L'écriture passe par `window.SyntaxeStore` (js/theme.js) et NON par un
+     `localStorage.setItem` enveloppé d'un `catch` vide : c'est précisément la
+     faute que le point V12-B1 a corrigée sur 21 points d'écriture du site — en
+     navigation privée stricte, l'apprenant réussissait des situations qui
+     n'étaient gardées nulle part, sans un mot. Le magasin affiche un bandeau,
+     et distingue le quota plein du refus. */
+  function faits() {
+    if (window.SyntaxeStore) {
+      var v = window.SyntaxeStore.getJSON(CLE_FAITS, []);
+      return Array.isArray(v) ? v : [];
+    }
+    try {
+      var brut = JSON.parse(localStorage.getItem(CLE_FAITS) || "[]");
+      return Array.isArray(brut) ? brut : [];
+    } catch (e) { return []; }
+  }
+
+  function marquerFait(id) {
+    var l = faits();
+    if (l.indexOf(id) >= 0) return;
+    l.push(id);
+    if (window.SyntaxeStore) { window.SyntaxeStore.setJSON(CLE_FAITS, l); return; }
+    try { localStorage.setItem(CLE_FAITS, JSON.stringify(l)); } catch (e) { /* signalé par le magasin */ }
+  }
+
+  /* Le repère du bouton qui avait le focus, pour le lui rendre après que la
+     liste ou le panneau ont été reconstruits. */
+  var focusBouton = null;
+
+  function bouton(libelle, classe, action) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = classe;
+    b.textContent = libelle;
+    b.addEventListener("click", function (ev) {
+      focusBouton = this.getAttribute("data-bac-focus");
+      action(ev);
+    });
+    return b;
+  }
+
+  /* Repose le focus sur le bouton de même rôle, s'il existe encore et si rien
+     d'autre ne l'a pris entre-temps. */
+  function reposerFocus() {
+    if (!focusBouton) return;
+    if (document.activeElement && document.activeElement !== document.body
+        && document.activeElement.tagName !== "HTML") { focusBouton = null; return; }
+    var cible = document.querySelector('[data-bac-focus="' + focusBouton + '"]');
+    if (cible && cible.focus) cible.focus();
+    focusBouton = null;
+  }
+
+  function numeroLecon(nom) {
+    var m = /lecon-(\d+)/.exec(nom);
+    return m ? String(parseInt(m[1], 10)) : nom;
+  }
+
+  /* --- la liste des situations ------------------------------------------------ */
+
+  function listerScenarios() {
+    if (!hoteScenarios) return;
+    var accomplis = faits();
+    hoteScenarios.innerHTML = "";
+    for (var i = 0; i < GS.SCENARIOS.length; i++) {
+      (function (sc) {
+        var carte = document.createElement("article");
+        carte.className = "bac-carte" + (accomplis.indexOf(sc.id) >= 0 ? " bac-carte--fait" : "");
+        carte.id = "carte-" + sc.id;
+        carte.setAttribute("data-scenario", sc.id);
+
+        var haut = document.createElement("p");
+        haut.className = "bac-carte__niveau";
+        haut.textContent = sc.niveau + (accomplis.indexOf(sc.id) >= 0 ? " · réussi" : "");
+        carte.appendChild(haut);
+
+        var h = document.createElement("h3");
+        h.className = "bac-carte__titre";
+        h.textContent = sc.titre;
+        carte.appendChild(h);
+
+        var r = document.createElement("p");
+        r.className = "bac-carte__resume";
+        r.textContent = sc.resume;
+        carte.appendChild(r);
+
+        var enCours = scenario && scenario.id === sc.id;
+        var b = bouton(enCours ? "Remonter cette situation" : "Commencer",
+          "btn btn--sm" + (enCours ? " btn--ghost" : ""),
+          function () { demarrerScenario(sc.id); });
+        b.setAttribute("data-bac-focus", "carte-" + sc.id);
+        carte.appendChild(b);
+        hoteScenarios.appendChild(carte);
+      })(GS.SCENARIOS[i]);
+    }
+    reposerFocus();
+  }
+
+  /* --- démarrer, quitter ------------------------------------------------------ */
+
+  /* La mise en place est jouée SANS bruit : dérouler seize lignes dans le
+     terminal noierait la situation qu'on vient d'énoncer. Elle reste consultable
+     — le panneau la déplie — et elle entre dans l'historique de la flèche haute,
+     parce qu'elle fait partie de ce qui s'est passé. */
+  function executerSilencieux(ligne) {
+    historique.push(ligne);
+    var traitee = GQ.executer(depot, ligne);
+    if (traitee) {
+      if (traitee.reinit) depot = neuf();
+      return true;
+    }
+    var mots = GC.decouperLigne(ligne);
+    var r = GC.executer(depot, mots);
+    if (!r) return false;
+    if (r.ok) return true;
+    var texte = r.sortie.join(" ");
+    return !/is not a git command|unknown option|^usage:|not a git repository/i.test(texte);
+  }
+
+  function demarrerScenario(id) {
+    var sc = GS.parId(id);
+    if (!sc) return;
+    /* ⚠️ Commencer une situation REMPLACE le dépôt en cours. Il faut le dire :
+       on arrive parfois ici par un lien d'une leçon, sans l'avoir demandé, et
+       voir son travail disparaître sans un mot est exactement ce que le bac à
+       sable enseigne à ne pas faire. */
+    var avaitQuelqueChose = depot && (depot.oidHEAD() || depot.cheminsTravail().length);
+    depot = neuf();
+    historique = [];
+    rangHistorique = -1;
+    selection = null;
+    focusOid = null;
+    terminal.innerHTML = "";
+    scenario = sc;
+    indicesMontres = 0;
+    reussiAnnonce = false;
+
+    var rate = 0;
+    for (var i = 0; i < sc.mise.length; i++) if (!executerSilencieux(sc.mise[i])) rate++;
+    rangHistorique = historique.length;
+
+    ecrire("Situation « " + sc.titre + " » : le dépôt a été monté pour toi.", "note");
+    if (avaitQuelqueChose) ecrire("Ton dépôt précédent a été remplacé par celui de la situation.", "note");
+    if (rate) ecrire("Attention : " + rate + " commande(s) de mise en place n'ont pas abouti.", "erreur");
+    ecrire("Tape « git status » pour voir où tu en es. L'encadré au-dessus dit ce qu'il faut obtenir.", "note");
+    derniereExplication = "";
+    afficher("");
+    sauver();
+    listerScenarios();
+    if (hoteMission && hoteMission.scrollIntoView) hoteMission.scrollIntoView({ block: "start" });
+  }
+
+  /* Sortir d'une situation, en le DISANT : le panneau disparaît, et sans un mot
+     l'apprenant ne sait pas s'il a réussi, abandonné, ou cassé quelque chose.
+     Les boutons « Repartir de zéro » et « Charger un exemple » passaient par un
+     autre chemin, silencieux. */
+  function quitterSituation(message) {
+    if (!scenario) return;
+    scenario = null;
+    indicesMontres = 0;
+    reussiAnnonce = false;
+    if (message) ecrire(message, "note");
+    listerScenarios();
+  }
+
+  /* Ouvre la situation que l'ancre désigne, puis EFFACE l'ancre : sans cela,
+     un rechargement la rejouerait et remonterait la situation par-dessus le
+     travail en cours. Rend true si une situation a été ouverte. */
+  function ouvrirDepuisAncre() {
+    var vise = /^#scenario-([a-z-]+)$/.exec(location.hash || "");
+    if (!vise || !GS.parId(vise[1])) return false;
+    if (window.history && history.replaceState) {
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* rien */ }
+    }
+    demarrerScenario(vise[1]);
+    return true;
+  }
+
+  function quitterScenario() {
+    quitterSituation("Situation quittée : le dépôt reste tel quel, tu peux continuer librement.");
+    afficher("");
+    sauver();
+  }
+
+  /* --- le panneau de la situation --------------------------------------------- */
+
+  function ligneObjectif(o) {
+    var li = document.createElement("li");
+    li.className = "bac-objectif" + (o.atteint ? " bac-objectif--fait" : "");
+    var marque = document.createElement("span");
+    marque.className = "bac-objectif__marque";
+    marque.setAttribute("aria-hidden", "true");
+    marque.textContent = o.atteint ? "✓" : "○";
+    li.appendChild(marque);
+    var texte = document.createElement("span");
+    texte.textContent = o.texte;
+    li.appendChild(texte);
+    /* La liste est relue à chaque commande : sans ce préfixe, « atteint » et
+       « à faire » se lisent exactement pareil pour un lecteur d'écran. */
+    li.setAttribute("aria-label", (o.atteint ? "Atteint : " : "À faire : ") + o.texte);
+    return li;
+  }
+
+  function marquer(element, repere) {
+    element.setAttribute("data-bac-focus", repere);
+    return element;
+  }
+
+  function detailsRepliable(titre, remplir) {
+    var d = document.createElement("details");
+    d.className = "bac-repli";
+    var sum = document.createElement("summary");
+    sum.textContent = titre;
+    d.appendChild(sum);
+    remplir(d);
+    return d;
+  }
+
+  function listeCommandes(lignes) {
+    var pre = document.createElement("pre");
+    pre.className = "bac-commandes";
+    var code = document.createElement("code");
+    code.textContent = lignes.join("\n");
+    pre.appendChild(code);
+    return pre;
+  }
+
+  function afficherMission() {
+    if (!hoteMission) return;
+    hoteMission.innerHTML = "";
+    if (!scenario) {
+      hoteMission.hidden = true;
+      return;
+    }
+    hoteMission.hidden = false;
+
+    var bilan = GS.evaluer(depot, scenario);
+
+    var kicker = document.createElement("p");
+    kicker.className = "bac-mission__kicker";
+    kicker.textContent = "Situation guidée · " + scenario.niveau;
+    hoteMission.appendChild(kicker);
+
+    var h = document.createElement("h2");
+    h.className = "bac-panneau__titre";
+    h.textContent = scenario.titre;
+    hoteMission.appendChild(h);
+
+    var sit = document.createElement("p");
+    sit.className = "bac-mission__situation";
+    sit.textContent = scenario.situation;
+    hoteMission.appendChild(sit);
+
+    var but = document.createElement("p");
+    but.className = "bac-mission__but";
+    but.textContent = "But : " + scenario.but;
+    hoteMission.appendChild(but);
+
+    var faits = 0;
+    for (var f = 0; f < bilan.objectifs.length; f++) if (bilan.objectifs[f].atteint) faits++;
+    var progres = document.createElement("p");
+    progres.className = "bac-mission__progres";
+    progres.setAttribute("role", "status");
+    progres.textContent = faits + " objectif" + (faits > 1 ? "s" : "") + " sur "
+      + bilan.objectifs.length + (faits > 1 ? " atteints" : " atteint");
+    hoteMission.appendChild(progres);
+
+    var ul = document.createElement("ul");
+    ul.className = "bac-objectifs";
+    for (var i = 0; i < bilan.objectifs.length; i++) ul.appendChild(ligneObjectif(bilan.objectifs[i]));
+    hoteMission.appendChild(ul);
+
+    if (bilan.reussi) {
+      var ok = document.createElement("div");
+      ok.className = "bac-reussite";
+      var t = document.createElement("p");
+      t.className = "bac-reussite__titre";
+      t.textContent = "C'est fait.";
+      ok.appendChild(t);
+      var q = document.createElement("p");
+      q.textContent = scenario.apres;
+      ok.appendChild(q);
+      var liens = document.createElement("p");
+      liens.className = "bac-reussite__liens";
+      for (var l = 0; l < scenario.lecons.length; l++) {
+        var a = document.createElement("a");
+        a.href = "git/" + scenario.lecons[l] + ".html";
+        a.textContent = "Leçon " + numeroLecon(scenario.lecons[l]) + " — " + GS.TITRES_LECONS[scenario.lecons[l]];
+        liens.appendChild(a);
+        if (l < scenario.lecons.length - 1) liens.appendChild(document.createTextNode(" · "));
+      }
+      ok.appendChild(liens);
+      hoteMission.appendChild(ok);
+    }
+
+    /* Les indices se donnent UN par UN : trois d'un coup, et c'est la solution
+       déguisée. */
+    if (!bilan.reussi && indicesMontres > 0) {
+      var ulI = document.createElement("ul");
+      ulI.className = "bac-indices";
+      for (var k = 0; k < indicesMontres && k < scenario.indices.length; k++) {
+        var liI = document.createElement("li");
+        liI.textContent = scenario.indices[k];
+        ulI.appendChild(liI);
+      }
+      hoteMission.appendChild(ulI);
+    }
+
+    var actions = document.createElement("p");
+    actions.className = "bac-actions";
+    if (!bilan.reussi && indicesMontres < scenario.indices.length) {
+      actions.appendChild(marquer(bouton(indicesMontres ? "Un autre indice" : "Un indice",
+        "btn btn--sm btn--ghost", function () {
+          indicesMontres++;
+          afficherMission();
+          /* Sans ceci, trois indices demandés puis un rechargement — le geste
+             naturel quand on est bloqué — les perdait tous les trois. */
+          sauver();
+        }), "indice"));
+    }
+    actions.appendChild(marquer(bouton("Remonter la situation", "btn btn--sm btn--ghost",
+      function () { demarrerScenario(scenario.id); }), "remonter"));
+    actions.appendChild(marquer(bouton("Quitter le scénario", "btn btn--sm btn--ghost", quitterScenario), "quitter"));
+    hoteMission.appendChild(actions);
+
+    hoteMission.appendChild(detailsRepliable("Comment on en est arrivé là", function (d) {
+      var pm = document.createElement("p");
+      pm.className = "bac-aide";
+      pm.textContent = "Ces commandes ont été jouées pour toi avant que tu n'arrives :";
+      d.appendChild(pm);
+      d.appendChild(listeCommandes(scenario.mise));
+    }));
+
+    reposerFocus();
+
+    hoteMission.appendChild(detailsRepliable("Voir une solution", function (d) {
+      var ps = document.createElement("p");
+      ps.className = "bac-aide";
+      ps.textContent = "Une solution parmi d'autres — ce qui compte est l'état obtenu, pas la commande employée :";
+      d.appendChild(ps);
+      d.appendChild(listeCommandes(scenario.solutionTexte
+        || (typeof scenario.solution === "function" ? scenario.solution(depot) : scenario.solution)));
+      if (scenario.variantes && scenario.variantes.length) {
+        var pv = document.createElement("p");
+        pv.className = "bac-aide";
+        pv.textContent = "Autre chemin, tout aussi valable : " + scenario.variantes[0].nom + ".";
+        d.appendChild(pv);
+      }
+    }));
+  }
+
+  /* Appelé après chaque commande : c'est là que la réussite est constatée. */
+  function surveillerScenario() {
+    if (!scenario) return;
+    var bilan = GS.evaluer(depot, scenario);
+    if (bilan.reussi && !reussiAnnonce) {
+      reussiAnnonce = true;
+      marquerFait(scenario.id);
+      ecrire("Objectif atteint : " + scenario.but, "reussite");
+      ecrire(scenario.apres, "note");
+      listerScenarios();
+    } else if (!bilan.reussi && reussiAnnonce) {
+      /* On peut défaire ce qu'on vient de réussir : le scénario redevient
+         ouvert, et il pourra être réannoncé. */
+      reussiAnnonce = false;
     }
   }
 
@@ -417,6 +768,12 @@
     depot = neuf();
     historique = [];
     terminal.innerHTML = "";
+    /* Repartir de zéro sort de la situation : garder l'énoncé au-dessus d'un
+       dépôt qui n'est plus le sien annoncerait un but devenu inatteignable. */
+    var sortie = scenario ? "Tu es sorti de la situation guidée « " + scenario.titre + " »." : "";
+    quitterSituation("");
+    if (sortie) messageDeSortie = sortie;
+    if (messageDeSortie) { ecrire(messageDeSortie, "note"); messageDeSortie = ""; }
     var lignes = DEMARRAGES[nom] || [];
     for (var i = 0; i < lignes.length; i++) executer(lignes[i]);
     if (!lignes.length) {
@@ -435,10 +792,13 @@
     zones = $("bac-zones");
     expli = $("bac-explication");
     titreEtat = $("bac-etat");
+    hoteScenarios = $("bac-scenarios");
+    hoteMission = $("bac-mission");
     if (!terminal || !saisie || !svgHote || !zones) return;
 
     var repris = charger();
     if (!depot) depot = neuf();
+    listerScenarios();
 
     var formulaire = $("bac-formulaire");
     formulaire.addEventListener("submit", function (ev) {
@@ -483,7 +843,15 @@
       });
     }
 
+    /* Une leçon du cours `git` renvoie ici avec `#scenario-<id>` : on ouvre
+       DIRECTEMENT la situation, sinon l'apprenant atterrit sur une page qui ne
+       montre pas ce qu'on lui a promis. Le dépôt en cours est remplacé — c'est
+       le sens du clic, et le panneau le dit. */
+    window.addEventListener("hashchange", ouvrirDepuisAncre);
+    if (ouvrirDepuisAncre()) return;
+
     ecrire("Bac à sable Git — les commandes sont exécutées pour de bon, sur un dépôt qui vit dans ton navigateur.", "note");
+    if (sessionIllisible) ecrire("Ta session précédente était illisible : on repart d'un dépôt neuf.", "erreur");
     if (!repris) ecrire("Tape « aide » pour la liste des commandes.", "note");
     else ecrire("Ton dépôt précédent a été retrouvé. Tape « aide » pour la liste des commandes, "
       + "« reinitialiser » pour repartir de zéro.", "note");

@@ -1615,6 +1615,95 @@ var SCENARIOS = [
       { git: "status --porcelain" },
       { git: "log --oneline" }
     ]
+  },
+  {
+    nom: "reset-avec-chemins-et-degre",
+    /* Trouve par une passe adversariale du point D4 : `git reset --hard HEAD
+       <fichier>` etait execute comme un `--hard` COMPLET par le bac a sable —
+       il detruisait ce que git REFUSE de toucher (exit 128). Les cinq formes
+       sont mesurees des deux cotes, et le `status` qui suit chaque refus prouve
+       que RIEN n'a bouge. */
+    actions: [
+      { ecrire: ["f.txt", "L1\n"] },
+      { git: "add ." },
+      { git: "commit -m \"socle\"" },
+      { ecrire: ["n.txt", "N\n"] },
+      { git: "add n.txt" },
+      { ecrire: ["f.txt", "L1 modifie\n"] },
+      { git: "reset --hard HEAD f.txt" },
+      { git: "status --porcelain" },
+      { git: "reset --hard f.txt" },
+      { git: "reset --soft HEAD f.txt" },
+      { git: "reset --hard -- f.txt" },
+      { git: "reset --hard zzz" },
+      { git: "status --porcelain" },
+      { git: "reset HEAD f.txt" },
+      { git: "status --porcelain" },
+      { git: "reset --hard" },
+      { git: "status --porcelain" }
+    ]
+  },
+  {
+    nom: "amend-qui-viderait-le-commit",
+    /* Trouve par `verif-git-scenarios.js` : le bac a sable ACCEPTAIT un
+       amendement qui rend le commit vide, la ou git refuse — sauf sur un commit
+       RACINE, ou il reussit. Les deux cas sont ici, avec et sans fichier non
+       suivi (git n'affiche pas les memes sections). */
+    actions: [
+      { ecrire: ["a.txt", "L1\n"] },
+      { git: "add ." },
+      { git: "commit -m \"racine\"" },
+      { git: "commit --amend -m \"racine renommee\"" },
+      { ecrire: ["a.txt", "L1\nL2\n"] },
+      { git: "add ." },
+      { git: "commit -m \"deuxieme\"" },
+      { ecrire: ["a.txt", "L1\n"] },
+      { git: "add ." },
+      { git: "commit --amend -m \"vide\"" },
+      { git: "status --porcelain" },
+      { ecrire: ["b.txt", "non suivi\n"] },
+      { git: "commit --amend -m \"vide\"" },
+      { git: "commit --amend --allow-empty -m \"vide assume\"" },
+      { git: "log --oneline" }
+    ]
+  },
+  {
+    nom: "revert-nomme-le-parent",
+    /* Trouve par une passe adversariale du point D4 : la ligne CONFLICT d'un
+       revert nomme « parent of <oid> (titre) ». Le bac a sable ecrivait
+       l'empreinte du commit lui-meme : il designait a l'apprenant un autre
+       objet que celui dont git parle. */
+    actions: [
+      { ecrire: ["base.txt", "socle\n"] },
+      { git: "add ." },
+      { git: "commit -m \"socle\"" },
+      { ecrire: ["f.txt", "L1\n"] },
+      { git: "add ." },
+      { git: "commit -m \"cree f\"" },
+      { ecrire: ["f.txt", "L1\nL2\n"] },
+      { git: "add ." },
+      { git: "commit -m \"modifie f\"" },
+      { git: "revert HEAD~1" },
+      { git: "status --porcelain" },
+      { git: "revert --abort" },
+      { git: "log --oneline" }
+    ]
+  },
+  {
+    nom: "revert-du-commit-racine",
+    /* Et quand le commit annule est la RACINE, git nomme ce cote
+       « (empty tree) » : son parent n'existe pas. */
+    actions: [
+      { ecrire: ["config.txt", "nom\n"] },
+      { git: "add ." },
+      { git: "commit -m \"racine\"" },
+      { ecrire: ["config.txt", "nom\nDEBUG\n"] },
+      { git: "add ." },
+      { git: "commit -m \"debug\"" },
+      { git: "revert HEAD~1" },
+      { git: "status --porcelain" },
+      { git: "log --oneline" }
+    ]
   }
 
 ];

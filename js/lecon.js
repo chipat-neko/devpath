@@ -1745,6 +1745,34 @@
      (`../`, une leçon vit dans `pages/<cours>/`) est vérifiée dans le navigateur
      par `tools/preuves/git-graphe.js` — une profondeur fausse ne se voit pas
      autrement, la page s'ouvrant sans erreur sur un lien mort. */
+  /* Quelle leçon du cours `git` mène à quelle situation guidée du bac à sable
+     (chantier V14, point D4). ⚠️ C'est la SEULE recopie de `js/git-scenarios.js`
+     sur le site — une leçon ne charge pas le module des scénarios pour trois
+     liens. `tools/verif-git-scenarios.js` exige donc que les deux tables
+     coïncident : sans cet invariant, une leçon renverrait vers une situation
+     qui ne la concerne pas, et la page s'ouvrirait très bien quand même. */
+  var SCENARIOS_GIT = {
+    "lecon-02": ["desindexer", "restaurer-fichier"],
+    "lecon-04": ["mauvaise-branche"],
+    "lecon-05": ["conflit"],
+    "lecon-06": ["conflit"],
+    "lecon-07": ["desindexer", "restaurer-fichier", "message-faux", "mauvaise-branche", "annuler-partage"],
+    "lecon-12": ["rebaser", "un-seul-commit"],
+    "lecon-19": ["commit-perdu"],
+    "lecon-20": ["un-seul-commit"]
+  };
+  var TITRES_SCENARIOS_GIT = {
+    "annuler-partage": "Il faut annuler un commit que les autres ont déjà",
+    "commit-perdu": "Un « reset --hard » a emporté un commit",
+    "conflit": "Tu es au milieu d'un conflit de fusion",
+    "desindexer": "Tu viens d'indexer un fichier qui ne doit pas partir",
+    "mauvaise-branche": "Tu as committé sur « main », ça devait aller sur une branche à part",
+    "message-faux": "Le message de ton dernier commit est faux",
+    "rebaser": "Ta branche est partie d'une base périmée",
+    "restaurer-fichier": "Tu as écrasé un fichier, et rien n'est committé",
+    "un-seul-commit": "Tu ne veux qu'UN commit d'une autre branche"
+  };
+
   function initBacGit() {
     var parts = location.pathname.split("/").filter(Boolean);
     if (parts.length < 2 || parts[parts.length - 2] !== "git") return;
@@ -1760,6 +1788,31 @@
       + "Ouvrir le bac à sable Git →</a></p>"
       + "<p>Un vrai dépôt, dans cette page&nbsp;: les empreintes sont calculées comme "
       + "Git les calcule, et le graphe se redessine à chaque commande.</p>";
+
+    /* ⚠️ Les liens vers les SITUATIONS sont construits en DOM, pas en innerHTML :
+       le titre vient d'une table, et le jour où quelqu'un y écrira un chevron,
+       il doit rester un chevron. Le lien porte l'ancre `#scenario-<id>`, que
+       `js/git-bac.js` lit au chargement pour ouvrir la situation directement. */
+    var lies = SCENARIOS_GIT[parts[parts.length - 1].replace(/\.html$/, "")] || [];
+    if (lies.length) {
+      var intro = document.createElement("p");
+      intro.className = "lesson-erreurs__titre";
+      intro.textContent = lies.length > 1
+        ? "Des situations guidées reprennent ce que cette leçon vient d'expliquer :"
+        : "Une situation guidée reprend ce que cette leçon vient d'expliquer :";
+      box.appendChild(intro);
+      var ul = document.createElement("ul");
+      ul.className = "lesson-bac-git__situations";
+      for (var i = 0; i < lies.length; i++) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = "../git-bac-a-sable.html#scenario-" + lies[i];
+        a.textContent = TITRES_SCENARIOS_GIT[lies[i]] || lies[i];
+        li.appendChild(a);
+        ul.appendChild(li);
+      }
+      box.appendChild(ul);
+    }
     prose.appendChild(box);
   }
 

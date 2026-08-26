@@ -63,7 +63,42 @@
    - `rebase` ne saute pas explicitement les commits déjà appliqués en amont
      (git compare des `patch-id` et le dit dans un `warning:`).
    - Pas de dépôt distant, donc pas de `fetch`/`push`/`pull` ; pas de reflog,
-     donc pas de `HEAD@{1}` ; pas de `stash` ; pas de sous-modules.
+     donc pas de `HEAD@{1}` ; pas de `stash` ; pas de sous-modules. Ces commandes
+     EXISTENT dans git : depuis D4, elles sont refusées par un message qui le dit
+     (« git restore existe, mais ce bac à sable ne le simule pas »), et non plus
+     par « is not a git command » — qui affirmait une contre-vérité, alors même
+     que le `git status` du bac à sable propose `git restore --staged`.
+
+   ⚠️ SEPT DIVERGENCES DE PLUS, mesurées le 2026-08-26 par une passe adversariale
+   du point D4 (97 suites voisines rejouées des deux côtés, 9 727 comparaisons).
+   Aucune n'est atteinte par les scénarios publiés — elles le seraient par un
+   apprenant qui explore. Elles sont écrites ici plutôt que corrigées à la hâte :
+
+   - **`git checkout HEAD` (sans chemin) DÉTACHE HEAD** ici ; le vrai git reste
+     sur la branche et ne bouge pas. C'est la plus grave des sept : elle change
+     l'état du dépôt, pas seulement un message.
+   - **`git cherry-pick -n <commit>`** ouvre à tort une opération en cours : le
+     `status` annonce « You are currently cherry-picking », `--continue` COMMITE
+     et `--abort` DÉTRUIT le travail indexé, là où git répond « no cherry-pick or
+     revert in progress ». Perte de données silencieuse.
+   - **`git commit -a -m` pendant un conflit** est refusé ici (« Committing is
+     not possible because you have unmerged files ») ; git, lui, termine la
+     fusion dès lors que les marqueurs ont été retirés du fichier.
+   - **`git checkout --ours|--theirs <fichier>`** : l'option est ignorée, la
+     commande se comporte comme un `checkout <chemin>` et échoue.
+   - **`git reset --keep <commit>`** laisse sur le disque un fichier que git
+     supprime.
+   - **`git checkout -B <branche courante> <cible>`** écrit « Switched to and
+     reset branch » là où git écrit « Reset branch » : le bac à sable ne
+     distingue pas le cas où l'on y est déjà.
+   - **`git revert A..B`** rend une ligne d'usage au lieu de « empty commit set
+     passed ».
+
+   Et une divergence de STRATÉGIE, elle, corrigée : `-X theirs`, `-s ours` et
+   `--strategy-option` étaient LUS puis IGNORÉS — la fusion se faisait à trois
+   voies et rendait un conflit là où git résolvait tout seul. Ils sont désormais
+   REFUSÉS avec un message, conformément à la politique de ce fichier : une
+   option sans effet enseigne un drapeau qui n'a rien fait.
    ============================================================================= */
 (function (racine) {
   "use strict";
@@ -384,7 +419,7 @@
       valeurs: [], usage: "usage: git rm [<options>] [--] <file>..." },
     commit: { drapeaux: ["--amend", "--allow-empty", "--allow-empty-message", "-a", "--all", "--no-edit", "-q", "--quiet", "-v", "--verbose", "-n", "--no-verify", "-s", "--signoff"],
       valeurs: ["-m", "--message", "-C", "--reuse-message", "--author", "--date"], usage: "usage: git commit [-a | --interactive | --patch] [-s] [-v] [-u[<mode>]] [--amend]" },
-    status: { drapeaux: ["--porcelain", "-s", "--short", "-b", "--branch", "-v", "--verbose", "--long", "--depuis-commit"],
+    status: { drapeaux: ["--porcelain", "-s", "--short", "-b", "--branch", "-v", "--verbose", "--long", "--depuis-commit", "--amend-vide"],
       valeurs: ["-u", "--untracked-files"], usage: "usage: git status [<options>] [--] [<pathspec>...]" },
     log: { drapeaux: ["--oneline", "--decorate", "--all", "--reverse"],
       valeurs: ["-n", "--max-count"], usage: "usage: git log [<options>] [<revision-range>] [[--] <path>...]" },
@@ -523,6 +558,16 @@
     var chemins = dico(), c;
     for (c in courant) if (possede(courant, c)) chemins[c] = true;
     for (c in cible) if (possede(cible, c)) chemins[c] = true;
+    /* ⚠️ UNE BASCULE FORCÉE REMET AUSSI L'INDEX, donc elle doit connaître les
+       chemins qui n'existent QUE dans l'index — un fichier ajouté par `git add`
+       et jamais commité. Sans eux, `git reset --hard` les laissait sur le disque
+       alors que git les efface : mesuré sur trois cas (indexé neuf, indexé puis
+       modifié, indexé puis effacé du disque), git les supprime les trois fois.
+       Un fichier NON SUIVI, lui, survit — il n'est dans aucun des trois
+       ensembles, et c'est ce qui distingue `reset --hard` de `git clean`. */
+    if (options.force) {
+      for (c in depot.index) if (possede(depot.index, c)) chemins[c] = true;
+    }
 
     var ecrases = [], nonSuivis = [], liste = [];
     for (c in chemins) if (possede(chemins, c)) liste.push(c);
@@ -1117,6 +1162,24 @@
       var st = C.status(depot, ["--depuis-commit"]);
       return echec(st.sortie, "Rien n'a été ajouté à l'index : il n'y a littéralement rien à figer.");
     }
+    /* ⚠️ UN AMENDEMENT QUI VIDERAIT LE COMMIT EST REFUSÉ PAR GIT, et le bac à
+       sable l'acceptait : il fabriquait un commit sans aucun changement, ce qui
+       enseigne un git qui n'existe pas. Trouvé par `verif-git-scenarios.js` (un
+       piège du scénario « annuler un commit partagé » : réécrire le fichier puis
+       amender), sur un fichier que 7 030 comparaisons déclaraient vert — faute
+       de scénario qui amende un commit jusqu'à le vider.
+       ⚠️ La condition porte sur `parents.length` : sur un commit RACINE, `git
+       commit --amend` réussit même à contenu identique, puisque l'arbre du
+       « parent » n'existe pas. Mesuré des deux côtés, pas déduit. */
+    if (!permettreVide && amend && parents.length && nouvelArbre === arbreParent) {
+      var stAmend = C.status(depot, ["--amend-vide"]);
+      return echec(stAmend.sortie.concat([
+        "You asked to amend the most recent commit, but doing so would make",
+        "it empty. You can repeat your command with --allow-empty, or you can",
+        "remove the commit entirely with \"git reset HEAD^\"."
+      ]), "Amender ce commit le rendrait vide : git refuse. Il faudrait « --allow-empty », "
+        + "ou retirer le commit avec « git reset HEAD^ ».");
+    }
 
     var instant = depot.instant;
     depot.instant += depot.pasHorloge;
@@ -1221,6 +1284,12 @@
        vide en trop se voit. */
     var sections = [], i;
     var indexes = s.indexes.filter(function (x) { return !conflitVu[x.chemin]; });
+    /* ⚠️ Pendant un `--amend`, git compare l'index au PARENT du commit, pas à
+       HEAD. Dans le seul cas où ce drapeau interne est employé — l'amendement
+       qui viderait le commit — l'index est par définition identique à l'arbre du
+       parent : il n'y a donc rien « to be committed », et git n'affiche pas la
+       section. Mesuré : le bac à sable la posait, git non. */
+    if (args.indexOf("--amend-vide") >= 0) indexes = [];
     if (indexes.length) {
       /* Pendant une fusion, git n'affiche PAS le conseil « unstage » : dé-indexer
          au milieu d'une fusion n'aurait pas de sens. */
@@ -1277,7 +1346,12 @@
     }
 
     var conclusion = null;
-    if (indexes.length) conclusion = null;   /* quelque chose est prêt : git ne conclut rien */
+    /* ⚠️ `--amend-vide` est un drapeau INTERNE, jamais tapé par personne : c'est
+       `git commit --amend` qui s'en sert pour refuser un amendement qui rendrait
+       le commit vide. Git y remplace sa conclusion habituelle par « No changes »
+       — et garde les sections. Mesuré des deux côtés le 2026-08-26. */
+    if (args.indexOf("--amend-vide") >= 0) conclusion = "No changes";
+    else if (indexes.length) conclusion = null;   /* quelque chose est prêt : git ne conclut rien */
     else if (conflits.length || pasIndexes.length) conclusion = 'no changes added to commit (use "git add" and/or "git commit -a")';
     else if (nonSuivis.length) conclusion = 'nothing added to commit but untracked files present (use "git add" to track)';
     else if (!tete) conclusion = 'nothing to commit (create/copy files and use "git add" to track)';
@@ -1875,7 +1949,14 @@
        voyait une révision en tête et désindexait TOUT — sur la commande la plus
        enseignée du cours. */
     var revisionChemins = null;
-    if (!cheminsVises.length && mots.length && mode === "mixed") {
+    /* ⚠️ La forme « avec chemins » se reconnaît AVANT de regarder le degré : git
+       refuse `--hard` et `--soft` accompagnés d'un chemin, il ne les exécute pas
+       sur tout le dépôt. Le bac à sable, lui, ne cherchait des chemins qu'en
+       mode `--mixed` : `git reset --hard HEAD notes-perso.txt` y devenait un
+       `git reset --hard` complet, et DÉTRUISAIT le travail que git avait refusé
+       de toucher. Trouvé par une passe adversariale du point D4, sur la ligne
+       même qu'un texte de scénario invitait à essayer. */
+    if (!cheminsVises.length && mots.length) {
       if (mots.length > 1 && depot.resoudre(mots[0])) {
         revisionChemins = mots[0];
         cheminsVises = mots.slice(1);
@@ -1894,6 +1975,15 @@
           "Use '--' to separate paths from revisions, like this:",
           "'git <command> [<revision>...] -- [<file>...]'"],
           "Ce chemin n'est ni une révision ni un fichier connu de git.");
+      }
+      /* Mesuré des deux côtés : le refus vient APRÈS la résolution des chemins —
+         un chemin inconnu rend « ambiguous argument », un chemin connu rend
+         « Cannot do hard reset with paths. ». Et rien n'est modifié. */
+      if (mode !== "mixed") {
+        return echec(["fatal: Cannot do " + mode + " reset with paths."],
+          "`--" + mode + "` porte sur TOUT le dépôt : git refuse de le limiter à un chemin. "
+          + "Pour ne toucher qu'un fichier, c'est `git reset <fichier>` (sans degré), "
+          + "ou `git checkout -- <fichier>` pour le disque.");
       }
       for (var i = 0; i < vises.length; i++) {
         var c = vises[i];
@@ -1952,9 +2042,27 @@
        · l'autre est déjà dans notre histoire  → rien à faire ;
        · nous sommes dans la sienne            → avance rapide, AUCUN commit créé ;
        · les histoires ont divergé             → fusion à trois voies. */
+  /* ⚠️ UNE OPTION IGNOREE EST PIRE QU'UNE OPTION ABSENTE : elle enseigne un
+     drapeau qui n'a rien fait. `-X theirs` et `-s ours` étaient LUS puis jetés,
+     et la fusion se faisait à trois voies comme si de rien n'était — le vrai git,
+     lui, résout le conflit sans broncher. Mesuré par une passe adversariale du
+     point D4. La politique du fichier est de REFUSER en le disant. */
+  function strategieRefusee(r, quoi) {
+    var st = valeur(r, "-s", "--strategy");
+    var opt = valeur(r, "-X", "--strategy-option");
+    if (!st && !opt) return null;
+    var citee = opt ? "-X " + opt : "-s " + st;
+    return echec(["fatal: " + citee + " n'est pas simulé par ce bac à sable."],
+      "Ce bac à sable fusionne toujours à trois voies, sans stratégie au choix : « " + citee
+      + " » y serait sans effet, et une option sans effet enseigne un git qui n'existe pas. "
+      + "Résous le conflit à la main, c'est ce que " + quoi + " demande ici.");
+  }
+
   C.merge = function (depot, args) {
     var rm_ = analyser("merge", args);
     if (rm_.inconnue) return optionInconnue(rm_);
+    var refusMerge = strategieRefusee(rm_, "la fusion");
+    if (refusMerge) return refusMerge;
     var e = etat(depot);
     if (drapeau(rm_, "--abort")) {
       if (e.operation !== "merge") return echec(["fatal: There is no merge to abort (MERGE_HEAD missing)."], "Aucune fusion n'est en cours.");
@@ -2256,7 +2364,15 @@
       var a = appliquer(depot, oid, {
         inverse: options.inverse,
         mainline: options.mainline,
-        labelLeur: options.inverse ? "parent of " + abrev(oid) + " (" + c.titre + ")" : abrev(oid) + " (" + c.titre + ")"
+        /* ⚠️ Le côté « leur » d'un REVERT est le PARENT du commit annulé, et git
+           le nomme ainsi jusque dans la ligne CONFLICT : « deleted in parent of
+           3628bc8 (cree f) ». Quand le commit annulé est la RACINE, ce parent
+           n'existe pas et git écrit « (empty tree) ». Les deux formes sont
+           mesurées contre le vrai git ; le bac à sable écrivait l'empreinte du
+           commit lui-même dans les deux cas — donc il désignait à l'apprenant
+           un objet qui n'est pas celui dont git parle. */
+        labelLeur: !options.inverse ? abrev(oid) + " (" + c.titre + ")"
+          : (c.parents.length ? "parent of " + abrev(oid) + " (" + c.titre + ")" : "(empty tree)")
       });
       if (a.parentInconnu) {
         return echec(["error: commit " + oid + " does not have parent " + a.parentInconnu,
@@ -2266,7 +2382,7 @@
       var message = options.inverse ? messageDeRevert(depot, c, oid, options.mainline) : c.message.replace(/\n+$/, "");
       if (options.tracer && !options.inverse) message += "\n\n(cherry picked from commit " + oid + ")";
       var e = etat(depot);
-      sortie = sortie.concat(lignesDeFusion(a.fusion, a.conflits, a.labelLeur.replace(/^parent of /, "")));
+      sortie = sortie.concat(lignesDeFusion(a.fusion, a.conflits, a.labelLeur));
 
       if (a.conflits.length) {
         e.operation = options.quoi;
@@ -2421,6 +2537,8 @@
   C.rebase = function (depot, args) {
     var rb_ = analyser("rebase", args);
     if (rb_.inconnue) return optionInconnue(rb_);
+    var refusRebase = strategieRefusee(rb_, "le rebasage");
+    if (refusRebase) return refusRebase;
     if (drapeau(rb_, "-i", "--interactive")) {
       return echec(["fatal: le bac à sable ne simule pas le rebasage interactif."],
         "`rebase -i` ouvre un éditeur pour réordonner, fusionner ou réécrire les commits : ce n'est pas simulé.");
@@ -2671,6 +2789,20 @@
     if (!mots.length) return echec(["usage: git <command> [<args>]"], "Il manque la commande.");
     var nom = mots.shift();
     if (!possede(C, nom)) {
+      /* ⚠️ NE PAS MENTIR SUR GIT. `restore`, `switch`, `stash`, `reflog`,
+         `clean`, `fsck`, `show`, `push`, `pull`, `fetch` EXISTENT — certaines
+         depuis 2019 — et `git status` les propose lui-même deux lignes plus
+         haut : le bac à sable affiche « (use "git restore --staged <file>..." to
+         unstage) », puis répondait « git: 'restore' is not a git command ». Une
+         passe adversariale l'a relevé : l'apprenant en conclut que la commande
+         que git vient de lui souffler n'existe pas. On distingue donc ce qui
+         n'existe pas de ce qui n'est pas SIMULÉ ICI. */
+      if (REELLES_NON_SIMULEES.indexOf(nom) >= 0) {
+        return echec(["git " + nom + " existe, mais ce bac à sable ne le simule pas.",
+          "Les quinze commandes simulées : " + Object.keys(C).sort().join(", ") + "."],
+          "« git " + nom + " » est une vraie commande de git — simplement, ce bac à sable "
+          + "ne la reproduit pas. Le cours, lui, l'enseigne.");
+      }
       return echec(["git: '" + nom + "' is not a git command. See 'git --help'."],
         "Cette commande n'existe pas dans le bac à sable. Disponibles : " + Object.keys(C).sort().join(", ") + ".");
     }
@@ -2686,6 +2818,15 @@
   /* ===========================================================================
      7. SÉRIALISATION (pour D4 : reprendre un scénario où on l'a laissé)
      =========================================================================== */
+
+  /* Des commandes de git bien réelles, que ce bac à sable ne simule pas. Les
+     confondre avec des fautes de frappe enseignerait un git qui n'existe pas —
+     et plusieurs d'entre elles sont proposées par le `git status` du bac à sable
+     lui-même, ou enseignées par le cours. */
+  var REELLES_NON_SIMULEES = ["restore", "stash", "reflog", "clean", "fsck", "show",
+    "push", "pull", "fetch", "clone", "remote", "bisect", "blame", "worktree",
+    "submodule", "config", "init", "apply", "format-patch", "bundle", "archive",
+    "grep", "shortlog", "describe", "gc", "prune", "notes", "am", "mv"];
 
   function exporter(depot) {
     var e = etat(depot);

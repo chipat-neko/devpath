@@ -47,6 +47,11 @@ var page = args.filter(function (a) { return a.indexOf('--') !== 0; })[0];
 if (!page) { console.error('usage : node tools/preuve-hors-reseau.js <page.html> [--attendre=EXPR]'); process.exit(2); }
 var attendreExpr = (args.find(function (a) { return a.indexOf('--attendre=') === 0; }) || '--attendre=window.__RESULTAT').slice(11);
 var LIMITE = parseInt((args.find(function (a) { return a.indexOf('--ms=') === 0; }) || '--ms=25000').slice(5), 10);
+/* `--hash=#quelque-chose` : l'ancre fait partie de l'URL, et certaines pages en
+   dépendent dès le chargement — le bac à sable Git ouvre la situation guidée que
+   `#scenario-<id>` désigne. Elle ne peut pas être collée au chemin, que
+   `path.resolve` normaliserait. */
+var ANCRE = (args.find(function (a) { return a.indexOf('--hash=') === 0; }) || '--hash=').slice(7);
 
 function dodo(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 function get(url) {
@@ -60,7 +65,7 @@ function get(url) {
 }
 
 (async function () {
-  var url = 'file:///' + path.resolve(RACINE, page).replace(/\\/g, '/');
+  var url = 'file:///' + path.resolve(RACINE, page).replace(/\\/g, '/') + ANCRE;
   console.log('preuve-hors-reseau.js — ' + url);
   console.log('  Chrome headless · file:// · SANS --allow-file-access-from-files · DNS coupé\n');
 

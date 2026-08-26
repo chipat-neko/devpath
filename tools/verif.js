@@ -14,6 +14,7 @@
      stockage node tools/verif-stockage.js  l'echec d'ecriture previent l'apprenant
      gitmodl  node tools/verif-git-modele.js  le modele de depot Git face au vrai git
      gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
+     gitscen  node tools/verif-git-scenarios.js  les situations guidees : la solution atteint le but
 
    USAGE
      node tools/verif.js            # les six (le rendu prend plusieurs minutes)
@@ -90,6 +91,13 @@ var ETAPES = [
      l'ordre topologique des lignes, la continuite des colonnes, les aretes et
      les marques a ce que rend `git log --graph --topo-order`. */
   { nom: "gitgraf", fichier: "verif-git-graphe.js", args: [], quoi: "graphe du bac a sable : meme ordre et memes colonnes que git log --graph", sautable: true },
+  /* Les SITUATIONS GUIDEES (point D4) affirment trois choses de plus : que la
+     mise en place produit bien le probleme annonce, que la solution publiee
+     l'atteint (et plusieurs autres chemins avec elle), et que les pieges
+     echouent sur l'objectif annonce. Cette etape rejoue les 43 parcours des deux
+     cotes, et refuse tout objectif deja vrai au depart — un controle vert par
+     vacuite ne prouve rien. */
+  { nom: "gitscen", fichier: "verif-git-scenarios.js", args: [], quoi: "situations guidees : la solution atteint le but, les pieges echouent", sautable: true },
 ];
 if (!RAPIDE) {
   ETAPES.push({
