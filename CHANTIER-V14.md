@@ -728,10 +728,76 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **7. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (37,0 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 10 pages hôtes : **60 mesures** (3 largeurs × 2 thèmes), **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome, en `file://` sans `--allow-file-access-from-files` : **40 réponses tapées, 40 acceptées** ; passe adversariale **40 fausses tapées, 40 refusées**. 🆕 **`--graphie=N`** ajouté à `exos-texte.js` — une tolérance ajoutée sans être tapée serait une affirmation sans preuve : **30 secondes graphies tapées, 30 acceptées**. Alignement `.exercise` ⇄ `data-exos` : **4 pour 4** sur les 10 pages. 0 BOM, 0 caractère NUL, 0 mojibake, JSON valide, **tout en LF** (les pages repassent en CRLF à chaque `git checkout` : `core.autocrlf` vaut `true`). **0 URL de CDN.** Générateur **idempotent**. `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
 
   **8. Mesure.** Exercices à champ : **4 574 → 4 584** (+10). Exercices de prédiction sur le site : **35 → 45** (+10). Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`. **0 octet de moteur ajouté.** Pages corrigées hors lot : **10 pages `cpp`** (consigne de recherche inexacte).
-- [ ] **B7c-3 · `java` et `csharp`** (37 et 31 blocs). ⚠️ `dotnet` n'a ici **que le runtime, aucun SDK** : C# n'est pas plus compilable que le reste, le rejeu par transposition reste la seule voie.
+- [x] **B7c-3 · `java` et `csharp`** ✅ **2026-08-26. 14 exercices de prédiction — et le premier lot où le REJEU A CORRIGÉ LE SITE AVANT D'ÉCRIRE : trois sorties étaient fausses.**
+
+  **1. Ni JDK ni SDK .NET, et la mesure du plan ne se reproduit pas.** `javac` et `java` : absents. `dotnet` est là mais **`--list-sdks` ne rend RIEN** (`--list-runtimes` : Microsoft.NETCore.App 8.0.19) — le runtime seul ne compile pas, la réserve inscrite dans le plan est confirmée par la commande. La transposition reste donc la seule voie, comme pour cpp et rust. Et les « 37 et 31 blocs » annoncés ne se retrouvent pas : avec la règle exacte de la forme `bloc` (tête STRICTE `// Sortie :`), `scratchpad/v14-b7c3/inventaire.js` compte **28 blocs java sur 228** et **22 csharp sur 247** — l'écart vient de la règle de comptage, comme pour rust (43 mesurés contre 50 annoncés). Le gisement est CONCENTRÉ : java dans 4 leçons (01, 03, 04, 06) sur 23, csharp dans 5 (01, 04, 05, 09, 12) sur 23.
+
+  **2. LES 50 PROGRAMMES ONT ÉTÉ REJOUÉS — ET TROIS SORTIES DU SITE ÉTAIENT FAUSSES.** Deux outils neufs sur le modèle de `rejoue-rust.js` : `tools/preuves/rejoue-java.js` (**28 programmes, 56 lignes**) et `tools/preuves/rejoue-csharp.js` (**22 programmes, 33 lignes, 1 glose écartée**). Ils reproduisent ce que chaque langage IMPRIME et confrontent à la sortie **extraite du HTML**, jamais retapée.
+
+  | le bloc | ce que la leçon annonçait | ce que le programme fait |
+  |---|---|---|
+  | `java/lecon-03`, boucles étiquetées | `0,0` / `0,1` / **`1,0`** | **`0,0` / `0,1`** — `break externe` sort des DEUX boucles, et `1,0` est la sortie d'un `break` SIMPLE |
+  | `java/lecon-04`, tableau à deux dimensions | 2 lignes (`1 2 3` / `4 5 6`) | **5 lignes** : trois `println` (6, 2, 3) précèdent la boucle |
+  | `csharp/lecon-04`, grille | 2 lignes | **5 lignes** — même faute, même correction |
+
+  La première est la plus grave : **l'exemple contredisait son propre commentaire** (« sort des DEUX boucles d'un coup ») trois lignes plus bas, et la contre-épreuve le prouve — `--fausse=label`, qui remplace le `break` étiqueté par un `break` simple, rend le bloc **conforme**. Quatre vérificateurs verts n'avaient rien vu, parce qu'aucun n'exécute.
+
+  **Contre-épreuves ciblées** (un rejeu qui ne trouve rien doit prouver qu'il sait trouver) : java `--fausse=divent` fait tomber **exactement 1** programme (le seul qui dépende de `17 / 4 = 4`), `--fausse=arrondi` **exactement 2** ; csharp `--fausse=write` **1** (les trois `Console.Write` d'une même ligne), `--fausse=zero` **4** (les `decimal`/`double` sans zéro final), `--fausse=static` **1** (le compteur partagé). Après correction : **28/28 et 22/22, 0 divergence.**
+
+  **3. Une « sortie » qui n'en est pas.** `csharp/lecon-12` intercale « (2 secondes plus tard) » au milieu de la sortie de son programme asynchrone : c'est une GLOSE. Le rejeu la retire au lieu de faire semblant de la produire (champ `glose`), et c'est aussi pourquoi ce bloc ne peut porter aucun exercice.
+
+  **4. LE FAN-OUT DE CONTRADICTION A FAIT RETIRER UNE CIBLE ET CORRIGÉ SEPT LIBELLÉS DE LIEN.** Trois agents (calcul / triche / rédaction) sur les 15 exercices d'abord écrits, tous mes contrôles verts.
+
+  Le contradicteur **calcul** a retransposé les 15 programmes indépendamment : **15 sorties sur 15 identiques**, 25 lignes recalculées, code cité fidèle au bloc d'origine ligne à ligne (ratio 1.000), et les sorties des leçons SOURCES elles-mêmes revérifiées. Les deux autres ont rendu ce que ni lui ni mes contrôles ne pouvaient voir :
+
+  | ce qui a été trouvé | vérifié par moi | traitement |
+  |---|---|---|
+  | **`java/lecon-13` : la réponse est de la TRANSCRIPTION.** `Livre[titre=Java 1re ed., isbn=978-1]` s'obtient en collant cinq littéraux tous visibles à l'écran ; et les indices achevaient le travail (« c'est le livre a, pas b », puis la règle d'assemblage) | oui, lu dans le bloc | **cible SUPPRIMÉE** — 15 exercices deviennent 14. La seule autre ligne du bloc est « true », binaire |
+  | **Les 7 libellés de lien `csharp` sont FAUX.** « Classes et objets » pour une leçon intitulée « Classes, objets et propriétés » — et c'est le titre de `java/lecon-05` : le libellé avait été **emprunté au cours jumeau**. « Découvrir C# » pour « Découvrir C# et .NET » | oui, lu dans les `<h1>` | **contrôle 12 ajouté au générateur** (le libellé doit être le titre `<h1>` de la leçon source, ou le préfixe d'un de ses titres de section) ; 7 libellés corrigés |
+  | **La tolérance de frappe était ASYMÉTRIQUE**, mesuré frappe par frappe : `graphies()` n'enlevait que l'espace d'AVANT le séparateur. « Total: 53 » passait, « Total :53 » échouait ; « 5!=120 » passait, « 5! =120 » échouait | oui, en exécutant `normExo` | `graphies()` énumère désormais les **quatre** combinaisons pour `:` `;` `=` `|`. **Et les 45 exercices déjà écrits ont été mis à niveau** (`scratchpad/v14-b7c3/maj-accept.js`, qui EXTRAIT la règle du générateur au lieu de la recopier) : **12 exercices élargis, 29 graphies ajoutées** |
+  | **Deux commentaires énonçaient la réponse** : `// termine la ligne ici` (csharp/lecon-01, le point même de l'exercice) et `// Constructeur surcharge qui CHAINE vers le principal` (csharp/lecon-05, la seule inférence à faire) | oui | masqués — et le **masquage a dû être étendu**, il ne courait que sur les lignes situées AVANT la zone de sortie |
+  | **Six indices donnaient le RÉSULTAT au lieu d'une règle** (« Recolle les trois morceaux dans l'ordre », « compare pi × 2² et 9 », « la dernière valeur affichée est celle d'AVANT », « Decrire() met les points de vie entre parenthèses… ») | oui, relus un par un | réécrits |
+  | **La virgule décimale française est refusée** (« 21,57 ») sans que rien ne prévienne | oui | **tolérance REFUSÉE, avertissement AJOUTÉ** : « 21,57 » n'est pas ce que `Locale.US` imprime, l'accepter validerait une sortie que le programme ne produit pas. Les trois indices concernés nomment désormais `Locale.US` |
+  | **Toute la prose neuve était SANS ACCENTS** (« libelle », « resultat », « incremente », « Heritage »), par mimétisme des commentaires du code — que ces deux cours écrivent volontairement en ASCII. 79 occurrences | oui, comptées | prose entièrement réaccentuée : **0 mot non accentué** contre 47 (java) et 48 (csharp) accentués. Le code, lui, n'est pas touché |
+
+  **5. DEUX TROUS DU GÉNÉRATEUR, ouverts par C# et refermés.** L'idiome de C# écrit le programme, PUIS sa sortie, PUIS la classe qui le fait marcher (10 blocs sur 10 dans `lecon-05`). Or (a) le contrôle 11 ne comptait les commentaires **qu'avant** la zone de sortie : tout le corps de la classe échappait au compte, et un commentaire y énonçant la réponse serait passé inaperçu ; (b) la règle « une ligne commentée après la sortie se lit comme sa suite » courait **jusqu'au bout du bloc** et effaçait « Constructeur principal » à quinze lignes de là. Le compte couvre désormais tout le code cité, et la coupe exige la **contiguïté**.
+
+  **6. Réserves assumées, mesurées, non masquées.**
+  - **La réponse reste en clair dans la leçon SOURCE**, pour 14 sur 14, et le `<details>` « Voir la réponse » la donne aussi — c'est la convention de tous les exercices du site. Inhérent à la règle A5 ; **le trancher reste la case B7c-6.**
+  - **`java/lecon-07` (do…while) se déduit par parallélisme** : « do...while : 5 » reste visible, l'énoncé dit qu'UNE seule ligne manque, donc « 4 » s'obtient sans comprendre que la boucle teste après. Gardé faute de meilleure cible dans la leçon 03, mais c'est le plus faible du lot ; les indices ont été réécrits pour ne plus donner le calcul.
+  - **6 libellés de lien PRÉEXISTANTS ne correspondent à aucun titre** de leur leçon source (ruby 5 : « Modifier un hash », « Rouvrir une classe », « Inspecter l'exception », « Écrire du JSON », « La déstructuration » ; kotlin 1 : « les propriétés déléguées »). Révélés par le contrôle 12, **non corrigés ici** : c'est la même dette que les 5 exercices `ruby` de B7c-6, et la mélanger à ce point aurait fait deux travaux à moitié.
+  - **`java/lecon-11` et `csharp/lecon-08` débordent horizontalement à 320 px** — et **le débordement PRÉEXISTE** : mesuré sur la version HEAD des mêmes pages (`git show HEAD:… > …-avant.html`), il est identique. ⚠️ Au passage : **`verif-rendu.js` n'est pas déterministe** sur ces pages — deux passes sur un fichier INCHANGÉ rendent 4 puis 3 erreurs, avec des valeurs qui varient (+50 puis +86 px). Cause probable : les schémas SVG de 640 px de large du cours.
+  - **`csharp/lecon-04` (grille) : l'espace de FIN de rangée n'est pas transcrite.** `Write($"{v} ")` en produit une, invisible dans un commentaire. Les deux blocs corrigés gagnent leurs trois lignes manquantes, pas cette espace.
+
+  **7. ⚠️ LE PIÈGE DU HEREDOC S'EST REPRODUIT, et il a coûté deux libellés.** Un `heredoc` Bash de cet environnement réduit `\\` en `\` : un `'Revoir \\u00ab …'` écrit dans un script Python y arrive en `'Revoir « …'`, que Python **interprète** comme le guillemet « — la ligne de sécurité censée ne rien faire a donc vidé le champ `label` de deux pages. Réparé (`scratchpad/v14-b7c3/repare-label.js`), et vérifié : **0 `"label":""` sur tout le site**. Le plan le disait déjà pour B7c-1 ; il faut l'écrire une deuxième fois.
+
+  **8. Les 14 exercices** (bloc de la leçon *n* → exercice dans une leçon suivante) :
+
+  | source → hôte | ce qu'on fait prédire | réponse recalculée |
+  |---|---|---|
+  | java 03 → 04 | la somme d'un tableau de quatre notes, au for-each | `Total : 53` |
+  | java 03 → 05 | une factorielle dont la boucle part de 2 et va jusqu'à n INCLUS | `5! = 120` |
+  | java 03 → 07 | la dernière ligne d'un `do...while` qui teste après | `do...while : 4` |
+  | java 03 → 08 | la valeur d'un `j` déclaré AVANT la boucle qui l'incrémente | `j vaut 3` |
+  | java 06 → 10 | un cercle et un carré sommés par polymorphisme, `%.2f` | `Aire totale : 21.57` |
+  | java 06 → 11 | une classe abstraite dont la sous-classe redéfinit `aire()` | `rouge, aire = 3.14` |
+  | java 06 → 12 | `comparer()` rend l'OBJET le plus étendu, pas sa valeur | `Plus grande aire : 12.57` |
+  | csharp 01 → 02 | trois `Console.Write` qui ne font qu'une ligne | `Bonjour C#!` |
+  | csharp 01 → 03 | une accolade d'interpolation qui contient une EXPRESSION | `L'an prochain, tu en auras 18.` |
+  | csharp 05 → 06 | un champ `int` non initialisé, incrémenté deux fois | `Valeur : 2` |
+  | csharp 05 → 07 | un constructeur qui CHAÎNE vers le principal | `Noah (100 PV) \| Lina (100 PV)` |
+  | csharp 05 → 08 | une propriété `static` partagée face à un `Id` d'instance | `1, 2, total = 2` |
+  | csharp 05 → 09 | un `decimal` modifié par deux méthodes, sans zéro final | `Noah : 120 EUR` |
+  | csharp 05 → 10 | une propriété CALCULÉE, et un `double` entier | `Aire = 12` |
+
+  Ce sont des pièges : la borne INCLUSE de `i <= n`, le corps de `do…while` exécuté avant son test, la variable qui survit à la boucle parce qu'elle a été déclarée avant, le `%.2f` qui ARRONDIT au lieu de tronquer, le `Console.Write` qui n'achève pas sa ligne, le constructeur qui délègue la valeur qu'on cherche, le compteur statique que les instances se partagent, et le `decimal` qui s'imprime sans zéro final.
+
+  **9. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (37,2 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 12 pages hôtes sans dette préexistante : **72 mesures** (3 largeurs × 2 thèmes), **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome, en `file://` sans `--allow-file-access-from-files` : **56 réponses tapées, 56 acceptées** ; passe adversariale **56 fausses tapées, 56 refusées** ; **95 graphies élargies tapées, 95 acceptées** (`--graphie=2,3,4`, sur les lots java, csharp, cpp et rust). Alignement `.exercise` ⇄ `data-exos` : **4 pour 4** sur les 15 pages touchées. 0 BOM, 0 caractère NUL, 0 mojibake, JSON valide, **tout en LF**. **0 URL de CDN active** (les 2 fichiers qui citent `fonts.gstatic.com` sont des leçons HTML qui l'écrivent **échappé**, pour l'enseigner ; elles datent du premier commit). Générateur **idempotent** ; `--rejouer` ne rend que les **11 dettes préexistantes** (5 exercices `ruby` de B7c-6, 6 libellés). `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
+
+  **10. Mesure.** Exercices à champ : **4 584 → 4 598** (+14). Exercices de prédiction sur le site : **45 → 59** (+14). Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`. **0 octet de moteur ajouté.** Sorties du site corrigées : **3 blocs** (java 2, csharp 1), **+9 lignes de sortie manquantes**. Tolérance de frappe élargie sur **12 exercices antérieurs** (+29 graphies). Libellés de lien corrigés : **7**.
 - [ ] **B7c-4 · `c` et `php`** (28 et 29 blocs).
 - [ ] **B7c-5 · `go` et `elixir`** (22 et 1 blocs). ⚠️ `elixir` est le seul des huit à employer surtout l'annonce de fin de ligne (10 blocs) : c'est la forme de B7a/B7b qu'il faut y appliquer, pas la forme `bloc`.
-- [ ] **B7c-6 · Reprendre les 5 exercices `ruby` que `--rejouer` refuse** (point 9 de B7c-1), et trancher la réserve du point 8 : faut-il masquer la ligne dans la leçon source ?
+- [ ] **B7c-6 · Reprendre les 5 exercices `ruby` que `--rejouer` refuse** (point 9 de B7c-1), et trancher la réserve du point 8 : faut-il masquer la ligne dans la leçon source ? ➕ **Et les 6 libellés de lien que le contrôle 12 refuse** (B7c-3) : `ruby/lecon-05` « Modifier un hash », `lecon-11` « Rouvrir une classe », `lecon-12` « Inspecter l’exception », `lecon-19` « Écrire du JSON », `lecon-20` « La déstructuration », `kotlin/lecon-11` « les propriétés déléguées » — aucun ne correspond à un titre de sa leçon source.
 - [ ] **B7d · `bash`** (65 blocs) — à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
 
 ---

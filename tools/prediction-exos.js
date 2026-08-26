@@ -580,6 +580,199 @@ var LOTS = {
        fournissait de cible non triviale, et prendre un bloc de la leçon 12 aurait
        divulgué la leçon suivante. */
     ]
+  },
+
+  /* ===================== B7c-3 — java (2026-08-26) =====================
+     Même forme « bloc » que cpp et rust. Aucun JDK ici (`javac` et `java` : absents,
+     vérifié) : `tools/preuves/rejoue-java.js` transpose les 28 programmes du cours qui
+     portent une tête stricte et reproduit ce que Java IMPRIME — la division ENTIÈRE
+     (17 / 4 vaut 4), `printf("%.2f")` qui arrondit, `print` qui n'ajoute pas de saut de
+     ligne, un boolean écrit en toutes lettres. 56 lignes comparées.
+
+     ⚠️ CE REJEU A TROUVÉ DEUX SORTIES FAUSSES, corrigées avant d'écrire un seul
+     exercice : `lecon-03` annonçait « 0,0 / 0,1 / 1,0 » sous un `break externe` — c'est
+     la sortie d'un `break` SIMPLE, et l'exemple contredisait son propre commentaire ;
+     `lecon-04` annonçait 2 lignes là où le programme en affiche 5. Un exercice de
+     prédiction bâti sur l'une des deux aurait publié une réponse fausse.
+
+     ⚠️ LE GISEMENT TIENT DANS QUATRE LEÇONS (01, 03, 04, 06) sur 23, et la leçon 01
+     n'offre que de la transcription (« Lea », « Hello, World! ») : les sources
+     utilisables sont 03 et 06. L'apostrophe est DROITE — le cours en compte 2 269 pour
+     0 courbe. La prose, elle, est ACCENTUÉE : les commentaires du code de ces deux
+     cours sont volontairement sans accents, mais un énoncé lu par l'apprenant n'est
+     pas du code. */
+  java: {
+    dossier: 'java', langue: 'java', marqueur: '//', forme: 'bloc', fichierCite: 'Main.java',
+    cibles: [
+  { source: '03', page: '04', bloc: 'int[] notes = {12, 8, 15, 18};', ligne: 'Total :',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["Le for-each parcourt les quatre notes, une par une.",
+            "total part de 0 et accumule chaque valeur.",
+            "Le libellé « Total : » fait partie de la ligne affichée."],
+    pourquoi: "Le for-each additionne les quatre notes du tableau. La concaténation colle le résultat derrière le libellé.",
+    label: 'Revoir « Conditions et boucles »' },
+
+  { source: '03', page: '05', bloc: 'long factorielle = 1;', ligne: '! =',
+    quoi: 'la ligne manquante', commentaires: 2,
+    hints: ["La boucle part de 2, pas de 1 : multiplier par 1 ne changerait rien.",
+            "Elle s'arrête à n INCLUS, car la condition est i <= n.",
+            "Le libellé reprend n, puis le point d'exclamation, puis le signe égal."],
+    pourquoi: "factorielle accumule le produit des entiers de 2 à n. Le libellé affiche n, le point d'exclamation, puis le résultat.",
+    label: 'Revoir « Conditions et boucles »' },
+
+  { source: '03', page: '07', bloc: 'int compteur = 0;', ligne: 'do...while : 4',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["do...while teste sa condition APRÈS le tour, jamais avant.",
+            "Regarde dans quel sens n varie à chaque passage, et à quelle condition la boucle continue.",
+            "La ligne masquée est la dernière que le programme écrit avant de s'arrêter."],
+    pourquoi: "Le corps s'exécute d'abord, la condition n > 3 n'est testée qu'ensuite : n est affiché tant qu'il reste au-dessus de 3, et la dernière valeur écrite est la dernière à satisfaire ce test.",
+    label: 'Revoir « Conditions et boucles »' },
+
+  { source: '03', page: '08', bloc: 'déclaré AVANT la boucle', ligne: 'j vaut',
+    quoi: 'la ligne manquante', commentaires: 3,
+    hints: ["j est déclaré AVANT la boucle : il survit à la boucle, contrairement à i.",
+            "Le while ne fait qu'incrémenter j, sans rien afficher.",
+            "Une boucle s'arrête quand sa condition devient fausse, pas avant."],
+    pourquoi: "Le while incrémente j jusqu'à ce que la condition j < 3 devienne fausse ; j existe toujours après la boucle, puisqu'il a été déclaré avant elle.",
+    label: 'Revoir « Conditions et boucles »' },
+
+  { source: '06', page: '10', bloc: 'List<Forme> formes = List.of(', ligne: 'Aire totale',
+    quoi: 'la ligne manquante', commentaires: 3,
+    hints: ["Chaque objet calcule SON aire : la formule du cercle pour l'un, celle du carré pour l'autre.",
+            "Le rayon vaut 2 et le côté 3 : additionne les deux aires.",
+            "%.2f arrondit à deux décimales, et Locale.US impose le point comme séparateur décimal."],
+    pourquoi: "La boucle appelle aire() sur chaque forme sans savoir laquelle elle tient : chaque classe applique sa propre formule. Le total est arrondi par %.2f, il n'est pas tronqué.",
+    label: 'Revoir « Héritage et polymorphisme »' },
+
+  { source: '06', page: '11', bloc: 'new Cercle("rouge", 1)', ligne: 'rouge, aire',
+    quoi: 'la ligne manquante', commentaires: 3,
+    hints: ["decrire() est écrit une seule fois dans la classe abstraite, mais aire() est redéfini par Cercle.",
+            "Le rayon vaut 1 : l'aire du cercle se ramène à une constante bien connue.",
+            "%.2f garde deux décimales, et Locale.US impose le point comme séparateur décimal."],
+    pourquoi: "decrire() affiche la couleur, puis l'aire calculée par la sous-classe. Avec un rayon de 1, l'aire vaut pi, que %.2f arrondit à deux décimales.",
+    label: 'Revoir « Héritage et polymorphisme »' },
+
+  { source: '06', page: '12', bloc: 'Forme comparer(Forme autre)', ligne: 'Plus grande aire',
+    quoi: 'la ligne manquante', commentaires: 2, masquer: ['aire ~ 12.57'],
+    hints: ["comparer() rend l'OBJET dont l'aire est la plus grande, pas la valeur de l'aire.",
+            "Calcule les deux aires avant de comparer : un cercle de rayon 2 face à un rectangle de 3 sur 3.",
+            "%.2f arrondit le gagnant à deux décimales, et Locale.US impose le point comme séparateur décimal."],
+    pourquoi: "comparer() est écrit une seule fois dans la classe abstraite, mais il appelle aire(), que chaque sous-classe redéfinit : c'est la forme la plus étendue qui est rendue, puis affichée arrondie.",
+    label: 'Revoir « Héritage et polymorphisme »' }
+
+  /* ÉCARTÉS, et pour des raisons qui valent d'être écrites :
+     · toute la leçon 01 (« Lea », « Hello, World! », « Noah / Java / 2026 ») : la
+       réponse est le littéral du code, à la guillemet près. De la transcription.
+     · `lecon-03` bloc `switch (note / 4)` : le point est superbe (17 / 4 vaut 4 en
+       division entière), mais les DEUX lignes de sortie sont écrites en clair dans le
+       switch (`println("Excellent travail !")` et `yield "Très bien"`). Le contrôle 5
+       les refuse, et il a raison.
+     · `lecon-03` bloc des boucles étiquetées : sortie CORRIGÉE ce jour (voir plus
+       haut), mais il ne lui reste que deux lignes dont l'une se déduit de l'autre.
+     · `lecon-04` bloc `afficher` surchargé : les commentaires de l'appel annoncent la
+       sortie en clair (« 1re version : Salut », « 2e version : Java x3 »).
+     · `lecon-06` blocs `crier()` (« Wouf » / « Miaou ») et `instanceof` : les deux
+       valeurs sont des littéraux du code.
+     · ⚠️ `lecon-06` bloc `class Livre` — ÉCRIT, PUIS RETIRÉ PAR LA CONTRADICTION.
+       « Livre[titre=Java 1re ed., isbn=978-1] » s'obtient en collant cinq littéraux
+       tous visibles à l'écran (`"Livre[titre="`, le titre passé au constructeur,
+       `", isbn="`, l'ISBN, `"]"`) : aucun calcul, aucune sémantique. C'est le motif
+       « Scores : [10, 7, 15] » déjà sanctionné sur le lot rust. Et les indices
+       achevaient le travail en tranchant la seule ambiguïté restante (« c'est le livre
+       a, pas b ») puis en décrivant la règle d'assemblage. La ligne « true » du même
+       bloc, elle, exigerait de comprendre l'égalité par ISBN — mais c'est une réponse
+       binaire, donc une chance sur deux au hasard. Le bloc est abandonné. */
+    ]
+  },
+
+  /* ===================== B7c-3 — csharp (2026-08-26) =====================
+     ⚠️ `dotnet` est installé ici, mais il n'a QUE LE RUNTIME : `dotnet --list-sdks` ne
+     rend rien, `--list-runtimes` rend Microsoft.NETCore.App 8.0.19. Sans SDK, pas de
+     `dotnet run` : C# n'est pas plus compilable que le C++ ou le Rust, et le rejeu par
+     transposition reste la seule voie. `tools/preuves/rejoue-csharp.js` couvre les 22
+     programmes à tête stricte du cours — 33 lignes comparées, 0 divergence après
+     correction de `lecon-04` (même sortie incomplète que son jumeau Java).
+
+     Ce que le rejeu devait reproduire : un `decimal` ou un `double` sans partie
+     décimale s'imprime SANS zéro final (120m donne « 120 »), `Console.Write` n'ajoute
+     pas de saut de ligne, et une propriété `static` est partagée par toutes les
+     instances. Apostrophe DROITE : le cours en compte 2 540 pour 3 courbes. */
+  csharp: {
+    dossier: 'csharp', langue: 'csharp', marqueur: '//', forme: 'bloc', fichierCite: 'Program.cs',
+    cibles: [
+  { source: '01', page: '02', bloc: 'Console.Write("Bonjour ");', ligne: 'Bonjour',
+    quoi: 'la ligne manquante', commentaires: 0, masquer: ['termine la ligne ici'],
+    hints: ["Write et WriteLine ne font pas la même chose : l'un termine la ligne, l'autre non.",
+            "Compte les lignes de la sortie, puis compte les appels : il y en a plus que de lignes.",
+            "La deuxième ligne affichée est déjà visible : tout ce qui vient avant elle tient donc sur la première."],
+    pourquoi: "Console.Write n'ajoute pas de saut de ligne : les appels s'écrivent bout à bout tant qu'aucun WriteLine ne vient terminer la ligne. Quatre appels ne font ici que deux lignes.",
+    label: 'Revoir « Découvrir C# et .NET »' },
+
+  { source: '01', page: '03', bloc: 'var prenom = "Noah";', ligne: 'prochain',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["Une interpolation n'accepte pas qu'un nom de variable : elle évalue une EXPRESSION.",
+            "Regarde ce que contiennent exactement les accolades de la seconde ligne.",
+            "Le point final appartient à la chaîne, il s'affiche aussi."],
+    pourquoi: "Les accolades d'une chaîne interpolée évaluent une expression complète, pas seulement une variable : c'est le résultat du calcul qui s'affiche, et le point final fait partie du texte.",
+    label: 'Revoir « Découvrir C# et .NET »' },
+
+  { source: '05', page: '06', bloc: 'var compteur = new Compteur();', ligne: 'Valeur',
+    quoi: 'la ligne manquante', commentaires: 4,
+    hints: ["Le champ _valeur part de 0 : un int non initialisé vaut zéro en C#.",
+            "Compte les appels à Incrementer() avant l'affichage.",
+            "Afficher() reprend le libellé « Valeur : » suivi du champ."],
+    pourquoi: "Un champ int vaut 0 par défaut ; chaque appel à Incrementer() l'augmente d'une unité, et Afficher() écrit sa valeur courante derrière son libellé.",
+    label: 'Revoir « Classes, objets et propriétés »' },
+
+  { source: '05', page: '07', bloc: 'public Joueur(string nom) : this(nom, 100) { }', ligne: 'PV',
+    quoi: 'la ligne manquante', commentaires: 3,
+    masquer: ['utilise les 100 PV par defaut', 'Constructeur surcharge qui CHAINE vers le principal'],
+    hints: ["Deux constructeurs portent le même nom : c'est le NOMBRE d'arguments qui choisit lequel s'exécute.",
+            "Le second n'a pas de corps, mais il en appelle un autre : regarde ce qu'il lui transmet.",
+            "Decrire() est écrit une seule fois, et les deux joueurs passent par lui."],
+    pourquoi: "Le constructeur à un seul argument délègue au constructeur principal en lui passant lui-même la valeur manquante : le second joueur reçoit donc cette valeur sans qu'aucun appel ne l'écrive.",
+    label: 'Revoir « Classes, objets et propriétés »' },
+
+  { source: '05', page: '08', bloc: 'public static int Total { get; private set; }', ligne: 'total =',
+    quoi: 'la ligne manquante', commentaires: 4,
+    hints: ["Total est static : il n'existe qu'une seule fois pour toute la classe.",
+            "Id, lui, est propre à chaque objet, et prend la valeur de Total au moment de la construction.",
+            "Deux utilisateurs sont créés : suis le compteur pas à pas, dans l'ordre du constructeur."],
+    pourquoi: "Total est partagé par la classe entière, alors que chaque Id garde la valeur qu'avait le compteur au moment où son objet a été construit : l'un avance, les autres sont figés.",
+    label: 'Revoir « Classes, objets et propriétés »' },
+
+  { source: '05', page: '09', bloc: 'var compte = new Compte("Noah", 50m);', ligne: 'EUR',
+    quoi: 'la ligne manquante', commentaires: 4,
+    hints: ["Le solde initial est passé au constructeur, puis modifié par les appels suivants.",
+            "Deposer ajoute, Retirer soustrait : suis les appels dans leur ordre.",
+            "Un decimal sans partie décimale s'affiche sans zéro final : ni virgule, ni centimes."],
+    pourquoi: "Le solde n'est modifiable que par les méthodes de la classe, qui l'ajustent tour à tour. Un decimal dont la partie décimale est nulle s'imprime sans zéro final.",
+    label: 'Revoir « Classes, objets et propriétés »' },
+
+  { source: '05', page: '10', bloc: 'var r = new Rectangle(3, 4);', ligne: 'Aire',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["Aire n'est pas un champ : c'est une propriété calculée à chaque lecture.",
+            "Elle combine les deux dimensions passées au constructeur, dans l'ordre où il les range.",
+            "Les deux dimensions sont des double, mais un double entier s'affiche sans zéro final."],
+    pourquoi: "Aire est recalculée à la volée à partir des deux dimensions. Le résultat est un double, mais C# n'écrit pas le zéro final d'un double sans partie décimale.",
+    label: 'Revoir « Classes, objets et propriétés »' }
+
+  /* ÉCARTÉS, et pour des raisons qui valent d'être écrites :
+     · `lecon-01` blocs « Bonjour, C#! », « Mon premier programme C# », la carte de
+       visite : la sortie est le littéral passé à WriteLine. De la transcription.
+     · `lecon-05` blocs `init` (« Aria niveau 5 »), constructeur primaire
+       (« localhost:8080 »), `init`-only (« Le Petit Prince — Saint-Exupery ») et
+       `Produit` (« Souris a 25 EUR ») : tous les morceaux de la réponse sont des
+       littéraux voisins. `Etudiant` (« Noah : 17/20 ») est du même ordre — 17 et 20
+       sont écrits à deux lignes de là.
+     · `lecon-09` : les trois blocs affichent une chaîne écrite en clair dans le
+       `catch` ou dans le constructeur de l'exception.
+     · `lecon-12` (async) : sa « sortie » contient « (2 secondes plus tard) », qui est
+       une GLOSE et non ce que le programme imprime. Demander une ligne d'une sortie
+       partiellement fictive serait ambigu.
+     · `lecon-04` (grille) : sortie CORRIGÉE ce jour, mais ses cinq lignes sont soit
+       des dimensions annoncées en commentaire, soit la transcription du littéral. */
+    ]
   }
 };
 
@@ -670,6 +863,26 @@ function graphies(v) {
   if (/\s[:;]/.test(v)) {
     add(v.replace(/\s+([:;])/g, '$1'));
     add(sansG.replace(/\s+([:;])/g, '$1'));
+  }
+  /* ⚠️ ET LA TOLÉRANCE ÉTAIT ASYMÉTRIQUE, ce qu'un contradicteur a mesuré frappe par
+     frappe sur 13 des 15 cibles de B7c-3 : les règles ci-dessus n'enlèvent QUE l'espace
+     d'AVANT le séparateur, jamais celle d'APRÈS. « Total: 53 » passait, « Total :53 »
+     échouait ; « 5!=120 » passait, « 5! =120 » échouait ; « Aire=12 » passait,
+     « Aire =12 » échouait. Un apprenant qui a parfaitement prédit la valeur était donc
+     renvoyé sur un demi-espace, au hasard de son habitude de frappe.
+     On énumère désormais les QUATRE combinaisons (espace avant retirée ou non × espace
+     après retirée ou non), pour les séparateurs qui ne portent pas de sens : `:` `;`
+     `=` `|`. La VALEUR reste exacte — seule sa mise en espace est libre, comme pour la
+     virgule des listes en B7c-1 et le `=` en B7c-2. On ne touche pas au point décimal :
+     « 21,57 » n'est PAS ce que Locale.US imprime, et l'accepter serait valider une
+     sortie que le programme ne produit pas. */
+  var SEP = /[:;=|]/;
+  if (SEP.test(v)) {
+    [v, sansG].forEach(function (base) {
+      add(base.replace(/[ \t]+([:;=|])/g, '$1'));                 // sans l'espace d'avant
+      add(base.replace(/([:;=|])[ \t]+/g, '$1'));                 // sans l'espace d'après
+      add(base.replace(/[ \t]*([:;=|])[ \t]*/g, '$1'));           // sans aucune des deux
+    });
   }
   return out;
 }
@@ -805,7 +1018,7 @@ Object.keys(LOTS).forEach(function (nomLot) {
          au sens du juge, l'une des lignes de la sortie. Un commentaire explicatif
          (« // capture par valeur ») n'est jamais touché. */
       var toutesSorties = autresValeurs.concat([attendu]).map(normExo);
-      var citeB = [], coupes = 0, masques = 0, apres = 0, restants = [];
+      var citeB = [], coupes = 0, masques = 0, apres = 0, restants = [], contigu = true;
       for (var e = 0; e < lignes.length; e++) {
         if (e === iAnn) {
           /* Le « ? » occupe TOUJOURS sa propre ligne, même quand la leçon écrit sa
@@ -853,7 +1066,7 @@ Object.keys(LOTS).forEach(function (nomLot) {
              la sortie ; la cible doit en déclarer le nombre exact (contrôle 11). */
           var pc = e === iTete ? -1 : lg.indexOf(lot.marqueur);
           if (pc >= 0 && lg.slice(pc + lot.marqueur.length).trim()) restants.push(lg.slice(pc + lot.marqueur.length).trim());
-        } else if (e > iFin && COMMENTE.test(lg)) {
+        } else if (e > iFin && COMMENTE.test(lg) && contigu) {
           /* Après la zone de sortie, une ligne entièrement commentée se lit comme la
              SUITE de la sortie — l'énoncé vient de dire que la sortie est écrite en
              commentaire à la fin. cpp/lecon-17 met deux lignes d'explication juste
@@ -861,6 +1074,40 @@ Object.keys(LOTS).forEach(function (nomLot) {
              lignes. Elles sortent du code cité ; l'explication reste dans la réponse. */
           apres++;
           continue;
+        } else if (e > iFin) {
+          /* ⚠️ TROU DU CONTRÔLE 11, trouvé en écrivant le lot `csharp` : l'inventaire
+             (c) ne regardait que les lignes situées AVANT la zone de sortie. Or C#
+             écrit couramment son programme, PUIS sa sortie, PUIS la classe qui le fait
+             marcher (`lecon-05` : 10 blocs sur 10 dans ce cas) — tout le corps de la
+             classe échappait donc au compte, et un commentaire y énonçant la réponse
+             serait passé inaperçu. Le contrôle couvre désormais TOUT le code cité. */
+          /* ⚠️ ET LA COUPE NE DOIT PLUS COURIR JUSQU'AU BOUT DU BLOC. La règle « une
+             ligne commentée après la sortie se lit comme sa suite » ne vaut que si
+             elle SUIT la sortie sans rien entre les deux — le cas de cpp/lecon-17. En
+             C#, la sortie est écrite au MILIEU du bloc et la classe vient après :
+             appliquée sans condition de contiguïté, la règle effaçait « Constructeur
+             principal » et « Constructeur surchargé qui CHAÎNE vers le principal »
+             (csharp/lecon-05), c'est-à-dire du commentaire de CODE, à 15 lignes de la
+             sortie. `contigu` retombe dès la première ligne de code rencontrée. */
+          if (lg.trim()) contigu = false;
+          /* ⚠️ ET LE MASQUAGE DOIT COURIR ICI AUSSI. `masquer` ne s'appliquait qu'aux
+             lignes situées AVANT la sortie — or en C# la classe vient APRÈS, et c'est
+             là qu'un contradicteur a trouvé « Constructeur surchargé qui CHAÎNE vers le
+             principal » (csharp/lecon-05), qui énonce à lui seul le raisonnement de
+             l'exercice. Un motif déclaré et introuvable reste une FAUTE (contrôle plus
+             bas) : on ne masque pas au hasard, on masque ce qu'on a désigné. */
+          for (var q3 = 0; q3 < (t.masquer || []).length; q3++) {
+            var p3 = lg.indexOf(t.masquer[q3]);
+            if (p3 < 0) continue;
+            var c3 = lg.lastIndexOf(lot.marqueur, p3);
+            if (c3 < 0) continue;
+            masques++;
+            if (COMMENTE.test(lg)) { lg = null; break; }
+            lg = lg.slice(0, c3).replace(/\s+$/, '');
+          }
+          if (lg === null) continue;
+          var pc2 = lg.indexOf(lot.marqueur);
+          if (pc2 >= 0 && lg.slice(pc2 + lot.marqueur.length).trim()) restants.push(lg.slice(pc2 + lot.marqueur.length).trim());
         }
         citeB.push(lg);
       }
@@ -1024,6 +1271,38 @@ Object.keys(LOTS).forEach(function (nomLot) {
     try { nbEntrees = JSON.parse(mj0[2]).length; } catch (e) { fautes.push(id + ' : data-exos illisible'); return; }
     if (!REJOUER && nbEx !== nbEntrees) {
       fautes.push(id + ' : page hôte DÉSALIGNÉE (' + nbEx + ' blocs .exercise pour ' + nbEntrees + ' entrées)');
+      return;
+    }
+
+    /* 12. contrôle : LE LIBELLÉ DU LIEN DOIT ÊTRE LE VRAI TITRE DE LA LEÇON SOURCE.
+       Rien ne le vérifiait, et un contradicteur a montré ce que ça coûte : les 7 cibles
+       `csharp` renvoyaient à « Classes et objets » et « Découvrir C# », alors que les
+       `<h1>` disent « Classes, objets et propriétés » et « Découvrir C# et .NET ». Le
+       premier est même le titre de `java/lecon-05` — le libellé avait été emprunté au
+       COURS JUMEAU, écrit le même jour par le même outil. L'apprenant qui clique après
+       dix essais ratés arrive sur une leçon dont le nom ne correspond pas à ce qu'on
+       lui a promis. On compare au `<h1>` du fichier, pas à une table : c'est le titre
+       que la page affiche vraiment.
+
+       ⚠️ ET LE CONTRÔLE DÉPEND DE LA DESTINATION, sinon il condamne une convention
+       parfaitement saine. Quand la source et la page hôte sont la MÊME leçon (les lots
+       `ruby` et `kotlin`), le lien renvoie plus haut dans la page courante et cite donc
+       une SECTION : c'est l'usage des 145 liens préexistants de ces cours. Quand elles
+       diffèrent (cpp, rust, java, csharp), le lien mène à une AUTRE leçon et doit
+       porter SON titre. Les deux cas sont vérifiés, chacun contre le bon niveau de
+       titre. */
+    function titreNu(x) { return dec(x).replace(/<[^>]*>/g, '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim(); }
+    var titres = [], mt2, RE_TITRE = /<h([123])[^>]*>([\s\S]*?)<\/h\1>/g;
+    while ((mt2 = RE_TITRE.exec(srcBloc))) titres.push(titreNu(mt2[2]));
+    var mLabel = String(t.label || '').match(/«\s*([\s\S]*?)\s*»/);
+    var vise = mLabel ? titreNu(mLabel[1]) : null;
+    /* Un libellé de SECTION est souvent l'abrégé du titre complet — « La boucle for »
+       pour « La boucle for : sur les éléments, pas sur un compteur » (kotlin/lecon-03).
+       Le préfixe est donc accepté ; « Classes et objets » pour « Classes, objets et
+       propriétés » n'en est pas un, et c'est exactement la faute qu'on cherche. */
+    if (titres.length && vise && !titres.some(function (x) { return x === vise || x.indexOf(vise) === 0; })) {
+      fautes.push(id + ' : le libellé du lien dit « ' + vise + ' » — aucun titre de la leçon source ' +
+        'ne porte ce nom ni ne commence par lui (titre de la leçon : « ' + titres[0] + ' »)');
       return;
     }
 
