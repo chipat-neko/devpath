@@ -246,7 +246,33 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
 
 - [ ] **B1 · Les cours SQL et données** (`sql`, `bdd`, `nosql`, `data-eng`) — dépend de A2/A3.
 - [ ] **B2 · Les cours Python** (`python`, `python-avance`, `pandas`, `stats`, `dataviz`, `ml`) — dépend de A4.
-- [ ] **B3 · Les cours JavaScript restants** (`typescript`, `nodejs`, `react`, `vue`, `projets-js`) — exécutable dès aujourd'hui, aucun préalable.
+- [x] **B3 · Les cours JavaScript restants** (`typescript`, `nodejs`, `react`, `vue`, `projets-js`). ✅ **2026-08-26. 25 exercices de code neufs, et un outil qui prouve — dans le navigateur — que leur solution passe.**
+
+  **1. La prémisse de la case était fausse, et la mesure le dit.** « Exécutable dès aujourd'hui » supposait qu'il suffisait de convertir les `type:text` existants. Mesuré avant de toucher quoi que ce soit : **0 exercice `type:code` dans `typescript`, `nodejs`, `react` et `vue`** (173 `type:text`), 21 dans `projets-js`. Et surtout, **rien n'y était convertible** : le juge du site est un Worker qui fait un `eval` **synchrone** de JavaScript pur — pas de TypeScript (annotations = `SyntaxError`), pas de JSX, pas de `require`, pas de DOM, pas d'`async`. Les énoncés existants portent tous sur du vocabulaire (« la directive pour… », « le mot-clé qui… ») ou sur des API absentes du Worker (`fs.readFile`).
+
+  **La conversion était donc impossible ; l'ajout, lui, ne l'était pas.** Chaque domaine a une logique PURE, et c'est même la plus instructive : un réducteur, un `computed`, une file de mises à jour, une chaîne de middlewares, un analyseur d'arguments sont du JavaScript ordinaire. **25 exercices écrits sur ce principe, 5 par cours**, chacun avec son bloc `.exercise` (« Au clavier »), sa solution repliée et ses trois indices.
+
+  | cours | leçons touchées | ce que l'apprenant écrit |
+  |---|---|---|
+  | `typescript` | 04, 06, 07, 15, 18 | l'affinage par `typeof`, un générique une fois compilé, `Pick` à l'exécution, un validateur de frontière, une garde de type |
+  | `nodejs` | 06, 07, 09, 12, 23 | un `EventEmitter` maison, le découpage en morceaux d'un stream, la lecture d'options, une chaîne de middlewares, l'analyse d'une commande |
+  | `react` | 04, 05, 06, 13, 16 | les clés en double, **le piège de `{0 && …}`**, la file de mises à jour d'état, un réducteur, une mémoïsation |
+  | `vue` | 02, 03, 05, 09, 11 | `v-for` + filtre, un `computed` **avec son cache**, un watcher, un magasin d'état, la validation d'un formulaire |
+  | `projets-js` | 19, 20, 22, 23, 24 | déplacer une carte de Kanban, masquer le mot du pendu, compter les paires, filtrer une liste, la série en cours |
+
+  **2. Outil neuf `tools/preuves/exos-code.js` — le contrôle que la méthode de la phase B exigeait et que personne n'outillait.** Le plan demande « exécuter la solution de référence pour prouver qu'elle passe ». Aucun outil ne le faisait : `verif-exemples.js --exos` rejoue l'**énoncé** dans `vm` (Node), jamais la solution, et jamais dans le moteur du site. Celui-ci ouvre la leçon dans Chrome en `file://` — **sans `--allow-file-access-from-files`**, comme un apprenant —, **copie la solution repliée dans le champ, clique « Vérifier » et lit le verdict rendu par la page**. C'est le Worker qui juge, pas Node.
+
+  **Résultat sur les 25 leçons neuves : 25 solutions acceptées, 0 refusée, 45,8 s.** Contre-mesure indépendante dans `vm` avant insertion : 25/25 également, avec la règle exacte de `lecon.js` (`normExo` + `uneLigneEgale`).
+
+  ⚠️ **Le piège qui a coûté la première mesure : `Runtime.evaluate` sans `awaitPromise: true` rend la promesse, pas sa valeur.** Le script injecté est asynchrone (il attend le Worker). Sans ce paramètre, l'outil ne lit rien et imprime « aucun champ de code trouvé » — c'est-à-dire **un verdict vert par vacuité**. Exactement la forme de panne qui a fondé ce chantier : un contrôle qui ne mesure rien ressemble à un contrôle qui passe.
+
+  **3. Ce que la même preuve révèle sur l'EXISTANT, et qui n'était au plan d'aucune case.** Passée sur tout le site (`--tout`, 120 pages, 277,8 s) : **200 solutions acceptées, 31 REFUSÉES, 5 exercices sans solution repliée.** Les 31 refus se concentrent sur `js` (8), `algo` (8), `projets-js` (7 préexistants) et `offensive` (5). **Ce ne sont pas 31 fautes** : dans ces leçons, le micro-exercice interactif pose une question AUTONOME (« affiche `totalDepenses([…])` ») tandis que la solution repliée juste au-dessous répond à l'énoncé général du bloc `.exercise` (le modèle de budget entier). Les deux dispositifs cohabitent sous le même titre sans se répondre.
+
+  **Le cas `offensive` est le plus net, et il est lisible par l'apprenant** : sous un « Exercice 3 » dont l'énoncé dit « Décris en trois phrases le raisonnement », le champ affiché demande « **Écris le code** — le nombre de hachages par candidat, sans puis avec sel ». La consigne visible et le champ ne parlent pas de la même chose, sur les 5 leçons `offensive/lecon-07` à `11`. C'est la vraie forme de la dette notée en V13 sous « 5 exercices faux dans `offensive` » : ni l'exercice ni la solution ne sont faux — **c'est leur appariement qui l'est**. Chantier à part, non traité ici.
+
+  **4. Mesure avant / après.** Exercices `type:code` du site : **211 → 236 (+11,8 %)**. Part réellement auto-corrigée : **4,77 % → 5,31 %** (236 / 4 447). Cours ayant au moins un exercice exécuté : **9 → 13** (`typescript`, `nodejs`, `react` et `vue` entrent, `projets-js` y était déjà). `verif-exemples.js --exos` confirme **143 `run.expect` par exécution contre 118 avant, 0 divergent**. **0 octet ajouté au dépôt hors contenu** — aucun moteur, aucune dépendance.
+
+  **5. Contrôles.** `verif.js --rapide` **tout vert** (source, données, contenu, exemples). `verif-html` 0/0 sur 1 612 fichiers. `verif-donnees` 0 erreur sur 25 invariants — **après correction d'une erreur que l'ajout a révélée** : `vue/lecon-02.html` chargeait `prism-markup` mais **pas** `prism-javascript`, donc le premier bloc JavaScript de la page serait resté sans coloration (I14 l'a attrapé ; `prism-clike` et `prism-javascript` ajoutés). `verif-rendu` 0 erreur / 0 avertissement sur 30 mesures (5 pages × 3 largeurs × 2 thèmes). `search-index.js` régénéré (1 587 leçons). 0 URL de CDN introduite — les 6 occurrences de `fonts.gstatic.com` du dépôt sont dans le CONTENU échappé de `html/lecon-25` et `lecon-35`, qui enseignent `preconnect`, et sont antérieures.
 - [ ] **B4 · Les cours web** (`html`, `css`, `sass`, `a11y`, `perf-web`) — l'aperçu HTML existe déjà dans `runner.js` et n'est presque pas utilisé : c'est un gisement immédiat.
 - [ ] **B5 · `regex`** — cas particulier : entièrement vérifiable en JavaScript, et c'est le cours où « écrire et tester » a le plus de valeur.
 - [ ] **B6 · `algo` et `patterns`** — déjà bien dotés, compléter.
