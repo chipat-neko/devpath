@@ -927,7 +927,46 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **8. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (35,4 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 6 pages hôtes : **36 mesures** (3 largeurs × 2 thèmes), **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome, en `file://` sans `--allow-file-access-from-files` : **24 réponses tapées, 24 acceptées** ; passe adversariale **24 fausses tapées, 24 refusées** ; **7 graphies élargies acceptées**. Alignement `.exercise` ⇄ `data-exos` : **4 pour 4** sur les 6 pages. **0 accent grave de Markdown** dans le lot. 0 BOM, 0 caractère de contrôle, 0 CRLF, 0 mojibake, JSON valide. **0 URL de CDN active**. Générateur **idempotent** (72/72 déjà en place au second passage) ; `--rejouer` ne rend que les **11 dettes préexistantes** de B7c-6. `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
 
   **9. Mesure.** Exercices à champ : **4 605 → 4 611** (+6). Exercices de prédiction sur le site : **66 → 72** (+6). Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`. **0 octet de moteur ajouté.** Sorties recalculées : **104** (27 lignes Go + 77 annonces Elixir). Annonces du site corrigées : **2**. Cibles écrites puis RETIRÉES par contradiction : **5 sur 11** ; déplacée : **1**. Fautes de rédaction corrigées : **7**. Commentaires neutralisés : **2**, par un champ qui n'existait pas dans cette forme avant cette passe.
-- [ ] **B7c-6 · Reprendre les 5 exercices `ruby` que `--rejouer` refuse** (point 9 de B7c-1), et trancher la réserve du point 8 : faut-il masquer la ligne dans la leçon source ? ➕ **Et les 6 libellés de lien que le contrôle 12 refuse** (B7c-3) : `ruby/lecon-05` « Modifier un hash », `lecon-11` « Rouvrir une classe », `lecon-12` « Inspecter l’exception », `lecon-19` « Écrire du JSON », `lecon-20` « La déstructuration », `kotlin/lecon-11` « les propriétés déléguées » — aucun ne correspond à un titre de sa leçon source.
+- [x] **B7c-6 · Les 11 dettes du mode `--rejouer`, soldées** ✅ **2026-08-26. `--rejouer` ne signale plus aucune faute — et la réserve traînée depuis B7c-1 est TRANCHÉE, pas contournée.**
+
+  **1. Les 5 exercices `ruby` que `--rejouer` refusait : 4 RETIRÉS de leur page, 1 gardé avec sa fuite déclarée.** Ils avaient été écrits en B7a, c'est-à-dire AVANT les contrôles 5 et 7 qui les refusent. Aucun n'était FAUX ; tous étaient résolubles sans comprendre, ou validables par une autre ligne du même bloc.
+
+  | l'exercice | ce que le contrôle disait | traitement |
+  |---|---|---|
+  | `lecon-03`, `puts "b" if 0` | la réponse « b » est encore visible | **RETIRÉ.** La réponse est le littéral de la ligne — et l'énoncé, qui demande « quelle sortie remplace le `?` », PROMET qu'il y a une sortie : il donne donc la réponse à la seule vraie question (0 est-il vrai en Ruby ?) |
+  | `lecon-06`, `addition_proc.call(1)` | la réponse « 1 » est encore visible | **RETIRÉ.** La réponse est l'argument, recopiable tel quel |
+  | `lecon-07`, `take_while` | « [18, 15] » indiscernable d'une autre sortie | **RETIRÉ.** `notes.take(2)`, visible dans le même bloc, rend exactement la même valeur : on validerait un apprenant qui confond les deux |
+  | `lecon-09`, `a == b` | « true » indiscernable | **RETIRÉ.** `a.equal?(a)` rend le même `true` — et la réponse est binaire, une chance sur deux au hasard |
+  | `lecon-02`, `"3a".to_i` | la réponse « 3 » est encore visible | **GARDÉ, fuite DÉCLARÉE.** Le 3 qu'on lit est celui de `"3a"`, et tout l'exercice consiste à savoir que `to_i` s'arrête là. Même cas que la fuite tolérée du lot `cpp` (« 16 se lit dans 16.7 ») |
+
+  **2. LA RÉSERVE DU POINT 8 EST TRANCHÉE : NON, ON NE MASQUE PAS LA LIGNE DANS LA LEÇON SOURCE.** La question posée depuis B7c-1 était : faut-il retirer l'annonce `# => valeur` du bloc d'origine pour que la réponse ne soit plus lisible ? **Non**, et pour une raison qui tient au fondement du chantier : la règle A5 impose de ne bâtir un exercice que sur une sortie **DÉJÀ AFFIRMÉE** par la leçon. Effacer cette affirmation, c'est détruire la source de vérité pour protéger l'exercice qu'elle rend possible — et priver la leçon de ce qu'elle enseigne.
+
+  Le remède est celui que le chantier applique déjà depuis B7c-1 : **poser l'exercice dans une AUTRE leçon**. Restait à l'appliquer au lot qui était en dette. **Mesuré** (`scratchpad/v14-b7c6/ou-est-la-source.js`) : sur les 72 exercices de prédiction publiés, **10 citaient encore un bloc de LEUR PROPRE page** — tout le lot `ruby` de B7a, où la réponse était imprimée quelques écrans plus haut. Le lot `kotlin` (B7b), lui, était déjà à la règle.
+
+  Les 10 ont été **retirés de leur page et réécrits dans la leçon suivante** (02→03, 04→05, 05→06, 08→09, 10→11, 11→12, 12→13, 18→19, 19→20). **9 sur 10 y passent.** La dixième est **perdue** : `lecon-20` (`premier, *reste` → `[2, 3, 4, 5]`) a pour ligne visée le mot `reste`, seul sur sa ligne, et le contrôle 6 le trouve dans le VERBE français « restent », écrit deux fois dans la page hôte. **C'est un faux positif, mesuré — et on ne modifie pas un contrôle pour faire passer une cible** (même décision qu'en B7c-5 pour `elixir/lecon-07`, refusée sur un `end`). ⚠️ **Deux cibles perdues pour la même cause** : le contrôle 6 compare des SOUS-CHAÎNES là où il devrait comparer des LIGNES de bloc de code. À instruire hors de cette case.
+
+  **Mesure finale : 0 exercice de prédiction sur 67 ne cite plus sa propre page** (10 avant).
+
+  **3. Les 6 libellés de lien que le contrôle 12 refusait — et un SEPTIÈME que les autres fautes cachaient.** Chacun renvoyait à une section qui n'existe pas, corrigé dans la table du générateur ET dans la page déjà publiée :
+
+  | page | libellé publié | vrai titre de la leçon source |
+  |---|---|---|
+  | `ruby/lecon-05` | « Modifier un hash » | « Ajouter, modifier, supprimer, interroger » |
+  | `ruby/lecon-11` | « Rouvrir une classe » | « Les classes sont ouvertes » |
+  | `ruby/lecon-12` | « Inspecter l'exception » | « Quand ça casse : la hiérarchie des exceptions » |
+  | `ruby/lecon-19` | « Écrire du JSON » | « JSON ↔ structures Ruby » |
+  | `ruby/lecon-20` | « La déstructuration » | « Déstructurer tableaux et hachages » |
+  | `kotlin/lecon-12` | « les propriétés déléguées » | « Délégation de classe avec by » |
+  | `ruby/lecon-02` | « Les conversions » | « Convertir d'un type à l'autre » |
+
+  ⚠️ **Le septième n'est apparu qu'une fois les cinq premières fautes levées** : le contrôle 5 `return`ait avant que le contrôle 12 ne soit atteint. **Un contrôle qui coupe masque tous les suivants** — c'est la deuxième fois de ce chantier qu'un vert cache un rouge, après le contrôle qui ne pouvait pas échouer.
+  🔵 Relevé hors périmètre : **une entrée PRÉEXISTANTE de `ruby/lecon-02`** porte encore « Revoir « Les conversions » ». Le contrôle 12 ne regarde que les cibles du lot de prédiction ; les libellés des autres exercices du site ne sont surveillés par rien.
+
+  **4. ⚠️ LE PIÈGE CRLF DE B7c-4 S'EST REPRODUIT, par une autre porte.** `git stash` / `git stash pop` — employé pour comparer l'état d'avant — a réécrit **17 fichiers en CRLF** (`core.autocrlf = true`), sans que `git status` le montre. **9 262 fins de ligne** remises en LF, plus un retour chariot isolé dans `ruby/lecon-04` que la conversion en masse n'avait pas vu (il fallait retirer tous les `\r`, pas seulement les `\r\n`). Contrôle final : **0 fichier modifié ne porte de retour chariot**.
+
+  **5. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (37,3 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 10 pages touchées : **60 mesures**, **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome : **54 réponses tapées, 54 acceptées** (36 sur les 9 pages hôtes neuves, 18 sur les 6 pages allégées) ; passe adversariale **36 fausses tapées, 36 refusées**. `--rejouer` : **0 faute** (11 avant). Alignement `.exercise` ⇄ `data-exos` vérifié avant ET après chaque retrait ; les 39 pages du site qui portent plus de blocs que d'entrées sont **préexistantes et bénignes** (l'appariement se fait par index, le bloc surnuméraire est le dernier) — mesuré avant et après : 39 et 39. 0 BOM, 0 CRLF, 0 mojibake, JSON valide. `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
+
+  **6. Mesure.** Exercices à champ : **4 611 → 4 606** (−5). Exercices de prédiction : **72 → 67** (−4 retirés au titre du point 1, −1 perdue au point 2). Exercices citant leur propre page : **10 → 0**. Libellés de lien faux : **7 → 0**. Fautes rendues par `--rejouer` : **11 → 0**. Fins de ligne remises en LF : **9 262**.
 - [ ] **B7d · `bash`** (65 blocs) — à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
 
 ---
