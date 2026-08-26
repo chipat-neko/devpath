@@ -45,9 +45,18 @@
      rend la ligne `error: unknown option` et la PREMIÈRE ligne d'usage, pas les
      quarante lignes que git déroule. De même, `git zzz` ne suggère pas de
      commande proche.
-   - **L'ordre d'aplatissement d'un rebasage** dont la branche contient une
-     FUSION peut différer de celui de git (les deux sont topologiquement
-     valides ; les empreintes, elles, diffèrent).
+   - ⚠️ **Un rebasage dont la branche contient une FUSION n'aplatit rien, et le
+     dit mal.** Mesuré des deux côtés le 2026-08-26 : sur `main → (c2, c3)` d'un
+     côté, `c4 → c5` de l'autre, une fusion des deux, puis `git rebase hotfix`,
+     le vrai git rejoue c2 et c3 par-dessus c5 et la fusion disparaît
+     (« Successfully rebased ») ; le bac à sable répond « Current branch z2 is
+     up to date. » et ne touche à rien. Ce n'est donc pas, comme il était écrit
+     ici, un simple écart d'ORDRE d'aplatissement : c'est une absence
+     d'aplatissement, annoncée par un message qui affirme le contraire. Les
+     6 976 comparaisons de D2 ne l'avaient pas vue, faute de scénario ; une
+     passe adversariale du point D3 l'a trouvée. À corriger dans `C.rebase` :
+     la liste des commits à rejouer doit être celle de `rev-list amont..HEAD`
+     sans les fusions, et non « rien si l'amont est un ancêtre ».
    - Un fichier dont le saut de ligne final est ajouté d'un seul côté élargit le
      conflit d'une ligne par rapport à git ; `\ No newline at end of file` n'est
      pas écrit.
@@ -1650,6 +1659,15 @@
         toutes = toutes.filter(function (t) { return re.test(t); });
       }
       return res(true, toutes, "Les étiquettes du dépôt.");
+    }
+    /* ⚠️ `git tag` valide le nom comme `git branch` : `~mauvais^nom`,
+       `mauvais nom` et `fin.lock` sont refusés (mesuré contre git 2.54, exit
+       128). Cette garde manquait ici alors qu'elle existait pour `branch`,
+       `checkout -b` et `switch -c` : le bac à sable dessinait une pastille
+       portant un nom que le vrai git n'accepterait jamais. */
+    if (!nomDeBrancheValide(noms[0])) {
+      return echec(["fatal: '" + noms[0] + "' is not a valid tag name."],
+        "Ce nom d'étiquette est interdit : ni espace, ni ~ ^ : ? * [ \\, ni « .. », ni fin en « / », « . » ou « .lock ».");
     }
     if (depot.oidDeRef("refs/tags/" + noms[0]) && !drapeau(r, "-f", "--force")) {
       return echec(["fatal: tag '" + noms[0] + "' already exists"], "Ce nom d'étiquette est déjà pris.");

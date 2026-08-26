@@ -74,10 +74,22 @@
         return out.join(" | ");
       })(),
       injection: String(document.querySelectorAll("#bac-graphe script").length),
+      /* ⚠️ AUCUN TEXTE NE DOIT SORTIR DU CADRE. Le SVG a `overflow: hidden` : un
+         cadre trop court ne provoque pas d'erreur, il ROGNE le titre du commit,
+         et rien dans le source ne le montre. La largeur est ESTIMEE a la chasse
+         de la police (`GEO.carMono`) ; seule cette mesure, faite par le
+         navigateur avec `getComputedTextLength`, dit si l'estimation tient. */
+      depassement: (function () {
+        var t = svg.querySelectorAll("text"), pire = 0;
+        var cadre = parseFloat(svg.getAttribute("viewBox").split(" ")[2]);
+        for (var k = 0; k < t.length; k++) {
+          var fin = parseFloat(t[k].getAttribute("x")) + t[k].getComputedTextLength();
+          if (fin - cadre > pire) pire = fin - cadre;
+        }
+        return pire > 0 ? "DEPASSE de " + Math.ceil(pire) + " px" : "aucun";
+      })(),
       /* Le graphe est plus large que la colonne des que l'histoire branche : il
-         doit DEFILER dans son cadre, et non pousser la page. On mesure les deux
-         — la propriete calculee, et le debordement reel de la page apres les
-         quinze commandes. */
+         doit DEFILER dans son cadre, et non pousser la page. */
       defilement: getComputedStyle(document.getElementById("bac-graphe")).overflowX,
       debordement: String(document.documentElement.scrollWidth - document.documentElement.clientWidth)
     };
@@ -96,6 +108,37 @@
     caseOrphelins.dispatchEvent(new Event("change", { bubbles: true }));
     valeurs.avecOrphelins = String(document.querySelectorAll("#bac-graphe [data-oid]").length);
     valeurs.marquesPerdus = String(document.querySelectorAll("#bac-graphe .gg-noeud--orphelin").length);
+
+    /* Le CAS DUR de la largeur : un nom de branche long et un titre long, comme
+       en vraie vie. C'est ce cas qui avait rendu, avant correction, un cadre
+       440 px trop court — l'empreinte et le titre disparaissaient entierement. */
+    var dur = [
+      "git checkout -b correctif/connexion-base-de-donnees-lente",
+      'echo "correctif" > correctif.txt',
+      "git add .",
+      'git commit -m "corrige la connexion a la base de donnees, qui retombait apres trente secondes"',
+      "git tag correctif-verifie-en-recette"
+    ];
+    for (var q = 0; q < dur.length; q++) {
+      saisie.value = dur[q];
+      formulaire.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    }
+    valeurs.depassementDur = (function () {
+      var s2 = document.querySelector("#bac-graphe svg");
+      if (!s2) return "aucun SVG";
+      var t = s2.querySelectorAll("text"), pire = 0;
+      var cadre = parseFloat(s2.getAttribute("viewBox").split(" ")[2]);
+      for (var k = 0; k < t.length; k++) {
+        var fin = parseFloat(t[k].getAttribute("x")) + t[k].getComputedTextLength();
+        if (fin - cadre > pire) pire = fin - cadre;
+      }
+      return pire > 0 ? "DEPASSE de " + Math.ceil(pire) + " px" : "aucun";
+    })();
+    /* Et la page ne doit toujours pas etre poussee : le graphe large DEFILE
+       dans son cadre. C'est ce que la regle "svg { max-width: 100% }" de
+       css/base.css empechait, en mettant le graphe a l'echelle au lieu de le
+       laisser defiler. */
+    valeurs.debordementDur = String(document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
     window.__preuveD3 = JSON.stringify({ ok: true, valeurs: valeurs });
   } catch (e) {

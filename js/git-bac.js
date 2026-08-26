@@ -38,6 +38,10 @@
   var rangHistorique = -1;
   var montrerOrphelins = false;
   var selection = null;
+  /* Le commit qui a le focus, pour le lui rendre apres reconstruction du SVG,
+     et l'explication de la derniere commande, pour ne pas l'effacer au clic. */
+  var focusOid = null;
+  var derniereExplication = "";
 
   var $ = function (id) { return document.getElementById(id); };
   var terminal, saisie, svgHote, zones, expli, titreEtat;
@@ -48,22 +52,43 @@
     return new GM.Depot({ identite: IDENTITE, branche: "main", instant: INSTANT_ZERO, pasHorloge: 60, fuseau: "+0100" });
   }
 
+  /* ⚠️ Un echec d'ecriture doit se DIRE : sans cela, l'ancienne valeur reste en
+     place et l'apprenant retrouve, au rechargement, un depot perime sans avoir
+     jamais ete prevenu. On ne le dit qu'UNE fois, pour ne pas noyer le terminal. */
+  var stockageSignale = false;
   function sauver() {
     try {
       localStorage.setItem(CLE, JSON.stringify({ depot: GC.exporter(depot), historique: historique.slice(-60) }));
-    } catch (e) { /* stockage plein ou refusé : le bac à sable marche quand même */ }
+    } catch (e) {
+      if (!stockageSignale && terminal) {
+        stockageSignale = true;
+        ecrire("Ton navigateur refuse d'enregistrer ce dépôt (stockage plein ou bloqué) : "
+          + "le bac à sable continue de marcher, mais tu ne le retrouveras pas au rechargement.", "erreur");
+      }
+    }
   }
 
+  /* ⚠️ Un dépôt relu peut être VALIDE pour l'importateur et pourtant incohérent :
+     une référence vers une empreinte absente, ou un magasin d'objets vidé alors
+     que les références subsistent. Mesuré : 2 valeurs sur 15 laissaient la page
+     à moitié morte — plus de graphe, plus de zones, et toute commande suivante
+     levait une exception, sans un mot. Juger « l'import a-t-il levé ? » ne
+     suffit donc pas : on EXERCE le dépôt relu (statut + graphe complet, ce que
+     la page fera de toute façon la seconde d'après) avant de l'accepter. */
   function charger() {
     var brut = null;
     try { brut = localStorage.getItem(CLE); } catch (e) { brut = null; }
     if (!brut) return false;
     try {
       var d = JSON.parse(brut);
-      depot = GC.importer(d.depot);
-      historique = Array.isArray(d.historique) ? d.historique : [];
+      var relu = GC.importer(d.depot);
+      relu.statut();
+      GG.disposer(relu, { orphelins: true });
+      depot = relu;
+      historique = Array.isArray(d.historique) ? d.historique.filter(function (l) { return typeof l === "string"; }) : [];
       return true;
     } catch (e) {
+      depot = null;
       return false;
     }
   }
@@ -126,9 +151,10 @@
       return true;
     }
 
-    if (nom === "rm" && mots.length >= 2) {
+    if (nom === "rm") {
       /* `rm` tout court efface le fichier du disque ; `git rm` est autre chose,
          et c'est justement la distinction à faire sentir. */
+      if (mots.length < 2) { ecrire("rm : indique un fichier.", "erreur"); return true; }
       var efface = 0;
       for (var i = 1; i < mots.length; i++) {
         if (depot.lireFichier(mots[i]) !== null) { depot.supprimerFichier(mots[i]); efface++; }
@@ -140,8 +166,13 @@
 
     if (nom === "echo") {
       /* `echo "texte" > fichier` : on relit la ligne BRUTE pour retrouver le
-         chevron, que le découpage en mots a déjà avalé. */
-      var m = /^echo\s+([\s\S]*?)\s*(>>?)\s*(\S+)\s*$/.exec(brut);
+         chevron, que le découpage en mots a déjà avalé.
+         ⚠️ La cible ne peut PAS commencer par un chevron. Sans cette garde,
+         `echo "a" >> ` (sans cible) faisait capter le premier `>` comme
+         redirection et le SECOND comme nom de fichier : le bac à sable créait,
+         puis indexait, puis commitait un fichier nommé « > ».
+         Elle peut en revanche être CITÉE, donc contenir une espace. */
+      var m = /^echo\s+([\s\S]*?)\s*(>>?)\s*("[^"]+"|'[^']+'|[^>\s]\S*)\s*$/.exec(brut);
       if (!m) {
         ecrire(mots.slice(1).join(" "));
         return true;
@@ -168,8 +199,15 @@
 
     var mots = GC.decouperLigne(ligne);
     var explication = "";
+    var traitee;
+    try {
+      traitee = commandeLocale(mots, ligne);
+    } catch (err) {
+      ecrire("Le bac à sable a buté sur cette ligne : " + (err && err.message ? err.message : err), "erreur");
+      traitee = true;
+    }
 
-    if (commandeLocale(mots, ligne)) {
+    if (traitee) {
       explication = "";
     } else if (mots[0] !== "git") {
       ecrire(mots[0] + " : commande inconnue. Tape « aide » pour la liste.", "erreur");
@@ -187,6 +225,7 @@
       }
     }
 
+    derniereExplication = explication;
     afficher(explication);
     sauver();
   }
@@ -229,28 +268,46 @@
 
   function afficherZones() {
     var st = depot.statut();
+    /* ⚠️ Les chemins EN CONFLIT ne sont ni indexés ni propres : git tient trois
+       versions du même fichier tant qu'on n'a pas tranché. Les afficher en vert,
+       comme un fichier prêt à commiter, était un mensonge — et c'est justement
+       la situation où l'apprenant a besoin qu'on ne lui mente pas. */
+    var enConflit = GC.enConflit(depot) ? GC.cheminsEnConflit(depot) : [];
     var travail = [], i;
     var chemins = depot.cheminsTravail();
     for (i = 0; i < chemins.length; i++) {
       var c = chemins[i];
       var etat = "", mention = "";
-      if (st.nonSuivis.indexOf(c) >= 0) { etat = "nouveau"; mention = "non suivi"; }
+      if (enConflit.indexOf(c) >= 0) { etat = "conflit"; mention = "en conflit"; }
+      else if (st.nonSuivis.indexOf(c) >= 0) { etat = "nouveau"; mention = "non suivi"; }
       else if (st.modifies.indexOf(c) >= 0) { etat = "modifie"; mention = "modifié"; }
       travail.push({ chemin: c, etat: etat, mention: mention });
+    }
+    /* ⚠️ Un fichier effacé du DISQUE appartient au répertoire de travail, pas à
+       l'index : `git status --porcelain` met son « D » en seconde colonne, et
+       `git ls-files --stage` le montre toujours indexé, octet pour octet. Il
+       était rangé dans l'index, où il apparaissait DEUX FOIS avec deux mentions
+       contradictoires — pendant que le terminal, une ligne plus haut, écrivait
+       « l'index, lui, n'a pas bougé ». */
+    for (i = 0; i < st.supprimes.length; i++) {
+      travail.push({ chemin: st.supprimes[i], etat: "supprime", mention: "effacé du disque" });
     }
 
     var index = [];
     for (i = 0; i < st.indexes.length; i++) {
-      index.push({ chemin: st.indexes[i].chemin, etat: "indexe", mention: st.indexes[i].etat });
+      index.push({
+        chemin: st.indexes[i].chemin,
+        etat: enConflit.indexOf(st.indexes[i].chemin) >= 0 ? "conflit" : "indexe",
+        mention: enConflit.indexOf(st.indexes[i].chemin) >= 0 ? "en conflit" : st.indexes[i].etat
+      });
     }
     var cheminsIndex = depot.cheminsIndex();
     for (i = 0; i < cheminsIndex.length; i++) {
       var deja = false;
       for (var j = 0; j < index.length; j++) if (index[j].chemin === cheminsIndex[i]) deja = true;
-      if (!deja) index.push({ chemin: cheminsIndex[i], etat: "", mention: "identique au commit" });
-    }
-    for (i = 0; i < st.supprimes.length; i++) {
-      index.push({ chemin: st.supprimes[i], etat: "supprime", mention: "effacé du disque" });
+      if (deja) continue;
+      if (enConflit.indexOf(cheminsIndex[i]) >= 0) index.push({ chemin: cheminsIndex[i], etat: "conflit", mention: "en conflit" });
+      else index.push({ chemin: cheminsIndex[i], etat: "", mention: "identique au commit" });
     }
 
     var commit = [], tete = depot.oidHEAD();
@@ -285,18 +342,32 @@
         if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); surCommit.call(this, ev); }
       });
     }
+    /* ⚠️ Le graphe est reconstruit ENTIÈREMENT à chaque affichage : le groupe qui
+       avait le focus vient d'être détruit, et le focus est retombé sur <body>.
+       Conséquence mesurée : on pouvait activer un commit au clavier UNE fois,
+       après quoi Espace faisait défiler la page. On le repose. */
+    if (focusOid) {
+      var repris = svg.querySelector('[data-oid="' + focusOid + '"]');
+      if (repris && repris.focus) repris.focus();
+    }
   }
 
   function surCommit(ev) {
     var oid = this.getAttribute("data-oid");
     selection = selection === oid ? null : oid;
+    focusOid = oid;
     var c = depot.lireCommit(oid);
-    ecrire("$ git show --stat " + GC.abrev(oid) + "   (clic sur le graphe)", "invite");
+    /* On n'écrit PAS « git show » : la commande n'existe pas dans le bac à sable,
+       et afficher une ligne d'invite que l'apprenant ne peut pas retaper lui
+       enseignerait une commande imaginaire. */
+    ecrire("— fiche du commit " + GC.abrev(oid) + " (clic sur le graphe)", "note");
     ecrire("commit " + oid);
     ecrire("Author: " + c.identite);
     ecrire("    " + c.titre);
     if (c.parents.length > 1) ecrire("Merge: " + c.parents.map(GC.abrev).join(" "), "note");
-    afficher("");
+    /* L'explication de la DERNIÈRE commande reste affichée : la faire disparaître
+       parce qu'on a cliqué un commit punissait la curiosité. */
+    afficher(derniereExplication);
     if (ev) ev.preventDefault();
   }
 
@@ -366,7 +437,8 @@
     titreEtat = $("bac-etat");
     if (!terminal || !saisie || !svgHote || !zones) return;
 
-    if (!charger()) depot = neuf();
+    var repris = charger();
+    if (!depot) depot = neuf();
 
     var formulaire = $("bac-formulaire");
     formulaire.addEventListener("submit", function (ev) {
@@ -412,7 +484,9 @@
     }
 
     ecrire("Bac à sable Git — les commandes sont exécutées pour de bon, sur un dépôt qui vit dans ton navigateur.", "note");
-    ecrire("Tape « aide » pour la liste des commandes.", "note");
+    if (!repris) ecrire("Tape « aide » pour la liste des commandes.", "note");
+    else ecrire("Ton dépôt précédent a été retrouvé. Tape « aide » pour la liste des commandes, "
+      + "« reinitialiser » pour repartir de zéro.", "note");
     afficher("");
   }
 

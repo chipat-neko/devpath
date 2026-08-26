@@ -1588,6 +1588,19 @@ var SCENARIOS = [
     ]
   },
   {
+    nom: "noms-d-etiquettes-refuses",
+    /* Trouve par une passe adversariale : `git tag` ne validait PAS son nom,
+       alors que `branch`, `checkout -b` et `switch -c` le font tous les trois.
+       Le vrai git refuse ces trois-la (exit 128, mesure faite). */
+    actions: [
+      { ecrire: ["a.txt", "1\n"] }, { git: "add ." }, { git: 'commit -m "socle"' },
+      { git: "tag ~mauvais^nom" },
+      { git: "tag mauvais.lock" },
+      { git: "tag bon-nom" },
+      { git: "tag -l" }
+    ]
+  },
+  {
     nom: "fusion-d-histoires-etrangeres",
     actions: [
       { ecrire: ["a.txt", "1\n"] },

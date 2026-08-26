@@ -11,6 +11,9 @@
 
    CE QUI EST MESURÉ CONTRE LE VRAI GIT (tools/verif-git-graphe.js)
    1. L'ORDRE des lignes, exactement celui de `git log --all --topo-order`.
+      Éprouvé au-delà de cet outil : une passe adversariale a énuméré
+      exhaustivement les graphes à quatre, cinq et six commits et joué 4 731
+      formes pour 264 373 comparaisons — **zéro écart d'ordre**.
       Ce n'est pas un détail d'affichage : en ordre de DATE (`--date-order`,
       celui de `Depot.journal`), git sort parfois un parent AVANT ses propres
       descendants — mesuré en D1 sur une fusion dont le second parent est la
@@ -44,11 +47,26 @@
    voies que plusieurs enfants attendaient sont libérées.
 
    CE QUI EST ASSUMÉ
-   - Git COMPRESSE parfois ses colonnes (les lignes `|/` du dessin ASCII) : une
-     voie libérée est refermée et tout ce qui est à droite glisse d'un cran.
-     Ici, une voie libérée reste libre et sera reprise par le prochain qui en a
-     besoin. Les écarts que cela produit sont COMPTÉS par le vérificateur, pas
-     dissimulés.
+   - Git COMPRESSE ses colonnes : il en INSÈRE une à droite d'une fusion (les
+     `|\ \` du dessin ASCII) et en SUPPRIME une quand une lignée meurt (les
+     `|/`), auquel cas tout ce qui est à droite glisse d'un cran. Ici, une voie
+     garde son numéro du début à la fin, ce qui donne des lignes droites en SVG.
+     ⚠️ Conséquence, et il a fallu une contre-épreuve pour l'écrire : les
+     numéros de colonne ne coïncident PAS toujours avec ceux de git, et l'ordre
+     gauche-droite de deux voisins non plus. Une énumération exhaustive des
+     graphes à six commits et une racine met **225 cas sur 2 700 (8,3 %)** en
+     écart, quelles que soient les dates. Le vérificateur COMPTE donc cette
+     ressemblance au lieu de l'exiger ; ce qu'il exige, ce sont l'ordre des
+     lignes, les arêtes, les marques et les invariants de lisibilité.
+   - Une référence qui pointe sur un objet `tag` (étiquette ANNOTÉE) est
+     ignorée : le modèle n'en fabrique pas, et `git tag -a` est refusé par les
+     commandes. Le jour où D2 les ajoutera, il faudra PELER la référence ici et
+     dans `marquesPar`, sans quoi un commit tenu par une seule étiquette
+     annotée disparaîtrait du graphe — mesuré contre le vrai git.
+   - Une fusion dont le second parent est un ANCÊTRE du premier ferait descendre
+     une arête à travers les commits intermédiaires. Aucune des quinze commandes
+     ne peut produire cette forme (git répond « Already up to date. » et le bac
+     à sable aussi) ; elle n'est atteignable que par un état importé.
    - Les commits inatteignables (après un `reset --hard`, par exemple) ne sont
      pas montrés par git ; l'option `orphelins` permet de les afficher, parce
      que « où est passé mon commit ? » est une vraie question d'apprenant. Elle
@@ -75,7 +93,10 @@
     rayonFusion: 9,
     colonneTexte: 18,   // écart entre la dernière voie et le début du texte
     carMono: 7.3,       // largeur d'un caractère de la police à chasse fixe, 12 px
-    hauteurPastille: 19
+    hauteurPastille: 19,
+    /* 14 px de remplissage dans la pastille + 6 px avant la suivante : une
+       SEULE constante, sinon l'estimation et la pose derivent l'une de l'autre. */
+    pastilleMarges: 20
   };
 
   /* ===========================================================================
@@ -275,17 +296,55 @@
       }
 
       lignes.push({ oid: oid, voie: voie, parents: parents, voiesParents: voiesParents });
-      var largeur = 0;
-      for (j = 0; j < voies.length; j++) if (voies[j] !== null) largeur = j + 1;
-      if (voie + 1 > largeur) largeur = voie + 1;
-      if (largeur > maxVoies) maxVoies = largeur;
+      /* ⚠️ La largeur est celle des colonnes qu'un commit OCCUPE, pas celle des
+         colonnes RESERVEES. Une voie ouverte pour un second parent peut etre
+         refermee plus bas par la convergence sans qu'aucun commit ne s'y soit
+         jamais pose : compter les reservations donnait alors une colonne vide a
+         droite du graphe — atteignable en CINQ commandes ordinaires (fusionner,
+         revenir, refusionner), et 13 fois sur les 2 700 graphes a six commits
+         enumeres exhaustivement. */
+      if (voie + 1 > maxVoies) maxVoies = voie + 1;
     }
-    return { lignes: lignes, voies: maxVoies || 1 };
+    /* A la fin, plus aucune voie ne doit attendre quoi que ce soit : tous les
+       parents du graphe ont ete dessines. Une voie encore reservee signale une
+       lignee que le dessin a ouverte et jamais refermee — c'est l'invariant que
+       le verificateur exige a zero. */
+    var restantes = 0;
+    for (j = 0; j < voies.length; j++) if (voies[j] !== null) restantes++;
+    return { lignes: lignes, voies: maxVoies || 1, restantes: restantes };
   }
 
   /* ===========================================================================
      3. LES MARQUES (HEAD, branches, étiquettes)
      =========================================================================== */
+
+  /* ⚠️ UNE SEULE expression du libelle d'une pastille, et une seule de sa
+     largeur. Il y en avait DEUX, qui ne disaient pas la meme chose : le dessin
+     posait « HEAD → main » (11 caracteres) la ou l'estimation de largeur
+     comptait « HEAD » (4). Consequence mesuree : le SVG etait annonce 30 px
+     trop court des le PREMIER commit, `overflow: hidden` rognait le titre, et
+     le manque croissait avec la longueur du nom de branche — sur
+     `correctif/connexion-base-de-donnees-lente`, l'empreinte et le titre
+     disparaissaient entierement. L'`aria-label` avait le meme defaut : il
+     annoncait « HEAD, sujet » sans jamais nommer la branche courante. */
+  function texteMarque(m) {
+    if (m.sorte === "etiquette") return "tag: " + m.nom;
+    if (m.sorte === "tete" && m.branche) return "HEAD → " + m.branche;
+    return m.nom;
+  }
+
+  /* Le libelle DIT a un lecteur d'ecran de quoi il s'agit : « HEAD sur la
+     branche main » vaut mieux que « HEAD → main », qui se lit « HEAD fleche
+     droite main ». */
+  function marqueParlee(m) {
+    if (m.sorte === "etiquette") return "etiquette " + m.nom;
+    if (m.sorte === "tete") return m.branche ? "HEAD, sur la branche " + m.branche : "HEAD, detachee";
+    return "branche " + m.nom;
+  }
+
+  function largeurMarque(m) {
+    return texteMarque(m).length * GEO.carMono + GEO.pastilleMarges;
+  }
 
   function marquesPar(depot) {
     var par = dico(), oid, i;
@@ -415,9 +474,7 @@
     var largeurTexte = 0;
     for (i = 0; i < noeuds.length; i++) {
       var l = (noeuds[i].abrev.length + 1 + noeuds[i].titre.length) * GEO.carMono;
-      for (j = 0; j < noeuds[i].marques.length; j++) {
-        l += (noeuds[i].marques[j].nom.length + (noeuds[i].marques[j].sorte === "etiquette" ? 5 : 0)) * GEO.carMono + 18;
-      }
+      for (j = 0; j < noeuds[i].marques.length; j++) l += largeurMarque(noeuds[i].marques[j]);
       if (l > largeurTexte) largeurTexte = l;
     }
 
@@ -425,6 +482,7 @@
       noeuds: noeuds,
       aretes: aretes,
       voies: pose.voies,
+      voiesRestantes: pose.restantes,
       lignes: noeuds.length,
       xTexte: xTexte,
       largeur: Math.ceil(xTexte + largeurTexte + GEO.margeX),
@@ -450,17 +508,24 @@
     return e;
   }
 
+  /* Trois sortes de pastilles, pas quatre : la branche COURANTE n'a pas de
+     pastille a elle — elle est dans celle de HEAD, avec la fleche, comme chez
+     git. La classe `--courante` qui vivait ici n'etait donc jamais posee :
+     mesure faite sur 800 rendus tires de 400 depots, 0 occurrence. */
   function classeMarque(m) {
     if (m.sorte === "tete") return "gg-marque gg-marque--tete";
     if (m.sorte === "etiquette") return "gg-marque gg-marque--etiquette";
-    return m.courante ? "gg-marque gg-marque--courante" : "gg-marque gg-marque--branche";
+    return "gg-marque gg-marque--branche";
   }
 
   function arbre(d, options) {
     options = options || {};
     var enfants = [], i, j;
 
-    var aretes = el("g", { "class": "gg-aretes", fill: "none" });
+    /* Les traits sont DECORATIFS : ce qu'ils disent (« ce commit descend de
+       celui-la ») est deja dans le libelle de chaque commit. Sans cela, un
+       enfant sans role s'intercale dans le role="list". */
+    var aretes = el("g", { "class": "gg-aretes", fill: "none", "aria-hidden": "true" });
     for (i = 0; i < d.aretes.length; i++) {
       var a = d.aretes[i];
       aretes.enfants.push(el("path", {
@@ -485,7 +550,7 @@
         tabindex: "0",
         role: "listitem",
         "aria-label": "Commit " + n.abrev + " — " + n.titre
-          + (n.marques.length ? " — " + n.marques.map(function (m) { return m.nom; }).join(", ") : "")
+          + (n.marques.length ? " — " + n.marques.map(marqueParlee).join(", ") : "")
       });
       g.enfants.push(el("circle", {
         "class": "gg-point",
@@ -496,9 +561,8 @@
       var x = d.xTexte;
       for (j = 0; j < n.marques.length; j++) {
         var m = n.marques[j];
-        var etiq = m.sorte === "etiquette" ? "tag: " + m.nom
-          : (m.sorte === "tete" && m.branche ? "HEAD → " + m.branche : m.nom);
-        var w = etiq.length * d.geo.carMono + 14;
+        var etiq = texteMarque(m);
+        var w = largeurMarque(m) - 6;            // la pastille ; les 6 px sont l'ecart
         g.enfants.push(el("rect", {
           "class": classeMarque(m),
           x: x, y: n.y - d.geo.hauteurPastille / 2,
@@ -566,6 +630,8 @@
     ordonner: ordonner,
     attribuerVoies: attribuerVoies,
     marquesPar: marquesPar,
+    texteMarque: texteMarque,
+    largeurMarque: largeurMarque,
     disposer: disposer,
     arbre: arbre,
     versTexte: versTexte,

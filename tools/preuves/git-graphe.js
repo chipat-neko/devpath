@@ -97,11 +97,14 @@ function scenarioNode() {
     fusions: String(disposition.noeuds.filter(function (n) { return n.fusion; }).length),
     titres: disposition.noeuds.map(function (n) { return n.titre; }).join(" | "),
     injection: "0",
+    depassement: "aucun",
     defilement: "auto",
     debordement: "0",
     apresReset: String(apresReset.noeuds.length),
     avecOrphelins: String(avecOrphelins.noeuds.length),
-    marquesPerdus: String(avecOrphelins.noeuds.filter(function (n) { return n.orphelin; }).length)
+    marquesPerdus: String(avecOrphelins.noeuds.filter(function (n) { return n.orphelin; }).length),
+    depassementDur: "aucun",
+    debordementDur: "0"
   };
 }
 
@@ -180,7 +183,15 @@ if (reseau && parseInt(reseau[1], 10) > 0) {
    autre cours) qu'il n'y en a aucun.
    --------------------------------------------------------------------------- */
 
-var MESURE_ENCART = "(function(){var a=document.querySelector('.lesson-bac-git a');"
+/* ⚠️ La mesure doit rendre `null` TANT QUE la page n'est pas prete, sinon elle
+   lit un DOM que `js/lecon.js` n'a pas encore garni et rend « 0 encart » pour un
+   faux negatif silencieux — c'est arrive une fois sur trois pages. `.lesson-note`
+   est pose par `initNotes`, qui tourne AVANT `initBacGit` dans la meme passe :
+   sa presence prouve que le script de lecon est alle jusqu'au bout. */
+var MESURE_ENCART = "(function(){"
+  + "if (document.readyState !== 'complete') return null;"
+  + "if (!document.querySelector('.lesson-note')) return null;"
+  + "var a=document.querySelector('.lesson-bac-git a');"
   + "return JSON.stringify({encarts:document.querySelectorAll('.lesson-bac-git').length,"
   + "href:a?a.getAttribute('href'):'',resolu:a?a.href:''});})()";
 

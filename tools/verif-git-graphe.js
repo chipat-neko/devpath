@@ -64,7 +64,7 @@ var DATE_COMMITTEUR = INSTANT + " +0000";
 var comparaisons = 0;
 var ecarts = [];
 var contexteCourant = "";
-var statVoies = { total: 0, concordantes: 0, divergentes: [] };
+var statVoies = { total: 0, concordantes: 0, divergentes: [], voisins: 0, voisinsOk: 0, lignees: 0, ligneesOk: 0 };
 
 function ArretVite() { this.vite = true; }
 
@@ -249,6 +249,15 @@ function verifierDessin(d) {
         git: "largeur " + largeurReelle, bac: "largeur " + d.voies });
       if (VITE) throw new ArretVite();
     }
+    /* Et AUCUNE voie ne reste ouverte a la fin : toutes les lignees dessinees
+       ont trouve leur parent. Une voie encore reservee est une colonne que rien
+       ne refermera jamais — elle pousse tout ce qui suit d'un cran a droite. */
+    comparaisons++;
+    if (d.voiesRestantes !== 0) {
+      ecarts.push({ ou: contexteCourant, quoi: "voie(s) encore ouverte(s) a la fin du dessin",
+        git: "0", bac: String(d.voiesRestantes) });
+      if (VITE) throw new ArretVite();
+    }
   }
 
   /* 7. le SVG est bien forme : balises equilibrees, rien d'injecte */
@@ -306,25 +315,35 @@ function comparerGraphe(dir, depot) {
       + " git " + reel[i].voie + " / bac " + n.voie);
   }
 
-  /* (c) L'ORDRE GAUCHE-DROITE de deux commits VOISINS dans le graphe — strict.
-     C'est le critere qui survit au decalage de git tout en restant mordant :
-     l'insertion d'une colonne translate les numeros, elle n'echange jamais deux
-     voisins de place. Un seuil sur le taux (b), lui, ne separait pas une faute
-     d'attribution du decalage : mesure faite, une vraie faute faisait tomber le
-     taux de 99,6 % a 99,2 % — indiscernable d'un scenario ajoute. */
+  /* (c) DEUX MESURES DE PLUS, comptees et non exigees — et il a fallu une
+     contre-epreuve pour l'admettre. Elles etaient annoncees « comparees a
+     100 % », au motif qu'une colonne INSEREE translate les numeros sans jamais
+     echanger deux voisins de place. C'est vrai de l'insertion. Mais git
+     SUPPRIME aussi des colonnes : quand une lignee meurt, tout ce qui est a sa
+     droite glisse d'un cran (les `|/` du dessin). Ce glissement, lui, CHANGE
+     lequel de deux voisins est a gauche, et change si un commit et son parent
+     partagent une colonne. Mesure faite par enumeration EXHAUSTIVE des graphes
+     a six commits et une racine : 225 sur 2 700 (8,3 %) tombent dans ce cas,
+     avec le meme compte pour des dates egales, croissantes ou decroissantes —
+     la difference est structurelle, pas horaire.
+     Ces deux taux restent donc affiches, parce qu'ils disent quelque chose de
+     vrai sur la ressemblance au dessin de git ; ils ne sont plus des exigences.
+     Ce qui EST exige tient dans les invariants internes (aucun parent au-dessus
+     de son enfant, aucune traversee, aucune colonne fantome, aucune voie encore
+     ouverte a la fin) et dans l'ordre, les aretes et les marques — ceux-la ont
+     resiste a 264 373 comparaisons d'une passe adversariale. */
   for (var v = 0; v + 1 < reel.length; v++) {
     var n1 = parOid[reel[v].oid], n2 = parOid[reel[v + 1].oid];
     if (!n1 || !n2) continue;
-    compare("ordre gauche-droite de " + reel[v].oid.slice(0, 7) + " et " + reel[v + 1].oid.slice(0, 7),
-      signe(reel[v].voie - reel[v + 1].voie), signe(n1.voie - n2.voie));
+    statVoies.voisins++;
+    if (signe(reel[v].voie - reel[v + 1].voie) === signe(n1.voie - n2.voie)) statVoies.voisinsOk++;
   }
 
   for (var e = 0; e < d.aretes.length; e++) {
     var ar = d.aretes[e];
     if (voieGit[ar.enfant] === undefined || voieGit[ar.parent] === undefined) continue;
-    compare("continuite de la lignee " + ar.enfant.slice(0, 7) + " -> " + ar.parent.slice(0, 7),
-      voieGit[ar.enfant] === voieGit[ar.parent] ? "meme colonne" : "colonnes differentes",
-      ar.voieEnfant === ar.voieParent ? "meme colonne" : "colonnes differentes");
+    statVoies.lignees++;
+    if ((voieGit[ar.enfant] === voieGit[ar.parent]) === (ar.voieEnfant === ar.voieParent)) statVoies.ligneesOk++;
   }
 
   /* Les aretes : l'ensemble des couples (enfant, parent) */
@@ -617,6 +636,52 @@ var SCENARIOS = [
     )
   },
   {
+    nom: "aller-retour-de-fusion",
+    /* ⚠️ CINQ commandes ordinaires, et la colonne fantome apparaissait : une voie
+       ouverte pour le second parent d'une fusion, refermee plus bas par la
+       convergence, sans qu'aucun commit ne s'y soit jamais pose. Trouve par une
+       enumeration exhaustive des graphes a six commits. */
+    actions: [].concat(
+      commits("a", 1),
+      [{ git: "checkout -b z1" }], commits("z", 1, INSTANT + 10),
+      [{ git: "checkout main" }], commits("m", 1, INSTANT + 20),
+      [{ git: "checkout z1" }, { instant: INSTANT + 30 }, { git: "merge main" }],
+      [{ git: "checkout main" }], commits("m2", 1, INSTANT + 40),
+      [{ instant: INSTANT + 50 }, { git: "merge z1" }]
+    )
+  },
+  {
+    nom: "croisement-de-deux-branches",
+    actions: [].concat(
+      commits("a", 1),
+      [{ git: "checkout -b b" }], commits("b", 1, INSTANT + 10),
+      [{ git: "checkout main" }], commits("m", 1, INSTANT + 20),
+      [{ instant: INSTANT + 30 }, { git: "merge b" }],
+      [{ git: "checkout b" }, { instant: INSTANT + 40 }, { git: "merge main" }],
+      [{ git: "checkout main" }, { instant: INSTANT + 50 }, { git: "merge b" }]
+    )
+  },
+  {
+    nom: "no-ff-puis-retour",
+    actions: [].concat(
+      commits("a", 1),
+      [{ git: "checkout -b feat" }], commits("f", 1, INSTANT + 10),
+      [{ git: "checkout main" }, { instant: INSTANT + 20 }, { git: "merge --no-ff feat" }],
+      [{ git: "checkout feat" }, { instant: INSTANT + 30 }, { git: "merge main" }]
+    )
+  },
+  {
+    nom: "deux-fusions-croisees-de-la-meme-branche",
+    actions: [].concat(
+      commits("a", 1),
+      [{ git: "checkout -b p" }], commits("p", 1, INSTANT + 10),
+      [{ git: "checkout -b q main" }], commits("q", 1, INSTANT + 20),
+      [{ git: "checkout -b br0 main" }, { instant: INSTANT + 30 }, { git: "merge --no-ff q" }],
+      [{ git: "checkout -b br1 p" }, { instant: INSTANT + 40 }, { git: "merge q" }],
+      [{ git: "checkout br0" }]
+    )
+  },
+  {
     nom: "noms-a-accents-et-chevrons",
     /* Un message de commit et un nom de branche qui contiennent ce qu'un
        apprenant tapera vraiment — et ce qu'un dessin naif injecterait. */
@@ -688,13 +753,41 @@ function main() {
 
   console.log("verif-git-graphe — " + joues + " scenario(s), " + comparaisons + " comparaison(s) contre "
     + cp.execFileSync("git", ["--version"], { encoding: "utf8" }).trim() + ".");
-  var taux = statVoies.total ? 100 * statVoies.concordantes / statVoies.total : 100;
-  console.log("  numeros de colonne identiques a git : " + statVoies.concordantes + " / " + statVoies.total
-    + " (" + taux.toFixed(1) + " %) — les ecarts viennent du DECALAGE de colonnes de git, decrit en tete ;\n"
-    + "  l'ordre gauche-droite des voisins, lui, est compare a 100 %.");
+  function pct(a, b) { return b ? (100 * a / b).toFixed(1) + " %" : "-"; }
+  console.log("  RESSEMBLANCE au dessin de git (mesuree, NON exigee — git compresse ses colonnes) :");
+  console.log("    numeros de colonne identiques ... " + statVoies.concordantes + " / " + statVoies.total
+    + " (" + pct(statVoies.concordantes, statVoies.total) + ")");
+  console.log("    ordre gauche-droite des voisins . " + statVoies.voisinsOk + " / " + statVoies.voisins
+    + " (" + pct(statVoies.voisinsOk, statVoies.voisins) + ")");
+  console.log("    continuite des lignees .......... " + statVoies.ligneesOk + " / " + statVoies.lignees
+    + " (" + pct(statVoies.ligneesOk, statVoies.lignees) + ")");
   for (var v = 0; v < statVoies.divergentes.length; v++) console.log("      · " + statVoies.divergentes[v]);
-  if (taux < 95) {
-    ecarts.push({ ou: "global", quoi: "taux de colonnes identiques", git: "au moins 99 %", bac: taux.toFixed(1) + " %" });
+
+  /* NON-REGRESSION, et rien de plus. Les trois taux ci-dessus ne sont PAS des
+     proprietes generales du dessin : une enumeration exhaustive des graphes a
+     six commits en met 8,3 % en defaut, parce que git compresse ses colonnes.
+     Mais sur LES 23 FORMES RETENUES ICI, ils valent ce qui suit, et une baisse
+     signale une faute d'attribution — c'est ce qui rattrape les mutations que
+     les invariants internes laissent passer.
+     ⚠️ Ajouter un scenario peut deplacer ces nombres : les remesurer alors, et
+     n'accepter la nouvelle valeur qu'en sachant pourquoi elle a bouge. */
+  var REFERENCE = { colonnes: 2, voisins: 0, lignees: 0 };
+  var ecartColonnes = statVoies.total - statVoies.concordantes;
+  var ecartVoisins = statVoies.voisins - statVoies.voisinsOk;
+  var ecartLignees = statVoies.lignees - statVoies.ligneesOk;
+  if (!SEUL) {
+    if (ecartColonnes > REFERENCE.colonnes) {
+      ecarts.push({ ou: "global", quoi: "colonnes differentes de git (non-regression)",
+        git: "au plus " + REFERENCE.colonnes, bac: String(ecartColonnes) });
+    }
+    if (ecartVoisins > REFERENCE.voisins) {
+      ecarts.push({ ou: "global", quoi: "voisins gauche-droite inverses (non-regression)",
+        git: "au plus " + REFERENCE.voisins, bac: String(ecartVoisins) });
+    }
+    if (ecartLignees > REFERENCE.lignees) {
+      ecarts.push({ ou: "global", quoi: "lignees discontinues (non-regression)",
+        git: "au plus " + REFERENCE.lignees, bac: String(ecartLignees) });
+    }
   }
 
   if (!ecarts.length) {
