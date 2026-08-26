@@ -1233,7 +1233,51 @@ Le site donne une solution par exercice. Les bons cours montrent les **alternati
 pourquoi on choisit l'une plutôt que l'autre — c'est ce qui distingue un apprenant qui applique d'un
 apprenant qui décide.
 
-- [ ] **E1 · Choisir les leçons.** Repérer les leçons où plusieurs approches se défendent réellement (boucle contre méthode fonctionnelle, récursif contre itératif, jointure contre sous-requête…). **Borner : quelques dizaines, pas 1 463.** Écrire la liste ici avant de commencer.
+- [x] **E1 · Choisir les leçons.** ✅ **2026-08-26. 1 612 leçons lues, 12 909 blocs de code passés au crible de 18 motifs : 96 leçons candidates, dont 30 retenues.** Outil neuf et rejouable : `tools/mesure-alternatives.js` (`--detail`, `--cours=`, `--deja`).
+
+  **⚠️ DEUX FOIS, LA PREMIÈRE MESURE ÉTAIT FAUSSE — et les deux fois elle rassurait.**
+
+  1. Le filtre « cette leçon en parle déjà » capturait « plutôt que », « au lieu de », « variante », « alternative » : **2 496 occurrences dans 203 leçons**, dont l'immense majorité sont des conseils ordinaires (« choisis `prix` plutôt que `p` », « anime `transform` plutôt que des propriétés qui déclenchent un reflow »). Un échantillon de douze phrases, lu en entier, l'a montré. Resserré aux tournures qui annoncent une SECONDE FAÇON D'ÉCRIRE LA MÊME CHOSE, il ne reste que **4 leçons**. Le constat qui fonde la phase E se confirme donc par la mesure : **le site montre presque toujours une seule façon de faire.**
+  2. Le classement par nombre d'occurrences remontait `crypto` et `offensive` en tête — des leçons longues, dont le code manipule des octets dans des boucles indexées, et où une compréhension de liste n'apprendrait rien à personne. **Le poids mesurait la LONGUEUR, pas le choix.** Une alternative ne compte désormais que dans un cours qui **enseigne** cette notion : 221 candidates → **96**.
+
+  **Trois cours n'ont RIEN à corriger, et c'est une bonne nouvelle mesurée** : `go` (30 blocs en `for … range`, **0** boucle indexée), `php` (24 `foreach`, 0), `rust` (15 `iter()`, 0). `java` et `csharp` en ont respectivement **2** et **3**.
+
+  **LES 30 LEÇONS RETENUES**, chacune avec le choix à montrer :
+
+  | leçon | ce qu'elle montre | l'autre façon |
+  |---|---|---|
+  | `js/lecon-23` Les promesses avancées | `.then` chaîné (7 fois) | `async`/`await`, et `Promise.all` contre le séquentiel |
+  | `js/lecon-46` Boucle d'événements et concurrence | `.then` (5) | `await`, et ce que chacun rend lisible |
+  | `js/lecon-44` Itérateurs et générateurs avancés | tableau accumulé | générateur paresseux |
+  | `js/lecon-57` La Streams API | accumulation en mémoire (5) | traitement par flux |
+  | `js/lecon-21` Héritage et encapsulation | héritage de classe | composition |
+  | `algo/lecon-02` La récursion en profondeur | récursion (5) | itératif avec pile explicite |
+  | `algo/lecon-03` Rechercher : linéaire et binaire | binaire récursive | binaire itérative |
+  | `algo/lecon-05` Le tri fusion | descendant récursif | ascendant itératif |
+  | `algo/lecon-08` Piles et files | tableau | liste chaînée, et le coût de chaque opération |
+  | `algo/lecon-18` Le backtracking | récursion | pile explicite |
+  | `algo/lecon-25` Arbres auto-équilibrés (AVL) | rotations récursives | itératives ; et AVL contre rouge-noir |
+  | `algo/lecon-12` Les graphes : représentation et parcours | listes d'adjacence | matrice, et quand elle gagne |
+  | `algo/lecon-19` Deux pointeurs et fenêtre glissante | boucle indexée | deux pointeurs contre table de hachage |
+  | `python/lecon-06` Les fonctions | boucle d'accumulation (3) | compréhension de liste |
+  | `python/lecon-27` collections, itertools, functools | boucles | `itertools`, et ce qu'on y perd en lisibilité |
+  | `python/lecon-29` Les décorateurs | décorateur | fonction d'ordre supérieur explicite |
+  | `python/lecon-37` Programmation fonctionnelle | récursion (4) | `reduce` / `accumulate` |
+  | `sql/lecon-09` Sous-requêtes, ensembles et CTE | sous-requête dans le SELECT (10) | jointure, `EXISTS`, CTE — et le plan d'exécution |
+  | `bdd/lecon-10` Dénormaliser à bon escient | jointure | colonne dénormalisée, et son coût d'écriture |
+  | `bdd/lecon-13` Transactions et isolation | verrou pessimiste | verrou optimiste |
+  | `data-eng/lecon-08` Idempotence et reprise | suppression puis insertion | `MERGE` / upsert |
+  | `css/lecon-08` Le flux, display et position | `position: absolute` | grid, qui garde le flux |
+  | `css/lecon-38` Le positionnement par ancre | `absolute` (7) | ancrage CSS, et le repli à prévoir |
+  | `css/lecon-45` Formes, découpe et tracé | `float` + `shape-outside` | grid |
+  | `nodejs/lecon-05` Promesses et async/await | `.then` | `await`, séquentiel contre `Promise.all` |
+  | `nodejs/lecon-07` Les streams et les buffers | tout charger en mémoire | flux, et le seuil où il devient nécessaire |
+  | `patterns/lecon-04` Patterns structurels | composite récursif | parcours itératif |
+  | `java/lecon-04` Méthodes et tableaux | boucle indexée | for-each, puis l'API Stream |
+  | `csharp/lecon-04` Méthodes et tableaux | boucle indexée | `foreach`, puis LINQ |
+  | `bash/lecon-12` Déboguer ses scripts Bash | boucle sur la sortie de `ls` | `find -exec` / `xargs -0`, et les noms à espaces |
+
+  **Ce qui est écarté, et pourquoi** : les 66 autres candidates sont soit des projets de synthèse (le code y illustre l'assemblage, pas le choix), soit des leçons où l'approche montrée est la seule raisonnable au niveau visé. La liste reste **bornée à 30** — le plan demandait « quelques dizaines, pas 1 463 ».
 - [ ] **E2 · Le format.** Un bloc « une autre façon de le faire » : la variante, ce qu'elle coûte, ce qu'elle apporte, quand la préférer. Style du site, pas de catalogue exhaustif.
 - [ ] **E3 · Écrire, par lots de cours.** Un lot par case.
 
