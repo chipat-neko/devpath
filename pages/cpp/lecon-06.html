@@ -411,7 +411,8 @@ int main() {
 [
   {"type":"text","accept":["override"],"placeholder":"le mot-clé placé APRÈS une méthode qui redéfinit celle de la base (double aire() const …) : …","hints":["Le compilateur vérifie qu'elle redéfinit bien une méthode virtuelle.","Évite les fautes de signature silencieuses.","Huit lettres."],"link":{"href":"lecon-06.html","label":"Revoir « override »"}},
   {"type":"text","accept":["unique_ptr","std::unique_ptr","uniqueptr"],"placeholder":"le pointeur intelligent à propriété EXCLUSIVE stocké dans le vector<…<Forme>> : std::…","hints":["Un seul propriétaire ; il libère à la destruction.","Non copiable, mais déplaçable.","std::?????_ptr"],"link":{"href":"lecon-06.html","label":"Revoir « unique_ptr »"}},
-  {"type":"text","accept":["virtual","virtuel"],"placeholder":"le mot-clé à mettre sur le DESTRUCTEUR de la base pour une destruction correcte via un pointeur de base : …","hints":["Sans lui, seul le destructeur de la base est appelé (fuite).","virtual ~Ressource();","Sept lettres."],"link":{"href":"lecon-06.html","label":"Revoir « Le destructeur virtuel »"}}
+  {"type":"text","accept":["virtual","virtuel"],"placeholder":"le mot-clé à mettre sur le DESTRUCTEUR de la base pour une destruction correcte via un pointeur de base : …","hints":["Sans lui, seul le destructeur de la base est appelé (fuite).","virtual ~Ressource();","Sept lettres."],"link":{"href":"lecon-06.html","label":"Revoir « Le destructeur virtuel »"}},
+  {"type":"text","accept":["a[0]=7  b[0]=99"],"placeholder":"la ligne manquante : …","hints":["b est construit à partir de a : quel constructeur est appelé ?","Celui-ci n’a pas copié le POINTEUR, il a alloué un nouveau tableau.","Les deux objets ont donc des tableaux distincts."],"link":{"href":"lecon-05.html","label":"Revoir « Constructeurs, destructeurs et RAII »"}}
 ]
 </script>
 
@@ -509,6 +510,49 @@ int main() {
 // + Fichier
 // - Ressource        // ~RessourceFichier() N'EST PAS appelé :
 //                    // la partie Fichier n'est pas libérée -&gt; fuite.</code></pre></figure></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Prédiction</span></div><p><strong>Sans exécuter le code</strong>&nbsp;: ce programme n'affiche qu'une seule ligne, et elle a été remplacée par <code>//&nbsp;?</code> à la fin du code. Quelle est-elle&nbsp;?</p><p><em>Ce code est repris de la leçon précédente.</em></p><figure class="code-block" data-file="extrait.cpp"><pre><code class="language-cpp">#include &lt;algorithm&gt;   // std::copy
+#include &lt;cstddef&gt;
+#include &lt;iostream&gt;
+
+class Buffer {
+public:
+    explicit Buffer(std::size_t n) : taille_(n), data_(new int[n]{}) {}
+
+    ~Buffer() { delete[] data_; }
+
+    Buffer(const Buffer&amp; autre)
+        : taille_(autre.taille_), data_(new int[autre.taille_]) {
+        std::copy(autre.data_, autre.data_ + taille_, data_);
+    }
+
+    // Operateur d'AFFECTATION par copie (allouer - copier - liberer - basculer)
+    Buffer&amp; operator=(const Buffer&amp; autre) {
+        if (this == &amp;autre) return *this;     // auto-affectation
+        int* neuf = new int[autre.taille_];   // 1) allouer d'abord (securite)
+        std::copy(autre.data_, autre.data_ + autre.taille_, neuf);
+        delete[] data_;                        // 2) liberer l'ancien
+        data_   = neuf;                        // 3) basculer
+        taille_ = autre.taille_;
+        return *this;
+    }
+
+    void set(std::size_t i, int v) { data_[i] = v; }
+    int  get(std::size_t i) const   { return data_[i]; }
+
+private:
+    std::size_t taille_;
+    int*        data_;
+};
+
+int main() {
+    Buffer a(2);
+    a.set(0, 7);
+    Buffer b = a;
+    b.set(0, 99);
+    std::cout &lt;&lt; "a[0]=" &lt;&lt; a.get(0) &lt;&lt; "  b[0]=" &lt;&lt; b.get(0) &lt;&lt; '\n';
+}
+// Sortie :
+// ?</code></pre></figure><details><summary>Voir la réponse</summary><p>La ligne affiche <code>a[0]=7  b[0]=99</code>. Le constructeur de copie fait une copie PROFONDE : b possède son propre tableau, donc modifier b ne change pas a.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

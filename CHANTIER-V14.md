@@ -599,7 +599,86 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   🔵 **Relevé hors périmètre, établi par comparaison avec HEAD** : `kotlin/lecon-07` (+201 px) et `kotlin/lecon-09` (+462 px) débordent à 1280 px **avant comme après** mon passage. Cause pour `lecon-09` : un `<code>` inline de **146 caractères** dans la section « Un cas réel », que `white-space: nowrap` empêche de couper.
 
   **10. Mesure.** Exercices à champ : **4 553 → 4 564** (+11). Exercices de prédiction sur le site : **14 → 25**. Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`, il ne prétend pas être exécuté ; la part exécutée passe donc mécaniquement de 7,77 % à **7,76 %**, et c'est normal. **0 octet de moteur ajouté.**
-- [ ] **B7c · Le reste des langages compilés** (`cpp` 70, `rust` 65, `elixir` 65, `c` 62, `php` 50, `java` 40, `csharp` 37, `go` 28) — un lot par famille. ⚠️ `bash` (65) est à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
+**B7c est SCINDÉ le 2026-08-26**, comme le plan le prévoyait (« un lot par famille ») : les huit cours n'ont ni le même gisement ni le même idiome, et la première passe a dû ÉCRIRE UN DEUXIÈME ANALYSEUR avant de pouvoir écrire un seul exercice. Une case par lot.
+
+- [x] **B7c-1 · Le lot `cpp`** ✅ **2026-08-26. Premier lot de prédiction dont les sorties ont été RECALCULÉES et non reprises sur parole — et premier où la contradiction a trouvé une faute que MES contrôles ne pouvaient pas trouver : le commentaire français qui énonce la réponse.**
+
+  **1. La mesure du plan était juste sur le compte, fausse sur l'idiome — et c'est ce qui a fait le travail de la case.** Le plan annonçait « cpp 70 » : `mesure-prediction.js` confirme **70 blocs sur 232**. Mais ces 70 blocs n'écrivent PAS leur sortie comme Ruby et Kotlin. Mesuré sur les 8 cours du point :
+
+  | cours | blocs | annonce **en fin de ligne** (`// => x`, l'idiome de B7a/B7b) | **bloc « // Sortie : » en fin de programme** |
+  |---|---:|---:|---:|
+  | `cpp` | 232 | **2** | **64** |
+  | `rust` | 214 | 0 | 50 |
+  | `java` | 228 | 0 | 37 |
+  | `csharp` | 247 | 0 | 31 |
+  | `php` | 204 | 6 | 29 |
+  | `c` | 215 | 0 | 28 |
+  | `go` | 197 | 1 | 22 |
+  | `elixir` | 163 | 10 | 1 |
+
+  **L'outil `tools/prediction-exos.js` ne savait lire aucun de ces 262 blocs.** Il ne connaissait que l'annonce de fin de ligne. Une case « écrire des exercices » était en réalité une case « apprendre à lire un deuxième idiome ».
+
+  **2. La forme `bloc`, et la règle stricte qui écarte toute seule le non déterministe.** Le lot déclare `forme:'bloc'` : on cite le programme entier, on masque UNE ligne de sa sortie par `// ?`, les autres restent visibles. La tête est **stricte** — `// Sortie :` et rien d'autre. Conséquence non prévue et heureuse : `// Sortie typique`, `// Sortie attendue`, `// Sortie probable`, `// Sortie (avec reserve(2))` sont refusées d'office, et **ce sont exactement les cas que le cours déclare non reproductibles** : le banc d'essai à 320 ns, le comportement indéfini de `lecon-06`, la « corruption du tas » de `lecon-12`, et surtout l'état d'une `std::string` après `std::move` — « valide mais NON SPÉCIFIÉ », dit la leçon. Prédire `source : []` aurait été enseigner le faux. **Une règle de forme a fait le tri sémantique.**
+
+  **3. LES SORTIES ONT ÉTÉ RECALCULÉES. C'est l'apport de fond, et B7a/B7b ne l'avaient pas.** Aucun compilateur C++ n'existe ici (`g++`, `clang++`, `cl` absents ; `dotnet` n'a **que le runtime**, pas de SDK — vérifié, donc C# non plus). Mais ces programmes sont de l'algorithmique déterministe : `scratchpad/v14-b7c/rejoue-cpp.js` les transpose et reproduit `std::cout` là où sont les pièges — un `bool` sort `1` sans `boolalpha`, un `double` sort à 6 chiffres significatifs sans zéro final (7.0 → « 7 »), `std::string::size()` compte des **octets**, une `std::map` est triée par clé, l'apostrophe de `1'000'000` sépare les chiffres. Confronté aux sorties **extraites du HTML**, jamais retapées : **12 programmes, 21 lignes de sortie, 0 divergence.**
+
+  **Contre-épreuve** — un rejeu qui ne trouve rien doit prouver qu'il sait trouver : en faussant la seule règle du `bool` (`1` → `true`), **2 divergences** apparaissent et sont nommées ; après retour en arrière, **0**. Ce que ça prouve : la valeur affirmée est celle de l'algorithme, opérateur d'affichage compris. Ce que ça ne prouve pas : que le C++ compile. C'est écrit dans l'en-tête du script.
+
+  **4. LE FAN-OUT DE CONTRADICTION A DÉTRUIT LE PREMIER JET — pour la deuxième fois, et sur un trou que rien d'automatique ne pouvait voir.** 11 exercices écrits, mes 10 contrôles verts, `verif.js --rapide` vert, **44 réponses acceptées et 44 fausses refusées dans Chrome**, `verif-rendu` 66 mesures sans un avertissement. Trois agents chargés de les démolir (calcul / triche / rédaction) ont rendu **26 fautes, dont 5 bloquantes**. Aucune n'était une valeur fausse — le contradicteur « calcul » a retranspilé les 11 programmes et retrouvé **11 sorties sur 11 identiques**. Toutes portaient sur ce qu'aucun contrôle ne regardait :
+
+  | ce qui a été trouvé | vérifié par moi | traitement |
+  |---|---|---|
+  | **Un commentaire ÉNONCE la réponse, en français.** `// modifie b, pas a (tableaux distincts)` dit que `a` garde 7 et `b` vaut 99 ; `// v == {9, 8, 5, 2, 1}` donne le tri qu'on demandait de faire ; `// COPIE : duplique le million d'éléments` donne les DEUX points de son exercice | oui, lus dans les 3 blocs | champ **`masquer`** neuf (le commentaire est neutralisé dans la citation, la leçon d'origine intacte) + **contrôle 11** |
+  | **`lecon-04` : la réponse est déterminée par ÉLIMINATION.** La `std::map` n'a que deux entrées et l'autre ligne de sortie reste visible ; en prime, le commentaire au-dessus énonce la règle testée | oui | **cible abandonnée** — 11 exercices deviennent 10 |
+  | **Un `<` non échappé dans le HTML.** Le champ `pourquoi` était concaténé **sans passer par `enc()`** : « l'operator<< maison » a produit deux chevrons bruts. **1 occurrence sur 1 612 fichiers**, invisible à l'œil, et `verif-html.js` ne la voit pas | oui, `grep` | `enc(t.pourquoi)` — **vrai bug du générateur** |
+  | **L'énoncé était FAUX sur 4 pages** : il annonce un marqueur `// ?` alors que le code portait `// Sortie : ?` (sortie tenant sur la tête) | oui, mesuré sur les 11 | le « ? » occupe **toujours** sa propre ligne |
+  | **L'énoncé promettait une « sortie complète » là où le programme n'affiche qu'UNE ligne** — 5 cibles sur 11 | oui | énoncé choisi selon le nombre réel de lignes |
+  | `lecon-08` : `a * 3 = (3,6)` REFUSÉ alors que la réponse est comprise — `graphies()` réservait la tolérance sur la virgule aux valeurs commençant par `[` ou `{` | oui, en exécutant `normExo` | critère élargi à toute **liste entre parenthèses ou crochets** |
+  | Deux libellés de lien en apostrophe courbe quand les titres réels ont l'apostrophe droite (`La surcharge d'opérateurs`, `Gestion d'erreurs…`) | oui, `grep` sur les `<h1>` | alignés sur le titre réel |
+  | `lecon-09` : l'indice écrit `1’000’000` en apostrophe **typographique** — du C++ invalide, dans l'exercice qui porte précisément sur ce caractère | oui, octet par octet | réécrit avec l'apostrophe droite |
+  | `lecon-19` : le 3ᵉ indice énonçait le résultat au lieu d'une règle | oui | réécrit |
+  | `lecon-17` : deux lignes d'explication placées **sous** `// Sortie :` se lisent comme de la sortie | oui | retirées de la citation |
+
+  **5. Le contrôle 11, et le vert par vacuité qu'il a failli être.** Premier jet : comparer les MOTS du commentaire à ceux de la réponse. Contre-épreuve — masquage retiré sur `lecon-06` : **l'outil n'a rien dit**. La réponse `a[0]=7  b[0]=99` n'a aucun mot de deux lettres, et « modifie b, pas a » n'en partage évidemment aucun. **La prose française qui révèle un résultat n'est pas détectable par recoupement de tokens** ; prétendre le contraire aurait rendu un contrôle incapable d'échouer — la troisième fois de ce chantier.
+
+  Ce qui est réellement mesurable, c'est le **nombre** de commentaires que la citation laisse à l'apprenant. La cible doit le déclarer (`commentaires: N`) ; l'outil les **affiche tous, un par un**, ce qui oblige à les lire à l'écriture, et si la leçon source change plus tard le compte diverge et l'outil refuse. Il ne juge pas le sens : il garantit qu'aucun commentaire n'entre dans un exercice sans avoir été vu. **Il a refusé son premier compte à moi** (`lecon-06` : 6 commentaires, j'en avais déclaré 5) et fait apparaître le troisième révélateur, `// Constructeur de COPIE : duplique le tableau (copie profonde)`, que la contradiction n'avait pas cité.
+
+  **6. Un piège d'environnement, coûteux et invisible : `core.autocrlf`.** Après un `git checkout` de retour en arrière, **4 cibles sur 11 sont tombées** avec « pas de tête Sortie : stricte » — sans qu'une ligne du site ni de la table ait changé. Cause : `core.autocrlf` vaut `true`, le checkout a réécrit les pages en **CRLF**, et un motif terminé par `$` **sans le drapeau `m`** ne matche plus une ligne suivie d'un `\r` (le `.` ne traverse pas un retour chariot). Les 11 pages ont été remises en LF (le site en compte 1 689 en LF pour 79 en CRLF ; `git diff` reste vide, Git normalisant à l'index) et `dec()` retire désormais les `\r` **avant tout**. ⚠️ **Deuxième piège du même réveil** : un `heredoc` Bash de cet environnement réduit `\\` en `\` — un `[\\s\\S]` écrit dans un script y arrive en `[\s\S]`, c'est-à-dire `[sS]`, et la mesure rend **0 sur toute la ligne**. Écrire ces fichiers avec l'outil d'écriture, pas avec un heredoc.
+
+  **7. Les 10 exercices** (bloc de la leçon *n* → exercice dans une leçon suivante) :
+
+  | source → hôte | ce qu'on fait prédire | réponse recalculée |
+  |---|---|---|
+  | 01 → 02 | `doubler(3)` et `doubler(3.5)`, deux surcharges | `6 et 7` |
+  | 02 → 03 | `texte.size()` sur « Bonjour le C++ » | `[Bonjour le C++] (14 caracteres)` |
+  | 05 → 06 | `b = a` puis `b.set(0, 99)`, règle de trois | `a[0]=7  b[0]=99` |
+  | 07 → 08 | `a * 3.0` sur le vecteur (1, 2) | `a * 3   = (3, 6)` |
+  | 08 → 09 | `a.size()` et `b.size()` après copie de `1'000'000` | `1000000 1000000` |
+  | 11 → 12 | `find_if(x > 4)` **après** un tri décroissant | `premier > 4 : 9` |
+  | 13 → 14 | `b.value_or(-1)` sur un `optional` vide | `b = -1` |
+  | 16 → 17 | un fold sur `<<` dont le dernier argument est un `bool` | `x = 42, ok=1` |
+  | 17 → 18 | `filter` des pairs puis `transform` au carré, sur 1..8 | `4 16 36 64` |
+  | 17 → 19 | `compteur(4)` avec `co_yield` | `0 1 2 3` |
+
+  Ce sont des pièges : la surcharge choisie par le type et le `7.0` que `cout` écrit « 7 », le `size()` qui compte les espaces et les deux `+`, la copie **profonde** qui rend les tableaux indépendants, le séparateur de chiffres du C++14, l'ordre tri-puis-recherche, l'`optional` vide, et le `bool` qui sort `1` faute de `boolalpha`.
+
+  **8. Réserves assumées, mesurées, non masquées.**
+  - **La réponse reste lisible dans la leçon SOURCE, et l'énoncé y renvoie.** Vérifié : `// 6 et 7` est en clair dans `cpp/lecon-01`, `// premier > 4 : 9` dans `cpp/lecon-11`, et ainsi des 10. **C'est inhérent à la règle A5** : on ne bâtit que sur une sortie DÉJÀ AFFIRMÉE, donc elle est écrite quelque part. B7b avait déplacé l'exercice d'une leçon ; cela met la réponse à un clic au lieu de zéro, pas à l'abri. Les 25 exercices `ruby`/`kotlin` ont le même défaut. **Le trancher demande un choix éditorial** (masquer aussi la ligne dans la leçon d'origine, ou assumer que le lien « Revoir » est une aide et non une triche) : laissé au chantier, pas décidé en passant.
+  - **Deux exercices sont faibles et je le dis** : `lecon-03` fait surtout **compter des caractères** (91 % de la réponse est recopiable du code), et `lecon-02` laisse le `7` visible deux fois. Gardés parce qu'ils enseignent chacun un point réel, mais ce ne sont pas les meilleurs du lot.
+  - **`lecon-12` emploie un TROISIÈME idiome**, le commentaire de bloc `/* Sortie : … */`, que la forme `bloc` ne lit pas. Un seul bloc du cours est dans ce cas : un troisième analyseur ne se justifiait pas.
+
+  **9. Une dette de B7a, découverte par un mode neuf et NON corrigée ici.** L'idempotence de l'outil masque toute régression : un lot écrit ne repasse plus jamais dans le calcul. Le drapeau **`--rejouer`** lève ce court-circuit sans jamais écrire. Résultat : **5 des 14 exercices `ruby` ne passent pas les contrôles 5 et 7**, instaurés APRÈS eux en B7b — `lecon-02` (`3` lisible dans `"3a"`), `lecon-03` (`b` lisible dans `"b"`), `lecon-06` (`1` lisible dans `call(1)`), `lecon-07` (`[18, 15]` écrit deux fois dans le bloc), `lecon-09` (`true` écrit ailleurs). Les deux derniers sont de vrais défauts : la réponse se recopie. **Mesuré, chiffré, laissé à une case propre** — le mélanger à B7c aurait fait deux travaux à moitié.
+
+  **10. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (35,4 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les **10 pages hôtes** : **60 mesures** (3 largeurs × 2 thèmes), réseau coupé, **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome, en `file://` sans `--allow-file-access-from-files` : **40 réponses tapées, 40 acceptées** ; passe adversariale **40 fausses tapées, 40 refusées**. Alignement `.exercise` ⇄ `data-exos` : **22 leçons sur 23 à l'identique**, seul le capstone `lecon-23` garde son écart préexistant (4 pour 3) — **non touché**, comme `ruby/lecon-22` et `kotlin/lecon-21`. 0 BOM, JSON valide, `<div>` équilibrés. **0 URL de CDN.** Générateur **idempotent** (relancé : « 10 déjà en place »). `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
+
+  **11. Mesure.** Exercices à champ : **4 564 → 4 574** (+10). Exercices de prédiction sur le site : **25 → 35**. Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`. **0 octet de moteur ajouté.**
+
+- [ ] **B7c-2 · `rust`** (50 blocs à « // Sortie : », 214 blocs au total). L'outil sait désormais lire cette forme : la case est un travail de **choix de cibles et de contradiction**, pas d'outillage. Même méthode obligatoire : rejouer les sorties avant d'écrire, déclarer `commentaires: N`, faire démolir.
+- [ ] **B7c-3 · `java` et `csharp`** (37 et 31 blocs). ⚠️ `dotnet` n'a ici **que le runtime, aucun SDK** : C# n'est pas plus compilable que le reste, le rejeu par transposition reste la seule voie.
+- [ ] **B7c-4 · `c` et `php`** (28 et 29 blocs).
+- [ ] **B7c-5 · `go` et `elixir`** (22 et 1 blocs). ⚠️ `elixir` est le seul des huit à employer surtout l'annonce de fin de ligne (10 blocs) : c'est la forme de B7a/B7b qu'il faut y appliquer, pas la forme `bloc`.
+- [ ] **B7c-6 · Reprendre les 5 exercices `ruby` que `--rejouer` refuse** (point 9 de B7c-1), et trancher la réserve du point 8 : faut-il masquer la ligne dans la leçon source ?
+- [ ] **B7d · `bash`** (65 blocs) — à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
 
 ---
 

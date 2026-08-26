@@ -25,17 +25,36 @@
  * rester LISIBLE dans le code cité — ce dernier a écarté 2 des 16 exercices envisagés
  * en B7a, et il a de nouveau écarté des cibles en B7b.
  *
+ * DEUX FORMES D'ANNONCE, parce que les langages n'écrivent pas leur sortie pareil.
+ *   `forme` absent  — l'annonce termine la ligne de code : `x # => 3` (Ruby, Kotlin).
+ *   `forme:'bloc'`  — le programme entier, PUIS sa sortie complète en commentaire :
+ *                     c'est l'idiome des langages compilés (mesuré le 2026-08-26 :
+ *                     cpp 64 blocs à « // Sortie : » contre 2 à « // => », rust 50
+ *                     contre 0, java 37 contre 0). On y masque UNE ligne de la sortie.
+ *                     La tête est STRICTE — « Sortie typique », « Sortie attendue »,
+ *                     « Sortie probable » sont refusées, et ce sont exactement les cas
+ *                     non déterministes du site (banc d'essai, comportement indéfini,
+ *                     état non spécifié après std::move).
+ *
  *   node tools/prediction-exos.js                  contrôle tous les lots (n'écrit rien)
  *   node tools/prediction-exos.js --lot=kotlin     un seul lot
  *   node tools/prediction-exos.js --lot=kotlin --write   écrit
+ *   node tools/prediction-exos.js --rejouer        RECALCULE les lots déjà écrits
  *
- * IDEMPOTENT : une leçon qui porte déjà un exercice « Prédiction » est sautée.
+ * IDEMPOTENT : une leçon qui porte déjà un exercice « Prédiction » est sautée. C'est
+ * commode, mais ça masque toute régression de l'outil — un lot écrit ne repasse plus
+ * jamais dans le calcul. `--rejouer` lève ce court-circuit sans jamais écrire (les
+ * contrôles 6 et 9, qui portent sur la page hôte, y sont sautés : la page PORTE déjà
+ * l'exercice). C'est ce mode qui a montré que 5 exercices du lot `ruby` (B7a) ne
+ * passent pas les contrôles 5 et 7, instaurés APRÈS eux, en B7b.
  */
 var fs = require('fs'), path = require('path');
 var RACINE = path.resolve(__dirname, '..');
 var ECRIRE = process.argv.indexOf('--write') !== -1;
 var LOT_DEMANDE = (process.argv.filter(function (a) { return a.indexOf('--lot=') === 0; })[0] || '').slice(6);
 var VOIR = process.argv.indexOf('--voir') !== -1;   // affiche le code cité, pour la relecture
+var REJOUER = process.argv.indexOf('--rejouer') !== -1;  // recalcule les lots déjà écrits (n'écrit jamais)
+if (REJOUER) ECRIRE = false;
 
 /* ---------------------------------------------------------------------------
    LES LOTS. Un lot = un cours, une langue Prism, un marqueur de commentaire.
@@ -271,6 +290,8 @@ var LOTS = {
      contexte d'illustration — devient inatteignable une fois le bloc cité tel quel.
      Un contradicteur l'a trouvé ; le contrôle 8 le refuse désormais tout seul.
 
+     (suite des écarts kotlin plus bas — le lot cpp est déclaré après.)
+
      ÉCARTÉ — `lecon-05`, cible `println(taches)` (2ᵉ occurrence, `[DORMIR, manger]`) :
      le juge du site normalise en MINUSCULES (`normExo`, js/lecon.js). Or les deux
      `println(taches)` du bloc ne diffèrent QUE par la casse : `[dormir, manger]`, la
@@ -282,13 +303,151 @@ var LOTS = {
      donc une chance sur deux au hasard, et le 3ᵉ indice la calculait. Remplacée par
      la sortie du convertisseur, qui porte plus d'un bit d'information. */
     ]
+  },
+
+  /* ===================== B7c — cpp (2026-08-26) =====================
+     PREMIER LOT À LA FORME « bloc » : ici la leçon ne commente pas ses lignes une à
+     une, elle donne le programme entier PUIS sa sortie complète en commentaire. On
+     masque UNE ligne de cette sortie ; les autres restent visibles, ce qui pose la
+     question sans révéler la réponse.
+
+     ⚠️ ET SURTOUT : chacune de ces sorties a été RECALCULÉE avant d'être reprise.
+     Aucun compilateur C++ n'est disponible ici, mais ces programmes sont de
+     l'algorithmique déterministe : `scratchpad/v14-b7c/rejoue-cpp.js` les transpose,
+     reproduit ce que fait `std::cout` (un bool sort « 1 », un double 7.0 sort « 7 »,
+     `size()` compte des octets) et compare à la sortie EXTRAITE du HTML —
+     12 programmes, 21 lignes, 0 divergence. C'est la première fois qu'un lot de
+     prédiction repose sur des valeurs vérifiées et non sur la seule parole du site. */
+  cpp: {
+    dossier: 'cpp', langue: 'cpp', marqueur: '//', forme: 'bloc', fichierCite: 'extrait.cpp',
+    cibles: [
+  { source: '01', page: '02', bloc: 'int& alias = n;', ligne: '6 et 7',
+    quoi: 'la ligne manquante', commentaires: 3,
+    hints: ['Deux fonctions portent le même nom : c’est le TYPE de l’argument qui choisit.',
+            '3 est un int, 3.5 est un double — ce ne sont pas les mêmes appels.',
+            'La version double rend 7.0, mais std::cout n’écrit pas les zéros inutiles.'],
+    pourquoi: 'doubler(3) appelle la surcharge int et rend 6 ; doubler(3.5) appelle la surcharge double et rend 7.0, que std::cout affiche « 7 » sans le zéro final.',
+    label: 'Revoir « Découvrir le C++ »' },
+
+  { source: '02', page: '03', bloc: 'void afficher(const std::string& texte)',
+    ligne: 'caracteres', quoi: 'la ligne manquante', commentaires: 3,
+    hints: ['size() ne compte pas les mots, mais les caractères.',
+            'Les espaces comptent, les deux + aussi.',
+            'Compte-les un par un : « Bonjour », l’espace, « le », l’espace, « C++ ».'],
+    pourquoi: 'std::string::size() compte tous les caractères, espaces et symboles compris.',
+    label: 'Revoir « Types, références et bases modernes »' },
+
+  { source: '05', page: '06', bloc: 'Buffer& operator=(const Buffer& autre)',
+    ligne: 'a[0]=', quoi: 'la ligne manquante',
+    /* Relus un par un (contrôle 11). Trois ÉNONCENT la réponse : « modifie b, pas a
+       (tableaux distincts) » dit que a garde 7 et b 99 ; « appelle le constructeur de
+       copie » désigne le mécanisme ; « duplique le tableau (copie profonde) » donne le
+       mot même de la notion. Les cinq autres (std::copy, l'ordre allouer/copier/
+       libérer/basculer, l'auto-affectation) décrivent l'opérateur d'affectation, qui
+       n'est PAS la ligne jouée ici. */
+    masquer: ['modifie b, pas a', 'appelle le constructeur de copie', 'duplique le tableau'],
+    commentaires: 6,
+    hints: ['b est construit à partir de a : quel constructeur est appelé ?',
+            'Celui-ci n’a pas copié le POINTEUR, il a alloué un nouveau tableau.',
+            'Les deux objets ont donc des tableaux distincts.'],
+    pourquoi: 'Le constructeur de copie fait une copie PROFONDE : b possède son propre tableau, donc modifier b ne change pas a.',
+    label: 'Revoir « Constructeurs, destructeurs et RAII »' },
+
+  { source: '07', page: '08', bloc: 'bool operator==(const Vecteur2D&) const = default;',
+    ligne: 'a * 3', quoi: 'la ligne manquante', commentaires: 1,
+    hints: ['a vaut (1, 2), et l’operator* multiplie chaque composante.',
+            'Le facteur est 3.0, appliqué à x comme à y.',
+            'L’affichage passe par l’operator<< maison, qui écrit « (x, y) ».'],
+    pourquoi: 'operator*(v, k) multiplie les deux composantes : (1, 2) × 3 donne (3, 6), affiché par l’operator<< sous la forme « (x, y) ».',
+    label: "Revoir « La surcharge d'opérateurs »" },
+
+  { source: '08', page: '09', bloc: "fabrique(1'000'000)", ligne: '1000000',
+    quoi: 'la ligne manquante',
+    masquer: ['duplique le million'], commentaires: 2,
+    /* ⚠️ apostrophe DROITE dans le littéral : c'est la seule que le compilateur
+       accepte, et c'est précisément le sujet de l'exercice. L'écrire en apostrophe
+       typographique — ce que faisait le premier jet — donne du C++ invalide dans
+       l'indice qui explique ce caractère-là. */
+    hints: ["Le séparateur de 1'000'000 n’est pas un chiffre : il ne fait que grouper.",
+            'b est une COPIE de a : quelle taille a une copie ?',
+            'Les deux tailles sont affichées sur la même ligne, séparées par une espace.'],
+    pourquoi: "Depuis C++14, l’apostrophe droite sépare les chiffres d’un littéral : 1'000'000 vaut un million. La copie duplique les éléments, donc les deux vecteurs ont la même taille.",
+    label: 'Revoir « Sémantique de copie et de déplacement »' },
+
+  { source: '11', page: '12', bloc: 'std::count_if(v.begin(), v.end()', ligne: 'premier > 4',
+    quoi: 'la ligne manquante', masquer: ['v == {9'], commentaires: 3,
+    commentaireTolere: '« // premier élément > 4 » décrit l’INTENTION de find_if, pas son résultat : le vecteur trié n’est plus montré nulle part.',
+    hints: ['Attention à l’ordre des opérations : le tri a lieu AVANT la recherche.',
+            'Le comparateur est a > b : le vecteur est trié par ordre décroissant.',
+            'find_if rend le PREMIER élément qui convient, dans le vecteur déjà trié.'],
+    pourquoi: 'Le tri décroissant place 9 en tête ; find_if s’arrête au premier élément supérieur à 4, c’est-à-dire le tout premier.',
+    label: 'Revoir « La STL : algorithmes et lambdas »' },
+
+  { source: '13', page: '14', bloc: 'std::optional<int> vers_entier', ligne: 'b = ',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ['std::stoi("abc") ne rend pas 0 : il lève une exception.',
+            'Le catch rend donc nullopt, et b est un optional VIDE.',
+            'value_or ne rend sa valeur de repli que dans ce cas précis.'],
+    pourquoi: 'stoi("abc") lève, le catch rend nullopt : b est vide, donc value_or(-1) rend son repli.',
+    label: "Revoir « Gestion d'erreurs et utilitaires modernes »" },
+
+  { source: '16', page: '17', bloc: '(std::cout << ... << args)', ligne: 'ok=',
+    quoi: 'la ligne manquante', commentaires: 4,
+    hints: ['Le fold déplie les arguments dans l’ordre où ils sont passés.',
+            'Le dernier argument est un bool.',
+            'Sans std::boolalpha, un bool ne s’affiche pas « true ».'],
+    pourquoi: 'Sans std::boolalpha, std::cout écrit un bool comme un entier : true devient 1.',
+    label: 'Revoir « Métaprogrammation et templates avancés »' },
+
+  { source: '17', page: '18', bloc: 'rv::filter', ligne: '4 16', quoi: 'la ligne manquante',
+    commentaires: 2,
+    hints: ['Le pipeline garde d’abord les pairs, puis élève au carré.',
+            'Le vecteur va de 1 à 8 : il y a donc quatre pairs.',
+            'Les carrés sont affichés séparés par une espace, dans l’ordre.'],
+    pourquoi: 'filter garde 2, 4, 6, 8 ; transform les élève au carré. Le calcul n’a lieu qu’au moment de la boucle, mais le résultat est le même.',
+    label: 'Revoir « Performance et C++ moderne »' },
+
+  { source: '17', page: '19', bloc: 'co_yield i;', ligne: '0 1', quoi: 'la ligne manquante',
+    commentaires: 3,
+    /* ⚠️ Le 3ᵉ indice du premier jet (« Il rend donc quatre valeurs, et la dernière
+       n’est pas 4 ») ne laissait plus rien à déduire : combiné aux deux autres, il
+       ÉNONÇAIT la réponse. Un indice donne une règle, pas un résultat. */
+    hints: ['La boucle du générateur part de i = 0.',
+            'Sa condition est i < n, avec n valant 4 : la borne est exclue.',
+            'Les valeurs sont affichées dans l’ordre où co_yield les rend, séparées par une espace.'],
+    pourquoi: 'La boucle va de 0 à n-1 : compteur(4) rend quatre valeurs, 0 à 3.',
+    label: 'Revoir « Performance et C++ moderne »' }
+
+  /* ÉCARTÉS PAR LA RÈGLE DE LA TÊTE STRICTE — et c'est le bon résultat : les blocs
+     annotés « Sortie typique », « Sortie attendue », « Sortie probable » ou
+     « Sortie (avec reserve(2)) » sont précisément les cas NON DÉTERMINISTES du cours.
+     `lecon-08` : l'état d'une std::string après std::move est « valide mais NON
+     SPÉCIFIÉ » — la leçon le dit, et prédire « source : [] » serait enseigner le faux.
+     `lecon-17` : un banc d'essai (320 ns) ne se prédit pas. `lecon-06` : un
+     comportement indéfini. `lecon-12` : « plantage ou corruption du tas ».
+
+     ÉCARTÉ — `lecon-05`, le bloc de la Sentinelle (« destruction » avant « apres le
+     bloc ») : c'est le plus bel exemple RAII du cours, mais chaque ligne de sa sortie
+     est un littéral du code, donc la réponse se recopie sans rien comprendre. Le
+     contrôle 5 le refuse, et il a raison.
+
+     NON TRAITÉ — `lecon-12` emploie un TROISIÈME idiome, le commentaire de bloc
+     (« /* Sortie : … *​/ »), que la forme « bloc » ne lit pas. Un seul bloc du cours
+     est dans ce cas ; le gain ne valait pas un troisième analyseur. */
+    ]
   }
 };
 
 /* ------------------------------- outillage ------------------------------- */
 function esc(s) { return s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'); }
 function dec(s) {
-  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+  /* ⚠️ Les `\r` D'ABORD, et ce n'est pas de la cosmétique. `core.autocrlf` vaut `true`
+     ici : un simple `git checkout` d'une page la réécrit en CRLF. Or un motif qui finit
+     par `$` sans le drapeau `m` ne matche PLUS une ligne terminée par `\r` — `.` ne
+     traverse pas un retour chariot. C'est ce qui a fait échouer 4 cibles sur 11 après
+     un retour en arrière, alors que ni le site ni la table n'avaient changé. */
+  return s.replace(/\r\n?/g, '\n')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
     .replace(/&#0?39;/g, "'").replace(/&#x27;/gi, "'").replace(/&amp;/g, '&');
 }
 function enc(s) {
@@ -324,7 +483,14 @@ function graphies(v) {
   add(v);
   var sansG = v.replace(/^"([\s\S]*)"$/, '$1').replace(/^'([\s\S]*)'$/, '$1');
   add(sansG);
-  if (/^[\[{]/.test(v.trim())) {                 // liste, tableau, map : la virgule sépare
+  /* ⚠️ La condition ne peut pas être « ça commence par [ ou { ». Mesuré par un
+     contradicteur dans Chrome : sur « a * 3   = (3, 6) », un apprenant qui a tout
+     compris et tape « a * 3 = (3,6) » est REFUSÉ — normExo réduit les suites
+     d'espaces mais n'égalise pas l'espace après la virgule, et la valeur ne commence
+     ni par « [ » ni par « { ». Le critère juste est la PRÉSENCE d'une liste entre
+     parenthèses ou crochets, où la virgule sépare des éléments et n'appartient pas
+     au texte. Sur une phrase, on ne touche toujours à rien. */
+  if (/[\[{(][^\])}]*,[^\])}]*[\])}]/.test(v)) {
     add(v.replace(/,\s+/g, ','));
     add(sansG.replace(/,\s+/g, ','));
   }
@@ -346,6 +512,17 @@ Object.keys(LOTS).forEach(function (nomLot) {
   var RE_ANN = new RegExp(M + '\\s*=>');
   var RE_VAL = new RegExp('^[\\s\\S]*?' + M + '\\s*=>\\s*');
   var COMMENTE = new RegExp('^\\s*' + M);
+  /* FORME « bloc » (B7c) — l'idiome des langages compilés : le programme entier, puis
+     sa sortie complète en commentaires à la fin. Mesuré le 2026-08-26 : cpp 64 blocs,
+     rust 50, java 37, csharp 31, c 28, php 29, go 22 — contre 0 à 2 blocs seulement
+     à l'idiome « annonce en fin de ligne » de Ruby/Kotlin. La tête est STRICTE :
+     « // Sortie : » et rien d'autre. « Sortie typique », « Sortie attendue »,
+     « Sortie probable », « Sortie (avec reserve(2)) » sont donc écartées d'office —
+     et c'est exactement ce qu'il faut, car ce sont les cas NON DÉTERMINISTES du site
+     (le benchmark, l'état non spécifié après std::move, le comportement indéfini). */
+  var RE_TETE = new RegExp('^\\s*' + M + '\\s*Sortie\\s*:(.*)$');
+  var RE_TETE_TEST = new RegExp('^\\s*' + M + '\\s*Sortie\\s*:', 'm');
+  var RE_SORTIE = new RegExp('^\\s*' + M + '\\s?');
 
   lot.cibles.forEach(function (t) {
     /* `source` = la leçon dont vient le bloc ; `page` = la leçon où l'exercice est
@@ -357,8 +534,12 @@ Object.keys(LOTS).forEach(function (nomLot) {
     var fPage = path.join(DIR, 'lecon-' + page + '.html');
     var srcBloc = fs.readFileSync(fSrc, 'utf8');
     var src = source === page ? srcBloc : fs.readFileSync(fPage, 'utf8');
-    /* Idempotence : relancer le script ne doit pas empiler un second exercice. */
-    if (src.indexOf('exercise__level">Prédiction') >= 0) {
+    /* Idempotence : relancer le script ne doit pas empiler un second exercice.
+       `--rejouer` court-circuite ce court-circuit : il refait tout le calcul sur les
+       lots DÉJÀ écrits, sans jamais écrire. C'est le contrôle de non-régression de
+       l'outil lui-même — sans lui, refondre l'extraction ne se vérifie sur rien,
+       puisque les lots anciens sortent avant d'avoir été recalculés. */
+    if (src.indexOf('exercise__level">Prédiction') >= 0 && !REJOUER) {
       rapport.push({ lot: nomLot, id: id, attendu: '(déjà posé)', accept: [], lignes: 0, num: 0 });
       return;
     }
@@ -368,16 +549,187 @@ Object.keys(LOTS).forEach(function (nomLot) {
     RE_BLOC.lastIndex = 0;
     while ((m = RE_BLOC.exec(srcBloc))) {
       var c = dec(m[2]);
-      if (c.indexOf(t.bloc) >= 0) { code = c; break; }
+      if (c.indexOf(t.bloc) < 0) continue;
+      /* ⚠️ En forme « bloc », NE PAS s'arrêter au premier bloc qui contient le motif :
+         une leçon montre presque toujours l'extrait court (la signature, la ligne
+         isolée) AVANT le programme complet qui, lui, porte la sortie. Le premier jet
+         s'y est fait prendre — il concluait « pas de tête Sortie : » sur cpp/lecon-07
+         alors que le bon bloc était deux figures plus bas. */
+      if (lot.forme === 'bloc' && !RE_TETE_TEST.test(c)) continue;
+      code = c; break;
     }
-    if (code === null) { fautes.push(id + ' : bloc introuvable (' + t.bloc + ')'); return; }
+    if (code === null) { fautes.push(id + ' : bloc introuvable, ou sans tête « ' + lot.marqueur + ' Sortie : » (' + t.bloc + ')'); return; }
 
     /* 2. la ligne visée et SA sortie annoncée.
        Deux formes : l'annonce termine la ligne de code (Ruby, et Kotlin le plus
        souvent), ou elle occupe la ligne SUIVANTE (fréquent en Kotlin) — champ `apres`. */
     var lignes = code.split('\n');
     var occ = t.occ || 1, vu = 0, iAnn = -1, iCode = -1;
-    for (var i = 0; i < lignes.length; i++) {
+    var attendu = null, codeCite = null, nbSorties = 0;
+    /* Les AUTRES valeurs annoncées du même bloc, pour le contrôle 7 (indiscernabilité
+       au sens du juge). Rempli par les deux formes, lu une seule fois plus bas. */
+    var autresValeurs = [];
+
+    if (lot.forme === 'bloc') {
+      /* --- FORME « bloc » : le programme, puis sa sortie complète en commentaires. ---
+         On repère la tête stricte, on délimite la sortie, on désigne la ligne visée par
+         le motif `t.ligne`, et on la remplace par un « ? » DANS LA SORTIE CITÉE. Le
+         reste de la sortie demeure visible : c'est le contexte qui rend la question
+         posable (« quelle ligne manque ici ? ») sans dire combien de lignes il y a. */
+      var iTete = -1, reste = '';
+      for (var a = 0; a < lignes.length; a++) {
+        var mt = lignes[a].match(RE_TETE);
+        if (mt) { iTete = a; reste = mt[1].trim(); break; }
+      }
+      if (iTete < 0) { fautes.push(id + ' : pas de tête « ' + lot.marqueur + ' Sortie : » stricte dans ce bloc'); return; }
+
+      var iDeb, iFin;                       // bornes INCLUSIVES des lignes de sortie
+      if (reste) { iDeb = iTete; iFin = iTete; }   // sortie d'une seule ligne, sur la tête
+      else {
+        iDeb = iTete + 1; iFin = iTete;
+        for (var b = iTete + 1; b < lignes.length; b++) {
+          if (!RE_SORTIE.test(lignes[b])) { if (!lignes[b].trim()) continue; break; }
+          iFin = b;
+        }
+        if (iFin < iDeb) { fautes.push(id + ' : tête « Sortie : » sans aucune ligne de sortie'); return; }
+      }
+
+      var vus = 0;
+      for (var d = iDeb; d <= iFin; d++) {
+        var val = d === iTete ? reste : lignes[d].replace(RE_SORTIE, '').replace(/\s+$/, '');
+        if (val.indexOf(t.ligne) < 0) continue;
+        if (++vus === occ) { iAnn = d; break; }
+      }
+      if (iAnn < 0) { fautes.push(id + ' : ligne de sortie introuvable (' + t.ligne + ', occurrence ' + occ + ')'); return; }
+
+      attendu = (iAnn === iTete ? reste : lignes[iAnn].replace(RE_SORTIE, '')).trim();
+      if (!attendu) { fautes.push(id + ' : ligne de sortie vide'); return; }
+      iCode = iAnn;
+      nbSorties = iFin - iDeb + 1;
+      for (var f2 = iDeb; f2 <= iFin; f2++) {
+        if (f2 === iAnn) continue;
+        var v2 = (f2 === iTete ? reste : lignes[f2].replace(RE_SORTIE, '')).trim();
+        if (v2) autresValeurs.push(v2);
+      }
+
+      /* 2bis. contrôle : la ligne visée ne doit pas porter de GLOSE. Le site annote
+         parfois sa sortie (« libérée : buffer       <- destructeurs appelés ») : ce
+         n'est plus ce que le programme affiche, et le demander serait faux. */
+      if (/<-|->|~\s|\(x\d|\(aucun|\(~|,\s*comme attendu/.test(attendu)) {
+        fautes.push(id + ' : la ligne visée porte une glose, ce n\'est pas la sortie brute (« ' + attendu + ' »)');
+        return;
+      }
+
+      /* 3. le code cité : la ligne visée devient « ? », le reste est intact —
+         SAUF les commentaires de fin de ligne qui RÉPÈTENT une ligne de la sortie.
+         ⚠️ Le contrôle 5 a trouvé le cas tout seul : `std::cout << "b = " <<
+         b.value_or(-1) << '\n'; // b = -1` annonce la sortie deux fois, dans le
+         programme puis dans le bloc final. Les laisser, c'est publier la réponse.
+         La coupe est CIBLÉE : on ne retire un commentaire que si son texte est,
+         au sens du juge, l'une des lignes de la sortie. Un commentaire explicatif
+         (« // capture par valeur ») n'est jamais touché. */
+      var toutesSorties = autresValeurs.concat([attendu]).map(normExo);
+      var citeB = [], coupes = 0, masques = 0, apres = 0, restants = [];
+      for (var e = 0; e < lignes.length; e++) {
+        if (e === iAnn) {
+          /* Le « ? » occupe TOUJOURS sa propre ligne, même quand la leçon écrit sa
+             sortie sur la tête (« // Sortie : 4 16 36 64 »). Sinon le marqueur réel
+             est « // Sortie : ? » alors que l'énoncé annonce « // ? » : la consigne
+             de recherche devient fausse, sur 4 des 11 pages du lot cpp. */
+          if (e === iTete) {
+            var indent = lignes[e].match(/^\s*/)[0];
+            citeB.push(lignes[e].slice(0, lignes[e].length - reste.length).replace(/\s+$/, ''));
+            citeB.push(indent + lot.marqueur + ' ?');
+          } else citeB.push(lignes[e].match(/^\s*/)[0] + lot.marqueur + ' ?');
+          continue;
+        }
+        var lg = lignes[e];
+        if (e < iDeb) {
+          /* (a) le commentaire répète une ligne de la sortie : on le retire. */
+          if (!COMMENTE.test(lg)) {
+            var iCom = lg.indexOf(lot.marqueur);
+            if (iCom > 0) {
+              var texteCom = lg.slice(iCom + lot.marqueur.length).trim();
+              if (texteCom && toutesSorties.indexOf(normExo(texteCom)) >= 0) {
+                lg = lg.slice(0, iCom).replace(/\s+$/, '');
+                coupes++;
+              }
+            }
+          }
+          /* (b) le commentaire ÉNONCE la réponse en français — le vrai trou du lot.
+             `masquer` déclare, cible par cible, les commentaires à neutraliser : ils
+             deviennent une question ouverte, sans que la leçon d'origine soit touchée.
+             C'est le contrôle 11 (plus bas) qui oblige à les regarder. */
+          for (var q2 = 0; q2 < (t.masquer || []).length; q2++) {
+            var p = lg.indexOf(t.masquer[q2]);
+            if (p < 0) continue;
+            var c0 = lg.lastIndexOf(lot.marqueur, p);
+            if (c0 < 0) continue;
+            masques++;
+            /* Ligne entièrement commentée : elle DISPARAÎT. Commentaire de fin de
+               ligne : seul le commentaire tombe, le code reste. */
+            if (COMMENTE.test(lg)) { lg = null; break; }
+            lg = lg.slice(0, c0).replace(/\s+$/, '');
+          }
+          if (lg === null) continue;
+          /* (c) inventaire : tout commentaire de CODE que l'apprenant lira encore.
+             Compté ici, où l'on sait que la ligne appartient au programme et non à
+             la sortie ; la cible doit en déclarer le nombre exact (contrôle 11). */
+          var pc = e === iTete ? -1 : lg.indexOf(lot.marqueur);
+          if (pc >= 0 && lg.slice(pc + lot.marqueur.length).trim()) restants.push(lg.slice(pc + lot.marqueur.length).trim());
+        } else if (e > iFin && COMMENTE.test(lg)) {
+          /* Après la zone de sortie, une ligne entièrement commentée se lit comme la
+             SUITE de la sortie — l'énoncé vient de dire que la sortie est écrite en
+             commentaire à la fin. cpp/lecon-17 met deux lignes d'explication juste
+             sous « // Sortie : … » : l'apprenant croit que la sortie fait trois
+             lignes. Elles sortent du code cité ; l'explication reste dans la réponse. */
+          apres++;
+          continue;
+        }
+        citeB.push(lg);
+      }
+      if (coupes) notes.push(id + ' : ' + coupes + ' commentaire(s) de fin de ligne retiré(s), ils répétaient la sortie');
+      if (masques !== (t.masquer || []).length) {
+        fautes.push(id + ' : ' + (t.masquer || []).length + ' commentaire(s) à masquer déclaré(s), ' + masques + ' trouvé(s) dans le bloc — un motif ne correspond à rien');
+        return;
+      }
+      if (masques) notes.push(id + ' : ' + masques + ' commentaire(s) neutralisé(s), ils énonçaient la réponse');
+      while (citeB.length && !citeB[citeB.length - 1].trim()) citeB.pop();
+      codeCite = citeB.join('\n');
+
+      /* 11. LE CONTRÔLE QUI MANQUAIT, et qu'un fan-out de contradiction a exigé.
+         Le contrôle 5 ne cherche que la réponse LITTÉRALE dans le code cité. Il ne
+         voit donc pas un commentaire qui l'énonce EN FRANÇAIS : « // modifie b, pas a
+         (tableaux distincts) » dit que a garde 7 et que b vaut 99, sans jamais écrire
+         « a[0]=7  b[0]=99 » ; « // v == {9, 8, 5, 2, 1} » donne le tri qu'on demandait
+         de faire ; « // COPIE : duplique le million d'éléments » donne les DEUX points
+         de son exercice. Trois contradicteurs sur trois l'ont trouvé ; aucun de mes
+         contrôles ne pouvait le trouver.
+
+         PREMIER JET, ET IL ÉTAIT VIDE. J'ai d'abord comparé les MOTS du commentaire à
+         ceux de la réponse. Contre-épreuve : masquage retiré sur `lecon-06`, l'outil
+         n'a rien dit — la réponse « a[0]=7  b[0]=99 » n'a aucun mot de deux lettres,
+         et « modifie b, pas a » n'en partage évidemment aucun. Un contrôle qui ne peut
+         pas échouer ne contrôle rien : c'est la troisième fois que ce chantier bute
+         dessus. La prose française qui révèle un résultat n'est PAS détectable par
+         recoupement de tokens ; prétendre le contraire aurait rendu un vert par vacuité.
+
+         CE QUI EST RÉELLEMENT MESURABLE : le NOMBRE de commentaires que le code cité
+         laisse à l'apprenant. La cible doit le déclarer (`commentaires: N`). L'outil
+         les affiche tous, un par un, ce qui oblige à les lire à l'écriture ; et si la
+         leçon source change plus tard — un commentaire ajouté, reformulé, déplacé —
+         le compte diverge et l'outil refuse. Il ne juge pas le sens : il garantit
+         qu'aucun commentaire n'entre dans un exercice sans avoir été vu. */
+      if (t.commentaires !== restants.length) {
+        fautes.push(id + ' : ' + restants.length + ' commentaire(s) restent dans le code cité, la cible en déclare ' +
+          (t.commentaires === undefined ? 'aucun (champ `commentaires` absent)' : t.commentaires) +
+          '. À RELIRE UN PAR UN, aucun ne doit énoncer la réponse :\n        · ' +
+          restants.join('\n        · '));
+        return;
+      }
+    }
+
+    for (var i = 0; codeCite === null && i < lignes.length; i++) {
       if (lignes[i].indexOf(t.cible) < 0) continue;
       if (t.apres) {
         if (i + 1 < lignes.length && RE_ANN_SEULE.test(lignes[i + 1])) { if (++vu === occ) { iCode = i; iAnn = i + 1; break; } }
@@ -385,24 +737,31 @@ Object.keys(LOTS).forEach(function (nomLot) {
         if (++vu === occ) { iCode = i; iAnn = i; break; }
       }
     }
-    if (iAnn < 0) { fautes.push(id + ' : ligne visée sans annonce de sortie (' + t.cible + ', occurrence ' + occ + ')'); return; }
-    var attendu = valeurNette(lignes[iAnn].replace(RE_VAL, ''));
-    if (!attendu) { fautes.push(id + ' : sortie annoncée vide'); return; }
+    if (codeCite === null) {
+      if (iAnn < 0) { fautes.push(id + ' : ligne visée sans annonce de sortie (' + t.cible + ', occurrence ' + occ + ')'); return; }
+      attendu = valeurNette(lignes[iAnn].replace(RE_VAL, ''));
+      if (!attendu) { fautes.push(id + ' : sortie annoncée vide'); return; }
 
-    /* 3. le code cité : toutes les annonces de sortie retirées, un « ? » sur la ligne visée */
-    var cite = [];
-    for (var j = 0; j < lignes.length; j++) {
-      var l = lignes[j];
-      if (RE_ANN_SEULE.test(l)) {
-        if (j === iAnn) cite.push(l.match(/^\s*/)[0] + lot.marqueur + ' => ?');
-        continue;                                          // sinon : la ligne disparaît
+      /* 3. le code cité : toutes les annonces de sortie retirées, un « ? » sur la ligne visée */
+      var cite = [];
+      for (var j = 0; j < lignes.length; j++) {
+        var l = lignes[j];
+        if (RE_ANN_SEULE.test(l)) {
+          if (j === iAnn) cite.push(l.match(/^\s*/)[0] + lot.marqueur + ' => ?');
+          continue;                                        // sinon : la ligne disparaît
+        }
+        var nu = l.replace(RE_ANN_FIN, '');
+        if (j === iAnn) cite.push(nu + '   ' + lot.marqueur + ' => ?');
+        else cite.push(nu);
       }
-      var nu = l.replace(RE_ANN_FIN, '');
-      if (j === iAnn) cite.push(nu + '   ' + lot.marqueur + ' => ?');
-      else cite.push(nu);
+      while (cite.length && !cite[cite.length - 1].trim()) cite.pop();
+      codeCite = cite.join('\n');
+      for (var k2 = 0; k2 < lignes.length; k2++) {
+        if (k2 === iAnn || !RE_ANN.test(lignes[k2])) continue;
+        var v3 = valeurNette(lignes[k2].replace(RE_VAL, ''));
+        if (v3) autresValeurs.push(v3);
+      }
     }
-    while (cite.length && !cite[cite.length - 1].trim()) cite.pop();
-    var codeCite = cite.join('\n');
 
     /* 4. contrôle : la réponse attendue passe-t-elle le champ ? (moteur du site) */
     var accept = graphies(attendu);
@@ -426,8 +785,11 @@ Object.keys(LOTS).forEach(function (nomLot) {
        C'est ce contrôle qui manquait, et trois contradicteurs l'ont montré : poser
        l'exercice dans la leçon dont il cite le bloc laisse la réponse imprimée en
        clair quelques écrans plus haut, dans le `// =>` du bloc d'origine. */
-    var ligneNue = lignes[iCode].replace(RE_ANN_FIN, '').trim();
-    if (ligneNue && dec(src).indexOf(ligneNue) >= 0) {
+    var ligneNue = lot.forme === 'bloc' ? attendu : lignes[iCode].replace(RE_ANN_FIN, '').trim();
+    /* En mode `--rejouer` la page hôte PORTE déjà l'exercice, donc elle contient
+       forcément la ligne visée : ce contrôle-là n'a plus de sens, et les contrôles 9
+       (alignement) non plus. Le mode vérifie l'EXTRACTION, pas la page d'accueil. */
+    if (!REJOUER && ligneNue && dec(src).indexOf(ligneNue) >= 0) {
       fautes.push(id + ' : la ligne visée « ' + ligneNue + ' » figure déjà dans la page où l\'exercice est posé');
       return;
     }
@@ -437,10 +799,8 @@ Object.keys(LOTS).forEach(function (nomLot) {
        diffèrent que par la casse — `[dormir, manger]` et `[DORMIR, manger]` — sont
        le même verdict, et l'exercice accepte alors la sortie de la ligne d'avant. */
     var collision = null;
-    for (var k = 0; k < lignes.length; k++) {
-      if (k === iAnn || !RE_ANN.test(lignes[k])) continue;
-      var autre = valeurNette(lignes[k].replace(RE_VAL, ''));
-      if (autre && normExo(autre) === normExo(attendu)) { collision = lignes[k].trim(); break; }
+    for (var k = 0; k < autresValeurs.length; k++) {
+      if (normExo(autresValeurs[k]) === normExo(attendu)) { collision = autresValeurs[k]; break; }
     }
     if (collision) {
       fautes.push(id + ' : une AUTRE sortie du bloc est indiscernable de la réponse au sens de normExo (« ' + collision + ' »)');
@@ -486,7 +846,7 @@ Object.keys(LOTS).forEach(function (nomLot) {
     if (!mj0) { fautes.push(id + ' : tableau data-exos introuvable dans la page hôte'); return; }
     var nbEntrees;
     try { nbEntrees = JSON.parse(mj0[2]).length; } catch (e) { fautes.push(id + ' : data-exos illisible'); return; }
-    if (nbEx !== nbEntrees) {
+    if (!REJOUER && nbEx !== nbEntrees) {
       fautes.push(id + ' : page hôte DÉSALIGNÉE (' + nbEx + ' blocs .exercise pour ' + nbEntrees + ' entrées)');
       return;
     }
@@ -505,16 +865,41 @@ Object.keys(LOTS).forEach(function (nomLot) {
     }
 
     var num = nbEx + 1;
+    /* ⚠️ « la leçon précédente » n'est vrai que si l'hôte suit immédiatement la source.
+       Dès qu'un lot doit sauter une leçon (une page hôte ne peut porter qu'UN exercice
+       de prédiction, l'idempotence se fondant sur sa présence), la phrase devient
+       fausse. On cite donc le NUMÉRO, qui est toujours juste. */
     var provenance = source === page ? '' :
-      '<p><em>Ce code est repris de la leçon précédente.</em></p>';
+      (Number(page) === Number(source) + 1
+        ? '<p><em>Ce code est repris de la leçon précédente.</em></p>'
+        : '<p><em>Ce code est repris de la leçon ' + enc(String(Number(source))) + '.</em></p>');
+    /* L'énoncé suit la forme : en Ruby/Kotlin le « ? » remplace une annonce de fin de
+       ligne, en C++ il remplace UNE LIGNE de la sortie du programme, les autres restant
+       affichées. Dire lequel évite l'ambiguïté sur ce qu'il faut taper. */
+    /* ⚠️ Et l'énoncé doit dire le VRAI nombre de lignes. « Le programme affiche sa
+       sortie complète, une ligne a été remplacée » promet un contexte qui n'existe pas
+       quand le programme n'affiche qu'UNE ligne — le cas de 5 des 11 cibles cpp. */
+    var question = lot.forme !== 'bloc'
+      ? '<p><strong>Sans exécuter le code</strong>&nbsp;: quelle sortie remplace le <code>?</code> de la ligne marquée <code>' +
+        enc(lot.marqueur) + '&nbsp;=&gt;</code>&nbsp;?</p>'
+      : (nbSorties > 1
+        ? '<p><strong>Sans exécuter le code</strong>&nbsp;: la sortie complète du programme est écrite en commentaire à la fin, mais <strong>une de ses lignes a été remplacée par <code>' +
+          enc(lot.marqueur) + '&nbsp;?</code></strong>. Quelle est cette ligne&nbsp;?</p>'
+        : '<p><strong>Sans exécuter le code</strong>&nbsp;: ce programme n\'affiche qu\'une seule ligne, et elle a été remplacée par <code>' +
+          enc(lot.marqueur) + '&nbsp;?</code> à la fin du code. Quelle est-elle&nbsp;?</p>');
     var bloc =
       '<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice ' + num +
-      '</span><span class="exercise__level">Prédiction</span></div><p><strong>Sans exécuter le code</strong>&nbsp;: quelle sortie remplace le <code>?</code> de la ligne marquée <code>' +
-      enc(lot.marqueur) + '&nbsp;=&gt;</code>&nbsp;?</p>' + provenance +
+      '</span><span class="exercise__level">Prédiction</span></div>' + question + provenance +
       '<figure class="code-block" data-file="' + lot.fichierCite + '"><pre><code class="language-' + lot.langue + '">' +
       enc(codeCite) + '</code></pre></figure>' +
+      /* ⚠️ `pourquoi` et `hints` sont du TEXTE : ils doivent être échappés comme tout
+         le reste. Le premier jet concaténait `pourquoi` tel quel — et le premier champ
+         à contenir un « < » (« l'operator<< maison », cpp/lecon-08) a produit deux
+         chevrons bruts dans le HTML. Le navigateur les tolère, `verif-html.js` ne les
+         voit pas : c'est un contradicteur qui l'a trouvé, en cherchant `<` non suivi
+         d'une lettre. Une valeur injectée dans du HTML passe par enc(), sans exception. */
       '<details><summary>Voir la réponse</summary><p>La ligne affiche <code>' + enc(attendu) + '</code>.' +
-      (t.pourquoi ? ' ' + t.pourquoi : '') + '</p></details></div>';
+      (t.pourquoi ? ' ' + enc(t.pourquoi) : '') + '</p></details></div>';
 
     var entree = {
       type: 'text', accept: accept,
@@ -523,7 +908,7 @@ Object.keys(LOTS).forEach(function (nomLot) {
       link: { href: 'lecon-' + source + '.html', label: t.label }
     };
 
-    rapport.push({ lot: nomLot, id: id, attendu: attendu, accept: accept, lignes: cite.length, num: num });
+    rapport.push({ lot: nomLot, id: id, attendu: attendu, accept: accept, lignes: codeCite.split('\n').length, num: num });
 
     if (VOIR) {
       console.log('\n----- ' + id + '  attendu = ' + JSON.stringify(attendu) + '  accept = ' + JSON.stringify(accept));
