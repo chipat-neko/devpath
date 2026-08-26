@@ -532,7 +532,73 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
 
   **9. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (34,1 s). `verif-html` **0/0 sur 1 612 fichiers**. `verif-donnees` **0 erreur sur 25 invariants**. `verif-rendu` **0 erreur / 0 avertissement sur 18 mesures** (3 pages ruby × 3 largeurs × 2 thèmes, réseau coupé). `search-index.js` régénéré (43 774 mots) ; quiz, flashcards, antisèches et `search-lite` **identiques**. 0 URL de CDN. Le générateur est **idempotent** : relancé, il ne réécrit rien.
 
-- [ ] **B7b · Le lot `kotlin`** (151 blocs annonçant leur sortie sur 230, 2 cours). Même outil, même règle : une table de cibles à écrire dans `tools/prediction-exos.js`. ⚠️ Vérifier d'abord l'alignement `data-exos` ⇄ `.exercise` du cours, et compter les blocs `.exercise` par leçon (kotlin n'a pas forcément la structure régulière de `ruby`, qui était à 3 partout).
+- [x] **B7b · Le lot `kotlin`** ✅ **2026-08-26. 11 exercices de prédiction, 44 réponses tapées dans Chrome et 44 acceptées ; 44 fausses, 44 refusées. Le lot a été ÉCRIT, DÉMOLI PAR CONTRADICTION, PUIS REFAIT — c'est le vrai résultat de cette case.**
+
+  **1. La mesure du plan se reproduit exactement.** 151 blocs sur 212 annoncent leur sortie dans `pages/kotlin` (71 %), 0 sur 18 dans `mobile` : le « 151 sur 230, 2 cours » du plan est juste, mais le gisement tient dans **un seul** cours. L'idiome kotlin est `// =>` — **368 lignes d'annonce**. ⚠️ **Piège de mesure** : un premier comptage donnait 11 blocs au lieu de 151, parce que `>` s'écrit `&gt;` dans le source. **Compter des annonces sans décoder les entités HTML sous-estime d'un facteur 14.**
+
+  **2. Alignement vérifié avant d'écrire** (l'avertissement du plan) : les 21 leçons sont à **3 blocs `.exercise` pour 3 entrées `data-exos`**, sauf le capstone `lecon-21` (4 pour 3, écart préexistant et délibéré) — **non touché**, comme `ruby/lecon-22` en B7a.
+
+  **3. LE FAN-OUT DE CONTRADICTION A DÉMOLI LE PREMIER JET, ET IL AVAIT RAISON.** 12 exercices écrits, tous mes contrôles verts, `verif.js --rapide` vert, 48 réponses acceptées et 48 fausses refusées dans Chrome — puis trois agents chargés de les détruire ont rendu **21 fautes, dont 2 bloquantes**. Aucune n'était une réponse fausse (les trois ont simulé les 12 codes : **12 valeurs sur 12 exactes**). Toutes portaient sur ce qu'aucun de mes contrôles ne regardait :
+
+  | ce qui a été trouvé | vérifié par moi | traitement |
+  |---|---|---|
+  | **`lecon-05` : réponse non discriminante.** Les deux `println(taches)` du bloc ne diffèrent que par la CASSE, et `normExo` finit par `toLowerCase()` : `[dormir, manger]` — la sortie de la ligne PRÉCÉDENTE — était acceptée | **reproduit en exécutant `normExo`** : 4 graphies sur 4 acceptées, dont celle de la ligne d'avant | cible abandonnée, **contrôle 7** neuf |
+  | **`lecon-01` : le code cité ne compile pas.** Le bloc se termine par `langage = "Java"` sur un `val` : rien ne s'affiche, la sortie annoncée est inatteignable | lu dans le bloc | cible abandonnée, **contrôle 8** neuf |
+  | **La réponse est imprimée en clair PLUS HAUT SUR LA MÊME PAGE**, dans le `// =>` du bloc d'origine — et le lien « Revoir » y menait | vérifié sur les 12 | **conception changée** (voir 4) |
+  | `lecon-04` : réponse binaire (`true`/`false`) et 3ᵉ indice qui la calcule | oui | cible remplacée |
+  | `lecon-07` : indice inexact (« sept ne se divise pas en trois » — si : 3 + 3 + 1) | oui | réécrit |
+  | « elle n'a pas été recalculée ici » : **note de chantier publiée à l'apprenant** | oui, sur 26 pages | phrase supprimée, remplacée par le raisonnement |
+  | Double point d'interrogation dans l'énoncé (`// => ? ?`) | oui | énoncé reformulé |
+  | Contrôle 5 désactivé pour toute réponse de 2 caractères ou moins (`14` n'était contrôlé par rien) | oui | seuil supprimé |
+  | `lecon-11` : lien vers « Délégation de classe », alors que l'exercice porte sur une propriété déléguée | oui | libellé corrigé |
+  | `lecon-12` : « la virgule et l'espace comprises » (accord) | oui | corrigé |
+
+  **4. Le changement de conception, qui est l'apport de cette case : l'exercice n'est plus posé dans la leçon dont il cite le bloc.** La règle fondatrice — ne bâtir que sur une sortie DÉJÀ AFFIRMÉE — rend le conflit **inévitable** en intra-page : si la leçon annonce la sortie, elle l'imprime. Le champ `page` sépare donc la leçon **source** (d'où vient le bloc) de la leçon **hôte** (où l'on interroge) : bloc de la leçon *n*, exercice dans la leçon *n+1*. L'affirmation reste relue et publiée, mais plus sur la page où l'on répond, et le lien « Revoir » redevient utile au lieu d'être un raccourci vers la solution. **B7a (ruby) n'a pas cette propriété** : dette assumée, chiffrée au point 8.
+
+  **5. Cinq contrôles bloquants neufs dans `tools/prediction-exos.js`, chacun avec sa contre-épreuve.** Un contrôle qui n'a jamais rien refusé ne prouve rien :
+
+  | contrôle | ce qu'il refuse | contre-épreuve jouée |
+  |---|---|---|
+  | **6** | la ligne visée figure dans la page hôte | `page` remis à `09` → **refusé** : « la ligne visée « println(a === b) » figure déjà dans la page » |
+  | **7** | une autre annonce du bloc est indiscernable au sens de `normExo` | cible `[DORMIR, manger]` réintroduite → **refusée**, la ligne coupable citée |
+  | **8** | le bloc annonce une erreur de compilation sur une ligne active | cible `lecon-01` réintroduite → **refusée** : « le bloc ne compile pas (« langage = "Java" ») » |
+  | **9** | la page hôte est désalignée `.exercise` ⇄ `data-exos` | préventif : `lecon-21` serait refusée |
+  | **10** | un mot insécable de plus de 30 caractères dans le placeholder | mesuré par `verif-rendu` avant/après |
+
+  ⚠️ **Le contrôle 8 était FAUX à son premier jet, et c'est sa propre contre-épreuve qui l'a montré** : il prenait la ligne d'annonce pour la ligne visée dès qu'elle commençait par `//`, donc il ne refusait jamais rien. **Un contrôle qui ne peut pas échouer ne contrôle rien** — la contre-épreuve n'est pas une formalité, c'est le seul moyen de le savoir.
+
+  **6. Deux régressions de MA main, trouvées par les outils du dépôt et corrigées.**
+  - **Une classe CSS inventée.** Le gabarit posait `<p class="text-muted">` : **`.text-muted` n'existe nulle part dans le CSS du site** (les 11 occurrences étaient les miennes). Remplacée par `<em>`, et le contrôle qui manquait est désormais fait : comparer chaque classe employée au CSS réel.
+  - **Un débordement mobile, mesuré et expliqué.** `verif-rendu` a signalé +26 px à 320 px sur `lecon-05` ; la version HEAD ne débordait pas → **régression de mon fait**. Cause exacte : `.exo-try__label` se coupe aux espaces mais pas au milieu d'un mot, et mon placeholder contenait `println(decrire(celsiusVersFahrenheit(20.0),` — **44 caractères insécables**. Ce n'est **pas** la longueur totale qui gêne : le site porte des placeholders de **375 caractères** sans déborder. Placeholders raccourcis, **contrôle 10** ajouté, **0 erreur** au remesurage.
+
+  **7. Les 11 exercices** (bloc de la leçon *n* → exercice dans la leçon *n+1*) :
+
+  | source → hôte | ce qu'on fait prédire | réponse extraite |
+  |---|---|---|
+  | 02 → 03 | `note.toInt()` sur 16.7 | `16` |
+  | 03 → 04 | `for (i in 1..3) print("$i ")` | `1 2 3` |
+  | 04 → 05 | `decrire(celsiusVersFahrenheit(20.0), "°F")` | `68.0 °F` |
+  | 05 → 06 | `reponses.filterNotNull()` | `[oui, non]` |
+  | 06 → 07 | `nombres.drop(7)` sur 1..10 | `[8, 9, 10]` |
+  | 07 → 08 | `(1..7).toList().chunked(3)` | `[[1, 2, 3], [4, 5, 6], [7]]` |
+  | 08 → 09 | `p.majeur` après `p.age = 18` | `true` |
+  | 09 → 10 | `a === b` sur une data class | `false` |
+  | 10 → 11 | `Point(1, 2) == Point(1, 2)`, classe ordinaire | `false` |
+  | 11 → 12 | `c.valeur = 8` avec `Delegates.observable` | `5 -> 8` |
+  | 12 → 13 | `with(accueil) { length }` | `14` |
+
+  Ce sont des pièges : la troncature qui n'arrondit pas, le range inclusif, la valeur par défaut d'un paramètre, `filterNotNull` qui change la taille, `drop(7)` qui enlève les sept **premières** valeurs, sept éléments qui font trois morceaux dont un incomplet, la propriété sans champ, `===` contre `==`, et la classe qui n'est **pas** une data class.
+
+  **8. Réserves assumées, mesurées et non masquées.**
+  - **3 réponses sur 11 sont booléennes** (`true`, `false`, `false`) : une chance sur deux au hasard. Gardées parce que ce sont les points centraux de leurs leçons (`===`, l'`equals` d'`Any`, le getter recalculé) ; l'outil l'**affiche** désormais à chaque passe.
+  - Sur ces 3 pages, la valeur `true` ou `false` apparaît par ailleurs, sur d'autres lignes sans rapport — inévitable pour un booléen. **Mesuré : 8 exercices sur 11 ont une réponse introuvable ailleurs dans leur page hôte.**
+  - **B7a (ruby) garde le défaut de conception corrigé ici** : ses 14 exercices sont posés dans la leçon qui publie la réponse, et portent la phrase de chantier. À reprendre — c'est le commit suivant.
+
+  **9. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (34,1 s). `verif-html` **0/0 sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les **10 pages hôtes** (60 mesures, 3 largeurs × 2 thèmes, réseau coupé) : **0 erreur introduite**. `search-index` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**. 0 URL de CDN. Générateur **idempotent** (relancé : « 11 déjà en place »). Les 21 leçons kotlin : JSON valide, 0 BOM, `<div>` équilibrés, alignement conservé.
+
+  🔵 **Relevé hors périmètre, établi par comparaison avec HEAD** : `kotlin/lecon-07` (+201 px) et `kotlin/lecon-09` (+462 px) débordent à 1280 px **avant comme après** mon passage. Cause pour `lecon-09` : un `<code>` inline de **146 caractères** dans la section « Un cas réel », que `white-space: nowrap` empêche de couper.
+
+  **10. Mesure.** Exercices à champ : **4 553 → 4 564** (+11). Exercices de prédiction sur le site : **14 → 25**. Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`, il ne prétend pas être exécuté ; la part exécutée passe donc mécaniquement de 7,77 % à **7,76 %**, et c'est normal. **0 octet de moteur ajouté.**
 - [ ] **B7c · Le reste des langages compilés** (`cpp` 70, `rust` 65, `elixir` 65, `c` 62, `php` 50, `java` 40, `csharp` 37, `go` 28) — un lot par famille. ⚠️ `bash` (65) est à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
 
 ---
