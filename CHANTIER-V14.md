@@ -288,7 +288,50 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **0 octet de moteur ajouté** : SQLite était déjà là depuis A2.
 
   **7. Contrôles.** `verif.js --rapide` **tout vert, 6 vérificateurs** (source, données, contenu, exemples, motifs, **requêtes**). `verif-rendu` **0 erreur / 0 avertissement sur 24 mesures** (4 pages × 3 largeurs × 2 thèmes). `search-index.js` régénéré (1 587 leçons). **0 URL de CDN**, 0 BOM. La grammaire Prism a été ajoutée à **4 pages** (`clike` puis `javascript`, dans cet ordre — `javascript` en dépend) qui n'avaient jamais eu de bloc JavaScript ; sans elle l'invariant I14 casse et la solution s'affiche sans coloration.
-- [ ] **B2 · Les cours Python** (`python`, `python-avance`, `pandas`, `stats`, `dataviz`, `ml`) — dépend de A4.
+- [x] **B2 · Les cours Python** (`python`, `python-avance`, `pandas`, `stats`, `dataviz`, `ml`). ✅ **2026-08-26. CPython 3.12 exécute désormais ce que l'apprenant écrit, dans le navigateur, sans serveur — et les 25 solutions publiées passent leur propre exercice.**
+
+  **1. La case cite six cours ; il n'y en a que cinq.** Les **22 pages de `python-avance` sont des REDIRECTIONS** (`<meta http-equiv="refresh">` vers `python/lecon-29` et suivantes) : le cours a été fusionné dans `python`, il ne contient **aucun exercice**. Périmètre réel mesuré avant de toucher quoi que ce soit : **105 leçons, 310 exercices, tous `type:"text"`, 0 exécutable**.
+
+  **2. Le moteur `type:"python"`, et pourquoi il est plus simple que celui de B1.** SQL exigeait un juge neuf (comparer un tableau de résultats). Python n'en demande aucun : un programme produit une **sortie standard**, et la règle du site pour `type:"code"` — *l'une des lignes de la sortie est exactement `run.expect`* — s'y applique telle quelle. Le travail était donc de brancher l'interpréteur : un Worker qui charge le CPython embarqué (`assets/vendor/pyodide/`, cf. A4), collecte `stdout` **et `stderr`** (une trace Python est le message le plus utile qu'un apprenant puisse lire), et rend le texte. Le Worker est **partagé par la page** — 8,27 Mo à charger — et les demandes sont **sérialisées** : un interpréteur unique ne mène pas deux programmes de front. Garde de 20 s avec **terminaison du Worker**, parce qu'une boucle infinie Python ne s'interrompt pas de l'intérieur ; le Worker suivant est recréé à la demande.
+
+  **3. Les 25 exercices — et le choix que l'absence de paquets impose.** Pyodide n'embarque que la **stdlib** (index des paquets vidé, garde-fou réseau) : ni pandas, ni numpy, ni matplotlib, ni scikit-learn. Imiter ces bibliothèques en Python pur aurait été un mensonge. Ces exercices font donc **écrire la règle que la bibliothèque applique** — la voie déjà retenue en B4 pour les cours web, et la plus instructive : on ne peut pas se tromper sur ce qu'on a écrit soi-même.
+
+  | cours | leçons | ce que l'apprenant écrit |
+  |---|---|---|
+  | `python` | 08, 10, 12, 14, 27, 29, 33, 37 | regrouper par `setdefault`, une compréhension de dictionnaire filtrante, **deux `except` distincts et un `else`**, un générateur de fenêtres glissantes, `groupby` (qui ne groupe que les CONSÉCUTIFS), un décorateur de mémoïsation **qui compte les calculs réels**, une `dataclass(order=True)` dont un champ est hors comparaison, la composition de fonctions par `reduce` |
+  | `pandas` | 04, 06, 09, 11, 12 | le taux de valeurs manquantes et la médiane d'imputation, un **masque booléen** combiné terme à terme, le **split-apply-combine** à la main, une jointure gauche **et le gonflement du nombre de lignes qu'un doublon provoque (12 → 15)**, un `resample` mensuel suivi d'un `pct_change` |
+  | `stats` | 03, 07, 09, 11, 14 | étendue / écart-type / IQR sur deux serveurs de **même moyenne**, l'**erreur standard** (≠ écart-type) et l'IC à 95 %, le coefficient de Pearson **retourné par un seul point**, la droite des moindres carrés et son R², le **paradoxe de Simpson** recalculé sur les effectifs |
+  | `dataviz` | 06, 09, 11 | un histogramme à dernière classe ouverte (médiane 22 contre moyenne 26), **la hausse perçue d'un axe tronqué**, l'agrégation spatiale en cellules |
+  | `ml` | 03, 06, 08, 09 | la standardisation **sans fuite de données** (ajuster sur le train seul, et le prouver), le diagnostic sur/sous-apprentissage par l'écart, **une itération de k-means** plus la lecture du coude, précision / rappel / **F1 harmonique** |
+
+  Sept exercices retombent **exactement** sur les chiffres que leur leçon annonce sans les démontrer : CA par ville 28,80 / 32,80 / 6,00 (`pandas/09`), 182,40 puis 97,10 et −46,8 % (`pandas/12`), IC **[97,1 ; 115,3]** ms (`stats/07`), pente 0,0169 / origine 16,33 / R² 0,9955 / 41,7 % à 1 500 ms (`stats/11`), 16,5 % contre 12 % (`stats/14`), +3 % réel contre **+63 % perçu** (`dataviz/09`), 0,800 / 0,667 / 0,727 (`ml/09`). L'apprenant peut désormais **vérifier le cours** au lieu de le croire.
+
+  **4. Preuve, en trois endroits.**
+
+  | contrôle | résultat |
+  |---|---|
+  | avant insertion, CPython **3.14** de la machine | **25 / 25 conformes** |
+  | `tools/verif-python-exos.js` (solutions relues DANS les pages) | **25 fichiers, 25 exercices, 0 faute, 3,7 s** |
+  | Chrome, `file://`, **sans** `--allow-file-access-from-files`, CPython **3.12** | **25 / 25 acceptées** (82,1 s) |
+  | `tools/preuve-hors-reseau.js` (DNS coupé, `MAP * ~NOTFOUND`) | « ✓ Bravo, c'est juste ! » en **1 628 ms**, **0 requête distante** sur 19 |
+
+  **Aucune divergence entre CPython 3.14 et 3.12** sur ces 25 programmes — c'est mesuré, pas supposé, et c'est précisément ce que le contrôle local ne peut pas garantir seul.
+
+  **5. Outil neuf `tools/verif-python-exos.js` — 7ᵉ étape de `verif.js`.** La preuve navigateur coûte ~3 s par page : un contrôle de deux minutes ne tourne pas à chaque passe, donc il ne protège de rien au quotidien. Celui-ci rejoue la **solution publiée** avec le CPython de la machine, en appliquant la règle exacte de `js/lecon.js`, et refuse en outre **tout import absent de Pyodide** (`numpy`, `pandas`, `matplotlib`, `scipy`, `sklearn`, `seaborn`, `requests`, `sqlite3`) — un exercice qui en dépendrait serait mort dans le navigateur sans que rien ne le dise. `verif.js` sait désormais **SAUTER** une étape sans la compter en échec : sur une machine sans Python, l'outil sort en code 2 et la chaîne reste verte.
+
+  **6. Mesure avant / après.**
+
+  | | avant | après |
+  |---|---:|---:|
+  | exercices réellement exécutés | 329 / 4 514 — **7,29 %** | **354 / 4 539 — 7,80 %** |
+  | dont `type:"python"` | 0 | **25** |
+  | cours ayant au moins un exercice exécuté | 24 | **29** |
+
+  Rappel du point de départ du chantier : **2,5 %** annoncés, **4,77 %** mesurés en A1. **0 octet ajouté** — l'interpréteur était déjà là depuis A4.
+
+  **7. Contrôles.** `verif.js --rapide` **tout vert, 7 vérificateurs**. `verif-html` 0/0, `verif-donnees` 0 erreur, `verif-rendu` **0 erreur / 0 avertissement sur 18 mesures**, `search-index.js` régénéré, **0 URL de CDN**. Aucune grammaire Prism à ajouter : les 25 pages chargeaient déjà `prism-python`.
+
+  🔵 **Relevé hors périmètre, à traiter un jour** : dans `python/lecon-29`, `lecon-33` et `lecon-37`, le champ `link.href` des entrées `data-exos` préexistantes pointe vers **une autre leçon** (`lecon-01`, `lecon-05`, `lecon-09`). Le lien « revoir la notion » d'un exercice y renvoie donc au mauvais endroit. Aucun invariant ne compare `link.href` au fichier qui le porte.
 - [x] **B3 · Les cours JavaScript restants** (`typescript`, `nodejs`, `react`, `vue`, `projets-js`). ✅ **2026-08-26. 25 exercices de code neufs, et un outil qui prouve — dans le navigateur — que leur solution passe.**
 
   **1. La prémisse de la case était fausse, et la mesure le dit.** « Exécutable dès aujourd'hui » supposait qu'il suffisait de convertir les `type:text` existants. Mesuré avant de toucher quoi que ce soit : **0 exercice `type:code` dans `typescript`, `nodejs`, `react` et `vue`** (173 `type:text`), 21 dans `projets-js`. Et surtout, **rien n'y était convertible** : le juge du site est un Worker qui fait un `eval` **synchrone** de JavaScript pur — pas de TypeScript (annotations = `SyntaxError`), pas de JSX, pas de `require`, pas de DOM, pas d'`async`. Les énoncés existants portent tous sur du vocabulaire (« la directive pour… », « le mot-clé qui… ») ou sur des API absentes du Worker (`fs.readFile`).
