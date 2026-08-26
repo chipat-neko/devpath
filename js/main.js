@@ -701,6 +701,9 @@
     { titre: "Outils de code", liens: [
       ["playground.html", "Bac à sable web"],
       ["console.html", "Console Python & SQL"],
+      /* D3 : le bac à sable Git se cherche quand on bute sur une commande,
+         c'est-à-dire depuis une leçon — comme le décodeur d'erreurs. */
+      ["git-bac-a-sable.html", "Bac à sable Git"],
       ["comparateur.html", "Comparateur de syntaxe"],
       ["outils.html", "Boîte à outils"],
     ] },

@@ -1736,6 +1736,33 @@
     prose.appendChild(box);
   }
 
+  /* ------------------------------------- Le bac à sable Git (D3)
+     Le cours `git` est le seul du site dont les commandes se pratiquent SANS rien
+     installer : le bac à sable exécute pour de bon `add`, `commit`, `merge` et
+     `rebase` sur un dépôt qui vit dans le navigateur, et dessine le graphe. Une
+     leçon de ce cours mène donc à l'endroit où l'essayer.
+     Le lien est construit à l'exécution, comme celui du décodeur : sa PROFONDEUR
+     (`../`, une leçon vit dans `pages/<cours>/`) est vérifiée dans le navigateur
+     par `tools/preuves/git-graphe.js` — une profondeur fausse ne se voit pas
+     autrement, la page s'ouvrant sans erreur sur un lien mort. */
+  function initBacGit() {
+    var parts = location.pathname.split("/").filter(Boolean);
+    if (parts.length < 2 || parts[parts.length - 2] !== "git") return;
+    if (!/^lecon-/.test(parts[parts.length - 1])) return;
+    var prose = document.querySelector(".prose");
+    if (!prose || prose.querySelector(".lesson-bac-git")) return;
+    var box = document.createElement("aside");
+    box.className = "lesson-erreurs lesson-bac-git";
+    box.setAttribute("aria-label", "Essayer ces commandes");
+    box.innerHTML =
+      "<p class=\"lesson-erreurs__titre\">Essaie ces commandes pour de vrai&nbsp;:</p>" +
+      "<p class=\"lesson-erreurs__lien\"><a href=\"../git-bac-a-sable.html\">"
+      + "Ouvrir le bac à sable Git →</a></p>"
+      + "<p>Un vrai dépôt, dans cette page&nbsp;: les empreintes sont calculées comme "
+      + "Git les calcule, et le graphe se redessine à chaque commande.</p>";
+    prose.appendChild(box);
+  }
+
   /* ----------------------------------------------- Init */
   recordLast();
   initNotes();
@@ -1752,4 +1779,5 @@
   buildTOC();
   initReadingProgress();
   initDecodeur();
+  initBacGit();
 })();

@@ -13,6 +13,7 @@
      rendu    node tools/verif-rendu.js      ce que le navigateur affiche
      stockage node tools/verif-stockage.js  l'echec d'ecriture previent l'apprenant
      gitmodl  node tools/verif-git-modele.js  le modele de depot Git face au vrai git
+     gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
 
    USAGE
      node tools/verif.js            # les six (le rendu prend plusieurs minutes)
@@ -84,6 +85,11 @@ var ETAPES = [
      chaque commande, la sortie, la reussite, `status --porcelain`, HEAD, toutes
      les refs, le contenu de chaque fichier et l'arbre de HEAD. */
   { nom: "gitcmd ", fichier: "verif-git-commandes.js", args: [], quoi: "commandes du bac a sable : memes sorties et memes etats que le vrai git", sautable: true },
+  /* Le GRAPHE (point D3) est une affirmation de plus : « ce commit descend de
+     celui-la ». Cette etape compare, apres chaque commande de 19 scenarios,
+     l'ordre topologique des lignes, la continuite des colonnes, les aretes et
+     les marques a ce que rend `git log --graph --topo-order`. */
+  { nom: "gitgraf", fichier: "verif-git-graphe.js", args: [], quoi: "graphe du bac a sable : meme ordre et memes colonnes que git log --graph", sautable: true },
 ];
 if (!RAPIDE) {
   ETAPES.push({
