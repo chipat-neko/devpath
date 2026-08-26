@@ -147,7 +147,59 @@ L'ordre compte : SQL d'abord parce qu'il est petit et que le besoin est massif (
 
   `verif-html` 0/0 sur 1 612 fichiers, `verif-donnees` 0 erreur sur 25 invariants, 0 URL de CDN dans `runner.js`, 0 BOM.
 
-- [ ] **A4 · Python : décider, pas bricoler.** Pyodide pèse environ 10 Mo — c'est un tiers du dépôt actuel. Trois options à évaluer honnêtement, chiffres à l'appui : (a) l'embarquer malgré le poids ; (b) écrire un mini-interpréteur Python couvrant le sous-ensemble réellement utilisé dans les exercices (variables, conditions, boucles, listes, chaînes, fonctions simples) ; (c) renoncer et l'assumer explicitement dans l'interface. **Écrire la recommandation et son raisonnement ici, puis appliquer.** Ne pas se lancer dans (b) sans avoir mesuré ce que couvrent réellement les exercices Python.
+- [x] **A4 · Python : décider, pas bricoler.** ✅ **2026-08-26. Décision : (a), embarquer — mais à 8,27 Mo et non 17,5, et le poids annoncé au plan était le mauvais chiffre.**
+
+  **Verdict mesuré : CPython 3.12.1 démarre en 799 ms en `file://`, DNS coupé, 0 requête distante.**
+
+  **1. Ce que le site demande vraiment à Python.** Outil neuf `tools/mesure-python.js` (sans dépendance, rejouable) sur les **997 blocs `language-python` de 11 cours** :
+
+  | | blocs | dont avec `print()` |
+  |---|---:|---:|
+  | n'important **rien** | 492 | 263 |
+  | n'important que la **bibliothèque standard** | 276 | 228 |
+  | **→ couverts par Pyodide nu** | **768 (77,0 %)** | **491** |
+  | exigeant un **paquet tiers** (pandas 70, sklearn 60, matplotlib 57, numpy 45…) | 229 (23,0 %) | 82 |
+
+  **C'est ce tableau qui tue l'option (b).** Un mini-interpréteur arrêté aux classes, compréhensions, exceptions et générateurs couvrirait **241 blocs à sortie observable — la moitié des 491** que Pyodide donne sans écrire une ligne d'interpréteur. Et il les couvrirait *approximativement* : un « Python » écrit à la main enseignerait ses propres bugs comme s'ils étaient le langage. Sur un site qui vient de trouver 4 exemples faux en exécutant du SQL, fabriquer un moteur qui ment est le contraire du but. **(b) est écarté, sur mesure et non par principe.**
+
+  **2. Le poids annoncé au plan était faux dans les deux sens.** « Environ 10 Mo, un tiers du dépôt » : le dépôt fait 77,9 Mo, pas 30 ; et la distribution complète en base64 fait 17,95 Mo, pas 10. Surtout, **le `.wasm` se gzippe à 3,07 Mo** — la contrainte `file://` impose le base64, pas le stockage brut :
+
+  | | tel quel | base64 brut | **retenu** |
+  |---|---:|---:|---:|
+  | `pyodide.asm.wasm` | 9,62 Mo | 13,45 Mo | **4,10 Mo** (gzip + base64) |
+  | `python_stdlib.zip` | 2,23 Mo | 2,98 Mo | **2,98 Mo** (déjà un zip : gzip ne gagne que 1 %) |
+  | `pyodide.asm.js` + `pyodide.js` | 1,19 Mo | — | **1,19 Mo** (scripts classiques) |
+  | index des paquets | 0,10 Mo | 0,14 Mo | **0,8 Ko** (vidé, voir plus bas) |
+  | **total** | | **17,95 Mo (+23,0 %)** | **8,27 Mo (+10,6 %)** |
+
+  La décompression par `DecompressionStream('gzip')` coûte **35 ms**. **8,7 Mo économisés pour 35 ms** : c'est le chiffre qui a rendu (a) acceptable.
+
+  **3. Trois découvertes techniques, toutes trouvées en exécutant, aucune en lisant le code.**
+
+  - **Le chargeur de Pyodide n'aboutit PAS dans une page, mais aboutit dans un Worker.** Il emploie `await import()` — un module ES, que Chrome refuse en `file://` — quand il tourne dans une page, et `importScripts()` quand il tourne dans un Worker. Premier essai en page : « Failed to fetch dynamically imported module ». Même code dans un Worker : prêt en 793 ms. **Le Worker n'est pas qu'un isolement, c'est ce qui rend Python possible.** (Prolonge le constat d'A2 : un Worker issu d'un Blob peut `importScripts()` une URL `file://` absolue.)
+  - **Pyodide n'a pas d'option `wasmBinary`**, contrairement à Emscripten : il n'y a pas de porte officielle pour lui donner un binaire déjà en mémoire. On **détourne `fetch`** dans le Worker (`assets/vendor/pyodide/pyodide-charge.js`) et on rend une `Response` construite en mémoire pour les trois ressources ; toute autre URL retombe sur le `fetch` d'origine, donc une requête inattendue resterait visible au journal réseau.
+  - **L'index des paquets est VIDÉ, et c'est un garde-fou, pas une économie.** Le vrai `pyodide-lock.json` déclare **310 paquets** téléchargeables depuis un CDN. Avec `packages: {}`, `loadPackage` ne peut littéralement rien demander. `loadPackagesFromImports` a été retiré de `runner.js` pour la même raison : il serait allé chercher numpy sur le réseau.
+
+  **4. Livré.** `assets/vendor/pyodide/` (Pyodide 0.26.4, MPL-2.0, **8,27 Mo**), `tools/build-pyodide.js` (régénère et, sans argument, contrôle l'intégrité : nombres magiques, tailles annoncées, 0 URL http, 0 module ES), `tools/preuves/pyodide.html` et `tools/preuves/python-lecon.js`. `js/runner.js` : plus aucune garde de protocole, plus aucun bouton « Serveur requis » — **`addOfflineBtn` et `showOffline` supprimés, 37 lignes de code mort**. L'URL de CDN de `pyodide.js` est neutralisée à la copie : **le dépôt reste à 0 URL de CDN**.
+
+  **5. Deux gardes, toutes deux mesurées contre une vérité indépendante.**
+
+  - **Modules non embarqués** : liste blanche des **185 modules réellement importables**, obtenue en EXÉCUTANT `sys.builtin_module_names` + `pkgutil.iter_modules()` dans le moteur — pas en recopiant une liste de mémoire. `tools/mesure-python.js` et `tools/mesure-executable.js` la **lisent** dans `runner.js` au lieu de la dupliquer. ⚠️ **`sqlite3` n'en fait pas partie** : il n'est pas compilé dans ce build, alors qu'une liste écrite de tête l'aurait inclus — 4 blocs concernés.
+  - **Ce n'est pas du Python.** En **compilant les 997 blocs** (`compile()` de CPython), **27 (2,7 %) ne sont pas du Python valide** : des commandes de terminal (`$ pytest -q`, `pip install requests`, `python -m venv`), des extraits de `pyproject.toml`, des arborescences de fichiers, un message d'erreur collé tel quel. Un motif les écarte, et **il a été mesuré contre cette vérité : 20 des 27 attrapés, et ZÉRO bloc valide privé de son bouton.** ⚠️ **Le premier jet en avait un** : il cherchait un `$` en début de ligne, or dans une expression régulière `re.VERBOSE` l'ancre `$` est seule sur sa ligne — `python/lecon-41` perdait son bouton. Un prompt de terminal est suivi d'une commande *sur la même ligne* ; c'est ce que le motif exige désormais. **Dette assumée : 7 blocs (0,7 %) gardent un bouton sur du Python invalide** (fragments tronqués de `llm`, pseudo-code Cython) — à traiter en phase B, aucun motif ne les distingue sans faux positif.
+
+  **6. Résultat, mesuré sur le site entier.**
+
+  | | avant A4 | **après** |
+  |---|---:|---:|
+  | blocs Python avec un bouton « Tester » | **0** | **747 / 997 (74,9 %)** |
+  | blocs exécutables du site | 2 458 / 12 723 (19,3 %) | **3 493 / 12 723 (27,5 %)** |
+  | langages réellement exécutables en `file://` | 3 (JS, HTML, SQL) | **4** |
+
+  `tools/mesure-executable.js` a été corrigé au passage : sa table des moteurs annonçait encore « CDN — inutilisable en `file://` » pour SQL **et** ne comptait ni SQL ni Python dans les blocs exécutables. Le 19,3 % d'A1 sous-estimait donc déjà de 288 blocs SQL.
+
+  **7. Contrôles.** `node tools/preuves/python-lecon.js` sur 3 leçons réelles : **44 blocs cliqués, 40 sorties obtenues, 0 échec du moteur, 0 requête distante**, premier bloc en 1 574 ms (démarrage compris), les suivants immédiats. Non-régression SQL : 40 blocs cliqués, 27 aboutis, 0 requête distante — identique à A3. `verif-html` 0/0 sur 1 612 fichiers, `verif-donnees` 0 erreur sur 25 invariants, `verif-rendu` 0 erreur / 0 avertissement sur 18 mesures, `build-sqljs` intègre, `build-pyodide` sans écart, 0 URL de CDN dans le dépôt.
+
+  ⚠️ **Relevé hors périmètre : `starter/js/runner.js` charge toujours Pyodide ET sql.js depuis `cdn.jsdelivr.net`** (3 URL). Le kit de démarrage livré à l'apprenant n'a donc aucun des deux moteurs hors ligne. L'y embarquer lui coûterait 9,2 Mo — décision à prendre à part, pas dans cette case.
 
 - [ ] **A5 · Ce qui restera non exécutable.** Après A2-A4, dresser la liste des langages qui ne le seront jamais en `file://` (compilés, mobiles, systèmes). Pour ceux-là, l'exercice honnête n'est pas l'exécution mais la **prédiction** : « que produit ce code ? ». Le dire dans l'interface plutôt que de laisser un bouton mort.
 

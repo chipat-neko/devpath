@@ -30,9 +30,34 @@ const MOTEUR = {
   js: "worker JS",
   markup: "aperçu HTML",
   html: "aperçu HTML",
-  python: "CDN — inutilisable en file://",
-  sql: "CDN — inutilisable en file://",
+  python: "CPython 3.12 embarqué",
+  sql: "SQLite embarqué",
 };
+
+/* Règles EXACTES de js/runner.js pour SQL. Un bloc n'a de bouton que s'il contient une
+   vraie instruction, et s'il n'est pas écrit pour un autre SGBD que SQLite. */
+const SQL_INSTRUCTION = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|WITH)\b/i;
+const AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
+
+/* Règles EXACTES de js/runner.js pour Python. La liste des modules embarqués est LUE
+   dans runner.js plutôt que recopiée : 185 noms dupliqués dériveraient en silence. */
+const PAS_DU_PYTHON = /^[ \t]*\$[ \t]+[a-z]|^[ \t]*(?:pip|pip3|python|python3|pytest|ruff|mypy|black|flake8|poetry|conda|jupyter|uv|source|venv|deactivate)[ \t]+[-\w.\/]|^[ \t]*\[(?:build-system|project|tool)[\w.]*\][ \t]*$|[├└│]|^[ \t]*\/\/|^[ \t]*\w*(?:Error|Exception):[ \t]/m;
+
+const PY_MODULES = (function () {
+  const src = fs.readFileSync(path.join(RACINE, "js", "runner.js"), "utf8");
+  const m = src.match(/var PY_MODULES = \(([\s\S]*?)\)\.split\(" "\);/);
+  if (!m) throw new Error("PY_MODULES introuvable dans js/runner.js");
+  return new Set(m[1].replace(/["+\n\r]/g, " ").split(/\s+/).filter(Boolean));
+})();
+
+function pyModuleAbsent(code) {
+  const re = /^[ \t]*(?:import|from)[ \t]+([A-Za-z_][\w.]*)/gm;
+  let m;
+  while ((m = re.exec(code))) {
+    if (!PY_MODULES.has(m[1].split(".")[0])) return m[1].split(".")[0];
+  }
+  return null;
+}
 
 function decodeEntites(s) {
   return s
@@ -97,6 +122,15 @@ for (const item of liste) {
       else L.executables++;
     } else if (langue === "markup" || langue === "html") {
       L.executables++; // aperçu HTML : disponible en file://
+    } else if (langue === "python") {
+      /* CPython 3.12 est embarqué depuis le 2026-08-26 (A4). Trois gardes : les
+         sessions REPL, les paquets non embarqués, et ce qui n'est pas du Python. */
+      if (code.indexOf(">>>") !== -1 || pyModuleAbsent(code) || PAS_DU_PYTHON.test(code)) L.bloquesParGarde++;
+      else L.executables++;
+    } else if (langue === "sql") {
+      /* SQLite est embarqué depuis le 2026-08-26 (A2/A3). */
+      if (!SQL_INSTRUCTION.test(code) || AUTRE_SGBD.test(code)) L.bloquesParGarde++;
+      else L.executables++;
     }
   }
 

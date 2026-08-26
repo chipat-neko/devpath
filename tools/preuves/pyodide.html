@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Preuve Pyodide en file://</title>
+</head>
+<body>
+<pre id="sortie">… en cours</pre>
+
+<!-- Le code Python est écrit ici EN CLAIR, dans un bloc que le navigateur n'exécute
+     pas : aucun échappement JavaScript ne peut le déformer. C'est aussi le vrai flux
+     d'usage — le Worker reçoit le code par message, il ne le porte pas dans sa
+     propre source. -->
+<script type="text/plain" id="code-python">
+notes = [12, 17, 9, 16]
+print("moyenne", sum(notes) / len(notes))
+
+import math, json, statistics, sys, re, datetime, collections
+print("sqrt", math.sqrt(144))
+print("mediane", statistics.median(notes))
+print("json", json.dumps({"a": 1}))
+print("regex", re.findall(r"\d+", "a1b22c333"))
+print("compteur", collections.Counter("abracadabra").most_common(2))
+print("date", datetime.date(2026, 8, 26).strftime("%d/%m/%Y"))
+print("version", sys.version.split()[0])
+print("accents", "éàüç".upper())
+
+class Point:
+    def __init__(self, x):
+        self.x = x
+    def __repr__(self):
+        return f"Point({self.x})"
+
+print("classe", [Point(i) for i in range(3)])
+print("tri", sorted(["poire", "abricot", "kiwi"], key=len))
+
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+print("fib(30)", fib(30))
+</script>
+
+<script>
+(function () {
+  "use strict";
+  var lignes = [];
+  function dire(s) { lignes.push(s); document.getElementById("sortie").textContent = lignes.join("\n"); }
+
+  window.__RESULTAT = null;
+  dire("protocole            : " + location.protocol);
+
+  /* Base ABSOLUE du dépôt : un Worker issu d'un Blob n'a aucune base relative. */
+  var RACINE = location.href.replace(/\/tools\/preuves\/[^\/]*$/, "");
+  var DOSSIER = RACINE + "/assets/vendor/pyodide";
+  dire("dossier du moteur    : " + DOSSIER.replace(RACINE, "<dépôt>"));
+
+  var SRC = [
+    "var T0 = Date.now(), jalons = [];",
+    "function jalon(n) { jalons.push(n + ' ' + (Date.now() - T0) + ' ms'); }",
+    "var D = " + JSON.stringify(DOSSIER) + ";",
+    "self.onmessage = function (ev) {",
+    "  var code = ev.data;",
+    "  try {",
+    "    importScripts(D + '/pyodide-wasm-gz-b64.js', D + '/pyodide-stdlib-b64.js',",
+    "                  D + '/pyodide-lock-b64.js', D + '/pyodide-charge.js');",
+    "  } catch (e) { postMessage({ erreur: 'importScripts : ' + (e && e.message) }); return; }",
+    "  jalon('scripts importes');",
+    "  self.PythonLocal.pret(D).then(function (py) {",
+    "    jalon('interpreteur pret');",
+    "    var out = [];",
+    "    py.setStdout({ batched: function (t) { out.push(t); } });",
+    "    py.setStderr({ batched: function (t) { out.push('[stderr] ' + t); } });",
+    "    var erreur = null;",
+    "    try { py.runPython(code); } catch (e) { erreur = String(e).split('\\n').filter(Boolean).pop(); }",
+    "    jalon('code execute');",
+    "    var t = Date.now();",
+    "    py.runPython('x = sum(i*i for i in range(1000000))');",
+    "    var msCalcul = Date.now() - t;",
+    /* Les messages d'erreur doivent être ceux de CPython, mot pour mot : c'est ce
+       que l'apprenant verra, et ce dont vivra le décodeur d'erreurs (phase C). */
+    "    var msg = [];",
+    "    ['1/0', 'print(varibale)', 'print(\"a\" + 1)', 'x = [1,2]; print(x[9])', 'def f(:', 'import numpy'].forEach(function (c) {",
+    "      try { py.runPython(c); msg.push('AUCUNE ERREUR pour : ' + c); }",
+    "      catch (e) { msg.push(String(e).split('\\n').filter(Boolean).pop()); }",
+    "    });",
+    "    postMessage({ sortie: out, erreurExecution: erreur, messages: msg, msCalcul1M: msCalcul, jalons: jalons });",
+    "  }, function (e) { postMessage({ erreur: String(e && e.message || e), jalons: jalons }); });",
+    "};",
+  ].join("\n");
+
+  var t0 = Date.now();
+  var w;
+  try {
+    w = new Worker(URL.createObjectURL(new Blob([SRC], { type: "text/javascript" })));
+  } catch (e) {
+    dire("Worker impossible    : " + e.message);
+    window.__RESULTAT = "ECHEC";
+    return;
+  }
+  w.onerror = function (e) { dire("worker onerror      : " + e.message); window.__RESULTAT = "ECHEC"; };
+  w.onmessage = function (ev) {
+    var d = ev.data || {};
+    if (d.erreur) {
+      dire("ECHEC               : " + d.erreur);
+      (d.jalons || []).forEach(function (j) { dire("  jalon             : " + j); });
+      window.__RESULTAT = "ECHEC";
+      return;
+    }
+    dire("Python pret         : OK en " + (Date.now() - t0) + " ms (page)");
+    (d.jalons || []).forEach(function (j) { dire("  jalon             : " + j); });
+    dire("");
+    dire("--- sortie du programme ---");
+    d.sortie.forEach(function (l) { dire("  " + l); });
+    if (d.erreurExecution) dire("  ERREUR INATTENDUE : " + d.erreurExecution);
+    dire("");
+    dire("somme des carres jusqu'a 1 000 000 : " + d.msCalcul1M + " ms");
+    dire("");
+    dire("--- messages d'erreur rendus a l'apprenant ---");
+    d.messages.forEach(function (m) { dire("  " + m); });
+    var attendu = ["moyenne 13.5", "sqrt 12.0", "version 3.12.1", "fib(30) 832040", "accents ÉÀÜÇ"];
+    var manquants = attendu.filter(function (a) { return d.sortie.indexOf(a) === -1; });
+    dire("");
+    dire(manquants.length === 0
+      ? "VERDICT             : les " + attendu.length + " sorties attendues sont exactes."
+      : "VERDICT             : MANQUE " + manquants.join(" | "));
+    window.__RESULTAT = manquants.length === 0 && !d.erreurExecution ? "OK" : "ECHEC";
+  };
+  w.postMessage(document.getElementById("code-python").textContent);
+})();
+</script>
+</body>
+</html>

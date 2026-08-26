@@ -9,24 +9,20 @@
      via Pyodide (WebAssembly) dans un Web Worker isolé → panneau console.
    - Blocs SQL (language-sql) : bouton « ▶ Exécuter » → éditeur + requête exécutée
      par SQLite (sql.js) dans un Web Worker isolé → résultat en tableau.
-   JS, HTML et SQL fonctionnent en file:// (aucun serveur). ⚠️ Python (Pyodide) se
-   charge encore depuis un CDN et EXIGE le protocole HTTP : en file:// — le mode
-   fondateur du site — l'exécution échoue toujours. On le SIGNALE donc AVANT le clic
-   (bouton « Serveur requis » désactivé, aucune requête émise) au lieu d'afficher une
-   erreur après.
-   SQL, lui, ne dépend plus du réseau depuis le 2026-08-26 : le binaire WebAssembly de
-   SQLite est embarqué dans assets/vendor/sqljs/ (encodé en base64, car en file:// un
-   fetch() vers un .wasm local est refusé) et le Worker l'importe par une URL file://
-   ABSOLUE — un Worker issu d'un Blob n'a aucune base pour un chemin relatif.
+   LES QUATRE MOTEURS FONCTIONNENT EN file://, SANS SERVEUR ET SANS RÉSEAU. Plus aucun
+   CDN depuis le 2026-08-26 : SQLite est embarqué dans assets/vendor/sqljs/ et CPython
+   3.12.1 dans assets/vendor/pyodide/. Les binaires WebAssembly y sont encodés en
+   base64 — en file://, un fetch() vers un .wasm local est refusé (origine opaque) — et
+   le Worker les importe par une URL file:// ABSOLUE, un Worker issu d'un Blob n'ayant
+   aucune base pour résoudre un chemin relatif.
+   ⚠️ Python n'a que la BIBLIOTHÈQUE STANDARD : numpy, pandas, matplotlib et
+   scikit-learn sont des paquets séparés, téléchargeables depuis un CDN seulement. Les
+   blocs qui les importent n'ont donc pas de bouton (PY_MODULES ci-dessous), plutôt
+   qu'un bouton qui ne rendrait qu'un ModuleNotFoundError.
    À charger après main.js.
    ============================================================================= */
 (function () {
   "use strict";
-
-  // Pyodide se charge depuis un CDN et n'aboutit qu'en HTTP : inutile d'essayer en
-  // file://, on prévient avant le clic. (sql.js, lui, est embarqué depuis le
-  // 2026-08-26 et n'a plus besoin de cette garde.)
-  var HTTP_OK = location.protocol === "http:" || location.protocol === "https:";
 
   function $all(sel, ctx) {
     return Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
@@ -81,25 +77,88 @@
   ].join("\n");
 
   /* ----------------------------------------------------- Python (Pyodide) */
-  var PY_VER = "0.26.2";
-  /* Worker isolé : charge Pyodide depuis le CDN puis exécute le code Python. */
+  /* LISTE MESURÉE, PAS DEVINÉE. Les 185 modules réellement importables dans le
+     Pyodide embarqué, obtenus en EXÉCUTANT `sys.builtin_module_names` +
+     `pkgutil.iter_modules()` dedans (scratchpad/pyodide-essai/liste-modules.html,
+     2026-08-26). Tout le reste — numpy, pandas, matplotlib, scikit-learn, requests…
+     — est un paquet séparé qui ne s'obtient que par le réseau : le bloc qui l'importe
+     n'a pas de bouton, comme un bloc SQL écrit pour PostgreSQL n'en a pas.
+     ⚠️ `sqlite3` n'est PAS de la liste : il n'est pas compilé dans ce build. */
+  var PY_MODULES = ("abc aifc antigravity argparse array ast asyncio atexit audioop base64 bdb " +
+    "binascii bisect builtins bz2 cProfile calendar cgi cgitb chunk cmath cmd code codecs codeop " +
+    "collections colorsys compileall concurrent configparser contextlib contextvars copy copyreg " +
+    "crypt csv ctypes dataclasses datetime decimal difflib dis doctest email encodings enum errno " +
+    "faulthandler filecmp fileinput fnmatch fractions ftplib functools gc genericpath getopt " +
+    "getpass gettext glob graphlib gzip hashlib heapq hmac html http imaplib imghdr importlib " +
+    "inspect io ipaddress itertools json keyword linecache locale logging mailbox mailcap marshal " +
+    "math mimetypes mmap modulefinder multiprocessing netrc nntplib ntpath nturl2path numbers " +
+    "opcode operator optparse os pathlib pdb pickle pickletools pipes pkgutil platform plistlib " +
+    "poplib posix posixpath pprint profile pstats pty py_compile pyclbr pydoc pyexpat pyodide " +
+    "queue quopri random re reprlib rlcompleter runpy sched secrets select selectors shelve shlex " +
+    "shutil signal site smtplib sndhdr socket socketserver sre_compile sre_constants sre_parse " +
+    "stat statistics string stringprep struct subprocess sunau symtable sys sysconfig tabnanny " +
+    "tarfile telnetlib tempfile textwrap this threading time timeit token tokenize tomllib trace " +
+    "traceback tracemalloc tty types typing unicodedata unittest urllib uu uuid warnings wave " +
+    "weakref webbrowser wsgiref xdrlib xml xmlrpc zipapp zipfile zipimport zlib zoneinfo").split(" ");
+
+  /* CE QUI PORTE LA CLASSE « python » SANS ÊTRE DU PYTHON. Mesuré le 2026-08-26 en
+     COMPILANT les 997 blocs du site : 27 (2,7 %) ne sont pas du Python syntaxiquement
+     valide — des commandes de terminal (`$ pytest -q`, `pip install requests`), des
+     extraits de `pyproject.toml`, des arborescences de fichiers, un message d'erreur
+     collé tel quel. Leur poser un bouton ne rendrait qu'une SyntaxError.
+     ⚠ Le motif a été mesuré contre cette vérité : 20 des 27 écartés, et surtout
+     ZÉRO bloc valide privé de son bouton. Un premier jet cherchait un « $ » en début
+     de ligne : dans une expression régulière VERBOSE, l'ancre « $ » seule sur sa ligne
+     le satisfaisait, et python/lecon-41 perdait son bouton. Un prompt de terminal est
+     suivi d'une commande SUR LA MÊME LIGNE — c'est ce que le motif exige. */
+  var PAS_DU_PYTHON = /^[ \t]*\$[ \t]+[a-z]|^[ \t]*(?:pip|pip3|python|python3|pytest|ruff|mypy|black|flake8|poetry|conda|jupyter|uv|source|venv|deactivate)[ \t]+[-\w.\/]|^[ \t]*\[(?:build-system|project|tool)[\w.]*\][ \t]*$|[├└│]|^[ \t]*\/\/|^[ \t]*\w*(?:Error|Exception):[ \t]/m;
+
+  /* Rend le premier module importé qui n'est PAS embarqué, ou null. On ne regarde que
+     le NOM DE TÊTE (« matplotlib.pyplot » -> « matplotlib ») et on ignore les imports
+     relatifs (`from . import x`), qui ne visent aucun paquet. */
+  function pyModuleAbsent(code) {
+    var re = /^[ \t]*(?:import|from)[ \t]+([A-Za-z_][\w.]*)/gm;
+    var m;
+    while ((m = re.exec(code))) {
+      var tete = m[1].split(".")[0];
+      if (PY_MODULES.indexOf(tete) === -1) return tete;
+    }
+    return null;
+  }
+
+  /* Worker isolé : charge CPython DEPUIS LE DÉPÔT (aucun réseau) puis exécute le code.
+     Mesuré le 2026-08-26 : interpréteur prêt en 799 ms, 0 requête distante, DNS coupé
+     et sans --allow-file-access-from-files (tools/preuve-hors-reseau.js).
+     ⚠️ Le chargeur de Pyodide emploie `await import()` — un module ES, que Chrome
+     refuse en file:// — quand il tourne dans une PAGE, et `importScripts()` quand il
+     tourne dans un WORKER. C'est le Worker qui rend Python possible ici, pas seulement
+     l'isolement.
+     ⚠️ Plus de `loadPackagesFromImports` : il irait chercher un paquet sur le réseau.
+     Les blocs qui importent un paquet non embarqué n'ont pas de bouton (PY_MODULES). */
   var PY_WORKER_SRC = [
     "var ready = null;",
     "self.onmessage = function (ev) {",
     "  var d = ev.data || {};",
     "  if (d.type === 'load') {",
-    "    try { importScripts('https://cdn.jsdelivr.net/pyodide/v" + PY_VER + "/full/pyodide.js'); }",
-    "    catch (e) { self.postMessage({ type: 'fatal' }); return; }",
-    "    if (typeof loadPyodide !== 'function') { self.postMessage({ type: 'fatal' }); return; }",
-    "    ready = loadPyodide();",
-    "    ready.then(function () { self.postMessage({ type: 'ready' }); }, function () { self.postMessage({ type: 'fatal' }); });",
+    "    var D = d.base + '/assets/vendor/pyodide';",
+    "    try {",
+    "      importScripts(D + '/pyodide-wasm-gz-b64.js');",
+    "      importScripts(D + '/pyodide-stdlib-b64.js');",
+    "      importScripts(D + '/pyodide-lock-b64.js');",
+    "      importScripts(D + '/pyodide-charge.js');",
+    "    }",
+    "    catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
+    "    if (!self.PythonLocal) { self.postMessage({ type: 'fatal', text: 'pyodide-charge.js absent' }); return; }",
+    "    ready = self.PythonLocal.pret(D);",
+    "    ready.then(function () { self.postMessage({ type: 'ready' }); },",
+    "               function (e) { self.postMessage({ type: 'fatal', text: String(e && e.message || e) }); });",
     "    return;",
     "  }",
     "  if (d.type === 'run') {",
     "    Promise.resolve(ready).then(function (py) {",
     "      py.setStdout({ batched: function (s) { self.postMessage({ type: 'out', level: 'log', text: s }); } });",
     "      py.setStderr({ batched: function (s) { self.postMessage({ type: 'out', level: 'error', text: s }); } });",
-    "      return py.loadPackagesFromImports(d.code).catch(function () {}).then(function () { return py.runPythonAsync(d.code); }).then(",
+    "      return py.runPythonAsync(d.code).then(",
     "        function () { self.postMessage({ type: 'done' }); },",
     "        function (err) { self.postMessage({ type: 'out', level: 'error', text: (err && err.message) ? String(err.message) : String(err) }); self.postMessage({ type: 'done' }); }",
     "      );",
@@ -256,41 +315,6 @@
      En file://, Pyodide et sql.js ne peuvent pas se charger. On remplace le
      bouton d'exécution par un bouton « Serveur requis » explicite (aucune
      requête) ; le clic n'affiche qu'une explication, il ne tente rien. */
-  function addOfflineBtn(bar, block, lang) {
-    var b = addBtn(bar, "code-block__try code-block__try--offline", ICON_PLAY + "<span>Serveur requis</span>", function () {
-      showOffline(block, lang);
-    });
-    b.setAttribute(
-      "title",
-      lang + " s'exécute via un moteur WebAssembly chargé depuis un CDN — il lui faut un serveur HTTP. Indisponible en local (file://). Clique pour l'explication."
-    );
-    return b;
-  }
-
-  function showOffline(block, lang) {
-    var out = block.querySelector(".runner-output");
-    if (!out) {
-      out = document.createElement("div");
-      out.className = "runner-output";
-      out.setAttribute("aria-live", "polite");
-      block.appendChild(out);
-    }
-    out.innerHTML = "";
-    var head = document.createElement("p");
-    head.className = "runner-output__head";
-    head.textContent = lang === "SQL" ? "Résultat SQL" : "Console " + lang;
-    out.appendChild(head);
-    var l1 = document.createElement("div");
-    l1.className = "runner-output__line runner-output__line--warn";
-    l1.textContent =
-      lang + " s'exécute via un moteur WebAssembly chargé depuis un CDN : il faut une connexion Internet ET que le site soit servi en HTTP. En local (file://), c'est indisponible.";
-    out.appendChild(l1);
-    var l2 = document.createElement("div");
-    l2.className = "runner-output__line runner-output__line--empty";
-    l2.textContent =
-      "Astuce : ouvre un terminal dans le dossier du site, lance « python -m http.server », puis ouvre http://localhost:8000 dans le navigateur.";
-    out.appendChild(l2);
-  }
 
   /* --------------------------------------------- Rendre un bloc éditable */
   function makeEditable(block, code) {
@@ -365,11 +389,23 @@
           block.setAttribute("data-runner", "skip");
           return;
         }
-        block.setAttribute("data-runner", "py");
-        if (!HTTP_OK) {
-          addOfflineBtn(bar, block, "Python");
+        /* Le moteur embarqué n'a que la bibliothèque standard. Un bloc qui importe
+           numpy, pandas, matplotlib ou scikit-learn ne rendrait qu'un
+           « ModuleNotFoundError: No module named 'numpy' » — plus décourageant qu'un
+           bloc sans bouton. Mesuré le 2026-08-26 sur les 997 blocs Python du site :
+           227 importent un paquet qui n'est pas embarqué, 770 n'en importent aucun. */
+        var absent = pyModuleAbsent(py.textContent);
+        if (absent) {
+          block.setAttribute("data-runner", "skip");
+          block.setAttribute("data-runner-motif", "module-absent:" + absent);
           return;
         }
+        if (PAS_DU_PYTHON.test(py.textContent)) {
+          block.setAttribute("data-runner", "skip");
+          block.setAttribute("data-runner-motif", "pas-du-python");
+          return;
+        }
+        block.setAttribute("data-runner", "py");
         addBtn(bar, "code-block__try", ICON_PLAY + "<span>Tester</span>", function (b) {
           activatePython(block, py, bar, b);
         });
@@ -388,9 +424,9 @@
           block.setAttribute("data-runner", "skip");
           return;
         }
-        /* Plus de garde HTTP_OK ici : depuis le 2026-08-26, SQLite est embarqué dans
-           assets/vendor/sqljs/ et s'exécute en file:// (prouvé réseau coupé par
-           tools/preuve-hors-reseau.js). Seul Python dépend encore d'un CDN. */
+        /* Aucune garde de protocole ici : depuis le 2026-08-26, SQLite est embarqué
+           dans assets/vendor/sqljs/ et s'exécute en file:// (prouvé réseau coupé par
+           tools/preuve-hors-reseau.js). Python l'a rejoint le même jour. */
         block.setAttribute("data-runner", "sql");
         addBtn(bar, "code-block__try", ICON_PLAY + "<span>Exécuter</span>", function (b) {
           activateSql(block, sql, bar, b);
@@ -605,11 +641,12 @@
       pyWorker = null;
       pyLoaded = false;
     }
-    function fatal() {
+    function fatal(detail) {
       out.innerHTML = '<p class="runner-output__head">Console Python</p>';
       line(
         "error",
-        "Python n'a pas pu se charger. Cette fonctionnalité a besoin d'une connexion Internet et que le site soit servi en HTTP — elle ne marche pas en file://. Astuce : lance « python -m http.server » dans le dossier du site, puis recharge la page."
+        "Python n'a pas pu démarrer" + (detail ? " (" + detail + ")" : "") +
+          ". L'interpréteur est pourtant dans le dépôt, à assets/vendor/pyodide/ — vérifie que ce dossier est bien présent à côté des pages."
       );
       killWorker();
       finish();
@@ -626,7 +663,7 @@
     function onMsg(ev) {
       var d = ev.data || {};
       if (d.type === "fatal") {
-        fatal();
+        fatal(d.text);
       } else if (d.type === "ready") {
         pyLoaded = true;
         startRun();
@@ -649,14 +686,14 @@
         return;
       }
       pyWorker.addEventListener("message", onMsg);
-      line("empty", "Chargement de Python… (quelques secondes la première fois)");
-      pyWorker.postMessage({ type: "load" });
+      line("empty", "Démarrage de Python… (environ une seconde la première fois)");
+      pyWorker.postMessage({ type: "load", base: RACINE_SITE });
     } else {
       pyWorker.addEventListener("message", onMsg);
       if (pyLoaded) {
         startRun();
       } else {
-        line("empty", "Chargement de Python…");
+        line("empty", "Démarrage de Python…");
       }
     }
   }
