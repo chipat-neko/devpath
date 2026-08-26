@@ -21,6 +21,24 @@ $claude = 'C:\Users\chipat\.local\bin\claude.exe'
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') }
 
+# Lecture de l'heure de reprise annoncee par claude.exe. Les messages ont la forme
+# exacte : You've hit your session limit - resets 2:30pm (Europe/Paris), ou bien
+# resets 1am. On rend un DateTime local, reporte au lendemain si l'heure est passee.
+function Get-HeureReset($texte) {
+  if (-not $texte) { return $null }
+  $m = [regex]::Match($texte, 'resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)', 'IgnoreCase')
+  if (-not $m.Success) { return $null }
+  $h = [int]$m.Groups[1].Value
+  $min = 0
+  if ($m.Groups[2].Success) { $min = [int]$m.Groups[2].Value }
+  $ampm = $m.Groups[3].Value.ToLower()
+  if ($ampm -eq 'pm' -and $h -ne 12) { $h = $h + 12 }
+  if ($ampm -eq 'am' -and $h -eq 12) { $h = 0 }
+  $d = (Get-Date).Date.AddHours($h).AddMinutes($min)
+  if ($d -le (Get-Date)) { $d = $d.AddDays(1) }
+  return $d
+}
+
 # Ecriture du journal a l'epreuve d'un verrou. Constate le 2026-08-21 : un simple
 # tail -f ouvert sur journal.log par un outil exterieur EMPECHE Add-Content d'ecrire
 # (Windows refuse l'acces, le fichier etant deja ouvert par un autre processus).
@@ -122,6 +140,31 @@ if (Test-ChantierFini) {
 # Horodatage du debut de la passe : sert a verifier que le rapport de la passe
 # de securite a bien ete ECRIT PENDANT celle-ci, et non relu d'un chantier
 # precedent (voir le controle de fraicheur plus bas).
+# --- VERROU DE BUDGET (2026-08-26, demande de Noah) --------------------------
+# Le quota reel d'un abonnement n'est PAS lisible depuis cette machine : mesure faite
+# sur 332 transcrits, les limites hebdomadaires passees sont tombees a 2 M, 7 M puis
+# 9 M de jetons de sortie sur 7 jours, alors que la semaine en cours en comptait 21 M
+# sans qu'aucune limite ne tombe. Ce verrou est donc un BUDGET MAISON, pas une lecture
+# du quota Anthropic -- il bride une derive de depense, il ne predit pas la limite.
+# Reglage : ecrire un nombre de jetons de SORTIE dans .autonomie/budget.txt (0 = inactif).
+$budget = 0
+try {
+  $bf = Join-Path $dir 'budget.txt'
+  if (Test-Path $bf) { $budget = [int]((Get-Content $bf -Raw) -replace '[^0-9]','') }
+} catch { $budget = 0 }
+if ($budget -gt 0) {
+  try {
+    $conso = [int](& node (Join-Path $proj 'tools\conso-hebdo.js') total 2>$null | Select-Object -Last 1)
+    if ($conso -ge $budget) {
+      Log "[$(Stamp)] ===== ARRET SUR BUDGET : $conso jetons de sortie sur 7 jours, budget $budget. Tache desactivee. ====="
+      try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {}
+      exit 0
+    }
+    $pct = [int]($conso * 100 / $budget)
+    if ($pct -ge 80) { Log "[$(Stamp)] budget : $pct % consomme ($conso / $budget jetons de sortie sur 7 jours)." }
+  } catch { Log "[$(Stamp)] budget : mesure impossible ($_) -- la passe continue." }
+}
+
 $debutPasse = Get-Date
 
 New-Item -ItemType File -Path $lock -Force | Out-Null
@@ -228,6 +271,30 @@ try {
     try { $sortie = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding(1252).GetBytes($sortie)) } catch {}
   }
   Log $sortie
+
+  # --- VERROUS D'USAGE, lus dans la sortie de claude.exe -----------------------
+  # Les deux messages sont textuels et stables : You've hit your weekly limit et
+  # You've hit your session limit, tous deux suivis de l'heure de reprise.
+  $resetSession = $null
+  if ($sortie -match "hit your weekly limit") {
+    # LIMITE HEBDOMADAIRE : on arrete TOUT. Sans ce controle, la tache se reveillait
+    # toutes les 2 h pour echouer aussitot, ce qui ne sert qu'a brasser du vide.
+    $quand = Get-HeureReset $sortie
+    $txt = if ($quand) { $quand.ToString('yyyy-MM-dd HH:mm') } else { 'heure inconnue' }
+    Log "[$(Stamp)] ===== ARRET : LIMITE HEBDOMADAIRE ATTEINTE. Reprise possible a $txt. Tache desactivee. ====="
+    try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {}
+    try { Set-Content -Path (Join-Path $dir 'limite-hebdo.txt') -Value $txt -Encoding utf8 } catch {}
+    $arretDemande = $true
+  }
+  elseif ($sortie -match "hit your session limit") {
+    # LIMITE DE SESSION : inutile de reessayer avant l'heure dite. On reporte le
+    # prochain reveil a la reprise plutot que dans 5 minutes.
+    $resetSession = Get-HeureReset $sortie
+    if ($resetSession) { Log "[$(Stamp)] limite de session : prochain reveil reporte a $($resetSession.ToString('HH:mm')), pas dans 5 min." }
+  }
+
+  # --- Releve de consommation, pour le verrou de budget ------------------------
+  try { & node (Join-Path $proj 'tools\conso-hebdo.js') enregistrer $debutPasse.ToString('o') 2>$null | Out-Null } catch {}
   Log "[$(Stamp)] ===== fin (exit $code) ====="
 
   # --- Ligne BILAN lisible : on compte le nombre REEL de lecons enrichies = fichiers
@@ -302,10 +369,11 @@ try {
   # Le verrou anti-chevauchement empeche tout double-run. Settings (WakeToRun...) preserves.
   if (-not $arretDemande) {
     try {
-      $next  = (Get-Date).AddMinutes(5)
+      $next = if ($resetSession) { $resetSession.AddMinutes(2) } else { (Get-Date).AddMinutes(5) }
+      $motif = if ($resetSession) { 'a la reprise annoncee par la limite de session' } else { '5 min apres la fin' }
       $tOnce = New-ScheduledTaskTrigger -Once -At $next -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tOnce -ErrorAction Stop | Out-Null
-      Log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) (5 min apres la fin)"
+      Log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) ($motif)"
     } catch {
       Log "[$(Stamp)] ATTENTION replanification KO ($_) -- le filet 2h prend le relais."
     }
