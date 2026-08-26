@@ -495,7 +495,45 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **7. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (source, données, contenu, exemples, motifs, requêtes, Python) en 27,4 s. `verif-donnees` 0 erreur. 0 URL de CDN dans `tools/`, `js/`, `css/`. Un seul fichier modifié (`tools/verif-exemples.js`, +222/−15) ; **aucune page du site touchée**, donc ni index à régénérer ni rendu à remesurer.
 
   🔵 **Ce qui reste, et qui ne se règle pas par un motif** : 96 blocs à API navigateur/Node, 64 fragments dépendant d'un bloc précédent (`ReferenceError`), 45 comptes inégaux irréductibles, 42 gloses françaises, 40 dépendants du système, 39 erreurs d'exécution, 32 non déterministes, 11 liés à la locale. Les 64 fragments sont le prochain gisement : les concaténer au bloc précédent de la même page les rendrait exécutables, mais **ce n'est pas ce que fait le site** — `runner.js` exécute chaque bloc seul — et l'outil doit mesurer ce que l'apprenant obtient, pas ce qui serait commode.
-- [ ] **B7 · Les cours de prédiction** (langages non exécutables) — appliquer le format « que produit ce code ? » décidé en A5, sur les cours les plus consultés d'abord.
+**B7 est BORNÉ le 2026-08-26**, comme B5 et B6 l'ont été : « les cours les plus consultés d'abord » ne désigne rien de mesurable — le site n'a aucune statistique de consultation. Le critère de substitution est celui que A5 a mesuré : **le gisement de sorties déjà affirmées**, seul matériau autorisé par la règle. D'où l'ordre `ruby` (186 blocs), `kotlin` (151), puis le reste (`cpp` 70, `rust` 65, `elixir` 65, `bash` 65, `c` 62, `php` 50, `java` 40, `csharp` 37…). **Une case par lot.**
+
+- [x] **B7a · Le lot `ruby`** (le plus gros gisement : 186 blocs sur 246 annoncent leur sortie, 76 %). ✅ **2026-08-26. 14 exercices de prédiction, 56 réponses tapées dans Chrome et 56 acceptées — et 56 fausses refusées. Deux exercices écartés PAR UN CONTRÔLE, pas par jugement.**
+
+  **1. Pourquoi la prédiction, et pas l'exécution.** Vérifié avant d'écrire : `ruby` n'a **aucun** interpréteur disponible ici (`ruby`, `php`, `java`, `go`, `rustc`, `gcc`, `elixir`, `kotlin` : tous absents ; seul `dotnet` répond). Aucune sortie ruby ne peut donc être calculée. La règle A5 est la seule issue honnête : **on ne bâtit un exercice que sur une sortie déjà affirmée par la leçon**.
+
+  **2. L'outil neuf `tools/prediction-exos.js` — et son principe : IL N'ÉCRIT AUCUNE VALEUR.** Le code cité est EXTRAIT du bloc de la leçon ; la réponse attendue est EXTRAITE du commentaire `# =>` de la ligne visée. La table du script ne fait que **désigner une ligne** et rédiger l'énoncé, les trois indices et le lien. Dans le code cité, **toutes** les annonces de sortie sont retirées et la ligne visée porte `# => ?` : l'apprenant ne peut pas lire la réponse des lignes voisines.
+
+  **3. Trois contrôles bloquants avant écriture — et le troisième a écarté deux exercices que j'aurais écrits.**
+  - la ligne visée doit porter une annonce de sortie (sinon on ne sait pas ce qu'on demande) ;
+  - la réponse attendue doit passer le champ, vérifié avec `normExo` **reproduit depuis `js/lecon.js`** (le juge du site, pas une approximation) ;
+  - **la réponse ne doit pas rester lisible dans le code cité.** `lecon-09` (`Compte.devise # => "CHF"`) et `lecon-21` (`compteur # => 1000`) ont été refusés à ce titre : `"CHF"` est écrit dans la sous-classe, `1000` se lit dans le code des fils. Le premier a été remplacé par une cible meilleure (`a == b # => true`, où la classe redéfinit `==` sur le seul IBAN) ; le second est **abandonné**, la leçon n'ayant pas d'autre sortie affirmée.
+
+  **4. Les graphies acceptées, calculées et non devinées.** `normExo` réduit les suites d'espaces mais **ne les supprime pas** : `[18,15]` n'est pas `[18, 15]`. Le script génère donc, pour chaque réponse, la graphie de la leçon, la même sans ses guillemets englobants, et les deux sans espace après les virgules — 1 à 4 graphies selon le cas.
+
+  **5. Les 14 exercices** (leçon → ce qu'on fait prédire → réponse extraite) :
+
+  | | | | | |
+  |---|---|---|---|---|
+  | 02 `"3a".to_i` → `3` | 03 `puts "b" if 0` → `b` | 04 `langages[99]` → `nil` | 05 `contact.delete(:metier)` → `"informaticienne"` | 06 `addition_proc.call(1)` → `1` |
+  | 07 `take_while` → `[18, 15]` | 08 `prix_ttc(100)` → `120.0` | 09 `a == b` → `true` | 10 `clamp(...).to_s` → `"3.4"` | 11 `.inverse_mots` → `"dort chat le"` |
+  | 12 `puts e.class` → `ArgumentError` | 18 `gsub(/lapins?/, "chat")` → `"1 chat, 2 chat"` | 19 `.to_json` → `'{"ville":"Lyon","hab":522000}'` | 20 `premier, *reste` → `[2, 3, 4, 5]` | |
+
+  Ce sont des **pièges**, pas des récitations : `to_i` qui ne lève pas, `0` truthy, l'indice hors limites qui rend `nil`, le Proc qui ne compte pas ses arguments, `take_while` qui s'arrête au premier échec et rate le `16` qui suit, le retour flottant, l'égalité redéfinie, `clamp` qui rend la borne.
+
+  **6. Outil neuf `tools/preuves/exos-texte.js` — les `type:"text"` jugés PAR LA PAGE, pour la première fois.** 4 199 exercices du site sont corrigés par un champ `accept` et **aucun n'avait jamais été tapé dans un navigateur**. Or la phase B a montré deux fois la même panne (8 exercices de `regex`, 5 d'`offensive`) : un `accept` appartenant à un AUTRE exercice que l'énoncé affiché, invisible pour un contrôle de source. L'outil ouvre la leçon dans Chrome headless, en `file://`, **sans** `--allow-file-access-from-files`, tape la réponse publiée et lit le verdict. Résultat sur les 14 leçons : **56 réponses tapées, 56 acceptées, 0 refusée** (22,8 s) — les 14 neuves **et les 42 préexistantes** du cours.
+
+  Et dans l'autre sens, `--contre` : **56 réponses plausibles mais fausses tapées, 56 REFUSÉES, 0 acceptée à tort** (22,5 s). Prouver qu'une bonne réponse passe ne prouve que la moitié — un correcteur qui accepterait tout réussirait le premier contrôle.
+
+  ⚠️ **Le piège de l'outil, et il aurait rendu un vert par vacuité.** Le premier jet attendait 1,2 s puis lisait la page : **4 exercices sur 8 revenaient « sans champ »**, non parce qu'ils n'en avaient pas, mais parce que `initExos` n'avait pas fini. Une page lue trop tôt rend **zéro exercice**, ce qui se serait lu comme « rien à juger » — le même vert par vacuité que le champ `groupes` oublié en B5. L'outil attend désormais que les champs SOIENT POSÉS, pas un délai.
+
+  **7. Le piège d'insertion, évité par le contrôle et non par la chance.** `initExos` apparie `data-exos` aux blocs `.exercise` **par index**. Contrôle passé sur les 22 leçons **avant** écriture : toutes à 3 pour 3, sauf le capstone `lecon-22` (5 blocs, 4 entrées — écart délibéré et préexistant), qui n'a **pas** été touché. Contrôle repassé après écriture : **aucun décalage introduit**.
+
+  **8. Mesure.** Exercices à champ : **4 539 → 4 553** (+14). Exercices de prédiction sur le site : **0 → 14**, tous dans `ruby`. Les exercices corrigés **par exécution** ne bougent pas (**354**) : un exercice de prédiction est un `type:"text"`, il ne prétend pas être exécuté. **0 octet de moteur ajouté.**
+
+  **9. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (34,1 s). `verif-html` **0/0 sur 1 612 fichiers**. `verif-donnees` **0 erreur sur 25 invariants**. `verif-rendu` **0 erreur / 0 avertissement sur 18 mesures** (3 pages ruby × 3 largeurs × 2 thèmes, réseau coupé). `search-index.js` régénéré (43 774 mots) ; quiz, flashcards, antisèches et `search-lite` **identiques**. 0 URL de CDN. Le générateur est **idempotent** : relancé, il ne réécrit rien.
+
+- [ ] **B7b · Le lot `kotlin`** (151 blocs annonçant leur sortie sur 230, 2 cours). Même outil, même règle : une table de cibles à écrire dans `tools/prediction-exos.js`. ⚠️ Vérifier d'abord l'alignement `data-exos` ⇄ `.exercise` du cours, et compter les blocs `.exercise` par leçon (kotlin n'a pas forcément la structure régulière de `ruby`, qui était à 3 partout).
+- [ ] **B7c · Le reste des langages compilés** (`cpp` 70, `rust` 65, `elixir` 65, `c` 62, `php` 50, `java` 40, `csharp` 37, `go` 28) — un lot par famille. ⚠️ `bash` (65) est à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
 
 ---
 
