@@ -673,7 +673,61 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
 
   **11. Mesure.** Exercices à champ : **4 564 → 4 574** (+10). Exercices de prédiction sur le site : **25 → 35**. Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`. **0 octet de moteur ajouté.**
 
-- [ ] **B7c-2 · `rust`** (50 blocs à « // Sortie : », 214 blocs au total). L'outil sait désormais lire cette forme : la case est un travail de **choix de cibles et de contradiction**, pas d'outillage. Même méthode obligatoire : rejouer les sorties avant d'écrire, déclarer `commentaires: N`, faire démolir.
+- [x] **B7c-2 · `rust`** ✅ **2026-08-26. 10 exercices de prédiction — et le premier lot dont la contradiction a fait RETIRER et REMPLACER des cibles, pas seulement corriger des textes.**
+
+  **1. La mesure du plan ne se reproduit pas, et il faut le dire : 43 blocs, pas 50.** `scratchpad/v14-b7c2/inventaire-rust.js` applique la règle exacte de la forme `bloc` (tête STRICTE `// Sortie :`) aux **214 blocs `language-rust`** du cours : **43 la portent**, plus **1** tête « Sortie » non stricte. L'écart avec les « 50 blocs » annoncés en B7c-1 vient de la règle de comptage, pas du site. Et le gisement est CONCENTRÉ : ces 43 blocs tiennent dans **7 leçons** (01, 02, 05, 07, 12, 14, 16) sur 22. Les 15 autres leçons n'en portent aucun — ce qui borne mécaniquement le lot, une page hôte ne pouvant recevoir qu'un exercice de prédiction.
+
+  **2. LES SORTIES ONT ÉTÉ RECALCULÉES.** Ni `rustc` ni `cargo` sur cette machine (vérifié). `tools/preuves/rejoue-rust.js` transpose les programmes et reproduit ce que font `Display` et `Debug` : un f64 4.0 s'affiche **« 4 »** (c'est `{:?}` qui écrirait « 4.0 »), un Vec s'affiche **« [1, 2, 3] »** avec l'espace après la virgule, `str::len()` compte des **octets**, `strlen` s'arrête **au NUL**, `1..=5` inclut 5. Confronté aux sorties **extraites du HTML**, jamais retapées : **14 programmes, 20 lignes de sortie, 0 divergence.**
+
+  **Contre-épreuves CIBLÉES, parce qu'un rejeu qui ne trouve rien doit prouver qu'il sait trouver.** `--fausse=float` (le Display d'un f64 écrit « 4.0 ») fait tomber **exactement 1 programme**, celui qui en dépend ; `--fausse=debug` (la virgule du Debug perd son espace) en fait tomber **exactement 2**. Ni plus — donc la mesure discrimine — ni moins.
+
+  ⚠️ **Deux motifs de bloc trop larges ont d'abord fait diverger le rejeu** : `for recu in rx` et `Cons(i32, Box<List>)` désignaient un AUTRE bloc de la même leçon, qui porte une autre sortie. Le rejeu a rendu 2 divergences ; c'était l'outil qui visait mal, pas le site.
+
+  **3. LE FAN-OUT DE CONTRADICTION A REMPLACÉ DEUX CIBLES SUR ONZE ET EN A SUPPRIMÉ UNE.** Trois agents (calcul / triche / rédaction) sur 11 exercices écrits, tous mes contrôles verts, `verif.js --rapide` vert, 44 réponses acceptées et 44 fausses refusées dans Chrome, `verif-rendu` 66 mesures sans un avertissement.
+
+  Le contradicteur **calcul** a retransposé les 11 programmes indépendamment : **11 sorties sur 11 identiques**, code cité fidèle au bloc d'origine ligne à ligne, et les deux programmes à threads (mpsc, `Arc<Mutex>`) confirmés **déterministes** (le `join()` précède l'affichage, la somme est commutative). Les deux autres ont rendu ce que ni lui ni mes contrôles ne pouvaient voir :
+
+  | ce qui a été trouvé | vérifié par moi | traitement |
+  |---|---|---|
+  | **`lecon-01` : la réponse est la TRANSCRIPTION du code.** `Scores : [10, 7, 15]` est le littéral `let scores = [10, 7, 15];` au format près, et la ligne se devinait EN PLUS par élimination (3 `println!`, 2 lignes visibles) | oui, lu dans le bloc | **cible supprimée** — 11 exercices deviennent 10, et la leçon 01 n'offrait rien d'autre |
+  | **`Some(10)` : trois voies de recopie pour une seule réponse.** `Some(val)` est écrit dans le corps de la fonction, le `10` vient de l'appel juste au-dessus, et la ligne restée visible (« None ») montre déjà comment Debug écrit une Option | oui | **cible remplacée** par le bloc FFI `strlen` : le littéral compte 5 octets, la réponse en annonce 4, et aucune ligne visible ne le dit |
+  | **Un CARACTÈRE NUL publié dans un indice.** L'échappement Rust du terminateur, écrit avec une séquence JSON à quatre chiffres, devenait un vrai caractère de contrôle une fois le JSON relu par la page : l'apprenant lisait « le littéral écrit «  » ». **1 sur 1 612 fichiers**, invisible à l'œil, invisible à `verif-html` | oui, compté octet par octet | indice reformulé — il **nomme** l'octet au lieu de le citer. ⚠️ Et le piège s'est REPRODUIT en écrivant le commentaire qui le documente : l'outil d'écriture rend cette séquence en octet réel |
+  | **« à la fin du code » était FAUX une fois sur deux.** Le bloc `// Sortie :` est souvent écrit À L'INTÉRIEUR de `main()`, avant l'accolade fermante : la consigne de recherche envoyait chercher au mauvais endroit | oui, mesuré : **2 des 11 pages rust, et 5 des 10 pages cpp DÉJÀ PUBLIÉES** | formule corrigée dans le générateur **et sur les 10 pages cpp** (dette de B7c-1 soldée) |
+  | **Cinq réponses justes étaient REFUSÉES** pour une habitude de frappe : `Somme=15`, `Total=5000`, `sqrt(16.0)=4`, et `Extrait: …` sans l'espace française | oui, en exécutant `normExo` | `graphies()` élargi à l'espacement autour de `=` et **avant** `:` `;`. Le juge ignore déjà la CASSE et les ACCENTS : refuser une espace de frappe pendant qu'on accepte « SOMME = 15 » n'était pas une exigence, c'était une incohérence |
+  | **Six indices sur onze énonçaient le RÉSULTAT, pas une règle** : « la somme des cinq premiers entiers, ni plus ni moins », « 5 threads, chacun incrémentant 1000 fois », « la racine carrée de 16 est exacte » | oui, relus un par un | réécrits : un indice donne une règle ou désigne où regarder |
+  | **Un indice promettait une exigence que le juge n'applique pas** (« l'alignement du libellé, espaces comprises ») alors que `normExo` replie toute suite d'espaces | oui, en exécutant `normExo` | indice réécrit |
+  | **`extern "C"` transcrit en `extern « C »`** — un débutant qui recopie écrit du Rust invalide | oui | guillemets droits rétablis |
+  | **L'apostrophe COURBE des textes rompt avec le cours qui les héberge** | oui : la prose du cours rust compte **1 706 apostrophes droites pour 11 courbes**, et les 11 courbes étaient les miennes | les textes du lot passent à l'apostrophe droite |
+  | **Les `<details>` ignoraient l'espace insécable** que leurs voisins respectent (4 `&nbsp;` contre 0 espace simple sur les mêmes pages) | oui | fonction `typo()` dans le générateur, appliquée APRÈS `enc()` et jamais sur du code : **12 `&nbsp;`** posés |
+
+  **4. Une cible écartée par un garde-fou qu'il aurait été facile — et faux — d'assouplir.** La somme des pairs de 1 à 10 (« 30 ») a été refusée par le contrôle 6 : « 30 » figure dans la page hôte… dans des **coordonnées SVG** (`x1="230"`, `y="130"`). Le contrôle cherche une sous-chaîne brute dans tout le HTML et ne peut pas distinguer une divulgation d'un attribut de schéma. **On change de cible plutôt que le garde-fou** — et une réponse d'un nombre nu était de toute façon la plus faible du lot.
+
+  **5. Les 10 exercices** (bloc de la leçon *n* → exercice dans une leçon suivante) :
+
+  | source → hôte | ce qu'on fait prédire | réponse recalculée |
+  |---|---|---|
+  | 02 → 03 | la valeur de `y` après `y = y + 1` | `y vaut 11` |
+  | 05 → 06 | `repeter(mot.clone(), 3)`, séparateur compris | `résultat      : écho écho écho` |
+  | 07 → 08 | `split('.').next()` sur une phrase | `Extrait : Appelez-moi Ismaël` |
+  | 12 → 13 | un canal `mpsc` qui reçoit `1..=5` | `Somme = 15` |
+  | 14 → 15 | une liste cons en `Box`, sommée récursivement | `somme = 6` |
+  | 16 → 17 | `couper(&mut data, 2)`, deux tranches | `[1, 2] \| [3, 4]` |
+  | 16 → 18 | `sqrt(16.0)` en FFI, affiché par Display | `sqrt(16.0) = 4` |
+  | 16 → 19 | `strlen` sur `b"rust\0"` | `strlen = 4` |
+  | 12 → 20 | 5 threads × 1000 incréments sous `Mutex` | `Total = 5000` |
+  | 14 → 21 | deux `push` via deux `Rc` du même `RefCell` | `[1, 2, 3, 4, 5]` |
+
+  Ce sont des pièges : la borne INCLUSE de `..=`, le point qui n'appartient à aucun segment de `split`, l'espace ajoutée seulement à partir du deuxième tour, le f64 qui s'affiche sans zéro final, le NUL que `strlen` ne compte pas, et le `Rc` qui partage au lieu de copier.
+
+  **6. Réserves assumées, mesurées, non masquées.**
+  - **La réponse reste en clair dans la leçon SOURCE, pour 10 sur 10**, et le lien « Revoir » y mène (après 10 essais ratés, `EXO_LINK_STEP`). C'est inhérent à la règle A5 — on ne bâtit que sur une sortie DÉJÀ affirmée — et c'est la même réserve que sur les 35 exercices ruby/kotlin/cpp. **Le trancher reste la case B7c-6.**
+  - **`lecon-06` : la réponse publiée ne s'affiche pas au caractère près.** Les 6 espaces d'alignement sont repliées par le navigateur dans un `<code>` hors `<pre>`. Sans effet sur la correction — `normExo` les replie aussi — mais l'apprenant lit un espacement qui n'est pas celui du programme.
+  - **Les textes rédigés ne balisent aucun identifiant en `<code>`** (`println!`, `Rc`, `RefCell`…), là où le reste de ces pages en compte 1 193. C'est un choix du générateur, pas un oubli ponctuel ; le corriger vaut pour tous les lots à la fois.
+  - **La leçon 11 reste sans exercice** : aucune leçon antérieure n'offrait de cible non triviale, et prendre un bloc de la leçon 12 aurait divulgué la leçon suivante.
+
+  **7. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (37,0 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 10 pages hôtes : **60 mesures** (3 largeurs × 2 thèmes), **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome, en `file://` sans `--allow-file-access-from-files` : **40 réponses tapées, 40 acceptées** ; passe adversariale **40 fausses tapées, 40 refusées**. 🆕 **`--graphie=N`** ajouté à `exos-texte.js` — une tolérance ajoutée sans être tapée serait une affirmation sans preuve : **30 secondes graphies tapées, 30 acceptées**. Alignement `.exercise` ⇄ `data-exos` : **4 pour 4** sur les 10 pages. 0 BOM, 0 caractère NUL, 0 mojibake, JSON valide, **tout en LF** (les pages repassent en CRLF à chaque `git checkout` : `core.autocrlf` vaut `true`). **0 URL de CDN.** Générateur **idempotent**. `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
+
+  **8. Mesure.** Exercices à champ : **4 574 → 4 584** (+10). Exercices de prédiction sur le site : **35 → 45** (+10). Exercices corrigés **par exécution** : **354**, inchangés — un exercice de prédiction est un `type:"text"`. **0 octet de moteur ajouté.** Pages corrigées hors lot : **10 pages `cpp`** (consigne de recherche inexacte).
 - [ ] **B7c-3 · `java` et `csharp`** (37 et 31 blocs). ⚠️ `dotnet` n'a ici **que le runtime, aucun SDK** : C# n'est pas plus compilable que le reste, le rejeu par transposition reste la seule voie.
 - [ ] **B7c-4 · `c` et `php`** (28 et 29 blocs).
 - [ ] **B7c-5 · `go` et `elixir`** (22 et 1 blocs). ⚠️ `elixir` est le seul des huit à employer surtout l'annonce de fin de ligne (10 blocs) : c'est la forme de B7a/B7b qu'il faut y appliquer, pas la forme `bloc`.

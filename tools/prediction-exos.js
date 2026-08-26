@@ -435,6 +435,151 @@ var LOTS = {
      (« /* Sortie : … *​/ »), que la forme « bloc » ne lit pas. Un seul bloc du cours
      est dans ce cas ; le gain ne valait pas un troisième analyseur. */
     ]
+  },
+
+  /* ===================== B7c-2 — rust (2026-08-26) =====================
+     Même forme « bloc » que cpp, et même règle : chaque sortie a été RECALCULÉE avant
+     d'être reprise. Ni `rustc` ni `cargo` n'existent ici (vérifié) ;
+     `tools/preuves/rejoue-rust.js` transpose les 14 programmes et reproduit ce que
+     font Display et Debug — un f64 4.0 s'affiche « 4 », un Vec s'affiche « [1, 2, 3] »
+     avec l'espace après la virgule, `str::len()` compte des octets, `strlen` s'arrête
+     au NUL. 20 lignes comparées, 0 divergence ; les deux contre-épreuves ciblées
+     (`--fausse=float`, `--fausse=debug`) font tomber exactement 1 et 2 programmes,
+     ceux qui dépendent de la règle cassée.
+
+     ⚠️ LES THREADS. Deux cibles viennent de la leçon 12 (mpsc, Arc<Mutex>). Elles ne
+     sont retenues que parce que leur RÉSULTAT ne dépend pas de l'ordonnancement : un
+     `join()` précède l'affichage, et la somme est commutative. Un programme dont la
+     sortie dépendrait de l'ordre des `println!` concurrents serait à écarter.
+
+     ⚠️ L'APOSTROPHE EST DROITE, ici et nulle part ailleurs dans les lots. Mesuré : la
+     prose du cours rust compte 1 706 apostrophes DROITES pour 11 courbes — et les 11
+     courbes étaient celles du premier jet de ce lot. Les textes suivent donc le cours
+     qui les héberge, pas l'habitude des lots précédents. */
+  rust: {
+    dossier: 'rust', langue: 'rust', marqueur: '//', forme: 'bloc', fichierCite: 'extrait.rs',
+    cibles: [
+  { source: '02', page: '03', bloc: 'let mut y = 10;', ligne: 'y vaut',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["Les deux println! n'affichent pas la même variable : celui qui reste caché porte sur y.",
+            "y est déclaré mut : sa valeur a le droit de changer entre la déclaration et l'affichage.",
+            "La valeur affichée est celle d'APRÈS l'incrément, pas celle de la déclaration."],
+    pourquoi: "y est mutable et vaut 10 + 1 au moment du println!. Le println! lit la valeur courante, pas la valeur initiale.",
+    label: 'Revoir « Variables, types et fonctions »' },
+
+  { source: '05', page: '06', bloc: 'fn repeter(mot: String, fois: usize)', ligne: 'résultat',
+    quoi: 'la ligne manquante', commentaires: 5,
+    hints: ["La boucle tourne 3 fois, mais l'espace n'est ajouté que si i > 0.",
+            "Il y a donc un espace de moins que de répétitions.",
+            "Le libellé « résultat » du println! fait partie de la ligne affichée, comme le mot répété."],
+    pourquoi: "repeter concatène 3 fois « écho » en n'insérant un espace qu'à partir du deuxième tour : deux espaces pour trois mots, aucun en tête ni en queue.",
+    label: 'Revoir « La possession (ownership) »' },
+
+  { source: '07', page: '08', bloc: "struct Extrait<'a>", ligne: 'Extrait :',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["split('.') coupe la chaîne AU point : le point n'est dans aucun segment.",
+            "next() rend le PREMIER segment, pas la chaîne entière.",
+            "Le libellé « Extrait : » du println! fait partie de la ligne affichée."],
+    pourquoi: "split('.') découpe sur le point, qui n'appartient à aucun segment ; next() rend le premier. La struct ne fait qu'emprunter cette tranche de la String.",
+    label: 'Revoir « Les durées de vie (lifetimes) »' },
+
+  { source: '12', page: '13', bloc: 'tx.send(i).unwrap()', ligne: 'Somme =',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["Le thread envoie les entiers de 1 à 5 — la borne est INCLUSE avec ..=.",
+            "La boucle for recu in rx s'arrête quand le canal se ferme, donc rien n'est perdu.",
+            "Le libellé « Somme = » vient du println! ; ce qui le suit est le total accumulé."],
+    pourquoi: "1..=5 inclut 5 : le thread envoie 1, 2, 3, 4, 5. Quand tx est abandonné, le canal se ferme et la boucle du récepteur se termine, après avoir tout additionné.",
+    label: 'Revoir « La concurrence sans peur »' },
+
+  { source: '14', page: '15', bloc: 'fn somme(liste: &List)', ligne: 'somme =',
+    quoi: 'la ligne manquante', commentaires: 0,
+    hints: ["La liste chaînée contient trois valeurs, imbriquées les unes dans les autres.",
+            "La fonction est récursive : chaque maillon ajoute sa valeur à la somme du reste.",
+            "Nil rend 0 : il n'ajoute rien."],
+    pourquoi: "La récursion additionne 1, 2 et 3, puis Nil rend 0. Box ne change rien au calcul : il ne fait que donner une taille connue au type récursif.",
+    label: 'Revoir « Pointeurs intelligents et mutabilité intérieure »' },
+
+  /* ⚠️ Ce n'est PAS la cible d'origine. Le premier choix visait « 30 » (la somme des
+     pairs de 1 à 10, bloc `somme_pairs`) : le contrôle 6 l'a refusée, parce que « 30 »
+     figure dans la page hôte — dans des COORDONNÉES SVG (`x1="230"`, `y="130"`). Le
+     contrôle cherche une sous-chaîne brute dans tout le HTML : sur une réponse aussi
+     courte, il ne peut pas distinguer une divulgation d'un attribut de schéma. Plutôt
+     que d'affaiblir le garde-fou pour faire passer une cible, on change de cible — et
+     une réponse d'un nombre nu était de toute façon la plus faible du lot. */
+  { source: '16', page: '17', bloc: 'fn couper(v: &mut [i32], mid: usize)', ligne: '[1, 2]',
+    /* Les 5 commentaires restants sont la DOC de la fonction et les justifications de
+       sûreté (« les deux tranches ne se chevauchent pas ») : ils énoncent le contrat,
+       jamais le contenu des tranches. Relus un par un. */
+    quoi: 'la ligne manquante', commentaires: 5,
+    hints: ["`couper` rend DEUX tranches, et le println! les affiche toutes les deux.",
+            "La première tranche s'arrête à l'indice mid ; la seconde reprend là où l'autre s'arrête.",
+            "Le format {:?} entoure chaque tranche de crochets ; le « | » vient du println!."],
+    pourquoi: "couper découpe [1, 2, 3, 4] à l'indice 2 : la première tranche prend les 2 premiers éléments, la seconde le reste. Le bloc unsafe ne change pas le résultat, il rend seulement le découpage possible sans copie.",
+    label: 'Revoir « Async, unsafe et performance »' },
+
+  { source: '16', page: '18', bloc: 'fn sqrt(x: f64) -> f64;', ligne: 'sqrt(16.0)',
+    quoi: 'la ligne manquante', commentaires: 2,
+    hints: ['La fonction déclarée dans le bloc extern "C" est la sqrt de la bibliothèque C.',
+            "Son type de retour est f64, même quand la racine tombe juste.",
+            "Le Display d'un flottant n'écrit ni zéro final ni point inutile."],
+    pourquoi: "sqrt(16.0) rend le f64 4.0, et le format {} (Display) écrit la représentation la plus courte : « 4 ». C'est {:?} (Debug) qui écrirait « 4.0 ».",
+    label: 'Revoir « Async, unsafe et performance »' },
+
+  /* ⚠️ Ce n'est PAS la cible d'origine non plus. Le premier choix visait « Some(10) »
+     (bloc `get_unchecked`) : un contradicteur a montré que `Some(val)` est ÉCRIT dans
+     le corps de la fonction, que le `10` vient de l'appel juste au-dessus, et que la
+     deuxième ligne de sortie — « None », restée visible — montre déjà comment Debug
+     écrit une Option. Trois voies de recopie pour une seule réponse. Le bloc FFI, lui,
+     demande de savoir que `strlen` s'arrête AU NUL : le littéral compte 5 octets, la
+     réponse en annonce 4, et aucune ligne visible ne le dit.
+     ⚠️ ET L'INDICE 2 A FAILLI PUBLIER UN CARACTÈRE NUL. Il cite l'échappement Rust du
+     terminateur ; écrit avec une séquence d'échappement JSON à quatre chiffres dans le premier jet, il devenait un
+     VRAI caractère de contrôle une fois le JSON relu par la page, et l'apprenant lisait
+     « le littéral écrit «  » ». Invisible à l'œil, invisible à verif-html : trouvé par
+     un contradicteur qui cherchait les caractères de contrôle. La formulation ne cite
+     donc plus l'échappement, elle nomme l'octet. */
+  { source: '16', page: '19', bloc: 'fn strlen(s: *const c_char) -> usize;', ligne: 'strlen =',
+    quoi: 'la ligne manquante', commentaires: 3,
+    hints: ["strlen vient du C : elle ne connaît pas la longueur, elle la cherche.",
+            "Une chaîne C se termine par un octet NUL, celui que le littéral ajoute à la fin.",
+            "Ce terminateur marque la fin : il n'est pas compté dans le nombre d'octets rendu."],
+    pourquoi: "strlen parcourt les octets jusqu'au NUL et rend le nombre d'octets qui le PRÉCÈDENT : le littéral en compte 5, la longueur rendue est donc plus courte d'une unité.",
+    label: 'Revoir « Async, unsafe et performance »' },
+
+  { source: '12', page: '20', bloc: 'for _ in 0..1000', ligne: 'Total =',
+    quoi: 'la ligne manquante', commentaires: 1,
+    hints: ["Chaque thread exécute la MÊME boucle : lis-en les bornes, elles sont exclusives.",
+            "Le Mutex sérialise les incréments : aucun n'est perdu, aucun n'est compté deux fois.",
+            "Le join() de tous les threads a lieu AVANT l'affichage."],
+    pourquoi: "5 threads × 1000 incréments, chacun protégé par le Mutex : le total est exact et déterministe. Sans le verrou, le compilateur refuserait tout simplement le partage.",
+    label: 'Revoir « La concurrence sans peur »' },
+
+  { source: '14', page: '21', bloc: 'vue_b.borrow_mut().push(5)', ligne: '[1,',
+    quoi: 'la ligne manquante', commentaires: 2,
+    hints: ["Rc::clone ne duplique pas la valeur : il ajoute un propriétaire.",
+            "RefCell autorise la mutation d'une valeur pourtant déclarée sans mut.",
+            "Les deux push s'appliquent donc au même vecteur, dans l'ordre où ils sont écrits."],
+    pourquoi: "Rc partage la valeur au lieu de la copier, et RefCell autorise la mutation malgré l'immuabilité apparente : les deux push s'ajoutent au même vecteur.",
+    label: 'Revoir « Pointeurs intelligents et mutabilité intérieure »' }
+
+  /* ÉCARTÉS, et pour des raisons qui valent d'être écrites :
+     · `lecon-01` (« Scores : [10, 7, 15] ») : la sortie Debug est le littéral du code,
+       à la virgule près — de la transcription, et la ligne se devinait en plus par
+       élimination (3 println!, 2 lignes visibles). La leçon 01 n'offrait rien d'autre.
+     · `lecon-07` bloc « plus_longue » (sortie « rouille ») et `lecon-05` bloc « consomme »
+       (« je possède : a » puis « b ») : la réponse est un littéral du code, elle se
+       recopie sans rien comprendre. Le contrôle 5 les refuse, et il a raison.
+     · `lecon-14` bloc « Ressource » (Drop) : la sortie restante nomme déjà « libération
+       de A », donc « libération de B » se déduit par simple symétrie — c'est la faute
+       relevée sur cpp/lecon-04, une réponse obtenue par élimination.
+     · `lecon-14` bloc « RefCell » qui PANIQUE à la fin (BorrowMutError) : la sortie
+       annoncée précède la panique. Demander « ce que le programme affiche » d'un
+       programme qui s'interrompt serait ambigu.
+     · `lecon-16` blocs `tokio` : la sortie dépend d'un ordonnanceur asynchrone.
+     · La leçon 11 reste sans exercice de prédiction : aucune leçon ANTÉRIEURE ne
+       fournissait de cible non triviale, et prendre un bloc de la leçon 12 aurait
+       divulgué la leçon suivante. */
+    ]
   }
 };
 
@@ -452,6 +597,15 @@ function dec(s) {
 }
 function enc(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+/* La typographie du site : espace INSÉCABLE avant les ponctuations doubles. Mesuré par
+   un contradicteur sur les 10 pages hôtes du lot rust — les `<details>` voisins en
+   comptent 4 pour 0 espace simple, la prose de ces pages 398 pour 122, et l'énoncé
+   généré ici respectait déjà la règle (33 `&nbsp;`, 0 simple) alors que la réponse
+   rédigée l'ignorait : deux plumes dans un même exercice. À appliquer APRÈS enc(),
+   sur du texte déjà échappé, et jamais sur du code. */
+function typo(s) {
+  return s.replace(/ ([:;!?»])/g, '&nbsp;$1').replace(/« /g, '«&nbsp;');
 }
 /* La valeur annoncée, débarrassée de la glose que la leçon met entre parenthèses :
    « nil       (hors limites : pas d'erreur !) » → « nil ».
@@ -495,6 +649,28 @@ function graphies(v) {
     add(sansG.replace(/,\s+/g, ','));
   }
   add(v.replace(/\s*->\s*/g, '->'));
+  /* ⚠️ LES ESPACES AUTOUR DU « = ». `normExo` réduit les SUITES d'espaces, il n'égalise
+     pas « Somme = 15 » et « Somme=15 » : un apprenant qui a parfaitement prédit la
+     valeur était refusé pour une habitude de frappe. Mesuré par un contradicteur sur
+     5 des 11 cibles rust (« Somme=15 », « Total=5000 », « somme=6 », « sqrt(16.0)=4 »).
+     C'est la même correction que celle faite en B7c-1 sur la virgule des listes, et
+     elle est du même ordre : une tolérance de SAISIE, jamais de contenu — la valeur
+     annoncée doit être exacte, seule sa mise en espace est libre. */
+  if (v.indexOf('=') >= 0) {
+    add(v.replace(/\s*=\s*/g, '='));
+    add(sansG.replace(/\s*=\s*/g, '='));
+  }
+  /* ⚠️ ET L'ESPACE FRANÇAISE AVANT LES DEUX-POINTS. Même raison, et même mesure : sur
+     « Extrait : Appelez-moi Ismaël », un apprenant qui a tout compris mais tape à
+     l'anglo-saxonne (« Extrait: … ») était refusé. Le juge du site ignore déjà la
+     CASSE et les ACCENTS : refuser une espace de frappe pendant qu'on accepte
+     « SOMME = 15 » n'était pas une exigence, c'était une incohérence. On ne touche
+     qu'à l'espace AVANT la ponctuation, celle qui est une convention typographique
+     française et non un caractère produit par le programme. */
+  if (/\s[:;]/.test(v)) {
+    add(v.replace(/\s+([:;])/g, '$1'));
+    add(sansG.replace(/\s+([:;])/g, '$1'));
+  }
   return out;
 }
 
@@ -883,10 +1059,16 @@ Object.keys(LOTS).forEach(function (nomLot) {
       ? '<p><strong>Sans exécuter le code</strong>&nbsp;: quelle sortie remplace le <code>?</code> de la ligne marquée <code>' +
         enc(lot.marqueur) + '&nbsp;=&gt;</code>&nbsp;?</p>'
       : (nbSorties > 1
-        ? '<p><strong>Sans exécuter le code</strong>&nbsp;: la sortie complète du programme est écrite en commentaire à la fin, mais <strong>une de ses lignes a été remplacée par <code>' +
+        ? '<p><strong>Sans exécuter le code</strong>&nbsp;: la sortie complète du programme est écrite en commentaire, mais <strong>une de ses lignes a été remplacée par <code>' +
           enc(lot.marqueur) + '&nbsp;?</code></strong>. Quelle est cette ligne&nbsp;?</p>'
+        /* ⚠️ « À LA FIN DU CODE » ÉTAIT FAUX UNE FOIS SUR DEUX, et c'est un
+           contradicteur qui l'a vu : le bloc « // Sortie : » est souvent écrit À
+           L'INTÉRIEUR de main(), avant l'accolade fermante. Mesuré le 2026-08-26 :
+           2 des 11 pages rust et 5 des 10 pages cpp déjà publiées portaient donc une
+           consigne de recherche inexacte. La formule ne parle plus d'un emplacement,
+           mais de ce qui est vrai partout — la sortie est écrite EN COMMENTAIRE. */
         : '<p><strong>Sans exécuter le code</strong>&nbsp;: ce programme n\'affiche qu\'une seule ligne, et elle a été remplacée par <code>' +
-          enc(lot.marqueur) + '&nbsp;?</code> à la fin du code. Quelle est-elle&nbsp;?</p>');
+          enc(lot.marqueur) + '&nbsp;?</code> dans le commentaire de sortie. Quelle est-elle&nbsp;?</p>');
     var bloc =
       '<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice ' + num +
       '</span><span class="exercise__level">Prédiction</span></div>' + question + provenance +
@@ -899,7 +1081,7 @@ Object.keys(LOTS).forEach(function (nomLot) {
          voit pas : c'est un contradicteur qui l'a trouvé, en cherchant `<` non suivi
          d'une lettre. Une valeur injectée dans du HTML passe par enc(), sans exception. */
       '<details><summary>Voir la réponse</summary><p>La ligne affiche <code>' + enc(attendu) + '</code>.' +
-      (t.pourquoi ? ' ' + enc(t.pourquoi) : '') + '</p></details></div>';
+      (t.pourquoi ? ' ' + typo(enc(t.pourquoi)) : '') + '</p></details></div>';
 
     var entree = {
       type: 'text', accept: accept,

@@ -279,7 +279,8 @@ println!("{sortie}");         // {"ok":true,"items":[1,2,3]}</code></pre></figur
 [
   {"type":"text","accept":["serde_json","serde json"],"placeholder":"la crate qui implémente le format JSON pour serde : …","hints":["serde + le nom du format.","On l'appelle avec ::to_string et ::from_str.","serde_????"],"link":{"href":"lecon-20.html","label":"Revoir « Installer serde »"}},
   {"type":"text","accept":["to_string_pretty","to_string_pretty()","pretty"],"placeholder":"la fonction serde_json qui produit du JSON INDENTÉ (lisible) : serde_json::___","hints":["Comme to_string mais « joli ».","On l'utilise pour un fichier de config.","to_string_??????"],"link":{"href":"lecon-20.html","label":"Revoir « Lisible pour un humain »"}},
-  {"type":"text","accept":["null"],"placeholder":"en JSON, la valeur produite par un champ Option qui vaut None : …","hints":["L'absence de valeur en JSON.","Quatre lettres.","n???"],"link":{"href":"lecon-20.html","label":"Revoir « imbriqué »"}}
+  {"type":"text","accept":["null"],"placeholder":"en JSON, la valeur produite par un champ Option qui vaut None : …","hints":["L'absence de valeur en JSON.","Quatre lettres.","n???"],"link":{"href":"lecon-20.html","label":"Revoir « imbriqué »"}},
+  {"type":"text","accept":["Total = 5000","Total=5000"],"placeholder":"la ligne manquante : …","hints":["Chaque thread exécute la MÊME boucle : lis-en les bornes, elles sont exclusives.","Le Mutex sérialise les incréments : aucun n'est perdu, aucun n'est compté deux fois.","Le join() de tous les threads a lieu AVANT l'affichage."],"link":{"href":"lecon-12.html","label":"Revoir « La concurrence sans peur »"}}
 ]
 </script>
 
@@ -326,6 +327,32 @@ fn main() -&gt; Result&lt;(), serde_json::Error&gt; {
     println!("{u:?}"); // Utilisateur { user_id: 3, user_name: "kim" }
     Ok(())
 }</code></pre></figure><p>L'attribut <code>rename_all = "camelCase"</code> traduit d'un coup&nbsp;: on garde des noms <code>snake_case</code> côté Rust tout en parlant <code>camelCase</code> avec l'API.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Prédiction</span></div><p><strong>Sans exécuter le code</strong>&nbsp;: ce programme n'affiche qu'une seule ligne, et elle a été remplacée par <code>//&nbsp;?</code> dans le commentaire de sortie. Quelle est-elle&nbsp;?</p><p><em>Ce code est repris de la leçon 12.</em></p><figure class="code-block" data-file="extrait.rs"><pre><code class="language-rust">use std::sync::{Arc, Mutex};
+use std::thread;
+
+fn main() {
+    let compteur = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..5 {
+        let compteur = Arc::clone(&amp;compteur);
+        let h = thread::spawn(move || {
+            for _ in 0..1000 {
+                let mut n = compteur.lock().unwrap();
+                *n += 1;
+            } // le verrou est relâché à chaque tour
+        });
+        handles.push(h);
+    }
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    println!("Total = {}", *compteur.lock().unwrap());
+}
+// Sortie :
+// ?</code></pre></figure><details><summary>Voir la réponse</summary><p>La ligne affiche <code>Total = 5000</code>. 5 threads × 1000 incréments, chacun protégé par le Mutex&nbsp;: le total est exact et déterministe. Sans le verrou, le compilateur refuserait tout simplement le partage.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

@@ -40,6 +40,12 @@ var RACINE = path.resolve(__dirname, '..', '..');
 var PORT = 9359;
 var args = process.argv.slice(2);
 var CONTRE = args.indexOf('--contre') !== -1;
+/* Quelle GRAPHIE de `accept` taper. Par défaut la première — la réponse publiée. Mais
+   `accept` en porte souvent plusieurs : ce sont des TOLÉRANCES DE FRAPPE (la virgule
+   sans espace d'une liste, l'espace française avant les deux-points, l'espacement
+   autour du « = »). Les ajouter sans jamais les taper reviendrait à les affirmer sans
+   preuve — exactement ce que ce chantier combat. `--graphie=1` tape la deuxième. */
+var GRAPHIE = Number((args.filter(function (a) { return a.indexOf('--graphie=') === 0; })[0] || '').split('=')[1] || 0);
 var PAGES = args.filter(function (a) { return a.indexOf('--') !== 0; });
 if (!PAGES.length) { console.log('exos-texte.js — aucune page : passer des chemins.'); process.exit(0); }
 
@@ -106,6 +112,7 @@ function connecter(wsUrl) {
 var SCRIPT = [
   '(async () => {',
   '  const CONTRE = ' + (CONTRE ? 'true' : 'false') + ';',
+  '  const GRAPHIE = ' + GRAPHIE + ';',
   '  const sortie = [];',
   '  const exos = [...document.querySelectorAll(".exercise")];',
   '  let donnees = [];',
@@ -116,7 +123,7 @@ var SCRIPT = [
   '    if (!entree || entree.type !== "text") continue;',
   '    const champ = ex.querySelector("input.exo-try__input") || ex.querySelector("textarea.exo-try__input");',
   '    if (!champ) { sortie.push({ i: i + 1, etat: "sans-champ" }); continue; }',
-  '    const bonne = (entree.accept || [])[0];',
+  '    const bonne = (entree.accept || [])[GRAPHIE];',
   '    if (bonne == null) { sortie.push({ i: i + 1, etat: "sans-accept" }); continue; }',
   /* La contre-réponse : la bonne, suffixée d'un caractère qu'aucune normalisation du
      site ne retire (normExo ne touche qu'aux espaces, aux accents, à la casse et au
