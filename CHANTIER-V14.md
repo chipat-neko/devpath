@@ -967,7 +967,30 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
   **5. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (37,3 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 10 pages touchées : **60 mesures**, **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome : **54 réponses tapées, 54 acceptées** (36 sur les 9 pages hôtes neuves, 18 sur les 6 pages allégées) ; passe adversariale **36 fausses tapées, 36 refusées**. `--rejouer` : **0 faute** (11 avant). Alignement `.exercise` ⇄ `data-exos` vérifié avant ET après chaque retrait ; les 39 pages du site qui portent plus de blocs que d'entrées sont **préexistantes et bénignes** (l'appariement se fait par index, le bloc surnuméraire est le dernier) — mesuré avant et après : 39 et 39. 0 BOM, 0 CRLF, 0 mojibake, JSON valide. `search-index.js` régénéré ; quiz, flashcards, antisèches et `search-lite` **identiques**.
 
   **6. Mesure.** Exercices à champ : **4 611 → 4 606** (−5). Exercices de prédiction : **72 → 67** (−4 retirés au titre du point 1, −1 perdue au point 2). Exercices citant leur propre page : **10 → 0**. Libellés de lien faux : **7 → 0**. Fautes rendues par `--rejouer` : **11 → 0**. Fins de ligne remises en LF : **9 262**.
-- [ ] **B7d · `bash`** (65 blocs) — à traiter à part : ses sorties dépendent du système, et la règle A5 n'y suffit pas.
+- [x] **B7d · `bash`** ✅ **2026-08-26. Le seul lot du chantier dont les sorties ont été RÉELLEMENT EXÉCUTÉES — et le gisement annoncé (« 65 blocs ») ne se reproduit pas : il y en a 4.**
+
+  **1. Ici, on n'a pas transposé : on a lancé.** Les huit rejeux précédents (cpp, rust, java, csharp, c, php, go, elixir) transposent le programme en JavaScript, faute d'avoir le langage sur la machine. `bash`, lui, **est installé** (GNU bash 5.3, vérifié) : `tools/preuves/rejoue-bash.js` écrit chaque bloc dans un fichier temporaire, le **LANCE**, et compare sa sortie ligne à ligne à celle que la leçon annonce. **4 scripts exécutés, 8 lignes comparées, 0 divergence.** C'est le seul rejeu du chantier qui ne puisse pas se tromper de la même façon que le contenu qu'il vérifie.
+
+  **Contre-épreuve** : `--fausse=local` retire la déclaration locale des variables — **exactement 1 script** diverge, et sur la bonne ligne (« Après bon() : global » devient « Après bon() : interne »).
+
+  **2. ⚠️ UN REJEU QUI EXÉCUTE DU CODE DOIT SE GARDER, ET LE PROUVER.** Deux barrières, dans cet ordre : (a) seuls les blocs **désignés** dans une liste blanche sont exécutés ; (b) chacun est **refusé** s'il contient une commande qui touche au système ou au réseau (`rm`, `mv`, `cp`, `curl`, `sudo`, `chmod`, une redirection vers un chemin absolu…). La seconde protège de la première : si une leçon change et qu'un bloc désigné devient dangereux, le rejeu s'arrête au lieu de l'exécuter. **Contre-épreuve du garde-fou : 42 des 212 blocs du cours seraient refusés (20 %)** — il sait donc refuser. Le script tourne dans un répertoire temporaire jetable, sans argument, sans entrée standard, avec un délai maximal.
+
+  **3. Le chiffre du plan ne se reproduit pas, et la raison est de fond.** `pages/bash` compte **212 blocs**. À la règle stricte du générateur (« # Sortie : » en tête de la sortie), **4 seulement** annoncent ce qu'ils produisent — tous dans `lecon-08`, les fonctions — et **0 bloc** emploie la forme « # => ». Le plan annonçait « 65 blocs ». Ce n'est pas un défaut du cours : **un cours de shell montre surtout des commandes dont la sortie dépend de la machine** (`ls`, `df`, `date`, `ps`, un chemin, un nom d'utilisateur), et l'on ne peut rien en affirmer de fixe — c'est précisément ce que le plan pressentait en écrivant « ses sorties dépendent du système, et la règle A5 n'y suffit pas ». La règle A5 suffit, mais elle ne trouve que 4 blocs. Les 4 retenus ne touchent ni au disque, ni au réseau, ni à l'horloge : `echo`, arithmétique entière, portée des variables.
+
+  **4. Deux exercices écrits sur trois.**
+
+  | source → hôte | ce qu'on fait prédire | réponse exécutée |
+  |---|---|---|
+  | bash 08 → 10 | ce que devient une variable globale après une fonction qui déclare la sienne en local | `Après bon() : global` |
+  | bash 08 → 11 | une somme rendue par `echo` et récupérée par substitution de commande | `Total : 42` |
+
+  **La troisième cible est ÉCARTÉE** (« Code de sortie : 7 ») : la sortie de ce bloc fait deux lignes, et celle qui reste affichée est « Somme : 7 » — le chiffre demandé est donc écrit une ligne plus bas. **Même motif que `go/lecon-07` en B7c-5** : on donnait la valeur et on demandait l'étiquette. Le bloc reste vérifié par le rejeu (il tourne vraiment, et `$?` vaut bien 7) ; il ne porte simplement pas d'exercice.
+
+  **5. Trois commentaires masqués, et un piège de comptage propre à Bash.** Dans le bloc de portée, « vit seulement dans la fonction », « global : intact, ouf » et « global : écrasé » énonçaient à eux trois toute la réponse : neutralisés par le champ `masquer`. ⚠️ **Le SHEBANG est un commentaire comme un autre pour le contrôle 11** (le marqueur de Bash est `#`) : il entre dans le compte déclaré, ce qui n'était le cas d'aucun autre lot.
+
+  **6. Contrôles.** `verif.js --rapide` **tout vert, 7 étapes** (37,5 s). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `verif-rendu` sur les 2 pages hôtes : **12 mesures**, **0 erreur, 0 avertissement**. `exos-texte.js` dans Chrome, en `file://` : **8 réponses tapées, 8 acceptées** ; adversarial **8 fausses, 8 refusées** ; **5 graphies élargies acceptées**. `--rejouer` : **0 faute**. 0 CRLF, 0 BOM, JSON valide. `search-index.js` régénéré ; les quatre autres index **identiques**.
+
+  **7. Mesure.** Exercices à champ : **4 606 → 4 608** (+2). Exercices de prédiction : **67 → 69** (+2). Lignes de sortie **réellement exécutées et comparées** : **8**. Blocs du cours qui seraient refusés par le garde-fou : **42 sur 212**. Blocs à tête stricte : **4 sur 212** (et non 65).
 
 ---
 
