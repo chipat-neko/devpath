@@ -109,6 +109,8 @@
     return String(entree.motif || "").replace(/\\.|\(\?:|[()\[\]{}|^$*+?.]/g, "").length;
   }
 
+  var NOM_LANGUE = { javascript: "JavaScript", python: "Python", sql: "SQL", bash: "Bash" };
+
   /* --------------------------------- rendu --------------------------------- */
   function ech(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -123,7 +125,7 @@
     return (
       '<article class="dec-fiche ' + (ouvert ? "is-ouverte" : "") + '" data-id="' + ech(e.id) + '">' +
         '<header class="dec-fiche__tete">' +
-          '<span class="dec-fiche__langue">' + (e.langue === "python" ? "Python" : "JavaScript") + "</span>" +
+          '<span class="dec-fiche__langue">' + NOM_LANGUE[e.langue] + "</span>" +
           '<h2 class="dec-fiche__titre"><code>' + ech(e.gabarit) + "</code></h2>" +
           (s > 0 ? '<span class="dec-fiche__score ' + c.classe + '">' + c.texte + "</span>" : "") +
         "</header>" +

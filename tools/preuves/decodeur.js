@@ -46,6 +46,16 @@ var ERREURS = sandbox.window.ERREURS;
 
 /** Une trace vraisemblable autour du message, selon le langage. */
 function trace(e) {
+  /* SQL : les clients affichent le message avec un prefixe qui leur est propre. */
+  if (e.langue === 'sql') {
+    return 'Error: ' + e.message + '\n' +
+      '  at Database.exec (sql-wasm.js:1:12345)\n' +
+      "  requete : SELECT ... FROM ...";
+  }
+  /* Bash : le prefixe fichier + numero de ligne, exactement comme le shell l'ecrit. */
+  if (e.langue === 'bash') {
+    return './deploiement.sh: line 42: ' + e.message;
+  }
   if (e.langue === 'javascript') {
     return 'D:\\projets\\mon-site\\app.js:12\n' +
       '  console.log(x);\n              ^\n\n' + e.message + '\n' +
@@ -78,10 +88,26 @@ var RENOMMAGES = {
   'py-unbound': ["'compteur'", "'sous_total'"],
   'py-int-iterable': ["'int' object", "'float' object"],
   'py-indent': ["'if' statement on line 1", "'for' statement on line 12"],
+  'sql-table': ['clients', 'utilisateurs'],
+  'sql-colonne': ['nom_complet', 'date_naissance'],
+  'sql-syntaxe': ['"FORM"', '"SELCT"'],
+  'sql-unique': ['client.email', 'produit.reference'],
+  'sql-notnull': ['client.nom', 'facture.total'],
+  'sql-ambigu': ['id', 'code'],
+  'sql-fonction': ['NOW', 'GETDATE'],
+  'sh-command-not-found': ['monoutil', 'docekr'],
+  'sh-unbound': ['INEXISTANT', 'CHEMIN_BASE'],
+  'sh-readonly': ['TAUX', 'RACINE'],
+  'sh-substitution': ['${x!!}', '${chemin//}'],
   'js-parenthese': null, 'js-const': null, 'js-stack': null, 'js-json-vide': null,
   'js-json-simple': null, 'js-tofixed': null, 'js-await-hors-async': null,
   'py-concat': null, 'py-index': null, 'py-zero': null, 'py-deux-points': null,
-  'py-parenthese': null, 'py-recursion': null
+  'py-parenthese': null, 'py-recursion': null,
+  /* Ces messages ne portent aucun nom propre : il n'y a rien a renommer. */
+  'sql-nb-valeurs': null, 'sql-agregat': null, 'sql-sous-requete': null,
+  'sql-incomplet': null, 'sql-order-range': null, 'sql-table-existe': null, 'sql-fk': null,
+  'sh-no-such-file': null, 'sh-eof-guillemet': null, 'sh-token-inattendu': null,
+  'sh-fin-de-fichier': null, 'sh-test-unaire': null, 'sh-division': null
 };
 var FAUX = [
   'MonSuperError: le café est froid',
@@ -144,6 +170,7 @@ var FAUX = [
     bilan.trace[1]++; if (b && b.id === e.id) bilan.trace[0]++;
     else console.log('  ✗ TRACE ENTIÈRE  ' + e.id + ' → ' + (b ? b.id + ' (' + b.s + ')' : 'rien'));
 
+    if (!(e.id in RENOMMAGES)) console.log('  ⚠ RENOMMAGE non declare pour ' + e.id + ' -- epreuve 3 non jouee');
     var r = RENOMMAGES[e.id];
     if (r) {
       var autre = e.message.split(r[0]).join(r[1]);

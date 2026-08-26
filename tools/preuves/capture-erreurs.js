@@ -99,6 +99,34 @@ var CAS = [
     'def compter(n):\n    return compter(n + 1)\n\ncompter(0)' },
   { cle: 'py-int-iterable', langue: 'py', attendu: 'TypeError', code:
     'for x in 5:\n    print(x)' }
+ ,
+
+  /* ============================== Bash =============================== */
+  /* ATTENTION : les messages de Bash sont PREFIXES par le fichier et la ligne
+     (« /tmp/xyz.sh: line 1: ... ») : ce prefixe est propre a l'execution et n'a rien
+     a faire dans un fichier de donnees. Il est retire a la capture. Et ils sont
+     LOCALISES : on force LC_ALL=C pour capturer la forme anglaise, celle que
+     l'apprenant verra sur la plupart des machines et dans tous les forums. */
+  { cle: 'sh-command-not-found', langue: 'sh', attendu: '', code:
+    'monoutil --version' },
+  { cle: 'sh-no-such-file', langue: 'sh', attendu: '', code:
+    'cat /tmp/fichier-qui-nexiste-pas-42.txt' },
+  { cle: 'sh-eof-guillemet', langue: 'sh', attendu: '', code:
+    'echo "bonjour' },
+  { cle: 'sh-token-inattendu', langue: 'sh', attendu: '', code:
+    'for i in 1 2; echo $i' },
+  { cle: 'sh-fin-de-fichier', langue: 'sh', attendu: '', code:
+    'if true\nthen\n  echo ok' },
+  { cle: 'sh-test-unaire', langue: 'sh', attendu: '', code:
+    'x=5\n[ $x -eq ]' },   /* sans `if` : sinon le script se termine avec 0 et rien n'est capture */
+  { cle: 'sh-substitution', langue: 'sh', attendu: '', code:
+    'x=1\necho ${x!!}' },
+  { cle: 'sh-unbound', langue: 'sh', attendu: '', code:
+    'set -u\necho "$INEXISTANT"' },
+  { cle: 'sh-division', langue: 'sh', attendu: '', code:
+    'n=0\necho $((5 / n))' },
+  { cle: 'sh-readonly', langue: 'sh', attendu: '', code:
+    'declare -r TAUX=1\nTAUX=2' }
 ];
 
 /* --- exécution -------------------------------------------------------------------- */
@@ -114,6 +142,9 @@ var VPY = version('python', ['--version']);
 function ligneErreur(sortie, langue) {
   var l = sortie.replace(/\r\n?/g, '\n').split('\n').filter(function (x) { return x.trim(); });
   if (!l.length) return '';
+  /* Bash : PREMIERE ligne, prefixe retire. Le prefixe (« /tmp/x.sh: line 1: ») change
+     a chaque execution ; ce qui est stable, et donc cherchable, vient apres. */
+  if (langue === 'sh') return l[0].replace(/^.*?:\s*(?:line|ligne)\s+\d+:\s*/, '').trim();   /* .*? et non [^:]* : un chemin Windows porte deja un deux-points (C:) */
   if (langue === 'py') return l[l.length - 1].trim();
   /* Node : la première ligne qui commence par un nom d'erreur. */
   for (var i = 0; i < l.length; i++) {
@@ -124,12 +155,14 @@ function ligneErreur(sortie, langue) {
 
 var res = [], sansErreur = 0, autreType = 0;
 CAS.forEach(function (c) {
-  var f = path.join(tmp, c.cle + (c.langue === 'js' ? '.js' : '.py'));
+  var EXT = { js: '.js', py: '.py', sh: '.sh' }, CMD = { js: 'node', py: 'python', sh: 'bash' };
+  var f = path.join(tmp, c.cle + EXT[c.langue]);
   fs.writeFileSync(f, c.code, 'utf8');
   var sortie = '', code = 0;
   try {
-    cp.execFileSync(c.langue === 'js' ? 'node' : 'python', [f],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
+    cp.execFileSync(CMD[c.langue], [f],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000,
+        env: Object.assign({}, process.env, { LC_ALL: 'C', LANG: 'C' }) });
   } catch (err) {
     code = err.status === undefined ? -1 : err.status;
     sortie = (err.stderr || '') + (err.stdout || '');
@@ -137,7 +170,7 @@ CAS.forEach(function (c) {
   var msg = ligneErreur(sortie, c.langue);
   var typeVu = (msg.match(/^([A-Za-z]+Error)/) || [])[1] || '';
   if (!msg) { console.log('⚠ ' + c.cle + ' : AUCUNE erreur — cet extrait ne casse pas'); sansErreur++; }
-  else if (typeVu !== c.attendu) { console.log('⚠ ' + c.cle + ' : ' + typeVu + ' au lieu de ' + c.attendu + ' — « ' + msg + ' »'); autreType++; }
+  else if (c.langue !== 'sh' && typeVu !== c.attendu) { console.log('⚠ ' + c.cle + ' : ' + typeVu + ' au lieu de ' + c.attendu + ' — « ' + msg + ' »'); autreType++; }
   else console.log('✓ ' + c.cle + '  ' + msg);
   res.push({ cle: c.cle, langue: c.langue, attendu: c.attendu, vu: typeVu, message: msg, code: c.code, sortie: code });
 });

@@ -43,17 +43,23 @@ var INTERDIT = /\brequire\s*\(|\bimport\s+(?:os|sys|subprocess|shutil|socket|url
 var DEROGATION = { 'js-await-hors-async': 'fetch() est écrit dans un fichier qui ne compile pas : il ne s\'exécute jamais' };
 
 var tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verif-erreurs-'));
+var EXT = { javascript: '.js', python: '.py', bash: '.sh' };
+var CMD = { javascript: 'node', python: 'python', bash: 'bash' };
 function executer(code, langue, cle) {
-  var f = path.join(tmp, cle + (langue === 'javascript' ? '.js' : '.py'));
+  var f = path.join(tmp, cle + EXT[langue]);
   fs.writeFileSync(f, code, 'utf8');
   try {
-    cp.execFileSync(langue === 'javascript' ? 'node' : 'python', [f],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20000 });
+    cp.execFileSync(CMD[langue], [f],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20000,
+        env: Object.assign({}, process.env, { LC_ALL: 'C', LANG: 'C' }) });
     return '';
   } catch (err) {
     var sortie = ((err.stderr || '') + (err.stdout || '')).replace(/\r\n?/g, '\n');
     var l = sortie.split('\n').filter(function (x) { return x.trim(); });
     if (!l.length) return '(échec sans message)';
+    /* Bash : PREMIERE ligne, prefixe « fichier: line N: » retire -- il est propre a
+       l'execution, et ce n'est pas lui que l'apprenant cherche. */
+    if (langue === 'bash') return l[0].replace(/^.*?:\s*(?:line|ligne)\s+\d+:\s*/, '').trim();
     if (langue === 'python') return l[l.length - 1].trim();
     for (var i = 0; i < l.length; i++) if (/^[A-Za-z]*Error[:\s]/.test(l[i].trim())) return l[i].trim();
     return l[l.length - 1].trim();
@@ -74,7 +80,7 @@ function titreDe(href) {
 }
 
 var CHAMPS = ['id', 'langue', 'type', 'message', 'gabarit', 'motif', 'cles', 'cause', 'remede', 'exemple', 'lecon', 'moteur'];
-var fautes = [], vus = {}, testes = 0, sautes = 0;
+var fautes = [], vus = {}, testes = 0, sautes = 0, delegues = 0;
 
 ERREURS.forEach(function (e, i) {
   var id = e.id || ('#' + i);
@@ -83,9 +89,18 @@ ERREURS.forEach(function (e, i) {
   });
   if (vus[e.id]) fautes.push(id + ' : identifiant en double');
   vus[e.id] = 1;
-  if (['javascript', 'python'].indexOf(e.langue) < 0) fautes.push(id + ' : langue inconnue (' + e.langue + ')');
+  if (['javascript', 'python', 'sql', 'bash'].indexOf(e.langue) < 0) fautes.push(id + ' : langue inconnue (' + e.langue + ')');
   if (!e.exemple || !e.exemple.fautif || !e.exemple.corrige) { fautes.push(id + ' : exemple incomplet'); return; }
-  if (e.message.indexOf(e.type) !== 0) fautes.push(id + ' : le message ne commence pas par le type déclaré (' + e.type + ')');
+  /* Le type est un NOM D'EXCEPTION en JavaScript et en Python : il ouvre le message,
+     et l'exiger en tete est un vrai controle. En SQL et en Bash il n'existe pas de
+     type formel -- le champ est une etiquette de famille, et le moteur prefixe par
+     autre chose (« near "FORM": syntax error », « monoutil: command not found »).
+     On exige alors seulement qu'elle FIGURE dans le message. */
+  if (e.langue === 'bash' || e.langue === 'sql') {
+    if (e.message.indexOf(e.type) < 0) fautes.push(id + ' : le type declare (' + e.type + ') ne figure pas dans le message');
+  } else if (e.message.indexOf(e.type) !== 0) {
+    fautes.push(id + ' : le message ne commence pas par le type declare (' + e.type + ')');
+  }
 
   /* 3. le motif de recherche doit reconnaître le message publié. */
   var re;
@@ -105,6 +120,11 @@ ERREURS.forEach(function (e, i) {
     fautes.push(id + ' : un extrait touche au disque, au réseau ou aux processus — NON EXÉCUTÉ');
     return;
   }
+  /* SQL : aucun `sqlite3` sur cette machine, et sql.js est un moteur de NAVIGATEUR.
+     L'execution de ces entrees est faite par `tools/preuves/erreurs-sql.js`, qui les
+     rejoue dans le moteur EMBARQUE DU SITE. Ici on ne verifie que leur structure --
+     et on le DIT, plutot que de laisser croire qu'elles ont ete executees. */
+  if (e.langue === 'sql') { delegues++; return; }
   if (!LENT && /recursion|stack/.test(e.id)) { sautes++; return; }
 
   /* 1. le fautif produit-il EXACTEMENT le message publié ? */
@@ -123,7 +143,8 @@ ERREURS.forEach(function (e) { parLangue[e.langue] = (parLangue[e.langue] || 0) 
 console.log('Décodeur d\'erreurs — ' + ERREURS.length + ' entrée(s) : ' +
   Object.keys(parLangue).map(function (k) { return parLangue[k] + ' ' + k; }).join(', '));
 console.log('  extraits réexécutés : ' + (testes * 2) + ' (' + testes + ' fautifs + ' + testes + ' corrigés)' +
-  (sautes ? ', ' + sautes + ' sauté(s) — récursion, lents : --lent pour les inclure' : ''));
+  (sautes ? ', ' + sautes + ' sauté(s) — récursion, lents : --lent pour les inclure' : '') +
+  (delegues ? ', ' + delegues + ' délégué(s) au navigateur (SQL : tools/preuves/erreurs-sql.js)' : ''));
 if (fautes.length) {
   console.log('\n  FAUTES :');
   fautes.forEach(function (f) { console.log('   · ' + f); });

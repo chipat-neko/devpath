@@ -82,6 +82,17 @@ if (!RAPIDE) {
     quoi: "debordement, contraste, focus, aria, console, reseau",
     lent: true,
   });
+  /* Les 14 entrees SQL du decodeur ne peuvent pas etre rejouees par Node : aucun
+     `sqlite3` sur la machine, et sql.js est un moteur de NAVIGATEUR. Elles sont donc
+     rejouees dans Chrome, dans le SQLite EMBARQUE du site -- celui qui juge les
+     exercices SQL de l'apprenant. Hors du mode rapide, comme tout ce qui pilote Chrome. */
+  ETAPES.push({
+    nom: "err-sql",
+    fichier: "preuves/erreurs-sql.js",
+    args: [],
+    quoi: "decodeur : les entrees SQL rejouees dans le moteur du site",
+    lent: true,
+  });
   /* Pilote Chrome lui aussi (~40 s) : hors du mode rapide, comme le rendu. */
   ETAPES.push({
     nom: "stockag",

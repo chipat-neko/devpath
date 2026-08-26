@@ -9,15 +9,25 @@
    ⚠️ RÈGLE DE CE FICHIER, ET ELLE EST VÉRIFIÉE PAR UN OUTIL : chaque `message` est
    COPIÉ D'UNE EXÉCUTION RÉELLE, jamais reconstitué de mémoire. Un message approximatif
    ne serait jamais retrouvé par recherche — c'est tout l'intérêt du décodeur qui
-   tomberait. `tools/verif-erreurs.js` réexécute les 31 extraits fautifs et exige que
-   le moteur produise EXACTEMENT le message publié ici ; il exécute aussi chaque
-   correction et exige qu'elle ne produise plus rien.
+   tomberait. `tools/verif-erreurs.js` réexécute les extraits fautifs et exige que le
+   moteur produise EXACTEMENT le message publié ici ; il exécute aussi chaque correction
+   et exige qu'elle ne produise plus rien. Les entrées SQL font exception : aucun
+   `sqlite3` n'est installé et sql.js est un moteur de NAVIGATEUR — elles sont donc
+   rejouées par `tools/preuves/erreurs-sql.js`, dans le moteur embarqué du site.
 
-   OÙ LES MESSAGES ONT ÉTÉ CAPTURÉS. JavaScript : Node v24.16.0 (moteur V8, celui de
-   Chrome — donc celui des blocs « ▶ Tester » du site). Python : CPython 3.14.5 de la
-   machine ET Pyodide 3.12.1, le CPython embarqué du site : les 16 messages Python
-   sont IDENTIQUES dans les deux, mesuré le 2026-08-26. C'est ce qui permet d'affirmer
-   qu'un apprenant retrouvera son message, qu'il ait exécuté sur le site ou chez lui.
+   OÙ LES MESSAGES ONT ÉTÉ CAPTURÉS, langue par langue :
+     · JavaScript — Node v24.16.0 (moteur V8, celui de Chrome, donc celui des blocs
+       « ▶ Tester » du site).
+     · Python — CPython 3.14.5 de la machine ET Pyodide 3.12.1, le CPython embarqué du
+       site : les 16 messages sont IDENTIQUES dans les deux, mesuré le 2026-08-26.
+     · SQL — SQLite 3.49.1, le sql.js embarqué du site, celui-là même qui juge les
+       exercices SQL de l'apprenant (`tools/preuves/erreurs-sql.js`).
+     · Bash — GNU bash 5.3, avec LC_ALL=C. ⚠️ Les messages du shell sont LOCALISÉS et
+       PRÉFIXÉS par le fichier et la ligne (« ./script.sh: line 42: … ») : le préfixe,
+       propre à chaque exécution, est retiré ; la forme anglaise est publiée, parce que
+       c'est celle que l'on retrouve sur la plupart des machines et dans tous les forums.
+   C'est ce qui permet d'affirmer qu'un apprenant retrouvera son message, qu'il ait
+   exécuté sur le site ou chez lui.
 
    FORMAT D'UNE ENTRÉE :
      id       identifiant stable
@@ -37,7 +47,7 @@
    ============================================================================= */
 window.ERREURS = [
 
-  /* ========================== JavaScript ========================== */
+  /* ======================= JavaScript ======================= */
   {
     id: "js-not-defined",
     langue: "javascript",
@@ -294,7 +304,7 @@ window.ERREURS = [
     moteur: "Node v24.16.0"
   },
 
-  /* ============================ Python ============================ */
+  /* =========================== Python =========================== */
   {
     id: "py-name",
     langue: "python",
@@ -566,5 +576,417 @@ window.ERREURS = [
     },
     lecon: { href: "python/lecon-05.html", label: "Les boucles" },
     moteur: "CPython 3.14.5 · identique dans Pyodide 3.12.1"
+  },
+
+  /* ============================== SQL ============================== */
+  {
+    id: "sql-table",
+    langue: "sql",
+    type: "no such table",
+    message: "no such table: clients",
+    gabarit: "no such table: …",
+    motif: "^no such table: .+",
+    cles: ["no such table"],
+    cause: "La table nommée n'existe pas dans la base ouverte. Presque toujours : un pluriel de trop ou de moins, une faute de frappe, ou une base qui n'est pas celle qu'on croit.",
+    remede: "Vérifie le nom exact, au singulier comme au pluriel. SQLite distingue mal la casse des identifiants mais pas leur orthographe : liste les tables avec « SELECT name FROM sqlite_master WHERE type = 'table' ».",
+    exemple: {
+      fautif: "SELECT * FROM clients;",
+      corrige: "SELECT * FROM client;"
+    },
+    lecon: { href: "sql/lecon-02.html", label: "Filtrer avec WHERE" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-colonne",
+    langue: "sql",
+    type: "no such column",
+    message: "no such column: nom_complet",
+    gabarit: "no such column: …",
+    motif: "^no such column: .+",
+    cles: ["no such column"],
+    cause: "La colonne demandée n'existe pas dans les tables citées. Attention au piège : une chaîne écrite avec des guillemets DOUBLES est prise pour un nom de colonne par SQLite, d'où ce message sur ce qu'on croyait être du texte.",
+    remede: "Vérifie le nom de la colonne, et n'emploie que des apostrophes simples pour le texte : 'Paris', jamais \"Paris\".",
+    exemple: {
+      fautif: "SELECT nom_complet FROM client;",
+      corrige: "SELECT nom FROM client;"
+    },
+    lecon: { href: "sql/lecon-02.html", label: "Filtrer avec WHERE" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-syntaxe",
+    langue: "sql",
+    type: "syntax error",
+    message: "near \"FORM\": syntax error",
+    gabarit: "near \"…\": syntax error",
+    motif: "^near \".*\": syntax error",
+    cles: ["syntax error", "near"],
+    cause: "SQLite bute sur un mot. Le mot cité entre guillemets est celui qu'il n'attendait pas — la faute est donc souvent JUSTE AVANT lui.",
+    remede: "Relis le mot signalé et celui qui le précède : mot-clé mal orthographié, virgule en trop, parenthèse manquante, apostrophe non fermée.",
+    exemple: {
+      fautif: "SELECT * FORM client;",
+      corrige: "SELECT * FROM client;"
+    },
+    lecon: { href: "sql/lecon-02.html", label: "Filtrer avec WHERE" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-unique",
+    langue: "sql",
+    type: "UNIQUE constraint failed",
+    message: "UNIQUE constraint failed: client.email",
+    gabarit: "UNIQUE constraint failed: ….…",
+    motif: "^UNIQUE constraint failed: .+",
+    cles: ["unique constraint failed"],
+    cause: "La colonne citée porte une contrainte d'unicité, et la valeur insérée y figure déjà. C'est la base qui protège tes données : elle refuse le doublon.",
+    remede: "Cherche la ligne existante avant d'insérer, ou emploie « INSERT OR IGNORE », ou « ON CONFLICT DO UPDATE » pour mettre à jour au lieu d'insérer.",
+    exemple: {
+      fautif: "INSERT INTO client (nom, email) VALUES ('Grace', 'ada@example.com');",
+      corrige: "INSERT INTO client (nom, email) VALUES ('Grace', 'grace@example.com');"
+    },
+    lecon: { href: "sql/lecon-06.html", label: "Modéliser : tables, clés et relations" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-notnull",
+    langue: "sql",
+    type: "NOT NULL constraint failed",
+    message: "NOT NULL constraint failed: client.nom",
+    gabarit: "NOT NULL constraint failed: ….…",
+    motif: "^NOT NULL constraint failed: .+",
+    cles: ["not null constraint failed"],
+    cause: "Une colonne déclarée NOT NULL n'a reçu aucune valeur. Elle n'était pas dans la liste des colonnes de l'INSERT, ou la valeur fournie vaut NULL.",
+    remede: "Fournis la valeur, ou donne une valeur par défaut à la colonne dans le schéma (DEFAULT).",
+    exemple: {
+      fautif: "INSERT INTO client (email) VALUES ('bob@example.com');",
+      corrige: "INSERT INTO client (nom, email) VALUES ('Bob', 'bob@example.com');"
+    },
+    lecon: { href: "sql/lecon-06.html", label: "Modéliser : tables, clés et relations" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-ambigu",
+    langue: "sql",
+    type: "ambiguous column name",
+    message: "ambiguous column name: id",
+    gabarit: "ambiguous column name: …",
+    motif: "^ambiguous column name: .+",
+    cles: ["ambiguous column name"],
+    cause: "Deux tables jointes portent une colonne du même nom : la base ne peut pas deviner laquelle tu veux. C'est le cas classique de « id ».",
+    remede: "Préfixe la colonne par sa table — client.id — ou donne un alias aux tables.",
+    exemple: {
+      fautif: "SELECT id FROM client JOIN commande ON client.id = commande.client_id;",
+      corrige: "SELECT client.id FROM client JOIN commande ON client.id = commande.client_id;"
+    },
+    lecon: { href: "sql/lecon-05.html", label: "Agréger : COUNT, SUM et GROUP BY" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-nb-valeurs",
+    langue: "sql",
+    type: "values for",
+    message: "1 values for 2 columns",
+    gabarit: "… values for … columns",
+    motif: "^\\d+ values for \\d+ columns",
+    cles: ["values for", "columns"],
+    cause: "Le nombre de valeurs ne correspond pas au nombre de colonnes nommées dans l'INSERT.",
+    remede: "Compte les colonnes et les valeurs. Nommer explicitement les colonnes — INSERT INTO t (a, b) — rend la faute visible et protège des changements de schéma.",
+    exemple: {
+      fautif: "INSERT INTO client (nom, email) VALUES ('Bob');",
+      corrige: "INSERT INTO client (nom, email) VALUES ('Bob', 'bob@example.com');"
+    },
+    lecon: { href: "sql/lecon-06.html", label: "Modéliser : tables, clés et relations" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-fonction",
+    langue: "sql",
+    type: "no such function",
+    message: "no such function: NOW",
+    gabarit: "no such function: …",
+    motif: "^no such function: .+",
+    cles: ["no such function"],
+    cause: "La fonction n'existe pas dans CE moteur. Le SQL n'est pas le même partout : NOW() est MySQL, GETDATE() est SQL Server, SQLite écrit DATE('now').",
+    remede: "Cherche l'équivalent du moteur que tu emploies. En SQLite : DATE('now'), DATETIME('now'), STRFTIME.",
+    exemple: {
+      fautif: "SELECT NOW() FROM client;",
+      corrige: "SELECT DATE('now') FROM client;"
+    },
+    lecon: { href: "sql/lecon-04.html", label: "Fonctions et expressions" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-agregat",
+    langue: "sql",
+    type: "misuse of aggregate",
+    message: "misuse of aggregate function COUNT()",
+    gabarit: "misuse of aggregate function …()",
+    motif: "^misuse of aggregate",
+    cles: ["misuse of aggregate"],
+    cause: "WHERE filtre les lignes AVANT tout regroupement : une fonction d'agrégat n'y a donc pas encore de sens. C'est HAVING qui filtre APRÈS regroupement.",
+    remede: "Déplace la condition d'agrégat dans HAVING, après le GROUP BY.",
+    exemple: {
+      fautif: "SELECT nom FROM client WHERE COUNT(*) > 1;",
+      corrige: "SELECT ville FROM client GROUP BY ville HAVING COUNT(*) > 1;"
+    },
+    lecon: { href: "sql/lecon-04.html", label: "Fonctions et expressions" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-sous-requete",
+    langue: "sql",
+    type: "sub-select returns",
+    message: "sub-select returns 2 columns - expected 1",
+    gabarit: "sub-select returns … columns - expected …",
+    motif: "^sub-select returns \\d+ columns",
+    cles: ["sub-select returns", "expected"],
+    cause: "Une sous-requête employée avec IN ou une comparaison doit rendre UNE SEULE colonne. Celle-ci en rend plusieurs.",
+    remede: "Ne sélectionne que la colonne comparée dans la sous-requête.",
+    exemple: {
+      fautif: "SELECT * FROM commande WHERE client_id IN (SELECT id, nom FROM client);",
+      corrige: "SELECT * FROM commande WHERE client_id IN (SELECT id FROM client);"
+    },
+    lecon: { href: "sql/lecon-05.html", label: "Agréger : COUNT, SUM et GROUP BY" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-incomplet",
+    langue: "sql",
+    type: "incomplete input",
+    message: "incomplete input",
+    gabarit: "incomplete input",
+    motif: "^incomplete input$",
+    cles: ["incomplete input"],
+    cause: "La requête s'arrête au milieu : il manque la fin. Souvent une comparaison sans valeur, une parenthèse ou une apostrophe jamais refermée — tout ce qui suit est alors avalé.",
+    remede: "Relis la fin de la requête et compte les apostrophes et les parenthèses.",
+    exemple: {
+      fautif: "SELECT * FROM client WHERE nom =",
+      corrige: "SELECT * FROM client WHERE nom = 'Ada';"
+    },
+    lecon: { href: "sql/lecon-02.html", label: "Filtrer avec WHERE" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-order-range",
+    langue: "sql",
+    type: "ORDER BY term out of range",
+    message: "1st ORDER BY term out of range - should be between 1 and 1",
+    gabarit: "…st ORDER BY term out of range - should be between … and …",
+    motif: "ORDER BY term out of range",
+    cles: ["order by term out of range"],
+    cause: "Trier par un NUMÉRO de colonne suppose que ce numéro existe dans le résultat. Ici le SELECT rend moins de colonnes que le numéro demandé.",
+    remede: "Trie par le NOM de la colonne plutôt que par son rang : c'est lisible, et ça survit à un changement du SELECT.",
+    exemple: {
+      fautif: "SELECT ville FROM client ORDER BY 9;",
+      corrige: "SELECT ville FROM client ORDER BY ville;"
+    },
+    lecon: { href: "sql/lecon-03.html", label: "Trier et limiter les résultats" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-table-existe",
+    langue: "sql",
+    type: "already exists",
+    message: "table client already exists",
+    gabarit: "table … already exists",
+    motif: "^table .+ already exists$",
+    cles: ["already exists"],
+    cause: "La table existe déjà : un CREATE TABLE ne l'écrase pas, il refuse.",
+    remede: "Emploie « CREATE TABLE IF NOT EXISTS » pour un script rejouable, ou supprime la table d'abord si tu veux vraiment la refaire.",
+    exemple: {
+      fautif: "CREATE TABLE client (id INTEGER);",
+      corrige: "CREATE TABLE IF NOT EXISTS client (id INTEGER);"
+    },
+    lecon: { href: "sql/lecon-06.html", label: "Modéliser : tables, clés et relations" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+  {
+    id: "sql-fk",
+    langue: "sql",
+    type: "FOREIGN KEY constraint failed",
+    message: "FOREIGN KEY constraint failed",
+    gabarit: "FOREIGN KEY constraint failed",
+    motif: "^FOREIGN KEY constraint failed$",
+    cles: ["foreign key constraint failed"],
+    cause: "La ligne insérée référence une clé qui n'existe pas dans la table pointée — ou l'on supprime une ligne encore référencée ailleurs. La base refuse de laisser une référence dans le vide.",
+    remede: "Insère d'abord la ligne référencée, ou corrige l'identifiant. ⚠️ En SQLite, cette vérification n'est active que si « PRAGMA foreign_keys = ON » a été exécuté : sans lui, la faute passe INAPERÇUE.",
+    exemple: {
+      fautif: "PRAGMA foreign_keys = ON;\nINSERT INTO commande (client_id, montant) VALUES (999, 10);",
+      corrige: "PRAGMA foreign_keys = ON;\nINSERT INTO commande (client_id, montant) VALUES (1, 10);"
+    },
+    lecon: { href: "sql/lecon-06.html", label: "Modéliser : tables, clés et relations" },
+    moteur: "SQLite 3.49.1 (sql.js, le moteur embarqué du site)"
+  },
+
+  /* ============================= Bash ============================= */
+  {
+    id: "sh-command-not-found",
+    langue: "bash",
+    type: "command not found",
+    message: "monoutil: command not found",
+    gabarit: "…: line …: …: command not found",
+    motif: "command not found|commande introuvable",
+    cles: ["command not found"],
+    cause: "Le shell n'a trouvé aucun programme de ce nom dans le PATH. Faute de frappe, outil non installé, ou script local appelé sans son chemin.",
+    remede: "Vérifie l'orthographe, puis que l'outil est installé. Pour un script du dossier courant, écris ./monscript.sh — le répertoire courant n'est pas dans le PATH, et c'est voulu.",
+    exemple: {
+      fautif: "monoutil --version",
+      corrige: "echo \"monoutil --version\""
+    },
+    lecon: { href: "bash/lecon-01.html", label: "Le terminal et le shell" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-no-such-file",
+    langue: "bash",
+    type: "No such file or directory",
+    message: "cat: /tmp/fichier-qui-nexiste-pas-42.txt: No such file or directory",
+    gabarit: "…: …: No such file or directory",
+    motif: "No such file or directory|Aucun fichier ou dossier",
+    cles: ["no such file or directory"],
+    cause: "Le fichier ou le dossier nommé n'existe pas à cet endroit. Chemin relatif parti d'un autre répertoire que celui qu'on croit, ou nom mal orthographié.",
+    remede: "Affiche le répertoire courant avec pwd et le contenu avec ls. Dans un script, ne suppose jamais le répertoire de départ : construis les chemins depuis celui du script.",
+    exemple: {
+      fautif: "cat /tmp/fichier-qui-nexiste-pas-42.txt",
+      corrige: "f=/tmp/fichier-qui-nexiste-pas-42.txt\nif [ -f \"$f\" ]; then cat \"$f\"; else echo \"fichier absent\"; fi"
+    },
+    lecon: { href: "bash/lecon-03.html", label: "Manipuler fichiers et dossiers" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-eof-guillemet",
+    langue: "bash",
+    type: "unexpected EOF",
+    message: "unexpected EOF while looking for matching `\"'",
+    gabarit: "unexpected EOF while looking for matching `…'",
+    motif: "unexpected EOF while looking for matching",
+    cles: ["unexpected eof", "looking for matching"],
+    cause: "Un guillemet, une apostrophe ou une parenthèse n'a jamais été refermé : le shell a lu tout le fichier en cherchant sa fermeture.",
+    remede: "Le caractère cité entre accents graves est celui qu'il attendait. Cherche son ouverture — un éditeur qui colore les chaînes la montre d'un coup d'œil.",
+    exemple: {
+      fautif: "echo \"bonjour",
+      corrige: "echo \"bonjour\""
+    },
+    lecon: { href: "bash/lecon-02.html", label: "Naviguer dans le système de fichiers" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-token-inattendu",
+    langue: "bash",
+    type: "syntax error near unexpected token",
+    message: "syntax error near unexpected token `echo'",
+    gabarit: "syntax error near unexpected token `…'",
+    motif: "syntax error near unexpected token",
+    cles: ["syntax error near unexpected token"],
+    cause: "Le shell a rencontré un mot là où il attendait autre chose. Le plus souvent, un mot-clé de structure manque : do après for, then après if.",
+    remede: "Le mot cité est celui qui a surpris le shell : la faute est juste avant lui.",
+    exemple: {
+      fautif: "for i in 1 2; echo $i",
+      corrige: "for i in 1 2; do echo $i; done"
+    },
+    lecon: { href: "bash/lecon-04.html", label: "Lire, chercher et filtrer du texte" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-fin-de-fichier",
+    langue: "bash",
+    type: "unexpected end of file",
+    message: "syntax error: unexpected end of file from `if' command on line 1",
+    gabarit: "syntax error: unexpected end of file from `…' command on line …",
+    motif: "syntax error: unexpected end of file",
+    cles: ["unexpected end of file"],
+    cause: "Un bloc est resté ouvert : le shell est arrivé à la fin du fichier sans trouver son fi, son done ou son accolade fermante. Le message indique la LIGNE D'OUVERTURE du bloc coupable.",
+    remede: "Va à la ligne indiquée et referme le bloc. Indenter les blocs rend ces oublis visibles.",
+    exemple: {
+      fautif: "if true\nthen\n  echo ok",
+      corrige: "if true\nthen\n  echo ok\nfi"
+    },
+    lecon: { href: "bash/lecon-04.html", label: "Lire, chercher et filtrer du texte" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-test-unaire",
+    langue: "bash",
+    type: "unary operator expected",
+    message: "[: 5: unary operator expected",
+    gabarit: "[: …: unary operator expected",
+    motif: "unary operator expected|opérateur unaire attendu",
+    cles: ["unary operator expected"],
+    cause: "Le test manque d'un opérande. Cas très fréquent : une variable VIDE ou non définie disparaît du test avant qu'il ne soit évalué, et il ne reste plus qu'un opérateur solitaire.",
+    remede: "Mets toujours les variables entre guillemets dans un test : [ \"$x\" -eq 5 ]. Une variable vide devient alors une chaîne vide, et non rien du tout.",
+    exemple: {
+      fautif: "x=5\n[ $x -eq ]",
+      corrige: "x=5\n[ \"$x\" -eq 5 ]"
+    },
+    lecon: { href: "bash/lecon-04.html", label: "Lire, chercher et filtrer du texte" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-substitution",
+    langue: "bash",
+    type: "bad substitution",
+    message: "${x!!}: bad substitution",
+    gabarit: "${…}: bad substitution",
+    motif: "bad substitution",
+    cles: ["bad substitution"],
+    cause: "La syntaxe d'expansion entre accolades est invalide. Souvent une opération que le shell ne connaît pas, ou un script écrit pour Bash mais exécuté par sh.",
+    remede: "Relis la forme employée. Et si le script emploie des expansions de Bash, lance-le avec bash, pas avec sh — le shebang #!/usr/bin/env bash ne suffit pas si l'on écrit « sh script.sh ».",
+    exemple: {
+      fautif: "x=1\necho ${x!!}",
+      corrige: "x=1\necho ${x}"
+    },
+    lecon: { href: "bash/lecon-02.html", label: "Naviguer dans le système de fichiers" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-unbound",
+    langue: "bash",
+    type: "unbound variable",
+    message: "INEXISTANT: unbound variable",
+    gabarit: "…: unbound variable",
+    motif: "unbound variable|variable sans liaison",
+    cles: ["unbound variable"],
+    cause: "La variable n'est pas définie, et le script tourne avec « set -u », qui refuse justement de lire une variable inexistante — au lieu de la remplacer silencieusement par du vide.",
+    remede: "Ce message est un cadeau : sans set -u, la faute aurait produit un chemin vide, donc éventuellement une suppression à la racine. Définis la variable, ou donne-lui une valeur par défaut : ${VAR:-valeur}.",
+    exemple: {
+      fautif: "set -u\necho \"$INEXISTANT\"",
+      corrige: "set -u\necho \"${INEXISTANT:-valeur par défaut}\""
+    },
+    lecon: { href: "bash/lecon-08.html", label: "Fonctions, robustesse et automatisation" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-division",
+    langue: "bash",
+    type: "division by 0",
+    message: "5 / n: division by 0 (error token is \"n\")",
+    gabarit: "…: division by 0 (error token is \"…\")",
+    motif: "division by 0|division par 0",
+    cles: ["division by 0"],
+    cause: "Division par zéro dans une expression arithmétique. Attention au piège du shell : une variable VIDE ou non numérique y vaut zéro, sans le moindre avertissement.",
+    remede: "Teste le diviseur avant de diviser, et vérifie que la variable contient bien un nombre.",
+    exemple: {
+      fautif: "n=0\necho $((5 / n))",
+      corrige: "n=0\nif [ \"$n\" -ne 0 ]; then echo $((5 / n)); else echo \"division impossible\"; fi"
+    },
+    lecon: { href: "bash/lecon-02.html", label: "Naviguer dans le système de fichiers" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
+  },
+  {
+    id: "sh-readonly",
+    langue: "bash",
+    type: "readonly variable",
+    message: "TAUX: readonly variable",
+    gabarit: "…: readonly variable",
+    motif: "readonly variable|variable en lecture seule",
+    cles: ["readonly variable"],
+    cause: "La variable a été déclarée en lecture seule (declare -r ou readonly) : le shell refuse de la modifier.",
+    remede: "Si la valeur doit changer, ne la déclare pas en lecture seule. Sinon, cherche pourquoi une affectation la vise — c'est souvent le signe d'un nom réutilisé par mégarde.",
+    exemple: {
+      fautif: "declare -r TAUX=1\nTAUX=2",
+      corrige: "TAUX=1\nTAUX=2\necho \"$TAUX\""
+    },
+    lecon: { href: "bash/lecon-02.html", label: "Naviguer dans le système de fichiers" },
+    moteur: "GNU bash 5.3, LC_ALL=C"
   }
 ];

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Décodeur : les entrées SQL rejouées dans le moteur du site</title>
+</head>
+<body>
+<pre id="sortie">… en cours</pre>
+
+<!-- POURQUOI CETTE PAGE. `tools/verif-erreurs.js` réexécute les extraits JavaScript,
+     Python et Bash avec les moteurs de la machine. Il ne peut rien faire des entrées
+     SQL : aucun `sqlite3` n'est installé, et sql.js est un moteur de NAVIGATEUR. Cette
+     page-ci rejoue donc les entrées `langue: "sql"` du fichier de données DANS LE MOTEUR
+     EMBARQUÉ DU SITE — celui qui juge les exercices SQL de l'apprenant — et vérifie que :
+       · l'exemple FAUTIF produit EXACTEMENT le message publié ;
+       · l'exemple CORRIGÉ ne produit plus rien.
+     Chaque exemple part d'une base NEUVE : sans quoi un INSERT réussi changerait le
+     résultat du suivant, et l'ordre des entrées deviendrait significatif.
+     Pilotée par `tools/preuves/erreurs-sql.js`. -->
+<script type="application/json" id="schema">
+[
+  "CREATE TABLE client (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, email TEXT UNIQUE, ville TEXT);",
+  "CREATE TABLE commande (id INTEGER PRIMARY KEY, client_id INTEGER REFERENCES client(id), montant REAL);",
+  "INSERT INTO client (nom, email, ville) VALUES ('Ada', 'ada@example.com', 'Paris');",
+  "INSERT INTO commande (client_id, montant) VALUES (1, 42.5);"
+]
+</script>
+
+<script src="../../assets/vendor/sqljs/sql-wasm-base64.js"></script>
+<script src="../../assets/vendor/sqljs/sql-wasm.js"></script>
+<script src="../../assets/vendor/sqljs/sql-charge.js"></script>
+<script src="../../js/erreurs-data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var lignes = [];
+  function dire(s) { lignes.push(s); document.getElementById("sortie").textContent = lignes.join("\n"); }
+  window.__RESULTAT = null;
+  window.__BILAN = null;
+
+  var SCHEMA = JSON.parse(document.getElementById("schema").textContent);
+  var ENTREES = (window.ERREURS || []).filter(function (e) { return e.langue === "sql"; });
+  dire("protocole    : " + location.protocol);
+  dire("entrées SQL  : " + ENTREES.length);
+
+  window.SQLLocal.pret().then(function (SQL) {
+    var v = new SQL.Database();
+    var version = v.exec("SELECT sqlite_version();")[0].values[0][0];
+    v.close();
+    dire("SQLite       : " + version);
+    dire("");
+
+    /* Une base neuve par exemple : l'isolation est ce qui rend le résultat reproductible. */
+    function jouer(sql) {
+      var db = new SQL.Database();
+      SCHEMA.forEach(function (s) { db.run(s); });
+      var msg = "";
+      try {
+        /* Un exemple peut contenir plusieurs instructions (PRAGMA puis INSERT). */
+        db.exec(sql);
+      } catch (e) {
+        msg = String(e && e.message ? e.message : e).trim();
+      }
+      db.close();
+      return msg;
+    }
+
+    var fautes = [], joues = 0;
+    ENTREES.forEach(function (e) {
+      var vu = jouer(e.exemple.fautif);
+      joues++;
+      if (vu !== e.message) {
+        fautes.push(e.id + " : le moteur écrit « " + vu + " », le fichier publie « " + e.message + " »");
+        dire("  ✗ " + e.id + "  →  " + vu);
+      } else {
+        var apres = jouer(e.exemple.corrige);
+        if (apres) {
+          fautes.push(e.id + " : la CORRECTION échoue encore — « " + apres + " »");
+          dire("  ✗ " + e.id + "  correction : " + apres);
+        } else {
+          dire("  ✓ " + e.id + "  →  " + vu);
+        }
+      }
+    });
+    window.__BILAN = { version: version, joues: joues, fautes: fautes };
+    window.__RESULTAT = fautes.length ? "ECHEC" : "OK";
+    dire("");
+    dire(joues + " entrée(s) rejouée(s), " + fautes.length + " faute(s).");
+  }).catch(function (e) {
+    dire("ECHEC        : " + (e && e.message ? e.message : e));
+    window.__RESULTAT = "ECHEC";
+    window.__BILAN = { fautes: ["le moteur n'a pas démarré : " + (e && e.message ? e.message : e)] };
+  });
+})();
+</script>
+</body>
+</html>
