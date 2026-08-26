@@ -999,7 +999,31 @@ solution de référence pour prouver qu'elle passe**, et mesurer avant/après.
 C'est ce qu'un débutant cherche en premier, et le site n'en dit rien. Un fichier de données, une page
 de recherche, et des renvois depuis les leçons.
 
-- [ ] **C1 · Le format et les 30 premières erreurs.** `js/erreurs-data.js` : message, langage, cause réelle, remède, leçon qui l'explique. Commencer par JavaScript et Python, les deux langages où le site a le plus de contenu. **Chaque message doit être copié d'une exécution réelle**, pas reconstitué de mémoire — un message approximatif ne sera jamais retrouvé par recherche.
+- [x] **C1 · Le format et les 30 premières erreurs.** ✅ **2026-08-26. 31 entrées — et pas une seule n'a été écrite de mémoire : les 31 messages sortent d'une exécution, et 62 extraits sont rejoués à chaque passe de `verif.js`.**
+
+  **1. Trois outils, et l'ordre compte.** `tools/preuves/capture-erreurs.js` porte 31 extraits fautifs — quelques lignes chacun, du code qu'un débutant écrit vraiment — les exécute (`node` pour JavaScript, `python` pour Python) et **relève le message que le moteur produit**. Il ne compare pas : il constate. Résultat de la passe : **31 extraits exécutés, 31 du type attendu, 0 qui ne casse pas.**
+
+  **2. ⚠️ MAIS LE SITE N'EXÉCUTE PAS LE MÊME PYTHON QUE LA MACHINE, et c'était la vraie question.** Les messages de CPython ont changé plusieurs fois (les suggestions « did you mean » en 3.10, `UnboundLocalError` réécrit en 3.11, les erreurs de syntaxe précisées en 3.12). La machine porte **CPython 3.14.5** ; le site, lui, exécute **Pyodide 3.12.1** depuis la case A4. Publier les messages de l'un en laissant l'apprenant lire ceux de l'autre aurait vidé le décodeur de son intérêt.
+
+  D'où `tools/preuves/erreurs-pyodide.html` et son pilote : les 16 extraits Python sont **rejoués dans le moteur du site**, en `file://`, DNS coupé. **16 messages sur 16 IDENTIQUES**, **0 requête distante**. L'apprenant retrouvera donc son message qu'il ait exécuté sur le site ou chez lui — et c'est mesuré, pas supposé.
+
+  **3. Le format.** Chaque entrée porte : `message` (le texte EXACT), `gabarit` (le même, parties variables remplacées par des points de suspension), `motif` (l'expression rationnelle qui le reconnaît malgré les noms de variables qui changent — c'est elle dont vivra la recherche de C2), `cles`, `cause`, `remede`, `exemple.fautif`, `exemple.corrige`, `lecon` et `moteur`. Les deux exemples sont des programmes complets, **tous deux exécutés**.
+
+  **4. `tools/verif-erreurs.js` — la 8ᵉ étape de `verif.js`.** Elle **réexécute les 62 extraits** (31 fautifs + 31 corrigés) et exige que :
+  · le fautif produise **exactement** le message publié — pas « le même type d'erreur », le même texte au caractère près, puisque c'est ce texte que l'apprenant colle dans une recherche ;
+  · la correction soit **muette** — sinon le remède est faux ;
+  · le motif reconnaisse son propre message ; la leçon citée existe et son `<h1>` corresponde au libellé ; les champs soient présents et les identifiants uniques.
+  ⚠️ Le contrôle EXÉCUTE du code : un garde-fou refuse tout extrait qui touche au disque, au réseau ou aux processus, avec **une dérogation nommée** — le `fetch(` de l'exemple `await` hors `async`, écrit dans un fichier qui ne compile pas et ne s'exécute donc jamais. On déroge en le disant plutôt que d'affaiblir le garde-fou.
+
+  **5. UN CONTRÔLE VERT DU PREMIER COUP DOIT PROUVER QU'IL SAIT ROUGIR.** `scratchpad/v14-c1/contre-epreuve.js` sabote le fichier de données de quatre façons, une à la fois : un message faux **d'un seul caractère**, une correction qui ne corrige rien, une leçon inexistante, un motif qui ne reconnaît pas son message. **4 détectés sur 4**, et le fichier est restauré à l'**empreinte identique** (`efb84c1f4744…`). C'est le contrôle du contrôle que ce chantier a appris à exiger : trois fois déjà, un vert s'était révélé vide.
+
+  **6. Ce que couvrent les 31 entrées.** JavaScript (15) : `ReferenceError` sur un nom, zone morte temporelle, `Cannot read properties of undefined`, `is not a function`, affectation à une constante, `is not iterable`, pile saturée, les deux `SyntaxError` de `JSON.parse`, écriture dans un élément `null`, `map` sur un objet, identifiant déjà déclaré, parenthèse non fermée, `toFixed` hors bornes, `await` hors `async`. Python (16) : `NameError` avec suggestion, concaténation `str` + `int`, indentation attendue, indice hors liste, `KeyError`, méthode inexistante (`push` au lieu d'`append`), `int()` sur un mot, division par zéro, chaîne immuable, deux-points manquants, parenthèse jamais fermée, module introuvable, argument manquant, `UnboundLocalError`, récursion infinie, entier non itérable.
+
+  **7. 🔵 RELEVÉ HORS PÉRIMÈTRE, trouvé en fixant la convention des liens.** `js/projets-data.js` écrit ses liens sous la forme `../pandas/cours.html` alors que sa page hôte, `pages/projets.html`, est à la racine de `pages/` : **38 liens, 29 distincts, qui ne résolvent NI depuis `pages/` NI depuis la racine**. Ils sont tous dans le champ `pistes`, replié dans un `<details>`, ce qui explique qu'ils n'aient jamais été vus. **Aucun invariant ne surveille les liens des fichiers de données.** Le décodeur, lui, écrit `js/lecon-02.html` (base `pages/`), et `verif-erreurs.js` vérifie que chaque cible existe. Correction de `projets-data.js` : chantier à part.
+
+  **8. Contrôles.** `verif.js --rapide` **tout vert, 8 étapes** (45,4 s — la nouvelle en pèse 8,2). `verif-html` **0 grave / 0 attention sur 1 612 fichiers**. `verif-donnees` **0 erreur**. `node --check` sur les trois fichiers JavaScript neufs. 0 CRLF, 0 BOM, **0 URL de CDN**. Rien n'est encore affiché à l'apprenant : le rendu est la case **C2**.
+
+  **9. Mesure.** Entrées : **31** (15 JavaScript, 16 Python). Messages capturés par exécution : **31**. Messages Python revérifiés dans le moteur du site : **16 sur 16 identiques**. Extraits réexécutés à chaque passe de `verif.js` : **62**. Sabotages détectés : **4 sur 4**. Requêtes distantes : **0**. Liens cassés relevés ailleurs : **38**.
 - [ ] **C2 · La page de recherche.** On colle un message d'erreur, on obtient la cause et le remède. Recherche tolérante : les messages contiennent des noms de variables qui changent d'un cas à l'autre.
 - [ ] **C3 · Étendre aux autres langages** — un lot par famille, en s'appuyant sur les cours existants.
 - [ ] **C4 · Relier aux leçons.** Une leçon qui enseigne une notion dont l'erreur est fréquente renvoie au décodeur, et inversement.
