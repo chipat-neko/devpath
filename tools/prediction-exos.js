@@ -1179,6 +1179,60 @@ var LOTS = {
        sessions IEx en commentaire, arbres de syntaxe abrégés, structures Ecto. On ne
        bâtit pas un exercice sur une valeur qu'aucun rejeu n'a pu confirmer. */
     ]
+  },
+
+  /* ===================== B7d — bash (2026-08-26) =====================
+     LE SEUL LOT DONT LES SORTIES ONT ÉTÉ RÉELLEMENT EXÉCUTÉES. `bash` est installé sur
+     cette machine (GNU bash 5.3, vérifié) : `tools/preuves/rejoue-bash.js` écrit chaque
+     bloc dans un fichier temporaire et le LANCE, puis compare sa sortie à celle que la
+     leçon annonce. 8 lignes comparées, 0 divergence. Aucune transposition, donc aucune
+     chance de se tromper de la même façon que le contenu vérifié.
+
+     ⚠️ LE GISEMENT EST MINUSCULE, et ce n'est pas un défaut du cours : `pages/bash` compte
+     212 blocs, dont **4 seulement** annoncent leur sortie sous une tête stricte, tous dans
+     `lecon-08` — et **0** à la forme « # => ». Le plan annonçait « 65 blocs » ; le chiffre
+     ne se reproduit pas. La cause est celle que le plan pressentait : un cours de shell
+     montre surtout des commandes dont la sortie DÉPEND DE LA MACHINE (`ls`, `df`, `date`,
+     `ps`, un chemin, un utilisateur), et l'on ne peut rien en affirmer de fixe. Les 4
+     blocs retenus ne touchent ni au disque, ni au réseau, ni à l'horloge.
+
+     ⚠️ Le rejeu EXÉCUTE du code, donc il porte deux barrières : une liste blanche de blocs
+     désignés, et un refus de tout bloc contenant une commande qui touche au système
+     (mesuré : 42 des 212 blocs du cours seraient refusés — le garde-fou sait refuser). */
+  bash: {
+    dossier: 'bash', langue: 'bash', marqueur: '#', forme: 'bloc', fichierCite: 'extrait.sh',
+    cibles: [
+  /* CIBLE ECARTEE, et c'est le rejeu par EXECUTION qui a permis de la juger : `lecon-08`
+     additionner_faux (« Code de sortie : 7 »). La sortie du bloc fait deux lignes, et
+     celle qui reste affichée est « Somme : 7 » — le chiffre demandé y est donc écrit,
+     une ligne plus bas. Même motif que `go/lecon-07` select en B7c-5 : on donnait la
+     valeur et on demandait l'étiquette. Le bloc reste vérifié par le rejeu (il tourne
+     vraiment, et $? vaut bien 7), il ne porte simplement pas d'exercice. */
+  { source: '08', page: '10', bloc: 'compteur="global"', ligne: 'Après bon()',
+    quoi: 'la ligne manquante', commentaires: 2,
+    /* Relus (contrôle 11). TROIS ÉNONÇAIENT LA RÉPONSE : « vit seulement dans la
+       fonction », « global : intact, ouf » et « global : écrasé » disent, à eux trois,
+       tout ce que l'exercice demande de déduire. Masqués ; les deux restants portent sur
+       l'autre fonction. */
+    masquer: ['vit seulement dans la fonction', 'global : intact, ouf', 'global : écrasé'],
+    hints: ['Une des deux fonctions déclare sa variable, l\'autre non.',
+            'Celle qui la déclare travaille sur une copie qui meurt avec elle.',
+            'La ligne demandée est lue APRÈS cette fonction-là, et avant l\'autre.'],
+    pourquoi: "Sans déclaration, une affectation dans une fonction écrase la variable du dessus. Avec la déclaration locale, la fonction travaille sur une variable qui n'existe que pendant son exécution : la variable globale ressort donc intacte, et c'est seulement l'autre fonction qui la modifiera.",
+    label: 'Revoir « Les variables locales : éviter les collisions »' },
+
+  { source: '08', page: '11', bloc: 'total=$(somme 12 30)', ligne: 'Total',
+    quoi: 'la ligne manquante', commentaires: 1,   /* le shebang, et rien d'autre */
+    hints: ['La fonction AFFICHE son résultat, elle ne le renvoie pas.',
+            'La substitution de commande capture ce qui est affiché.',
+            'Les deux arguments sont écrits dans l\'appel.'],
+    pourquoi: "La fonction écrit sa somme sur la sortie standard, et la substitution de commande la capture dans une variable au lieu de la laisser s'afficher. C'est la façon correcte de rendre un résultat en Bash, celle que return ne permet pas.",
+    label: 'Revoir « Renvoyer un résultat : return n\'est pas une valeur »' }
+
+  /* CIBLE ÉCARTÉE : `lecon-08` saluer (« Bonjour, Noah ! » / « Bonjour, Léa ! ») — les
+     deux lignes sont l'assemblage d'un littéral du echo et d'un argument écrit dans
+     l'appel, toutes deux visibles. Transcription. */
+    ]
   }
 };
 
