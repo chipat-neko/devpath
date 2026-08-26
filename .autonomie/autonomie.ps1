@@ -140,29 +140,52 @@ if (Test-ChantierFini) {
 # Horodatage du debut de la passe : sert a verifier que le rapport de la passe
 # de securite a bien ete ECRIT PENDANT celle-ci, et non relu d'un chantier
 # precedent (voir le controle de fraicheur plus bas).
-# --- VERROU DE BUDGET (2026-08-26, demande de Noah) --------------------------
-# Le quota reel d'un abonnement n'est PAS lisible depuis cette machine : mesure faite
-# sur 332 transcrits, les limites hebdomadaires passees sont tombees a 2 M, 7 M puis
-# 9 M de jetons de sortie sur 7 jours, alors que la semaine en cours en comptait 21 M
-# sans qu'aucune limite ne tombe. Ce verrou est donc un BUDGET MAISON, pas une lecture
-# du quota Anthropic -- il bride une derive de depense, il ne predit pas la limite.
-# Reglage : ecrire un nombre de jetons de SORTIE dans .autonomie/budget.txt (0 = inactif).
-$budget = 0
+# --- VERROU D'USAGE HEBDOMADAIRE (2026-08-26, demande de Noah) ---------------
+# On lit l'utilisation REELLE de l'abonnement, celle qu'affiche /usage : l'endpoint
+# https://api.anthropic.com/api/oauth/usage repond avec le jeton OAuth deja present
+# sur la machine. Mesure du 2026-08-26 : seven_day.utilization = 75, remise a zero le
+# 01/09 a 01:00. C'est le seul chiffre juste ; un budget calcule en jetons localement
+# serait une fiction, les limites passees etant tombees a 2 M, 7 M puis 9 M de jetons
+# sur sept jours alors que la semaine en cours en comptait 21 M sans limite.
+#
+# AU SEUIL, ON NE DESACTIVE PAS : on REPORTE le prochain reveil apres la remise a zero.
+# Noah peut etre au travail au moment ou le seuil tombe ; l'autonomie doit repartir
+# seule, sans intervention.
+#
+# Reglage : un pourcentage dans .autonomie/seuil-hebdo.txt (0 = verrou inactif).
+$seuilHebdo = 99
 try {
-  $bf = Join-Path $dir 'budget.txt'
-  if (Test-Path $bf) { $budget = [int]((Get-Content $bf -Raw) -replace '[^0-9]','') }
-} catch { $budget = 0 }
-if ($budget -gt 0) {
+  $sf = Join-Path $dir 'seuil-hebdo.txt'
+  if (Test-Path $sf) { $seuilHebdo = [int]((Get-Content $sf -Raw) -replace '[^0-9]','') }
+} catch {}
+if ($seuilHebdo -gt 0) {
+  $pct = -1; $resetIso = ''
   try {
-    $conso = [int](& node (Join-Path $proj 'tools\conso-hebdo.js') total 2>$null | Select-Object -Last 1)
-    if ($conso -ge $budget) {
-      Log "[$(Stamp)] ===== ARRET SUR BUDGET : $conso jetons de sortie sur 7 jours, budget $budget. Tache desactivee. ====="
+    $duo = (& node (Join-Path $proj 'tools\usage-anthropic.js') duo 2>$null | Select-Object -Last 1)
+    if ($duo -match '^(-?\d+)\|(.*)$') { $pct = [int]$Matches[1]; $resetIso = $Matches[2] }
+  } catch { $pct = -1 }
+  if ($pct -lt 0) {
+    # Jeton expire entre deux passes, ou reseau coupe. UNE LECTURE IMPOSSIBLE N'EST PAS
+    # UN QUOTA EPUISE : on continue, et claude.exe rafraichira le jeton en demarrant.
+    Log "[$(Stamp)] usage hebdomadaire : lecture impossible -- la passe continue."
+  }
+  elseif ($pct -ge $seuilHebdo) {
+    $quand = $null
+    if ($resetIso) { try { $quand = ([datetime]::Parse($resetIso)).ToLocalTime().AddMinutes(10) } catch {} }
+    if (-not $quand) { $quand = (Get-Date).AddHours(12) }
+    Log "[$(Stamp)] ===== PAUSE : usage hebdomadaire a $pct % (seuil $seuilHebdo). Reveil reporte au $($quand.ToString('yyyy-MM-dd HH:mm')), apres la remise a zero. ====="
+    try {
+      $tPause = New-ScheduledTaskTrigger -Once -At $quand -RepetitionInterval (New-TimeSpan -Hours 2)
+      Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tPause -ErrorAction Stop | Out-Null
+      Set-Content -Path (Join-Path $dir 'pause-hebdo.txt') -Value "$pct % le $(Stamp) -- reprise $($quand.ToString('yyyy-MM-dd HH:mm'))" -Encoding utf8
+    } catch {
+      Log "[$(Stamp)] ATTENTION report KO ($_) -- desactivation par securite."
       try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {}
-      exit 0
     }
-    $pct = [int]($conso * 100 / $budget)
-    if ($pct -ge 80) { Log "[$(Stamp)] budget : $pct % consomme ($conso / $budget jetons de sortie sur 7 jours)." }
-  } catch { Log "[$(Stamp)] budget : mesure impossible ($_) -- la passe continue." }
+    if (Test-Path $lock) { Remove-Item $lock -Force -ErrorAction SilentlyContinue }
+    exit 0
+  }
+  elseif ($pct -ge 90) { Log "[$(Stamp)] usage hebdomadaire : $pct % (seuil $seuilHebdo) -- il reste peu de marge." }
 }
 
 $debutPasse = Get-Date
@@ -281,8 +304,12 @@ try {
     # toutes les 2 h pour echouer aussitot, ce qui ne sert qu'a brasser du vide.
     $quand = Get-HeureReset $sortie
     $txt = if ($quand) { $quand.ToString('yyyy-MM-dd HH:mm') } else { 'heure inconnue' }
-    Log "[$(Stamp)] ===== ARRET : LIMITE HEBDOMADAIRE ATTEINTE. Reprise possible a $txt. Tache desactivee. ====="
-    try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {}
+    Log "[$(Stamp)] ===== LIMITE HEBDOMADAIRE ATTEINTE. Reveil reporte a $txt, pas de nouvelle tentative d ici la. ====="
+    try {
+      $reprise = if ($quand) { $quand.AddMinutes(10) } else { (Get-Date).AddHours(12) }
+      $tLim = New-ScheduledTaskTrigger -Once -At $reprise -RepetitionInterval (New-TimeSpan -Hours 2)
+      Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tLim -ErrorAction Stop | Out-Null
+    } catch { try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {} }
     try { Set-Content -Path (Join-Path $dir 'limite-hebdo.txt') -Value $txt -Encoding utf8 } catch {}
     $arretDemande = $true
   }
