@@ -1278,7 +1278,81 @@ apprenant qui décide.
   | `bash/lecon-12` Déboguer ses scripts Bash | boucle sur la sortie de `ls` | `find -exec` / `xargs -0`, et les noms à espaces |
 
   **Ce qui est écarté, et pourquoi** : les 66 autres candidates sont soit des projets de synthèse (le code y illustre l'assemblage, pas le choix), soit des leçons où l'approche montrée est la seule raisonnable au niveau visé. La liste reste **bornée à 30** — le plan demandait « quelques dizaines, pas 1 463 ».
-- [ ] **E2 · Le format.** Un bloc « une autre façon de le faire » : la variante, ce qu'elle coûte, ce qu'elle apporte, quand la préférer. Style du site, pas de catalogue exhaustif.
+- [x] **E2 · Le format.** ✅ **2026-08-27. Le format existe, il est contrôlé par un outil (15/15 fautes injectées vues) — et la contradiction a démoli DIX affirmations sur les deux seuls blocs écrits, dont trois bloquantes et une qui était MA PROPRE correction.**
+
+  **Le format** — `<aside class="variante">` : un titre fixe, une phrase d'annonce, le code de la variante,
+  puis **trois faits obligatoires dans cet ordre** (`Ce qu'elle coûte` / `Ce qu'elle apporte` / `Quand la
+  préférer`). Documenté dans `DESIGN_SYSTEM.md`, stylé dans `css/components.css` (14 variables CSS, toutes
+  vérifiées comme existantes), inclus dans le `break-inside: avoid` de l'impression.
+
+  **L'outil** : `tools/verif-alternatives.js`, 8ᵉ étape de `verif.js`. Il exige les trois libellés dans
+  l'ordre, 80 caractères minimum par réponse, un bloc de code avec `data-file`, aucun titre `<h…>` (il
+  polluerait le sommaire), l'icône `aria-hidden` — et surtout **que chaque classe employée existe vraiment
+  dans `css/components.css`**, parce qu'une classe mal orthographiée rend le bloc en texte nu sans qu'aucun
+  autre contrôle bronche. Mode `--mutations` : **15 fautes injectées, 15 vues**. 1 612 leçons lues.
+
+  **⚠️ CE QUE LA CONTRADICTION A RENDU : 10 fautes prouvées par exécution, sur 2 blocs déjà écrits et déjà
+  relus.** Deux agents (lecture et mesure seules, aucune écriture) ont réexécuté le code publié.
+
+  1. **[bloquante, `css/lecon-08`] LE CODE PUBLIÉ FAISAIT L'INVERSE DE CE QUE LE TEXTE PROMETTAIT.** Le bloc
+     annonçait un badge « posé *par-dessus* le contenu ». Dans une grille, la superposition suit **l'ordre
+     du DOM**, et le badge était écrit *avant* le contenu : il était donc peint **dessous**.
+     `elementsFromPoint` au centre du badge rendait `DIV` puis `SPAN.badge` (vérifié par moi-même, et dans le
+     vrai aperçu du site par l'agent). Invisible dans la démo **uniquement** parce que le contenu n'a pas de
+     fond : dès qu'on lui en donne un, l'agent compte **0 pixel rouge sur 3 978** dans le rectangle du badge
+     — contre 3 285/3 978 pour la version `absolute`. Sur une carte produit avec image : **0/1 794 en grid,
+     1 417/1 794 en absolute**. Corrigé : le badge est passé **dernier enfant**, et le texte dit désormais
+     que c'est l'ordre du HTML qui décide. Après correction, la pile est `SPAN.badge` en tête dans les trois
+     cas testés, fond blanc compris.
+  2. **[bloquante, `css/lecon-08`] Le « quand la préférer » recommandait la grille pour « un composant
+     réutilisé un peu partout »** — c'est-à-dire la seule des deux façons qui casse dès que le contenu a une
+     image. Réécrit avec les trois cas où `absolute` reste le bon choix.
+  3. **[bloquante, `algo/lecon-02`] MA PROPRE CORRECTION ÉTAIT FAUSSE.** J'avais remplacé un seuil de
+     débordement inventé (« 5 750 ») par trois valeurs mesurées, en attribuant l'écart à « ce qui est déjà
+     empilé ». L'agent l'a réfuté : à état d'optimisation identique, **deux cadres d'appel déplacent le seuil
+     de 7 niveaux**. Le vrai paramètre est **la chauffe JIT**, que je n'avais pas nommée. Revérifié par
+     moi-même avec un protocole propre (**un seul appel mesuré par processus**, sinon la dichotomie chauffe
+     elle-même la fonction et l'effet devient invisible — c'est ce qui m'avait trompé) : **7 062 à froid,
+     10 437 après 200 000 appels**, chaque valeur reproduite deux fois. Chrome 151 : **8 500**.
+  4. **[sérieuse, `algo/lecon-02`] Le remède proposé sur l'ordre de visite ne marchait pas.** « Empiler les
+     sous-tableaux à l'envers » rend `[1, 7, 2, 3, 4, 5, 6]` — toujours pas l'ordre récursif. Il faut empiler
+     **tous** les éléments à l'envers, feuilles comprises : c'est la seule des trois variantes exécutées qui
+     redonne `[1, 2, 3, 4, 5, 6, 7]`.
+  5. **[sérieuse, `css/lecon-08`] La morsure de « 4 px » ne vaut que sur une page nue.** Dans l'aperçu du
+     site — celui que l'astuce publiée juste dessous invite à ouvrir — la feuille `PREVIEW_PRE` de
+     `js/runner.js` impose `line-height: 1.5` et la morsure vaut **7,3 px**. Les deux chiffres sont
+     désormais donnés avec leur contexte.
+  6. **[sérieuse, `css/lecon-08`] Mes chiffres `x = 262 / 685 / 1205` ne se reproduisaient pas** dans
+     l'aperçu, qui applique `margin: 14px` et `box-sizing: border-box` (la carte s'y arrête à **234**, pas
+     262). Reformulé en écart relatif, qui lui tient partout.
+  7. **[mineure ×4]** « Trois lignes de plus » → **cinq** (comptage exécuté sur les blocs publiés) ; « il se
+     colle au bord » → il le **dépasse de 10 px** et crée un `scrollWidth` de 1 274 pour 1 264 ; « hors
+     écran » → **56 % du badge reste visible** ; et « DOM d'une page inconnue » comme exemple de profondeur
+     non bornée → **le lecteur HTML de Chrome plafonne à 511 niveaux** (mesuré : 400 `<div>` → 401 ;
+     1 200 → 511 ; 5 000 → 511), soit 5 % du seuil de débordement. Remplacé par l'arbre syntaxique.
+
+  **⚠️ LA LEÇON DE MÉTHODE, et elle vaut pour tout le chantier : UN PROTOCOLE DE MESURE PEUT MASQUER
+  L'EFFET QU'IL MESURE.** Ma dichotomie appelait la fonction des dizaines de fois avant son premier point :
+  elle chauffait ce qu'elle prétendait mesurer à froid, et rendait donc un seuil stable — donc rassurant,
+  donc faux. Le seul protocole valide était **un processus neuf par point de mesure**. Deuxième piège du
+  même genre : `PREVIEW_PRE` est une **concaténation JavaScript**, et l'extraire par une simple expression
+  régulière laisse les `" + "` dans le CSS, ce qui invalide silencieusement toutes les règles suivantes —
+  dont `*{box-sizing:border-box}`. Le garde-fou a été ajouté à l'outil de mesure (il refuse de tourner si
+  `box-sizing` a disparu de la feuille extraite).
+
+  **Ce qui a TENU** à la contradiction et n'a pas été touché : les sorties `10` et `20001` du code publié,
+  l'ordre `[1, 7, 4, 5, 6, 2, 3]` de la pile, la taille maximale de pile (**1** sur une donnée profonde de
+  20 000, **10 000** sur une donnée large de 10 000), les 100 000 niveaux encaissés par l'itérative,
+  `JSON.parse` qui avale **2 000 000** de niveaux, les **17 px** aux bords en grid et les **9 px** de
+  dépassement en absolute (identiques dans les deux contextes), et le remède par marge à droite.
+
+  **Contrôles finaux** : `verif-html` 0/0 sur 1 612 fichiers · `verif-donnees` 0 erreur sur 25 invariants ·
+  `verif-rendu` 12 mesures (2 pages × 3 largeurs × 2 thèmes), 0 erreur · `verif-clic` **13 blocs cliqués,
+  0 divergent** sur `algo/lecon-02` (les 13 blocs JS ont bien leur bouton, celui de la variante compris, et
+  il rend `10` puis `20001` en 4 ms — très loin des 3 s du runner) · une passe large de `verif-clic` sur
+  **72 pages, 463 blocs, 0 divergent** · `verif-sorties` 324/325 (l'unique divergence, `offensive/lecon-07`,
+  est un dépassement de délai à 10 s, préexistant et hors périmètre) · 0 URL de CDN · `search-index`
+  régénéré (43 789 mots).
 - [ ] **E3 · Écrire, par lots de cours.** Un lot par case.
 
 ---

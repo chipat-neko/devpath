@@ -291,6 +291,46 @@ console.log(fibMemo(50)); // 12586269025 (instantané)</code></pre></figure>
 
 console.log(sommeProfonde([1, [2, [3, 4]]])); // 10</code></pre></figure>
 <p>Ici, écrire l'équivalent itératif demanderait de gérer une pile explicite à la main. La récursion épouse la forme de la donnée&nbsp;: c'est souvent là qu'elle est <em>plus lisible</em> qu'une boucle. Sa complexité est O(k) en temps, où k est le nombre total d'éléments (feuilles et sous-tableaux visités), et O(d) en espace de pile où d est la profondeur d'imbrication.</p>
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head">
+    <svg class="variante__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M6 16.5V5" /><path d="M18 7.5a9 9 0 0 1-9 9" /></svg>
+    <p class="variante__title">Une autre façon de le faire</p>
+  </div>
+  <p class="variante__lead">La même somme <strong>sans récursion</strong>&nbsp;: on remplace les cadres empilés par le moteur par une <strong>pile explicite</strong> — un simple tableau qu'on empile et dépile dans une boucle <code>while</code>.</p>
+<figure class="code-block" data-file="somme-profonde-pile.js"><pre><code class="language-javascript">function sommeProfondeIterative(arr) {
+  const pile = [arr]; // la pile explicite remplace les cadres du moteur
+  let total = 0;
+  while (pile.length &gt; 0) {
+    const courant = pile.pop();
+    for (const el of courant) {
+      if (Array.isArray(el)) pile.push(el); // à traiter plus tard
+      else total += el;
+    }
+  }
+  return total;
+}
+
+console.log(sommeProfondeIterative([1, [2, [3, 4]]])); // 10
+
+// 20 000 niveaux d'imbrication : la version récursive déborde, celle-ci non
+let profond = [1];
+for (let i = 0; i &lt; 20000; i++) profond = [1, profond];
+console.log(sommeProfondeIterative(profond)); // 20001</code></pre></figure>
+  <dl class="variante__facts">
+    <div>
+      <dt>Ce qu'elle coûte</dt>
+      <dd>Cinq lignes de plus, et surtout <strong>l'ordre de visite change</strong>&nbsp;: <code>pop()</code> ressort le dernier empilé. Aplatir <code>[1, [2, 3], [4, [5, 6]], 7]</code> donne <code>[1, 2, 3, 4, 5, 6, 7]</code> en récursif mais <code>[1, 7, 4, 5, 6, 2, 3]</code> avec cette pile (mesuré). Sans importance pour une somme&nbsp;; rédhibitoire dès que l'ordre compte — et le rattraper demande plus qu'on ne croit&nbsp;: n'empiler que les sous-tableaux à l'envers rend <code>[1, 7, 2, 3, 4, 5, 6]</code>, toujours pas l'ordre récursif. Il faut empiler <em>tous</em> les éléments à l'envers, feuilles comprises, et ne traiter que ce qui sort de la pile (mesuré&nbsp;: c'est la seule des trois variantes qui redonne exactement l'ordre récursif).</dd>
+    </div>
+    <div>
+      <dt>Ce qu'elle apporte</dt>
+      <dd>Elle ne déborde jamais. La version récursive ci-dessus, elle, lève <code>RangeError</code> quelque part entre sept et onze mille niveaux d'imbrication — et <strong>ce seuil n'est pas un nombre sur lequel compter</strong>. Ce n'est pas une question de mesure imprécise&nbsp;: c'est le moteur qui change d'avis. La <em>même</em> fonction, appelée depuis le <em>même</em> endroit, déborde à 7&nbsp;062 niveaux au tout premier appel du programme et à 10&nbsp;437 après 200&nbsp;000 appels préalables (Node&nbsp;24.16.0, chaque valeur reproduite deux fois, un seul appel mesuré par processus)&nbsp;: une fois la fonction chaude, le moteur l'optimise et ses cadres de pile rétrécissent. Chrome&nbsp;151, lui, rend 8&nbsp;500. La version itérative, elle, additionne 100&nbsp;000 niveaux dans les deux moteurs, en quelques millisecondes. Et son coût mémoire s'inverse&nbsp;: le tableau <code>pile</code> ne monte jamais au-delà de <strong>1</strong> élément sur une donnée profonde de 20&nbsp;000 niveaux, mais atteint <strong>10&nbsp;000</strong> sur une donnée large de 10&nbsp;000 sous-tableaux (mesuré)&nbsp;: elle grandit avec la <em>largeur</em>, pas la profondeur.</dd>
+    </div>
+    <div>
+      <dt>Quand la préférer</dt>
+      <dd>Quand la profondeur vient de l'extérieur et n'est pas bornée&nbsp;: JSON reçu d'une API (<code>JSON.parse</code> avale deux millions de niveaux sans broncher, ton parcours récursif non), arborescence de fichiers, arbre syntaxique d'un fichier qu'on t'envoie. En revanche, pas le DOM d'une page&nbsp;: le lecteur HTML de Chrome plafonne l'imbrication à 511 niveaux (mesuré&nbsp;: 400 <code>&lt;div&gt;</code> imbriqués en donnent 401, mais 1&nbsp;200 comme 5&nbsp;000 en donnent 511), soit très loin du seuil de débordement. Sur une structure dont tu maîtrises la profondeur, garde la récursion&nbsp;: elle épouse la forme de la donnée et se relit en deux secondes.</dd>
+    </div>
+  </dl>
+</aside>
 
 <h2>Récursion ou itération&nbsp;?</h2>
 <p>Toute récursion peut se réécrire en boucle, et inversement&nbsp;: les deux sont équivalents en puissance de calcul. Le choix est une affaire de lisibilité et de coût.</p>

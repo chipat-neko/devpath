@@ -54,6 +54,29 @@ Boutons (primaire/secondaire/fantôme), cartes (cours, fonctionnalité, leçon),
 blocs de code + barre + copier, sommaire (TOC) avec scrollspy, barre de progression, nav
 précédent/suivant, fil d'Ariane, champ de recherche, bascule de thème, menu mobile.
 
+### `.variante` — « Une autre façon de le faire »
+Encadré de leçon qui montre une **seconde façon d'écrire la même chose**. Structure imposée, et
+contrôlée par `node tools/verif-alternatives.js` (mode `--mutations` pour éprouver le contrôle) :
+
+```html
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head"><svg class="variante__icon" … aria-hidden="true">…</svg>
+    <p class="variante__title">Une autre façon de le faire</p></div>
+  <p class="variante__lead">…ce qu'est la variante, en une phrase…</p>
+  <figure class="code-block" data-file="…"><pre><code class="language-…">…</code></pre></figure>
+  <dl class="variante__facts">
+    <div><dt>Ce qu'elle coûte</dt><dd>…</dd></div>
+    <div><dt>Ce qu'elle apporte</dt><dd>…</dd></div>
+    <div><dt>Quand la préférer</dt><dd>…</dd></div>
+  </dl>
+</aside>
+```
+
+Règles : les trois libellés sont **fixes et dans cet ordre** ; chaque réponse fait au moins
+80 caractères et cite une **mesure**, jamais une impression ; pas de titre `<h…>` dans le bloc
+(il polluerait le sommaire) ; au plus 3 blocs par leçon. L'accent suit la couleur du cours
+(`var(--accent)`), donc le bloc change de teinte d'un cours à l'autre sans réglage.
+
 ## Boucle qualité
 Chaque type de page est rendu via Chrome headless (`tools/shot.ps1`) en desktop (1440) et mobile
 (390), critiqué sur les 8 axes (hiérarchie, espacement, alignement, typo, contraste, couleur,

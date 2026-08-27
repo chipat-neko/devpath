@@ -98,6 +98,12 @@ var ETAPES = [
      cotes, et refuse tout objectif deja vrai au depart — un controle vert par
      vacuite ne prouve rien. */
   { nom: "gitscen", fichier: "verif-git-scenarios.js", args: [], quoi: "situations guidees : la solution atteint le but, les pieges echouent", sautable: true },
+  /* Le bloc « Une autre facon de le faire » (phase E) est un FORMAT : trois faits
+     obligatoires, dans le meme ordre, sous le meme titre. Un format qui derive ne
+     casse rien -- il se contente de ne plus rien promettre au lecteur. Et une classe
+     mal orthographiee rend le bloc en texte nu sans qu'aucun autre controle bronche :
+     cette etape verifie donc aussi que chaque classe employee existe dans le CSS. */
+  { nom: "altern ", fichier: "verif-alternatives.js", args: [], quoi: "format « une autre facon de le faire » : les trois faits, les classes reelles" },
 ];
 if (!RAPIDE) {
   ETAPES.push({
