@@ -1355,6 +1355,22 @@ apprenant qui décide.
   régénéré (43 789 mots).
 - [ ] **E3 · Écrire, par lots de cours.** Un lot par case.
 
+  **⚠️ CE QUE E2 IMPOSE À E3, chiffré : 2 blocs écrits ont rendu 10 fautes, dont 3 bloquantes — soit
+  5 fautes par bloc.** Ce n'est pas de la négligence : ces blocs *affirment* des coûts et des
+  comportements, et une affirmation non exécutée est fausse une fois sur deux. À ce taux, écrire les
+  28 blocs restants sans passe de contradiction produirait une centaine de fautes publiées.
+  **Donc : pas plus de 3 à 4 blocs par case, et une contradiction par lot, sinon la case ne vaut rien.**
+  Les trois pièges à vérifier d'office sur chaque bloc neuf, parce qu'ils ont tous les trois été
+  rencontrés sur deux blocs seulement :
+  1. **le code publié fait-il vraiment ce que le texte dit ?** (le badge était peint *sous* le contenu
+     alors que le texte promettait l'inverse) — l'exécuter ne suffit pas, il faut *observer la propriété
+     annoncée* ;
+  2. **chaque chiffre se reproduit-il, et sous quel protocole ?** (un seuil de pile dépend de la chauffe
+     JIT, une géométrie dépend de `box-sizing`, une largeur dépend du libellé choisi) — citer le
+     contexte, ou ne pas citer le chiffre ;
+  3. **le remède proposé marche-t-il ?** (« empiler les sous-tableaux à l'envers » ne rétablissait pas
+     l'ordre) — appliquer le correctif et remesurer, jamais le déduire.
+
 ---
 
 ## PHASE F — Contrôle final
