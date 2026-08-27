@@ -169,6 +169,67 @@ console.log(JSON.stringify(subsets([1, 2, 3])));
 // affiche: [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]]</code></pre></figure>
 <p>Il y a <code>2^n</code> sous-ensembles et on copie chacun en <code>O(n)</code> : la complexité est <strong>O(n · 2^n)</strong> en temps, optimale puisque la sortie elle-même fait cette taille.</p>
 
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head">
+    <svg class="variante__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M6 16.5V5" /><path d="M18 7.5a9 9 0 0 1-9 9" /></svg>
+    <p class="variante__title">Une autre façon de le faire</p>
+  </div>
+  <p class="variante__lead">Les mêmes sous-ensembles avec une <strong>pile explicite</strong> au lieu de la récursion&nbsp;: chaque entrée de la pile porte <em>son propre</em> état (l'index de départ et le chemin déjà construit). Le <code>chemin.pop()</code> — le «&nbsp;défaire&nbsp;» — disparaît alors complètement, puisque plus rien n'est partagé entre les branches.</p>
+<figure class="code-block" data-file="backtracking-pile.js"><pre><code class="language-javascript">function subsetsPile(nums) {
+  const res = [];
+  const pile = [{ debut: 0, chemin: [] }]; // l'état de départ, et lui seul
+  while (pile.length &gt; 0) {
+    const { debut, chemin } = pile.pop();
+    res.push(chemin);                      // chaque nœud EST un sous-ensemble
+    // À L'ENVERS : pop() ressort le dernier empilé, donc on empile
+    // les choix dans l'ordre inverse pour les traiter dans le bon ordre.
+    for (let i = nums.length - 1; i &gt;= debut; i--) {
+      pile.push({ debut: i + 1, chemin: [...chemin, nums[i]] });
+    }
+  }
+  return res;
+}
+
+console.log(JSON.stringify(subsetsPile([1, 2, 3])));
+// affiche: [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]]
+
+// La pile est une VALEUR : on peut suspendre l'exploration, puis la reprendre.
+function pas(nums, pile, res) { // traite UN nœud, pas un de plus
+  if (pile.length === 0) return false;
+  const { debut, chemin } = pile.pop();
+  res.push(chemin);
+  for (let i = nums.length - 1; i &gt;= debut; i--) {
+    pile.push({ debut: i + 1, chemin: [...chemin, nums[i]] });
+  }
+  return true;
+}
+
+const nums = [1, 2, 3];
+const pile = [{ debut: 0, chemin: [] }];
+const res = [];
+pas(nums, pile, res);
+pas(nums, pile, res); // deux nœuds seulement, puis on s'arrête
+console.log(JSON.stringify(res), pile.length);
+// affiche: [[],[1]] 4
+while (pas(nums, pile, res)); // on reprend exactement là où on en était
+console.log(JSON.stringify(res));
+// affiche: [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]]</code></pre></figure>
+  <dl class="variante__facts">
+    <div>
+      <dt>Ce qu'elle coûte</dt>
+      <dd><strong>Deux fois plus de temps — mais pas pour la raison qu'on croit — et un ordre qui se retourne à la moindre distraction.</strong> Sur <code>n = 20</code> (1&nbsp;048&nbsp;576 sous-ensembles), la version récursive tient en <strong>75 à 76&nbsp;ms</strong> et celle-ci en <strong>158 à 167&nbsp;ms</strong> (Node&nbsp;24.16.0, médiane de 7 essais, une version par processus, série reproduite deux fois). L'explication qui vient à l'esprit — «&nbsp;c'est l'objet enveloppe <code>{debut, chemin}</code>&nbsp;» — est <em>fausse</em>&nbsp;: réécrite avec deux piles parallèles et plus aucun objet, la variante met <strong>164 à 178&nbsp;ms</strong>, c'est-à-dire un peu <em>plus</em>. Ce qui coûte, c'est la <strong>copie du chemin à chaque poussée</strong> (<code>[...chemin, nums[i]]</code>), là où la récursion mute un seul tableau. La preuve par une troisième variante&nbsp;: une pile explicite qui empile aussi des <em>marqueurs de retour</em> pour rétablir le «&nbsp;défaire&nbsp;» — donc un seul chemin muté — rend exactement la même liste en <strong>77 à 78&nbsp;ms</strong>, à égalité avec la récursion. Quant à la boucle <code>for</code> descendante, elle n'est pas une coquetterie&nbsp;: écrite dans le sens naturel (<code>i = debut</code> vers le haut), elle rend <code>[[],[3],[2],[2,3],[1],[1,3],[1,2],[1,2,3]]</code> au lieu de l'ordre attendu, et sur les tailles 0 à 12 <strong>seules 2 retrouvent l'ordre récursif</strong> — celles qui ont zéro ou un élément (mesuré). Un test qui compare des <em>ensembles</em> ne verra rien&nbsp;; un test qui compare la liste rendue échouera sur les onze autres.</dd>
+    </div>
+    <div>
+      <dt>Ce qu'elle apporte</dt>
+      <dd><strong>Le parcours devient une donnée qu'on manipule</strong>, alors que la récursion l'enferme dans la pile du moteur. Trois conséquences mesurées&nbsp;: <em>(1)</em> on peut s'arrêter au nœud <em>k</em> et reprendre plus tard — c'est ce que fait la seconde moitié du code ci-dessus, et le résultat final est identique aux <strong>8 sous-ensembles</strong> de la version d'un seul tenant&nbsp;; <em>(2)</em> remplacer <code>pop()</code> par <code>shift()</code> — <strong>une seule ligne</strong> — fait passer le parcours de la profondeur à la <strong>largeur</strong>&nbsp;: les sous-ensembles sortent alors par taille croissante, <code>[[],[3],[2],[1],[2,3],[1,3],[1,2],[1,2,3]]</code>. Note bien l'ordre <em>à l'intérieur</em> de chaque taille&nbsp;: il est renversé, parce que la boucle d'empilement descendante n'a plus de raison d'être une fois qu'on défile par la tête. La remettre à l'endroit (deuxième ligne à changer) donne <code>[[],[1],[2],[3],[1,2],[1,3],[2,3],[1,2,3]]</code>. <em>(3)</em> La pile est observable, donc plafonnable&nbsp;: <strong>154 entrées au maximum</strong> pour <code>n = 18</code> et ses 262&nbsp;144 nœuds, ce qui donne un budget mémoire qu'on peut afficher ou journaliser — mais c'est une propriété du parcours en <em>profondeur</em>, pas de la pile&nbsp;: en largeur, la même mesure monte à <strong>48&nbsp;620 entrées</strong>. À qualité égale par ailleurs&nbsp;: <strong>13 tailles sur 13 (n de 0 à 12) rendent exactement la même liste, dans le même ordre</strong>, que la version récursive.</dd>
+    </div>
+    <div>
+      <dt>Quand la préférer</dt>
+      <dd>Quand l'exploration doit être <strong>interruptible</strong>&nbsp;: un solveur qui rend la main à l'interface toutes les 16&nbsp;ms, une recherche qu'on arrête au bout de <em>n</em> solutions ou d'un budget de temps, une exploration qu'on veut reprendre après un redémarrage. Et quand on veut <strong>changer de stratégie de parcours</strong> sans réécrire l'algorithme. <strong>En revanche, pas pour éviter le débordement de pile&nbsp;: ici l'argument ne tient pas.</strong> La profondeur du backtracking vaut le nombre de décisions — <code>n</code> pour les sous-ensembles — et bien avant que <code>n</code> n'approche les milliers de niveaux que le moteur encaisse, c'est le nombre de nœuds qui devient impraticable&nbsp;: <code>2^n</code> vaut déjà 33 millions à <code>n = 25</code>. L'argument du débordement vaut pour un parcours en profondeur de <em>graphe</em> (leçon&nbsp;12), où la profondeur suit le nombre de sommets, pas pour l'arbre de décision d'ici. Et si tu veux la pile explicite <em>sans</em> payer le double, garde le «&nbsp;défaire&nbsp;»&nbsp;: empile des marqueurs de retour plutôt que des copies du chemin. Partout ailleurs, la récursion reste préférable&nbsp;: elle est deux fois plus rapide que la version ci-dessus et le «&nbsp;choisir → explorer → défaire&nbsp;» se lit d'un coup d'œil.</dd>
+    </div>
+  </dl>
+</aside>
+
 <h2>Générer les permutations</h2>
 <p>Ici, l'ordre compte et chaque élément doit apparaître une seule fois. On marque les éléments déjà placés avec un tableau <code>utilise</code> qu'on remet à <code>false</code> au retour. On n'enregistre que les chemins <em>complets</em> (longueur = <code>n</code>).</p>
 <figure class="code-block" data-file="algo.js"><pre><code class="language-javascript">function permutations(nums) {

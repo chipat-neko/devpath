@@ -235,6 +235,80 @@ for (const v of [1, 2, 3, 4, 5, 6]) arbre = inserer(arbre, v);
 // racine 4, hauteur 3 (au lieu de 6 pour un BST naïf).</code></pre></figure>
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c.7.7 1 1.3 1 2h6c0-.7.3-1.3 1-2a6 6 0 0 0-4-10Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — une rotation ne trie jamais à ta place</p><p>Le réflexe pour vérifier une rotation à la main : écris le parcours infixe (gauche, racine, droite) <em>avant</em> et <em>après</em>. Les deux suites doivent être <strong>identiques et triées</strong>. Si elles diffèrent, un pointeur a été mal raccroché — presque toujours l'<em>orphelin</em> (<code>T3</code> pour la rotation à droite) que l'on a oublié de rebrancher.</p></div></div>
 
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head">
+    <svg class="variante__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M6 16.5V5" /><path d="M18 7.5a9 9 0 0 1-9 9" /></svg>
+    <p class="variante__title">Une autre façon de le faire</p>
+  </div>
+  <p class="variante__lead">La même insertion <strong>sans récursion</strong>&nbsp;: on descend en mémorisant le chemin dans un tableau, puis on le remonte à l'envers. Ce que la récursion faisait gratuitement — se souvenir du parent pour y rebrancher le résultat d'une rotation — devient ici du code explicite.</p>
+<figure class="code-block" data-file="avl-insertion-iterative.js"><pre><code class="language-javascript">// Les briques de la leçon, reprises telles quelles pour que le bloc tourne seul.
+class Noeud { constructor(cle) { this.cle = cle; this.gauche = null; this.droite = null; this.hauteur = 1; } }
+const hauteur = (n) =&gt; (n ? n.hauteur : 0);
+const facteur = (n) =&gt; (n ? hauteur(n.gauche) - hauteur(n.droite) : 0);
+const majHauteur = (n) =&gt; { n.hauteur = 1 + Math.max(hauteur(n.gauche), hauteur(n.droite)); };
+const rotationDroite = (z) =&gt; { const y = z.gauche, T3 = y.droite; y.droite = z; z.gauche = T3; majHauteur(z); majHauteur(y); return y; };
+const rotationGauche = (z) =&gt; { const y = z.droite, T2 = y.gauche; y.gauche = z; z.droite = T2; majHauteur(z); majHauteur(y); return y; };
+
+function insererIteratif(racine, cle) {
+  if (!racine) return new Noeud(cle);
+
+  // 1) DESCENTE : on note chaque nœud traversé, il faudra les revoir.
+  const chemin = [];
+  let n = racine;
+  for (;;) {
+    chemin.push(n);
+    if (cle &lt; n.cle) { if (!n.gauche) { n.gauche = new Noeud(cle); break; } n = n.gauche; }
+    else if (cle &gt; n.cle) { if (!n.droite) { n.droite = new Noeud(cle); break; } n = n.droite; }
+    else return racine; // doublon ignoré
+  }
+
+  // 2) REMONTÉE : le chemin se relit à l'envers, du parent vers la racine.
+  for (let k = chemin.length - 1; k &gt;= 0; k--) {
+    const noeud = chemin[k];
+    const avant = noeud.hauteur;
+    majHauteur(noeud);
+    const bf = facteur(noeud);
+    let neuf = noeud;
+    if (bf &gt; 1 &amp;&amp; cle &lt; noeud.gauche.cle) neuf = rotationDroite(noeud);                              // LL
+    else if (bf &lt; -1 &amp;&amp; cle &gt; noeud.droite.cle) neuf = rotationGauche(noeud);                         // RR
+    else if (bf &gt; 1) { noeud.gauche = rotationGauche(noeud.gauche); neuf = rotationDroite(noeud); }   // LR
+    else if (bf &lt; -1) { noeud.droite = rotationDroite(noeud.droite); neuf = rotationGauche(noeud); }  // RL
+
+    if (neuf !== noeud) {
+      // 3) REBRANCHEMENT : la rotation a changé la racine du sous-arbre.
+      const parent = chemin[k - 1];
+      if (!parent) racine = neuf;                            // c'était la racine de l'arbre
+      else if (parent.gauche === noeud) parent.gauche = neuf; // sinon, chez le parent
+      else parent.droite = neuf;
+      return racine; // une seule rotation suffit après une insertion
+    }
+    if (noeud.hauteur === avant) return racine; // hauteur inchangée : les ancêtres ne bougent plus
+  }
+  return racine;
+}
+
+const infixe = (n, sortie = []) =&gt; { if (n) { infixe(n.gauche, sortie); sortie.push(n.cle); infixe(n.droite, sortie); } return sortie; };
+
+let arbre = null;
+for (const v of [1, 2, 3, 4, 5, 6]) arbre = insererIteratif(arbre, v);
+console.log(arbre.cle, arbre.hauteur); // 4 3
+console.log(JSON.stringify(infixe(arbre))); // [1,2,3,4,5,6]</code></pre></figure>
+  <dl class="variante__facts">
+    <div>
+      <dt>Ce qu'elle coûte</dt>
+      <dd><strong>Le rebranchement, écrit à la main — et il ne pardonne pas.</strong> La version récursive rend le nouveau sous-arbre et l'appelant l'accroche par <code>racine.gauche = inserer(…)</code>&nbsp;; ici, il faut retrouver le parent dans le chemin et choisir soi-même le bon côté. Faute injectée pour mesurer l'enjeu&nbsp;: on garde tout le reste et on supprime ces trois lignes de rebranchement — <strong>50 arbres sur 50 perdent des clés</strong> (300 insertions chacun), et c'est vrai sur les dix tirages essayés&nbsp;; l'invariant AVL, lui, est violé dans <strong>21 à 31 arbres sur 50</strong> selon le tirage. Retiens le premier chiffre, pas le second&nbsp;: c'est celui qui ne dépend pas du hasard. Second coût&nbsp;: le tableau <code>chemin</code>, qui matérialise ce que la pile d'appels offrait gratuitement, et <strong>douze lignes de code de plus</strong> (19 contre 31, comptées sur les deux fonctions publiées). En revanche, l'arrêt anticipé de la dernière ligne n'est <em>pas</em> un risque&nbsp;: le retirer laisse <strong>0 arbre sur 50</strong> en défaut, sur les dix tirages — c'est une optimisation, pas une condition de justesse.</dd>
+    </div>
+    <div>
+      <dt>Ce qu'elle apporte</dt>
+      <dd><strong>Elle ne remonte que là où l'arbre change.</strong> La version récursive réaffecte <code>racine.gauche</code> ou <code>racine.droite</code> et recalcule une hauteur à <em>chaque</em> niveau du chemin, même quand rien ne bouge&nbsp;: <strong>15,46 nœuds revisités par insertion</strong> en moyenne sur 100&nbsp;000 clés (arbre de hauteur 20), dont <strong>13,75 écritures de hauteur qui réécrivent la valeur déjà présente</strong>. La version itérative s'arrête dès qu'une hauteur ne change plus et tombe à <strong>2,77 nœuds revisités</strong>&nbsp;; en nœuds <em>distincts</em> effectivement écrits, la comparaison qui compte pour un support où écrire coûte cher, c'est <strong>15,68 contre 3,40</strong>, soit <strong>4,6 fois moins</strong> (compté, pas estimé). Le chronomètre, lui, dépend entièrement de <strong>la forme de l'entrée</strong>, et c'est la mesure la plus instructive du lot&nbsp;: sur 200&nbsp;000 clés <em>tirées au hasard</em>, les deux versions sont à égalité (<strong>54 à 58&nbsp;ms</strong> en récursif contre <strong>53&nbsp;ms</strong>) parce que la descente y coûte à elle seule 34&nbsp;ms et qu'elle est commune aux deux&nbsp;; sur 200&nbsp;000 clés <em>déjà triées</em> — le cas même que cette leçon a passé cinq paragraphes à décrire — la descente ne pèse plus que 8,5&nbsp;ms, la remontée redevient l'essentiel du travail, et l'itérative passe devant&nbsp;: <strong>19&nbsp;ms contre 31</strong>, soit <strong>1,6 fois plus rapide</strong> (Node&nbsp;24.16.0, médiane de 5, une version par processus, série reproduite deux fois). Les deux versions construisent par ailleurs <strong>exactement le même arbre</strong> — mêmes clés, mêmes hauteurs, même forme — sur 60 jeux de 400 clés tirées au hasard, ainsi que sur les trois entrées pathologiques classiques (2&nbsp;000 clés croissantes, décroissantes, en dents de scie)&nbsp;: 60/60 et 3/3 identiques.</dd>
+    </div>
+    <div>
+      <dt>Quand la préférer</dt>
+      <dd>Quand les clés arrivent <strong>déjà ordonnées</strong> — fichier trié, identifiants croissants, horodatages —, parce que c'est là que la remontée pèse le plus et que l'arrêt anticipé la coupe&nbsp;: 1,6 fois plus rapide sur la mesure ci-dessus. Et quand une <strong>écriture</strong> coûte beaucoup plus cher qu'une lecture&nbsp;: nœuds persistés sur disque, structure partagée entre fils d'exécution, arbre copié à l'écriture (<em>copy-on-write</em>), où toucher un nœud signifie le recopier — le facteur 4,6 se paie alors en octets, pas en microsecondes. Sur des clés désordonnées et en mémoire vive, en revanche, l'écart de temps est dans le bruit&nbsp;: à ce prix-là, douze lignes de plus et un rebranchement qui perd des clés quand on l'oublie ne se justifient que si le profilage les réclame. Note enfin que ce «&nbsp;ne remonte que si ça change&nbsp;» n'est pas gratuit non plus&nbsp;: <code>majHauteur</code> est appelé <em>avant</em> le test d'arrêt, si bien qu'une écriture de hauteur par insertion — exactement une — réécrit une valeur inchangée. Sur un support où écrire coûte, c'est la ligne à déplacer en premier.</dd>
+    </div>
+  </dl>
+</aside>
+
 <h2>Rouge-noir : l'autre équilibre</h2>
 <p>L'AVL n'est pas le seul arbre auto-équilibré. L'<strong>arbre rouge-noir</strong> colore chaque nœud en rouge ou noir et impose des règles (pas deux rouges consécutifs, même nombre de noirs sur tout chemin racine-feuille) qui garantissent une hauteur bornée par <code>2 · log₂(n)</code>. C'est un équilibre <strong>plus lâche</strong> que l'AVL (<code>1,44 · log₂ n</code>) : les recherches y sont donc un peu plus lentes, mais surtout il exige <strong>moins de rotations</strong> lors des insertions et suppressions.</p>
 <p>Ce compromis décide de l'usage. Charge dominée par les <strong>lectures</strong>&nbsp;? L'AVL, plus compact en hauteur, répond plus vite. Charge avec beaucoup d'<strong>écritures</strong>&nbsp;? Le rouge-noir amortit mieux, car il retouche moins l'arbre. C'est pourquoi les bibliothèques standard, très générales, penchent presque toujours pour le rouge-noir.</p>

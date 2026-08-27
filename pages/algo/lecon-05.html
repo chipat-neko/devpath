@@ -256,6 +256,58 @@ console.log(triFusion([5, 2, 4, 1])); // [1, 2, 4, 5]</code></pre></figure>
 
 <table><thead><tr><th>Ressource</th><th>Coût</th></tr></thead><tbody><tr><td>Temps (tous cas)</td><td>O(n log n)</td></tr><tr><td>Espace auxiliaire</td><td>O(n)</td></tr><tr><td>Pile de récursion</td><td>O(log n)</td></tr></tbody></table>
 
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head">
+    <svg class="variante__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M6 16.5V5" /><path d="M18 7.5a9 9 0 0 1-9 9" /></svg>
+    <p class="variante__title">Une autre façon de le faire</p>
+  </div>
+  <p class="variante__lead">Le même tri, <strong>sans récursion</strong>&nbsp;: au lieu de couper jusqu'à des morceaux de taille&nbsp;1, on <strong>part</strong> des morceaux de taille&nbsp;1 et on fusionne par largeurs qui doublent — 1, puis 2, 4, 8 — entre deux tampons qu'on échange à chaque passage. C'est la version dite <strong>bottom-up</strong> (ascendante).</p>
+<figure class="code-block" data-file="tri-fusion-bottom-up.js"><pre><code class="language-javascript">// Fusionne src[g..m[ et src[m..d[ (déjà triés) DANS out[g..d[.
+function fusionDans(src, g, m, d, out) {
+  let i = g; // tête de la moitié gauche
+  let j = m; // tête de la moitié droite
+  for (let k = g; k &lt; d; k++) {
+    // gauche non épuisée ET (droite épuisée OU sa tête n'est pas plus petite)
+    if (i &lt; m &amp;&amp; (j &gt;= d || src[i] &lt;= src[j])) out[k] = src[i++];
+    else out[k] = src[j++];
+  }
+}
+
+function triFusionBottomUp(arr) {
+  let source = arr.slice();            // on ne touche jamais à arr
+  let cible = new Array(arr.length);   // le second tampon : DEUX en tout
+
+  // largeur = taille des morceaux DÉJÀ triés : 1, puis 2, 4, 8…
+  for (let largeur = 1; largeur &lt; arr.length; largeur *= 2) {
+    for (let g = 0; g &lt; arr.length; g += 2 * largeur) {
+      const m = Math.min(g + largeur, arr.length);     // début de la 2e moitié
+      const d = Math.min(g + 2 * largeur, arr.length); // fin du bloc
+      fusionDans(source, g, m, d, cible);
+    }
+    const t = source; source = cible; cible = t; // le résultat devient l'entrée
+  }
+  return source;
+}
+
+console.log(triFusionBottomUp([5, 2, 4, 1])); // [1, 2, 4, 5]
+console.log(triFusionBottomUp([3, 1])); // [1, 3]
+console.log(triFusionBottomUp([])); // []</code></pre></figure>
+  <dl class="variante__facts">
+    <div>
+      <dt>Ce qu'elle coûte</dt>
+      <dd><strong>Les indices, et ils sont impitoyables.</strong> Les deux <code>Math.min</code> ne sont pas de la prudence décorative&nbsp;: ce sont eux qui gèrent le dernier bloc, forcément incomplet quand <code>n</code> n'est pas une puissance de deux. Sans eux, le tri devient faux sur <strong>1&nbsp;140 tableaux sur 1&nbsp;280</strong> (toutes les tailles de 1 à 64, 20 tirages chacune, mesuré)&nbsp;— et pas d'une petite inversion&nbsp;: <code>[11, 2, 39]</code> rend <code>[null, 2, 11, 39]</code>, un tableau <em>plus long</em> que l'entrée. Second coût, discret&nbsp;: le découpage n'est plus «&nbsp;au milieu&nbsp;», donc le nombre de comparaisons s'écarte un peu — <strong>123&nbsp;540 contre 120&nbsp;424</strong> pour <code>n = 10&nbsp;000</code>, soit +2,6&nbsp;%. Sur toutes les tailles de 2 à 2&nbsp;000, la bottom-up compare davantage <strong>1&nbsp;905 fois</strong>, moins <strong>71 fois</strong>, autant <strong>23 fois</strong>&nbsp;: le surcoût est la règle, pas une loi. Il s'annule à coup sûr quand <code>n</code> est une puissance de deux, où les deux découpages coïncident&nbsp;: <strong>14 tailles sur 14</strong>, de 2 à 16&nbsp;384, rendent le même compte au comparateur près (8&nbsp;933 contre 8&nbsp;933 pour <code>n = 1&nbsp;024</code>). Ce n'est pas la seule façon de tomber juste, cela dit&nbsp;: sur un balayage de 2 à 2&nbsp;000, on compte 17 à 23 égalités selon le tirage, dont les 10 puissances de deux <em>toujours</em>, et 7 à 13 autres qui doivent tout au hasard des données. Enfin, le résultat sort tantôt dans un tampon, tantôt dans l'autre selon la parité du nombre de passages&nbsp;: c'est pourquoi la fonction renvoie <code>source</code> et ne suppose jamais lequel des deux.</dd>
+    </div>
+    <div>
+      <dt>Ce qu'elle apporte</dt>
+      <dd><strong>Elle n'alloue plus qu'un nombre <em>constant</em> de tableaux</strong> — attention, constant en <em>nombre</em>, pas en taille&nbsp;: ces deux tableaux font <code>n</code> cases chacun, donc l'espace auxiliaire reste le <code>O(n)</code> annoncé plus haut, et la variante ne le supprime pas. Ce qu'elle supprime, c'est le <em>défilé</em> d'allocations&nbsp;: la version récursive crée deux <code>slice</code> par appel et un tableau par fusion, soit <strong>599&nbsp;997 tableaux</strong> pour trier 200&nbsp;000 éléments (comptés). La bottom-up en crée <strong>2</strong>, quelle que soit la taille. Le temps suit&nbsp;: sur un million d'entiers, <strong>162 à 165&nbsp;ms</strong> en récursif contre <strong>85 à 87&nbsp;ms</strong> en bottom-up (Node&nbsp;24.16.0, médiane de 5 essais, un seul algorithme par processus, série reproduite trois fois, <strong>machine au repos</strong>) — deux fois plus rapide <em>bien qu'elle compare davantage</em>&nbsp;: ce qui coûte ici, ce sont les allocations, pas les comparaisons. Et cette précision «&nbsp;machine au repos&nbsp;» n'est pas une coquetterie&nbsp;: la même mesure relancée pendant que dix autres processus travaillent donne <strong>347&nbsp;ms</strong> pour le récursif mais seulement <strong>110&nbsp;ms</strong> pour la bottom-up. L'écart passe de 1,9 à <strong>3,2</strong>&nbsp;: celle qui alloue est celle qui souffre quand la mémoire est disputée. Un chrono sans son contexte ne veut rien dire. Et rien n'est perdu au passage&nbsp;: mêmes résultats que la version récursive sur <strong>2&nbsp;000 tableaux, 0 écart</strong>, et la stabilité tient (le <code>&lt;=</code> est au même endroit) — <strong>500 tableaux à clés répétées, 0 inversion</strong>.</dd>
+    </div>
+    <div>
+      <dt>Quand la préférer</dt>
+      <dd>Quand l'ordre des fusions doit être <strong>connu d'avance</strong>&nbsp;: c'est tout l'intérêt du tri externe. Chaque passage lit les données du début à la fin et écrit des «&nbsp;runs&nbsp;» deux fois plus longs&nbsp;: la liste des fusions à faire se déduit du seul nombre d'enregistrements, sans rien tenir en mémoire. Ce n'est pas que la découpe récursive en soit <em>incapable</em> — elle trie elle aussi un fichier plus gros que la mémoire, et pour le même nombre d'entrées-sorties (vérifié par exécution sur un fichier 220 fois plus gros que son budget mémoire&nbsp;: 11&nbsp;534&nbsp;336 enregistrements lus ou écrits de part et d'autre, rapport 1,000) — c'est qu'elle a besoin d'une pile de sous-problèmes pour savoir où elle en est, là où la bottom-up n'a besoin que d'un compteur. <strong>En revanche, pas pour éviter un débordement de pile</strong>&nbsp;: c'est l'argument qu'on lit partout, et il ne tient pas ici. La profondeur de la récursion vaut <code>⌈log₂ n⌉ + 1</code>, soit <strong>19 niveaux mesurés pour 200&nbsp;000 éléments</strong> — à des milliers de niveaux du seuil de débordement (leçon&nbsp;2). Sur un tableau en mémoire dont on relit le code plus souvent qu'on ne le profile, la version récursive reste la bonne&nbsp;: elle tient en <strong>sept lignes de code</strong> contre vingt et une ici (comptées sur les blocs publiés), et elle dit ce qu'elle fait.</dd>
+    </div>
+  </dl>
+</aside>
+
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — fusion ou tri rapide&nbsp;?</p><p>Le <strong>tri rapide</strong> (quicksort, prochaine leçon) trie <em>en place</em> et est souvent plus rapide en moyenne, mais son pire cas est <code>O(n²)</code> et il n&apos;est pas stable. Choisis le <strong>tri fusion</strong> quand tu as besoin de <em>stabilité</em>, d&apos;un <em>pire cas garanti</em>, ou de trier des <em>données hors mémoire</em> ; choisis le tri rapide quand la mémoire est comptée et que le débit moyen prime.</p></div></div>
 
 <h2>Propriétés et usages</h2>

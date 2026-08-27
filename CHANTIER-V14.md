@@ -1353,7 +1353,99 @@ apprenant qui décide.
   **72 pages, 463 blocs, 0 divergent** · `verif-sorties` 324/325 (l'unique divergence, `offensive/lecon-07`,
   est un dépassement de délai à 10 s, préexistant et hors périmètre) · 0 URL de CDN · `search-index`
   régénéré (43 789 mots).
-- [ ] **E3 · Écrire, par lots de cours.** Un lot par case.
+- [x] **E3a · Le lot `algo` (4 blocs sur les 7).** ✅ **2026-08-27. Quatre blocs écrits, exécutés, puis DÉMOLIS par contradiction : 34 fautes annoncées, 20 confirmées par un second agent, et la moitié des faits publiés a dû être RÉÉCRITE — dont trois affirmations que mes propres mesures soutenaient.**
+
+  **Les quatre blocs** : `algo/lecon-05` (tri fusion bottom-up), `algo/lecon-08` (file en liste
+  chaînée), `algo/lecon-18` (backtracking à pile explicite), `algo/lecon-25` (insertion AVL itérative).
+  Chaque bloc est **autonome et exécutable** : `verif-clic` ouvre les 4 pages dans Chrome et clique
+  **32 blocs sur 32** (0 privé de bouton par `BROWSER_ONLY`, 0 divergent, 0 fragment en erreur).
+
+  **⚠️ LA CONTRADICTION (4 agents démolisseurs + 24 contre-experts, lecture et exécution seules)** a rendu
+  **34 fautes ; 24 ont été soumises à un second agent, 20 confirmées, 4 réfutées** ; les 10 restantes
+  (celles de `lecon-25`) ont été vérifiées par moi-même, mesure par mesure. Ce qu'elles ont coûté :
+  **9 corrections sur `lecon-05`, et les TROIS faits réécrits en entier sur chacune des trois autres.**
+
+  1. **[bloquante, `lecon-08`] MA MESURE MESURAIT L'HORLOGE, PAS LA FILE.** J'avais publié « 36 à 41 ms
+     contre 38 à 39 » comme preuve que les deux files ont le même débit. Or poser `hrtime` autour de
+     **chaque** défilement coûte plus cher que le défilement : mesuré, deux lectures d'horloge par tour
+     font **80,5 ms** au million. Sans chronomètre par opération, le vrai total est **4,8 à 5,7 ms pour
+     le tableau contre 2,4 à 2,5 ms pour la chaînée** : non seulement le chiffre était faux d'un facteur
+     sept, mais **il inversait la conclusion** — la chaînée est deux fois plus rapide au défilement.
+  2. **[bloquante, `lecon-18`] LE REMÈDE DÉDUIT, PAS TESTÉ — le piège n°3 du cadrage, exactement.**
+     J'annonçais « remplacer `pop()` par `shift()`, une ligne, et le parcours passe en largeur :
+     `[[],[1],[2],[3],…]` ». Exécuté : **une ligne rend `[[],[3],[2],[1],[2,3],[1,3],[1,2],[1,2,3]]`**.
+     Le parcours devient bien en largeur, mais l'ordre à l'intérieur de chaque taille est renversé ; la
+     liste que j'avais publiée demande **deux** changements. J'avais mesuré la bonne liste sur une
+     fonction que j'avais écrite à côté, pas sur la modification que le texte décrit.
+  3. **[bloquante, `lecon-25`] « AUCUN GAIN DE TEMPS » ÉTAIT VRAI POUR LA SEULE DISTRIBUTION QUE
+     J'AVAIS MESURÉE.** Sur des clés tirées au hasard, les deux versions sont à égalité (54-58 ms contre
+     53) parce que la **descente**, commune aux deux, coûte à elle seule 33,9 ms. Sur des clés **déjà
+     triées** — le cas que la leçon passe cinq paragraphes à décrire — la descente tombe à 8,5 ms et
+     l'itérative passe devant : **19 ms contre 31, soit 1,6×**. Une mesure sur une seule forme d'entrée
+     avait produit une prescription inverse de la mesure.
+  4. **[bloquante, `lecon-08`] « Retirer au milieu, c'est `O(1)` en liste chaînée »** — faux avec un
+     chaînage **simple** : sans le prédécesseur, on ne décroche rien, et le retrouver coûte **499 999
+     sauts** pour le nœud du milieu d'une file d'un million. Même faute sur le deque : le tableau
+     retire par la queue d'un `pop()`, la chaînée simple doit reparcourir toute la liste.
+  5. **[sérieuse, `lecon-05`] « Elle n'alloue plus rien »** : elle alloue **2n cases** (une copie de
+     l'entrée plus un tampon), donc l'espace auxiliaire reste le `O(n)` que la section juste au-dessus
+     reproche au tri fusion. Ce qui disparaît, c'est le **nombre** d'allocations (2 contre 599 997), pas
+     l'ordre de grandeur. Le commentaire du **code publié** disait la même chose en pire (« le SEUL
+     tableau supplémentaire », trois lignes sous `arr.slice()`).
+  6. **[sérieuse, `lecon-18`] MON EXPLICATION DU COÛT ÉTAIT FAUSSE, et une variante l'a prouvé.**
+     J'attribuais les 2,3× à l'objet enveloppe `{debut, chemin}`. Réécrite avec deux piles parallèles
+     et **plus aucun objet**, la variante met **164 à 178 ms** — un peu *plus*. Le vrai coût est la
+     **copie du chemin à chaque poussée** : une troisième variante à marqueurs de retour, qui mute un
+     seul chemin, rend la même liste en **77-78 ms**, à égalité avec la récursion.
+  7. **[sérieuse, `lecon-05`] Le tri externe ne disqualifie pas la récursion.** Un agent a écrit et
+     exécuté un tri fusion externe *récursif* sur un fichier **220 fois plus gros que son budget
+     mémoire** : trié, avec le **même nombre d'entrées-sorties** que la bottom-up (11 534 336
+     enregistrements, rapport 1,000). L'avantage réel est ailleurs : la bottom-up n'a besoin que d'un
+     compteur là où la récursive a besoin d'une pile de sous-problèmes.
+  8. **[mineures, 8 au total]** « c'est eux » → « ce sont eux » ; « aller-retours » → « allers-retours »
+     (2 occurrences fautives dans tout `pages/`, contre 355 correctes) ; « elle tient en trois lignes »
+     → **sept** (comptées sur le bloc publié) ; « une bonne vingtaine de lignes de plus » → **douze**
+     (19 contre 31) ; `log₂(n)` → `⌈log₂ n⌉ + 1` pour 19 niveaux ; « 24 sur 50 » → **21 à 31 selon le
+     tirage** (seul « 50 sur 50 perdent des clés » ne dépend pas du hasard) ; « 15,46 nœuds retouchés »
+     → **revisités** (les nœuds distincts écrits sont 15,68 contre 3,40, soit 4,6× et non 5,6) ;
+     « une ligne qu'on oublie une fois sur deux » → taux jamais mesuré, retiré.
+
+  **⚠️ DEUX MESURES QUE LA CONTRADICTION A CRUES FAUSSES ET QUI ÉTAIENT JUSTES — parce que les agents
+  mesuraient pendant que vingt autres agents tournaient.** Un contre-expert donnait 182-194 ms là où je
+  publiais 162-164 pour le tri fusion récursif. Machine au repos, je reproduis **162 à 165 ms** (trois
+  séries). L'explication est mesurée : relancée pendant que **dix processus** travaillent, la version
+  récursive passe à **347 ms** quand la bottom-up ne monte qu'à **110** — celle qui alloue est celle qui
+  souffre quand la mémoire est disputée, et l'écart passe de 1,9× à **3,2×**. Leçon inscrite dans la
+  page : **un chrono sans son contexte ne veut rien dire** ; les deux chiffres y figurent désormais.
+
+  **⚠️ LA QUATRIÈME FAUSSE MESURE DE LA PHASE E, trouvée avant la contradiction et par hasard.** Un
+  résultat aberrant (0,39 remontée par insertion, alors que le minimum possible est 1) a fait ouvrir mon
+  générateur pseudo-aléatoire : le LCG `x*1103515245+12345` dépasse 2^53 en JavaScript, perd sa précision
+  et **ne rend que 14 041 valeurs distinctes sur 100 000** (99 489 avec un xorshift correct). Toutes les
+  mesures de la case ont été rejouées. C'est la troisième fois de ce chantier qu'une mesure fausse
+  *rassure* : ici, elle faisait paraître l'itératif 32× meilleur qu'il n'est.
+
+  **Ce que les blocs disent, une fois corrigés** (tout est mesuré, protocole cité) : bottom-up
+  → 2 tableaux contre 599 997, 162-165 ms contre 85-87, 1 140 tableaux faux sur 1 280 si l'on oublie un
+  `Math.min` ; file chaînée → 38,2 Mo contre 10,0 (3,8×), défilement 2× plus rapide, cycle complet
+  à égalité (12,2 contre 13,1 ms) mais pire cas 3× pire (17,8 contre 51,0 ms, c'est le ramasse-miettes) ;
+  backtracking à pile → interruptible et reprenable, mais 2× plus lent tant qu'on copie le chemin ;
+  AVL itératif → 4,6× moins de nœuds écrits, 1,6× plus rapide sur clés triées, à égalité sinon.
+
+  **Contrôles finaux** : `verif-alternatives` **6 blocs, 0 faute de format** · `verif-html` **0/0 sur
+  1 612 fichiers** · `verif-donnees` **0 erreur sur 25 invariants** · `verif-exemples` **19 conformes,
+  0 divergent** · `verif-clic` **32 blocs cliqués, 0 divergent** · `verif-rendu` **24 mesures (4 pages
+  × 3 largeurs × 2 thèmes), 0 erreur, 0 avertissement, réseau coupé** · 0 URL de CDN · `search-index`
+  régénéré (43 815 mots).
+
+- [ ] **E3b · Les 3 blocs restants** : `algo/lecon-19` (la table de hachage face aux deux pointeurs),
+  `sql/lecon-09` (la réécriture en `JOIN` d'une sous-requête scalaire) et `patterns/lecon-04` (un
+  parcours itératif là où le pattern est récursif).
+  ⚠️ **À REVÉRIFIER AVANT D'ÉCRIRE** : le diagnostic de E1 disait « `EXPLAIN` n'apparaît pas une seule
+  fois » dans `sql/lecon-09` — or `grep -ic EXPLAIN` en compte **3** au 2026-08-27. De même,
+  `patterns/lecon-04` compte **8** occurrences de « itérat|pile » que E1 déclarait être des faux amis
+  (Decorator) : à relire avant de conclure. Le lot `algo` a montré le coût réel d'un bloc : **compter
+  une passe de contradiction par lot, et prévoir que la moitié des faits sera réécrite.**
 
   **⚠️ CE QUE E2 IMPOSE À E3, chiffré : 2 blocs écrits ont rendu 10 fautes, dont 3 bloquantes — soit
   5 fautes par bloc.** Ce n'est pas de la négligence : ces blocs *affirment* des coûts et des

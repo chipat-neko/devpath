@@ -319,6 +319,77 @@ console.log(f.taille);    // 1</code></pre></figure>
 <p class="code-caption">Déroulé&nbsp;: après trois <code>enfiler</code>, <code>#items=[A,B,C]</code>, <code>#tete=0</code>. <code>defiler()</code> renvoie <code>A</code> et passe <code>#tete</code> à 1, sans décaler le reste. <code>defiler()</code> renvoie <code>B</code>, <code>#tete=2</code>. La tête « glisse » au lieu de tout déplacer.</p>
 <p>Chaque <code>enfiler</code> et chaque <code>defiler</code> est en <strong>O(1) amorti</strong>&nbsp;: avancer un index est constant, et le compactage occasionnel (un <code>slice</code> en O(n) déclenché seulement quand la moitié du tableau est déjà consommée) se répartit sur les défilements. L'espace est <strong>O(n)</strong> pour n éléments présents.</p>
 
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head">
+    <svg class="variante__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M6 16.5V5" /><path d="M18 7.5a9 9 0 0 1-9 9" /></svg>
+    <p class="variante__title">Une autre façon de le faire</p>
+  </div>
+  <p class="variante__lead">La même file, <strong>sans tableau</strong>&nbsp;: c'est la deuxième solution annoncée plus haut, la <strong>liste chaînée avec référence de queue</strong>. Chaque élément devient un petit objet qui pointe vers le suivant&nbsp;; la file ne retient que deux bouts, <code>#tete</code> et <code>#queue</code>.</p>
+<figure class="code-block" data-file="file-chainee.js"><pre><code class="language-javascript">class FileChainee {
+  #tete = null;   // le prochain à défiler
+  #queue = null;  // le dernier enfilé
+  #taille = 0;
+
+  enfiler(valeur) {
+    const noeud = { valeur, suivant: null };
+    if (this.#queue) this.#queue.suivant = noeud; // on accroche derrière
+    else this.#tete = noeud;                      // file vide : c'est aussi la tête
+    this.#queue = noeud;
+    this.#taille++;
+    return this;
+  }
+
+  defiler() {
+    if (this.estVide()) {
+      throw new Error("defiler() sur une file vide");
+    }
+    const noeud = this.#tete;
+    this.#tete = noeud.suivant;
+    if (!this.#tete) this.#queue = null; // ATTENTION : la file se vide, la queue aussi
+    this.#taille--;
+    return noeud.valeur;
+  }
+
+  premier() {
+    return this.#tete ? this.#tete.valeur : undefined;
+  }
+
+  estVide() {
+    return this.#taille === 0;
+  }
+
+  get taille() {
+    return this.#taille;
+  }
+}
+
+const f = new FileChainee();
+f.enfiler("A").enfiler("B").enfiler("C");
+console.log(f.defiler()); // A
+console.log(f.defiler()); // B
+console.log(f.premier()); // C
+console.log(f.taille); // 1
+
+// le cas qui casse tout si on oublie la ligne signalée ci-dessus :
+f.defiler();
+f.enfiler("D");
+console.log(f.defiler()); // D</code></pre></figure>
+  <dl class="variante__facts">
+    <div>
+      <dt>Ce qu'elle coûte</dt>
+      <dd><strong>De la mémoire, et une ligne qu'on oublie facilement.</strong> Chaque élément traîne désormais un objet à deux champs&nbsp;: un million d'entiers occupent <strong>38,2&nbsp;Mo</strong> en liste chaînée contre <strong>10,0&nbsp;Mo</strong> avec le tableau et son index de tête (<code>heapUsed</code> relevé avant et après remplissage, ramasse-miettes forcé, une seule file par processus, trois essais au chiffre près), soit <strong>3,8 fois plus</strong>. Le ramasse-miettes s'en ressent&nbsp;: sur un cycle complet — un million d'enfilements suivis d'un million de défilements — les deux structures se tiennent (médianes <strong>12,2&nbsp;ms</strong> pour le tableau, <strong>13,1&nbsp;ms</strong> pour la chaînée), mais le <em>pire</em> des cinq essais passe de <strong>17,8&nbsp;ms</strong> à <strong>51,0&nbsp;ms</strong>&nbsp;: un million de petits objets à ramasser, ça se paie. La ligne qu'on oublie, c'est <code>this.#queue = null</code> quand la file se vide&nbsp;: sans elle, <code>#queue</code> désigne encore un nœud que plus personne ne tient, le prochain <code>enfiler</code> l'accroche à ce fantôme, et la file annonce <code>taille = 1</code> pendant que <code>defiler()</code> lève <code>TypeError: Cannot read properties of null (reading 'suivant')</code> — mesuré&nbsp;: <strong>999 allers-retours fautifs sur 1 000</strong> une fois la faute introduite. Enfin, on perd l'accès indexé&nbsp;: plus de <code>#items[k]</code> pour inspecter la file au débogueur, il faut la parcourir.</dd>
+    </div>
+    <div>
+      <dt>Ce qu'elle apporte</dt>
+      <dd><strong>Elle n'a plus rien à compacter, donc plus rien à régler.</strong> Le tableau, lui, doit se recopier de temps en temps, et la règle qui décide <em>quand</em> tient dans deux constantes arbitraires du code publié plus haut&nbsp;: <code>&gt; 32</code> et <code>* 2</code>. Trois effets mesurés. <em>(1)</em> Le défilement seul est <strong>deux fois plus rapide</strong>&nbsp;: vider un million d'éléments prend <strong>2,4 à 2,5&nbsp;ms</strong> en liste chaînée contre <strong>4,8 à 5,7&nbsp;ms</strong> avec le tableau — l'écart, c'est le compactage. <em>(2)</em> Les pointes prévisibles disparaissent&nbsp;: le tableau paie <strong>0,40 à 0,46&nbsp;ms</strong> au 499&nbsp;999<sup>e</sup> défilement et <strong>0,21&nbsp;ms</strong> au 749&nbsp;999<sup>e</sup>, aux mêmes rangs sur trois essais — ce sont ses recopies. <em>(3)</em> Les deux files se comportent par ailleurs à l'identique&nbsp;: <strong>200&nbsp;000 opérations tirées au hasard, 0 écart</strong> sur la valeur défilée, la taille et le premier élément. <strong>⚠ Mais ne va pas en conclure une garantie de latence&nbsp;:</strong> la plus grosse pointe n'est pas le compactage, c'est le ramasse-miettes, et il frappe les deux — jusqu'à <strong>0,96&nbsp;ms</strong> côté tableau et <strong>0,79&nbsp;ms</strong> côté chaînée, à des rangs qui changent d'un essai à l'autre. En JavaScript, aucune des deux structures ne promet un plafond par opération.</dd>
+    </div>
+    <div>
+      <dt>Quand la préférer</dt>
+      <dd>Quand les éléments sont <strong>gros</strong>&nbsp;: le surcoût d'un nœud ne dépend pas de ce qu'il contient, donc le facteur 3,8 mesuré ici sur des entiers fond dès que la valeur pèse quelques centaines d'octets. Quand tu veux une structure <strong>sans réglage</strong>, dont le coût ne dépend d'aucun seuil choisi à la main. Et quand il faudra <strong>retirer ailleurs qu'en tête</strong> — mais attention, pas avec ce code-ci&nbsp;: une liste <em>simplement</em> chaînée ne sait pas décrocher un nœud dont elle ne connaît pas le prédécesseur, et le retrouver coûte <code>n/2</code> sauts en moyenne (mesuré&nbsp;: <strong>499&nbsp;999 sauts</strong> pour le nœud du milieu d'une file d'un million). Il faut un <em>double</em> chaînage pour que ce retrait devienne <code>O(1)</code>, et c'est aussi ce qu'exige le <strong>deque</strong> de la section suivante&nbsp;: avec le simple chaînage écrit ici, retirer par la queue demande de reparcourir toute la liste, alors que le tableau le fait d'un <code>pop()</code>. Partout ailleurs, garde le tableau avec index de tête&nbsp;: il tient en moins de lignes, il est près de quatre fois plus compact, et sur un cycle complet il est même légèrement devant.</dd>
+    </div>
+  </dl>
+</aside>
+
 <h2>Analyse de complexité comparée</h2>
 <p>Récapitulons les coûts. Pour la file, « naïve » désigne la version <code>push</code>/<code>shift</code> à éviter.</p>
 <table>
