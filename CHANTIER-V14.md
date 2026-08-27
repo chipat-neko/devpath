@@ -1371,6 +1371,57 @@ apprenant qui décide.
   3. **le remède proposé marche-t-il ?** (« empiler les sous-tableaux à l'envers » ne rétablissait pas
      l'ordre) — appliquer le correctif et remesurer, jamais le déduire.
 
+  **⚠️ LA LISTE DE E1 EST RAMENÉE DE 30 À 7 LEÇONS — mesuré le 2026-08-27, avant d'écrire quoi que ce
+  soit.** Première leçon abordée, `js/lecon-23` : elle montrait **déjà** `.then` *et* sa version
+  `async/await`, et le séquentiel *et* `Promise.all` (~900 ms contre ~300 ms). Le bloc y aurait été un
+  doublon. Vérification systématique lancée aussitôt.
+
+  **La cause, et c'est la TROISIÈME fausse mesure de la phase E — toutes les trois rassuraient.** Pour
+  écarter les leçons qui montrent déjà leur alternative, E1 s'appuyait sur le motif `DEJA_DIT` de
+  `mesure-alternatives.js`, qui cherche des **tournures d'annonce** (« une autre façon de », « on aurait
+  pu écrire », « version équivalente »). Une leçon qui met les deux façons côte à côte en disant
+  simplement « en version async/await » ou « compare ces deux fonctions » n'en déclenche aucune. **Le
+  filtre mesurait la présence d'une PHRASE, pas la présence de l'ALTERNATIVE** — d'où son verdict
+  rassurant de « 4 leçons seulement en parlent déjà ».
+
+  **Outil neuf : `tools/verif-liste-alternatives.js`** — pour chacune des 30 leçons, il cherche le motif
+  du **code** de l'alternative prescrite, **dans les blocs de code uniquement** (une alternative citée en
+  prose n'est pas une alternative montrée). Verdict : **17 sur 30 déjà pourvues**. L'outil dit lui-même
+  que c'est un indice et non un verdict, et il avait raison de le dire : sur `java/lecon-04` il criait au
+  loup sur le seul `for-each`, alors que `.stream()` y apparaît **0 fois**.
+
+  **Contre-mesure par LECTURE** (5 agents, lecture seule, 28 leçons, justification exigée avec numéros de
+  ligne) : **18 DÉJÀ MONTRÉES · 5 mentionnées sans code · 5 absentes — et 7 seulement valent encore un
+  bloc.** Trois écarts que l'outil mécanique ne pouvait pas voir, tous vérifiés par moi-même :
+  - **`css/lecon-45` : la prescription de E1 était FAUSSE.** `float` n'y est pas un choix de mise en page,
+    c'est le **prérequis technique** de `shape-outside` (« n'a d'effet que sur un élément flotté »).
+    Vérifié : **0 occurrence de « grid », 21 de « shape-outside »**. Aucune grille ne fait couler du texte
+    autour d'un cercle — le bloc prescrit aurait **enseigné une chose fausse**.
+  - **`bash/lecon-12` : faux positif de prémisse.** La leçon s'intitule « Déboguer ses scripts Bash », pas
+    « parcourir des fichiers » ; la boucle sur `ls` n'y est pas enseignée, elle apparaît **dans la sortie
+    de ShellCheck qui la dénonce** (`SC2045`). Vérifié : **0 occurrence de `xargs`/`print0`/`find`** dans
+    cette leçon, **19 dans `bash/lecon-10`**, qui l'enseigne déjà avec l'argument des noms à espaces.
+  - **`java/lecon-04` et `csharp/lecon-04`** : le `for-each` est montré **dans le même bloc, juste sous**
+    la boucle indexée, avec le critère de choix en commentaire (« plus lisible si l'index est inutile ») —
+    vérifié lignes 248-258. `Stream`/LINQ sont absents, mais enseignés plus loin dans le même cours, et
+    prématurés ici (ni lambdas ni génériques encore vus).
+
+  **LES 7 LEÇONS QUI RESTENT** (et deux sont déjà faites en E2, donc **7 à écrire**) :
+
+  | leçon | état | ce qu'il manque |
+  |---|---|---|
+  | `algo/lecon-05` Le tri fusion | mentionnée sans code | le bottom-up est décrit en prose (l. 280) et au glossaire, **jamais en code** ; les 5 blocs sont tous récursifs |
+  | `algo/lecon-08` Piles et files | mentionnée sans code | la leçon annonce elle-même qu'elle ne la montre pas (« Voyons la version tableau + index de tête ») ; la liste chaînée **ne figure dans aucune ligne** du tableau de coûts |
+  | `algo/lecon-18` Le backtracking | absente | **0 occurrence du mot « pile »** dans les 6 blocs, tous récursifs (vérifié) |
+  | `algo/lecon-25` Arbres AVL | mentionnée sans code | rouge-noir est comparé en profondeur mais **sans une ligne de code** ; `inserer` n'a pas de pendant itératif |
+  | `algo/lecon-19` Deux pointeurs | mentionnée sans code | ⚠️ le diagnostic de E1 était faux (la leçon enseigne déjà les deux pointeurs) ; ce qui manque est la **table de hachage**, citée une seule fois en prose |
+  | `sql/lecon-09` Sous-requêtes et CTE | mentionnée sans code | `EXISTS` et les CTE y sont déjà ; ce qui manque est la **réécriture en `JOIN`** de la sous-requête scalaire, affirmée en prose seule — et **`EXPLAIN` n'apparaît pas une seule fois** |
+  | `patterns/lecon-04` Patterns structurels | absente | aucun parcours itératif ; les occurrences d'« empiler » concernent le Decorator (faux amis) |
+
+  **Ce que ça change pour E3** : 7 blocs, soit **deux lots de 3 à 4**. Et la leçon vaut au-delà de cette
+  phase — **une liste produite par un filtre de vocabulaire doit être vérifiée par lecture avant d'être
+  exécutée**, sans quoi on écrit consciencieusement 23 doublons, dont un qui aurait enseigné une erreur.
+
 ---
 
 ## PHASE F — Contrôle final
