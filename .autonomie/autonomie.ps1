@@ -119,7 +119,13 @@ function Test-ChantierFini {
 }
 
 $modeVerif = $false
-$arretDemande = $false
+$arretDemande = $false   # VRAIE fin de chantier, confirmee par la passe de securite
+# Ne PAS confondre avec $replanifFaite ci-dessous. Le 2026-08-27, le verrou de limite
+# hebdomadaire posait $arretDemande = $true pour empecher une replanification immediate ;
+# le bloc final l'a lu comme une fin de chantier, a journalise CHANTIER TERMINE et
+# desactive la tache. L'autonomie est restee muette SIX JOURS avec 38 cases a faire.
+# Une variable qui sert a deux choses finit par mentir sur l'une des deux.
+$replanifFaite = $false  # un declencheur a deja ete pose (limite atteinte) : ne pas en reposer
 if (Test-ChantierFini) {
   if (Test-Path $okFile) {
     Log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE. Tache desactivee. ====="
@@ -303,6 +309,14 @@ try {
     # LIMITE HEBDOMADAIRE : on arrete TOUT. Sans ce controle, la tache se reveillait
     # toutes les 2 h pour echouer aussitot, ce qui ne sert qu'a brasser du vide.
     $quand = Get-HeureReset $sortie
+    if (-not $quand) {
+      # Le message ne portait pas d'heure lisible (constate le 2026-08-27 : la reprise
+      # a ete notee heure inconnue). L'API, elle, donne la date exacte de remise a zero.
+      try {
+        $iso = (& node (Join-Path $proj 'tools\usage-anthropic.js') reset 2>$null | Select-Object -Last 1)
+        if ($iso) { $quand = ([datetime]::Parse($iso)).ToLocalTime() }
+      } catch {}
+    }
     $txt = if ($quand) { $quand.ToString('yyyy-MM-dd HH:mm') } else { 'heure inconnue' }
     Log "[$(Stamp)] ===== LIMITE HEBDOMADAIRE ATTEINTE. Reveil reporte a $txt, pas de nouvelle tentative d ici la. ====="
     try {
@@ -376,7 +390,12 @@ try {
   Log "[$(Stamp)] ERREUR wrapper : $_"
 } finally {
   Remove-Item $lock -Force -ErrorAction SilentlyContinue
-  if ($arretDemande) {
+  if ($replanifFaite) {
+    # Un declencheur a deja ete pose (limite d usage) : ne rien faire de plus, et
+    # surtout NE PAS desactiver -- la tache doit repartir seule apres la remise a zero.
+    Log "[$(Stamp)] reveil deja replanifie (limite d usage) -- la tache reste ACTIVE."
+  }
+  elseif ($arretDemande) {
     # Fin de chantier confirmee par la passe de securite : on coupe ici, sans
     # replanifier, plutot que de gaspiller un reveil de plus.
     Log "[$(Stamp)] ===== CHANTIER TERMINE : verification finale VERTE. Tache desactivee, aucun reveil replanifie. ====="
@@ -394,7 +413,7 @@ try {
   #     reboot / une veille des que la machine est dispo.
   # (Pas de trigger AtStartup : il exige l'elevation admin, indisponible en contexte non-eleve.)
   # Le verrou anti-chevauchement empeche tout double-run. Settings (WakeToRun...) preserves.
-  if (-not $arretDemande) {
+  elseif (-not $arretDemande) {
     try {
       $next = if ($resetSession) { $resetSession.AddMinutes(2) } else { (Get-Date).AddMinutes(5) }
       $motif = if ($resetSession) { 'a la reprise annoncee par la limite de session' } else { '5 min apres la fin' }
