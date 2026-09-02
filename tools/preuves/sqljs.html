@@ -6,51 +6,118 @@
 </head>
 <body>
 <pre id="sortie">… en cours</pre>
-<script src="../../assets/vendor/sqljs/sql-wasm-base64.js"></script>
-<script src="../../assets/vendor/sqljs/sql-wasm.js"></script>
-<script src="../../assets/vendor/sqljs/sql-charge.js"></script>
+
+<!-- ⚠️ CETTE PAGE A DÉJÀ MENTI UNE FOIS, et c'est la raison de sa forme actuelle.
+     Jusqu'au 2026-09-02, elle chargeait sql.js par trois <script src> DANS LA PAGE.
+     Elle affichait donc « SQL EXECUTE EN FILE:// SANS SERVEUR » alors que plus un seul
+     bouton du site ne fonctionnait : le produit, lui, passe par un WORKER, et c'est
+     ce chemin-là que Chrome 152 avait fermé. Une preuve qui n'emprunte pas le chemin
+     du produit ne prouve rien.
+     Elle emprunte désormais EXACTEMENT le trajet de js/runner.js :
+       la page charge les CHAÎNES  ->  postMessage au Worker  ->  le Worker les évalue. -->
 <script>
 (function () {
+  "use strict";
   var lignes = [];
   function dire(s) { lignes.push(s); document.getElementById("sortie").textContent = lignes.join("\n"); }
 
   window.__RESULTAT = null;
   dire("protocole            : " + location.protocol);
-  dire("disponible()         : " + window.SQLLocal.disponible());
-  dire("poids base64         : " + window.SQLLocal.poidsBase64() + " caracteres");
 
-  window.onerror = function (m) { dire("onerror             : " + m); window.__RESULTAT = "ECHEC"; };
+  var RACINE = location.href.replace(/\/tools\/preuves\/[^\/]*$/, "");
+  var DOSSIER = RACINE + "/assets/vendor/sqljs";
+  dire("dossier du moteur    : " + DOSSIER.replace(RACINE, "<dépôt>"));
+
+  window.onerror = function (m) { dire("onerror              : " + m); window.__RESULTAT = "ECHEC"; };
   window.addEventListener("unhandledrejection", function (e) {
-    dire("rejet non traite    : " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+    dire("rejet non traite     : " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
     window.__RESULTAT = "ECHEC";
   });
-  var _err = console.error;
-  console.error = function () { dire("console.error       : " + Array.prototype.join.call(arguments, " ")); _err.apply(console, arguments); };
+
+  /* Le Worker de la preuve : même mécanique que SQL_WORKER_SRC de js/runner.js —
+     il ne charge RIEN, il reçoit deux chaînes et évalue le code en portée globale. */
+  var SRC = [
+    "self.onmessage = function (ev) {",
+    "  var d = ev.data, T0 = Date.now();",
+    "  try { self.SQL_WASM_BASE64 = d.b64; (0, eval)(d.src); }",
+    "  catch (e) { postMessage({ erreur: 'evaluation : ' + (e && e.message) }); return; }",
+    "  if (typeof initSqlJs !== 'function') { postMessage({ erreur: 'initSqlJs absent' }); return; }",
+    "  var brut = atob(self.SQL_WASM_BASE64), bin = new Uint8Array(brut.length), i;",
+    "  for (i = 0; i < brut.length; i++) bin[i] = brut.charCodeAt(i);",
+    "  initSqlJs({ wasmBinary: bin, locateFile: function (f) { return f; } }).then(function (SQL) {",
+    "    var msPret = Date.now() - T0, out = [];",
+    "    var db = new SQL.Database();",
+    "    db.run(\"CREATE TABLE eleve (id INTEGER PRIMARY KEY, nom TEXT, note INTEGER);\");",
+    "    db.run(\"INSERT INTO eleve (nom, note) VALUES ('Ada', 18), ('Alan', 15), ('Grace', 20), ('Linus', 12);\");",
+    "    var r = db.exec(\"SELECT nom, note FROM eleve WHERE note >= 15 ORDER BY note DESC;\");",
+    "    var agg = db.exec(\"SELECT COUNT(*) AS n, AVG(note) AS moyenne FROM eleve;\");",
+    "    var ver = db.exec(\"SELECT sqlite_version();\");",
+    "    var erreurAttendue = null;",
+    "    try { db.exec('SELECT * FROM table_absente;'); }",
+    "    catch (e) { erreurAttendue = e.message; }",
+    "    db.close();",
+    "    postMessage({ msPret: msPret, recu: d.b64.length, colonnes: r[0].columns, valeurs: r[0].values,",
+    "                  compte: agg[0].values[0][0], moyenne: agg[0].values[0][1],",
+    "                  version: ver[0].values[0][0], erreurAttendue: erreurAttendue });",
+    "  }, function (e) { postMessage({ erreur: String((e && e.message) || e) }); });",
+    "};",
+  ].join("\n");
+
+  /* Charger un <script src> depuis la PAGE : c'est ce que Chrome 152 permet encore,
+     et c'est ce que fait js/runner.js. */
+  function charger(url) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement("script");
+      s.src = url;
+      s.onload = function () { res(); };
+      s.onerror = function () { rej(new Error("introuvable : " + url.split("/").pop())); };
+      document.head.appendChild(s);
+    });
+  }
 
   var t0 = Date.now();
-  window.SQLLocal.pret().then(function (SQL) {
-    dire("initSqlJs           : OK en " + (Date.now() - t0) + " ms");
-    var db = new SQL.Database();
-    db.run("CREATE TABLE eleve (id INTEGER PRIMARY KEY, nom TEXT, note INTEGER);");
-    db.run("INSERT INTO eleve (nom, note) VALUES ('Ada', 18), ('Alan', 15), ('Grace', 20), ('Linus', 12);");
-    var r = db.exec("SELECT nom, note FROM eleve WHERE note >= 15 ORDER BY note DESC;");
-    dire("colonnes            : " + r[0].columns.join(", "));
-    r[0].values.forEach(function (v) { dire("  " + v[0] + " -> " + v[1]); });
-    var agg = db.exec("SELECT COUNT(*) AS n, AVG(note) AS moyenne FROM eleve;");
-    dire("COUNT(*)            : " + agg[0].values[0][0]);
-    dire("AVG(note)           : " + agg[0].values[0][1]);
-    var ver = db.exec("SELECT sqlite_version();");
-    dire("sqlite_version()    : " + ver[0].values[0][0]);
-    /* une erreur SQL doit remonter proprement : c'est ce que verra l'apprenant */
-    try { db.exec("SELECT * FROM table_absente;"); }
-    catch (e) { dire("erreur attendue     : " + e.message); }
-    db.close();
-    dire("VERDICT             : SQL EXECUTE EN FILE:// SANS SERVEUR");
-    window.__RESULTAT = "OK";
-  }).catch(function (e) {
-    dire("ECHEC               : " + e.message);
+  var w;
+  try {
+    w = new Worker(URL.createObjectURL(new Blob([SRC], { type: "text/javascript" })));
+  } catch (e) {
+    dire("Worker impossible    : " + e.message);
     window.__RESULTAT = "ECHEC";
-  });
+    return;
+  }
+  w.onerror = function (e) { dire("worker onerror       : " + e.message); window.__RESULTAT = "ECHEC"; };
+  w.onmessage = function (ev) {
+    var d = ev.data || {};
+    if (d.erreur) {
+      dire("ECHEC                : " + d.erreur);
+      window.__RESULTAT = "ECHEC";
+      return;
+    }
+    dire("recu par le Worker   : " + d.recu + " caracteres de base64");
+    dire("initSqlJs            : OK en " + d.msPret + " ms (dans le Worker)");
+    dire("total depuis la page : " + (Date.now() - t0) + " ms");
+    dire("colonnes             : " + d.colonnes.join(", "));
+    d.valeurs.forEach(function (v) { dire("  " + v[0] + " -> " + v[1]); });
+    dire("COUNT(*)             : " + d.compte);
+    dire("AVG(note)            : " + d.moyenne);
+    dire("sqlite_version()     : " + d.version);
+    dire("erreur attendue      : " + d.erreurAttendue);
+    var ok = d.compte === 4 && d.valeurs.length === 3 && /no such table/.test(d.erreurAttendue || "");
+    dire("VERDICT              : " + (ok ? "SQL EXECUTE DANS LE WORKER, EN FILE://, SANS SERVEUR"
+                                         : "RESULTATS INATTENDUS"));
+    window.__RESULTAT = ok ? "OK" : "ECHEC";
+  };
+
+  charger(DOSSIER + "/sql-wasm-base64.js")
+    .then(function () { return charger(DOSSIER + "/sql-wasm-src.js"); })
+    .then(function () {
+      dire("charges dans la page : sql-wasm-base64.js (" + window.SQL_WASM_BASE64.length +
+           " car.) + sql-wasm-src.js (" + window.SQLJS_SRC.length + " car.)");
+      w.postMessage({ b64: window.SQL_WASM_BASE64, src: window.SQLJS_SRC });
+    })
+    .catch(function (e) {
+      dire("ECHEC                : " + e.message);
+      window.__RESULTAT = "ECHEC";
+    });
 })();
 </script>
 </body>

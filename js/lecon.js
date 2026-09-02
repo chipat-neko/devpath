@@ -891,14 +891,43 @@
   var MOI_LECON = document.currentScript && document.currentScript.src;
   var RACINE_EXO = MOI_LECON ? MOI_LECON.replace(/\/js\/lecon\.js(\?.*)?$/, "") : "";
 
+  /* CHARGER UN SCRIPT DEPUIS LA PAGE, ET LUI SEUL — même dispositif, même raison et
+     mêmes mesures que dans js/runner.js : depuis Chrome 152, un Worker issu d'un Blob
+     ne peut plus faire `importScripts()` sur une URL `file://`. La page charge, le
+     Worker reçoit des CHAÎNES par postMessage et les évalue.
+     Ces deux fichiers ne partagent pas de code : 89 leçons chargent lecon.js SANS
+     runner.js, et un exercice auto-corrigé doit fonctionner là aussi. */
+  var scriptsExoCharges = {}; // url -> promesse
+  function chargerScriptExo(urls) {
+    return urls.reduce(function (chaine, url) {
+      return chaine.then(function () {
+        if (scriptsExoCharges[url]) return scriptsExoCharges[url];
+        scriptsExoCharges[url] = new Promise(function (res, rej) {
+          var s = document.createElement("script");
+          s.src = url;
+          s.onload = function () { res(); };
+          s.onerror = function () { rej(new Error("fichier introuvable : " + url.split("/").pop())); };
+          document.head.appendChild(s);
+        });
+        return scriptsExoCharges[url];
+      });
+    }, Promise.resolve());
+  }
+  function oublierScriptExo(urls) {
+    urls.forEach(function (u) { delete scriptsExoCharges[u]; });
+  }
+
   var EXO_SQL_WORKER_SRC = [
     "var SQLP = null;",
     "self.onmessage = function (ev) {",
     "  var d = ev.data || {};",
     "  if (d.type === 'load') {",
     "    try {",
-    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm-base64.js');",
-    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm.js');",
+    "      self.SQL_WASM_BASE64 = d.b64;",
+    /* eval INDIRECT : le code est évalué en portée GLOBALE du Worker, donc le
+       `var initSqlJs` de sql-wasm.js y devient une globale — comme le faisait
+       importScripts avant que Chrome 152 ne le refuse en file://. */
+    "      (0, eval)(d.src);",
     "    } catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
     "    if (typeof initSqlJs !== 'function') { self.postMessage({ type: 'fatal', text: 'initSqlJs absent' }); return; }",
     "    if (typeof self.SQL_WASM_BASE64 !== 'string') { self.postMessage({ type: 'fatal', text: 'binaire absent' }); return; }",
@@ -1007,7 +1036,22 @@
       }
     };
     sqlExoWorker.onerror = function () { sqlExoTousEnEchec("✗ Erreur du moteur SQL."); };
-    sqlExoWorker.postMessage({ type: "load", base: RACINE_EXO });
+    var SQ = RACINE_EXO + "/assets/vendor/sqljs";
+    var FICHIERS_SQL = [SQ + "/sql-wasm-base64.js", SQ + "/sql-wasm-src.js"];
+    chargerScriptExo(FICHIERS_SQL).then(function () {
+      if (typeof window.SQLJS_SRC !== "string" || typeof window.SQL_WASM_BASE64 !== "string") {
+        sqlExoTousEnEchec("✗ Les fichiers de SQLite sont incomplets dans assets/vendor/sqljs/.");
+        return;
+      }
+      sqlExoWorker.postMessage({ type: "load", b64: window.SQL_WASM_BASE64, src: window.SQLJS_SRC });
+      /* Le Worker en a sa copie : on libère la page, et l'on oublie les URL pour qu'un
+         prochain Worker (après une panne) les recharge vraiment. */
+      oublierScriptExo(FICHIERS_SQL);
+      window.SQL_WASM_BASE64 = window.SQLJS_SRC = "";
+    }, function (e) {
+      sqlExoTousEnEchec("✗ SQLite n'a pas pu se charger (" + ((e && e.message) || "chargement impossible") +
+        "). Vérifie que le dossier assets/vendor/sqljs/ est bien présent à côté du dossier js/.");
+    });
   }
 
   /* ---- Exercices type:"python" : le programme est EXÉCUTÉ par CPython ---------
@@ -1026,10 +1070,14 @@
     "  if (d.type === 'load') {",
     "    var D = d.base + '/assets/vendor/pyodide';",
     "    try {",
-    "      importScripts(D + '/pyodide-wasm-gz-b64.js');",
-    "      importScripts(D + '/pyodide-stdlib-b64.js');",
-    "      importScripts(D + '/pyodide-lock-b64.js');",
-    "      importScripts(D + '/pyodide-charge.js');",
+    "      self.PYODIDE_WASM_GZ_B64 = d.wasm;",
+    "      self.PYODIDE_STDLIB_B64 = d.stdlib;",
+    "      self.PYODIDE_LOCK_GZ_B64 = d.lock;",
+    /* eval INDIRECT, cf. EXO_SQL_WORKER_SRC : les `var` de pyodide.asm.js et de
+       pyodide.js doivent atterrir en portée globale du Worker. */
+    "      (0, eval)(d.asm);",
+    "      (0, eval)(d.pyjs);",
+    "      (0, eval)(d.charge);",
     "    }",
     "    catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
     "    if (!self.PythonLocal) { self.postMessage({ type: 'fatal', text: 'pyodide-charge.js absent' }); return; }",
@@ -1122,7 +1170,26 @@
       }
     };
     pyExoWorker.onerror = function () { pyExoAbandonner("✗ Erreur de l'interpréteur Python."); };
-    pyExoWorker.postMessage({ type: "load", base: RACINE_EXO });
+    var PY = RACINE_EXO + "/assets/vendor/pyodide";
+    var FICHIERS_PY = [PY + "/pyodide-wasm-gz-b64.js", PY + "/pyodide-stdlib-b64.js",
+                       PY + "/pyodide-lock-b64.js", PY + "/pyodide-src.js"];
+    chargerScriptExo(FICHIERS_PY).then(function () {
+      if (typeof window.PYODIDE_ASM_SRC !== "string" || typeof window.PYODIDE_WASM_GZ_B64 !== "string") {
+        pyExoAbandonner("✗ Les fichiers de Python sont incomplets dans assets/vendor/pyodide/.");
+        return;
+      }
+      pyExoWorker.postMessage({
+        type: "load", base: RACINE_EXO,
+        wasm: window.PYODIDE_WASM_GZ_B64, stdlib: window.PYODIDE_STDLIB_B64,
+        lock: window.PYODIDE_LOCK_GZ_B64, asm: window.PYODIDE_ASM_SRC,
+        pyjs: window.PYODIDE_JS_SRC, charge: window.PYODIDE_CHARGE_SRC,
+      });
+      oublierScriptExo(FICHIERS_PY);
+      window.PYODIDE_WASM_GZ_B64 = window.PYODIDE_STDLIB_B64 = window.PYODIDE_ASM_SRC = "";
+    }, function (e) {
+      pyExoAbandonner("✗ Python n'a pas pu se charger (" + ((e && e.message) || "chargement impossible") +
+        "). Vérifie que le dossier assets/vendor/pyodide/ est bien présent à côté du dossier js/.");
+    });
   }
 
   function runExoPython(code, cb) {

@@ -54,11 +54,17 @@
   var SRC = [
     "var D = " + JSON.stringify(DOSSIER) + ";",
     "self.onmessage = function (ev) {",
-    "  var extraits = ev.data;",
+    "  var extraits = ev.data.extraits;",
+    /* Plus d'importScripts : Chrome 152 le refuse sur une URL file:// depuis un Worker
+       issu d'un Blob. La page charge, le Worker évalue — chemin de js/runner.js. */
     "  try {",
-    "    importScripts(D + '/pyodide-wasm-gz-b64.js', D + '/pyodide-stdlib-b64.js',",
-    "                  D + '/pyodide-lock-b64.js', D + '/pyodide-charge.js');",
-    "  } catch (e) { postMessage({ erreur: 'importScripts : ' + (e && e.message) }); return; }",
+    "    self.PYODIDE_WASM_GZ_B64 = ev.data.wasm;",
+    "    self.PYODIDE_STDLIB_B64 = ev.data.stdlib;",
+    "    self.PYODIDE_LOCK_GZ_B64 = ev.data.lock;",
+    "    (0, eval)(ev.data.asm);",
+    "    (0, eval)(ev.data.pyjs);",
+    "    (0, eval)(ev.data.charge);",
+    "  } catch (e) { postMessage({ erreur: 'evaluation : ' + (e && e.message) }); return; }",
     "  self.PythonLocal.pret(D).then(function (py) {",
     "    py.setStdout({ batched: function () {} });",
     "    py.setStderr({ batched: function () {} });",
@@ -94,7 +100,26 @@
     window.__MESSAGES = { version: d.version, messages: d.messages };
     window.__RESULTAT = "OK";
   };
-  w.postMessage(EXTRAITS);
+  function charger(url) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement("script");
+      s.src = url;
+      s.onload = function () { res(); };
+      s.onerror = function () { rej(new Error("introuvable : " + url.split("/").pop())); };
+      document.head.appendChild(s);
+    });
+  }
+  ["/pyodide-wasm-gz-b64.js", "/pyodide-stdlib-b64.js", "/pyodide-lock-b64.js", "/pyodide-src.js"]
+    .reduce(function (p, f) { return p.then(function () { return charger(DOSSIER + f); }); }, Promise.resolve())
+    .then(function () {
+      w.postMessage({
+        extraits: EXTRAITS,
+        wasm: window.PYODIDE_WASM_GZ_B64, stdlib: window.PYODIDE_STDLIB_B64,
+        lock: window.PYODIDE_LOCK_GZ_B64, asm: window.PYODIDE_ASM_SRC,
+        pyjs: window.PYODIDE_JS_SRC, charge: window.PYODIDE_CHARGE_SRC,
+      });
+    })
+    .catch(function (e) { dire("ECHEC               : " + e.message); window.__RESULTAT = "ECHEC"; });
 })();
 </script>
 </body>

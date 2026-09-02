@@ -104,6 +104,12 @@ var ETAPES = [
      mal orthographiee rend le bloc en texte nu sans qu'aucun autre controle bronche :
      cette etape verifie donc aussi que chaque classe employee existe dans le CSS. */
   { nom: "altern ", fichier: "verif-alternatives.js", args: [], quoi: "format « une autre facon de le faire » : les trois faits, les classes reelles" },
+  /* Depuis Chrome 152, les deux moteurs embarques ne sont plus IMPORTES par le Worker
+     mais EVALUES a partir de chaines que la page lui transmet. Ces chaines sont des
+     COPIES du code de sql.js et de Pyodide : une copie qui derive de son original est
+     une panne muette -- le moteur demarrerait avec une version qui n'est plus celle
+     du depot. Cette etape relit chaque chaine et la compare caractere par caractere. */
+  { nom: "moteurs", fichier: "build-sources-worker.js", args: [], quoi: "le code des moteurs, copie en chaine pour le Worker, est identique a l'original" },
 ];
 if (!RAPIDE) {
   ETAPES.push({

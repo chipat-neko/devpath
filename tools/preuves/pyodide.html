@@ -62,12 +62,19 @@ print("fib(30)", fib(30))
     "function jalon(n) { jalons.push(n + ' ' + (Date.now() - T0) + ' ms'); }",
     "var D = " + JSON.stringify(DOSSIER) + ";",
     "self.onmessage = function (ev) {",
-    "  var code = ev.data;",
+    "  var code = ev.data.code;",
+    /* ⚠️ Plus aucun importScripts : depuis Chrome 152, un Worker issu d'un Blob ne peut
+       plus charger une URL file://. La PAGE charge les scripts et transmet les chaînes ;
+       le Worker les évalue en portée globale — le chemin exact de js/runner.js. */
     "  try {",
-    "    importScripts(D + '/pyodide-wasm-gz-b64.js', D + '/pyodide-stdlib-b64.js',",
-    "                  D + '/pyodide-lock-b64.js', D + '/pyodide-charge.js');",
-    "  } catch (e) { postMessage({ erreur: 'importScripts : ' + (e && e.message) }); return; }",
-    "  jalon('scripts importes');",
+    "    self.PYODIDE_WASM_GZ_B64 = ev.data.wasm;",
+    "    self.PYODIDE_STDLIB_B64 = ev.data.stdlib;",
+    "    self.PYODIDE_LOCK_GZ_B64 = ev.data.lock;",
+    "    (0, eval)(ev.data.asm);",
+    "    (0, eval)(ev.data.pyjs);",
+    "    (0, eval)(ev.data.charge);",
+    "  } catch (e) { postMessage({ erreur: 'evaluation : ' + (e && e.message) }); return; }",
+    "  jalon('scripts evalues');",
     "  self.PythonLocal.pret(D).then(function (py) {",
     "    jalon('interpreteur pret');",
     "    var out = [];",
@@ -128,7 +135,33 @@ print("fib(30)", fib(30))
       : "VERDICT             : MANQUE " + manquants.join(" | "));
     window.__RESULTAT = manquants.length === 0 && !d.erreurExecution ? "OK" : "ECHEC";
   };
-  w.postMessage(document.getElementById("code-python").textContent);
+  /* La page charge les scripts locaux — seul chemin encore ouvert en file:// depuis
+     Chrome 152 — puis transmet leur contenu au Worker. */
+  function charger(url) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement("script");
+      s.src = url;
+      s.onload = function () { res(); };
+      s.onerror = function () { rej(new Error("introuvable : " + url.split("/").pop())); };
+      document.head.appendChild(s);
+    });
+  }
+  ["/pyodide-wasm-gz-b64.js", "/pyodide-stdlib-b64.js", "/pyodide-lock-b64.js", "/pyodide-src.js"]
+    .reduce(function (p, f) { return p.then(function () { return charger(DOSSIER + f); }); }, Promise.resolve())
+    .then(function () {
+      dire("charges dans la page : wasm " + window.PYODIDE_WASM_GZ_B64.length + " car., stdlib " +
+           window.PYODIDE_STDLIB_B64.length + " car., code " + window.PYODIDE_ASM_SRC.length + " car.");
+      w.postMessage({
+        code: document.getElementById("code-python").textContent,
+        wasm: window.PYODIDE_WASM_GZ_B64, stdlib: window.PYODIDE_STDLIB_B64,
+        lock: window.PYODIDE_LOCK_GZ_B64, asm: window.PYODIDE_ASM_SRC,
+        pyjs: window.PYODIDE_JS_SRC, charge: window.PYODIDE_CHARGE_SRC,
+      });
+    })
+    .catch(function (e) {
+      dire("ECHEC               : " + e.message);
+      window.__RESULTAT = "ECHEC";
+    });
 })();
 </script>
 </body>

@@ -134,7 +134,13 @@
      tourne dans un WORKER. C'est le Worker qui rend Python possible ici, pas seulement
      l'isolement.
      ⚠️ Plus de `loadPackagesFromImports` : il irait chercher un paquet sur le réseau.
-     Les blocs qui importent un paquet non embarqué n'ont pas de bouton (PY_MODULES). */
+     Les blocs qui importent un paquet non embarqué n'ont pas de bouton (PY_MODULES).
+     ⚠️ CHROME 152 A FERMÉ `importScripts('file:///…')` DEPUIS UN WORKER ISSU D'UN BLOB.
+     Mesuré le 2026-09-02 : 43 blocs Python cliqués, 43 échecs, et le fichier de 0,8 Ko
+     échoue comme celui de 4,10 Mo — ce n'est pas une affaire de taille mais la politique
+     `file://`. Le Worker ne charge donc plus RIEN lui-même : la PAGE charge les scripts
+     (voir `chargerDansLaPage`) et lui transmet des CHAÎNES par postMessage ; le Worker
+     évalue le code et affecte les données. Voir tools/build-sources-worker.js. */
   var PY_WORKER_SRC = [
     "var ready = null;",
     "self.onmessage = function (ev) {",
@@ -142,10 +148,15 @@
     "  if (d.type === 'load') {",
     "    var D = d.base + '/assets/vendor/pyodide';",
     "    try {",
-    "      importScripts(D + '/pyodide-wasm-gz-b64.js');",
-    "      importScripts(D + '/pyodide-stdlib-b64.js');",
-    "      importScripts(D + '/pyodide-lock-b64.js');",
-    "      importScripts(D + '/pyodide-charge.js');",
+    "      self.PYODIDE_WASM_GZ_B64 = d.wasm;",
+    "      self.PYODIDE_STDLIB_B64 = d.stdlib;",
+    "      self.PYODIDE_LOCK_GZ_B64 = d.lock;",
+    /* eval INDIRECT : (0, eval) évalue en portée GLOBALE du Worker, si bien que les
+       `var` de pyodide.asm.js et pyodide.js deviennent des globales, exactement comme
+       si importScripts les avait chargés. Un eval direct les enfermerait ici. */
+    "      (0, eval)(d.asm);",
+    "      (0, eval)(d.pyjs);",
+    "      (0, eval)(d.charge);",
     "    }",
     "    catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
     "    if (!self.PythonLocal) { self.postMessage({ type: 'fatal', text: 'pyodide-charge.js absent' }); return; }",
@@ -247,10 +258,42 @@
   var MOI = document.currentScript && document.currentScript.src;
   var RACINE_SITE = MOI ? MOI.replace(/\/js\/runner\.js(\?.*)?$/, "") : "";
 
-  /* Worker isolé : charge sql.js DEPUIS LE DÉPÔT (aucun réseau) puis exécute la requête.
-     Mesuré le 2026-08-26 : un Worker issu d'un Blob PEUT importScripts() une URL file://
-     absolue, même sans le drapeau --allow-file-access-from-files. C'est ce qui rend SQL
-     exécutable en file:// alors que le CDN ne l'a jamais permis. */
+  /* CHARGER UN SCRIPT DEPUIS LA PAGE, ET LUI SEUL.
+     Le 2026-08-26, le Worker chargeait lui-même sql.js et Pyodide par `importScripts()`
+     sur une URL `file://` absolue. Chrome 152 le refuse (mesuré le 2026-09-02 : 41 blocs
+     SQL cliqués, 41 échecs, message « The script at 'file:///…' failed to load »). Ce qui
+     marche encore, et qui est mesuré : une PAGE `file://` charge un `<script src>` local,
+     et une chaîne passe intacte au Worker par postMessage.
+     Les scripts chargés ici n'exposent que des CHAÎNES (`self.SQL_WASM_BASE64`,
+     `self.SQLJS_SRC`, …) : rien n'est exécuté dans la page, tout part au Worker.
+     Le chargement est PARESSEUX et mémorisé — une page qui n'exécute ni SQL ni Python ne
+     lit jamais ces mégaoctets. */
+  var scriptsCharges = {}; // url -> promesse
+  function chargerDansLaPage(urls) {
+    return urls.reduce(function (chaine, url) {
+      return chaine.then(function () {
+        if (scriptsCharges[url]) return scriptsCharges[url];
+        scriptsCharges[url] = new Promise(function (res, rej) {
+          var s = document.createElement("script");
+          s.src = url;
+          s.onload = function () { res(); };
+          s.onerror = function () { rej(new Error("fichier introuvable : " + url.split("/").pop())); };
+          document.head.appendChild(s);
+        });
+        return scriptsCharges[url];
+      });
+    }, Promise.resolve());
+  }
+  /* Oublier une URL, pour qu'un prochain besoin la recharge vraiment (les globales
+     qu'elle définit sont vidées après envoi au Worker, pour ne pas garder deux copies
+     des mêmes mégaoctets en mémoire). */
+  function oublierScripts(urls) {
+    urls.forEach(function (u) { delete scriptsCharges[u]; });
+  }
+
+  /* Worker isolé : exécute la requête sur sql.js, reçu de la page sous forme de chaînes.
+     L'isolement n'est pas décoratif : une requête récursive sans borne figerait la page,
+     alors qu'un Worker se termine (voir le minuteur de 15 s). */
   var SQL_WORKER_SRC = [
     "var SQLP = null;",
     "var SEED = " + JSON.stringify(SEED_SQL) + ";",
@@ -258,8 +301,10 @@
     "  var d = ev.data || {};",
     "  if (d.type === 'load') {",
     "    try {",
-    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm-base64.js');",
-    "      importScripts(d.base + '/assets/vendor/sqljs/sql-wasm.js');",
+    "      self.SQL_WASM_BASE64 = d.b64;",
+    /* eval INDIRECT : portée globale du Worker, donc `var initSqlJs` de sql-wasm.js y
+       devient une globale — comme le faisait importScripts. */
+    "      (0, eval)(d.src);",
     "    }",
     "    catch (e) { self.postMessage({ type: 'fatal', text: 'chargement : ' + (e && e.message) }); return; }",
     "    if (typeof initSqlJs !== 'function') { self.postMessage({ type: 'fatal', text: 'initSqlJs absent' }); return; }",
@@ -687,7 +732,30 @@
       }
       pyWorker.addEventListener("message", onMsg);
       line("empty", "Démarrage de Python… (environ une seconde la première fois)");
-      pyWorker.postMessage({ type: "load", base: RACINE_SITE });
+      var PY = RACINE_SITE + "/assets/vendor/pyodide";
+      chargerDansLaPage([PY + "/pyodide-wasm-gz-b64.js", PY + "/pyodide-stdlib-b64.js",
+                         PY + "/pyodide-lock-b64.js", PY + "/pyodide-src.js"]).then(function () {
+        if (typeof window.PYODIDE_ASM_SRC !== "string" || typeof window.PYODIDE_WASM_GZ_B64 !== "string") {
+          fatal("les fichiers de Python sont incomplets dans assets/vendor/pyodide/.");
+          return;
+        }
+        pyWorker.postMessage({
+          type: "load", base: RACINE_SITE,
+          wasm: window.PYODIDE_WASM_GZ_B64, stdlib: window.PYODIDE_STDLIB_B64,
+          lock: window.PYODIDE_LOCK_GZ_B64, asm: window.PYODIDE_ASM_SRC,
+          pyjs: window.PYODIDE_JS_SRC, charge: window.PYODIDE_CHARGE_SRC,
+        });
+        /* Le Worker en détient sa propre copie : ces 8,6 Mo de chaînes n'ont plus rien à
+           faire dans la page. ⚠️ On OUBLIE aussi les URL : le Worker est recréé après un
+           dépassement de délai (voir plus haut `pyWorker = null`), et il lui faudra alors
+           de vraies chaînes, pas des globales vidées. Le rechargement relit un fichier
+           local déjà en cache — il ne coûte rien et ne sort pas du dépôt. */
+        oublierScripts([PY + "/pyodide-wasm-gz-b64.js", PY + "/pyodide-stdlib-b64.js",
+                        PY + "/pyodide-lock-b64.js", PY + "/pyodide-src.js"]);
+        window.PYODIDE_WASM_GZ_B64 = window.PYODIDE_STDLIB_B64 = window.PYODIDE_ASM_SRC = "";
+      }, function (e) {
+        fatal((e && e.message) || "chargement impossible");
+      });
     } else {
       pyWorker.addEventListener("message", onMsg);
       if (pyLoaded) {
@@ -810,7 +878,18 @@
       }
       sqlWorker.addEventListener("message", onMsg);
       line("empty", "Chargement de SQLite… (quelques secondes la première fois)");
-      sqlWorker.postMessage({ type: "load", base: RACINE_SITE });
+      var SQ = RACINE_SITE + "/assets/vendor/sqljs";
+      chargerDansLaPage([SQ + "/sql-wasm-base64.js", SQ + "/sql-wasm-src.js"]).then(function () {
+        if (typeof window.SQLJS_SRC !== "string" || typeof window.SQL_WASM_BASE64 !== "string") {
+          fatal("les fichiers de SQLite sont incomplets dans assets/vendor/sqljs/.");
+          return;
+        }
+        sqlWorker.postMessage({ type: "load", b64: window.SQL_WASM_BASE64, src: window.SQLJS_SRC });
+        oublierScripts([SQ + "/sql-wasm-base64.js", SQ + "/sql-wasm-src.js"]);
+        window.SQL_WASM_BASE64 = window.SQLJS_SRC = "";
+      }, function (e) {
+        fatal((e && e.message) || "chargement impossible");
+      });
     } else {
       sqlWorker.addEventListener("message", onMsg);
       if (sqlLoaded) {
