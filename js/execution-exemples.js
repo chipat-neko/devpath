@@ -297,6 +297,165 @@
         "",
         "console.log(compter(7));"
       ].join("\n")
+    },
+
+    /* -------------------------------------- portée, fermetures, `this` (B4)
+       Le site explique bien ces trois notions. Les VOIR les tranche : le panneau
+       de droite montre la chaîne des portées, donc l'endroit exact où un nom est
+       trouvé — et `this` y figure comme une variable ordinaire, ce qu'il est. */
+    {
+      id: "portee-chainee",
+      titre: "Où un nom est-il cherché ?",
+      groupe: "Portée, fermetures et this",
+      resume: "Trois portées empilées. Le nom est cherché de la plus proche à la plus lointaine.",
+      src: [
+        "var niveau = \"global\";",
+        "",
+        "function externe() {",
+        "  var propre = \"externe\";",
+        "  function interne() {",
+        "    var local = \"interne\";",
+        "    return niveau + \" > \" + propre + \" > \" + local;",
+        "  }",
+        "  return interne();",
+        "}",
+        "",
+        "console.log(externe());"
+      ].join("\n")
+    },
+    {
+      id: "portee-bloc",
+      titre: "Un bloc, une portée",
+      groupe: "Portée, fermetures et this",
+      resume: "Le même nom, trois fois, dans trois portées différentes.",
+      src: [
+        "var x = \"global\";",
+        "",
+        "function f() {",
+        "  var x = \"fonction\";",
+        "  if (true) {",
+        "    let x = \"bloc\";",
+        "    console.log(\"dans le bloc :\", x);",
+        "  }",
+        "  console.log(\"dans la fonction :\", x);",
+        "  return x;",
+        "}",
+        "",
+        "f();",
+        "console.log(\"au global :\", x);"
+      ].join("\n")
+    },
+    {
+      id: "fermeture-compteur",
+      titre: "Une fermeture : la variable survit à la fonction",
+      groupe: "Portée, fermetures et this",
+      resume: "`faireCompteur` a rendu la main depuis longtemps, et pourtant son `n` existe encore.",
+      src: [
+        "function faireCompteur() {",
+        "  var n = 0;",
+        "  return function () {",
+        "    n = n + 1;",
+        "    return n;",
+        "  };",
+        "}",
+        "",
+        "var a = faireCompteur();",
+        "var b = faireCompteur();",
+        "",
+        "console.log(a(), a(), a());",
+        "console.log(b());"
+      ].join("\n")
+    },
+    {
+      id: "let-vs-var",
+      lignesDifferentes: [0, 1],
+      titre: "Le piège : `var` dans une boucle",
+      groupe: "Portée, fermetures et this",
+      resume: "Le même code, deux mots-clés, deux résultats. Regarde la portée à chaque tour.",
+      src: [
+        "var avecVar = [];",
+        "for (var i = 0; i < 3; i++) {",
+        "  avecVar.push(function () { return i; });",
+        "}",
+        "",
+        "var avecLet = [];",
+        "for (let j = 0; j < 3; j++) {",
+        "  avecLet.push(function () { return j; });",
+        "}",
+        "",
+        "console.log(\"var :\", avecVar[0](), avecVar[1](), avecVar[2]());",
+        "console.log(\"let :\", avecLet[0](), avecLet[1](), avecLet[2]());"
+      ].join("\n")
+    },
+    {
+      id: "zone-morte",
+      titre: "Utiliser une variable avant de la déclarer",
+      groupe: "Portée, fermetures et this",
+      resume: "Le nom existe déjà dans la portée — mais il est en « zone morte » tant qu'il n'est pas initialisé.",
+      erreurAttendue: "ReferenceError",
+      src: [
+        "var couleur = \"rouge\";",
+        "",
+        "function montrer() {",
+        "  console.log(\"avant :\", couleur);",
+        "  let couleur = \"bleu\";",
+        "  console.log(\"apres :\", couleur);",
+        "}",
+        "",
+        "montrer();"
+      ].join("\n")
+    },
+    {
+      id: "this-methode",
+      montreThis: true,
+      titre: "`this` : méthode, fonction nue, fonction fléchée",
+      groupe: "Portée, fermetures et this",
+      resume: "`this` apparaît dans le panneau des portées : c'est une variable comme une autre.",
+      src: [
+        "var compteur = {",
+        "  nom: \"compteur\",",
+        "  n: 0,",
+        "  incrementer: function () {",
+        "    this.n = this.n + 1;",
+        "    return this.nom + \" = \" + this.n;",
+        "  },",
+        "  flechee: function () {",
+        "    var interne = () => this.nom;",
+        "    return interne();",
+        "  },",
+        "  nue: function () {",
+        "    var interne = function () { return typeof this; };",
+        "    return interne();",
+        "  }",
+        "};",
+        "",
+        "console.log(compteur.incrementer());",
+        "console.log(compteur.incrementer());",
+        "console.log(\"flechee :\", compteur.flechee());",
+        "console.log(\"nue :\", compteur.nue());"
+      ].join("\n")
+    },
+    {
+      id: "this-impose",
+      montreThis: true,
+      titre: "Imposer `this` avec call, apply et bind",
+      groupe: "Portée, fermetures et this",
+      resume: "La même fonction, trois objets. Et une fonction liée qui ne change plus jamais de `this`.",
+      src: [
+        "function saluer(politesse) {",
+        "  return politesse + \", \" + this.nom;",
+        "}",
+        "",
+        "var ada = { nom: \"Ada\" };",
+        "var alan = { nom: \"Alan\" };",
+        "",
+        "console.log(saluer.call(ada, \"Bonjour\"));",
+        "console.log(saluer.apply(alan, [\"Salut\"]));",
+        "",
+        "var lieAda = saluer.bind(ada);",
+        "console.log(lieAda(\"Coucou\"));",
+        "console.log(lieAda.call(alan, \"Et maintenant\"));"
+      ].join("\n")
     }
   ];
 

@@ -427,7 +427,26 @@ rejoue l'animation. Il ne sait faire que les tris.
   **C · UN CONTRÔLE QUI EMPÊCHE UN EXEMPLE DE NE RIEN MONTRER.** Ajouter des programmes ne prouve pas qu'ils enseignent la récursivité. Le vérificateur mesure donc, sur chaque exemple du groupe, la **profondeur maximale de la pile** (≥ 3 exigés) et le fait qu'elle **redescende à 1**. Mis à l'épreuve : en remplaçant `fact(5)` par `fact(1)`, il répond « *factorielle : la pile ne dépasse pas 2 cadres — cet exemple ne montre aucune récursivité* ». Sans ce contrôle, un exemple dégradé serait resté au catalogue en n'enseignant rien.
 
   **D · CONTRÔLES.** `verif-execution.js` **12 exemples, 710 pas, 2 840 comparaisons, 698 reculs, 383 contrôles de défilement, 6 exemples récursifs (pile la plus haute : 221 cadres), 0 requête hors `file://`, 0 erreur de console, 0 problème** · `verif-execution-mutations.js` **10/10 fautes vues** · `verif-rendu.js` sur la page **6 mesures, 0 erreur** · `verif-html.js --tous` **1 783 fichiers, 0/0** · `verif-donnees.js` **25 contrôles, 0 erreur** · `node --check` · **0 BOM** · index de recherche **identiques** (aucun contenu de leçon touché).
-- [ ] **B4 · Portée, fermetures, `this`.** Trois notions que le site explique bien mais que voir tranche définitivement.
+- [x] **B4 · Portée, fermetures, `this`.** ✅ **2026-09-02. Sept programmes de plus, et le panneau des portées devient l'argument : `this` y figure comme une variable ordinaire — ce qu'il est. 19 exemples pilotés, 869 pas cliqués, 3 476 comparaisons page ⇄ moteur, chaîne de portées la plus longue mesurée : 5 niveaux, 0 écart.**
+
+  **A · LES SEPT PROGRAMMES**, tous exécutés avant publication :
+  | id | ce qu'il montre | sortie mesurée |
+  |---|---|---|
+  | `portee-chainee` | trois portées empilées, le nom cherché de la plus proche à la plus lointaine | `global > externe > interne` |
+  | `portee-bloc` | le même nom dans trois portées différentes | `bloc`, `fonction`, `global` |
+  | `fermeture-compteur` | `faireCompteur` a rendu la main, et son `n` existe encore — deux compteurs indépendants | `1 2 3` puis `1` |
+  | `let-vs-var` | **le** piège de la boucle | `var : 3 3 3` / `let : 0 1 2` |
+  | `zone-morte` | le nom existe déjà dans la portée, mais est inutilisable tant qu'il n'est pas initialisé | `ReferenceError` ligne 4 |
+  | `this-methode` | `this` en méthode, en fonction fléchée, en fonction nue | `compteur = 1`, `compteur = 2`, `flechee : compteur`, `nue : undefined` |
+  | `this-impose` | `call`, `apply`, `bind` — et une fonction liée qui **ne change plus jamais** de `this` | `Bonjour, Ada` · `Salut, Alan` · `Coucou, Ada` · `Et maintenant, Ada` |
+
+  **B · CE QUE LE VISUALISEUR APPORTE ICI, ET QU'UN TEXTE NE PEUT PAS.** `this` n'est pas expliqué : il est **affiché**, dans la portée de fonction, à côté des paramètres. Un apprenant qui voit `this = { nom: 'Ada' }` changer de valeur d'un appel à l'autre n'a plus besoin qu'on lui dise que « `this` dépend de la manière dont on appelle ». De même, `zone-morte` montre la variable **présente et marquée « non initialisée »** avant sa déclaration : la zone morte cesse d'être une formule.
+
+  **C · DEUX CONTRÔLES DE PLUS, ET TOUS DEUX MIS À L'ÉPREUVE.**
+  - **La chaîne des portées doit exister** (2 niveaux au minimum) et, pour les exemples qui l'annoncent (`montreThis`), une portée doit afficher `this` **avec une valeur**.
+  - **Certains exemples n'existent que pour l'ÉCART entre deux de leurs lignes** (`lignesDifferentes`). Si `let-vs-var` se mettait à afficher deux fois la même chose, il enseignerait le contraire de son titre. Épreuve : en remplaçant `let j` par `var j`, l'outil répond « *les deux lignes censées différer disent la même chose — « var : 3 3 3 » / « let : 3 3 3 »* ».
+
+  **D · CONTRÔLES.** `verif-execution.js` **19 exemples, 869 pas, 3 476 comparaisons, 850 reculs, 484 contrôles de défilement, 6 exemples récursifs (pile max 221), 7 exemples de portée (chaîne max 5), 1 contraste exigé, 0 requête hors `file://`, 0 erreur de console, 0 problème** · `verif-execution-mutations.js` **10/10 fautes vues** · `verif-rendu.js` **6 mesures, 0 erreur** · `verif-html.js --tous` **1 783 fichiers, 0/0** · `verif-donnees.js` **25 contrôles, 0 erreur** · `node --check` · **0 BOM**.
 - [ ] **B5 · L'asynchrone.** La file des tâches, la boucle d'événements, l'ordre réel d'exécution d'un `setTimeout` et d'une promesse. Purement JavaScript, donc exécutable en `file://`.
 - [ ] **B6 · Relier aux leçons.** Chaque leçon qui parle de pile, de portée, de récursivité ou d'asynchrone renvoie au visualiseur, avec l'exemple pré-chargé. Un visualiseur qu'on ne trouve pas ne sert à personne.
 

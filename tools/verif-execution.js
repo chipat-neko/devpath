@@ -31,6 +31,13 @@
       faire resterait sinon au catalogue en n'enseignant rien.
    9. Un exemple peut DEVOIR echouer (`erreurAttendue`) : l'outil exige alors
       l'erreur, son type, et que la page l'affiche AVEC son numero de ligne.
+  10. Un exemple du groupe « portee » doit montrer une CHAINE de portees (2 au
+      moins), et ceux qui annoncent `montreThis` doivent afficher `this` avec
+      une valeur dans au moins une portee.
+  11. Un exemple peut n'exister que pour l'ECART entre deux de ses lignes
+      (`lignesDifferentes`) : « var : 3 3 3 » contre « let : 0 1 2 ». Si les
+      deux se mettaient a dire la meme chose, l'exemple enseignerait le
+      contraire de son titre — l'outil le refuse.
 
    Codes de sortie : 0 tout va bien · 1 divergence · 2 l'outil n'a pas pu mesurer.
    ============================================================================= */
@@ -190,7 +197,7 @@ function numeroDePas(position) {
   await attendre(1500);
 
   var pbs = [];
-  var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0, recursifs: 0, profondeurMax: 0 };
+  var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0, recursifs: 0, profondeurMax: 0, portees: 0, porteeMax: 0, contrastes: 0 };
 
   /* ---- 1. la page a-t-elle seulement demarre ? ---- */
   var pret = await cx.evaluer("!!document.getElementById('vex-lignes') && !!window.Interpreteur && !!window.EXECUTION_EXEMPLES");
@@ -263,6 +270,40 @@ function numeroDePas(position) {
         if (Math.min.apply(null, apres) > 1) {
           pbs.push(ex.id + " : la pile monte a " + maxP + " cadres mais ne redescend jamais a 1");
         }
+      }
+    }
+
+    /* --- un exemple de portee doit MONTRER une chaine de portees, et non une
+       seule case. Meme raison qu'au-dessus : ajouter un programme ne prouve pas
+       qu'il enseigne quelque chose. Ce qui est mesure ici l'est sur la trace du
+       moteur ; que l'affichage la reproduise exactement est verifie juste apres,
+       variable par variable. --- */
+    if ((ex.groupe || "").indexOf("Port") === 0) {
+      mesures.portees++;
+      var profP = 0, voitThis = false;
+      attendu.trace.forEach(function (p) {
+        if (p.portees.length > profP) profP = p.portees.length;
+        p.portees.forEach(function (s) {
+          s.vars.forEach(function (v) { if (v.nom === "this" && v.valeur !== "undefined") voitThis = true; });
+        });
+      });
+      if (profP > mesures.porteeMax) mesures.porteeMax = profP;
+      if (profP < 2) pbs.push(ex.id + " : la chaine des portees ne depasse jamais " + profP + " niveau — cet exemple ne montre aucune portee");
+      if (ex.montreThis && !voitThis) {
+        pbs.push(ex.id + " : l'exemple annonce montrer « this » et aucune portee ne l'affiche avec une valeur");
+      }
+    }
+    /* Certains exemples n'existent que pour l'ECART entre deux de leurs lignes :
+       « var : 3 3 3 » contre « let : 0 1 2 ». Si les deux se mettaient a dire la
+       meme chose, l'exemple enseignerait le contraire de son titre. */
+    if (ex.lignesDifferentes) {
+      var la = attendu.sortie[ex.lignesDifferentes[0]], lb = attendu.sortie[ex.lignesDifferentes[1]];
+      if (la === undefined || lb === undefined) {
+        pbs.push(ex.id + " : les lignes " + ex.lignesDifferentes.join(" et ") + " annoncees comme differentes n'existent pas toutes");
+      } else if (la.replace(/^[^:]*:/, "") === lb.replace(/^[^:]*:/, "")) {
+        pbs.push(ex.id + " : les deux lignes censees differer disent la meme chose — « " + la + " » / « " + lb + " »");
+      } else {
+        mesures.contrastes++;
       }
     }
 
@@ -384,6 +425,8 @@ function numeroDePas(position) {
   console.log("  reculs joues ................ " + mesures.reculs);
   console.log("  controles de defilement ..... " + mesures.defilements);
   console.log("  exemples recursifs .......... " + mesures.recursifs + " (pile la plus haute : " + mesures.profondeurMax + " cadres)");
+  console.log("  exemples de portee .......... " + mesures.portees + " (chaine la plus longue : " + mesures.porteeMax + " portees)");
+  console.log("  contrastes exiges ........... " + mesures.contrastes);
   console.log("  requetes reseau ............. " + cx.evenements.reseau.length + " (dont hors file:// : " + externes.length + ")");
   console.log("  erreurs de console .......... " + cx.evenements.console.length);
   console.log("  problemes ................... " + pbs.length);
