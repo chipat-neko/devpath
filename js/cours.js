@@ -521,6 +521,77 @@
     card.appendChild(a);
   }
 
+  /* ---- Lien « étude de cas » (lire du code, pas en écrire) -----------
+     Les six études de cas vivent dans pages/etude-*.html et ne pointent que
+     vers les cours : rien ne ramenait des cours vers elles. Cette table pose
+     le renvoi manquant, sur le modèle exact des fils rouges — un cours peut
+     être concerné par PLUSIEURS études, on les affiche toutes.
+     Ce qui est écrit ici est un lien, jamais un chiffre : la vitrine chiffrée,
+     c'est pages/etudes.html, et elle est assemblée par tools/etudes/hub.js qui
+     relit les études. Un titre recopié à la main périmerait en silence. */
+  var ETUDES = [
+    {
+      page: "../etude-journal.html", titre: "Un programme que tu n'as pas écrit",
+      quoi: "152 lignes de JavaScript, données en entier puis décortiquées.",
+      cours: ["javascript"],
+    },
+    {
+      page: "../etude-moteur-exos.html", titre: "Entrer dans un fichier de 1899 lignes",
+      quoi: "Cartographier un fichier qu'on n'ouvrira jamais en entier.",
+      cours: ["javascript", "patterns"],
+    },
+    {
+      page: "../etude-recherche.html", titre: "Pourquoi un index pré-calculé",
+      quoi: "Lire une décision de conception, puis la mettre en défaut.",
+      cours: ["algo", "bdd"],
+    },
+    {
+      page: "../etude-reecriture.html", titre: "Le même programme, écrit deux fois",
+      quoi: "Sept mesures pour départager, au lieu de « c'est plus propre ».",
+      cours: ["tests", "patterns"],
+    },
+    {
+      page: "../etude-euclide.html", titre: "Le plus vieil algorithme, lu comme du code",
+      quoi: "Les deux phrases qui prouvent une boucle, et où ce code ment.",
+      cours: ["algo", "crypto"],
+    },
+    {
+      page: "../etude-inconnu.html", titre: "Lire un langage qu'on ne connaît pas",
+      quoi: "Ce qui se devine dans un langage étranger, mesuré sur 39 langages.",
+      cours: ["go", "compilation"],
+    },
+  ];
+
+  function makeEtudeLink(e) {
+    var a = document.createElement("a");
+    a.className = "start-card__etude";
+    a.href = e.page;
+    a.setAttribute("data-accent", courseId);
+    a.innerHTML =
+      '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5h7a3 3 0 0 1 3 3v11a2.5 2.5 0 0 0-2.5-2.5H2z" /><path d="M22 5h-7a3 3 0 0 0-3 3v11a2.5 2.5 0 0 1 2.5-2.5H22z" /></svg>' +
+      "<span><strong>Étude de cas&nbsp;: " + e.titre + "</strong><br>" + e.quoi + "</span>";
+    return a;
+  }
+
+  function renderEtudeLink() {
+    var card = document.querySelector(".start-card");
+    if (!card) return;
+    var hits = ETUDES.filter(function (e) { return e.cours.indexOf(courseId) !== -1; });
+    if (!hits.length) return;
+    if (hits.length === 1) {
+      card.appendChild(makeEtudeLink(hits[0]));
+      return;
+    }
+    var wrap = document.createElement("div");
+    wrap.className = "start-card__filrouges";
+    var titre = document.createElement("p");
+    titre.className = "start-card__filrouges-title";
+    titre.textContent = hits.length + " études de cas s'appuient sur ce cours :";
+    wrap.appendChild(titre);
+    hits.forEach(function (hit) { wrap.appendChild(makeEtudeLink(hit)); });
+    card.appendChild(wrap);
+  }
+
   /* ---- Lien « antisèche du cours » (référence rapide) -----------------
      Les 88 cours ont au moins une antisèche (vérifié : 0 cours sans fiche).
      On passe le DOSSIER du cours en ancre : pages/antiseches.html indexe ses
@@ -565,6 +636,7 @@
   renderResetButton();
   renderCompletionBadge();
   renderFilRouge();
+  renderEtudeLink();
   renderProjetLink();
   renderAntisecheLink();
   renderPrintLink();

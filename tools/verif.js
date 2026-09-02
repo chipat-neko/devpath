@@ -251,6 +251,18 @@ if (!RAPIDE) {
     quoi: "etude de cas 6 : la page dit-elle qu'aucun compilateur Go n'a tourne, et ses chiffres tiennent-ils",
     lent: true,
   });
+  /* Les chemins qui menent aux etudes sont construits PAR DU JAVASCRIPT au chargement
+     (le menu par initMainNav, les encarts de cours par renderEtudeLink) : ils
+     n'existent dans aucun fichier HTML, et aucun controle de source ne peut les voir.
+     Cette etape ouvre les pages pour de bon -- y compris DEUX COURS TEMOINS qui ne
+     doivent porter aucun encart, sans quoi un encart pose partout passerait pour vert. */
+  ETAPES.push({
+    nom: "etudes-hub",
+    fichier: "preuves/etudes-hub.js",
+    args: [],
+    quoi: "les six etudes sont-elles atteignables : hub, menu aux 4 profondeurs, encarts de cours, retour",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

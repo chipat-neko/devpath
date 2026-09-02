@@ -316,7 +316,45 @@ que le jour où on arrive à le changer sans le casser.
 
   🔵 **Toujours à A7** : les six études ne sont reliées qu'entre elles.
 
-- [ ] **A7 · Le hub des études de cas** et les renvois depuis les cours concernés. Ajouter la page à la navigation et au catalogue.
+- [x] **A7 · Le hub des études de cas** et les renvois depuis les cours concernés. ✅ **2026-09-02. Les six études ne sont plus orphelines : hub, entrée de menu sur les 1 782 pages, encarts sur 8 cours, et retour au hub depuis chacune — le tout vérifié DANS LE NAVIGATEUR, parce que ces chemins n'existent dans aucun fichier HTML.**
+
+  **Mesure de départ, reproduite** : avant ce point, `grep` sur `index.html`, `pages/` et `js/` → **0 page du site ne pointait vers une étude**. On ne les rejoignait que par la recherche. Les six comptes rendus d'A1 à A6 le signalaient chacun ; le point était bien à faire.
+
+  **A · CE QUI EST LIVRÉ**
+
+  | | |
+  |---|---|
+  | `pages/etudes.html` | le hub, **13 734 octets**, 6 cartes + « comment lire une étude » en 4 temps |
+  | `tools/etudes/hub.js` | l'assembleur du hub : il **extrait** les titres et les numéros des 6 pages d'étude, refuse d'écrire si le dossier `pages/` et sa table ne listent pas les mêmes études, si les numéros ne se suivent pas, ou **si le chiffre mis en avant sur une carte ne se retrouve pas dans la page** |
+  | `tools/etudes/hub-gabarit.html` | le gabarit, sans un seul titre d'étude recopié |
+  | `js/main.js` | une entrée de plus dans `MENU` → « Études de cas » apparaît sur **toutes** les pages, `aria-current` compris sur les pages `etude-*` |
+  | `js/cours.js` | table `ETUDES` + `renderEtudeLink()` : l'encart « Étude de cas » sur les cours concernés, sur le moule exact des fils rouges (un cours peut en porter **plusieurs**) |
+  | `css/pages.css` | **aucune règle neuve** : `.start-card__etude` ajouté aux 4 sélecteurs groupés existants |
+  | `index.html` | une carte dans « Outils » + une ligne dans le pied de page |
+  | les 6 gabarits d'étude | le fil d'Ariane ramène au hub — les 6 pages **réassemblées**, pas éditées à la main |
+  | `tools/preuves/etudes-hub.js` | la preuve, **27ᵉ étape de `verif.js`** hors mode rapide |
+
+  **B · POURQUOI CE POINT AVAIT BESOIN D'UNE PREUVE DANS LE NAVIGATEUR.** Les deux chemins qui comptent le plus n'existent **dans aucun fichier HTML** : le menu est reconstruit à l'exécution par `initMainNav` (il déduit la profondeur du chemin depuis le lien « Accueil »), et les encarts sont posés par `renderEtudeLink`. Un `grep` ne verrait rien, et un contrôle de source rendrait un vert qui ne veut rien dire. La preuve ouvre donc les pages pour de bon.
+
+  | ce qui est affirmé | mesure |
+  |---|---|
+  | « le hub liste toutes les études » | **6 cartes / 6 études sur le disque**, 0 lien mort |
+  | « le menu y mène de partout » | testé aux **4 profondeurs de chemin** — racine, `pages/`, `pages/<cours>/cours.html`, `pages/<cours>/lecon-01.html` — 4/4, avec le bon nombre de `../` |
+  | « les cours concernés y renvoient » | 8 cours, **11 encarts**, chacun avec le compte attendu (js 2, algo 2, patterns 2, crypto/go/tests/bdd/compilation 1) |
+  | « et seulement eux » | **2 cours témoins** (cobol, ux) : **0 encart**. Sans témoin, un encart posé partout passerait pour vert. |
+  | « on peut revenir » | fil d'Ariane → hub sur les **6 études, 6/6** |
+  | hors réseau | **0 requête distante, 0 exception** |
+
+  **Épreuve d'injection faite, 3 fautes, 3 vues** : l'entrée de menu retirée de `main.js` (vue aux 4 profondeurs d'un coup), un cours retiré de la table de `cours.js` (`crypto` → « 0 encart, 1 attendu »), et le retour au hub retiré d'une étude. Fichiers restaurés, `git status` inchangé.
+
+  **C · DEUX CHOSES QUE LES OUTILS ONT ATTRAPÉES, ET PAS MOI**
+
+  1. **Le contrôle du hub a rejeté mes propres chiffres au premier essai.** J'avais écrit sur les cartes des formules de mémoire (« 19 lignes publiées », « 6 publiés / 6 retrouvés ») : aucune n'existait telle quelle dans les études. L'assembleur a refusé d'écrire. Deux causes distinctes — des formules qui n'étaient dans aucune page, et des chiffres bien présents mais écrits avec une **espace insécable** (`90&nbsp;000`), invisible à une comparaison brute. Le contrôle normalise désormais les insécables, et les six formules citées sont celles des pages.
+  2. **Le menu passe de 7 à 8 entrées** — un vrai risque de débordement horizontal, que rien dans le code ne signale. `verif-rendu.js` lancé sur **les 13 pages touchées** — le hub, l'accueil, les 8 pages de cours qui portent un encart et trois études : **84 mesures (13 pages × 3 largeurs × 2 thèmes), 0 erreur, 0 avertissement**.
+
+  **D · CONTRÔLES.** `verif.js --rapide` **vert (16 étapes, 156,7 s)** · `verif-html.js --tous` **1 782 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `node --check` sur `main.js`, `cours.js`, `hub.js`, `etudes-hub.js` · accolades de `pages.css` **1 517 / 1 517** · 0 BOM, 0 URL de CDN · `verif-rendu.js` **84 mesures, 0 erreur** · `search-index`/`search-lite` régénérés, **72 → 73 pages transverses**, point fixe atteint.
+
+  ✅ **La phase A est close** : 7 cases sur 7, six études de cas écrites, prouvées et désormais **atteignables**.
 
 ---
 

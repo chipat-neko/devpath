@@ -594,6 +594,7 @@
     { fichier: "index.html", label: "Accueil", racine: true },
     { fichier: "catalogue.html", label: "Catalogue" },
     { fichier: "fils-rouges.html", label: "Fils rouges", aussi: /^fil-rouge/ },
+    { fichier: "etudes.html", label: "Études de cas", aussi: /^etude-/ },
     { fichier: "parcours.html", label: "Parcours" },
     { fichier: "projets.html", label: "Projets" },
     { fichier: "progression.html", label: "Ma progression" },
