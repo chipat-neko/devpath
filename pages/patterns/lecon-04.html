@@ -243,6 +243,73 @@ racine.poids();   // 15 : feuilles et dossiers traités uniformément</code></pr
 </figure>
 <p>La force du Composite&nbsp;: le code client appelle <code>poids()</code> sans se soucier de savoir s'il a affaire à un fichier ou à un dossier. La récursivité naturelle de l'arbre est encapsulée dans les objets eux-mêmes.</p>
 
+<aside class="variante" aria-label="Une autre façon de le faire">
+  <div class="variante__head">
+    <svg class="variante__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M6 16.5V5" /><path d="M18 7.5a9 9 0 0 1-9 9" /></svg>
+    <p class="variante__title">Une autre façon de le faire</p>
+  </div>
+  <p class="variante__lead">Le même total, mais <strong>calculé hors des objets</strong>&nbsp;: au lieu de laisser chaque dossier additionner ses enfants, on parcourt l'arbre depuis l'extérieur avec une <strong>pile explicite</strong> — et un ensemble des nœuds déjà vus, ce qui change tout sur les arbres qui n'en sont pas vraiment.</p>
+<figure class="code-block" data-file="composite-iteratif.js"><pre><code class="language-javascript">// La feuille et le composite de la leçon, repris tels quels.
+class Fichier {
+  constructor(taille) { this.taille = taille; }
+  poids() { return this.taille; }
+}
+class Dossier {
+  constructor() { this.elements = []; }
+  ajouter(e) { this.elements.push(e); }
+  poids() { return this.elements.reduce((total, e) =&gt; total + e.poids(), 0); }
+}
+
+// Le parcours, lui, sort des objets : une pile et un ensemble de nœuds déjà vus.
+function poidsTotal(racine) {
+  let total = 0;
+  const pile = [racine];
+  const vus = new Set();
+  while (pile.length &gt; 0) {
+    const noeud = pile.pop();
+    if (vus.has(noeud)) continue;          // déjà compté : on ne repasse pas
+    vus.add(noeud);
+    if (noeud.elements) {                  // ⚠ il faut distinguer les deux types
+      for (const e of noeud.elements) pile.push(e);
+    } else {
+      total += noeud.taille;
+    }
+  }
+  return total;
+}
+
+const racine = new Dossier();
+racine.ajouter(new Fichier(10));
+const sous = new Dossier();
+sous.ajouter(new Fichier(5));
+racine.ajouter(sous);
+console.log(racine.poids(), poidsTotal(racine)); // 15 15
+
+// Le cas que la version récursive ne survit pas : un dossier qui se contient
+// (raccourci, lien symbolique, référence circulaire d'un modèle mal fermé).
+sous.ajouter(racine);
+try {
+  racine.poids();
+} catch (e) {
+  console.log("poids() récursif : " + e.constructor.name);
+}
+console.log(poidsTotal(racine)); // 15</code></pre></figure>
+  <dl class="variante__facts">
+    <div>
+      <dt>Ce qu'elle coûte</dt>
+      <dd><strong>Elle rompt la promesse même du Composite, et elle coûte cher.</strong> Toute la force du pattern tient dans une phrase — «&nbsp;le client appelle <code>poids()</code> sans savoir s'il a affaire à un fichier ou à un dossier&nbsp;». Ici, le client doit justement le savoir&nbsp;: le <code>if (noeud.elements)</code> est un test de type déguisé, et ajouter demain un troisième genre d'élément obligera à revenir dans cette fonction, alors que le Composite se contentait d'une classe de plus. Le prix en temps est net&nbsp;: sur une arborescence de 488&nbsp;280 dossiers et 1&nbsp;953&nbsp;124 fichiers profonde de 8 niveaux, <code>racine.poids()</code> met <strong>29 à 31&nbsp;ms</strong> et ce parcours <strong>240 à 275&nbsp;ms</strong>, soit <strong>huit fois plus</strong> (Node&nbsp;24.16.0, médiane de 5, une version par processus, série reproduite deux fois). Et le coupable est identifié&nbsp;: la même boucle <em>sans</em> l'ensemble <code>vus</code> tombe à <strong>37 à 40&nbsp;ms</strong>. Ce n'est donc pas la pile qui coûte, c'est la protection contre les cycles — 2,4 millions d'insertions dans un <code>Set</code>.</dd>
+    </div>
+    <div>
+      <dt>Ce qu'elle apporte</dt>
+      <dd><strong>Elle termine sur des arbres qui n'en sont pas.</strong> Un dossier qui se contient lui-même — un raccourci, un lien symbolique, une référence circulaire dans un modèle chargé depuis une base — fait tourner <code>poids()</code> jusqu'à <code>RangeError: Maximum call stack size exceeded</code>&nbsp;; le parcours ci-dessus rend <strong>15</strong>, c'est-à-dire la bonne réponse. Elle encaisse aussi la <strong>profondeur</strong>&nbsp;: sur une chaîne de dossiers emboîtés, la version récursive passe à 2&nbsp;600 niveaux et échoue à 2&nbsp;700 (mesuré avec <em>un seul appel par processus</em>, sinon la fonction chauffe et le seuil bouge)&nbsp;; c'est bien plus bas qu'on ne l'imagine, parce que chaque niveau empile trois cadres — <code>poids</code>, <code>reduce</code>, et la fonction fléchée. Le parcours itératif, lui, additionne <strong>un million de niveaux</strong> sans broncher. Sur les arbres ordinaires, enfin, les deux coïncident&nbsp;: <strong>5&nbsp;000 arbres tirés au hasard, 50&nbsp;697 fichiers, 0 écart</strong>.</dd>
+    </div>
+    <div>
+      <dt>Quand la préférer</dt>
+      <dd>Quand l'arbre vient de <strong>l'extérieur</strong> et que rien ne garantit que c'en soit un&nbsp;: système de fichiers avec liens, graphe de dépendances, données désérialisées. Là, le <code>RangeError</code> n'est pas une hypothèse d'école&nbsp;: c'est un plantage en production sur une donnée que personne n'a choisie. <strong>⚠ Mais mesure d'abord ce que tu changes&nbsp;:</strong> l'ensemble <code>vus</code> ne se contente pas de protéger, il <em>modifie le résultat</em>. Un dossier rangé à deux endroits (partage légitime, pas cycle) est compté <strong>deux fois par la version récursive et une seule fois ici</strong> — sur l'exemple mesuré, <strong>14 contre 7</strong>. Ce n'est pas un bogue&nbsp;: c'est le passage de «&nbsp;somme des chemins&nbsp;» à «&nbsp;somme des nœuds distincts&nbsp;», et c'est à toi de dire laquelle des deux tu voulais. Sur un arbre dont tu maîtrises la forme, garde le Composite&nbsp;: il est huit fois plus rapide ici, et son <code>poids()</code> reste une méthode qu'on peut appeler sur n'importe quel nœud.</dd>
+    </div>
+  </dl>
+</aside>
+
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Composer plutôt qu'hériter</p><p>Un fil rouge des patterns structurels&nbsp;: ils privilégient la <strong>composition</strong> (assembler des objets) à l'<strong>héritage</strong> (étendre des classes). La composition est plus souple — on assemble et réassemble à l'exécution — là où l'héritage fige des relations à la compilation. «&nbsp;Préférer la composition à l'héritage&nbsp;» est l'un des conseils les plus précieux de la conception objet.</p></div></div>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: ces patterns tiennent le web debout</p><p>Le <em>Decorator</em> est le cœur des <code>@middlewares</code> et des flux&nbsp;: en Java, <code>new BufferedReader(new FileReader(f))</code> empile deux couches exactement comme le café. La <em>Facade</em>, c'est ce que fait une bibliothèque comme <code>axios</code>&nbsp;: une méthode <code>axios.get(url)</code> simple cache toute la mécanique de <code>XMLHttpRequest</code>/<code>fetch</code>. L'<em>Adapter</em> est le pain quotidien des intégrations&nbsp;: brancher une API de paiement, un service d'e-mails ou un vieux module derrière l'interface que ton code attend.</p></div></div>
