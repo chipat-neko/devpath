@@ -1438,7 +1438,37 @@ apprenant qui décide.
   × 3 largeurs × 2 thèmes), 0 erreur, 0 avertissement, réseau coupé** · 0 URL de CDN · `search-index`
   régénéré (43 815 mots).
 
-- [ ] **E3b · Les 3 blocs restants** : `algo/lecon-19` (la table de hachage face aux deux pointeurs),
+- [x] **E3b · Les 3 blocs restants.** ✅ **2026-09-02. Les trois blocs existaient déjà, écrits par une passe coupée avant son contrôle : les REJOUER a rendu 7 chiffres qui ne se reproduisaient pas, et la contradiction 17 fautes de plus — dont une qui a fait RÉÉCRIRE LE CODE PUBLIÉ, parce qu'il payait quatre fois et demie le prix de ce qu'il protégeait.**
+
+  **Ce que le rejeu seul a trouvé, avant tout agent** (les 3 blocs étaient déjà en place, `verif-alternatives` vert, `verif-html` 0/0 — donc invisibles à tous les outils) :
+
+  | affirmation publiée | mesuré le 2026-09-02 |
+  |---|---|
+  | `Map` de 2 M d'entiers = **56,1 Mo** | **40,8 Mio** (`--expose-gc`, deux fois le même chiffre) |
+  | trier+converger **517 ms** contre table **131 ms**, « quatre fois moins » | **556-583** contre **157-184 ms**, trois à quatre fois |
+  | trié : 3 ms contre **136 ms**, « **45 fois** » | 3 ms contre **161-199 ms** |
+  | Composite : `poids()` **29-31 ms**, parcours **240-275 ms**, « **huit fois** » | **10-12** contre **187-605 ms** |
+  | arbre de **488 280** dossiers / **1 953 124** fichiers, **8 niveaux** | **488 281** / **1 953 125**, **9 niveaux** |
+  | 5 000 arbres, **50 697** fichiers | **55 486** (le nombre dépend d'un générateur non publié) |
+  | plan de la jointure : `SCAN` puis `SEARCH … AUTOMATIC COVERING INDEX` | il y a AUSSI un **`BLOOM FILTER ON commandes`** entre les deux |
+
+  Ont tenu au rejeu : les trois sorties du code JS (`[4,5]` / `[2,3]` / `null` / `[4,4]`, et `15 15` / `RangeError` / `15`), le seuil de récursion **2 600 passe, 2 700 échoue** (un seul appel par processus), le million de niveaux de l'itératif, les **trois cadres par niveau** (lus dans la trace : `Dossier.poids`, `Array.reduce`, la fonction fléchée), les **14 contre 7** du partage, les 6 lignes identiques en SQL, le `COUNT(*)` qui met **1** au client sans commande et le `JOIN` interne qui rend **5 lignes au lieu de 6**.
+
+  **Contradiction : 6 agents (3 démolisseurs, 3 juges chargés de RÉFUTER les démolisseurs), 25 fautes annoncées, 17 confirmées, 7 réfutées, 1 indécidable.** Le juge a servi : il a réfuté 7 accusations, dont une qui aurait fait publier une règle FAUSSE (« la corrélée garde l'ordre de la table » — mesuré : la même corrélée rend deux ordres différents selon que la table a un `rowid` ou non).
+
+  **⚠️ LA FAUTE QUI A FAIT RÉÉCRIRE DU CODE PUBLIÉ (`patterns/lecon-04`).** Le bloc affirmait « ce n'est pas la pile qui coûte, c'est la protection contre les cycles ». C'est une **attribution de cause fausse**, et le code publié en était la preuve : il rangeait **tous** les nœuds dans le `Set`, feuilles comprises. Or **un cycle passe nécessairement par un nœud qui a des enfants**. Mesuré par moi-même, trois séries, un processus par variante : ensemble sur tous les nœuds **301-322 ms et 80,0 Mio** (2 441 406 entrées) ; ensemble restreint aux dossiers **66-67 ms et 10,0 Mio** (488 281 entrées) ; aucune protection **32-39 ms** ; récursif **10-12 ms**. Le code du bloc a donc été refait (deux lignes déplacées), équivalence prouvée : cycle → 15 des deux côtés, 1 000 000 de niveaux → OK, **5 000 arbres tirés au hasard, 0 écart entre les trois variantes**. Bénéfice second : la phrase « un **dossier** rangé à deux endroits est compté deux fois par le récursif et une seule ici » devient exacte, alors que l'ancien code dédoublonnait aussi les **fichiers** partagés.
+
+  **⚠️ LES DEUX FAUTES BLOQUANTES DE `algo/lecon-19` : UN POURCENTAGE QUI MESURAIT LE GÉNÉRATEUR, PAS LES ALGORITHMES.** Le bloc disait « les deux méthodes rendent des indices identiques dans 18 203 cas sur 20 000 (91 %) ». Énumération **exhaustive** refaite par moi-même (tous les tableaux triés de 2 à 6 valeurs prises dans 0…6 × toutes les cibles 0…12 = **22 204 cas**) : quand **plusieurs** paires conviennent (**5 303 cas**), l'accord vaut **0** — jamais, la convergente rendant la paire la plus extérieure et la table celle qui se referme le plus tôt ; quand il y en a au plus une (16 901 cas), l'accord est **total**. Et le décompte le prouve sur les tirages mêmes du bloc : **18 203 = 15 049 (aucune paire) + 3 154 (une seule)**, les 1 797 désaccords étant exactement les tirages à plusieurs paires. Le « 91 % » ne disait donc rien des algorithmes : il disait que 75 % des tirages n'avaient rien à trouver. Corollaire corrigé : « un test qui compare la sortie exacte échouera une fois sur onze » → **il échoue à tous les coups** dès qu'il existe plusieurs paires ; le remède, absent, a été ajouté (comparer l'invariant `tab[i] + tab[j] === cible`, pas les indices).
+
+  **⚠️ ET UN CHIFFRE JUSTE OBTENU PAR UN PROTOCOLE QUI ANNULAIT LA MOITIÉ DU TRAVAIL.** Les « 3 ms » des deux pointeurs venaient d'une cible **hors de l'intervalle des sommes** : un seul des deux pointeurs bouge alors. À **nombre de tours rigoureusement identique (1 999 999)**, cible au milieu : **10,1 ms** (deux séries, 3,5 ms pour une cible haute, 3,7 pour une cible basse). Le rapport annoncé (« 45 fois », puis « une cinquantaine ») tombe à **une vingtaine** — 175-189 ms pour la table.
+
+  **`sql/lecon-09` : un article défini qui promettait une exhaustivité fausse.** « LES DEUX FAUTES QUI GUETTENT CETTE RÉÉCRITURE » — j'en ai mesuré **trois de plus**, toutes silencieuses sur la base du site : filtre dans le `WHERE` au lieu du `ON` → **3 lignes au lieu de 6** (le `WHERE` s'applique après la jointure et annule le `LEFT`) ; `GROUP BY` **oublié** → **une seule ligne**, « Camille Roy | 7 », sans erreur ; `GROUP BY clients.nom` au lieu de `clients.id` → deux homonymes **fusionnés** (6 lignes au lieu de 7). La troisième faute est désormais dans le bloc de code. Autre correction : le bloc énonçait « toute colonne du `SELECT` doit se retrouver dans le `GROUP BY` » — **SQLite ne l'applique pas** et pioche une valeur *arbitraire* du groupe (mesuré : `commandes.montant` rend 24 pour un client qui en a trois, 59,90 / 120 / 24). C'est une règle de portabilité, elle est publiée comme telle.
+
+  **Contrôles** : `verif-alternatives` **9 blocs, 0 faute de format** · `verif-html` **0/0 sur 1 612 fichiers** · `verif-donnees` **0 erreur sur 25 invariants** · `verif-sql` sur la leçon **19 blocs, 19 aboutissent (100 %)** · `verif-clic` **11 blocs cliqués, 0 divergent** · les **19 blocs `language-javascript`** des deux leçons JS reçoivent bien leurs **19 boutons** (règle `BROWSER_ONLY` extraite de `runner.js`, aucun faux positif) · `verif-rendu` **18 mesures** (3 pages × 3 largeurs × 2 thèmes) · `search-index` régénéré (43 830 mots) · 0 URL de CDN, 0 BOM.
+
+  🔵 **Relevé hors périmètre, prouvé préexistant** : `pages/algo/lecon-19.html` déborde de **7 px à 320 px** (`label.exo-try__label`, les deux thèmes). Vérifié en remettant la version d'avant le bloc : le débordement y est déjà. La cause est un libellé d'exercice insécable (`longueurSansRepetition("abcabcbb")`) ; le remède est une règle CSS globale sur `.exo-try__label`, donc une passe `verif-rendu --tout` — un chantier à part, pas une case E3.
+
+  **Le diagnostic de départ, conservé pour mémoire** : `algo/lecon-19` (la table de hachage face aux deux pointeurs),
   `sql/lecon-09` (la réécriture en `JOIN` d'une sous-requête scalaire) et `patterns/lecon-04` (un
   parcours itératif là où le pattern est récursif).
   ⚠️ **À REVÉRIFIER AVANT D'ÉCRIRE** : le diagnostic de E1 disait « `EXPLAIN` n'apparaît pas une seule
