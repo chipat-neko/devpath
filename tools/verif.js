@@ -227,6 +227,18 @@ if (!RAPIDE) {
     quoi: "etude de cas 4 : les deux programmes publies rendent-ils la meme sortie, celle qui est publiee",
     lent: true,
   });
+  /* L'etude 5 publie un algorithme celebre -- ce qui ne le dispense de rien. Cette
+     etape prend le code DANS LE HTML, l'execute dans le navigateur, et le fait juger
+     par une force brute ecrite dans la preuve elle-meme (tous les diviseurs essayes) :
+     14 400 paires, plus l'identite de Bezout et les 96 inverses modulo 97. Sans cette
+     reference independante, on ne verifierait Euclide que par Euclide. */
+  ETAPES.push({
+    nom: "etude-5",
+    fichier: "preuves/etude-euclide.js",
+    args: [],
+    quoi: "etude de cas 5 : l'algorithme publie resiste-t-il a une force brute independante",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

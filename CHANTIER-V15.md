@@ -221,7 +221,47 @@ que le jour où on arrive à le changer sans le casser.
   **E · CONTRÔLES.** `verif.js --rapide` **vert (21 étapes, 140,3 s)** · `verif-html.js --tous` **1 779 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` sur la page **6 mesures, 0 erreur, 0 avertissement** (aucun CSS neuf : les classes `.etude-*` d'A1 servent une troisième fois) · `node --check` sur les 8 fichiers JS neufs · 0 BOM, 0 mojibake, 0 URL de CDN · `search-index`/`search-lite` régénérés, **1 593 documents** (point fixe atteint en une passe).
 
   🔵 **Toujours à A7** : aucune page du site ne pointe vers les quatre études.
-- [ ] **A5 · Lire un algorithme historique.** Un algorithme du domaine public (Dijkstra, Huffman, ou l'algorithme d'Euclide étendu — qui resservira en cryptographie), lu comme du code, pas comme une formule.
+- [x] **A5 · Lire un algorithme historique.** ✅ **2026-09-02. L'étude nº 5 lit l'algorithme d'Euclide étendu COMME DU CODE — et son résultat le plus utile est qu'un algorithme de vingt-trois siècles se vérifie exactement comme le reste : 90 000 paires confrontées à une force brute qui ne sait rien d'Euclide, 0 écart, et 3 familles d'entrées où il ment sans lever d'erreur.**
+
+  **A · CE QUI EST LIVRÉ**
+
+  | | |
+  |---|---|
+  | `pages/etude-euclide.html` | l'étude nº 5, **39 722 octets**, 7 sections ancrées, 8 blocs de code dont **exactement 1 exécutable** |
+  | `tools/etudes/euclide/algo.js` | les 4 fonctions (soustraction, reste, étendu, inverse modulaire), **73 lignes**, chacune avec son invariant et sa décroissance écrits |
+  | `tools/etudes/euclide/mesures.js` | confronte Euclide à une **référence bête** (tous les diviseurs essayés), vérifie Bézout, cherche le pire cas, compare reste et soustraction, teste les inverses |
+  | `tools/etudes/euclide/domaine.js` | les bords : ce que le code rend hors de son domaine, puis un garde-fou et la preuve qu'il ne casse rien |
+  | `tools/etudes/euclide/banc.js` | le banc publié : Bézout, le pire cas, et **un RSA minuscule dont la clé privée sort de l'algorithme** |
+  | `tools/etudes/euclide/assembler.js` | vérifie que les paires **nommées dans les phrases** sont celles que la mesure désigne, et refuse d'écrire sinon |
+  | `tools/preuves/etude-euclide.js` | la preuve, **25ᵉ étape de `verif.js`** hors mode rapide |
+
+  **B · CE QUI EST MESURÉ**
+
+  | affirmation | mesure |
+  |---|---|
+  | « Euclide dit la même chose que la force brute » | **90 000 paires, 0 écart** |
+  | « l'identité de Bézout tient » | **90 000 vérifiées, 0 fausse** (plus grand \|u\| rencontré : 149) |
+  | « le pire cas, ce sont deux Fibonacci consécutifs » | **(89, 55) · (987, 610) · (6765, 4181)** — et c'est **le programme** qui calcule la suite et le confirme, pas l'œil |
+  | « sur Fibonacci, le reste ne gagne rien » | (46368, 28657) : **22 tours avec le reste, 22 avec la soustraction** — le quotient y vaut toujours 1 |
+  | « ailleurs, il gagne tout » | pgcd(1000000, 1) : **1 tour contre 999 999** |
+  | « il sert à fabriquer une clé privée » | RSA jouet : **d = 2753** en 5 tours, 65 → 2790 → **65** |
+  | inverses modulo 1009 et 1000 | **1008 et 400 attendus, autant trouvés, 0 faux** |
+
+  **C · CE QUE L'ÉTUDE APPORTE ET QUE LES QUATRE PRÉCÉDENTES N'AVAIENT PAS**
+
+  1. **La méthode de lecture d'une boucle en deux phrases** — ce qui ne change pas (l'invariant) dit pourquoi c'est juste, ce qui décroît dit pourquoi ça s'arrête. Appliquée aux 4 fonctions.
+  2. **« Constater d'abord, nommer ensuite »** : le pire cas est *cherché par le programme*, puis rattaché au théorème de Lamé — et la page se corrige elle-même en précisant que **18 paires** atteignent le record à 10 000, pas seulement celle de Fibonacci.
+  3. **Le domaine de validité, qui n'est écrit nulle part.** Mesuré aux bords : un négatif rend un « plus grand diviseur commun » **NÉGATIF** (l'invariant tient, la spécification non) ; **au-delà de 2⁵³** l'identité de Bézout devient fausse et l'entrée est déjà altérée ; `pgcd(10.5, 3)` rend **1.5**. Garde-fou de 3 lignes : **4 familles hors domaine refusées sur 4**, **90 000 paires rejouées, 0 résultat changé**.
+
+  **D · CE QUE LA PREUVE VÉRIFIE** — Chrome headless, `file://`, DNS coupé. Le code est pris **dans le HTML** et jugé par une **force brute écrite dans la preuve elle-même** : sans référence indépendante, on ne vérifierait Euclide que par Euclide.
+
+  **14 400 paires jugées, 0 écart de pgcd, 0 identité fausse, 96 inverses modulo 97 tous justes** · banc **21 lignes publiées / 21 rendues, 0 écart** · prose ⇄ banc : d, message et chiffré identiques · **0 requête distante, 0 exception**.
+
+  **Épreuve d'injection faite**, trois fautes : une condition du code publié (`r.d !== 1` → `!== 2`, dans le SEUL bloc complet), un chiffre de la sortie publiée (2753 → 2757) et le chiffre de la prose (2753 → 2751). **Les trois vues** (4 messages), page restaurée **octet pour octet par réassemblage**. ⚠️ Au premier essai, le motif d'injection `var reste = a - q * b;` existait **3 fois** dans la page (fichier complet, extrait, banc) — le piège du motif trop large, évité en injectant dans une tranche délimitée.
+
+  **E · CONTRÔLES.** `verif.js --rapide` **vert (21 étapes, 140,3 s)** · `verif-html.js --tous` **0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` **6 mesures, 0 erreur, 0 avertissement** · `node --check` sur les 6 fichiers JS neufs · 0 BOM, 0 mojibake, 0 URL de CDN · `search-index`/`search-lite` régénérés, **1 594 documents**, point fixe atteint.
+
+  🔵 **Toujours à A7** : les cinq études ne sont reliées qu'entre elles.
 - [ ] **A6 · Lire du code dans un langage qu'on ne connaît pas.** La compétence réelle : deviner ce que fait un programme Go ou Rust quand on ne fait que du Python. Ce qui se devine, ce qui ne se devine pas, et par quoi commencer.
 - [ ] **A7 · Le hub des études de cas** et les renvois depuis les cours concernés. Ajouter la page à la navigation et au catalogue.
 
