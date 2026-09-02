@@ -1879,6 +1879,125 @@
     prose.appendChild(box);
   }
 
+  /* --------------------------- Le visualiseur d'exécution (V15, point B6)
+     Un visualiseur qu'on ne trouve pas ne sert à personne : les six études de
+     cas de la phase A étaient orphelines, et il a fallu un point entier pour
+     les rattacher. On ne refait pas l'erreur.
+
+     COMMENT LES LEÇONS ONT ÉTÉ CHOISIES, ET POURQUOI PAS LES AUTRES
+     Mesure : 42 leçons du site portent « pile d'appels », « récursion »,
+     « fermeture », « portée », « this » ou « asynchrone » DANS LEUR TITRE —
+     c'est-à-dire dont c'est le sujet, et non celles qui en parlent au passage
+     (une recherche dans le corps rendait 100 leçons de plus, presque toutes
+     hors sujet). Sur ces 42, on écarte celles où un visualiseur JAVASCRIPT
+     induirait en erreur : l'`asyncio` de Python, les coroutines de Kotlin, le
+     modèle de Rust, la récursion de Prolog ou de Haskell ne se ramènent pas à
+     la boucle d'événements ni à la pile d'appels de JavaScript. Ce qui reste,
+     ce sont les langages dont le mécanisme est VRAIMENT le même.
+
+     Pour les cours qui ne sont pas de la famille JavaScript, l'encart le DIT :
+     la syntaxe diffère, le mécanisme est le même. Une leçon Pascal qui
+     renverrait vers du JavaScript sans le dire serait un piège.
+
+     ⚠️ Les titres des exemples sont recopiés ici (comme SCENARIOS_GIT plus
+     haut) : une leçon ne charge pas `js/execution-exemples.js` pour trois
+     libellés. `tools/verif-execution-liens.js` exige que cette table et le
+     fichier des exemples coïncident, sinon une leçon renverrait vers un
+     exemple qui n'existe plus — et la page s'ouvrirait très bien quand même. */
+  var FAMILLE_JS = ["js", "js-avance", "javascript", "nodejs", "typescript", "react", "vue", "projets-js"];
+
+  var VISUALISEUR = {
+    "js/lecon-12": ["async-ordre", "async-await"],
+    "js/lecon-16": ["portee-chainee", "portee-bloc", "zone-morte", "fermeture-compteur", "let-vs-var"],
+    "js/lecon-17": ["this-methode", "this-impose"],
+    "js/lecon-18": ["recursion-somme", "factorielle", "arbre", "recursion-sans-fin"],
+    "js/lecon-22": ["async-ordre", "async-microtaches-dabord", "async-chaines-paralleles", "async-minuteurs"],
+    "js/lecon-23": ["async-then-promesse", "async-chaines-paralleles", "async-rejet"],
+    "js/lecon-46": ["async-ordre", "async-microtaches-dabord", "async-minuteurs"],
+    "js/lecon-48": ["async-await", "async-then-promesse"],
+    "nodejs/lecon-04": ["async-ordre", "async-microtaches-dabord", "async-minuteurs"],
+    "nodejs/lecon-05": ["async-await", "async-then-promesse", "async-rejet"],
+    "projets-js/lecon-11": ["async-minuteurs", "async-ordre"],
+    "algo/lecon-02": ["recursion-somme", "factorielle", "hanoi", "arbre", "recursion-sans-fin"],
+    "compilation/lecon-08": ["arbre", "factorielle"],
+    "pascal/lecon-12": ["factorielle", "hanoi", "recursion-sans-fin"],
+    "lua/lecon-04": ["portee-chainee", "fermeture-compteur"],
+    "perl/lecon-07": ["portee-chainee", "portee-bloc"],
+    "swift/lecon-04": ["fermeture-compteur", "portee-chainee"],
+    "dart/lecon-04": ["fermeture-compteur", "portee-chainee"],
+    "groovy/lecon-04": ["fermeture-compteur", "let-vs-var"]
+  };
+
+  var TITRES_VISUALISEUR = {
+    "arbre": "Parcourir un arbre",
+    "async-await": "await : la fonction se met en pause",
+    "async-chaines-paralleles": "Trois chaînes de promesses, en même temps",
+    "async-microtaches-dabord": "Toutes les microtâches, puis un seul minuteur",
+    "async-minuteurs": "Trois minuteurs, trois délais",
+    "async-ordre": "L'ordre qui surprend tout le monde",
+    "async-rejet": "Une promesse rompue que personne n'attrape",
+    "async-then-promesse": "Le piège : rendre une promesse dans un then",
+    "factorielle": "Factorielle : la pile monte, puis redescend",
+    "fermeture-compteur": "Une fermeture : la variable survit à la fonction",
+    "hanoi": "Les tours de Hanoï",
+    "let-vs-var": "Le piège : `var` dans une boucle",
+    "portee-bloc": "Un bloc, une portée",
+    "portee-chainee": "Où un nom est-il cherché ?",
+    "recursion-somme": "La récursivité la plus simple",
+    "recursion-sans-fin": "Quand la récursivité ne s'arrête pas",
+    "this-impose": "Imposer `this` avec call, apply et bind",
+    "this-methode": "`this` : méthode, fonction nue, fonction fléchée",
+    "zone-morte": "Utiliser une variable avant de la déclarer"
+  };
+
+  function initVisualiseur() {
+    var parts = location.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return;
+    var cours = parts[parts.length - 2];
+    var lecon = parts[parts.length - 1].replace(/\.html$/, "");
+    if (!/^lecon-/.test(lecon)) return;
+    var lies = VISUALISEUR[cours + "/" + lecon];
+    if (!lies || !lies.length) return;
+    var prose = document.querySelector(".prose");
+    if (!prose || prose.querySelector(".lesson-vex")) return;
+
+    var box = document.createElement("aside");
+    box.className = "lesson-erreurs lesson-vex";
+    box.setAttribute("aria-label", "Voir ce mécanisme s'exécuter");
+
+    var titre = document.createElement("p");
+    titre.className = "lesson-erreurs__titre";
+    titre.textContent = lies.length > 1
+      ? "Regarde ce mécanisme tourner, ligne par ligne :"
+      : "Regarde ce mécanisme tourner, ligne par ligne :";
+    box.appendChild(titre);
+
+    var ul = document.createElement("ul");
+    ul.className = "lesson-bac-git__situations";
+    for (var i = 0; i < lies.length; i++) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = "../execution.html#" + lies[i];
+      a.textContent = TITRES_VISUALISEUR[lies[i]] || lies[i];
+      li.appendChild(a);
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
+
+    var p = document.createElement("p");
+    if (FAMILLE_JS.indexOf(cours) === -1) {
+      p.className = "lesson-vex__note";
+      p.textContent = "Le visualiseur exécute du JavaScript : la syntaxe diffère de ce cours, "
+        + "le mécanisme est le même — la pile d'appels et les portées se comportent de la même façon.";
+    } else {
+      p.textContent = "La pile d'appels, les variables de chaque portée et ce qui a été affiché, "
+        + "à chaque pas. On avance, on recule, on recommence.";
+    }
+    box.appendChild(p);
+
+    prose.appendChild(box);
+  }
+
   /* ----------------------------------------------- Init */
   recordLast();
   initNotes();
@@ -1896,4 +2015,5 @@
   initReadingProgress();
   initDecodeur();
   initBacGit();
+  initVisualiseur();
 })();

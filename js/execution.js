@@ -329,14 +329,21 @@
     analyser(premier.src);
   }
 
-  /* Une leçon peut ouvrir la page sur un exemple précis : execution.html#appels */
-  var ancre = (window.location.hash || "").replace(/^#/, "");
-  if (ancre) {
+  /* Une leçon peut ouvrir la page sur un exemple précis : execution.html#appels
+     Il faut écouter `hashchange` et pas seulement lire l'ancre au chargement :
+     changer d'ancre sur une page DÉJÀ ouverte ne la recharge pas. Sans cet
+     écouteur, revenir en arrière dans l'historique laissait l'apprenant sur
+     l'exemple précédent — défaut trouvé par `tools/verif-execution-liens.js`,
+     pas à la relecture. */
+  function chargerAncre() {
+    var ancre = (window.location.hash || "").replace(/^#/, "");
+    if (!ancre) return;
     var vise = exemplePar(ancre);
-    if (vise && vise.id === ancre) {
-      if (selEx) selEx.value = vise.id;
-      zoneCode.value = vise.src;
-      analyser(vise.src);
-    }
+    if (!vise || vise.id !== ancre) return;
+    if (selEx) selEx.value = vise.id;
+    zoneCode.value = vise.src;
+    analyser(vise.src);
   }
+  window.addEventListener("hashchange", chargerAncre);
+  chargerAncre();
 })();
