@@ -12,9 +12,14 @@
    LES QUATRE MOTEURS FONCTIONNENT EN file://, SANS SERVEUR ET SANS RÉSEAU. Plus aucun
    CDN depuis le 2026-08-26 : SQLite est embarqué dans assets/vendor/sqljs/ et CPython
    3.12.1 dans assets/vendor/pyodide/. Les binaires WebAssembly y sont encodés en
-   base64 — en file://, un fetch() vers un .wasm local est refusé (origine opaque) — et
-   le Worker les importe par une URL file:// ABSOLUE, un Worker issu d'un Blob n'ayant
-   aucune base pour résoudre un chemin relatif.
+   base64 — en file://, un fetch() vers un .wasm local est refusé (origine opaque).
+   ⚠️ COMMENT LES MOTEURS ARRIVENT DANS LE WORKER, ET POURQUOI ÇA A CHANGÉ. De leur
+   embarquement (2026-08-26) au 2026-09-02, le Worker les chargeait lui-même par
+   importScripts() sur une URL file:// ABSOLUE. Chrome 152 le refuse : 41 blocs SQL et 41
+   échecs, 43 blocs Python et 43 échecs — les deux moteurs étaient MORTS chez
+   l'apprenant depuis une semaine sans qu'aucun vérificateur ne le voie. Désormais
+   LA PAGE charge les scripts (chargerDansLaPage) et transmet des CHAÎNES au Worker,
+   qui les évalue. Voir tools/build-sources-worker.js et le point F2 de CHANTIER-V14.
    ⚠️ Python n'a que la BIBLIOTHÈQUE STANDARD : numpy, pandas, matplotlib et
    scikit-learn sont des paquets séparés, téléchargeables depuis un CDN seulement. Les
    blocs qui les importent n'ont donc pas de bouton (PY_MODULES ci-dessous), plutôt
@@ -268,7 +273,13 @@
      `self.SQLJS_SRC`, …) : rien n'est exécuté dans la page, tout part au Worker.
      Le chargement est PARESSEUX et mémorisé — une page qui n'exécute ni SQL ni Python ne
      lit jamais ces mégaoctets. */
-  var scriptsCharges = {}; // url -> promesse
+  /* ⚠️ LE CACHE EST PARTAGÉ AVEC js/lecon.js, ET IL DOIT L'ÊTRE. Les deux fichiers ont
+     besoin des mêmes globales (`window.SQL_WASM_BASE64`…), et une leçon peut très bien
+     voir l'apprenant cliquer sur « ▶ Exécuter » (runner) puis « Vérifier » un exercice
+     SQL (lecon). Avec deux caches séparés, chacun rechargerait le script et REDÉFINIRAIT
+     la globale sous les pieds de l'autre. Une seule promesse par URL : le second
+     consommateur attend la même, et lit une valeur qui ne bouge plus. */
+  var scriptsCharges = (window.__syntaxeMoteurs = window.__syntaxeMoteurs || {});
   function chargerDansLaPage(urls) {
     return urls.reduce(function (chaine, url) {
       return chaine.then(function () {
@@ -284,12 +295,13 @@
       });
     }, Promise.resolve());
   }
-  /* Oublier une URL, pour qu'un prochain besoin la recharge vraiment (les globales
-     qu'elle définit sont vidées après envoi au Worker, pour ne pas garder deux copies
-     des mêmes mégaoctets en mémoire). */
-  function oublierScripts(urls) {
-    urls.forEach(function (u) { delete scriptsCharges[u]; });
-  }
+  /* ⚠️ ON NE VIDE PAS LES GLOBALES APRÈS ENVOI, et c'est délibéré. Un premier jet le
+     faisait — pour ne pas garder deux fois 8,6 Mo de chaînes en mémoire — puis
+     « oubliait » l'URL afin qu'un prochain Worker recharge le fichier. Deux défauts :
+     le Worker est recréé après un dépassement de délai (`pyWorker = null`), et surtout
+     `lecon.js` lit les MÊMES globales. Un vidage entre le chargement de l'un et la
+     lecture de l'autre rendrait un « fichiers incomplets » parfaitement faux. La
+     mémoire est le prix de la fiabilité ; le Worker garde sa copie de toute façon. */
 
   /* Worker isolé : exécute la requête sur sql.js, reçu de la page sous forme de chaînes.
      L'isolement n'est pas décoratif : une requête récursive sans borne figerait la page,
@@ -745,14 +757,6 @@
           lock: window.PYODIDE_LOCK_GZ_B64, asm: window.PYODIDE_ASM_SRC,
           pyjs: window.PYODIDE_JS_SRC, charge: window.PYODIDE_CHARGE_SRC,
         });
-        /* Le Worker en détient sa propre copie : ces 8,6 Mo de chaînes n'ont plus rien à
-           faire dans la page. ⚠️ On OUBLIE aussi les URL : le Worker est recréé après un
-           dépassement de délai (voir plus haut `pyWorker = null`), et il lui faudra alors
-           de vraies chaînes, pas des globales vidées. Le rechargement relit un fichier
-           local déjà en cache — il ne coûte rien et ne sort pas du dépôt. */
-        oublierScripts([PY + "/pyodide-wasm-gz-b64.js", PY + "/pyodide-stdlib-b64.js",
-                        PY + "/pyodide-lock-b64.js", PY + "/pyodide-src.js"]);
-        window.PYODIDE_WASM_GZ_B64 = window.PYODIDE_STDLIB_B64 = window.PYODIDE_ASM_SRC = "";
       }, function (e) {
         fatal((e && e.message) || "chargement impossible");
       });
@@ -885,8 +889,6 @@
           return;
         }
         sqlWorker.postMessage({ type: "load", b64: window.SQL_WASM_BASE64, src: window.SQLJS_SRC });
-        oublierScripts([SQ + "/sql-wasm-base64.js", SQ + "/sql-wasm-src.js"]);
-        window.SQL_WASM_BASE64 = window.SQLJS_SRC = "";
       }, function (e) {
         fatal((e && e.message) || "chargement impossible");
       });

@@ -152,6 +152,28 @@ if (!RAPIDE) {
     quoi: "l'echec d'ecriture previent l'apprenant (8 scenarios)",
     lent: true,
   });
+  /* ⚠️ LES DEUX SEULES ETAPES QUI CLIQUENT SUR UN VRAI BOUTON DE MOTEUR, et elles sont ici
+     parce que leur absence a coute une semaine. Du 26 aout au 2 septembre 2026, Chrome 152 a
+     ferme importScripts() sur une URL file:// : SQLite et CPython ne demarraient plus chez
+     l'apprenant, 1 075 boutons etaient morts -- et TOUTE la chaine restait verte, parce
+     qu'aucune etape n'ouvrait une lecon pour y cliquer. Rien dans le depot n'avait bouge ;
+     c'est le navigateur qui avait change. Aucun controle de SOURCE ne peut voir cela.
+     Elles ne rougissent que si le MOTEUR echoue (une erreur SQL d'un exemple de lecon est
+     un resultat normal, pas une panne) ou si une requete part sur le reseau. ~90 s chacune. */
+  ETAPES.push({
+    nom: "sql-lec",
+    fichier: "preuves/sql-lecon.js",
+    args: [],
+    quoi: "SQLite demarre-t-il vraiment quand on clique dans une lecon (file://, DNS coupe)",
+    lent: true,
+  });
+  ETAPES.push({
+    nom: "py-lec ",
+    fichier: "preuves/python-lecon.js",
+    args: [],
+    quoi: "CPython demarre-t-il vraiment quand on clique dans une lecon (file://, DNS coupe)",
+    lent: true,
+  });
 }
 
 console.log("verif.js — " + ETAPES.length + " verificateur(s)" + (RAPIDE ? " (mode rapide : le rendu est saute)" : "") + "\n");

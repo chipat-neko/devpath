@@ -185,6 +185,19 @@ for (var c = 0; c < COPIES.length; c++) {
 var charge = path.join(DEST, 'pyodide-charge.js');
 if (fs.existsSync(charge)) poids += fs.readFileSync(charge, 'utf8').length;
 console.log('-'.repeat(60));
-console.log('poids total du dossier : ' + mo(poids) + '  (Pyodide ' + VERSION + ', CPython ' + PYTHON + ')');
+console.log('poids des fichiers Pyodide : ' + mo(poids) + '  (Pyodide ' + VERSION + ', CPython ' + PYTHON + ')');
+/* pyodide-src.js n'est pas de Pyodide : c'est la COPIE EN CHAÎNE du code ci-dessus, que
+   le Worker évalue depuis que Chrome 152 refuse importScripts() en file:// (cf. F2 du
+   chantier V14). Son intégrité est contrôlée par tools/build-sources-worker.js — on la
+   compte ici pour que « poids du dossier » ne mente pas de 1,2 Mo. */
+var srcW = path.join(DEST, 'pyodide-src.js');
+if (fs.existsSync(srcW)) {
+  var pSrc = fs.statSync(srcW).size;
+  console.log('  + pyodide-src.js (copie en chaîne pour le Worker) : ' + mo(pSrc));
+  console.log('poids total du dossier : ' + mo(poids + pSrc));
+} else {
+  console.log('⚠ pyodide-src.js ABSENT — le Worker ne pourra pas démarrer en file:// ' +
+              '(lancer : node tools/build-sources-worker.js --write)');
+}
 console.log(pb === 0 ? 'aucun écart.' : pb + ' écart(s).');
 process.exit(pb === 0 ? 0 : 1);

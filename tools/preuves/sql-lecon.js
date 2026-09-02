@@ -80,7 +80,7 @@ function get(url) {
   await new Promise(function (r) { ws.onopen = r; });
   await envoyer('Network.enable'); await envoyer('Runtime.enable');
 
-  var totalBlocs = 0, totalOK = 0, totalKO = 0;
+  var totalBlocs = 0, totalOK = 0, totalKO = 0, totalMoteurKO = 0;
 
   for (var i = 0; i < pages.length; i++) {
     var url = 'file:///' + path.resolve(RACINE, pages[i]).replace(/\\/g, '/');
@@ -119,15 +119,29 @@ function get(url) {
       /* Un CREATE ou un INSERT ne renvoie aucune ligne : « Requête exécutée » est un
          succès au même titre qu'un tableau de résultats. Seule une erreur SQLite ou un
          moteur qui ne charge pas comptent comme échec. */
-      var bon = /\d+ ligne|Requête exécutée/.test(texte) && !/n'a pas pu|⏱/.test(texte);
+      /* ⚠️ TROIS ISSUES, ET NON DEUX — la distinction est ce qui rend ce script utilisable
+         comme étape de `verif.js`. Un bloc qui rend « no such column » n'est PAS une panne :
+         c'est SQLite qui fait son travail sur un exemple de leçon volontairement fautif, ou
+         sur un schéma déclaré ailleurs dans la page. La seule vraie panne est le MOTEUR qui
+         ne démarre pas (ou le délai dépassé) — c'est elle, et elle seule, qui doit rougir. */
+      var moteurKO = /n'a pas pu|⏱/.test(texte) || !texte;
+      var bon = /\d+ ligne|Requête exécutée/.test(texte) && !moteurKO;
+      if (moteurKO) totalMoteurKO++;
       if (bon) totalOK++; else totalKO++;
-      console.log('  bloc ' + (b + 1) + ' : ' + (bon ? 'OK  ' : 'KO  ') + resume);
+      console.log('  bloc ' + (b + 1) + ' : ' + (moteurKO ? 'MOTEUR KO ' : (bon ? 'OK  ' : 'sql ')) + resume);
     }
   }
 
   console.log('\n--- bilan ---');
-  console.log('  blocs SQL cliqués : ' + totalBlocs + '  ·  résultats obtenus : ' + totalOK + '  ·  échecs : ' + totalKO);
+  console.log('  blocs SQL cliqués : ' + totalBlocs + '  ·  résultats obtenus : ' + totalOK +
+              '  ·  erreurs SQL du contenu : ' + (totalKO - totalMoteurKO) +
+              '  ·  MOTEUR EN ÉCHEC : ' + totalMoteurKO);
   console.log('  requêtes DISTANTES : ' + distantes.length + (distantes.length ? ' -> ' + distantes.join(', ') : ' (aucune)'));
+  /* Un résultat NUL est aussi une panne : si pas un seul bloc n'aboutit alors que la page en
+     porte, le moteur est mort d'une façon que le message n'a pas dite — c'est exactement ce qui
+     s'est produit le 2026-09-02 (41 blocs cliqués, 0 résultat). */
+  var muet = totalBlocs > 0 && totalOK === 0;
+  if (muet) console.log("  ⚠ AUCUN bloc n'a abouti : le moteur ne fonctionne pas.");
   ws.close(); proc.kill();
-  process.exit(totalKO || distantes.length ? 1 : 0);
+  process.exit(totalMoteurKO || muet || distantes.length ? 1 : 0);
 })();

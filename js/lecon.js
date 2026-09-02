@@ -895,9 +895,14 @@
      mêmes mesures que dans js/runner.js : depuis Chrome 152, un Worker issu d'un Blob
      ne peut plus faire `importScripts()` sur une URL `file://`. La page charge, le
      Worker reçoit des CHAÎNES par postMessage et les évalue.
-     Ces deux fichiers ne partagent pas de code : 89 leçons chargent lecon.js SANS
-     runner.js, et un exercice auto-corrigé doit fonctionner là aussi. */
-  var scriptsExoCharges = {}; // url -> promesse
+     La FONCTION est dupliquée à dessein (89 leçons chargent lecon.js sans runner.js) ;
+     le CACHE, lui, est partagé — voir juste en dessous. */
+  /* ⚠️ CACHE PARTAGÉ AVEC js/runner.js (même objet sur `window`) : les deux fichiers
+     ont besoin des mêmes globales, et une leçon peut voir l'apprenant cliquer sur
+     « ▶ Exécuter » (runner) puis « Vérifier » un exercice SQL (ici). Avec deux caches
+     séparés, chacun rechargerait le script et redéfinirait la globale sous les pieds
+     de l'autre. Une seule promesse par URL, et on ne vide jamais les globales. */
+  var scriptsExoCharges = (window.__syntaxeMoteurs = window.__syntaxeMoteurs || {});
   function chargerScriptExo(urls) {
     return urls.reduce(function (chaine, url) {
       return chaine.then(function () {
@@ -912,9 +917,6 @@
         return scriptsExoCharges[url];
       });
     }, Promise.resolve());
-  }
-  function oublierScriptExo(urls) {
-    urls.forEach(function (u) { delete scriptsExoCharges[u]; });
   }
 
   var EXO_SQL_WORKER_SRC = [
@@ -1044,10 +1046,6 @@
         return;
       }
       sqlExoWorker.postMessage({ type: "load", b64: window.SQL_WASM_BASE64, src: window.SQLJS_SRC });
-      /* Le Worker en a sa copie : on libère la page, et l'on oublie les URL pour qu'un
-         prochain Worker (après une panne) les recharge vraiment. */
-      oublierScriptExo(FICHIERS_SQL);
-      window.SQL_WASM_BASE64 = window.SQLJS_SRC = "";
     }, function (e) {
       sqlExoTousEnEchec("✗ SQLite n'a pas pu se charger (" + ((e && e.message) || "chargement impossible") +
         "). Vérifie que le dossier assets/vendor/sqljs/ est bien présent à côté du dossier js/.");
@@ -1184,8 +1182,6 @@
         lock: window.PYODIDE_LOCK_GZ_B64, asm: window.PYODIDE_ASM_SRC,
         pyjs: window.PYODIDE_JS_SRC, charge: window.PYODIDE_CHARGE_SRC,
       });
-      oublierScriptExo(FICHIERS_PY);
-      window.PYODIDE_WASM_GZ_B64 = window.PYODIDE_STDLIB_B64 = window.PYODIDE_ASM_SRC = "";
     }, function (e) {
       pyExoAbandonner("✗ Python n'a pas pu se charger (" + ((e && e.message) || "chargement impossible") +
         "). Vérifie que le dossier assets/vendor/pyodide/ est bien présent à côté du dossier js/.");
