@@ -20,6 +20,11 @@ $log  = 'd:\test-claude\.autonomie\journal.log'
 $lock = 'd:\test-claude\.autonomie\lock'
 $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
 
+# MARQUEUR D'ARRET VOLONTAIRE (2026-09-02). tools/sante-autonomie.ps1 surveille et
+# REPARE les arrets anormaux ; sans ce fichier, il relancerait aussitot ce que l'on
+# vient d'arreter a la main. Le supprimer est ce qui autorise la reprise.
+try { Set-Content -Path (Join-Path (Split-Path $lock) 'arret-volontaire.txt') -Value "arret manuel du $stamp" -Encoding utf8 } catch {}
+
 Write-Host "Arret de l'autonomie de Syntaxe..." -ForegroundColor Yellow
 
 # 1) Desactiver la tache (reversible via /ENABLE).
@@ -65,3 +70,4 @@ try { Add-Content $log "[$stamp] ===== ARRET MANUEL (arret.ps1) =====" } catch {
 Write-Host ""
 Write-Host "Autonomie ARRETEE." -ForegroundColor Cyan
 Write-Host "Reprendre : schtasks /Change /TN `"$task`" /ENABLE" -ForegroundColor Cyan
+Write-Host "         (et supprimer .autonomie/arret-volontaire.txt, sinon la surveillance ne redemarrera rien)" -ForegroundColor DarkCyan
