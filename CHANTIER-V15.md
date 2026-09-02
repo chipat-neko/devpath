@@ -263,6 +263,15 @@ que le jour où on arrive à le changer sans le casser.
 
   🔵 **Toujours à A7** : les cinq études ne sont reliées qu'entre elles.
 - [ ] **A6 · Lire du code dans un langage qu'on ne connaît pas.** La compétence réelle : deviner ce que fait un programme Go ou Rust quand on ne fait que du Python. Ce qui se devine, ce qui ne se devine pas, et par quoi commencer.
+
+  🔴 **RELEVÉ AVANT DE COMMENCER (2026-09-02, passe A4/A5) — à lire, il change la conception de ce point.** Sondé sur cette machine : **ni `go` ni `rustc` ne sont installés** (`go version` et `rustc --version` ne répondent pas ; seuls Node et Python 3.14.5 sont disponibles). Conséquence directe : **on ne peut PAS publier « voici ce que ce programme Go affiche »** — ce serait exactement la faute qui a fondé toute cette chaîne de chantiers, et Go a des pièges où l'intuition se trompe (l'ordre d'itération d'une `map` y est délibérément aléatoire).
+
+  **Trois voies, à trancher au début de la prochaine passe :**
+  1. **Publier du Go sans jamais publier sa sortie.** L'étude ne pose que des questions de *lecture* (que fait ce code, où irais-tu chercher, qu'est-ce qui te manque), et la seule chose exécutée — donc prouvée — est une transcription JavaScript clairement étiquetée comme telle. Honnête, mais l'étude perd son banc.
+  2. **Fonder « ce qui se devine » sur une MESURE tirée du site.** Les leçons contiennent du code de 80 langages : un outil peut compter dans combien d'entre eux apparaissent réellement `if`, `for`, `return`, l'accolade, la déclaration de type explicite, le point-virgule… Cela remplace l'intuition (« la structure se devine ») par un chiffre reproductible, et c'est du matériau qu'aucune autre étude n'a. **C'est la voie recommandée** : elle donne à ce point ce que les études 1 à 5 ont toutes eu — un chiffre qu'on peut refaire.
+  3. **Installer un compilateur Go.** Écarté : ajouter un outillage à la machine dépasse le mandat d'une passe autonome, et le dépôt pèse déjà 90 Mo.
+
+  ⚠️ Ne pas retomber sur Python comme « langage inconnu » : il est déjà exécutable sur le site (Pyodide embarqué) et il est enseigné par deux cours — ce n'est un langage étranger pour personne ici.
 - [ ] **A7 · Le hub des études de cas** et les renvois depuis les cours concernés. Ajouter la page à la navigation et au catalogue.
 
 ---
