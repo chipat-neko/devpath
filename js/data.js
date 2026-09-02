@@ -670,7 +670,7 @@ window.SITE_DATA = (function () {
     {
       id: "maths", dir: "maths", title: "Mathématiques de l'informatique : ce dont on se sert vraiment",
       glyph: "∀", language: "Mathématiques", level: "intermediaire", status: "apercu",
-      accent: "#702070", lessons: 3, hours: 3,
+      accent: "#702070", lessons: 6, hours: 5,
       tagline: "Pas un cours de mathématiques déguisé : les mathématiques dont un développeur se sert, chacune reliée à l'endroit du site où elle sert déjà. La logique derrière un if, les ensembles derrière une table de hachage, l'arithmétique modulaire derrière la cryptographie, les graphes derrière un réseau, la croissance derrière un O(n²). Chaque notion arrive avec un programme qui la met en œuvre — et aucun chiffre de ce cours n'a été écrit de tête : tous sortent d'une exécution.",
       tags: ["Transversal", "Fondamentaux", "Mathématiques"],
     },
@@ -5930,9 +5930,9 @@ window.SITE_DATA = (function () {
           num: "02", title: "Ensembles, dénombrement, probabilités", sub: "ce qui fonde les tables de hachage et les collisions",
           level: "intermediaire",
           lessons: [
-            { num: "04", title: "Ensembles, unions, intersections", file: "#", status: "bientot" },
-            { num: "05", title: "Compter sans énumérer : le dénombrement", file: "#", status: "bientot" },
-            { num: "06", title: "Probabilités, collisions et paradoxe des anniversaires", file: "#", status: "bientot" },
+            { num: "04", title: "Ensembles : ce que Set sait faire, et ce qu'il coûte", file: "lecon-04.html", status: "complet" },
+            { num: "05", title: "Compter sans énumérer", file: "lecon-05.html", status: "complet" },
+            { num: "06", title: "Probabilités, collisions et paradoxe des anniversaires", file: "lecon-06.html", status: "complet" },
           ],
         },
         {
@@ -6176,7 +6176,7 @@ window.SITE_DATA = (function () {
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
     "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34,"lecon-04.html":34,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":35,"lecon-10.html":36,"lecon-11.html":40},
-    "maths": {"lecon-01.html":52,"lecon-02.html":50,"lecon-03.html":54},
+    "maths": {"lecon-01.html":52,"lecon-02.html":50,"lecon-03.html":54,"lecon-04.html":48,"lecon-05.html":50,"lecon-06.html":52},
     "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24,"lecon-12.html":30},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},
