@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Remède possible : la page charge, le Worker reçoit</title></head>
+<!-- La PAGE charge les scripts par <script src> RELATIF — ce que Chrome 152 permet
+     encore en file:// — puis passe les chaînes au Worker par postMessage. Le Worker
+     ne fait plus aucun importScripts sur une URL file://. -->
+<script src="../../assets/vendor/sqljs/sql-wasm-base64.js"></script>
+<script src="../../assets/vendor/pyodide/pyodide-lock-b64.js"></script>
+<body>
+<pre id="out">…</pre>
+<script>
+(function () {
+  var lignes = [];
+  function dis(s) { lignes.push(s); document.getElementById('out').textContent = lignes.join('\n'); }
+  dis('dans la PAGE : SQL_WASM_BASE64 = ' + typeof window.SQL_WASM_BASE64
+      + ' (' + (window.SQL_WASM_BASE64 ? window.SQL_WASM_BASE64.length : 0) + ' caractères)');
+  dis('dans la PAGE : PYODIDE_LOCK_GZ_B64 = ' + typeof window.PYODIDE_LOCK_GZ_B64);
+  if (typeof window.SQL_WASM_BASE64 !== 'string') {
+    dis('VERDICT : la page elle-même ne peut plus charger un <script src> local — remède mort');
+    window.__RESULTAT = lignes.join('\n'); return;
+  }
+  var src = [
+    'self.onmessage = function (e) {',
+    '  var t0 = Date.now();',
+    '  self.SQL_WASM_BASE64 = e.data.sql;',
+    '  var n = self.SQL_WASM_BASE64 ? self.SQL_WASM_BASE64.length : 0;',
+    '  var bin = null, err = null;',
+    '  try { bin = Uint8Array.from(atob(self.SQL_WASM_BASE64.slice(0, 8)), function (c) { return c.charCodeAt(0); }); }',
+    '  catch (x) { err = x.message; }',
+    '  postMessage({ recu: n, ms: Date.now() - t0, magique: bin ? Array.from(bin.slice(0, 4)) : null, err: err });',
+    '};'
+  ].join('\n');
+  var t0 = Date.now();
+  var w = new Worker(URL.createObjectURL(new Blob([src], { type: 'application/javascript' })));
+  w.onmessage = function (ev) {
+    dis('le WORKER a reçu ' + ev.data.recu + ' caractères en ' + (Date.now() - t0) + ' ms (transfert compris)');
+    dis('nombre magique du .wasm lu dans le Worker : ' + JSON.stringify(ev.data.magique) + ' (attendu [0,97,115,109])');
+    var ok = ev.data.recu === window.SQL_WASM_BASE64.length
+             && JSON.stringify(ev.data.magique) === '[0,97,115,109]';
+    dis('VERDICT : ' + (ok ? 'LE REMEDE TIENT — la page charge, le Worker reçoit, le binaire est intact'
+                           : 'REMEDE EN DEFAUT : ' + (ev.data.err || 'contenu inattendu')));
+    window.__RESULTAT = lignes.join('\n');
+  };
+  w.onerror = function (e) { dis('ERREUR DU WORKER : ' + (e.message || e)); window.__RESULTAT = lignes.join('\n'); };
+  w.postMessage({ sql: window.SQL_WASM_BASE64 });
+  setTimeout(function () { if (!window.__RESULTAT) { dis('DELAI DEPASSE'); window.__RESULTAT = lignes.join('\n'); } }, 20000);
+})();
+</script>
+</body>
+</html>

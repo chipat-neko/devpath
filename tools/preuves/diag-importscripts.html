@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Diagnostic du chargement de Pyodide</title></head>
+<body>
+<pre id="out">…</pre>
+<script>
+(function () {
+  var base = location.href.replace(/\/tools\/[^]*$/, '');
+  var lignes = [];
+  function dis(s) { lignes.push(s); document.getElementById('out').textContent = lignes.join('\n'); }
+  dis('base = ' + base);
+  var src = [
+    'self.__log = [];',
+    'function essaie(nom, url) {',
+    '  var t0 = Date.now();',
+    '  try { importScripts(url); self.__log.push(nom + " : OK en " + (Date.now() - t0) + " ms"); return true; }',
+    '  catch (e) { self.__log.push(nom + " : ECHEC — " + (e && e.message ? e.message : e)); return false; }',
+    '}',
+    'self.onmessage = function (ev) {',
+    '  var b = ev.data;',
+    '  essaie("pyodide-lock-b64 (0,8 Ko)", b + "/assets/vendor/pyodide/pyodide-lock-b64.js");',
+    '  self.__log.push("  -> PYODIDE_LOCK_GZ_B64 = " + (typeof self.PYODIDE_LOCK_GZ_B64));',
+    '  essaie("pyodide.js (14 Ko)", b + "/assets/vendor/pyodide/pyodide.js");',
+    '  self.__log.push("  -> loadPyodide = " + (typeof self.loadPyodide));',
+    '  essaie("pyodide.asm.js (1,2 Mo)", b + "/assets/vendor/pyodide/pyodide.asm.js");',
+    '  essaie("pyodide-stdlib-b64 (2,98 Mo)", b + "/assets/vendor/pyodide/pyodide-stdlib-b64.js");',
+    '  self.__log.push("  -> PYODIDE_STDLIB_B64 = " + (typeof self.PYODIDE_STDLIB_B64) + " longueur " + (self.PYODIDE_STDLIB_B64 ? self.PYODIDE_STDLIB_B64.length : "-"));',
+    '  essaie("pyodide-wasm-gz-b64 (4,10 Mo)", b + "/assets/vendor/pyodide/pyodide-wasm-gz-b64.js");',
+    '  self.__log.push("  -> PYODIDE_WASM_GZ_B64 = " + (typeof self.PYODIDE_WASM_GZ_B64) + " longueur " + (self.PYODIDE_WASM_GZ_B64 ? self.PYODIDE_WASM_GZ_B64.length : "-"));',
+    '  postMessage(self.__log);',
+    '};'
+  ].join('\n');
+  var w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  w.onmessage = function (ev) {
+    ev.data.forEach(dis);
+    window.__RESULTAT = lignes.join('\n');
+  };
+  w.onerror = function (e) {
+    dis('ERREUR DU WORKER : ' + (e.message || e));
+    window.__RESULTAT = lignes.join('\n');
+  };
+  w.postMessage(base);
+  setTimeout(function () { if (!window.__RESULTAT) { dis('DELAI DEPASSE'); window.__RESULTAT = lignes.join('\n'); } }, 20000);
+})();
+</script>
+</body>
+</html>

@@ -1548,9 +1548,55 @@ apprenant qui décide.
 
 ## PHASE F — Contrôle final
 
-- [ ] **F1 · Mesure globale.** Part d'exercices auto-corrigés : **2,5 % au départ**, combien à l'arrivée ? Nombre de cours ayant au moins un exercice exécutable : **3 au départ**.
-- [ ] **F2 · Preuve hors réseau.** Tous les moteurs embarqués fonctionnent avec le réseau coupé, mesuré dans Chrome. Aucune requête distante.
-- [ ] **F3 · Poids.** Taille du dépôt avant et après, et jugement : le compromis valait-il le coup ?
+- [x] **F1 · Mesure globale.** ✅ **2026-09-02. La part auto-corrigée a été multipliée par 1,6 — et non par 3, parce que le chiffre de départ inscrit en tête de plan était faux d'un facteur deux.**
+
+  `node tools/mesure-executable.js`, 1 612 leçons lues, 12 919 blocs de code, 92 dossiers de cours :
+
+  | | annoncé en tête de plan | **vrai départ** (mesuré en A1) | **aujourd'hui** |
+  |---|---:|---:|---:|
+  | exercices corrigés en **exécutant** | 105 | **211** | **354** |
+  | exercices comparés à un mot-clé | 4 136 | 4 211 | 4 254 |
+  | part réellement auto-corrigée | 2,5 % | **4,77 %** | **7,68 %** (354 / 4 608) |
+  | cours ayant au moins un exercice exécuté | 3 | **9** | **29** sur 92 |
+  | blocs exécutables en `file://` | — | **19,3 %** | **28,0 %** (3 621 / 12 919) |
+  | langages réellement exécutables | 1 | 3 | **4** (JS, HTML, SQL, Python) |
+
+  **Le vrai résultat du chantier n'est pas le pourcentage, c'est la RÉPARTITION** : de 9 cours à **29**. Les trois cours qui monopolisaient l'exécution (`js`, `algo`, `projets-js`) pèsent aujourd'hui 119 exercices sur 354, soit un tiers au lieu de la totalité. Les 20 cours au plus fort potentiel restant (`git` 67 exercices, `ruby` 75, `csharp` 76, `cpp` 79, `java` 76…) n'ont toujours **aucun** exercice exécuté : ce sont des langages qu'aucun moteur ne peut faire tourner en `file://`, et la phase B7 les a traités par la **prédiction de sortie**, qui n'entre pas dans ce compteur.
+
+  ⚠️ **Trois cases du plan restent à zéro exercice** : `js-avance` (23 leçons), `html-avance` (22), `css-avance` (22), `python-avance` (22) — **89 leçons sur 1 612 n'ont aucun `data-exos`**, constat déjà relevé en A2 et jamais traité.
+- [ ] **F2 · Preuve hors réseau.** ⛔ **NE PEUT PAS ÊTRE COCHÉE — et c'est la trouvaille la plus importante de la passe du 2026-09-02 : LES DEUX MOTEURS EMBARQUÉS NE DÉMARRENT PLUS CHEZ L'APPRENANT. Chrome les a fermés entre le 26 août et le 2 septembre.**
+
+  **Ce qui est mesuré**, réseau coupé (`MAP * ~NOTFOUND`), en `file://`, **sans** `--allow-file-access-from-files` — c'est-à-dire dans les conditions réelles de quelqu'un qui double-clique sur une page :
+
+  | moteur | preuve | 2026-08-26 | **2026-09-02** |
+  |---|---|---:|---:|
+  | **Worker JavaScript** (1 860 blocs) | page de diagnostic, Worker issu d'un Blob | OK | **OK, 410 ms, 0 requête distante** |
+  | **SQLite** (303 blocs) | `node tools/preuves/sql-lecon.js` | 27 blocs aboutis | **41 blocs cliqués, 0 résultat, 41 échecs** |
+  | **CPython** (772 blocs) | `node tools/preuves/python-lecon.js` | 44 cliqués, 40 sorties | **43 cliqués, 0 sortie, 43 échecs du moteur** |
+
+  **La cause, isolée par une page de diagnostic qui importe les fichiers un par un** : `importScripts()` sur une URL `file://` **absolue** échoue désormais depuis un Worker issu d'un `Blob`. Ce n'est **pas une affaire de taille** — le fichier de **0,8 Ko** (`pyodide-lock-b64.js`) échoue exactement comme celui de 4,10 Mo, avec le même message (« The script at 'file:///…' failed to load »). Les fichiers sont intacts : `node tools/build-pyodide.js` rend « aucun écart » sur les cinq, et `build-sqljs` de même. **Chrome installé : 152.0.7977.65** ; les mesures de A2/A4 avaient été faites sous **Chrome 151**. Preuve que c'est bien la politique `file://` et rien d'autre : la MÊME preuve relancée **avec** `--allow-file-access-from-files` rend **14 résultats sur 27 blocs SQL**, 0 requête distante.
+
+  ⚠️ **CE QUE ÇA APPREND SUR LA MÉTHODE, et qui vaut au-delà de ce point : la preuve de A2 ne prouvait pas ce qu'elle annonçait.** `tools/preuves/sqljs.html` charge le base64 par une balise `<script src>` **dans la page** — pas par le chemin qu'emploie `js/runner.js` (Worker + `importScripts`). Elle rend donc « SQL EXECUTE EN FILE:// SANS SERVEUR » **encore aujourd'hui**, alors que pas un seul bouton du site ne fonctionne. Une preuve qui n'emprunte pas le chemin du produit ne prouve rien, et celle-ci a survécu à la panne sans broncher. Les deux preuves qui ont vu la panne sont celles qui **pilotent une vraie leçon** (`sql-lecon.js`, `python-lecon.js`).
+
+  **LE REMÈDE EST DÉJÀ ÉPROUVÉ, il reste à l'appliquer** (`scratchpad/v14-e3b-rejeu/diag-remede.html`, mesuré réseau coupé et sans drapeau) : la **page** peut toujours charger un `<script src>` **relatif** en `file://`, et transmettre la chaîne au Worker par `postMessage`. Mesuré : **877 880 caractères transférés en 9 ms**, nombre magique du `.wasm` relu **intact dans le Worker** (`[0, 97, 115, 109]`), 0 requête distante. Ce qu'il reste à trancher pour Python : `pyodide.asm.js` (1,2 Mo) et `pyodide.js` sont du **code à exécuter dans le Worker**, pas des données — il faudra que `tools/build-pyodide.js` les livre aussi sous forme de chaîne (`self.PYODIDE_ASM_SRC = "…"`) pour que le Worker les évalue, au lieu de les importer.
+
+  **Tant que ce point n'est pas fait, F4 et F5 ne veulent rien dire** : 46 exercices `type:"sql"` et `type:"python"` sont aujourd'hui incorrigeables chez l'apprenant, et 1 075 blocs SQL et Python portent un bouton qui échoue. **C'est le premier point à traiter au prochain réveil.**
+- [x] **F3 · Poids.** ✅ **2026-09-02. +14,2 % de dépôt, dont 84 % pour deux moteurs — et le chiffre de référence inscrit en tête de plan (« ~35 Mo ») était faux de plus du double.**
+
+  Taille des fichiers **suivis par git** (`git ls-tree -r -l`, donc ce qui est réellement livré, à l'exclusion du `scratchpad`) :
+
+  | jalon | fichiers | poids | écart |
+  |---|---:|---:|---:|
+  | avant V14 (`ce96922^`) | 2 288 | **77,87 Mo** | — |
+  | après sql.js (A2) | 2 297 | 78,78 Mo | **+0,90 Mo** (+1,2 %) |
+  | après Pyodide (A4) | 2 311 | 87,14 Mo | **+8,36 Mo** (+10,7 %) |
+  | aujourd'hui (fin de phase E) | 2 370 | **88,89 Mo** | **+11,02 Mo** (+14,2 %) |
+
+  **Le jugement, et il est mitigé.** Les deux moteurs pèsent **9,26 Mo des 11,02** ajoutés (84 %) ; tout le contenu de six phases — 46 exercices exécutés, le bac à sable Git, le cahier de 55 erreurs, 9 blocs « une autre façon », les lots de prédiction — tient dans les **1,76 Mo** restants. Le rapport coût/bénéfice est très inégal : **sql.js coûte 0,90 Mo et rend 21 exercices exécutables** (24 Mo par exercice), **Pyodide coûte 8,36 Mo et en rend 25** (334 Mo par exercice, quatorze fois plus cher). Et ce que le worker JavaScript déjà présent a rendu possible — 1 073 exercices convertibles selon A1 — n'a coûté **aucun octet**.
+
+  ⚠️ **À la lumière de F2, ce jugement doit être relu** : les 9,26 Mo achètent aujourd'hui **zéro exercice qui fonctionne chez l'apprenant**. Le poids est acquis, le bénéfice ne le sera qu'une fois F2 réparé — c'est un argument de plus pour le traiter en premier.
+
+  🔵 Pour mémoire : le dépôt ne faisait **pas** 35 Mo au début de V14, mais 77,87 (A4 l'avait déjà relevé). La règle du plan « le poids est un critère » reste juste ; c'est la valeur de référence qui traînait depuis un chantier antérieur.
 - [ ] **F4 · Non-régression.** Les cinq vérificateurs verts.
 - [ ] **F5 · Ce qui n'a pas été fait.** Lister et expliquer.
 
