@@ -175,6 +175,19 @@ if (!RAPIDE) {
     quoi: "CPython demarre-t-il vraiment quand on clique dans une lecon (file://, DNS coupe)",
     lent: true,
   });
+  /* Une etude de cas AFFIRME trois choses a l'apprenant : que le programme marche, qu'il
+     affiche CE QUI EST PUBLIE, et que la solution de la modification produit la ligne
+     annoncee. Aucune des trois ne se verifie en lisant le fichier -- il faut ouvrir la
+     page, cliquer, comparer. C'est ce que fait cette etape, en file:// et DNS coupe.
+     Epreuve d'injection faite : un seul chiffre change dans la sortie publiee, et
+     l'etape rougit en designant la ligne. */
+  ETAPES.push({
+    nom: "etude-1",
+    fichier: "preuves/etude-journal.js",
+    args: [],
+    quoi: "etude de cas 1 : le programme publie rend-il, dans le navigateur, la sortie publiee",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

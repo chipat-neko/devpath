@@ -54,7 +54,44 @@ fait, comment il est organisé, pourquoi tel choix, et où on irait chercher si 
 puis la lecture guidée, puis **une modification à faire soi-même** — parce qu'on n'a compris un code
 que le jour où on arrive à le changer sans le casser.
 
-- [ ] **A1 · Le format et la première étude.** Créer le gabarit (page, CSS, navigation) et la première étude de cas de bout en bout : un programme JavaScript d'environ 150 lignes, exécutable dans le site. Le gabarit compte autant que le contenu : les six suivantes s'y couleront.
+- [x] **A1 · Le format et la première étude.** ✅ **2026-09-02. Le format existe, la première étude est écrite — et elle est la première page du site dont la sortie publiée est COMPARÉE, dans le navigateur, à ce que le programme produit vraiment : 19 lignes publiées, 19 lignes rendues, 0 écart.**
+
+  **Mesure de départ, reproduite** : `grep` sur `pages/` et `js/` → **0 étude de cas**, comme l'annonçait le cadrage. Le point était donc bien à faire.
+
+  **A · CE QUI EST LIVRÉ**
+
+  | | |
+  |---|---|
+  | `pages/etude-journal.html` | l'étude nº 1, **39,8 Ko**, 5 sections ancrées, 7 blocs de code |
+  | `tools/etudes/journal/` | les SOURCES versionnées : le programme lu (**152 lignes** de JavaScript, un analyseur de journal d'accès HTTP), le gabarit, et un `assembler.js` qui **re-mesure la sortie à chaque assemblage** — la page publiée ne peut donc pas contenir une sortie périmée. Reconstruction vérifiée : même page à l'octet près (39 754). |
+  | `css/pages.css` | **8 classes neuves** `.etude-*` (bandeau de méta, encadré de questions, partie de lecture guidée numérotée + repère de lignes, tableau des décisions replié en fiches sous 640 px) |
+  | `tools/preuves/etude-journal.js` | la preuve, **21ᵉ étape de `verif.js`** hors mode rapide (la chaîne passe à 22 en `--complet`) |
+
+  **Le format, en quatre temps** — c'est lui que les six études suivantes reprendront : **(1)** le programme entier, *exécutable et modifiable sur place* ; **(2)** quatre questions à se poser AVANT toute explication, puis la sortie réelle ; **(3)** la lecture guidée en **7 parties**, chacune ancrée sur des **numéros de ligne** du programme ; **(4)** les **décisions nommées** dans un tableau à trois colonnes dont la dernière est *ce que l'autre choix coûterait* — la règle de A4 (« jamais seulement : c'est plus propre ») appliquée dès la première étude ; **(5)** une modification à faire soi-même, avec sa sortie attendue et sa solution.
+
+  **Rien de neuf n'a été écrit côté moteur** : un `<figure class="code-block">` suffit pour que `js/main.js` pose la barre et `js/runner.js` le bouton « Tester » + l'éditeur. Les six extraits de la lecture guidée portent `data-runner="skip"` — un attribut que `runner.js` respectait déjà et que le contenu n'employait jamais — pour qu'un fragment non exécutable ne propose pas un bouton qui ne rendrait rien. **Mesuré dans Chrome : 7 blocs, exactement 1 exécutable, 6 volontairement inertes.**
+
+  **B · CE QUI EST PROUVÉ, ET COMMENT** — `node tools/preuves/etude-journal.js`, Chrome headless, `file://`, `--host-resolver-rules="MAP * ~NOTFOUND"` :
+
+  | ce qui est affirmé à l'apprenant | mesure |
+  |---|---|
+  | « ce programme marche » | le bouton « Tester » l'exécute : **0 exception de page** |
+  | « voici ce qu'il affiche » | **19 lignes publiées / 19 rendues, 0 écart** ligne à ligne |
+  | « voici la solution » | la solution **publiée**, appliquée au programme **publié**, relus tous deux dans la page, rend `taux d'échec ....... 31.3 %` — exactement la ligne annoncée |
+  | le sommaire | 5 sections ancrées, **0 lien mort** |
+  | hors réseau | **0 requête distante** |
+
+  Et la preuve n'est pas verte pour rien : **épreuve d'injection faite** — un seul chiffre changé dans la sortie publiée (`18` → `19`), l'étape rougit en désignant la ligne 2 et les deux valeurs. C'est la leçon de V14-F4 appliquée le jour même.
+
+  **C · TROIS CHOSES QUE J'AI DÛ CORRIGER AVANT DE PUBLIER, ET C'EST LE VRAI RÉSULTAT DU POINT**
+
+  1. **Un commentaire du programme affirmait une contre-vérité.** Il justifiait le départage des ex æquo par « sinon deux exécutions rendraient deux classements différents ». **Faux, mesuré en le retirant : trois exécutions de suite rendent le même classement** — le tri de JavaScript est stable depuis 2019. Le vrai motif est autre, et il est plus intéressant : sans départage, les ex æquo sortent dans l'ordre de leur *première apparition dans le journal* (`/index.html` passe alors devant `/cours/sql`). Le commentaire ET la partie 6 de la lecture guidée disent maintenant cela — et l'étude s'en sert pour enseigner « vérifie plutôt que crois ».
+  2. **Une affirmation sur `Map` vs objet ordinaire a été exécutée avant d'être écrite**, et la mesure est plus forte que ce que j'allais publier : `o["constructor"] = (o["constructor"] || 0) + 1` rend `"function Object() { [native code] }1"` — une **concaténation**, pas un compte ; et `o["__proto__"] = 1` est **purement ignoré**, la clé n'apparaissant même pas dans `Object.keys`, si bien que ce chemin **disparaîtrait du rapport**. La sortie brute de cette mesure est publiée telle quelle dans la partie 4.
+  3. **Deux fautes trouvées par les outils du site, pas par moi.** `verif-rendu.js` a rendu **9 erreurs de contraste** sur 6 mesures : mon encadré de questions employait `var(--surface-inset)`, qui est **volontairement sombre dans les deux thèmes** (c'est le fond des blocs de code) — texte sombre sur fond sombre, **1,19:1 pour un seuil de 4,5**. Corrigé en `--surface-2` → **0 erreur sur 6 mesures** (3 largeurs × 2 thèmes). Et la carte « pour continuer » renvoyait à `js/lecon-19.html` que je croyais consacrée aux tableaux : son `<h1>` dit « Objets avancés et prototypes ». Remplacée par `lecon-08` (map/filter/reduce, sujet de la partie 5) et `lecon-28` (Map et Set, sujet de la partie 4), les deux titres relus sur disque.
+
+  **D · CONTRÔLES.** `verif.js --rapide` **vert (14 étapes, 201,2 s)** · `verif-html.js --tous` **1 776 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js --echantillon` **20 pages, 120 mesures, 0 erreur** · équilibre des balises **1 776 pages / 1 480 453 balises / 0 déséquilibre** · 0 BOM, 0 mojibake, 0 URL de CDN · accolades du CSS équilibrées (1 517 / 1 517), aucune `var(--x)` inexistante introduite. `search-index` et `search-lite` régénérés : **66 → 67 pages transverses**, la page est donc **déjà trouvable par la recherche** (vérifié : son titre y figure).
+
+  🔵 **Ce qui reste à A7, et qui n'est pas un oubli** : le **hub**, l'entrée dans la **navigation** et dans le **catalogue**, ainsi que les renvois depuis les cours concernés. A1 ne livre que le gabarit et la première étude ; aujourd'hui, **aucune page du site ne pointe vers elle** : on ne la rejoint que par la recherche (mesuré : son titre est bien dans `search-lite`). Les quatre cartes « pour continuer » de l'étude partent d'elle vers les leçons, jamais l'inverse. **C'est le seul manque de ce point, et il est explicitement le sujet de A7.**
 - [ ] **A2 · Lire le code de ce site (1) — le moteur d'exercices.** `js/lecon.js` : comment une leçon devient interactive. Le meilleur code à lire est celui dont on utilise le résultat tous les jours.
 - [ ] **A3 · Lire le code de ce site (2) — la recherche.** `js/recherche.js` et l'index généré : pourquoi un index pré-calculé, ce qu'il coûte, ce qu'il évite.
 - [ ] **A4 · Un programme mal écrit, et sa réécriture.** Le même besoin, deux fois : la version qui marche mais qu'on ne peut pas maintenir, puis la version propre. Nommer précisément ce qui change, sans jamais dire seulement « c'est plus propre ».
