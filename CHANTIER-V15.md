@@ -262,16 +262,60 @@ que le jour où on arrive à le changer sans le casser.
   **E · CONTRÔLES.** `verif.js --rapide` **vert (21 étapes, 140,3 s)** · `verif-html.js --tous` **0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` **6 mesures, 0 erreur, 0 avertissement** · `node --check` sur les 6 fichiers JS neufs · 0 BOM, 0 mojibake, 0 URL de CDN · `search-index`/`search-lite` régénérés, **1 594 documents**, point fixe atteint.
 
   🔵 **Toujours à A7** : les cinq études ne sont reliées qu'entre elles.
-- [ ] **A6 · Lire du code dans un langage qu'on ne connaît pas.** La compétence réelle : deviner ce que fait un programme Go ou Rust quand on ne fait que du Python. Ce qui se devine, ce qui ne se devine pas, et par quoi commencer.
+- [x] **A6 · Lire du code dans un langage qu'on ne connaît pas.** ✅ **2026-09-02. La voie nº 2 du relevé a été retenue et appliquée : « ce qui se devine » n'est plus une impression, c'est un compte — 39 langages de programmation, 20 marqueurs, 10 364 blocs de code. Et l'étude publie du Go SANS jamais prétendre savoir ce qu'il affiche.**
 
-  🔴 **RELEVÉ AVANT DE COMMENCER (2026-09-02, passe A4/A5) — à lire, il change la conception de ce point.** Sondé sur cette machine : **ni `go` ni `rustc` ne sont installés** (`go version` et `rustc --version` ne répondent pas ; seuls Node et Python 3.14.5 sont disponibles). Conséquence directe : **on ne peut PAS publier « voici ce que ce programme Go affiche »** — ce serait exactement la faute qui a fondé toute cette chaîne de chantiers, et Go a des pièges où l'intuition se trompe (l'ordre d'itération d'une `map` y est délibérément aléatoire).
+  **Mesure de départ, reproduite** : `go version` et `rustc --version` ne répondent toujours pas ; seuls Node et Python sont installés. Le relevé de la passe précédente tient. La voie nº 3 (installer un compilateur) reste écartée.
 
-  **Trois voies, à trancher au début de la prochaine passe :**
-  1. **Publier du Go sans jamais publier sa sortie.** L'étude ne pose que des questions de *lecture* (que fait ce code, où irais-tu chercher, qu'est-ce qui te manque), et la seule chose exécutée — donc prouvée — est une transcription JavaScript clairement étiquetée comme telle. Honnête, mais l'étude perd son banc.
-  2. **Fonder « ce qui se devine » sur une MESURE tirée du site.** Les leçons contiennent du code de 80 langages : un outil peut compter dans combien d'entre eux apparaissent réellement `if`, `for`, `return`, l'accolade, la déclaration de type explicite, le point-virgule… Cela remplace l'intuition (« la structure se devine ») par un chiffre reproductible, et c'est du matériau qu'aucune autre étude n'a. **C'est la voie recommandée** : elle donne à ce point ce que les études 1 à 5 ont toutes eu — un chiffre qu'on peut refaire.
-  3. **Installer un compilateur Go.** Écarté : ajouter un outillage à la machine dépasse le mandat d'une passe autonome, et le dépôt pèse déjà 90 Mo.
+  **A · CE QUI EST LIVRÉ**
 
-  ⚠️ Ne pas retomber sur Python comme « langage inconnu » : il est déjà exécutable sur le site (Pyodide embarqué) et il est enseigné par deux cours — ce n'est un langage étranger pour personne ici.
+  | | |
+  |---|---|
+  | `pages/etude-inconnu.html` | l'étude nº 6, **58 031 octets**, 7 sections ancrées, 6 blocs de code dont **exactement 1 exécutable** |
+  | `tools/etudes/inconnu/mesure-langages.js` | l'outil qui COMPTE : relit les 1 523 leçons, extrait 12 919 blocs, en garde 10 364 d'au moins 5 lignes, les range par langage et y cherche 20 marqueurs |
+  | `tools/etudes/inconnu/inventaire.go` | le programme lu, **115 lignes** de Go écrites pour l'occasion (aucun code tiers) |
+  | `tools/etudes/inconnu/transcription.js` | sa transcription JavaScript exécutable, chaque règle d'impression de Go écrite en commentaire |
+  | `tools/etudes/inconnu/modif.js` | la modification demandée à l'apprenant, exécutée à l'assemblage pour produire la sortie attendue |
+  | `tools/etudes/inconnu/assembler.js` | refuse d'écrire si un chiffre du texte ne colle plus à la mesure — **et si l'avertissement disparaît** |
+  | `tools/preuves/etude-inconnu.js` | la preuve, **26ᵉ étape de `verif.js`** hors mode rapide |
+
+  **Aucun CSS neuf** : les classes `.etude-*` d'A1 et `.etude-choix` d'A4 ont suffi. `verif-rendu.js` : **6 mesures (3 largeurs × 2 thèmes), 0 erreur, 0 avertissement**, sans correctif de contraste.
+
+  **B · CE QUE LA MESURE DONNE** — et ce chiffre-là n'existait nulle part :
+
+  | | |
+  |---|---:|
+  | marqueurs présents dans **les 39 langages** | **3** — un commentaire, des lignes indentées, une chaîne entre guillemets |
+  | marqueurs à **38 / 39** | **3** — parenthèses, appel `nom(arguments)`, `=` qui affecte — et il leur manque **le même** langage |
+  | l'accolade, qu'on croit universelle | **32 / 39** |
+  | le point-virgule en fin de ligne | **23 / 39** |
+  | le langage qui manque le plus de marqueurs | **l'assembleur : 15 sur 20** (2ᵉ : COBOL, 11) |
+  | Prolog | ni mot pour « fonction », ni « si », ni boucle |
+
+  **C · LA MESURE A MENTI TROIS FOIS, ET C'EST LE VRAI RÉSULTAT DU POINT**
+
+  1. **Le mot « si » d'un commentaire FRANÇAIS compté comme mot-clé.** La première version effaçait les commentaires de tous les langages pareil (`//`, `#`, `--`). Les commentaires de l'assembleur commencent par un `;` seul, non reconnu : `jge .fin ; si i >= 5, sortir` faisait passer nasm pour un langage doté d'un `if`, et le marqueur ressortait **présent partout, sans exception**. Il a fallu donner à chaque langage **ses** marques de commentaire — le `;` qui commente en assembleur *termine* une instruction en C. Après correction : **37 / 39**.
+  2. **Un fan-out adversarial de 4 agents a rendu 16 griefs sur l'outil, dont 5 bloquants**, et ils étaient justes. `clike` n'est pas un langage : c'est la classe de repli de la coloration, sous laquelle le site mélange **137 blocs de cinq langages** (l'essentiel du **Zig**, plus du Rust, du C, du Protocol Buffers, un schéma Prisma) — publier « 40 langages » était donc faux, c'est **39**, et le Zig n'apparaît nulle part faute d'étiquette à lui (défaut de balisage des leçons, signalé dans la page). `void` faisait passer un type de retour pour un mot désignant une fonction, et `sub ecx, 8` — la SOUSTRACTION de l'assembleur — aussi ; `do` faisait de `defmodule … do` d'Elixir, qui n'a aucune boucle, un langage à boucle. Le marqueur « == ou = » ne cherchait jamais le `=` seul, celui de Pascal et d'Ada. Le marqueur « type après le nom » attrapait le ternaire de C et le `for (int n : notes)` de Java. Tout cela est corrigé, marqueur par marqueur, et **ce qui a été retiré de chaque liste est écrit dans le fichier** : c'est le sujet même de l'étude — un mot-clé qui existe dans plusieurs langages n'y a pas le même sens.
+  3. **Mon propre filtre était trop large, exactement comme le prévient la règle du chantier.** Écarter les pages de redirection en cherchant `http-equiv="refresh"` n'importe où écartait aussi `pages/html/lecon-35.html` — 41 Ko, 10 blocs — dont le seul tort est d'**enseigner** cette balise, échappée. Deux conditions au lieu d'une (balise non échappée **et** fichier minuscule) : on passe de 90 pages écartées à 89, et le compte tombe sur **1 523 leçons — le nombre exact que publie la page d'accueil**. L'assembleur relit désormais ce nombre dans `index.html` et refuse d'écrire s'ils divergent.
+
+  **D · TROIS BUGS RÉELS DANS LA TRANSCRIPTION, DÉMONTRÉS PAR EXÉCUTION** (mêmes agents, axe transcription) :
+
+  - `var stock = {}` héritait de `Object.prototype` : un article nommé `toString` valait une **fonction** que `|| 0` laissait passer, et l'addition devenait une **concaténation** (`function toString() { [native code] }5`) ; un article `__proto__` **disparaissait** du rapport. Une map de Go n'a aucune clé héritée → `Object.create(null)`. *C'est le même piège que l'étude nº 1 avait déjà mesuré.*
+  - `goPrintf` convertissait les sauts de ligne **après** substitution des arguments : une ligne de journal citant un chemin Windows se coupait en deux dans son propre message d'erreur. La conversion se fait maintenant sur le format seul.
+  - `strconv.Atoi` acceptait `99999999999999999999` là où Go rejette la ligne, et arrondissait silencieusement au-delà de 2⁵³ — un solde **faux sans aucune erreur**. Bornes ajoutées ; au-delà du domaine exact de JavaScript, la transcription **refuse** plutôt que de répondre faux.
+  - `%q` n'échappait pas les caractères de contrôle : complété. Il reste **une** approximation, écrite dans la page plutôt que tue : les « blancs » du découpage sont ceux de JavaScript, qui diffèrent de ceux de Go sur deux caractères exotiques.
+
+  **Quatre affirmations du programme Go ont aussi été corrigées** : « pas d'exception dans ce langage » (`panic`/`recover` existe, mais est réservé aux fautes de programmation) ; `defer` « quoi qu'il arrive » (`os.Exit` l'en empêche) ; « valeur zéro de son type » (du type des **valeurs** — et le `make` n'est pas facultatif, écrire dans une map nulle fait paniquer) ; la majuscule qui exporte (vraie, mais **sans effet observable ici**, un paquet `main` n'étant importable par personne). **L'axe « le Go compile-t-il » a rendu 0 grief.**
+
+  **E · CE QUE LA PREUVE VÉRIFIE** — Chrome headless, `file://`, DNS coupé. Son contrôle central ne porte pas sur un chiffre mais **sur une phrase** : la page doit DIRE qu'aucun compilateur Go n'a tourné. Une sortie non prouvée publiée sans cet aveu serait précisément la faute qui a fondé cette chaîne de chantiers.
+
+  **Go publié = fichier `.go` : 115 lignes / 115, 0 écart** · **tableau des marqueurs : 20 lignes retrouvées / 20, 0 discordance** avec la mesure recalculée · banc **10 lignes publiées / 10 rendues, 0 écart** · prose ⇄ banc : nombre de lignes et dernière ligne concordants · modification : même nombre de lignes, mêmes articles, colonne MVTS présente · **0 requête distante, 0 exception**.
+
+  **Épreuve d'injection faite, 3 fautes, 3 vues** : un chiffre du tableau (39 → 38, injecté dans une **tranche délimitée** — le piège du motif trop large, `39` figurant partout), une ligne de la sortie publiée (solde 5 → 6), et **l'avertissement retiré**. Page restaurée octet pour octet.
+
+  **F · CONTRÔLES.** `verif.js --rapide` **vert (16 étapes, 155,0 s)** · `verif-html.js --tous` **0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` **6 mesures, 0 erreur, 0 avertissement** · `node --check` sur les 6 fichiers JS neufs · 0 BOM, 0 URL de CDN · `search-index`/`search-lite` régénérés, **71 → 72 pages transverses**, point fixe atteint.
+
+  🔵 **Toujours à A7** : les six études ne sont reliées qu'entre elles.
+
 - [ ] **A7 · Le hub des études de cas** et les renvois depuis les cours concernés. Ajouter la page à la navigation et au catalogue.
 
 ---

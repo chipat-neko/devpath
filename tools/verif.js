@@ -239,6 +239,18 @@ if (!RAPIDE) {
     quoi: "etude de cas 5 : l'algorithme publie resiste-t-il a une force brute independante",
     lent: true,
   });
+  /* L'etude 6 est la SEULE du site a publier du code dans un langage que cette machine
+     ne sait pas executer (ni go ni rustc installes). Elle ne peut donc pas prouver ce
+     que le Go affiche -- et cette etape verifie d'abord qu'elle le DIT. Elle recalcule
+     ensuite le tableau de mesure des 39 langages et le confronte a celui de la page,
+     compare le Go publie au fichier .go, et fait executer le banc dans le navigateur. */
+  ETAPES.push({
+    nom: "etude-6",
+    fichier: "preuves/etude-inconnu.js",
+    args: [],
+    quoi: "etude de cas 6 : la page dit-elle qu'aucun compilateur Go n'a tourne, et ses chiffres tiennent-ils",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »
