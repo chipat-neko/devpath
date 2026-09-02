@@ -188,6 +188,18 @@ if (!RAPIDE) {
     quoi: "etude de cas 1 : le programme publie rend-il, dans le navigateur, la sortie publiee",
     lent: true,
   });
+  /* L'etude 2 fait lire le VRAI code du site : elle affirme en plus que ses extraits
+     sont ceux de js/lecon.js. Cette etape les compare au fichier sur disque, execute le
+     banc d'essai dans le navigateur, et refait la mesure annoncee par la solution.
+     Epreuve d'injection faite : trois fautes posees (un chiffre de la sortie, le nombre
+     de bascules annonce, un mot d'un extrait), trois fautes vues et nommees. */
+  ETAPES.push({
+    nom: "etude-2",
+    fichier: "preuves/etude-moteur-exos.js",
+    args: [],
+    quoi: "etude de cas 2 : les extraits publies sont-ils ceux de js/lecon.js, et le banc rend-il sa sortie",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

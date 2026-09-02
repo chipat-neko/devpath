@@ -92,7 +92,47 @@ que le jour où on arrive à le changer sans le casser.
   **D · CONTRÔLES.** `verif.js --rapide` **vert (14 étapes, 201,2 s)** · `verif-html.js --tous` **1 776 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js --echantillon` **20 pages, 120 mesures, 0 erreur** · équilibre des balises **1 776 pages / 1 480 453 balises / 0 déséquilibre** · 0 BOM, 0 mojibake, 0 URL de CDN · accolades du CSS équilibrées (1 517 / 1 517), aucune `var(--x)` inexistante introduite. `search-index` et `search-lite` régénérés : **66 → 67 pages transverses**, la page est donc **déjà trouvable par la recherche** (vérifié : son titre y figure).
 
   🔵 **Ce qui reste à A7, et qui n'est pas un oubli** : le **hub**, l'entrée dans la **navigation** et dans le **catalogue**, ainsi que les renvois depuis les cours concernés. A1 ne livre que le gabarit et la première étude ; aujourd'hui, **aucune page du site ne pointe vers elle** : on ne la rejoint que par la recherche (mesuré : son titre est bien dans `search-lite`). Les quatre cartes « pour continuer » de l'étude partent d'elle vers les leçons, jamais l'inverse. **C'est le seul manque de ce point, et il est explicitement le sujet de A7.**
-- [ ] **A2 · Lire le code de ce site (1) — le moteur d'exercices.** `js/lecon.js` : comment une leçon devient interactive. Le meilleur code à lire est celui dont on utilise le résultat tous les jours.
+- [x] **A2 · Lire le code de ce site (1) — le moteur d'exercices.** ✅ **2026-09-02. L'étude nº 2 est écrite, et elle ne contient PAS UNE LIGNE de code recopiée : ses 6 extraits sont relus dans `js/lecon.js` à chaque assemblage, et une preuve les recompare au fichier sur disque — 6 publiés, 6 retrouvés tels quels.**
+
+  **Mesure de départ, reproduite** : `grep -rl "etude-moteur"` → **0** avant ce point ; une seule étude de cas existait (A1). Le point était bien à faire.
+
+  **A · L'ANGLE, ET POURQUOI IL DIFFÈRE D'A1.** A1 donnait un programme de 152 lignes lu d'un bout à l'autre. Ce n'est pas la situation ordinaire. Celle-ci l'est : **un fichier que personne ne lit en entier**. L'étude 2 enseigne donc l'inverse — cartographier, entrer par un point, suivre **un seul fil**, et **savoir ce qu'on ne lit pas**. Le fichier lu est `js/lecon.js`, **1 899 lignes, 48 fonctions**, dont `initExos` (**218 lignes, 1223–1440**) qui fait tourner **4 608 exercices sur 1 523 leçons** (4 254 `text`, 290 `code`, 26 `regex`, 25 `python`, 13 `sql` — mesuré, pas estimé).
+
+  **B · CE QUI EST LIVRÉ**
+
+  | | |
+  |---|---|
+  | `pages/etude-moteur-exos.html` | l'étude nº 2, **50 126 octets**, 6 sections ancrées, 11 blocs de code dont **exactement 1 exécutable** |
+  | `tools/etudes/moteur-exos/carte.js` | dresse la **carte** du fichier (fonctions, tailles, bornes) — la sortie publiée est la sienne |
+  | `tools/etudes/moteur-exos/inventaire.js` | compte ce que le moteur traite **réellement** sur le site (leçons, exercices, types) |
+  | `tools/etudes/moteur-exos/banc.js` | le **banc d'essai** publié : 14 cas passés à `normExo` et `uneLigneEgale`, **extraites de `js/lecon.js` à l'assemblage** |
+  | `tools/etudes/moteur-exos/assembler.js` | vérifie **8 repères de lignes** (début ET fin de chaque extrait), exécute le banc, exécute la variante modifiée, et refuse de publier si un chiffre du texte ne colle plus |
+  | `tools/preuves/etude-moteur-exos.js` | la preuve, **22ᵉ étape de `verif.js`** hors mode rapide |
+
+  **Aucun CSS neuf** : les 8 classes `.etude-*` créées par A1 ont suffi — c'est ce qu'on attend d'un format réutilisable. **`verif-rendu.js` sur la page : 6 mesures (3 largeurs × 2 thèmes), 0 erreur**, sans avoir eu à corriger un contraste comme en A1.
+
+  **C · CE QUI EST PROUVÉ** — `node tools/preuves/etude-moteur-exos.js`, Chrome headless, `file://`, DNS coupé :
+
+  | ce qui est affirmé à l'apprenant | mesure |
+  |---|---|
+  | « ces extraits sont ceux de `js/lecon.js` » | **6 publiés / 6 retrouvés tels quels** dans le fichier sur disque |
+  | « ce banc marche » | le bouton « Tester » l'exécute : **0 exception de page** |
+  | « voici ce qu'il affiche » | **21 lignes publiées / 21 rendues, 0 écart** ligne à ligne |
+  | « en retirant cette ligne, N verdicts basculent » | **2 annoncés, 2 mesurés** dans le navigateur |
+  | le sommaire | 6 sections ancrées, **0 lien mort** |
+  | hors réseau | **0 requête distante** |
+
+  **Épreuve d'injection faite**, trois fautes posées d'un coup : un chiffre de la sortie publiée (`10 acceptés` → `11`), le nombre de bascules annoncé (`2` → `3`), et un mot dans un extrait (`"code"` → `"CODE"`). **Trois fautes vues, chacune nommée précisément** — dont « extrait nº 3 introuvable tel quel dans js/lecon.js ».
+
+  **D · CE QUE LA MESURE M'A APPRIS, ET QUE JE N'AURAIS PAS ÉCRIT DE TÊTE**
+
+  1. **La modification proposée fait basculer 2 verdicts, pas 1 ni 3 — et lesquels n'était pas devinable.** En rendant `normExo` strict sur les accents, `eleve` et `ELEVE` tombent, mais **`ÉLÈVE` reste accepté** : la casse est traitée par `toLowerCase()`, sur une autre ligne. Deux tolérances qu'on croirait liées sont indépendantes. L'assembleur **exige** désormais que les cas basculés soient exactement ceux que la page nomme, sinon il refuse de publier.
+  2. **`innerText` sur la console du runner SAUTE les lignes vides** : ma première mesure annonçait 18 lignes rendues contre 21 publiées, et l'écart était **entièrement faux**. Un `<div>` sans texte ne produit aucun saut de ligne pour `innerText`, alors qu'à l'écran la ligne existe — `.runner-output__line::before` lui pose un chevron « › ». **Ce n'est donc pas un défaut du site, c'est un défaut de la mesure** : la preuve relève maintenant les lignes **une par une**, par `textContent`. Sans cette vérification, j'aurais « corrigé » `runner.js` pour rien, sur 1 523 leçons.
+  3. **Trois caractères invisibles enseignés parce qu'ils sont là.** `normExo` contient `.replace(/ /g, " ")` — le premier caractère est une **espace insécable** (U+00A0) — et une plage de **diacritiques combinants** (U+0300–U+036F) qui se posent sur le crochet qui les précède. Ces deux lignes existent parce que ce site écrit sa typographie en insécables et guillemets courbes : **sans elles, une réponse juste copiée depuis l'énoncé serait refusée sans que l'apprenant voie la moindre différence à l'écran**. Le banc le démontre en deux cas.
+
+  **E · CONTRÔLES.** `verif.js --rapide` **vert (14 étapes, 294,9 s)** · `verif-html.js --tous` **1 777 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** (1 avertissement préexistant, doublon de QCM `zig`) · `verif-rendu.js` sur la page **6 mesures, 0 erreur** · `node --check` sur les 4 fichiers JS neufs + `tools/verif.js` · 0 BOM, 0 mojibake, 0 URL de CDN. `search-index` et `search-lite` régénérés : **67 → 68 pages transverses**, la page est donc trouvable par la recherche.
+
+  🔵 **Ce qui reste à A7** : comme pour A1, **aucune page du site ne pointe encore vers cette étude** (vérifié : les seules mentions hors `tools/` sont dans `search-index` et `search-lite`). Le hub, la navigation et les renvois depuis les cours sont explicitement le sujet d'A7.
 - [ ] **A3 · Lire le code de ce site (2) — la recherche.** `js/recherche.js` et l'index généré : pourquoi un index pré-calculé, ce qu'il coûte, ce qu'il évite.
 - [ ] **A4 · Un programme mal écrit, et sa réécriture.** Le même besoin, deux fois : la version qui marche mais qu'on ne peut pas maintenir, puis la version propre. Nommer précisément ce qui change, sans jamais dire seulement « c'est plus propre ».
 - [ ] **A5 · Lire un algorithme historique.** Un algorithme du domaine public (Dijkstra, Huffman, ou l'algorithme d'Euclide étendu — qui resservira en cryptographie), lu comme du code, pas comme une formule.
