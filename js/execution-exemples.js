@@ -456,6 +456,141 @@
         "console.log(lieAda(\"Coucou\"));",
         "console.log(lieAda.call(alan, \"Et maintenant\"));"
       ].join("\n")
+    },
+
+    /* ------------------------------------------------------- l'asynchrone (B5)
+       Ici le panneau des FILES devient le sujet : la pile se vide, et c'est
+       seulement alors que la boucle d'événements reprend quelque chose — les
+       microtâches d'abord, TOUTES, puis un seul minuteur. */
+    {
+      id: "async-ordre",
+      titre: "L'ordre qui surprend tout le monde",
+      groupe: "L'asynchrone",
+      resume: "Quatre lignes, quatre numéros. Le minuteur à 0 ms arrive bon dernier.",
+      src: [
+        "console.log(\"1 - je suis synchrone\");",
+        "",
+        "setTimeout(function () {",
+        "  console.log(\"4 - minuteur, pourtant inscrit a 0 ms\");",
+        "}, 0);",
+        "",
+        "Promise.resolve().then(function () {",
+        "  console.log(\"3 - microtache\");",
+        "});",
+        "",
+        "console.log(\"2 - encore synchrone\");"
+      ].join("\n")
+    },
+    {
+      id: "async-microtaches-dabord",
+      titre: "Toutes les microtâches, puis un seul minuteur",
+      groupe: "L'asynchrone",
+      resume: "Regarde le compteur de microtâches : il doit retomber à zéro avant qu'un minuteur bouge.",
+      src: [
+        "setTimeout(function () { console.log(\"macro 1\"); }, 0);",
+        "setTimeout(function () { console.log(\"macro 2\"); }, 0);",
+        "",
+        "Promise.resolve()",
+        "  .then(function () { console.log(\"micro 1\"); })",
+        "  .then(function () { console.log(\"micro 2\"); })",
+        "  .then(function () { console.log(\"micro 3\"); });",
+        "",
+        "console.log(\"synchrone\");"
+      ].join("\n")
+    },
+    {
+      id: "async-chaines-paralleles",
+      titre: "Trois chaînes de promesses, en même temps",
+      groupe: "L'asynchrone",
+      resume: "Le compteur de microtâches monte à trois, puis les chaînes avancent d'un cran chacune, à tour de rôle.",
+      src: [
+        "Promise.resolve().then(function () { console.log(\"a1\"); })",
+        "  .then(function () { console.log(\"a2\"); });",
+        "",
+        "Promise.resolve().then(function () { console.log(\"b1\"); })",
+        "  .then(function () { console.log(\"b2\"); });",
+        "",
+        "Promise.resolve().then(function () { console.log(\"c1\"); })",
+        "  .then(function () { console.log(\"c2\"); });",
+        "",
+        "console.log(\"synchrone\");"
+      ].join("\n")
+    },
+    {
+      id: "async-minuteurs",
+      titre: "Trois minuteurs, trois délais",
+      groupe: "L'asynchrone",
+      resume: "La file des minuteurs se réordonne toute seule : échéance d'abord, inscription ensuite.",
+      src: [
+        "setTimeout(function () { console.log(\"c - 20 ms\"); }, 20);",
+        "setTimeout(function () { console.log(\"a - 0 ms\"); }, 0);",
+        "setTimeout(function () { console.log(\"b - 10 ms\"); }, 10);",
+        "",
+        "console.log(\"inscrits, dans le desordre\");"
+      ].join("\n")
+    },
+    {
+      id: "async-await",
+      titre: "await : la fonction se met en pause",
+      groupe: "L'asynchrone",
+      resume: "La pile de la fonction disparaît pendant l'attente, puis revient telle quelle.",
+      src: [
+        "function tard(v, ms) {",
+        "  return new Promise(function (res) {",
+        "    setTimeout(function () { res(v); }, ms);",
+        "  });",
+        "}",
+        "",
+        "async function principal() {",
+        "  console.log(\"debut\");",
+        "  var a = await tard(10, 5);",
+        "  console.log(\"recu\", a);",
+        "  var b = await tard(a * 2, 5);",
+        "  console.log(\"recu\", b);",
+        "  return a + b;",
+        "}",
+        "",
+        "principal().then(function (t) { console.log(\"total\", t); });",
+        "console.log(\"la suite ne l'a pas attendue\");"
+      ].join("\n")
+    },
+    {
+      id: "async-then-promesse",
+      titre: "Le piège : rendre une promesse dans un then",
+      groupe: "L'asynchrone",
+      resume: "Deux tours de microtâche de retard, et non un. C'est mesurable, et c'est mesuré.",
+      src: [
+        "Promise.resolve()",
+        "  .then(function () {",
+        "    console.log(\"A1\");",
+        "    return Promise.resolve(\"x\");",
+        "  })",
+        "  .then(function () { console.log(\"A2 - arrive tard\"); });",
+        "",
+        "Promise.resolve()",
+        "  .then(function () { console.log(\"B1\"); })",
+        "  .then(function () { console.log(\"B2\"); })",
+        "  .then(function () { console.log(\"B3\"); })",
+        "  .then(function () { console.log(\"B4\"); });"
+      ].join("\n")
+    },
+    {
+      id: "async-rejet",
+      titre: "Une promesse rompue que personne n'attrape",
+      groupe: "L'asynchrone",
+      resume: "Le programme s'arrête là. Le minuteur inscrit juste après ne partira jamais.",
+      erreurAttendue: "Error",
+      src: [
+        "console.log(\"debut\");",
+        "",
+        "Promise.reject(new Error(\"personne ne m'attrape\"));",
+        "",
+        "setTimeout(function () {",
+        "  console.log(\"cette ligne ne sera jamais atteinte\");",
+        "}, 0);",
+        "",
+        "console.log(\"fin du script\");"
+      ].join("\n")
     }
   ];
 

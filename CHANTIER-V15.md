@@ -447,7 +447,26 @@ rejoue l'animation. Il ne sait faire que les tris.
   - **Certains exemples n'existent que pour l'ÉCART entre deux de leurs lignes** (`lignesDifferentes`). Si `let-vs-var` se mettait à afficher deux fois la même chose, il enseignerait le contraire de son titre. Épreuve : en remplaçant `let j` par `var j`, l'outil répond « *les deux lignes censées différer disent la même chose — « var : 3 3 3 » / « let : 3 3 3 »* ».
 
   **D · CONTRÔLES.** `verif-execution.js` **19 exemples, 869 pas, 3 476 comparaisons, 850 reculs, 484 contrôles de défilement, 6 exemples récursifs (pile max 221), 7 exemples de portée (chaîne max 5), 1 contraste exigé, 0 requête hors `file://`, 0 erreur de console, 0 problème** · `verif-execution-mutations.js` **10/10 fautes vues** · `verif-rendu.js` **6 mesures, 0 erreur** · `verif-html.js --tous` **1 783 fichiers, 0/0** · `verif-donnees.js` **25 contrôles, 0 erreur** · `node --check` · **0 BOM**.
-- [ ] **B5 · L'asynchrone.** La file des tâches, la boucle d'événements, l'ordre réel d'exécution d'un `setTimeout` et d'une promesse. Purement JavaScript, donc exécutable en `file://`.
+- [x] **B5 · L'asynchrone.** ✅ **2026-09-02. Le visualiseur montre désormais LES DEUX FILES, à chaque pas — et c'est ce qui manquait : sans elles, on voyait bien qu'une microtâche s'exécutait, jamais POURQUOI elle passait devant un minuteur inscrit plus tôt. 26 exemples pilotés, 1 040 pas, 5 200 comparaisons page ⇄ moteur, 0 écart ; 12/12 fautes injectées vues.**
+
+  **A · CE QUI A ÉTÉ AJOUTÉ AU MOTEUR.** Chaque pas de la trace porte maintenant l'état des deux files : le nombre de **microtâches** en attente, et la liste des **minuteurs** rendue *dans l'ordre où la boucle les prendra* — échéance croissante, puis ordre d'inscription. Un nouveau panneau les affiche, avec le prochain minuteur mis en avant.
+
+  **B · LES SEPT PROGRAMMES**, tous exécutés avant publication :
+  | id | ce qu'il montre | sortie mesurée |
+  |---|---|---|
+  | `async-ordre` | le minuteur à 0 ms arrive **bon dernier** | `1 · 2 · 3 microtâche · 4 minuteur` |
+  | `async-microtaches-dabord` | toutes les microtâches, **puis** un seul minuteur | `synchrone · micro 1-2-3 · macro 1-2` |
+  | `async-chaines-paralleles` | trois chaînes avancent **d'un cran chacune, à tour de rôle** | `synchrone · a1 b1 c1 a2 b2 c2` (file de microtâches à **3**) |
+  | `async-minuteurs` | la file se réordonne toute seule | `a - 0 ms · b - 10 ms · c - 20 ms` |
+  | `async-await` | la pile de la fonction **disparaît** pendant l'attente, puis revient | `debut · la suite ne l'a pas attendue · recu 10 · recu 20 · total 30` |
+  | `async-then-promesse` | rendre une promesse dans un `then` coûte **deux** tours, pas un | `A1 · B1 · B2 · B3 · A2 · B4` |
+  | `async-rejet` | un rejet que personne n'attrape **arrête le programme** | `debut · fin du script`, puis `Error` |
+
+  **C · LE CONTRÔLE QUI VAUT LE PLUS.** Le panneau affirme : « *la boucle d'événements vide TOUTES les microtâches avant de reprendre un seul minuteur* ». L'outil vérifie cette phrase — à chaque pas de genre « tâche », le compteur de microtâches doit valoir **zéro**. Si le moteur reprenait un minuteur trop tôt, le visualiseur enseignerait le contraire de ce qu'il affiche. S'y ajoute la comparaison, pas par pas, des deux files affichées avec celles du moteur, et l'exigence que chaque exemple asynchrone les **exerce** vraiment.
+
+  **D · UN CHIFFRE QUI A FAIT AJOUTER UN PROGRAMME.** La première mesure donnait « microtâches en attente max : **1** » : une chaîne de `.then` n'en met qu'une à la fois dans la file, donc le panneau n'aurait jamais rien eu à montrer. D'où `async-chaines-paralleles`, trois chaînes indépendantes, qui fait monter la file à **3**. Sans la mesure, le panneau serait resté décoratif.
+
+  **E · CONTRÔLES.** `verif-execution.js` **26 exemples, 1 040 pas, 5 200 comparaisons, 1 014 reculs, 525 contrôles de défilement, 6 récursifs (pile max 221), 7 de portée (chaîne max 5), 7 asynchrones (microtâches max 3, minuteurs max 3), 0 requête hors `file://`, 0 erreur de console, 0 problème** · `verif-execution-mutations.js` **12/12** · `verif-interpreteur.js --trace --navigateur` rejoué après modification du moteur : **116 programmes, 0 écart, 3 limites tenues, 0 écart Chrome ⇄ Node** · `verif-rendu.js` **6 mesures, 0 erreur** · `verif-html.js --tous` **1 783 fichiers, 0/0** · `verif-donnees.js` **25 contrôles, 0 erreur** · accolades **1 590 / 1 590** · balises de la page **47 / 47** · **0 BOM**.
 - [ ] **B6 · Relier aux leçons.** Chaque leçon qui parle de pile, de portée, de récursivité ou d'asynchrone renvoie au visualiseur, avec l'exemple pré-chargé. Un visualiseur qu'on ne trouve pas ne sert à personne.
 
 ---

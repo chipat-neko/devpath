@@ -859,6 +859,16 @@
     if (ctx.pile.length && ligne) ctx.pile[ctx.pile.length - 1].ligne = ligne;
     var pile = [];
     for (var i = 0; i < ctx.pile.length; i++) pile.push({ nom: ctx.pile[i].nom, ligne: ctx.pile[i].ligne });
+    /* L'ÉTAT DES DEUX FILES, à chaque pas. Sans lui, le visualiseur pourrait
+       montrer qu'une microtâche s'exécute, mais jamais POURQUOI elle passe avant
+       un minuteur inscrit plus tôt — or c'est toute la leçon de la boucle
+       d'événements. Les minuteurs sont rendus dans l'ordre où la boucle les
+       prendra : échéance croissante, puis ordre d'inscription. */
+    var macro = [];
+    for (var m = 0; m < ctx.macro.length; m++) {
+      if (!ctx.macro[m].annulee) macro.push({ delai: ctx.macro[m].delai, echeance: ctx.macro[m].echeance, ordre: ctx.macro[m].ordre });
+    }
+    macro.sort(function (a, b) { return (a.echeance - b.echeance) || (a.ordre - b.ordre); });
     ctx.trace.push({
       n: ctx.trace.length,
       ligne: ligne || 0,
@@ -866,7 +876,9 @@
       detail: detail || "",
       pile: pile,
       portees: porteesInstantanees(portee),
-      sortie: ctx.sortie.length
+      sortie: ctx.sortie.length,
+      micro: ctx.micro.length,
+      macro: macro
     });
   }
 

@@ -34,6 +34,10 @@
   10. Un exemple du groupe « portee » doit montrer une CHAINE de portees (2 au
       moins), et ceux qui annoncent `montreThis` doivent afficher `this` avec
       une valeur dans au moins une portee.
+  12. Les DEUX FILES (microtaches, minuteurs) affichees sont comparees a celles
+      du moteur a chaque pas ; et un exemple asynchrone doit les exercer, tout
+      en respectant ce que le panneau annonce : aucun minuteur n'est repris
+      tant qu'une microtache attend encore.
   11. Un exemple peut n'exister que pour l'ECART entre deux de ses lignes
       (`lignesDifferentes`) : « var : 3 3 3 » contre « let : 0 1 2 ». Si les
       deux se mettaient a dire la meme chose, l'exemple enseignerait le
@@ -153,6 +157,10 @@ var LIRE_ETAT =
   "position: (document.getElementById('vex-position')||{}).textContent||''," +
   "explication: (document.getElementById('vex-explication')||{}).textContent||''," +
   "erreur: (document.getElementById('vex-err')||{}).textContent||''," +
+  "micro: (function(){var n=document.querySelectorAll('#vex-files .vex-file')[0];" +
+  "if(!n)return -1;var b=n.querySelector('.vex-file__n');return b?Number(b.textContent):-1;})()," +
+  "minuteurs: [].slice.call(document.querySelectorAll('#vex-files .vex-minuteur')).map(function(m){" +
+  "var d=m.querySelector('.vex-minuteur__delai');return d?d.textContent:'';})," +
   "visible: (function(){var l=document.getElementById('vex-lignes');" +
   "if(!c||!l)return true;var a=l.getBoundingClientRect(),b=c.getBoundingClientRect();" +
   "return b.top >= a.top - 1 && b.bottom <= a.bottom + 1;})()," +
@@ -197,7 +205,7 @@ function numeroDePas(position) {
   await attendre(1500);
 
   var pbs = [];
-  var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0, recursifs: 0, profondeurMax: 0, portees: 0, porteeMax: 0, contrastes: 0 };
+  var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0, recursifs: 0, profondeurMax: 0, portees: 0, porteeMax: 0, contrastes: 0, async: 0, microMax: 0, macroMax: 0 };
 
   /* ---- 1. la page a-t-elle seulement demarre ? ---- */
   var pret = await cx.evaluer("!!document.getElementById('vex-lignes') && !!window.Interpreteur && !!window.EXECUTION_EXEMPLES");
@@ -238,7 +246,7 @@ function numeroDePas(position) {
          apprend rien. On exige le nom de l'erreur et un numero de ligne. */
       if (!etat.erreur) { pbs.push(ex.id + " : la page n'affiche pas l'erreur attendue"); continue; }
       if (etat.erreur.indexOf(ex.erreurAttendue) === -1) { pbs.push(ex.id + " : le message affiche ne cite pas « " + ex.erreurAttendue + " » — « " + etat.erreur + " »"); }
-      if (etat.erreur.indexOf("ligne") === -1) { pbs.push(ex.id + " : le message d'erreur affiche ne cite aucune ligne — « " + etat.erreur + " »"); }
+      if (attendu.erreur.ligne && etat.erreur.indexOf("ligne") === -1) { pbs.push(ex.id + " : le message d'erreur affiche ne cite aucune ligne — « " + etat.erreur + " »"); }
     } else if (etat.erreur) {
       pbs.push(ex.id + " : la page affiche une erreur — " + etat.erreur);
       continue;
@@ -293,6 +301,32 @@ function numeroDePas(position) {
         pbs.push(ex.id + " : l'exemple annonce montrer « this » et aucune portee ne l'affiche avec une valeur");
       }
     }
+    /* --- un exemple asynchrone doit EXERCER les deux files, et respecter la
+       regle que le panneau annonce : la boucle d'evenements vide TOUTES les
+       microtaches avant de reprendre un seul minuteur. Si un pas « tache »
+       survient alors que des microtaches attendent encore, le visualiseur
+       enseignerait le contraire de ce qu'il affiche. --- */
+    if ((ex.groupe || "").indexOf("asynchrone") !== -1) {
+      mesures.async++;
+      var filesVues = false, fautif = -1, microMax = 0, macroMax = 0;
+      attendu.trace.forEach(function (p, idx) {
+        var mi = p.micro || 0, ma = (p.macro || []).length;
+        if (mi > microMax) microMax = mi;
+        if (ma > macroMax) macroMax = ma;
+        if (mi > 0 || ma > 0) filesVues = true;
+        if (p.genre === "tache" && mi !== 0 && fautif < 0) fautif = idx;
+      });
+      if (microMax > mesures.microMax) mesures.microMax = microMax;
+      if (macroMax > mesures.macroMax) mesures.macroMax = macroMax;
+      if (!filesVues) {
+        pbs.push(ex.id + " : les deux files restent vides a chaque pas — cet exemple ne montre pas la boucle d'evenements");
+      }
+      if (fautif >= 0) {
+        pbs.push(ex.id + " pas " + (fautif + 1) + " : un minuteur est repris alors que " +
+          attendu.trace[fautif].micro + " microtache(s) attendent encore");
+      }
+    }
+
     /* Certains exemples n'existent que pour l'ECART entre deux de leurs lignes :
        « var : 3 3 3 » contre « let : 0 1 2 ». Si les deux se mettaient a dire la
        meme chose, l'exemple enseignerait le contraire de son titre. */
@@ -339,6 +373,16 @@ function numeroDePas(position) {
         return p.vars.filter(function (x) { return x.nom !== "__classe__"; })
           .map(function (x) { return x.nom + "=" + x.valeur; });
       });
+      /* Les deux files, elles aussi, doivent etre celles du moteur — sinon le
+         panneau qui explique la boucle d'evenements raconterait autre chose. */
+      mesures.comparaisons++;
+      var attMinuteurs = (att.macro || []).slice(0, 12).map(function (m) { return m.delai + " ms"; });
+      if (v.micro !== (att.micro || 0) || JSON.stringify(v.minuteurs) !== JSON.stringify(attMinuteurs)) {
+        pbs.push(ex.id + " pas " + (k + 1) + " : les files affichees different de celles du moteur\n" +
+          "        page   : micro=" + v.micro + " minuteurs=" + JSON.stringify(v.minuteurs) + "\n" +
+          "        moteur : micro=" + (att.micro || 0) + " minuteurs=" + JSON.stringify(attMinuteurs));
+        break;
+      }
       if (JSON.stringify(v.portees) !== JSON.stringify(attVars)) {
         pbs.push(ex.id + " pas " + (k + 1) + " : les variables affichees different de celles du moteur\n" +
           "        page   : " + JSON.stringify(v.portees) + "\n" +
@@ -427,6 +471,7 @@ function numeroDePas(position) {
   console.log("  exemples recursifs .......... " + mesures.recursifs + " (pile la plus haute : " + mesures.profondeurMax + " cadres)");
   console.log("  exemples de portee .......... " + mesures.portees + " (chaine la plus longue : " + mesures.porteeMax + " portees)");
   console.log("  contrastes exiges ........... " + mesures.contrastes);
+  console.log("  exemples asynchrones ........ " + mesures.async + " (microtaches en attente max : " + mesures.microMax + ", minuteurs max : " + mesures.macroMax + ")");
   console.log("  requetes reseau ............. " + cx.evenements.reseau.length + " (dont hors file:// : " + externes.length + ")");
   console.log("  erreurs de console .......... " + cx.evenements.console.length);
   console.log("  problemes ................... " + pbs.length);

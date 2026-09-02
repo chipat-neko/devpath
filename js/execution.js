@@ -31,6 +31,7 @@
   var elPile = document.getElementById("vex-pile");
   var elPortees = document.getElementById("vex-portees");
   var elSortie = document.getElementById("vex-sortie");
+  var elFiles = document.getElementById("vex-files");
   var elPosition = document.getElementById("vex-position");
   var elExplication = document.getElementById("vex-explication");
   var elBilan = document.getElementById("vex-bilan");
@@ -92,6 +93,7 @@
       elPile.innerHTML = "";
       elPortees.innerHTML = "";
       elSortie.textContent = "";
+      if (elFiles) elFiles.innerHTML = "";
       elPosition.textContent = "—";
       elExplication.textContent = "";
       elBilan.textContent = "";
@@ -183,6 +185,37 @@
     elPortees.innerHTML = html;
   }
 
+  /* Les deux files. Elles ne servent qu'à l'asynchrone, mais elles y servent
+     à tout : c'est le seul endroit où l'on voit qu'une microtâche inscrite
+     APRÈS un minuteur passe quand même avant lui. */
+  function dessinerFiles(pas) {
+    if (!elFiles) return;
+    var micro = pas.micro || 0;
+    var macro = pas.macro || [];
+    var html = '<div class="vex-file">' +
+      '<p class="vex-file__titre">Microtâches <span class="vex-file__n">' + micro + "</span></p>" +
+      (micro
+        ? '<p class="vex-file__note">' + micro + " promesse" + (micro > 1 ? "s" : "") + " prête" + (micro > 1 ? "s" : "") + " à reprendre, avant tout minuteur</p>"
+        : '<p class="vex-vide">vide</p>') +
+      "</div>";
+    html += '<div class="vex-file">' +
+      '<p class="vex-file__titre">Minuteurs <span class="vex-file__n">' + macro.length + "</span></p>";
+    if (!macro.length) html += '<p class="vex-vide">vide</p>';
+    else {
+      html += '<ol class="vex-minuteurs">';
+      for (var i = 0; i < macro.length && i < 12; i++) {
+        html += '<li class="vex-minuteur' + (i === 0 ? " is-prochain" : "") + '">' +
+          '<span class="vex-minuteur__rang">' + (i + 1) + "</span>" +
+          '<span class="vex-minuteur__delai">' + macro[i].delai + " ms</span>" +
+          '<span class="vex-minuteur__ordre">inscrit en ' + macro[i].ordre + "<sup>e</sup></span></li>";
+      }
+      if (macro.length > 12) html += '<li class="vex-minuteur vex-vide">… ' + (macro.length - 12) + " de plus</li>";
+      html += "</ol>";
+    }
+    html += "</div>";
+    elFiles.innerHTML = html;
+  }
+
   function dessinerSortie(pas) {
     var lignes = etat.sortie.slice(0, pas.sortie);
     var html = "";
@@ -226,6 +259,7 @@
     dessinerLignes(pas.ligne);
     dessinerPile(pas);
     dessinerPortees(pas);
+    dessinerFiles(pas);
     dessinerSortie(pas);
     dessinerExplication(pas);
     elPosition.textContent = "pas " + (etat.pas + 1) + " sur " + etat.trace.length;

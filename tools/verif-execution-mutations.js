@@ -72,6 +72,16 @@ var MUTATIONS = [
     vers: "if (ligneCourante < 0) faireDefiler(ligneCourante);"
   },
   {
+    nom: "les deux files d'attente ne sont plus dessinees",
+    de: "elFiles.innerHTML = html;",
+    vers: "elFiles.innerHTML = \"\";"
+  },
+  {
+    nom: "les minuteurs sont montres dans le desordre",
+    de: "for (var i = 0; i < macro.length && i < 12; i++) {",
+    vers: "for (var i = macro.length - 1; i >= 0 && i > macro.length - 13; i--) {"
+  },
+  {
     nom: "le compteur de pas ment d'une unite",
     de: 'elPosition.textContent = "pas " + (etat.pas + 1) + " sur " + etat.trace.length;',
     vers: 'elPosition.textContent = "pas " + (etat.pas + 2) + " sur " + etat.trace.length;'
