@@ -23,6 +23,14 @@
    5. « Tout derouler » mene au dernier pas, ou la sortie affichee doit etre
       EXACTEMENT celle du programme.
    6. Les fleches du clavier avancent et reculent.
+   7. La ligne surlignee reste DANS le champ de vision — controle qui ne mesure
+      rien tant qu'aucun exemple n'est plus long que la fenetre, d'ou l'exemple
+      long du selecteur.
+   8. Un exemple du groupe « recursivite » doit VRAIMENT montrer la pile monter
+      (au moins 3 cadres) puis redescendre a 1. Un exemple qui cesserait de le
+      faire resterait sinon au catalogue en n'enseignant rien.
+   9. Un exemple peut DEVOIR echouer (`erreurAttendue`) : l'outil exige alors
+      l'erreur, son type, et que la page l'affiche AVEC son numero de ligne.
 
    Codes de sortie : 0 tout va bien · 1 divergence · 2 l'outil n'a pas pu mesurer.
    ============================================================================= */
@@ -182,7 +190,7 @@ function numeroDePas(position) {
   await attendre(1500);
 
   var pbs = [];
-  var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0 };
+  var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0, recursifs: 0, profondeurMax: 0 };
 
   /* ---- 1. la page a-t-elle seulement demarre ? ---- */
   var pret = await cx.evaluer("!!document.getElementById('vex-lignes') && !!window.Interpreteur && !!window.EXECUTION_EXEMPLES");
@@ -200,7 +208,17 @@ function numeroDePas(position) {
     var attendu = Interpreteur.executer(ex.src, { maxTrace: 4000, maxPas: 400000 });
     mesures.exemples++;
 
-    if (attendu.erreur) { pbs.push(ex.id + " : le moteur refuse l'exemple (" + attendu.erreur.nom + " ligne " + attendu.erreur.ligne + " : " + attendu.erreur.message + ")"); continue; }
+    /* Un exemple peut DEVOIR echouer : « quand la recursivite ne s'arrete pas »
+       n'enseigne rien d'autre que son RangeError. Il le declare (`erreurAttendue`)
+       et l'outil exige alors l'erreur au lieu de la refuser — un exemple qui
+       cesserait d'echouer serait tout aussi faux qu'un exemple qui casse. */
+    if (ex.erreurAttendue) {
+      if (!attendu.erreur) { pbs.push(ex.id + " : l'exemple annonce une erreur « " + ex.erreurAttendue + " » et n'en produit aucune"); continue; }
+      if (attendu.erreur.nom !== ex.erreurAttendue) { pbs.push(ex.id + " : erreur « " + attendu.erreur.nom + " » alors que l'exemple annonce « " + ex.erreurAttendue + " »"); continue; }
+    } else if (attendu.erreur) {
+      pbs.push(ex.id + " : le moteur refuse l'exemple (" + attendu.erreur.nom + " ligne " + attendu.erreur.ligne + " : " + attendu.erreur.message + ")");
+      continue;
+    }
     if (!attendu.trace.length) { pbs.push(ex.id + " : le moteur ne produit aucun pas"); continue; }
 
     await cx.evaluer("(function(){var s=document.getElementById('vex-exemple');s.value=" +
@@ -208,7 +226,16 @@ function numeroDePas(position) {
     await attendre(120);
 
     var etat = JSON.parse(await cx.evaluer(LIRE_ETAT));
-    if (etat.erreur) { pbs.push(ex.id + " : la page affiche une erreur — " + etat.erreur); continue; }
+    if (ex.erreurAttendue) {
+      /* Et la page doit le DIRE : une erreur que l'apprenant ne voit pas ne lui
+         apprend rien. On exige le nom de l'erreur et un numero de ligne. */
+      if (!etat.erreur) { pbs.push(ex.id + " : la page n'affiche pas l'erreur attendue"); continue; }
+      if (etat.erreur.indexOf(ex.erreurAttendue) === -1) { pbs.push(ex.id + " : le message affiche ne cite pas « " + ex.erreurAttendue + " » — « " + etat.erreur + " »"); }
+      if (etat.erreur.indexOf("ligne") === -1) { pbs.push(ex.id + " : le message d'erreur affiche ne cite aucune ligne — « " + etat.erreur + " »"); }
+    } else if (etat.erreur) {
+      pbs.push(ex.id + " : la page affiche une erreur — " + etat.erreur);
+      continue;
+    }
 
     var pos = numeroDePas(etat.position);
     if (!pos) { pbs.push(ex.id + " : la position affichee est illisible (« " + etat.position + " »)"); continue; }
@@ -217,6 +244,27 @@ function numeroDePas(position) {
     }
     if (pos.i !== 1) pbs.push(ex.id + " : la page ne demarre pas au pas 1 (elle est au pas " + pos.i + ")");
     if (!etat.precDesactive) pbs.push(ex.id + " : « Precedent » est actif alors qu'on est au premier pas");
+
+    /* --- un exemple de recursivite doit VRAIMENT montrer la pile monter, puis
+       redescendre. Sans ce controle, un exemple mal choisi (ou casse plus tard)
+       resterait au catalogue en ne montrant rien du tout. La mesure porte sur la
+       trace du moteur ; que l'affichage la suive est verifie juste apres, cadre
+       par cadre. --- */
+    if ((ex.groupe || "").indexOf("cursi") !== -1) {
+      var profondeurs = attendu.trace.map(function (p) { return p.pile.length; });
+      var maxP = Math.max.apply(null, profondeurs);
+      mesures.recursifs++;
+      if (maxP > mesures.profondeurMax) mesures.profondeurMax = maxP;
+      if (maxP < 3) {
+        pbs.push(ex.id + " : la pile ne depasse pas " + maxP + " cadre(s) — cet exemple ne montre aucune recursivite");
+      }
+      if (!ex.erreurAttendue) {
+        var apres = profondeurs.slice(profondeurs.indexOf(maxP));
+        if (Math.min.apply(null, apres) > 1) {
+          pbs.push(ex.id + " : la pile monte a " + maxP + " cadres mais ne redescend jamais a 1");
+        }
+      }
+    }
 
     /* --- l'affichage suit-il le moteur, pas par pas ? --- */
     var n = attendu.trace.length;
@@ -335,6 +383,7 @@ function numeroDePas(position) {
   console.log("  comparaisons page/moteur .... " + mesures.comparaisons);
   console.log("  reculs joues ................ " + mesures.reculs);
   console.log("  controles de defilement ..... " + mesures.defilements);
+  console.log("  exemples recursifs .......... " + mesures.recursifs + " (pile la plus haute : " + mesures.profondeurMax + " cadres)");
   console.log("  requetes reseau ............. " + cx.evenements.reseau.length + " (dont hors file:// : " + externes.length + ")");
   console.log("  erreurs de console .......... " + cx.evenements.console.length);
   console.log("  problemes ................... " + pbs.length);

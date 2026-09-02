@@ -162,6 +162,141 @@
         "",
         "console.log(a, b);"
       ].join("\n")
+    },
+
+    /* ------------------------------------------------------- récursivité (B3)
+       Ce que ces six programmes ont en commun : ils ne s'expliquent pas, ils se
+       REGARDENT. La pile monte, puis elle redescend — et c'est le seul moment
+       où l'on comprend d'où sort la valeur de retour. */
+    {
+      id: "recursion-somme",
+      titre: "La récursivité la plus simple",
+      groupe: "La récursivité",
+      resume: "Un cas d'arrêt, un appel sur un problème plus petit. Rien d'autre.",
+      src: [
+        "function somme(t, i) {",
+        "  if (i >= t.length) {",
+        "    return 0;",
+        "  }",
+        "  return t[i] + somme(t, i + 1);",
+        "}",
+        "",
+        "console.log(somme([4, 7, 2], 0));"
+      ].join("\n")
+    },
+    {
+      id: "factorielle",
+      titre: "Factorielle : la pile monte, puis redescend",
+      groupe: "La récursivité",
+      resume: "Cinq cadres s'empilent avant que le moindre calcul ne se fasse.",
+      src: [
+        "function fact(n) {",
+        "  if (n <= 1) {",
+        "    return 1;",
+        "  }",
+        "  return n * fact(n - 1);",
+        "}",
+        "",
+        "console.log(fact(5));"
+      ].join("\n")
+    },
+    {
+      id: "fibonacci",
+      titre: "Fibonacci : le même calcul, refait encore et encore",
+      groupe: "La récursivité",
+      resume: "Deux appels par cadre. Le programme compte lui-même combien de fois il s'appelle.",
+      src: [
+        "var appels = 0;",
+        "",
+        "function fib(n) {",
+        "  appels = appels + 1;",
+        "  if (n < 2) {",
+        "    return n;",
+        "  }",
+        "  return fib(n - 1) + fib(n - 2);",
+        "}",
+        "",
+        "console.log(\"fib(6) =\", fib(6));",
+        "console.log(\"appels :\", appels);"
+      ].join("\n")
+    },
+    {
+      id: "hanoi",
+      titre: "Les tours de Hanoï",
+      groupe: "La récursivité",
+      resume: "Deux appels autour d'un déplacement : la pile dessine l'ordre des coups.",
+      src: [
+        "var coups = [];",
+        "",
+        "function hanoi(n, de, vers, via) {",
+        "  if (n === 0) {",
+        "    return;",
+        "  }",
+        "  hanoi(n - 1, de, via, vers);",
+        "  coups.push(de + \"->\" + vers);",
+        "  hanoi(n - 1, via, vers, de);",
+        "}",
+        "",
+        "hanoi(3, \"A\", \"C\", \"B\");",
+        "console.log(coups.length, \"coups\");",
+        "console.log(coups.join(\" \"));"
+      ].join("\n")
+    },
+    {
+      id: "arbre",
+      titre: "Parcourir un arbre",
+      groupe: "La récursivité",
+      resume: "La profondeur de la pile, c'est la hauteur de l'arbre.",
+      src: [
+        "var arbre = {",
+        "  v: 8,",
+        "  g: { v: 3, g: { v: 1, g: null, d: null }, d: { v: 6, g: null, d: null } },",
+        "  d: { v: 10, g: null, d: { v: 14, g: null, d: null } }",
+        "};",
+        "",
+        "var ordre = [];",
+        "",
+        "function infixe(n) {",
+        "  if (n === null) {",
+        "    return;",
+        "  }",
+        "  infixe(n.g);",
+        "  ordre.push(n.v);",
+        "  infixe(n.d);",
+        "}",
+        "",
+        "function hauteur(n) {",
+        "  if (n === null) {",
+        "    return 0;",
+        "  }",
+        "  var g = hauteur(n.g);",
+        "  var d = hauteur(n.d);",
+        "  return 1 + (g > d ? g : d);",
+        "}",
+        "",
+        "infixe(arbre);",
+        "console.log(ordre.join(\" \"));",
+        "console.log(\"hauteur :\", hauteur(arbre));"
+      ].join("\n")
+    },
+    {
+      id: "recursion-sans-fin",
+      titre: "Quand la récursivité ne s'arrête pas",
+      groupe: "La récursivité",
+      resume: "Le cas d'arrêt est faux. Regarde la pile grossir jusqu'à céder.",
+      /* Cet exemple DOIT échouer : c'est ce qu'il enseigne. `tools/verif-execution.js`
+         exige l'erreur au lieu de la refuser (champ `erreurAttendue`). */
+      erreurAttendue: "RangeError",
+      src: [
+        "function compter(n) {",
+        "  if (n === 0) {",
+        "    return \"fini\";",
+        "  }",
+        "  return compter(n - 2);",
+        "}",
+        "",
+        "console.log(compter(7));"
+      ].join("\n")
     }
   ];
 

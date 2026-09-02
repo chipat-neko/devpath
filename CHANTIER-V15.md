@@ -410,7 +410,23 @@ rejoue l'animation. Il ne sait faire que les tris.
   **F · CONTRÔLES.** `verif-execution.js` **6 exemples, 227 pas, 908 comparaisons, 221 reculs, 182 contrôles de défilement, 16 requêtes toutes en `file://`, 0 erreur de console, 0 problème** · `verif-execution-mutations.js` **10/10 fautes vues** · `verif-rendu.js` sur la page **6 mesures (3 largeurs × 2 thèmes), 0 erreur**, et **--echantillon 20 pages / 120 mesures, 0 erreur** après modification de `variables.css` · `verif-html.js --tous` **1 783 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `node --check` sur les 4 fichiers JS neufs · accolades **1 577 / 1 577** (`pages.css`) et **12 / 12** (`variables.css`), aucune variable `var(--x)` inexistante · **0 BOM**, **0 URL de CDN** · `search-index` / `search-lite` régénérés, **73 → 74 pages transverses**, point fixe atteint · la page est liée depuis l'accueil (l'orphelinat était l'erreur que la phase A a dû réparer).
 
   **G · CE QUI RESTE À FAIRE.** Les 6 exemples sont volontairement élémentaires : B3 (récursivité), B4 (portée, fermetures, `this`) et B5 (asynchrone) ajouteront les leurs à `js/execution-exemples.js`, et chacun sera automatiquement piloté par `verif-execution.js`. B6 posera les liens depuis les leçons (`execution.html#identifiant` charge déjà l'exemple visé).
-- [ ] **B3 · La récursivité.** La pile qui monte et qui redescend — la seule façon de comprendre vraiment, et la notion sur laquelle butent le plus d'apprenants. Factorielle, Fibonacci, parcours d'arbre.
+- [x] **B3 · La récursivité.** ✅ **2026-09-02. Six programmes récursifs au visualiseur, et surtout un contrôle qui exige qu'ils MONTRENT quelque chose : la pile doit monter à 3 cadres au moins, puis redescendre à 1. La plus haute mesurée atteint 221 cadres. 12 exemples pilotés, 710 pas cliqués, 2 840 comparaisons page ⇄ moteur, 0 écart.**
+
+  **A · LES SIX PROGRAMMES**, tous exécutés avant d'être publiés — aucune sortie n'est écrite de tête :
+  | id | ce qu'il montre | sortie mesurée | pile max |
+  |---|---|---|---:|
+  | `recursion-somme` | un cas d'arrêt, un appel plus petit, rien d'autre | `13` | 5 |
+  | `factorielle` | cinq cadres s'empilent avant le moindre calcul | `120` | 6 |
+  | `fibonacci` | deux appels par cadre ; le programme compte lui-même ses appels | `fib(6) = 8` puis `appels : 25` | 7 |
+  | `hanoi` | deux appels autour d'un déplacement | `7 coups` puis `A->C A->B C->B A->C B->A B->C A->C` | 5 |
+  | `arbre` | la profondeur de la pile **est** la hauteur de l'arbre | `1 3 6 8 10 14` puis `hauteur : 3` | 6 |
+  | `recursion-sans-fin` | le cas d'arrêt est faux : la pile grossit jusqu'à céder | `RangeError` ligne 5 | **221** |
+
+  **B · LE POINT QUI COMPTE : `recursion-sans-fin` DOIT échouer.** Un exemple dont l'erreur est le contenu ne peut pas être traité comme un exemple cassé. Il le déclare (`erreurAttendue: "RangeError"`) et `verif-execution.js` **exige** alors l'erreur, son type, **et** que la page l'affiche avec son numéro de ligne — un exemple qui cesserait d'échouer serait tout aussi faux qu'un exemple qui casse.
+
+  **C · UN CONTRÔLE QUI EMPÊCHE UN EXEMPLE DE NE RIEN MONTRER.** Ajouter des programmes ne prouve pas qu'ils enseignent la récursivité. Le vérificateur mesure donc, sur chaque exemple du groupe, la **profondeur maximale de la pile** (≥ 3 exigés) et le fait qu'elle **redescende à 1**. Mis à l'épreuve : en remplaçant `fact(5)` par `fact(1)`, il répond « *factorielle : la pile ne dépasse pas 2 cadres — cet exemple ne montre aucune récursivité* ». Sans ce contrôle, un exemple dégradé serait resté au catalogue en n'enseignant rien.
+
+  **D · CONTRÔLES.** `verif-execution.js` **12 exemples, 710 pas, 2 840 comparaisons, 698 reculs, 383 contrôles de défilement, 6 exemples récursifs (pile la plus haute : 221 cadres), 0 requête hors `file://`, 0 erreur de console, 0 problème** · `verif-execution-mutations.js` **10/10 fautes vues** · `verif-rendu.js` sur la page **6 mesures, 0 erreur** · `verif-html.js --tous` **1 783 fichiers, 0/0** · `verif-donnees.js` **25 contrôles, 0 erreur** · `node --check` · **0 BOM** · index de recherche **identiques** (aucun contenu de leçon touché).
 - [ ] **B4 · Portée, fermetures, `this`.** Trois notions que le site explique bien mais que voir tranche définitivement.
 - [ ] **B5 · L'asynchrone.** La file des tâches, la boucle d'événements, l'ordre réel d'exécution d'un `setTimeout` et d'une promesse. Purement JavaScript, donc exécutable en `file://`.
 - [ ] **B6 · Relier aux leçons.** Chaque leçon qui parle de pile, de portée, de récursivité ou d'asynchrone renvoie au visualiseur, avec l'exemple pré-chargé. Un visualiseur qu'on ne trouve pas ne sert à personne.
