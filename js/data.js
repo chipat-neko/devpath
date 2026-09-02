@@ -667,6 +667,13 @@ window.SITE_DATA = (function () {
       tagline: "Les cours Sécurité applicative et HTTP emploient le chiffrement sans jamais l'expliquer. Ce cours ouvre la boîte : chaque primitive y est écrite en entier, exécutée dans la page, vérifiée contre les vecteurs de test de sa norme — puis cassée, parce que c'est en la cassant qu'on comprend ce qu'elle protégeait. La règle qui traverse tout : on n'écrit jamais sa propre cryptographie, on choisit le bon outil avec les bons paramètres.",
       tags: ["Transversal", "Sécurité", "Fondamentaux"],
     },
+    {
+      id: "maths", dir: "maths", title: "Mathématiques de l'informatique : ce dont on se sert vraiment",
+      glyph: "∀", language: "Mathématiques", level: "intermediaire", status: "apercu",
+      accent: "#702070", lessons: 3, hours: 3,
+      tagline: "Pas un cours de mathématiques déguisé : les mathématiques dont un développeur se sert, chacune reliée à l'endroit du site où elle sert déjà. La logique derrière un if, les ensembles derrière une table de hachage, l'arithmétique modulaire derrière la cryptographie, les graphes derrière un réseau, la croissance derrière un O(n²). Chaque notion arrive avec un programme qui la met en œuvre — et aucun chiffre de ce cours n'a été écrit de tête : tous sortent d'une exécution.",
+      tags: ["Transversal", "Fondamentaux", "Mathématiques"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -1489,6 +1496,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "Les réseaux s'écrivent en Python dans la vraie vie. Ici les exemples sont en JavaScript pour tourner dans la page, mais les idées se transposent ligne à ligne." },
         { course: "llm", note: "Ce que ce cours explique est exactement ce qui rend un LLM possible : des couches, des poids, une fonction d'activation. Le cours LLM part de là et monte d'un cran." },
         { course: "algo", note: "Une couche est une boucle sur des tableaux, un réseau une composition de fonctions. Les briques algorithmiques rendent le code des leçons évident plutôt que magique." },
+        { course: "maths", note: "Matrices et dérivées, posées sans prérequis et exécutées dans la page — les deux objets dont l'apprentissage profond ne se passe pas." },
       ],
       modules: [
         {
@@ -1588,6 +1596,7 @@ window.SITE_DATA = (function () {
         { course: "http", note: "HTTPS y est expliqué du point de vue du protocole : en-têtes, certificats, redirections. Ici, on ouvre les primitives qui le font tenir." },
         { course: "offensive", note: "Le point de vue de l'attaquant sur les mots de passe, les sessions et les jetons. Ce cours-ci donne les fondations que ces attaques exploitent." },
         { course: "reseaux", note: "Ce qui voyage sur un réseau, et qui écoute. Le chiffrement de transport ne se comprend qu'une fois le trajet d'un paquet posé." },
+        { course: "maths", note: "L'arithmétique modulaire, les nombres premiers et le dénombrement des collisions : le socle sur lequel RSA et Diffie-Hellman sont construits." },
       ],
       modules: [
         {
@@ -1633,6 +1642,7 @@ window.SITE_DATA = (function () {
         { course: "nosql", note: "ACID, BASE et le théorème CAP y sont posés du point de vue des bases. Ici, ils sont repris depuis le réseau qui les rend nécessaires." },
         { course: "archi", note: "Découper un système en services, c'est transformer des appels de fonction en appels réseau. Ce cours mesure ce que ce changement coûte." },
         { course: "http", note: "Chaque aller-retour HTTP est un aller-retour réseau : le module 1 chiffre ce que valent une poignée de main TCP et une poignée de main TLS en millisecondes." },
+        { course: "maths", note: "Raisonner sur un graphe de machines et formuler une garantie en logique : les deux outils que ce cours emploie à chaque page." },
       ],
       modules: [
         {
@@ -1859,6 +1869,7 @@ window.SITE_DATA = (function () {
         { course: "javascript", note: "Les bases JS indispensables avant de plonger dans les algorithmes." },
         { course: "compilation", note: "Un compilateur est le plus bel assemblage de ces algorithmes : arbres, piles, tables et parcours récursifs y travaillent ensemble sur un vrai problème." },
         { course: "neurones", note: "Une couche de neurones n'est qu'une boucle sur des tableaux, un réseau qu'une composition de fonctions : les briques d'ici, appliquées ailleurs." },
+        { course: "maths", note: "La complexité, les logarithmes et les matrices d'adjacence viennent de là. Le cours de mathématiques les pose calmement, chacun avec le programme qui le mesure." },
       ],
       modules: [
         {
@@ -4425,6 +4436,7 @@ window.SITE_DATA = (function () {
         { course: "python", note: "Les exemples s'écrivent en Python (module statistics, un peu de numpy) : le langage sous les calculs." },
         { course: "ml", note: "Régression, sur-ajustement, échantillon d'entraînement et de test : le machine learning est de la statistique appliquée à grande échelle." },
         { course: "neurones", note: "Un réseau apprend en minimisant une erreur mesurée : perte, moyenne, jeu de test. Ce cours-ci fournit les notions dont le module « Ce qui rate » se sert en permanence." },
+        { course: "maths", note: "Ensembles, dénombrement et probabilités, pris à la racine — ce que les statistiques appliquées supposent connu." },
       ],
       modules: [
         {
@@ -5894,6 +5906,62 @@ window.SITE_DATA = (function () {
         },
       ],
     },
+    maths: {
+      id: "maths", dir: "maths", title: "Mathématiques de l'informatique : ce dont on se sert vraiment",
+      glyph: "∀", accent: "#702070", overview: "cours.html",
+      related: [
+        { course: "algo", note: "La complexité, les arbres et les graphes de ce cours-là s'appuient sur les notions du module 5 et du module 4 : croissance, logarithmes, matrices d'adjacence." },
+        { course: "crypto", note: "L'arithmétique modulaire du module 3 est le socle de RSA et de Diffie-Hellman. Ce cours-ci donne l'outil ; celui-là montre ce qu'on en fait." },
+        { course: "neurones", note: "Un réseau de neurones est une suite de produits de matrices. Le module 4 pose ces objets calmement, avant de les voir apprendre." },
+        { course: "distribue", note: "Un système distribué se raisonne sur un graphe de machines, et ses garanties se formulent en logique — les deux sujets du module 1 et du module 4." },
+        { course: "stats", note: "Le module 2 pose les ensembles, le dénombrement et les probabilités : exactement ce que les statistiques appliquées supposent connu." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Logique et booléens", sub: "propositions, tables de vérité, De Morgan, ce qu'un if veut dire",
+          level: "intermediaire",
+          lessons: [
+            { num: "01", title: "Propositions, connecteurs et tables de vérité", file: "lecon-01.html", status: "complet" },
+            { num: "02", title: "Les lois de l'algèbre de Boole, et De Morgan", file: "lecon-02.html", status: "complet" },
+            { num: "03", title: "Ce qu'un if complexe veut vraiment dire", file: "lecon-03.html", status: "complet" },
+          ],
+        },
+        {
+          num: "02", title: "Ensembles, dénombrement, probabilités", sub: "ce qui fonde les tables de hachage et les collisions",
+          level: "intermediaire",
+          lessons: [
+            { num: "04", title: "Ensembles, unions, intersections", file: "#", status: "bientot" },
+            { num: "05", title: "Compter sans énumérer : le dénombrement", file: "#", status: "bientot" },
+            { num: "06", title: "Probabilités, collisions et paradoxe des anniversaires", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "03", title: "Arithmétique et nombres en machine", sub: "modulo, nombres premiers, et 0.1 + 0.2",
+          level: "intermediaire",
+          lessons: [
+            { num: "07", title: "Arithmétique modulaire : l'horloge des cryptographes", file: "#", status: "bientot" },
+            { num: "08", title: "Nombres premiers, PGCD et algorithme d'Euclide", file: "#", status: "bientot" },
+            { num: "09", title: "Pourquoi 0.1 + 0.2 ne fait pas 0.3", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "04", title: "Graphes et matrices", sub: "représenter un réseau, une carte, un réseau de neurones",
+          level: "intermediaire",
+          lessons: [
+            { num: "10", title: "Représenter un réseau : graphes et matrices d'adjacence", file: "#", status: "bientot" },
+            { num: "11", title: "Matrices : une seule opération pour une carte et un réseau", file: "#", status: "bientot" },
+          ],
+        },
+        {
+          num: "05", title: "Croissance et complexité", sub: "ce que veut dire O(n²) sur un million de lignes",
+          level: "intermediaire",
+          lessons: [
+            { num: "12", title: "Ordres de grandeur : mesurer la croissance", file: "#", status: "bientot" },
+            { num: "13", title: "Logarithmes et exponentielles, vus du code", file: "#", status: "bientot" },
+          ],
+        },
+      ],
+    },
   };
 
   /* ---- Parcours d'apprentissage (itinéraires de cours existants) -------------
@@ -5933,7 +6001,7 @@ window.SITE_DATA = (function () {
       title: "Fondamentaux & informatique",
       glyph: "O(n)",
       tagline: "Les bases solides : programmer, raisonner, comprendre la machine.",
-      courses: ["python", "algo", "c", "rust", "compilation"],
+      courses: ["maths", "python", "algo", "c", "rust", "compilation"],
     },
     {
       id: "data",
@@ -6108,6 +6176,7 @@ window.SITE_DATA = (function () {
     "compilation": {"lecon-01.html":55,"lecon-02.html":52,"lecon-03.html":58,"lecon-04.html":62,"lecon-05.html":62,"lecon-06.html":54,"lecon-07.html":75,"lecon-08.html":80,"lecon-09.html":95,"lecon-10.html":80,"lecon-11.html":85,"lecon-12.html":90,"lecon-13.html":95},
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
     "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34,"lecon-04.html":34,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":35,"lecon-10.html":36,"lecon-11.html":40},
+    "maths": {"lecon-01.html":52,"lecon-02.html":50,"lecon-03.html":54},
     "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24,"lecon-12.html":30},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},

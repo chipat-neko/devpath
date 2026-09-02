@@ -3785,4 +3785,51 @@ window.PROJETS = [
       "réseau a retenu. Le cours <a href=\"../stats/cours.html\">statistiques</a> aide à lire les scores ; " +
       "l'<a href=\"../algo/cours.html\">algorithmique</a>, à écrire les boucles sur les tableaux.</p>",
   },
+  {
+    id: "maths-verificateur-conditions",
+    course: "maths",
+    courseTitle: "Mathématiques de l'informatique",
+    dir: "maths",
+    accent: "maths",
+    type: "Outil de vérification",
+    niveau: "Intermédiaire",
+    titre: "Un vérificateur de conditions pour les revues de code",
+    contexte:
+      "<p>Dans ton équipe, une simplification de condition a laissé passer, pendant six mois, des comptes " +
+      "<strong>bannis</strong> vers un formulaire d'édition. Personne ne l'a vu en relecture&nbsp;: la version simplifiée " +
+      "<em>avait l'air</em> plus propre. On te demande un outil qui rende ce genre d'erreur impossible à rater&nbsp;: " +
+      "avant/après, il doit dire si deux conditions sont <strong>vraiment</strong> équivalentes, et montrer la ligne " +
+      "exacte où elles divergent quand elles ne le sont pas.</p>",
+    objectif:
+      "<p>Écrire un petit outil qui prend deux conditions booléennes portant sur les mêmes variables, énumère les " +
+      "<strong>2<sup>n</sup> combinaisons</strong>, et rend un verdict accompagné de sa preuve&nbsp;: la table complète, " +
+      "et la liste des contre-exemples s'il y en a. Ce n'est pas un échantillon de tests&nbsp;: c'est la totalité du " +
+      "domaine, donc une démonstration.</p>",
+    livrable: "Un module autonome : une fonction de comparaison, une fonction d'affichage de table, et une batterie de cas qui inclut au moins une équivalence FAUSSE.",
+    fonctionnalites: [
+      "Une fonction <strong>table(noms, f)</strong> qui affiche les 2<sup>n</sup> lignes d'une condition, et compte les lignes vraies.",
+      "Une fonction <strong>equivalentes(n, f, g)</strong> qui rend un verdict et, en cas d'écart, le <strong>contre-exemple</strong> complet.",
+      "Un jeu de cas couvrant les lois usuelles&nbsp;: De Morgan, absorption, distributivité, contraposée.",
+      "Au moins un cas <strong>volontairement faux</strong>&nbsp;: un vérificateur qui ne sait pas dire non ne prouve rien.",
+      "Le décompte, pour une condition donnée, du <strong>nombre de situations</strong> où elle est vraie — l'information qui révèle une garde trop étroite.",
+      "Un mode «&nbsp;<strong>avant / après</strong>&nbsp;»&nbsp;: on donne l'ancienne et la nouvelle condition, l'outil dit si la refonte est sûre.",
+    ],
+    criteres: [
+      "L'outil confirme <code>!(a &amp;&amp; b)</code> = <code>!a || !b</code> sur les <strong>4</strong> lignes.",
+      "Il <strong>réfute</strong> <code>!(a &amp;&amp; b)</code> = <code>!a &amp;&amp; !b</code> et exhibe le contre-exemple.",
+      "Il traite une condition à <strong>quatre variables</strong> sans modification&nbsp;: le nombre de variables est un paramètre, jamais une constante écrite en dur.",
+      "Chaque verdict est accompagné du <strong>nombre de lignes réellement essayées</strong>&nbsp;: c'est ce qui distingue une preuve d'un sondage.",
+      "Les contre-exemples sont affichés de façon <strong>lisible</strong> (V/F par variable, avec le nom de chaque variable).",
+      "Une condition qui se réduit à une <strong>constante</strong> (toujours vraie, toujours fausse) est signalée à part&nbsp;: c'est presque toujours un bug.",
+    ],
+    pistes:
+      "<p>Le cœur tient en dix lignes&nbsp;: une boucle de <code>0</code> à <code>2**n - 1</code>, et le bit numéro " +
+      "<code>k</code> de <code>i</code> donne la valeur de la variable <code>k</code>. Tout le reste est de la " +
+      "présentation. Commence par la table, puis la comparaison&nbsp;; garde pour la fin le mode avant/après.</p>" +
+      "<p>Pour aller plus loin&nbsp;: fais-lui <strong>chercher</strong> une simplification au lieu de la vérifier — " +
+      "essayer de supprimer chaque variable, une par une, et regarder si la table change. C'est le principe des méthodes " +
+      "de minimisation booléenne. Le cours <a href=\"../tests/cours.html\">Tests &amp; qualité</a> montre la version " +
+      "probabiliste de la même idée (les tests basés sur les propriétés)&nbsp;; ici, le domaine est si petit qu'on peut " +
+      "tout prendre.</p>",
+  },
 ];

@@ -238,6 +238,13 @@
       '<path d="M11 11 19.5 19.5"/>' +
       '<path d="M15.4 15.4 17.9 12.9M17.9 17.9 20.4 15.4"/>'
     ),
+    /* Mathématiques : une table de vérité — deux colonnes d'entrées, une de résultat */
+    maths: stroke(
+      '<rect x="3" y="3" width="18" height="18" rx="3"/>' +
+      '<path d="M3 8.5h18M13 3v18"/>' +
+      '<path d="M6.2 12.5h3.6M6.2 17h3.6"/>' +
+      '<path d="M15.8 12.5h2.4"/>'
+    ),
     /* Systèmes distribués : trois machines reliées, et un lien coupé — la partition */
     distribue: stroke(
       '<circle cx="12" cy="5" r="2.4"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/>' +
@@ -260,7 +267,7 @@
     fsharp: "fsharp", clojure: "clojure", prolog: "prolog", ada: "ada", pascal: "pascal", vb: "vb",
     objc: "objc", erlang: "erlang", groovy: "groovy", solidity: "solidity",
     ml: "ml", pandas: "pandas", dataviz: "dataviz", stats: "stats", "data-eng": "data-eng", bdd: "bdd", mobile: "mobile", equipe: "equipe", kubernetes: "kubernetes", graphql: "graphql", llm: "llm", a11y: "a11y",
-    "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os", compilation: "compilation", neurones: "neurones", distribue: "distribue", offensive: "offensive", crypto: "crypto",
+    "perf-web": "perf-web", cloud: "cloud", iac: "iac", archi: "archi", wasm: "wasm", linux: "linux", reseaux: "reseaux", ux: "ux", observabilite: "observabilite", os: "os", compilation: "compilation", neurones: "neurones", distribue: "distribue", offensive: "offensive", crypto: "crypto", maths: "maths",
   };
 
   function courseLogo(id) {
