@@ -45,9 +45,12 @@
  *   node tools/verif-html.js --fichier <chemin>  analyse un seul fichier
  *   node tools/verif-html.js --json              sortie machine
  *   node tools/verif-html.js --tout-signaler     inclut les remarques mineures dans la liste
+ *   node tools/verif-html.js --tolere-mineurs    ne rend 1 que sur un probleme GRAVE (ancien comportement)
  *   node tools/verif-html.js --dom [--dom-max N] seconde passe Chrome headless (lente, optionnelle)
  *
- * Code de sortie : 1 si au moins un problème GRAVE, sinon 0.
+ * Code de sortie : 1 dès qu'un problème est détecté — GRAVE ou ATTENTION. Une remarque
+ * ATTENTION signifie qu'un exemple de code affiché à l'apprenant a été altéré : c'est le
+ * défaut même que ce chantier existe pour empêcher, pas un détail cosmétique.
  * Aucune dépendance : Node seul. La passe --dom est optionnelle et non bloquante.
  */
 
@@ -541,13 +544,14 @@ function listeHtml(dossier, sortie) {
 function main(argv) {
   const opt = {
     racine: path.resolve(__dirname, '..'),
-    tous: false, json: false, toutSignaler: false, dom: false, domMax: 20, fichiers: []
+    tous: false, json: false, toutSignaler: false, tolereMineurs: false, dom: false, domMax: 20, fichiers: []
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--tous') opt.tous = true;
     else if (a === '--json') opt.json = true;
     else if (a === '--tout-signaler') opt.toutSignaler = true;
+    else if (a === '--tolere-mineurs') opt.tolereMineurs = true;
     else if (a === '--dom') opt.dom = true;
     else if (a === '--dom-max') opt.domMax = parseInt(argv[++i], 10) || 20;
     else if (a === '--racine') opt.racine = path.resolve(argv[++i]);
@@ -636,7 +640,19 @@ function main(argv) {
     passeDom(cibles, opt.domMax);
   }
 
-  return graves.length ? 1 : 0;
+  /* ⚠️ UNE REMARQUE « ATTENTION » EST BLOQUANTE, ET ELLE NE L'A PAS TOUJOURS ÉTÉ.
+     Jusqu'au 2026-09-02, ce script ne rendait 1 que sur un problème GRAVE : un <b>
+     créé dans un bloc <pre><code> était affiché à l'écran, puis la chaîne repartait
+     verte. Or c'est EXACTEMENT le défaut qui fonde le chantier V14 — un exemple que
+     l'apprenant lit et qui ne dit pas ce que le code dit. « Structure de page intacte »
+     ne veut pas dire « sans conséquence » : le texte avalé disparaît de l'exemple.
+     Mesuré par tools/verif-chaine-mutations.js (mutation `source`), qui a trouvé cet
+     angle mort en injectant la faute et en constatant un code de sortie 0.
+     Le site en compte 0 le jour où cette ligne est écrite : rendre la remarque
+     bloquante ne coûte donc rien et ferme le trou. --tolere-mineurs rétablit
+     l'ancien comportement pour un diagnostic ponctuel. */
+  if (opt.tolereMineurs) return graves.length ? 1 : 0;
+  return graves.length + mineurs.length ? 1 : 0;
 }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));

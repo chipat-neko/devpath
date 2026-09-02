@@ -1610,7 +1610,48 @@ apprenant qui décide.
   ✅ **Relu après la réparation de F2 (2026-09-02, seconde passe)** : les 9,26 Mo achètent de nouveau 38 exercices auto-corrigés et 1 075 boutons qui fonctionnent. La réparation a ajouté **+1,27 Mo** de copies en chaîne (`pyodide-src.js`, `sql-wasm-src.js`), portant le dépôt à **90,17 Mo (+1,43 %)** et les deux moteurs à **10,53 Mo**. Le rapport de Pyodide se dégrade d'autant : **380 Mo par exercice** au lieu de 334.
 
   🔵 Pour mémoire : le dépôt ne faisait **pas** 35 Mo au début de V14, mais 77,87 (A4 l'avait déjà relevé). La règle du plan « le poids est un critère » reste juste ; c'est la valeur de référence qui traînait depuis un chantier antérieur.
-- [ ] **F4 · Non-régression.** Les cinq vérificateurs verts.
+- [x] **F4 · Non-régression.** ✅ **2026-09-02. Les 21 étapes sont vertes en 2 005 s — mais le vrai résultat de ce point n'est pas cette couleur : c'est d'avoir mesuré CE QUE LA CHAÎNE VOIT, et d'avoir trouvé qu'elle était aveugle au défaut même qui fonde le chantier V14.**
+
+  **A · LA CHAÎNE, TELLE QU'ELLE EST.** `node tools/verif.js --complet` — 21 étapes, **2 005,4 s**, code de sortie 0. Le mot « cinq vérificateurs » de l'énoncé date d'un chantier antérieur : il y en a vingt-et-un.
+
+  | étape | durée | ce qu'elle a rendu |
+  |---|---:|---|
+  | source · donnees · contenu | 1,5 + 4,6 + 13,8 s | 0 problème · 0 erreur d'invariant · 1 leçon maigre (`sass/lecon-09`, connue depuis F5) |
+  | exemple | 65,7 s | 1 058 valeurs annoncées confrontées au réel, **0 divergente** ; 197 solutions `type:code` rejouées, 0 divergente |
+  | motifs · requete · python | 0,2 + 0,3 + 5,5 s | les exercices regex, SQL et Python : la référence passe, les contre-exemples échouent |
+  | erreurs | 7,0 s | 55 entrées du décodeur, **78 extraits réexécutés** (39 fautifs + 39 corrigés) |
+  | gitmodl · gitcmd · gitgraf · gitscen | 7,8 + 123,9 + 32,9 + 55,4 s | le bac à sable Git face au vrai `git` |
+  | altern · moteurs | 0,3 + 0,0 s | format « une autre façon » · les copies en chaîne identiques à l'original |
+  | **rendu** (`--tout --cours --lecons`) | **1 358,0 s** | débordement, contraste, focus, aria, console, réseau : **0 erreur** |
+  | err-sql · dec-lec · stockag | 2,2 + 18,9 + 48,2 s | Chrome, `file://`, DNS coupé |
+  | **sql-lec · py-lec** | 71,5 + 32,2 s | **41 blocs SQL cliqués, 28 résultats, 13 erreurs SQL du contenu, 0 moteur en échec, 0 requête distante** |
+  | **mutants** (neuf) | 155,6 s | voir ci-dessous |
+
+  Contrôles indépendants, hors chaîne, refaits le jour même : `build-index.js` sur les **5 index dérivés** (quiz 5 970, flashcards 11 364, antisèches 1 560, search 1 589, search-lite 1 589) → **identiques au fichier cible, 0 écart** ; **1 967 fichiers HTML** → **0 BOM** ; **3 153 blocs JSON** (`data-quiz` 1 536, `data-exos` 1 524, `data-quiz-bilan` 93) → **0 invalide** ; **189 fichiers `.js`** de `js/` et `tools/` → `node --check` **0 échec** ; **1 775 pages du site, 1 479 671 balises** → **0 déséquilibre** ; grep CDN sur tout le site hors `scratchpad/` → **0 URL** vers `cdnjs`, `fonts.googleapis`, `fonts.gstatic` (les seules occurrences sont du texte pédagogique et un `&lt;link&gt;` échappé dans `html/lecon-25`, qui enseigne précisément `preconnect`).
+
+  **B · CE QUE CE POINT A RÉELLEMENT APPORTÉ : `tools/verif-chaine-mutations.js`, le vérificateur des vérificateurs.** « Vert » ne veut rien dire tant qu'on n'a pas mesuré ce que le contrôle regarde — c'est la leçon de F2, où la chaîne est restée verte une semaine pendant que les deux moteurs étaient morts. L'outil neuf injecte **neuf fautes** dans des fichiers réels, lance le vérificateur censé voir chacune, et **exige un code de sortie non nul**. Il restaure les octets d'origine après chaque mutation — y compris sur exception et sur Ctrl-C — et refuse de conclure si `git status` a bougé.
+
+  | mutation | ce qu'elle casse | verdict |
+  |---|---|---:|
+  | `source` | un `<` non échappé dans un bloc `<pre><code>` | VUE (2,2 s) |
+  | `donnees` | une leçon déclarée dans `data.js`, absente du disque | VUE (4,6 s) |
+  | `exemple` | une sortie annoncée en commentaire qui ment | VUE (74,0 s) |
+  | `requete` | le tableau attendu d'un exercice SQL, faussé d'une valeur | VUE (0,4 s) |
+  | `python` | le `run.expect` d'un exercice Python, faussé d'un caractère | VUE (6,0 s) |
+  | `erreurs` | un message du décodeur qui n'est plus celui du moteur | VUE (8,7 s) |
+  | `moteurs` | le code d'un moteur qui dérive de sa copie en chaîne | VUE (0,1 s) |
+  | **`sql-lec`** | **SQLite ne démarre plus** (chaîne de moteur vidée) | **VUE (29,8 s)** |
+  | **`py-lec`** | **CPython ne démarre plus** (chaîne de moteur vidée) | **VUE (29,4 s)** |
+
+  **9 injectées, 9 vues, 0 survivante**, arbre de travail identique à avant. Les deux dernières rejouent exactement la panne de F2 : elles prouvent que les étapes ajoutées en F5 ne sont pas décoratives.
+
+  **C · L'ANGLE MORT TROUVÉ, ET IL PORTAIT SUR LE DÉFAUT FONDATEUR DU CHANTIER.** Au premier passage, **la mutation `source` a SURVÉCU**. `verif-html.js` voyait pourtant la faute et l'imprimait — `[element-dans-code] <b> créé dans le bloc <pre> et JAMAIS refermé : le texte disparaît de l'exemple` — puis **rendait 0**, parce que son code de sortie ne comptait que les problèmes classés GRAVES (« la page est cassée »), jamais les ATTENTION (« seul l'exemple est altéré »). Or « seul l'exemple est altéré » est **exactement** ce que V14 existe pour empêcher : un apprenant qui lit un code qui n'est pas celui qu'on croit lui montrer. Un `<b>` glissé dans un bloc aurait traversé `verif.js` en vert.
+
+  Correctif : `verif-html.js` rend désormais 1 **dès qu'un problème est détecté, GRAVE ou ATTENTION** ; `--tolere-mineurs` rétablit l'ancien comportement pour un diagnostic ponctuel. **Le site est à 0 GRAVE et 0 ATTENTION sur 1 612 fichiers** le jour où la ligne est écrite : fermer le trou ne coûte rien. Mesure après correctif : mutation `source` → **VUE (code 1)**, site sain → **code 0**.
+
+  🔵 **Une fausse alerte, notée parce qu'elle est instructive.** La mutation `exemple` a d'abord survécu elle aussi — mais le vérificateur n'y était pour rien : mon ancre visait `//=&gt; "number"`, texte qui n'existe que dans un `<code>` en ligne d'un tableau récapitulatif. Dans le vrai bloc exécutable, le `>` n'a pas besoin d'être échappé et s'écrit `//=>`. La mutation tombait à côté du seul endroit que `verif-exemples.js` regarde. **C'est la règle « un motif de remplacement trop large casse ce qui était juste » vue par l'autre bout : un motif trop ÉTROIT fait passer un outil sain pour aveugle.** Ancre corrigée (le code autour, pas seulement l'annonce) → VUE en 74,0 s.
+
+  **D · CE QUI ENTRE DANS LA CHAÎNE, ET À QUEL PRIX.** `mutants` devient la **21ᵉ étape**, jouée **uniquement en `--complet`** parce qu'elle modifie des fichiers du dépôt. Coût : **+155,6 s** (1 883 → 2 005 s). Réserve honnête, écrite dans les deux fichiers : un arrêt **brutal** de la machine pendant une mutation laisserait un fichier modifié — `git checkout -- <fichier>` le répare. C'est le prix d'une mesure qu'aucun contrôle de source ne peut rendre.
 - [x] **F5 · Ce qui n'a pas été fait.** ✅ **2026-09-02. Sept manques, tous mesurés le jour où ils sont écrits — et trois d'entre eux ne sont pas des oublis mais des LIMITES, ce qui ne se dit qu'en le prouvant. Un huitième a été comblé en chemin : les deux seules preuves qui cliquent sur un bouton de moteur entrent dans `verif.js`.**
 
   **A · CE QUI RESTE À FAIRE, ET QUI EST FAISABLE**

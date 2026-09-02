@@ -19,7 +19,8 @@
    USAGE
      node tools/verif.js            # les six (le rendu prend plusieurs minutes)
      node tools/verif.js --rapide   # les quatre premiers, exemples JS seul : ~20 secondes
-     node tools/verif.js --complet  # idem, mais le rendu balaie 139 pages
+     node tools/verif.js --complet  # idem, le rendu balaie 229 pages, ET les verificateurs
+                                    #   sont eux-memes mis a l epreuve par 9 fautes injectees
      node tools/verif.js --strict   # code 1 des qu'un outil signale quoi que ce soit
 
    Note : en mode rapide, « exemples » n'execute que JavaScript (pur Node, ~1 s) ;
@@ -172,6 +173,26 @@ if (!RAPIDE) {
     fichier: "preuves/python-lecon.js",
     args: [],
     quoi: "CPython demarre-t-il vraiment quand on clique dans une lecon (file://, DNS coupe)",
+    lent: true,
+  });
+}
+/* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
+   parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »
+   dans un bloc de code, une lecon absente du disque, une sortie annoncee faussee, une
+   chaine de moteur videe... -- et exige que le verificateur charge de chacune ROUGISSE.
+   Elle restaure les octets d'origine apres chaque mutation, y compris sur exception et
+   sur Ctrl-C, et refuse de conclure si `git status` a change. RESERVE HONNETE : un arret
+   BRUTAL de la machine pendant une mutation laisserait un fichier modifie -- `git
+   checkout -- <fichier>` le repare. C'est le prix d'une mesure qu'aucun controle de
+   source ne peut rendre : le 2026-09-02, elle a trouve que verif-html.js VOYAIT le
+   « < » injecte, l'affichait... et rendait 0. La chaine restait verte sur le defaut
+   meme qui fonde ce chantier. */
+if (COMPLET) {
+  ETAPES.push({
+    nom: "mutants",
+    fichier: "verif-chaine-mutations.js",
+    args: [],
+    quoi: "les verificateurs VOIENT-ILS une faute ? 9 fautes injectees, 9 attendues rouges",
     lent: true,
   });
 }
