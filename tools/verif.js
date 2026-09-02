@@ -213,6 +213,20 @@ if (!RAPIDE) {
     quoi: "etude de cas 3 : le rapport publie est-il celui que la modification annoncee produit",
     lent: true,
   });
+  /* L'etude 4 publie DEUX programmes et affirme qu'ils rendent la meme sortie. Cette
+     etape prend les trois blocs dans le HTML -- le jeu d'essai, la version 1, la
+     version 2 -- les execute DANS LE NAVIGATEUR, et compare les deux sorties entre
+     elles et a la sortie publiee. Rien n'est relu sur le disque : si quelqu'un modifie
+     un programme sans reassembler la page, l'ecart se voit. Elle verifie aussi que le
+     chiffre annonce dans la prose est celui du bloc de mesures -- controle ne d'une
+     vraie confusion : deux mesures differentes portaient le meme libelle. */
+  ETAPES.push({
+    nom: "etude-4",
+    fichier: "preuves/etude-reecriture.js",
+    args: [],
+    quoi: "etude de cas 4 : les deux programmes publies rendent-ils la meme sortie, celle qui est publiee",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

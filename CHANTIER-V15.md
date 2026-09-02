@@ -167,7 +167,60 @@ que le jour où on arrive à le changer sans le casser.
   **D · CONTRÔLES.** `verif.js --rapide` **vert (14 étapes, 141,3 s)** · `verif-html.js --tous` **1 778 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` sur la page **6 mesures, 0 erreur** (aucun CSS neuf : les classes `.etude-*` d'A1 ont resservi une deuxième fois) · `node --check` sur les 4 fichiers JS neufs · 0 BOM, 0 mojibake, 0 URL de CDN · `search-index`/`search-lite` au point fixe, **1 592 documents**.
 
   🔵 **Toujours à A7** : aucune page du site ne pointe vers les trois études ; elles ne se rejoignent que par la recherche et par les liens qu'elles se font entre elles.
-- [ ] **A4 · Un programme mal écrit, et sa réécriture.** Le même besoin, deux fois : la version qui marche mais qu'on ne peut pas maintenir, puis la version propre. Nommer précisément ce qui change, sans jamais dire seulement « c'est plus propre ».
+- [x] **A4 · Un programme mal écrit, et sa réécriture.** ✅ **2026-09-02. L'étude nº 4 est écrite — et elle ne dit jamais « c'est plus propre » : elle applique QUATRE changements réels aux DEUX versions et publie ce qu'ils coûtent, y compris le quatrième, où c'est la version mal écrite qui gagne (4 lignes en 2 endroits contre 7 en 3).**
+
+  **A · CE QUI EST LIVRÉ**
+
+  | | |
+  |---|---|
+  | `pages/etude-reecriture.html` | l'étude nº 4, **53 635 octets**, 8 sections ancrées, 9 blocs de code dont **exactement 1 exécutable** |
+  | `tools/etudes/reecriture/v1.js` · `v2.js` | le même besoin écrit deux fois — un relevé de facturation pour 4 pays (remises, port, TVA, arrondis). Écrits pour l'occasion : **aucun code tiers recopié** |
+  | `tools/etudes/reecriture/jeu.js` | 14 commandes de vitrine (publiées dans la page) + un tirage à graine fixe, paramétrable en pays et en quantités |
+  | `tools/etudes/reecriture/metriques.js` | 7 comptages sur un source JS, **commentaires et chaînes retirés d'abord** — sans quoi le `if` d'un commentaire compterait comme une décision |
+  | `tools/etudes/reecriture/modifs.js` · `modif4.js` · `modif5.js` | 5 changements applicables aux deux versions, avec un diff (plus longue sous-séquence commune) qui compte lignes **et endroits non contigus** |
+  | `tools/etudes/reecriture/mesurer.js` | produit **tous** les chiffres de la page en exécutant : équivalence, métriques, coût des changements, oublis, pile, arrondi |
+  | `tools/etudes/reecriture/banc.js` | le banc publié : où arrondit-on ? |
+  | `tools/etudes/reecriture/assembler.js` | relit les sources, exécute tout, et **refuse d'écrire** si une affirmation de la page ne se reproduit pas |
+  | `tools/preuves/etude-reecriture.js` | la preuve, **24ᵉ étape de `verif.js`** hors mode rapide |
+
+  **B · CE QUI EST MESURÉ, ET PUBLIÉ TEL QUEL**
+
+  | mesure | version 1 | version 2 |
+  |---|---:|---:|
+  | lignes de code effectives | 93 | **103** (la réécriture est PLUS longue) |
+  | fonctions · plus longue | 1 · 93 l. | 23 · 20 l. |
+  | imbrication · points de décision | 5 · 31 | 3 · 13 |
+  | nombres écrits en clair | 58 (21 distincts) | 7 |
+  | endroits qui testent le pays | 9 | 0 |
+  | cadres de pile quand un centime s'arrondit | 15 | **22** (le prix de l'indirection) |
+
+  **Équivalence prouvée** : **10 000 commandes** tirées à graine fixe, les deux sorties comparées caractère par caractère → **0 écart**.
+
+  **Coût des 4 changements, patchs appliqués et rejoués** (les deux versions doivent rendre les mêmes chiffres, sinon l'assemblage échoue) : ajouter un pays **6 l./3 endroits vs 3 l./1** · changer un taux **4/2 vs 2/1** · ajouter un palier **4/1 vs 3/1** · **déplacer un avantage client 4 l./2 endroits vs 7 l./3** — la v1 gagne, parce que ce changement coupe en travers du découpage de la v2. L'assembleur **refuse de publier** si ce 4ᵉ résultat s'inversait : la page affirmerait le contraire de la mesure.
+
+  **C · TROIS CHOSES TROUVÉES EN MESURANT**
+
+  1. **Oublier un des trois endroits ne provoque AUCUNE erreur.** En retirant un patch à la fois : **178, 160 et 4** commandes sur 1 000 facturées faux, sans une seule exception. Le plus rare est le plus dangereux — 4 pour mille, c'est ce qu'aucun test ne rattrape.
+  2. **Le `else` fourre-tout facture l'Espagne au taux suisse** : **66,38 €**, relevé d'apparence normale. La v2, elle, s'arrête net (`TypeError`). Les deux comportements sont publiés côte à côte.
+  3. **Déplacer un arrondi « sans rien changer » change 2 478 commandes sur 10 000** (24,8 %), au plus 2 centimes chacune, **25,02 € cumulés**. Invisible à la relecture ; visible en comparant deux sorties.
+
+  **D · CE QUE LA PREUVE VÉRIFIE** — Chrome headless, `file://`, DNS coupé, **rien n'est relu sur le disque** : les trois blocs (jeu, v1, v2) sont pris **dans le HTML** et exécutés dans le navigateur.
+
+  | affirmation | mesure |
+  |---|---|
+  | « voici ce que le programme imprime » | **72 lignes publiées / 72 rendues, 0 écart** |
+  | « la version 2 rend la même sortie » | les deux textes publiés, exécutés : **identiques** |
+  | « le banc affiche ceci » | **18 / 18, 0 écart** |
+  | prose ⇄ bloc de mesures | 2 478 des deux côtés |
+  | hors réseau | **0 requête distante, 0 exception** |
+
+  **Épreuve d'injection faite**, trois fautes d'un coup : un chiffre de la sortie (`42.10` → `42.19`), une constante du code publié (`REMISE_FIDELITE = 3` → `4`) et le chiffre de la prose (`2478` → `2500`). **Trois fautes vues** (4 messages), la première avec sa ligne exacte. Page restaurée **octet pour octet par réassemblage**.
+
+  **Trouvé par la preuve, et corrigé à la source** : le bloc de mesures portait **deux fois le même libellé** « commandes dont le total change » pour deux mesures différentes (l'exercice : 37 ; l'arrondi : 2 478), et le contrôle comparait la prose au mauvais chiffre. Libellés distingués, et la preuve ne cherche plus que dans sa section.
+
+  **E · CONTRÔLES.** `verif.js --rapide` **vert (21 étapes, 140,3 s)** · `verif-html.js --tous` **1 779 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` sur la page **6 mesures, 0 erreur, 0 avertissement** (aucun CSS neuf : les classes `.etude-*` d'A1 servent une troisième fois) · `node --check` sur les 8 fichiers JS neufs · 0 BOM, 0 mojibake, 0 URL de CDN · `search-index`/`search-lite` régénérés, **1 593 documents** (point fixe atteint en une passe).
+
+  🔵 **Toujours à A7** : aucune page du site ne pointe vers les quatre études.
 - [ ] **A5 · Lire un algorithme historique.** Un algorithme du domaine public (Dijkstra, Huffman, ou l'algorithme d'Euclide étendu — qui resservira en cryptographie), lu comme du code, pas comme une formule.
 - [ ] **A6 · Lire du code dans un langage qu'on ne connaît pas.** La compétence réelle : deviner ce que fait un programme Go ou Rust quand on ne fait que du Python. Ce qui se devine, ce qui ne se devine pas, et par quoi commencer.
 - [ ] **A7 · Le hub des études de cas** et les renvois depuis les cours concernés. Ajouter la page à la navigation et au catalogue.
