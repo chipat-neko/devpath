@@ -133,7 +133,40 @@ que le jour où on arrive à le changer sans le casser.
   **E · CONTRÔLES.** `verif.js --rapide` **vert (14 étapes, 294,9 s)** · `verif-html.js --tous` **1 777 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** (1 avertissement préexistant, doublon de QCM `zig`) · `verif-rendu.js` sur la page **6 mesures, 0 erreur** · `node --check` sur les 4 fichiers JS neufs + `tools/verif.js` · 0 BOM, 0 mojibake, 0 URL de CDN. `search-index` et `search-lite` régénérés : **67 → 68 pages transverses**, la page est donc trouvable par la recherche.
 
   🔵 **Ce qui reste à A7** : comme pour A1, **aucune page du site ne pointe encore vers cette étude** (vérifié : les seules mentions hors `tools/` sont dans `search-index` et `search-lite`). Le hub, la navigation et les renvois depuis les cours sont explicitement le sujet d'A7.
-- [ ] **A3 · Lire le code de ce site (2) — la recherche.** `js/recherche.js` et l'index généré : pourquoi un index pré-calculé, ce qu'il coûte, ce qu'il évite.
+- [x] **A3 · Lire le code de ce site (2) — la recherche.** ✅ **2026-09-02. L'étude nº 3 est écrite — et son vrai résultat est qu'elle DEMANDE À L'APPRENANT DE METTRE EN DÉFAUT LA MESURE QU'ELLE VIENT DE PUBLIER : le rapport annoncé passe de 61× à 45× quand on compte le travail oublié, mesuré en appliquant la correction, pas estimé.**
+
+  **A · CE QUI EST LIVRÉ**
+
+  | | |
+  |---|---|
+  | `pages/etude-recherche.html` | l'étude nº 3, **43 750 octets**, 6 sections ancrées, 9 blocs de code dont **exactement 1 exécutable** |
+  | `tools/etudes/recherche/mesures.js` | mesure l'index réel : taille des deux fichiers, clefs, couples, et **recalcule l'économie de l'encodage** en réécrivant la même entrée sous forme naïve |
+  | `tools/etudes/recherche/banc.js` | le banc publié : décode une **vraie entrée de l'index** avec la fonction `postings` extraite de `js/recherche.js`, puis compare balayage et index sur un corpus reproductible |
+  | `tools/etudes/recherche/assembler.js` | 4 repères de lignes vérifiés (début ET fin), banc exécuté, **modification appliquée et rejouée**, et refus de publier si le rapport ne change pas |
+  | `tools/preuves/etude-recherche.js` | la preuve, **23ᵉ étape de `verif.js`** hors mode rapide |
+
+  **Les chiffres publiés, tous mesurés** : index complet **3,96 Mo**, index réduit **767 Ko**, **1 592 documents**, **43 911 mots distincts**, **901 711 couples mot × leçon**. Sur l'entrée témoin (`hoisting`), l'encodage en écarts base 36 fait **38 % de moins** que des identifiants absolus en base 10.
+
+  **B · CE QUI EST PROUVÉ** — Chrome headless, `file://`, DNS coupé :
+
+  | affirmation | mesure |
+  |---|---|
+  | « ces extraits sont ceux de `js/recherche.js` » | **3 publiés / 3 retrouvés tels quels** |
+  | « la fonction du banc est celle du site » | `postings`, **18 lignes, identique** une fois l'indentation retirée |
+  | « voici ce qu'il affiche » | **25 lignes publiées / 25 rendues, 0 écart** |
+  | « le rapport tombe de 61× à 45× » | solution publiée appliquée au banc publié dans le navigateur : **61 → 45**, les deux chiffres |
+  | hors réseau | **0 requête distante**, 0 exception |
+
+  **Épreuve d'injection faite**, trois fautes d'un coup : un chiffre de la sortie (`61` → `70`), le rapport annoncé (`45` → `50`), et une valeur du décodage (`var prev = 0` → `1`). **Trois fautes vues**, la troisième signalée à la fois par les 6 lignes de leçons décalées et par le contrôle d'identité de `postings`.
+
+  **C · DEUX CHOSES TROUVÉES EN MESURANT, ET QUI ONT CHANGÉ LA PAGE**
+
+  1. **La page est indexée dans l'index dont elle parle — et il fallait prouver que la boucle converge.** Le mot témoin `hoisting` était dans 6 leçons ; depuis que cette étude l'emploie, il est dans **7**, la 7ᵉ étant la page elle-même (document nº 1543, vérifié dans `search-index.js`). Assembler la page change donc l'index, qui change les chiffres de la page. **Bouclé pour de vrai : assembler → régénérer → assembler… l'index redevient identique octet pour octet au 3ᵉ tour.** Le point fixe est atteint, il est publié dans la page avec sa date, et l'encadré qui l'explique enseigne la règle générale : *quand un outil produit une donnée dont il dépend, cherche le point fixe et prouve qu'il existe*.
+  2. **Le mot « document » au SINGULIER dans un commentaire français fait disparaître le bouton « Tester ».** `js/runner.js` refuse d'exécuter un bloc contenant `document`, `window`, `require`… et la regex ne demande pas de délimiteur de mot à gauche : « chaque mot de chaque document. » suffit. Mesuré au premier assemblage : **9 blocs, 0 exécutable** au lieu de 1. Le test de `runner.js` est désormais **recopié dans les deux assembleurs d'études**, qui refusent de publier un banc non exécutable — le piège ne peut plus passer en silence.
+
+  **D · CONTRÔLES.** `verif.js --rapide` **vert (14 étapes, 141,3 s)** · `verif-html.js --tous` **1 778 fichiers, 0 GRAVE, 0 ATTENTION** · `verif-donnees.js` **25 contrôles, 0 erreur** · `verif-rendu.js` sur la page **6 mesures, 0 erreur** (aucun CSS neuf : les classes `.etude-*` d'A1 ont resservi une deuxième fois) · `node --check` sur les 4 fichiers JS neufs · 0 BOM, 0 mojibake, 0 URL de CDN · `search-index`/`search-lite` au point fixe, **1 592 documents**.
+
+  🔵 **Toujours à A7** : aucune page du site ne pointe vers les trois études ; elles ne se rejoignent que par la recherche et par les liens qu'elles se font entre elles.
 - [ ] **A4 · Un programme mal écrit, et sa réécriture.** Le même besoin, deux fois : la version qui marche mais qu'on ne peut pas maintenir, puis la version propre. Nommer précisément ce qui change, sans jamais dire seulement « c'est plus propre ».
 - [ ] **A5 · Lire un algorithme historique.** Un algorithme du domaine public (Dijkstra, Huffman, ou l'algorithme d'Euclide étendu — qui resservira en cryptographie), lu comme du code, pas comme une formule.
 - [ ] **A6 · Lire du code dans un langage qu'on ne connaît pas.** La compétence réelle : deviner ce que fait un programme Go ou Rust quand on ne fait que du Python. Ce qui se devine, ce qui ne se devine pas, et par quoi commencer.

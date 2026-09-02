@@ -87,6 +87,17 @@ var banc = lireIci("banc.js")
 
 if (banc.indexOf("@@") !== -1) { console.log("✗ jeton non remplacé dans le banc"); process.exit(1); }
 
+/* ⚠️ js/runner.js refuse d'exécuter un bloc JavaScript contenant certains mots
+   (document, window, require…) : le bouton « Tester » disparaîtrait sans un mot
+   d'explication. Le mot « document » au singulier dans un commentaire français suffit
+   — c'est arrivé à l'étude nº 3. On recopie donc le test de runner.js ici. */
+var BROWSER_ONLY = /(?:^|[^\w$À-ɏ])(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename)(?![\w$À-ɏ])|require\s*\(|module\.exports|\bexports\.|\bglobalThis\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts/;
+var interdit = BROWSER_ONLY.exec(banc);
+if (interdit) {
+  console.log("✗ le banc contient « " + interdit[0].trim() + " » : runner.js n'y mettrait PAS de bouton « Tester ».");
+  process.exit(1);
+}
+
 /* Le banc est exécuté DANS LA FORME EXACTE où il sera publié : le fichier temporaire
    ci-dessous a le texte de la page, caractère pour caractère. */
 function executer(source, etiquette) {

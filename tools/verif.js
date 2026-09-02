@@ -200,6 +200,19 @@ if (!RAPIDE) {
     quoi: "etude de cas 2 : les extraits publies sont-ils ceux de js/lecon.js, et le banc rend-il sa sortie",
     lent: true,
   });
+  /* L'etude 3 publie en plus des CHIFFRES de mesure (un rapport avant/apres). Cette
+     etape rejoue la modification annoncee dans le navigateur et compare les deux
+     rapports, verifie que la fonction `postings` embarquee dans le banc est bien celle
+     de js/recherche.js, et recompare la sortie ligne a ligne. Epreuve d'injection
+     faite : trois fautes posees (un chiffre de la sortie, le rapport annonce, une
+     valeur du decodage), trois fautes vues. */
+  ETAPES.push({
+    nom: "etude-3",
+    fichier: "preuves/etude-recherche.js",
+    args: [],
+    quoi: "etude de cas 3 : le rapport publie est-il celui que la modification annoncee produit",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

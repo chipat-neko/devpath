@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Étude de cas 3 — Pourquoi un index pré-calculé — Syntaxe</title>
+    <meta name="description" content="La recherche de ce site, lue pour de vrai : @@N_MOTS@@ mots, @@N_POSTINGS@@ couples mot × leçon, et un encodage qui gagne @@GAIN_ENCODAGE@@ %. Ce qu'un index coûte, ce qu'il évite, et ce qu'il empêche — banc d'essai exécutable à l'appui." />
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg" />
+
+    <script src="../js/theme.js"></script>
+
+    <link rel="stylesheet" href="../css/fonts.css" />
+
+    <link rel="stylesheet" href="../css/variables.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/pages.css" />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../index.html" aria-label="Syntaxe — accueil">
+          <svg class="brand__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="26" height="26" rx="8" /><path d="M13 12 L9 16 L13 20" /><path d="M19 12 L23 16 L19 20" />
+          </svg>
+          <span>Syntaxe<span class="brand__dot" aria-hidden="true">.</span></span>
+        </a>
+        <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu de navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        </button>
+        <nav class="primary-nav" id="primary-nav" aria-label="Navigation principale">
+          <a href="../index.html">Accueil</a>
+          <a href="catalogue.html">Catalogue</a>
+          <a href="parcours.html">Parcours</a>
+          <a href="progression.html">Ma progression</a>
+        </nav>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle aria-label="Activer le thème sombre">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="contenu">
+      <noscript>
+        <p class="noscript-avis">
+          <strong>JavaScript est désactivé.</strong> Le texte de cette étude reste entièrement
+          lisible&nbsp;: extraits, mesures et explications sont écrits dans la page. Seul le bouton
+          «&nbsp;Tester&nbsp;» du banc d'essai a besoin de JavaScript.
+        </p>
+      </noscript>
+
+      <div class="page-head">
+        <div class="container">
+          <nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+            <ol class="breadcrumb">
+              <li><a href="../index.html">Accueil</a></li>
+              <li aria-current="page">Étude de cas&nbsp;3</li>
+            </ol>
+          </nav>
+          <p class="kicker">Lire le code des autres · Étude de cas nº&nbsp;3</p>
+          <h1>Pourquoi un index pré-calculé</h1>
+          <p class="hero__lead">
+            Ce site n'a pas de serveur. Pourtant, quand tu tapes un mot dans sa recherche, il
+            fouille le texte de <strong>@@N_DOCS@@ pages</strong> et répond avant que tu aies
+            fini de taper. Il n'y a là aucune magie&nbsp;: il y a une <strong>décision
+            d'architecture</strong>, prise une fois, qui a un coût, des limites, et des
+            conséquences qu'on peut mesurer. C'est ce que cette étude te fait lire — et exécuter.
+          </p>
+          <ul class="etude-meta">
+            <li><b>Les fichiers</b> <code>js/recherche.js</code>, <code>js/search-index.js</code></li>
+            <li><b>L'index</b> @@N_MOTS@@&nbsp;mots, @@N_POSTINGS@@&nbsp;couples</li>
+            <li><b>Poids</b> @@TAILLE_INDEX@@&nbsp;Mo, chargé seulement à la 1ʳᵉ recherche</li>
+            <li><b>Prérequis</b> tableaux, objets, un peu de complexité</li>
+          </ul>
+        </div>
+      </div>
+
+      <section class="section--tight">
+        <div class="container container--narrow">
+          <nav class="toc" aria-label="Sommaire de l'étude">
+            <p class="toc__title">Sommaire</p>
+            <ol>
+              <li><a href="#probleme">Le problème, et ses contraintes</a></li>
+              <li><a href="#lecture">La lecture guidée</a></li>
+              <li><a href="#banc">Le banc d'essai&nbsp;: compter, pas chronométrer</a></li>
+              <li><a href="#choix">Les décisions, nommées</a></li>
+              <li><a href="#modifier">À toi&nbsp;: mets ma mesure en défaut</a></li>
+              <li><a href="#emporter">Ce que tu emportes</a></li>
+            </ol>
+          </nav>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow prose">
+          <h2 id="probleme">1. Le problème, et ses contraintes</h2>
+          <p>
+            L'énoncé tient en une phrase&nbsp;: <em>trouver les leçons qui contiennent un mot,
+            parmi @@N_DOCS@@, sans serveur, sans base de données, et sans faire attendre le
+            visiteur.</em> Les trois contraintes sont ce qui rend le problème intéressant — sur un
+            serveur, on installerait un moteur de recherche et on n'y penserait plus.
+          </p>
+          <p>
+            Première chose à faire devant ce genre de code&nbsp;: <strong>regarder les chiffres
+            avant de lire les lignes</strong>. Un choix d'architecture ne se juge pas dans
+            l'abstrait, il se juge sur des ordres de grandeur.
+          </p>
+
+          <figure class="code-block" data-file="node tools/etudes/recherche/mesures.js" data-runner="skip"><pre><code class="language-text">@@SORTIE_MESURES@@</code></pre></figure>
+          <p class="code-caption">
+            Mesuré au moment où cette page a été assemblée&nbsp;: taille réelle des fichiers,
+            nombre réel de clefs, et économie recalculée sur une vraie entrée de l'index.
+          </p>
+
+          <p>
+            Retiens trois nombres. <strong>@@N_MOTS@@ mots distincts</strong>&nbsp;: c'est ce que
+            le moteur devra parcourir à chaque recherche. <strong>@@N_POSTINGS@@ couples mot ×
+            leçon</strong>&nbsp;: c'est le vrai volume de l'index, et la raison pour laquelle son
+            encodage compte. <strong>@@TAILLE_INDEX@@ Mo</strong>&nbsp;: c'est ce qu'il faudrait
+            télécharger pour chercher — d'où un deuxième index, réduit à
+            @@TAILLE_LITE@@&nbsp;Ko, que la palette clavier charge d'emblée.
+          </p>
+
+          <div class="etude-questions">
+            <p>Avant de continuer, réponds-toi à ces quatre questions</p>
+            <ol>
+              <li>Sans index, combien de mots faudrait-il examiner pour répondre à une recherche&nbsp;?</li>
+              <li>L'index doit bien être construit&nbsp;: qui paie cette construction, et quand&nbsp;?</li>
+              <li>Pourquoi deux index — un de @@TAILLE_INDEX@@&nbsp;Mo et un de @@TAILLE_LITE@@&nbsp;Ko — plutôt qu'un seul&nbsp;?</li>
+              <li>À ton avis, chercher «&nbsp;dex&nbsp;» trouve-t-il les leçons qui parlent d'<em>index</em>&nbsp;?</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow prose">
+          <h2 id="lecture">2. La lecture guidée</h2>
+
+          <div class="etude-partie">
+            <div class="etude-partie__head">
+              <span class="etude-partie__num" aria-hidden="true">1</span>
+              <h3 class="etude-partie__titre">L'en-tête : seize lignes qui valent le fichier entier</h3>
+              <span class="etude-partie__lignes">lignes 1 à 16</span>
+            </div>
+            <figure class="code-block" data-file="js/recherche.js" data-runner="skip"><pre><code class="language-javascript">@@EXTRAIT_ENTETE@@</code></pre></figure>
+            <p>
+              <strong>Lis ce bloc deux fois.</strong> Il ne décrit pas ce que fait le code — il
+              décrit <em>ce qui a été essayé avant</em>, ce que ça coûtait, et ce qu'on a accepté de
+              perdre. Trois informations qu'aucune lecture du code ne donnerait&nbsp;:
+            </p>
+            <ul>
+              <li>
+                <strong>Un chiffre d'avant&nbsp;:</strong> l'ancien index embarquait le texte
+                intégral — «&nbsp;16&nbsp;Mo, 104&nbsp;Mo de RAM&nbsp;». On sait donc quel problème
+                la version actuelle résout, et on ne proposera pas de revenir en arrière.
+              </li>
+              <li>
+                <strong>Une équivalence démontrée&nbsp;:</strong> «&nbsp;un terme purement
+                alphanumérique est sous-chaîne du texte d'une leçon <em>si et seulement si</em> il
+                est sous-chaîne d'un mot indexé&nbsp;». C'est ce raisonnement qui autorise à jeter
+                le texte intégral. Sans lui, le changement serait un pari&nbsp;; avec lui, c'est une
+                démonstration.
+              </li>
+              <li>
+                <strong>Une «&nbsp;LIMITE ASSUMÉE&nbsp;»&nbsp;:</strong> un terme contenant un
+                séparateur (<code>put_line</code>) est redécoupé, et rend un <em>sur-ensemble</em>
+                des résultats attendus. L'auteur ne cache pas le défaut&nbsp;: il le nomme, et
+                précise dans quel sens il penche.
+              </li>
+            </ul>
+            <div class="callout callout--tip">
+              <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0-3.6 10.8V17h7.2v-3.2A6 6 0 0 0 12 3Z" /></svg>
+              <div class="callout__body">
+                <p class="callout__title">Ce qu'on cherche dans un en-tête de fichier</p>
+                <p>
+                  Pas «&nbsp;à quoi sert ce fichier&nbsp;» — le nom le dit souvent. On y cherche
+                  <strong>les contraintes</strong> (ici&nbsp;: aucun <code>fetch</code>),
+                  <strong>l'historique</strong> (ce qui a été remplacé et pourquoi) et
+                  <strong>les limites connues</strong>. Un en-tête qui contient ces trois choses
+                  t'épargne une demi-journée. Un en-tête qui n'a que «&nbsp;Gère la
+                  recherche&nbsp;» ne t'apprend rien&nbsp;: passe.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="etude-partie">
+            <div class="etude-partie__head">
+              <span class="etude-partie__num" aria-hidden="true">2</span>
+              <h3 class="etude-partie__titre">Ne pas charger ce dont on n'a pas encore besoin</h3>
+              <span class="etude-partie__lignes">lignes 57 à 68</span>
+            </div>
+            <figure class="code-block" data-file="js/recherche.js" data-runner="skip"><pre><code class="language-javascript">@@EXTRAIT_PARESSEUX@@</code></pre></figure>
+            <p>
+              L'index pèse @@TAILLE_INDEX@@&nbsp;Mo. Le charger avec la page rendrait la page de
+              recherche la plus lourde du site — <em>alors qu'à l'arrivée le champ est vide</em>.
+              Il est donc récupéré à la <strong>première recherche réelle</strong>, en créant un
+              <code>&lt;script&gt;</code>&nbsp;: une technique qui marche en <code>file://</code>,
+              là où un <code>fetch</code> serait refusé par le navigateur.
+            </p>
+            <p>
+              <strong>Les quatre lignes à ne pas manquer</strong> sont celles qui gèrent les
+              <em>réentrances</em>&nbsp;: <code>idxLoading</code>, <code>idxFailed</code>, et le
+              <code>setTimeout</code> qui remet l'appelant dans la file. Sans elles, taper vite
+              trois lettres lancerait trois téléchargements du même fichier. Quand tu lis du code
+              asynchrone, <strong>cherche toujours ce qui se passe si la même fonction est
+              appelée deux fois avant la fin de la première</strong>&nbsp;: c'est là que se cachent
+              les bugs les plus difficiles à reproduire.
+            </p>
+          </div>
+
+          <div class="etude-partie">
+            <div class="etude-partie__head">
+              <span class="etude-partie__num" aria-hidden="true">3</span>
+              <h3 class="etude-partie__titre">L'index, et pourquoi il ne ressemble à rien de lisible</h3>
+              <span class="etude-partie__lignes">lignes 118 à 138</span>
+            </div>
+            <p>
+              Voici une entrée réelle de <code>js/search-index.js</code> — celle du mot
+              «&nbsp;@@TEMOIN@@&nbsp;», présent dans @@N_TEMOIN@@ leçons&nbsp;:
+            </p>
+            <figure class="code-block" data-file="search-index.js — une entrée" data-runner="skip"><pre><code class="language-text">"@@TEMOIN@@": "@@BRUT@@"</code></pre></figure>
+            <p>
+              Illisible, et c'est voulu. Chaque nombre est un <strong>écart</strong> par rapport à
+              la leçon précédente, écrit en <strong>base 36</strong>, suivi éventuellement d'un
+              point et du nombre d'occurrences. Écrite naïvement — identifiants absolus, base 10 —
+              la même information donnerait&nbsp;:
+            </p>
+            <figure class="code-block" data-file="la même chose, naïvement" data-runner="skip"><pre><code class="language-text">"@@TEMOIN@@": "@@NAIF@@"</code></pre></figure>
+            <p>
+              <strong>@@GAIN_ENCODAGE@@&nbsp;% de moins</strong> sur cette entrée, et il y en a
+              @@N_MOTS@@. Le décodage tient en vingt lignes, que le banc d'essai de la section
+              suivante exécute sur cette entrée précise. Deux détails y méritent l'œil&nbsp;:
+              <code>POST</code> mémorise le résultat (on ne redécode jamais deux fois le même mot),
+              et il est créé par <code>Object.create(null)</code> — parce qu'un mot indexé peut
+              très bien s'appeler <code>constructor</code>.
+            </p>
+          </div>
+
+          <div class="etude-partie">
+            <div class="etude-partie__head">
+              <span class="etude-partie__num" aria-hidden="true">4</span>
+              <h3 class="etude-partie__titre">Le cœur : parcourir les mots, pas les textes</h3>
+              <span class="etude-partie__lignes">lignes 186 à 200</span>
+            </div>
+            <figure class="code-block" data-file="js/recherche.js" data-runner="skip"><pre><code class="language-javascript">@@EXTRAIT_INTERSECT@@</code></pre></figure>
+            <p>
+              Toute l'idée de l'index tient dans la boucle
+              <code>for (var wi = 0; wi &lt; WORDS.length; wi++)</code>&nbsp;: on ne regarde plus
+              le <em>texte</em> des leçons, seulement les <strong>@@N_MOTS@@ clefs</strong> de
+              l'index. Pour chaque clef dont le terme est sous-chaîne, on récupère d'un coup la
+              liste des leçons concernées.
+            </p>
+            <p>
+              Le <code>ti === 0</code> est le genre de condition qu'on lit trois fois&nbsp;: le
+              score de fréquence n'est accumulé que pour le <strong>premier</strong> terme de la
+              requête. C'est un choix de classement, pas une optimisation — et il est écrit là,
+              au milieu de la boucle, sans en-tête ni fanfare. <strong>Beaucoup de décisions
+              importantes ressemblent à ça&nbsp;: une condition de trois caractères.</strong>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow prose">
+          <h2 id="banc">3. Le banc d'essai : compter, pas chronométrer</h2>
+          <p>
+            On veut savoir ce que l'index fait gagner. La tentation est de chronométrer&nbsp;: c'est
+            une mauvaise idée. Un temps dépend de la machine, du navigateur, de ce qui tourne à
+            côté, et il change à chaque exécution — <strong>on ne peut ni le publier, ni le
+            vérifier</strong>. On compte donc des <strong>opérations</strong>, qui sont les mêmes
+            partout.
+          </p>
+          <p>
+            Le programme ci-dessous fait trois choses&nbsp;: <strong>(A)</strong> il décode la vraie
+            entrée d'index vue plus haut, avec la fonction extraite de
+            <code>js/recherche.js</code>&nbsp;; <strong>(B)</strong> il compare, sur un corpus
+            reproductible, ce que coûte une recherche <em>sans</em> puis <em>avec</em> index&nbsp;;
+            <strong>(C)</strong> il met en évidence ce que la recherche par sous-chaîne apporte —
+            et ce qu'elle interdit.
+          </p>
+
+          <!-- SEUL bloc exécutable de la page. -->
+          <figure class="code-block" data-file="banc d'essai — postings, extraite de js/recherche.js"><pre><code class="language-javascript">@@BANC@@</code></pre></figure>
+
+          <p>Voici ce qu'il affiche&nbsp;:</p>
+          <figure class="code-block" data-file="sortie" data-runner="skip"><pre><code class="language-text">@@SORTIE_BANC@@</code></pre></figure>
+          <p class="code-caption">
+            Sortie obtenue en exécutant le programme ci-dessus, dans la forme exacte où il est
+            publié.
+          </p>
+
+          <div class="callout callout--warning">
+            <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
+            <div class="callout__body">
+              <p class="callout__title">Une page qui se retrouve dans l'index dont elle parle</p>
+              <p>
+                Regarde la dernière leçon listée en&nbsp;A&nbsp;: <strong>c'est cette page-ci</strong>.
+                Elle emploie le mot «&nbsp;@@TEMOIN@@&nbsp;» pour l'expliquer, donc l'indexeur l'y
+                trouve, donc elle entre dans la liste qu'elle publie. Ce n'est pas un bug&nbsp;: c'est
+                une <strong>boucle</strong> — la page décrit un index qui la contient.
+              </p>
+              <p>
+                Ce genre de boucle doit converger, sinon l'outil qui fabrique la page et celui qui
+                fabrique l'index se relanceraient l'un l'autre indéfiniment. Ici elle converge&nbsp;:
+                assembler la page, régénérer l'index, réassembler — au bout de <strong>trois
+                tours</strong> (mesuré le 2&nbsp;septembre&nbsp;2026), l'index régénéré est
+                identique au précédent, octet pour octet. Ce point d'équilibre a été vérifié en
+                bouclant vraiment, pas supposé. <strong>Chaque fois que tu vois un
+                outil qui produit une donnée dont il dépend, cherche le point fixe et prouve
+                qu'il existe.</strong>
+              </p>
+            </div>
+          </div>
+
+          <h3>Ce que la mesure apprend</h3>
+          <p>
+            <strong>(1) L'index ne supprime pas le travail, il le déplace.</strong> Construire
+            l'index coûte exactement un balayage complet du corpus — le même que celui qu'on
+            voulait éviter. La différence est <em>qui paie</em>&nbsp;: la construction se fait une
+            fois, chez le développeur (ici <code>tools/build-index.js</code>), et jamais chez le
+            visiteur. C'est la réponse à la deuxième question du début.
+          </p>
+          <p>
+            <strong>(2) L'amortissement est immédiat.</strong> Le banc le dit&nbsp;: dès la
+            troisième recherche, l'index a remboursé sa construction. Sur un site où la recherche
+            sert des milliers de fois pour une construction, le calcul n'est même pas serré.
+          </p>
+          <p>
+            <strong>(3) La sous-chaîne coûte le même prix que le préfixe — et rend bien plus.</strong>
+            Chercher «&nbsp;dex&nbsp;» trouve les leçons qui parlent d'<em>index</em>&nbsp;; un
+            moteur à préfixes n'en trouverait aucune. C'est la réponse à la quatrième question.
+            Mais ce confort a un prix caché, et il est <em>structurel</em>&nbsp;: on ne peut pas
+            trier les clefs pour aller plus vite. Un préfixe se cherche par dichotomie sur une
+            liste triée&nbsp;; une sous-chaîne, non — il faut regarder <strong>toutes</strong> les
+            clefs, à chaque terme, à chaque frappe. Voilà pourquoi le moteur parcourt
+            @@N_MOTS@@ mots plutôt que d'en consulter une vingtaine.
+          </p>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow prose">
+          <h2 id="choix">4. Les décisions, nommées</h2>
+          <table class="etude-choix">
+            <thead>
+              <tr><th scope="col">La décision</th><th scope="col">Pourquoi</th><th scope="col">Ce que l'autre choix coûterait</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Un index pré-calculé plutôt qu'une recherche à la volée</th>
+                <td data-libelle="Pourquoi">Le travail est fait une fois, hors ligne, au lieu d'être refait à chaque frappe de chaque visiteur.</td>
+                <td data-libelle="L'autre choix">Balayer le texte des @@N_DOCS@@ pages à chaque recherche — et devoir embarquer ce texte, ce qui était le cas avant&nbsp;: 16&nbsp;Mo.</td>
+              </tr>
+              <tr>
+                <th scope="row">Jeter le texte intégral, ne garder que les mots</th>
+                <td data-libelle="Pourquoi">Un terme alphanumérique est sous-chaîne d'un texte si et seulement s'il l'est d'un de ses mots. L'équivalence est démontrée dans l'en-tête.</td>
+                <td data-libelle="L'autre choix">Garder le texte pour rien&nbsp;: 16&nbsp;Mo au lieu de @@TAILLE_INDEX@@&nbsp;Mo, pour le <em>même</em> ensemble de résultats.</td>
+              </tr>
+              <tr>
+                <th scope="row">Écarts en base 36 plutôt qu'identifiants en base 10</th>
+                <td data-libelle="Pourquoi">@@GAIN_ENCODAGE@@&nbsp;% de moins sur l'entrée témoin, multipliés par @@N_MOTS@@ mots.</td>
+                <td data-libelle="L'autre choix">Un index nettement plus gros, pour une lisibilité dont personne ne profite&nbsp;: ce fichier n'est jamais lu par un humain, il est <em>généré</em>.</td>
+              </tr>
+              <tr>
+                <th scope="row">Deux index : un complet, un réduit</th>
+                <td data-libelle="Pourquoi">La palette clavier doit répondre tout de suite&nbsp;; la recherche plein-texte peut attendre le premier mot tapé.</td>
+                <td data-libelle="L'autre choix">Un seul index complet chargé partout&nbsp;: @@TAILLE_INDEX@@&nbsp;Mo sur chaque page, pour un usage occasionnel.</td>
+              </tr>
+              <tr>
+                <th scope="row">Chercher par sous-chaîne</th>
+                <td data-libelle="Pourquoi">L'apprenant tape un fragment («&nbsp;dex&nbsp;», «&nbsp;async&nbsp;») et veut trouver&nbsp;; c'est le comportement attendu d'une recherche de site.</td>
+                <td data-libelle="L'autre choix">Le préfixe permettrait une recherche dichotomique sur des clefs triées — beaucoup moins d'examens — mais ne trouverait rien pour «&nbsp;dex&nbsp;».</td>
+              </tr>
+              <tr>
+                <th scope="row">Charger l'index à la première recherche</th>
+                <td data-libelle="Pourquoi">À l'arrivée sur la page, le champ est vide&nbsp;: l'index ne sert à rien.</td>
+                <td data-libelle="L'autre choix">Faire de la page de recherche la plus lourde du site pour un visiteur qui, peut-être, ne cherchera rien.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow prose">
+          <h2 id="modifier">5. À toi : mets ma mesure en défaut</h2>
+          <p>
+            Les études précédentes te demandaient de modifier un programme. Celle-ci te demande
+            quelque chose de plus utile&nbsp;: <strong>prendre en défaut la mesure que je viens de
+            publier</strong>. Elle est incomplète, et tu peux le prouver en une ligne.
+          </p>
+
+          <div class="exercise">
+            <div class="exercise__head">
+              <span class="exercise__num">Modification</span>
+              <span class="exercise__level">Guidé</span>
+            </div>
+            <p>
+              Le banc annonce «&nbsp;@@EXAMENS_AVANT@@ clefs examinées&nbsp;» pour la recherche avec
+              index. <strong>Ce n'est pas tout le travail fait.</strong> Relis
+              <code>parIndex</code>&nbsp;: quand une clef correspond, la fonction parcourt en plus
+              sa liste de documents — et ce parcours-là n'est compté nulle part.
+            </p>
+            <p>
+              Ajoute-le au compteur. Puis, <strong>avant d'exécuter</strong>, écris ta prévision&nbsp;:
+              le rapport annoncé (@@RAPPORT_AVANT@@&nbsp;fois moins d'examens) va-t-il rester le
+              même, un peu baisser, ou s'effondrer&nbsp;?
+            </p>
+            <details>
+              <summary>Voir la solution et la mesure</summary>
+              <p>Une seule ligne à changer, dans <code>parIndex</code>&nbsp;:</p>
+              <figure class="code-block" data-file="solution" data-runner="skip"><pre><code class="language-javascript">@@SOLUTION@@</code></pre></figure>
+              <p>
+                Mesure faite en l'appliquant réellement au banc publié, puis en le rejouant&nbsp;:
+                les examens passent de <strong>@@EXAMENS_AVANT@@ à @@EXAMENS_APRES@@</strong>, et
+                le rapport tombe de <strong>@@RAPPORT_AVANT@@× à @@RAPPORT_APRES@@×</strong>.
+              </p>
+              <p>
+                <strong>La conclusion tient, le chiffre non.</strong> L'index reste massivement
+                gagnant — mais «&nbsp;@@RAPPORT_AVANT@@ fois moins&nbsp;» était un chiffre
+                <em>flatteur</em>, obtenu en ne comptant que la moitié du travail. C'est exactement
+                comme cela qu'on publie de bonne foi une mesure fausse&nbsp;: on compte ce qu'on
+                avait en tête, pas ce que le programme fait.
+              </p>
+              <p>
+                Et l'écart grandit avec la popularité du terme&nbsp;: plus un mot est fréquent, plus
+                sa liste de documents est longue. Essaie donc de remplacer
+                <code>"index"</code> par un terme très courant du vocabulaire du banc, et regarde le
+                rapport se resserrer encore.
+              </p>
+            </details>
+          </div>
+
+          <div class="callout callout--more">
+            <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            <div class="callout__body">
+              <p class="callout__title">Trois autres pistes, sans solution</p>
+              <p>
+                <strong>(a)</strong> Fais varier <code>PAR_DOC</code> (la longueur des documents) et
+                observe ce que devient le seuil d'amortissement.
+                <strong>(b)</strong> Ajoute un second terme et l'intersection des deux ensembles,
+                comme le fait le vrai moteur&nbsp;: le coût double-t-il&nbsp;?
+                <strong>(c)</strong> Plus exigeant&nbsp;: trie les clefs et écris une recherche
+                dichotomique <em>par préfixe</em>. Compte les examens, et mesure ce que tu as gagné
+                — puis relis la colonne de droite du tableau ci-dessus pour dire ce que tu as perdu.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow prose">
+          <h2 id="emporter">6. Ce que tu emportes</h2>
+          <dl class="glossary">
+            <dt>Regarder les ordres de grandeur avant les lignes</dt>
+            <dd>
+              @@N_DOCS@@ documents, @@N_MOTS@@ mots, @@TAILLE_INDEX@@&nbsp;Mo&nbsp;: ces trois
+              nombres expliquent presque toutes les décisions du fichier. On les obtient en
+              quelques minutes, avant de lire.
+            </dd>
+            <dt>Lire l'en-tête comme un compte rendu de décision</dt>
+            <dd>
+              Ce qui a été essayé, ce que ça coûtait, ce qu'on accepte de perdre. Un en-tête qui
+              contient un chiffre d'avant et une «&nbsp;limite assumée&nbsp;» vaut dix pages de
+              documentation.
+            </dd>
+            <dt>Un index déplace le travail, il ne le supprime pas</dt>
+            <dd>
+              La question n'est jamais «&nbsp;est-ce plus rapide&nbsp;?&nbsp;» mais «&nbsp;qui paie,
+              et combien de fois&nbsp;?&nbsp;». La réponse tient dans le seuil d'amortissement.
+            </dd>
+            <dt>Compter des opérations, pas des millisecondes</dt>
+            <dd>
+              Un compte d'opérations est reproductible, publiable et vérifiable&nbsp;; un temps ne
+              l'est pas. C'est aussi la seule mesure qu'on peut inscrire dans un test.
+            </dd>
+            <dt>Se demander ce que sa propre mesure ne compte pas</dt>
+            <dd>
+              Ici, le parcours des listes de documents était oublié&nbsp;: la conclusion tenait, le
+              chiffre était faux de moitié. Une mesure qu'on n'a pas cherché à mettre en défaut
+              n'est qu'une opinion chiffrée.
+            </dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="section--tight">
+        <div class="container container--narrow">
+          <div class="related-section">
+            <h2 class="toc__title">Pour continuer</h2>
+            <div class="related-grid">
+              <a class="related-card" href="etude-moteur-exos.html">
+                <div class="related-card__body">
+                  <p class="related-card__title">Étude de cas nº 2 — entrer dans un gros fichier</p>
+                  <p class="related-card__note">La méthode de lecture dont celle-ci se sert sans la réexpliquer.</p>
+                </div>
+                <span class="related-card__arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="related-card" href="etude-journal.html">
+                <div class="related-card__body">
+                  <p class="related-card__title">Étude de cas nº 1 — un programme entier</p>
+                  <p class="related-card__note">152 lignes lues d'un bout à l'autre, pour commencer.</p>
+                </div>
+                <span class="related-card__arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="related-card" href="algo/cours.html">
+                <div class="related-card__body">
+                  <p class="related-card__title">Cours Algorithmique</p>
+                  <p class="related-card__note">Complexité, tables de hachage&nbsp;: le socle de tout ce qui précède.</p>
+                </div>
+                <span class="related-card__arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="related-card" href="recherche.html">
+                <div class="related-card__body">
+                  <p class="related-card__title">La recherche du site</p>
+                  <p class="related-card__note">Le code que tu viens de lire, à l'œuvre. Essaie «&nbsp;dex&nbsp;».</p>
+                </div>
+                <span class="related-card__arrow" aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="site-footer__bottom">
+          <span>© <span data-year>2026</span> Syntaxe. Projet de démonstration.</span>
+          <span><a href="catalogue.html">Voir aussi&nbsp;: le catalogue des cours →</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../js/main.js" defer></script>
+    <script src="../js/logos.js" defer></script>
+    <script src="../js/runner.js" defer></script>
+  </body>
+</html>
