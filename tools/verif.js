@@ -272,6 +272,33 @@ if (!RAPIDE) {
      n'existent dans aucun fichier HTML, et aucun controle de source ne peut les voir.
      Cette etape ouvre les pages pour de bon -- y compris DEUX COURS TEMOINS qui ne
      doivent porter aucun encart, sans quoi un encart pose partout passerait pour vert. */
+  /* LE VISUALISEUR (phase B) n'etait dans AUCUN mode de cette chaine : ni --strict
+     ni --complet ne l'ouvraient. Trois preuves l'eprouvent, et elles entrent ici.
+     La premiere pilote les 26 exemples par le SELECTEUR ; la deuxieme verifie que
+     les 19 lecons liees menent vraiment quelque part ; la troisieme, la seule qui
+     suive le chemin REEL de l'apprenant, ouvre la page a neuf sur execution.html#<id>
+     et deroule chaque exemple jusqu'au dernier pas, reseau coupe. */
+  ETAPES.push({
+    nom: "vexec  ",
+    fichier: "verif-execution.js",
+    args: [],
+    quoi: "visualiseur : les 26 exemples pilotes par le selecteur, pas par pas",
+    lent: true,
+  });
+  ETAPES.push({
+    nom: "vexlien",
+    fichier: "verif-execution-liens.js",
+    args: [],
+    quoi: "visualiseur : les 19 lecons liees, leurs 53 liens et 6 temoins negatifs",
+    lent: true,
+  });
+  ETAPES.push({
+    nom: "vexancr",
+    fichier: "preuves/execution-ancres.js",
+    args: [],
+    quoi: "visualiseur : les 26 exemples ouverts PAR L'ANCRE et deroules jusqu'au bout",
+    lent: true,
+  });
   ETAPES.push({
     nom: "etudes-hub",
     fichier: "preuves/etudes-hub.js",

@@ -1047,7 +1047,66 @@ Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieil
   - `pages/offensive/lecon-07.html` · `cout.txt` : **dépassement du délai de 10 s** dans le bac à sable `vm` — le piège connu (le `vm` peut être dix fois plus lent que le navigateur), donc probablement pas une faute de contenu, mais un bloc **non jugé** en pratique.
 
   Aucune des deux ne touche les mathématiques, donc aucune n'entre dans F2 ; les deux sont reportées à **F5**, avec la question qui les commande : **faut-il faire entrer `verif-sorties` dans la chaîne ?** Tant qu'il n'y est pas, 449 blocs de sortie du site ne sont rejoués que si quelqu'un y pense.
-- [ ] **F3 · Le visualiseur, éprouvé.** Chaque exemple pré-chargé s'ouvre et se déroule jusqu'au bout, réseau coupé.
+- [x] **F3 · Le visualiseur, éprouvé.** ✅ **2026-09-03. Les 26 exemples ouverts PAR LEUR ANCRE — le chemin réel de l'apprenant, celui qu'aucun outil ne suivait — et déroulés jusqu'au dernier pas, réseau coupé : 26 chargements neufs, 960 pas, 0 problème. Et une découverte de méthode : la première version de la preuve croyait recharger la page et ne le faisait pas.**
+
+  **MESURE DE DÉPART, REPRODUITE.** Les trois outils de la phase B sont verts : `verif-execution` **26 exemples, 1 040 pas, 5 200 comparaisons, 0 problème** · `verif-execution-liens` **19 leçons, 53 liens, 6 témoins négatifs, 0 problème** (15 s). Le point n'était donc pas « réparer le visualiseur ». Il était de mesurer **ce que ces verts ne couvrent pas** — et la réponse est nette.
+
+  **A · LE TROU : PERSONNE N'OUVRAIT LA PAGE COMME UN APPRENANT.** `verif-execution` charge la page **une fois**, puis change la valeur d'un `<select>` 26 fois. C'est le chemin de quelqu'un qui est déjà là. Or les 19 leçons liées pointent vers `execution.html#<id>` : l'apprenant arrive **par une ancre, sur une page qui vient de se charger**, et ce chemin passe par un autre code (`chargerAncre()`), dépendant de l'ordre dans lequel la page monte. `verif-execution-liens` n'en éprouvait que **3 ancres sur 26**, et il vérifiait que le lien menait quelque part — jamais que ce quelque part **se déroulait**.
+
+  **B · CE QUI EST LIVRÉ.** `tools/preuves/execution-ancres.js` (Node pur, client CDP maison, Chrome sans fenêtre, `file://`, `--host-resolver-rules=MAP * ~NOTFOUND`). Pour **chacun des 26 exemples** :
+  1. la page est ouverte **à neuf** sur `execution.html#<id>` ;
+  2. le programme chargé est le bon, comparé **caractère par caractère** à la source du fichier d'exemples — le sélecteur seul ne prouve rien, il peut afficher un nom sans que le code suive ;
+  3. la page annonce « pas 1 sur N » avec le N que le moteur recalcule dans Node, et « Précédent » y est désactivé ;
+  4. « Tout dérouler » atteint le **dernier** pas, « Suivant » s'y désactive, et la sortie affichée est **exactement** celle du programme ;
+  5. un exemple qui doit échouer affiche bien son erreur ;
+  6. le chemin **sans rechargement** (retour dans l'historique, second lien d'une même leçon) est éprouvé sur les **25** transitions, pas sur 3 ;
+  7. une ancre inconnue ne casse rien — et les **deux** situations sont distinguées, parce qu'elles n'appellent pas la même bonne réponse : à l'**ouverture**, la page doit retomber sur le premier exemple ; **en cours de route**, elle doit **garder** l'exemple en place, remplacer le travail de l'apprenant serait pire que ne rien faire.
+
+  **C · LE PIÈGE QUI A FAILLI RENDRE LA PREUVE VIDE.** La première version enchaînait `Page.navigate` vers `execution.html#a`, puis `#b`, puis `#c`. **Deux URL qui ne diffèrent que par leur fragment ne rechargent rien** : le navigateur se contente d'un `hashchange`. La boucle éprouvait donc le point 6 en croyant éprouver le point 1, et les 26 « chargements » n'en étaient pas un seul. Corrigé en passant par `about:blank` — et surtout **contrôlé** : un témoin `window.__dejaVu` est posé dans le document après chaque mesure, et **s'il survit à la navigation suivante, la mesure est refusée**. Compteur ajouté au bilan : **chargements NEUFS 26 / 26**. C'est la même famille d'erreur que celles que ce chantier traque — un outil qui mesure autre chose que ce qu'il annonce, et qui reste vert.
+
+  L'**attente est un état, jamais une durée** : sondage toutes les 100 ms jusqu'à 15 s que le sélecteur désigne l'exemple attendu **et** que la position soit lisible. C'est la leçon de F1, appliquée dès l'écriture.
+
+  **D · MESURES** (`node tools/preuves/execution-ancres.js`) :
+
+  | | |
+  |---|---|
+  | chargements neufs de la page | **26 / 26** |
+  | exemples ouverts par leur ancre | **26 / 26**, code chargé identique à l'octet |
+  | déroulés jusqu'au dernier pas | **23** (les 3 autres sont les exemples qui doivent échouer, et ils affichent leur erreur) |
+  | pas parcourus | **960** |
+  | lignes de sortie comparées au moteur | **74**, 0 écart |
+  | changements d'ancre sans rechargement | **25 / 25** |
+  | requêtes réseau | **407**, dont **0** hors `file://` |
+  | erreurs de console | **0** |
+  | problèmes | **0** |
+
+  Les 407 requêtes valent d'être notées : `verif-execution` n'en comptait que **15**, parce qu'il ne chargeait la page qu'une fois. Le passage de 15 à 407 est lui-même la preuve que les rechargements sont réels — et **aucune** ne sort de `file://`.
+
+  **E · L'ÉPREUVE.** `tools/preuves/execution-ancres-mutations.js` pose **5 fautes** dans `js/execution.js`, chacune visant **une** affirmation de la preuve et une seule : l'ancre n'est plus lue à l'ouverture · l'ancre choisit le bon nom mais charge le mauvais programme · `hashchange` n'est plus écouté · une ancre inconnue efface le travail en cours · « Tout dérouler » s'arrête un pas trop tôt. **5 posées, 5 VUES, 0 passée inaperçue**, chacune rougissant le point qu'elle visait, et le fichier relu après chaque restauration.
+
+  **F · LE VISUALISEUR ENTRE DANS LA CHAÎNE — il n'y était pas du tout.** Constat fait en câblant : **aucun** des outils de la phase B n'était dans un mode de `verif.js`, ni `--strict` ni `--complet` (les 28 étapes de F1 se comptent sans eux). Trois étapes ajoutées hors mode rapide : `vexec` (26 exemples au sélecteur), `vexlien` (19 leçons liées), `vexancr` (26 ancres déroulées). La chaîne passe de **17 à 20 vérificateurs** hors `--rapide`.
+
+  **CE QUI N'A PAS ÉTÉ FAIT, ET POURQUOI.** Les **deux campagnes de mutations** du visualiseur (`verif-execution-mutations.js`, 12 fautes, et `execution-ancres-mutations.js`, 5 fautes) restent **hors de la chaîne**, comme elles l'étaient. La raison est chiffrée et non idéologique : une faute qui casse le chargement fait expirer 26 attentes d'état de 15 s, donc chaque exécution mutée dure des minutes et la campagne complète a pris **environ 50 minutes** ce réveil. C'est une preuve qu'on relance quand on touche `js/execution.js`, pas à chaque commit. Le compromis à trancher un jour — raccourcir le délai d'attente au risque d'un verdict qui dépend de la charge, exactement ce que F1 a corrigé ailleurs — est reporté à **F5**.
+
+  **G · ET LE CÂBLAGE A IMMÉDIATEMENT PAYÉ : `verif-execution.js` rendait un verdict qui dépendait de la charge de la machine.** Première chaîne complète après l'ajout — 20 vérificateurs, 850 s — `vexec` **SIGNALE, en 4,4 s** au lieu des ~100 s qu'il met seul, avec **7 alertes** :
+
+  ```
+  - le selecteur montre 0 exemple(s), le fichier en declare 26
+  - compte / fonctions / conditions : la position affichee est illisible (« — »)
+  - objet : la page annonce 18 pas, le moteur en calcule 25
+  - objet : les variables affichees different de celles du moteur
+  - objet : au dernier pas la sortie affichee differe de celle du moteur
+  ```
+
+  **Aucune de ces sept alertes n'existait dans le site.** Lancé seul juste après, le même outil rend **0 problème**. La cause est la même qu'en F1 pour `verif-stockage`, et elle se lit dans les chiffres : l'outil attendait des **durées fixes** — 1 500 ms après le rechargement, 120 ms après un changement d'exemple, 80 ms après « Tout dérouler ». Ces délais ont tenu deux chantiers parce qu'il tournait seul ; en **30ᵉ position** d'une chaîne qui pilotait Chrome depuis dix minutes, la page n'avait pas fini de monter, le sélecteur était encore vide, et un exemple affichait l'état du précédent. La preuve chiffrée du décrochage : **942 pas comparés au lieu de 1 040**.
+
+  **Corrigé de la même façon** : un `sonder()` qui interroge la page toutes les 100 ms jusqu'à 15 s, et **cinq** attentes converties en états — la page est montée quand le sélecteur porte ses 26 options ; l'exemple est chargé quand le sélecteur le désigne **et** que la position est lisible (ou qu'une erreur s'affiche, pour ceux qui doivent échouer) ; « Tout dérouler » est fini quand la position dit `pas N sur N`. Si l'état n'arrive jamais, l'outil est **KO en le disant** (« la page n'a jamais monté cet exemple après 15 s — geste non joué »), jamais vert par patience insuffisante. Relancé : **26 exemples, 1 040 pas, 5 200 comparaisons, 0 problème.**
+
+  **Et la correction ne l'a pas rendu aveugle** — c'est le risque exact d'un outil qui attend plus longtemps. `verif-execution-mutations.js` rejoué en entier sur la version corrigée : **12 fautes injectées, 12 VUES, 0 passée inaperçue**, `js/execution.js` restauré à l'octet.
+
+  **UN SECOND SIGNALEMENT, NON DIAGNOSTIQUÉ, DIT SANS ARRONDIR.** La même chaîne a vu `sql-lec` signaler (91,7 s). Relancé seul deux fois, il rend **41 blocs SQL cliqués, 28 résultats, 13 erreurs SQL du contenu, MOTEUR EN ÉCHEC : 0**, code de sortie **0**. Je n'ai donc **pas** reproduit le signalement et je ne conclus rien : la ressemblance avec le cas `vexec` — vert seul, rouge en fin de chaîne chargée — est une **hypothèse**, pas une mesure. Reporté à **F5**.
+
+  **CONTRÔLES** : `verif-html` **1 629 fichiers, 0 grave / 0 attention** · `verif-donnees` **25 contrôles, 0 erreur** · `node --check` sur les 4 fichiers JS touchés · **0 BOM**, **0 URL interdite** · `js/execution.js` relu après la campagne : **identique à l'octet** (aucune mutation survivante).
 - [ ] **F4 · Mesure globale.** Études de cas publiées, notions visualisées, leçons de maths, pages datées. Comparer aux chiffres du constat en tête de ce fichier.
 - [ ] **F5 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir.
 

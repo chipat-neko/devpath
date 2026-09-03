@@ -170,6 +170,26 @@ var LIRE_ETAT =
   "precDesactive: !!(document.getElementById('vex-prec')||{}).disabled" +
   "};})())";
 
+/* ON ATTEND UN ETAT, PAS UNE DUREE. Les delais fixes de cet outil (1 500 ms
+   apres le rechargement, 120 ms apres un changement d'exemple, 80 ms apres
+   « Tout derouler ») ont tenu tant qu'il tournait seul. Lance en 30e position
+   d'une chaine de vingt verificateurs, sur une machine qui pilotait Chrome
+   depuis dix minutes, il a cede : le selecteur montrait 0 exemple sur 26, trois
+   positions etaient illisibles, et un exemple affichait l'etat du precedent.
+   AUCUNE de ces sept alertes n'existait dans le site — c'est l'outil qui rendait
+   un verdict dependant de la charge de la machine, c'est-a-dire aucun verdict.
+   Meme correction qu'en F1 pour verif-stockage : on sonde jusqu'a 15 s que la
+   condition soit remplie, et on echoue EN LE DISANT si elle ne l'est jamais. */
+async function sonder(cx, expression, ms) {
+  var debut = Date.now(), limite = ms || 15000;
+  while (Date.now() - debut < limite) {
+    var v = await cx.evaluer(expression);
+    if (v) return true;
+    await attendre(100);
+  }
+  return false;
+}
+
 function numeroDePas(position) {
   var m = /pas (\d+) sur (\d+)/.exec(position || "");
   return m ? { i: Number(m[1]), n: Number(m[2]) } : null;
@@ -208,7 +228,10 @@ function numeroDePas(position) {
   await cx.envoyer("Log.enable");
   await cx.envoyer("Network.enable");
   await cx.evaluer("location.reload()");
-  await attendre(1500);
+  /* La page est montee quand ses scripts sont la ET que le selecteur porte ses
+     options : les remplir est le dernier geste de l'initialisation. */
+  await sonder(cx, "!!document.getElementById('vex-lignes') && !!window.Interpreteur && !!window.EXECUTION_EXEMPLES && " +
+    "document.querySelectorAll('#vex-exemple option').length === " + EXEMPLES.length);
 
   var pbs = [];
   var mesures = { exemples: 0, pas: 0, comparaisons: 0, reculs: 0, defilements: 0, recursifs: 0, profondeurMax: 0, portees: 0, porteeMax: 0, contrastes: 0, async: 0, microMax: 0, macroMax: 0 };
@@ -244,7 +267,17 @@ function numeroDePas(position) {
 
     await cx.evaluer("(function(){var s=document.getElementById('vex-exemple');s.value=" +
       JSON.stringify(ex.id) + ";s.dispatchEvent(new Event('change'));return 1;})()");
-    await attendre(120);
+    /* L'exemple est charge quand le selecteur le designe ET que la page annonce
+       une position (ou une erreur, pour ceux qui doivent echouer). */
+    var monte = await sonder(cx, "(function(){var s=document.getElementById('vex-exemple');" +
+      "if(!s||s.value!==" + JSON.stringify(ex.id) + ")return false;" +
+      "var p=(document.getElementById('vex-position')||{}).textContent||'';" +
+      "var e=(document.getElementById('vex-err')||{}).textContent||'';" +
+      "return /pas \\d+ sur \\d+/.test(p) || !!e;})()");
+    if (!monte) {
+      pbs.push(ex.id + " : la page n'a jamais monte cet exemple apres 15 s — geste non joue");
+      continue;
+    }
 
     var etat = JSON.parse(await cx.evaluer(LIRE_ETAT));
     if (ex.erreurAttendue) {
@@ -425,7 +458,8 @@ function numeroDePas(position) {
 
     /* --- « tout derouler » --- */
     await cx.evaluer("document.getElementById('vex-fin').click()");
-    await attendre(80);
+    await sonder(cx, "(function(){var m=/pas (\\d+) sur (\\d+)/.exec((document.getElementById('vex-position')||{}).textContent||'');" +
+      "return !!m && m[1] === m[2];})()");
     var fin = JSON.parse(await cx.evaluer(LIRE_ETAT));
     var posFin = numeroDePas(fin.position);
     if (!posFin || posFin.i !== posFin.n) {
@@ -441,7 +475,7 @@ function numeroDePas(position) {
     /* --- clavier --- */
     await cx.evaluer("document.getElementById('vex-debut').click()");
     await cx.evaluer("document.body.focus();document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))");
-    await attendre(60);
+    await sonder(cx, "/pas 2 sur /.test((document.getElementById('vex-position')||{}).textContent||'')", 5000);
     var apresClavier = numeroDePas(JSON.parse(await cx.evaluer(LIRE_ETAT)).position);
     if (!apresClavier || apresClavier.i !== 2) {
       pbs.push(ex.id + " : la fleche droite du clavier n'avance pas d'un pas (position « " +
@@ -453,7 +487,7 @@ function numeroDePas(position) {
   if (pret) {
     await cx.evaluer("(function(){var t=document.getElementById('vex-code');t.value='var x = ;';" +
       "document.getElementById('vex-relancer').click();return 1;})()");
-    await attendre(150);
+    await sonder(cx, "!!((document.getElementById('vex-err')||{}).textContent||'')", 5000);
     var mauvais = JSON.parse(await cx.evaluer(LIRE_ETAT));
     if (!mauvais.erreur) pbs.push("un programme invalide (« var x = ; ») ne provoque aucun message d'erreur visible");
     else if (mauvais.erreur.indexOf("ligne") === -1) pbs.push("le message d'erreur ne cite pas de ligne : « " + mauvais.erreur + " »");
