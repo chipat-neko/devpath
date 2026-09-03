@@ -3832,4 +3832,55 @@ window.PROJETS = [
       "probabiliste de la même idée (les tests basés sur les propriétés)&nbsp;; ici, le domaine est si petit qu'on peut " +
       "tout prendre.</p>",
   },
+  {
+    id: "maths-profileur-croissance",
+    course: "maths",
+    courseTitle: "Mathématiques de l'informatique",
+    dir: "maths",
+    accent: "maths",
+    type: "Outil de mesure",
+    niveau: "Intermédiaire",
+    titre: "Un profileur qui classe un programme sans lire son code",
+    contexte:
+      "<p>Un traitement nocturne qui tenait en quatre minutes en met désormais seize, et le fichier a doublé. " +
+      "Personne dans l\'équipe ne sait dire si c\'est grave&nbsp;: faut-il attendre la prochaine astreinte, ou " +
+      "réécrire tout de suite&nbsp;? La question n\'est pas «&nbsp;est-ce lent&nbsp;», elle est " +
+      "<strong>«&nbsp;comment cela grandit-il&nbsp;»</strong> — et il se trouve qu\'on peut y répondre sans lire " +
+      "une ligne du code fautif.</p>",
+    objectif:
+      "<p>Écrire un outil qui prend une fonction quelconque et un générateur d\'entrées, l\'exécute sur des tailles " +
+      "qui doublent, compte le travail effectué, et rend une <strong>classe de complexité</strong> accompagnée de la " +
+      "mesure qui la justifie. L\'outil ne doit rien supposer du code mesuré&nbsp;: c\'est tout l\'intérêt.</p>",
+    livrable: "Un module autonome : un compteur d\'accès, une fonction de mesure par doublement, un classificateur, et une batterie de fonctions témoins dont on connaît la classe.",
+    fonctionnalites: [
+      "Un <strong>compteur</strong> qui n\'exige aucune modification de la fonction mesurée&nbsp;: un <code>Proxy</code> sur le tableau d\'entrée suffit à compter ses accès.",
+      "Une fonction <strong>doubler(f, tailles)</strong> qui exécute f sur chaque taille et rend la suite des rapports.",
+      "Un <strong>classificateur</strong> qui traduit le dernier rapport en exposant, par log₂, et nomme la classe la plus proche.",
+      "Une <strong>batterie de témoins</strong> — constant, linéaire, quasi-linéaire, quadratique, cubique — pour vérifier que l\'outil ne se trompe pas sur des cas connus.",
+      "Un <strong>aveu d\'ignorance</strong>&nbsp;: quand le rapport ne tranche pas entre deux classes, l\'outil doit le dire et proposer d\'aller plus loin, pas choisir au hasard.",
+      "Une <strong>extrapolation</strong>&nbsp;: à partir de la classe trouvée et d\'une mesure, prévoir le coût à un million d\'éléments.",
+    ],
+    criteres: [
+      "L\'outil classe correctement les <strong>cinq témoins</strong>, sans qu\'on lui ait donné leur code source.",
+      "Il rend un rapport proche de <strong>4</strong> sur une double boucle et de <strong>2</strong> sur une simple&nbsp;: c\'est le cœur de la méthode.",
+      "Sur une recherche dichotomique, il <strong>refuse de trancher</strong> entre logarithmique et constant aux petites tailles — et le dit.",
+      "Le compteur ne facture <strong>pas</strong> les lectures de <code>length</code>&nbsp;: la convention de comptage est écrite, et respectée.",
+      "Chaque verdict est accompagné de la <strong>suite complète des rapports</strong>, pas seulement du dernier&nbsp;: c\'est elle qui montre si la mesure converge.",
+      "L\'extrapolation nomme son <strong>hypothèse de débit</strong> (opérations par seconde) au lieu de sortir une durée de nulle part.",
+    ],
+    pistes:
+      "<p>Commence par le compteur, qui est la seule partie astucieuse&nbsp;: un <code>Proxy</code> dont le piège " +
+      "<code>get</code> incrémente un compteur quand la clé est numérique. Le reste est une boucle et une division. " +
+      "Prends des tailles qui doublent vraiment — 125, 250, 500, 1 000 — et au moins quatre points&nbsp;: avec deux, " +
+      "on formule une hypothèse&nbsp;; avec quatre, on voit si elle converge.</p>" +
+      "<p>Deux pièges à éviter, tous deux rencontrés dans la leçon&nbsp;12. D\'abord, ne mesure pas une durée&nbsp;: " +
+      "elle change à chaque exécution, et ton outil rendrait un verdict différent à chaque lancement. Ensuite, " +
+      "n\'instrumente jamais une fonction de la bibliothèque standard — compter les comparaisons de " +
+      "<code>Array.prototype.sort</code> mesure le moteur, pas l\'algorithme, et Node et Chrome n\'en font pas le " +
+      "même nombre.</p>" +
+      "<p>Pour aller plus loin&nbsp;: fais-lui distinguer le <strong>pire cas</strong> du <strong>cas moyen</strong> " +
+      "en lui donnant deux générateurs d\'entrées, l\'un aléatoire et l\'autre déjà trié. C\'est ainsi qu\'on " +
+      "démasque un tri rapide à pivot terminal, dont le cours de <a href=\"../algo/cours.html\">l\'algorithmique</a> " +
+      "détaille les variantes.</p>",
+  },
 ];

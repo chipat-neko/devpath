@@ -6001,7 +6001,7 @@ window.SITE_DATA = (function () {
       title: "Fondamentaux & informatique",
       glyph: "O(n)",
       tagline: "Les bases solides : programmer, raisonner, comprendre la machine.",
-      courses: ["maths", "python", "algo", "c", "rust", "compilation"],
+      courses: ["python", "maths", "algo", "c", "rust", "compilation"],
     },
     {
       id: "data",
@@ -6084,7 +6084,7 @@ window.SITE_DATA = (function () {
       title: "Intelligence artificielle",
       glyph: "AI",
       tagline: "De Python à l'apprentissage automatique et aux LLM.",
-      courses: ["python", "pandas", "stats", "ml", "neurones", "llm"],
+      courses: ["python", "pandas", "stats", "maths", "ml", "neurones", "llm"],
     },
     {
       id: "mobile-dev",

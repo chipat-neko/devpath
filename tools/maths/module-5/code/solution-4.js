@@ -32,8 +32,13 @@ console.log('  ' + (reponse - 1) + ' · log₂(' + (reponse - 1) + ') = ' + ((re
 console.log('  ' + reponse + ' · log₂(' + reponse + ') = ' + (reponse * Math.log2(reponse)).toFixed(0) + '  > 10^9');
 
 /* Méthode 2 : le témoin. Une boucle qui monte de 1 en 1, pour vérifier. */
+/* Math.log2 est repris dans une variable locale : dans un bac à sable, chaque
+   lecture de « Math » traverse le proxy du contexte, et la boucle en fait
+   quarante millions. Sans cette ligne, ce programme passe de 0,3 s à plus de
+   4 s — et frôle le plafond d'exécution de la page. */
+const log2 = Math.log2;
 let n = 1, evalBoucle = 0;
-while ((evalBoucle++, n * Math.log2(n)) <= CIBLE) n++;
+while ((evalBoucle++, n * log2(n)) <= CIBLE) n++;
 console.log('');
 console.log('TÉMOIN : la même réponse, cherchée de 1 en 1');
 console.log('  réponse : ' + n + '   identique : ' + (n === reponse));

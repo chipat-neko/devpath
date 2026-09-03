@@ -19,13 +19,43 @@ function fmt(v) {
   if (typeof v === 'function') return v.toString();
   try { return JSON.stringify(v); } catch (e) { return String(v); }
 }
-function executer(src) {
+/* Le plafond du bac à sable, et celui du NAVIGATEUR. js/runner.js interrompt un
+   bloc après 3 000 ms : un programme qui tient ici mais pas là publierait une
+   sortie que l'apprenant n'obtiendra jamais. On se donne donc une marge, et on
+   refuse tout ce qui s'en approche. */
+const PLAFOND_MS = 5000;
+const PLAFOND_NAVIGATEUR_MS = 3000;
+const MARGE_MS = 1500;                 // au-delà, on considère que la page est en danger
+const DUREES = {};
+
+function executer(src, nom) {
   const out = [];
   const push = function () { out.push(Array.prototype.slice.call(arguments).map(fmt).join(' ')); };
   const bac = { console: { log: push, warn: push, error: push, info: push, debug: push } };
   bac.globalThis = bac;
-  try { vm.runInNewContext(src, vm.createContext(bac), { timeout: 5000 }); }
-  catch (e) { out.push('!! ' + e.name + ': ' + e.message); }
+  const t0 = Date.now();
+  let incident = null;
+  try { vm.runInNewContext(src, vm.createContext(bac), { timeout: PLAFOND_MS }); }
+  catch (e) { incident = e.name + ': ' + e.message; out.push('!! ' + incident); }
+  const ms = Date.now() - t0;
+  DUREES[nom || '?'] = ms;
+
+  /* UN DÉPASSEMENT NE DOIT JAMAIS ÊTRE PUBLIÉ. Il l'a été une fois : la sortie
+     de solution-4.js s'est retrouvée tronquée sur « !! Error: Script execution
+     timed out », et seul verif-chiffres l'a vu, par ricochet. */
+  if (incident && /timed out/i.test(incident)) {
+    console.error('ARRÊT : ' + nom + ' a dépassé ' + PLAFOND_MS + ' ms. Rien n a été écrit.');
+    process.exit(1);
+  }
+  if (incident) {
+    console.error('ARRÊT : ' + nom + ' a levé « ' + incident + ' ». Rien n a été écrit.');
+    process.exit(1);
+  }
+  if (ms > PLAFOND_NAVIGATEUR_MS - MARGE_MS) {
+    console.error('ARRÊT : ' + nom + ' a mis ' + ms + ' ms, soit trop près du plafond de ' +
+      PLAFOND_NAVIGATEUR_MS + ' ms de js/runner.js. L apprenant verrait une exécution interrompue.');
+    process.exit(1);
+  }
   return out.join('\n');
 }
 
@@ -49,7 +79,7 @@ function remplirMarqueurs(corps) {
   return corps.replace(/@@(CODE|SORTIE):([a-z0-9-]+\.js)@@/g, function (_, quoi, fichier) {
     const src = fs.readFileSync(path.join(CODE, fichier), 'utf8');
     if (quoi === 'CODE') return blocCode(fichier, src);
-    const sortie = executer(src);
+    const sortie = executer(src, fichier);
     MESURES[fichier] = sortie.split('\n').length;
     return blocSortie(fichier.replace(/\.js$/, '.txt'), sortie);
   });
@@ -212,3 +242,6 @@ META.forEach(function (m) {
   console.log('écrit ' + cible + '  ' + Math.round(html.length / 1024) + ' Ko, ' + visible.split(/\s+/).length + ' mots visibles');
 });
 console.log('lignes de sortie insérées : ' + JSON.stringify(MESURES));
+const lent = Object.keys(DUREES).sort((a, b) => DUREES[b] - DUREES[a]).slice(0, 3);
+console.log('le plus lent : ' + lent.map((n) => n + ' ' + DUREES[n] + ' ms').join(', ') +
+  '  (plafond du navigateur : ' + PLAFOND_NAVIGATEUR_MS + ' ms)');
