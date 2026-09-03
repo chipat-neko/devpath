@@ -195,10 +195,34 @@ function lireTable() {
     "texte:b.textContent" +
     "};})())";
 
+  /* ⚠️ NE PAS REMETTRE UN DELAI FIXE. Il y en avait un — 700 ms — et il a rendu cet
+     outil INUTILISABLE sans que personne le voie : deux passages consécutifs, sans
+     rien changer au dépôt, ont accusé DEUX ENSEMBLES DIFFERENTS de six leçons de
+     « n'avoir aucun encart ». Le site n'avait rien ; c'est l'outil qui lisait la page
+     avant que `js/lecon.js` (chargé en `defer`) ait fini de la construire. Un
+     vérificateur qui juge au chronomètre accuse au hasard — et, dans l'autre sens,
+     il acquitte au hasard. On attend donc un ETAT.
+     `readyState === 'complete'` suffit et ne triche pas : un script `defer` s'exécute
+     AVANT `DOMContentLoaded`, donc bien avant `complete`. La condition est de plus
+     INDEPENDANTE de ce qu'on mesure — attendre l'encart lui-même rendrait le contrôle
+     incapable de constater son absence. */
+  async function attendreChargee(quoi) {
+    var debut = Date.now(), etat = "jamais évalué";
+    while (Date.now() - debut < 15000) {
+      try {
+        etat = await cx.evaluer("document.readyState");
+        if (etat === "complete") { await attendre(80); return true; }
+      } catch (e) { etat = "évaluation impossible : " + e.message; }
+      await attendre(60);
+    }
+    pbs.push(quoi + " : page jamais chargée en 15 s (readyState = " + etat + ")");
+    return false;
+  }
+
   async function ouvrir(rel) {
     var abs = path.join(RACINE, "pages", rel);
     await cx.envoyer("Page.navigate", { url: "file:///" + abs.replace(/\\/g, "/") });
-    await attendre(700);
+    return await attendreChargee(rel);
   }
 
   /* ---- 2 et 3. chaque lecon liee ---- */
@@ -259,8 +283,15 @@ function lireTable() {
   for (var a = 0; a < essais.length; a++) {
     var abs = path.join(RACINE, "pages", "execution.html");
     await cx.envoyer("Page.navigate", { url: "file:///" + abs.replace(/\\/g, "/") + "#" + essais[a] });
-    await attendre(700);
-    var choisi = await cx.evaluer("(document.getElementById('vex-exemple')||{}).value||''");
+    /* Meme regle que ci-dessus : le selecteur est PEUPLE par js/execution.js, il
+       n'existe pas dans le HTML. On attend la page chargee, puis le selecteur
+       renseigne — sinon on lirait une chaine vide et on accuserait l'ancre. */
+    if (!(await attendreChargee("execution.html#" + essais[a]))) continue;
+    var choisi = "";
+    for (var w = 0; w < 100 && !choisi; w++) {
+      choisi = await cx.evaluer("(document.getElementById('vex-exemple')||{}).value||''");
+      if (!choisi) await attendre(60);
+    }
     if (choisi !== essais[a]) {
       pbs.push("l'ancre #" + essais[a] + " ouvre « " + choisi + " » au lieu de l'exemple vise");
     }

@@ -182,8 +182,14 @@ function numeroDePas(position) {
 
   var profil = fs.mkdtempSync(path.join(os.tmpdir(), "syntaxe-vex-"));
   var url = "file:///" + PAGE.replace(/\\/g, "/");
+  /* --host-resolver-rules : AUCUN nom de domaine ne se resout. Compter les requetes
+     hors file:// prouve que la page n'en DEMANDE aucune ; couper la resolution prouve
+     qu'elle n'en a pas BESOIN. Ce sont deux affirmations differentes, et c'est la
+     seconde que le chantier demande — celle qui tiendrait chez un apprenant hors ligne.
+     Meme drapeau que verif-stockage.js et preuves/sql-lecon.js. */
   var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=" + PORT, "--disable-gpu",
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+    "--host-resolver-rules=MAP * ~NOTFOUND",
     "--user-data-dir=" + profil, url], { stdio: "ignore" });
 
   var cible = null;
