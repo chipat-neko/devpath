@@ -677,8 +677,8 @@ window.SITE_DATA = (function () {
     {
       id: "doc", dir: "doc", title: "Lire la documentation : l'anglais et les sources du métier",
       glyph: "§", language: "Documentation", level: "debutant", status: "complet",
-      accent: "#3d5a80", lessons: 2, hours: 2,
-      tagline: "74 leçons de ce site renvoient à « la documentation officielle », à « la spécification » ou à une RFC, et aucune n'apprend à les lire. Ce cours ouvre une page de référence rubrique par rubrique — signature, paramètres, valeur de retour, exceptions, limites connues —, apprend l'ordre de lecture qui fait gagner du temps, puis donne le vocabulaire anglais qui porte le contrat : deprecated, optional, throws, race condition, unless. La page étudiée documente une fonction de ce site, et chaque piège du vocabulaire est démontré par un programme qui s'exécute dans la leçon — aucun chiffre n'y est écrit de tête.",
+      accent: "#3d5a80", lessons: 3, hours: 2,
+      tagline: "74 leçons de ce site renvoient à « la documentation officielle », à « la spécification » ou à une RFC, et aucune n'apprend à les lire. Ce cours ouvre une page de référence rubrique par rubrique — signature, paramètres, valeur de retour, exceptions, limites connues —, apprend l'ordre de lecture qui fait gagner du temps, donne le vocabulaire anglais qui porte le contrat — deprecated, optional, throws, race condition, unless —, puis apprend à lire un document normatif : RFC, spécification, journal des modifications, numéro de version. La page étudiée documente une fonction de ce site, et chaque piège du vocabulaire est démontré par un programme qui s'exécute dans la leçon — aucun chiffre n'y est écrit de tête.",
       tags: ["Transversal", "Fondamentaux", "Métier"],
     },
   ];
@@ -5996,6 +5996,13 @@ window.SITE_DATA = (function () {
             { num: "02", title: "Le vocabulaire minimal : les mots anglais qui reviennent partout", file: "lecon-02.html", status: "complet" },
           ],
         },
+        {
+          num: "03", title: "Les documents normatifs", sub: "RFC, spécification, changelog, note de version : MUST, SHOULD, MAY",
+          level: "intermediaire",
+          lessons: [
+            { num: "03", title: "RFC, spécification, changelog : les documents qui font autorité", file: "lecon-03.html", status: "complet" },
+          ],
+        },
       ],
     },
   };
@@ -6213,7 +6220,7 @@ window.SITE_DATA = (function () {
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
     "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34,"lecon-04.html":34,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":35,"lecon-10.html":36,"lecon-11.html":40},
     "maths": {"lecon-01.html":52,"lecon-02.html":50,"lecon-03.html":54,"lecon-04.html":48,"lecon-05.html":50,"lecon-06.html":52,"lecon-07.html":52,"lecon-08.html":54,"lecon-09.html":55,"lecon-10.html":62,"lecon-11.html":64,"lecon-12.html":60,"lecon-13.html":62},
-    "doc": {"lecon-01.html":45,"lecon-02.html":50},
+    "doc": {"lecon-01.html":45,"lecon-02.html":50,"lecon-03.html":45},
     "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24,"lecon-12.html":30},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},

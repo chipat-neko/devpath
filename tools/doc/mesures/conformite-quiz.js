@@ -1,0 +1,137 @@
+/* tools/doc/mesures/conformite-quiz.js — le corpus des QCM du site, confronté
+   clause par clause à la spécification de tools/doc/reference/quiz-format.txt.
+
+   POURQUOI : la leçon 03 enseigne à lire un document normatif. Le meilleur
+   moyen de montrer à quoi sert un MUST est d'en écrire un, puis de compter ce
+   qui le respecte. Le corpus est celui du site : tous les blocs data-quiz et
+   data-quiz-bilan des leçons, le cours « doc » exclu (une leçon qui se mesure
+   elle-même périme ses chiffres en étant publiée — leçon de D1).
+
+   USAGE : node tools/doc/mesures/conformite-quiz.js [--details] [--clause=M3] */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const lib = require('./corpus-lib.js');
+
+/* Le contrat RÉELLEMENT implémenté par buildQuiz() dans js/lecon.js :
+     opts = item.a.map(...)                → « a » doit être un tableau
+     i === (item.correct || 0)             → « correct » absent vaut 0
+     opts = shuffle(opts)                  → L'ORDRE D'AFFICHAGE EST ALÉATOIRE
+     escapeHTML(item.q), item.explain      → texte brut, explication facultative
+   Chaque clause ci-dessous découle d'une de ces lignes. */
+const CLAUSES = [
+  { id: 'M1', niveau: 'MUST', libelle: 'q est une chaîne non vide',
+    test: (x) => typeof x.q === 'string' && x.q.trim().length > 0 },
+  { id: 'M2', niveau: 'MUST', libelle: 'a est un tableau d au moins deux options',
+    test: (x) => Array.isArray(x.a) && x.a.length >= 2 },
+  { id: 'M3', niveau: 'MUST', libelle: 'chaque option est une chaîne non vide',
+    test: (x) => Array.isArray(x.a) && x.a.every((o) => typeof o === 'string' && o.trim().length > 0) },
+  { id: 'M4', niveau: 'MUST', libelle: 'correct, s il est présent, désigne une option existante',
+    test: (x) => x.correct === undefined ||
+      (Number.isInteger(x.correct) && x.correct >= 0 && Array.isArray(x.a) && x.correct < x.a.length) },
+  { id: 'M5', niveau: 'MUST', libelle: 'les options sont deux à deux distinctes',
+    test: (x) => Array.isArray(x.a) && new Set(x.a.map((o) => String(o).trim())).size === x.a.length },
+  /* Celle-ci est la seule qu'on ne devine pas en lisant les données : elle
+     découle du shuffle(). Une option qui parle de sa position ment dès que
+     l'ordre change — c'est-à-dire à chaque affichage. */
+  /* ⚠ PREMIÈRE RÉDACTION DE CETTE CLAUSE : elle cherchait « aucune des deux »,
+     « les deux premiers », « ci-dessus ». Elle a rendu 11 manquements — et les
+     ONZE étaient faux : « aucune des deux ReLU », « les deux premiers éléments
+     du tableau », « les trois premiers tours » parlent du SUJET de la question,
+     pas des options. Une clause normative doit être testable SANS AMBIGUÏTÉ :
+     celle-ci ne vise donc que les tournures qui désignent explicitement les
+     réponses, ou leur place à l'écran. */
+  { id: 'M6', niveau: 'MUST', libelle: 'aucune option ne fait référence à sa position d affichage',
+    test: (x) => {
+      if (!Array.isArray(x.a)) return false;
+      /* deux motifs, et le second n'est PAS insensible à la casse — voir plus bas */
+      const parPosition = /(r[ée]ponses?|propositions?|affirmations?|options?)\s+(ci-dessus|ci-dessous|pr[ée]c[ée]dentes?|suivantes?)|(ci-dessus|ci-dessous)[^.]{0,20}(r[ée]ponses?|propositions?|options?)/i;
+      /* ⚠ TROISIÈME RÉDACTION. La deuxième cherchait « réponse [ABCD] » avec le
+         drapeau i et un \b final : elle voyait une violation dans « filtre la
+         réponse côté client » et dans « la réponse d'un fetch ». La cause est
+         un piège d'expression régulière : en JavaScript, \b ne connaît que
+         [A-Za-z0-9_], donc « ô » compte comme une frontière de mot et « réponse
+         côté » ressemble à « réponse C ». Ici, la lettre doit être une vraie
+         MAJUSCULE isolée, accents compris dans le refus. */
+      const parLettre = /(?:R[ée]ponse|r[ée]ponse|Option|option) [ABCD](?![A-Za-zÀ-ÿ0-9'’-])/;
+      return !x.a.some((o) => parPosition.test(String(o)) || parLettre.test(String(o)));
+    } },
+  { id: 'S1', niveau: 'SHOULD', libelle: 'une explication accompagne la question',
+    test: (x) => typeof x.explain === 'string' && x.explain.trim().length > 0 },
+  { id: 'S2', niveau: 'SHOULD', libelle: 'la question propose quatre options',
+    test: (x) => Array.isArray(x.a) && x.a.length === 4 },
+  /* La clause née de la mesure de verif-contenu : sur ce site, la bonne réponse
+     est la plus longue dans neuf cas sur dix. Une bonne réponse reconnaissable
+     à sa forme n'évalue plus rien. */
+  { id: 'S3', niveau: 'SHOULD', libelle: 'la bonne réponse n est pas STRICTEMENT la plus longue',
+    test: (x) => {
+      if (!Array.isArray(x.a) || x.a.length < 2) return false;
+      const L = x.a.map((o) => String(o).length);
+      const bonne = L[x.correct || 0];
+      /* strictement : un ex aequo n'est reconnaissable par personne. */
+      return L.filter((n) => n >= bonne).length > 1;
+    } },
+  { id: 'A1', niveau: 'MAY', libelle: 'correct est omis (la première option est alors la bonne)',
+    test: (x) => x.correct === undefined },
+];
+
+function questions() {
+  const out = [];
+  for (const f of lib.fichiersLecons()) {
+    const html = fs.readFileSync(f, 'utf8');
+    const art = html.match(/<article class="prose"[\s\S]*?<\/article>/);
+    if (!art) continue;
+    const rel = path.relative(lib.RACINE, f).split(path.sep).join('/');
+    for (const b of art[0].matchAll(/<script type="application\/json" data-quiz(?:-bilan(?:="[^"]*")?)?>([\s\S]*?)<\/script>/g)) {
+      let lot;
+      try { lot = JSON.parse(b[1]); } catch (e) { out.push({ fichier: rel, invalide: e.message }); continue; }
+      if (!Array.isArray(lot)) { out.push({ fichier: rel, invalide: 'le bloc n est pas un tableau' }); continue; }
+      lot.forEach((q, i) => out.push({ fichier: rel, rang: i + 1, q }));
+    }
+  }
+  return out;
+}
+
+function mesurer() {
+  const toutes = questions();
+  const valides = toutes.filter((e) => !e.invalide);
+  const resultats = CLAUSES.map((c) => {
+    const echecs = valides.filter((e) => {
+      try { return !c.test(e.q); } catch (err) { return true; }
+    });
+    return {
+      id: c.id, niveau: c.niveau, libelle: c.libelle,
+      total: valides.length, conformes: valides.length - echecs.length,
+      echecs: echecs.length,
+      exemples: echecs.slice(0, 5).map((e) => e.fichier + ' #' + e.rang),
+      liste: echecs,
+    };
+  });
+  const cours = new Set(valides.map((e) => e.fichier.split('/')[1]));
+  return { questions: valides.length, blocsInvalides: toutes.filter((e) => e.invalide), cours: cours.size, clauses: resultats };
+}
+
+module.exports = { mesurer, CLAUSES };
+
+if (require.main === module) {
+  const r = mesurer();
+  console.log(r.questions + ' questions dans ' + r.cours + ' cours (le cours « doc » exclu).');
+  if (r.blocsInvalides.length) console.log('BLOCS JSON INVALIDES : ' + r.blocsInvalides.length);
+  console.log('');
+  console.log('clause  niveau   conformes / total    échecs   libellé');
+  for (const c of r.clauses) {
+    const pct = ((c.conformes / c.total) * 100).toFixed(1);
+    console.log('  ' + c.id.padEnd(6) + c.niveau.padEnd(9) +
+      (c.conformes + ' / ' + c.total).padStart(14) + '  ' + (pct + ' %').padStart(7) +
+      String(c.echecs).padStart(8) + '   ' + c.libelle);
+  }
+  const detail = process.argv.find((a) => a.startsWith('--clause='));
+  if (detail) {
+    const c = r.clauses.find((x) => x.id === detail.slice(9));
+    console.log('\nÉchecs de ' + c.id + ' (' + c.echecs + ') :');
+    for (const e of c.liste.slice(0, 40)) {
+      console.log('  ' + e.fichier + ' #' + e.rang + '  ' + String(e.q.q).slice(0, 90));
+      if (process.argv.includes('--details')) console.log('      ' + JSON.stringify(e.q.a));
+    }
+  }
+}

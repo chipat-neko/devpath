@@ -97,10 +97,57 @@ function blocSortie(nom, sortie) {
 }
 
 const MESURES = {};
+/* @@SPEC:x.txt@@ dans un BLOC DE CODE : le document de tools/doc/reference/ est
+   injecte dans le programme sous forme de chaine JS. Le programme publie analyse
+   donc le texte exact publie juste au-dessus de lui, jamais une copie. */
+function litteralJs(texte) {
+  return JSON.stringify(texte);
+}
+/* Le filtre BROWSER_ONLY de js/runner.js refuse de poser un bouton « Tester »
+   sur un bloc contenant « document », « window », « process »… — y compris dans
+   une CHAINE. Le document normatif publie contient le mot « document » : un
+   programme qui l'embarquerait entier perdrait son bouton en silence.
+   Mesure faite avant de conclure : assouplir ce filtre pour qu'il ignore les
+   chaines ferait changer de verdict 96 blocs du site, dont des blocs Node qui
+   gagneraient un bouton qu'ils ne peuvent pas honorer (« node:fs » vit dans une
+   chaine). runner.js n'est donc PAS touche : on injecte les seules LIGNES
+   NORMATIVES, et un garde-fou verifie qu'aucune ne porte un mot interdit. */
+const BROWSER_ONLY_RUNNER = /(?:^|[^\w$À-ɏ])(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename)(?![\w$À-ɏ])|require\s*\(|module\.exports|\bexports\.|\bglobalThis\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts/;
+
+function lignesNormatives() {
+  const texte = fs.readFileSync(path.join(__dirname, 'reference', 'quiz-format.txt'), 'utf8');
+  const MOTS = ['MUST NOT', 'MUST', 'SHOULD NOT', 'SHOULD', 'MAY'];
+  const lignes = texte.split(String.fromCharCode(10));
+  const sections = [];
+  lignes.forEach(function (l, i) {
+    const m = l.match(/^(\d+(?:\.\d+)?)\.?\s+(\S.*)$/);
+    if (m) sections.push({ cle: m[1] + '. ' + m[2].trim(), ligne: i + 1 });
+  });
+  const out = [];
+  lignes.forEach(function (l, i) {
+    if (!MOTS.some(function (m) { return l.indexOf(m) !== -1; })) return;
+    let courante = '(hors section)';
+    for (const s of sections) if (s.ligne <= i + 1) courante = s.cle;
+    out.push({ ligne: i + 1, section: courante, texte: l.trim() });
+  });
+  const brut = out.map(function (o) { return o.section + ' ' + o.texte; }).join(' ');
+  const interdit = brut.match(BROWSER_ONLY_RUNNER);
+  if (interdit) {
+    console.error('ARRÊT : les lignes normatives injectées contiennent « ' + interdit[0].trim() +
+      ' », que js/runner.js interdit — le bloc publié perdrait son bouton « Tester ».');
+    process.exit(1);
+  }
+  return { lignes: out, total: lignes.length, sections: sections.length };
+}
+
 function lireCode(fichier) {
-  const brut = fs.readFileSync(path.join(CODE, fichier), 'utf8');
-  if (brut.indexOf('/*@@SLUGIFY@@*/') === -1) return brut;
-  return brut.replace('/*@@SLUGIFY@@*/', SLUGIFY);
+  let brut = fs.readFileSync(path.join(CODE, fichier), 'utf8');
+  if (brut.indexOf('/*@@SLUGIFY@@*/') !== -1) brut = brut.replace('/*@@SLUGIFY@@*/', SLUGIFY);
+  brut = brut.replace(/\/\*@@SPEC@@\*\/null/g, function () {
+    const r = lignesNormatives();
+    return JSON.stringify(r, null, 1).split(String.fromCharCode(10)).join(String.fromCharCode(10));
+  });
+  return brut;
 }
 /* @@MESURE:cle@@ — un CHIFFRE DE CORPUS, calculé à l'assemblage et jamais écrit
    dans la prose. Né d'une relecture adversariale : les chiffres avaient été
@@ -241,6 +288,81 @@ const VOCAB_NB = (function () {
   };
 })();
 
+/* ------------------------------------------------------- NORMATIF (D3) */
+/* La lecon 03 confronte une SPECIFICATION aux 6 000 QCM du site. Comme pour le
+   vocabulaire, aucun de ces chiffres n'est ecrit dans la prose : @@NORMNB:cle@@
+   les injecte a l'assemblage, et verif-normatif echoue s'ils divergent. */
+const CONF = require('./mesures/conformite-quiz.js').mesurer();
+const SPEC_TXT = fs.readFileSync(path.join(__dirname, 'reference', 'quiz-format.txt'), 'utf8');
+const NORM_NB = (function () {
+  const cl = {};
+  for (const c of CONF.clauses) {
+    cl[c.id] = c;
+  }
+  const must = CONF.clauses.filter(function (c) { return c.niveau === 'MUST'; });
+  const should = CONF.clauses.filter(function (c) { return c.niveau === 'SHOULD'; });
+  const compteMot = function (mot) {
+    let n = 0, reste = SPEC_TXT, pos;
+    while ((pos = reste.indexOf(mot)) !== -1) { n++; reste = reste.slice(pos + mot.length); }
+    return n;
+  };
+  const mustNot = compteMot('MUST NOT');
+  const shouldNot = compteMot('SHOULD NOT');
+  /* les mentions du site : combien de lecons renvoient a un document normatif */
+  const libx = require('./mesures/corpus-lib.js');
+  const M = { rfc: /RFC\s?\d{3,5}/g, spec: /la sp[ée]cification/gi,
+    changelog: /changelog|journal des modifications/gi,
+    semver: /semver|versionnage s[ée]mantique|version s[ée]mantique/gi,
+    motsCles: /MUST|SHOULD/g };
+  const cpt = {};
+  for (const k in M) cpt[k] = 0;
+  for (const f of libx.fichiersLecons()) {
+    const html = fs.readFileSync(f, 'utf8');
+    const art = html.match(/<article class="prose"[\s\S]*?<\/article>/);
+    if (!art) continue;
+    for (const k in M) { M[k].lastIndex = 0; if (M[k].test(art[0])) cpt[k]++; }
+  }
+  return {
+    questions: milliers(CONF.questions),
+    coursQuiz: String(CONF.cours),
+    clausesMust: String(must.length),
+    clausesShould: String(should.length),
+    mustConformes: milliers(must[0].conformes),
+    mustEchecs: String(must.reduce(function (a, c) { return a + c.echecs; }, 0)),
+    s3Conformes: milliers(cl.S3.conformes),
+    s3Echecs: milliers(cl.S3.echecs),
+    s3Pct: ((cl.S3.conformes / cl.S3.total) * 100).toFixed(1).replace('.', ','),
+    s3PctEchec: ((cl.S3.echecs / cl.S3.total) * 100).toFixed(1).replace('.', ','),
+    s2Echecs: String(cl.S2.echecs),
+    s1Conformes: milliers(cl.S1.conformes),
+    a1Echecs: milliers(cl.A1.echecs),
+    lignesSpec: String(SPEC_TXT.split(String.fromCharCode(10)).length),
+    lignesNormatives: String(lignesNormatives().lignes.length),
+    pctNormatif: String(Math.round((lignesNormatives().lignes.length /
+      SPEC_TXT.split(String.fromCharCode(10)).length) * 100)),
+    motMust: String(compteMot('MUST') - mustNot),
+    motMustNot: String(mustNot),
+    motShould: String(compteMot('SHOULD') - shouldNot),
+    motShouldNot: String(shouldNot),
+    motMay: String(compteMot('MAY')),
+    leconsRfc: String(cpt.rfc),
+    leconsSpec: String(cpt.spec),
+    leconsChangelog: String(cpt.changelog),
+    leconsSemver: String(cpt.semver),
+    leconsMotsCles: String(cpt.motsCles),
+  };
+})();
+
+function remplirNorm(corps) {
+  return corps.replace(/@@NORMNB:([a-zA-Z0-9]+)@@/g, function (_, cle) {
+    if (!NORM_NB.hasOwnProperty(cle)) {
+      console.error('ARRÊT : décompte normatif inconnu « ' + cle + ' ».');
+      process.exit(1);
+    }
+    return NORM_NB[cle];
+  });
+}
+
 function remplirVocab(corps) {
   return corps
     .replace(/@@VOCAB:([a-z]+)@@/g, function (_, f) { return tableauVocab(f); })
@@ -267,7 +389,7 @@ function remplirTextes(corps) {
    synchrone, et il faut l'attendre (voir drainer()). On remplace donc en deux
    temps — repérer, exécuter, puis substituer. */
 async function remplirMarqueurs(corps) {
-  let texte = remplirVocab(remplirTextes(remplirMesures(corps)));
+  let texte = remplirNorm(remplirVocab(remplirTextes(remplirMesures(corps))));
   const marqueurs = [...texte.matchAll(/@@(CODE|SORTIE):([a-z0-9-]+\.js)@@/g)];
   const remplacements = new Map();
   for (const m of marqueurs) {
