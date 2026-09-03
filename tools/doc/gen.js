@@ -117,7 +117,10 @@ const BROWSER_ONLY_RUNNER = /(?:^|[^\w$À-ɏ])(document|window|localStorage|sess
 function lignesNormatives() {
   const texte = fs.readFileSync(path.join(__dirname, 'reference', 'quiz-format.txt'), 'utf8');
   const MOTS = ['MUST NOT', 'MUST', 'SHOULD NOT', 'SHOULD', 'MAY'];
-  const lignes = texte.split(String.fromCharCode(10));
+  /* ⚠ le fichier se termine par un saut de ligne : split() rend une derniere
+     entree VIDE, et le compte annoncait une ligne de plus que ce que le lecteur
+     voit dans le bloc publie. Trouve par relecture adversariale. */
+  const lignes = texte.replace(/\n$/, '').split(String.fromCharCode(10));
   const sections = [];
   lignes.forEach(function (l, i) {
     const m = l.match(/^(\d+(?:\.\d+)?)\.?\s+(\S.*)$/);
@@ -294,6 +297,31 @@ const VOCAB_NB = (function () {
    les injecte a l'assemblage, et verif-normatif echoue s'ils divergent. */
 const CONF = require('./mesures/conformite-quiz.js').mesurer();
 const SPEC_TXT = fs.readFileSync(path.join(__dirname, 'reference', 'quiz-format.txt'), 'utf8');
+/* Le nombre de lignes du document, tel que le lecteur le compte : sans la
+   chaine vide que split() ajoute apres le dernier saut de ligne. */
+const NB_LIGNES_SPEC = SPEC_TXT.replace(/\n$/, '').split(String.fromCharCode(10)).length;
+
+/* Les obligations (MUST et MUST NOT) des sections 4 a 6 — celles que la section
+   8 rend obligatoires. A ne pas confondre avec le nombre de CLAUSES que l'outil
+   sait tester : il en teste moins, et la lecon dit desormais pourquoi. */
+const OBLIGATIONS_46 = (function () {
+  const i4 = SPEC_TXT.lastIndexOf('4.  Block Syntax');
+  const i7 = SPEC_TXT.lastIndexOf('7.  Authoring Recommendations');
+  if (i4 < 0 || i7 < i4) {
+    console.error('ARRÊT : sections 4 a 6 introuvables dans la specification.');
+    process.exit(1);
+  }
+  let reste = SPEC_TXT.slice(i4, i7);
+  let n = 0, pos;
+  for (const mot of ['MUST NOT', 'MUST']) {
+    while ((pos = reste.indexOf(mot)) !== -1) {
+      n++;
+      reste = reste.slice(0, pos) + ' '.repeat(mot.length) + reste.slice(pos + mot.length);
+    }
+  }
+  return n;
+})();
+
 const NORM_NB = (function () {
   const cl = {};
   for (const c of CONF.clauses) {
@@ -327,7 +355,6 @@ const NORM_NB = (function () {
     coursQuiz: String(CONF.cours),
     clausesMust: String(must.length),
     clausesShould: String(should.length),
-    mustConformes: milliers(must[0].conformes),
     mustEchecs: String(must.reduce(function (a, c) { return a + c.echecs; }, 0)),
     s3Conformes: milliers(cl.S3.conformes),
     s3Echecs: milliers(cl.S3.echecs),
@@ -335,11 +362,17 @@ const NORM_NB = (function () {
     s3PctEchec: ((cl.S3.echecs / cl.S3.total) * 100).toFixed(1).replace('.', ','),
     s2Echecs: String(cl.S2.echecs),
     s1Conformes: milliers(cl.S1.conformes),
-    a1Echecs: milliers(cl.A1.echecs),
-    lignesSpec: String(SPEC_TXT.split(String.fromCharCode(10)).length),
+    a1Employe: milliers(cl.A1.total - cl.A1.echecs),
+    lignesSpec: String(NB_LIGNES_SPEC),
     lignesNormatives: String(lignesNormatives().lignes.length),
-    pctNormatif: String(Math.round((lignesNormatives().lignes.length /
-      SPEC_TXT.split(String.fromCharCode(10)).length) * 100)),
+    pctNormatif: String(Math.round((lignesNormatives().lignes.length / NB_LIGNES_SPEC) * 100)),
+    /* Ce que le DOCUMENT porte comme obligations dans les sections que la
+       section 8 rend obligatoires, et ce que l'outil sait en tester. Les deux
+       chiffres different, et la lecon le dit maintenant : trois obligations de
+       la section 4 lient le BLOC, deux de la section 6 lient le LECTEUR, et
+       celle de la 5.1 porte sur une intention. */
+    obligationsDoc: String(OBLIGATIONS_46),
+    clausesTestables: String(must.length),
     motMust: String(compteMot('MUST') - mustNot),
     motMustNot: String(mustNot),
     motShould: String(compteMot('SHOULD') - shouldNot),

@@ -16,6 +16,10 @@ function comparer(a, b) {
   return 0;
 }
 
+/* Quatre paires de vraies versions sémantiques — la convention exige TROIS
+   nombres —, plus une cinquième qui n'en est pas une : « 1.2 » n'est pas une
+   version sémantique valide, et c'est justement pour ça qu'elle est là. Les
+   outils l'acceptent en complétant par un zéro ; la convention, non. */
 const PAIRES = [
   ['1.9.0', '1.10.0'],
   ['1.9.3', '1.10.0'],
@@ -23,13 +27,22 @@ const PAIRES = [
   ['1.0.10', '1.0.9'],
   ['1.2', '1.2.0'],
 ];
+const CONFORME = /^\d+\.\d+\.\d+$/;
 console.log('\ncomparaison de versions (< : la première est antérieure)');
+let trompe = 0, valides = 0;
 for (const [a, b] of PAIRES) {
   const r = comparer(a, b);
+  const ok = CONFORME.test(a) && CONFORME.test(b);
+  if (ok) valides++;
+  const seTrompe = (r < 0) !== (a < b);
+  if (seTrompe && ok) trompe++;
   console.log('  ' + a.padEnd(9) + (r < 0 ? '<' : r > 0 ? '>' : '=') + '  ' + b.padEnd(9) +
     '   en texte : ' + (a < b ? '<' : a > b ? '>' : '=') +
-    ((r < 0) !== (a < b) ? '   ← le texte se trompe' : ''));
+    (seTrompe ? '   ← le texte se trompe' : '') +
+    (ok ? '' : '   (« ' + a + ' » n’est pas une version sémantique valide)'));
 }
+console.log('\nSur les ' + valides + ' paires de versions VALIDES, la comparaison');
+console.log('textuelle se trompe ' + trompe + ' fois.');
 
 /* Et la question de départ : suis-je concerné par « corrigé en 1.10.0 » ? */
 const MIENNE = '1.9.3';
@@ -51,5 +64,6 @@ for (const [nom, exemple, sens] of REGLES) {
 
 /* Le piège que la convention elle-même documente : avant la 1.0.0, elle ne
    promet rien. Tout peut changer à tout moment, y compris en 0.x.y → 0.x.(y+1). */
-console.log('\nAvant la 1.0.0, la convention ne promet RIEN :');
-console.log('  0.4.0 → 0.5.0 a le droit de tout casser, et c’est écrit dans la règle.');
+console.log('\nET LA CLAUSE QU’ON OUBLIE : tout ce qui précède ne vaut qu’à partir');
+console.log('de la 1.0.0. Avant, la convention ne promet RIEN — 0.4.0 → 0.5.0 a');
+console.log('le droit de tout casser, et c’est écrit dans la règle elle-même.');

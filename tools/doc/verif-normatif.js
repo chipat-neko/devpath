@@ -106,6 +106,8 @@ const s3 = r.clauses.find((c) => c.id === 'S3');
 verdict(visible.indexOf(fmt(r.questions)) !== -1, 'la page cite le nombre de questions = ' + fmt(r.questions));
 verdict(visible.indexOf(String(r.cours)) !== -1, 'la page cite le nombre de cours = ' + r.cours);
 verdict(echecsMust === 0, 'aucune question du site ne viole un MUST', echecsMust + ' manquement(s)');
+verdict((r.rejets || []).length === 0, 'aucun bloc portant data-quiz n est rejeté en silence',
+  (r.rejets || []).map((x) => x.fichier).join(', '));
 const pct = ((s3.echecs / s3.total) * 100).toFixed(1).replace('.', ',');
 verdict(visible.indexOf(pct) !== -1, 'la page cite le taux de manquement à S3 = ' + pct + ' %');
 verdict(visible.indexOf(fmt(s3.echecs)) !== -1, 'la page cite le nombre de manquements à S3 = ' + fmt(s3.echecs));
@@ -157,6 +159,29 @@ console.log('3 bis. Les compteurs de mentions, recalculés');
     verdict(visible.indexOf(String(compte[k])) !== -1,
       'la page cite ce compte (' + compte[k] + ') — ' + k);
   }
+}
+
+/* ---- 3 ter. le MUST du lecteur, vérifié dans js/lecon.js ------------------ */
+/* La section 6 exige que le lecteur MÉLANGE les options — et c'est de là que
+   vient toute la clause M6. Rien ne le vérifiait : si « shuffle(opts) »
+   disparaissait de js/lecon.js, la chaîne entière serait restée verte et la
+   leçon aurait continué d'enseigner une justification devenue fausse. */
+console.log('3 ter. Le MUST du lecteur ⇄ js/lecon.js');
+{
+  const lecon = fs.readFileSync(path.join(RACINE, 'js', 'lecon.js'), 'utf8');
+  const build = lecon.match(/function buildQuiz\([\s\S]*?\n  \}/);
+  verdict(!!build, 'buildQuiz() est trouvée dans js/lecon.js');
+  if (build) {
+    verdict(/opts\s*=\s*shuffle\(opts\)/.test(build[0]),
+      'buildQuiz mélange les options, comme la section 6 l exige');
+    verdict(/escapeHTML\(item\.q\)/.test(build[0]) && /escapeHTML\(o\.text\)/.test(build[0]),
+      'buildQuiz échappe la question et les options, comme la section 5.1 l annonce');
+    verdict(/item\.correct \|\| 0/.test(build[0]),
+      'un « correct » absent vaut zéro, comme la section 5.3 l annonce');
+  }
+  const shuffle = lecon.match(/function shuffle\([\s\S]*?\n  \}/);
+  verdict(!!shuffle && /Math\.random/.test(shuffle[0]),
+    'le mélange est bien aléatoire (donc refait à chaque chargement)');
 }
 
 /* ---- 4. les blocs de sortie ⇄ l exécution --------------------------------- */
@@ -253,6 +278,25 @@ if (page) {
     plusLongue + '/' + questions + ' (seuil ' + seuil + ')');
   verdict(plusCourte <= seuil, 'la bonne réponse n est pas systématiquement la plus COURTE',
     plusCourte + '/' + questions + ' (seuil ' + seuil + ')');
+
+  /* ⚠ EXIGENCE STRICTE, et elle ne vaut que pour ce cours-ci : il PUBLIE la
+     règle S3, il doit donc la tenir à zéro manquement. Ses trois leçons la
+     violaient 15 fois sur 48 — un cours qui enseigne une règle et l'enfreint
+     n'enseigne rien. Le reste du site reste sous le régime du seuil. */
+  const S3clause = conformite.CLAUSES.find((c) => c.id === 'S3');
+  for (const f of ['lecon-01.html', 'lecon-02.html', 'lecon-03.html']) {
+    const chemin = path.join(RACINE, 'pages', 'doc', f);
+    if (!fs.existsSync(chemin)) continue;
+    const h = fs.readFileSync(chemin, 'utf8');
+    let total = 0, viole = 0;
+    for (const b of h.matchAll(/<script type="application\/json" data-quiz(?:-bilan(?:="[^"]*")?)?>([\s\S]*?)<\/script>/g)) {
+      let lot;
+      try { lot = JSON.parse(dech(b[1])); } catch (e) { continue; }
+      for (const q of lot) { total++; if (!S3clause.test(q)) viole++; }
+    }
+    verdict(viole === 0, 'doc/' + f + ' respecte la règle S3 qu il publie',
+      viole + ' manquement(s) sur ' + total);
+  }
 }
 
 console.log('\n' + ok + ' contrôle(s) OK, ' + ko + ' en échec.');

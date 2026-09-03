@@ -40,17 +40,32 @@ console.log('\nOù ces mots-clés se trouvent :');
 const noms = Object.keys(parSection).sort(function (a, b) { return parSection[b] - parSection[a]; });
 for (const n of noms) console.log('  ' + String(parSection[n]).padStart(3) + '  ' + n);
 
-/* Le piège de ce comptage, et il vaut pour toutes les RFC : la section qui
-   DÉFINIT les mots-clés en est pleine, et n'impose rien du tout. Un classement
-   par fréquence met donc en tête la seule section qu'on peut sauter. */
+/* Deux pièges de ce comptage, et ils valent pour toutes les RFC.
+   PREMIER : tous les mots-clés ne sont pas des obligations. Seuls MUST et
+   MUST NOT obligent ; SHOULD recommande, MAY autorise. Compter les cinq
+   ensemble gonfle le total de plus de moitié.
+   SECOND : la section qui DÉFINIT les mots-clés en est pleine — mais elle n'est
+   pas vide d'obligations pour autant, et c'est la surprise de ce relevé. */
+const obligations = total['MUST'] + total['MUST NOT'];
+console.log('\nSur ' + Object.keys(total).reduce(function (a, m) { return a + total[m]; }, 0) +
+  ' mots-clés, ' + obligations + ' obligent vraiment (MUST et MUST NOT).');
+console.log('Les ' + (total['SHOULD'] + total['SHOULD NOT']) + ' SHOULD recommandent et les ' +
+  total['MAY'] + ' MAY autorisent : ni les uns ni les autres n’obligent.');
+
 const definition = noms.filter(function (n) { return /Requirements Language/.test(n); })[0];
 if (definition) {
-  const somme = noms.reduce(function (a, n) { return a + parSection[n]; }, 0);
-  console.log('\nEn tête du classement : « ' + definition + ' », avec ' + parSection[definition] +
-    ' mots-clés');
-  console.log('sur ' + somme + '. C’est la section qui les DÉFINIT : elle n’impose rien.');
-  console.log('Obligations réelles : ' + (somme - parSection[definition]) +
-    ', réparties sur ' + (noms.length - 1) + ' sections.');
-  console.log('\nCompter n’est pas comprendre : la section la plus « normative »');
-  console.log('au comptage est la seule qu’on puisse ignorer.');
+  console.log('\nEn tête du classement : « ' + definition + ' », avec ' +
+    parSection[definition] + ' mots-clés.');
+  /* Combien d'entre eux sont des obligations que cette section IMPOSE, plutôt
+     que des mots qu'elle définit ? On regarde ses lignes une par une. */
+  const sienne = RELEVE.lignes.filter(function (l) { return l.section === definition; });
+  const imposees = sienne.filter(function (l) {
+    return /(MUST|MUST NOT)/.test(l.texte) && !/^(MUST|MUST NOT|SHOULD|SHOULD NOT|MAY)\b/.test(l.texte) &&
+      !/key words/.test(l.texte) && !/Note the asymmetry/.test(l.texte);
+  });
+  console.log('C’est la section qui les DÉFINIT — et pourtant elle en IMPOSE ' +
+    imposees.length + ' :');
+  for (const l of imposees) console.log('  ligne ' + l.ligne + ' : ' + l.texte);
+  console.log('\nLa seconde engage le lecteur, et elle n’est écrite nulle part ailleurs.');
+  console.log('Sauter « la section qu’on peut sauter » coûte donc une obligation.');
 }

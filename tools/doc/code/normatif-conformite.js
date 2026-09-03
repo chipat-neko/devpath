@@ -4,7 +4,12 @@
    conforme PEUT violer n'importe quel SHOULD — il est alors valide, seulement
    moins bon. Voici ce que cette phrase veut dire quand on l'applique. */
 
-/* Les six MUST des sections 4, 5 et 6, transcrits en fonctions. */
+/* Les MUST que l'on peut tester SUR LES DONNÉES d'une question, transcrits en
+   fonctions. La spécification en porte davantage : ceux de la section 4 lient le
+   BLOC (élément script, type, tableau JSON), ceux de la section 6 engagent le
+   LECTEUR, et celui de la 5.1 (« markup intended to be rendered ») porte sur une
+   intention, donc ne se teste pas. Ces six-là sont ceux qu'une question peut
+   satisfaire ou violer d'elle-même. */
 const MUST = [
   ['M1', 'q est une chaîne non vide',
     (x) => typeof x.q === 'string' && x.q.trim().length > 0],
@@ -68,11 +73,20 @@ const CAS = [
 let conformes = 0;
 for (const [nom, bloc] of CAS) {
   const echecsM = MUST.filter(([, , t]) => { try { return !t(bloc); } catch (e) { return true; } });
-  const echecsS = SHOULD.filter(([, , t]) => { try { return !t(bloc); } catch (e) { return true; } });
   const verdict = echecsM.length === 0 ? 'CONFORME' : 'NON CONFORME';
   if (!echecsM.length) conformes++;
   console.log(verdict.padEnd(14) + nom);
   if (echecsM.length) console.log('    MUST violés   : ' + echecsM.map(([id, l]) => id + ' (' + l + ')').join(', '));
+  /* On n'évalue les SHOULD que si les MUST passent. Sinon on ment : sur un bloc
+     dont « correct » vaut 7, L[7] est undefined et S3 se déclare violé alors que
+     les deux options font un caractère. Un test qui déraille sur une donnée déjà
+     invalide produit une fausse alerte — et une fausse alerte dans un encadré
+     qui enseigne la rigueur coûte plus cher qu'un silence. */
+  if (echecsM.length) {
+    console.log('    SHOULD         : non évalués (le bloc est déjà non conforme)');
+    continue;
+  }
+  const echecsS = SHOULD.filter(([, , t]) => { try { return !t(bloc); } catch (e) { return true; } });
   if (echecsS.length) console.log('    SHOULD ignorés : ' + echecsS.map(([id, l]) => id + ' (' + l + ')').join(', '));
 }
 

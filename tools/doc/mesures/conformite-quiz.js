@@ -53,7 +53,16 @@ const CLAUSES = [
          [A-Za-z0-9_], donc « ô » compte comme une frontière de mot et « réponse
          côté » ressemble à « réponse C ». Ici, la lettre doit être une vraie
          MAJUSCULE isolée, accents compris dans le refus. */
-      const parLettre = /(?:R[ée]ponse|r[ée]ponse|Option|option) [ABCD](?![A-Za-zÀ-ÿ0-9'’-])/;
+      /* ⚠ Variantes trouvées par relecture adversariale : espace insécable,
+         pluriel, guillemets autour de la lettre. La casse de la LETTRE reste
+         imposée — « réponse c » en minuscule est du français ordinaire. */
+      const parLettre = /(?:R|r)[ée]ponses?[\s\u00a0]+[«"']?[ABCD][»"']?(?![A-Za-zÀ-ÿ0-9'’-])|(?:O|o)ptions?[\s\u00a0]+[«"']?[ABCD][»"']?(?![A-Za-zÀ-ÿ0-9'’-])/;
+      /* ⚠ Ce motif doit voir « Aucune de ces réponses » et laisser passer
+         « écarte toutes les réponses qui portent un code 401 » : la formule
+         n'est une référence aux OPTIONS que si elle constitue l'option
+         entière, ou si un marqueur de position la suit. */
+      const parEnsemble = /^[\s\u00a0]*(toutes|aucune)[\s\u00a0]+(de[\s\u00a0]+)?(ces|les|ses)?[\s\u00a0]*(r[ée]ponses|propositions|options)[\s\u00a0]*[.!]?[\s\u00a0]*$|(toutes|aucune)[\s\u00a0]+(de[\s\u00a0]+)?(ces|les)[\s\u00a0]+(r[ée]ponses|propositions|options)[\s\u00a0]+(ci-dessus|ci-dessous|pr[ée]c[ée]dentes|suivantes)/i;
+      if (x.a.some((o) => parEnsemble.test(String(o)))) return false;
       return !x.a.some((o) => parPosition.test(String(o)) || parLettre.test(String(o)));
     } },
   { id: 'S1', niveau: 'SHOULD', libelle: 'une explication accompagne la question',
@@ -71,24 +80,46 @@ const CLAUSES = [
       /* strictement : un ex aequo n'est reconnaissable par personne. */
       return L.filter((n) => n >= bonne).length > 1;
     } },
-  { id: 'A1', niveau: 'MAY', libelle: 'correct est omis (la première option est alors la bonne)',
+  /* Un MAY ne peut pas être violé : la colonne « conformes » compte donc ici
+     les questions qui EMPLOIENT la faculté, pas celles qui la respectent.
+     L'outil qui sert à démontrer la différence entre les trois niveaux ne peut
+     pas la nier dans sa propre sortie. */
+  { id: 'A1', niveau: 'MAY', libelle: 'correct est omis — faculté EMPLOYÉE (un MAY ne se viole pas)',
     test: (x) => x.correct === undefined },
 ];
 
+/* ⚠ La première version cherchait directement le motif canonique
+   « <script type="application/json" data-quiz> ». Un bloc écrit autrement —
+   attributs inversés, apostrophes simples, saut de ligne entre attributs — lui
+   échappait EN SILENCE : le total aurait baissé sans qu'un message le dise,
+   et la mesure se serait crue complète. On repère donc d'abord TOUT script
+   portant un attribut data-quiz, puis on rejette explicitement ce qui ne suit
+   pas la section 4. */
+const TOUT_SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script>/g;
+
 function questions() {
   const out = [];
+  const rejets = [];
   for (const f of lib.fichiersLecons()) {
     const html = fs.readFileSync(f, 'utf8');
     const art = html.match(/<article class="prose"[\s\S]*?<\/article>/);
     if (!art) continue;
     const rel = path.relative(lib.RACINE, f).split(path.sep).join('/');
-    for (const b of art[0].matchAll(/<script type="application\/json" data-quiz(?:-bilan(?:="[^"]*")?)?>([\s\S]*?)<\/script>/g)) {
+    TOUT_SCRIPT.lastIndex = 0;
+    for (const b of art[0].matchAll(TOUT_SCRIPT)) {
+      const attrs = b[1];
+      if (!/\bdata-quiz(-bilan)?\b/.test(attrs)) continue;
+      if (!/type\s*=\s*["']application\/json["']/.test(attrs)) {
+        rejets.push({ fichier: rel, pourquoi: 'type absent ou autre que application/json', attrs: attrs.trim() });
+        continue;
+      }
       let lot;
-      try { lot = JSON.parse(b[1]); } catch (e) { out.push({ fichier: rel, invalide: e.message }); continue; }
+      try { lot = JSON.parse(b[2]); } catch (e) { out.push({ fichier: rel, invalide: e.message }); continue; }
       if (!Array.isArray(lot)) { out.push({ fichier: rel, invalide: 'le bloc n est pas un tableau' }); continue; }
       lot.forEach((q, i) => out.push({ fichier: rel, rang: i + 1, q }));
     }
   }
+  out.rejets = rejets;
   return out;
 }
 
@@ -108,7 +139,12 @@ function mesurer() {
     };
   });
   const cours = new Set(valides.map((e) => e.fichier.split('/')[1]));
-  return { questions: valides.length, blocsInvalides: toutes.filter((e) => e.invalide), cours: cours.size, clauses: resultats };
+  return {
+    questions: valides.length,
+    blocsInvalides: toutes.filter((e) => e.invalide),
+    rejets: toutes.rejets || [],
+    cours: cours.size, clauses: resultats,
+  };
 }
 
 module.exports = { mesurer, CLAUSES };
@@ -117,13 +153,19 @@ if (require.main === module) {
   const r = mesurer();
   console.log(r.questions + ' questions dans ' + r.cours + ' cours (le cours « doc » exclu).');
   if (r.blocsInvalides.length) console.log('BLOCS JSON INVALIDES : ' + r.blocsInvalides.length);
+  if (r.rejets.length) {
+    console.log('BLOCS PORTANT data-quiz MAIS REJETÉS : ' + r.rejets.length);
+    for (const x of r.rejets.slice(0, 10)) console.log('  ' + x.fichier + ' — ' + x.pourquoi);
+  } else {
+    console.log('aucun bloc data-quiz rejeté : tous suivent la section 4.');
+  }
   console.log('');
   console.log('clause  niveau   conformes / total    échecs   libellé');
   for (const c of r.clauses) {
     const pct = ((c.conformes / c.total) * 100).toFixed(1);
     console.log('  ' + c.id.padEnd(6) + c.niveau.padEnd(9) +
       (c.conformes + ' / ' + c.total).padStart(14) + '  ' + (pct + ' %').padStart(7) +
-      String(c.echecs).padStart(8) + '   ' + c.libelle);
+      (c.niveau === 'MAY' ? '       —' : String(c.echecs).padStart(8)) + '   ' + c.libelle);
   }
   const detail = process.argv.find((a) => a.startsWith('--clause='));
   if (detail) {
