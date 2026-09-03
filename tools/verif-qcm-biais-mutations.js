@@ -94,6 +94,31 @@ function questionsEquilibrees(n) {
   }
   return out;
 }
+/* Devinables PAR LA SEULE PARENTHESE. Ajoutees en B4 (2026-09-04) avec l'indice
+   « l'incise entre parentheses » : sans ce cas, la branche neuve d'EXPLOITABLES
+   n'etait eprouvee par RIEN, et un verificateur dont une branche n'est jamais
+   exercee ne vaut pas mieux qu'un verificateur absent.
+   Les quatre options sont de longueur voisine, portent le meme nombre de virgules
+   et le meme vocabulaire : SEULE la bonne reponse glisse une incise entre
+   parentheses. Le verdict attendu doit donc nommer la PARENTHESE, pas la
+   longueur -- c'est ce que le motif de la mutation controle. */
+function questionsParenthesees(n) {
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    out.push({
+      q: 'Question parenthesee n° ' + (i + 1) + ' — quel enonce decrit le comportement ?',
+      a: [
+        'Le compteur est remis a zero avant la lecture, si bien que la valeur affichee reste nulle',
+        'Le compteur est remis a zero apres la lecture, si bien que la valeur affichee est doublee',
+        'Le compteur est recopie avant la lecture, si bien que la valeur affichee vient de la copie',
+        'Le compteur est lu avant la remise a zero (avant l ecriture), et la valeur affichee est juste',
+      ],
+      correct: 3,
+      explain: 'Question injectee par une epreuve de mutation : elle ne doit jamais rester dans le depot.',
+    });
+  }
+  return out;
+}
 function pageAvec(questions) {
   var bloc = '<script type="application/json" data-quiz>' + JSON.stringify(questions) + '</script>\n  ';
   return pageOrig.replace('</body>', bloc + '</body>');
@@ -129,6 +154,16 @@ var MUTATIONS = [
   ['stats (99,3 % de biais) retiré de la référence : il redevient un « cours neuf »',
     function () { fs.writeFileSync(REF, refAvec(function (j) { delete j.cours.stats; })); },
     1, /cours neuf non conforme/],
+
+  /* B4 : le biais de PARENTHESE sans biais de longueur. Le motif attendu nomme
+     l'incise : si le verdict tombait sur « la plus longue », le cas ne
+     prouverait pas la branche neuve, il prouverait l'ancienne. */
+  ['60 questions devinables A LA SEULE PARENTHESE, et doc marqué « traité »',
+    function () {
+      fs.writeFileSync(PAGE, pageAvec(questionsParenthesees(60)));
+      fs.writeFileSync(REF, refAvec(function (j) { j.cours.doc.traite = true; }));
+    },
+    1, /incise entre parentheses/],
 
   ['un cours qui n’existe pas ajouté à la référence',
     function () {

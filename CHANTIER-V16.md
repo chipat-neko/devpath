@@ -1017,6 +1017,144 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       rendus). Les cinq leçons à remettre en consigne dès le premier lot : les quatre pièges de
       forme (longueur dans les deux sens, ponctuation, énumération, absolus), et le fait que
       **corriger un indice en crée un autre**.
+
+      ---
+
+      **LE DÉCOUPAGE DE `js`, DÉCIDÉ AVANT DE COMMENCER comme le cadrage l'exigeait : DEUX PASSES.**
+      65 leçons, 218 questions, 654 distracteurs — trois fois `mobile`, le plus gros cours de B3.
+      **Passe 1 = leçons 01-36** (108 questions, 324 distracteurs). **Passe 2 = leçons 37-65**
+      (110 questions, 330 distracteurs, dont les deux QCM bilan). La coupure est à mi-corpus et non
+      à la frontière du bilan de la leçon 42, qui aurait donné 141 / 77.
+
+      **`js` PASSE 1 — FAIT le 2026-09-04. Les 324 distracteurs des leçons 01 à 36 réécrits.**
+      Six écrivains sur fichiers disjoints, six relecteurs adversariaux, six correcteurs — un seul
+      écrivain par fichier à tout instant, aucun commit d'agent.
+
+      | indice, sur les 108 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **99,5 %** | **19,3 %** |
+      | la plus COURTE | 0,0 % | **24,1 %** (le biais ne s'est PAS retourné) |
+      | la plus détaillée | 77,2 % | **19,3 %** |
+      | le mot technique exclusif | 95,1 % | **16,7 %** |
+      | l'écho de l'énoncé | 67,1 % | **21,8 %** |
+      | **l'incise entre parenthèses** | 73,8 % | **35,3 %** |
+      | **la MAJUSCULE d'emphase** | 44,0 % | **30,3 %** |
+      | le point-virgule | 68,1 % | **34,9 %** |
+      | rangs de longueur de la bonne réponse | **108 / 0 / 0 / 0** | **23 / 26 / 34 / 25** |
+      | distracteurs hors de 70-130 % | **322** | **0** (0,70 à 1,30) |
+
+      **Cours `js` entier : 95,4 % → 55,7 %** (les 29 leçons de la passe 2 pèsent encore).
+      **Global du site : 84,8 % → 83,4 %.** `mesure-qcm-intouchable` : **0 atteinte** sur les
+      208 questions — énoncés, index `correct`, explications et bonnes réponses identiques à
+      `git show HEAD:`. La case reste **décochée** : une passe sur deux, et neuf cours sur dix.
+
+      ⚠️⚠️ **CE POINT A TROUVÉ UN TROU DANS LA MESURE DE B1, ET C'EST SON RÉSULTAT PRINCIPAL.**
+      B1 avait fait jouer huit stratégies et conclu que la longueur était le biais. **Les six
+      relecteurs adversariaux ont tous signalé, sans se concerter, un indice qu'AUCUNE des huit ne
+      voyait : l'incise entre parenthèses, portée par la seule bonne réponse.** Mesuré après coup :
+      **59,2 % sur les 6 167 questions du site** — le DEUXIÈME indice, devant le mot technique
+      exclusif. Il est maintenant dans `mesure-biais-qcm.js`, avec « la MAJUSCULE d'emphase »
+      (31,2 % sur le site, 44,0 % sur ce lot).
+
+      **Et il fallait mesurer avant de les croire : sur trois de leurs quatre affirmations de forme,
+      les relecteurs se sont trompés.** Ils annonçaient la parenthèse « inchangée, 12/12 = 100 % » et
+      le point-virgule « 5/5 = 100 % » : mesurés sur les 108 questions en pondérant les ex æquo,
+      **73,8 % → 61,7 %** et **68,1 % → 40,3 %** après la seule première passe. Ils comptaient les
+      questions où l'indice se **déclenche**, pas la réussite — la même erreur de méthode que
+      « la bonne réponse est en première position ». Un quatrième a affirmé « l'option la plus courte
+      n'est jamais la bonne, 18/18 » : sur 108 questions la stratégie rend **25,9 %** contre 25,0 %
+      au hasard. **En revanche ils avaient raison sur la capitale d'emphase — 44,0 % avant,
+      44,9 % après la première passe, l'indice n'avait pas bougé d'un pouce** pendant que la longueur
+      tombait de 99,5 % à 23,1 %. C'est la leçon 3 de B3 qui se répète : *un relecteur qui mesure sur
+      son lot extrapole faux* — mais ce qu'il **voit** reste juste, et lui seul l'a vu.
+
+      **137 prises rendues (71 de FOND, 66 de FORME), 117 retenues après jugement.** Les défauts de
+      fond sont les mêmes qu'en B3, en pire, parce qu'en JavaScript un distracteur approximatif
+      devient exact plus vite qu'ailleurs :
+      - « `sort()` n'est pas spécifiée pour les nombres » — c'est **l'argument même de la leçon**
+        pour justifier le comparateur, et la stabilité de `sort` était bien *implementation-defined*
+        avant ES2019 ;
+      - « l'affectation se comporte comme `Object.assign({}, a)` : chaque variable reçoit sa propre
+        référence » — **littéralement vrai**, et dans le vocabulaire de la bonne réponse ;
+      - « `innerHTML` … mais un peu plus lent » — **exact**, et la leçon l'écrit trois écrans plus bas ;
+      - « `requestAnimationFrame` planifie une microtâche vidée avant chaque rendu » — **tout est vrai
+        sauf le mot « microtâche »** : le bon mécanisme sous un mauvais nom ;
+      - « la promesse de `fetch` ne rejette que si la connexion se ferme avant l'envoi d'un corps » —
+        **la règle exacte de la spécification Fetch** ;
+      - « un `import` n'est évalué qu'une fois, sauf si les deux emploient le même chemin relatif » —
+        l'exception est déclenchée par l'énoncé lui-même, donc l'option **se replie sur la bonne
+        réponse**, et elle est **techniquement plus exacte qu'elle** (le cache ESM est indexé par URL
+        résolue) ;
+      - « un champ de classe est évalué au chargement » — **vrai des champs `static`** ;
+      - « `JSON.stringify` refuse tout objet non sérialisable » — **vrai** des références circulaires
+        et des `BigInt`.
+
+      ⚠️ **LES CORRECTEURS ONT REFUSÉ 20 PRISES, ET SURTOUT UNE TRENTAINE DE TEXTES DE REMPLACEMENT
+      — le relecteur reproduisait le défaut qu'il dénonçait.** Exemples : « `"click"` se déclenche
+      avant `"submit"` » (vrai) ; « `unshift` renvoie la nouvelle taille » (vrai, et la leçon dit
+      l'inverse de ce que le relecteur croyait) ; « `sort()` range selon le nombre de chiffres »
+      (donnerait `[1, 2, 10]`, or l'énoncé affiche `[1, 10, 2]` : l'option **se réfute contre son
+      propre énoncé**) ; un texte contenant `document.write("<li>")`, c'est-à-dire un chevron
+      interdit ; un texte proposant `NULL` comme capitale d'emphase, mot qui figure dans la liste des
+      **sigles** et n'aurait donc rien neutralisé. **La contradiction doit elle-même être contredite.**
+
+      ⚠️ **LE BIAIS S'EST RETOURNÉ DANS TROIS LOTS SUR SIX, ET LES ÉCRIVAINS L'ONT VU EUX-MÊMES.**
+      Après leur première vague de corrections, « la plus longue » tombait à **0,0 %** (lots 07-12 et
+      19-24) et à 5,6 % (lot 31-36), « la plus COURTE » montant à **44,4 %** : la bonne réponse
+      n'était plus *jamais* la plus longue, ce qui est une règle d'élimination aussi rentable que le
+      biais d'origine. Les trois ont fait une seconde vague sans qu'on le leur demande. **C'est la
+      preuve de la leçon 2 de B3 : une leçon écrite dans ce plan ne se repaie que si elle est remise
+      EN CONSIGNE au tour suivant.** Elle l'était, et elle a payé trois fois.
+
+      **L'OUTILLAGE A ÉTÉ CORRIGÉ EN CONSÉQUENCE, en trois points :**
+      1. `mesure-biais-qcm.js` mesure **deux indices de plus** (parenthèse, capitale d'emphase),
+         avec une liste de sigles du métier — sans elle, `HTML` ou `JSON` compteraient pour un cri et
+         la mesure ne voudrait rien dire.
+      2. `verif-qcm-biais.js` : **« l'incise entre parenthèses » entre dans `EXPLOITABLES »**.
+         Vérifié AVANT de l'inscrire : les six cours marqués `traite` en B3 sont entre **36,6 % et
+         48,9 %** dessus, donc l'ajout ne fait rougir personne — c'est la condition pour qu'un cliquet
+         reste lu. « La MAJUSCULE d'emphase » n'y entre **pas** : 31,2 % sur le site, soit le niveau
+         exact de « la plus prudente » (30,1 %) que B1 avait écartée ; la même règle doit valoir pour
+         les deux.
+      3. `verif-qcm-biais-mutations.js` passe de 6 à **7 cas**, et le 7ᵉ existe pour une raison
+         précise : **une branche d'`EXPLOITABLES` que rien n'éprouve ne vaut pas mieux qu'un
+         vérificateur absent.** Le cas injecte 60 questions de longueur, de ponctuation et de
+         vocabulaire équilibrés dont **seule la bonne réponse porte une incise**, et le motif attendu
+         **nomme la parenthèse** : si le verdict tombait sur « la plus longue », le cas prouverait
+         l'ancienne branche et pas la neuve. **7/7.** Le cours-témoin `stats` (99,3 %) est intact,
+         comme le cadrage l'exigeait.
+
+      ⚠️ **UN PIÈGE D'ENVIRONNEMENT, trouvé deux fois indépendamment, et qui ne se voit à AUCUN
+      contrôle : le heredoc du shell de cet environnement AVALE un antislash doublé.** `"\\d{5}"`
+      arrive dans le fichier comme `\d{5}` en Python (avertissement) mais `"\\b"` y arrive comme un
+      **vrai caractère U+0008**. Conséquences vécues : la stratégie « MAJUSCULE d'emphase » a rendu
+      **25,0 %, soit exactement le hasard**, pendant deux mesures — un chiffre qui ressemblait à un
+      résultat ; et un correcteur a publié `/d{5}/` au lieu de `/\d{5}/` dans un distracteur.
+      **Ni `JSON.parse`, ni les mesures, ni `mesure-qcm-intouchable` ne le voient** — c'est exactement
+      l'accident qui avait fait afficher « 0 leçon cite une RFC » dans `gen.js`. Écrire les motifs par
+      `String.fromCharCode(92)`, ou passer par l'outil d'écriture de fichier. Contrôle ajouté après
+      coup sur les 432 options du lot : **0 caractère de contrôle, 3 expressions régulières intactes**.
+
+      ⚠️ **`doc/lecon-03` s'est périmé une SIXIÈME fois**, et cette fois il portait en plus une
+      **incohérence interne** : 85,0 % à un endroit, **89,8 %** à un autre pour la même grandeur,
+      resté d'une passe antérieure. Recalculé : **5 189 → 5 101 manquements, 85,0 % → 83,6 %**, et
+      **29 → 30 leçons parlant de « la spécification »** — ce dernier parce qu'un distracteur neuf
+      emploie le mot. **11 mentions** corrigées, `quiz-index` régénéré **deux fois** (le chiffre était
+      aussi dans l'explication d'un QCM), `verif-normatif` revenu à **60/60**. Le script de
+      remplacement a **refusé d'écrire** au premier essai : j'avais annoncé 4 occurrences là où il y
+      en avait 5, parce que `grep -c` compte des lignes et non des occurrences. *Un motif de
+      remplacement trop large casse ce qui était juste* — le garde-fou est ce qui l'a empêché.
+
+      **Contrôles finaux** : `verif.js --rapide` **26 étapes tout vert (76,6 s)** ; `verif-html`
+      **0 / 1 629 fichiers** ; `verif-donnees` **0 erreur** ; `verif-normatif` **60/60** ; cliquet
+      **vert**, refigé (`js` **non** marqué `traite` : 55,7 % contre une cible de 40 %), épreuve
+      **7/7**.
+
+      **CE QUI RESTE À FAIRE SUR B4, sans arrondir** : la passe 2 de `js` (leçons 37-65, 110 questions,
+      330 distracteurs), puis `python`, `css`, `html`, `maths`, `algo`, `nodejs`, `bdd`, `projets-js`,
+      `react`. **Et une question neuve, ouverte par ce point** : les 84 cours non traités n'ont jamais
+      été mesurés sur la parenthèse. À 59,2 % de moyenne, l'ordre de nocivité du cadrage — établi sur
+      la seule longueur — **est peut-être à refaire**.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

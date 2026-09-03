@@ -107,6 +107,10 @@ var ABSOLUS = /\b(toujours|jamais|uniquement|seulement|aucun|aucune|impossible|o
 /* Les formulations PRUDENTES, symetrie de la precedente. */
 var PRUDENTS = /\b(souvent|generalement|généralement|en general|en général|peut|permet|selon|plutot|plutôt|principalement|notamment|le plus souvent)\b/i;
 
+/* Les SIGLES du metier, ecartes de la mesure des capitales d'emphase : « HTML »
+   ou « JSON » dans une option n'est pas un cri, c'est le nom de la chose. */
+var SIGLES = /^(HTML|CSS|JS|JSON|DOM|API|URL|URI|HTTP|HTTPS|CORS|SQL|CLI|UI|UX|ID|IDE|CPU|GPU|RAM|SSD|DNS|TLS|SSL|CRUD|REST|RPC|GRPC|ORM|JWT|XSS|CSRF|SVG|PNG|JPEG|GIF|PDF|UTF|ASCII|BOM|LF|CRLF|OK|NASA|IEEE|ISO|RFC|MDN|ECMA|ES|NPM|CDN|CI|CD|TDD|BDD|DDD|MVC|MVVM|SPA|PWA|SEO|ARIA|WAI|WCAG|RGPD|GNU|POSIX|BSD|MIT|AWS|GCP|VM|OS|IO|FIFO|LIFO|LRU|TTL|UUID|MD|XML|YAML|TOML|CSV|AJAX|XHR|WEBP|WOFF|EOF|NAN|INF|TCP|UDP|IP|SSH|FTP|SMTP|IMAP|MQTT|GRAPHQL|SDK|JVM|LLVM|ASM|WASM|GC|JIT|AOT|OOP|FP|SOLID|DRY|KISS|YAGNI|A11Y|I18N|L10N|RGB|HSL|DPI|PPI|FPS|MS|KO|MO|GO|TO|BIT|OCTET|SI|IIFE|NEW|THIS|VAR|LET|CONST|NULL|TRUE|FALSE|GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|SELECT|INSERT|UPDATE|FROM|WHERE|JOIN|GROUP|ORDER|BY|AND|OR|NOT|IN|IS|AS|ON|IF|ELSE|FOR|WHILE|DO|END|BEGIN|COMMIT|ROLLBACK|CASCADE|UNIQUE|INDEX|KEY|PRIMARY|FOREIGN|TABLE|VIEW|WITH|UNION|ALL|DISTINCT|LIMIT|OFFSET|CASE|WHEN|THEN|USING|SET|VALUES|INTO|CREATE|DROP|ALTER|GRANT|REVOKE)$/;
+
 var STRATEGIES = [
   {
     nom: "hasard (etalon)",
@@ -165,6 +169,34 @@ var STRATEGIES = [
         return n;
       });
       return argMax(score);
+    },
+  },
+  {
+    /* AJOUTE EN B4 (2026-09-04). B1 avait cru faire le tour des indices et en a
+       manque un qui est le DEUXIEME du site : l'incise entre parentheses, portee
+       par la seule bonne reponse. Mesuree apres coup sur les 6 167 questions :
+       59,2 %. Six relecteurs adversariaux du lot `js` l'ont signalee sans se
+       concerter, et aucun des huit indices de B1 ne la voyait. On ne compte pas
+       les parentheses d'appel de fonction — `f()`, `map()` — mais les incises
+       d'au moins quatre caracteres, celles qui expliquent. */
+    nom: "l'incise entre parentheses",
+    quoi: "l'option qui glisse le plus d'explications entre parentheses",
+    choisir: function (q) {
+      return argMax(q.a.map(function (t) { return (t.match(/\([^)]{4,}\)/g) || []).length; }));
+    },
+  },
+  {
+    /* AJOUTE EN B4. Meme angle mort : la bonne reponse est souvent la seule a
+       CRIER un mot. Les sigles du metier (HTML, JSON, DOM...) ne sont pas des
+       emphases : sans cette exclusion la mesure ne voudrait rien dire. */
+    nom: "la MAJUSCULE d'emphase",
+    quoi: "l'option seule a crier un mot en capitales",
+    choisir: function (q) {
+      return argMax(q.a.map(function (t) {
+        return (t.match(/\b[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ']{1,}\b/g) || []).filter(function (w) {
+          return !SIGLES.test(w.replace(/'/g, ""));
+        }).length;
+      }));
     },
   },
   {

@@ -53,8 +53,21 @@ var DETAIL = process.argv.indexOf("--detail") !== -1;
 var ECRIRE = process.argv.indexOf("--ecrire") !== -1;
 
 /* Les strategies EXPLOITABLES, retenues par la mesure B1 : nettement au-dessus du
-   hasard. Les trois autres sont ignorees a dessein. */
-var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exclusif", "l'echo de la question"];
+   hasard. Les trois autres sont ignorees a dessein.
+
+   AJOUT B4 (2026-09-04) : « l'incise entre parentheses », 59,2 % sur les 6 167
+   questions — le DEUXIEME indice du site, et B1 ne l'avait pas vu. Six relecteurs
+   adversariaux du lot `js` l'ont signale sans se concerter ; la mesure les a
+   confirmes. Verifie avant de l'inscrire ici : les six cours marques `traite` en
+   B3 sont entre 36,6 % et 48,9 % dessus, donc l'ajouter ne fait rougir personne
+   — c'est la condition pour qu'un cliquet reste lu.
+
+   NON retenue, et il faut dire pourquoi : « la MAJUSCULE d'emphase » vaut 31,2 %
+   sur le site, soit le niveau exact de « la plus prudente » (30,1 %) que B1 avait
+   ecartee. La meme regle doit valoir pour les deux. Elle reste MESUREE par
+   mesure-biais-qcm.js, parce qu'elle monte a 44,9 % sur certains cours. */
+var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exclusif",
+                    "l'echo de la question", "l'incise entre parentheses"];
 var CLEF_LONGUEUR = "la plus longue";
 
 /* ------------------------------------------------------------------- la mesure */
