@@ -419,11 +419,64 @@ La cause est mécanique et sans malice : la bonne réponse porte l'explication, 
 expédiés. La correction ne consiste donc **pas** à raccourcir la bonne réponse — ce serait perdre le
 contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
 
-- [ ] **B1 · Mesurer d'abord, et ne pas se fier au seul critère de longueur.** Relever aussi les
+- [x] **B1 · Mesurer d'abord, et ne pas se fier au seul critère de longueur.** Relever aussi les
       autres indices qui trahissent la bonne réponse : présence d'un tiret d'explication, vocabulaire
       technique absent des autres choix, formulation prudente contre affirmation absolue. **Le
       biais de longueur n'est peut-être pas le seul, ni le pire.** Produire le tableau, choisir la
       cible chiffrée, et l'écrire ici.
+
+      **FAIT le 2026-09-03.** `tools/mesure-biais-qcm.js` (nouveau) lit les blocs `data-quiz` et
+      `data-quiz-bilan` des **sources** — **6 167 questions** dont 1 111 en QCM bilan, sur 90 cours —
+      et fait jouer huit *apprenants qui ne comprennent rien*, chacun appliquant une règle mécanique
+      sur le texte des options. **L'ex æquo ne compte pas pour une réussite** : quand une stratégie
+      hésite entre deux options, elle tranche au hasard et l'on compte 1/n, sans quoi tous les taux
+      seraient gonflés. L'étalon est l'espérance exacte du hasard, pas une simulation.
+
+      | stratégie | réussite | sans ex æquo |
+      |---|---:|---:|
+      | hasard (étalon) | 25,0 % | — |
+      | **la plus longue** | **89,5 %** | 88,8 % |
+      | **COMBINÉ : le tiret puis la longueur** | **89,8 %** | 89,1 % |
+      | **la plus détaillée** (virgules et deux-points) | **76,4 %** | 67,0 % |
+      | **le mot technique exclusif** | **62,1 %** | 51,5 % |
+      | l'écho de la question (mots repris de l'énoncé) | 46,7 % | 30,6 % |
+      | la plus prudente (« souvent », « permet », « selon ») | 30,2 % | 8,3 % |
+      | la seule à porter un tiret d'explication | 27,3 % | 3,1 % |
+      | écarter les affirmations absolues | 26,3 % | 0,8 % |
+
+      **Le plan se trompait sur deux des trois indices qu'il annonçait, et c'est le résultat de ce
+      point.** Le tiret d'explication (27,3 %), l'évitement des absolus (26,3 %) et la prudence de
+      formulation (30,2 %) sont **au niveau du hasard** : ils ne discriminent presque jamais (96,8 %,
+      98,5 % et 87,2 % d'ex æquo). Les corriger serait du travail perdu. En revanche **deux indices
+      non prévus sont réellement exploitables** : « la plus détaillée » (**76,4 %**) et « le mot
+      technique exclusif » (**62,1 %**). Ils sont corrélés à la longueur — étoffer un distracteur les
+      fait baisser ensemble — mais ils ne disparaissent pas avec elle : sur `doc`, dont la longueur ne
+      trahit **rien** (0,0 %), « la plus détaillée » tient encore **38,4 %**.
+
+      ⚠️ **Un chiffre spectaculaire, et faux comme faille : la bonne réponse est en première position
+      dans 6 096 questions sur 6 167 (98,8 %) dans le source.** Cela ne donne aucun avantage à
+      l'apprenant : `js/lecon.js` **mélange** les options (`shuffle`, appelé par `buildQuiz` pour les
+      QCM de leçon comme pour les bilans). Vérifié dans le code avant d'écrire la ligne — c'est
+      exactement le genre de mesure qui, prise de tête, aurait lancé une correction inutile et
+      cassé les scores enregistrés.
+
+      **Cinq cours prouvent que la cible est atteignable**, parce qu'ils ont été écrits après le
+      constat : `doc` **0,0 %**, `distribue` 5,6 %, `neurones` 15,4 %, `offensive` 37,7 %,
+      `compilation` 52,1 % sur le critère de longueur. Les 85 autres sont entre 81,2 % et 100 %.
+
+      **LA CIBLE, chiffrée et tenable :**
+      - **par cours traité — « la plus longue » ≤ 40 %, et aucune stratégie exploitable > 60 %.**
+        C'est le niveau de `offensive` (37,7 %), atteint en écrivant, pas en rabotant.
+      - **cible globale sous 60 % : hors de portée de ce chantier, et le dire vaut mieux que
+        l'arrondir.** Il faudrait traiter **40 cours, soit 3 417 questions et ~10 000 distracteurs à
+        étoffer** (ou 32 cours / 2 895 questions si chacun descend à 30 %). Le calcul est dans le
+        commit, pas dans l'intuition.
+      - **ce que B3 et B4 visent donc** : les 6 cours à **100 %** d'abord (`mobile`, `zig`, `equipe`,
+        `ux`, `archi`, `iac` — **361 questions, 1 083 distracteurs**), qui ramèneraient le global de
+        89,5 % à **86,0 %** ; puis des lots par ordre de nocivité, un compte rendu chiffré par lot.
+      - **les quatre indices à surveiller** sont donc : longueur, détail, mot technique exclusif,
+        écho de l'énoncé. Les trois écartés le sont **par la mesure**, et le vérificateur de B2 n'a
+        pas à les contrôler.
 - [ ] **B2 · Le vérificateur, avant les corrections.** `tools/verif-qcm-biais.js` : signale une
       question dont la bonne réponse dépasse les distracteurs au-delà d'un seuil mesuré. **Éprouvé
       par injection** : des questions volontairement biaisées doivent être vues. Entre dans la
