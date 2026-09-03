@@ -674,6 +674,13 @@ window.SITE_DATA = (function () {
       tagline: "Pas un cours de mathématiques déguisé : les mathématiques dont un développeur se sert, chacune reliée à l'endroit du site où elle sert déjà. La logique derrière un if, les ensembles derrière une table de hachage, l'arithmétique modulaire derrière la cryptographie, les graphes derrière un réseau, la croissance derrière un O(n²). Chaque notion arrive avec un programme qui la met en œuvre — et aucun chiffre de ce cours n'a été écrit de tête : tous sortent d'une exécution.",
       tags: ["Transversal", "Fondamentaux", "Mathématiques"],
     },
+    {
+      id: "doc", dir: "doc", title: "Lire la documentation : l'anglais et les sources du métier",
+      glyph: "§", language: "Documentation", level: "debutant", status: "complet",
+      accent: "#3d5a80", lessons: 1, hours: 1,
+      tagline: "74 leçons de ce site renvoient à « la documentation officielle », à « la spécification » ou à une RFC, et aucune n'apprend à les lire. Ce cours ouvre une page de référence rubrique par rubrique — signature, paramètres, valeur de retour, exceptions, limites connues — et apprend l'ordre de lecture qui fait gagner du temps. La page étudiée documente une fonction de ce site : chacune de ses affirmations s'exécute dans la page, et 23 contrôles la rejouent — dont un qui en a démenti une.",
+      tags: ["Transversal", "Fondamentaux", "Métier"],
+    },
   ];
 
   /* ---- Structure détaillée des cours (pages de cours + nav de leçon) -------
@@ -1691,6 +1698,7 @@ window.SITE_DATA = (function () {
         { course: "algo", note: "Mets tes bases au service de la résolution de problèmes : algorithmes & structures de données." },
         { course: "html", note: "Le HTML structure les pages que ton code manipule." },
         { course: "react", note: "Passe aux interfaces à composants une fois les bases acquises." },
+        { course: "doc", note: "La documentation de référence de JavaScript est en anglais. Ce cours-là apprend à la lire — et il décortique une page de doc écrite pour une fonction de ce site." },
       ],
       modules: [
         {
@@ -2194,6 +2202,7 @@ window.SITE_DATA = (function () {
       related: [
         { course: "css", note: "Une fois la structure posée, mets-la en forme avec CSS." },
         { course: "javascript", note: "Rends tes pages interactives avec JavaScript." },
+        { course: "doc", note: "La spécification HTML fait autorité quand un tutoriel et un navigateur se contredisent. Encore faut-il savoir la lire." },
       ],
       modules: [
         {
@@ -3353,6 +3362,7 @@ window.SITE_DATA = (function () {
         { course: "git", note: "La doc en Markdown vit dans le dépôt Git et se versionne avec le code." },
         { course: "html", note: "Markdown se convertit en HTML ; on peut même y insérer du HTML." },
         { course: "formats", note: "Markdown est du texte brut : portable, durable, versionnable." },
+        { course: "doc", note: "Écrire de la documentation suppose de savoir à quoi ressemble une bonne page de référence : les huit rubriques et ce qu'on y promet." },
       ],
       modules: [
         {
@@ -5962,6 +5972,25 @@ window.SITE_DATA = (function () {
         },
       ],
     },
+    doc: {
+      id: "doc", dir: "doc", title: "Lire la documentation : l'anglais et les sources du métier",
+      glyph: "§", accent: "#3d5a80", overview: "cours.html",
+      related: [
+        { course: "javascript", note: "La page de référence étudiée documente une fonction JavaScript de ce site, et ses programmes s'exécutent dans la page." },
+        { course: "html", note: "Les spécifications du web sont l'exemple type d'un document normatif : celui qui fait autorité quand un navigateur et un tutoriel se contredisent." },
+        { course: "equipe", note: "Documenter son propre code est l'autre moitié du sujet : ce qu'on écrit pour l'équipe qui reprendra le projet." },
+        { course: "markdown", note: "Le format dans lequel la plupart des documentations sont écrites aujourd'hui, README compris." },
+      ],
+      modules: [
+        {
+          num: "01", title: "Une page de référence", sub: "les huit rubriques, l'ordre de lecture, et ce qu'on saute",
+          level: "debutant",
+          lessons: [
+            { num: "01", title: "Anatomie d'une page de documentation", file: "lecon-01.html", status: "complet" },
+          ],
+        },
+      ],
+    },
   };
 
   /* ---- Parcours d'apprentissage (itinéraires de cours existants) -------------
@@ -6177,6 +6206,7 @@ window.SITE_DATA = (function () {
     "neurones": {"lecon-01.html":83,"lecon-02.html":86,"lecon-03.html":88,"lecon-04.html":102,"lecon-05.html":101,"lecon-06.html":102,"lecon-07.html":117,"lecon-08.html":117,"lecon-09.html":109,"lecon-10.html":104,"lecon-11.html":103,"lecon-12.html":117},
     "crypto": {"lecon-01.html":32,"lecon-02.html":30,"lecon-03.html":34,"lecon-04.html":34,"lecon-05.html":33,"lecon-06.html":35,"lecon-07.html":34,"lecon-08.html":35,"lecon-09.html":35,"lecon-10.html":36,"lecon-11.html":40},
     "maths": {"lecon-01.html":52,"lecon-02.html":50,"lecon-03.html":54,"lecon-04.html":48,"lecon-05.html":50,"lecon-06.html":52,"lecon-07.html":52,"lecon-08.html":54,"lecon-09.html":55,"lecon-10.html":62,"lecon-11.html":64,"lecon-12.html":60,"lecon-13.html":62},
+    "doc": {"lecon-01.html":45},
     "offensive": {"lecon-01.html":78,"lecon-02.html":82,"lecon-03.html":86,"lecon-04.html":22,"lecon-05.html":18,"lecon-06.html":18,"lecon-07.html":26,"lecon-08.html":24,"lecon-09.html":22,"lecon-10.html":24,"lecon-11.html":24,"lecon-12.html":30},
     "distribue": {"lecon-01.html":80,"lecon-02.html":84,"lecon-03.html":86,"lecon-04.html":79,"lecon-05.html":73,"lecon-06.html":71,"lecon-07.html":77,"lecon-08.html":74,"lecon-09.html":77,"lecon-10.html":94,"lecon-11.html":94,"lecon-12.html":84},
     "cicd": {"lecon-01.html":30,"lecon-02.html":35,"lecon-03.html":38,"lecon-04.html":37,"lecon-05.html":38,"lecon-06.html":35,"lecon-07.html":37,"lecon-08.html":36,"lecon-09.html":38,"lecon-10.html":38,"lecon-11.html":40},

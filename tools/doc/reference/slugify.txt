@@ -1,0 +1,94 @@
+slugify()
+=========
+
+The slugify() function returns a URL fragment identifier derived from the visible
+text of a heading. Syntaxe uses the returned value twice: as the id attribute of
+the <h2> element, and as the href target of the matching entry in the table of
+contents.
+
+Syntax
+------
+
+    slugify(s)
+
+Parameters
+----------
+
+  s
+      A string. The visible text of a heading, as read from Node.textContent.
+      No conversion is performed; see Exceptions below.
+
+Return value
+------------
+
+  A new string built only from the characters a-z, 0-9 and U+002D HYPHEN-MINUS.
+  It neither starts nor ends with a hyphen. The empty string ("") is returned
+  when the input contains no character that survives the pipeline described
+  below.
+
+Exceptions
+----------
+
+  TypeError
+      Thrown if s is null or undefined, or more generally if s has no
+      toLowerCase() method. The implementation performs no type check: it calls
+      s.toLowerCase() directly, so a String object -- or any object exposing the
+      expected string methods -- is accepted and produces a normal result.
+
+Description
+-----------
+
+  The transformation is a pipeline of five steps, applied in this order:
+
+    1. Lowercase the whole string (String.prototype.toLowerCase()).
+    2. Normalize to NFD, which splits a precomposed letter such as "e-acute"
+       into "e" followed by U+0301 COMBINING ACUTE ACCENT, and applies canonical
+       ordering to the resulting marks.
+    3. Remove every code point carrying the Unicode property Diacritic.
+    4. Replace every run of characters outside [a-z0-9] with a single "-".
+    5. Trim a leading or a trailing "-".
+
+  Steps 2 and 3 remove the accents that Unicode encodes as combining marks.
+  Step 4 is what makes the result URL-safe; it is also what silently discards
+  anything the previous steps failed to reduce to ASCII.
+
+Examples
+--------
+
+    slugify("Les tableaux")             // "les-tableaux"
+    slugify("Portee et fermetures")     // "portee-et-fermetures"
+    slugify("   Trois   espaces   ")    // "trois-espaces"
+    slugify("ES2015 (ES6)")             // "es2015-es6"
+
+Notes and known limitations
+---------------------------
+
+  * Uniqueness is NOT guaranteed. Two different headings may return the same
+    value; resolving duplicates is the caller's responsibility.
+  * Only the diacritics that NFD splits off are removed. A Latin letter whose
+    mark is part of the glyph itself has no canonical decomposition, reaches
+    step 4 unchanged and is deleted there: this applies to U+0153 LATIN SMALL
+    LIGATURE OE, U+00DF LATIN SMALL LETTER SHARP S, and to the stroked letters
+    of Polish, Danish, Croatian or Maltese (L-stroke, O-stroke, D-stroke,
+    H-stroke), among others. slugify() therefore returns "c-ur" for the French
+    word for "heart", and "odz" for the Polish city Lodz written with its own
+    diacritics.
+  * Switching step 2 to NFKD would fix some of these cases but not all: U+0153
+    and U+00DF have no compatibility decomposition either, whereas U+FB01 LATIN
+    SMALL LIGATURE FI and U+216B ROMAN NUMERAL TWELVE do have one.
+  * The Diacritic property also covers spacing characters, including the ASCII
+    U+005E CIRCUMFLEX ACCENT and U+0060 GRAVE ACCENT. Step 3 deletes them
+    outright, so step 4 never turns them into a hyphen: slugify("a^b") returns
+    "ab", not "a-b".
+  * Characters belonging to a script that steps 2 and 3 do not reduce to ASCII
+    are removed by step 4. A heading written entirely in such a script therefore
+    returns the empty string, while a mixed heading keeps its ASCII part.
+  * The empty string is a valid return value, not an error. Callers that use it
+    as an id will produce an empty id attribute.
+
+See also
+--------
+
+  * String.prototype.normalize()
+  * Unicode property escapes, \p{Diacritic}
+  * buildTOC(), the only caller of slugify() in js/lecon.js

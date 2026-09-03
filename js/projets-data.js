@@ -3883,4 +3883,53 @@ window.PROJETS = [
       "démasque un tri rapide à pivot terminal, dont le cours de <a href=\"../algo/cours.html\">l\'algorithmique</a> " +
       "détaille les variantes.</p>",
   },
+  {
+    id: "doc-fiche-reference",
+    course: "doc",
+    courseTitle: "Lire la documentation",
+    dir: "doc",
+    accent: "doc",
+    type: "Documentation technique",
+    niveau: "Débutant",
+    titre: "La page de référence d'une fonction que personne n'ose toucher",
+    contexte:
+      "<p>Dans presque tous les projets, il existe une fonction que tout le monde appelle et que personne ne " +
+      "modifie&nbsp;: un formateur de dates, un nettoyeur de chaînes, un calculateur de remise. Elle marche, " +
+      "elle est appelée à quarante endroits, et <strong>personne ne sait dire ce qu'elle promet</strong>. Le jour " +
+      "où il faut la corriger, la vraie question n'est pas «&nbsp;que fait-elle&nbsp;?&nbsp;» mais " +
+      "«&nbsp;<strong>sur quoi les quarante appelants comptent-ils</strong>&nbsp;?&nbsp;»</p>",
+    objectif:
+      "<p>Choisir une telle fonction — dans ton code, ou l'une des fonctions utilitaires de ce site — et rédiger " +
+      "sa <strong>page de référence complète</strong>, dans le format des huit rubriques, <em>en anglais</em>. " +
+      "Puis prouver chacune de ses affirmations par un petit programme qui les rejoue.</p>",
+    livrable: "Un fichier de référence (texte ou Markdown) et le programme qui vérifie chacune de ses affirmations.",
+    fonctionnalites: [
+      "Les huit rubriques&nbsp;: <code>Syntax</code>, <code>Parameters</code>, <code>Return value</code>, <code>Exceptions</code>, <code>Description</code>, <code>Examples</code>, <code>Notes</code>, <code>See also</code>.",
+      "Une rubrique <code>Exceptions</code> qui nomme l'erreur ET la condition qui la déclenche.",
+      "Au moins <strong>trois exemples</strong> exécutables, dont un cas limite (chaîne vide, zéro, valeur absente).",
+      "Une rubrique <code>Notes and known limitations</code> qui énonce au moins <strong>une limite réelle</strong> — pas une précaution de style.",
+      "Un <strong>programme de contrôle</strong> qui rejoue chaque exemple et chaque promesse, et échoue bruyamment si l'une devient fausse.",
+      "Un <strong>relevé sur données réelles</strong>&nbsp;: applique la fonction à toutes les entrées que ton projet lui donne vraiment, et compte les cas limites atteints.",
+    ],
+    criteres: [
+      "Chaque exemple publié a été <strong>exécuté</strong>&nbsp;: aucune sortie n'est écrite de tête.",
+      "La rubrique <code>Return value</code> répond sans ambiguïté à «&nbsp;l'entrée est-elle modifiée&nbsp;?&nbsp;».",
+      "La documentation décrit un <strong>contrat</strong>, pas une implémentation&nbsp;: on peut réécrire la fonction sans trahir la page.",
+      "Le programme de contrôle rejoue <strong>au moins six</strong> affirmations distinctes.",
+      "Au moins une limite documentée est <strong>chiffrée sur les données réelles</strong>&nbsp;: combien de fois elle se produit vraiment.",
+      "Une propriété que tu as seulement <em>observée</em> est signalée comme telle, et non promise.",
+    ],
+    pistes:
+      "<p>Commence par la rubrique <code>Exceptions</code>, la plus vite bâclée&nbsp;: passe à ta fonction " +
+      "<code>null</code>, <code>undefined</code>, un nombre, un tableau, un objet, et note ce qui se produit " +
+      "vraiment. C'est en cinq minutes la moitié d'une page de référence honnête.</p>" +
+      "<p>Le relevé sur données réelles est la partie qui instruit le plus. Dans la leçon&nbsp;1, il a montré que " +
+      "<strong>deux limites documentées sur trois ne se produisaient jamais</strong> sur les 17&nbsp;101 titres du " +
+      "site — et que la troisième se produisait <strong>56 fois</strong>, silencieusement. Une limite documentée " +
+      "n'est pas un problème rencontré&nbsp;: seule la mesure le dit.</p>" +
+      "<p>Pour aller plus loin&nbsp;: fais relire ta page par quelqu'un qui ne connaît pas la fonction, et " +
+      "demande-lui de prédire trois résultats sans exécuter. Chaque prédiction fausse désigne une phrase à " +
+      "réécrire. Le format de rédaction lui-même est traité dans le cours " +
+      "<a href=\"../markdown/cours.html\">Markdown</a>.</p>",
+  },
 ];

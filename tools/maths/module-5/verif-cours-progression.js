@@ -24,9 +24,22 @@ var fs = require('fs');
 
 var RACINE = path.join(__dirname, '..', '..', '..');
 var PORT = 9337;
-var PAGE = 'pages/maths/cours.html';
-var TERMINEES = ['lecon-01.html', 'lecon-02.html', 'lecon-03.html', 'lecon-04.html', 'lecon-05.html'];
-var ATTENDUES = 13;
+/* Paramétrable depuis la ligne de commande, pour servir à d'autres cours que
+   « maths » sans se recopier :
+     node tools/maths/module-5/verif-cours-progression.js --cours=doc --terminees=1 --attendues=1
+   Sans argument, les valeurs d'origine du cours de mathématiques sont reprises. */
+var ARG = function (nom, defaut) {
+  var t = process.argv.slice(2).find(function (a) { return a.indexOf('--' + nom + '=') === 0; });
+  return t ? t.split('=').slice(1).join('=') : defaut;
+};
+var COURS = ARG('cours', 'maths');
+var ATTENDUES = Number(ARG('attendues', 13));
+var NB_TERMINEES = Number(ARG('terminees', 5));
+var PAGE = 'pages/' + COURS + '/cours.html';
+var TERMINEES = [];
+for (var iT = 1; iT <= NB_TERMINEES; iT++) {
+  TERMINEES.push('lecon-' + String(iT).padStart(2, '0') + '.html');
+}
 
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -116,8 +129,10 @@ function connecter(wsUrl) {
      script en semait une, et la page affichait 0 / 13 sans rien signaler. */
   var seme = {};
   TERMINEES.forEach(function (f) { seme[f] = true; });
-  await cdp.evaluer('localStorage.setItem("syntaxe-progress", JSON.stringify({ maths: ' +
-    JSON.stringify(seme) + ' })); "sémé"');
+  var paquet = {};
+  paquet[COURS] = seme;
+  await cdp.evaluer('localStorage.setItem("syntaxe-progress", JSON.stringify(' +
+    JSON.stringify(paquet) + ')); "sémé"');
   await cdp.naviguer(url);
   await attendre(1400);
 
@@ -150,8 +165,8 @@ function connecter(wsUrl) {
   if (barre[1] !== String(TERMINEES.length) || barre[2] !== String(ATTENDUES)) {
     pbs.push('la barre affiche « ' + (barre[0] || '(rien)') + ' » au lieu de « ' + TERMINEES.length + ' / ' + ATTENDUES + ' »');
   }
-  if (!/13/.test(vu.badge)) pbs.push('le badge ne mentionne pas les 13 leçons : « ' + vu.badge.trim() + ' »');
-  if (vu.stockage.indexOf('lecon-05') < 0) pbs.push('la progression semée n a pas été relue');
+  if (vu.badge.indexOf(String(ATTENDUES)) < 0) pbs.push('le badge ne mentionne pas les ' + ATTENDUES + ' leçons : « ' + vu.badge.trim() + ' »');
+  if (vu.stockage.indexOf(TERMINEES[TERMINEES.length - 1]) < 0) pbs.push('la progression semée n a pas été relue');
 
   console.log('  titre .................. : ' + vu.titre.trim());
   console.log('  badge .................. : ' + vu.badge.trim());
@@ -163,6 +178,6 @@ function connecter(wsUrl) {
   console.log('  barre de progression ... : ' + vu.progression.replace(/\s+/g, ' ').trim().slice(0, 90));
   console.log('');
   if (pbs.length) { console.log('PROBLÈMES : ' + pbs.join(' | ')); process.exit(1); }
-  console.log('Aucun problème : la page de cours rend ses 13 leçons, sans lien mort ni « bientôt »,');
+  console.log('Aucun problème : la page de cours rend ses ' + ATTENDUES + ' leçons, sans lien mort ni « bientôt »,');
   console.log('et tient compte de la progression semée.');
 })();
