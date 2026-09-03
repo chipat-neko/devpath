@@ -182,11 +182,53 @@ distinguent, et elles ne se traitent pas pareil :
       **Un angle mort trouvé au passage, et noté ici plutôt que perdu** : `verif-execution.js` ne voit
       pas la douzième faute injectée — « le compteur de pas ment d'une unité ». 11 sur 12.
 
-- [ ] **A2 · `verif-sorties.js` : trancher la question que le V15 a laissée ouverte.** Il trouve de
+- [x] **A2 · `verif-sorties.js` : trancher la question que le V15 a laissée ouverte.** Il trouve de
       vraies fautes (une leçon dont les 4 lignes publiées rendent `undefined`, un dépassement de
       délai de 10 s dans le bac à sable `vm`). Le V15 refusait de l'intégrer sans avoir d'abord
       soldé ces deux cas. **Les solder, puis l'intégrer** — ou expliquer par la mesure pourquoi il
       doit rester dehors.
+
+      **FAIT le 2026-09-03. Les deux cas étaient des défauts de l'OUTIL, pas des fautes de
+      contenu.** Les deux leçons publient une sortie exacte au caractère près ; c'est le
+      vérificateur qui les accusait à tort. Le V15 avait raison de ne pas l'intégrer avant d'avoir
+      regardé, et tort de supposer qu'il « trouvait de vraies fautes ».
+
+      **Cas 1 — `pages/doc/lecon-02.html`, bloc `vocab-concurrence.txt`.** Le programme est
+      **asynchrone** : ses quatre dernières lignes sortent d'un `Promise.all(...).then(...)`.
+      `run()` appelait `vm.runInNewContext` et rendait la main aussitôt : **tout ce qui s'imprime
+      depuis une microtâche était perdu**, et l'outil l'annonçait « undefined ». Le programme
+      extrait de la page et lancé sous Node rend **exactement les 7 lignes publiées**. Correctif :
+      `microtaskMode: 'afterEvaluate'` à la création du contexte — mesure avant / après sur ce
+      bloc : **3 lignes récupérées contre 7**.
+
+      **Cas 2 — `pages/offensive/lecon-07.html`, bloc `cout.txt`.** Aucune erreur non plus : le
+      programme compte **7 000 064 tours** de calcul. Chronométré : **2 247 ms sous Node lancé
+      directement, 11 853 ms dans le bac à sable `vm`** — **un facteur 5,3**, et l'ancien délai de
+      10 s tombait juste en dessous. Sa sortie, une fois le programme mené à son terme, est
+      **identique au caractère près sur ses 18 lignes**. Correctif : délai porté de 10 s à 60 s,
+      avec la mesure écrite en commentaire pour que le prochain qui le lise sache d'où vient le
+      chiffre. C'est la troisième fois du projet qu'**attendre une durée au lieu d'un état** produit
+      une fausse alerte.
+
+      **Rejoué en entier après correction, pas seulement sur les deux cas** (règle du chantier :
+      un motif trop large casse ce qui était juste) : **449 blocs rejoués, 449 identiques au
+      caractère près, 0 divergent, 93 blocs `.txt` non jugés** (illustration ou autre langage),
+      code de sortie **0**, en **70 s**. Aucune régression sur les 447 qui passaient déjà.
+
+      **Intégré à la chaîne** : modes par défaut, `--complet` et `--strict` — pas `--rapide`.
+      `verif.js` passe de **32 à 33 étapes** sans option, de 34 à **35** en `--complet`. Chaîne
+      complète relancée : **33 étapes, 658,1 s, tout est vert**, dont **`sorties` OK en 57,7 s**.
+      Les vérificateurs hors chaîne passent de **25 à 24**, le total à régler de **35 à 34**.
+
+      **Corrigé au passage** : `verif.js` annonçait « (patience, il pilote Chrome) » pour toute
+      étape marquée `lent`. C'était devenu faux — `verif-sorties.js` est lent parce qu'il rejoue
+      449 programmes, sans ouvrir un navigateur. Une étape peut désormais dire pourquoi elle est
+      lente (`pourquoiLent`), le libellé Chrome restant le défaut.
+
+      ⚠️ **Un renseignement pour A3, mesuré ici** : `verif.js --rapide` prend déjà **241,8 s**,
+      soit **quatre fois la minute** que A3 pose comme seuil — et cela **avant** le moindre ajout.
+      Le seuil est donc déjà franchi ; A3 doit arbitrer sur ce qu'est vraiment un mode rapide, pas
+      sur les 11,4 s qu'il s'apprêtait à y verser.
 
 - [ ] **A3 · Faire entrer les vérificateurs classés « chaîne obligatoire ».** Un par un, en
       mesurant la durée ajoutée à `verif.js --rapide` et `--complet` à chaque fois. **Si le mode

@@ -102,12 +102,25 @@ function fmt(v) {                                        /* le formateur exact d
   if (typeof v === 'function') return v.toString();
   try { return JSON.stringify(v); } catch (e) { return String(v); }
 }
+/* Le délai accordé à un bloc. Mesuré, pas choisi : le programme de coût de
+   `pages/offensive/lecon-07.html` (7 000 064 tours de calcul) prend 2 247 ms sous
+   Node lancé directement, et 11 853 ms dans ce bac à sable — un facteur 5,3. Le
+   délai de 10 s tombait juste en dessous, et l'outil accusait la leçon d'un dépassement
+   qui ne venait que de la lenteur du `vm`. Sa sortie publiée est en réalité
+   identique au caractère près, sur ses 18 lignes. */
+var DELAI = 60000;
+
 function run(code) {
   var out = [];
   var pousse = function () { out.push(Array.prototype.slice.call(arguments).map(fmt).join(' ')); };
   var ctx = { console: { log: pousse, warn: pousse, error: pousse } };
   ctx.globalThis = ctx;
-  vm.runInNewContext(code, vm.createContext(ctx), { timeout: 10000 });
+  /* `microtaskMode: 'afterEvaluate'` vide la file des microtâches avant de rendre
+     la main. Sans lui, tout ce qu'un programme imprime depuis un `.then()` ou
+     après un `await` est PERDU, et l'outil le reproche à la page : les 4 dernières
+     lignes de `pages/doc/lecon-02.html` — une situation de compétition entre deux
+     tâches — étaient annoncées « undefined » alors qu'elles sont exactes. */
+  vm.runInContext(code, vm.createContext(ctx, { microtaskMode: 'afterEvaluate' }), { timeout: DELAI });
   return out;
 }
 

@@ -129,6 +129,21 @@ var ETAPES = [
   { nom: "maths  ", fichier: "maths/verif-verite.js", args: [], quoi: "les faits du cours maths, recalcules par une autre methode" },
 ];
 if (!RAPIDE) {
+  /* `verif-exemples.js` ne confronte au reel que les valeurs ecrites EN COMMENTAIRE
+     dans le code. Or une lecon range souvent sa sortie dans un bloc `.txt` voisin,
+     et ces 449 blocs-la n'etaient rejoues par aucun mode : l'outil existait depuis le
+     chantier V15 et personne ne le lancait. Entre dans la chaine au point A2 du V16,
+     apres solde de ses deux verdicts douteux -- tous deux etaient des defauts de
+     l'outil, pas des fautes de contenu (microtaches perdues, delai trop court).
+     70 s : hors du mode rapide. */
+  ETAPES.push({
+    nom: "sorties",
+    fichier: "verif-sorties.js",
+    args: [],
+    quoi: "les 449 blocs de sortie ranges a part, rejoues et compares au caractere pres",
+    lent: true,
+    pourquoiLent: "il rejoue 449 programmes",
+  });
   ETAPES.push({
     nom: "rendu  ",
     fichier: "verif-rendu.js",
@@ -360,7 +375,12 @@ var debutTotal = Date.now();
 
 ETAPES.forEach(function (e) {
   var t0 = Date.now();
-  process.stdout.write("  " + e.nom + "  " + e.quoi + (e.lent ? "  (patience, il pilote Chrome)" : "") + "\n");
+  /* `lent` a longtemps voulu dire « pilote Chrome », et le message le disait en
+     toutes lettres. Ce n'est plus vrai depuis que `verif-sorties.js` est entre dans
+     la chaine : il est lent parce qu'il rejoue 449 programmes dans un bac a sable,
+     sans ouvrir un seul navigateur. Une etape peut donc dire POURQUOI elle est lente. */
+  process.stdout.write("  " + e.nom + "  " + e.quoi +
+    (e.lent ? "  (patience, " + (e.pourquoiLent || "il pilote Chrome") + ")" : "") + "\n");
   var r = cp.spawnSync(process.execPath, [path.join(TOOLS, e.fichier)].concat(e.args), {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
