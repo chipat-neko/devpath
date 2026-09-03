@@ -1067,6 +1067,99 @@
     }
   }
 
+  /* ------------------------------------------------- Fraîcheur (V15-E2) ----
+     Rend visible ce qui PÉRIME. Le point E1 a démontré qu'aucun motif ne
+     distingue « React 19 introduit use() » (un fait, vrai pour toujours) de
+     « les nouveautés de React 19 » (un état du monde, qui périmera sans bruit).
+     La marque est donc posée à la main dans le HTML :
+
+         <span class="fraicheur" data-arrete="2026-09-03">…</span>
+
+     Ici on l'habille : l'ANNÉE en exposant (l'information sans survol ni clic),
+     une infobulle, un doublon pour lecteur d'écran, et un bilan replié en fin
+     d'article — ce dernier est le chemin ACCESSIBLE, l'infobulle n'est jamais
+     le seul. Convention complète : tools/fraicheur/CONVENTION.md.
+
+     ⚠ « arrêté au », et non « vérifié le » : le site ne consulte rien en ligne,
+     il ne PEUT pas savoir si l'affirmation est encore vraie. Il sait seulement
+     quand elle a été écrite, et c'est exactement ce qu'il dit. */
+  var MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+    "août", "septembre", "octobre", "novembre", "décembre"];
+
+  function dateFrancais(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+    if (!m) return null;
+    var mois = MOIS_FR[Number(m[2]) - 1];
+    if (!mois) return null;
+    var jour = Number(m[3]);
+    return { texte: (jour === 1 ? "1er" : String(jour)) + " " + mois + " " + m[1], an: m[1] };
+  }
+
+  function initFraicheur() {
+    var marques = $all(".fraicheur[data-arrete]");
+    if (!marques.length) return;
+
+    var lignes = [];
+    marques.forEach(function (el, i) {
+      if (el.getAttribute("data-fraicheur-pret")) return; // idempotent
+      var d = dateFrancais(el.getAttribute("data-arrete"));
+      if (!d) return;                                     // date mal formée : on ne bricole pas
+      el.setAttribute("data-fraicheur-pret", "1");
+      if (!el.id) el.id = "fraicheur-" + (i + 1);
+      el.title = "Affirmation datée : état arrêté au " + d.texte + ".";
+
+      var sup = document.createElement("sup");
+      sup.className = "fraicheur__an";
+      sup.setAttribute("aria-hidden", "true");
+      sup.textContent = d.an;
+      var sr = document.createElement("span");
+      sr.className = "sr-only";
+      sr.textContent = " (état arrêté au " + d.texte + ") ";
+      if (el.parentNode) {
+        el.parentNode.insertBefore(sup, el.nextSibling);
+        el.parentNode.insertBefore(sr, sup.nextSibling);
+      }
+      lignes.push({ id: el.id, texte: (el.textContent || "").replace(/\s+/g, " ").trim(), date: d.texte });
+    });
+
+    if (!lignes.length) return;
+    var hote = document.querySelector("article.prose");
+    if (!hote || hote.querySelector(".fraicheur-bilan")) return;
+
+    var det = document.createElement("details");
+    det.className = "fraicheur-bilan";
+    var sum = document.createElement("summary");
+    sum.textContent = "Fraîcheur de cette page — " + lignes.length +
+      (lignes.length > 1 ? " affirmations datées" : " affirmation datée");
+    det.appendChild(sum);
+
+    var note = document.createElement("p");
+    note.className = "fraicheur-bilan__note";
+    note.textContent = "Ces passages décrivent l'état des choses à une date donnée. Le site ne " +
+      "consulte rien en ligne : il ne peut pas dire s'ils sont encore vrais, seulement quand ils " +
+      "ont été écrits.";
+    det.appendChild(note);
+
+    var ul = document.createElement("ul");
+    lignes.forEach(function (l) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.setAttribute("href", "#" + l.id);
+      /* Espaces INSÉCABLES autour des guillemets : c'est la typographie
+         française, et cela évite qu'un « » » se retrouve seul en début de ligne
+         quand l'extrait est long (constaté à la capture). */
+      a.textContent = "« " + (l.texte.length > 90 ? l.texte.slice(0, 88).trim() + "…" : l.texte) + " »";
+      li.appendChild(a);
+      var sp = document.createElement("span");
+      sp.className = "fraicheur-bilan__date";
+      sp.textContent = " — arrêté au " + l.date;
+      li.appendChild(sp);
+      ul.appendChild(li);
+    });
+    det.appendChild(ul);
+    hote.appendChild(det);
+  }
+
   /* --------------------------------------------------------------- Init */
   function init() {
     initThemeToggle();
@@ -1081,6 +1174,7 @@
     initAccent();
     initPalette();
     enhanceCodeBlocks();
+    initFraicheur();
   }
 
   if (document.readyState === "loading") {

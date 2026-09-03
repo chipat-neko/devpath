@@ -820,7 +820,59 @@ Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieil
   **⚠ LE CHIFFRE DE CE PLAN NE SE REPRODUIT PAS.** Le constat en tête de la phase E annonce « **51 pages citent un numéro de version, 4 portent une date** ». Le relevé donne **112** et **47**. L'écart vient de la méthode (liste blanche de technologies, prose séparée du code, dates récentes seules retenues), pas d'une évolution du site. Il est écrit ici plutôt que tu.
 
   **CONTRÔLES** : `node --check` sur l'outil · `verif-html` **0/0** · `verif-donnees` **25 contrôles, 0 erreur** · aucune page modifiée (ce point est un relevé, pas une correction).
-- [ ] **E2 · La convention de datation.** Marquer une affirmation périssable de façon uniforme et discrète, sans alourdir la lecture. Décider la forme, l'appliquer d'abord sur un cours, juger le rendu, puis généraliser.
+- [x] **E2 · La convention de datation.** ✅ **2026-09-03. La convention existe, elle est appliquée sur un cours entier et prouvée dans un vrai Chrome — mais le résultat qui compte est ce qu'elle a révélé : sur les 52 affirmations réellement périssables du cours `react`, 45 (87 %) sont INVISIBLES aux motifs d'E1. Le périssable de ce site n'est presque jamais un numéro de version : c'est un NOM D'OUTIL.**
+
+  **LA CONVENTION**, arrêtée et écrite dans `tools/fraicheur/CONVENTION.md` :
+
+  ```html
+  <span class="fraicheur" data-arrete="2026-09-03" data-duree="12">les deux références sont Next.js et React Router</span>
+  ```
+
+  - **`data-arrete`, et non `data-verifie`.** Le site ne consulte rien en ligne : il ne *peut pas* vérifier qu'une version est encore la dernière. La date dit donc ce qu'elle dit — *l'état des choses arrêté à ce jour-là*, comme on arrête des comptes. Écrire « vérifié » aurait été faux, et c'est exactement ce que E3 pressentait (« il vérifie qu'on **sait** quand on l'a écrite »).
+  - `data-duree` (mois, défaut 18) donne à E3 un seuil différencié : **12** pour un paysage d'outils ou une part de marché, **36** pour ce qui bouge lentement.
+  - **Le rendu.** Sans JavaScript : un soulignement pointillé, rien d'autre — la page reste lisible. Avec : **l'année en exposant** juste après le passage (quatre chiffres, l'information *sans survol ni clic*), une infobulle, une alternative `.sr-only`, et **un `<details>` replié en fin d'article** qui liste les passages datés — c'est lui le chemin accessible, l'infobulle n'est jamais le seul.
+  - Le moteur est `initFraicheur()` dans `js/main.js` : il couvre donc les **1 782 pages** du site sans qu'un seul fichier HTML ait à charger un script de plus.
+  - **Règle de parcimonie, qui prime** : *une marque par affirmation, pas par occurrence.* Une page qui écrit « React 19 » douze fois pour les mêmes nouveautés porte **une** affirmation à dater, pas douze.
+
+  **LE COURS PILOTE : `react`, 26 leçons LUES EN ENTIER** (six relecteurs, lecture seule, aucun n'écrit — seul le pilote écrit). Rendu : **54 affirmations périssables retenues, 264 faux positifs nommés avec leur raison, et 62 affirmations qu'aucun motif n'aurait vues.**
+
+  **CE QUE LE RELEVÉ DIT, ET QUI ORIENTE E4.** Répartition des 54 affirmations :
+
+| Nature | Nombre |
+|---|---:|
+| **paysage d'outils** (« React Hook Form ou Formik », « TanStack Query ou SWR », « Radix UI, MUI ou Chakra ») | **32** |
+| affirmation de récence (« les nouveautés de React 19 », « la direction que prend React ») | 9 |
+| domination (« la pratique la plus courante », « la combinaison la plus demandée ») | 9 |
+| **numéro de version** | **2** |
+| chiffre de performance sans provenance | 2 |
+
+  E1 comptait « 269 dettes de version » sur tout le site. À la lecture, sur le cours le plus exposé, **il y en a deux**. Ce qui périme, ce sont les **noms de bibliothèques tierces** qu'on cite comme « le » choix courant — et aucune de ces phrases ne contient de numéro, de date ni de superlatif.
+
+  **52 MARQUES POSÉES SUR 23 PAGES.** Deux affirmations ont été écartées à la relecture : la citation mot pour mot d'un message d'erreur de React (dater un message n'a pas de sens) et un compte interne (traité autrement, voir plus bas). **Trois leçons n'en portent aucune** — et c'est un résultat, pas un oubli. Durées : **29** à 12 mois, **15** à 18, **8** à 36.
+
+  **LA MESURE QUI TRANCHE, dans les deux sens** (`tmp/recouvrement.js`, motifs d'E1 rejoués sur le texte de chaque passage marqué) :
+  - **45 des 52 marques (87 %) sont invisibles aux motifs.** « ton outil de build (Babel) », « des bibliothèques comme *react-use* ou *usehooks-ts* », « la référence est React Hook Form » : ni version, ni date, ni superlatif reconnu.
+  - Et réciproquement : des **34** occurrences « nues » que le détecteur d'E1 signalait dans `react`, **7** seulement recouvrent une vraie dette. **Le détecteur se trompait quatre fois sur cinq, et ratait presque neuf dettes sur dix.** E1 avait conclu qu'un vérificateur par motifs serait ignoré en une semaine ; cette mesure le chiffre.
+
+  **L'OUTIL D'APPLICATION** — `tools/fraicheur/appliquer.js`, qui posera aussi les marques d'E4. Il travaille par **ancre exacte** et applique la règle du chantier (« un motif de remplacement trop large casse ce qui était juste ») jusqu'au bout : **c'est tout le lot ou rien**, et il refuse une ancre qui est trouvée un nombre de fois différent de 1, qui tombe dans un bloc de code / un `<head>` / un bloc JSON, qui commence ou finit à l'intérieur d'une balise, qui est à cheval sur une balise, qui recoupe une marque déjà posée, qui vit hors de `<article class="prose">`, ou dont la date est mal formée, impossible (`2026-02-31`) ou dans le futur.
+
+  **⚠ ET IL A ÉTÉ CORRIGÉ TROIS FOIS PAR SES PROPRES FAUX REFUS**, chacun trouvé en le faisant tourner :
+  1. il traitait **toute balise** comme une zone à ne pas chevaucher, et refusait donc `… sont <strong>Next.js</strong> et <strong>React Router</strong>` — pourtant légitime. Une ancre peut *contenir* des balises appariées ; ce qu'elle ne peut pas, c'est *commencer ou finir* dans l'une ;
+  2. il traitait `<code>` **inline** comme un bloc de code, et refusait « La plupart des applications React ont ainsi un `ThemeContext` » — de la prose contenant un identifiant. La bonne règle : refuser une ancre *contenue* dans un `<code>`, accepter celle qui en *contient* un ;
+  3. rien n'interdisait de poser une marque **à l'intérieur d'une marque existante** — le cas s'est présenté dès la première application (une ancre proposée était une sous-chaîne d'une marque déjà posée) et aurait produit une imbrication comptée deux fois à l'affichage.
+
+  **LA PREUVE D'AFFICHAGE.** Une marque de fraîcheur **n'existe pas dans le HTML** : le source ne porte qu'un `<span>`, tout le reste est construit dans le navigateur. Aucun vérificateur lisant des fichiers ne peut donc en dire quoi que ce soit. `tools/fraicheur/verif-affichage.js` ouvre un vrai Chrome et compare, marque par marque : **23 pages, 52 marques, 0 écart** — exposant, année, `aria-hidden`, alternative pour lecteur d'écran, infobulle, identifiant, bilan (compte annoncé, nombre d'entrées, liens qui atteignent leur cible, note), et débordement horizontal. La date en toutes lettres y est **recalculée par une implémentation indépendante** (`Intl`), pas par la table de mois de `main.js` : sinon le contrôle ne prouverait rien.
+
+  **ET LE VÉRIFICATEUR A ÉTÉ ÉPROUVÉ** — `verif-affichage-mutations.js` : **14 fautes injectées une à une dans `js/main.js`, 14 vues, 0 angle mort** (mauvaise année, `aria-hidden` retiré, exposant non inséré, classe `.sr-only` perdue, date absente de l'alternative, infobulle vide, identifiant supprimé, table de mois décalée, bilan absent, bilan déplié, compte faux, lien mort, entrée manquante, note trafiquée), fichier restauré et re-contrôlé vert.
+
+  **⚠ UNE MESURE PRISE TROP TÔT MENT.** La toute première exécution du contrôle a annoncé **6 écarts sur une page qui n'en avait aucun** : Chrome créait son profil, `js/main.js` (chargé en `defer`) n'avait pas encore tourné, et la sonde a lu une page nue. Un délai fixe ne suffit pas — l'outil attend maintenant la **preuve** que le moteur a tourné avant de mesurer quoi que ce soit.
+
+  **TROIS CHIFFRES FAUX TROUVÉS EN CHEMIN, ET CORRIGÉS.** Un relecteur a signalé « C'est la première des **17 leçons** du cours » dans `react/lecon-01` : le cours en compte **26** dans `data.js`. La mesure généralisée (`tmp/compte-lecons.js`, comptes annoncés confrontés à `data.js`) donne **8 occurrences de « N leçons » dans le site, dont 3 fausses** : `react/lecon-01` (17 → 26), `react/lecon-20` (« Pendant 17 leçons » — c'est la 20ᵉ ; la phrase a été débarrassée de son compte) et `html/lecon-42` (« tu as fini les 14 leçons », dans un cours qui en a 47 ; compte retiré). Après correction : **6 occurrences, 0 fausse.** Ce n'est pas une dette de fraîcheur et ça n'a donc **pas** été marqué — un compte interne ne se date pas, il se corrige et se contrôle. **Le périssable le plus sûr d'un site est ce qu'il dit de lui-même**, et c'est exactement le piège de D1.
+
+  **DETTE SIGNALÉE, PAS TRAITÉE** : `react/lecon-26` déclare **3 exercices dans `data-exos` pour 4 blocs `.exercise`** — le 4ᵉ reste sans champ de réponse. Vérifié sur la version d'avant ce point : **préexistant**, sans rapport avec les marques. À traiter en phase F.
+
+  **CONTRÔLES** : `verif.js --rapide` **15 vérificateurs verts (312 s)** · `verif-html` **0 grave / 0 remarque sur 1 629 fichiers** · `verif-donnees` **25 contrôles, 0 erreur** · `verif-rendu` sur 5 leçons marquées × 3 largeurs × 2 thèmes : **0 débordement, 0 contraste insuffisant, 0 repère de focus manquant** (les seules erreurs de console sont les 20 occurrences du défaut préexistant de `lecon-26`) · `node --check` sur `main.js` et les trois outils · CSS : **315 accolades ouvrantes = 315 fermantes, 0 variable `var(--x)` inexistante** · `search-index.js` et `search-lite.js` régénérés, quiz / flashcards / antisèches **identiques** · **0 URL vers `cdnjs`, `fonts.googleapis` ou `fonts.gstatic`** réellement chargée (les deux occurrences de `html/lecon-25` et `lecon-35` sont du texte échappé qui *enseigne* `preconnect`) · **rendu revérifié avec une progression semée dans `localStorage`** (`--progression` : `syntaxe-progress`, `syntaxe-xp`, `syntaxe-quiz`, puis rechargement) — **23 pages, 52 marques, 0 écart**, et la graine est *prouvée présente* (le contrôle échoue si `localStorage` est vide ou si la pastille XP n'apparaît pas : sans cela, « tester avec une progression » aurait été un placebo, ce qu'il était à la première tentative).
+
 - [ ] **E3 · Le vérificateur.** `tools/verif-fraicheur.js` : signale les affirmations périssables non datées et celles dont la date dépasse un seuil. Hors réseau — il ne vérifie pas si la version est à jour, il vérifie qu'on **sait** quand on l'a écrite.
 - [ ] **E4 · Passer les cours les plus exposés.** Ceux qui bougent vite en premier — frameworks, outils, cloud, conteneurs.
 

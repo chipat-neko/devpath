@@ -347,4 +347,6 @@ if (require.main === module) {
   }
 }
 
-module.exports = { relever, CATEGORIES, TECHNOS, NOMS_FIGES };
+module.exports = { relever, CATEGORIES, TECHNOS, NOMS_FIGES,
+  /* exportés pour E2/E3 : le sous-classement contextuel ne doit exister qu'ici. */
+  decouper, classer, RE_VERSION, fichiersLecons };
