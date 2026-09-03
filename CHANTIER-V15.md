@@ -873,7 +873,58 @@ Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieil
 
   **CONTRÔLES** : `verif.js --rapide` **15 vérificateurs verts (312 s)** · `verif-html` **0 grave / 0 remarque sur 1 629 fichiers** · `verif-donnees` **25 contrôles, 0 erreur** · `verif-rendu` sur 5 leçons marquées × 3 largeurs × 2 thèmes : **0 débordement, 0 contraste insuffisant, 0 repère de focus manquant** (les seules erreurs de console sont les 20 occurrences du défaut préexistant de `lecon-26`) · `node --check` sur `main.js` et les trois outils · CSS : **315 accolades ouvrantes = 315 fermantes, 0 variable `var(--x)` inexistante** · `search-index.js` et `search-lite.js` régénérés, quiz / flashcards / antisèches **identiques** · **0 URL vers `cdnjs`, `fonts.googleapis` ou `fonts.gstatic`** réellement chargée (les deux occurrences de `html/lecon-25` et `lecon-35` sont du texte échappé qui *enseigne* `preconnect`) · **rendu revérifié avec une progression semée dans `localStorage`** (`--progression` : `syntaxe-progress`, `syntaxe-xp`, `syntaxe-quiz`, puis rechargement) — **23 pages, 52 marques, 0 écart**, et la graine est *prouvée présente* (le contrôle échoue si `localStorage` est vide ou si la pastille XP n'apparaît pas : sans cela, « tester avec une progression » aurait été un placebo, ce qu'il était à la première tentative).
 
-- [ ] **E3 · Le vérificateur.** `tools/verif-fraicheur.js` : signale les affirmations périssables non datées et celles dont la date dépasse un seuil. Hors réseau — il ne vérifie pas si la version est à jour, il vérifie qu'on **sait** quand on l'a écrite.
+- [x] **E3 · Le vérificateur.** ✅ **2026-09-03. `tools/verif-fraicheur.js` existe, il est la 16ᵉ étape de `verif.js` (0,2 s) et 13 fautes injectées sur 13 lui font rougir. Mais son apport principal est un REFUS, et ce refus est MESURÉ : il ne cherche pas le périssable, parce que le meilleur noyau de motifs qu'on puisse construire ne toucherait que 38 % des affirmations réellement périssables — et que le motif central du relevé E1, « un numéro de version », a une précision de 4 %.**
+
+  **CE QU'IL CONTRÔLE** — 9 familles, sur les 1 798 pages HTML du site :
+
+| | contrôle | verdict |
+|---|---|---|
+| F1 | `data-arrete` présent, format `AAAA-MM-JJ`, jour réel, pas dans le futur | erreur |
+| F2 | `data-duree` entier positif s'il est là | erreur |
+| F3 | **l'âge** : au-delà de la durée → avertissement ; au-delà du **double** → erreur | les deux |
+| F4 | aucune marque dans un bloc de code, un `<head>`, un bloc JSON, un attribut ou un `<code>` | erreur |
+| F5 | aucune marque imbriquée dans une autre | erreur |
+| F6 | balises appariées à l'intérieur de la marque | erreur |
+| F7 | aucune marque hors de `<article class="prose">` (le bilan ne la listerait pas) | erreur |
+| F8 | parcimonie : au-delà de 4 marques sur une page | avertissement |
+| F9 | marque non vide, et plus courte que 200 caractères | erreur / avert. |
+
+  **L'ÉTAT DU SITE AUJOURD'HUI** : **1 798 pages lues, 23 marquées, 52 marques, 0 erreur, 0 avertissement.** L'outil publie aussi ce qui sert à *planifier* plutôt qu'à rougir : la marque la plus ancienne, et le nombre de marques **à échéance dans moins de six mois** (0 aujourd'hui, elles viennent d'être posées).
+
+  **IL SE PROJETTE DANS LE TEMPS** (`--date=AAAA-MM-JJ`), et c'est ce qui prouve que le seuil d'âge fonctionne vraiment — les 52 marques se répartissent en 29 durées de 12 mois, 15 de 18 et 8 de 36 :
+
+| date de référence | à échéance < 6 mois | avertissements | erreurs |
+|---|---:|---:|---:|
+| 2026-09-03 (aujourd'hui) | 0 | 0 | 0 |
+| 2027-10-03 (13 mois) | 15 | **29** | 0 |
+| 2028-04-03 (19 mois) | 0 | **44** | 0 |
+| 2029-10-03 (37 mois) | 0 | 8 | **44** |
+
+  Chaque chiffre tombe exactement sur une classe de durée : 29 à 13 mois, 29+15 à 19 mois, et à 37 mois les 44 marques de 12 et 18 mois ont dépassé le double quand les 8 de 36 mois ne sont qu'en avertissement.
+
+  **ÉPROUVÉ PAR L'INJECTION** — `tools/fraicheur/verif-fraicheur-mutations.js` : **13 fautes, 13 vues, 0 angle mort**, page restaurée et re-contrôlée verte. Les fautes : `data-arrete` absent, date au format français, 31 février, date dans le futur, `data-duree` à 0, `data-duree` en toutes lettres, marque imbriquée, marque vide, balises non appariées, marque hors de l'article, marque dans un bloc de code, affirmation deux fois trop vieille, et six marques sur une page.
+
+  **LA SECONDE MOITIÉ DE L'ÉNONCÉ, TRANCHÉE PAR LA MESURE.** Le point demandait aussi de « signaler les affirmations périssables **non datées** ». Plutôt que de trancher d'opinion, on a mesuré : `tools/fraicheur/calibrer.js` confronte **20 formulations candidates** à la seule **vérité terrain** dont dispose le site — les 26 leçons de `react`, lues intégralement, dont les 52 affirmations périssables sont marquées. Pour chaque motif, on compte ses occurrences **dans** une marque et **hors** marque, dans la prose seule (le code est neutralisé). Résultat :
+
+| motif | dans | hors | précision |
+|---|---:|---:|---:|
+| des bibliothèques comme | 3 | 1 | **75 %** ← le seul retenu |
+| quasi systématiquement / presque toujours | 2 | 2 | 50 % |
+| « X moderne » (React moderne…) | 2 | 4 | 33 % |
+| le plus courant / la plus courante | 2 | 5 | 29 % |
+| la plupart des | 1 | 4 | 20 % |
+| la référence / les références | 1 | 7 | 13 % |
+| deux noms propres reliés par « ou » | 1 | 8 | 11 % |
+| **un numéro de version d'un outil** | **4** | **99** | **4 %** |
+
+  Cinq motifs affichent 100 %, mais avec **une ou deux** occurrences : statistiquement, ils ne disent rien. **Un seul candidat sur vingt** dépasse 60 % avec au moins trois occurrences utiles. Et surtout : **les vingt candidats RÉUNIS ne touchent que 20 des 52 affirmations marquées, soit 38 %** — les 62 % restants n'ont ni version, ni date, ni superlatif, ni nom propre reconnaissable.
+
+  **Un détecteur bâti là-dessus signalerait donc environ deux pages sur trois à tort, tout en manquant six affirmations sur dix.** Il serait désactivé dans la semaine, et sa présence donnerait la fausse assurance que le périssable est surveillé. `verif-fraicheur.js` ne le fait pas, et `calibrer.js` reste dans le dépôt pour que ce refus soit **rejouable** plutôt que décrété — et pour qu'on puisse le rouvrir le jour où un autre corpus sera étiqueté (`--cours=`, `--seuil=`, `--exemples`).
+
+  **⚠ RÉSERVE, ÉCRITE PLUTÔT QUE TUE** : cette calibration ne vaut que pour `react`. C'est le cours le plus exposé du site et le seul dont la vérité terrain existe ; rien ne garantit que les mêmes motifs se comporteraient ainsi sur `cloud` ou `docker`. E4 étiquettera d'autres cours — la mesure se rejouera d'une commande.
+
+  **CONTRÔLES** : `node --check` sur les trois fichiers · `verif.js --rapide` **16 étapes, tout vert (298 s)** · `verif-fraicheur` **0 erreur / 0 avertissement** en `--strict` · `verif-html` **0/0** · aucune page modifiée par ce point (le vérificateur ne corrige rien, il constate).
+
 - [ ] **E4 · Passer les cours les plus exposés.** Ceux qui bougent vite en premier — frameworks, outils, cloud, conteneurs.
 
 ---

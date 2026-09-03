@@ -111,6 +111,13 @@ var ETAPES = [
      une panne muette -- le moteur demarrerait avec une version qui n'est plus celle
      du depot. Cette etape relit chaque chaine et la compare caractere par caractere. */
   { nom: "moteurs", fichier: "build-sources-worker.js", args: [], quoi: "le code des moteurs, copie en chaine pour le Worker, est identique a l'original" },
+  /* Les marques de FRAICHEUR (V15-E2) datent ce qui perime. E1 et E2 ont mesure
+     qu'aucun motif ne sait TROUVER le perissable -- 87 % des affirmations
+     perissables de `react` n'ont ni version, ni date, ni superlatif -- donc la
+     charge est inversee : celui qui ecrit marque, et ce controle verifie que les
+     marques posees sont bien formees, bien placees, et qu'aucune n'a depasse son
+     age. Il ne dit jamais si une version est a jour : il n'a pas de reseau. */
+  { nom: "fraich ", fichier: "verif-fraicheur.js", args: STRICT ? ["--strict"] : [], quoi: "marques de fraicheur : bien formees, bien placees, dans leur duree" },
 ];
 if (!RAPIDE) {
   ETAPES.push({
