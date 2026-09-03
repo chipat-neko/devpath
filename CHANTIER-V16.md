@@ -525,6 +525,72 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
 - [ ] **B3 · Les six cours à 100 %** (`archi`, `equipe`, `iac`, `mobile`, `ux`, `zig`). Étoffer les
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.
+
+      **EN COURS — 1 cours sur 6 fait le 2026-09-03 : `iac`, 100,0 % → 13,3 %.** La case reste
+      décochée parce qu'elle en porte six ; le protocole ci-dessous est établi et rejouable tel quel.
+
+      **Ce qui a été fait sur `iac`** (11 leçons, **45 questions**, 33 en QCM de leçon et 12 en QCM
+      bilan) : **135 distracteurs sur 135 réécrits**, chacun tenu entre **70 % et 130 %** de la
+      longueur de la bonne réponse (mesuré : 0,78 à 1,18). Six agents en parallèle, un par lot de
+      leçons — **fichiers disjoints, aucune écriture concurrente**, aucun commit d'agent.
+
+      | mesure | avant | après |
+      |---|---:|---:|
+      | « la plus longue » | **100,0 %** | **13,3 %** |
+      | « la plus détaillée » | 62,2 % | 33,0 % |
+      | « le mot technique exclusif » | 55,6 % | 31,7 % |
+      | pire stratégie exploitable | 100,0 % | **33,0 %** (cible ≤ 60 %) |
+      | global du site, « la plus longue » | 89,5 % | **88,9 %** |
+
+      **LA CONTRADICTION EST CE QUI A SAUVÉ CE POINT, et le piège annoncé s'est bien produit.** Quatre
+      relecteurs adversariaux ont relu les 45 questions et 180 options avec pour seule consigne de
+      démolir le travail : **34 problèmes rendus, dont 22 défauts de fond** — **13 distracteurs
+      devenus PARTIELLEMENT VRAIS** et **9 AMBIGUS**. Exemples, tous corrigés :
+      - « count ne sait créer que des copies strictement identiques : dès qu'une taille diffère, il
+        refuse le plan » — la **première moitié est la phrase même de la leçon** (« réserve `count`
+        aux cas N copies vraiment identiques ») ; seule la fin est fausse, à l'endroit le moins lu ;
+      - « `lifecycle { ignore_changes = all }` : la ressource sort du plan » — la leçon 09 du même
+        cours enseigne `ignore_changes` comme parade à une destruction non voulue ;
+      - « un `terraform.tfvars` laissé à la racine : ce n'est pas du code exécuté, donc il n'est pas
+        versionné » — le lieu est celui que recommande HashiCorp ; seul le raisonnement est faux ;
+      - « le verrou servant à signer chaque changement au nom de son auteur » — le `LockInfo` du
+        backend **contient réellement** le champ `Who`.
+      **Les 22 ont été corrigés par un seul écrivain (moi), après avoir jugé chaque remplacement**, et
+      un des textes proposés a été réécrit parce qu'il répétait le motif d'un autre.
+
+      **8 des 12 « indices résiduels » retenus aussi** : la bonne réponse était la seule à porter des
+      capitales d'emphase (`LIT`, `CRÉE` — retirées, seule modification d'une bonne réponse du lot),
+      la seule à s'ouvrir sur « Seulement… », deux distracteurs décrivaient le **même** objet (le
+      QCM tombait à deux choix), et une option annonçait « les trois noms » en n'en citant que deux.
+
+      ⚠️ **Deux contradictions RÉFUTÉES par la mesure, et il fallait les réfuter** : deux relecteurs
+      ont conclu qu'« un apprenant qui clique toujours la première option a 45/45, donc le travail est
+      cosmétique ». C'est faux : `shuffle` mélange les options dans `buildQuiz` (`js/lecon.js`) **et**
+      dans `js/examen.js` ; `js/revision.js` ne montre que la bonne réponse. Vérifié dans le code
+      avant d'écarter la remarque.
+
+      ⚠️ **Une vraie prise du même relecteur, elle : le travail n'existait qu'à moitié.**
+      `js/quiz-index.js` — la banque que lisent les pages **Examen** et **Révision** — portait encore
+      les anciens distracteurs courts. Régénéré (`build-index.js --write --only=quiz`) ; vérifié
+      ensuite dans l'index lui-même : **0 ancien distracteur, 13,3 % au même critère**. Sans cette
+      régénération, l'apprenant retrouvait le QCM biaisé à l'examen.
+
+      ⚠️ **Un contenu qui mesure le site s'est périmé en étant publié, une fois de plus.**
+      `doc/verif-normatif.js` a rougi tout seul : la leçon `doc/lecon-03` publie le taux de
+      manquement à sa propre règle `S3`, et mes 45 questions l'avaient déplacé. **5 439 manquements
+      sur 6 103 (89,1 %) au lieu de 5 478 (89,8 %)** — **9 mentions** mises à jour dans la page
+      (dont une dans l'explication d'un QCM, ce qui a demandé une **seconde** régénération de
+      l'index). Contrôles finaux : `verif-normatif` **60/60**, `verif.js --rapide` **26 étapes tout
+      vert**, `verif-rendu` sur les pages touchées **0 erreur / 0 avertissement**, cliquet **vert**
+      avec `iac` marqué `traite` et son épreuve **6/6**.
+
+      **LE PROTOCOLE, pour les cinq cours restants** (`archi` 48 questions, `equipe` 68, `mobile` 73,
+      `ux` 56, `zig` 71 — **316 questions, ~950 distracteurs**) : (1) un agent par lot de leçons,
+      fichiers disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne
+      réponse — **contrôlé après coup contre `git show HEAD:`**, pas sur parole ; (3) fourchette
+      70–130 % vérifiée par mesure ; (4) **contradiction adversariale obligatoire** — sans elle, 22
+      questions de `iac` avaient deux réponses défendables ; (5) régénérer `quiz-index` **et**
+      relancer `doc/verif-normatif` ; (6) marquer le cours `traite` et refiger la référence.
 - [ ] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
