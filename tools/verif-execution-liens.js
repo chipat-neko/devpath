@@ -171,6 +171,7 @@ function lireTable() {
   var profil = fs.mkdtempSync(path.join(os.tmpdir(), "syntaxe-liens-"));
   var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=" + PORT, "--disable-gpu",
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+    "--host-resolver-rules=MAP * ~NOTFOUND",
     "--user-data-dir=" + profil, "about:blank"], { stdio: "ignore" });
   var cible = null;
   for (var t = 0; t < 40 && !cible; t++) {
