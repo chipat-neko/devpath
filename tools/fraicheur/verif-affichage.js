@@ -37,6 +37,7 @@ var http = require('http');
 var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
+var profilChrome = require('../lib/profil-chrome.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
 var PORT = 9357;
@@ -201,7 +202,7 @@ function portOccupe() {
     var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
       '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
       '--window-size=1280,900',
-      '--user-data-dir=' + path.join(RACINE, 'scratchpad', '.chrome-fraicheur'), url], { stdio: 'ignore' });
+      '--user-data-dir=' + profilChrome.neuf('fraicheur'), url], { stdio: 'ignore' });
     var cible = null;
     for (var t = 0; t < 40 && !cible; t++) {
       await attendre(300);

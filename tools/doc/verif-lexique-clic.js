@@ -22,6 +22,7 @@ const http = require('http');
 const net = require('net');
 const crypto = require('crypto');
 const cp = require('child_process');
+const profilChrome = require('../lib/profil-chrome.js');
 
 const RACINE = path.join(__dirname, '..', '..');
 const PORT = 9357;
@@ -97,7 +98,7 @@ function verdict(cond, libelle, detail) {
   console.log('verif-lexique-clic.js — pages/lexique.html ouverte dans Chrome, filtres cliqués\n');
   const proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
     '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
-    '--user-data-dir=' + path.join(RACINE, 'scratchpad', '.chrome-verif-lexique'), url], { stdio: 'ignore' });
+    '--user-data-dir=' + profilChrome.neuf('lexique'), url], { stdio: 'ignore' });
   let cible = null;
   for (let t = 0; t < 40 && !cible; t++) {
     await attendre(300);

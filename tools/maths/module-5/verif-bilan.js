@@ -18,6 +18,7 @@ var http = require('http');
 var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
+var profilChrome = require('../../lib/profil-chrome.js');
 
 var RACINE = path.join(__dirname, '..', '..', '..');
 var PORT = 9341;
@@ -121,7 +122,7 @@ function scoreLu(texte, sur) {
     var url = 'file:///' + path.resolve(RACINE, page).replace(/\\/g, '/');
     var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
       '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
-      '--user-data-dir=' + path.join(RACINE, 'scratchpad', '.chrome-bilan'), url], { stdio: 'ignore' });
+      '--user-data-dir=' + profilChrome.neuf('bilan'), url], { stdio: 'ignore' });
     var cible = null;
     for (var i = 0; i < 60 && !cible; i++) {
       await attendre(250);

@@ -230,9 +230,88 @@ distinguent, et elles ne se traitent pas pareil :
       Le seuil est donc déjà franchi ; A3 doit arbitrer sur ce qu'est vraiment un mode rapide, pas
       sur les 11,4 s qu'il s'apprêtait à y verser.
 
-- [ ] **A3 · Faire entrer les vérificateurs classés « chaîne obligatoire ».** Un par un, en
+- [x] **A3 · Faire entrer les vérificateurs classés « chaîne obligatoire ».** Un par un, en
       mesurant la durée ajoutée à `verif.js --rapide` et `--complet` à chaque fois. **Si le mode
       rapide dépasse une minute, il n'est plus rapide** : le dire et arbitrer.
+
+      **FAIT le 2026-09-03. 17 vérificateurs sont entrés dans la chaîne ; les hors-chaîne passent
+      de 24 à 7.** `verif.js` lance désormais **24 étapes en `--rapide`** (16 avant), **49 sans
+      option** (33), **52 en `--complet`** (35), **49 en `--strict`**. Chaîne complète relancée
+      après coup : **49 étapes, 784,7 s, tout est vert** (33 étapes / 658,1 s avant).
+
+      **AUCUN N'EST ENTRÉ SUR SA RÉPUTATION.** Le classement de A1 disait « ils fonctionnent » —
+      c'était une lecture, pas une mesure. Chacun des 16 candidats a donc subi une **épreuve par
+      injection** (`scratchpad/a3-epreuve.js`) : une faute posée dans le fichier qu'il lit, l'outil
+      relancé, son code de sortie exigé différent de 0, puis les octets d'origine réécrits et
+      **relus pour comparaison** (16 fois `restaure=oui`). Résultat final : **16 / 16 fautes vues**
+      — mais seulement **après trois découvertes que la lecture n'aurait pas données** :
+
+      1. ⚠️ **`verif-sql.js` ne pouvait pas rougir.** Une colonne inexistante posée dans un `SELECT`
+         d'une leçon, et il rendait **0**. Sa raison est structurelle : il ne juge qu'une
+         **proportion** (seuil 55 %) et le site est à **59,1 %** — il faudrait casser **13 blocs
+         d'un coup** pour le faire basculer. Le relevé qu'il imprime le dit sans qu'on l'ait
+         écouté : **124 blocs SQL sur 303 rendent une erreur** à l'apprenant qui clique
+         « Exécuter ». Un tel outil **mesure, il ne vérifie pas**. Correctif : un **cliquet**
+         (`tools/verif-sql-attendu.json`, référence **124**) — le nombre de blocs en erreur ne doit
+         jamais augmenter ; ajouter une leçon saine ne le bouge pas, en casser un seul le fait
+         rougir ; `--fixer` redescend la référence après réparation, elle ne remonte jamais seule.
+         Épreuve rejouée : **VU, code 1**.
+      2. ⚠️ **`verif-liste-alternatives.js` est un outil d'aide, pas un vérificateur** : il ne
+         contient **qu'un seul `process.exit(0)`** et ne peut donc rendre que 0. A1 l'avait classé
+         « chaîne obligatoire » ; l'y mettre aurait ajouté une étape **verte par construction** —
+         exactement le contrôle par vacuité que ce chantier combat. **Reclassé hors chaîne assumé.**
+      3. ⚠️ **Une faute posée dans `pages/maths/cours.html` ne prouve rien** : la page de cours
+         construit ses liens **en JavaScript**, depuis `js/data.js`. Deux injections successives
+         (`href` inexistant, puis `href="#"`) ont laissé `mth-prg` vert sans qu'il soit aveugle. Il
+         a fallu casser **le moteur qui remplit la page** (`js/cours.js`) pour que le contrôle ait
+         une chance de voir — et il a vu. La leçon vaut au-delà de ce cas : *injecter dans le
+         fichier qu'on lit n'est pas injecter dans ce que la page affiche.*
+
+      **LE PROFIL CHROME NEUF, condition d'entrée posée par A1, est appliqué** —
+      `tools/lib/profil-chrome.js`, un dossier temporaire par exécution, effacé à la sortie, un
+      seul écouteur `exit` pour les outils qui rouvrent Chrome page par page. Mesures avant/après,
+      sur les quatre outils convertis :
+
+      | outil | avant (profil persistant) | après (profil neuf) | |
+      |---|---:|---:|---|
+      | `maths/module-5/verif-cours-progression.js` | 15,0 s, **code 1** | **2,8 s, code 0** | −81 % |
+      | `doc/verif-lexique-clic.js` | 4,5 s | **2,5 s** | −44 % |
+      | `fraicheur/verif-affichage.js` | 201,1 s | **143,5 s** | −29 % |
+      | `maths/module-5/verif-bilan.js` | 14,1 s | **12,7 s** | −10 % |
+
+      Les 401 Mo de profils devenus inutiles (`.chrome-bilan`, `.chrome-progression`,
+      `.chrome-verif-lexique`, `.chrome-fraicheur`) ont été effacés : `scratchpad/` passe de
+      **3,2 Go à 2,8 Go**.
+
+      **UN DÉFAUT DE LA CHAÎNE ELLE-MÊME, trouvé en route** : quatre des outils entrants lisent des
+      chemins **relatifs au répertoire courant** (`fs.readFileSync('js/lecon.js')`,
+      `process.cwd()`). Lancés d'ailleurs que de la racine, ils tombent. `verif.js` **impose
+      désormais `cwd: RACINE`** à chaque étape au lieu d'hériter du répertoire de l'appelant.
+
+      **L'ARBITRAGE DU MODE RAPIDE — la minute n'est pas tenue, et c'est dit plutôt que maquillé.**
+      Mesure faite **avant tout ajout** : **266,7 s pour 16 étapes**. Le seuil n'était donc pas
+      menacé par les entrants, il était **déjà franchi de quatre fois**. La mesure désigne le
+      coupable sans discussion : les **trois bacs à sable Git pèsent 203,6 s**, soit **76 % du mode
+      rapide** (`gitcmd` 121,2 s, `gitscen` 49,4 s, `gitgraf` 33,0 s). Ils **sortent du mode
+      rapide, et de lui seul** — ils restent joués par le mode par défaut, `--complet` et
+      `--strict`. `gitmodl` (8,0 s) reste, pour qu'une régression du modèle de dépôt se voie quand
+      même. **Rapide mesuré après, machine au repos : 77,0 s pour 24 étapes** — trois fois moins de
+      temps pour huit contrôles de plus. Les onze entrants n'y coûtent que **8,2 s** ; ce qui
+      dépasse la minute, ce sont trois contrôles centraux (`contenu` 15,6 s, `maths` 15,5 s,
+      `exemples` 11,3 s) et les retirer viderait le mode de son intérêt. **Le seuil d'une minute
+      est donc écarté par la mesure, pas atteint.**
+
+      **Où va chacun** — 11 en `--rapide` et dans tous les modes (`caract`, `doc-ref`, `normatf`,
+      `doc-rec`, `contras`, `sql-blc`, `mth-acc`, `mth-ren`, `mth-e3`, `mth-e4`, `mth-e5`) ; 5 hors
+      du rapide (`lexique` 1,8 s, `vocab` 12,8 s, `interpr` 8,4 s, `mth-bil` 12,9 s, `mth-prg`
+      2,7 s) ; 1 en `--complet` seul (`fr-affi`, 143,5 s).
+
+      **Ce qui reste hors chaîne, et pourquoi** (recensé par `tools/recense-chaine.js`, qui compte
+      maintenant **44 vérificateurs dont 7 hors chaîne**) : `verif-clic.js` (ne termine pas),
+      `verif-liste-alternatives.js` (ne peut pas rougir), `maths/module-{3,4,5}/verif-chiffres.js`
+      (utilitaires paramétrés), `maths/module-{3,4}/verif-cours-progression.js` (attentes figées sur
+      un état révolu). Les **10 épreuves par injection** restantes sont l'objet de A4, et leur
+      déclaration formelle celui de A5 : le recensement affiche encore **17 à régler**.
 
 - [ ] **A4 · Un mode `--mutations` pour les 7 épreuves par injection.** Elles prouvent que les
       vérificateurs voient vraiment les fautes — c'est le contrôle le plus précieux du projet et il

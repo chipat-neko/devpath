@@ -36,7 +36,22 @@ var SEUIL = 0.55;
 
 var args = process.argv.slice(2);
 var SEULEMENT_ERREURS = args.indexOf('--erreurs') !== -1;
+var FIXER = args.indexOf('--fixer') !== -1;
 var cibles = args.filter(function (a) { return a.indexOf('--') !== 0; });
+
+/* --- LE CLIQUET, et pourquoi le seuil ne suffisait pas -------------------- *
+ * Le point A3 du chantier V16 a eprouve cet outil par injection : une colonne
+ * inexistante posee dans un bloc SELECT d'une lecon, et l'outil est reste VERT.
+ * La raison est structurelle : il ne juge qu'une PROPORTION (seuil 55 %) et le
+ * site est a 59,1 % — il faudrait casser treize blocs d'un coup pour le faire
+ * rougir. Un tel outil mesure ; il ne verifie pas.
+ * Le cliquet corrige cela sans toucher au seuil : le NOMBRE de blocs en erreur
+ * ne doit jamais AUGMENTER. Ajouter une lecon dont les blocs aboutissent ne le
+ * bouge pas ; en casser un seul le fait rougir. Quand des blocs sont repares,
+ * `--fixer` redescend la reference — elle ne remonte jamais toute seule.
+ * Le cliquet ne s'applique pas quand des cibles sont passees en argument : un
+ * sous-ensemble n'est pas comparable a la reference du site entier. */
+var ATTENDU = path.join(__dirname, 'verif-sql-attendu.json');
 
 /* --- le SEED, lu dans runner.js pour qu'il ne puisse pas diverger ---------- */
 function lireSeed() {
@@ -160,6 +175,31 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
     process.exit(1);
   }
   console.log('\nAu-dessus du seuil de ' + (100 * SEUIL).toFixed(0) + ' %.');
+
+  /* le cliquet : voir le commentaire en tete de fichier */
+  if (cibles.length) { console.log('  (cliquet inactif : des cibles ont ete passees en argument)'); return; }
+  if (FIXER) {
+    fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total,
+      note: 'Nombre de blocs SQL en erreur au dernier releve. Il ne doit jamais augmenter. ' +
+            'Le descendre apres une reparation : node tools/verif-sql.js --fixer' }, null, 2) + String.fromCharCode(10), 'utf8');
+    console.log('  cliquet fixe a ' + ko + ' bloc(s) en erreur sur ' + total + '.');
+    return;
+  }
+  var ref = null;
+  try { ref = JSON.parse(fs.readFileSync(ATTENDU, 'utf8')); } catch (e) { ref = null; }
+  if (!ref) { console.log('  (aucune reference de cliquet : node tools/verif-sql.js --fixer)'); return; }
+  if (ko > ref.ko) {
+    console.log(String.fromCharCode(10) +
+      'CLIQUET : ' + ko + ' bloc(s) en erreur contre ' + ref.ko + ' a la reference, soit ' +
+      (ko - ref.ko) + ' de plus. Un bloc SQL qui aboutissait est tombe en erreur.');
+    process.exit(1);
+  }
+  if (ko < ref.ko) {
+    console.log('  cliquet : ' + ko + ' en erreur contre ' + ref.ko + ' attendus, soit ' +
+      (ref.ko - ko) + ' de moins. Descendre la reference : node tools/verif-sql.js --fixer');
+    return;
+  }
+  console.log('  cliquet : ' + ko + ' bloc(s) en erreur, comme a la reference.');
 }).catch(function (e) {
   console.error('sql.js n\'a pas pu se charger : ' + (e && e.message || e));
   process.exit(1);

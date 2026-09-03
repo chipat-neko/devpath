@@ -16,12 +16,16 @@
      gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
      gitscen  node tools/verif-git-scenarios.js  les situations guidees : la solution atteint le but
 
-   USAGE
-     node tools/verif.js            # les six (le rendu prend plusieurs minutes)
-     node tools/verif.js --rapide   # les quatre premiers, exemples JS seul : ~20 secondes
-     node tools/verif.js --complet  # idem, le rendu balaie 229 pages, ET les verificateurs
-                                    #   sont eux-memes mis a l epreuve par 9 fautes injectees
-     node tools/verif.js --strict   # code 1 des qu'un outil signale quoi que ce soit
+   USAGE (durees mesurees le 2026-09-03, apres l'entree des 17 outils du point A3)
+     node tools/verif.js            # 49 etapes, plusieurs minutes (le rendu pilote Chrome)
+     node tools/verif.js --rapide   # 24 etapes, ~77 s : tout ce qui ne pilote pas Chrome,
+                                    #   moins les trois bacs a sable Git (voir l'arbitrage
+                                    #   plus bas : ils pesaient 76 % du mode a eux seuls)
+     node tools/verif.js --complet  # 52 etapes : le rendu balaie 229 pages, la fraicheur est
+                                    #   lue A L'AFFICHAGE, ET les verificateurs sont eux-memes
+                                    #   mis a l epreuve par 9 + 13 fautes injectees
+     node tools/verif.js --strict   # 49 etapes, code 1 des qu'un outil signale quoi que ce soit
+     node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
 
    Note : en mode rapide, « exemples » n'execute que JavaScript (pur Node, ~1 s) ;
    Python (via l'interpreteur, ~35 s) n'est joue qu'en mode complet.
@@ -40,6 +44,12 @@ var RAPIDE = flag("rapide");
 var COMPLET = flag("complet");
 var STRICT = flag("strict");
 var TOOLS = __dirname;
+/* La racine du depot. Plusieurs verificateurs lisent des chemins RELATIFS
+   (`js/lecon.js`, `pages/...`) ou appellent `process.cwd()` : lances depuis un
+   autre dossier, ils tombaient. La chaine impose donc le repertoire de travail
+   au lieu d'heriter de celui de l'appelant. Mesure du point A3 : quatre outils
+   entrants sur seize etaient dans ce cas. */
+var RACINE = path.join(TOOLS, "..");
 
 var ETAPES = [
   { nom: "source ", fichier: "verif-html.js", args: [], quoi: "balise creee par erreur dans un bloc de code" },
@@ -127,7 +137,70 @@ var ETAPES = [
      enumeration exhaustive, force brute, BigInt exact, decodage binaire des flottants --
      puis confronte le resultat au texte publie. */
   { nom: "maths  ", fichier: "maths/verif-verite.js", args: [], quoi: "les faits du cours maths, recalcules par une autre methode" },
+
+  /* ===================================================================== *
+   * ONZE VERIFICATEURS ENTRES PAR LE POINT A3 DU CHANTIER V16.
+   * Ils existaient tous, ils fonctionnaient tous, et AUCUN mode ne les
+   * lancait : un outil qu'il faut penser a lancer ne protege rien.
+   * Aucun n'est entre sur sa reputation : chacun a subi une EPREUVE PAR
+   * INJECTION (une faute posee dans le fichier qu'il lit, l'outil relance,
+   * son code de sortie exige different de 0, les octets restaures et relus).
+   * 16 candidats, 16 fautes vues. Cout mesure du lot : 8,4 s.
+   * ===================================================================== */
+  /* Un caractere de controle ecrit par accident est INVISIBLE a la relecture :
+     un « \b » devenu un vrai backspace dans une expression reguliere avait fait
+     afficher « 0 » a deux compteurs, et seule une capture d'ecran l'avait montre. */
+  { nom: "caract ", fichier: "verif-controles.js", args: [], quoi: "aucun caractere de controle invisible hors des deux emplois declares" },
+  /* La page de reference en anglais (cours doc) demande a l'apprenant de s'y fier :
+     36 controles rejouent son code, ses exemples et ses promesses de valeur. */
+  { nom: "doc-ref", fichier: "doc/verif-doc.js", args: [], quoi: "la page de documentation dit-elle vrai (36 controles rejoues)" },
+  /* La lecon 03 publie une specification et affirme que les milliers de questions
+     du site la respectent : une affirmation qui se perime a chaque question ajoutee. */
+  { nom: "normatf", fichier: "doc/verif-normatif.js", args: [], quoi: "la specification publiee et sa conformite, recalculees" },
+  /* La lecon 04 tire ses chiffres de l'EXECUTION d'un moteur : un changement de
+     version de Node peut faire basculer un verdict et la page mentirait en silence. */
+  { nom: "doc-rec", fichier: "doc/verif-recherche.js", args: [], quoi: "les chiffres de la lecon 04, rejoues depuis les corpus" },
+  /* L'angle mort du bilan REPLIE : verif-rendu ne mesure que le visible, donc les
+     couleurs d'un <details> ferme ne sont jugees par personne. */
+  { nom: "contras", fichier: "fraicheur/verif-contraste.js", args: [], quoi: "contraste des couleurs du bilan de fraicheur, dans les deux themes" },
+  /* Les blocs SQL portent un bouton « Executer » : un bouton qui rend une erreur est
+     pire que pas de bouton. ⚠ Le seuil de 55 % ne peut pas voir une faute isolee (le
+     site est a 59,1 %) — c'est ce que l'epreuve d'injection a montre, et c'est
+     pourquoi cet outil a recu un CLIQUET : le nombre de blocs en erreur ne doit
+     jamais augmenter. */
+  { nom: "sql-blc", fichier: "verif-sql.js", args: [], quoi: "les blocs SQL des lecons aboutissent-ils (seuil + cliquet)" },
+  /* Les quatre suivants gardent le cours de maths, le seul du site ou une erreur est
+     invisible a la relecture. Ils comblent chacun un angle mort de verif-exemples. */
+  { nom: "mth-acc", fichier: "maths/module-5/verif-accept.js", args: [], quoi: "la valeur attendue d'un exercice est celle qu'affiche sa solution" },
+  { nom: "mth-ren", fichier: "maths/module-5/verif-renvois.js", args: [], quoi: "les renvois « les mathematiques derriere » : cible reelle, chiffres retrouves" },
+  { nom: "mth-e3 ", fichier: "maths/module-3/verif-expect.js", args: [], quoi: "module 3 : la solution publiee produit bien son run.expect" },
+  { nom: "mth-e4 ", fichier: "maths/module-4/verif-expect.js", args: [], quoi: "module 4 : la solution publiee produit bien son run.expect" },
+  { nom: "mth-e5 ", fichier: "maths/module-5/verif-expect.js", args: [], quoi: "module 5 : la solution publiee produit bien son run.expect" },
 ];
+
+/* ===================================================================== *
+ * L'ARBITRAGE DU MODE RAPIDE (point A3 du chantier V16).
+ * Le plan posait un seuil : « si le mode rapide depasse une minute, il n'est
+ * plus rapide ». Mesure faite AVANT tout ajout : 266,7 s pour 16 etapes.
+ * Le seuil n'etait donc pas franchi par les nouveaux venus, il l'etait deja,
+ * et de quatre fois. La mesure designe le coupable sans ambiguite : les trois
+ * bacs a sable Git pesent 203,6 s a eux seuls, soit 76 % du mode rapide
+ * (gitcmd 121,2 s, gitscen 49,4 s, gitgraf 33,0 s).
+ * Ils SORTENT donc du mode rapide, et de lui seul : ils restent joues par le
+ * mode par defaut, par --complet et par --strict. `gitmodl` (7,1 s) reste,
+ * pour qu'une regression du modele de depot se voie quand meme en rapide.
+ * Rapide mesure apres, machine au repos : 77,0 s pour 24 etapes, contre 266,7 s
+ * pour 16 avant — trois fois moins de temps pour huit controles de plus.
+ * ⚠ LA MINUTE N'EST PAS TENUE, et il faut le dire plutot que de la faire tenir :
+ * les onze entrants ne coutent que 8,2 s ensemble. Ce qui reste au-dessus du
+ * seuil, ce sont trois controles centraux — contenu 15,6 s, maths 15,5 s,
+ * exemples 11,3 s — et les retirer viderait le mode de son interet. Le seuil
+ * d'une minute est donc ecarte par la mesure, pas atteint.
+ * ===================================================================== */
+var HORS_RAPIDE = ["verif-git-commandes.js", "verif-git-graphe.js", "verif-git-scenarios.js"];
+if (RAPIDE) {
+  ETAPES = ETAPES.filter(function (e) { return HORS_RAPIDE.indexOf(e.fichier) === -1; });
+}
 if (!RAPIDE) {
   /* `verif-exemples.js` ne confronte au reel que les valeurs ecrites EN COMMENTAIRE
      dans le code. Or une lecon range souvent sa sortie dans un bloc `.txt` voisin,
@@ -321,6 +394,56 @@ if (!RAPIDE) {
     quoi: "les six etudes sont-elles atteignables : hub, menu aux 4 profondeurs, encarts de cours, retour",
     lent: true,
   });
+  /* ===================================================================== *
+   * CINQ VERIFICATEURS DE PLUS, entres par le point A3 du V16 — hors du mode
+   * rapide parce qu'ils coutent 39,2 s a eux cinq, dont trois pilotent Chrome.
+   * ⚠ LES TROIS QUI OUVRENT CHROME PARTENT D'UN PROFIL NEUF (tools/lib/
+   * profil-chrome.js). C'est une condition d'entree, pas un detail : avec son
+   * ancien profil persistant, `mth-prg` annoncait « la barre affiche 0 / 13 »
+   * — un bug du site en apparence — et le seul effacement du profil le fait
+   * passer au vert, en 2,8 s au lieu de 15,0 s.
+   * Chacun a subi l'epreuve par injection, et l'une d'elles a appris quelque
+   * chose : la page de cours construit ses liens EN JAVASCRIPT, donc une faute
+   * posee dans cours.html ne prouve rien — il faut casser le moteur qui la
+   * remplit pour que le controle ait une chance de voir.
+   * ===================================================================== */
+  ETAPES.push({
+    nom: "lexique",
+    fichier: "doc/verif-lexique-clic.js",
+    args: [],
+    quoi: "le lexique CLIQUE dans Chrome : filtres, recherche par le piege, quiz",
+    lent: true,
+  });
+  ETAPES.push({
+    nom: "vocab  ",
+    fichier: "doc/verif-vocab.js",
+    args: [],
+    quoi: "les 82 fiches de vocabulaire : chaque affirmation chiffree rejouee",
+    lent: true,
+    pourquoiLent: "il rejoue les preuves de chaque fiche",
+  });
+  ETAPES.push({
+    nom: "interpr",
+    fichier: "verif-interpreteur.js",
+    args: [],
+    quoi: "le mini-interpreteur du visualiseur, confronte au vrai moteur JavaScript",
+    lent: true,
+    pourquoiLent: "il execute chaque programme deux fois",
+  });
+  ETAPES.push({
+    nom: "mth-bil",
+    fichier: "maths/module-5/verif-bilan.js",
+    args: [],
+    quoi: "le QCM de bilan juge-t-il vraiment : score parfait ET temoin negatif a zero",
+    lent: true,
+  });
+  ETAPES.push({
+    nom: "mth-prg",
+    fichier: "maths/module-5/verif-cours-progression.js",
+    args: [],
+    quoi: "la page de cours avec une progression SEMEE : 13 liens, barre lue, aucun « bientot »",
+    lent: true,
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »
@@ -347,6 +470,19 @@ if (COMPLET) {
     fichier: "maths/preuve-injection.js",
     args: [],
     quoi: "le controle des maths VOIT-IL une faute ? 13 fautes injectees, 13 attendues rouges",
+    lent: true,
+  });
+  /* Les marques de fraicheur sont posees dans le SOURCE, mais ce que l'apprenant
+     lit est calcule a l'affichage : l'age d'une marque, la note du bilan, les dates
+     en clair. `verif-fraicheur.js` (mode rapide) juge le source ; celui-ci ouvre les
+     pages et lit le rendu. 201 s a l'origine, il ne pouvait tenir nulle part
+     ailleurs qu'en --complet. Son epreuve par injection existe deja et passe
+     (fraicheur/verif-affichage-mutations.js, 14 fautes posees, 14 vues). */
+  ETAPES.push({
+    nom: "fr-affi",
+    fichier: "fraicheur/verif-affichage.js",
+    args: [],
+    quoi: "les marques de fraicheur telles que le navigateur les AFFICHE",
     lent: true,
   });
   ETAPES.push({
@@ -383,6 +519,7 @@ ETAPES.forEach(function (e) {
     (e.lent ? "  (patience, " + (e.pourquoiLent || "il pilote Chrome") + ")" : "") + "\n");
   var r = cp.spawnSync(process.execPath, [path.join(TOOLS, e.fichier)].concat(e.args), {
     encoding: "utf8",
+    cwd: RACINE,
     maxBuffer: 32 * 1024 * 1024,
   });
   var duree = ((Date.now() - t0) / 1000).toFixed(1);
